@@ -1062,39 +1062,16 @@ class _TaskDetailContent extends StatelessWidget {
   }
 
   void _showCounterOfferSheet(BuildContext context, Task task) {
-    final controller = TextEditingController();
     showDialog<void>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(context.l10n.taskDetailCounterOffer),
-        content: TextField(
-          controller: controller,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: InputDecoration(
-            hintText: context.l10n.taskDetailCounterOfferHint,
-            prefixText: '£ ',
-          ),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(context.l10n.actionsCancel),
-          ),
-          TextButton(
-            onPressed: () {
-              final price = double.tryParse(controller.text.trim());
-              if (price == null || price <= 0) return;
-              Navigator.of(dialogContext).pop();
-              context.read<TaskDetailBloc>().add(
+      builder: (dialogContext) => _CounterOfferDialog(
+        onSubmit: (price) {
+          context.read<TaskDetailBloc>().add(
                 TaskDetailSubmitCounterOfferRequested(price: price),
               );
-            },
-            child: Text(context.l10n.actionsConfirm),
-          ),
-        ],
+        },
       ),
-    ).whenComplete(() => controller.dispose());
+    );
   }
 
   void _showDeclineDesignatedTaskConfirm(BuildContext context) {
@@ -1120,6 +1097,67 @@ class _TaskDetailContent extends StatelessWidget {
       if (!context.mounted || confirmed != true) return;
       context.read<TaskDetailBloc>().add(const TaskDetailCancelApplicationRequested());
     });
+  }
+}
+
+class _CounterOfferDialog extends StatefulWidget {
+  const _CounterOfferDialog({
+    required this.onSubmit,
+  });
+
+  final ValueChanged<double> onSubmit;
+
+  @override
+  State<_CounterOfferDialog> createState() => _CounterOfferDialogState();
+}
+
+class _CounterOfferDialogState extends State<_CounterOfferDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final price = double.tryParse(_controller.text.trim());
+    if (price == null || price <= 0) return;
+    widget.onSubmit(price);
+    Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(context.l10n.taskDetailCounterOffer),
+      content: TextField(
+        controller: _controller,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        decoration: InputDecoration(
+          hintText: context.l10n.taskDetailCounterOfferHint,
+          prefixText: '£ ',
+        ),
+        autofocus: true,
+        onSubmitted: (_) => _submit(),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(context.l10n.actionsCancel),
+        ),
+        TextButton(
+          onPressed: _submit,
+          child: Text(context.l10n.actionsConfirm),
+        ),
+      ],
+    );
   }
 }
 

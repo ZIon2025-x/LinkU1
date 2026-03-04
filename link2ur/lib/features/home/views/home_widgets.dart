@@ -112,7 +112,7 @@ class _GreetingSectionWithCloudState extends State<_GreetingSectionWithCloud> {
                         fontWeight: FontWeight.w900,
                         color: isDark
                             ? AppColors.textSecondaryDark
-                            : AppColors.textTertiaryLight,
+                            : AppColors.textSecondaryLight,
                       ),
                     ),
                   ],
@@ -211,7 +211,7 @@ class _GreetingSectionState extends State<_GreetingSection> {
                     fontWeight: FontWeight.w900,
                     color: isDark
                         ? AppColors.textSecondaryDark
-                        : AppColors.textTertiaryLight,
+                        : AppColors.textSecondaryLight,
                   ),
                 ),
               ],
