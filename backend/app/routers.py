@@ -9309,12 +9309,13 @@ from app.deps import check_admin, check_admin_user_status, check_super_admin
 def get_public_stats(
     db: Session = Depends(get_db)
 ):
-    """获取公开的平台统计数据（仅用户总数）"""
+    """获取公开的平台统计数据（用户总数、成功匹配并完成的任务数）"""
     try:
-        # 只返回用户总数，不返回其他敏感信息
         total_users = db.query(models.User).count()
+        completed_tasks = db.query(models.Task).filter(models.Task.status == "completed").count()
         return {
-            "total_users": total_users
+            "total_users": total_users,
+            "completed_tasks": completed_tasks,
         }
     except Exception as e:
         logger.error(f"Error in get_public_stats: {e}")

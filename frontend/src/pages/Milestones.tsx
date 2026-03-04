@@ -9,7 +9,7 @@ import {
   ShopOutlined,
   SmileOutlined,
 } from '@ant-design/icons';
-import { fetchCurrentUser, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead } from '../api';
+import { fetchCurrentUser, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, getPublicStats } from '../api';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import HamburgerMenu from '../components/HamburgerMenu';
 import NotificationButton from '../components/NotificationButton';
@@ -42,7 +42,7 @@ interface MilestoneEvent {
 
 const milestoneEvents: MilestoneEvent[] = [
   {
-    date: '2024.09',
+    date: '2025.02',
     icon: <RocketOutlined />,
     iconBg: '#3b82f6',
     titleEn: 'Link²Ur Founded',
@@ -51,7 +51,7 @@ const milestoneEvents: MilestoneEvent[] = [
     descriptionZh: '一群志同道合的年轻人汇聚在一起，创建技能互助平台，正式开启我们的旅程。',
   },
   {
-    date: '2024.12',
+    date: '2025.06',
     icon: <ThunderboltOutlined />,
     iconBg: '#f59e0b',
     titleEn: 'Platform Beta Launch',
@@ -60,16 +60,7 @@ const milestoneEvents: MilestoneEvent[] = [
     descriptionZh: '平台第一个版本正式上线内测，获得了首批用户的热情反馈。',
   },
   {
-    date: '2025.02',
-    icon: <TeamOutlined />,
-    iconBg: '#10b981',
-    titleEn: '100+ Registered Users',
-    titleZh: '注册用户突破 100+',
-    descriptionEn: 'Within months of launch, the platform reached over 100 registered users, validating our community-first approach.',
-    descriptionZh: '上线短短几个月，平台注册用户突破100人，验证了我们以社区为核心的理念。',
-  },
-  {
-    date: '2025.04',
+    date: '2025.08',
     icon: <ShopOutlined />,
     iconBg: '#8b5cf6',
     titleEn: 'Flea Market Feature Launched',
@@ -78,16 +69,34 @@ const milestoneEvents: MilestoneEvent[] = [
     descriptionZh: '平台功能扩展至社区二手交易，支持用户买卖闲置物品。',
   },
   {
-    date: '2025.06',
-    icon: <StarOutlined />,
-    iconBg: '#ec4899',
-    titleEn: 'First Community Event in London',
-    titleZh: '伦敦首场线下社区活动',
-    descriptionEn: 'Organized our first offline meetup in London, bringing together community members for networking and fun.',
-    descriptionZh: '在伦敦举办首次线下见面会，社区成员齐聚一堂，交流互动。',
+    date: '2025.12',
+    icon: <RocketOutlined />,
+    iconBg: '#0ea5e9',
+    titleEn: 'Platform Officially Launched',
+    titleZh: '平台正式上线',
+    descriptionEn: 'The platform officially launched, opening to more users and services.',
+    descriptionZh: '平台正式上线，面向更多用户与服务开放。',
   },
   {
-    date: '2025.09',
+    date: '2026.01',
+    icon: <TeamOutlined />,
+    iconBg: '#10b981',
+    titleEn: '100+ Registered Users',
+    titleZh: '注册用户突破 100+',
+    descriptionEn: 'Within months of launch, the platform reached over 100 registered users, validating our community-first approach.',
+    descriptionZh: '上线短短几个月，平台注册用户突破100人，验证了我们以社区为核心的理念。',
+  },
+  {
+    date: '2026.02',
+    icon: <StarOutlined />,
+    iconBg: '#ec4899',
+    titleEn: 'Spring Festival Events in Birmingham & Bristol',
+    titleZh: '伯明翰与布里斯托赞助春晚活动',
+    descriptionEn: 'Sponsored Spring Festival Gala events in Birmingham and Bristol, engaging with student users and giving New Year gifts & spring couplets.',
+    descriptionZh: '在伯明翰和布里斯托赞助春晚活动，与学生用户互动，送新年礼物与春联。',
+  },
+  {
+    date: '2026.02',
     icon: <SmileOutlined />,
     iconBg: '#06b6d4',
     titleEn: 'AI Customer Service Introduced',
@@ -96,16 +105,16 @@ const milestoneEvents: MilestoneEvent[] = [
     descriptionZh: '推出AI智能客服系统，为日益增长的用户群体提供全天候即时服务。',
   },
   {
-    date: '2025.12',
+    date: '至今',
     icon: <TrophyOutlined />,
     iconBg: '#f97316',
-    titleEn: '500+ Tasks Completed',
-    titleZh: '完成任务突破 500+',
-    descriptionEn: 'A milestone moment — over 500 tasks successfully matched and completed through our platform.',
-    descriptionZh: '里程碑时刻——平台成功匹配并完成超过500个任务。',
+    titleEn: '{count} Tasks Completed',
+    titleZh: '平台成功匹配并完成 {count} 个任务',
+    descriptionEn: 'Tasks successfully matched and completed through our platform to date.',
+    descriptionZh: '平台成功匹配并完成的任务数至今。',
   },
   {
-    date: '2026.03',
+    date: '未来',
     icon: <GlobalOutlined />,
     iconBg: '#6366f1',
     titleEn: 'Expanding to More Cities',
@@ -132,6 +141,7 @@ const Milestones: React.FC = () => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [systemSettings] = useState({});
+  const [completedTaskCount, setCompletedTaskCount] = useState<number | null>(null);
   const timelineRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   const isZh = language === 'zh';
@@ -156,6 +166,14 @@ const Milestones: React.FC = () => {
       }
     };
     loadUserData();
+  }, []);
+
+  useEffect(() => {
+    getPublicStats().then((data) => {
+      setCompletedTaskCount(data.completed_tasks ?? 0);
+    }).catch(() => {
+      setCompletedTaskCount(null);
+    });
   }, []);
 
   // IntersectionObserver for scroll animations
@@ -279,27 +297,42 @@ const Milestones: React.FC = () => {
           {isZh ? '发展里程碑' : 'Milestones'}
         </h2>
         <div className={styles.timeline}>
-          {milestoneEvents.map((event, index) => (
-            <div
-              key={index}
-              ref={setTimelineRef(index)}
-              className={`${styles.timelineItem} ${index % 2 === 0 ? styles.timelineItemLeft : styles.timelineItemRight}`}
-            >
-              <div className={styles.timelineDot} />
-              <div className={styles.timelineCard}>
-                <div className={styles.cardIcon} style={{ background: event.iconBg }}>
-                  {event.icon}
+          {milestoneEvents.map((event, index) => {
+            const countStr = event.date === '至今' && completedTaskCount !== null
+              ? String(completedTaskCount)
+              : event.date === '至今'
+                ? '—'
+                : null;
+            const titleEn = countStr !== null
+              ? event.titleEn.replace('{count}', countStr)
+              : event.titleEn;
+            const titleZh = countStr !== null
+              ? event.titleZh.replace('{count}', countStr)
+              : event.titleZh;
+            return (
+              <div
+                key={index}
+                ref={setTimelineRef(index)}
+                className={`${styles.timelineItem} ${index % 2 === 0 ? styles.timelineItemLeft : styles.timelineItemRight}`}
+              >
+                <div className={styles.timelineDot} />
+                <div className={styles.timelineCard}>
+                  <div className={styles.cardIcon} style={{ background: event.iconBg }}>
+                    {event.icon}
+                  </div>
+                  <div className={styles.cardDate}>
+                    {event.date === '至今' ? (isZh ? '至今' : 'To date') : event.date === '未来' ? (isZh ? '未来' : 'Future') : event.date}
+                  </div>
+                  <div className={styles.cardTitle}>
+                    {isZh ? titleZh : titleEn}
+                  </div>
+                  <p className={styles.cardDescription}>
+                    {isZh ? event.descriptionZh : event.descriptionEn}
+                  </p>
                 </div>
-                <div className={styles.cardDate}>{event.date}</div>
-                <div className={styles.cardTitle}>
-                  {isZh ? event.titleZh : event.titleEn}
-                </div>
-                <p className={styles.cardDescription}>
-                  {isZh ? event.descriptionZh : event.descriptionEn}
-                </p>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 
@@ -312,7 +345,9 @@ const Milestones: React.FC = () => {
           {statsData.map((stat, index) => (
             <div key={index} className={styles.statItem}>
               <div className={styles.statNumber}>
-                {isZh ? stat.numberZh : stat.numberEn}
+                {index === 1 && completedTaskCount !== null
+                  ? String(completedTaskCount)
+                  : isZh ? stat.numberZh : stat.numberEn}
               </div>
               <div className={styles.statLabel}>
                 {isZh ? stat.labelZh : stat.labelEn}

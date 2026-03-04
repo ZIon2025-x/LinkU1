@@ -1180,14 +1180,13 @@ export const getMyCustomerServiceSessions = async () => {
 
 
 // 管理后台相关API
-// 获取公开的平台统计数据（仅用户总数）
-export const getPublicStats = async () => {
+// 获取公开的平台统计数据（用户总数、成功匹配并完成的任务数）
+export const getPublicStats = async (): Promise<{ total_users: number; completed_tasks?: number }> => {
   try {
     const res = await api.get('/api/stats');
     return res.data;
   } catch (error) {
-        // 如果API不存在或失败，返回默认值
-    return { total_users: 0 };
+    return { total_users: 0, completed_tasks: 0 };
   }
 };
 
