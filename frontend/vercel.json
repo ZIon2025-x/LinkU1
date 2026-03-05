@@ -73,17 +73,7 @@
     },
     {
       "source": "/",
-      "destination": "/en/",
-      "permanent": true
-    },
-    {
-      "source": "/en",
-      "destination": "/en/",
-      "permanent": true
-    },
-    {
-      "source": "/zh",
-      "destination": "/zh/",
+      "destination": "/en",
       "permanent": true
     },
     {

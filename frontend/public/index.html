@@ -70,7 +70,6 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="brand" content="Link²Ur" />
     <meta name="site_name" content="Link²Ur" />
     <meta name="robots" content="index, follow" />
@@ -84,10 +83,6 @@
     <meta name="PerplexityBot" content="index, follow" />
     <meta name="CCBot" content="index, follow" />
     
-    <!-- AI友好的内容描述 - 帮助AI理解网站用途 -->
-    <meta name="application-name" content="Link²Ur - Task & Service Platform" />
-    <meta name="apple-mobile-web-app-title" content="Link²Ur" />
-    
     <!-- 地理位置信息 - 帮助AI理解服务区域 -->
     <meta name="geo.region" content="GB" />
     <meta name="geo.placename" content="United Kingdom" />
@@ -96,8 +91,8 @@
     <!-- Canonical 链接将由 CanonicalLink 组件动态添加 -->
     
     <!-- Hreflang tags for multilingual SEO -->
-    <link rel="alternate" hreflang="en" href="https://www.link2ur.com/en" />
-    <link rel="alternate" hreflang="zh" href="https://www.link2ur.com/zh" />
+    <link rel="alternate" hreflang="en-GB" href="https://www.link2ur.com/en" />
+    <link rel="alternate" hreflang="zh-CN" href="https://www.link2ur.com/zh" />
     <link rel="alternate" hreflang="x-default" href="https://www.link2ur.com/en" />
     
     <!-- Open Graph / Facebook -->
@@ -110,7 +105,7 @@
     <meta property="og:image:height" content="512" />
     <meta property="og:image:type" content="image/png" />
     <meta property="og:site_name" content="Link²Ur" />
-    <meta property="og:locale" content="en_US" />
+    <meta property="og:locale" content="en_GB" />
     <meta property="og:brand" content="Link²Ur" />
     
     <!-- Twitter -->
@@ -170,10 +165,6 @@
           allOgImageHeights.forEach(function(tag) { tag.remove(); });
           var allOgImageTypes = document.querySelectorAll('meta[property="og:image:type"]');
           allOgImageTypes.forEach(function(tag) { tag.remove(); });
-          
-          // 移除所有 description 标签
-          var allDescriptions = document.querySelectorAll('meta[name="description"]');
-          allDescriptions.forEach(function(tag) { tag.remove(); });
           
           // 如果是榜单详情页，立即通过API获取榜单信息并设置meta标签（用于微信爬虫）
           if (isLeaderboardDetailPage) {
@@ -297,9 +288,6 @@
       })();
     </script>
     
-    <!-- Additional SEO Meta Tags -->
-    <meta name="theme-color" content="#007AFF" />
-    <meta name="msapplication-TileColor" content="#007AFF" />
     <!--
       manifest.json provides metadata used when your web app is installed on a
       user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
@@ -407,11 +395,6 @@
     <title>Link²Ur - Connect, Capability, Create</title>
   </head>
   <body>
-    <!-- SEO H1 Tag for Bing Webmaster - Hidden but accessible to search engines -->
-    <!-- Using position: absolute; left: -9999px; instead of clip, as Bing prefers this method -->
-    <h1 style="position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden;">
-      Link²Ur - Professional Task Publishing and Skill Matching Platform
-    </h1>
     <noscript>
       <div style="max-width: 1200px; margin: 0 auto; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
         <header style="border-bottom: 2px solid #007AFF; padding-bottom: 20px; margin-bottom: 30px;">

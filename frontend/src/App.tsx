@@ -103,6 +103,7 @@ const CustomLeaderboardDetail = lazyWithRetry(() => import('./pages/CustomLeader
 const LeaderboardItemDetail = lazyWithRetry(() => import('./pages/LeaderboardItemDetail'));
 const FleaMarketItemDetail = lazyWithRetry(() => import('./pages/FleaMarketItemDetail'));
 const ActivityDetail = lazyWithRetry(() => import('./pages/ActivityDetail'));
+const NotFoundPage = lazyWithRetry(() => import('./pages/NotFoundPage'));
 
 // 语言重定向组件 - 使用React Router的Navigate而不是window.location
 const LanguageRedirect: React.FC = () => {
@@ -327,8 +328,8 @@ const LanguageRoutes: React.FC = () => {
       <Route path="/reset-password/:token" element={<ParamRedirect basePath="/reset-password/:token" />} />
       <Route path="/student-verification/verify/:token" element={<ParamRedirect basePath="/student-verification/verify/:token" />} />
       
-      {/* Catch-all路由：处理未匹配的路径，重定向到首页 */}
-      <Route path="*" element={<Navigate to={`/${DEFAULT_LANGUAGE}`} replace />} />
+      {/* Catch-all路由：显示404页面，带noindex防止搜索引擎索引 */}
+      <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </Suspense>
   );

@@ -193,7 +193,7 @@ const SEOHead: React.FC<SEOHeadProps> = ({
     
     // 添加微信友好的Open Graph标签
     updateMetaTag('og:site_name', 'Link²Ur', true);
-    updateMetaTag('og:locale', 'zh_CN', true);
+    // og:locale 由 LanguageMetaManager 根据语言正确设置，此处不再硬编码
     
     // AI友好的额外meta标签
     if (description) {
@@ -215,8 +215,8 @@ const SEOHead: React.FC<SEOHeadProps> = ({
     const enUrl = `https://www.link2ur.com/en${currentBasePath}`;
     const zhUrl = `https://www.link2ur.com/zh${currentBasePath}`;
     
-    updateLinkTag('alternate', enUrl, 'en');
-    updateLinkTag('alternate', zhUrl, 'zh');
+    updateLinkTag('alternate', enUrl, 'en-GB');
+    updateLinkTag('alternate', zhUrl, 'zh-CN');
     updateLinkTag('alternate', enUrl, 'x-default');
 
     // 微信分享特殊处理：将重要的meta标签移动到head的前面（确保微信爬虫能读取到）
