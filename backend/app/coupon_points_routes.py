@@ -126,12 +126,13 @@ def get_account_info(
 def get_transactions(
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
+    type: Optional[str] = Query(None),
     current_user: models.User = Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db)
 ):
     """获取积分交易记录"""
     skip = (page - 1) * limit
-    transactions, total = get_points_transactions(db, current_user.id, skip, limit)
+    transactions, total = get_points_transactions(db, current_user.id, skip, limit, type_filter=type)
     
     # 格式化显示
     data = []
@@ -281,6 +282,7 @@ def get_available_coupons_list(
             "currency": coupon.currency,
             "valid_until": coupon.valid_until,
             "usage_conditions": coupon.usage_conditions,
+            "points_required": coupon.points_required or 0,
             "eligibility_type": getattr(coupon, "eligibility_type", None),
             "per_user_per_month_limit": getattr(coupon, "per_user_per_month_limit", None),
             "per_user_limit_window": getattr(coupon, "per_user_limit_window", None),

@@ -17209,6 +17209,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Counter-offer rejected'**
   String get taskDetailCounterOfferRejected;
+
+  /// No description provided for @commonDiscardChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard Changes?'**
+  String get commonDiscardChanges;
+
+  /// No description provided for @commonDiscardChangesMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'You have unsaved changes. Are you sure you want to discard them?'**
+  String get commonDiscardChangesMessage;
+
+  /// No description provided for @commonDiscard.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard'**
+  String get commonDiscard;
+
+  /// No description provided for @taskNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Task not found'**
+  String get taskNotFound;
+
+  /// No description provided for @userNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'User not found'**
+  String get userNotFound;
 }
 
 class _AppLocalizationsDelegate

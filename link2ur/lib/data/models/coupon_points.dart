@@ -140,6 +140,7 @@ class Coupon extends Equatable {
     this.currency = 'GBP',
     this.validUntil,
     this.usageConditions,
+    this.pointsRequired = 0,
   });
 
   final int id;
@@ -153,6 +154,7 @@ class Coupon extends Equatable {
   final String currency;
   final DateTime? validUntil;
   final Map<String, dynamic>? usageConditions;
+  final int pointsRequired;
 
   /// 是否已过期
   bool get isExpired =>
@@ -200,12 +202,13 @@ class Coupon extends Equatable {
           : null,
       usageConditions:
           json['usage_conditions'] as Map<String, dynamic>?,
+      pointsRequired: json['points_required'] as int? ?? 0,
     );
   }
 
   @override
   List<Object?> get props =>
-      [id, code, name, type, discountValue, minAmount, validUntil];
+      [id, code, name, type, discountValue, minAmount, validUntil, pointsRequired];
 }
 
 /// 用户优惠券模型

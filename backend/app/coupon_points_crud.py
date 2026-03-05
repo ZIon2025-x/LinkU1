@@ -187,16 +187,22 @@ def get_points_transactions(
     db: Session,
     user_id: str,
     skip: int = 0,
-    limit: int = 20
+    limit: int = 20,
+    type_filter: str = None
 ) -> tuple[List[models.PointsTransaction], int]:
     """获取用户积分交易记录"""
     query = db.query(models.PointsTransaction).filter(
         models.PointsTransaction.user_id == user_id
-    ).order_by(models.PointsTransaction.created_at.desc())
-    
+    )
+    if type_filter:
+        valid_types = {'earn', 'spend', 'refund', 'expire', 'coupon_redeem'}
+        if type_filter in valid_types:
+            query = query.filter(models.PointsTransaction.type == type_filter)
+    query = query.order_by(models.PointsTransaction.created_at.desc())
+
     total = query.count()
     transactions = query.offset(skip).limit(limit).all()
-    
+
     return transactions, total
 
 

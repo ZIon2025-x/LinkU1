@@ -1473,6 +1473,7 @@ class CouponOut(BaseModel):
     currency: str
     valid_until: datetime.datetime
     usage_conditions: Optional[Dict[str, Any]] = None
+    points_required: int = 0
 
     class Config:
         from_attributes = True

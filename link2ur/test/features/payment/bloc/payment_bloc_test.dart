@@ -132,12 +132,12 @@ void main() {
         'updates selected coupon',
         build: () => paymentBloc,
         act: (bloc) => bloc.add(const PaymentSelectCoupon(
-          couponId: 123,
+          userCouponId: 123,
           couponName: 'SUMMER20',
         )),
         expect: () => [
           const PaymentState(
-            selectedCouponId: 123,
+            selectedUserCouponId: 123,
             selectedCouponName: 'SUMMER20',
           ),
         ],
@@ -149,7 +149,7 @@ void main() {
         'clears selected coupon',
         build: () => paymentBloc,
         seed: () => const PaymentState(
-          selectedCouponId: 123,
+          selectedUserCouponId: 123,
           selectedCouponName: 'SUMMER20',
         ),
         act: (bloc) => bloc.add(const PaymentRemoveCoupon()),

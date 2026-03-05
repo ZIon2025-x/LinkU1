@@ -40,7 +40,7 @@ class TaskDraftCard extends StatelessWidget {
           color: isDark ? const Color(0xFF1A2332) : const Color(0xFFF0F7FF),
           borderRadius: BorderRadius.circular(AppRadius.large),
           border: Border.all(
-            color: AppColors.primary.withAlpha(60),
+            color: AppColors.primary.withValues(alpha: 0.24),
           ),
         ),
         child: Column(

@@ -380,7 +380,7 @@ class _PaymentContentState extends State<_PaymentContent> {
     context.read<PaymentBloc>().add(
           PaymentCreateWeChatSession(
             taskId: widget.taskId,
-            couponId: state.selectedCouponId,
+            couponId: state.selectedUserCouponId,
           ),
         );
   }
@@ -473,7 +473,7 @@ class _PaymentContentState extends State<_PaymentContent> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) => _CouponSelectorSheet(
-        selectedCouponId: context.read<PaymentBloc>().state.selectedCouponId,
+        selectedUserCouponId: context.read<PaymentBloc>().state.selectedUserCouponId,
         orderAmountPence: context.read<PaymentBloc>().state.paymentResponse?.originalAmount,
       ),
     );
@@ -481,7 +481,7 @@ class _PaymentContentState extends State<_PaymentContent> {
     if (result != null && mounted) {
       final bloc = context.read<PaymentBloc>();
       bloc.add(PaymentSelectCoupon(
-        couponId: result['id'] as int?,
+        userCouponId: result['id'] as int?,
         couponName: result['name'] as String?,
       ));
       // 重新创建支付意向（含优惠券 + 当前支付方式）
@@ -846,7 +846,7 @@ class _PaymentContentState extends State<_PaymentContent> {
                 color: AppColors.accentPink, size: 20),
             AppSpacing.hMd,
             Expanded(
-              child: state.selectedCouponId != null
+              child: state.selectedUserCouponId != null
                   ? Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -873,7 +873,7 @@ class _PaymentContentState extends State<_PaymentContent> {
                       ),
                     ),
             ),
-            if (state.selectedCouponId != null)
+            if (state.selectedUserCouponId != null)
               GestureDetector(
                 onTap: _removeCoupon,
                 child: const Padding(

@@ -168,7 +168,14 @@ class _ChatContentState extends State<_ChatContent> {
         return Scaffold(
           backgroundColor: AppColors.backgroundFor(Theme.of(context).brightness),
           appBar: AppBar(
-            title: Text(context.l10n.chatUserTitle(widget.userId)),
+            title: Text(
+              state.messages
+                      .where((m) => m.senderId == widget.userId)
+                      .map((m) => m.senderName)
+                      .where((n) => n != null && n.isNotEmpty)
+                      .firstOrNull ??
+                  context.l10n.chatUserTitle(widget.userId),
+            ),
             actions: [
               IconButton(
                 icon: const Icon(Icons.person_outline),

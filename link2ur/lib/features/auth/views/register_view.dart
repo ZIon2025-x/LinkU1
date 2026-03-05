@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'dart:ui';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/constants/app_assets.dart';
 import '../../../core/utils/haptic_feedback.dart';
@@ -39,6 +42,14 @@ class _RegisterViewState extends State<RegisterView>
   bool _obscureConfirmPassword = true;
   bool _agreeTerms = false;
 
+  // ---- 倒计时 ----
+  int _countdown = 0;
+  Timer? _countdownTimer;
+
+  // ---- Terms/Privacy 手势 ----
+  late TapGestureRecognizer _termsTapRecognizer;
+  late TapGestureRecognizer _privacyTapRecognizer;
+
   // ---- 动画 ----
   late AnimationController _animController;
   late Animation<double> _logoScale;
@@ -75,10 +86,18 @@ class _RegisterViewState extends State<RegisterView>
     );
 
     _animController.forward();
+
+    _termsTapRecognizer = TapGestureRecognizer()
+      ..onTap = () => launchUrl(Uri.parse('https://link2ur.com/terms'));
+    _privacyTapRecognizer = TapGestureRecognizer()
+      ..onTap = () => launchUrl(Uri.parse('https://link2ur.com/privacy'));
   }
 
   @override
   void dispose() {
+    _countdownTimer?.cancel();
+    _termsTapRecognizer.dispose();
+    _privacyTapRecognizer.dispose();
     _animController.dispose();
     _bgAnimController.dispose();
     _nameController.dispose();
@@ -124,6 +143,17 @@ class _RegisterViewState extends State<RegisterView>
     context.read<AuthBloc>().add(AuthSendEmailCodeRequested(email: email));
   }
 
+  void _startCountdown() {
+    _countdownTimer?.cancel();
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted || _countdown <= 0) {
+        timer.cancel();
+        return;
+      }
+      setState(() => _countdown--);
+    });
+  }
+
   // ---- 构建 ----
 
   @override
@@ -166,6 +196,8 @@ class _RegisterViewState extends State<RegisterView>
               ),
             );
           } else if (state.codeSendStatus == CodeSendStatus.sent) {
+            setState(() => _countdown = 60);
+            _startCountdown();
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(context.l10n.authCodeSent)),
             );
@@ -442,6 +474,7 @@ class _RegisterViewState extends State<RegisterView>
                   placeholder: context.l10n.authEnterUsername,
                   icon: Icons.person_outlined,
                   isDark: isDark,
+                  textInputAction: TextInputAction.next,
                   validator: (v) => Validators.validateUsername(v, l10n: context.l10n),
                 ),
                 const SizedBox(height: AppSpacing.md),
@@ -453,6 +486,7 @@ class _RegisterViewState extends State<RegisterView>
                   placeholder: context.l10n.authEnterEmailPlaceholder,
                   icon: Icons.email_outlined,
                   keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
                   isDark: isDark,
                   validator: (v) => Validators.validateEmail(v, l10n: context.l10n),
                 ),
@@ -469,7 +503,9 @@ class _RegisterViewState extends State<RegisterView>
                         placeholder: context.l10n.authCodePlaceholder,
                         icon: Icons.pin_outlined,
                         keyboardType: TextInputType.number,
+                        textInputAction: TextInputAction.next,
                         isDark: isDark,
+                        validator: (v) => Validators.validateVerificationCode(v, l10n: context.l10n),
                       ),
                     ),
                     const SizedBox(width: AppSpacing.sm),
@@ -485,6 +521,7 @@ class _RegisterViewState extends State<RegisterView>
                   placeholder: context.l10n.authInvitationCodeHint,
                   icon: Icons.card_giftcard_outlined,
                   keyboardType: TextInputType.text,
+                  textInputAction: TextInputAction.next,
                   isDark: isDark,
                 ),
                 const SizedBox(height: AppSpacing.md),
@@ -496,6 +533,7 @@ class _RegisterViewState extends State<RegisterView>
                   placeholder: context.l10n.authPasswordRequirement,
                   icon: Icons.lock_outlined,
                   obscureText: _obscurePassword,
+                  textInputAction: TextInputAction.next,
                   isDark: isDark,
                   validator: (v) => Validators.validatePassword(v, l10n: context.l10n),
                   suffixIcon: IconButton(
@@ -532,6 +570,7 @@ class _RegisterViewState extends State<RegisterView>
                   placeholder: context.l10n.authConfirmPasswordPlaceholder,
                   icon: Icons.lock_outlined,
                   obscureText: _obscureConfirmPassword,
+                  textInputAction: TextInputAction.done,
                   isDark: isDark,
                   validator: (value) => Validators.validateConfirmPassword(
                     value,
@@ -581,6 +620,7 @@ class _RegisterViewState extends State<RegisterView>
     required IconData icon,
     required bool isDark,
     TextInputType? keyboardType,
+    TextInputAction? textInputAction,
     bool obscureText = false,
     String? Function(String?)? validator,
     Widget? suffixIcon,
@@ -601,6 +641,7 @@ class _RegisterViewState extends State<RegisterView>
         TextFormField(
           controller: controller,
           keyboardType: keyboardType,
+          textInputAction: textInputAction,
           obscureText: obscureText,
           onChanged: onChanged,
           style: AppTypography.body.copyWith(

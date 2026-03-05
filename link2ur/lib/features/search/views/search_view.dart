@@ -9,6 +9,7 @@ import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
+import '../../../core/widgets/error_state_view.dart';
 import '../../../core/router/app_router.dart';
 import '../../../data/repositories/task_repository.dart';
 import '../../../data/repositories/forum_repository.dart';
@@ -110,18 +111,14 @@ class _SearchContentState extends State<_SearchContent> {
           }
 
           if (state.status == SearchStatus.error) {
-            return Center(
-              child: Text(
-                ErrorLocalizer.localize(
-                  context,
-                  state.errorMessage,
-                ),
-                style: TextStyle(
-                  color: isDark
-                      ? AppColors.textSecondaryDark
-                      : AppColors.textSecondaryLight,
-                ),
-              ),
+            return ErrorStateView(
+              message: context.localizeError(state.errorMessage ?? ''),
+              onRetry: () => context.read<SearchBloc>().add(
+                    SearchSubmitted(
+                      state.query,
+                      Localizations.localeOf(context),
+                    ),
+                  ),
             );
           }
 

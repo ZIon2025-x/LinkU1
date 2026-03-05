@@ -4253,5 +4253,10 @@
   "taskDetailAcceptCounterOffer": "同意报价",
   "taskDetailRejectCounterOffer": "拒绝",
   "taskDetailCounterOfferAccepted": "已接受反报价",
-  "taskDetailCounterOfferRejected": "已拒绝反报价"
+  "taskDetailCounterOfferRejected": "已拒绝反报价",
+  "commonDiscardChanges": "放弃更改？",
+  "commonDiscardChangesMessage": "您有未保存的更改，确定要放弃吗？",
+  "commonDiscard": "放弃",
+  "taskNotFound": "未找到任务",
+  "userNotFound": "未找到用户"
 }

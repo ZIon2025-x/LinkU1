@@ -9350,4 +9350,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get taskDetailCounterOfferRejected => 'Counter-offer rejected';
+
+  @override
+  String get commonDiscardChanges => 'Discard Changes?';
+
+  @override
+  String get commonDiscardChangesMessage =>
+      'You have unsaved changes. Are you sure you want to discard them?';
+
+  @override
+  String get commonDiscard => 'Discard';
+
+  @override
+  String get taskNotFound => 'Task not found';
+
+  @override
+  String get userNotFound => 'User not found';
 }

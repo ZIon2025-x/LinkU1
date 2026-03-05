@@ -4192,5 +4192,10 @@
   "taskDetailAcceptCounterOffer": "同意報價",
   "taskDetailRejectCounterOffer": "拒絕",
   "taskDetailCounterOfferAccepted": "已接受反報價",
-  "taskDetailCounterOfferRejected": "已拒絕反報價"
+  "taskDetailCounterOfferRejected": "已拒絕反報價",
+  "commonDiscardChanges": "放棄更改？",
+  "commonDiscardChangesMessage": "您有未儲存的更改，確定要放棄嗎？",
+  "commonDiscard": "放棄",
+  "taskNotFound": "未找到任務",
+  "userNotFound": "未找到用戶"
 }

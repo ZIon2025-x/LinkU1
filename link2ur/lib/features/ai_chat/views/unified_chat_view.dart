@@ -545,7 +545,7 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
                     horizontal: AppSpacing.md,
                     vertical: AppSpacing.sm,
                   ),
-                  color: Colors.red.withAlpha(25),
+                  color: Colors.red.withValues(alpha: 0.1),
                   child: Text(
                     context.localizeError(state.errorMessage),
                     style: const TextStyle(
@@ -1258,7 +1258,7 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
                     label: Text(navAction.$1),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.primary,
-                      side: BorderSide(color: AppColors.primary.withAlpha(180)),
+                      side: BorderSide(color: AppColors.primary.withValues(alpha: 0.71)),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius:

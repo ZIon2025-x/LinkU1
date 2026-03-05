@@ -4345,5 +4345,10 @@
   "taskDetailAcceptCounterOffer": "Accept Price",
   "taskDetailRejectCounterOffer": "Reject",
   "taskDetailCounterOfferAccepted": "Counter-offer accepted",
-  "taskDetailCounterOfferRejected": "Counter-offer rejected"
+  "taskDetailCounterOfferRejected": "Counter-offer rejected",
+  "commonDiscardChanges": "Discard Changes?",
+  "commonDiscardChangesMessage": "You have unsaved changes. Are you sure you want to discard them?",
+  "commonDiscard": "Discard",
+  "taskNotFound": "Task not found",
+  "userNotFound": "User not found"
 }

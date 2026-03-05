@@ -10,6 +10,7 @@ import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/sheet_adaptation.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
+import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/stat_item.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/animated_circular_progress.dart';
@@ -67,7 +68,10 @@ class _UserProfileViewState extends State<UserProfileView> {
                         },
                       )
                     : state.publicUser == null
-                        ? const SizedBox.shrink()
+                        ? EmptyStateView.noData(
+                            context,
+                            title: context.l10n.userNotFound,
+                          )
                         : Column(
                             children: [
                               Expanded(

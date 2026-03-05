@@ -274,9 +274,9 @@ class _ActionButton extends StatelessWidget {
           vertical: 5,
         ),
         decoration: BoxDecoration(
-          color: AppColors.primary.withAlpha(20),
+          color: AppColors.primary.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(AppRadius.medium),
-          border: Border.all(color: AppColors.primary.withAlpha(60)),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.24)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,

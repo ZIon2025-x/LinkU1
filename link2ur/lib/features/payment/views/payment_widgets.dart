@@ -2,9 +2,9 @@ part of 'payment_view.dart';
 
 /// 优惠券选择底部弹窗
 class _CouponSelectorSheet extends StatefulWidget {
-  const _CouponSelectorSheet({this.selectedCouponId, this.orderAmountPence});
+  const _CouponSelectorSheet({this.selectedUserCouponId, this.orderAmountPence});
 
-  final int? selectedCouponId;
+  final int? selectedUserCouponId;
   /// 订单金额（便士），用于过滤不满足最低使用金额的优惠券
   final int? orderAmountPence;
 
@@ -95,7 +95,7 @@ class _CouponSelectorSheetState extends State<_CouponSelectorSheet> {
                 separatorBuilder: (_, __) => const SizedBox(height: 8),
                 itemBuilder: (context, index) {
                   final coupon = _coupons[index];
-                  final isSelected = coupon['id'] == widget.selectedCouponId;
+                  final isSelected = coupon['id'] == widget.selectedUserCouponId;
                   return GestureDetector(
                     onTap: () => Navigator.pop(context, coupon),
                     child: Container(

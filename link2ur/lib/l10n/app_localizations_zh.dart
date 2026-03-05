@@ -8992,6 +8992,21 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get taskDetailCounterOfferRejected => '已拒绝反报价';
+
+  @override
+  String get commonDiscardChanges => '放弃更改？';
+
+  @override
+  String get commonDiscardChangesMessage => '您有未保存的更改，确定要放弃吗？';
+
+  @override
+  String get commonDiscard => '放弃';
+
+  @override
+  String get taskNotFound => '未找到任务';
+
+  @override
+  String get userNotFound => '未找到用户';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -17982,4 +17997,19 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get taskDetailCounterOfferRejected => '已拒絕反報價';
+
+  @override
+  String get commonDiscardChanges => '放棄更改？';
+
+  @override
+  String get commonDiscardChangesMessage => '您有未儲存的更改，確定要放棄嗎？';
+
+  @override
+  String get commonDiscard => '放棄';
+
+  @override
+  String get taskNotFound => '未找到任務';
+
+  @override
+  String get userNotFound => '未找到用戶';
 }

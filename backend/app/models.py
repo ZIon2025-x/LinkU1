@@ -1039,6 +1039,8 @@ class UserCoupon(Base):
     )
 
 
+# NOTE: CouponRedemption 保留以维持数据库 schema 稳定。
+# 当前优惠券使用流程通过 CouponUsageLog 处理，此表未被 CRUD 层使用。
 class CouponRedemption(Base):
     """优惠券使用记录表（两阶段使用控制）"""
     __tablename__ = "coupon_redemptions"

@@ -188,7 +188,7 @@ class ToolCallCard extends StatelessWidget {
           border: Border.all(
             color: isDark
                 ? Colors.white12
-                : Colors.black.withAlpha(15),
+                : Colors.black.withValues(alpha: 0.06),
           ),
         ),
         child: Row(

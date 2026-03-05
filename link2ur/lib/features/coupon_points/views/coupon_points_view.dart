@@ -218,7 +218,7 @@ class _PointsTab extends StatelessWidget {
                         ),
                         AppSpacing.vSm,
                         Text(
-                          '${context.l10n.pointsTotalEarned}: ${state.pointsAccount.totalEarned}  ${context.l10n.pointsTotalSpent}: ${state.pointsAccount.totalSpent}',
+                          '${context.l10n.pointsTotalEarned}: £${(state.pointsAccount.totalEarned / 100).toStringAsFixed(2)}  ${context.l10n.pointsTotalSpent}: £${(state.pointsAccount.totalSpent / 100).toStringAsFixed(2)}',
                           style: AppTypography.caption.copyWith(
                             color: Colors.white.withValues(alpha: 0.7),
                           ),
@@ -373,7 +373,7 @@ class _TransactionRow extends StatelessWidget {
             ),
           ),
           Text(
-            '${transaction.isIncome ? '+' : ''}${transaction.amount}',
+            '${transaction.isIncome ? '+' : ''}${transaction.amountDisplay.isNotEmpty ? transaction.amountDisplay : transaction.amount}',
             style: AppTypography.bodyBold.copyWith(
               color:
                   transaction.isIncome ? AppColors.success : AppColors.error,
@@ -572,11 +572,20 @@ class _AvailableCouponCard extends StatelessWidget {
                           : AppColors.textSecondaryLight,
                     ),
                   ),
+                if (coupon.pointsRequired > 0)
+                  Text(
+                    '${coupon.pointsRequired} ${context.l10n.couponPointsTab}',
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.primary,
+                    ),
+                  ),
               ],
             ),
           ),
           SmallActionButton(
-            text: context.l10n.couponClaim,
+            text: coupon.pointsRequired > 0
+                ? context.l10n.couponRedeemReward
+                : context.l10n.couponClaim,
             onPressed: isSubmitting
                 ? null
                 : () => context
@@ -768,7 +777,7 @@ class _CheckInTab extends StatelessWidget {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                '+${(index + 1) * 5}',
+                                _getCheckInDayReward(state.checkInRewards, index),
                                 style: AppTypography.caption2.copyWith(
                                   color: isDark
                                       ? AppColors.textTertiaryDark
@@ -816,7 +825,6 @@ class _CheckInTab extends StatelessWidget {
   }
 
   Widget _buildRewardSection(BuildContext context, bool isDark, CouponPointsState state) {
-    // 签到活动尚未开放，显示占位文案
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -829,41 +837,106 @@ class _CheckInTab extends StatelessWidget {
           ),
         ),
         AppSpacing.vMd,
-        Container(
-          width: double.infinity,
-          padding: AppSpacing.allLg,
-          decoration: BoxDecoration(
-            color: isDark
-                ? AppColors.cardBackgroundDark
-                : AppColors.cardBackgroundLight,
-            borderRadius: AppRadius.allMedium,
-          ),
-          child: Column(
-            children: [
-              Icon(
-                Icons.event_available_rounded,
-                size: 48,
-                color: AppColors.textSecondaryLight.withValues(alpha: 0.5),
+        if (state.checkInRewards.isNotEmpty)
+          ...state.checkInRewards.map((reward) {
+            final days = reward['consecutive_days'] as int? ?? 0;
+            final rewardType = reward['reward_type'] as String? ?? '';
+            final pts = reward['points_reward'] as int?;
+            final label = rewardType == 'coupon'
+                ? '🎟 ${context.l10n.couponCouponsTab}'
+                : pts != null
+                    ? '+$pts ${context.l10n.couponPointsTab}'
+                    : '';
+            return Container(
+              margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+              padding: AppSpacing.allMd,
+              decoration: BoxDecoration(
+                color: isDark
+                    ? AppColors.cardBackgroundDark
+                    : AppColors.cardBackgroundLight,
+                borderRadius: AppRadius.allMedium,
               ),
-              AppSpacing.vMd,
-              Text(
-                context.l10n.couponCheckInComingSoon,
-                textAlign: TextAlign.center,
-                style: AppTypography.body.copyWith(
-                  color: isDark
-                      ? AppColors.textSecondaryDark
-                      : AppColors.textSecondaryLight,
+              child: Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        '$days',
+                        style: AppTypography.bodyBold.copyWith(
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                  ),
+                  AppSpacing.hMd,
+                  Expanded(
+                    child: Text(
+                      '${context.l10n.couponConsecutiveDays(days)}: $label',
+                      style: AppTypography.body.copyWith(
+                        color: isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimaryLight,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          })
+        else
+          Container(
+            width: double.infinity,
+            padding: AppSpacing.allLg,
+            decoration: BoxDecoration(
+              color: isDark
+                  ? AppColors.cardBackgroundDark
+                  : AppColors.cardBackgroundLight,
+              borderRadius: AppRadius.allMedium,
+            ),
+            child: Column(
+              children: [
+                Icon(
+                  Icons.event_available_rounded,
+                  size: 48,
+                  color: AppColors.textSecondaryLight.withValues(alpha: 0.5),
                 ),
-              ),
-            ],
+                AppSpacing.vMd,
+                Text(
+                  context.l10n.couponCheckInComingSoon,
+                  textAlign: TextAlign.center,
+                  style: AppTypography.body.copyWith(
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
       ],
     );
   }
 }
 
 // _RewardRow 已移除 —— 签到奖励区域改为占位文案
+
+String _getCheckInDayReward(List<Map<String, dynamic>> rewards, int index) {
+  final day = index + 1;
+  for (final r in rewards) {
+    if (r['consecutive_days'] == day) {
+      if (r['reward_type'] == 'coupon') return '🎟';
+      final pts = r['points_reward'];
+      if (pts != null) return '+$pts';
+    }
+  }
+  return '+${day * 5}'; // fallback
+}
 
 String _localizePointsType(BuildContext context, String type) {
   final l10n = context.l10n;

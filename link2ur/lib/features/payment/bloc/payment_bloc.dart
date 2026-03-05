@@ -37,13 +37,13 @@ class PaymentCreateIntent extends PaymentEvent {
 
 /// 选择优惠券
 class PaymentSelectCoupon extends PaymentEvent {
-  const PaymentSelectCoupon({this.couponId, this.couponName});
+  const PaymentSelectCoupon({this.userCouponId, this.couponName});
 
-  final int? couponId;
+  final int? userCouponId;
   final String? couponName;
 
   @override
-  List<Object?> get props => [couponId, couponName];
+  List<Object?> get props => [userCouponId, couponName];
 }
 
 /// 移除优惠券
@@ -108,7 +108,7 @@ class PaymentState extends Equatable {
   const PaymentState({
     this.status = PaymentStatus.initial,
     this.paymentResponse,
-    this.selectedCouponId,
+    this.selectedUserCouponId,
     this.selectedCouponName,
     this.preferredPaymentMethod,
     this.weChatCheckoutUrl,
@@ -118,7 +118,7 @@ class PaymentState extends Equatable {
 
   final PaymentStatus status;
   final TaskPaymentResponse? paymentResponse;
-  final int? selectedCouponId;
+  final int? selectedUserCouponId;
   final String? selectedCouponName;
   /// 当前 PaymentIntent 对应的支付方式（'card' / 'alipay'）
   final String? preferredPaymentMethod;
@@ -135,7 +135,7 @@ class PaymentState extends Equatable {
   PaymentState copyWith({
     PaymentStatus? status,
     TaskPaymentResponse? paymentResponse,
-    int? selectedCouponId,
+    int? selectedUserCouponId,
     String? selectedCouponName,
     String? preferredPaymentMethod,
     String? weChatCheckoutUrl,
@@ -148,8 +148,8 @@ class PaymentState extends Equatable {
     return PaymentState(
       status: status ?? this.status,
       paymentResponse: paymentResponse ?? this.paymentResponse,
-      selectedCouponId:
-          clearCoupon ? null : (selectedCouponId ?? this.selectedCouponId),
+      selectedUserCouponId:
+          clearCoupon ? null : (selectedUserCouponId ?? this.selectedUserCouponId),
       selectedCouponName:
           clearCoupon ? null : (selectedCouponName ?? this.selectedCouponName),
       preferredPaymentMethod:
@@ -166,7 +166,7 @@ class PaymentState extends Equatable {
   List<Object?> get props => [
         status,
         paymentResponse,
-        selectedCouponId,
+        selectedUserCouponId,
         selectedCouponName,
         preferredPaymentMethod,
         weChatCheckoutUrl,
@@ -227,7 +227,7 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
     try {
       final response = await _repository.createPaymentIntent(
         taskId: event.taskId,
-        userCouponId: event.couponId ?? state.selectedCouponId,
+        userCouponId: event.couponId ?? state.selectedUserCouponId,
         preferredPaymentMethod: event.preferredPaymentMethod,
       );
 
@@ -252,7 +252,7 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
     Emitter<PaymentState> emit,
   ) async {
     emit(state.copyWith(
-      selectedCouponId: event.couponId,
+      selectedUserCouponId: event.userCouponId,
       selectedCouponName: event.couponName,
     ));
   }
@@ -297,7 +297,7 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
     try {
       final checkoutUrl = await _repository.createWeChatCheckoutSession(
         taskId: event.taskId,
-        couponId: event.couponId ?? state.selectedCouponId,
+        couponId: event.couponId ?? state.selectedUserCouponId,
       );
 
       emit(state.copyWith(
