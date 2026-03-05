@@ -35,9 +35,11 @@ def _check_account_status_v2(account_id: str) -> Tuple[bool, bool]:
         requirements = account.get("requirements") or {}
         summary = requirements.get("summary") or {}
         minimum_deadline = summary.get("minimum_deadline") or {}
-        
-        # 如果没有 minimum_deadline（即没有待完成的必填项），认为 details_submitted
-        details_submitted = len(minimum_deadline) == 0
+        deadline_status = minimum_deadline.get("status") if isinstance(minimum_deadline, dict) else None
+
+        # details_submitted: 没有 deadline 或仅有 eventually_due（非紧急未来需求）
+        # 与 stripe_connect_routes.py 的 /account/status 端点逻辑保持一致
+        details_submitted = not deadline_status or deadline_status == "eventually_due"
         
         # 检查 charges_enabled (recipient 配置中的 stripe_transfers)
         configuration = account.get("configuration") or {}
