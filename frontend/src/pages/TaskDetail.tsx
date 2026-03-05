@@ -932,6 +932,30 @@ const TaskDetail: React.FC = () => {
         finalWeixinImage.setAttribute('name', 'weixin:image');
         finalWeixinImage.content = shareImageUrl;
         document.head.insertBefore(finalWeixinImage, document.head.firstChild);
+
+        // 强制移除所有旧 og:image 标签，重新插入正确的图片
+        const allOgImages = document.querySelectorAll('meta[property="og:image"]');
+        allOgImages.forEach(tag => tag.remove());
+
+        const finalOgImage = document.createElement('meta');
+        finalOgImage.setAttribute('property', 'og:image');
+        finalOgImage.content = shareImageUrl;
+        document.head.insertBefore(finalOgImage, document.head.firstChild);
+
+        const ogImageWidth = document.createElement('meta');
+        ogImageWidth.setAttribute('property', 'og:image:width');
+        ogImageWidth.content = '1200';
+        document.head.insertBefore(ogImageWidth, document.head.firstChild);
+
+        const ogImageHeight = document.createElement('meta');
+        ogImageHeight.setAttribute('property', 'og:image:height');
+        ogImageHeight.content = '630';
+        document.head.insertBefore(ogImageHeight, document.head.firstChild);
+
+        const ogImageType = document.createElement('meta');
+        ogImageType.setAttribute('property', 'og:image:type');
+        ogImageType.content = 'image/png';
+        document.head.insertBefore(ogImageType, document.head.firstChild);
       }, 1000); // 延迟1秒，确保在其他页面的useLayoutEffect之后执行
       
       // 添加结构化数据 - 使用JobPosting类型以便搜索引擎识别

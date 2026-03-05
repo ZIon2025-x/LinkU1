@@ -3027,9 +3027,29 @@ async def create_post(
                 db_post.images = moved_urls
                 await db.flush()
         except Exception as e:
-            import logging
-            logging.getLogger(__name__).warning(f"Failed to move forum post images: {e}")
-    
+            logger.warning(f"Failed to move forum post images: {e}")
+
+    # 如果有附件，移动临时文件到永久路径
+    if post_attachments:
+        try:
+            from app.services.image_upload_service import ImageUploadService, ImageCategory
+            upload_service = ImageUploadService()
+            uploader_id = admin_user.id if admin_user else current_user.id
+            att_urls = [a["url"] for a in post_attachments if a.get("url")]
+            if att_urls:
+                moved_att_urls = upload_service.move_from_temp(
+                    ImageCategory.FORUM_POST_FILE, uploader_id, str(db_post.id), att_urls
+                )
+                if moved_att_urls:
+                    url_map = dict(zip(att_urls, moved_att_urls))
+                    for att in post_attachments:
+                        if att.get("url") in url_map:
+                            att["url"] = url_map[att["url"]]
+                    db_post.attachments = post_attachments
+                    await db.flush()
+        except Exception as e:
+            logger.warning(f"Failed to move forum post files: {e}")
+
     # 更新板块统计（仅当帖子可见时）
     if db_post.is_deleted == False and db_post.is_visible == True:
         category.post_count += 1
@@ -3162,6 +3182,9 @@ async def update_post(
     update_data = post.model_dump(exclude_unset=True)
     old_category_id = db_post.category_id
     old_is_visible = db_post.is_visible
+    # 保存旧的图片和附件 URL，用于后续对比删除被移除的文件
+    old_image_urls = list(db_post.images) if db_post.images else []
+    old_attachment_urls = [a["url"] for a in db_post.attachments if a.get("url")] if db_post.attachments else []
     
     # 仅当 title 或 content 实际发生变化时才调用翻译，避免浪费翻译次数
     updated_title = update_data.get("title", db_post.title) if "title" in update_data else db_post.title
@@ -3255,8 +3278,51 @@ async def update_post(
                 db_post.images = moved_urls
                 await db.flush()
         except Exception as e:
-            import logging
-            logging.getLogger(__name__).warning(f"Failed to move updated forum post images: {e}")
+            logger.warning(f"Failed to move updated forum post images: {e}")
+
+    # 如果更新了附件，将临时文件移动到永久存储
+    if "attachments" in update_data and update_data["attachments"]:
+        try:
+            from app.services.image_upload_service import ImageUploadService, ImageCategory
+            upload_service = ImageUploadService()
+            uploader_id = admin_user.id if admin_user else current_user.id
+            att_urls = [a["url"] for a in update_data["attachments"] if isinstance(a, dict) and a.get("url")]
+            if att_urls:
+                moved_att_urls = upload_service.move_from_temp(
+                    ImageCategory.FORUM_POST_FILE, uploader_id, str(db_post.id), att_urls
+                )
+                if moved_att_urls:
+                    url_map = dict(zip(att_urls, moved_att_urls))
+                    for att in update_data["attachments"]:
+                        if isinstance(att, dict) and att.get("url") in url_map:
+                            att["url"] = url_map[att["url"]]
+                    db_post.attachments = update_data["attachments"]
+                    await db.flush()
+        except Exception as e:
+            logger.warning(f"Failed to move updated forum post files: {e}")
+
+    # 删除被移除的旧图片和附件文件
+    try:
+        from app.services.image_upload_service import ImageUploadService, ImageCategory
+        upload_service = ImageUploadService()
+        # 删除被移除的旧图片
+        if "images" in update_data:
+            new_image_urls = set(db_post.images) if db_post.images else set()
+            removed_images = [url for url in old_image_urls if url not in new_image_urls]
+            if removed_images:
+                upload_service.delete(ImageCategory.FORUM_POST, str(db_post.id), removed_images)
+                logger.info(f"Deleted {len(removed_images)} removed images for post {db_post.id}")
+        # 删除被移除的旧附件
+        if "attachments" in update_data:
+            new_att_urls = set()
+            if db_post.attachments:
+                new_att_urls = {a["url"] for a in db_post.attachments if isinstance(a, dict) and a.get("url")}
+            removed_atts = [url for url in old_attachment_urls if url not in new_att_urls]
+            if removed_atts:
+                upload_service.delete(ImageCategory.FORUM_POST_FILE, str(db_post.id), removed_atts)
+                logger.info(f"Deleted {len(removed_atts)} removed attachments for post {db_post.id}")
+    except Exception as e:
+        logger.warning(f"Failed to delete removed files for post {db_post.id}: {e}")
     
     # 如果板块改变或可见性改变，更新统计
     if "category_id" in update_data or "is_visible" in update_data:

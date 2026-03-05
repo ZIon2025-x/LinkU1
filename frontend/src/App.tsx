@@ -293,6 +293,8 @@ const LanguageRoutes: React.FC = () => {
       
       {/* 处理没有语言前缀的旧链接 */}
       <Route path="/forum" element={<Navigate to={`/${DEFAULT_LANGUAGE}/forum`} replace />} />
+      <Route path="/forum/post/:postId" element={<ParamRedirect basePath="/forum/post/:postId" />} />
+      <Route path="/forum/post/:postId/edit" element={<ParamRedirect basePath="/forum/post/:postId/edit" />} />
       <Route path="/forum/*" element={<ParamRedirect basePath="/forum" />} />
       <Route path="/tasks" element={<Navigate to={`/${DEFAULT_LANGUAGE}/tasks`} replace />} />
       <Route path="/about" element={<Navigate to={`/${DEFAULT_LANGUAGE}/about`} replace />} />

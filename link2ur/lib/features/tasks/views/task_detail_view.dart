@@ -18,7 +18,7 @@ import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/full_screen_image_view.dart';
-import '../../../core/widgets/custom_share_panel.dart';
+import '../../../core/utils/share_util.dart';
 import '../../../core/widgets/user_identity_badges.dart';
 import '../../../core/widgets/animated_list_item.dart';
 import '../../../core/router/app_router.dart';
@@ -348,7 +348,7 @@ class _TaskDetailContent extends StatelessWidget {
                     _showCancelTaskConfirm(context, task.id);
                   },
                 ),
-              // 分享 - 显示自定义分享面板（微信走SDK，其他走系统分享）
+              // 分享 - 使用原生系统分享
               ListTile(
                 leading: const Icon(Icons.share_outlined),
                 title: Text(l10n.taskDetailShare),
@@ -356,11 +356,10 @@ class _TaskDetailContent extends StatelessWidget {
                   Navigator.pop(context);
                   final locale = Localizations.localeOf(context);
                   final imageUrl = task.images.isNotEmpty ? task.images.first : null;
-                  CustomSharePanel.show(
-                    context,
+                  ShareUtil.share(
                     title: task.displayTitle(locale),
                     description: task.displayDescription(locale) ?? '',
-                    url: 'https://link2ur.com/tasks/${task.id}',
+                    url: ShareUtil.taskUrl(task.id),
                     imageUrl: imageUrl,
                   );
                 },

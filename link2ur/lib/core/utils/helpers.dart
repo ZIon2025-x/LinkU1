@@ -141,7 +141,7 @@ class Helpers {
 
   // ==================== URL处理 ====================
   /// 获取图片完整 URL。
-  /// 需在 CDN（如 Cloudflare）上为 app.link2ur.com 配置 CORS，否则 Web 端跨域加载会失败。见 link2ur/docs/cdn-cors-setup.md。
+  /// CDN 已通过 Cloudflare Transform Rule 配置 CORS（Set static），Web 端可直连。
   ///
   /// [width]/[height] — 如果后端/CDN 支持 resize 参数，可传入缩略图尺寸。
   /// 目前仅拼接完整 URL，后续可在此统一添加 ?w=xxx&h=yyy 参数。
@@ -155,7 +155,6 @@ class Helpers {
   }
 
   /// 获取文件/资源完整 URL（下载、PDF 等）。
-  /// 同样依赖 CDN 对 app.link2ur.com 的 CORS 配置。
   static String getResourceUrl(String? path, {String? baseUrl}) {
     if (path == null || path.isEmpty) return '';
     if (path.startsWith('http://') || path.startsWith('https://')) {

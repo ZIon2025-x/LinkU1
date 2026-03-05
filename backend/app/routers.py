@@ -5196,21 +5196,32 @@ def update_avatar(
 ):
     
     try:
+        # 保存旧头像 URL
+        old_avatar = current_user.avatar
+
         # 直接更新数据库，简单直接
         db.query(models.User).filter(models.User.id == current_user.id).update({
             "avatar": data.avatar
         })
         db.commit()
-        
+
         # 清除用户缓存
         try:
             from app.redis_cache import invalidate_user_cache
             invalidate_user_cache(current_user.id)
         except Exception as e:
             logger.warning(f"头像更新后清除用户缓存失败 (user_id={current_user.id}): {e}")
-        
+
+        # 删除旧头像文件（异步，失败不影响更新）
+        if old_avatar and old_avatar != data.avatar and "/static/" not in old_avatar:
+            try:
+                from app.image_cleanup import delete_expert_avatar
+                delete_expert_avatar(str(current_user.id), old_avatar)
+            except Exception as e:
+                logger.warning(f"删除旧头像失败 (user_id={current_user.id}): {e}")
+
         return {"avatar": data.avatar}
-        
+
     except Exception as e:
         logger.error(f"头像更新失败: {e}")
         db.rollback()
@@ -10241,7 +10252,7 @@ async def upload_image(
         raise HTTPException(status_code=500, detail=f"上传失败: {str(e)}")
 
 
-@router.post("/upload/public-image")
+@router.post("/upload/public-image", deprecated=True)
 @rate_limit("upload_file")
 async def upload_public_image(
     request: Request,
@@ -10251,10 +10262,15 @@ async def upload_public_image(
     db: Session = Depends(get_db),
 ):
     """
+    ⚠️ 已废弃 — 请使用 /api/v2/upload/image（upload_routes.py）。
+    V2 额外支持批量上传、temp 清理、论坛文件上传。Flutter 端已全部迁移至 V2。
+    本接口保留仅为兼容旧版 iOS/Web 调用，后续将移除。
+
+    ---
     上传公开图片文件（所有人可访问）
     用于头像等需要公开访问的图片
     支持管理员和普通用户上传
-    
+
     参数:
     - category: 图片类型
       - expert_avatar: 任务达人头像

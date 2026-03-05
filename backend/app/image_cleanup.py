@@ -93,6 +93,71 @@ def delete_expert_avatar(expert_id: str, old_avatar_url: Optional[str] = None):
         logger.warning(f"删除任务达人头像失败 {expert_id}: {e}")
 
 
+def delete_forum_post_files(post_id: int, image_urls: Optional[List[str]] = None, attachment_urls: Optional[List[str]] = None):
+    """删除论坛帖子的图片和文件附件
+
+    Args:
+        post_id: 帖子 ID
+        image_urls: 帖子图片 URL（仅日志用途，实际按目录整体删除）
+        attachment_urls: 帖子附件 URL（仅日志用途，实际按目录整体删除）
+    """
+    try:
+        deleted_count = 0
+
+        if _is_cloud_storage():
+            storage = _get_storage_backend()
+            if storage:
+                try:
+                    from app.services.image_upload_service import ImageCategory
+                    # 删除帖子图片目录
+                    img_dir = f"{ImageCategory.FORUM_POST.value}/{post_id}"
+                    files = storage.list_files(img_dir)
+                    for file_key in files:
+                        if storage.delete(file_key):
+                            deleted_count += 1
+                    if files:
+                        storage.delete_directory(img_dir)
+                    # 删除帖子文件目录
+                    file_dir = f"{ImageCategory.FORUM_POST_FILE.value}/{post_id}"
+                    files = storage.list_files(file_dir)
+                    for file_key in files:
+                        if storage.delete(file_key):
+                            deleted_count += 1
+                    if files:
+                        storage.delete_directory(file_dir)
+                    if deleted_count > 0:
+                        logger.info(f"删除帖子 {post_id} 的 {deleted_count} 个文件（云存储）")
+                    return deleted_count
+                except Exception as e:
+                    logger.warning(f"使用云存储删除帖子文件失败 {post_id}: {e}")
+
+        # 本地存储
+        RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
+        base = Path("/data/uploads") if RAILWAY_ENVIRONMENT else Path("uploads")
+        for sub_dir in [f"public/images/forum_posts/{post_id}", f"public/files/forum_posts/{post_id}"]:
+            dir_path = base / sub_dir
+            if dir_path.exists():
+                for f in dir_path.iterdir():
+                    if f.is_file():
+                        try:
+                            f.unlink()
+                            deleted_count += 1
+                        except Exception as e:
+                            logger.warning(f"删除帖子文件失败 {f}: {e}")
+                try:
+                    if not any(dir_path.iterdir()):
+                        dir_path.rmdir()
+                except Exception:
+                    pass
+
+        if deleted_count > 0:
+            logger.info(f"帖子 {post_id} 已删除 {deleted_count} 个文件")
+        return deleted_count
+    except Exception as e:
+        logger.error(f"删除帖子文件失败 {post_id}: {e}")
+        return 0
+
+
 def delete_service_images(expert_id: str, service_id: int, image_urls: Optional[List[str]] = None):
     """删除服务的所有图片"""
     try:

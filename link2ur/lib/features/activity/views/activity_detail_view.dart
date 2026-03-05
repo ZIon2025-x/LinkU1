@@ -20,7 +20,7 @@ import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/full_screen_image_view.dart';
-import '../../../core/widgets/custom_share_panel.dart';
+import '../../../core/utils/share_util.dart';
 import '../../../core/widgets/scroll_safe_tap.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/router/page_transitions.dart';
@@ -145,11 +145,10 @@ class _ActivityDetailViewContent extends StatelessWidget {
               AppHaptics.selection();
               final activity = state.activityDetail!;
               final locale = Localizations.localeOf(context);
-              CustomSharePanel.show(
-                context,
+              ShareUtil.share(
                 title: activity.displayTitle(locale),
                 description: activity.displayDescription(locale),
-                url: 'https://link2ur.com/activities/${activity.id}',
+                url: ShareUtil.activityUrl(activity.id),
                 imageUrl: activity.firstImage,
               );
             },

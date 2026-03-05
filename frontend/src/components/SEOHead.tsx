@@ -152,7 +152,7 @@ const SEOHead: React.FC<SEOHeadProps> = ({
     }
 
     // 检查是否是详情页（useLayoutEffect 会管理微信标签，SEOHead 不覆盖）
-    const isDetailPage = /\/(leaderboard\/custom|forum\/post|tasks|activities|flea-market)\/\d+/.test(window.location.pathname);
+    const isDetailPage = /\/(leaderboard\/custom|forum\/post|tasks|activities)\/\d+/.test(window.location.pathname);
 
     // 更新Open Graph图片标签和微信分享标签（微信会优先读取这些标签，如果没有则使用og标签）
     // 对于详情页，不设置 og:image 和 weixin:image，让 useLayoutEffect 来管理

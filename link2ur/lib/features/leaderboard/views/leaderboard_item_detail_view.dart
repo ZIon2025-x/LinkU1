@@ -20,7 +20,6 @@ import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/external_web_view.dart';
 import '../../../core/widgets/full_screen_image_view.dart';
-import '../../../core/widgets/custom_share_panel.dart';
 import '../../../core/widgets/app_feedback.dart';
 import '../../../core/utils/share_util.dart';
 import '../../../data/models/leaderboard.dart';
@@ -96,8 +95,7 @@ class _ItemDetailContent extends StatelessWidget {
       BuildContext context, LeaderboardItem? item, bool hasImages) {
     void onShare() {
       if (item == null) return;
-      CustomSharePanel.show(
-        context,
+      ShareUtil.share(
         title: item.name,
         description: item.description ?? '',
         url: ShareUtil.leaderboardItemUrl(item.id),

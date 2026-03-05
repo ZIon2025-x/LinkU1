@@ -11,7 +11,7 @@ class ShareUtil {
   static const String _baseUrl = 'https://link2ur.com';
 
   static String taskUrl(int taskId) => '$_baseUrl/tasks/$taskId';
-  static String forumPostUrl(int postId) => '$_baseUrl/forum/posts/$postId';
+  static String forumPostUrl(int postId) => '$_baseUrl/forum/post/$postId';
   static String fleaMarketUrl(String itemId) => '$_baseUrl/flea-market/$itemId';
   static String activityUrl(int activityId) => '$_baseUrl/activities/$activityId';
   static String leaderboardItemUrl(int itemId) => '$_baseUrl/leaderboard/item/$itemId';

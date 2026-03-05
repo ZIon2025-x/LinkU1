@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import '../../../core/widgets/custom_share_panel.dart';
+import '../../../core/utils/share_util.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
@@ -62,11 +62,10 @@ class TaskExpertDetailView extends StatelessWidget {
                       final name = expert.displayNameWith(context.l10n);
                       final shareTitle = context.l10n.taskExpertShareTitle(name);
                       final shareDesc = context.l10n.taskExpertShareText(name);
-                      CustomSharePanel.show(
-                        context,
+                      ShareUtil.share(
                         title: shareTitle,
                         description: shareDesc,
-                        url: 'https://link2ur.com/task-experts/${expert.id}',
+                        url: ShareUtil.taskExpertUrl(expert.id),
                         imageUrl: expert.avatar,
                       );
                     }

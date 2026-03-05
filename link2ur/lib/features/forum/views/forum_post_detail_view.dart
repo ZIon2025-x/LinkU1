@@ -17,7 +17,7 @@ import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/full_screen_image_view.dart';
-import '../../../core/widgets/custom_share_panel.dart';
+import '../../../core/utils/share_util.dart';
 import '../../../core/widgets/animated_like_button.dart';
 import '../../../data/repositories/forum_repository.dart';
 import '../../../data/models/forum.dart';
@@ -269,11 +269,10 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                         final rawDesc = contentForDesc?.replaceAll(RegExp(r'<[^>]*>'), '').trim() ?? '';
                         final description = rawDesc.length > 200 ? '${rawDesc.substring(0, 200)}...' : rawDesc;
                         final imageUrl = p?.images.isNotEmpty == true ? p!.images.first : null;
-                        CustomSharePanel.show(
-                          context,
+                        ShareUtil.share(
                           title: shareTitle,
                           description: description,
-                          url: 'https://link2ur.com/forum/posts/${widget.postId}',
+                          url: ShareUtil.forumPostUrl(widget.postId),
                           imageUrl: imageUrl,
                         );
                       },

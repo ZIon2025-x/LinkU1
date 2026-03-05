@@ -126,6 +126,7 @@ class CleanupTasks:
         self.last_completed_tasks_cleanup_date = None  # 同日只跑一次，避免每轮都调 crud
         self.last_expired_tasks_cleanup_date = None
         self.last_flea_cleanup_date = None
+        self.last_forum_cleanup_date = None  # 已删除帖子文件：同日一次
         self.last_orphan_files_cleanup_date = None  # 孤立文件：同日一次
         self.last_orphan_entity_cleanup_date = None  # 孤儿实体目录：同日一次（与 orphan_files 独立）
         self.last_old_format_cleanup_date = None  # 旧格式图：同日一次（与 orphan_files 独立）
@@ -165,6 +166,8 @@ class CleanupTasks:
             await self._cleanup_expired_tasks_files()
             # 清理过期跳蚤市场商品（每天检查一次）
             await self._cleanup_expired_flea_market_items()
+            # 清理已删除论坛帖子的文件（每天检查一次）
+            await self._cleanup_deleted_forum_posts_files()
             # 清理孤立文件（每周检查一次）
             await self._cleanup_orphan_files()
             # 清理不存在实体的图片文件夹（每周检查一次）
@@ -300,7 +303,73 @@ class CleanupTasks:
             logger.error(f"清理过期跳蚤市场商品失败: {e}")
         finally:
             release_redis_distributed_lock(lock_key)
-    
+
+    async def _cleanup_deleted_forum_posts_files(self):
+        """清理已删除超过3天的论坛帖子的图片和文件，同日只跑一次，使用分布式锁"""
+        today = get_utc_time().date()
+        if self.last_forum_cleanup_date == today:
+            return
+        lock_key = "scheduled_task:cleanup_deleted_forum_posts:lock"
+        lock_ttl = 3600
+        if not get_redis_distributed_lock(lock_key, lock_ttl):
+            logger.debug("清理已删除帖子文件：其他实例正在执行，跳过")
+            return
+        try:
+            from app.deps import get_sync_db
+            from app.models import ForumPost
+            from app.image_cleanup import delete_forum_post_files
+
+            db = next(get_sync_db())
+            try:
+                three_days_ago = get_utc_time() - timedelta(days=3)
+                three_days_ago_naive = three_days_ago.replace(tzinfo=None) if three_days_ago.tzinfo else three_days_ago
+
+                # 查找已软删除超过3天、且仍有图片或附件的帖子
+                deleted_posts = (
+                    db.query(ForumPost)
+                    .filter(
+                        ForumPost.is_deleted == True,
+                        ForumPost.updated_at <= three_days_ago_naive,
+                        # 至少有图片或附件
+                        (ForumPost.images.isnot(None)) | (ForumPost.attachments.isnot(None))
+                    )
+                    .all()
+                )
+
+                if not deleted_posts:
+                    logger.debug("没有需要清理文件的已删除帖子")
+                else:
+                    logger.info(f"找到 {len(deleted_posts)} 个已删除帖子需要清理文件")
+                    cleaned_count = 0
+                    for post in deleted_posts:
+                        try:
+                            image_urls = post.images if post.images else None
+                            att_urls = None
+                            if post.attachments:
+                                att_urls = [a["url"] for a in post.attachments if isinstance(a, dict) and a.get("url")]
+                            deleted = delete_forum_post_files(post.id, image_urls, att_urls)
+                            if deleted > 0:
+                                cleaned_count += 1
+                            # 清理后将字段设为 None 防止重复处理
+                            post.images = None
+                            post.attachments = None
+                        except Exception as e:
+                            logger.warning(f"清理帖子 {post.id} 的文件失败: {e}")
+                    db.commit()
+                    if cleaned_count > 0:
+                        logger.info(f"清理了 {cleaned_count} 个已删除帖子的文件")
+            finally:
+                try:
+                    db.rollback()
+                except Exception:
+                    pass
+                db.close()
+            self.last_forum_cleanup_date = today
+        except Exception as e:
+            logger.error(f"清理已删除帖子文件失败: {e}")
+        finally:
+            release_redis_distributed_lock(lock_key)
+
     async def _cleanup_unused_temp_images(self):
         """清理未使用的临时图片（超过24小时未使用的临时图片，使用分布式锁和限流）"""
         lock_key = "scheduled_task:cleanup_unused_temp_images:lock"

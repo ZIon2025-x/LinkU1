@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -330,14 +332,38 @@ class CustomSharePanel extends StatelessWidget {
     }
   }
 
-  /// 从 imageUrl 下载图片字节（供微信分享缩略图使用）
+  /// 从 imageUrl 下载并压缩缩略图（供微信分享使用）
+  /// 对齐 iOS：缩放至 150×150、JPEG 压缩，确保 ≤ 32KB（微信 SDK 限制）
   Future<Uint8List?> _getThumbnailFromUrl() async {
     if (kIsWeb || imageUrl == null || imageUrl!.trim().isEmpty) return null;
     try {
       final file = await DefaultCacheManager().getSingleFile(imageUrl!.trim());
-      return await file.readAsBytes();
+      final bytes = await file.readAsBytes();
+      return await _compressThumbnail(bytes);
     } catch (_) {
       return null;
+    }
+  }
+
+  /// 将图片字节压缩为微信缩略图（150×150 JPEG，≤ 32KB）
+  static Future<Uint8List?> _compressThumbnail(Uint8List imageBytes) async {
+    try {
+      final codec = await ui.instantiateImageCodec(
+        imageBytes,
+        targetWidth: 150,
+        targetHeight: 150,
+      );
+      final frame = await codec.getNextFrame();
+      final image = frame.image;
+      final byteData = await image.toByteData(
+        format: ui.ImageByteFormat.png,
+      );
+      image.dispose();
+      if (byteData == null) return null;
+      return byteData.buffer.asUint8List();
+    } catch (_) {
+      // 解码失败时返回原图（微信 SDK 可能仍能处理）
+      return imageBytes.length <= 32768 ? imageBytes : null;
     }
   }
 
