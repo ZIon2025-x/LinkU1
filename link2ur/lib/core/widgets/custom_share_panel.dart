@@ -1,6 +1,7 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import '../utils/haptic_feedback.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../design/app_colors.dart';
@@ -9,6 +10,7 @@ import '../design/app_typography.dart';
 import '../design/app_radius.dart';
 import '../constants/app_assets.dart';
 import '../utils/l10n_extension.dart';
+import '../utils/native_share.dart';
 import '../utils/sheet_adaptation.dart';
 import '../utils/wechat_share_manager.dart';
 import '../../l10n/app_localizations.dart';
@@ -125,20 +127,20 @@ extension SharePlatformExtension on SharePlatform {
 
 /// 自定义分享面板组件（类似小红书）
 /// 参考 iOS CustomSharePanel.swift
-/// 当前已暂时禁用：点击分享直接调起原生分享，见 [NativeShare]。
-/// 保留本类便于日后恢复自定义分享栏。
 class CustomSharePanel extends StatelessWidget {
   const CustomSharePanel({
     super.key,
     required this.title,
     this.description = '',
     this.url,
+    this.imageUrl,
     this.onDismiss,
   });
 
   final String title;
   final String description;
   final String? url;
+  final String? imageUrl;
   final VoidCallback? onDismiss;
 
   /// 便捷方法 - 显示分享面板（iPad/平板适配）
@@ -147,6 +149,7 @@ class CustomSharePanel extends StatelessWidget {
     required String title,
     String description = '',
     String? url,
+    String? imageUrl,
   }) {
     SheetAdaptation.showAdaptiveModalBottomSheet(
       context: context,
@@ -157,6 +160,7 @@ class CustomSharePanel extends StatelessWidget {
         title: title,
         description: description,
         url: url,
+        imageUrl: imageUrl,
         onDismiss: () => Navigator.of(context).pop(),
       ),
     );
@@ -302,17 +306,38 @@ class CustomSharePanel extends StatelessWidget {
         onDismiss?.call();
         // 延迟显示系统分享面板，确保底部Sheet完全关闭
         await Future.delayed(const Duration(milliseconds: 300));
-        final shareText = '$title\n$description\n${url ?? ''}';
-        await SharePlus.instance.share(ShareParams(text: shareText));
+        final shareFiles = await NativeShare.fileFromFirstImageUrl(imageUrl);
+        await NativeShare.share(
+          title: title,
+          description: description,
+          url: url,
+          files: shareFiles,
+        );
         break;
 
       default:
         // 其他平台尝试通过系统分享
         onDismiss?.call();
         await Future.delayed(const Duration(milliseconds: 300));
-        final defaultShareText = '$title\n$description\n${url ?? ''}';
-        await SharePlus.instance.share(ShareParams(text: defaultShareText));
+        final defaultShareFiles = await NativeShare.fileFromFirstImageUrl(imageUrl);
+        await NativeShare.share(
+          title: title,
+          description: description,
+          url: url,
+          files: defaultShareFiles,
+        );
         break;
+    }
+  }
+
+  /// 从 imageUrl 下载图片字节（供微信分享缩略图使用）
+  Future<Uint8List?> _getThumbnailFromUrl() async {
+    if (kIsWeb || imageUrl == null || imageUrl!.trim().isEmpty) return null;
+    try {
+      final file = await DefaultCacheManager().getSingleFile(imageUrl!.trim());
+      return await file.readAsBytes();
+    } catch (_) {
+      return null;
     }
   }
 
@@ -325,9 +350,18 @@ class CustomSharePanel extends StatelessWidget {
       if (!installed) {
         // 微信未安装，使用系统分享
         await Future.delayed(const Duration(milliseconds: 300));
-        await SharePlus.instance.share(ShareParams(text: '$title\n$description\n${url ?? ''}'));
+        final shareFiles = await NativeShare.fileFromFirstImageUrl(imageUrl);
+        await NativeShare.share(
+          title: title,
+          description: description,
+          url: url,
+          files: shareFiles,
+        );
         return;
       }
+
+      // 下载缩略图
+      final thumbnail = await _getThumbnailFromUrl();
 
       bool success;
       if (toMoments) {
@@ -335,24 +369,38 @@ class CustomSharePanel extends StatelessWidget {
           title: title,
           description: description,
           url: url ?? '',
+          thumbnail: thumbnail,
         );
       } else {
         success = await wechatManager.shareToFriend(
           title: title,
           description: description,
           url: url ?? '',
+          thumbnail: thumbnail,
         );
       }
 
       if (!success && context.mounted) {
         // 分享失败，回退到系统分享
         await Future.delayed(const Duration(milliseconds: 300));
-        await SharePlus.instance.share(ShareParams(text: '$title\n$description\n${url ?? ''}'));
+        final shareFiles = await NativeShare.fileFromFirstImageUrl(imageUrl);
+        await NativeShare.share(
+          title: title,
+          description: description,
+          url: url,
+          files: shareFiles,
+        );
       }
     } catch (_) {
       // 出错时回退到系统分享
       await Future.delayed(const Duration(milliseconds: 300));
-      await SharePlus.instance.share(ShareParams(text: '$title\n$description\n${url ?? ''}'));
+      final shareFiles = await NativeShare.fileFromFirstImageUrl(imageUrl);
+      await NativeShare.share(
+        title: title,
+        description: description,
+        url: url,
+        files: shareFiles,
+      );
     }
   }
 

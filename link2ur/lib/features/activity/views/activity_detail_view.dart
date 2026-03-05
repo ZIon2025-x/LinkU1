@@ -20,7 +20,7 @@ import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/full_screen_image_view.dart';
-import '../../../core/utils/native_share.dart';
+import '../../../core/widgets/custom_share_panel.dart';
 import '../../../core/widgets/scroll_safe_tap.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/router/page_transitions.dart';
@@ -141,18 +141,16 @@ class _ActivityDetailViewContent extends StatelessWidget {
         if (state.activityDetail != null) ...[
           _buildAppBarButton(
             icon: Icons.share_outlined,
-            onPressed: () async {
+            onPressed: () {
               AppHaptics.selection();
               final activity = state.activityDetail!;
               final locale = Localizations.localeOf(context);
-              final shareFiles = await NativeShare.fileFromFirstImageUrl(activity.firstImage);
-              if (!context.mounted) return;
-              await NativeShare.share(
+              CustomSharePanel.show(
+                context,
                 title: activity.displayTitle(locale),
                 description: activity.displayDescription(locale),
                 url: 'https://link2ur.com/activities/${activity.id}',
-                files: shareFiles,
-                context: context,
+                imageUrl: activity.firstImage,
               );
             },
           ),

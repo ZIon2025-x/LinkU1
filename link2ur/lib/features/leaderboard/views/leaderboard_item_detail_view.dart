@@ -20,7 +20,7 @@ import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/external_web_view.dart';
 import '../../../core/widgets/full_screen_image_view.dart';
-import '../../../core/utils/native_share.dart';
+import '../../../core/widgets/custom_share_panel.dart';
 import '../../../core/widgets/app_feedback.dart';
 import '../../../core/utils/share_util.dart';
 import '../../../data/models/leaderboard.dart';
@@ -94,16 +94,14 @@ class _ItemDetailContent extends StatelessWidget {
 
   PreferredSizeWidget _buildAppBar(
       BuildContext context, LeaderboardItem? item, bool hasImages) {
-    void onShare() async {
+    void onShare() {
       if (item == null) return;
-      final shareFiles = await NativeShare.fileFromFirstImageUrl(item.firstImage);
-      if (!context.mounted) return;
-      await NativeShare.share(
+      CustomSharePanel.show(
+        context,
         title: item.name,
         description: item.description ?? '',
         url: ShareUtil.leaderboardItemUrl(item.id),
-        files: shareFiles,
-        context: context,
+        imageUrl: item.firstImage,
       );
     }
 

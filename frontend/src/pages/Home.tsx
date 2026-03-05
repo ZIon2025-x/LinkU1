@@ -1088,26 +1088,32 @@ const Home: React.FC = () => {
           </p>
           
           <div className={styles.heroButtons}>
-            <button 
-              onClick={() => navigate('/tasks')}
+            <a
+              href="https://app.link2ur.com/tasks"
+              target="_blank"
+              rel="noopener noreferrer"
               className={styles.heroButton}
             >
               ✨ {t('navigation.tasks')}
-            </button>
-            
-            <button 
-              onClick={() => navigate('/publish')}
+            </a>
+
+            <a
+              href="https://app.link2ur.com/publish"
+              target="_blank"
+              rel="noopener noreferrer"
               className={styles.heroButton}
             >
               🚀 {t('navigation.publish')}
-            </button>
-            
-            <button 
-              onClick={() => navigate('/task-experts')}
+            </a>
+
+            <a
+              href="https://app.link2ur.com/task-experts"
+              target="_blank"
+              rel="noopener noreferrer"
               className={styles.heroButton}
             >
               👑 {t('footer.taskExperts')}
-            </button>
+            </a>
           </div>
           
           {/* 统计数据 */}

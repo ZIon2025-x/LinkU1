@@ -13,7 +13,7 @@ import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/full_screen_image_view.dart';
-import '../../../core/utils/native_share.dart';
+import '../../../core/widgets/custom_share_panel.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/router/page_transitions.dart';
@@ -205,18 +205,16 @@ class _FleaMarketDetailContent extends StatelessWidget {
           _buildCircleButton(
             context,
             icon: Icons.share_outlined,
-            onTap: () async {
+            onTap: () {
               AppHaptics.selection();
               final item = state.selectedItem!;
               final imageUrl = item.images.isNotEmpty ? item.images.first : null;
-              final shareFiles = await NativeShare.fileFromFirstImageUrl(imageUrl);
-              if (!context.mounted) return;
-              await NativeShare.share(
+              CustomSharePanel.show(
+                context,
                 title: item.title,
                 description: item.description ?? '',
                 url: 'https://link2ur.com/flea-market/${item.id}',
-                files: shareFiles,
-                context: context,
+                imageUrl: imageUrl,
               );
             },
           ),

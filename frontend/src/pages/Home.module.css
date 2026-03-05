@@ -116,6 +116,8 @@
   cursor: pointer;
   backdrop-filter: blur(10px);
   transition: all 0.3s ease;
+  text-decoration: none;
+  display: inline-block;
 }
 
 .heroButton:hover {

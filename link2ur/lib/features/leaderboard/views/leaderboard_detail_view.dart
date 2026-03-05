@@ -13,7 +13,7 @@ import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
-import '../../../core/utils/native_share.dart';
+import '../../../core/widgets/custom_share_panel.dart';
 import '../../../core/widgets/vote_comparison_bar.dart';
 import '../../../core/widgets/gradient_text.dart';
 import '../../../data/repositories/leaderboard_repository.dart';
@@ -142,17 +142,15 @@ class _LeaderboardDetailContentState
 
   PreferredSizeWidget _buildAppBar(
       BuildContext context, LeaderboardState state, bool hasHero) {
-    void onShare() async {
+    void onShare() {
       final lb = state.selectedLeaderboard;
       if (lb == null) return;
-      final shareFiles = await NativeShare.fileFromFirstImageUrl(lb.coverImage);
-      if (!context.mounted) return;
-      await NativeShare.share(
+      CustomSharePanel.show(
+        context,
         title: lb.displayName(Localizations.localeOf(context)),
         description: lb.displayDescription(Localizations.localeOf(context)) ?? '',
         url: 'https://link2ur.com/leaderboard/${lb.id}',
-        files: shareFiles,
-        context: context,
+        imageUrl: lb.coverImage,
       );
     }
 

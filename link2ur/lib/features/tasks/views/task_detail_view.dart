@@ -18,7 +18,7 @@ import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/full_screen_image_view.dart';
-import '../../../core/utils/native_share.dart';
+import '../../../core/widgets/custom_share_panel.dart';
 import '../../../core/widgets/user_identity_badges.dart';
 import '../../../core/widgets/animated_list_item.dart';
 import '../../../core/router/app_router.dart';
@@ -348,22 +348,20 @@ class _TaskDetailContent extends StatelessWidget {
                     _showCancelTaskConfirm(context, task.id);
                   },
                 ),
-              // 分享 - 对标 iOS 直接调起系统分享（标题+描述+链接）
+              // 分享 - 显示自定义分享面板（微信走SDK，其他走系统分享）
               ListTile(
                 leading: const Icon(Icons.share_outlined),
                 title: Text(l10n.taskDetailShare),
-                onTap: () async {
+                onTap: () {
                   Navigator.pop(context);
                   final locale = Localizations.localeOf(context);
                   final imageUrl = task.images.isNotEmpty ? task.images.first : null;
-                  final shareFiles = await NativeShare.fileFromFirstImageUrl(imageUrl);
-                  if (!context.mounted) return;
-                  await NativeShare.share(
+                  CustomSharePanel.show(
+                    context,
                     title: task.displayTitle(locale),
                     description: task.displayDescription(locale) ?? '',
                     url: 'https://link2ur.com/tasks/${task.id}',
-                    files: shareFiles,
-                    context: context,
+                    imageUrl: imageUrl,
                   );
                 },
               ),
