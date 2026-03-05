@@ -151,31 +151,14 @@ const SEOHead: React.FC<SEOHeadProps> = ({
       updateMetaTag('twitter:image', twitterImage);
     }
 
-    // og:image 强制校验和 fallback
-    const isValidOgImage = (imageUrl: string): boolean => {
-      // 简化版：检查 URL 是否包含已知的大图标识
-      // 实际项目中可以异步加载图片检查尺寸
-      return imageUrl.includes('og-') || imageUrl.includes('1200x630') || imageUrl.includes('favicon');
-    };
-    
-    // 检查是否是榜单详情页（URL格式：/leaderboard/custom/数字）
-    // 对于榜单详情页，useLayoutEffect 会管理微信标签，SEOHead 不覆盖
-    const isLeaderboardDetailPage = /\/leaderboard\/custom\/\d+/.test(window.location.pathname);
-    
-    if (isLeaderboardDetailPage) {
-      // 跳过图片设置，让 useLayoutEffect 管理
-    }
-    
+    // 检查是否是详情页（useLayoutEffect 会管理微信标签，SEOHead 不覆盖）
+    const isDetailPage = /\/(leaderboard\/custom|forum\/post|tasks|activities|flea-market)\/\d+/.test(window.location.pathname);
+
     // 更新Open Graph图片标签和微信分享标签（微信会优先读取这些标签，如果没有则使用og标签）
-    // 对于榜单详情页，不设置 og:image 和 weixin:image，让 useLayoutEffect 来管理
-    if (ogImage && !isLeaderboardDetailPage) {
+    // 对于详情页，不设置 og:image 和 weixin:image，让 useLayoutEffect 来管理
+    if (ogImage && !isDetailPage) {
       // 确保og:image是完整URL（微信需要绝对URL）
       let fullOgImage = ogImage.startsWith('http') ? ogImage : `${window.location.origin}${ogImage}`;
-      
-      // 对于其他页面，如果图片尺寸太小，才 fallback 到默认大图
-      if (!isValidOgImage(fullOgImage)) {        
-        fullOgImage = 'https://www.link2ur.com/static/favicon.png'; // 默认分享图
-    }
       
       // 添加版本号避免缓存问题
       fullOgImage = fullOgImage.includes('?') ? fullOgImage : `${fullOgImage}?v=2`;
@@ -199,11 +182,11 @@ const SEOHead: React.FC<SEOHeadProps> = ({
       }
       updateMetaTag('weixin:image', fullOgImage);
     }
-    if (ogTitle && !isLeaderboardDetailPage) {
+    if (ogTitle && !isDetailPage) {
       // 对于榜单详情页，不设置微信标签，让 useLayoutEffect 来管理
       updateMetaTag('weixin:title', ogTitle);
     }
-    if (ogDescription && !isLeaderboardDetailPage) {
+    if (ogDescription && !isDetailPage) {
       // 对于榜单详情页，不设置微信标签，让 useLayoutEffect 来管理
       updateMetaTag('weixin:description', ogDescription);
     }
