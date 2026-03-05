@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import '../models/leaderboard.dart';
 import '../services/api_service.dart';
 import '../../core/constants/api_endpoints.dart';
@@ -178,10 +180,11 @@ class LeaderboardRepository {
   }
 
   /// 上传排行榜封面图（公开图片，使用 V2 接口；创建时由后端迁移到正式目录）
-  Future<String> uploadImage(String filePath, {String category = 'leaderboard_cover'}) async {
-    final response = await _apiService.uploadFile<Map<String, dynamic>>(
+  Future<String> uploadImage(Uint8List bytes, String filename, {String category = 'leaderboard_cover'}) async {
+    final response = await _apiService.uploadFileBytes<Map<String, dynamic>>(
       '${ApiEndpoints.uploadImageV2}?category=$category',
-      filePath: filePath,
+      bytes: bytes,
+      filename: filename,
       fieldName: 'image',
     );
 

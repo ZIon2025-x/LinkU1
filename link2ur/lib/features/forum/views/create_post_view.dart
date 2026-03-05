@@ -83,13 +83,12 @@ class _CreatePostViewState extends State<CreatePostView> {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf'],
+        withData: true,
       );
       if (result != null && result.files.isNotEmpty && mounted) {
         setState(() {
           for (final f in result.files) {
-            if (_selectedFiles.length < _kMaxFiles &&
-                f.path != null &&
-                f.path!.isNotEmpty) {
+            if (_selectedFiles.length < _kMaxFiles) {
               _selectedFiles.add(f);
             }
           }
@@ -170,16 +169,13 @@ class _CreatePostViewState extends State<CreatePostView> {
     try {
       if (_selectedImages.isNotEmpty) {
         for (final file in _selectedImages) {
-          final path = file.path;
-          if (path.isEmpty) continue;
-          final url = await repo.uploadPostImage(path);
+          final url = await repo.uploadPostImage(await file.readAsBytes(), file.name);
           imageUrls.add(url);
         }
       }
       if (_selectedFiles.isNotEmpty) {
         for (final file in _selectedFiles) {
-          if (file.path == null || file.path!.isEmpty) continue;
-          final att = await repo.uploadPostFile(file.path!);
+          final att = await repo.uploadPostFile(file.bytes!, file.name);
           uploadedAttachments.add(att);
         }
       }

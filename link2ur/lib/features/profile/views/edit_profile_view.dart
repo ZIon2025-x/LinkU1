@@ -126,7 +126,7 @@ class _EditProfileContentState extends State<_EditProfileContent> {
         });
         if (mounted) {
           context.read<ProfileBloc>().add(
-                ProfileUploadAvatar(pickedFile.path),
+                ProfileUploadAvatar(await pickedFile.readAsBytes(), pickedFile.name),
               );
         }
       }

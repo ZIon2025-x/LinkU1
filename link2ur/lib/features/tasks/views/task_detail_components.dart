@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -14,6 +12,7 @@ import '../../../core/design/app_typography.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/widgets/buttons.dart';
+import '../../../core/widgets/cross_platform_image.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/bouncing_widget.dart';
@@ -3073,7 +3072,7 @@ class _EvidenceCollectionSheetState extends State<_EvidenceCollectionSheet> {
       if (_images.isNotEmpty) {
         imageUrls = [];
         for (final img in _images) {
-          final url = await widget.taskRepo.uploadTaskImage(img.path);
+          final url = await widget.taskRepo.uploadTaskImage(await img.readAsBytes(), img.name);
           imageUrls.add(url);
         }
       }
@@ -3130,7 +3129,7 @@ class _EvidenceCollectionSheetState extends State<_EvidenceCollectionSheet> {
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: Image.file(File(entry.value.path), width: 72, height: 72, fit: BoxFit.cover),
+                    child: CrossPlatformImage(xFile: entry.value, width: 72, height: 72),
                   ),
                   Positioned(
                     top: 2, right: 2,

@@ -434,7 +434,7 @@ class _PublishContentState extends State<_PublishContent>
       try {
         final repo = context.read<TaskRepository>();
         for (final file in _taskImages) {
-          final url = await repo.uploadTaskImage(file.path);
+          final url = await repo.uploadTaskImage(await file.readAsBytes(), file.name);
           imageUrls.add(url);
         }
       } catch (e) {
@@ -519,13 +519,11 @@ class _PublishContentState extends State<_PublishContent>
       setState(() => _postUploading = true);
       try {
         for (final file in _postImages) {
-          final url = await repo.uploadPostImage(file.path);
+          final url = await repo.uploadPostImage(await file.readAsBytes(), file.name);
           imageUrls.add(url);
         }
-        if (_postPdfFile != null &&
-            _postPdfFile!.path != null &&
-            _postPdfFile!.path!.isNotEmpty) {
-          final att = await repo.uploadPostFile(_postPdfFile!.path!);
+        if (_postPdfFile != null && _postPdfFile!.bytes != null) {
+          final att = await repo.uploadPostFile(_postPdfFile!.bytes!, _postPdfFile!.name);
           attachments.add(att);
         }
       } catch (e) {
@@ -646,12 +644,11 @@ class _PublishContentState extends State<_PublishContent>
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf'],
+        withData: true,
       );
       if (result != null && result.files.isNotEmpty && mounted) {
         final f = result.files.first;
-        if (f.path != null && f.path!.isNotEmpty) {
-          setState(() => _postPdfFile = f);
-        }
+        setState(() => _postPdfFile = f);
       }
     } catch (e) {
       if (mounted) AppFeedback.showError(context, e.toString());

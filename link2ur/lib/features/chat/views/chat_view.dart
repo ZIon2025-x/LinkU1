@@ -118,7 +118,7 @@ class _ChatContentState extends State<_ChatContent> {
     for (final file in toSend) {
       if (!mounted) break;
       context.read<ChatBloc>().add(
-        ChatSendImage(filePath: file.path, senderId: _currentUserId),
+        ChatSendImage(bytes: await file.readAsBytes(), filename: file.name, senderId: _currentUserId),
       );
     }
     if (mounted) setState(() => _showAttachMenu = false);
@@ -278,7 +278,8 @@ class _ChatContentState extends State<_ChatContent> {
               if (confirmed == true && mounted) {
                 context.read<ChatBloc>().add(
                       ChatSendImage(
-                        filePath: image.path,
+                        bytes: await image.readAsBytes(),
+                        filename: image.name,
                         senderId: _currentUserId,
                       ),
                     );

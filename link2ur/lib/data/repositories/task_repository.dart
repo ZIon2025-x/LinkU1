@@ -205,10 +205,11 @@ class TaskRepository {
       getTaskById(id, cancelToken: cancelToken);
 
   /// 上传任务图片（创建任务前调用，返回公开 URL；使用 V2 接口以便后端迁移到 task_id 目录并更新 DB）
-  Future<String> uploadTaskImage(String filePath) async {
-    final response = await _apiService.uploadFile<Map<String, dynamic>>(
+  Future<String> uploadTaskImage(Uint8List bytes, String filename) async {
+    final response = await _apiService.uploadFileBytes<Map<String, dynamic>>(
       '${ApiEndpoints.uploadImageV2}?category=task',
-      filePath: filePath,
+      bytes: bytes,
+      filename: filename,
       fieldName: 'image',
     );
     if (!response.isSuccess || response.data == null) {

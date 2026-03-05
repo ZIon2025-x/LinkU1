@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -116,17 +118,19 @@ class LeaderboardApplyRequested extends LeaderboardEvent {
     required this.location,
     this.description,
     this.applicationReason,
-    this.coverImagePath,
+    this.coverImageBytes,
+    this.coverImageName,
   });
 
   final String name;
   final String location;
   final String? description;
   final String? applicationReason;
-  final String? coverImagePath;
+  final Uint8List? coverImageBytes;
+  final String? coverImageName;
 
   @override
-  List<Object?> get props => [name, location, description, applicationReason, coverImagePath];
+  List<Object?> get props => [name, location, description, applicationReason, coverImageBytes, coverImageName];
 }
 
 class LeaderboardSubmitItem extends LeaderboardEvent {
@@ -137,7 +141,7 @@ class LeaderboardSubmitItem extends LeaderboardEvent {
     this.address,
     this.phone,
     this.website,
-    this.imagePaths,
+    this.imageDataList,
   });
 
   final int leaderboardId;
@@ -146,10 +150,10 @@ class LeaderboardSubmitItem extends LeaderboardEvent {
   final String? address;
   final String? phone;
   final String? website;
-  final List<String>? imagePaths;
+  final List<(Uint8List, String)>? imageDataList;
 
   @override
-  List<Object?> get props => [leaderboardId, name, description, address, phone, website, imagePaths];
+  List<Object?> get props => [leaderboardId, name, description, address, phone, website, imageDataList];
 }
 
 class LeaderboardClearActionMessage extends LeaderboardEvent {
@@ -768,9 +772,9 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
     try {
       // 如果有封面图片，先上传获取 URL
       String? coverImageUrl;
-      if (event.coverImagePath != null) {
+      if (event.coverImageBytes != null && event.coverImageName != null) {
         coverImageUrl =
-            await _leaderboardRepository.uploadImage(event.coverImagePath!);
+            await _leaderboardRepository.uploadImage(event.coverImageBytes!, event.coverImageName!);
       }
 
       await _leaderboardRepository.applyLeaderboard(
@@ -803,11 +807,11 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
 
     try {
       List<String>? imageUrls;
-      if (event.imagePaths != null && event.imagePaths!.isNotEmpty) {
+      if (event.imageDataList != null && event.imageDataList!.isNotEmpty) {
         imageUrls = [];
-        for (final path in event.imagePaths!) {
+        for (final (bytes, name) in event.imageDataList!) {
           final url = await _leaderboardRepository.uploadImage(
-              path, category: 'leaderboard_item');
+              bytes, name, category: 'leaderboard_item');
           imageUrls.add(url);
         }
       }

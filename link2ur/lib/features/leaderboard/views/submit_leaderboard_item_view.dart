@@ -88,7 +88,7 @@ class _SubmitLeaderboardItemContentState
     setState(() => _selectedImages.removeAt(index));
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     final name = _nameController.text.trim();
     if (name.isEmpty) {
       setState(() => _localError = context.l10n.leaderboardFillRequired);
@@ -109,8 +109,8 @@ class _SubmitLeaderboardItemContentState
           address: address.isNotEmpty ? address : null,
           phone: phone.isNotEmpty ? phone : null,
           website: website.isNotEmpty ? website : null,
-          imagePaths: _selectedImages.isNotEmpty
-              ? _selectedImages.map((e) => e.path).toList()
+          imageDataList: _selectedImages.isNotEmpty
+              ? await Future.wait(_selectedImages.map((e) async => (await e.readAsBytes(), e.name)))
               : null,
         ));
   }

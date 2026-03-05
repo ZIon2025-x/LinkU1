@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import '../models/message.dart';
 import '../services/api_service.dart';
 import '../services/websocket_service.dart';
@@ -446,10 +448,11 @@ class MessageRepository {
   }
 
   /// 上传任务聊天图片（私密图片，走 /api/upload/image，后端要求字段名为 image）
-  Future<String> uploadImage(String filePath) async {
-    final response = await _apiService.uploadFile<Map<String, dynamic>>(
+  Future<String> uploadImage(Uint8List bytes, String filename) async {
+    final response = await _apiService.uploadFileBytes<Map<String, dynamic>>(
       ApiEndpoints.uploadImage,
-      filePath: filePath,
+      bytes: bytes,
+      filename: filename,
       fieldName: 'image',
     );
 

@@ -105,15 +105,14 @@ class _EditPostViewState extends State<EditPostView> {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf'],
+        withData: true,
       );
       if (result != null && result.files.isNotEmpty && mounted) {
         final f = result.files.first;
-        if (f.path != null && f.path!.isNotEmpty) {
-          setState(() {
-            _existingAttachment = null;
-            _newPdfFile = f;
-          });
-        }
+        setState(() {
+          _existingAttachment = null;
+          _newPdfFile = f;
+        });
       }
     } catch (e) {
       if (mounted) AppFeedback.showError(context, e.toString());
@@ -164,9 +163,7 @@ class _EditPostViewState extends State<EditPostView> {
       if (hasNewImageFiles || !existingSame) {
         imageUrls = List<String>.from(_existingUrls);
         for (final file in _newFiles) {
-          final path = file.path;
-          if (path.isEmpty) continue;
-          final url = await repo.uploadPostImage(path);
+          final url = await repo.uploadPostImage(await file.readAsBytes(), file.name);
           imageUrls.add(url);
         }
       }
@@ -175,7 +172,7 @@ class _EditPostViewState extends State<EditPostView> {
       List<ForumPostAttachment>? attachments;
       if (pdfChanged) {
         if (pdfReplaced) {
-          final att = await repo.uploadPostFile(_newPdfFile!.path!);
+          final att = await repo.uploadPostFile(_newPdfFile!.bytes!, _newPdfFile!.name);
           attachments = [att];
         } else if (pdfRemoved) {
           attachments = [];

@@ -136,7 +136,8 @@ class _TaskChatContentState extends State<_TaskChatContent> {
       if (!mounted) break;
       context.read<ChatBloc>().add(
         ChatSendImage(
-          filePath: file.path,
+          bytes: await file.readAsBytes(),
+          filename: file.name,
           senderId: _currentUserId ?? StorageService.instance.getUserId(),
         ),
       );
@@ -156,7 +157,8 @@ class _TaskChatContentState extends State<_TaskChatContent> {
     if (confirmed == true && mounted) {
       context.read<ChatBloc>().add(
         ChatSendImage(
-          filePath: image.path,
+          bytes: await image.readAsBytes(),
+          filename: image.name,
           senderId: _currentUserId ?? StorageService.instance.getUserId(),
         ),
       );

@@ -63,7 +63,7 @@ class _ApplyLeaderboardViewState extends State<ApplyLeaderboardView> {
     setState(() => _coverImage = null);
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (_titleController.text.trim().isEmpty ||
         _locationController.text.trim().isEmpty) {
       AppFeedback.showWarning(context, context.l10n.leaderboardFillRequired);
@@ -81,7 +81,8 @@ class _ApplyLeaderboardViewState extends State<ApplyLeaderboardView> {
             applicationReason: _reasonController.text.trim().isEmpty
                 ? null
                 : _reasonController.text.trim(),
-            coverImagePath: _coverImage?.path,
+            coverImageBytes: _coverImage != null ? await _coverImage!.readAsBytes() : null,
+            coverImageName: _coverImage?.name,
           ),
         );
   }

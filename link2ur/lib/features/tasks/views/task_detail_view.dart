@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -13,6 +11,7 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/widgets/buttons.dart';
+import '../../../core/widgets/cross_platform_image.dart';
 import '../../../core/widgets/review_bottom_sheet.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
@@ -2597,7 +2596,7 @@ class _CompleteTaskSheetContentState extends State<_CompleteTaskSheetContent> {
       if (_selectedImages.isNotEmpty) {
         imageUrls = [];
         for (final img in _selectedImages) {
-          final url = await widget.taskRepo.uploadTaskImage(img.path);
+          final url = await widget.taskRepo.uploadTaskImage(await img.readAsBytes(), img.name);
           imageUrls.add(url);
         }
       }
@@ -2665,9 +2664,9 @@ class _CompleteTaskSheetContentState extends State<_CompleteTaskSheetContent> {
                   children: [
                     ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: Image.file(
-                        File(entry.value.path),
-                        width: 72, height: 72, fit: BoxFit.cover,
+                      child: CrossPlatformImage(
+                        xFile: entry.value,
+                        width: 72, height: 72,
                       ),
                     ),
                     Positioned(

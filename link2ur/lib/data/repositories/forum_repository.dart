@@ -197,10 +197,11 @@ class ForumRepository {
 
   /// 上传帖子图片（临时目录，发帖时由后端 move_from_temp 到 post_id 目录；使用 V2 公开接口）
   /// 最多 5 张，需在发帖前依次上传，将返回的 url 列表传入 createPost。
-  Future<String> uploadPostImage(String filePath) async {
-    final response = await _apiService.uploadFile<Map<String, dynamic>>(
+  Future<String> uploadPostImage(Uint8List bytes, String filename) async {
+    final response = await _apiService.uploadFileBytes<Map<String, dynamic>>(
       '${ApiEndpoints.uploadImageV2}?category=forum_post',
-      filePath: filePath,
+      bytes: bytes,
+      filename: filename,
       fieldName: 'image',
     );
 
@@ -217,10 +218,11 @@ class ForumRepository {
 
   /// 上传帖子文件附件（PDF/文档等，临时目录，发帖时由后端关联到帖子）
   /// 返回 ForumPostAttachment（含 url/filename/size/content_type）
-  Future<ForumPostAttachment> uploadPostFile(String filePath) async {
-    final response = await _apiService.uploadFile<Map<String, dynamic>>(
+  Future<ForumPostAttachment> uploadPostFile(Uint8List bytes, String filename) async {
+    final response = await _apiService.uploadFileBytes<Map<String, dynamic>>(
       ApiEndpoints.uploadForumFile,
-      filePath: filePath,
+      bytes: bytes,
+      filename: filename,
     );
 
     if (!response.isSuccess || response.data == null) {

@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -13,6 +11,7 @@ import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/app_feedback.dart';
 import '../../../core/widgets/buttons.dart';
+import '../../../core/widgets/cross_platform_image.dart';
 import '../../../core/widgets/location_picker.dart';
 import '../../../core/utils/validators.dart';
 import '../../../data/models/task.dart';
@@ -210,7 +209,7 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
       try {
         final repo = context.read<TaskRepository>();
         for (final img in _selectedImages) {
-          final url = await repo.uploadTaskImage(img.path);
+          final url = await repo.uploadTaskImage(await img.readAsBytes(), img.name);
           imageUrls.add(url);
         }
       } catch (e) {
@@ -491,11 +490,10 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
             children: [
               ClipRRect(
                 borderRadius: AppRadius.allMedium,
-                child: Image.file(
-                  File(img.path),
+                child: CrossPlatformImage(
+                  xFile: img,
                   width: 80,
                   height: 80,
-                  fit: BoxFit.cover,
                 ),
               ),
               Positioned(

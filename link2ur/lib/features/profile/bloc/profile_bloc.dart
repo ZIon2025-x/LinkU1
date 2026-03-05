@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -34,12 +35,13 @@ class ProfileUpdateRequested extends ProfileEvent {
 }
 
 class ProfileUploadAvatar extends ProfileEvent {
-  const ProfileUploadAvatar(this.filePath);
+  const ProfileUploadAvatar(this.bytes, this.filename);
 
-  final String filePath;
+  final Uint8List bytes;
+  final String filename;
 
   @override
-  List<Object?> get props => [filePath];
+  List<Object?> get props => [bytes, filename];
 }
 
 class ProfileSendEmailCode extends ProfileEvent {
@@ -401,7 +403,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     emit(state.copyWith(isUpdating: true));
 
     try {
-      final updatedUser = await _userRepository.uploadAvatar(event.filePath);
+      final updatedUser = await _userRepository.uploadAvatar(event.bytes, event.filename);
       emit(state.copyWith(
         user: updatedUser,
         isUpdating: false,

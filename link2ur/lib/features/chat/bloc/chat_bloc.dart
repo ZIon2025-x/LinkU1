@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -54,16 +55,18 @@ class ChatSendMessage extends ChatEvent {
 
 class ChatSendImage extends ChatEvent {
   const ChatSendImage({
-    required this.filePath,
-    /// 当前用户 id，用于乐观更新时显示“我”发出的消息；不传则不做乐观更新
+    required this.bytes,
+    required this.filename,
+    /// 当前用户 id，用于乐观更新时显示”我”发出的消息；不传则不做乐观更新
     this.senderId,
   });
 
-  final String filePath;
+  final Uint8List bytes;
+  final String filename;
   final String? senderId;
 
   @override
-  List<Object?> get props => [filePath, senderId];
+  List<Object?> get props => [bytes, filename, senderId];
 }
 
 class ChatMessageReceived extends ChatEvent {
@@ -450,7 +453,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     int? pendingId;
 
     try {
-      final imageUrl = await _messageRepository.uploadImage(event.filePath);
+      final imageUrl = await _messageRepository.uploadImage(event.bytes, event.filename);
 
       final senderId = event.senderId?.trim();
       final canOptimistic = senderId != null && senderId.isNotEmpty;

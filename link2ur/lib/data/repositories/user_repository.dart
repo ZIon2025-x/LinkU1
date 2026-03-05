@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 
 import '../models/user.dart';
@@ -47,8 +49,8 @@ class UserRepository {
   }
 
   /// 上传头像：先上传图片获取 URL，再 PATCH 更新
-  Future<User> uploadAvatar(String filePath) async {
-    final imageUrl = await uploadPublicImage(filePath);
+  Future<User> uploadAvatar(Uint8List bytes, String filename) async {
+    final imageUrl = await uploadPublicImage(bytes, filename);
 
     final response = await _apiService.patch<Map<String, dynamic>>(
       ApiEndpoints.uploadAvatar,
@@ -205,10 +207,11 @@ class UserRepository {
   }
 
   /// 上传图片（私密，任务聊天等；后端 /api/upload/image 要求字段名为 image）
-  Future<String> uploadImage(String filePath) async {
-    final response = await _apiService.uploadFile<Map<String, dynamic>>(
+  Future<String> uploadImage(Uint8List bytes, String filename) async {
+    final response = await _apiService.uploadFileBytes<Map<String, dynamic>>(
       ApiEndpoints.uploadImage,
-      filePath: filePath,
+      bytes: bytes,
+      filename: filename,
       fieldName: 'image',
     );
 
@@ -220,10 +223,11 @@ class UserRepository {
   }
 
   /// 上传公开图片（头像、任务图片等）
-  Future<String> uploadPublicImage(String filePath) async {
-    final response = await _apiService.uploadFile<Map<String, dynamic>>(
+  Future<String> uploadPublicImage(Uint8List bytes, String filename) async {
+    final response = await _apiService.uploadFileBytes<Map<String, dynamic>>(
       ApiEndpoints.uploadPublicImage,
-      filePath: filePath,
+      bytes: bytes,
+      filename: filename,
       fieldName: 'image',
     );
 
@@ -235,10 +239,11 @@ class UserRepository {
   }
 
   /// 上传文件
-  Future<String> uploadFile(String filePath) async {
-    final response = await _apiService.uploadFile<Map<String, dynamic>>(
+  Future<String> uploadFile(Uint8List bytes, String filename) async {
+    final response = await _apiService.uploadFileBytes<Map<String, dynamic>>(
       ApiEndpoints.uploadFile,
-      filePath: filePath,
+      bytes: bytes,
+      filename: filename,
     );
 
     if (!response.isSuccess || response.data == null) {
