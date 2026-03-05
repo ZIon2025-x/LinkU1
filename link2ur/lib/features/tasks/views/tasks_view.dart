@@ -113,6 +113,7 @@ class _TasksViewContentState extends State<_TasksViewContent> {
     final isDesktop = ResponsiveUtils.isDesktop(context);
     return Scaffold(
       appBar: AppBar(
+        leading: const BackButton(),
         titleSpacing: 0,
         title: isDesktop ? ContentConstraint(child: _buildSearchBar()) : _buildSearchBar(),
       ),

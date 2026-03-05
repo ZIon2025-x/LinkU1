@@ -1,8 +1,13 @@
 import 'dart:async';
+import 'dart:io' show Platform;
+
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/design/app_colors.dart';
+import '../../../core/utils/adaptive_dialogs.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/design/app_radius.dart';
@@ -85,13 +90,13 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
   void _showRatingDialog() {
     int selectedRating = 5;
     final commentController = TextEditingController();
+    final isIOS = !kIsWeb && Platform.isIOS;
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: Text(context.l10n.customerServiceRateServiceTitle),
-          content: Column(
+        builder: (ctx, setDialogState) {
+          final ratingContent = Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Row(
@@ -109,37 +114,76 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
                 }),
               ),
               const SizedBox(height: 12),
-              TextField(
-                controller: commentController,
-                maxLines: 3,
-                decoration: InputDecoration(
-                  hintText: context.l10n.customerServiceRatingContent,
-                  border: const OutlineInputBorder(),
+              isIOS
+                  ? CupertinoTextField(
+                      controller: commentController,
+                      maxLines: 3,
+                      placeholder: context.l10n.customerServiceRatingContent,
+                    )
+                  : TextField(
+                      controller: commentController,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        hintText: context.l10n.customerServiceRatingContent,
+                        border: const OutlineInputBorder(),
+                      ),
+                    ),
+            ],
+          );
+
+          if (isIOS) {
+            return CupertinoAlertDialog(
+              title: Text(context.l10n.customerServiceRateServiceTitle),
+              content: ratingContent,
+              actions: [
+                CupertinoDialogAction(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(context.l10n.commonCancel),
                 ),
+                CupertinoDialogAction(
+                  isDefaultAction: true,
+                  onPressed: () {
+                    context.read<CustomerServiceBloc>().add(
+                          CustomerServiceRateChat(
+                            rating: selectedRating,
+                            comment: commentController.text.trim().isNotEmpty
+                                ? commentController.text.trim()
+                                : null,
+                          ),
+                        );
+                    Navigator.pop(ctx);
+                  },
+                  child: Text(context.l10n.commonSubmit),
+                ),
+              ],
+            );
+          }
+
+          return AlertDialog(
+            title: Text(context.l10n.customerServiceRateServiceTitle),
+            content: ratingContent,
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(context.l10n.commonCancel),
+              ),
+              TextButton(
+                onPressed: () {
+                  context.read<CustomerServiceBloc>().add(
+                        CustomerServiceRateChat(
+                          rating: selectedRating,
+                          comment: commentController.text.trim().isNotEmpty
+                              ? commentController.text.trim()
+                              : null,
+                        ),
+                      );
+                  Navigator.pop(ctx);
+                },
+                child: Text(context.l10n.commonSubmit),
               ),
             ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text(context.l10n.commonCancel),
-            ),
-            TextButton(
-              onPressed: () {
-                context.read<CustomerServiceBloc>().add(
-                      CustomerServiceRateChat(
-                        rating: selectedRating,
-                        comment: commentController.text.trim().isNotEmpty
-                            ? commentController.text.trim()
-                            : null,
-                      ),
-                    );
-                Navigator.pop(ctx);
-              },
-              child: Text(context.l10n.commonSubmit),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     ).then((_) => commentController.dispose());
   }
@@ -312,29 +356,18 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
                         icon: const Icon(Icons.close),
                         tooltip: context.l10n.customerServiceEndConversation,
                         onPressed: () {
-                          showDialog(
+                          AdaptiveDialogs.showConfirmDialog(
                             context: context,
-                            builder: (ctx) => AlertDialog(
-                              title: Text(context.l10n.customerServiceEndConversation),
-                              content: Text(context.l10n.customerServiceEndMessage),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(ctx),
-                                  child: Text(context.l10n.commonCancel),
-                                ),
-                                TextButton(
-                                  onPressed: () {
-                                    Navigator.pop(ctx);
-                                    context
-                                        .read<CustomerServiceBloc>()
-                                        .add(const CustomerServiceEndChat());
-                                  },
-                                  child: Text(context.l10n.customerServiceEndConversation,
-                                      style:
-                                          const TextStyle(color: AppColors.error)),
-                                ),
-                              ],
-                            ),
+                            title: context.l10n.customerServiceEndConversation,
+                            content: context.l10n.customerServiceEndMessage,
+                            confirmText: context.l10n.customerServiceEndConversation,
+                            cancelText: context.l10n.commonCancel,
+                            isDestructive: true,
+                            onConfirm: () {
+                              context
+                                  .read<CustomerServiceBloc>()
+                                  .add(const CustomerServiceEndChat());
+                            },
                           );
                         },
                       ),

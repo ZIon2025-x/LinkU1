@@ -1,10 +1,16 @@
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 
 /// 触觉反馈管理器
-/// 对齐 iOS HapticFeedback.swift
-/// 提供完整的触觉反馈类型和场景方法
+/// iOS: 增强触觉反馈通过 MethodChannel (UINotificationFeedbackGenerator, UIImpactFeedbackGenerator rigid/soft)
+/// Android/Web: Flutter 内置 HapticFeedback
 class AppHaptics {
   AppHaptics._();
+
+  static const _channel = MethodChannel('com.link2ur/haptics');
+  static bool get _useNativeHaptics => !kIsWeb && Platform.isIOS;
 
   // ==================== 基础反馈 ====================
 
@@ -20,16 +26,54 @@ class AppHaptics {
   /// 选择反馈
   static void selection() => HapticFeedback.selectionClick();
 
-  // ==================== 通知反馈 ====================
+  // ==================== 通知反馈 (iOS 增强) ====================
 
-  /// 成功反馈 - 中等力度 + 延迟轻触
-  static void success() => HapticFeedback.mediumImpact();
+  /// 成功反馈 — iOS: UINotificationFeedbackGenerator(.success)
+  static void success() {
+    if (_useNativeHaptics) {
+      _channel.invokeMethod('notificationSuccess');
+    } else {
+      HapticFeedback.mediumImpact();
+    }
+  }
 
-  /// 警告反馈 - 中等力度
-  static void warning() => HapticFeedback.mediumImpact();
+  /// 警告反馈 — iOS: UINotificationFeedbackGenerator(.warning)
+  static void warning() {
+    if (_useNativeHaptics) {
+      _channel.invokeMethod('notificationWarning');
+    } else {
+      HapticFeedback.mediumImpact();
+    }
+  }
 
-  /// 错误反馈 - 重击力度
-  static void error() => HapticFeedback.heavyImpact();
+  /// 错误反馈 — iOS: UINotificationFeedbackGenerator(.error)
+  static void error() {
+    if (_useNativeHaptics) {
+      _channel.invokeMethod('notificationError');
+    } else {
+      HapticFeedback.heavyImpact();
+    }
+  }
+
+  // ==================== iOS 独有反馈 ====================
+
+  /// 刚性碰撞反馈 (iOS: UIImpactFeedbackGenerator(.rigid), Android: mediumImpact)
+  static void rigid() {
+    if (_useNativeHaptics) {
+      _channel.invokeMethod('impactRigid');
+    } else {
+      HapticFeedback.mediumImpact();
+    }
+  }
+
+  /// 柔和碰撞反馈 (iOS: UIImpactFeedbackGenerator(.soft), Android: lightImpact)
+  static void soft() {
+    if (_useNativeHaptics) {
+      _channel.invokeMethod('impactSoft');
+    } else {
+      HapticFeedback.lightImpact();
+    }
+  }
 
   // ==================== 场景反馈 ====================
 
@@ -78,14 +122,14 @@ class AppHaptics {
   /// 截图
   static void screenshot() => HapticFeedback.mediumImpact();
 
-  /// 支付成功
-  static void paymentSuccess() => HapticFeedback.heavyImpact();
+  /// 支付成功 — 使用原生 success 反馈
+  static void paymentSuccess() => success();
 
   /// Tab 切换
   static void tabSwitch() => HapticFeedback.selectionClick();
 
-  /// 弹窗出现
-  static void popupAppear() => HapticFeedback.lightImpact();
+  /// 弹窗出现 — 使用柔和碰撞
+  static void popupAppear() => soft();
 
   /// 通知到达
   static void notification() => HapticFeedback.mediumImpact();
@@ -97,25 +141,18 @@ class AppHaptics {
     switch (type) {
       case HapticType.light:
         light();
-        break;
       case HapticType.medium:
         medium();
-        break;
       case HapticType.heavy:
         heavy();
-        break;
       case HapticType.selection:
         selection();
-        break;
       case HapticType.success:
         success();
-        break;
       case HapticType.warning:
         warning();
-        break;
       case HapticType.error:
         error();
-        break;
     }
   }
 

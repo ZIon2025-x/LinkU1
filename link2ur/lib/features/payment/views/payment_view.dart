@@ -12,6 +12,7 @@ import '../../../core/design/app_radius.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/sheet_adaptation.dart';
+import '../../../core/utils/adaptive_dialogs.dart';
 import '../../../core/widgets/buttons.dart';
 
 import '../../../core/router/page_transitions.dart';
@@ -229,23 +230,15 @@ class _PaymentContentState extends State<_PaymentContent> {
   }
 
   void _showPaymentExpiredDialog() {
-    SheetAdaptation.showAdaptiveDialog(
+    AdaptiveDialogs.showInfoDialog(
       context: context,
+      title: context.l10n.paymentExpired,
+      content: context.l10n.paymentExpiredMessage,
+      okText: context.l10n.commonOk,
       barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        title: Text(context.l10n.paymentExpired),
-        content: Text(context.l10n.paymentExpiredMessage),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              context.pop();
-            },
-            child: Text(context.l10n.commonOk),
-          ),
-        ],
-      ),
-    );
+    ).then((_) {
+      if (mounted) context.pop();
+    });
   }
 
   // ==================== 支付处理（对齐 iOS processPayment）====================
@@ -437,58 +430,37 @@ class _PaymentContentState extends State<_PaymentContent> {
 
   void _showPaymentSuccess() {
     AppHaptics.heavy();
-    SheetAdaptation.showAdaptiveDialog(
+    AdaptiveDialogs.showInfoDialog(
       context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: Column(
-          children: [
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                color: AppColors.success.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.check_circle,
-                color: AppColors.success,
-                size: 40,
-              ),
+      title: context.l10n.paymentSuccess,
+      contentWidget: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: AppColors.success.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
             ),
-            AppSpacing.vMd,
-            Text(context.l10n.paymentSuccess),
-          ],
-        ),
-        content: Text(
-          context.l10n.paymentSuccessMessage,
-          textAlign: TextAlign.center,
-        ),
-        actionsAlignment: MainAxisAlignment.center,
-        actions: [
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.pop(ctx);
-                context.pop(true);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Text(context.l10n.commonOk),
+            child: const Icon(
+              Icons.check_circle,
+              color: AppColors.success,
+              size: 40,
             ),
+          ),
+          AppSpacing.vMd,
+          Text(
+            context.l10n.paymentSuccessMessage,
+            textAlign: TextAlign.center,
           ),
         ],
       ),
-    );
+      okText: context.l10n.commonOk,
+      barrierDismissible: false,
+    ).then((_) {
+      if (mounted) context.pop(true);
+    });
   }
 
   // ==================== 优惠券 ====================

@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/design/app_colors.dart';
+import '../../../core/utils/adaptive_dialogs.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
@@ -100,44 +101,22 @@ class _LeaderboardDetailContentState
     );
   }
 
-  void _showReportDialog(BuildContext context) {
-    final reasonController = TextEditingController();
+  void _showReportDialog(BuildContext context) async {
     final bloc = context.read<LeaderboardBloc>();
-
-    showDialog<void>(
+    final reason = await AdaptiveDialogs.showInputDialog(
       context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: Text(context.l10n.commonReport),
-          content: TextField(
-            controller: reasonController,
-            maxLines: 3,
-            decoration: InputDecoration(
-              hintText: context.l10n.commonReportReason,
-              border: const OutlineInputBorder(),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: Text(context.l10n.commonCancel),
-            ),
-            FilledButton(
-              onPressed: () {
-                final reason = reasonController.text.trim();
-                if (reason.isEmpty) return;
-                bloc.add(LeaderboardReport(leaderboardId, reason: reason));
-                Navigator.pop(dialogContext);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(context.l10n.commonReportSubmitted)),
-                );
-              },
-              child: Text(context.l10n.commonConfirm),
-            ),
-          ],
-        );
-      },
-    ).then((_) => reasonController.dispose());
+      title: context.l10n.commonReport,
+      placeholder: context.l10n.commonReportReason,
+      maxLines: 3,
+      confirmText: context.l10n.commonConfirm,
+      cancelText: context.l10n.commonCancel,
+    );
+    if (reason != null && reason.trim().isNotEmpty && context.mounted) {
+      bloc.add(LeaderboardReport(leaderboardId, reason: reason.trim()));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.commonReportSubmitted)),
+      );
+    }
   }
 
   PreferredSizeWidget _buildAppBar(

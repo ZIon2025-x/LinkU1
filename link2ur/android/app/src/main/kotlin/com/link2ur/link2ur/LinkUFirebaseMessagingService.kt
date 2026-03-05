@@ -22,8 +22,10 @@ class LinkUFirebaseMessagingService : FirebaseMessagingService() {
         var onTokenRefresh: ((String) -> Unit)? = null
         var onRemoteMessage: ((Map<String, Any?>) -> Unit)? = null
 
-        private const val CHANNEL_ID = "link2ur_default"
-        private const val CHANNEL_NAME = "Link²Ur 通知"
+        // Notification channels
+        private const val CHANNEL_MESSAGES = "link2ur_messages"
+        private const val CHANNEL_TASKS = "link2ur_tasks"
+        private const val CHANNEL_DEFAULT = "link2ur_default"
     }
 
     override fun onNewToken(token: String) {
@@ -70,18 +72,33 @@ class LinkUFirebaseMessagingService : FirebaseMessagingService() {
         }
     }
 
+    private fun getChannelForType(type: String?): Pair<String, String> {
+        return when (type) {
+            "message", "task_chat" -> CHANNEL_MESSAGES to "消息通知"
+            "task_update", "task_applied", "task_accepted",
+            "task_completed", "task_confirmed", "task_cancelled" -> CHANNEL_TASKS to "任务通知"
+            else -> CHANNEL_DEFAULT to "Link²Ur 通知"
+        }
+    }
+
     private fun showNotification(title: String, body: String, data: Map<String, String>) {
         val notificationManager =
             getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        // 创建通知渠道 (Android 8.0+)
+        val type = data["type"]
+        val (channelId, channelName) = getChannelForType(type)
+
+        // 创建所有通知渠道 (Android 8.0+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                CHANNEL_NAME,
-                NotificationManager.IMPORTANCE_HIGH
-            )
-            notificationManager.createNotificationChannel(channel)
+            listOf(
+                Triple(CHANNEL_MESSAGES, "消息通知", NotificationManager.IMPORTANCE_HIGH),
+                Triple(CHANNEL_TASKS, "任务通知", NotificationManager.IMPORTANCE_HIGH),
+                Triple(CHANNEL_DEFAULT, "Link²Ur 通知", NotificationManager.IMPORTANCE_DEFAULT),
+            ).forEach { (id, name, importance) ->
+                notificationManager.createNotificationChannel(
+                    NotificationChannel(id, name, importance)
+                )
+            }
         }
 
         // 点击通知打开 app，附带 data
@@ -94,10 +111,11 @@ class LinkUFirebaseMessagingService : FirebaseMessagingService() {
             PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+        val notification = NotificationCompat.Builder(this, channelId)
             .setContentTitle(title)
             .setContentText(body)
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setColor(0xFF2196F3.toInt())
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_HIGH)

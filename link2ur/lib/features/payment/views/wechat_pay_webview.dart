@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../../core/design/app_colors.dart';
+import '../../../core/utils/adaptive_dialogs.dart';
 import '../../../core/utils/l10n_extension.dart';
 
 /// 微信支付 WebView 页面（与 payment_view 共用，供批准支付页等调用）
@@ -77,28 +78,15 @@ class _WeChatPayWebViewState extends State<WeChatPayWebView> {
   }
 
   void _confirmCancel() {
-    showDialog(
+    AdaptiveDialogs.showConfirmDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(context.l10n.paymentCancelPayment),
-        content: Text(context.l10n.paymentCancelPaymentConfirm),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(context.l10n.paymentContinuePayment),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              widget.onPaymentCancel();
-            },
-            child: Text(
-              context.l10n.paymentCancelPayment,
-              style: const TextStyle(color: AppColors.error),
-            ),
-          ),
-        ],
-      ),
+      title: context.l10n.paymentCancelPayment,
+      content: context.l10n.paymentCancelPaymentConfirm,
+      confirmText: context.l10n.paymentCancelPayment,
+      cancelText: context.l10n.paymentContinuePayment,
+      onConfirm: () {
+        widget.onPaymentCancel();
+      },
     );
   }
 

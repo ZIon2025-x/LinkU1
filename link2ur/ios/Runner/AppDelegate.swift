@@ -17,6 +17,9 @@ import SwiftUI
 
   /// MethodChannel 用于 Stripe Connect Onboarding
   private var stripeConnectChannel: FlutterMethodChannel?
+
+  /// MethodChannel 用于 iOS 增强触觉反馈
+  private var hapticsChannel: FlutterMethodChannel?
   private var stripeConnectHandler = StripeConnectOnboardingHandler()
 
   /// 缓存的 APNs device token（hex 格式）
@@ -98,6 +101,30 @@ import SwiftUI
           from: controller,
           result: result
         )
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
+
+    // 触觉反馈 channel（iOS 增强）
+    hapticsChannel = FlutterMethodChannel(name: "com.link2ur/haptics", binaryMessenger: messenger)
+    hapticsChannel?.setMethodCallHandler { call, result in
+      switch call.method {
+      case "notificationSuccess":
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        result(nil)
+      case "notificationWarning":
+        UINotificationFeedbackGenerator().notificationOccurred(.warning)
+        result(nil)
+      case "notificationError":
+        UINotificationFeedbackGenerator().notificationOccurred(.error)
+        result(nil)
+      case "impactRigid":
+        UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
+        result(nil)
+      case "impactSoft":
+        UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+        result(nil)
       default:
         result(FlutterMethodNotImplemented)
       }

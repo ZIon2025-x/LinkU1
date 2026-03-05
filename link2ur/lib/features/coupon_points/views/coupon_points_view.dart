@@ -4,8 +4,8 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/adaptive_dialogs.dart';
 import '../../../core/utils/l10n_extension.dart';
-import '../../../core/utils/sheet_adaptation.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/loading_view.dart';
@@ -292,39 +292,19 @@ class _PointsTab extends StatelessWidget {
     );
   }
 
-  void _showRedemptionCodeDialog(BuildContext context) {
-    final controller = TextEditingController();
-    SheetAdaptation.showAdaptiveDialog<void>(
+  void _showRedemptionCodeDialog(BuildContext context) async {
+    final code = await AdaptiveDialogs.showInputDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(context.l10n.couponEnterInviteCodeTitle),
-        content: TextField(
-          controller: controller,
-          decoration: InputDecoration(
-            hintText: context.l10n.couponEnterInviteCodeHint,
-            border: const OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(context.l10n.commonCancel),
-          ),
-          TextButton(
-            onPressed: () {
-              final code = controller.text.trim();
-              if (code.isNotEmpty) {
-                context
-                    .read<CouponPointsBloc>()
-                    .add(CouponPointsUseInvitationCode(code));
-                Navigator.pop(ctx);
-              }
-            },
-            child: Text(context.l10n.commonConfirm),
-          ),
-        ],
-      ),
-    ).then((_) => controller.dispose());
+      title: context.l10n.couponEnterInviteCodeTitle,
+      placeholder: context.l10n.couponEnterInviteCodeHint,
+      confirmText: context.l10n.commonConfirm,
+      cancelText: context.l10n.commonCancel,
+    );
+    if (code != null && code.trim().isNotEmpty && context.mounted) {
+      context
+          .read<CouponPointsBloc>()
+          .add(CouponPointsUseInvitationCode(code.trim()));
+    }
   }
 }
 

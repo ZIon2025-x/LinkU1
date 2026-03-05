@@ -41,6 +41,11 @@ class AppConfig {
   static String get mobileAppSecret =>
       const String.fromEnvironment('MOBILE_APP_SECRET');
 
+  /// Google Maps API Key（用于静态地图预览）
+  /// 通过 --dart-define=GOOGLE_MAPS_KEY=xxx 传入
+  static String get googleMapsKey =>
+      const String.fromEnvironment('GOOGLE_MAPS_KEY');
+
   /// Stripe公钥
   String get stripePublishableKey {
     switch (_environment) {

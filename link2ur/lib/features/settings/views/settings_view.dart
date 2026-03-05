@@ -10,7 +10,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
-import '../../../core/utils/sheet_adaptation.dart';
+import '../../../core/utils/adaptive_dialogs.dart';
 import '../../auth/bloc/auth_bloc.dart';
 
 /// 设置页面
@@ -54,29 +54,17 @@ class _SettingsViewState extends State<SettingsView> {
   }
 
   void _showDeleteAccountDialog(BuildContext context) {
-    SheetAdaptation.showAdaptiveDialog(
+    AdaptiveDialogs.showConfirmDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(context.l10n.settingsDeleteAccount),
-        content: Text(
-          context.l10n.settingsDeleteAccountMessage,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(context.l10n.commonCancel),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              // 发送删除账户事件，BlocListener 监听结果后再登出
-              context.read<SettingsBloc>().add(const SettingsDeleteAccount());
-            },
-            style: TextButton.styleFrom(foregroundColor: AppColors.error),
-            child: Text(context.l10n.settingsDeleteAccount),
-          ),
-        ],
-      ),
+      title: context.l10n.settingsDeleteAccount,
+      content: context.l10n.settingsDeleteAccountMessage,
+      confirmText: context.l10n.settingsDeleteAccount,
+      cancelText: context.l10n.commonCancel,
+      isDestructive: true,
+      onConfirm: () {
+        // 发送删除账户事件，BlocListener 监听结果后再登出
+        context.read<SettingsBloc>().add(const SettingsDeleteAccount());
+      },
     );
   }
 

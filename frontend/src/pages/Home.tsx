@@ -1089,7 +1089,7 @@ const Home: React.FC = () => {
           
           <div className={styles.heroButtons}>
             <a
-              href="https://app.link2ur.com/tasks"
+              href="https://app.link2ur.com"
               target="_blank"
               rel="noopener noreferrer"
               className={styles.heroButton}

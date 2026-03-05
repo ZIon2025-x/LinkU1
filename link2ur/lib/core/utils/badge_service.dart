@@ -1,25 +1,39 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
+import 'package:flutter_app_badger/flutter_app_badger.dart';
 
 import 'logger.dart';
 
 /// App 角标管理服务
-/// 参考 iOS 原生 BadgeManager.swift
-/// 通过 MethodChannel 调用原生 API 更新 app 图标角标
+/// iOS: MethodChannel (原生 UNUserNotificationCenter)
+/// Android: flutter_app_badger (支持三星、华为、小米等启动器)
 class BadgeService {
   BadgeService._();
   static final BadgeService instance = BadgeService._();
 
-  /// MethodChannel 用于与原生角标 API 通信
+  /// iOS 专用 MethodChannel
   static const _channel = MethodChannel('com.link2ur/badge');
+
+  /// iOS 使用原生 MethodChannel，Android 使用 flutter_app_badger
+  static bool get _useNativeChannel => !kIsWeb && Platform.isIOS;
 
   /// 更新 App 图标角标数
   /// [count] 未读总数（通知 + 消息）
   Future<void> updateBadge(int count) async {
-    if (kIsWeb) return; // Web 不支持角标
+    if (kIsWeb) return;
 
     try {
-      await _channel.invokeMethod('updateBadge', count);
+      if (_useNativeChannel) {
+        await _channel.invokeMethod('updateBadge', count);
+      } else {
+        if (count > 0) {
+          FlutterAppBadger.updateBadgeCount(count);
+        } else {
+          FlutterAppBadger.removeBadge();
+        }
+      }
     } catch (e) {
       AppLogger.error('BadgeService - updateBadge failed', e);
     }
@@ -30,7 +44,11 @@ class BadgeService {
     if (kIsWeb) return;
 
     try {
-      await _channel.invokeMethod('clearBadge');
+      if (_useNativeChannel) {
+        await _channel.invokeMethod('clearBadge');
+      } else {
+        FlutterAppBadger.removeBadge();
+      }
     } catch (e) {
       AppLogger.error('BadgeService - clearBadge failed', e);
     }
@@ -41,8 +59,12 @@ class BadgeService {
     if (kIsWeb) return 0;
 
     try {
-      final count = await _channel.invokeMethod<int>('getBadgeCount');
-      return count ?? 0;
+      if (_useNativeChannel) {
+        final count = await _channel.invokeMethod<int>('getBadgeCount');
+        return count ?? 0;
+      }
+      // flutter_app_badger 不支持在 Android 上读取角标数
+      return 0;
     } catch (e) {
       AppLogger.error('BadgeService - getBadgeCount failed', e);
       return 0;

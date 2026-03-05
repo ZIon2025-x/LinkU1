@@ -1,6 +1,11 @@
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../../core/config/app_config.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
@@ -25,6 +30,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/router/page_transitions.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/utils/sheet_adaptation.dart';
+import '../../../core/utils/adaptive_dialogs.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/helpers.dart';
@@ -120,26 +126,16 @@ class _TaskDetailContent extends StatelessWidget {
         }
 
         if (state.actionMessage == 'stripe_setup_required') {
-          showDialog<void>(
+          AdaptiveDialogs.showConfirmDialog(
             context: context,
-            builder: (d) => AlertDialog(
-              icon: const Icon(Icons.account_balance_wallet_outlined,
-                  size: 40, color: AppColors.primary),
-              title: Text(context.l10n.stripeSetupRequired),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(d),
-                  child: Text(context.l10n.commonCancel),
-                ),
-                FilledButton(
-                  onPressed: () {
-                    Navigator.pop(d);
-                    context.push('/wallet');
-                  },
-                  child: Text(context.l10n.stripeSetupAction),
-                ),
-              ],
-            ),
+            title: context.l10n.stripeSetupRequired,
+            contentWidget: const Icon(Icons.account_balance_wallet_outlined,
+                size: 40, color: AppColors.primary),
+            cancelText: context.l10n.commonCancel,
+            confirmText: context.l10n.stripeSetupAction,
+            onConfirm: () {
+              context.push('/wallet');
+            },
           );
           return;
         }
@@ -374,23 +370,13 @@ class _TaskDetailContent extends StatelessWidget {
   /// 取消任务确认弹窗
   void _showCancelTaskConfirm(BuildContext context, int taskId) {
     final l10n = context.l10n;
-    SheetAdaptation.showAdaptiveDialog<bool>(
+    AdaptiveDialogs.showConfirmDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.taskDetailCancelTask),
-        content: Text(l10n.taskDetailCancelTaskConfirm),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(l10n.actionsCancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
-            child: Text(l10n.taskDetailCancelTask),
-          ),
-        ],
-      ),
+      title: l10n.taskDetailCancelTask,
+      content: l10n.taskDetailCancelTaskConfirm,
+      cancelText: l10n.actionsCancel,
+      confirmText: l10n.taskDetailCancelTask,
+      isDestructive: true,
     ).then((confirmed) {
       if (!context.mounted || confirmed != true) return;
       context.read<TaskDetailBloc>().add(const TaskDetailCancelRequested());
@@ -1072,23 +1058,13 @@ class _TaskDetailContent extends StatelessWidget {
 
   void _showDeclineDesignatedTaskConfirm(BuildContext context) {
     final l10n = context.l10n;
-    SheetAdaptation.showAdaptiveDialog<bool>(
+    AdaptiveDialogs.showConfirmDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.taskDetailDeclineDesignated),
-        content: Text(l10n.taskDetailDeclineDesignatedConfirm),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(l10n.actionsCancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
-            child: Text(l10n.taskDetailDeclineDesignated),
-          ),
-        ],
-      ),
+      title: l10n.taskDetailDeclineDesignated,
+      content: l10n.taskDetailDeclineDesignatedConfirm,
+      cancelText: l10n.actionsCancel,
+      confirmText: l10n.taskDetailDeclineDesignated,
+      isDestructive: true,
     ).then((confirmed) {
       if (!context.mounted || confirmed != true) return;
       context.read<TaskDetailBloc>().add(const TaskDetailCancelApplicationRequested());
@@ -1438,7 +1414,55 @@ class _TaskHeaderCard extends StatelessWidget {
               ),
             ],
           ),
+          // 静态地图预览（仅线下任务且有坐标时显示）
+          if (!task.isOnline &&
+              task.latitude != null &&
+              task.longitude != null &&
+              AppConfig.googleMapsKey.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.sm),
+              child: _buildStaticMapPreview(context),
+            ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildStaticMapPreview(BuildContext context) {
+    final lat = task.latitude!;
+    final lng = task.longitude!;
+    final key = AppConfig.googleMapsKey;
+    final url = 'https://maps.googleapis.com/maps/api/staticmap'
+        '?center=$lat,$lng&zoom=15&size=600x200'
+        '&markers=color:red%7C$lat,$lng'
+        '&key=$key';
+
+    return GestureDetector(
+      onTap: () {
+        final mapUri = !kIsWeb && Platform.isIOS
+            ? Uri.parse('https://maps.apple.com/?ll=$lat,$lng&z=15')
+            : Uri.parse(
+                'https://www.google.com/maps/search/?api=1&query=$lat,$lng');
+        launchUrl(mapUri, mode: LaunchMode.externalApplication);
+      },
+      child: ClipRRect(
+        borderRadius: AppRadius.allMedium,
+        child: Image.network(
+          url,
+          height: 150,
+          width: double.infinity,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return Container(
+              height: 150,
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              child:
+                  const Center(child: CircularProgressIndicator.adaptive()),
+            );
+          },
+        ),
       ),
     );
   }

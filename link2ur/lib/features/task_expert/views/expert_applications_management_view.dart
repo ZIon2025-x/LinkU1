@@ -1,9 +1,14 @@
+import 'dart:io' show Platform;
+
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/adaptive_dialogs.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/haptic_feedback.dart';
@@ -408,84 +413,42 @@ class _ApplicationCard extends StatelessWidget {
     final appId = application['id'] as int;
     AppHaptics.light();
 
-    showDialog(
+    AdaptiveDialogs.showConfirmDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.expertApplicationConfirmApprove),
-        content: Text(l10n.expertApplicationConfirmApproveMessage),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(l10n.commonCancel),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.success,
-            ),
-            onPressed: () {
-              Navigator.of(dialogContext).pop();
-              context
-                  .read<TaskExpertBloc>()
-                  .add(TaskExpertApproveApplication(appId));
-            },
-            child: Text(l10n.expertApplicationApprove),
-          ),
-        ],
-      ),
+      title: l10n.expertApplicationConfirmApprove,
+      content: l10n.expertApplicationConfirmApproveMessage,
+      confirmText: l10n.expertApplicationApprove,
+      cancelText: l10n.commonCancel,
+      onConfirm: () {
+        context
+            .read<TaskExpertBloc>()
+            .add(TaskExpertApproveApplication(appId));
+      },
     );
   }
 
-  void _showRejectDialog(BuildContext context) {
+  void _showRejectDialog(BuildContext context) async {
     final l10n = context.l10n;
     final appId = application['id'] as int;
-    final reasonController = TextEditingController();
     AppHaptics.light();
 
-    showDialog(
+    final reason = await AdaptiveDialogs.showInputDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.expertApplicationConfirmReject),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(l10n.expertApplicationConfirmRejectMessage),
-            const SizedBox(height: AppSpacing.md),
-            TextField(
-              controller: reasonController,
-              decoration: InputDecoration(
-                labelText: l10n.expertApplicationRejectReason,
-                hintText: l10n.expertApplicationRejectReasonHint,
-                border: const OutlineInputBorder(),
-              ),
-              maxLines: 3,
+      title: l10n.expertApplicationConfirmReject,
+      message: l10n.expertApplicationConfirmRejectMessage,
+      placeholder: l10n.expertApplicationRejectReasonHint,
+      maxLines: 3,
+      confirmText: l10n.expertApplicationReject,
+      cancelText: l10n.commonCancel,
+    );
+    if (reason != null && context.mounted) {
+      context.read<TaskExpertBloc>().add(
+            TaskExpertRejectApplication(
+              appId,
+              reason: reason.trim().isNotEmpty ? reason.trim() : null,
             ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(l10n.commonCancel),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.error,
-            ),
-            onPressed: () {
-              Navigator.of(dialogContext).pop();
-              context.read<TaskExpertBloc>().add(
-                    TaskExpertRejectApplication(
-                      appId,
-                      reason: reasonController.text.trim().isNotEmpty
-                          ? reasonController.text.trim()
-                          : null,
-                    ),
-                  );
-            },
-            child: Text(l10n.expertApplicationReject),
-          ),
-        ],
-      ),
-    ).whenComplete(() => reasonController.dispose());
+          );
+    }
   }
 
   void _showCounterOfferDialog(BuildContext context) {
@@ -493,67 +456,128 @@ class _ApplicationCard extends StatelessWidget {
     final appId = application['id'] as int;
     final priceController = TextEditingController();
     final messageController = TextEditingController();
+    final isIOS = !kIsWeb && Platform.isIOS;
     AppHaptics.light();
 
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.expertApplicationCounterOffer),
-        content: Column(
+      builder: (dialogContext) {
+        final counterOfferContent = Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(
-              controller: priceController,
-              decoration: InputDecoration(
-                labelText: l10n.expertApplicationCounterPrice,
-                hintText: l10n.expertApplicationCounterPriceHint,
-                prefixText: '£ ',
-                border: const OutlineInputBorder(),
-              ),
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-            ),
+            isIOS
+                ? CupertinoTextField(
+                    controller: priceController,
+                    placeholder: l10n.expertApplicationCounterPriceHint,
+                    prefix: const Padding(
+                      padding: EdgeInsets.only(left: 8),
+                      child: Text('£ '),
+                    ),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                  )
+                : TextField(
+                    controller: priceController,
+                    decoration: InputDecoration(
+                      labelText: l10n.expertApplicationCounterPrice,
+                      hintText: l10n.expertApplicationCounterPriceHint,
+                      prefixText: '£ ',
+                      border: const OutlineInputBorder(),
+                    ),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                  ),
             const SizedBox(height: AppSpacing.md),
-            TextField(
-              controller: messageController,
-              decoration: InputDecoration(
-                labelText: l10n.expertApplicationCounterMessage,
-                hintText: l10n.expertApplicationCounterMessageHint,
-                border: const OutlineInputBorder(),
+            isIOS
+                ? CupertinoTextField(
+                    controller: messageController,
+                    placeholder: l10n.expertApplicationCounterMessageHint,
+                    maxLines: 3,
+                  )
+                : TextField(
+                    controller: messageController,
+                    decoration: InputDecoration(
+                      labelText: l10n.expertApplicationCounterMessage,
+                      hintText: l10n.expertApplicationCounterMessageHint,
+                      border: const OutlineInputBorder(),
+                    ),
+                    maxLines: 3,
+                  ),
+          ],
+        );
+
+        if (isIOS) {
+          return CupertinoAlertDialog(
+            title: Text(l10n.expertApplicationCounterOffer),
+            content: counterOfferContent,
+            actions: [
+              CupertinoDialogAction(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: Text(l10n.commonCancel),
               ),
-              maxLines: 3,
+              CupertinoDialogAction(
+                isDefaultAction: true,
+                onPressed: () {
+                  final price = double.tryParse(priceController.text.trim());
+                  if (price == null || price <= 0) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                          content:
+                              Text(l10n.fleaMarketNegotiatePriceTooLow)),
+                    );
+                    return;
+                  }
+                  Navigator.of(dialogContext).pop();
+                  context.read<TaskExpertBloc>().add(
+                        TaskExpertCounterOffer(
+                          appId,
+                          counterPrice: price,
+                          message: messageController.text.trim().isNotEmpty
+                              ? messageController.text.trim()
+                              : null,
+                        ),
+                      );
+                },
+                child: Text(l10n.commonConfirm),
+              ),
+            ],
+          );
+        }
+
+        return AlertDialog(
+          title: Text(l10n.expertApplicationCounterOffer),
+          content: counterOfferContent,
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(l10n.commonCancel),
+            ),
+            FilledButton(
+              onPressed: () {
+                final price = double.tryParse(priceController.text.trim());
+                if (price == null || price <= 0) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                        content: Text(l10n.fleaMarketNegotiatePriceTooLow)),
+                  );
+                  return;
+                }
+                Navigator.of(dialogContext).pop();
+                context.read<TaskExpertBloc>().add(
+                      TaskExpertCounterOffer(
+                        appId,
+                        counterPrice: price,
+                        message: messageController.text.trim().isNotEmpty
+                            ? messageController.text.trim()
+                            : null,
+                      ),
+                    );
+              },
+              child: Text(l10n.commonConfirm),
             ),
           ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(l10n.commonCancel),
-          ),
-          FilledButton(
-            onPressed: () {
-              final price = double.tryParse(priceController.text.trim());
-              if (price == null || price <= 0) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(l10n.fleaMarketNegotiatePriceTooLow)),
-                );
-                return;
-              }
-              Navigator.of(dialogContext).pop();
-              context.read<TaskExpertBloc>().add(
-                    TaskExpertCounterOffer(
-                      appId,
-                      counterPrice: price,
-                      message: messageController.text.trim().isNotEmpty
-                          ? messageController.text.trim()
-                          : null,
-                    ),
-                  );
-            },
-            child: Text(l10n.commonConfirm),
-          ),
-        ],
-      ),
+        );
+      },
     ).whenComplete(() {
       priceController.dispose();
       messageController.dispose();

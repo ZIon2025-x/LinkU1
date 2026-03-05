@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import 'adaptive_dialogs.dart';
 import 'l10n_extension.dart';
 import 'logger.dart';
-import 'sheet_adaptation.dart';
 
 /// 权限管理器
 /// 参考iOS PermissionManager.swift
@@ -111,31 +111,27 @@ class PermissionManager {
     bool isPermanentlyDenied = false,
   }) async {
     final l10n = context.l10n;
-    await SheetAdaptation.showAdaptiveDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.permissionRequired(permissionName)),
-        content: Text(
-          isPermanentlyDenied
-              ? l10n.permissionEnableInSettings(permissionName)
-              : l10n.permissionRequiredForFeature(permissionName),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(l10n.commonCancel),
-          ),
-          if (isPermanentlyDenied)
-            TextButton(
-              onPressed: () {
-                Navigator.pop(ctx);
-                openAppSettings();
-              },
-              child: Text(l10n.commonGoSetup),
-            ),
-        ],
-      ),
-    );
+    if (isPermanentlyDenied) {
+      // 两个按钮：取消 + 去设置
+      await AdaptiveDialogs.showConfirmDialog(
+        context: context,
+        title: l10n.permissionRequired(permissionName),
+        content: l10n.permissionEnableInSettings(permissionName),
+        confirmText: l10n.commonGoSetup,
+        cancelText: l10n.commonCancel,
+        onConfirm: () {
+          openAppSettings();
+        },
+      );
+    } else {
+      // 单按钮：知道了
+      await AdaptiveDialogs.showInfoDialog(
+        context: context,
+        title: l10n.permissionRequired(permissionName),
+        content: l10n.permissionRequiredForFeature(permissionName),
+        okText: l10n.commonCancel,
+      );
+    }
   }
 
   /// 请求多个权限

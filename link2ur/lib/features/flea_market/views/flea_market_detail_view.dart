@@ -19,6 +19,7 @@ import '../../../core/utils/responsive.dart';
 import '../../../core/router/page_transitions.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/utils/sheet_adaptation.dart';
+import '../../../core/utils/adaptive_dialogs.dart';
 import '../../../data/repositories/flea_market_repository.dart';
 import '../../../data/models/flea_market.dart';
 import '../../../features/auth/bloc/auth_bloc.dart';
@@ -418,38 +419,24 @@ class _FleaMarketDetailContent extends StatelessWidget {
           onTap: state.isSubmitting
               ? null
               : () {
-                  showDialog<void>(
+                  AdaptiveDialogs.showConfirmDialog(
                     context: context,
-                    builder: (d) => AlertDialog(
-                      title: Text(context.l10n.commonDelete),
-                      content:
-                          Text(context.l10n.fleaMarketDeleteItemConfirm),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(d),
-                          child: Text(context.l10n.commonCancel),
-                        ),
-                        FilledButton(
-                          style: FilledButton.styleFrom(
-                            backgroundColor:
-                                Theme.of(context).colorScheme.error,
-                          ),
-                          onPressed: () {
-                            context
-                                .read<FleaMarketBloc>()
-                                .add(FleaMarketDeleteItem(itemId));
-                            Navigator.pop(d);
-                            Navigator.of(context).pop();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                  content: Text(context
-                                      .l10n.fleaMarketItemDeleted)),
-                            );
-                          },
-                          child: Text(context.l10n.commonDelete),
-                        ),
-                      ],
-                    ),
+                    title: context.l10n.commonDelete,
+                    content: context.l10n.fleaMarketDeleteItemConfirm,
+                    cancelText: context.l10n.commonCancel,
+                    confirmText: context.l10n.commonDelete,
+                    isDestructive: true,
+                    onConfirm: () {
+                      context
+                          .read<FleaMarketBloc>()
+                          .add(FleaMarketDeleteItem(itemId));
+                      Navigator.of(context).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                            content: Text(context
+                                .l10n.fleaMarketItemDeleted)),
+                      );
+                    },
                   );
                 },
           child: Container(
@@ -709,64 +696,43 @@ class _FleaMarketDetailContent extends StatelessWidget {
   void _showAcceptCounterOfferDialog(
       BuildContext context, FleaMarketItem item, String priceText) {
     final l10n = context.l10n;
-    showDialog(
+    AdaptiveDialogs.showConfirmDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.fleaMarketAcceptCounterOfferConfirmTitle),
-        content: Text(l10n.fleaMarketAcceptCounterOfferConfirmMessage(priceText)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(l10n.actionsCancel),
+      title: l10n.fleaMarketAcceptCounterOfferConfirmTitle,
+      content: l10n.fleaMarketAcceptCounterOfferConfirmMessage(priceText),
+      cancelText: l10n.actionsCancel,
+      confirmText: l10n.actionsConfirm,
+      onConfirm: () {
+        context.read<FleaMarketBloc>().add(
+          FleaMarketRespondCounterOffer(
+            itemId,
+            purchaseRequestId: item.userPurchaseRequestId ?? 0,
+            accept: true,
           ),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-              context.read<FleaMarketBloc>().add(
-                FleaMarketRespondCounterOffer(
-                  itemId,
-                  purchaseRequestId: item.userPurchaseRequestId ?? 0,
-                  accept: true,
-                ),
-              );
-            },
-            child: Text(l10n.actionsConfirm),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
   void _showRejectCounterOfferDialog(
       BuildContext context, FleaMarketItem item) {
     final l10n = context.l10n;
-    showDialog(
+    AdaptiveDialogs.showConfirmDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.fleaMarketRejectCounterOfferConfirmTitle),
-        content: Text(l10n.fleaMarketRejectCounterOfferConfirmMessage),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(l10n.actionsCancel),
+      title: l10n.fleaMarketRejectCounterOfferConfirmTitle,
+      content: l10n.fleaMarketRejectCounterOfferConfirmMessage,
+      cancelText: l10n.actionsCancel,
+      confirmText: l10n.actionsConfirm,
+      isDestructive: true,
+      onConfirm: () {
+        context.read<FleaMarketBloc>().add(
+          FleaMarketRespondCounterOffer(
+            itemId,
+            purchaseRequestId: item.userPurchaseRequestId ?? 0,
+            accept: false,
           ),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-              context.read<FleaMarketBloc>().add(
-                FleaMarketRespondCounterOffer(
-                  itemId,
-                  purchaseRequestId: item.userPurchaseRequestId ?? 0,
-                  accept: false,
-                ),
-              );
-            },
-            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
-            child: Text(l10n.actionsConfirm,
-                style: const TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -2257,73 +2223,46 @@ class _PurchaseRequestItem extends StatelessWidget {
   }
 
   void _showRejectConfirmDialog(BuildContext context) {
-    showDialog(
+    AdaptiveDialogs.showConfirmDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(context.l10n.fleaMarketRejectPurchaseConfirmTitle),
-        content: Text(context.l10n.fleaMarketRejectPurchaseConfirmMessage),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(context.l10n.actionsCancel),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-              context.read<FleaMarketBloc>().add(
-                FleaMarketRejectPurchaseRequest(request.id, itemId),
-              );
-            },
-            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
-            child: Text(context.l10n.actionsConfirm, style: const TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
+      title: context.l10n.fleaMarketRejectPurchaseConfirmTitle,
+      content: context.l10n.fleaMarketRejectPurchaseConfirmMessage,
+      cancelText: context.l10n.actionsCancel,
+      confirmText: context.l10n.actionsConfirm,
+      isDestructive: true,
+      onConfirm: () {
+        context.read<FleaMarketBloc>().add(
+          FleaMarketRejectPurchaseRequest(request.id, itemId),
+        );
+      },
     );
   }
 
   void _showCounterOfferDialog(BuildContext context) {
-    final controller = TextEditingController(
-      text: request.proposedPrice != null
+    final initialValue = request.proposedPrice != null
         ? Helpers.formatAmountNumber(request.proposedPrice!)
-        : '',
-    );
-    showDialog(
+        : '';
+    AdaptiveDialogs.showInputDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(context.l10n.fleaMarketNegotiate),
-        content: TextField(
-          controller: controller,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: InputDecoration(
-            labelText: context.l10n.fleaMarketPrice,
-            prefixText: '£',
+      title: context.l10n.fleaMarketNegotiate,
+      placeholder: context.l10n.fleaMarketPrice,
+      initialValue: initialValue,
+      confirmText: context.l10n.actionsConfirm,
+      cancelText: context.l10n.actionsCancel,
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+    ).then((value) {
+      if (value == null || !context.mounted) return;
+      final price = double.tryParse(value);
+      if (price != null && price > 0) {
+        context.read<FleaMarketBloc>().add(
+          FleaMarketCounterOffer(
+            itemId,
+            purchaseRequestId: int.tryParse(request.id) ?? 0,
+            counterPrice: price,
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(context.l10n.actionsCancel),
-          ),
-          FilledButton(
-            onPressed: () {
-              final price = double.tryParse(controller.text);
-              if (price != null && price > 0) {
-                Navigator.pop(dialogContext);
-                context.read<FleaMarketBloc>().add(
-                  FleaMarketCounterOffer(
-                    itemId,
-                    purchaseRequestId: int.tryParse(request.id) ?? 0,
-                    counterPrice: price,
-                  ),
-                );
-              }
-            },
-            child: Text(context.l10n.actionsConfirm),
-          ),
-        ],
-      ),
-    );
+        );
+      }
+    });
   }
 
   Widget _buildStatusLabel(BuildContext context, String status) {

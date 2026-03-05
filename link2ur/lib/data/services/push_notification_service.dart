@@ -161,7 +161,7 @@ class PushNotificationService with WidgetsBindingObserver {
 
   /// 初始化本地通知
   Future<void> _initLocalNotifications() async {
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings('@drawable/ic_notification');
     const iosSettings = DarwinInitializationSettings(
       
     );
@@ -175,19 +175,35 @@ class PushNotificationService with WidgetsBindingObserver {
       onDidReceiveNotificationResponse: _onNotificationTapped,
     );
 
-    // 创建 Android 通知渠道
+    // 创建 Android 通知渠道（消息、任务、默认）
     if (!kIsWeb && ApiConfig.platformId == 'android') {
-      const channel = AndroidNotificationChannel(
-        'link2ur_default',
-        'Link²Ur 通知',
-        description: 'Link²Ur 应用通知',
-        importance: Importance.high,
-      );
+      const channels = [
+        AndroidNotificationChannel(
+          'link2ur_messages',
+          '消息通知',
+          description: '聊天消息通知',
+          importance: Importance.high,
+        ),
+        AndroidNotificationChannel(
+          'link2ur_tasks',
+          '任务通知',
+          description: '任务状态更新通知',
+          importance: Importance.high,
+        ),
+        AndroidNotificationChannel(
+          'link2ur_default',
+          'Link²Ur 通知',
+          description: '其他通知',
+          importance: Importance.defaultImportance,
+        ),
+      ];
 
-      await _localNotifications
+      final android = _localNotifications
           .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>()
-          ?.createNotificationChannel(channel);
+              AndroidFlutterLocalNotificationsPlugin>();
+      for (final channel in channels) {
+        await android?.createNotificationChannel(channel);
+      }
     }
   }
 
@@ -245,6 +261,7 @@ class PushNotificationService with WidgetsBindingObserver {
         title: title,
         body: body,
         payload: data.toString(),
+        type: data['type'] as String?,
       );
     }
   }
@@ -303,16 +320,54 @@ class PushNotificationService with WidgetsBindingObserver {
     }
   }
 
+  static String _channelForType(String? type) {
+    switch (type) {
+      case 'message':
+      case 'task_chat':
+        return 'link2ur_messages';
+      case 'task_update':
+      case 'task_applied':
+      case 'task_accepted':
+      case 'task_completed':
+      case 'task_confirmed':
+      case 'task_cancelled':
+        return 'link2ur_tasks';
+      default:
+        return 'link2ur_default';
+    }
+  }
+
+  static String _channelNameForType(String? type) {
+    switch (type) {
+      case 'message':
+      case 'task_chat':
+        return '消息通知';
+      case 'task_update':
+      case 'task_applied':
+      case 'task_accepted':
+      case 'task_completed':
+      case 'task_confirmed':
+      case 'task_cancelled':
+        return '任务通知';
+      default:
+        return 'Link²Ur 通知';
+    }
+  }
+
   /// 显示本地通知
   Future<void> _showLocalNotification({
     required String title,
     required String body,
     String? payload,
+    String? type,
   }) async {
-    const androidDetails = AndroidNotificationDetails(
-      'link2ur_default',
-      'Link²Ur 通知',
-      channelDescription: 'Link²Ur 应用通知',
+    final channelId = _channelForType(type);
+    final channelName = _channelNameForType(type);
+
+    final androidDetails = AndroidNotificationDetails(
+      channelId,
+      channelName,
+      channelDescription: channelName,
       importance: Importance.high,
       priority: Priority.high,
     );
@@ -321,7 +376,7 @@ class PushNotificationService with WidgetsBindingObserver {
       presentBadge: true,
       presentSound: true,
     );
-    const details = NotificationDetails(
+    final details = NotificationDetails(
       android: androidDetails,
       iOS: iosDetails,
     );

@@ -6,6 +6,7 @@ import 'package:in_app_purchase/in_app_purchase.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/adaptive_dialogs.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../data/services/api_service.dart';
@@ -83,56 +84,38 @@ class _VIPPurchaseViewState extends State<VIPPurchaseView> {
   }
 
   void _showPurchaseSuccessDialog() {
-    showDialog(
+    AdaptiveDialogs.showInfoDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: Column(
-          children: [
-            Container(
-              width: 64,
-              height: 64,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: AppColors.gradientGold,
-                ),
-                shape: BoxShape.circle,
+      title: context.l10n.vipPurchaseSuccess,
+      contentWidget: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: AppColors.gradientGold,
               ),
-              child: const Icon(
-                Icons.workspace_premium,
-                color: Colors.white,
-                size: 36,
-              ),
+              shape: BoxShape.circle,
             ),
-            const SizedBox(height: 12),
-            Text(context.l10n.vipPurchaseSuccess),
-          ],
-        ),
-        content: Text(
-          context.l10n.vipCongratulations,
-          textAlign: TextAlign.center,
-        ),
-        actionsAlignment: MainAxisAlignment.center,
-        actions: [
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.pop(ctx);
-                Navigator.of(context).pop(true);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-              ),
-              child: Text(context.l10n.vipPurchaseConfirm),
+            child: const Icon(
+              Icons.workspace_premium,
+              color: Colors.white,
+              size: 36,
             ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            context.l10n.vipCongratulations,
+            textAlign: TextAlign.center,
           ),
         ],
       ),
-    );
+      okText: context.l10n.vipPurchaseConfirm,
+    ).then((_) {
+      if (mounted) Navigator.of(context).pop(true);
+    });
   }
 
   Future<void> _purchase() async {

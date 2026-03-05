@@ -219,27 +219,17 @@ Widget _buildLogoutButton(BuildContext context, bool isDark) {
 }
 
 void _showLogoutDialog(BuildContext context) {
-  SheetAdaptation.showAdaptiveDialog(
+  AdaptiveDialogs.showConfirmDialog(
     context: context,
-    builder: (ctx) => AlertDialog(
-      title: Text(context.l10n.profileConfirmLogout),
-      content: Text(context.l10n.profileLogoutMessage),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(ctx),
-          child: Text(context.l10n.commonCancel),
-        ),
-        TextButton(
-          onPressed: () {
-            Navigator.pop(ctx);
-            context.read<AuthBloc>().add(AuthLogoutRequested());
-            context.go('/login');
-          },
-          style: TextButton.styleFrom(foregroundColor: AppColors.error),
-          child: Text(context.l10n.profileLogout),
-        ),
-      ],
-    ),
+    title: context.l10n.profileConfirmLogout,
+    content: context.l10n.profileLogoutMessage,
+    confirmText: context.l10n.profileLogout,
+    cancelText: context.l10n.commonCancel,
+    isDestructive: true,
+    onConfirm: () {
+      context.read<AuthBloc>().add(AuthLogoutRequested());
+      context.go('/login');
+    },
   );
 }
 

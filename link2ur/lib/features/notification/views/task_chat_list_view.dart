@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/adaptive_dialogs.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/loading_view.dart';
@@ -125,25 +126,15 @@ class _TaskChatListViewContent extends StatelessWidget {
                 label: context.l10n.chatDeleteChat,
                 color: AppColors.error,
                 onTap: () async {
-                  final confirmed = await showDialog<bool>(
+                  final confirmed = await AdaptiveDialogs.showConfirmDialog<bool>(
                     context: context,
-                    builder: (ctx) => AlertDialog(
-                      title: Text(context.l10n.chatDeleteChat),
-                      content: Text(context.l10n.chatDeletedHint),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(ctx).pop(false),
-                          child: Text(context.l10n.commonCancel),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.of(ctx).pop(true),
-                          child: Text(
-                            context.l10n.commonConfirm,
-                            style: const TextStyle(color: AppColors.error),
-                          ),
-                        ),
-                      ],
-                    ),
+                    title: context.l10n.chatDeleteChat,
+                    content: context.l10n.chatDeletedHint,
+                    confirmText: context.l10n.commonConfirm,
+                    cancelText: context.l10n.commonCancel,
+                    isDestructive: true,
+                    onConfirm: () => true,
+                    onCancel: () => false,
                   );
                   if (confirmed == true && context.mounted) {
                     context.read<MessageBloc>()

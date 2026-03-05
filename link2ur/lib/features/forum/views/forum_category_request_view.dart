@@ -7,6 +7,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_typography.dart';
+import '../../../core/utils/adaptive_dialogs.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../data/repositories/forum_repository.dart';
 import '../../../l10n/app_localizations.dart';
@@ -111,22 +112,13 @@ class _ForumCategoryRequestViewState extends State<ForumCategoryRequestView> {
       if (!mounted) return;
 
       // 显示成功对话框
-      await showDialog(
+      await AdaptiveDialogs.showInfoDialog(
         context: context,
-        builder: (ctx) => AlertDialog(
-          title: Text(context.l10n.forumRequestSubmitted),
-          content: Text(context.l10n.forumRequestSubmittedMessage),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(ctx).pop();
-                context.pop();
-              },
-              child: const Text('OK'),
-            ),
-          ],
-        ),
+        title: context.l10n.forumRequestSubmitted,
+        content: context.l10n.forumRequestSubmittedMessage,
+        okText: 'OK',
       );
+      if (mounted) context.pop();
     } catch (e) {
       if (!mounted) return;
       setState(() {

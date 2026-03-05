@@ -7,6 +7,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/utils/error_localizer.dart';
+import '../../../core/utils/adaptive_dialogs.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/router/app_router.dart';
@@ -66,68 +67,34 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
     });
   }
 
-  void _showReportDialog(BuildContext context) {
-    final reasonController = TextEditingController();
+  void _showReportDialog(BuildContext context) async {
     final bloc = context.read<ForumBloc>();
-
-    showDialog<void>(
+    final reason = await AdaptiveDialogs.showInputDialog(
       context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: Text(context.l10n.commonReport),
-          content: TextField(
-            controller: reasonController,
-            maxLines: 3,
-            decoration: InputDecoration(
-              hintText: context.l10n.commonReportReason,
-              border: const OutlineInputBorder(),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: Text(context.l10n.commonCancel),
-            ),
-            FilledButton(
-              onPressed: () {
-                final reason = reasonController.text.trim();
-                if (reason.isEmpty) return;
-                bloc.add(ForumReportPost(widget.postId, reason: reason));
-                Navigator.pop(dialogContext);
-              },
-              child: Text(context.l10n.commonConfirm),
-            ),
-          ],
-        );
-      },
-    ).then((_) => reasonController.dispose());
+      title: context.l10n.commonReport,
+      placeholder: context.l10n.commonReportReason,
+      maxLines: 3,
+      confirmText: context.l10n.commonConfirm,
+      cancelText: context.l10n.commonCancel,
+    );
+    if (reason != null && reason.trim().isNotEmpty) {
+      bloc.add(ForumReportPost(widget.postId, reason: reason.trim()));
+    }
   }
 
   void _showDeletePostDialog(BuildContext context) {
     final bloc = context.read<ForumBloc>();
-    showDialog<void>(
+    AdaptiveDialogs.showConfirmDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(context.l10n.commonDelete),
-        content: Text(context.l10n.forumDeletePostConfirm),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(context.l10n.commonCancel),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
-            ),
-            onPressed: () {
-              bloc.add(ForumDeletePost(widget.postId));
-              Navigator.pop(dialogContext);
-              // 删除成功后再 pop 详情页、显示 SnackBar，由 BlocListener 监听 selectedPost 置空
-            },
-            child: Text(context.l10n.commonDelete),
-          ),
-        ],
-      ),
+      title: context.l10n.commonDelete,
+      content: context.l10n.forumDeletePostConfirm,
+      confirmText: context.l10n.commonDelete,
+      cancelText: context.l10n.commonCancel,
+      isDestructive: true,
+      onConfirm: () {
+        bloc.add(ForumDeletePost(widget.postId));
+        // 删除成功后再 pop 详情页、显示 SnackBar，由 BlocListener 监听 selectedPost 置空
+      },
     );
   }
 
@@ -1211,33 +1178,18 @@ class _ReplyCard extends StatelessWidget {
                         child: GestureDetector(
                           behavior: HitTestBehavior.opaque,
                           onTap: () {
-                            showDialog<void>(
+                            AdaptiveDialogs.showConfirmDialog(
                               context: ctx,
-                              builder: (d) => AlertDialog(
-                                title: Text(ctx.l10n.commonDelete),
-                                content: Text(
-                                    ctx.l10n.forumDeleteReplyConfirm),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(d),
-                                    child: Text(ctx.l10n.commonCancel),
-                                  ),
-                                  FilledButton(
-                                    style: FilledButton.styleFrom(
-                                      backgroundColor: Theme.of(ctx)
-                                          .colorScheme
-                                          .error,
-                                    ),
-                                    onPressed: () {
-                                      ctx.read<ForumBloc>().add(
-                                            ForumDeleteReply(reply.id,
-                                                postId: postId));
-                                      Navigator.pop(d);
-                                    },
-                                    child: Text(ctx.l10n.commonDelete),
-                                  ),
-                                ],
-                              ),
+                              title: ctx.l10n.commonDelete,
+                              content: ctx.l10n.forumDeleteReplyConfirm,
+                              confirmText: ctx.l10n.commonDelete,
+                              cancelText: ctx.l10n.commonCancel,
+                              isDestructive: true,
+                              onConfirm: () {
+                                ctx.read<ForumBloc>().add(
+                                      ForumDeleteReply(reply.id,
+                                          postId: postId));
+                              },
                             );
                           },
                           child: Padding(

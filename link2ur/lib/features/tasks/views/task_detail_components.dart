@@ -19,6 +19,7 @@ import '../../../core/widgets/bouncing_widget.dart';
 import '../../../core/widgets/animated_star_rating.dart';
 import '../../../core/widgets/review_bottom_sheet.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/adaptive_dialogs.dart';
 import '../../../core/utils/sheet_adaptation.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/helpers.dart';
@@ -656,23 +657,15 @@ class _ApplicationItem extends StatelessWidget {
   final bool isDark;
 
   void _confirmReject(BuildContext context) {
-    showDialog<bool>(
+    AdaptiveDialogs.showConfirmDialog<bool>(
       context: context,
-      builder: (d) => AlertDialog(
-        title: Text(context.l10n.taskDetailRejectApplication),
-        content: Text(context.l10n.taskDetailRejectApplicationConfirm),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(d, false),
-            child: Text(context.l10n.commonCancel),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
-            onPressed: () => Navigator.pop(d, true),
-            child: Text(context.l10n.commonConfirm),
-          ),
-        ],
-      ),
+      title: context.l10n.taskDetailRejectApplication,
+      content: context.l10n.taskDetailRejectApplicationConfirm,
+      confirmText: context.l10n.commonConfirm,
+      cancelText: context.l10n.commonCancel,
+      isDestructive: true,
+      onConfirm: () => true,
+      onCancel: () => false,
     ).then((confirmed) {
       if (confirmed == true && context.mounted) {
         AppHaptics.medium();
@@ -1825,23 +1818,13 @@ class TaskActionButtonsView extends StatelessWidget {
 
   void _showCancelConfirm(BuildContext context) {
     final l10n = context.l10n;
-    SheetAdaptation.showAdaptiveDialog<bool>(
+    AdaptiveDialogs.showConfirmDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.taskDetailCancelTask),
-        content: Text(l10n.taskDetailCancelTaskConfirm),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(l10n.actionsCancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
-            child: Text(l10n.taskDetailCancelTask),
-          ),
-        ],
-      ),
+      title: l10n.taskDetailCancelTask,
+      content: l10n.taskDetailCancelTaskConfirm,
+      cancelText: l10n.actionsCancel,
+      confirmText: l10n.taskDetailCancelTask,
+      isDestructive: true,
     ).then((confirmed) {
       if (!context.mounted || confirmed != true) return;
       context.read<TaskDetailBloc>().add(const TaskDetailCancelRequested());

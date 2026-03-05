@@ -6,8 +6,8 @@ import '../design/app_colors.dart';
 import '../design/app_spacing.dart';
 import '../design/app_typography.dart';
 import '../design/app_radius.dart';
+import '../utils/adaptive_dialogs.dart';
 import '../utils/l10n_extension.dart';
-import '../utils/sheet_adaptation.dart';
 
 /// 通知权限引导视图
 /// 参考iOS NotificationPermissionView.swift
@@ -145,29 +145,19 @@ class NotificationPermissionView extends StatelessWidget {
 
   void _showSettingsDialog(BuildContext context) {
     final l10n = context.l10n;
-    SheetAdaptation.showAdaptiveDialog(
+    AdaptiveDialogs.showConfirmDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.notificationPermSettingsTitle),
-        content: Text(l10n.notificationPermSettingsDesc),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              onComplete();
-            },
-            child: Text(l10n.notificationPermSettingsLater),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              openAppSettings();
-              onComplete();
-            },
-            child: Text(l10n.notificationPermSettingsGo),
-          ),
-        ],
-      ),
+      title: l10n.notificationPermSettingsTitle,
+      content: l10n.notificationPermSettingsDesc,
+      confirmText: l10n.notificationPermSettingsGo,
+      cancelText: l10n.notificationPermSettingsLater,
+      onConfirm: () {
+        openAppSettings();
+        onComplete();
+      },
+      onCancel: () {
+        onComplete();
+      },
     );
   }
 }
