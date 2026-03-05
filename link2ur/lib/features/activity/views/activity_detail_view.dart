@@ -1612,7 +1612,8 @@ class _ActivityDescriptionCard extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.md),
             Text(
-              activity.displayDescription(Localizations.localeOf(context)),
+              Helpers.normalizeContentNewlines(
+                  activity.displayDescription(Localizations.localeOf(context))),
               style: AppTypography.body.copyWith(
                 color: isDark
                     ? AppColors.textSecondaryDark

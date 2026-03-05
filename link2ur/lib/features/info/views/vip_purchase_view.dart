@@ -282,6 +282,8 @@ class _VIPPurchaseViewState extends State<VIPPurchaseView> {
                                       fontWeight: FontWeight.w600)),
                               const SizedBox(height: 4),
                               Text(product.description,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
                                       fontSize: 13,
                                       color: AppColors.textSecondary)),

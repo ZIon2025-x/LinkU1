@@ -1771,7 +1771,7 @@ class _DetailsCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              item.description!,
+              Helpers.normalizeContentNewlines(item.description!),
               style: TextStyle(
                 fontSize: 15,
                 color: isDark

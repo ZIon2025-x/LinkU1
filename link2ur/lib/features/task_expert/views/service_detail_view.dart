@@ -434,7 +434,7 @@ class _DescriptionCard extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             service.description.isNotEmpty
-                ? service.description
+                ? Helpers.normalizeContentNewlines(service.description)
                 : context.l10n.serviceNoDescription,
             style: TextStyle(
               fontSize: 15,
