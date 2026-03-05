@@ -42,12 +42,12 @@ class GlassButton extends StatelessWidget {
               decoration: BoxDecoration(
                 color: isDark
                     ? Colors.black.withValues(alpha: 0.3)
-                    : Colors.white.withValues(alpha: 0.2),
+                    : Colors.black.withValues(alpha: 0.3),
                 borderRadius: effectiveBorderRadius,
                 border: Border.all(
                   color: isDark
                       ? Colors.white.withValues(alpha: 0.1)
-                      : Colors.white.withValues(alpha: 0.2),
+                      : Colors.black.withValues(alpha: 0.1),
                   width: 0.5,
                 ),
               ),
