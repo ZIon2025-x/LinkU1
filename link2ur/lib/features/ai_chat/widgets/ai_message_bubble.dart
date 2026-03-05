@@ -3,6 +3,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_assets.dart';
+import '../../../core/utils/system_context_menu.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_spacing.dart';
@@ -74,6 +75,7 @@ class AIMessageBubble extends StatelessWidget {
                   child: isUser
                       ? SelectableText(
                           message.content,
+                          contextMenuBuilder: systemContextMenuBuilder,
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: Colors.white,
                             height: 1.4,

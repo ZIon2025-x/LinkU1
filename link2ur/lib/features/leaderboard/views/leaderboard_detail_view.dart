@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/utils/adaptive_dialogs.dart';
+import '../../../core/utils/system_context_menu.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
@@ -319,6 +320,7 @@ class _LeaderboardDetailContentState
                     AppSpacing.md, AppSpacing.md, AppSpacing.md, 0),
                 child: SelectableText(
                   lb.displayDescription(Localizations.localeOf(context))!,
+                  contextMenuBuilder: systemContextMenuBuilder,
                   style: AppTypography.body.copyWith(
                     color: isDark
                         ? AppColors.textSecondaryDark
@@ -370,6 +372,7 @@ class _LeaderboardDetailContentState
                       const SizedBox(height: 8),
                       SelectableText(
                         lb.rules!,
+                        contextMenuBuilder: systemContextMenuBuilder,
                         style: AppTypography.caption.copyWith(
                           color: isDark
                               ? AppColors.textSecondaryDark
@@ -606,6 +609,7 @@ class _HeroSection extends StatelessWidget {
             bottom: 20,
             child: SelectableText(
               leaderboard.displayName(Localizations.localeOf(context)),
+              contextMenuBuilder: systemContextMenuBuilder,
               style: const TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,

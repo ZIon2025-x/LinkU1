@@ -8,6 +8,7 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/adaptive_dialogs.dart';
+import '../../../core/utils/system_context_menu.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/router/app_router.dart';
@@ -725,6 +726,7 @@ class _PostHeader extends StatelessWidget {
           // 标题
           SelectableText(
             post.displayTitle(locale),
+            contextMenuBuilder: systemContextMenuBuilder,
             style: AppTypography.title2.copyWith(
               color: isDark
                   ? AppColors.textPrimaryDark
@@ -793,6 +795,7 @@ class _PostContent extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
       child: SelectableText(
         Helpers.normalizeContentNewlines(content),
+        contextMenuBuilder: systemContextMenuBuilder,
         style: AppTypography.body.copyWith(
           color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
           height: 1.8,
@@ -1126,6 +1129,7 @@ class _ReplyCard extends StatelessWidget {
                   padding: const EdgeInsets.only(right: 42),
                   child: SelectableText(
                     Helpers.normalizeContentNewlines(reply.content),
+                    contextMenuBuilder: systemContextMenuBuilder,
                     style: (isSubReply ? AppTypography.footnote : AppTypography.subheadline).copyWith(
                       fontSize: isSubReply ? 14 : null,
                       color: isDark

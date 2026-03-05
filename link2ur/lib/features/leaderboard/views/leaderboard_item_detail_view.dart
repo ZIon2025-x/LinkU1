@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/utils/haptic_feedback.dart';
+import '../../../core/utils/system_context_menu.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/router/app_router.dart';
@@ -546,6 +547,7 @@ class _NameCard extends StatelessWidget {
           children: [
             SelectableText(
               item.name,
+              contextMenuBuilder: systemContextMenuBuilder,
               style: TextStyle(
                 fontSize: 26,
                 fontWeight: FontWeight.bold,
@@ -738,6 +740,7 @@ class _DescriptionCard extends StatelessWidget {
             const SizedBox(height: 12),
             SelectableText(
               description,
+              contextMenuBuilder: systemContextMenuBuilder,
               style: TextStyle(
                 fontSize: 15,
                 color: isDark
@@ -1098,6 +1101,7 @@ class _CommentCard extends StatelessWidget {
           // 评论内容
           SelectableText(
             comment,
+            contextMenuBuilder: systemContextMenuBuilder,
             style: TextStyle(
               fontSize: 14,
               color: isDark
