@@ -10,6 +10,8 @@ import '../../../core/design/app_radius.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/skeleton_view.dart';
+import '../../../core/widgets/error_state_view.dart';
+import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../notification/bloc/notification_bloc.dart';
 import '../../../core/utils/l10n_extension.dart';
@@ -101,7 +103,8 @@ class _MessageContent extends StatelessWidget {
     return BlocBuilder<MessageBloc, MessageState>(
       buildWhen: (previous, current) =>
           previous.displayTaskChats != current.displayTaskChats ||
-          previous.pinnedTaskIds != current.pinnedTaskIds,
+          previous.pinnedTaskIds != current.pinnedTaskIds ||
+          previous.status != current.status,
       builder: (context, state) {
         final displayChats = state.displayTaskChats;
         final pinnedIds = state.pinnedTaskIds;
@@ -190,6 +193,17 @@ class _MessageContent extends StatelessWidget {
                 );
               }
 
+              if (state.status == MessageStatus.error) {
+                return Padding(
+                  padding: const EdgeInsets.only(top: 40),
+                  child: ErrorStateView(
+                    message: context.localizeError(state.errorMessage),
+                    onRetry: () {
+                      context.read<MessageBloc>().add(const MessageRefreshRequested());
+                    },
+                  ),
+                );
+              }
               if (state.status == MessageStatus.loading) {
                 return const Padding(
                   padding: EdgeInsets.only(top: 40),
@@ -279,7 +293,7 @@ class _QuickActionBar extends StatelessWidget {
             _QuickActionButton(
               icon: Icons.auto_awesome,
               label: context.l10n.supportChatTitle,
-              color: const Color(0xFF7C3AED),
+              color: AppColors.purple,
               unreadCount: 0,
               isDark: isDark,
               onTap: () {

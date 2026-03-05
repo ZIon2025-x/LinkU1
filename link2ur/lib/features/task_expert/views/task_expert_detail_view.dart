@@ -384,7 +384,7 @@ class _ProfileCard extends StatelessWidget {
                 Expanded(
                   child: _StatItem(
                     icon: Icons.star,
-                    iconColor: Colors.orange,
+                    iconColor: AppColors.warning,
                     value: expert.ratingDisplay,
                     label: context.l10n.taskExpertRating,
                   ),
@@ -402,7 +402,7 @@ class _ProfileCard extends StatelessWidget {
                 Expanded(
                   child: _StatItem(
                     icon: Icons.bar_chart,
-                    iconColor: Colors.green,
+                    iconColor: AppColors.success,
                     value: '${expert.totalServices}',
                     label: context.l10n.taskExpertServices,
                   ),
@@ -813,7 +813,7 @@ class _ReviewRow extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark
             ? Colors.white.withValues(alpha: 0.04)
-            : Colors.grey.withValues(alpha: 0.06),
+            : AppColors.textSecondaryLight.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -945,7 +945,7 @@ class _ServicesSection extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark
             ? Colors.white.withValues(alpha: 0.03)
-            : Colors.grey.withValues(alpha: 0.05),
+            : AppColors.textSecondaryLight.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
@@ -1055,7 +1055,7 @@ class _ServiceCard extends StatelessWidget {
                                 horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
                               color: service.isPending
-                                  ? Colors.orange
+                                  ? AppColors.warning
                                   : AppColors.error,
                               borderRadius: BorderRadius.circular(10),
                             ),

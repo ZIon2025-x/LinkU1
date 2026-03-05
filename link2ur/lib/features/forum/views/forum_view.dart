@@ -832,7 +832,7 @@ class _CategoryCard extends StatelessWidget {
 
   // 统一使用项目主题蓝色渐变
   List<Color> get _gradient =>
-      const [AppColors.primary, Color(0xFF4A7AF5)];
+      const [AppColors.primary, AppColors.primaryLight];
 
   @override
   Widget build(BuildContext context) {

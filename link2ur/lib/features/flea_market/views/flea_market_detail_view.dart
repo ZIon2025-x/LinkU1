@@ -198,7 +198,7 @@ class _FleaMarketDetailContent extends StatelessWidget {
         icon: Icons.arrow_back_ios_new,
         onTap: () {
           AppHaptics.selection();
-          Navigator.of(context).pop();
+          context.pop();
         },
       ),
       actions: [
@@ -470,14 +470,14 @@ class _FleaMarketDetailContent extends StatelessWidget {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  Colors.orange,
-                  Colors.orange.withValues(alpha: 0.8),
+                  AppColors.warning,
+                  AppColors.warning.withValues(alpha: 0.8),
                 ],
               ),
               borderRadius: BorderRadius.circular(25),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.orange.withValues(alpha: 0.4),
+                  color: AppColors.warning.withValues(alpha: 0.4),
                   blurRadius: 8,
                   offset: const Offset(0, 4),
                 ),
@@ -598,18 +598,18 @@ class _FleaMarketDetailContent extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: Colors.orange.withValues(alpha: 0.1),
+            color: AppColors.warning.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Row(
             children: [
-              const Icon(Icons.local_offer, size: 16, color: Colors.orange),
+              const Icon(Icons.local_offer, size: 16, color: AppColors.warning),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
                   l10n.fleaMarketCounterOfferReceived(priceText),
                   style: AppTypography.body.copyWith(
-                    color: Colors.orange,
+                    color: AppColors.warning,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -833,14 +833,14 @@ class _FleaMarketDetailContent extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: item.isFree && !hasPendingPayment
-                ? [Colors.green, Colors.green.withValues(alpha: 0.8)]
+                ? [AppColors.success, AppColors.success.withValues(alpha: 0.8)]
                 : AppColors.gradientRed,
           ),
           borderRadius: BorderRadius.circular(25),
           boxShadow: [
             BoxShadow(
               color: (item.isFree && !hasPendingPayment
-                      ? Colors.green
+                      ? AppColors.success
                       : AppColors.priceRed)
                   .withValues(alpha: 0.4),
               blurRadius: 8,
@@ -1089,7 +1089,7 @@ class _FleaMarketPurchaseSheetState extends State<_FleaMarketPurchaseSheet> {
                                       style: const TextStyle(
                                         fontSize: 22,
                                         fontWeight: FontWeight.bold,
-                                        color: Colors.green,
+                                        color: AppColors.success,
                                       ),
                                     )
                                   else
@@ -1297,7 +1297,7 @@ class _FleaMarketPurchaseSheetState extends State<_FleaMarketPurchaseSheet> {
                             backgroundColor: _showNegotiate
                                 ? AppColors.primary
                                 : widget.item.isFree
-                                    ? Colors.green
+                                    ? AppColors.success
                                     : AppColors.primary,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
@@ -1659,8 +1659,8 @@ class _StatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final (color, label) = switch (item.status) {
       'active' => (AppColors.success, context.l10n.fleaMarketStatusActive),
-      'sold' => (Colors.blue, context.l10n.fleaMarketSold),
-      _ => (Colors.grey, context.l10n.fleaMarketDelisted),
+      'sold' => (AppColors.primary, context.l10n.fleaMarketSold),
+      _ => (AppColors.textSecondaryLight, context.l10n.fleaMarketDelisted),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -1927,7 +1927,7 @@ class _AutoDelistWarning extends StatelessWidget {
     if (days == null) return const SizedBox.shrink();
 
     final isUrgent = days <= 3;
-    final color = isUrgent ? AppColors.error : Colors.orange;
+    final color = isUrgent ? AppColors.error : AppColors.warning;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
@@ -2142,21 +2142,21 @@ class _PurchaseRequestItem extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: Colors.orange.withValues(alpha: 0.1),
+                color: AppColors.warning.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(Icons.local_offer,
-                      size: 14, color: Colors.orange),
+                      size: 14, color: AppColors.warning),
                   const SizedBox(width: 4),
                   Text(
                     '${context.l10n.fleaMarketSellerNegotiateLabel} ${Helpers.formatPrice(request.sellerCounterPrice!)}',
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
-                      color: Colors.orange,
+                      color: AppColors.warning,
                     ),
                   ),
                 ],
@@ -2186,8 +2186,8 @@ class _PurchaseRequestItem extends StatelessWidget {
                   child: OutlinedButton(
                     onPressed: () => _showCounterOfferDialog(context),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.orange,
-                      side: const BorderSide(color: Colors.orange),
+                      foregroundColor: AppColors.warning,
+                      side: const BorderSide(color: AppColors.warning),
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
@@ -2270,7 +2270,7 @@ class _PurchaseRequestItem extends StatelessWidget {
     String text;
     switch (status) {
       case 'pending':
-        color = Colors.orange;
+        color = AppColors.warning;
         text = context.l10n.fleaMarketWaitingSellerConfirm;
         break;
       case 'seller_negotiating':

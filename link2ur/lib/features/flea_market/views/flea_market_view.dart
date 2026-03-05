@@ -48,6 +48,7 @@ class _FleaMarketViewContent extends StatefulWidget {
 
 class _FleaMarketViewContentState extends State<_FleaMarketViewContent> {
   final Debouncer _debouncer = Debouncer();
+  bool _isNavigating = false;
 
   List<(String, String)> _getCategories(BuildContext context) => [
     ('all', context.l10n.fleaMarketCategoryAll),
@@ -278,7 +279,10 @@ class _FleaMarketViewContentState extends State<_FleaMarketViewContent> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
+          if (_isNavigating) return;
+          _isNavigating = true;
           await context.push('/flea-market/create');
+          _isNavigating = false;
           if (context.mounted) {
             context.read<FleaMarketBloc>().add(const FleaMarketRefreshRequested());
           }

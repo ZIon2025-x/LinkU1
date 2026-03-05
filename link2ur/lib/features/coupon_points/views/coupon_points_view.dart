@@ -61,10 +61,10 @@ class _CouponPointsContentState extends State<_CouponPointsContent>
       switch (_tabController.index) {
         case 0:
           bloc.add(const CouponPointsLoadTransactions());
+          bloc.add(const CouponPointsLoadAvailableCoupons());
           break;
         case 1:
           bloc.add(const CouponPointsLoadMyCoupons());
-          bloc.add(const CouponPointsLoadAvailableCoupons());
           break;
         case 2:
           bloc.add(const CouponPointsLoadCheckInStatus());
@@ -147,12 +147,10 @@ class _CouponPointsContentState extends State<_CouponPointsContent>
 
             return TabBarView(
               controller: _tabController,
-              children: [
-                _PointsTab(
-                  onGoToCoupons: () => _tabController.animateTo(1),
-                ),
-                const _CouponsTab(),
-                const _CheckInTab(),
+              children: const [
+                _PointsTab(),
+                _CouponsTab(),
+                _CheckInTab(),
               ],
             );
           },
@@ -164,9 +162,7 @@ class _CouponPointsContentState extends State<_CouponPointsContent>
 
 /// 积分页签
 class _PointsTab extends StatelessWidget {
-  const _PointsTab({this.onGoToCoupons});
-
-  final VoidCallback? onGoToCoupons;
+  const _PointsTab();
 
   @override
   Widget build(BuildContext context) {
@@ -233,7 +229,6 @@ class _PointsTab extends StatelessWidget {
                                 context
                                     .read<CouponPointsBloc>()
                                     .add(const CouponPointsLoadAvailableCoupons());
-                                onGoToCoupons?.call();
                               },
                             ),
                             AppSpacing.hMd,
@@ -249,6 +244,9 @@ class _PointsTab extends StatelessWidget {
                   ),
                 ),
               ),
+
+              // 积分兑换区域
+              ..._buildRedeemSections(context, state, isDark),
 
               // 积分记录标题
               SliverPadding(
@@ -290,6 +288,78 @@ class _PointsTab extends StatelessWidget {
         );
       },
     );
+  }
+
+  List<Widget> _buildRedeemSections(
+    BuildContext context,
+    CouponPointsState state,
+    bool isDark,
+  ) {
+    final paidCoupons = state.availableCoupons
+        .where((c) => c.pointsRequired > 0)
+        .toList();
+    final freeCoupons = state.availableCoupons
+        .where((c) => c.pointsRequired == 0)
+        .toList();
+
+    if (paidCoupons.isEmpty && freeCoupons.isEmpty) return [];
+
+    return [
+      if (paidCoupons.isNotEmpty) ...[
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md, AppSpacing.lg, AppSpacing.md, AppSpacing.sm,
+          ),
+          sliver: SliverToBoxAdapter(
+            child: Text(
+              context.l10n.couponRedeemReward,
+              style: AppTypography.title3.copyWith(
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : AppColors.textPrimaryLight,
+              ),
+            ),
+          ),
+        ),
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          sliver: SliverList.builder(
+            itemCount: paidCoupons.length,
+            itemBuilder: (context, index) => _AvailableCouponCard(
+              coupon: paidCoupons[index],
+              isSubmitting: state.isSubmitting,
+            ),
+          ),
+        ),
+      ],
+      if (freeCoupons.isNotEmpty) ...[
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md, AppSpacing.lg, AppSpacing.md, AppSpacing.sm,
+          ),
+          sliver: SliverToBoxAdapter(
+            child: Text(
+              context.l10n.couponClaim,
+              style: AppTypography.title3.copyWith(
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : AppColors.textPrimaryLight,
+              ),
+            ),
+          ),
+        ),
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          sliver: SliverList.builder(
+            itemCount: freeCoupons.length,
+            itemBuilder: (context, index) => _AvailableCouponCard(
+              coupon: freeCoupons[index],
+              isSubmitting: state.isSubmitting,
+            ),
+          ),
+        ),
+      ],
+    ];
   }
 
   void _showRedemptionCodeDialog(BuildContext context) async {
@@ -442,9 +512,6 @@ class _CouponsTab extends StatelessWidget {
             context
                 .read<CouponPointsBloc>()
                 .add(const CouponPointsLoadMyCoupons());
-            context
-                .read<CouponPointsBloc>()
-                .add(const CouponPointsLoadAvailableCoupons());
           },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -452,25 +519,6 @@ class _CouponsTab extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 可领取的优惠券
-                if (state.availableCoupons.isNotEmpty) ...[
-                  Text(
-                    context.l10n.couponAvailable,
-                    style: AppTypography.title3.copyWith(
-                      color:
-                          Theme.of(context).brightness == Brightness.dark
-                              ? AppColors.textPrimaryDark
-                              : AppColors.textPrimaryLight,
-                    ),
-                  ),
-                  AppSpacing.vMd,
-                  ...state.availableCoupons.map((coupon) => _AvailableCouponCard(
-                        coupon: coupon,
-                        isSubmitting: state.isSubmitting,
-                      )),
-                  AppSpacing.vLg,
-                ],
-
                 // 我的优惠券
                 Text(
                   context.l10n.walletMyCoupons,
@@ -590,7 +638,9 @@ class _AvailableCouponCard extends StatelessWidget {
                 ? null
                 : () => context
                     .read<CouponPointsBloc>()
-                    .add(CouponPointsClaimCoupon(coupon.id)),
+                    .add(coupon.pointsRequired > 0
+                        ? CouponPointsRedeemCoupon(coupon.id)
+                        : CouponPointsClaimCoupon(coupon.id)),
             filled: true,
           ),
         ],

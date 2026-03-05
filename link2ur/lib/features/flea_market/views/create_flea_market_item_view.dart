@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/adaptive_dialogs.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/cross_platform_image.dart';
 import '../../../core/widgets/buttons.dart';
@@ -52,6 +53,13 @@ class _CreateFleaMarketItemContentState
   final List<XFile> _selectedImages = [];
   final _imagePicker = ImagePicker();
   bool _isUploadingImages = false;
+
+  bool get _hasUnsavedChanges {
+    return _titleController.text.isNotEmpty ||
+        _descriptionController.text.isNotEmpty ||
+        _priceController.text.isNotEmpty ||
+        _selectedImages.isNotEmpty;
+  }
 
   /// API key 使用固定英文常量（对齐后端 FLEA_MARKET_CATEGORIES），显示名使用本地化
   List<(String, String)> _getCategories(BuildContext context) => [
@@ -222,7 +230,22 @@ class _CreateFleaMarketItemContentState
           }
         }
       },
-      child: Scaffold(
+      child: PopScope(
+        canPop: !_hasUnsavedChanges,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) {
+            AdaptiveDialogs.showConfirmDialog(
+              context: context,
+              title: context.l10n.commonDiscardChanges,
+              content: context.l10n.commonDiscardChangesMessage,
+              confirmText: context.l10n.commonDiscard,
+              isDestructive: true,
+            ).then((confirmed) {
+              if (confirmed == true) Navigator.of(context).pop();
+            });
+          }
+        },
+        child: Scaffold(
         appBar: AppBar(
           title: Text(context.l10n.fleaMarketPublishItem),
         ),
@@ -374,6 +397,7 @@ class _CreateFleaMarketItemContentState
             ),
           ),
         ),
+      ),
       ),
     );
   }

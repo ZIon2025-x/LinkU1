@@ -11,6 +11,8 @@ import '../../../core/router/app_router.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
+import '../../../core/widgets/loading_view.dart';
+import '../../../core/utils/date_formatter.dart';
 import '../../../data/models/notification.dart' as model;
 import '../bloc/notification_bloc.dart';
 
@@ -140,7 +142,7 @@ class _NotificationListViewContentState
                           if (index >= notifications.length) {
                             return const Padding(
                               padding: EdgeInsets.all(AppSpacing.md),
-                              child: Center(child: CircularProgressIndicator()),
+                              child: Center(child: LoadingIndicator()),
                             );
                           }
                           final notification = notifications[index];
@@ -380,7 +382,9 @@ class _NotificationCard extends StatelessWidget {
                   ],
                   const SizedBox(height: 6),
                   Text(
-                    notification.createdAt?.toString().split('.').first ?? '',
+                    notification.createdAt != null
+                        ? DateFormatter.formatRelative(notification.createdAt!, l10n: context.l10n)
+                        : '',
                     style: const TextStyle(
                         fontSize: 11,
                         color: AppColors.textTertiary),
@@ -454,10 +458,10 @@ class _NotificationCard extends StatelessWidget {
     // 论坛互动类型 - 粉色系
     if (type.startsWith('forum_')) {
       if (type == 'forum_like') return AppColors.accentPink;
-      return Colors.blue;
+      return AppColors.primary;
     }
     // 排行榜互动类型 - 橙色系
-    if (type.startsWith('leaderboard_')) return Colors.orange;
+    if (type.startsWith('leaderboard_')) return AppColors.warning;
     // 谈判/申请类型
     if (type == 'negotiation_offer') return AppColors.warning;
     // 任务类型
@@ -470,13 +474,13 @@ class _NotificationCard extends StatelessWidget {
       case 'payment_failed':
         return AppColors.error;
       case 'flea_market':
-        return Colors.teal;
+        return AppColors.teal;
       case 'activity':
-        return Colors.purple;
+        return AppColors.purple;
       case 'announcement':
-        return Colors.orange;
+        return AppColors.warning;
       case 'system':
-        return Colors.orange;
+        return AppColors.warning;
       default:
         return AppColors.textSecondary;
     }

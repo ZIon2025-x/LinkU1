@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import 'sheet_adaptation.dart';
 
 /// 平台自适应弹窗工具
@@ -33,13 +34,16 @@ class AdaptiveDialogs {
     required String title,
     String? content,
     Widget? contentWidget,
-    String confirmText = '确定',
-    String cancelText = '取消',
+    String? confirmText,
+    String? cancelText,
     bool isDestructive = false,
     bool barrierDismissible = true,
     T Function()? onConfirm,
     T Function()? onCancel,
   }) {
+    final l10n = AppLocalizations.of(context)!;
+    final effectiveConfirmText = confirmText ?? l10n.commonConfirm;
+    final effectiveCancelText = cancelText ?? l10n.commonCancel;
     if (_isIOS) {
       return showCupertinoDialog<T>(
         context: context,
@@ -54,7 +58,7 @@ class AdaptiveDialogs {
                 final result = onCancel?.call();
                 Navigator.of(ctx).pop(result);
               },
-              child: Text(cancelText),
+              child: Text(effectiveCancelText),
             ),
             CupertinoDialogAction(
               isDestructiveAction: isDestructive,
@@ -63,7 +67,7 @@ class AdaptiveDialogs {
                 final result = onConfirm?.call();
                 Navigator.of(ctx).pop(result ?? true as T);
               },
-              child: Text(confirmText),
+              child: Text(effectiveConfirmText),
             ),
           ],
         ),
@@ -86,7 +90,7 @@ class AdaptiveDialogs {
                 final result = onCancel?.call();
                 Navigator.of(ctx).pop(result);
               },
-              child: Text(cancelText),
+              child: Text(effectiveCancelText),
             ),
             if (isDestructive)
               TextButton(
@@ -95,7 +99,7 @@ class AdaptiveDialogs {
                   Navigator.of(ctx).pop(result ?? true as T);
                 },
                 child: Text(
-                  confirmText,
+                  effectiveConfirmText,
                   style: TextStyle(color: theme.colorScheme.error),
                 ),
               )
@@ -105,7 +109,7 @@ class AdaptiveDialogs {
                   final result = onConfirm?.call();
                   Navigator.of(ctx).pop(result ?? true as T);
                 },
-                child: Text(confirmText),
+                child: Text(effectiveConfirmText),
               ),
           ],
         );
@@ -126,9 +130,10 @@ class AdaptiveDialogs {
     required String title,
     String? content,
     Widget? contentWidget,
-    String okText = '好',
+    String? okText,
     bool barrierDismissible = true,
   }) {
+    final effectiveOkText = okText ?? AppLocalizations.of(context)!.commonOk;
     if (_isIOS) {
       return showCupertinoDialog<void>(
         context: context,
@@ -141,7 +146,7 @@ class AdaptiveDialogs {
             CupertinoDialogAction(
               isDefaultAction: true,
               onPressed: () => Navigator.of(ctx).pop(),
-              child: Text(okText),
+              child: Text(effectiveOkText),
             ),
           ],
         ),
@@ -158,7 +163,7 @@ class AdaptiveDialogs {
         actions: [
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(okText),
+            child: Text(effectiveOkText),
           ),
         ],
       ),
@@ -179,11 +184,14 @@ class AdaptiveDialogs {
     String? message,
     String? placeholder,
     String? initialValue,
-    String confirmText = '确定',
-    String cancelText = '取消',
+    String? confirmText,
+    String? cancelText,
     int maxLines = 1,
     TextInputType? keyboardType,
   }) {
+    final l10n = AppLocalizations.of(context)!;
+    final effectiveConfirmText = confirmText ?? l10n.commonConfirm;
+    final effectiveCancelText = cancelText ?? l10n.commonCancel;
     if (_isIOS) {
       return _showCupertinoInputDialog(
         context: context,
@@ -191,8 +199,8 @@ class AdaptiveDialogs {
         message: message,
         placeholder: placeholder,
         initialValue: initialValue,
-        confirmText: confirmText,
-        cancelText: cancelText,
+        confirmText: effectiveConfirmText,
+        cancelText: effectiveCancelText,
         maxLines: maxLines,
         keyboardType: keyboardType,
       );
@@ -204,8 +212,8 @@ class AdaptiveDialogs {
       message: message,
       placeholder: placeholder,
       initialValue: initialValue,
-      confirmText: confirmText,
-      cancelText: cancelText,
+      confirmText: effectiveConfirmText,
+      cancelText: effectiveCancelText,
       maxLines: maxLines,
       keyboardType: keyboardType,
     );
@@ -339,8 +347,9 @@ class AdaptiveDialogs {
     String? title,
     String? message,
     required List<AdaptiveAction<T>> actions,
-    String cancelText = '取消',
+    String? cancelText,
   }) {
+    final effectiveCancelText = cancelText ?? AppLocalizations.of(context)!.commonCancel;
     if (_isIOS) {
       return showCupertinoModalPopup<T>(
         context: context,
@@ -357,7 +366,7 @@ class AdaptiveDialogs {
           }).toList(),
           cancelButton: CupertinoActionSheetAction(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(cancelText),
+            child: Text(effectiveCancelText),
           ),
         ),
       );
@@ -423,7 +432,7 @@ class AdaptiveDialogs {
               const Divider(height: 1),
               ListTile(
                 title: Text(
-                  cancelText,
+                  effectiveCancelText,
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyLarge,
                 ),

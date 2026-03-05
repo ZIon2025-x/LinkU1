@@ -189,7 +189,7 @@ class _LeaderboardDetailContentState
       leading: Padding(
         padding: const EdgeInsets.all(4),
         child: GestureDetector(
-          onTap: () => Navigator.of(context).pop(),
+          onTap: () => context.pop(),
           child: Container(
             width: 36,
             height: 36,

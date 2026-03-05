@@ -57,6 +57,7 @@ class _TasksViewContentState extends State<_TasksViewContent> {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final Debouncer _debouncer = Debouncer();
+  bool _isNavigating = false;
 
   // 11个分类 (对齐iOS TasksView - SF Symbols)
   final List<Map<String, dynamic>> _categories = [
@@ -130,7 +131,10 @@ class _TasksViewContentState extends State<_TasksViewContent> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
+          if (_isNavigating) return;
+          _isNavigating = true;
           await context.push('/tasks/create');
+          _isNavigating = false;
           if (context.mounted) {
             context.read<TaskListBloc>().add(const TaskListRefreshRequested());
           }

@@ -806,7 +806,7 @@ class _PublishContentState extends State<_PublishContent>
                               type: _PublishType.task,
                               label: context.l10n.publishTaskCardLabel,
                               icon: Icons.task_alt_rounded,
-                              gradient: const [Color(0xFF007AFF), Color(0xFF409CFF)],
+                              gradient: AppColors.gradientPrimary,
                               onTap: () {
                                 AppHaptics.selection();
                                 setState(() => _selectedType = _PublishType.task);
@@ -822,7 +822,7 @@ class _PublishContentState extends State<_PublishContent>
                               type: _PublishType.fleaMarket,
                               label: context.l10n.publishFleaCardLabel,
                               icon: Icons.storefront_rounded,
-                              gradient: const [Color(0xFF26BF73), Color(0xFF34D399)],
+                              gradient: AppColors.gradientGreen,
                               onTap: () {
                                 AppHaptics.selection();
                                 setState(() => _selectedType = _PublishType.fleaMarket);
@@ -837,7 +837,7 @@ class _PublishContentState extends State<_PublishContent>
                         type: _PublishType.post,
                         label: context.l10n.publishPostCardLabel,
                         icon: Icons.article_rounded,
-                        gradient: const [Color(0xFF7359F2), Color(0xFFA78BFA)],
+                        gradient: AppColors.gradientPurple,
                         fullWidth: true,
                         onTap: () {
                           AppHaptics.selection();
@@ -1306,6 +1306,7 @@ class _PublishContentState extends State<_PublishContent>
               icon: Icons.title_rounded,
               isDark: isDark,
             ),
+            textInputAction: TextInputAction.next,
             maxLength: 100,
             validator: (v) => Validators.validateTitle(v, l10n: context.l10n),
           ),
@@ -1319,6 +1320,7 @@ class _PublishContentState extends State<_PublishContent>
               icon: Icons.description_outlined,
               isDark: isDark,
             ),
+            textInputAction: TextInputAction.done,
             maxLines: 4,
             maxLength: 2000,
             validator: (value) => Validators.validateDescription(value, l10n: context.l10n),

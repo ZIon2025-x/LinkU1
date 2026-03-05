@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/adaptive_dialogs.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/async_image_view.dart';
@@ -62,6 +63,17 @@ class _EditFleaMarketItemViewContentState
   String _selectedCategory = '';
   List<String> _existingImageUrls = [];
   final List<XFile> _newImages = [];
+
+  bool get _hasUnsavedChanges {
+    final item = widget.item;
+    return _titleController.text != item.title ||
+        _descriptionController.text != (item.description ?? '') ||
+        _priceController.text != item.price.toString() ||
+        _locationController.text != (item.location ?? 'Online') ||
+        _selectedCategory != (item.category ?? '') ||
+        _existingImageUrls.length != item.images.length ||
+        _newImages.isNotEmpty;
+  }
 
   /// API key 使用固定英文常量（对齐后端 FLEA_MARKET_CATEGORIES），显示名使用本地化
   List<(String, String)> _getCategories(BuildContext context) => [
@@ -265,7 +277,22 @@ class _EditFleaMarketItemViewContentState
           final isLoading = state.isSubmitting || state.isUploadingImage;
           final errorMessage = state.errorMessage;
 
-          return Scaffold(
+          return PopScope(
+            canPop: !_hasUnsavedChanges,
+            onPopInvokedWithResult: (didPop, _) {
+              if (!didPop) {
+                AdaptiveDialogs.showConfirmDialog(
+                  context: context,
+                  title: context.l10n.commonDiscardChanges,
+                  content: context.l10n.commonDiscardChangesMessage,
+                  confirmText: context.l10n.commonDiscard,
+                  isDestructive: true,
+                ).then((confirmed) {
+                  if (confirmed == true) Navigator.of(context).pop();
+                });
+              }
+            },
+            child: Scaffold(
             appBar: AppBar(
               title: Text(l10n.fleaMarketEditItem),
             ),
@@ -456,6 +483,7 @@ class _EditFleaMarketItemViewContentState
                 ),
               ),
             ),
+          ),
           );
         },
       ),

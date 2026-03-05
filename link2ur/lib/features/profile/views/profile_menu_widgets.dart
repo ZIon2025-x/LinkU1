@@ -81,7 +81,7 @@ Widget _buildMyContentSection(BuildContext context, bool isDark) {
                 icon: Icons.admin_panel_settings,  // bolt.shield.fill
                 title: context.l10n.profileMyApplications,
                 subtitle: context.l10n.profileMyApplicationsSubtitle,
-                color: Colors.purple,
+                color: AppColors.purple,
                 onTap: () => context.push('/my-service-applications'),
               ),
             ],
@@ -132,7 +132,7 @@ Widget _buildSystemSection(BuildContext context, bool isDark) {
               _ProfileRow(
                 icon: Icons.school,                // graduationcap.fill
                 title: context.l10n.profileStudentVerification,
-                color: Colors.indigo,
+                color: AppColors.indigo,
                 onTap: () => context.push('/student-verification'),
               ),
               _profileDivider(isDark),
@@ -146,28 +146,28 @@ Widget _buildSystemSection(BuildContext context, bool isDark) {
               _ProfileRow(
                 icon: Icons.schedule,              // calendar.badge.clock
                 title: context.l10n.profileActivity,
-                color: Colors.orange,
+                color: AppColors.warning,
                 onTap: () => context.push('/activities'),
               ),
               _profileDivider(isDark),
               _ProfileRow(
                 icon: Icons.favorite,              // heart.text.square.fill
                 title: context.l10n.profileTaskPreferences,
-                color: Colors.red,
+                color: AppColors.error,
                 onTap: () => context.push('/profile/task-preferences'),
               ),
               _profileDivider(isDark),
               _ProfileRow(
                 icon: Icons.local_activity,        // ticket.fill
                 title: context.l10n.profilePointsCoupons,
-                color: Colors.pink,
+                color: AppColors.accentPink,
                 onTap: () => context.push('/coupon-points'),
               ),
               _profileDivider(isDark),
               _ProfileRow(
                 icon: Icons.settings,              // gearshape.fill
                 title: context.l10n.profileSettings,
-                color: Colors.grey,
+                color: AppColors.textSecondaryLight,
                 onTap: () => context.push('/settings'),
               ),
             ],

@@ -52,7 +52,7 @@ class BannerCarousel extends StatefulWidget {
 class _BannerCarouselState extends State<BannerCarousel> {
   late PageController _pageController;
   Timer? _autoPlayTimer;
-  int _currentIndex = 0;
+  final ValueNotifier<int> _currentIndex = ValueNotifier<int>(0);
 
   @override
   void initState() {
@@ -67,13 +67,14 @@ class _BannerCarouselState extends State<BannerCarousel> {
   void dispose() {
     _autoPlayTimer?.cancel();
     _pageController.dispose();
+    _currentIndex.dispose();
     super.dispose();
   }
 
   void _startAutoPlay() {
     _autoPlayTimer = Timer.periodic(widget.autoPlayInterval, (_) {
       if (_pageController.hasClients) {
-        final nextIndex = (_currentIndex + 1) % widget.banners.length;
+        final nextIndex = (_currentIndex.value + 1) % widget.banners.length;
         _pageController.animateToPage(
           nextIndex,
           duration: const Duration(milliseconds: 400),
@@ -105,6 +106,9 @@ class _BannerCarouselState extends State<BannerCarousel> {
   Widget build(BuildContext context) {
     if (widget.banners.isEmpty) return const SizedBox.shrink();
 
+    final mq = MediaQuery.of(context);
+    final cacheWidth = (mq.size.width * mq.devicePixelRatio).toInt();
+
     return SizedBox(
       height: widget.height,
       child: Stack(
@@ -117,7 +121,7 @@ class _BannerCarouselState extends State<BannerCarousel> {
               allowImplicitScrolling: true,
               itemCount: widget.banners.length,
               onPageChanged: (index) {
-                setState(() => _currentIndex = index);
+                _currentIndex.value = index;
               },
               itemBuilder: (context, index) {
                 final banner = widget.banners[index];
@@ -130,6 +134,7 @@ class _BannerCarouselState extends State<BannerCarousel> {
                   child: AsyncImageView(
                     imageUrl: imageUrl,
                     width: double.infinity,
+                    memCacheWidth: cacheWidth,
                     placeholder: Container(
                       color: AppColors.skeletonBase,
                       child: const Center(
@@ -152,23 +157,28 @@ class _BannerCarouselState extends State<BannerCarousel> {
               bottom: 12,
               left: 0,
               right: 0,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(widget.banners.length, (index) {
-                  final isActive = index == _currentIndex;
-                  return AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    margin: const EdgeInsets.symmetric(horizontal: 3),
-                    width: isActive ? 20 : 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: isActive
-                          ? Colors.white
-                          : Colors.white.withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(3),
-                    ),
+              child: ValueListenableBuilder<int>(
+                valueListenable: _currentIndex,
+                builder: (context, currentIndex, _) {
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(widget.banners.length, (index) {
+                      final isActive = index == currentIndex;
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        margin: const EdgeInsets.symmetric(horizontal: 3),
+                        width: isActive ? 20 : 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: isActive
+                              ? Colors.white
+                              : Colors.white.withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      );
+                    }),
                   );
-                }),
+                },
               ),
             ),
         ],

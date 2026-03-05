@@ -391,15 +391,15 @@ class _CompetitorReviewCard extends StatelessWidget {
             const SizedBox(height: 8),
             Row(
               children: [
-                const Icon(Icons.thumb_up_outlined, size: 12, color: Color(0xFF10B981)),
+                const Icon(Icons.thumb_up_outlined, size: 12, color: AppColors.success),
                 const SizedBox(width: 3),
                 Text('${item.upvoteCount ?? 0}',
-                    style: const TextStyle(fontSize: 12, color: Color(0xFF10B981))),
+                    style: const TextStyle(fontSize: 12, color: AppColors.success)),
                 const SizedBox(width: 12),
-                const Icon(Icons.thumb_down_outlined, size: 12, color: Color(0xFFEF4444)),
+                const Icon(Icons.thumb_down_outlined, size: 12, color: AppColors.error),
                 const SizedBox(width: 3),
                 Text('${item.downvoteCount ?? 0}',
-                    style: const TextStyle(fontSize: 12, color: Color(0xFFEF4444))),
+                    style: const TextStyle(fontSize: 12, color: AppColors.error)),
               ],
             ),
           ],
@@ -615,7 +615,7 @@ class _RankingCard extends StatelessWidget {
                   Row(
                     children: [
                       const Icon(Icons.emoji_events,
-                          size: 16, color: Color(0xFFFFB300)),
+                          size: 16, color: AppColors.warning),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
@@ -804,7 +804,7 @@ class _ServiceCard extends StatelessWidget {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 const Icon(Icons.star,
-                                    size: 12, color: Color(0xFFFFB300)),
+                                    size: 12, color: AppColors.warning),
                                 const SizedBox(width: 2),
                                 Text(
                                   item.rating!.toStringAsFixed(1),
@@ -902,8 +902,6 @@ class _LinkedItemTag extends StatelessWidget {
   const _LinkedItemTag({required this.linkedItem});
   final LinkedItemBrief linkedItem;
 
-  static const Color _primaryPurple = Color(0xFF6C5CE7);
-
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -913,7 +911,7 @@ class _LinkedItemTag extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark
             ? Colors.white.withValues(alpha: 0.06)
-            : _primaryPurple.withValues(alpha: 0.04),
+            : AppColors.purple.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -925,7 +923,7 @@ class _LinkedItemTag extends StatelessWidget {
               color: _iconBgColor(linkedItem.itemType),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(_iconForType(linkedItem.itemType), size: 16, color: _primaryPurple),
+            child: Icon(_iconForType(linkedItem.itemType), size: 16, color: AppColors.purple),
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -936,7 +934,7 @@ class _LinkedItemTag extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: isDark ? AppColors.primaryLight : _primaryPurple,
+                color: isDark ? AppColors.primaryLight : AppColors.purple,
               ),
             ),
           ),
@@ -985,7 +983,7 @@ class _TargetItemTag extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark
             ? Colors.white.withValues(alpha: 0.06)
-            : const Color(0xFF6C5CE7).withValues(alpha: 0.04),
+            : AppColors.purple.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(

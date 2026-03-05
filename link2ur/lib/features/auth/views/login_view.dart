@@ -699,6 +699,7 @@ class _LoginViewState extends State<LoginView>
           placeholder: context.l10n.authEnterEmailOrId,
           icon: Icons.person_outlined,
           keyboardType: TextInputType.emailAddress,
+          textInputAction: TextInputAction.next,
           isDark: isDark,
           validator: (v) => Validators.validateEmail(v, l10n: context.l10n),
         ),
@@ -709,6 +710,7 @@ class _LoginViewState extends State<LoginView>
           placeholder: context.l10n.authPasswordPlaceholder,
           icon: Icons.lock_outlined,
           obscureText: _obscurePassword,
+          textInputAction: TextInputAction.done,
           isDark: isDark,
           validator: (v) => Validators.validatePassword(v, l10n: context.l10n),
           suffixIcon: IconButton(
@@ -739,6 +741,7 @@ class _LoginViewState extends State<LoginView>
           placeholder: context.l10n.authEnterEmailPlaceholder,
           icon: Icons.email_outlined,
           keyboardType: TextInputType.emailAddress,
+          textInputAction: TextInputAction.next,
           isDark: isDark,
           validator: (v) => Validators.validateEmail(v, l10n: context.l10n),
         ),
@@ -753,6 +756,7 @@ class _LoginViewState extends State<LoginView>
                 placeholder: context.l10n.authCodePlaceholder,
                 icon: Icons.pin_outlined,
                 keyboardType: TextInputType.number,
+                textInputAction: TextInputAction.done,
                 isDark: isDark,
                 validator: (v) => Validators.validateVerificationCode(v, l10n: context.l10n),
               ),
@@ -822,6 +826,7 @@ class _LoginViewState extends State<LoginView>
                   child: TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.phone,
+                    textInputAction: TextInputAction.next,
                     style: AppTypography.body.copyWith(
                       color: isDark
                           ? AppColors.textPrimaryDark
@@ -902,6 +907,7 @@ class _LoginViewState extends State<LoginView>
                 placeholder: context.l10n.authCodePlaceholder,
                 icon: Icons.pin_outlined,
                 keyboardType: TextInputType.number,
+                textInputAction: TextInputAction.done,
                 isDark: isDark,
                 validator: (v) => Validators.validateVerificationCode(v, l10n: context.l10n),
               ),
@@ -917,26 +923,27 @@ class _LoginViewState extends State<LoginView>
   /// 发送验证码按钮 - 对标iOS精美设计
   Widget _buildSendCodeButton(AuthState state, bool isDark) {
     final isSending = state.codeSendStatus == CodeSendStatus.sending;
+    final isDisabled = isSending || _countdown > 0;
     return Padding(
       padding: const EdgeInsets.only(top: 28),
       child: SizedBox(
         width: 100,
         height: 52,
         child: Material(
-          color: isSending
+          color: isDisabled
               ? (isDark
                   ? AppColors.cardBackgroundDark
                   : AppColors.backgroundLight)
               : AppColors.primary.withValues(alpha: 0.12),
           borderRadius: AppRadius.allMedium,
           child: InkWell(
-            onTap: isSending ? null : _sendCode,
+            onTap: isDisabled ? null : _sendCode,
             borderRadius: AppRadius.allMedium,
             child: Container(
               decoration: BoxDecoration(
                 borderRadius: AppRadius.allMedium,
                 border: Border.all(
-                  color: isSending
+                  color: isDisabled
                       ? (isDark
                           ? AppColors.dividerDark
                           : AppColors.dividerLight)
@@ -954,9 +961,15 @@ class _LoginViewState extends State<LoginView>
                         ),
                       )
                     : Text(
-                        context.l10n.forumSend,
+                        _countdown > 0
+                            ? context.l10n.authResendCountdown(_countdown)
+                            : context.l10n.forumSend,
                         style: AppTypography.caption.copyWith(
-                          color: AppColors.primary,
+                          color: _countdown > 0
+                              ? (isDark
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondaryLight)
+                              : AppColors.primary,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -1131,6 +1144,7 @@ class _StyledTextField extends StatelessWidget {
     required this.icon,
     required this.isDark,
     this.keyboardType,
+    this.textInputAction,
     this.obscureText = false,
     this.validator,
     this.suffixIcon,
@@ -1142,6 +1156,7 @@ class _StyledTextField extends StatelessWidget {
   final IconData icon;
   final bool isDark;
   final TextInputType? keyboardType;
+  final TextInputAction? textInputAction;
   final bool obscureText;
   final String? Function(String?)? validator;
   final Widget? suffixIcon;
@@ -1163,6 +1178,7 @@ class _StyledTextField extends StatelessWidget {
         TextFormField(
           controller: controller,
           keyboardType: keyboardType,
+          textInputAction: textInputAction,
           obscureText: obscureText,
           style: AppTypography.body.copyWith(
             color: isDark

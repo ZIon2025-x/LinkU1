@@ -110,45 +110,51 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
       child: Builder(
         builder: (context) {
           // context 此处才能拿到本页的 ForumBloc，AppBar 的分享/编辑/删除等依赖 selectedPost
-          return BlocListener<ForumBloc, ForumState>(
-            listenWhen: (prev, curr) =>
-                prev.isReplying && !curr.isReplying && curr.replies.length > prev.replies.length,
-            listener: (context, state) {
-              _replyController.clear();
-              _clearReplyTo();
-            },
-            child: BlocListener<ForumBloc, ForumState>(
-              listenWhen: (prev, curr) =>
-                  curr.replies.length < prev.replies.length,
-              listener: (context, state) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(context.l10n.forumReplyDeleted)),
-                );
-              },
-            child: BlocListener<ForumBloc, ForumState>(
-              listenWhen: (prev, curr) =>
-                  !prev.reportSuccess && curr.reportSuccess ||
-                  prev.errorMessage != curr.errorMessage && curr.errorMessage != null ||
-                  (prev.selectedPost?.id == widget.postId && curr.selectedPost == null),
-              listener: (context, state) {
-              if (state.reportSuccess) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(context.l10n.commonReportSubmitted)),
-                );
-              } else if (state.selectedPost == null && state.errorMessage == null) {
-                // 当前帖子已删除成功（listenWhen 已保证是本页帖子被删），返回上一页并提示
-                if (context.mounted) Navigator.of(context).pop();
-                if (context.mounted) {
+          return MultiBlocListener(
+            listeners: [
+              BlocListener<ForumBloc, ForumState>(
+                listenWhen: (prev, curr) =>
+                    prev.isReplying && !curr.isReplying && curr.replies.length > prev.replies.length,
+                listener: (context, state) {
+                  _replyController.clear();
+                  _clearReplyTo();
+                },
+              ),
+              BlocListener<ForumBloc, ForumState>(
+                listenWhen: (prev, curr) =>
+                    curr.replies.length < prev.replies.length,
+                listener: (context, state) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(context.l10n.forumPostDeleted)),
+                    SnackBar(content: Text(context.l10n.forumReplyDeleted)),
                   );
-                }
-              } else if (state.errorMessage != null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(context.localizeError(state.errorMessage))),
-                );
-              }
-            },
+                },
+              ),
+              BlocListener<ForumBloc, ForumState>(
+                listenWhen: (prev, curr) =>
+                    !prev.reportSuccess && curr.reportSuccess ||
+                    prev.errorMessage != curr.errorMessage && curr.errorMessage != null ||
+                    (prev.selectedPost?.id == widget.postId && curr.selectedPost == null),
+                listener: (context, state) {
+                  if (state.reportSuccess) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(context.l10n.commonReportSubmitted)),
+                    );
+                  } else if (state.selectedPost == null && state.errorMessage == null) {
+                    // 当前帖子已删除成功（listenWhen 已保证是本页帖子被删），返回上一页并提示
+                    if (context.mounted) Navigator.of(context).pop();
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(context.l10n.forumPostDeleted)),
+                      );
+                    }
+                  } else if (state.errorMessage != null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(context.localizeError(state.errorMessage))),
+                    );
+                  }
+                },
+              ),
+            ],
             child: Scaffold(
         resizeToAvoidBottomInset: true,
         backgroundColor: AppColors.backgroundFor(Theme.of(context).brightness),
@@ -484,9 +490,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
         // 底部回复栏 - 对标iOS bottomReplyBar with ultraThinMaterial
         bottomNavigationBar: _buildBottomReplyBar(context),
             ),
-          ),
-          ),
-        );
+          );
         },
       ),
     );
@@ -1435,8 +1439,6 @@ class _LinkedChip extends StatelessWidget {
   final String? name;
   final bool isDark;
 
-  static const Color _accent = Color(0xFF6C5CE7);
-
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -1446,29 +1448,29 @@ class _LinkedChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: isDark
               ? Colors.white.withValues(alpha: 0.06)
-              : _accent.withValues(alpha: 0.06),
+              : AppColors.purple.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: isDark
                 ? Colors.white.withValues(alpha: 0.10)
-                : _accent.withValues(alpha: 0.15),
+                : AppColors.purple.withValues(alpha: 0.15),
           ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(_iconData, size: 16, color: _accent),
+            Icon(_iconData, size: 16, color: AppColors.purple),
             const SizedBox(width: 6),
             Flexible(
               child: Text(
                 name ?? _typeLabel(context),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 13, color: _accent, fontWeight: FontWeight.w500),
+                style: const TextStyle(fontSize: 13, color: AppColors.purple, fontWeight: FontWeight.w500),
               ),
             ),
             const SizedBox(width: 2),
-            Icon(Icons.chevron_right, size: 14, color: _accent.withValues(alpha: 0.6)),
+            Icon(Icons.chevron_right, size: 14, color: AppColors.purple.withValues(alpha: 0.6)),
           ],
         ),
       ),

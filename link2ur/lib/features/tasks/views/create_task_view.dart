@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/adaptive_dialogs.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/app_feedback.dart';
@@ -101,6 +102,13 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
   bool _isUploadingImages = false;
   final _imagePicker = ImagePicker();
 
+  bool get _hasUnsavedChanges {
+    return _titleController.text.isNotEmpty ||
+        _descriptionController.text.isNotEmpty ||
+        _rewardController.text.isNotEmpty ||
+        _selectedImages.isNotEmpty;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -184,7 +192,7 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(context.l10n.createTaskSelectDeadline),
-          backgroundColor: Colors.orange,
+          backgroundColor: AppColors.warning,
         ),
       );
       return;
@@ -197,7 +205,7 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(context.l10n.validatorAmountMin(1.0)),
-          backgroundColor: Colors.orange,
+          backgroundColor: AppColors.warning,
         ),
       );
       return;
@@ -216,7 +224,7 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
         if (mounted) {
           setState(() => _isUploadingImages = false);
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(context.l10n.createTaskImageUploadFailed), backgroundColor: Colors.red),
+            SnackBar(content: Text(context.l10n.createTaskImageUploadFailed), backgroundColor: AppColors.error),
           );
         }
         return;
@@ -271,7 +279,22 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
         }
       },
       builder: (context, state) {
-        return Scaffold(
+        return PopScope(
+          canPop: !_hasUnsavedChanges,
+          onPopInvokedWithResult: (didPop, _) {
+            if (!didPop) {
+              AdaptiveDialogs.showConfirmDialog(
+                context: context,
+                title: context.l10n.commonDiscardChanges,
+                content: context.l10n.commonDiscardChangesMessage,
+                confirmText: context.l10n.commonDiscard,
+                isDestructive: true,
+              ).then((confirmed) {
+                if (confirmed == true) Navigator.of(context).pop();
+              });
+            }
+          },
+          child: Scaffold(
           appBar: AppBar(title: Text(context.l10n.createTaskTitle)),
           body: Form(
             key: _formKey,
@@ -421,6 +444,7 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
               ],
             ),
           ),
+        ),
         );
       },
     );

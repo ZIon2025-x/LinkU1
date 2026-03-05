@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/constants/app_constants.dart';
@@ -124,7 +125,7 @@ class _ActivityDetailViewContent extends StatelessWidget {
       leading: Padding(
         padding: const EdgeInsets.all(4),
         child: GestureDetector(
-          onTap: () => Navigator.of(context).pop(),
+          onTap: () => context.pop(),
           child: Container(
             width: 36,
             height: 36,
@@ -770,8 +771,10 @@ class _OfficialPrizeInfoCard extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFFFF8E1), Color(0xFFFFECB3)],
+                gradient: LinearGradient(
+                  colors: isDark
+                      ? [const Color(0xFF3D3520), const Color(0xFF2E2815)]
+                      : [const Color(0xFFFFF8E1), const Color(0xFFFFECB3)],
                 ),
                 borderRadius: isDrawn && winners.isNotEmpty
                     ? const BorderRadius.vertical(
@@ -790,10 +793,10 @@ class _OfficialPrizeInfoCard extends StatelessWidget {
                     Text(
                       prizeLabels[activity.prizeType] ??
                           '🎁 ${l10n.activityPrize}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF8B6914),
+                        color: isDark ? const Color(0xFFD4A017) : const Color(0xFF8B6914),
                       ),
                     ),
                   const SizedBox(height: 8),
@@ -805,7 +808,7 @@ class _OfficialPrizeInfoCard extends StatelessWidget {
                       activity.prizeDescription!,
                       style: TextStyle(
                         fontSize: 14,
-                        color: Colors.brown.shade700,
+                        color: isDark ? const Color(0xFFBFA76A) : Colors.brown.shade700,
                       ),
                     ),
 
@@ -823,7 +826,7 @@ class _OfficialPrizeInfoCard extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
-                            color: Colors.brown.shade600,
+                            color: isDark ? const Color(0xFFBFA76A) : Colors.brown.shade600,
                           ),
                         ),
                       ],
@@ -836,7 +839,7 @@ class _OfficialPrizeInfoCard extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: isDrawn
                                 ? AppColors.success
-                                : const Color(0xFFFF9800),
+                                : AppColors.warning,
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
@@ -1264,7 +1267,7 @@ class _ActivityHeaderCard extends StatelessWidget {
                 if (activity.hasTimeSlots)
                   _BadgeView(
                     text: context.l10n.activityByAppointment,
-                    color: Colors.orange,
+                    color: AppColors.warning,
                     withIcon: true,
                     icon: Icons.schedule,
                   ),
@@ -1498,9 +1501,9 @@ class _ActivityStatsBar extends StatelessWidget {
   Color _getStatusColor(String status) {
     switch (status) {
       case 'open':
-        return activity.isFull ? AppColors.error : Colors.orange;
+        return activity.isFull ? AppColors.error : AppColors.warning;
       case 'pending_review':
-        return Colors.orange;
+        return AppColors.warning;
       case 'rejected':
         return AppColors.error;
       case 'completed':

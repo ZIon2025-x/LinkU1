@@ -20,6 +20,7 @@ import '../../../core/widgets/cross_platform_image.dart';
 import '../../../core/widgets/review_bottom_sheet.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
+import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/full_screen_image_view.dart';
@@ -266,7 +267,7 @@ class _TaskDetailContent extends StatelessWidget {
         child: GlassButton(
           onTap: () {
             AppHaptics.selection();
-            Navigator.of(context).pop();
+            context.pop();
           },
           child: const Icon(Icons.arrow_back_ios_new,
               size: 18, color: Colors.white),
@@ -422,7 +423,12 @@ class _TaskDetailContent extends StatelessWidget {
     }
 
     final task = state.task;
-    if (task == null) return const SizedBox.shrink();
+    if (task == null) {
+      return EmptyStateView.noData(
+        context,
+        title: context.l10n.taskNotFound,
+      );
+    }
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -1952,7 +1958,7 @@ class _CounterpartyCard extends StatelessWidget {
                       if (info.isVerified) ...[
                         const SizedBox(width: 4),
                         const Icon(Icons.verified,
-                            size: 16, color: Colors.blue),
+                            size: 16, color: AppColors.primary),
                       ],
                       if (info.isExpert) ...[
                         const SizedBox(width: 4),
@@ -2635,7 +2641,7 @@ class _CompleteTaskSheetContentState extends State<_CompleteTaskSheetContent> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(context.localizeError(e.toString())),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColors.error,
           ),
         );
       }

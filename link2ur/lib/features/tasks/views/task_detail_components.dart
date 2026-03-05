@@ -3071,7 +3071,7 @@ class _EvidenceCollectionSheetState extends State<_EvidenceCollectionSheet> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(context.localizeError(e.toString())),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColors.error,
           ),
         );
       }

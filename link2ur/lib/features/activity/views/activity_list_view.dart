@@ -373,7 +373,7 @@ class ActivityCardView extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: Colors.red,
+                        color: AppColors.error,
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
@@ -587,7 +587,7 @@ class ActivityCardView extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(4),
             decoration: const BoxDecoration(
-              color: Colors.red,
+              color: AppColors.error,
               shape: BoxShape.circle,
             ),
             child: const Icon(
@@ -606,7 +606,7 @@ class ActivityCardView extends StatelessWidget {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: Colors.orange,
+          color: AppColors.warning,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Text(

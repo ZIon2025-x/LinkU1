@@ -127,6 +127,8 @@ Widget _buildUserInfoSection(
           ),
           child: Text(
             user.email ?? user.phone ?? 'ID: ${user.id}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w500,

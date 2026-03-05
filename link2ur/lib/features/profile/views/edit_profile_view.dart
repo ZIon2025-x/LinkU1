@@ -8,6 +8,7 @@ import '../../../core/constants/app_assets.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/adaptive_dialogs.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/app_feedback.dart';
 import '../../../core/widgets/async_image_view.dart';
@@ -55,8 +56,21 @@ class _EditProfileContentState extends State<_EditProfileContent> {
   XFile? _selectedImageFile;
   bool _initialized = false;
 
+  String _originalName = '';
+  String _originalBio = '';
+  String _originalCity = '';
   String? _originalEmail;
   String? _originalPhone;
+
+  bool get _hasUnsavedChanges {
+    if (!_initialized) return false;
+    return _nameController.text != _originalName ||
+        _bioController.text != _originalBio ||
+        _residenceCityController.text != _originalCity ||
+        _emailController.text.trim() != (_originalEmail ?? '') ||
+        _phoneController.text.trim() != (_originalPhone ?? '') ||
+        _selectedImageFile != null;
+  }
 
   @override
   void dispose() {
@@ -78,6 +92,9 @@ class _EditProfileContentState extends State<_EditProfileContent> {
       _residenceCityController.text = user.residenceCity ?? '';
       _emailController.text = user.email ?? '';
       _phoneController.text = user.phone ?? '';
+      _originalName = user.name;
+      _originalBio = user.bio ?? '';
+      _originalCity = user.residenceCity ?? '';
       _originalEmail = user.email ?? '';
       _originalPhone = user.phone ?? '';
       _initialized = true;
@@ -273,7 +290,22 @@ class _EditProfileContentState extends State<_EditProfileContent> {
 
         final avatarUrl = state.user?.avatar;
 
-        return Scaffold(
+        return PopScope(
+          canPop: !_hasUnsavedChanges,
+          onPopInvokedWithResult: (didPop, _) {
+            if (!didPop) {
+              AdaptiveDialogs.showConfirmDialog(
+                context: context,
+                title: context.l10n.commonDiscardChanges,
+                content: context.l10n.commonDiscardChangesMessage,
+                confirmText: context.l10n.commonDiscard,
+                isDestructive: true,
+              ).then((confirmed) {
+                if (confirmed == true) Navigator.of(context).pop();
+              });
+            }
+          },
+          child: Scaffold(
           appBar: AppBar(
             title: Text(context.l10n.profileEditProfile),
             actions: [
@@ -411,6 +443,7 @@ class _EditProfileContentState extends State<_EditProfileContent> {
               ),
             ),
           ),
+        ),
         );
       },
     );

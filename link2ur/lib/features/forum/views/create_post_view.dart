@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/adaptive_dialogs.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/logger.dart';
@@ -41,6 +42,13 @@ class _CreatePostViewState extends State<CreatePostView> {
   final List<PlatformFile> _selectedFiles = [];
 
   bool _isUploading = false;
+
+  bool get _hasUnsavedChanges {
+    return _titleController.text.isNotEmpty ||
+        _contentController.text.isNotEmpty ||
+        _selectedImages.isNotEmpty ||
+        _selectedFiles.isNotEmpty;
+  }
 
   String? _linkedItemType;
   String? _linkedItemId;
@@ -229,7 +237,22 @@ class _CreatePostViewState extends State<CreatePostView> {
           final isBusy =
               state.isCreatingPost == true || _isUploading == true;
 
-          return Scaffold(
+          return PopScope(
+            canPop: !_hasUnsavedChanges,
+            onPopInvokedWithResult: (didPop, _) {
+              if (!didPop) {
+                AdaptiveDialogs.showConfirmDialog(
+                  context: context,
+                  title: context.l10n.commonDiscardChanges,
+                  content: context.l10n.commonDiscardChangesMessage,
+                  confirmText: context.l10n.commonDiscard,
+                  isDestructive: true,
+                ).then((confirmed) {
+                  if (confirmed == true) Navigator.of(context).pop();
+                });
+              }
+            },
+            child: Scaffold(
             backgroundColor:
                 AppColors.backgroundFor(Theme.of(context).brightness),
             appBar: AppBar(
@@ -341,6 +364,7 @@ class _CreatePostViewState extends State<CreatePostView> {
                 ],
               ],
             ),
+          ),
           );
         },
       ),

@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/adaptive_dialogs.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/app_feedback.dart';
@@ -49,6 +50,16 @@ class _EditPostViewState extends State<EditPostView> {
   PlatformFile? _newPdfFile;
 
   bool _isUploading = false;
+
+  bool get _hasUnsavedChanges {
+    final post = widget.post;
+    return _titleController.text != post.title ||
+        _contentController.text != (post.content ?? '') ||
+        _existingUrls.length != post.images.length ||
+        _newFiles.isNotEmpty ||
+        _newPdfFile != null ||
+        (_existingAttachment == null && post.attachments.isNotEmpty);
+  }
 
   @override
   void initState() {
@@ -225,7 +236,22 @@ class _EditPostViewState extends State<EditPostView> {
           }
         }
       },
-      child: Scaffold(
+      child: PopScope(
+        canPop: !_hasUnsavedChanges,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) {
+            AdaptiveDialogs.showConfirmDialog(
+              context: context,
+              title: context.l10n.commonDiscardChanges,
+              content: context.l10n.commonDiscardChangesMessage,
+              confirmText: context.l10n.commonDiscard,
+              isDestructive: true,
+            ).then((confirmed) {
+              if (confirmed == true) Navigator.of(context).pop();
+            });
+          }
+        },
+        child: Scaffold(
       backgroundColor: AppColors.backgroundFor(isDark ? Brightness.dark : Brightness.light),
       appBar: AppBar(
         title: Text(context.l10n.commonEdit),
@@ -310,6 +336,7 @@ class _EditPostViewState extends State<EditPostView> {
           ],
         ],
       ),
+    ),
     ),
     );
   }

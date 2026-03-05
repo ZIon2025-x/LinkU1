@@ -212,6 +212,7 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
                       TextFormField(
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.done,
                         enabled: !_codeSent,
                         decoration: InputDecoration(
                           labelText: context.l10n.authEmail,
@@ -245,6 +246,7 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
                         TextFormField(
                           controller: _codeController,
                           keyboardType: TextInputType.number,
+                          textInputAction: TextInputAction.next,
                           decoration: InputDecoration(
                             labelText: context.l10n.authVerificationCode,
                             prefixIcon: const Icon(Icons.pin),
@@ -275,6 +277,7 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
                         TextFormField(
                           controller: _passwordController,
                           obscureText: _obscurePassword,
+                          textInputAction: TextInputAction.next,
                           decoration: InputDecoration(
                             labelText: context.l10n.authNewPassword,
                             prefixIcon: const Icon(Icons.lock_outline),
@@ -293,15 +296,7 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
                               borderRadius: AppRadius.allMedium,
                             ),
                           ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return context.l10n.authEnterNewPassword;
-                            }
-                            if (value.length < 8) {
-                              return context.l10n.authPasswordMinLength;
-                            }
-                            return null;
-                          },
+                          validator: (v) => Validators.validatePassword(v, l10n: context.l10n),
                         ),
                         AppSpacing.vMd,
 
@@ -309,6 +304,7 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
                         TextFormField(
                           controller: _confirmPasswordController,
                           obscureText: _obscureConfirm,
+                          textInputAction: TextInputAction.done,
                           decoration: InputDecoration(
                             labelText: context.l10n.authConfirmNewPassword,
                             prefixIcon: const Icon(Icons.lock_outline),
