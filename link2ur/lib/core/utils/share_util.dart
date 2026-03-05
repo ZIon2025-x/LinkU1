@@ -14,6 +14,7 @@ class ShareUtil {
   static String forumPostUrl(int postId) => '$_baseUrl/forum/post/$postId';
   static String fleaMarketUrl(String itemId) => '$_baseUrl/flea-market/$itemId';
   static String activityUrl(int activityId) => '$_baseUrl/activities/$activityId';
+  static String leaderboardUrl(int leaderboardId) => '$_baseUrl/leaderboard/custom/$leaderboardId';
   static String leaderboardItemUrl(int itemId) => '$_baseUrl/leaderboard/item/$itemId';
   static String taskExpertUrl(String expertId) => '$_baseUrl/task-experts/$expertId';
 

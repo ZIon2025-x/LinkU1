@@ -481,7 +481,7 @@ const ForumPostDetail: React.FC = () => {
     weixinImageTag.setAttribute('name', 'weixin:image');
     weixinImageTag.content = shareImageUrl;
     document.head.insertBefore(weixinImageTag, document.head.firstChild);
-    
+
     // 同时更新 Open Graph 标签
     const allOgDescriptions = document.querySelectorAll('meta[property="og:description"]');
     allOgDescriptions.forEach(tag => tag.remove());
@@ -489,7 +489,7 @@ const ForumPostDetail: React.FC = () => {
     ogDescTag.setAttribute('property', 'og:description');
     ogDescTag.content = currentShareDescription;
     document.head.insertBefore(ogDescTag, document.head.firstChild);
-    
+
     const existingOgTitle = document.querySelector('meta[property="og:title"]');
     if (existingOgTitle) {
       existingOgTitle.remove();
@@ -498,7 +498,7 @@ const ForumPostDetail: React.FC = () => {
     ogTitleTag.setAttribute('property', 'og:title');
     ogTitleTag.content = post.title;
     document.head.insertBefore(ogTitleTag, document.head.firstChild);
-    
+
     const existingOgImage = document.querySelector('meta[property="og:image"]');
     if (existingOgImage) {
       existingOgImage.remove();

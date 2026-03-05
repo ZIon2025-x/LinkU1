@@ -316,6 +316,9 @@ const LanguageRoutes: React.FC = () => {
       <Route path="/message" element={<Navigate to={`/${DEFAULT_LANGUAGE}/message`} replace />} />
       <Route path="/tasks/:id" element={<ParamRedirect basePath="/tasks/:id" />} />
       <Route path="/activities/:id" element={<ParamRedirect basePath="/activities/:id" />} />
+      <Route path="/flea-market/:itemId" element={<ParamRedirect basePath="/flea-market/:itemId" />} />
+      <Route path="/leaderboard/custom/:leaderboardId" element={<ParamRedirect basePath="/leaderboard/custom/:leaderboardId" />} />
+      <Route path="/leaderboard/item/:itemId" element={<ParamRedirect basePath="/leaderboard/item/:itemId" />} />
       <Route path="/my-tasks" element={<Navigate to={`/${DEFAULT_LANGUAGE}/my-tasks`} replace />} />
       <Route path="/user/:userId" element={<UserProfileRedirect />} />
       <Route path="/task-experts" element={<Navigate to={`/${DEFAULT_LANGUAGE}/task-experts`} replace />} />

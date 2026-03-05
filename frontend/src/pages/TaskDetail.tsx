@@ -801,7 +801,7 @@ const TaskDetail: React.FC = () => {
       weixinImageTag.setAttribute('name', 'weixin:image');
       weixinImageTag.content = shareImageUrl;
       document.head.insertBefore(weixinImageTag, document.head.firstChild);
-      
+
       // 更新Twitter Card标签
       updateMetaTag('twitter:card', 'summary_large_image');
       updateMetaTag('twitter:title', `${task.title} - Link²Ur任务平台`);

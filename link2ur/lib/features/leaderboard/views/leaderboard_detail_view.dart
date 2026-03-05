@@ -148,7 +148,7 @@ class _LeaderboardDetailContentState
       ShareUtil.share(
         title: lb.displayName(Localizations.localeOf(context)),
         description: lb.displayDescription(Localizations.localeOf(context)) ?? '',
-        url: 'https://link2ur.com/leaderboard/${lb.id}',
+        url: ShareUtil.leaderboardUrl(lb.id),
         imageUrl: lb.coverImage,
       );
     }
