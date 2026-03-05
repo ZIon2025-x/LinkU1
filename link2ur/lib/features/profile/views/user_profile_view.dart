@@ -389,7 +389,10 @@ class _UserProfileViewState extends State<UserProfileView> {
               ),
             )
           else
-            ...tasks.take(5).map((t) => Padding(
+            ...tasks
+                .where((t) => t.status == 'completed')
+                .take(3)
+                .map((t) => Padding(
                   key: ValueKey('task_${t.id}'),
                   padding: const EdgeInsets.only(bottom: AppSpacing.md),
                   child: ListTile(

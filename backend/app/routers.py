@@ -4805,37 +4805,18 @@ def user_profile(
     if taken_tasks_count > 0:
         completion_rate = (completed_tasks_count / taken_tasks_count) * 100
     
-    # 获取已完成且公开的任务用于显示（限制数量以提高性能）
-    tasks, _ = crud.get_user_tasks(db, user_id, limit=100)  # 限制为最近100个任务
-    # 所有用户看到的任务列表都是一样的，只显示已完成且公开的任务，避免信息泄露
-    posted_tasks = [
-        t
-        for t in tasks
-        if t.poster_id == user_id and t.is_public == 1 and t.status == "completed"
-    ]
-    taken_tasks = [
-        t
-        for t in tasks
-        if t.taker_id == user_id and t.is_public == 1 and t.status == "completed"
-    ]
-    # 该用户发布的进行中/开放任务（他人可见「发布的任务请求」）
-    open_posted = (
+    # 只显示已完成且公开的任务，按时间取最近 3 条
+    recent_tasks_source = (
         db.query(Task)
-        .filter(Task.poster_id == user_id, Task.status == "open")
+        .filter(
+            ((Task.poster_id == user_id) | (Task.taker_id == user_id)),
+            Task.status == "completed",
+            Task.is_public == 1,
+        )
         .order_by(Task.created_at.desc())
-        .limit(5)
+        .limit(3)
         .all()
     )
-
-    # 任务双语标题已从任务表列加载；缺失时后台触发预取
-    all_display_tasks = posted_tasks + taken_tasks
-    # 近期任务 = 开放中的发布任务 + 已完成公开任务，按时间取最近 5 条
-    all_for_recent = list(open_posted) + all_display_tasks
-    all_for_recent.sort(
-        key=lambda t: (t.created_at is None, -(t.created_at.timestamp() if t.created_at else 0)),
-        reverse=True,
-    )
-    recent_tasks_source = all_for_recent[:5]
     missing_task_ids = [
         t.id for t in recent_tasks_source
         if not getattr(t, "title_en", None) or not getattr(t, "title_zh", None)
