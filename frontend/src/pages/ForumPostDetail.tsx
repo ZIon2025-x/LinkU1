@@ -1069,11 +1069,11 @@ const ForumPostDetail: React.FC = () => {
             canonicalUrl={canonicalUrl}
             ogTitle={post.title}
             ogDescription={shareDescription}
-            ogImage={`https://www.link2ur.com/static/favicon.png`}
+            ogImage={post.images && post.images.length > 0 && post.images[0] ? ensureAbsoluteImageUrl(post.images[0]) : `https://www.link2ur.com/static/favicon.png`}
             ogUrl={canonicalUrl}
             twitterTitle={post.title}
             twitterDescription={shareDescription}
-            twitterImage={`https://www.link2ur.com/static/favicon.png`}
+            twitterImage={post.images && post.images.length > 0 && post.images[0] ? ensureAbsoluteImageUrl(post.images[0]) : `https://www.link2ur.com/static/favicon.png`}
           />
           <ForumPostStructuredData 
             post={{
