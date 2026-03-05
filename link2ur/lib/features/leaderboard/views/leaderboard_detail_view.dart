@@ -145,10 +145,13 @@ class _LeaderboardDetailContentState
     void onShare() async {
       final lb = state.selectedLeaderboard;
       if (lb == null) return;
+      final shareFiles = await NativeShare.fileFromFirstImageUrl(lb.coverImage);
+      if (!context.mounted) return;
       await NativeShare.share(
         title: lb.displayName(Localizations.localeOf(context)),
         description: lb.displayDescription(Localizations.localeOf(context)) ?? '',
         url: 'https://link2ur.com/leaderboard/${lb.id}',
+        files: shareFiles,
         context: context,
       );
     }
