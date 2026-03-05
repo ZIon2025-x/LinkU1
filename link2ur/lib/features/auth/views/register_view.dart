@@ -717,26 +717,27 @@ class _RegisterViewState extends State<RegisterView>
 
   Widget _buildSendCodeButton(AuthState state, bool isDark) {
     final isSending = state.codeSendStatus == CodeSendStatus.sending;
+    final isDisabled = isSending || _countdown > 0;
     return Padding(
       padding: const EdgeInsets.only(top: 28),
       child: SizedBox(
         width: 100,
         height: 52,
         child: Material(
-          color: isSending
+          color: isDisabled
               ? (isDark
                   ? AppColors.cardBackgroundDark
                   : AppColors.backgroundLight)
               : AppColors.primary.withValues(alpha: 0.12),
           borderRadius: AppRadius.allMedium,
           child: InkWell(
-            onTap: isSending ? null : _sendCode,
+            onTap: isDisabled ? null : _sendCode,
             borderRadius: AppRadius.allMedium,
             child: Container(
               decoration: BoxDecoration(
                 borderRadius: AppRadius.allMedium,
                 border: Border.all(
-                  color: isSending
+                  color: isDisabled
                       ? (isDark
                           ? AppColors.dividerDark
                           : AppColors.dividerLight)
@@ -754,9 +755,15 @@ class _RegisterViewState extends State<RegisterView>
                         ),
                       )
                     : Text(
-                        context.l10n.forumSend,
+                        _countdown > 0
+                            ? context.l10n.authResendCountdown(_countdown)
+                            : context.l10n.forumSend,
                         style: AppTypography.caption.copyWith(
-                          color: AppColors.primary,
+                          color: _countdown > 0
+                              ? (isDark
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondaryLight)
+                              : AppColors.primary,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -828,6 +835,7 @@ class _RegisterViewState extends State<RegisterView>
                       color: AppColors.primary,
                       fontWeight: FontWeight.w600,
                     ),
+                    recognizer: _termsTapRecognizer,
                   ),
                   TextSpan(text: context.l10n.authAnd),
                   TextSpan(
@@ -836,6 +844,7 @@ class _RegisterViewState extends State<RegisterView>
                       color: AppColors.primary,
                       fontWeight: FontWeight.w600,
                     ),
+                    recognizer: _privacyTapRecognizer,
                   ),
                 ],
               ),

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -35,6 +36,10 @@ class _LoginViewState extends State<LoginView>
   bool _obscurePassword = true;
   LoginMethod _loginMethod = LoginMethod.password;
   bool _showSessionExpiredBanner = false;
+
+  // ---- 倒计时 ----
+  int _countdown = 0;
+  Timer? _countdownTimer;
 
   // ---- 动画 ----
   late AnimationController _animController;
@@ -88,6 +93,7 @@ class _LoginViewState extends State<LoginView>
 
   @override
   void dispose() {
+    _countdownTimer?.cancel();
     _animController.dispose();
     _bgAnimController.dispose();
     _emailController.dispose();
@@ -148,6 +154,17 @@ class _LoginViewState extends State<LoginView>
       final fullPhone = '+44$localNumber';
       context.read<AuthBloc>().add(AuthSendPhoneCodeRequested(phone: fullPhone));
     }
+  }
+
+  void _startCountdown() {
+    _countdownTimer?.cancel();
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted || _countdown <= 0) {
+        timer.cancel();
+        return;
+      }
+      setState(() => _countdown--);
+    });
   }
 
   void _onMethodChanged(LoginMethod method) {
@@ -221,6 +238,8 @@ class _LoginViewState extends State<LoginView>
               ),
             );
           } else if (state.codeSendStatus == CodeSendStatus.sent) {
+            setState(() => _countdown = 60);
+            _startCountdown();
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(context.l10n.authCodeSent)),
             );
@@ -676,7 +695,7 @@ class _LoginViewState extends State<LoginView>
       children: [
         _StyledTextField(
           controller: _emailController,
-          label: context.l10n.authEmailPassword,
+          label: context.l10n.authEmail,
           placeholder: context.l10n.authEnterEmailOrId,
           icon: Icons.person_outlined,
           keyboardType: TextInputType.emailAddress,

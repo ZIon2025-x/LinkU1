@@ -49,7 +49,7 @@ Widget _buildMyContentSection(BuildContext context, bool isDark) {
                 icon: Icons.inventory_2,           // shippingbox.fill
                 title: context.l10n.profileMyPosts,
                 subtitle: context.l10n.profileMyPostsSubtitle,
-                color: Colors.orange,
+                color: AppColors.warning,
                 onTap: () => context.push('/profile/my-posts'),
               ),
               _profileDivider(isDark),
@@ -57,7 +57,7 @@ Widget _buildMyContentSection(BuildContext context, bool isDark) {
                 icon: Icons.description,           // doc.text.fill
                 title: context.l10n.profileMyForumPosts,
                 subtitle: context.l10n.profileMyForumPostsSubtitle,
-                color: Colors.blue,
+                color: AppColors.primary,
                 onTap: () => context.push('/forum/my-posts'),
               ),
               _profileDivider(isDark),
@@ -65,7 +65,7 @@ Widget _buildMyContentSection(BuildContext context, bool isDark) {
                 icon: Icons.storefront,            // sold items
                 title: context.l10n.profileMySoldItems,
                 subtitle: context.l10n.profileMySoldItemsSubtitle,
-                color: Colors.teal,
+                color: AppColors.teal,
                 onTap: () => context.push('/flea-market'),
               ),
               _profileDivider(isDark),

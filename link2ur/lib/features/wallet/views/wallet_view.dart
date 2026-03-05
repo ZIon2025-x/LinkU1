@@ -78,6 +78,10 @@ class _WalletContent extends StatelessWidget {
                           context
                               .read<WalletBloc>()
                               .add(const WalletLoadRequested());
+                          await context
+                              .read<WalletBloc>()
+                              .stream
+                              .firstWhere((s) => !s.isLoading);
                         },
                         child: SingleChildScrollView(
                           physics: const AlwaysScrollableScrollPhysics(),

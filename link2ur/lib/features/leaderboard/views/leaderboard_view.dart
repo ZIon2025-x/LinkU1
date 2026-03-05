@@ -28,72 +28,107 @@ class LeaderboardView extends StatelessWidget {
       create: (context) => LeaderboardBloc(
         leaderboardRepository: context.read<LeaderboardRepository>(),
       )..add(const LeaderboardLoadRequested()),
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(context.l10n.leaderboardLeaderboard),
-        ),
-        body: BlocBuilder<LeaderboardBloc, LeaderboardState>(
-          builder: (context, state) {
-            if (state.status == LeaderboardStatus.loading &&
-                state.leaderboards.isEmpty) {
-              return const SkeletonList(imageSize: 90);
-            }
+      child: const _LeaderboardContent(),
+    );
+  }
+}
 
-            if (state.status == LeaderboardStatus.error &&
-                state.leaderboards.isEmpty) {
-              return ErrorStateView.loadFailed(
-                message: state.errorMessage ?? context.l10n.tasksLoadFailed,
-                onRetry: () {
-                  context.read<LeaderboardBloc>().add(
-                        const LeaderboardLoadRequested(),
-                      );
-                },
-              );
-            }
+class _LeaderboardContent extends StatefulWidget {
+  const _LeaderboardContent();
 
-            if (state.leaderboards.isEmpty) {
-              return EmptyStateView.noData(
-                context,
-                title: context.l10n.leaderboardNoLeaderboards,
-                description: context.l10n.leaderboardNoLeaderboardsMessage,
-              );
-            }
+  @override
+  State<_LeaderboardContent> createState() => _LeaderboardContentState();
+}
 
-            return RefreshIndicator(
-              onRefresh: () async {
+class _LeaderboardContentState extends State<_LeaderboardContent> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!mounted) return;
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      context.read<LeaderboardBloc>().add(const LeaderboardLoadMore());
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(context.l10n.leaderboardLeaderboard),
+      ),
+      body: BlocBuilder<LeaderboardBloc, LeaderboardState>(
+        builder: (context, state) {
+          if (state.status == LeaderboardStatus.loading &&
+              state.leaderboards.isEmpty) {
+            return const SkeletonList(imageSize: 90);
+          }
+
+          if (state.status == LeaderboardStatus.error &&
+              state.leaderboards.isEmpty) {
+            return ErrorStateView.loadFailed(
+              message: state.errorMessage ?? context.l10n.tasksLoadFailed,
+              onRetry: () {
                 context.read<LeaderboardBloc>().add(
-                      const LeaderboardRefreshRequested(),
+                      const LeaderboardLoadRequested(),
                     );
               },
-              child: ListView.separated(
-                clipBehavior: Clip.none,
-                cacheExtent: 500,
-                padding: AppSpacing.allMd,
-                itemCount: state.leaderboards.length + (state.hasMore ? 1 : 0),
-                separatorBuilder: (context, index) => AppSpacing.vMd,
-                itemBuilder: (context, index) {
-                  if (index == state.leaderboards.length) {
-                    context.read<LeaderboardBloc>().add(
-                          const LeaderboardLoadMore(),
-                        );
-                    return const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(16.0),
-                        child: LoadingIndicator(),
-                      ),
-                    );
-                  }
-                  return RepaintBoundary(
-                    child: _LeaderboardCard(
-                      key: ValueKey(state.leaderboards[index].id),
-                      leaderboard: state.leaderboards[index],
+            );
+          }
+
+          if (state.leaderboards.isEmpty) {
+            return EmptyStateView.noData(
+              context,
+              title: context.l10n.leaderboardNoLeaderboards,
+              description: context.l10n.leaderboardNoLeaderboardsMessage,
+            );
+          }
+
+          return RefreshIndicator(
+            onRefresh: () async {
+              context.read<LeaderboardBloc>().add(
+                    const LeaderboardRefreshRequested(),
+                  );
+            },
+            child: ListView.separated(
+              controller: _scrollController,
+              clipBehavior: Clip.none,
+              cacheExtent: 500,
+              padding: AppSpacing.allMd,
+              itemCount: state.leaderboards.length + (state.hasMore ? 1 : 0),
+              separatorBuilder: (context, index) => AppSpacing.vMd,
+              itemBuilder: (context, index) {
+                if (index == state.leaderboards.length) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: LoadingIndicator(),
                     ),
                   );
-                },
-              ),
-            );
-          },
-        ),
+                }
+                return RepaintBoundary(
+                  child: _LeaderboardCard(
+                    key: ValueKey(state.leaderboards[index].id),
+                    leaderboard: state.leaderboards[index],
+                  ),
+                );
+              },
+            ),
+          );
+        },
       ),
     );
   }
