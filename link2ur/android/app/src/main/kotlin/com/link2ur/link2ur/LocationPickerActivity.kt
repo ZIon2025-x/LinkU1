@@ -7,18 +7,18 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Geocoder
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.text.Editable
 import android.text.TextWatcher
-import android.view.Gravity
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.*
+import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -28,6 +28,11 @@ import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.util.Locale
 
@@ -40,7 +45,6 @@ class LocationPickerActivity : AppCompatActivity(), OnMapReadyCallback {
         const val RESULT_ADDRESS = "address"
         const val RESULT_LATITUDE = "latitude"
         const val RESULT_LONGITUDE = "longitude"
-        private const val LOCATION_PERMISSION_REQUEST = 1001
         private const val DEFAULT_LAT = 51.5074
         private const val DEFAULT_LNG = -0.1278
         private const val DEFAULT_ZOOM = 15f
@@ -48,8 +52,7 @@ class LocationPickerActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private var googleMap: GoogleMap? = null
     private lateinit var fusedLocationClient: FusedLocationProviderClient
-    private val handler = Handler(Looper.getMainLooper())
-    private var geocodeRunnable: Runnable? = null
+    private var geocodeJob: Job? = null
 
     // Views
     private lateinit var searchEditText: EditText
@@ -62,6 +65,9 @@ class LocationPickerActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var onlineBtn: MaterialButton
     private lateinit var myLocationFab: FloatingActionButton
     private lateinit var citiesContainer: LinearLayout
+
+    // Permission launcher
+    private lateinit var locationPermissionLauncher: ActivityResultLauncher<Array<String>>
 
     // State
     private var currentAddress = ""
@@ -84,6 +90,25 @@ class LocationPickerActivity : AppCompatActivity(), OnMapReadyCallback {
         setContentView(R.layout.activity_location_picker)
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+
+        // Register permission launcher
+        locationPermissionLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestMultiplePermissions()
+        ) { permissions ->
+            val granted = permissions.values.any { it }
+            if (granted) {
+                enableMyLocationLayer()
+                requestCurrentLocation()
+            }
+        }
+
+        // Register back press callback
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                setResult(Activity.RESULT_CANCELED)
+                finish()
+            }
+        })
 
         initViews()
         setupSearchBar()
@@ -108,7 +133,7 @@ class LocationPickerActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun setupSearchBar() {
-        var searchDebounce: Runnable? = null
+        var searchDebounceJob: Job? = null
 
         searchEditText.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -117,10 +142,12 @@ class LocationPickerActivity : AppCompatActivity(), OnMapReadyCallback {
                 val query = s?.toString()?.trim() ?: ""
                 clearSearch.visibility = if (query.isNotEmpty()) View.VISIBLE else View.GONE
 
-                searchDebounce?.let { handler.removeCallbacks(it) }
+                searchDebounceJob?.cancel()
                 if (query.length >= 2) {
-                    searchDebounce = Runnable { geocodeSearch(query) }
-                    handler.postDelayed(searchDebounce!!, 500)
+                    searchDebounceJob = lifecycleScope.launch {
+                        delay(500)
+                        geocodeSearch(query)
+                    }
                 }
             }
         })
@@ -245,67 +272,65 @@ class LocationPickerActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun reverseGeocode(latLng: LatLng) {
-        geocodeRunnable?.let { handler.removeCallbacks(it) }
+        geocodeJob?.cancel()
         addressLoading.visibility = View.VISIBLE
 
-        geocodeRunnable = Runnable {
+        geocodeJob = lifecycleScope.launch {
             try {
-                val geocoder = Geocoder(this, Locale.getDefault())
-                @Suppress("DEPRECATION")
-                val addresses = geocoder.getFromLocation(latLng.latitude, latLng.longitude, 1)
-                runOnUiThread {
-                    addressLoading.visibility = View.GONE
-                    if (!addresses.isNullOrEmpty()) {
-                        val addr = addresses[0]
-                        val parts = mutableListOf<String>()
-                        addr.featureName?.let { if (it != addr.locality && it != addr.subLocality) parts.add(it) }
-                        addr.thoroughfare?.let { parts.add(it) }
-                        addr.subLocality?.let { parts.add(it) }
-                        addr.locality?.let { parts.add(it) }
-                        addr.postalCode?.let { parts.add(it) }
-                        if (parts.isEmpty()) addr.adminArea?.let { parts.add(it) }
-                        if (parts.isEmpty()) addr.countryName?.let { parts.add(it) }
-
-                        currentAddress = if (parts.isNotEmpty()) parts.joinToString(", ") else "Unknown location"
-                        addressText.text = currentAddress
-                        addressText.setTextColor(ContextCompat.getColor(this, android.R.color.black))
-                        confirmBtn.isEnabled = true
-                    } else {
-                        currentAddress = String.format("%.6f, %.6f", latLng.latitude, latLng.longitude)
-                        addressText.text = currentAddress
-                        addressText.setTextColor(ContextCompat.getColor(this, android.R.color.darker_gray))
-                        confirmBtn.isEnabled = true
-                    }
+                val result = withContext(Dispatchers.IO) {
+                    val geocoder = Geocoder(this@LocationPickerActivity, Locale.getDefault())
+                    @Suppress("DEPRECATION")
+                    geocoder.getFromLocation(latLng.latitude, latLng.longitude, 1)
                 }
-            } catch (e: IOException) {
-                runOnUiThread {
-                    addressLoading.visibility = View.GONE
+
+                addressLoading.visibility = View.GONE
+                if (!result.isNullOrEmpty()) {
+                    val addr = result[0]
+                    val parts = mutableListOf<String>()
+                    addr.featureName?.let { if (it != addr.locality && it != addr.subLocality) parts.add(it) }
+                    addr.thoroughfare?.let { parts.add(it) }
+                    addr.subLocality?.let { parts.add(it) }
+                    addr.locality?.let { parts.add(it) }
+                    addr.postalCode?.let { parts.add(it) }
+                    if (parts.isEmpty()) addr.adminArea?.let { parts.add(it) }
+                    if (parts.isEmpty()) addr.countryName?.let { parts.add(it) }
+
+                    currentAddress = if (parts.isNotEmpty()) parts.joinToString(", ") else "Unknown location"
+                    addressText.text = currentAddress
+                    addressText.setTextColor(ContextCompat.getColor(this@LocationPickerActivity, android.R.color.black))
+                    confirmBtn.isEnabled = true
+                } else {
                     currentAddress = String.format("%.6f, %.6f", latLng.latitude, latLng.longitude)
                     addressText.text = currentAddress
+                    addressText.setTextColor(ContextCompat.getColor(this@LocationPickerActivity, android.R.color.darker_gray))
                     confirmBtn.isEnabled = true
                 }
+            } catch (e: IOException) {
+                addressLoading.visibility = View.GONE
+                currentAddress = String.format("%.6f, %.6f", latLng.latitude, latLng.longitude)
+                addressText.text = currentAddress
+                confirmBtn.isEnabled = true
             }
         }
-        Thread(geocodeRunnable!!).start()
     }
 
     private fun geocodeSearch(query: String) {
-        Thread {
+        lifecycleScope.launch {
             try {
-                val geocoder = Geocoder(this, Locale.getDefault())
-                @Suppress("DEPRECATION")
-                val results = geocoder.getFromLocationName(query, 1)
-                runOnUiThread {
-                    if (!results.isNullOrEmpty()) {
-                        val loc = results[0]
-                        val pos = LatLng(loc.latitude, loc.longitude)
-                        moveTo(pos, DEFAULT_ZOOM)
-                    }
+                val result = withContext(Dispatchers.IO) {
+                    val geocoder = Geocoder(this@LocationPickerActivity, Locale.getDefault())
+                    @Suppress("DEPRECATION")
+                    geocoder.getFromLocationName(query, 1)
+                }
+                if (!result.isNullOrEmpty()) {
+                    val loc = result[0]
+                    val pos = LatLng(loc.latitude, loc.longitude)
+                    moveTo(pos, DEFAULT_ZOOM)
                 }
             } catch (_: IOException) {
                 // Geocoding failed silently
             }
-        }.start()
+        }
     }
 
     private fun moveTo(latLng: LatLng, zoom: Float) {
@@ -319,13 +344,11 @@ class LocationPickerActivity : AppCompatActivity(), OnMapReadyCallback {
     @SuppressLint("MissingPermission")
     private fun requestCurrentLocation() {
         if (!hasLocationPermission()) {
-            ActivityCompat.requestPermissions(
-                this,
+            locationPermissionLauncher.launch(
                 arrayOf(
                     Manifest.permission.ACCESS_FINE_LOCATION,
                     Manifest.permission.ACCESS_COARSE_LOCATION
-                ),
-                LOCATION_PERMISSION_REQUEST
+                )
             )
             return
         }
@@ -356,20 +379,6 @@ class LocationPickerActivity : AppCompatActivity(), OnMapReadyCallback {
                 PackageManager.PERMISSION_GRANTED
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == LOCATION_PERMISSION_REQUEST) {
-            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                enableMyLocationLayer()
-                requestCurrentLocation()
-            }
-        }
-    }
-
     private fun hideKeyboard() {
         val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
         imm.hideSoftInputFromWindow(searchEditText.windowToken, 0)
@@ -377,12 +386,5 @@ class LocationPickerActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private fun dp(value: Int): Int {
         return (value * resources.displayMetrics.density).toInt()
-    }
-
-    @Deprecated("Use OnBackPressedCallback instead")
-    override fun onBackPressed() {
-        setResult(Activity.RESULT_CANCELED)
-        @Suppress("DEPRECATION")
-        super.onBackPressed()
     }
 }

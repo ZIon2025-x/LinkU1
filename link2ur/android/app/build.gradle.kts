@@ -117,7 +117,10 @@ dependencies {
     implementation("com.google.android.gms:play-services-wallet:19.3.0")
     // ViewModel (Stripe 文档推荐 EmbeddedComponentManager 放在 ViewModel 中)
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("androidx.activity:activity-ktx:1.9.3")
+    // Coroutines for replacing deprecated Thread/Handler patterns
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 }
 
 flutter {

@@ -1,5 +1,5 @@
 # Uncomment this line to define a global platform for your project
-platform :ios, '13.0'
+platform :ios, '16.0'
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
@@ -44,9 +44,9 @@ post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
 
-    # 统一最低 iOS 部署目标为 13.0（webview_flutter_wkwebview、in_app_purchase 等依赖 iOS 13+ API）
+    # 统一最低 iOS 部署目标为 16.0
     target.build_configurations.each do |config|
-      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.0'
     end
 
     # 仅处理有编译源的原生 target（跳过 Pods-Runner 等 aggregate target）
@@ -95,9 +95,9 @@ post_install do |installer|
     end
   end
 
-  # 将 Pods 工程本身的部署目标也设为 13.0
+  # 将 Pods 工程本身的部署目标也设为 16.0
   installer.pods_project.build_configurations.each do |config|
-    config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
+    config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.0'
   end
 
   installer.pods_project.save

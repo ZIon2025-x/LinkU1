@@ -4,6 +4,8 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import com.google.firebase.messaging.FirebaseMessaging
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -13,19 +15,53 @@ import io.flutter.plugin.common.MethodChannel
 /// 见 https://github.com/flutter-stripe/flutter_stripe#android
 class MainActivity : FlutterFragmentActivity() {
 
-    companion object {
-        private const val LOCATION_PICKER_REQUEST = 2001
-        private const val STRIPE_CONNECT_REQUEST = 2002
-    }
-
     private var pushChannel: MethodChannel? = null
     private var locationPickerChannel: MethodChannel? = null
     private var stripeConnectChannel: MethodChannel? = null
     private var locationPickerResult: MethodChannel.Result? = null
     private var stripeConnectResult: MethodChannel.Result? = null
 
+    private lateinit var locationPickerLauncher: ActivityResultLauncher<Intent>
+    private lateinit var stripeConnectLauncher: ActivityResultLauncher<Intent>
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        locationPickerLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            val pendingResult = locationPickerResult
+            locationPickerResult = null
+            if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+                val data = result.data!!
+                val map = hashMapOf<String, Any>(
+                    "address" to (data.getStringExtra(LocationPickerActivity.RESULT_ADDRESS) ?: ""),
+                    "latitude" to data.getDoubleExtra(LocationPickerActivity.RESULT_LATITUDE, 0.0),
+                    "longitude" to data.getDoubleExtra(LocationPickerActivity.RESULT_LONGITUDE, 0.0)
+                )
+                pendingResult?.success(map)
+            } else {
+                pendingResult?.success(null)
+            }
+        }
+
+        stripeConnectLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            val pendingResult = stripeConnectResult
+            stripeConnectResult = null
+            if (result.resultCode == Activity.RESULT_OK) {
+                pendingResult?.success(mapOf("status" to "completed"))
+            } else {
+                val error = result.data?.getStringExtra("error")
+                if (error != null) {
+                    pendingResult?.error("ONBOARDING_FAILED", error, null)
+                } else {
+                    pendingResult?.success(mapOf("status" to "cancelled"))
+                }
+            }
+        }
+
         // 检查是否从通知点击启动
         handleNotificationIntent(intent)
     }
@@ -85,8 +121,7 @@ class MainActivity : FlutterFragmentActivity() {
                             putExtra(LocationPickerActivity.EXTRA_INITIAL_ADDR, it as String)
                         }
                     }
-                    @Suppress("DEPRECATION")
-                    startActivityForResult(intent, LOCATION_PICKER_REQUEST)
+                    locationPickerLauncher.launch(intent)
                 }
                 else -> result.notImplemented()
             }
@@ -104,14 +139,13 @@ class MainActivity : FlutterFragmentActivity() {
                     val args = call.arguments as? Map<*, *>
                     val publishableKey = args?.get("publishableKey") as? String
                     val clientSecret = args?.get("clientSecret") as? String
-                    
+
                     if (publishableKey != null && clientSecret != null) {
                         val intent = Intent(this, StripeConnectOnboardingActivity::class.java).apply {
                             putExtra("publishableKey", publishableKey)
                             putExtra("clientSecret", clientSecret)
                         }
-                        @Suppress("DEPRECATION")
-                        startActivityForResult(intent, STRIPE_CONNECT_REQUEST)
+                        stripeConnectLauncher.launch(intent)
                     } else {
                         result.error("INVALID_ARGS", "Missing publishableKey or clientSecret", null)
                     }
@@ -149,38 +183,6 @@ class MainActivity : FlutterFragmentActivity() {
             }, 500)
             // 清除 extra 防止重复处理
             intent?.removeExtra("notification_data")
-        }
-    }
-
-    @Suppress("DEPRECATION")
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == LOCATION_PICKER_REQUEST) {
-            val pendingResult = locationPickerResult
-            locationPickerResult = null
-            if (resultCode == Activity.RESULT_OK && data != null) {
-                val map = hashMapOf<String, Any>(
-                    "address" to (data.getStringExtra(LocationPickerActivity.RESULT_ADDRESS) ?: ""),
-                    "latitude" to data.getDoubleExtra(LocationPickerActivity.RESULT_LATITUDE, 0.0),
-                    "longitude" to data.getDoubleExtra(LocationPickerActivity.RESULT_LONGITUDE, 0.0)
-                )
-                pendingResult?.success(map)
-            } else {
-                pendingResult?.success(null)
-            }
-        } else if (requestCode == STRIPE_CONNECT_REQUEST) {
-            val pendingResult = stripeConnectResult
-            stripeConnectResult = null
-            if (resultCode == Activity.RESULT_OK) {
-                pendingResult?.success(mapOf("status" to "completed"))
-            } else {
-                val error = data?.getStringExtra("error")
-                if (error != null) {
-                    pendingResult?.error("ONBOARDING_FAILED", error, null)
-                } else {
-                    pendingResult?.success(mapOf("status" to "cancelled"))
-                }
-            }
         }
     }
 
