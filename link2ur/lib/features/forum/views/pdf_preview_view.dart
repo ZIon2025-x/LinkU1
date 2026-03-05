@@ -1,19 +1,15 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart' show Uint8List, kIsWeb;
+import 'package:flutter/foundation.dart' show Uint8List;
 import 'package:flutter/material.dart';
 import 'package:pdfx/pdfx.dart';
 import 'package:url_launcher/url_launcher.dart';
-
-import 'pdf_web_view_factory_stub.dart'
-    if (dart.library.html) 'pdf_web_view_factory.dart'
-    as pdf_web;
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/utils/l10n_extension.dart';
 
 /// 帖子 PDF 附件 App 内预览
-/// 移动端使用 pdfx 原生渲染（支持缩放和多页）
-/// Web 端使用 iframe 嵌入浏览器原生 PDF 渲染器
+/// 全平台使用 pdfx 渲染（移动端用 pdfium，Web 端用 pdf.js）
+/// 支持缩放和多页浏览
 class PdfPreviewView extends StatefulWidget {
   const PdfPreviewView({
     super.key,
@@ -30,7 +26,6 @@ class PdfPreviewView extends StatefulWidget {
 
 class _PdfPreviewViewState extends State<PdfPreviewView> {
   PdfControllerPinch? _pdfController;
-  String? _webViewType;
   bool _loading = true;
   bool _hasError = false;
   int _currentPage = 1;
@@ -39,15 +34,7 @@ class _PdfPreviewViewState extends State<PdfPreviewView> {
   @override
   void initState() {
     super.initState();
-
-    if (kIsWeb) {
-      _webViewType = pdf_web.registerPdfIframe(widget.url);
-      Future.microtask(() {
-        if (mounted) setState(() => _loading = false);
-      });
-    } else {
-      _loadPdf();
-    }
+    _loadPdf();
   }
 
   Future<void> _loadPdf() async {
@@ -101,7 +88,7 @@ class _PdfPreviewViewState extends State<PdfPreviewView> {
           overflow: TextOverflow.ellipsis,
         ),
         actions: [
-          if (!kIsWeb && _totalPages > 0)
+          if (_totalPages > 0)
             Center(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -126,10 +113,6 @@ class _PdfPreviewViewState extends State<PdfPreviewView> {
   }
 
   Widget _buildBody(bool isDark) {
-    if (kIsWeb) {
-      return pdf_web.buildPdfWebView(_webViewType!);
-    }
-
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
     }
