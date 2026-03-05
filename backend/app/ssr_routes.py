@@ -517,7 +517,19 @@ async def ssr_task_detail(
                 ),
                 status_code=404
             )
-        
+
+        # 已取消的任务返回 410 Gone，让搜索引擎尽快移除索引
+        if task.status == "cancelled":
+            return HTMLResponse(
+                content=generate_html(
+                    title="任务已取消 - Link²Ur",
+                    description="该任务已被取消",
+                    image_url="",
+                    page_url=f"https://www.link2ur.com/zh/tasks/{task_id}"
+                ),
+                status_code=410
+            )
+
         # 获取奖励信息（转换为 float 以便 JSON 序列化）
         reward_decimal = task.agreed_reward or task.base_reward or task.reward or 0
         reward = float(reward_decimal) if reward_decimal else 0
@@ -726,7 +738,19 @@ async def ssr_leaderboard_detail(
                 ),
                 status_code=404
             )
-        
+
+        # 非活跃的排行榜（待审核/已拒绝）返回 404，不应被索引
+        if leaderboard.status != "active":
+            return HTMLResponse(
+                content=generate_html(
+                    title="排行榜不存在 - Link²Ur",
+                    description="该排行榜不存在",
+                    image_url="",
+                    page_url=f"https://www.link2ur.com/zh/leaderboard/custom/{leaderboard_id}"
+                ),
+                status_code=404
+            )
+
         # 构建分享信息
         title = f"{leaderboard.name} - Link²Ur榜单"
         description = leaderboard.description or f"来 Link²Ur 看看这个排行榜，共有 {leaderboard.item_count} 个竞品"
@@ -838,7 +862,31 @@ async def ssr_forum_post_detail(
                 ),
                 status_code=404
             )
-        
+
+        # 已删除的帖子返回 410 Gone
+        if post.is_deleted:
+            return HTMLResponse(
+                content=generate_html(
+                    title="帖子已删除 - Link²Ur",
+                    description="该帖子已被删除",
+                    image_url="",
+                    page_url=f"https://www.link2ur.com/zh/forum/post/{post_id}"
+                ),
+                status_code=410
+            )
+
+        # 被隐藏的帖子返回 404
+        if not post.is_visible:
+            return HTMLResponse(
+                content=generate_html(
+                    title="帖子不存在 - Link²Ur",
+                    description="该帖子不存在",
+                    image_url="",
+                    page_url=f"https://www.link2ur.com/zh/forum/post/{post_id}"
+                ),
+                status_code=404
+            )
+
         title = f"{post.title} - Link²Ur论坛"
         # 清理 HTML 内容
         clean_description = re.sub(r'<[^>]+>', '', post.content or "")
@@ -956,6 +1004,18 @@ async def ssr_activity_detail(
                     page_url=f"https://www.link2ur.com/zh/activities/{activity_id}"
                 ),
                 status_code=404
+            )
+
+        # 已取消的活动返回 410 Gone
+        if activity.status == "cancelled":
+            return HTMLResponse(
+                content=generate_html(
+                    title="活动已取消 - Link²Ur",
+                    description="该活动已被取消",
+                    image_url="",
+                    page_url=f"https://www.link2ur.com/zh/activities/{activity_id}"
+                ),
+                status_code=410
             )
         
         # 获取价格信息（转换为 float 以便 JSON 序列化）

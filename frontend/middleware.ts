@@ -1,4 +1,4 @@
-const PRERENDER_TOKEN = 'eLAPk9lbtNJ0B1kCoOFb';
+const PRERENDER_TOKEN = process.env.PRERENDER_TOKEN || '';
 
 const BOT_USER_AGENTS = [
   'googlebot',

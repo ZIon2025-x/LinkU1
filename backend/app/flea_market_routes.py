@@ -507,7 +507,14 @@ async def get_flea_market_item(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="商品不存在"
             )
-        
+
+        # 已删除的商品返回 410 Gone，让搜索引擎尽快移除索引
+        if item.status == "deleted":
+            raise HTTPException(
+                status_code=410,
+                detail="商品已被删除"
+            )
+
         # 自动增加浏览量
         await db.execute(
             update(models.FleaMarketItem)

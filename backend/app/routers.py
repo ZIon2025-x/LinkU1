@@ -1284,7 +1284,11 @@ def get_task_detail(
                 is_applicant = application is not None
             
             if not is_poster and not is_taker and not is_participant and not is_applicant:
-                raise HTTPException(status_code=403, detail="无权限查看此任务")
+                # 已完成/已取消的任务对外展示摘要（有利于 SEO），其他敏感状态仍返回 403
+                if task.status in ("completed", "cancelled"):
+                    _is_summary_only = True
+                else:
+                    raise HTTPException(status_code=403, detail="无权限查看此任务")
     
     # 未登录用户看摘要：返回公开字段（标题、描述、状态、类型、图片等），隐藏敏感字段
     if _is_summary_only:
