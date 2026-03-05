@@ -996,6 +996,7 @@ class Coupon(Base):
     vat_category = Column(String(20), nullable=True)  # VAT分类
     points_required = Column(Integer, default=0, nullable=False)  # 积分兑换所需积分（0表示不支持积分兑换）
     applicable_scenarios = Column(JSONB, nullable=True)  # 适用场景列表（如 ["task", "activity", "service", "flea_market"]）
+    distribution_type = Column(String(20), default="public")  # public, code_only
     created_at = Column(DateTime(timezone=True), default=get_utc_time)
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
     

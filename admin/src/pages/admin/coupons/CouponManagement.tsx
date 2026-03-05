@@ -69,6 +69,7 @@ export const CouponManagement: React.FC = () => {
         // points_required 和 applicable_scenarios 是顶级字段
         points_required: values.points_required || 0,
         applicable_scenarios: values.applicable_scenarios.length > 0 ? values.applicable_scenarios : undefined,
+        distribution_type: values.distribution_type || 'public',
         per_device_limit: values.per_device_limit,
         per_ip_limit: values.per_ip_limit,
         per_day_limit: values.per_day_limit,
@@ -141,6 +142,7 @@ export const CouponManagement: React.FC = () => {
       per_user_limit_window: (coupon.per_user_limit_window as CouponForm['per_user_limit_window']) || '',
       per_user_per_window_limit: coupon.per_user_per_window_limit,
       vat_category: '',
+      distribution_type: coupon.distribution_type || 'public',
       applicable_scenarios: coupon.applicable_scenarios || [],
       task_types: coupon.usage_conditions?.task_types || [],
       locations: coupon.usage_conditions?.locations || [],
@@ -194,6 +196,17 @@ export const CouponManagement: React.FC = () => {
       dataIndex: 'points_required',
       width: 100,
       render: (value) => value || '-',
+    },
+    {
+      key: 'distribution_type',
+      title: '分发方式',
+      dataIndex: 'distribution_type',
+      width: 100,
+      render: (value) => {
+        const label = value === 'code_only' ? '兑换码' : '公开';
+        const variant = value === 'code_only' ? 'warning' : 'info';
+        return <StatusBadge text={label} variant={variant} />;
+      },
     },
     {
       key: 'usage',

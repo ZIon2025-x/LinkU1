@@ -156,6 +156,7 @@ def create_coupon(
         vat_category=coupon_data.vat_category,
         points_required=coupon_data.points_required or 0,
         applicable_scenarios=coupon_data.applicable_scenarios,
+        distribution_type=coupon_data.distribution_type or "public",
         status="active"
     )
     
@@ -207,7 +208,8 @@ def create_coupon(
         "valid_from": coupon.valid_from,
         "valid_until": coupon.valid_until,
         "status": coupon.status,
-        "usage_conditions": coupon.usage_conditions
+        "usage_conditions": coupon.usage_conditions,
+        "distribution_type": coupon.distribution_type or "public",
     }
 
 
@@ -288,6 +290,12 @@ def update_coupon(
         coupon.eligibility_type = coupon_data.eligibility_type
     if coupon_data.eligibility_value is not None:
         coupon.eligibility_value = coupon_data.eligibility_value
+    if coupon_data.distribution_type is not None:
+        coupon.distribution_type = coupon_data.distribution_type
+    if coupon_data.total_quantity is not None:
+        coupon.total_quantity = coupon_data.total_quantity
+    if coupon_data.per_user_limit is not None:
+        coupon.per_user_limit = coupon_data.per_user_limit
 
     db.commit()
     db.refresh(coupon)
@@ -387,6 +395,7 @@ def get_coupons_list(
             "per_user_limit_window": coupon.per_user_limit_window,
             "per_user_per_window_limit": coupon.per_user_per_window_limit,
             "per_day_limit": coupon.per_day_limit,
+            "distribution_type": coupon.distribution_type or "public",
         })
     
     return {
@@ -456,6 +465,7 @@ def get_coupon_detail(
         "valid_until": coupon.valid_until,
         "status": coupon.status,
         "usage_conditions": coupon.usage_conditions,
+        "distribution_type": coupon.distribution_type or "public",
         "statistics": statistics
     }
 
@@ -553,6 +563,224 @@ def delete_coupon(
         "success": True,
         "message": "优惠券删除成功"
     }
+
+
+# ==================== 推广码管理 API ====================
+
+@router.post("/promotion-codes", response_model=schemas.PromotionCodeOut)
+def create_promotion_code(
+    promo_data: schemas.PromotionCodeCreate,
+    request: Request,
+    current_admin: models.AdminUser = Depends(get_current_admin_secure_sync),
+    db: Session = Depends(get_db)
+):
+    """创建推广码（管理员）"""
+    from app.rate_limiting import rate_limiter, RATE_LIMITS
+
+    rate_limit_config = RATE_LIMITS.get("admin_coupon_operation", {"limit": 30, "window": 300})
+    rate_limit_info = rate_limiter.check_rate_limit(
+        request, "admin_coupon_operation",
+        limit=rate_limit_config["limit"], window=rate_limit_config["window"]
+    )
+    if not rate_limit_info.get("allowed", True):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"操作过于频繁，请稍后再试。限制：{rate_limit_config['limit']}次/{rate_limit_config['window']}秒",
+            headers={"Retry-After": str(rate_limit_info.get("retry_after", 300))}
+        )
+
+    # 校验关联优惠券
+    coupon = get_coupon_by_id(db, promo_data.coupon_id)
+    if not coupon:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="关联的优惠券不存在")
+
+    # 校验 code 唯一性（不区分大小写）
+    existing = db.query(models.PromotionCode).filter(
+        func.lower(models.PromotionCode.code) == func.lower(promo_data.code.strip())
+    ).first()
+    if existing:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"推广码 {promo_data.code} 已存在")
+
+    if promo_data.valid_until <= promo_data.valid_from:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="有效期结束时间必须大于开始时间")
+
+    promo = models.PromotionCode(
+        code=promo_data.code.strip().upper(),
+        coupon_id=promo_data.coupon_id,
+        name=promo_data.name,
+        description=promo_data.description,
+        max_uses=promo_data.max_uses,
+        per_user_limit=promo_data.per_user_limit,
+        valid_from=promo_data.valid_from,
+        valid_until=promo_data.valid_until,
+        is_active=promo_data.is_active,
+        target_user_type=promo_data.target_user_type,
+        created_by=current_admin.id,
+    )
+    db.add(promo)
+    db.commit()
+    db.refresh(promo)
+
+    # 审计日志
+    try:
+        from app.crud import create_audit_log
+        create_audit_log(
+            db=db, action_type="promotion_code_create", entity_type="promotion_code",
+            entity_id=str(promo.id), admin_id=current_admin.id,
+            old_value=None, new_value={"code": promo.code, "coupon_id": promo.coupon_id},
+            reason=f"管理员创建推广码: {promo.code}",
+            ip_address=get_client_ip(request), device_fingerprint=None
+        )
+    except Exception as e:
+        logger.error(f"创建推广码审计日志失败: {e}", exc_info=True)
+
+    return {
+        "id": promo.id,
+        "code": promo.code,
+        "coupon_id": promo.coupon_id,
+        "coupon_name": coupon.name,
+        "name": promo.name,
+        "description": promo.description,
+        "max_uses": promo.max_uses,
+        "used_count": 0,
+        "per_user_limit": promo.per_user_limit,
+        "valid_from": promo.valid_from,
+        "valid_until": promo.valid_until,
+        "is_active": promo.is_active,
+        "target_user_type": promo.target_user_type,
+        "created_at": promo.created_at,
+    }
+
+
+@router.get("/promotion-codes", response_model=schemas.PromotionCodeList)
+def get_promotion_codes_list(
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    coupon_id: Optional[int] = Query(None),
+    current_admin: models.AdminUser = Depends(get_current_admin_secure_sync),
+    db: Session = Depends(get_db)
+):
+    """获取推广码列表（管理员）"""
+    query = db.query(models.PromotionCode)
+
+    if coupon_id is not None:
+        query = query.filter(models.PromotionCode.coupon_id == coupon_id)
+
+    total = query.count()
+    promos = query.order_by(models.PromotionCode.created_at.desc()).offset((page - 1) * limit).limit(limit).all()
+
+    data = []
+    for p in promos:
+        # 查询关联优惠券名
+        coupon = get_coupon_by_id(db, p.coupon_id)
+        coupon_name = coupon.name if coupon else None
+
+        # 统计使用量
+        used_count = db.query(func.count(models.UserCoupon.id)).filter(
+            models.UserCoupon.promotion_code_id == p.id
+        ).scalar() or 0
+
+        data.append({
+            "id": p.id,
+            "code": p.code,
+            "coupon_id": p.coupon_id,
+            "coupon_name": coupon_name,
+            "name": p.name,
+            "description": p.description,
+            "max_uses": p.max_uses,
+            "used_count": used_count,
+            "per_user_limit": p.per_user_limit,
+            "valid_from": p.valid_from,
+            "valid_until": p.valid_until,
+            "is_active": p.is_active,
+            "target_user_type": p.target_user_type,
+            "created_at": p.created_at,
+        })
+
+    return {"total": total, "page": page, "limit": limit, "data": data}
+
+
+@router.put("/promotion-codes/{promo_id}")
+def update_promotion_code(
+    promo_id: int,
+    promo_data: schemas.PromotionCodeUpdate,
+    request: Request,
+    current_admin: models.AdminUser = Depends(get_current_admin_secure_sync),
+    db: Session = Depends(get_db)
+):
+    """更新推广码（管理员）"""
+    promo = db.query(models.PromotionCode).filter(models.PromotionCode.id == promo_id).first()
+    if not promo:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="推广码不存在")
+
+    if promo_data.name is not None:
+        promo.name = promo_data.name
+    if promo_data.description is not None:
+        promo.description = promo_data.description
+    if promo_data.max_uses is not None:
+        promo.max_uses = promo_data.max_uses
+    if promo_data.per_user_limit is not None:
+        promo.per_user_limit = promo_data.per_user_limit
+    if promo_data.valid_until is not None:
+        if promo_data.valid_until <= promo.valid_from:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="有效期结束时间必须大于开始时间")
+        promo.valid_until = promo_data.valid_until
+    if promo_data.is_active is not None:
+        promo.is_active = promo_data.is_active
+    if promo_data.target_user_type is not None:
+        promo.target_user_type = promo_data.target_user_type
+
+    db.commit()
+    db.refresh(promo)
+
+    # 审计日志
+    try:
+        from app.crud import create_audit_log
+        create_audit_log(
+            db=db, action_type="promotion_code_update", entity_type="promotion_code",
+            entity_id=str(promo_id), admin_id=current_admin.id,
+            old_value=None, new_value={"code": promo.code},
+            reason=f"管理员更新推广码: {promo.code}",
+            ip_address=get_client_ip(request), device_fingerprint=None
+        )
+    except Exception as e:
+        logger.error(f"创建推广码更新审计日志失败: {e}", exc_info=True)
+
+    return {"success": True, "message": "推广码更新成功"}
+
+
+@router.delete("/promotion-codes/{promo_id}")
+def delete_promotion_code(
+    promo_id: int,
+    request: Request,
+    current_admin: models.AdminUser = Depends(get_current_admin_secure_sync),
+    db: Session = Depends(get_db)
+):
+    """删除推广码（管理员）"""
+    _require_super_admin(current_admin, "删除推广码")
+
+    promo = db.query(models.PromotionCode).filter(models.PromotionCode.id == promo_id).first()
+    if not promo:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="推广码不存在")
+
+    # 审计日志
+    try:
+        from app.crud import create_audit_log
+        create_audit_log(
+            db=db, action_type="promotion_code_delete", entity_type="promotion_code",
+            entity_id=str(promo_id), admin_id=current_admin.id,
+            old_value={"code": promo.code, "coupon_id": promo.coupon_id},
+            new_value=None,
+            reason=f"管理员删除推广码: {promo.code}",
+            ip_address=get_client_ip(request), device_fingerprint=None
+        )
+    except Exception as e:
+        logger.error(f"创建推广码删除审计日志失败: {e}", exc_info=True)
+
+    db.delete(promo)
+    db.commit()
+
+    return {"success": True, "message": "推广码删除成功"}
 
 
 # ==================== 邀请码管理 API ====================

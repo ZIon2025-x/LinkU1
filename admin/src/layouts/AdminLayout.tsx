@@ -69,6 +69,12 @@ const defaultMenuItems: MenuItem[] = [
     path: '/admin/coupons',
   },
   {
+    key: 'promotion-codes',
+    label: '推广码管理',
+    icon: '🏷️',
+    path: '/admin/promotion-codes',
+  },
+  {
     key: 'disputes',
     label: '纠纷管理',
     icon: '⚖️',
@@ -169,6 +175,7 @@ const PATH_LABELS: Record<string, string> = {
   '/admin/job-positions': '岗位管理',
   '/admin/customer-service': '客服管理',
   '/admin/coupons': '优惠券管理',
+  '/admin/promotion-codes': '推广码管理',
   '/admin/disputes': '纠纷管理',
   '/admin/refunds': '退款管理',
   '/admin/notifications': '通知管理',

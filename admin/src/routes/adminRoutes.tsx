@@ -5,6 +5,7 @@ import { AdminLayout } from '../layouts/AdminLayout';
 // Lazy load components for code splitting
 const Dashboard = lazy(() => import('../pages/admin/dashboard/Dashboard'));
 const CouponManagement = lazy(() => import('../pages/admin/coupons').then(m => ({ default: m.CouponManagement })));
+const PromotionCodeManagement = lazy(() => import('../pages/admin/coupons').then(m => ({ default: m.PromotionCodeManagement })));
 
 const UserManagement = lazy(() => import('../pages/admin/users/UserManagement'));
 const ExpertManagement = lazy(() => import('../pages/admin/experts/ExpertManagement'));
@@ -58,6 +59,9 @@ export const AdminRoutes: React.FC = () => {
 
           {/* Coupon Management - 相对路径，匹配 /admin/coupons */}
           <Route path="coupons" element={<CouponManagement />} />
+
+          {/* Promotion Code Management - 推广码管理 */}
+          <Route path="promotion-codes" element={<PromotionCodeManagement />} />
 
           {/* User Management */}
           <Route path="users" element={<UserManagement />} />

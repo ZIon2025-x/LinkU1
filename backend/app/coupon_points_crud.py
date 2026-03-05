@@ -299,6 +299,13 @@ def get_available_coupons(db: Session, user_id: Optional[str] = None) -> List[mo
         models.Coupon.valid_from <= now,
         models.Coupon.valid_until >= now
     )
+    # 排除仅限兑换码领取的优惠券
+    query = query.filter(
+        or_(
+            models.Coupon.distribution_type.is_(None),
+            models.Coupon.distribution_type == "public"
+        )
+    )
     if user_id:
         user_obj = db.query(models.User).filter(models.User.id == user_id).first()
         is_member = user_obj and (user_obj.user_level or "normal").strip().lower() in ("vip", "super")
@@ -485,7 +492,12 @@ def validate_coupon_usage(
         if conditions.get("task_types") and task_type:
             if task_type not in conditions["task_types"]:
                 return False, "该优惠券不适用于此任务类型", None
-        
+
+        # 排除的任务类型
+        if conditions.get("excluded_task_types") and task_type:
+            if task_type in conditions["excluded_task_types"]:
+                return False, "该优惠券不适用于此任务类型", None
+
         # 金额限制
         if conditions.get("min_task_amount") and order_amount < conditions["min_task_amount"]:
             return False, f"任务金额不符合优惠券使用条件（最低：{conditions['min_task_amount'] / 100:.2f}）", None

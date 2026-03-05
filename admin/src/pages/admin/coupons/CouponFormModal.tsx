@@ -90,6 +90,27 @@ const hintStyle: React.CSSProperties = {
   display: 'block',
 };
 
+const fieldsetStyle: React.CSSProperties = {
+  border: '1px solid #e0e0e0',
+  borderRadius: '6px',
+  padding: '15px',
+  marginBottom: '20px',
+};
+
+const legendStyle: React.CSSProperties = {
+  fontWeight: 'bold',
+  fontSize: '14px',
+  color: '#333',
+  padding: '0 8px',
+};
+
+const sectionHintStyle: React.CSSProperties = {
+  color: '#888',
+  fontSize: '12px',
+  marginBottom: '12px',
+  display: 'block',
+};
+
 export const CouponFormModal: React.FC<CouponFormModalProps> = ({
   isOpen,
   isEdit,
@@ -159,391 +180,420 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
           {isEdit ? '编辑优惠券' : '创建优惠券'}
         </h3>
 
-        {/* 优惠券代码 */}
-        <div style={fieldStyle}>
-          <label style={labelStyle}>优惠券代码</label>
-          <input
-            type="text"
-            value={formData.code}
-            onChange={(e) => updateField('code', e.target.value.toUpperCase())}
-            placeholder="留空自动生成"
-            disabled={isEdit}
-            style={inputStyle}
-          />
-          <small style={hintStyle}>
-            {formData.code ? '用户可以通过输入此代码兑换优惠券' : '留空后只能通过积分兑换，系统会自动生成唯一代码'}
-          </small>
-        </div>
+        {/* ========== 1. 基本信息 ========== */}
+        <fieldset style={fieldsetStyle}>
+          <legend style={legendStyle}>基本信息</legend>
+          <small style={sectionHintStyle}>留空优惠券代码则只能通过积分兑换或兑换码领取</small>
 
-        {/* 优惠券名称 */}
-        <div style={fieldStyle}>
-          <label style={labelStyle}>
-            优惠券名称 <span style={{ color: 'red' }}>*</span>
-          </label>
-          <input
-            type="text"
-            value={formData.name}
-            onChange={(e) => updateField('name', e.target.value)}
-            placeholder="请输入优惠券名称"
-            style={inputStyle}
-          />
-        </div>
-
-        {/* 优惠券描述 */}
-        <div style={fieldStyle}>
-          <label style={labelStyle}>描述</label>
-          <textarea
-            value={formData.description}
-            onChange={(e) => updateField('description', e.target.value)}
-            placeholder="请输入优惠券描述（可选）"
-            rows={3}
-            style={{ ...inputStyle, resize: 'vertical' }}
-          />
-        </div>
-
-        {/* 折扣类型 */}
-        <div style={fieldStyle}>
-          <label style={labelStyle}>
-            折扣类型 <span style={{ color: 'red' }}>*</span>
-          </label>
-          <select
-            value={formData.type}
-            onChange={(e) => updateField('type', e.target.value as 'fixed_amount' | 'percentage')}
-            disabled={isEdit}
-            style={inputStyle}
-          >
-            <option value="fixed_amount">固定金额</option>
-            <option value="percentage">百分比折扣</option>
-          </select>
-        </div>
-
-        {/* 折扣值 */}
-        <div style={fieldStyle}>
-          <label style={labelStyle}>
-            折扣值 {formData.type === 'percentage' ? '(基点)' : '(便士)'} <span style={{ color: 'red' }}>*</span>
-          </label>
-          <input
-            type="number"
-            value={formData.discount_value}
-            onChange={(e) => updateField('discount_value', Number(e.target.value))}
-            placeholder={formData.type === 'percentage' ? '例如: 1000 表示 10%' : '例如: 1000 表示 £10'}
-            min="0"
-            disabled={isEdit}
-            style={inputStyle}
-          />
-          <small style={hintStyle}>
-            {formData.type === 'percentage'
-              ? '基点制：100=1%, 1000=10%, 10000=100%'
-              : '便士制：100=£1, 1000=£10'}
-          </small>
-        </div>
-
-        {/* 最低消费金额 */}
-        <div style={fieldStyle}>
-          <label style={labelStyle}>最低消费金额 (便士)</label>
-          <input
-            type="number"
-            value={formData.min_amount}
-            onChange={(e) => updateField('min_amount', Number(e.target.value))}
-            placeholder="0 表示无限制"
-            min="0"
-            disabled={isEdit}
-            style={inputStyle}
-          />
-        </div>
-
-        {/* 最大折扣金额（仅百分比类型） */}
-        {formData.type === 'percentage' && (
           <div style={fieldStyle}>
-            <label style={labelStyle}>最大折扣金额 (便士)</label>
+            <label style={labelStyle}>优惠券代码</label>
+            <input
+              type="text"
+              value={formData.code}
+              onChange={(e) => updateField('code', e.target.value.toUpperCase())}
+              placeholder="留空自动生成"
+              disabled={isEdit}
+              style={inputStyle}
+            />
+            <small style={hintStyle}>
+              {formData.code ? '用户可以通过输入此代码兑换优惠券' : '留空后系统会自动生成唯一代码'}
+            </small>
+          </div>
+
+          <div style={fieldStyle}>
+            <label style={labelStyle}>
+              优惠券名称 <span style={{ color: 'red' }}>*</span>
+            </label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => updateField('name', e.target.value)}
+              placeholder="请输入优惠券名称"
+              style={inputStyle}
+            />
+          </div>
+
+          <div style={fieldStyle}>
+            <label style={labelStyle}>描述</label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => updateField('description', e.target.value)}
+              placeholder="请输入优惠券描述（可选）"
+              rows={3}
+              style={{ ...inputStyle, resize: 'vertical' }}
+            />
+          </div>
+        </fieldset>
+
+        {/* ========== 2. 折扣设置 ========== */}
+        <fieldset style={fieldsetStyle}>
+          <legend style={legendStyle}>折扣设置</legend>
+          <small style={sectionHintStyle}>固定金额直接减免；百分比按订单折扣，可设封顶</small>
+
+          <div style={fieldStyle}>
+            <label style={labelStyle}>
+              折扣类型 <span style={{ color: 'red' }}>*</span>
+            </label>
+            <select
+              value={formData.type}
+              onChange={(e) => updateField('type', e.target.value as 'fixed_amount' | 'percentage')}
+              disabled={isEdit}
+              style={inputStyle}
+            >
+              <option value="fixed_amount">固定金额</option>
+              <option value="percentage">百分比折扣</option>
+            </select>
+          </div>
+
+          <div style={fieldStyle}>
+            <label style={labelStyle}>
+              折扣值 {formData.type === 'percentage' ? '(基点)' : '(便士)'} <span style={{ color: 'red' }}>*</span>
+            </label>
             <input
               type="number"
-              value={formData.max_discount || ''}
-              onChange={(e) => updateField('max_discount', Number(e.target.value) || undefined)}
-              placeholder="留空表示无限制"
+              value={formData.discount_value}
+              onChange={(e) => updateField('discount_value', Number(e.target.value))}
+              placeholder={formData.type === 'percentage' ? '例如: 1000 表示 10%' : '例如: 1000 表示 £10'}
+              min="0"
+              disabled={isEdit}
+              style={inputStyle}
+            />
+            <small style={hintStyle}>
+              {formData.type === 'percentage'
+                ? '基点制：100=1%, 1000=10%, 10000=100%'
+                : '便士制：100=£1, 1000=£10'}
+            </small>
+          </div>
+
+          <div style={fieldStyle}>
+            <label style={labelStyle}>最低消费金额 (便士)</label>
+            <input
+              type="number"
+              value={formData.min_amount}
+              onChange={(e) => updateField('min_amount', Number(e.target.value))}
+              placeholder="0 表示无限制"
               min="0"
               disabled={isEdit}
               style={inputStyle}
             />
           </div>
-        )}
 
-        {/* 总发行量 */}
-        <div style={fieldStyle}>
-          <label style={labelStyle}>总发行量</label>
-          <input
-            type="number"
-            value={formData.total_quantity || ''}
-            onChange={(e) => updateField('total_quantity', Number(e.target.value) || undefined)}
-            placeholder="留空表示无限制"
-            min="1"
-            disabled={isEdit}
-            style={inputStyle}
-          />
-        </div>
-
-        {/* 每用户限用次数 */}
-        <div style={fieldStyle}>
-          <label style={labelStyle}>每用户限用次数</label>
-          <input
-            type="number"
-            value={formData.per_user_limit}
-            onChange={(e) => updateField('per_user_limit', Number(e.target.value))}
-            min="1"
-            style={inputStyle}
-          />
-          <small style={hintStyle}>每个用户最多可以使用此优惠券的次数</small>
-        </div>
-
-        {/* 积分要求 */}
-        <div style={fieldStyle}>
-          <label style={labelStyle}>积分要求</label>
-          <input
-            type="number"
-            value={formData.points_required}
-            onChange={(e) => updateField('points_required', Number(e.target.value))}
-            placeholder="0 表示不需要积分"
-            min="0"
-            disabled={isEdit}
-            style={inputStyle}
-          />
-        </div>
-
-        {/* 资格类型（领取限制） */}
-        <div style={fieldStyle}>
-          <label style={labelStyle}>资格类型</label>
-          <select
-            value={formData.eligibility_type}
-            onChange={(e) => updateField('eligibility_type', e.target.value as CouponForm['eligibility_type'])}
-            style={inputStyle}
-          >
-            {ELIGIBILITY_TYPES.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-          <small style={hintStyle}>会员专属仅 VIP/Super 用户可领取</small>
-        </div>
-
-        {/* 资格值（当 user_type 或 member 时） */}
-        {(formData.eligibility_type === 'user_type' || formData.eligibility_type === 'member') && (
-          <div style={fieldStyle}>
-            <label style={labelStyle}>资格值</label>
-            <select
-              value={formData.eligibility_value}
-              onChange={(e) => updateField('eligibility_value', e.target.value as CouponForm['eligibility_value'])}
-              style={inputStyle}
-            >
-              {ELIGIBILITY_VALUES.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        {/* 限领周期 + 每周期限领 */}
-        <div style={{ ...fieldStyle, display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
-          <div style={{ flex: 1, minWidth: '140px' }}>
-            <label style={labelStyle}>限领周期</label>
-            <select
-              value={formData.per_user_limit_window}
-              onChange={(e) => updateField('per_user_limit_window', e.target.value as CouponForm['per_user_limit_window'])}
-              style={inputStyle}
-            >
-              {LIMIT_WINDOWS.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-          </div>
-          {formData.per_user_limit_window && (
-            <div style={{ flex: 1, minWidth: '140px' }}>
-              <label style={labelStyle}>每周期限领次数</label>
+          {formData.type === 'percentage' && (
+            <div style={fieldStyle}>
+              <label style={labelStyle}>最大折扣金额 (便士)</label>
               <input
                 type="number"
-                value={formData.per_user_per_window_limit ?? ''}
-                onChange={(e) => updateField('per_user_per_window_limit', e.target.value ? Number(e.target.value) : undefined)}
-                placeholder="例如: 1"
-                min="1"
+                value={formData.max_discount || ''}
+                onChange={(e) => updateField('max_discount', Number(e.target.value) || undefined)}
+                placeholder="留空表示无限制"
+                min="0"
+                disabled={isEdit}
                 style={inputStyle}
               />
             </div>
           )}
-        </div>
+        </fieldset>
 
-        {/* 每日限领 */}
-        <div style={fieldStyle}>
-          <label style={labelStyle}>每日限领次数</label>
-          <input
-            type="number"
-            value={formData.per_day_limit ?? ''}
-            onChange={(e) => updateField('per_day_limit', e.target.value ? Number(e.target.value) : undefined)}
-            placeholder="留空表示不限制"
-            min="1"
-            style={inputStyle}
-          />
-        </div>
+        {/* ========== 3. 发放规则 ========== */}
+        <fieldset style={fieldsetStyle}>
+          <legend style={legendStyle}>发放规则</legend>
+          <small style={sectionHintStyle}>控制谁能领、怎么领、领多少</small>
 
-        {/* 适用场景 */}
-        <div style={fieldStyle}>
-          <label style={labelStyle}>适用场景</label>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '5px' }}>
-            {APPLICABLE_SCENARIOS.map((scenario) => (
-              <label key={scenario.value} style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={formData.applicable_scenarios.includes(scenario.value)}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      updateField('applicable_scenarios', [...formData.applicable_scenarios, scenario.value]);
-                    } else {
-                      updateField('applicable_scenarios', formData.applicable_scenarios.filter(s => s !== scenario.value));
-                    }
-                  }}
-                  disabled={isEdit}
-                  style={{ width: '16px', height: '16px', cursor: 'pointer' }}
-                />
-                {scenario.label}
-              </label>
-            ))}
+          <div style={fieldStyle}>
+            <label style={labelStyle}>分发方式</label>
+            <select
+              value={formData.distribution_type}
+              onChange={(e) => updateField('distribution_type', e.target.value as 'public' | 'code_only')}
+              style={inputStyle}
+            >
+              <option value="public">公开展示</option>
+              <option value="code_only">仅限兑换码</option>
+            </select>
+            <small style={hintStyle}>
+              {formData.distribution_type === 'code_only'
+                ? '不会在用户可领券列表中展示，只能通过推广码领取'
+                : '用户在积分页或券列表中可直接看到并领取'}
+            </small>
           </div>
-        </div>
 
-        {/* 适用任务类型 */}
-        <div style={fieldStyle}>
-          <label style={labelStyle}>适用任务类型</label>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '5px' }}>
-            {TASK_TYPES.map((type) => (
-              <label key={type.value} style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={formData.task_types.includes(type.value)}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      updateField('task_types', [...formData.task_types, type.value]);
-                    } else {
-                      updateField('task_types', formData.task_types.filter(t => t !== type.value));
-                    }
-                  }}
-                  style={{ width: '16px', height: '16px', cursor: 'pointer' }}
-                />
-                {type.label}
-              </label>
-            ))}
-          </div>
-          <small style={hintStyle}>不选表示不限任务类型</small>
-        </div>
-
-        {/* 排除的任务类型 */}
-        <div style={fieldStyle}>
-          <label style={labelStyle}>排除的任务类型</label>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '5px' }}>
-            {TASK_TYPES.map((type) => (
-              <label key={type.value} style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={formData.excluded_task_types.includes(type.value)}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      updateField('excluded_task_types', [...formData.excluded_task_types, type.value]);
-                    } else {
-                      updateField('excluded_task_types', formData.excluded_task_types.filter(t => t !== type.value));
-                    }
-                  }}
-                  style={{ width: '16px', height: '16px', cursor: 'pointer' }}
-                />
-                {type.label}
-              </label>
-            ))}
-          </div>
-          <small style={hintStyle}>勾选的任务类型不可使用此优惠券</small>
-        </div>
-
-        {/* 任务金额范围 */}
-        <div style={{ ...fieldStyle, display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
-          <div style={{ flex: 1, minWidth: '140px' }}>
-            <label style={labelStyle}>最低任务金额 (便士)</label>
+          <div style={fieldStyle}>
+            <label style={labelStyle}>积分要求</label>
             <input
               type="number"
-              value={formData.min_task_amount ?? ''}
-              onChange={(e) => updateField('min_task_amount', e.target.value ? Number(e.target.value) : undefined)}
-              placeholder="留空不限制"
+              value={formData.points_required}
+              onChange={(e) => updateField('points_required', Number(e.target.value))}
+              placeholder="0 表示不需要积分"
               min="0"
-              style={inputStyle}
-            />
-          </div>
-          <div style={{ flex: 1, minWidth: '140px' }}>
-            <label style={labelStyle}>最高任务金额 (便士)</label>
-            <input
-              type="number"
-              value={formData.max_task_amount ?? ''}
-              onChange={(e) => updateField('max_task_amount', e.target.value ? Number(e.target.value) : undefined)}
-              placeholder="留空不限制"
-              min="0"
-              style={inputStyle}
-            />
-          </div>
-        </div>
-
-        {/* 适用地点 */}
-        <div style={fieldStyle}>
-          <label style={labelStyle}>适用地点</label>
-          <select
-            multiple
-            value={formData.locations}
-            onChange={(e) => {
-              const selected = Array.from(e.target.selectedOptions, option => option.value);
-              updateField('locations', selected);
-            }}
-            style={{ ...inputStyle, height: '120px' }}
-          >
-            {CITIES.map((city) => (
-              <option key={city} value={city}>
-                {city}
-              </option>
-            ))}
-          </select>
-          <small style={hintStyle}>按住 Ctrl/Cmd 可多选</small>
-        </div>
-
-        {/* 生效时间 */}
-        <div style={fieldStyle}>
-          <label style={labelStyle}>
-            生效时间 <span style={{ color: 'red' }}>*</span>
-          </label>
-          <input
-            type="datetime-local"
-            value={formData.valid_from}
-            onChange={(e) => updateField('valid_from', e.target.value)}
-            disabled={isEdit}
-            style={inputStyle}
-          />
-        </div>
-
-        {/* 失效时间 */}
-        <div style={fieldStyle}>
-          <label style={labelStyle}>
-            失效时间 <span style={{ color: 'red' }}>*</span>
-          </label>
-          <input
-            type="datetime-local"
-            value={formData.valid_until}
-            onChange={(e) => updateField('valid_until', e.target.value)}
-            style={inputStyle}
-          />
-        </div>
-
-        {/* 允许叠加 */}
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-            <input
-              type="checkbox"
-              checked={formData.can_combine}
-              onChange={(e) => updateField('can_combine', e.target.checked)}
               disabled={isEdit}
-              style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+              style={inputStyle}
             />
-            <span style={{ fontWeight: 'bold' }}>允许与其他优惠券叠加使用</span>
-          </label>
-        </div>
+          </div>
+
+          <div style={fieldStyle}>
+            <label style={labelStyle}>总发行量</label>
+            <input
+              type="number"
+              value={formData.total_quantity || ''}
+              onChange={(e) => updateField('total_quantity', Number(e.target.value) || undefined)}
+              placeholder="留空表示无限制"
+              min="1"
+              style={inputStyle}
+            />
+          </div>
+
+          <div style={fieldStyle}>
+            <label style={labelStyle}>每用户限用次数</label>
+            <input
+              type="number"
+              value={formData.per_user_limit}
+              onChange={(e) => updateField('per_user_limit', Number(e.target.value))}
+              min="1"
+              style={inputStyle}
+            />
+            <small style={hintStyle}>每个用户最多可以使用此优惠券的次数</small>
+          </div>
+
+          <div style={fieldStyle}>
+            <label style={labelStyle}>资格类型</label>
+            <select
+              value={formData.eligibility_type}
+              onChange={(e) => updateField('eligibility_type', e.target.value as CouponForm['eligibility_type'])}
+              style={inputStyle}
+            >
+              {ELIGIBILITY_TYPES.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+            <small style={hintStyle}>会员专属仅 VIP/Super 用户可领取</small>
+          </div>
+
+          {(formData.eligibility_type === 'user_type' || formData.eligibility_type === 'member') && (
+            <div style={fieldStyle}>
+              <label style={labelStyle}>资格值</label>
+              <select
+                value={formData.eligibility_value}
+                onChange={(e) => updateField('eligibility_value', e.target.value as CouponForm['eligibility_value'])}
+                style={inputStyle}
+              >
+                {ELIGIBILITY_VALUES.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+          )}
+        </fieldset>
+
+        {/* ========== 4. 周期限制 ========== */}
+        <fieldset style={fieldsetStyle}>
+          <legend style={legendStyle}>周期限制</legend>
+          <small style={sectionHintStyle}>可叠加使用，如"每月限领1次 + 每日限领1次"</small>
+
+          <div style={{ ...fieldStyle, display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: '140px' }}>
+              <label style={labelStyle}>限领周期</label>
+              <select
+                value={formData.per_user_limit_window}
+                onChange={(e) => updateField('per_user_limit_window', e.target.value as CouponForm['per_user_limit_window'])}
+                style={inputStyle}
+              >
+                {LIMIT_WINDOWS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+            {formData.per_user_limit_window && (
+              <div style={{ flex: 1, minWidth: '140px' }}>
+                <label style={labelStyle}>每周期限领次数</label>
+                <input
+                  type="number"
+                  value={formData.per_user_per_window_limit ?? ''}
+                  onChange={(e) => updateField('per_user_per_window_limit', e.target.value ? Number(e.target.value) : undefined)}
+                  placeholder="例如: 1"
+                  min="1"
+                  style={inputStyle}
+                />
+              </div>
+            )}
+          </div>
+
+          <div style={fieldStyle}>
+            <label style={labelStyle}>每日限领次数</label>
+            <input
+              type="number"
+              value={formData.per_day_limit ?? ''}
+              onChange={(e) => updateField('per_day_limit', e.target.value ? Number(e.target.value) : undefined)}
+              placeholder="留空表示不限制"
+              min="1"
+              style={inputStyle}
+            />
+          </div>
+        </fieldset>
+
+        {/* ========== 5. 使用条件 ========== */}
+        <fieldset style={fieldsetStyle}>
+          <legend style={legendStyle}>使用条件</legend>
+          <small style={sectionHintStyle}>不选 = 不限制</small>
+
+          <div style={fieldStyle}>
+            <label style={labelStyle}>适用场景</label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '5px' }}>
+              {APPLICABLE_SCENARIOS.map((scenario) => (
+                <label key={scenario.value} style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={formData.applicable_scenarios.includes(scenario.value)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        updateField('applicable_scenarios', [...formData.applicable_scenarios, scenario.value]);
+                      } else {
+                        updateField('applicable_scenarios', formData.applicable_scenarios.filter(s => s !== scenario.value));
+                      }
+                    }}
+                    disabled={isEdit}
+                    style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                  />
+                  {scenario.label}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div style={fieldStyle}>
+            <label style={labelStyle}>适用任务类型</label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '5px' }}>
+              {TASK_TYPES.map((type) => (
+                <label key={type.value} style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={formData.task_types.includes(type.value)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        updateField('task_types', [...formData.task_types, type.value]);
+                      } else {
+                        updateField('task_types', formData.task_types.filter(t => t !== type.value));
+                      }
+                    }}
+                    style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                  />
+                  {type.label}
+                </label>
+              ))}
+            </div>
+            <small style={hintStyle}>不选表示不限任务类型</small>
+          </div>
+
+          <div style={fieldStyle}>
+            <label style={labelStyle}>排除的任务类型</label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '5px' }}>
+              {TASK_TYPES.map((type) => (
+                <label key={type.value} style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={formData.excluded_task_types.includes(type.value)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        updateField('excluded_task_types', [...formData.excluded_task_types, type.value]);
+                      } else {
+                        updateField('excluded_task_types', formData.excluded_task_types.filter(t => t !== type.value));
+                      }
+                    }}
+                    style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                  />
+                  {type.label}
+                </label>
+              ))}
+            </div>
+            <small style={hintStyle}>勾选的任务类型不可使用此优惠券</small>
+          </div>
+
+          <div style={{ ...fieldStyle, display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: '140px' }}>
+              <label style={labelStyle}>最低任务金额 (便士)</label>
+              <input
+                type="number"
+                value={formData.min_task_amount ?? ''}
+                onChange={(e) => updateField('min_task_amount', e.target.value ? Number(e.target.value) : undefined)}
+                placeholder="留空不限制"
+                min="0"
+                style={inputStyle}
+              />
+            </div>
+            <div style={{ flex: 1, minWidth: '140px' }}>
+              <label style={labelStyle}>最高任务金额 (便士)</label>
+              <input
+                type="number"
+                value={formData.max_task_amount ?? ''}
+                onChange={(e) => updateField('max_task_amount', e.target.value ? Number(e.target.value) : undefined)}
+                placeholder="留空不限制"
+                min="0"
+                style={inputStyle}
+              />
+            </div>
+          </div>
+
+          <div style={fieldStyle}>
+            <label style={labelStyle}>适用地点</label>
+            <select
+              multiple
+              value={formData.locations}
+              onChange={(e) => {
+                const selected = Array.from(e.target.selectedOptions, option => option.value);
+                updateField('locations', selected);
+              }}
+              style={{ ...inputStyle, height: '120px' }}
+            >
+              {CITIES.map((city) => (
+                <option key={city} value={city}>
+                  {city}
+                </option>
+              ))}
+            </select>
+            <small style={hintStyle}>按住 Ctrl/Cmd 可多选</small>
+          </div>
+        </fieldset>
+
+        {/* ========== 6. 有效期与高级 ========== */}
+        <fieldset style={fieldsetStyle}>
+          <legend style={legendStyle}>有效期与高级</legend>
+
+          <div style={fieldStyle}>
+            <label style={labelStyle}>
+              生效时间 <span style={{ color: 'red' }}>*</span>
+            </label>
+            <input
+              type="datetime-local"
+              value={formData.valid_from}
+              onChange={(e) => updateField('valid_from', e.target.value)}
+              disabled={isEdit}
+              style={inputStyle}
+            />
+          </div>
+
+          <div style={fieldStyle}>
+            <label style={labelStyle}>
+              失效时间 <span style={{ color: 'red' }}>*</span>
+            </label>
+            <input
+              type="datetime-local"
+              value={formData.valid_until}
+              onChange={(e) => updateField('valid_until', e.target.value)}
+              style={inputStyle}
+            />
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={formData.can_combine}
+                onChange={(e) => updateField('can_combine', e.target.checked)}
+                disabled={isEdit}
+                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+              />
+              <span style={{ fontWeight: 'bold' }}>允许与其他优惠券叠加使用</span>
+            </label>
+          </div>
+        </fieldset>
 
         {/* 按钮 */}
         <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>

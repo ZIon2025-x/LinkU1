@@ -141,6 +141,13 @@ class Coupon extends Equatable {
     this.validUntil,
     this.usageConditions,
     this.pointsRequired = 0,
+    this.description,
+    this.validFrom,
+    this.eligibilityType,
+    this.applicableScenarios,
+    this.totalQuantity,
+    this.perUserLimit,
+    this.distributionType = 'public',
   });
 
   final int id;
@@ -155,6 +162,13 @@ class Coupon extends Equatable {
   final DateTime? validUntil;
   final Map<String, dynamic>? usageConditions;
   final int pointsRequired;
+  final String? description;
+  final DateTime? validFrom;
+  final String? eligibilityType;
+  final List<String>? applicableScenarios;
+  final int? totalQuantity;
+  final int? perUserLimit;
+  final String distributionType;
 
   /// 是否已过期
   bool get isExpired =>
@@ -203,12 +217,25 @@ class Coupon extends Equatable {
       usageConditions:
           json['usage_conditions'] as Map<String, dynamic>?,
       pointsRequired: json['points_required'] as int? ?? 0,
+      description: json['description'] as String?,
+      validFrom: json['valid_from'] != null
+          ? DateTime.tryParse(json['valid_from'])
+          : null,
+      eligibilityType: json['eligibility_type'] as String?,
+      applicableScenarios: (json['applicable_scenarios'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
+      totalQuantity: json['total_quantity'] as int?,
+      perUserLimit: json['per_user_limit'] as int?,
+      distributionType: json['distribution_type'] as String? ?? 'public',
     );
   }
 
   @override
   List<Object?> get props =>
-      [id, code, name, type, discountValue, minAmount, validUntil, pointsRequired];
+      [id, code, name, type, discountValue, minAmount, validUntil, pointsRequired,
+       description, validFrom, eligibilityType, applicableScenarios,
+       totalQuantity, perUserLimit, distributionType];
 }
 
 /// 用户优惠券模型

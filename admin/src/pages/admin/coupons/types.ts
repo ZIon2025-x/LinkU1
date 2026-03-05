@@ -30,6 +30,7 @@ export interface CouponForm {
   excluded_task_types: string[];
   min_task_amount?: number;
   max_task_amount?: number;
+  distribution_type: 'public' | 'code_only';
 }
 
 export interface Coupon {
@@ -64,6 +65,7 @@ export interface Coupon {
     min_task_amount?: number;
     max_task_amount?: number;
   };
+  distribution_type?: 'public' | 'code_only';
   created_at?: string;
   updated_at?: string;
 }
@@ -103,6 +105,7 @@ export const initialCouponForm: CouponForm = {
   task_types: [],
   locations: [],
   excluded_task_types: [],
+  distribution_type: 'public',
 };
 
 // 创建带有默认日期的表单初始值

@@ -584,6 +584,8 @@ export interface CouponData {
   per_user_limit_window?: string;
   /** 每个周期内每用户限领次数 */
   per_user_per_window_limit?: number;
+  /** 分发方式：public 公开展示, code_only 仅限兑换码 */
+  distribution_type?: string;
 }
 
 export const createCoupon = async (data: CouponData) => {
@@ -619,6 +621,9 @@ export const updateCoupon = async (couponId: number, data: {
   per_day_limit?: number;
   eligibility_type?: string;
   eligibility_value?: string;
+  distribution_type?: string;
+  total_quantity?: number;
+  per_user_limit?: number;
 }) => {
   const res = await api.put(`/api/admin/coupons/${couponId}`, data);
   return res.data;
@@ -626,6 +631,51 @@ export const updateCoupon = async (couponId: number, data: {
 
 export const deleteCoupon = async (couponId: number, force?: boolean) => {
   const res = await api.delete(`/api/admin/coupons/${couponId}`, { params: { force } });
+  return res.data;
+};
+
+// ==================== 推广码管理 API ====================
+
+export const getPromotionCodes = async (params?: {
+  page?: number;
+  limit?: number;
+  coupon_id?: number;
+}) => {
+  const res = await api.get('/api/admin/promotion-codes', { params });
+  return res.data;
+};
+
+export const createPromotionCode = async (data: {
+  code: string;
+  coupon_id: number;
+  name?: string;
+  description?: string;
+  max_uses?: number;
+  per_user_limit?: number;
+  valid_from: string;
+  valid_until: string;
+  is_active?: boolean;
+  target_user_type?: string;
+}) => {
+  const res = await api.post('/api/admin/promotion-codes', data);
+  return res.data;
+};
+
+export const updatePromotionCode = async (promoId: number, data: {
+  name?: string;
+  description?: string;
+  max_uses?: number;
+  per_user_limit?: number;
+  valid_until?: string;
+  is_active?: boolean;
+  target_user_type?: string;
+}) => {
+  const res = await api.put(`/api/admin/promotion-codes/${promoId}`, data);
+  return res.data;
+};
+
+export const deletePromotionCode = async (promoId: number) => {
+  const res = await api.delete(`/api/admin/promotion-codes/${promoId}`);
   return res.data;
 };
 

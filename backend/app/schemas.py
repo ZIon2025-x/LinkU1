@@ -1421,6 +1421,7 @@ class CouponBase(BaseModel):
     vat_category: Optional[str] = None
     points_required: int = 0  # 积分兑换所需积分（0表示不支持积分兑换）
     applicable_scenarios: Optional[List[str]] = None  # 适用场景列表
+    distribution_type: str = "public"  # public, code_only
 
     @validator("per_user_limit_window")
     def validate_limit_window(cls, v: Optional[str]) -> Optional[str]:
@@ -1450,6 +1451,9 @@ class CouponUpdate(BaseModel):
     applicable_scenarios: Optional[List[str]] = None
     eligibility_type: Optional[str] = None
     eligibility_value: Optional[str] = None
+    distribution_type: Optional[str] = None
+    total_quantity: Optional[int] = None
+    per_user_limit: Optional[int] = None
 
     @validator("per_user_limit_window")
     def validate_limit_window(cls, v: Optional[str]) -> Optional[str]:
@@ -1474,6 +1478,13 @@ class CouponOut(BaseModel):
     valid_until: datetime.datetime
     usage_conditions: Optional[Dict[str, Any]] = None
     points_required: int = 0
+    description: Optional[str] = None
+    valid_from: Optional[datetime.datetime] = None
+    eligibility_type: Optional[str] = None
+    applicable_scenarios: Optional[List[str]] = None
+    total_quantity: Optional[int] = None
+    per_user_limit: Optional[int] = None
+    distribution_type: str = "public"
 
     class Config:
         from_attributes = True
@@ -1686,6 +1697,7 @@ class CouponAdminOut(CouponOut):
     applicable_scenarios: Optional[List[str]] = None
     per_day_limit: Optional[int] = None
     max_discount: Optional[int] = None
+    distribution_type: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -1703,6 +1715,57 @@ class CouponAdminDetail(CouponAdminOut):
 
     class Config:
         from_attributes = True
+
+
+# 推广码管理 Schemas
+class PromotionCodeCreate(BaseModel):
+    code: str
+    coupon_id: int
+    name: Optional[str] = None
+    description: Optional[str] = None
+    max_uses: Optional[int] = None
+    per_user_limit: int = 1
+    valid_from: datetime.datetime
+    valid_until: datetime.datetime
+    is_active: bool = True
+    target_user_type: Optional[str] = None  # vip, super, normal, all
+
+
+class PromotionCodeUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    max_uses: Optional[int] = None
+    per_user_limit: Optional[int] = None
+    valid_until: Optional[datetime.datetime] = None
+    is_active: Optional[bool] = None
+    target_user_type: Optional[str] = None
+
+
+class PromotionCodeOut(BaseModel):
+    id: int
+    code: str
+    coupon_id: int
+    coupon_name: Optional[str] = None
+    name: Optional[str] = None
+    description: Optional[str] = None
+    max_uses: Optional[int] = None
+    used_count: Optional[int] = 0
+    per_user_limit: int = 1
+    valid_from: datetime.datetime
+    valid_until: datetime.datetime
+    is_active: bool
+    target_user_type: Optional[str] = None
+    created_at: Optional[datetime.datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class PromotionCodeList(BaseModel):
+    total: int
+    page: int
+    limit: int
+    data: List[PromotionCodeOut]
 
 
 # 邀请码管理 Schemas
