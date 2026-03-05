@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback, useLayoutEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, Empty, Typography, Space, Tag, Button, Input, Avatar, Divider, message, Modal, Select, QRCode } from 'antd';
-import { 
-  MessageOutlined, EyeOutlined, LikeOutlined, LikeFilled, 
+import {
+  MessageOutlined, EyeOutlined, LikeOutlined, LikeFilled,
   StarOutlined, StarFilled, UserOutlined, ClockCircleOutlined,
   EditOutlined, DeleteOutlined, FlagOutlined,
-  ShareAltOutlined, CopyOutlined
+  ShareAltOutlined, CopyOutlined,
+  FilePdfOutlined, LinkOutlined, FileOutlined
 } from '@ant-design/icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useCurrentUser } from '../contexts/AuthContext';
@@ -27,7 +28,7 @@ import LoginModal from '../components/LoginModal';
 import { formatRelativeTime } from '../utils/timeUtils';
 import SafeContent from '../components/SafeContent';
 import LazyImage from '../components/LazyImage';
-import { formatImageUrl } from '../utils/imageUtils';
+import { formatImageUrl, ensureAbsoluteImageUrl } from '../utils/imageUtils';
 import { getErrorMessage } from '../utils/errorHandler';
 import { getForumPostDisplayTitle, getForumPostDisplayContent } from '../utils/displayLocale';
 import SkeletonLoader from '../components/SkeletonLoader';
@@ -65,6 +66,15 @@ interface ForumPost {
   content_zh?: string | null;
   content_en?: string | null;
   images?: string[] | null;
+  attachments?: Array<{
+    url: string;
+    filename: string;
+    size: number;
+    content_type?: string;
+  }> | null;
+  linked_item_type?: string | null;
+  linked_item_id?: string | null;
+  linked_item_name?: string | null;
   category: {
     id: number;
     name: string;
@@ -230,8 +240,18 @@ const ForumPostDetail: React.FC = () => {
     weixinTitleTag.content = post.title;
     document.head.insertBefore(weixinTitleTag, document.head.firstChild);
 
-    // 设置微信分享图片
-    const shareImageUrl = `${window.location.origin}/static/favicon.png?v=2`;
+    // 设置分享图片（优先使用帖子图片，否则使用默认logo图片）
+    let shareImageUrl = `${window.location.origin}/static/favicon.png?v=2`;
+    if (post.images && Array.isArray(post.images) && post.images.length > 0 && post.images[0]) {
+      const postImageUrl = ensureAbsoluteImageUrl(post.images[0]);
+      if (postImageUrl.startsWith('http://') || postImageUrl.startsWith('https://')) {
+        shareImageUrl = postImageUrl;
+      } else if (postImageUrl.startsWith('/')) {
+        shareImageUrl = `${window.location.origin}${postImageUrl}`;
+      } else {
+        shareImageUrl = postImageUrl;
+      }
+    }
     const allWeixinImages = document.querySelectorAll('meta[name="weixin:image"]');
     allWeixinImages.forEach(tag => tag.remove());
     const weixinImageTag = document.createElement('meta');
@@ -393,7 +413,17 @@ const ForumPostDetail: React.FC = () => {
     // 限制描述长度在200字符内（微信分享建议不超过200字符）
     const { decodeContent } = require('../utils/formatContent');
     const currentShareDescription = decodeContent(post.content).replace(/<[^>]*>/g, '').trim().substring(0, 200);
-    const shareImageUrl = `${window.location.origin}/static/favicon.png?v=2`;
+    let shareImageUrl = `${window.location.origin}/static/favicon.png?v=2`;
+    if (post.images && Array.isArray(post.images) && post.images.length > 0 && post.images[0]) {
+      const postImageUrl = ensureAbsoluteImageUrl(post.images[0]);
+      if (postImageUrl.startsWith('http://') || postImageUrl.startsWith('https://')) {
+        shareImageUrl = postImageUrl;
+      } else if (postImageUrl.startsWith('/')) {
+        shareImageUrl = `${window.location.origin}${postImageUrl}`;
+      } else {
+        shareImageUrl = postImageUrl;
+      }
+    }
     
     // 强制移除所有描述标签（无条件移除，确保清理干净）
     const allDescriptions = document.querySelectorAll('meta[name="description"], meta[property="og:description"], meta[name="twitter:description"], meta[name="weixin:description"]');
@@ -1173,9 +1203,43 @@ const ForumPostDetail: React.FC = () => {
                 ))}
               </div>
             )}
-            <div style={{ 
-              position: 'absolute', 
-              bottom: 0, 
+            {post.attachments && post.attachments.length > 0 && (
+              <div className={styles.postAttachments}>
+                {post.attachments.map((attachment, index) => {
+                  const isPdf = attachment.content_type === 'application/pdf' || attachment.filename?.toLowerCase().endsWith('.pdf');
+                  const fileSize = attachment.size < 1024 * 1024
+                    ? `${(attachment.size / 1024).toFixed(1)} KB`
+                    : `${(attachment.size / (1024 * 1024)).toFixed(1)} MB`;
+                  return (
+                    <a
+                      key={index}
+                      href={formatImageUrl(attachment.url)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={styles.attachmentItem}
+                    >
+                      {isPdf ? <FilePdfOutlined className={styles.attachmentIcon} style={{ color: '#ff4d4f' }} /> : <FileOutlined className={styles.attachmentIcon} />}
+                      <span className={styles.attachmentName}>{attachment.filename}</span>
+                      <span className={styles.attachmentSize}>{fileSize}</span>
+                    </a>
+                  );
+                })}
+              </div>
+            )}
+            {post.linked_item_type && post.linked_item_id && (
+              <div className={styles.postLinkedItem}>
+                <LinkOutlined style={{ marginRight: 6 }} />
+                <a
+                  href={`/${lang}/${post.linked_item_type === 'forum_post' ? 'forum/post' : post.linked_item_type === 'activity' ? 'activities' : post.linked_item_type === 'product' ? 'flea-market' : post.linked_item_type === 'ranking' ? 'leaderboards' : post.linked_item_type === 'expert' ? 'task-experts' : post.linked_item_type === 'service' ? 'tasks' : post.linked_item_type}/${post.linked_item_id}`}
+                  className={styles.linkedItemLink}
+                >
+                  {post.linked_item_name || `${post.linked_item_type} #${post.linked_item_id}`}
+                </a>
+              </div>
+            )}
+            <div style={{
+              position: 'absolute',
+              bottom: 0,
               right: 0,
               display: 'flex',
               alignItems: 'center',
