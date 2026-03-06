@@ -1157,7 +1157,9 @@ async def startup_event():
             # AI Agent
             AIConversation, AIMessage,
             # Official accounts & activities
-            OfficialActivityApplication
+            OfficialActivityApplication,
+            # Content filtering
+            SensitiveWord, HomophoneMapping, ContentReview, FilterLog
         )
 
         # 🔧 自动检测并修复迁移状态（如果启用）
@@ -1402,6 +1404,32 @@ async def startup_event():
                     import traceback
                     logger.debug(f"详细错误: {traceback.format_exc()}")
                     logger.info("请手动运行: python backend/scripts/init_forum_school_categories.py")
+
+                # 自动初始化敏感词数据（如果表为空）
+                try:
+                    sensitive_word_count = db.query(models.SensitiveWord).count()
+                    if sensitive_word_count == 0:
+                        logger.info("检测到敏感词表为空，开始自动初始化...")
+                        from app.content_filter.seed_data import INITIAL_WORDS, INITIAL_HOMOPHONES
+                        for entry in INITIAL_WORDS:
+                            db.add(models.SensitiveWord(
+                                word=entry["word"],
+                                category=entry["category"],
+                                level=entry["level"],
+                                is_active=True,
+                            ))
+                        for entry in INITIAL_HOMOPHONES:
+                            db.add(models.HomophoneMapping(
+                                variant=entry["variant"],
+                                standard=entry["standard"],
+                                is_active=True,
+                            ))
+                        db.commit()
+                        logger.info(f"✅ 敏感词数据初始化完成！{len(INITIAL_WORDS)} 个敏感词，{len(INITIAL_HOMOPHONES)} 个谐音映射")
+                    else:
+                        logger.info(f"敏感词数据已存在（{sensitive_word_count} 条记录），跳过初始化")
+                except Exception as e:
+                    logger.warning(f"自动初始化敏感词数据时出错: {e}")
             finally:
                 db.close()
         except Exception as e:
