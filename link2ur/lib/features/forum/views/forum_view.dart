@@ -701,27 +701,28 @@ class _LeaderboardTab extends StatefulWidget {
 }
 
 class _LeaderboardTabState extends State<_LeaderboardTab> {
-  /// 缓存搜索框实例，避免 BlocBuilder 重建时重建 delegate 导致输入被清空
-  Widget? _cachedSearchBar;
-  late Widget _searchBar;
+  /// 缓存 delegate（内含搜索框），避免每次 BlocBuilder 重建时新建 delegate，
+  /// 否则同一 search bar 的 Element 会被重复挂载，触发 '!_elements.containsElement(element)' 断言。
+  SliverPersistentHeaderDelegate? _cachedHeaderDelegate;
 
-  Widget _buildSearchBar(BuildContext context) {
-    if (_cachedSearchBar != null) return _cachedSearchBar!;
-    _cachedSearchBar = _LeaderboardSearchBar(
-      hint: context.l10n.communitySearchLeaderboardHint,
-      onSearchChanged: (q) {
-        if (context.mounted) {
-          context.read<LeaderboardBloc>().add(LeaderboardSearchChanged(q));
-        }
-      },
+  SliverPersistentHeaderDelegate _getHeaderDelegate(BuildContext context) {
+    if (_cachedHeaderDelegate != null) return _cachedHeaderDelegate!;
+    _cachedHeaderDelegate = _PinnedSearchBarDelegate(
+      child: _LeaderboardSearchBar(
+        hint: context.l10n.communitySearchLeaderboardHint,
+        onSearchChanged: (q) {
+          if (context.mounted) {
+            context.read<LeaderboardBloc>().add(LeaderboardSearchChanged(q));
+          }
+        },
+      ),
     );
-    return _cachedSearchBar!;
+    return _cachedHeaderDelegate!;
   }
 
   @override
   Widget build(BuildContext context) {
     final isDesktop = ResponsiveUtils.isDesktop(context);
-    _searchBar = _buildSearchBar(context);
 
     return BlocBuilder<LeaderboardBloc, LeaderboardState>(
       buildWhen: (prev, curr) =>
@@ -736,7 +737,7 @@ class _LeaderboardTabState extends State<_LeaderboardTab> {
           slivers: [
             SliverPersistentHeader(
               pinned: true,
-              delegate: _PinnedSearchBarDelegate(child: _searchBar),
+              delegate: _getHeaderDelegate(context),
             ),
             sliverBody,
           ],

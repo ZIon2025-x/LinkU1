@@ -47,27 +47,31 @@ class _MyForumPostsViewState extends State<MyForumPostsView>
 
   void _onTabChanged() {
     if (_tabController.indexIsChanging) return;
-    final context = _blocProviderKey.currentContext;
-    if (context == null) return;
-    final bloc = context.read<ProfileBloc>();
-    final state = bloc.state;
-    switch (_tabController.index) {
-      case 0:
-        if (state.myForumPosts.isEmpty) {
-          bloc.add(const ProfileLoadMyForumActivity(type: 'posts'));
-        }
-        break;
-      case 1:
-        if (state.favoritedPosts.isEmpty) {
-          bloc.add(const ProfileLoadMyForumActivity(type: 'favorited'));
-        }
-        break;
-      case 2:
-        if (state.likedPosts.isEmpty) {
-          bloc.add(const ProfileLoadMyForumActivity(type: 'liked'));
-        }
-        break;
-    }
+    // 延后到下一帧再取 context，避免在 rebuild 期间访问 GlobalKey 导致 _elements.containsKey 断言失败
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final ctx = _blocProviderKey.currentContext;
+      if (ctx == null) return;
+      final bloc = ctx.read<ProfileBloc>();
+      final state = bloc.state;
+      switch (_tabController.index) {
+        case 0:
+          if (state.myForumPosts.isEmpty) {
+            bloc.add(const ProfileLoadMyForumActivity(type: 'posts'));
+          }
+          break;
+        case 1:
+          if (state.favoritedPosts.isEmpty) {
+            bloc.add(const ProfileLoadMyForumActivity(type: 'favorited'));
+          }
+          break;
+        case 2:
+          if (state.likedPosts.isEmpty) {
+            bloc.add(const ProfileLoadMyForumActivity(type: 'liked'));
+          }
+          break;
+      }
+    });
   }
 
   @override
