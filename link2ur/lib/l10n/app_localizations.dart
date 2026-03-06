@@ -17275,6 +17275,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed to update visibility'**
   String get taskDetailVisibilityUpdateFailed;
+
+  /// No description provided for @contentMaskedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Some content has been automatically processed. Please use in-app chat for communication.'**
+  String get contentMaskedHint;
+
+  /// No description provided for @contentUnderReviewHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Your content has been submitted and is pending review.'**
+  String get contentUnderReviewHint;
+
+  /// No description provided for @contentRejectedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Your content did not pass review.'**
+  String get contentRejectedHint;
 }
 
 class _AppLocalizationsDelegate

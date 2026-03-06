@@ -9385,4 +9385,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get taskDetailVisibilityUpdateFailed => 'Failed to update visibility';
+
+  @override
+  String get contentMaskedHint =>
+      'Some content has been automatically processed. Please use in-app chat for communication.';
+
+  @override
+  String get contentUnderReviewHint =>
+      'Your content has been submitted and is pending review.';
+
+  @override
+  String get contentRejectedHint => 'Your content did not pass review.';
 }

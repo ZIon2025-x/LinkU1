@@ -9025,6 +9025,15 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get taskDetailVisibilityUpdateFailed => '更新展示设置失败';
+
+  @override
+  String get contentMaskedHint => '部分内容已被自动处理，请通过平台内聊天沟通。';
+
+  @override
+  String get contentUnderReviewHint => '内容已提交，正在等待审核。';
+
+  @override
+  String get contentRejectedHint => '您的内容未通过审核。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -18048,4 +18057,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get taskDetailVisibilityUpdateFailed => '更新展示設定失敗';
+
+  @override
+  String get contentMaskedHint => '部分內容已被自動處理，請透過平台內聊天溝通。';
+
+  @override
+  String get contentUnderReviewHint => '內容已提交，正在等待審核。';
+
+  @override
+  String get contentRejectedHint => '您的內容未通過審核。';
 }

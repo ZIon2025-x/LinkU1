@@ -4204,5 +4204,8 @@
   "taskDetailShowOnProfile": "展示在我的主頁",
   "taskDetailShowOnProfileDesc": "將這個已完成的任務展示在你的公開主頁上",
   "taskDetailVisibilityUpdated": "主頁展示設定已更新",
-  "taskDetailVisibilityUpdateFailed": "更新展示設定失敗"
+  "taskDetailVisibilityUpdateFailed": "更新展示設定失敗",
+  "contentMaskedHint": "部分內容已被自動處理，請透過平台內聊天溝通。",
+  "contentUnderReviewHint": "內容已提交，正在等待審核。",
+  "contentRejectedHint": "您的內容未通過審核。"
 }

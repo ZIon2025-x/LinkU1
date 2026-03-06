@@ -295,8 +295,9 @@ class AsyncQueryOptimizer:
                     models.Task.deadline.is_(None)  # 灵活模式（无截止日期）
                 )
             )
+            .filter(models.Task.is_visible == True)  # 内容过滤：只显示通过审核的任务
         )
-        
+
         # 应用过滤条件
         if filters.get('task_type') and filters['task_type'] not in ['全部类型', '全部']:
             query = query.filter(models.Task.task_type == filters['task_type'])

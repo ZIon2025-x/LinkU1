@@ -568,10 +568,15 @@ class AsyncTaskCRUD:
                         )
                     )
 
+            # 内容过滤：公开列表只显示通过审核的任务（is_visible == True）
+            # 达人查看自己创建的任务时不过滤（需要看到被隐藏的内容）
+            if not expert_creator_id:
+                base_query = base_query.where(models.Task.is_visible == True)
+
             # 任务类型筛选
             if task_type and task_type not in ["全部类型", "全部", "all"]:
                 base_query = base_query.where(models.Task.task_type == task_type)
-            
+
             # 地点筛选（使用精确城市匹配）
             if location and location not in ["全部城市", "全部", "all"]:
                 if location.lower() == 'other':
@@ -1073,10 +1078,15 @@ class AsyncTaskCRUD:
                 )
             )
         
+        # 内容过滤：公开列表只显示通过审核的任务（is_visible == True）
+        # 达人查看自己创建的任务时不过滤（需要看到被隐藏的内容）
+        if not expert_creator_id:
+            query = query.where(models.Task.is_visible == True)
+
         # 筛选条件：和 /tasks 保持一致
         if task_type and task_type not in ["全部类型", "全部", "all"]:
             query = query.where(models.Task.task_type == task_type)
-        
+
         if location and location not in ["全部城市", "全部", "all"]:
             if location.lower() == 'other':
                 # "Other" 筛选：排除所有预定义城市和 Online（支持中英文地址）

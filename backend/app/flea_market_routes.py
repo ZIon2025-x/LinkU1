@@ -328,10 +328,12 @@ async def get_flea_market_items(
         else:
             # ⚠️ 优化：只显示 active 状态且未被预留的商品（sold_task_id 为空）
             # 如果 sold_task_id 不为空，说明商品已被购买但等待支付，不应该在列表中显示
+            # 内容过滤：只显示通过审核的商品（is_visible == True）
             query = query.where(
                 and_(
                     models.FleaMarketItem.status == "active",
-                    models.FleaMarketItem.sold_task_id.is_(None)  # 排除已预留但未支付完成的商品
+                    models.FleaMarketItem.sold_task_id.is_(None),  # 排除已预留但未支付完成的商品
+                    models.FleaMarketItem.is_visible == True  # 排除被内容审核隐藏的商品
                 )
             )
         

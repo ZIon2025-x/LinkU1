@@ -4357,5 +4357,8 @@
   "taskDetailShowOnProfile": "Show on my profile",
   "taskDetailShowOnProfileDesc": "Display this completed task on your public profile",
   "taskDetailVisibilityUpdated": "Profile visibility updated",
-  "taskDetailVisibilityUpdateFailed": "Failed to update visibility"
+  "taskDetailVisibilityUpdateFailed": "Failed to update visibility",
+  "contentMaskedHint": "Some content has been automatically processed. Please use in-app chat for communication.",
+  "contentUnderReviewHint": "Your content has been submitted and is pending review.",
+  "contentRejectedHint": "Your content did not pass review."
 }
