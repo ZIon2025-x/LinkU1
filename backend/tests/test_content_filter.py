@@ -2,12 +2,14 @@
 Tests for the content_filter package:
 - TextNormalizer
 - ContactDetector
+- KeywordMatcher
 """
 
 import pytest
 
 from app.content_filter.text_normalizer import TextNormalizer
 from app.content_filter.contact_detector import ContactDetector, ContactResult
+from app.content_filter.keyword_matcher import KeywordMatcher, MatchResult
 
 
 # =============================================================================
@@ -163,3 +165,88 @@ class TestContactDetector:
 
         result2 = self.detector.detect(None)
         assert result2.has_contact is False
+
+
+# =============================================================================
+# KeywordMatcher Tests
+# =============================================================================
+
+class TestKeywordMatcher:
+    """Tests for KeywordMatcher."""
+
+    def _make_keywords(self):
+        return [
+            {"word": "赌博", "category": "gambling", "level": "review"},
+            {"word": "色情", "category": "porn", "level": "review"},
+            {"word": "代购", "category": "commerce", "level": "mask"},
+            {"word": "优惠券", "category": "commerce", "level": "pass"},
+        ]
+
+    def test_match_single_keyword(self):
+        """A single keyword is detected correctly."""
+        matcher = KeywordMatcher(keywords=self._make_keywords())
+        result = matcher.match("这个赌博网站很危险")
+        assert result.has_match is True
+        assert len(result.matches) == 1
+        assert result.matches[0]["word"] == "赌博"
+
+    def test_match_multiple_keywords(self):
+        """Multiple keywords in the same text are all detected."""
+        matcher = KeywordMatcher(keywords=self._make_keywords())
+        result = matcher.match("赌博和色情内容都应该被过滤")
+        assert result.has_match is True
+        assert len(result.matches) == 2
+        words = {m["word"] for m in result.matches}
+        assert words == {"赌博", "色情"}
+
+    def test_no_match_clean_text(self):
+        """Clean text returns no match."""
+        matcher = KeywordMatcher(keywords=self._make_keywords())
+        result = matcher.match("今天天气很好")
+        assert result.has_match is False
+        assert len(result.matches) == 0
+        assert result.strictest_level == "pass"
+
+    def test_strictest_level(self):
+        """The strictest_level reflects the highest severity match."""
+        matcher = KeywordMatcher(keywords=self._make_keywords())
+        # Only mask-level match
+        result = matcher.match("这个代购很便宜")
+        assert result.strictest_level == "mask"
+
+        # Both mask and review
+        result2 = matcher.match("代购赌博网站")
+        assert result2.strictest_level == "review"
+
+    def test_empty_input(self):
+        """Empty/None input returns default MatchResult."""
+        matcher = KeywordMatcher(keywords=self._make_keywords())
+        result = matcher.match("")
+        assert result.has_match is False
+
+        result2 = matcher.match(None)
+        assert result2.has_match is False
+
+    def test_rebuild_automaton(self):
+        """Rebuilding automaton with new keywords replaces old ones."""
+        matcher = KeywordMatcher(keywords=[
+            {"word": "旧词", "category": "old", "level": "mask"},
+        ])
+        assert matcher.match("旧词出现").has_match is True
+        assert matcher.match("新词出现").has_match is False
+
+        # Rebuild with new keywords
+        matcher.rebuild([
+            {"word": "新词", "category": "new", "level": "review"},
+        ])
+        assert matcher.match("旧词出现").has_match is False
+        assert matcher.match("新词出现").has_match is True
+
+    def test_categories(self):
+        """Matched keywords include their category."""
+        matcher = KeywordMatcher(keywords=self._make_keywords())
+        result = matcher.match("赌博和代购")
+        assert result.has_match is True
+        categories = {m["category"] for m in result.matches}
+        assert "gambling" in categories
+        assert "commerce" in categories
