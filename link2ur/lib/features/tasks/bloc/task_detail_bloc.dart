@@ -268,6 +268,16 @@ class TaskDetailRespondNegotiationRequested extends TaskDetailEvent {
   List<Object?> get props => [action, notificationId];
 }
 
+/// 切换任务资料可见性（公开/隐藏）
+class TaskDetailToggleProfileVisibility extends TaskDetailEvent {
+  const TaskDetailToggleProfileVisibility({required this.isPublic});
+
+  final bool isPublic;
+
+  @override
+  List<Object?> get props => [isPublic];
+}
+
 // ==================== State ====================
 
 enum TaskDetailStatus { initial, loading, loaded, error }
@@ -416,6 +426,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
     on<TaskDetailSubmitCounterOfferRequested>(_onSubmitCounterOffer, transformer: droppable());
     on<TaskDetailRespondCounterOfferRequested>(_onRespondCounterOffer, transformer: droppable());
     on<TaskDetailRespondNegotiationRequested>(_onRespondNegotiation, transformer: droppable());
+    on<TaskDetailToggleProfileVisibility>(_onToggleProfileVisibility, transformer: droppable());
   }
 
   final TaskRepository _taskRepository;
@@ -1109,6 +1120,33 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'operation_failed',
+        errorMessage: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onToggleProfileVisibility(
+    TaskDetailToggleProfileVisibility event,
+    Emitter<TaskDetailState> emit,
+  ) async {
+    if (state.isSubmitting) return;
+    emit(state.copyWith(isSubmitting: true));
+
+    try {
+      await _taskRepository.updateTaskVisibility(
+        state.task!.id,
+        isPublic: event.isPublic,
+      );
+      // Reload task to get updated is_public/taker_public from server
+      add(TaskDetailLoadRequested(state.task!.id));
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'visibility_updated',
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'visibility_update_failed',
         errorMessage: e.toString(),
       ));
     }
