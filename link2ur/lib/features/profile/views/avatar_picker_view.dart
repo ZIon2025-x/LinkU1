@@ -110,8 +110,7 @@ class _AvatarPickerViewState extends State<AvatarPickerView> {
                     itemCount: _avatarOptions.length,
                     itemBuilder: (context, index) {
                       final isSelected =
-                          _selectedAvatar == _avatarOptions[index] ||
-                              widget.currentAvatar == _avatarOptions[index];
+                          _selectedAvatar == _avatarOptions[index];
 
                       return GestureDetector(
                         onTap: state.isUpdating

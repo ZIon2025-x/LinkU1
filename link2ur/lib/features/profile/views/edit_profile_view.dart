@@ -250,12 +250,14 @@ class _EditProfileContentState extends State<_EditProfileContent> {
 
         if (state.actionMessage != null) {
           final l10n = context.l10n;
-          final isSuccess = state.actionMessage == 'profile_updated' ||
-              state.actionMessage == 'avatar_updated';
+          final isSuccess = state.actionMessage == 'profile_updated';
+          final isAvatarUpdated = state.actionMessage == 'avatar_updated';
           final isCodeSent = state.actionMessage == 'email_code_sent' ||
               state.actionMessage == 'phone_code_sent';
 
-          if (isCodeSent) {
+          if (isAvatarUpdated) {
+            AppFeedback.showSuccess(context, l10n.profileAvatarUpdated);
+          } else if (isCodeSent) {
             final message = state.actionMessage == 'email_code_sent'
                 ? l10n.profileEmailCodeSent
                 : l10n.profilePhoneCodeSent;

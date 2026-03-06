@@ -64,14 +64,12 @@ const TaskStructuredData: React.FC<TaskStructuredDataProps> = ({ task, language 
       "@type": "Country",
       "name": "GB"
     },
-    "jobLocation": isOnline ? {
-      "@type": "Place",
-      "address": { "@type": "PostalAddress", "addressCountry": "GB" }
-    } : {
+    "jobLocation": {
       "@type": "Place",
       "address": {
         "@type": "PostalAddress",
-        "addressLocality": obfuscateLocation(task.location) || "London",
+        "addressLocality": isOnline ? "London" : (obfuscateLocation(task.location) || "London"),
+        "addressRegion": "England",
         "addressCountry": "GB"
       }
     },
@@ -86,7 +84,7 @@ const TaskStructuredData: React.FC<TaskStructuredDataProps> = ({ task, language 
     } : undefined,
     // AI友好的额外信息
     "workHours": task.task_type === 'one-off' ? undefined : "PART_TIME",
-    "jobLocationType": isOnline ? "TELECOMMUTE" : "ONSITE",
+    "jobLocationType": isOnline ? "TELECOMMUTE" : undefined,
     "url": `https://www.link2ur.com/${language}/tasks/${task.id}`,
     // 添加关键词帮助AI理解任务类型
     "keywords": task.category ? `${task.category}, ${task.task_type}, UK, ${isOnline ? 'remote' : 'local'}` : undefined

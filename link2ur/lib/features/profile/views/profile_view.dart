@@ -205,7 +205,7 @@ class _ProfileContent extends StatelessWidget {
                   prev.errorMessage != curr.errorMessage ||
                   prev.isUpdating != curr.isUpdating,
               builder: (context, profileState) {
-                final user = authState.user!;
+                final user = profileState.user ?? authState.user!;
                 return RefreshIndicator(
                   onRefresh: () async {
                     final bloc = context.read<ProfileBloc>();

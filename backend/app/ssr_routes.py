@@ -652,10 +652,8 @@ async def ssr_task_detail(
                 "@type": "Place",
                 "address": {
                     "@type": "PostalAddress",
-                    "addressCountry": "GB"
-                } if is_online else {
-                    "@type": "PostalAddress",
-                    "addressLocality": task.location or "London",
+                    "addressLocality": "London" if is_online else (task.location or "London"),
+                    "addressRegion": "England",
                     "addressCountry": "GB"
                 }
             },
