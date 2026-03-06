@@ -3,6 +3,7 @@ Tests for the content_filter package:
 - TextNormalizer
 - ContactDetector
 - KeywordMatcher
+- ContentFilter (orchestrator)
 """
 
 import pytest
@@ -10,6 +11,7 @@ import pytest
 from app.content_filter.text_normalizer import TextNormalizer
 from app.content_filter.contact_detector import ContactDetector, ContactResult
 from app.content_filter.keyword_matcher import KeywordMatcher, MatchResult
+from app.content_filter.content_filter import ContentFilter, FilterResult
 
 
 # =============================================================================
@@ -250,3 +252,64 @@ class TestKeywordMatcher:
         categories = {m["category"] for m in result.matches}
         assert "gambling" in categories
         assert "commerce" in categories
+
+
+# =============================================================================
+# ContentFilter (Orchestrator) Tests
+# =============================================================================
+
+class TestContentFilter:
+    """Tests for ContentFilter orchestrator."""
+
+    def setup_method(self):
+        keywords = [
+            {"word": "代理", "category": "agent", "level": "review"},
+            {"word": "赌博", "category": "gambling", "level": "review"},
+        ]
+        homophones = {"威信": "微信"}
+        self.filter = ContentFilter(keywords=keywords, homophones=homophones)
+
+    def test_clean_text_passes(self):
+        result = self.filter.check("帮忙搬家，价格面议")
+        assert result.action == "pass"
+
+    def test_contact_info_masked(self):
+        result = self.filter.check("加我微信abc123")
+        assert result.action == "mask"
+        assert "***" in result.cleaned_text
+
+    def test_keyword_triggers_review(self):
+        result = self.filter.check("网上赌博代理招人")
+        assert result.action == "review"
+        assert len(result.matched_words) >= 1
+
+    def test_contact_plus_keyword_uses_strictest(self):
+        result = self.filter.check("赌博网站加我微信abc123")
+        assert result.action == "review"  # review > mask
+
+    def test_variant_detected_via_normalizer(self):
+        result = self.filter.check("找个代☆理帮忙赌☆博")
+        assert result.action == "review"
+
+    def test_homophone_variant(self):
+        result = self.filter.check("加我威信abc123")
+        assert result.action == "mask"
+
+    def test_phone_masked(self):
+        result = self.filter.check("电话13800001234")
+        assert result.action == "mask"
+        assert "13800001234" not in result.cleaned_text
+
+    def test_empty_input(self):
+        result = self.filter.check("")
+        assert result.action == "pass"
+        result = self.filter.check(None)
+        assert result.action == "pass"
+
+    def test_check_multiple_fields(self):
+        results = self.filter.check_fields({
+            "title": "帮忙搬家",
+            "description": "加我微信abc123详聊"
+        })
+        assert results["title"].action == "pass"
+        assert results["description"].action == "mask"
