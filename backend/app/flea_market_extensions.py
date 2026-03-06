@@ -1,6 +1,6 @@
 """
 跳蚤市场扩展功能
-包含：通知、缓存、敏感词过滤等
+包含：通知、缓存等
 """
 import json
 import logging
@@ -12,38 +12,6 @@ from app import models
 from app import async_crud
 
 logger = logging.getLogger(__name__)
-
-# 敏感词列表（基础版本，可以扩展为从数据库或配置文件加载）
-SENSITIVE_WORDS = [
-    # 可以添加敏感词
-]
-
-
-def contains_sensitive_words(text: str) -> bool:
-    """检查文本是否包含敏感词"""
-    if not text:
-        return False
-    
-    text_lower = text.lower()
-    for word in SENSITIVE_WORDS:
-        if word.lower() in text_lower:
-            return True
-    return False
-
-
-def filter_sensitive_words(text: str) -> str:
-    """过滤敏感词（用*替换）"""
-    if not text:
-        return text
-    
-    result = text
-    for word in SENSITIVE_WORDS:
-        if word.lower() in result.lower():
-            # 替换敏感词
-            import re
-            pattern = re.compile(re.escape(word), re.IGNORECASE)
-            result = pattern.sub('*' * len(word), result)
-    return result
 
 
 async def send_purchase_request_notification(
