@@ -193,8 +193,8 @@ class TestNotificationAPI:
     def test_mark_notification_read_unauthorized(self):
         """测试：未登录用户不能标记通知已读"""
         with httpx.Client(timeout=self.timeout) as client:
-            # API 使用 PUT 方法
-            response = client.put(
+            # API 使用 POST 方法
+            response = client.post(
                 f"{self.base_url}/api/notifications/12345678/read"
             )
 
