@@ -16,6 +16,12 @@ import re
 import unicodedata
 from typing import Dict, Optional
 
+try:
+    import opencc
+    _T2S = opencc.OpenCC("t2s")
+except ImportError:
+    _T2S = None
+
 
 # Zero-width and invisible Unicode characters
 _ZERO_WIDTH_RE = re.compile(
@@ -109,6 +115,10 @@ class TextNormalizer:
         # 2. NFKC normalization (fullwidth -> halfwidth, compatibility decomposition)
         #    Done before emoji removal so fullwidth letters/digits are preserved
         s = unicodedata.normalize("NFKC", s)
+
+        # Traditional → Simplified Chinese
+        if _T2S:
+            s = _T2S.convert(s)
 
         # 3. Remove emoji
         s = _EMOJI_RE.sub("", s)

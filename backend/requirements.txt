@@ -82,4 +82,7 @@ anthropic>=0.42.0,<1.0.0
 sse-starlette>=2.2.1,<3.0.0
 tiktoken>=0.8.0,<1.0.0
 
-# 依赖更新日期: 2026-02-16 (添加 AI Agent 依赖)
+# Content Filtering
+opencc-python-reimplemented>=0.1.7
+
+# 依赖更新日期: 2026-03-06 (添加内容过滤依赖)
