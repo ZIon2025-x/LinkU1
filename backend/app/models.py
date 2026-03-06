@@ -215,6 +215,7 @@ class Task(Base):
     is_public = Column(Integer, default=1)  # 1=public, 0=private (仅自己可见)
     taker_public = Column(Integer, default=1)  # 1=public, 0=private (接单者主页可见性)
     visibility = Column(String(20), default="public")  # public, private
+    is_visible = Column(Boolean, default=True, nullable=False)  # 内容过滤：审核期间隐藏
     images = Column(Text, nullable=True)  # JSON数组存储图片URL列表
     points_reward = Column(BigInteger, nullable=True)  # 任务完成奖励积分（可选，如果设置则覆盖系统默认值）
     
@@ -1740,6 +1741,7 @@ class FleaMarketItem(Base):
     category = Column(String(100), nullable=True)
     contact = Column(String(200), nullable=True)  # 预留字段，本期不使用
     status = Column(String(20), nullable=False, default="active")
+    is_visible = Column(Boolean, default=True, nullable=False)  # 内容过滤：审核期间隐藏
     seller_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)  # 卖家ID
     sold_task_id = Column(Integer, ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True)  # 售出后关联的任务ID
     view_count = Column(Integer, nullable=False, default=0)  # 浏览量
@@ -2376,6 +2378,57 @@ class ForumReply(Base):
         Index("idx_forum_replies_author", author_id, is_deleted, is_visible),
         Index("idx_forum_replies_admin_author", admin_author_id, is_deleted, is_visible),
     )
+
+
+class SensitiveWord(Base):
+    """敏感词库"""
+    __tablename__ = "sensitive_words"
+
+    id = Column(Integer, primary_key=True, index=True)
+    word = Column(String(100), nullable=False, index=True)
+    category = Column(String(20), nullable=False, index=True)  # ad/scam/agent/porn/drugs/gambling/violence/illegal/profanity/contact
+    level = Column(String(10), nullable=False, default="review")  # mask/review
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_by = Column(String(5), ForeignKey("admin_users.id"), nullable=True)
+    created_at = Column(DateTime, default=func.now())
+
+
+class HomophoneMapping(Base):
+    """谐音映射表"""
+    __tablename__ = "homophone_mappings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    variant = Column(String(50), nullable=False, index=True, unique=True)
+    standard = Column(String(50), nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+
+
+class ContentReview(Base):
+    """审核队列"""
+    __tablename__ = "content_reviews"
+
+    id = Column(Integer, primary_key=True, index=True)
+    content_type = Column(String(20), nullable=False, index=True)  # task/forum_post/forum_reply/profile/flea_market
+    content_id = Column(Integer, nullable=False)
+    user_id = Column(String(8), ForeignKey("users.id"), nullable=False)
+    original_text = Column(Text, nullable=False)
+    matched_words = Column(JSON, nullable=True)
+    status = Column(String(10), nullable=False, default="pending", index=True)  # pending/approved/rejected
+    reviewed_by = Column(String(5), ForeignKey("admin_users.id"), nullable=True)
+    reviewed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=func.now())
+
+
+class FilterLog(Base):
+    """过滤日志"""
+    __tablename__ = "filter_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(8), ForeignKey("users.id"), nullable=False)
+    content_type = Column(String(20), nullable=False)
+    action = Column(String(10), nullable=False)  # mask/review/pass
+    matched_words = Column(JSON, nullable=True)
+    created_at = Column(DateTime, default=func.now())
 
 
 class ForumLike(Base):
