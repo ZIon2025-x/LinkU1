@@ -46,7 +46,6 @@ class _EditProfileContent extends StatefulWidget {
 class _EditProfileContentState extends State<_EditProfileContent> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _bioController = TextEditingController();
   final _residenceCityController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -54,10 +53,12 @@ class _EditProfileContentState extends State<_EditProfileContent> {
   final _phoneCodeController = TextEditingController();
 
   XFile? _selectedImageFile;
+  Uint8List? _selectedImageBytes;
   bool _initialized = false;
+  final _emailNotifier = ValueNotifier<String>('');
+  final _phoneNotifier = ValueNotifier<String>('');
 
   String _originalName = '';
-  String _originalBio = '';
   String _originalCity = '';
   String? _originalEmail;
   String? _originalPhone;
@@ -65,7 +66,6 @@ class _EditProfileContentState extends State<_EditProfileContent> {
   bool get _hasUnsavedChanges {
     if (!_initialized) return false;
     return _nameController.text != _originalName ||
-        _bioController.text != _originalBio ||
         _residenceCityController.text != _originalCity ||
         _emailController.text.trim() != (_originalEmail ?? '') ||
         _phoneController.text.trim() != (_originalPhone ?? '') ||
@@ -75,12 +75,13 @@ class _EditProfileContentState extends State<_EditProfileContent> {
   @override
   void dispose() {
     _nameController.dispose();
-    _bioController.dispose();
     _residenceCityController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
     _emailCodeController.dispose();
     _phoneCodeController.dispose();
+    _emailNotifier.dispose();
+    _phoneNotifier.dispose();
     super.dispose();
   }
 
@@ -88,15 +89,15 @@ class _EditProfileContentState extends State<_EditProfileContent> {
     if (!_initialized && state.user != null) {
       final user = state.user!;
       _nameController.text = user.name;
-      _bioController.text = user.bio ?? '';
       _residenceCityController.text = user.residenceCity ?? '';
       _emailController.text = user.email ?? '';
       _phoneController.text = user.phone ?? '';
       _originalName = user.name;
-      _originalBio = user.bio ?? '';
       _originalCity = user.residenceCity ?? '';
       _originalEmail = user.email ?? '';
       _originalPhone = user.phone ?? '';
+      _emailNotifier.value = _emailController.text;
+      _phoneNotifier.value = _phoneController.text;
       _initialized = true;
     }
   }
@@ -138,12 +139,14 @@ class _EditProfileContentState extends State<_EditProfileContent> {
       );
 
       if (pickedFile != null) {
+        final bytes = await pickedFile.readAsBytes();
         setState(() {
           _selectedImageFile = pickedFile;
+          _selectedImageBytes = bytes;
         });
         if (mounted) {
           context.read<ProfileBloc>().add(
-                ProfileUploadAvatar(await pickedFile.readAsBytes(), pickedFile.name),
+                ProfileUploadAvatar(bytes, pickedFile.name),
               );
         }
       }
@@ -190,9 +193,6 @@ class _EditProfileContentState extends State<_EditProfileContent> {
     final data = <String, dynamic>{
       'name': _nameController.text.trim(),
     };
-
-    final bio = _bioController.text.trim();
-    if (bio.isNotEmpty) data['bio'] = bio;
 
     final city = _residenceCityController.text.trim();
     if (city.isNotEmpty) data['residence_city'] = city;
@@ -256,7 +256,7 @@ class _EditProfileContentState extends State<_EditProfileContent> {
               state.actionMessage == 'phone_code_sent';
 
           if (isAvatarUpdated) {
-            setState(() { _selectedImageFile = null; });
+            setState(() { _selectedImageFile = null; _selectedImageBytes = null; });
             AppFeedback.showSuccess(context, l10n.profileAvatarUpdated);
           } else if (isCodeSent) {
             final message = state.actionMessage == 'email_code_sent'
@@ -292,6 +292,7 @@ class _EditProfileContentState extends State<_EditProfileContent> {
           canPop: !_hasUnsavedChanges,
           onPopInvokedWithResult: (didPop, _) {
             if (!didPop) {
+              final navigator = Navigator.of(context);
               AdaptiveDialogs.showConfirmDialog(
                 context: context,
                 title: context.l10n.commonDiscardChanges,
@@ -299,7 +300,7 @@ class _EditProfileContentState extends State<_EditProfileContent> {
                 confirmText: context.l10n.commonDiscard,
                 isDestructive: true,
               ).then((confirmed) {
-                if (confirmed == true) Navigator.of(context).pop();
+                if (confirmed == true && mounted) navigator.pop();
               });
             }
           },
@@ -392,21 +393,6 @@ class _EditProfileContentState extends State<_EditProfileContent> {
                   ),
                   AppSpacing.vMd,
 
-                  // Bio
-                  TextFormField(
-                    controller: _bioController,
-                    decoration: InputDecoration(
-                      labelText: context.l10n.profileBio,
-                      hintText: context.l10n.profileBioHint,
-                      prefixIcon: const Icon(Icons.description_outlined),
-                      border: OutlineInputBorder(
-                          borderRadius: AppRadius.allMedium),
-                    ),
-                    maxLines: 4,
-                    maxLength: 200,
-                  ),
-                  AppSpacing.vMd,
-
                   // City
                   TextFormField(
                     controller: _residenceCityController,
@@ -421,11 +407,17 @@ class _EditProfileContentState extends State<_EditProfileContent> {
                   AppSpacing.vLg,
 
                   // ---- Email Section ----
-                  _buildEmailSection(context, state),
+                  ValueListenableBuilder<String>(
+                    valueListenable: _emailNotifier,
+                    builder: (context, _, __) => _buildEmailSection(context, state),
+                  ),
                   AppSpacing.vLg,
 
                   // ---- Phone Section ----
-                  _buildPhoneSection(context, state),
+                  ValueListenableBuilder<String>(
+                    valueListenable: _phoneNotifier,
+                    builder: (context, _, __) => _buildPhoneSection(context, state),
+                  ),
                   AppSpacing.vLg,
 
                   // Save button
@@ -468,7 +460,7 @@ class _EditProfileContentState extends State<_EditProfileContent> {
           ),
           keyboardType: TextInputType.emailAddress,
           autocorrect: false,
-          onChanged: (_) => setState(() {}),
+          onChanged: (v) => _emailNotifier.value = v,
         ),
 
         // "Send Code" link appears when email differs from original
@@ -538,7 +530,7 @@ class _EditProfileContentState extends State<_EditProfileContent> {
             border: OutlineInputBorder(borderRadius: AppRadius.allMedium),
           ),
           keyboardType: TextInputType.phone,
-          onChanged: (_) => setState(() {}),
+          onChanged: (v) => _phoneNotifier.value = v,
         ),
 
         if (_phoneChanged) ...[
@@ -604,17 +596,11 @@ class _EditProfileContentState extends State<_EditProfileContent> {
   Widget _buildEditAvatar(String? avatarUrl) {
     const double radius = 50;
 
-    if (_selectedImageFile != null) {
-      return FutureBuilder<Uint8List>(
-        future: _selectedImageFile!.readAsBytes(),
-        builder: (context, snapshot) {
-          return CircleAvatar(
-            radius: radius,
-            backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-            backgroundImage:
-                snapshot.hasData ? MemoryImage(snapshot.data!) : null,
-          );
-        },
+    if (_selectedImageBytes != null) {
+      return CircleAvatar(
+        radius: radius,
+        backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+        backgroundImage: MemoryImage(_selectedImageBytes!),
       );
     }
 

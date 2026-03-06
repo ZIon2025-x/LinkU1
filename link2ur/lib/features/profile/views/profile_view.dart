@@ -19,6 +19,7 @@ import '../../../core/widgets/decorative_background.dart';
 import '../../../core/widgets/credit_score_gauge.dart';
 import '../../../core/widgets/animated_counter.dart';
 import '../../../data/models/user.dart';
+import '../../../data/models/task.dart' show Task;
 import '../../../data/repositories/user_repository.dart';
 import '../../../data/repositories/task_repository.dart';
 import '../../../data/repositories/forum_repository.dart';
@@ -29,6 +30,22 @@ import '../bloc/profile_bloc.dart';
 part 'profile_desktop_widgets.dart';
 part 'profile_mobile_widgets.dart';
 part 'profile_menu_widgets.dart';
+
+/// 单次遍历统计进行中 / 已完成任务数，供 mobile 和 desktop 共用
+({int inProgress, int completed}) _countTasks(List<Task> tasks) {
+  var inProgress = 0;
+  var completed = 0;
+  for (final t in tasks) {
+    if (t.status == 'assigned' ||
+        t.status == AppConstants.taskStatusInProgress ||
+        t.status == 'accepted') {
+      inProgress++;
+    } else if (t.status == AppConstants.taskStatusCompleted) {
+      completed++;
+    }
+  }
+  return (inProgress: inProgress, completed: completed);
+}
 
 /// 个人中心页
 /// 参考iOS ProfileView.swift

@@ -66,7 +66,7 @@ class _AvatarPickerViewState extends State<AvatarPickerView> {
       ),
       child: BlocConsumer<ProfileBloc, ProfileState>(
         listener: (context, state) {
-          if (state.actionMessage == 'profile_updated' &&
+          if (state.actionMessage == 'avatar_updated' &&
               state.user != null) {
             widget.onSelected(state.user!.avatar ?? '');
             Navigator.of(context).pop();
@@ -120,8 +120,8 @@ class _AvatarPickerViewState extends State<AvatarPickerView> {
                                   _selectedAvatar = _avatarOptions[index];
                                 });
                                 context.read<ProfileBloc>().add(
-                                      ProfileUpdateRequested(
-                                          {'avatar': _avatarOptions[index]}),
+                                      ProfileUpdateAvatar(
+                                          _avatarOptions[index]),
                                     );
                               },
                         child: Stack(

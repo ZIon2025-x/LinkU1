@@ -146,18 +146,7 @@ Widget _buildUserInfoSection(
 /// 统计区域 - 3项: 进行中/已完成/信用分 (对齐iOS)
 Widget _buildStatsSection(
     BuildContext context, ProfileState state, User user, bool isDark) {
-  // 单次遍历计算进行中和已完成的任务数量（避免双重 .where()）
-  var inProgressCount = 0;
-  var completedCount = 0;
-  for (final t in state.myTasks) {
-    if (t.status == 'assigned' ||
-        t.status == AppConstants.taskStatusInProgress ||
-        t.status == 'accepted') {
-      inProgressCount++;
-    } else if (t.status == AppConstants.taskStatusCompleted) {
-      completedCount++;
-    }
-  }
+  final (:inProgress, :completed) = _countTasks(state.myTasks);
 
   return Container(
     margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
@@ -188,7 +177,7 @@ Widget _buildStatsSection(
               mainAxisSize: MainAxisSize.min,
               children: [
                 AnimatedCounter(
-                  value: inProgressCount,
+                  value: inProgress,
                   style: AppTypography.title2.copyWith(
                     color: AppColors.primary,
                     fontWeight: FontWeight.w700,
@@ -219,7 +208,7 @@ Widget _buildStatsSection(
               mainAxisSize: MainAxisSize.min,
               children: [
                 AnimatedCounter(
-                  value: completedCount,
+                  value: completed,
                   style: AppTypography.title2.copyWith(
                     color: AppColors.success,
                     fontWeight: FontWeight.w700,

@@ -34,6 +34,15 @@ class ProfileUpdateRequested extends ProfileEvent {
   List<Object?> get props => [data];
 }
 
+class ProfileUpdateAvatar extends ProfileEvent {
+  const ProfileUpdateAvatar(this.avatarPath);
+
+  final String avatarPath;
+
+  @override
+  List<Object?> get props => [avatarPath];
+}
+
 class ProfileUploadAvatar extends ProfileEvent {
   const ProfileUploadAvatar(this.bytes, this.filename);
 
@@ -313,6 +322,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
         super(const ProfileState()) {
     on<ProfileLoadRequested>(_onLoadRequested);
     on<ProfileUpdateRequested>(_onUpdateRequested);
+    on<ProfileUpdateAvatar>(_onUpdateAvatar);
     on<ProfileUploadAvatar>(_onUploadAvatar);
     on<ProfileLoadMyTasks>(_onLoadMyTasks);
     on<ProfileLoadPublicProfile>(_onLoadPublicProfile);
@@ -371,10 +381,8 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       final data = event.data;
       final user = await _userRepository.updateProfile(
         name: data['name'] as String?,
-        bio: data['bio'] as String?,
         residenceCity: data['residence_city'] as String?,
         languagePreference: data['language_preference'] as String?,
-        avatar: data['avatar'] as String?,
         email: data['email'] as String?,
         emailVerificationCode: data['email_verification_code'] as String?,
         phone: data['phone'] as String?,
@@ -387,6 +395,30 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       ));
     } catch (e) {
       AppLogger.error('Failed to update profile', e);
+      emit(state.copyWith(
+        isUpdating: false,
+        actionMessage: 'update_failed',
+        errorMessage: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onUpdateAvatar(
+    ProfileUpdateAvatar event,
+    Emitter<ProfileState> emit,
+  ) async {
+    if (state.isUpdating) return;
+    emit(state.copyWith(isUpdating: true));
+
+    try {
+      final updatedUser = await _userRepository.updateAvatar(event.avatarPath);
+      emit(state.copyWith(
+        user: updatedUser,
+        isUpdating: false,
+        actionMessage: 'avatar_updated',
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to update avatar', e);
       emit(state.copyWith(
         isUpdating: false,
         actionMessage: 'update_failed',

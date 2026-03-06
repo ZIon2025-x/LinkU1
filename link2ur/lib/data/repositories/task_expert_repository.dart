@@ -215,18 +215,28 @@ class TaskExpertRepository {
   }
 
   /// 获取服务评价
-  Future<List<Map<String, dynamic>>> getServiceReviews(
-      int serviceId) async {
+  Future<Map<String, dynamic>> getServiceReviews(
+    int serviceId, {
+    int limit = 20,
+    int offset = 0,
+  }) async {
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.taskExpertServiceReviews(serviceId),
+      queryParameters: {'limit': limit, 'offset': offset},
     );
 
     if (!response.isSuccess || response.data == null) {
       throw TaskExpertException(response.message ?? '获取评价失败');
     }
 
-    final items = response.data!['items'] as List<dynamic>? ?? [];
-    return items.map((e) => e as Map<String, dynamic>).toList();
+    final data = response.data!;
+    final items = (data['items'] as List<dynamic>? ?? [])
+        .map((e) => e as Map<String, dynamic>)
+        .toList();
+    return {
+      'items': items,
+      'total': data['total'] ?? items.length,
+    };
   }
 
   /// 申请达人服务

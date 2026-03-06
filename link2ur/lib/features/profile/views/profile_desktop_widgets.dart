@@ -65,18 +65,7 @@ Widget _buildDesktopProfile(
 /// Desktop user card — avatar, name, badges, stats in a horizontal row
 Widget _buildDesktopUserCard(
     BuildContext context, ProfileState state, User user, bool isDark) {
-  // 单次遍历计算进行中和已完成的任务数量（避免双重 .where()）
-  var inProgressCount = 0;
-  var completedCount = 0;
-  for (final t in state.myTasks) {
-    if (t.status == 'assigned' ||
-        t.status == AppConstants.taskStatusInProgress ||
-        t.status == 'accepted') {
-      inProgressCount++;
-    } else if (t.status == AppConstants.taskStatusCompleted) {
-      completedCount++;
-    }
-  }
+  final (:inProgress, :completed) = _countTasks(state.myTasks);
 
   return Container(
     padding: const EdgeInsets.all(24),
@@ -204,13 +193,13 @@ Widget _buildDesktopUserCard(
         Row(
           children: [
             _DesktopStatItem(
-              value: '$inProgressCount',
+              value: '$inProgress',
               label: context.l10n.profileInProgress,
               color: AppColors.primary,
             ),
             const SizedBox(width: 24),
             _DesktopStatItem(
-              value: '$completedCount',
+              value: '$completed',
               label: context.l10n.profileCompleted,
               color: AppColors.success,
             ),

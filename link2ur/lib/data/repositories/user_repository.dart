@@ -57,13 +57,12 @@ class UserRepository {
       data: {'avatar': imageUrl},
     );
 
-    if (!response.isSuccess || response.data == null) {
+    if (!response.isSuccess) {
       throw UserException(response.message ?? '上传头像失败');
     }
 
-    final user = User.fromJson(response.data!);
-    await StorageService.instance.saveUserInfo(user.toJson());
-    return user;
+    // 后端返回 {"avatar": "url"}，非完整 User；需刷新完整资料
+    return getProfile(forceRefresh: true);
   }
 
   /// 获取其他用户资料
@@ -94,18 +93,27 @@ class UserRepository {
     return UserProfileDetail.fromJson(response.data!);
   }
 
-  /// 更新头像（预设头像路径）
+  /// 更新头像（预设头像路径，走专用 avatar 端点）
   Future<User> updateAvatar(String avatarPath) async {
-    return updateProfile(avatar: avatarPath);
+    final response = await _apiService.patch<Map<String, dynamic>>(
+      ApiEndpoints.uploadAvatar,
+      data: {'avatar': avatarPath},
+    );
+
+    if (!response.isSuccess) {
+      throw UserException(response.message ?? '更新头像失败');
+    }
+
+    // 后端返回 {"avatar": "url"}，非完整 User；需刷新完整资料
+    return getProfile(forceRefresh: true);
   }
 
-  /// 更新用户资料（含头像路径、邮箱/手机号+验证码）
+  /// 更新用户资料（邮箱/手机号+验证码）
+  /// 注意：avatar 走专用端点 updateAvatar()；后端不支持 bio 字段
   Future<User> updateProfile({
     String? name,
-    String? bio,
     String? residenceCity,
     String? languagePreference,
-    String? avatar,
     String? email,
     String? emailVerificationCode,
     String? phone,
@@ -113,12 +121,10 @@ class UserRepository {
   }) async {
     final data = <String, dynamic>{};
     if (name != null) data['name'] = name;
-    if (bio != null) data['bio'] = bio;
     if (residenceCity != null) data['residence_city'] = residenceCity;
     if (languagePreference != null) {
       data['language_preference'] = languagePreference;
     }
-    if (avatar != null) data['avatar'] = avatar;
     if (email != null) data['email'] = email;
     if (emailVerificationCode != null) {
       data['email_verification_code'] = emailVerificationCode;

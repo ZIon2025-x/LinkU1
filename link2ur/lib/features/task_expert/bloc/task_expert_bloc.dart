@@ -77,12 +77,13 @@ class TaskExpertSearchRequested extends TaskExpertEvent {
 
 /// 加载服务评价
 class TaskExpertLoadServiceReviews extends TaskExpertEvent {
-  const TaskExpertLoadServiceReviews(this.serviceId);
+  const TaskExpertLoadServiceReviews(this.serviceId, {this.loadMore = false});
 
   final int serviceId;
+  final bool loadMore;
 
   @override
-  List<Object?> get props => [serviceId];
+  List<Object?> get props => [serviceId, loadMore];
 }
 
 /// 加载达人评价
@@ -694,12 +695,23 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     TaskExpertLoadServiceReviews event,
     Emitter<TaskExpertState> emit,
   ) async {
+    if (event.loadMore && !state.hasMoreReviews) return;
+
     emit(state.copyWith(isLoadingReviews: true));
     try {
-      final reviews =
-          await _taskExpertRepository.getServiceReviews(event.serviceId);
+      final offset = event.loadMore ? state.reviews.length : 0;
+      final result = await _taskExpertRepository.getServiceReviews(
+        event.serviceId,
+        offset: offset,
+      );
+      final items = result['items'] as List<Map<String, dynamic>>;
+      final total = result['total'] as int;
+      final merged = event.loadMore ? [...state.reviews, ...items] : items;
+
       emit(state.copyWith(
-        reviews: reviews,
+        reviews: merged,
+        reviewsTotal: total,
+        hasMoreReviews: merged.length < total,
         isLoadingReviews: false,
       ));
     } catch (e) {

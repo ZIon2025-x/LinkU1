@@ -87,7 +87,8 @@ class TaskExpertDetailView extends StatelessWidget {
                   previous.isLoadingReviews != current.isLoadingReviews ||
                   previous.services != current.services ||
                   previous.expertActivities != current.expertActivities ||
-                  previous.isLoadingExpertActivities != current.isLoadingExpertActivities,
+                  previous.isLoadingExpertActivities != current.isLoadingExpertActivities ||
+                  previous.hasMoreReviews != current.hasMoreReviews,
               builder: (context, state) {
                 if (state.status == TaskExpertStatus.loading &&
                     state.selectedExpert == null) {
@@ -120,6 +121,7 @@ class TaskExpertDetailView extends StatelessWidget {
                   expert: expert,
                   reviews: state.reviews,
                   isLoadingReviews: state.isLoadingReviews,
+                  hasMoreReviews: state.hasMoreReviews,
                   services: state.services,
                   expertActivities: state.expertActivities,
                   isLoadingExpertActivities: state.isLoadingExpertActivities,
@@ -142,6 +144,7 @@ class _DetailBody extends StatelessWidget {
     required this.expert,
     required this.reviews,
     required this.isLoadingReviews,
+    required this.hasMoreReviews,
     required this.services,
     required this.expertActivities,
     required this.isLoadingExpertActivities,
@@ -150,6 +153,7 @@ class _DetailBody extends StatelessWidget {
   final TaskExpert expert;
   final List<Map<String, dynamic>> reviews;
   final bool isLoadingReviews;
+  final bool hasMoreReviews;
   final List<TaskExpertService> services;
   final List<Activity> expertActivities;
   final bool isLoadingExpertActivities;
@@ -199,6 +203,8 @@ class _DetailBody extends StatelessWidget {
                 _ReviewsSection(
                   reviews: reviews,
                   isLoading: isLoadingReviews,
+                  hasMore: hasMoreReviews,
+                  expertId: expert.id,
                 ),
                 const SizedBox(height: 24),
 
@@ -720,10 +726,14 @@ class _ReviewsSection extends StatelessWidget {
   const _ReviewsSection({
     required this.reviews,
     required this.isLoading,
+    required this.hasMore,
+    required this.expertId,
   });
 
   final List<Map<String, dynamic>> reviews;
   final bool isLoading;
+  final bool hasMore;
+  final String expertId;
 
   @override
   Widget build(BuildContext context) {
@@ -787,8 +797,39 @@ class _ReviewsSection extends StatelessWidget {
                 ),
               ),
             )
-          else
+          else ...[
             ...reviews.map((review) => _ReviewRow(review: review)),
+            if (hasMore)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Center(
+                  child: isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.primary,
+                          ),
+                        )
+                      : TextButton(
+                          onPressed: () {
+                            context.read<TaskExpertBloc>().add(
+                                  TaskExpertLoadExpertReviews(expertId,
+                                      loadMore: true),
+                                );
+                          },
+                          child: Text(
+                            context.l10n.commonLoadMore,
+                            style: const TextStyle(
+                              color: AppColors.primary,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                ),
+              ),
+          ],
         ],
       ),
     );

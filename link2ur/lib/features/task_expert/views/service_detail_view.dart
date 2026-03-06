@@ -135,6 +135,8 @@ class _ServiceDetailContent extends StatelessWidget {
                               _ReviewsCard(
                                 reviews: state.reviews,
                                 isLoading: state.isLoadingReviews,
+                                hasMore: state.hasMoreReviews,
+                                serviceId: serviceId,
                                 isDark: isDark,
                               ),
                               const SizedBox(height: 20),
@@ -465,11 +467,15 @@ class _ReviewsCard extends StatelessWidget {
   const _ReviewsCard({
     required this.reviews,
     required this.isLoading,
+    required this.hasMore,
+    required this.serviceId,
     required this.isDark,
   });
 
   final List<Map<String, dynamic>> reviews;
   final bool isLoading;
+  final bool hasMore;
+  final int serviceId;
   final bool isDark;
 
   @override
@@ -560,9 +566,40 @@ class _ReviewsCard extends StatelessWidget {
                 ),
               ),
             )
-          else
+          else ...[
             ...reviews
                 .map((review) => _ReviewRow(review: review, isDark: isDark)),
+            if (hasMore)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Center(
+                  child: isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.primary,
+                          ),
+                        )
+                      : TextButton(
+                          onPressed: () {
+                            context.read<TaskExpertBloc>().add(
+                                  TaskExpertLoadServiceReviews(serviceId,
+                                      loadMore: true),
+                                );
+                          },
+                          child: Text(
+                            context.l10n.commonLoadMore,
+                            style: const TextStyle(
+                              color: AppColors.primary,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                ),
+              ),
+          ],
         ],
       ),
     );

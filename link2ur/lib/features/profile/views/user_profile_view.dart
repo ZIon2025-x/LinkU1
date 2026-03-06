@@ -580,7 +580,7 @@ class _UserProfileViewState extends State<UserProfileView> {
 
                     // 任务类型
                     DropdownButtonFormField<String>(
-                      value: selectedTaskType,
+                      initialValue: selectedTaskType,
                       decoration: InputDecoration(
                         labelText: l10n.profileDirectRequestHintTaskType,
                         border: OutlineInputBorder(
