@@ -213,6 +213,7 @@ class Task(Base):
     paid_to_user_id = Column(String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)  # 删除用户时设为NULL
     stripe_dispute_frozen = Column(Integer, default=0)  # 1=因Stripe争议冻结，禁止转账; 0=正常
     is_public = Column(Integer, default=1)  # 1=public, 0=private (仅自己可见)
+    taker_public = Column(Integer, default=1)  # 1=public, 0=private (接单者主页可见性)
     visibility = Column(String(20), default="public")  # public, private
     images = Column(Text, nullable=True)  # JSON数组存储图片URL列表
     points_reward = Column(BigInteger, nullable=True)  # 任务完成奖励积分（可选，如果设置则覆盖系统默认值）

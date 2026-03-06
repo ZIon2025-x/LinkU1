@@ -400,6 +400,7 @@ class TaskOut(TaskBase):
     confirmation_reminder_sent: Optional[int] = 0  # 提醒状态位掩码
     confirmation_remaining_seconds: Optional[int] = None  # 计算字段：剩余确认时间（秒），仅当 status=pending_confirmation 时有效
     is_public: Optional[int] = 1  # 1=public, 0=private (仅自己可见)
+    taker_public: Optional[int] = 1  # 1=public, 0=private (接单者主页可见性)
     images: Optional[List[str]] = None  # 图片URL列表
     points_reward: Optional[int] = None  # 任务完成奖励积分（可选，如果设置则覆盖系统默认值）
     is_flexible: Optional[int] = 0  # 是否灵活时间（1=灵活，无截止日期；0=有截止日期）
@@ -623,6 +624,7 @@ class TaskOut(TaskBase):
             "task_level": obj.task_level,
             "created_at": obj.created_at,
             "is_public": obj.is_public,
+            "taker_public": getattr(obj, 'taker_public', 1),
             "images": images_list,
             "points_reward": obj.points_reward,
             "is_flexible": obj.is_flexible,
