@@ -176,6 +176,8 @@ class _TaskDetailContent extends StatelessWidget {
             'counter_offer_accepted' => l10n.taskDetailCounterOfferAccepted,
             'counter_offer_rejected' => l10n.taskDetailCounterOfferRejected,
             'counter_offer_respond_failed' => l10n.actionOperationFailed,
+            'visibility_updated' => l10n.taskDetailVisibilityUpdated,
+            'visibility_update_failed' => l10n.taskDetailVisibilityUpdateFailed,
             _ => state.actionMessage ?? '',
           };
           final isError = state.actionMessage!.contains('failed') ||
@@ -568,11 +570,25 @@ class _TaskDetailContent extends StatelessWidget {
                   ),
                 ],
 
+                // 主页展示开关 (已完成 + 当事人)
+                if (task.status == AppConstants.taskStatusCompleted &&
+                    (isPoster || isTaker)) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  AnimatedListItem(
+                    index: 5,
+                    child: _ProfileVisibilityCard(
+                      task: task,
+                      isPoster: isPoster,
+                      isDark: isDark,
+                    ),
+                  ),
+                ],
+
                 // 对方信息卡片 — 仅与任务相关的用户可见
                 if (isPoster || isTaker) ...[
                   const SizedBox(height: AppSpacing.md),
                   AnimatedListItem(
-                    index: 5,
+                    index: 6,
                     child: _CounterpartyCard(
                       task: task,
                       isPoster: isPoster,
@@ -1135,6 +1151,69 @@ class _CounterOfferDialogState extends State<_CounterOfferDialog> {
           child: Text(context.l10n.actionsConfirm),
         ),
       ],
+    );
+  }
+}
+
+// ============================================================
+// 主页展示开关卡片
+// ============================================================
+
+class _ProfileVisibilityCard extends StatelessWidget {
+  const _ProfileVisibilityCard({
+    required this.task,
+    required this.isPoster,
+    required this.isDark,
+  });
+
+  final Task task;
+  final bool isPoster;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    final isVisible = isPoster ? task.isPublic == 1 : task.takerPublic == 1;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppColors.cardBackgroundDark
+            : AppColors.cardBackgroundLight,
+        borderRadius: AppRadius.allLarge,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: SwitchListTile(
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.xs,
+        ),
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.allLarge),
+        title: Text(
+          context.l10n.taskDetailShowOnProfile,
+          style: AppTypography.bodyBold,
+        ),
+        subtitle: Text(
+          context.l10n.taskDetailShowOnProfileDesc,
+          style: AppTypography.caption.copyWith(
+            color: isDark
+                ? AppColors.textSecondaryDark
+                : AppColors.textSecondaryLight,
+          ),
+        ),
+        value: isVisible,
+        onChanged: (value) {
+          context.read<TaskDetailBloc>().add(
+                TaskDetailToggleProfileVisibility(isPublic: value),
+              );
+        },
+      ),
     );
   }
 }
