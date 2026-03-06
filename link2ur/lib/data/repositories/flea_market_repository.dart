@@ -127,6 +127,17 @@ class FleaMarketRepository {
         cancelToken: cancelToken,
       );
 
+      // 410 Gone — 商品已删除/已下架
+      if (response.statusCode == 410) {
+        await _cache.remove(cacheKey);
+        throw const FleaMarketException('flea_market_item_deleted');
+      }
+      // 404 — 商品不存在
+      if (response.statusCode == 404) {
+        await _cache.remove(cacheKey);
+        throw const FleaMarketException('flea_market_item_not_found');
+      }
+
       if (!response.isSuccess || response.data == null) {
         throw FleaMarketException(response.message ?? '获取商品详情失败');
       }
@@ -134,6 +145,7 @@ class FleaMarketRepository {
       await _cache.set(cacheKey, response.data!, ttl: CacheManager.defaultTTL);
       return FleaMarketItem.fromJson(response.data!);
     } catch (e) {
+      if (e is FleaMarketException) rethrow;
       final stale = _cache.getStale<Map<String, dynamic>>(cacheKey);
       if (stale != null) return FleaMarketItem.fromJson(stale);
       rethrow;

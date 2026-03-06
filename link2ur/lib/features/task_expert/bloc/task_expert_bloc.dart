@@ -187,6 +187,16 @@ class TaskExpertLoadMyExpertApplicationStatus extends TaskExpertEvent {
   const TaskExpertLoadMyExpertApplicationStatus();
 }
 
+/// 申请成为任务达人 — 对标 iOS TaskExpertApplyView.submitApplication
+class TaskExpertApplyToBeExpert extends TaskExpertEvent {
+  const TaskExpertApplyToBeExpert({this.message});
+
+  final String? message;
+
+  @override
+  List<Object?> get props => [message];
+}
+
 // ==================== State ====================
 
 enum TaskExpertStatus { initial, loading, loaded, error }
@@ -387,6 +397,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     on<TaskExpertRejectApplication>(_onRejectApplication);
     on<TaskExpertCounterOffer>(_onCounterOffer);
     on<TaskExpertLoadMyExpertApplicationStatus>(_onLoadMyExpertApplicationStatus);
+    on<TaskExpertApplyToBeExpert>(_onApplyToBeExpert);
   }
 
   final TaskExpertRepository _taskExpertRepository;
@@ -899,6 +910,39 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
       emit(state.copyWith(myExpertApplicationStatus: result));
     } catch (e) {
       AppLogger.error('Failed to load my expert application status', e);
+    }
+  }
+
+  /// 申请成为任务达人 — 对标 iOS TaskExpertApplyView.submitApplication
+  Future<void> _onApplyToBeExpert(
+    TaskExpertApplyToBeExpert event,
+    Emitter<TaskExpertState> emit,
+  ) async {
+    if (state.isSubmitting) return;
+    emit(state.copyWith(isSubmitting: true));
+
+    try {
+      await _taskExpertRepository.applyToBeExpert(
+        applicationData: {
+          if (event.message != null && event.message!.isNotEmpty)
+            'application_message': event.message,
+        },
+      );
+
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'expert_application_submitted',
+      ));
+
+      // 自动刷新申请状态
+      add(const TaskExpertLoadMyExpertApplicationStatus());
+    } catch (e) {
+      AppLogger.error('Failed to apply to be expert', e);
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'expert_application_failed',
+        errorMessage: e.toString(),
+      ));
     }
   }
 }

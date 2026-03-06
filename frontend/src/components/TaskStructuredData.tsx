@@ -60,7 +60,7 @@ const TaskStructuredData: React.FC<TaskStructuredDataProps> = ({ task, language 
       "sameAs": "https://www.link2ur.com",
       "logo": "https://www.link2ur.com/static/logo.png"
     },
-    "applicantLocationRequirements": isOnline ? undefined : {
+    "applicantLocationRequirements": {
       "@type": "Country",
       "name": "GB"
     },

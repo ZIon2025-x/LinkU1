@@ -83,8 +83,11 @@ class WebSocketService extends WidgetsBindingObserver {
       }
 
       // 后端 WebSocket 路径为 /ws/chat/{user_id}，需与 session 中的 user_id 一致
-      final wsUrl = '${AppConfig.instance.wsUrl}/ws/chat/$userId';
-      AppLogger.info('Connecting to WebSocket: $wsUrl');
+      // 后端校验优先级：cookies > query params（session_id / token）
+      // iOS/Dart 不自动带 Cookie，必须通过 query param 传 token
+      final wsUrl =
+          '${AppConfig.instance.wsUrl}/ws/chat/$userId?token=${Uri.encodeComponent(token)}';
+      AppLogger.info('Connecting to WebSocket: ${AppConfig.instance.wsUrl}/ws/chat/$userId');
 
       _channel = ws_config.createWebSocketChannel(
         Uri.parse(wsUrl),

@@ -8163,6 +8163,24 @@ abstract class AppLocalizations {
   /// **'Failed to load item information'**
   String get fleaMarketLoadFailed;
 
+  /// No description provided for @fleaMarketItemDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Listing deleted'**
+  String get fleaMarketItemDeleted;
+
+  /// No description provided for @fleaMarketItemNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Item not found'**
+  String get fleaMarketItemNotFound;
+
+  /// No description provided for @refundNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No refund record found'**
+  String get refundNotFound;
+
   /// No description provided for @fleaMarketProductDetail.
   ///
   /// In en, this message translates to:
@@ -16819,12 +16837,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Are you sure you want to delete this listing? This action cannot be undone.'**
   String get fleaMarketDeleteItemConfirm;
-
-  /// No description provided for @fleaMarketItemDeleted.
-  ///
-  /// In en, this message translates to:
-  /// **'Listing deleted'**
-  String get fleaMarketItemDeleted;
 
   /// No description provided for @taskEvidenceTitle.
   ///

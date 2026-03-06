@@ -4404,6 +4404,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fleaMarketLoadFailed => 'Failed to load item information';
 
   @override
+  String get fleaMarketItemDeleted => 'Listing deleted';
+
+  @override
+  String get fleaMarketItemNotFound => 'Item not found';
+
+  @override
+  String get refundNotFound => 'No refund record found';
+
+  @override
   String get fleaMarketProductDetail => 'Product Detail';
 
   @override
@@ -9127,9 +9136,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get fleaMarketDeleteItemConfirm =>
       'Are you sure you want to delete this listing? This action cannot be undone.';
-
-  @override
-  String get fleaMarketItemDeleted => 'Listing deleted';
 
   @override
   String get taskEvidenceTitle => 'Completion Evidence';

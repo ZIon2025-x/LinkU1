@@ -4237,6 +4237,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get fleaMarketLoadFailed => '加载商品信息失败';
 
   @override
+  String get fleaMarketItemDeleted => '商品已删除';
+
+  @override
+  String get fleaMarketItemNotFound => '商品不存在';
+
+  @override
+  String get refundNotFound => '未找到退款记录';
+
+  @override
   String get fleaMarketProductDetail => '商品详情';
 
   @override
@@ -8781,9 +8790,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get fleaMarketDeleteItemConfirm => '确定要删除这个商品吗？此操作不可撤销。';
 
   @override
-  String get fleaMarketItemDeleted => '商品已删除';
-
-  @override
   String get taskEvidenceTitle => '完成证据';
 
   @override
@@ -13240,6 +13246,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get fleaMarketLoadFailed => '加載商品信息失敗';
+
+  @override
+  String get fleaMarketItemDeleted => '商品已刪除';
+
+  @override
+  String get fleaMarketItemNotFound => '商品不存在';
+
+  @override
+  String get refundNotFound => '未找到退款記錄';
 
   @override
   String get fleaMarketProductDetail => '商品詳情';
@@ -17784,9 +17799,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get fleaMarketDeleteItemConfirm => '確定要刪除這個商品嗎？此操作不可撤銷。';
-
-  @override
-  String get fleaMarketItemDeleted => '商品已刪除';
 
   @override
   String get taskEvidenceTitle => '完成證據';

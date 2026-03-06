@@ -130,6 +130,7 @@ class LeaderboardRepository {
   }
 
   /// 投票
+  /// 后端参数全部为 Query（非 body）
   Future<Map<String, dynamic>> voteItem(
     int itemId, {
     required String voteType,
@@ -138,7 +139,7 @@ class LeaderboardRepository {
   }) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.leaderboardItemVote(itemId),
-      data: {
+      queryParameters: {
         'vote_type': voteType,
         if (comment != null) 'comment': comment,
         'is_anonymous': isAnonymous,

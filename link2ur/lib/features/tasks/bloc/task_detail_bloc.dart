@@ -493,13 +493,20 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
 
     try {
       final raw = await _taskRepository.getRefundStatus(_taskId!);
+      if (raw == null) {
+        // 无退款记录（404）→ 清空
+        emit(state.copyWith(
+          isLoadingRefundStatus: false,
+          clearRefundRequest: true,
+        ));
+        return;
+      }
       final refund = RefundRequest.fromJson(raw);
       emit(state.copyWith(
         refundRequest: refund,
         isLoadingRefundStatus: false,
       ));
     } catch (e) {
-      // 没有退款记录时可能 404 → 清空即可
       emit(state.copyWith(
         isLoadingRefundStatus: false,
         clearRefundRequest: true,
@@ -923,12 +930,20 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       );
       // 重新加载退款状态
       final raw = await _taskRepository.getRefundStatus(_taskId!);
-      final refund = RefundRequest.fromJson(raw);
-      emit(state.copyWith(
-        refundRequest: refund,
-        isSubmitting: false,
-        actionMessage: 'dispute_submitted',
-      ));
+      if (raw != null) {
+        final refund = RefundRequest.fromJson(raw);
+        emit(state.copyWith(
+          refundRequest: refund,
+          isSubmitting: false,
+          actionMessage: 'dispute_submitted',
+        ));
+      } else {
+        emit(state.copyWith(
+          isSubmitting: false,
+          actionMessage: 'dispute_submitted',
+          clearRefundRequest: true,
+        ));
+      }
     } catch (e) {
       AppLogger.error('Failed to submit rebuttal', e);
       emit(state.copyWith(

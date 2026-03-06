@@ -140,8 +140,7 @@ const ExpertManagement: React.FC = () => {
   const [detailExpert, setDetailExpert] = useState<any>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [serviceImageUploading, setServiceImageUploading] = useState<number | null>(null);
-  const [serviceStatusFilter, setServiceStatusFilter] = useState<string>('');
-  const [activityStatusFilter, setActivityStatusFilter] = useState<string>('');
+  // Status filters use useAdminTable's built-in filters to avoid stale closure on refresh
 
   // ==================== 达人列表 ====================
   const fetchExperts = useCallback(async ({ page, pageSize }: { page: number; pageSize: number }) => {
@@ -192,14 +191,14 @@ const ExpertManagement: React.FC = () => {
   });
 
   // ==================== 服务管理 ====================
-  const fetchServices = useCallback(async ({ page, pageSize }: { page: number; pageSize: number }) => {
+  const fetchServices = useCallback(async ({ page, pageSize, filters }: { page: number; pageSize: number; filters?: Record<string, any> }) => {
     const res = await getAllExpertServicesAdmin({
       page,
       limit: pageSize,
-      ...(serviceStatusFilter ? { status_filter: serviceStatusFilter } : {}),
+      ...(filters?.status_filter ? { status_filter: filters.status_filter } : {}),
     });
     return { data: res.items || [], total: res.total || 0 };
-  }, [serviceStatusFilter]);
+  }, []);
   const servicesTable = useAdminTable<any>({
     fetchData: fetchServices,
     initialPageSize: 20,
@@ -208,14 +207,14 @@ const ExpertManagement: React.FC = () => {
   });
 
   // ==================== 活动管理 ====================
-  const fetchActivities = useCallback(async ({ page, pageSize }: { page: number; pageSize: number }) => {
+  const fetchActivities = useCallback(async ({ page, pageSize, filters }: { page: number; pageSize: number; filters?: Record<string, any> }) => {
     const res = await getAllExpertActivitiesAdmin({
       page,
       limit: pageSize,
-      ...(activityStatusFilter ? { status_filter: activityStatusFilter } : {}),
+      ...(filters?.status_filter ? { status_filter: filters.status_filter } : {}),
     });
     return { data: res.items || [], total: res.total || 0 };
-  }, [activityStatusFilter]);
+  }, []);
   const activitiesTable = useAdminTable<any>({
     fetchData: fetchActivities,
     initialPageSize: 20,
@@ -897,10 +896,9 @@ const ExpertManagement: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
             <span>状态筛选：</span>
             <Select
-              value={serviceStatusFilter || undefined}
+              value={servicesTable.filters.status_filter || undefined}
               onChange={(v) => {
-                setServiceStatusFilter(v ?? '');
-                servicesTable.refresh();
+                servicesTable.setFilters({ status_filter: v ?? '' });
               }}
               options={SERVICE_STATUS_OPTIONS}
               style={{ width: 120 }}
@@ -933,10 +931,9 @@ const ExpertManagement: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
             <span>状态筛选：</span>
             <Select
-              value={activityStatusFilter || undefined}
+              value={activitiesTable.filters.status_filter || undefined}
               onChange={(v) => {
-                setActivityStatusFilter(v ?? '');
-                activitiesTable.refresh();
+                activitiesTable.setFilters({ status_filter: v ?? '' });
               }}
               options={ACTIVITY_STATUS_OPTIONS}
               style={{ width: 120 }}
@@ -1382,8 +1379,10 @@ const ExpertManagement: React.FC = () => {
                 onChange={(e) => serviceEditModal.updateField('status', e.target.value)}
                 style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
               >
-                <option value="active">启用</option>
-                <option value="inactive">停用</option>
+                <option value="pending">待审核</option>
+                <option value="active">已上架</option>
+                <option value="rejected">已拒绝</option>
+                <option value="inactive">已下架</option>
               </select>
             </div>
             <div style={{ flex: 1 }}>
@@ -1445,7 +1444,9 @@ const ExpertManagement: React.FC = () => {
                 onChange={(e) => activityEditModal.updateField('status', e.target.value)}
                 style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
               >
+                <option value="pending_review">待审核</option>
                 <option value="open">开放</option>
+                <option value="rejected">已拒绝</option>
                 <option value="closed">已关闭</option>
                 <option value="cancelled">已取消</option>
                 <option value="completed">已完成</option>

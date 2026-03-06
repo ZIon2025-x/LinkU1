@@ -68,6 +68,12 @@ class ErrorLocalizer {
         return context.l10n.errorRequestFailedGeneric;
       case 'flea_market_error_invalid_item_id':
         return context.l10n.errorInvalidInput;
+      case 'flea_market_item_deleted':
+        return context.l10n.fleaMarketItemDeleted;
+      case 'flea_market_item_not_found':
+        return context.l10n.fleaMarketItemNotFound;
+      case 'refund_not_found':
+        return context.l10n.refundNotFound;
       case 'customer_service_no_available_agent':
         return context.l10n.errorSomethingWentWrong;
       case 'ai_chat_load_conversations_failed':

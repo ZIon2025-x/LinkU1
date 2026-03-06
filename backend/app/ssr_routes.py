@@ -203,7 +203,15 @@ def generate_html(
     # 生成结构化数据JSON（json.dumps 已自动转义特殊字符）
     structured_data_json = ""
     if structured_data:
-        structured_data_json = f'<script type="application/ld+json">{json.dumps(structured_data, ensure_ascii=False)}</script>'
+        # 移除值为 None 的字段，避免输出 null
+        def _remove_none(obj):
+            if isinstance(obj, dict):
+                return {k: _remove_none(v) for k, v in obj.items() if v is not None}
+            if isinstance(obj, list):
+                return [_remove_none(i) for i in obj]
+            return obj
+        cleaned_data = _remove_none(structured_data)
+        structured_data_json = f'<script type="application/ld+json">{json.dumps(cleaned_data, ensure_ascii=False)}</script>'
     
     # 如果没有提供body内容，生成默认内容（title/description 已转义）
     if not body_content:
@@ -616,6 +624,7 @@ async def ssr_task_detail(
     </main>'''
         
         # 构建结构化数据
+        is_online = not task.location or "online" in (task.location or "").lower()
         structured_data = {
             "@context": "https://schema.org",
             "@type": "JobPosting",
@@ -632,16 +641,25 @@ async def ssr_task_detail(
             "hiringOrganization": {
                 "@type": "Organization",
                 "name": "Link²Ur",
-                "sameAs": "https://www.link2ur.com"
+                "sameAs": "https://www.link2ur.com",
+                "logo": "https://www.link2ur.com/static/logo.png"
+            },
+            "applicantLocationRequirements": {
+                "@type": "Country",
+                "name": "GB"
             },
             "jobLocation": {
                 "@type": "Place",
                 "address": {
                     "@type": "PostalAddress",
+                    "addressCountry": "GB"
+                } if is_online else {
+                    "@type": "PostalAddress",
                     "addressLocality": task.location or "London",
                     "addressCountry": "GB"
                 }
             },
+            "jobLocationType": "TELECOMMUTE" if is_online else None,
             "baseSalary": {
                 "@type": "MonetaryAmount",
                 "currency": "GBP",

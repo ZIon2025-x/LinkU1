@@ -303,20 +303,23 @@ const FleaMarketItemDetail: React.FC = () => {
         twitterTitle={item.title}
         twitterDescription={seoDescription}
         twitterImage={item.images?.[0] || `https://www.link2ur.com/static/favicon.png`}
+        noindex={!isActive}
       />
-      <FleaMarketStructuredData 
-        item={{
-          id: parseInt(item.id),
-          title: item.title,
-          description: item.description,
-          price: item.price,
-          images: item.images || [],
-          location: item.location || '',
-          category: item.category || '',
-          created_at: item.created_at
-        }}
-        language={language}
-      />
+      {isActive && (
+        <FleaMarketStructuredData
+          item={{
+            id: parseInt(item.id),
+            title: item.title,
+            description: item.description,
+            price: item.price,
+            images: item.images || [],
+            location: item.location || '',
+            category: item.category || '',
+            created_at: item.created_at
+          }}
+          language={language}
+        />
+      )}
       <HreflangManager type="flea-market" id={parseInt(item.id)} />
       <BreadcrumbStructuredData items={breadcrumbItems} />
       

@@ -137,49 +137,231 @@ class TaskExpertsIntroView extends StatelessWidget {
             const SizedBox(height: AppSpacing.xl),
 
             // ========== 申请按钮（对标iOS: gradient / primary button）==========
-            SizedBox(
-              height: 52,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: isAuthenticated
-                      ? const LinearGradient(
-                          colors: AppColors.gradientPrimary,
-                        )
-                      : null,
-                  color: isAuthenticated ? null : AppColors.primary,
-                  borderRadius: BorderRadius.circular(AppRadius.large),
-                ),
-                child: ElevatedButton(
-                  onPressed: () {
-                    if (isAuthenticated) {
-                      context.push('/task-experts');
-                    } else {
-                      context.push('/login');
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    shadowColor: Colors.transparent,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(AppRadius.large),
+            BlocBuilder<TaskExpertBloc, TaskExpertState>(
+              buildWhen: (p, c) =>
+                  p.myExpertApplicationStatus != c.myExpertApplicationStatus,
+              builder: (ctx, state) {
+                final app = state.myExpertApplicationStatus;
+                final status = app?['status'] as String?;
+                // 已有pending/approved申请时禁用按钮
+                final canApply = isAuthenticated &&
+                    status != 'pending' &&
+                    status != 'approved';
+
+                return SizedBox(
+                  height: 52,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: canApply
+                          ? const LinearGradient(
+                              colors: AppColors.gradientPrimary,
+                            )
+                          : null,
+                      color: canApply ? null : AppColors.primary.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(AppRadius.large),
+                    ),
+                    child: ElevatedButton(
+                      onPressed: canApply
+                          ? () => _showApplySheet(ctx)
+                          : (!isAuthenticated
+                              ? () => context.push('/login')
+                              : null),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppRadius.large),
+                        ),
+                      ),
+                      child: Text(
+                        isAuthenticated
+                            ? l10n.taskExpertApplyNow
+                            : l10n.taskExpertLoginToApply,
+                        style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w600),
+                      ),
                     ),
                   ),
-                  child: Text(
-                    isAuthenticated
-                        ? l10n.taskExpertApplyNow
-                        : l10n.taskExpertLoginToApply,
-                    style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ),
+                );
+              },
             ),
             const SizedBox(height: AppSpacing.xl),
           ],
         ),
       ),
+      ),
+    );
+  }
+}
+
+/// 显示申请达人的底部弹窗
+void _showApplySheet(BuildContext context) {
+  final bloc = context.read<TaskExpertBloc>();
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (_) => BlocProvider.value(
+      value: bloc,
+      child: const _ExpertApplySheet(),
+    ),
+  );
+}
+
+/// 申请成为达人的表单弹窗（对标 iOS TaskExpertApplyView）
+class _ExpertApplySheet extends StatefulWidget {
+  const _ExpertApplySheet();
+
+  @override
+  State<_ExpertApplySheet> createState() => _ExpertApplySheetState();
+}
+
+class _ExpertApplySheetState extends State<_ExpertApplySheet> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final message = _controller.text.trim();
+    if (message.isEmpty) return;
+    context.read<TaskExpertBloc>().add(
+          TaskExpertApplyToBeExpert(message: message),
+        );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return BlocListener<TaskExpertBloc, TaskExpertState>(
+      listenWhen: (p, c) => p.actionMessage != c.actionMessage,
+      listener: (ctx, state) {
+        if (state.actionMessage == 'expert_application_submitted') {
+          Navigator.of(ctx).pop();
+          showDialog<void>(
+            context: ctx,
+            builder: (dialogCtx) => AlertDialog(
+              title: Text(l10n.taskExpertApplicationSubmitted),
+              content: Text(l10n.taskExpertApplicationSubmittedMessage),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogCtx).pop(),
+                  child: Text(l10n.commonOk),
+                ),
+              ],
+            ),
+          );
+        } else if (state.actionMessage == 'expert_application_failed') {
+          ScaffoldMessenger.of(ctx).showSnackBar(
+            SnackBar(content: Text(state.errorMessage ?? l10n.errorUnknown)),
+          );
+        }
+      },
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: AppSpacing.md,
+          right: AppSpacing.md,
+          top: AppSpacing.md,
+          bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.md,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // 标题栏
+            Row(
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(l10n.commonCancel),
+                ),
+                Expanded(
+                  child: Text(
+                    l10n.taskExpertApplyTitle,
+                    style: AppTypography.title3,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                const SizedBox(width: 64), // 平衡取消按钮的宽度
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+            // 说明
+            Text(
+              l10n.taskExpertApplicationInfo,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            // 输入框
+            TextField(
+              controller: _controller,
+              maxLines: 6,
+              maxLength: 500,
+              decoration: InputDecoration(
+                hintText: l10n.taskExpertApplicationHint,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.medium),
+                ),
+              ),
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            // 提交按钮
+            BlocBuilder<TaskExpertBloc, TaskExpertState>(
+              buildWhen: (p, c) => p.isSubmitting != c.isSubmitting,
+              builder: (ctx, state) {
+                final canSubmit =
+                    _controller.text.trim().isNotEmpty && !state.isSubmitting;
+                return SizedBox(
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: canSubmit ? _submit : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(AppRadius.medium),
+                      ),
+                    ),
+                    child: state.isSubmitting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Text(
+                            l10n.taskExpertSubmitApplication,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }

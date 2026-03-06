@@ -14,15 +14,19 @@ interface FleaMarketStructuredDataProps {
   language: string;
 }
 
+const FALLBACK_IMAGE = "https://www.link2ur.com/static/favicon.png";
+
 const FleaMarketStructuredData: React.FC<FleaMarketStructuredDataProps> = ({ item, language }) => {
+  const imageList = item.images && item.images.length > 0
+    ? item.images.map(img => img.startsWith('http') ? img : `https://www.link2ur.com${img}`)
+    : [FALLBACK_IMAGE];
+
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "Product",
     "name": item.title,
     "description": item.description,
-    "image": item.images.map(img => 
-      img.startsWith('http') ? img : `https://www.link2ur.com${img}`
-    ),
+    "image": imageList,
     "url": `https://www.link2ur.com/${language}/flea-market/${item.id}`, // 新增：商品URL
     "sku": `FM-${item.id}`,  // 商品SKU（提升富媒体展示概率）
     "mpn": `FM-${item.id}`,  // 制造商零件号（Google 更喜欢同时有 mpn 和 sku）

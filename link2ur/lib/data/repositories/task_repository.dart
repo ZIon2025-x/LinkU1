@@ -715,10 +715,16 @@ class TaskRepository {
   }
 
   /// 获取退款状态
-  Future<Map<String, dynamic>> getRefundStatus(int taskId) async {
+  /// 返回 null 表示无退款记录（404）
+  Future<Map<String, dynamic>?> getRefundStatus(int taskId) async {
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.refundStatus(taskId),
     );
+
+    // 404 — 任务不存在或无退款记录，返回 null 而非抛异常
+    if (response.statusCode == 404) {
+      return null;
+    }
 
     if (!response.isSuccess || response.data == null) {
       throw TaskException(response.message ?? '获取退款状态失败');
