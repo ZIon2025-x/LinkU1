@@ -73,8 +73,6 @@ from app.utils.time_utils import get_utc_time, format_iso_utc, file_timestamp_to
 from app.config import Config
 from app.flea_market_constants import FLEA_MARKET_CATEGORIES, AUTO_DELETE_DAYS
 from app.flea_market_extensions import (
-    contains_sensitive_words,
-    filter_sensitive_words,
     send_purchase_request_notification,
     send_purchase_accepted_notification,
     send_direct_purchase_notification,
@@ -84,6 +82,7 @@ from app.flea_market_extensions import (
     get_cache_key_for_item_detail,
     invalidate_item_cache
 )
+from app.content_filter.filter_service import check_content, create_review
 
 logger = logging.getLogger(__name__)
 
@@ -805,21 +804,22 @@ async def create_flea_market_item(
                 detail="最多只能上传5张图片"
             )
         
-        # 敏感词过滤
-        if contains_sensitive_words(item_data.title) or contains_sensitive_words(item_data.description):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="商品标题或描述包含敏感词，请修改后重试"
-            )
-        
-        # 过滤敏感词
-        filtered_title = filter_sensitive_words(item_data.title)
-        filtered_description = filter_sensitive_words(item_data.description)
-        
+        # Content filtering
+        title_result = await check_content(db, item_data.title, "flea_market", current_user.id)
+        desc_result = await check_content(db, item_data.description, "flea_market", current_user.id)
+
+        filter_actions = [title_result.action, desc_result.action]
+        final_action = "review" if "review" in filter_actions else ("mask" if "mask" in filter_actions else "pass")
+
+        if title_result.action == "mask":
+            item_data.title = title_result.cleaned_text
+        if desc_result.action == "mask":
+            item_data.description = desc_result.cleaned_text
+
         # 创建商品
         new_item = models.FleaMarketItem(
-            title=filtered_title,
-            description=filtered_description,
+            title=item_data.title,
+            description=item_data.description,
             price=item_data.price,
             currency="GBP",
             images=json.dumps(item_data.images) if item_data.images else None,
@@ -837,7 +837,16 @@ async def create_flea_market_item(
         db.add(new_item)
         await db.commit()
         await db.refresh(new_item)
-        
+
+        # Content filter: handle review / visibility
+        if final_action == "review":
+            new_item.is_visible = False
+            combined_matched = title_result.matched_words + desc_result.matched_words
+            await create_review(db, "flea_market", new_item.id, current_user.id,
+                               f"[title]{item_data.title}[desc]{item_data.description}", combined_matched)
+            await db.commit()
+            await db.refresh(new_item)
+
         # 移动临时图片到正式目录并更新URL（使用图片上传服务）
         if item_data.images:
             try:

@@ -20,6 +20,7 @@ from app.csrf import csrf_cookie_bearer
 from app.security import cookie_bearer
 from app.rate_limiting import rate_limit
 from app.utils.time_utils import format_iso_utc
+from app.content_filter.filter_service import check_content, create_review
 
 logger = logging.getLogger(__name__)
 
@@ -540,15 +541,38 @@ async def create_task_async(
                     detail='您的学生认证已过期，请先续期后再发布"校园生活"类型的任务'
                 )
 
+        # Content filtering
+        title_result = await check_content(db, task.title, "task", current_user.id)
+        desc_result = await check_content(db, task.description, "task", current_user.id)
+
+        filter_actions = [title_result.action, desc_result.action]
+        final_action = "review" if "review" in filter_actions else ("mask" if "mask" in filter_actions else "pass")
+
+        if title_result.action == "mask":
+            task.title = title_result.cleaned_text
+        if desc_result.action == "mask":
+            task.description = desc_result.cleaned_text
+
         logger.debug("开始创建任务，用户ID: %s", current_user.id)
         logger.debug("任务数据: %s", task)
-        
+
         db_task = await async_crud.async_task_crud.create_task(
             db, task, current_user.id
         )
         
         logger.debug("任务创建成功，任务ID: %s", db_task.id)
-        
+
+        # Content filter: handle review / visibility
+        content_masked = "mask" in filter_actions
+        under_review = final_action == "review"
+
+        if under_review:
+            db_task.is_visible = False
+            combined_matched = title_result.matched_words + desc_result.matched_words
+            await create_review(db, "task", db_task.id, current_user.id,
+                               f"[title]{task.title}[desc]{task.description}", combined_matched)
+            await db.flush()
+
         # 迁移临时图片到正式的任务ID文件夹（使用图片上传服务）
         if task.images and len(task.images) > 0:
             try:
@@ -633,7 +657,9 @@ async def create_task_async(
             "task_level": db_task.task_level,
             "created_at": format_iso_utc(db_task.created_at) if db_task.created_at else None,
             "is_public": int(db_task.is_public) if db_task.is_public is not None else 1,
-            "images": images_list  # 返回图片列表
+            "images": images_list,  # 返回图片列表
+            "content_masked": content_masked,
+            "under_review": under_review,
         }
         
         logger.debug("准备返回结果: %s", result)

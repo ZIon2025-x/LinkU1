@@ -21,6 +21,7 @@ from app.utils.time_utils import get_utc_time
 from app.performance_monitor import measure_api_performance
 from app.cache import cache_response
 from app.push_notification_service import send_push_notification_async_safe
+from app.content_filter.filter_service import check_content, create_review
 
 logger = logging.getLogger(__name__)
 
@@ -2917,7 +2918,20 @@ async def create_post(
             detail="您最近5分钟内已发布过相同标题的帖子，请勿重复发布",
             headers={"X-Error-Code": "DUPLICATE_POST"}
         )
-    
+
+    # Content filtering
+    filter_user_id = current_user.id if current_user else admin_user.id
+    title_result = await check_content(db, post.title, "forum_post", filter_user_id)
+    content_result = await check_content(db, post.content, "forum_post", filter_user_id)
+
+    filter_actions = [title_result.action, content_result.action]
+    final_action = "review" if "review" in filter_actions else ("mask" if "mask" in filter_actions else "pass")
+
+    if title_result.action == "mask":
+        post.title = title_result.cleaned_text
+    if content_result.action == "mask":
+        post.content = content_result.cleaned_text
+
     # 验证板块是否存在并检查权限
     # 对于学校板块，需要学生认证；对于普通板块，所有用户都可以发帖
     category_result = await db.execute(
@@ -3013,7 +3027,15 @@ async def create_post(
         )
     db.add(db_post)
     await db.flush()
-    
+
+    # Content filter: handle review / visibility
+    if final_action == "review":
+        db_post.is_visible = False
+        combined_matched = title_result.matched_words + content_result.matched_words
+        await create_review(db, "forum_post", db_post.id, filter_user_id,
+                           f"[title]{post.title}[content]{post.content}", combined_matched)
+        await db.flush()
+
     # 如果有图片，移动临时图片到永久路径
     if post_images:
         try:
@@ -4125,7 +4147,14 @@ async def create_reply(
             detail="您最近2分钟内已在该帖子下发过相同内容的回复，请勿重复发布",
             headers={"X-Error-Code": "DUPLICATE_REPLY"}
         )
-    
+
+    # Content filtering
+    reply_filter_user_id = current_user.id if current_user else admin_user.id
+    content_result = await check_content(db, reply.content, "forum_reply", reply_filter_user_id)
+
+    if content_result.action == "mask":
+        reply.content = content_result.cleaned_text
+
     # 获取帖子（使用权限检查函数）
     post = await get_post_with_permissions(post_id, current_user, is_admin_user, db, admin_user)
     
@@ -4182,7 +4211,14 @@ async def create_reply(
     )
     db.add(db_reply)
     await db.flush()
-    
+
+    # Content filter: handle review / visibility
+    if content_result.action == "review":
+        db_reply.is_visible = False
+        await create_review(db, "forum_reply", db_reply.id, reply_filter_user_id,
+                           reply.content, content_result.matched_words)
+        await db.flush()
+
     # 更新帖子统计（仅当回复可见时）
     if db_reply.is_deleted == False and db_reply.is_visible == True:
         post.reply_count += 1
