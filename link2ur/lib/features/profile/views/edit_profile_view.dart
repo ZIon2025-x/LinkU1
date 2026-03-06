@@ -256,6 +256,7 @@ class _EditProfileContentState extends State<_EditProfileContent> {
               state.actionMessage == 'phone_code_sent';
 
           if (isAvatarUpdated) {
+            setState(() { _selectedImageFile = null; });
             AppFeedback.showSuccess(context, l10n.profileAvatarUpdated);
           } else if (isCodeSent) {
             final message = state.actionMessage == 'email_code_sent'
@@ -263,12 +264,7 @@ class _EditProfileContentState extends State<_EditProfileContent> {
                 : l10n.profilePhoneCodeSent;
             AppFeedback.showSuccess(context, message);
           } else if (isSuccess) {
-            final message = switch (state.actionMessage) {
-              'profile_updated' => l10n.profileUpdated,
-              'avatar_updated' => l10n.profileAvatarUpdated,
-              _ => state.actionMessage!,
-            };
-            AppFeedback.showSuccess(context, message);
+            AppFeedback.showSuccess(context, l10n.profileUpdated);
             if (!state.isUpdating) {
               context.pop();
             }
