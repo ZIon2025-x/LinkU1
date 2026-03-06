@@ -15,7 +15,7 @@ class Review extends Equatable {
 
   final int id;
   final int taskId;
-  final int reviewerId;
+  final String reviewerId;
   final UserBrief? reviewer;
   final double rating;
   final String? comment;
@@ -25,7 +25,7 @@ class Review extends Equatable {
     return Review(
       id: json['id'] as int,
       taskId: json['task_id'] as int,
-      reviewerId: json['reviewer_id'] as int? ?? 0,
+      reviewerId: (json['user_id'] ?? json['reviewer_id'] ?? '').toString(),
       reviewer: json['reviewer'] != null
           ? UserBrief.fromJson(json['reviewer'] as Map<String, dynamic>)
           : null,

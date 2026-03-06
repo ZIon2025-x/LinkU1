@@ -1735,11 +1735,13 @@ class TaskActionButtonsView extends StatelessWidget {
       return const SizedBox.shrink();
     }
     if (!isPoster && !isTaker) return const SizedBox.shrink();
+    // reviews 还在加载时不渲染评价按钮，避免闪烁
+    if (state.isLoadingReviews) return const SizedBox.shrink();
 
     final currentUid = context.read<AuthBloc>().state.user?.id;
     final hasCurrentUserReviewed = state.hasSubmittedReview ||
         (currentUid != null &&
-            state.reviews.any((r) => r.reviewerId.toString() == currentUid));
+            state.reviews.any((r) => r.reviewerId == currentUid));
     if (hasCurrentUserReviewed) {
       return Padding(
         padding: const EdgeInsets.only(bottom: AppSpacing.sm),

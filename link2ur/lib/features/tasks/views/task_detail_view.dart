@@ -568,10 +568,10 @@ class _TaskDetailContent extends StatelessWidget {
                     final myReviewed = state.hasSubmittedReview ||
                         (uid != null &&
                             state.reviews.any(
-                                (r) => r.reviewerId.toString() == uid));
+                                (r) => r.reviewerId == uid));
                     final visibleReviews = state.reviews.where((r) {
                       final isMine =
-                          uid != null && r.reviewerId.toString() == uid;
+                          uid != null && r.reviewerId == uid;
                       return isMine || myReviewed;
                     }).toList();
                     if (visibleReviews.isEmpty) return const SizedBox.shrink();
@@ -941,13 +941,15 @@ class _TaskDetailContent extends StatelessWidget {
     }
 
     // 已完成 + 可评价（reviews 列表 + 本次会话提交标记，覆盖匿名评价）
+    // reviews 还在加载时不渲染评价按钮，避免闪烁
     final currentUid = context.read<AuthBloc>().state.user?.id;
     final hasCurrentUserReviewed = state.hasSubmittedReview ||
         (currentUid != null &&
-            state.reviews.any((r) => r.reviewerId.toString() == currentUid));
+            state.reviews.any((r) => r.reviewerId == currentUid));
     if (task.status == AppConstants.taskStatusCompleted &&
         (isPoster || isTaker) &&
-        !hasCurrentUserReviewed) {
+        !hasCurrentUserReviewed &&
+        !state.isLoadingReviews) {
       return PrimaryButton(
         text: context.l10n.actionsRateTask,
         onPressed: () => _showReviewDialog(context),
