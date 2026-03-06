@@ -7,6 +7,7 @@ import 'package:flutter_stripe/flutter_stripe.dart';
 import '../config/app_config.dart';
 import '../router/app_router.dart';
 
+import '../widgets/external_web_view.dart';
 import 'logger.dart';
 
 /// 深度链接处理器
@@ -133,8 +134,10 @@ class DeepLinkHandler {
           context.go('/');
           break;
         case _DeepLinkRoute.unknown:
-          AppLogger.warning('Deep link - Unknown route: $path, navigating to home');
-          context.go('/');
+          // App 内没有的页面，用 WebView 打开网页版
+          final webUrl = 'https://link2ur.com$rawPath';
+          AppLogger.info('Deep link - Unknown route: $path, opening in WebView: $webUrl');
+          ExternalWebView.openInApp(context, url: webUrl);
           break;
       }
     } catch (e) {
