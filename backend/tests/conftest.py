@@ -68,7 +68,7 @@ def _tables(_engine):
     
     from app.models import Base
 
-    Base.metadata.create_all(bind=_engine)
+    Base.metadata.create_all(bind=_engine, checkfirst=True)
     return _engine
 
 

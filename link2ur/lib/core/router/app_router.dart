@@ -57,6 +57,16 @@ class AppRouter {
     // 监听 AuthBloc 状态变化，自动触发路由重定向（如 Token 失效时跳转登录页）
     refreshListenable: GoRouterBlocRefreshStream(_authBloc.stream),
     redirect: (BuildContext context, GoRouterState state) {
+      final path = state.uri.path;
+
+      // 剥离语言前缀：/zh/tasks/123 → /tasks/123, /en/ → /
+      // 网站使用 /zh/、/en/ 前缀做多语言，但 App 路由没有语言前缀
+      final langMatch = RegExp(r'^/(zh|en|zh-Hant)(/.*)?$').firstMatch(path);
+      if (langMatch != null) {
+        final remaining = langMatch.group(2);
+        return (remaining != null && remaining.isNotEmpty) ? remaining : '/';
+      }
+
       final authState = context.read<AuthBloc>().state;
       final isAuthenticated = authState.isAuthenticated;
       final location = state.matchedLocation;
