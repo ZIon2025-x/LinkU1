@@ -4810,12 +4810,15 @@ def user_profile(
         completion_rate = (completed_tasks_count / taken_tasks_count) * 100
     
     # 只显示已完成且公开的任务，按时间取最近 3 条
+    # 发布者看 is_public，接单者看 taker_public
     recent_tasks_source = (
         db.query(Task)
         .filter(
-            ((Task.poster_id == user_id) | (Task.taker_id == user_id)),
             Task.status == "completed",
-            Task.is_public == 1,
+            (
+                ((Task.poster_id == user_id) & (Task.is_public == 1))
+                | ((Task.taker_id == user_id) & (Task.taker_public == 1))
+            ),
         )
         .order_by(Task.created_at.desc())
         .limit(3)
