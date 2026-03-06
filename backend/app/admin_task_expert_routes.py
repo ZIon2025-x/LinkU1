@@ -94,7 +94,7 @@ async def get_all_expert_services_admin(
                 select(models.TaskExpert).where(models.TaskExpert.id == s.expert_id)
             )
             expert = expert_result.scalar_one_or_none()
-            expert_name = (expert.name if expert else None) or s.expert_id or ""
+            expert_name = (expert.expert_name if expert else None) or s.expert_id or ""
             desc = s.description
             if desc is None:
                 desc = ""
@@ -152,7 +152,7 @@ async def get_all_expert_activities_admin(
                 select(models.TaskExpert).where(models.TaskExpert.id == a.expert_id)
             )
             expert = expert_result.scalar_one_or_none()
-            expert_name = (expert.name if expert else None) or a.expert_id or ""
+            expert_name = (expert.expert_name if expert else None) or a.expert_id or ""
             desc = a.description
             desc_str = (str(desc)[:200] if desc else "")
             items.append({

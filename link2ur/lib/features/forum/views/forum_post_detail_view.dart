@@ -168,7 +168,9 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
               return GestureDetector(
                 onTap: () {
                   final userId = post.author?.id ?? post.authorId;
-                  if (userId.isNotEmpty) context.goToUserProfile(userId);
+                  if (userId.isNotEmpty) {
+                    context.goToUserProfile(userId, isAdmin: post.author?.isAdmin ?? false);
+                  }
                 },
                 child: Row(
                   children: [
@@ -994,7 +996,7 @@ class _ReplyCard extends StatelessWidget {
             onTap: () {
               final userId = reply.author?.id ?? reply.authorId;
               if (userId.isEmpty) return;
-              context.goToUserProfile(userId);
+              context.goToUserProfile(userId, isAdmin: reply.author?.isAdmin ?? false);
             },
             child: Container(
               decoration: BoxDecoration(
@@ -1027,7 +1029,7 @@ class _ReplyCard extends StatelessWidget {
                       onTap: () {
                         final userId = reply.author?.id ?? reply.authorId;
                         if (userId.isEmpty) return;
-                        context.goToUserProfile(userId);
+                        context.goToUserProfile(userId, isAdmin: reply.author?.isAdmin ?? false);
                       },
                       child: Text(
                         reply.author?.name ?? context.l10n.forumUserFallback(reply.authorId),

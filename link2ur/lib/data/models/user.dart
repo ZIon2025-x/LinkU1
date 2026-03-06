@@ -519,12 +519,14 @@ class UserBrief {
     required this.name,
     this.avatar,
     this.isVerified = false,
+    this.isAdmin = false,
   });
 
   final String id;
   final String name;
   final String? avatar;
   final bool isVerified;
+  final bool isAdmin;
 
   factory UserBrief.fromJson(Map<String, dynamic> json) {
     return UserBrief(
@@ -532,6 +534,7 @@ class UserBrief {
       name: json['name'] as String? ?? '',
       avatar: json['avatar'] as String?,
       isVerified: json['is_verified'] as bool? ?? false,
+      isAdmin: json['is_admin'] as bool? ?? false,
     );
   }
 
@@ -541,6 +544,7 @@ class UserBrief {
       name: user.name,
       avatar: user.avatar,
       isVerified: user.isVerified,
+      isAdmin: user.isAdmin,
     );
   }
 }

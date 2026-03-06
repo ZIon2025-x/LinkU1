@@ -81,10 +81,14 @@ extension GoRouterExtension on BuildContext {
     push('/task-chat/$taskId');
   }
 
-  /// 跳转到用户资料
-  void goToUserProfile(String userId) {
+  /// 跳转到用户资料（官方账号跳转到关于我们页面）
+  void goToUserProfile(String userId, {bool isAdmin = false}) {
     if (!_NavigationThrottle.acquire()) return;
-    push('/user/$userId');
+    if (isAdmin) {
+      push('/about');
+    } else {
+      push('/user/$userId');
+    }
   }
 
   /// 跳转到排行榜条目详情
