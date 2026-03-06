@@ -2090,18 +2090,22 @@ def update_task_visibility(
     current_user=Depends(check_user_status),
     db: Session = Depends(get_db),
 ):
-    """更新任务可见性（仅任务发布者可见）"""
+    """更新任务可见性（发布者更新 is_public，接单者更新 taker_public）"""
     task = crud.get_task(db, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
-    if task.poster_id != current_user.id:
+
+    is_public = visibility_update.is_public
+
+    if task.poster_id == current_user.id:
+        task.is_public = is_public
+    elif task.taker_id == current_user.id:
+        task.taker_public = is_public
+    else:
         raise HTTPException(
             status_code=403, detail="Not authorized to update this task"
         )
 
-    is_public = visibility_update.is_public
-
-    task.is_public = is_public
     db.commit()
     db.refresh(task)
     return task
