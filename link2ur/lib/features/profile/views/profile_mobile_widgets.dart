@@ -143,7 +143,7 @@ Widget _buildUserInfoSection(
   );
 }
 
-/// 统计区域 - 3项: 进行中/已完成/信用分 (对齐iOS)
+/// 统计区域 - 3项: 进行中/已完成/信用分 (对齐iOS，仅保留此处一个信用分)
 Widget _buildStatsSection(
     BuildContext context, ProfileState state, User user, bool isDark) {
   final (:inProgress, :completed) = _countTasks(state.myTasks);
