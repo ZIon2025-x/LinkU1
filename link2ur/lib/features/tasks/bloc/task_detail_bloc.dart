@@ -299,6 +299,7 @@ class TaskDetailState extends Equatable {
     this.isLoadingRefundHistory = false,
     this.reviews = const [],
     this.isLoadingReviews = false,
+    this.hasSubmittedReview = false,
   });
 
   final TaskDetailStatus status;
@@ -323,6 +324,8 @@ class TaskDetailState extends Equatable {
   // 评价
   final List<Review> reviews;
   final bool isLoadingReviews;
+  /// 当前会话中是否已提交过评价（覆盖匿名评价不在 reviews 列表中的情况）
+  final bool hasSubmittedReview;
 
   bool get isLoading => status == TaskDetailStatus.loading;
   bool get isLoaded => status == TaskDetailStatus.loaded;
@@ -346,6 +349,7 @@ class TaskDetailState extends Equatable {
     bool? isLoadingRefundHistory,
     List<Review>? reviews,
     bool? isLoadingReviews,
+    bool? hasSubmittedReview,
   }) {
     return TaskDetailState(
       status: status ?? this.status,
@@ -372,6 +376,7 @@ class TaskDetailState extends Equatable {
           isLoadingRefundHistory ?? this.isLoadingRefundHistory,
       reviews: reviews ?? this.reviews,
       isLoadingReviews: isLoadingReviews ?? this.isLoadingReviews,
+      hasSubmittedReview: hasSubmittedReview ?? this.hasSubmittedReview,
     );
   }
 
@@ -392,6 +397,7 @@ class TaskDetailState extends Equatable {
         isLoadingRefundHistory,
         reviews,
         isLoadingReviews,
+        hasSubmittedReview,
       ];
 }
 
@@ -828,6 +834,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
         task: task,
         reviews: reviews,
         isSubmitting: false,
+        hasSubmittedReview: true,
         actionMessage: 'review_submitted',
       ));
     } catch (e) {

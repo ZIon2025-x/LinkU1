@@ -557,17 +557,35 @@ class _TaskDetailContent extends StatelessWidget {
 
                 // 操作按钮已移至 bottomNavigationBar，避免重复显示
 
-                // 评价区域 (已完成 + 有评价)
+                // 评价区域 (已完成 + 有可见评价)
                 if (task.status == AppConstants.taskStatusCompleted &&
                     state.reviews.isNotEmpty) ...[
-                  const SizedBox(height: AppSpacing.md),
-                  AnimatedListItem(
-                    index: 4,
-                    child: TaskReviewsSection(
-                      reviews: state.reviews,
-                      isDark: isDark,
-                    ),
-                  ),
+                  () {
+                    // 可见性规则：
+                    // - 自己的评价始终可见
+                    // - 对方的评价仅在自己已评价后可见
+                    final uid = currentUserId;
+                    final myReviewed = state.hasSubmittedReview ||
+                        (uid != null &&
+                            state.reviews.any(
+                                (r) => r.reviewerId.toString() == uid));
+                    final visibleReviews = state.reviews.where((r) {
+                      final isMine =
+                          uid != null && r.reviewerId.toString() == uid;
+                      return isMine || myReviewed;
+                    }).toList();
+                    if (visibleReviews.isEmpty) return const SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.only(top: AppSpacing.md),
+                      child: AnimatedListItem(
+                        index: 4,
+                        child: TaskReviewsSection(
+                          reviews: visibleReviews,
+                          isDark: isDark,
+                        ),
+                      ),
+                    );
+                  }(),
                 ],
 
                 // 主页展示开关 (已完成 + 当事人)
@@ -922,10 +940,14 @@ class _TaskDetailContent extends StatelessWidget {
       );
     }
 
-    // 已完成 + 可评价
+    // 已完成 + 可评价（reviews 列表 + 本次会话提交标记，覆盖匿名评价）
+    final currentUid = context.read<AuthBloc>().state.user?.id;
+    final hasCurrentUserReviewed = state.hasSubmittedReview ||
+        (currentUid != null &&
+            state.reviews.any((r) => r.reviewerId.toString() == currentUid));
     if (task.status == AppConstants.taskStatusCompleted &&
         (isPoster || isTaker) &&
-        !task.hasReviewed) {
+        !hasCurrentUserReviewed) {
       return PrimaryButton(
         text: context.l10n.actionsRateTask,
         onPressed: () => _showReviewDialog(context),

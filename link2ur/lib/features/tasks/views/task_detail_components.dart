@@ -26,6 +26,7 @@ import '../../../core/utils/helpers.dart';
 import '../../../data/models/task.dart';
 import '../../../data/models/task_application.dart';
 import '../../../data/models/review.dart';
+import '../../auth/bloc/auth_bloc.dart';
 import '../../../data/models/refund_request.dart';
 import '../../../data/repositories/task_repository.dart';
 import '../bloc/task_detail_bloc.dart';
@@ -1735,7 +1736,11 @@ class TaskActionButtonsView extends StatelessWidget {
     }
     if (!isPoster && !isTaker) return const SizedBox.shrink();
 
-    if (task.hasReviewed) {
+    final currentUid = context.read<AuthBloc>().state.user?.id;
+    final hasCurrentUserReviewed = state.hasSubmittedReview ||
+        (currentUid != null &&
+            state.reviews.any((r) => r.reviewerId.toString() == currentUid));
+    if (hasCurrentUserReviewed) {
       return Padding(
         padding: const EdgeInsets.only(bottom: AppSpacing.sm),
         child: PrimaryButton(
