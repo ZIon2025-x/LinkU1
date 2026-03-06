@@ -17251,6 +17251,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'User not found'**
   String get userNotFound;
+
+  /// No description provided for @taskDetailShowOnProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Show on my profile'**
+  String get taskDetailShowOnProfile;
+
+  /// No description provided for @taskDetailShowOnProfileDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Display this completed task on your public profile'**
+  String get taskDetailShowOnProfileDesc;
+
+  /// No description provided for @taskDetailVisibilityUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile visibility updated'**
+  String get taskDetailVisibilityUpdated;
+
+  /// No description provided for @taskDetailVisibilityUpdateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to update visibility'**
+  String get taskDetailVisibilityUpdateFailed;
 }
 
 class _AppLocalizationsDelegate

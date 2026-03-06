@@ -9013,6 +9013,18 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get userNotFound => '未找到用户';
+
+  @override
+  String get taskDetailShowOnProfile => '展示在我的主页';
+
+  @override
+  String get taskDetailShowOnProfileDesc => '将这个已完成的任务展示在你的公开主页上';
+
+  @override
+  String get taskDetailVisibilityUpdated => '主页展示设置已更新';
+
+  @override
+  String get taskDetailVisibilityUpdateFailed => '更新展示设置失败';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -18024,4 +18036,16 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get userNotFound => '未找到用戶';
+
+  @override
+  String get taskDetailShowOnProfile => '展示在我的主頁';
+
+  @override
+  String get taskDetailShowOnProfileDesc => '將這個已完成的任務展示在你的公開主頁上';
+
+  @override
+  String get taskDetailVisibilityUpdated => '主頁展示設定已更新';
+
+  @override
+  String get taskDetailVisibilityUpdateFailed => '更新展示設定失敗';
 }

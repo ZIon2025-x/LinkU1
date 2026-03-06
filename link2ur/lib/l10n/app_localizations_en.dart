@@ -9372,4 +9372,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get userNotFound => 'User not found';
+
+  @override
+  String get taskDetailShowOnProfile => 'Show on my profile';
+
+  @override
+  String get taskDetailShowOnProfileDesc =>
+      'Display this completed task on your public profile';
+
+  @override
+  String get taskDetailVisibilityUpdated => 'Profile visibility updated';
+
+  @override
+  String get taskDetailVisibilityUpdateFailed => 'Failed to update visibility';
 }

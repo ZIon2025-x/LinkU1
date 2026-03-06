@@ -4353,5 +4353,9 @@
   "commonDiscardChangesMessage": "You have unsaved changes. Are you sure you want to discard them?",
   "commonDiscard": "Discard",
   "taskNotFound": "Task not found",
-  "userNotFound": "User not found"
+  "userNotFound": "User not found",
+  "taskDetailShowOnProfile": "Show on my profile",
+  "taskDetailShowOnProfileDesc": "Display this completed task on your public profile",
+  "taskDetailVisibilityUpdated": "Profile visibility updated",
+  "taskDetailVisibilityUpdateFailed": "Failed to update visibility"
 }

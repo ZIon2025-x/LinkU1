@@ -4200,5 +4200,9 @@
   "commonDiscardChangesMessage": "您有未儲存的更改，確定要放棄嗎？",
   "commonDiscard": "放棄",
   "taskNotFound": "未找到任務",
-  "userNotFound": "未找到用戶"
+  "userNotFound": "未找到用戶",
+  "taskDetailShowOnProfile": "展示在我的主頁",
+  "taskDetailShowOnProfileDesc": "將這個已完成的任務展示在你的公開主頁上",
+  "taskDetailVisibilityUpdated": "主頁展示設定已更新",
+  "taskDetailVisibilityUpdateFailed": "更新展示設定失敗"
 }

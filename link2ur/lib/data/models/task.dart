@@ -62,6 +62,8 @@ class Task extends Equatable {
     this.counterOfferPrice,
     this.counterOfferStatus,
     this.counterOfferUserId,
+    this.isPublic = 1,
+    this.takerPublic = 1,
   });
 
   final int id;
@@ -122,6 +124,8 @@ class Task extends Equatable {
   final double? counterOfferPrice;
   final String? counterOfferStatus;
   final String? counterOfferUserId;
+  final int isPublic;
+  final int takerPublic;
 
   /// 模糊距离（500m 为一个区间）
   /// 返回区间上限值（用于排序），如 500, 1000, 1500, ...
@@ -413,6 +417,8 @@ class Task extends Equatable {
       counterOfferPrice: (json['counter_offer_price'] as num?)?.toDouble(),
       counterOfferStatus: json['counter_offer_status'] as String?,
       counterOfferUserId: json['counter_offer_user_id'] as String?,
+      isPublic: json['is_public'] as int? ?? 1,
+      takerPublic: json['taker_public'] as int? ?? 1,
     );
   }
 
@@ -462,6 +468,8 @@ class Task extends Equatable {
       'points_reward': pointsReward,
       'min_participants': minParticipants,
       'reward_to_be_quoted': rewardToBeQuoted,
+      'is_public': isPublic,
+      'taker_public': takerPublic,
     };
   }
 
@@ -518,6 +526,8 @@ class Task extends Equatable {
     double? counterOfferPrice,
     String? counterOfferStatus,
     String? counterOfferUserId,
+    int? isPublic,
+    int? takerPublic,
   }) {
     return Task(
       id: id ?? this.id,
@@ -572,6 +582,8 @@ class Task extends Equatable {
       counterOfferPrice: counterOfferPrice ?? this.counterOfferPrice,
       counterOfferStatus: counterOfferStatus ?? this.counterOfferStatus,
       counterOfferUserId: counterOfferUserId ?? this.counterOfferUserId,
+      isPublic: isPublic ?? this.isPublic,
+      takerPublic: takerPublic ?? this.takerPublic,
     );
   }
 
@@ -580,6 +592,7 @@ class Task extends Equatable {
         id, title, status, reward, currency, hasApplied,
         userApplicationStatus, takerId, hasReviewed, updatedAt,
         counterOfferPrice, counterOfferStatus, counterOfferUserId,
+        isPublic, takerPublic,
       ];
 }
 

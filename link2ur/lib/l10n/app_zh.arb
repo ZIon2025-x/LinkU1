@@ -4261,5 +4261,9 @@
   "commonDiscardChangesMessage": "您有未保存的更改，确定要放弃吗？",
   "commonDiscard": "放弃",
   "taskNotFound": "未找到任务",
-  "userNotFound": "未找到用户"
+  "userNotFound": "未找到用户",
+  "taskDetailShowOnProfile": "展示在我的主页",
+  "taskDetailShowOnProfileDesc": "将这个已完成的任务展示在你的公开主页上",
+  "taskDetailVisibilityUpdated": "主页展示设置已更新",
+  "taskDetailVisibilityUpdateFailed": "更新展示设置失败"
 }
