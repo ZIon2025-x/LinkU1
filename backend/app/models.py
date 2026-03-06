@@ -2935,7 +2935,6 @@ class PaymentHistory(Base):
         Index("ix_payment_history_payment_intent", payment_intent_id),
         Index("ix_payment_history_status", status),
         Index("ix_payment_history_created", created_at),
-        Index("ix_payment_history_order_no", order_no),
     )
     
     def transition_status(self, new_status: str) -> bool:

@@ -78,10 +78,12 @@ class DeepLinkHandler {
       return;
     }
 
-    final path = uri.path;
+    // 剥离语言前缀：/zh/tasks/123 → /tasks/123
+    final rawPath = uri.path;
+    final path = _stripLanguagePrefix(rawPath);
     final queryParams = uri.queryParameters;
 
-    AppLogger.info('Deep link - Path: $path, Params: $queryParams');
+    AppLogger.info('Deep link - Raw: $rawPath, Path: $path, Params: $queryParams');
 
     try {
       // 根据路径匹配路由
@@ -126,8 +128,13 @@ class DeepLinkHandler {
           final id = _extractId(path);
           if (id != null) context.safePush('/task-experts/$id');
           break;
+        case _DeepLinkRoute.home:
+          // 首页或根路径，导航到首页
+          context.go('/');
+          break;
         case _DeepLinkRoute.unknown:
-          AppLogger.warning('Deep link - Unknown route: $path');
+          AppLogger.warning('Deep link - Unknown route: $path, navigating to home');
+          context.go('/');
           break;
       }
     } catch (e) {
@@ -141,8 +148,21 @@ class DeepLinkHandler {
         (uri.host == 'stripe-redirect' || uri.path.contains('stripe-redirect'));
   }
 
+  /// 剥离网站语言前缀：/zh/tasks/123 → /tasks/123, /en/ → /
+  String _stripLanguagePrefix(String path) {
+    final match = RegExp(r'^/(zh-Hant|zh|en)(/.*)?$').firstMatch(path);
+    if (match != null) {
+      final remaining = match.group(2);
+      return (remaining != null && remaining.isNotEmpty) ? remaining : '/';
+    }
+    return path;
+  }
+
   /// 根据路径匹配路由类型
   _DeepLinkRoute _getRouteType(String path) {
+    if (path == '/' || path.isEmpty) {
+      return _DeepLinkRoute.home;
+    }
     if (path.startsWith('/tasks/') || path.startsWith('/task/')) {
       return _DeepLinkRoute.task;
     } else if (path.startsWith('/forum/posts/') ||
@@ -248,6 +268,7 @@ class DeepLinkHandler {
 }
 
 enum _DeepLinkRoute {
+  home,
   task,
   forumPost,
   fleaMarketItem,

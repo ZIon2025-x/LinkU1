@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import '../utils/logger.dart';
 import 'app_routes.dart';
 export 'app_routes.dart';
 import 'go_router_extensions.dart';
@@ -18,7 +19,6 @@ import 'routes/info_routes.dart';
 import 'routes/payment_routes.dart';
 import 'routes/misc_routes.dart';
 import 'routes/ai_chat_routes.dart';
-import '../../l10n/app_localizations.dart';
 import '../../features/auth/bloc/auth_bloc.dart';
 
 import '../../features/main/main_tab_view.dart';
@@ -61,7 +61,7 @@ class AppRouter {
 
       // 剥离语言前缀：/zh/tasks/123 → /tasks/123, /en/ → /
       // 网站使用 /zh/、/en/ 前缀做多语言，但 App 路由没有语言前缀
-      final langMatch = RegExp(r'^/(zh|en|zh-Hant)(/.*)?$').firstMatch(path);
+      final langMatch = RegExp(r'^/(zh-Hant|zh|en)(/.*)?$').firstMatch(path);
       if (langMatch != null) {
         final remaining = langMatch.group(2);
         return (remaining != null && remaining.isNotEmpty) ? remaining : '/';
@@ -177,10 +177,10 @@ class AppRouter {
 
       ...paymentRoutes,
     ],
-    errorBuilder: (context, state) => Scaffold(
-      body: Center(
-        child: Text(AppLocalizations.of(context)?.errorPageNotFound(state.uri.toString()) ?? 'Page not found: ${state.uri}'),
-      ),
-    ),
+    // 未匹配路由（包括外部深度链接传入的未知路径）→ 跳转首页
+    onException: (_, GoRouterState state, GoRouter router) {
+      AppLogger.warning('GoRouter - No route matched: ${state.uri}, redirecting to home');
+      router.go('/');
+    },
   );
 }
