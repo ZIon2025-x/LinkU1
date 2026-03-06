@@ -69,7 +69,8 @@ def generate_sitemap(db: Session = Depends(get_db)):
         # 注意：deadline 判断由业务逻辑处理，这里只关注状态
         # 如果任务状态是 open 但 deadline 已过期，业务层应该负责关闭，而不是在 sitemap 层过滤
         tasks = db.query(Task).filter(
-            Task.status == "open"
+            Task.status == "open",
+            Task.is_visible == True
         ).order_by(Task.created_at.desc()).all()
         
         # 构建sitemap XML

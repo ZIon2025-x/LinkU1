@@ -513,9 +513,9 @@ async def ssr_task_detail(
             select(models.Task).where(models.Task.id == task_id)
         )
         task = result.scalar_one_or_none()
-        
-        if not task:
-            # 任务不存在，返回默认 meta
+
+        if not task or not task.is_visible:
+            # 任务不存在或正在审核中，返回默认 meta
             return HTMLResponse(
                 content=generate_html(
                     title="任务不存在 - Link²Ur",

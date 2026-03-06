@@ -218,18 +218,18 @@ Widget _buildLogoutButton(BuildContext context, bool isDark) {
   );
 }
 
-void _showLogoutDialog(BuildContext context) {
-  AdaptiveDialogs.showConfirmDialog(
+void _showLogoutDialog(BuildContext context) async {
+  final confirmed = await AdaptiveDialogs.showConfirmDialog<bool>(
     context: context,
     title: context.l10n.profileConfirmLogout,
     content: context.l10n.profileLogoutMessage,
     confirmText: context.l10n.profileLogout,
     cancelText: context.l10n.commonCancel,
     isDestructive: true,
-    onConfirm: () {
-      context.read<AuthBloc>().add(AuthLogoutRequested());
-    },
   );
+  if (confirmed == true && context.mounted) {
+    context.read<AuthBloc>().add(AuthLogoutRequested());
+  }
 }
 
 Widget _profileDivider(bool isDark) {

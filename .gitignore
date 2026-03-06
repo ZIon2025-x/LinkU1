@@ -57,6 +57,9 @@ DerivedData/
 *.xcuserstate
 project.xcworkspace/xcuserdata/
 
+# Admin build output
+admin/build/
+
 # Stripe sample code (may contain secrets - do not commit)
 stripe-sample-code (1)/
 

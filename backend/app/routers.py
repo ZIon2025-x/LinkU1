@@ -1247,7 +1247,12 @@ def get_task_detail(
     task = crud.get_task(db, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
-    
+
+    # 内容审核检查：被隐藏的任务只有发布者本人可以看到
+    if not task.is_visible:
+        if not current_user or str(current_user.id) != str(task.poster_id):
+            raise HTTPException(status_code=404, detail="Task not found")
+
     # 权限检查：除了 open 状态的任务，其他状态的任务只有任务相关人才能看到详情
     # 未登录用户（含搜索引擎爬虫）可看到公开摘要，便于 SEO 索引
     _is_summary_only = False
@@ -1619,17 +1624,22 @@ def get_task_match_score(
     用于在任务详情页显示匹配度
     """
     try:
+        task = crud.get_task(db, task_id)
+        if not task or not task.is_visible:
+            raise HTTPException(status_code=404, detail="Task not found")
         score = calculate_task_match_score(
             db=db,
             user_id=current_user.id,
             task_id=task_id
         )
-        
+
         return {
             "task_id": task_id,
             "match_score": round(score, 3),
             "match_percentage": round(score * 100, 1)
         }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"计算匹配分数失败: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="计算匹配分数失败")
@@ -2193,6 +2203,10 @@ def create_review(
 @measure_api_performance("get_task_reviews")
 @cache_response(ttl=180, key_prefix="task_reviews")  # 缓存3分钟
 def get_task_reviews(task_id: int, db: Session = Depends(get_db)):
+    # 内容审核检查：隐藏的任务不返回评价
+    task = crud.get_task(db, task_id)
+    if not task or not task.is_visible:
+        raise HTTPException(status_code=404, detail="Task not found")
     reviews = crud.get_task_reviews(db, task_id)
     return [schemas.ReviewOut.model_validate(r) for r in reviews]
 
@@ -7975,6 +7989,7 @@ def get_shared_tasks(
         db.query(Task)
         .filter(
             Task.status.in_(["taken", "pending_confirmation", "completed"]),
+            Task.is_visible == True,
             ((Task.poster_id == current_user.id) & (Task.taker_id == other_user_id))
             | ((Task.poster_id == other_user_id) & (Task.taker_id == current_user.id)),
         )

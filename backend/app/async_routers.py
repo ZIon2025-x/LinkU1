@@ -386,7 +386,12 @@ async def get_task_by_id(
     task = await async_crud.async_task_crud.get_task_by_id(db, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
-    
+
+    # 内容审核检查：被隐藏的任务只有发布者本人可以看到
+    if not task.is_visible:
+        if not current_user or str(current_user.id) != str(task.poster_id):
+            raise HTTPException(status_code=404, detail="Task not found")
+
     # 权限检查：除了 open 状态的任务，其他状态的任务只有任务相关人才能看到详情
     # 未登录用户（含搜索引擎爬虫）可看到公开摘要，便于 SEO 索引
     _is_summary_only = False
@@ -571,7 +576,8 @@ async def create_task_async(
             combined_matched = title_result.matched_words + desc_result.matched_words
             await create_review(db, "task", db_task.id, current_user.id,
                                f"[title]{task.title}[desc]{task.description}", combined_matched)
-            await db.flush()
+            await db.commit()
+            await db.refresh(db_task)
 
         # 迁移临时图片到正式的任务ID文件夹（使用图片上传服务）
         if task.images and len(task.images) > 0:
@@ -743,9 +749,13 @@ async def apply_for_task(
             error_msg = "任务不存在"
             logger.warning(f"申请任务失败: {error_msg}")
             raise HTTPException(status_code=404, detail=error_msg)
-        
+
+        # 内容审核检查：隐藏的任务不允许申请
+        if not task.is_visible:
+            raise HTTPException(status_code=404, detail="任务不存在")
+
         logger.info(f"任务检查 - 任务ID: {task_id}, 状态: {task.status}, 货币: {task.currency}")
-        
+
         # 检查是否已经申请过（无论状态）
         applicant_id = str(current_user.id) if current_user.id else None
         if not applicant_id:
@@ -1227,6 +1237,14 @@ async def get_task_reviews_async(
 ):
     """获取任务评价（异步版本）"""
     try:
+        # 内容审核检查：隐藏的任务不返回评价
+        task_check = await db.execute(
+            select(models.Task.is_visible).where(models.Task.id == task_id)
+        )
+        task_visible = task_check.scalar_one_or_none()
+        if task_visible is None or not task_visible:
+            raise HTTPException(status_code=404, detail="Task not found")
+
         # 先获取所有评价（用于当前用户自己的评价检查）
         all_reviews_query = select(models.Review).where(
             models.Review.task_id == task_id

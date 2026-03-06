@@ -1618,3 +1618,78 @@ export async function getDailyActiveStats(period: '7d' | '30d' | '90d'): Promise
   const { dates, counts } = response.data;
   return dates.map((date, i) => ({ date, count: counts[i] ?? 0 }));
 }
+
+// ===== Content Moderation (内容审核) =====
+
+export async function getSensitiveWords(params: {
+  skip?: number; limit?: number; category?: string; is_active?: boolean; keyword?: string;
+}) {
+  const res = await api.get('/api/admin/content-moderation/sensitive-words', { params });
+  return res.data;
+}
+
+export async function createSensitiveWord(data: {
+  word: string; category: string; level: string; is_active: boolean;
+}) {
+  const res = await api.post('/api/admin/content-moderation/sensitive-words', data);
+  return res.data;
+}
+
+export async function updateSensitiveWord(id: number, data: {
+  word?: string; category?: string; level?: string; is_active?: boolean;
+}) {
+  const res = await api.put(`/api/admin/content-moderation/sensitive-words/${id}`, data);
+  return res.data;
+}
+
+export async function deleteSensitiveWord(id: number) {
+  const res = await api.delete(`/api/admin/content-moderation/sensitive-words/${id}`);
+  return res.data;
+}
+
+export async function batchImportSensitiveWords(data: {
+  words: Array<{ word: string; category: string; level: string; is_active: boolean }>;
+}) {
+  const res = await api.post('/api/admin/content-moderation/sensitive-words/batch', data);
+  return res.data;
+}
+
+export async function getHomophoneMappings(params: {
+  skip?: number; limit?: number; keyword?: string;
+}) {
+  const res = await api.get('/api/admin/content-moderation/homophone-mappings', { params });
+  return res.data;
+}
+
+export async function createHomophoneMapping(data: {
+  variant: string; standard: string; is_active: boolean;
+}) {
+  const res = await api.post('/api/admin/content-moderation/homophone-mappings', data);
+  return res.data;
+}
+
+export async function deleteHomophoneMapping(id: number) {
+  const res = await api.delete(`/api/admin/content-moderation/homophone-mappings/${id}`);
+  return res.data;
+}
+
+export async function getContentReviews(params: {
+  skip?: number; limit?: number; status?: string; content_type?: string;
+}) {
+  const res = await api.get('/api/admin/content-moderation/content-reviews', { params });
+  return res.data;
+}
+
+export async function reviewContent(reviewId: number, data: {
+  action: 'approved' | 'rejected'; reason?: string;
+}) {
+  const res = await api.put(`/api/admin/content-moderation/content-reviews/${reviewId}`, data);
+  return res.data;
+}
+
+export async function getFilterLogs(params: {
+  skip?: number; limit?: number; action?: string; content_type?: string; user_id?: string;
+}) {
+  const res = await api.get('/api/admin/content-moderation/filter-logs', { params });
+  return res.data;
+}

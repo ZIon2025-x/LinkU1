@@ -30,6 +30,7 @@ const RecommendationManagement = lazy(() => import('../pages/admin/recommendatio
 const StudentVerificationManagement = lazy(() => import('../pages/admin/student-verification/StudentVerificationManagement'));
 const OAuthClientsManagement = lazy(() => import('../pages/admin/oauth-clients/OAuthClientsManagement'));
 const CancelRequestsManagement = lazy(() => import('../pages/admin/cancel-requests/CancelRequestsManagement'));
+const ContentModerationPage = lazy(() => import('../pages/admin/content-moderation').then(m => ({ default: m.ContentModerationPage })));
 
 // Loading component
 const LoadingFallback = () => (
@@ -125,6 +126,9 @@ export const AdminRoutes: React.FC = () => {
 
           {/* OAuth Clients Management */}
           <Route path="oauth-clients" element={<OAuthClientsManagement />} />
+
+          {/* Content Moderation */}
+          <Route path="content-moderation" element={<ContentModerationPage />} />
 
           {/* Settings */}
           <Route path="settings" element={<Settings />} />

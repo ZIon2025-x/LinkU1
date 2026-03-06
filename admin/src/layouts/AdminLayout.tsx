@@ -159,6 +159,12 @@ const defaultMenuItems: MenuItem[] = [
     path: '/admin/student-verification',
   },
   {
+    key: 'content-moderation',
+    label: '内容审核',
+    icon: '🛡️',
+    path: '/admin/content-moderation',
+  },
+  {
     key: 'oauth-clients',
     label: 'OAuth客户端',
     icon: '🔐',
@@ -190,6 +196,7 @@ const PATH_LABELS: Record<string, string> = {
   '/admin/vip': 'VIP订阅',
   '/admin/recommendation': '推荐系统',
   '/admin/student-verification': '学生认证',
+  '/admin/content-moderation': '内容审核',
   '/admin/oauth-clients': 'OAuth客户端',
   '/admin/settings': '设置',
   '/admin/2fa': '双因素认证',

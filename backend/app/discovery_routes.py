@@ -421,6 +421,7 @@ async def _fetch_service_reviews(db: AsyncSession, limit: int) -> list:
         .where(
             models.Task.created_by_expert == True,
             models.Task.status == "completed",
+            models.Task.is_visible == True,
             models.Review.comment.isnot(None),
             models.Review.comment != "",
         )

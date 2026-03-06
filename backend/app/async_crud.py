@@ -1215,8 +1215,9 @@ class AsyncTaskCRUD:
                     selectinload(models.Task.participants)  # 预加载参与者，用于动态计算current_participants
                 )
                 .where(models.Task.poster_id == user_id)
+                .where(models.Task.is_visible == True)
             )
-            
+
             # 构建接受任务查询
             taken_query = (
                 select(models.Task)
@@ -1227,6 +1228,7 @@ class AsyncTaskCRUD:
                     selectinload(models.Task.participants)  # 预加载参与者，用于动态计算current_participants
                 )
                 .where(models.Task.taker_id == user_id)
+                .where(models.Task.is_visible == True)
             )
             
             # 构建多人任务参与者查询
@@ -1250,7 +1252,8 @@ class AsyncTaskCRUD:
                     .where(
                         and_(
                             models.Task.id.in_(participant_task_ids),
-                            models.Task.is_multi_participant.is_(True)  # 使用 is_() 而不是 ==
+                            models.Task.is_multi_participant.is_(True),
+                            models.Task.is_visible == True
                         )
                     )
                 )
