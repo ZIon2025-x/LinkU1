@@ -470,22 +470,28 @@ class _TaskCard extends StatelessWidget {
                 ),
               ),
               if (task.location != null)
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.location_on_outlined,
-                      size: 16,
-                      color: AppColors.textTertiaryLight,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      task.location!,
-                      style: const TextStyle(
-                        fontSize: 12,
+                Expanded(
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.location_on_outlined,
+                        size: 16,
                         color: AppColors.textTertiaryLight,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          task.location!,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textTertiaryLight,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
             ],
           ),
