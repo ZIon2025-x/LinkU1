@@ -1,11 +1,13 @@
 """
 Tests for the content_filter package:
 - TextNormalizer
+- ContactDetector
 """
 
 import pytest
 
 from app.content_filter.text_normalizer import TextNormalizer
+from app.content_filter.contact_detector import ContactDetector, ContactResult
 
 
 # =============================================================================
@@ -81,3 +83,83 @@ class TestTextNormalizer:
 
         mixed = "Link2Ur 技能互助"
         assert self.normalizer.normalize(mixed) == mixed
+
+
+# =============================================================================
+# ContactDetector Tests
+# =============================================================================
+
+class TestContactDetector:
+    """Tests for ContactDetector."""
+
+    def setup_method(self):
+        self.detector = ContactDetector()
+
+    def test_detect_phone_number(self):
+        """Detects a standard China mobile number."""
+        result = self.detector.detect("请联系我13812345678谢谢")
+        assert result.has_contact is True
+        assert any("13812345678" in m for m in result.matched_text)
+
+    def test_detect_phone_with_spaces(self):
+        """Detects phone numbers with space/dash separators."""
+        result = self.detector.detect("电话 138 1234 5678")
+        assert result.has_contact is True
+        assert len(result.matched_text) > 0
+
+    def test_detect_wechat_variants(self):
+        """Detects WeChat ID with various keyword prefixes."""
+        prefixes = ["微信", "wx", "vx", "wechat", "V信", "weixin", "威信", "薇芯"]
+        for prefix in prefixes:
+            text = f"加我{prefix}:abc12345"
+            result = self.detector.detect(text)
+            assert result.has_contact is True, f"Failed to detect WeChat with prefix '{prefix}'"
+
+    def test_detect_qq(self):
+        """Detects QQ numbers."""
+        result = self.detector.detect("我的QQ:123456789")
+        assert result.has_contact is True
+        assert any("QQ:123456789" in m for m in result.matched_text)
+
+        result2 = self.detector.detect("扣扣 12345678")
+        assert result2.has_contact is True
+
+    def test_detect_email(self):
+        """Detects email addresses."""
+        result = self.detector.detect("发邮件到test@example.com")
+        assert result.has_contact is True
+        assert "test@example.com" in result.matched_text
+
+    def test_detect_url(self):
+        """Detects URLs."""
+        result = self.detector.detect("访问 https://www.example.com/page 查看")
+        assert result.has_contact is True
+        assert any("https://www.example.com/page" in m for m in result.matched_text)
+
+    def test_mask_phone(self):
+        """Phone numbers are replaced with *** in masked_text."""
+        result = self.detector.detect("电话13812345678")
+        assert "***" in result.masked_text
+        assert "13812345678" not in result.masked_text
+
+    def test_no_false_positive_on_normal_text(self):
+        """Normal text without contact info returns no match."""
+        result = self.detector.detect("今天天气真好，我想出去走走")
+        assert result.has_contact is False
+        assert len(result.matched_text) == 0
+
+    def test_no_false_positive_on_short_numbers(self):
+        """Short numbers like prices should not trigger phone detection."""
+        result = self.detector.detect("价格2000元")
+        assert result.has_contact is False
+
+        result2 = self.detector.detect("订单号123456")
+        assert result2.has_contact is False
+
+    def test_empty_input(self):
+        """Empty/None input returns ContactResult with has_contact=False."""
+        result = self.detector.detect("")
+        assert result.has_contact is False
+
+        result2 = self.detector.detect(None)
+        assert result2.has_contact is False
