@@ -158,13 +158,14 @@ class _MainTabViewState extends State<MainTabView>
   void dispose() {
     if (_blocsInitialized) {
       WidgetsBinding.instance.removeObserver(this);
-      // 延迟关闭 Bloc，等当前帧内子树先卸载、依赖先解除后再 close，
-      // 避免 InheritedWidget 卸载时 _dependents 仍非空导致断言失败（_dependents.isEmpty）
+      // 延迟关闭 Bloc，等当前帧子树完全卸载、InheritedWidget 依赖全部解除后再 close，
+      // 避免 StatefulShellRoute.indexedStack 分支元素在 InheritedElement.unmount() 时
+      // 尚未移除依赖导致 _dependents.isEmpty 断言失败。
+      final blocs = [_homeBloc, _forumBloc, _leaderboardBloc, _messageBloc];
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _homeBloc.close();
-        _forumBloc.close();
-        _leaderboardBloc.close();
-        _messageBloc.close();
+        for (final bloc in blocs) {
+          bloc.close();
+        }
       });
     }
     super.dispose();

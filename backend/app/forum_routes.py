@@ -3886,7 +3886,6 @@ async def hide_post(
 
 @router.get("/posts/{post_id}/replies", response_model=schemas.ForumReplyListResponse)
 @measure_api_performance("get_forum_replies")
-@cache_response(ttl=180, key_prefix="forum_replies")  # 缓存3分钟
 async def get_replies(
     post_id: int,
     page: int = Query(1, ge=1),

@@ -54,6 +54,32 @@ class _LeaderboardDetailContent extends StatefulWidget {
 class _LeaderboardDetailContentState
     extends State<_LeaderboardDetailContent> {
   int get leaderboardId => widget.leaderboardId;
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!mounted) return;
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      final state = context.read<LeaderboardBloc>().state;
+      if (state.itemsHasMore && !state.itemsLoadingMore && !state.isLoadingItems) {
+        context.read<LeaderboardBloc>().add(
+            LeaderboardLoadMoreItems(leaderboardId));
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -305,6 +331,7 @@ class _LeaderboardDetailContentState
             .add(LeaderboardLoadDetail(leaderboardId));
       },
       child: CustomScrollView(
+        controller: _scrollController,
         slivers: [
           // Hero 区域
           SliverToBoxAdapter(
@@ -426,14 +453,6 @@ class _LeaderboardDetailContentState
                   (context, index) {
                     if (index == items.length) {
                       if (state.itemsHasMore) {
-                        if (!state.itemsLoadingMore) {
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            if (context.mounted) {
-                              context.read<LeaderboardBloc>().add(
-                                  LeaderboardLoadMoreItems(leaderboardId));
-                            }
-                          });
-                        }
                         return Padding(
                           padding: const EdgeInsets.symmetric(
                               vertical: AppSpacing.md),

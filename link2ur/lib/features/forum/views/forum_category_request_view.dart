@@ -45,7 +45,7 @@ class _ForumCategoryRequestViewState extends State<ForumCategoryRequestView> {
   bool get _canSubmit =>
       _isNameValid &&
       _descriptionController.text.length <= _maxDescriptionLength &&
-      _iconController.text.length <= _maxIconLength &&
+      _iconController.text.characters.length <= _maxIconLength &&
       !_isLoading &&
       !_hasSubmitted;
 

@@ -228,7 +228,6 @@ void _showLogoutDialog(BuildContext context) {
     isDestructive: true,
     onConfirm: () {
       context.read<AuthBloc>().add(AuthLogoutRequested());
-      context.go('/login');
     },
   );
 }

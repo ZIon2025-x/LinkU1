@@ -1,8 +1,6 @@
-import 'package:flutter/foundation.dart' show Uint8List;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../../../core/constants/app_assets.dart';
 import '../../../core/design/app_colors.dart';
@@ -17,8 +15,8 @@ import '../../../core/widgets/buttons.dart';
 import '../../../data/repositories/user_repository.dart';
 import '../../../data/repositories/task_repository.dart';
 import '../../../data/repositories/forum_repository.dart';
-import '../../../core/utils/logger.dart';
 import '../bloc/profile_bloc.dart';
+import 'avatar_picker_view.dart';
 
 class EditProfileView extends StatelessWidget {
   const EditProfileView({super.key});
@@ -52,8 +50,6 @@ class _EditProfileContentState extends State<_EditProfileContent> {
   final _emailCodeController = TextEditingController();
   final _phoneCodeController = TextEditingController();
 
-  XFile? _selectedImageFile;
-  Uint8List? _selectedImageBytes;
   bool _initialized = false;
   final _emailNotifier = ValueNotifier<String>('');
   final _phoneNotifier = ValueNotifier<String>('');
@@ -68,8 +64,7 @@ class _EditProfileContentState extends State<_EditProfileContent> {
     return _nameController.text != _originalName ||
         _residenceCityController.text != _originalCity ||
         _emailController.text.trim() != (_originalEmail ?? '') ||
-        _phoneController.text.trim() != (_originalPhone ?? '') ||
-        _selectedImageFile != null;
+        _phoneController.text.trim() != (_originalPhone ?? '');
   }
 
   @override
@@ -128,35 +123,19 @@ class _EditProfileContentState extends State<_EditProfileContent> {
     return cleaned;
   }
 
-  Future<void> _pickImage() async {
-    try {
-      final picker = ImagePicker();
-      final pickedFile = await picker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 800,
-        maxHeight: 800,
-        imageQuality: 85,
-      );
-
-      if (pickedFile != null) {
-        final bytes = await pickedFile.readAsBytes();
-        setState(() {
-          _selectedImageFile = pickedFile;
-          _selectedImageBytes = bytes;
-        });
-        if (mounted) {
-          context.read<ProfileBloc>().add(
-                ProfileUploadAvatar(bytes, pickedFile.name),
-              );
-        }
-      }
-    } catch (e) {
-      AppLogger.error('Failed to pick image', e);
-      if (mounted) {
-        AppFeedback.showError(
-            context, context.l10n.feedbackPickImageFailed(e.toString()));
-      }
-    }
+  void _openAvatarPicker(String? currentAvatar) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => AvatarPickerView(
+          currentAvatar: currentAvatar,
+          onSelected: (newAvatar) {
+            // 头像更新由 AvatarPickerView 内部的 ProfileBloc 处理，
+            // 返回后重新加载 profile 以获取最新头像
+            context.read<ProfileBloc>().add(const ProfileLoadRequested());
+          },
+        ),
+      ),
+    );
   }
 
   void _sendEmailCode() {
@@ -256,7 +235,6 @@ class _EditProfileContentState extends State<_EditProfileContent> {
               state.actionMessage == 'phone_code_sent';
 
           if (isAvatarUpdated) {
-            setState(() { _selectedImageFile = null; _selectedImageBytes = null; });
             AppFeedback.showSuccess(context, l10n.profileAvatarUpdated);
           } else if (isCodeSent) {
             final message = state.actionMessage == 'email_code_sent'
@@ -329,44 +307,28 @@ class _EditProfileContentState extends State<_EditProfileContent> {
                 children: [
                   // Avatar
                   Center(
-                    child: Stack(
-                      children: [
-                        _buildEditAvatar(avatarUrl),
-                        if (state.isUpdating && _selectedImageFile != null)
-                          Positioned.fill(
+                    child: GestureDetector(
+                      onTap: state.isUpdating ? null : () => _openAvatarPicker(avatarUrl),
+                      child: Stack(
+                        children: [
+                          _buildEditAvatar(avatarUrl),
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
                             child: Container(
+                              width: 36,
+                              height: 36,
                               decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: 0.5),
+                                color: AppColors.primary,
                                 shape: BoxShape.circle,
+                                border:
+                                    Border.all(color: Colors.white, width: 2),
                               ),
-                              child: const Center(
-                                child: CircularProgressIndicator(
-                                    color: Colors.white),
-                              ),
+                              child: const Icon(Icons.edit, size: 18, color: Colors.white),
                             ),
                           ),
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: Container(
-                            width: 36,
-                            height: 36,
-                            decoration: BoxDecoration(
-                              color: AppColors.primary,
-                              shape: BoxShape.circle,
-                              border:
-                                  Border.all(color: Colors.white, width: 2),
-                            ),
-                            child: IconButton(
-                              icon: const Icon(Icons.camera_alt, size: 18),
-                              color: Colors.white,
-                              onPressed:
-                                  state.isUpdating ? null : _pickImage,
-                              padding: EdgeInsets.zero,
-                            ),
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                   AppSpacing.vLg,
@@ -595,14 +557,6 @@ class _EditProfileContentState extends State<_EditProfileContent> {
 
   Widget _buildEditAvatar(String? avatarUrl) {
     const double radius = 50;
-
-    if (_selectedImageBytes != null) {
-      return CircleAvatar(
-        radius: radius,
-        backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-        backgroundImage: MemoryImage(_selectedImageBytes!),
-      );
-    }
 
     final localAsset = AppAssets.getLocalAvatarAsset(avatarUrl);
     if (localAsset != null) {
