@@ -1,6 +1,6 @@
 /**
  * 「在 App 内打开」单按钮条
- * 仅对 iOS 用户显示。点击后先尝试用当前页 URL 打开 App（Universal Link）；
+ * 仅对 iOS 用户显示。点击后通过 link2ur:// 自定义 scheme 打开 App；
  * 若未安装，页面会重新加载，此时自动跳转到 App Store 下载页。
  */
 import React, { useState, useEffect } from 'react';
@@ -32,9 +32,11 @@ const OpenInAppBanner: React.FC = () => {
 
   const handleOpenApp = (e: React.MouseEvent) => {
     e.preventDefault();
-    const url = window.location.href;
+    // 用 link2ur:// 自定义 scheme 打开 App，App 端 DeepLinkHandler 会处理路径
+    const appPath = window.location.pathname + window.location.search;
+    const deepLink = `link2ur://app${appPath}`;
     sessionStorage.setItem(FALLBACK_KEY, '1');
-    window.location.href = url;
+    window.location.href = deepLink;
   };
 
   if (!visible) return null;
@@ -43,7 +45,7 @@ const OpenInAppBanner: React.FC = () => {
     <div className="open-in-app-banner" role="banner">
       <div className="open-in-app-banner-float">
         <a
-          href={typeof window !== 'undefined' ? window.location.href : '#'}
+          href="#"
           className="open-in-app-banner-btn"
           onClick={handleOpenApp}
           rel="noopener noreferrer"

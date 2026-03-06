@@ -39,14 +39,8 @@
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="link2ur"/>
             </intent-filter>
-            <!-- App Links: https://link2ur.com -->
-            <intent-filter android:autoVerify="true">
-                <action android:name="android.intent.action.VIEW"/>
-                <category android:name="android.intent.category.DEFAULT"/>
-                <category android:name="android.intent.category.BROWSABLE"/>
-                <data android:scheme="https" android:host="link2ur.com"/>
-                <data android:scheme="https" android:host="www.link2ur.com"/>
-            </intent-filter>
+            <!-- App Links 已禁用：不再自动拦截 https://link2ur.com 网页链接 -->
+            <!-- 网站内通过 link2ur:// 自定义 scheme 实现"在 App 中打开" -->
         </activity>
 
         <!-- FCM Service -->
