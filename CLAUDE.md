@@ -6,8 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Link2Ur** — 技能互助平台 (skill exchange / task assistance platform). This is a monorepo containing:
 
-- `link2ur/` — Flutter mobile app (primary codebase)
-- `ios/` — **iOS native app (reference implementation)** — 业务逻辑、接口与交互以 iOS 为准；不确定时请查看 `ios/link2ur/link2ur/` 下的 Views / ViewModels / Services
+- `link2ur/` — **Flutter mobile app (primary codebase)** — 功能最完整、最新，以 Flutter 为准
+- `ios/` — iOS native app (legacy) — 早期实现，仅供历史参考，不再作为标准
 - `backend/` — Python backend API (deployed on Railway)
 - `frontend/` — React admin/web frontend
 - `admin/` — Admin panel
