@@ -316,6 +316,10 @@ app.include_router(admin_system_router, tags=["管理员-系统设置"])
 from app.admin_notification_routes import router as admin_notification_router
 app.include_router(admin_notification_router, tags=["管理员-通知管理"])
 
+# 管理员内容审核路由
+from app.admin_content_moderation_routes import router as admin_content_moderation_router
+app.include_router(admin_content_moderation_router, tags=["管理员-内容审核"])
+
 # ==================== 主路由（包含所有未迁移的路由） ====================
 app.include_router(main_router, prefix="/api", tags=["main"])  # 添加主路由，包含图片上传API
 # auth_router 已移除，使用 secure_auth_router 替代
