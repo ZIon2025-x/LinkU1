@@ -457,7 +457,6 @@ class _TaskCard extends StatelessWidget {
 
           // 底部：价格和位置（待报价任务显示「待报价」）
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 task.isPriceToBeQuoted
@@ -469,9 +468,11 @@ class _TaskCard extends StatelessWidget {
                   color: AppColors.primary,
                 ),
               ),
+              const Spacer(),
               if (task.location != null)
-                Expanded(
+                Flexible(
                   child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       const Icon(
                         Icons.location_on_outlined,

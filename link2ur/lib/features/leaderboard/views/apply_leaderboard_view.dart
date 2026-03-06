@@ -63,7 +63,7 @@ class _ApplyLeaderboardViewState extends State<ApplyLeaderboardView> {
     setState(() => _coverImage = null);
   }
 
-  Future<void> _submit() async {
+  Future<void> _submit(BuildContext blocContext) async {
     if (_titleController.text.trim().isEmpty ||
         _locationController.text.trim().isEmpty) {
       AppFeedback.showWarning(context, context.l10n.leaderboardFillRequired);
@@ -71,7 +71,7 @@ class _ApplyLeaderboardViewState extends State<ApplyLeaderboardView> {
     }
 
     AppHaptics.medium();
-    context.read<LeaderboardBloc>().add(
+    blocContext.read<LeaderboardBloc>().add(
           LeaderboardApplyRequested(
             name: _titleController.text.trim(),
             location: _locationController.text.trim(),
@@ -173,7 +173,7 @@ class _ApplyLeaderboardViewState extends State<ApplyLeaderboardView> {
                             _titleController.text.trim().isEmpty ||
                             _locationController.text.trim().isEmpty
                         ? null
-                        : _submit,
+                        : () => _submit(context),
                     isLoading: state.isSubmitting,
                   ),
                   const SizedBox(height: AppSpacing.lg),
