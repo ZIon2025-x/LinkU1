@@ -354,6 +354,10 @@ class TaskRepository {
     if (!response.isSuccess) {
       throw TaskException(response.message ?? '接受申请失败');
     }
+
+    await _cache.remove('${CacheManager.prefixMyTasks}apps');
+    await _cache.invalidateTaskDetailCache(taskId);
+    await _cache.invalidateMyTasksCache();
     return response.data;
   }
 
@@ -366,6 +370,9 @@ class TaskRepository {
     if (!response.isSuccess) {
       throw TaskException(response.message ?? '拒绝申请失败');
     }
+
+    await _cache.remove('${CacheManager.prefixMyTasks}apps');
+    await _cache.invalidateTaskDetailCache(taskId);
   }
 
   /// 撤回申请

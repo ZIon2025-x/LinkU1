@@ -109,8 +109,11 @@ class _MyTasksViewState extends State<MyTasksView>
         if (userId == null) return [];
         return _allMyTasks.where((t) => t.posterId == userId).toList();
       case _TaskTab.taken:
+        // 不是我发布的 = 我接取/参与的（包括作为 taker 或多人任务参与者）
         if (userId == null) return [];
-        return _allMyTasks.where((t) => t.posterId != userId).toList();
+        return _allMyTasks
+            .where((t) => t.posterId != userId)
+            .toList();
       case _TaskTab.inProgress:
         return _allMyTasks
             .where((t) => t.status == AppConstants.taskStatusInProgress)
@@ -495,12 +498,17 @@ class _TaskCard extends StatelessWidget {
     switch (status) {
       case AppConstants.taskStatusOpen:
         return AppColors.success;
+      case AppConstants.taskStatusTaken:
+      case AppConstants.taskStatusPendingAcceptance:
+        return AppColors.teal;
       case AppConstants.taskStatusInProgress:
         return AppColors.primary;
       case AppConstants.taskStatusCompleted:
         return AppColors.textSecondaryLight;
       case AppConstants.taskStatusCancelled:
         return AppColors.error;
+      case AppConstants.taskStatusDisputed:
+        return AppColors.warning;
       case AppConstants.taskStatusPendingConfirmation:
       case AppConstants.taskStatusPendingPayment:
         return Colors.orange;

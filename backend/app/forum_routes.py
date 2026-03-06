@@ -2144,7 +2144,6 @@ async def review_category_request(
 
 @router.get("/categories/{category_id}", response_model=schemas.ForumCategoryOut)
 @measure_api_performance("get_forum_category")
-@cache_response(ttl=300, key_prefix="forum_category")  # 缓存5分钟
 async def get_category(
     category_id: int,
     current_user: Optional[models.User] = Depends(get_current_user_optional),
@@ -2523,7 +2522,6 @@ async def delete_category(
 
 @router.get("/posts", response_model=schemas.ForumPostListResponse)
 @measure_api_performance("list_forum_posts")
-@cache_response(ttl=60, key_prefix="forum")
 async def get_posts(
     category_id: Optional[int] = Query(None),
     page: int = Query(1, ge=1),

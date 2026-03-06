@@ -6353,21 +6353,20 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                             
                             # 更新商品状态为 sold（支付成功后）
                             # ⚠️ 优化：支持 active 或 reserved 状态（reserved 是已关联任务但未支付的状态）
+                            # 🔒 并发安全：使用 SELECT FOR UPDATE 锁定商品记录，防止并发支付重复标记 sold
                             flea_item = db.query(FleaMarketItem).filter(
                                 and_(
                                     FleaMarketItem.id == db_item_id,
                                     FleaMarketItem.sold_task_id == task_id,
-                                    FleaMarketItem.status.in_(["active", "reserved"])  # 支持 active 和 reserved 状态
+                                    FleaMarketItem.status.in_(["active", "reserved"])
                                 )
-                            ).first()
-                            
+                            ).with_for_update().first()
+
                             if flea_item:
                                 flea_item.status = "sold"
                                 # 确保 sold_task_id 已设置（双重保险）
                                 if flea_item.sold_task_id != task_id:
                                     flea_item.sold_task_id = task_id
-                                # 🔒 安全修复：不在中间提交，与任务更新一起在最终统一提交
-                                # 保持事务原子性，避免部分提交导致数据不一致
                                 db.flush()
                                 logger.info(f"✅ [WEBHOOK] 跳蚤市场商品 {flea_market_item_id} 支付成功，状态已更新为 sold (task_id: {task_id})")
                                 
@@ -7242,13 +7241,14 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                         from app.models import FleaMarketItem
                         from app.id_generator import parse_flea_market_id
                         db_item_id = parse_flea_market_id(flea_market_item_id)
+                        # 🔒 并发安全：使用 SELECT FOR UPDATE 锁定商品记录
                         flea_item = db.query(FleaMarketItem).filter(
                             and_(
                                 FleaMarketItem.id == db_item_id,
                                 FleaMarketItem.sold_task_id == task_id,
                                 FleaMarketItem.status.in_(["active", "reserved"])
                             )
-                        ).first()
+                        ).with_for_update().first()
                         if flea_item:
                             flea_item.status = "sold"
                             if flea_item.sold_task_id != task_id:
