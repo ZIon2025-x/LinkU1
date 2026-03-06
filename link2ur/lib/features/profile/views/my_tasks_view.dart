@@ -128,7 +128,7 @@ class _MyTasksViewState extends State<MyTasksView>
     }
   }
 
-  /// 只请求一次「全部我的任务」，各 Tab 本地筛选
+  /// 拉取全部我的任务（自动分页），各 Tab 本地筛选
   Future<void> _loadAllMyTasks() async {
     setState(() {
       _allMyTasksLoading = true;
@@ -136,12 +136,24 @@ class _MyTasksViewState extends State<MyTasksView>
     });
     try {
       final repo = context.read<TaskRepository>();
-      final response = await repo.getMyTasks(
-        pageSize: 100,
-      );
+      final List<Task> allTasks = [];
+      int page = 1;
+      const pageSize = 100;
+
+      while (true) {
+        final response = await repo.getMyTasks(
+          page: page,
+          pageSize: pageSize,
+        );
+        allTasks.addAll(response.tasks);
+        // 如果返回数量不足一页，说明已加载完毕
+        if (response.tasks.length < pageSize) break;
+        page++;
+      }
+
       if (mounted) {
         setState(() {
-          _allMyTasks = response.tasks;
+          _allMyTasks = allTasks;
           _allMyTasksLoading = false;
           _allMyTasksError = null;
         });

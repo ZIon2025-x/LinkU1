@@ -17,10 +17,12 @@ class ExternalWebView extends StatefulWidget {
     super.key,
     required this.url,
     this.title,
+    this.onNavigationStateChanged,
   });
 
   final String url;
   final String? title;
+  final VoidCallback? onNavigationStateChanged;
 
   /// 便捷方法 - 在外部浏览器中打开
   static Future<void> open(String url) async {
@@ -133,6 +135,7 @@ class _ExternalWebViewState extends State<ExternalWebView> {
         _canGoBack = canGoBack;
         _canGoForward = canGoForward;
       });
+      widget.onNavigationStateChanged?.call();
     }
   }
 
@@ -213,10 +216,6 @@ class _ExternalWebViewPageState extends State<_ExternalWebViewPage> {
 
   @override
   Widget build(BuildContext context) {
-    // 定期刷新导航按钮状态（页面加载完成后 ExternalWebView 内部已 setState，
-    // 但 parent 需要监听变化。使用 postFrameCallback 来同步）
-    WidgetsBinding.instance.addPostFrameCallback((_) => _refreshNavState());
-
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
@@ -262,6 +261,7 @@ class _ExternalWebViewPageState extends State<_ExternalWebViewPage> {
         key: _webViewKey,
         url: widget.url,
         title: widget.title,
+        onNavigationStateChanged: _refreshNavState,
       ),
     );
   }

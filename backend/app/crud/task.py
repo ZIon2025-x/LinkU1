@@ -57,9 +57,6 @@ def get_user_tasks(
 
     from app.models import Task, TaskParticipant, TaskTimeSlotRelation
 
-    now_utc = get_utc_time()
-    three_days_ago = now_utc - timedelta(days=3)
-
     tasks_query = (
         db.query(models.Task)
         .options(
@@ -76,17 +73,6 @@ def get_user_tasks(
                 models.Task.poster_id == user_id,
                 models.Task.taker_id == user_id,
                 models.Task.originating_user_id == user_id,
-            ),
-            or_(
-                models.Task.status != "completed",
-                and_(
-                    models.Task.status == "completed",
-                    models.Task.completed_at.isnot(None),
-                    models.Task.completed_at
-                    > three_days_ago.replace(tzinfo=None)
-                    if three_days_ago.tzinfo
-                    else models.Task.completed_at > three_days_ago,
-                ),
             ),
         )
     )
@@ -107,17 +93,6 @@ def get_user_tasks(
             and_(
                 TaskParticipant.user_id == user_id,
                 models.Task.is_multi_participant == True,
-                or_(
-                    models.Task.status != "completed",
-                    and_(
-                        models.Task.status == "completed",
-                        models.Task.completed_at.isnot(None),
-                        models.Task.completed_at
-                        > three_days_ago.replace(tzinfo=None)
-                        if three_days_ago.tzinfo
-                        else models.Task.completed_at > three_days_ago,
-                    ),
-                ),
             )
         )
     )

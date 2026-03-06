@@ -1272,13 +1272,11 @@ class _PublishContentState extends State<_PublishContent>
   Widget _buildTaskForm(bool isDark) {
     final taskCategories = _getTaskCategories(context);
 
-    // 如果当前选中的类型被禁用，重置
+    // 如果当前选中的类型被禁用，同步重置（ValueNotifier 不会触发 build 中 setState）
     if (_taskCategoryNotifier.value != null) {
       final match = taskCategories.where((c) => c.$1 == _taskCategoryNotifier.value);
       if (match.isEmpty || !match.first.$3) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) _taskCategoryNotifier.value = null;
-        });
+        _taskCategoryNotifier.value = null;
       }
     }
 
@@ -1572,12 +1570,10 @@ class _PublishContentState extends State<_PublishContent>
       currentUser,
     );
 
-    // 如果当前选中的分类不在可发布列表中，重置选择
+    // 如果当前选中的分类不在可发布列表中，直接重置（当前 build 帧会使用新值）
     if (_postCategoryId != null &&
         !postableCategories.any((c) => c.id == _postCategoryId)) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) setState(() => _postCategoryId = null);
-      });
+      _postCategoryId = null;
     }
 
     final viewInsets = MediaQuery.of(context).viewInsets;
