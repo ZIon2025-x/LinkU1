@@ -566,16 +566,13 @@ class _GroupBubbleItemState extends State<_GroupBubbleItem>
         return _buildInteractiveWrapper(
           isOutgoing: isOutgoing,
           isDark: isDark,
-          child: ClipRRect(
-            borderRadius: borderRadius,
-            child: GestureDetector(
-              onTap: _isSelected ? _dismiss : () => widget.onImageTap?.call(displayUrl),
-              child: AsyncImageView(
-                imageUrl: displayUrl,
-                width: 200,
-                height: 200,
-                borderRadius: borderRadius,
-              ),
+          child: GestureDetector(
+            onTap: _isSelected ? _dismiss : () => widget.onImageTap?.call(displayUrl),
+            child: AsyncImageView(
+              imageUrl: displayUrl,
+              width: 200,
+              height: 200,
+              borderRadius: borderRadius,
             ),
           ),
         );

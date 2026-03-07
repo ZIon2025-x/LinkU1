@@ -79,6 +79,7 @@ class ProfileView extends StatelessWidget {
   }
 
   Widget _buildNotLoggedIn(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       appBar: AppBar(
         title: Text(context.l10n.tabsProfile),
@@ -105,7 +106,7 @@ class ProfileView extends StatelessWidget {
             Text(
               context.l10n.profileWelcome,
               style: AppTypography.title2.copyWith(
-                color: Theme.of(context).brightness == Brightness.dark
+                color: isDark
                     ? AppColors.textPrimaryDark
                     : AppColors.textPrimaryLight,
               ),
@@ -114,7 +115,7 @@ class ProfileView extends StatelessWidget {
             Text(
               context.l10n.profileLoginPrompt,
               style: AppTypography.subheadline.copyWith(
-                color: Theme.of(context).brightness == Brightness.dark
+                color: isDark
                     ? AppColors.textSecondaryDark
                     : AppColors.textSecondaryLight,
               ),

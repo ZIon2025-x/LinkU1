@@ -439,19 +439,22 @@ class _FleaMarketDetailContent extends StatelessWidget {
                     },
                   );
                 },
-          child: Container(
-            height: 50,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.error.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(25),
-              border: Border.all(
-                color: Theme.of(context).colorScheme.error.withValues(alpha: 0.3),
+          child: Builder(builder: (context) {
+            final errorColor = Theme.of(context).colorScheme.error;
+            return Container(
+              height: 50,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: errorColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(25),
+                border: Border.all(
+                  color: errorColor.withValues(alpha: 0.3),
+                ),
               ),
-            ),
-            child: Icon(Icons.delete_outline,
-                size: 20, color: Theme.of(context).colorScheme.error),
-          ),
+              child: Icon(Icons.delete_outline,
+                  size: 20, color: errorColor),
+            );
+          }),
         ),
         const SizedBox(width: 8),
         // 刷新按钮 - 对标iOS orange gradient

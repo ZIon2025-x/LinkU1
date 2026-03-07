@@ -326,6 +326,7 @@ class _NotificationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final locale = Localizations.localeOf(context);
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -361,7 +362,7 @@ class _NotificationCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    notification.displayTitle(Localizations.localeOf(context)),
+                    notification.displayTitle(locale),
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: notification.isRead
@@ -369,10 +370,10 @@ class _NotificationCard extends StatelessWidget {
                           : FontWeight.w600,
                     ),
                   ),
-                  if (notification.displayContent(Localizations.localeOf(context)).isNotEmpty) ...[
+                  if (notification.displayContent(locale).isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Text(
-                      notification.displayContent(Localizations.localeOf(context)),
+                      notification.displayContent(locale),
                       style: const TextStyle(
                           fontSize: 13,
                           color: AppColors.textSecondary),

@@ -295,7 +295,7 @@ class _PostCard extends StatelessWidget {
             if (post.displayContent(locale)?.isNotEmpty ?? false) ...[
               const SizedBox(height: 6),
               Text(
-                Helpers.normalizeContentNewlines(post.displayContent(locale)!),
+                Helpers.normalizeContentNewlines(post.displayContent(locale) ?? ''),
                 style: const TextStyle(
                     fontSize: 14, color: AppColors.textSecondary),
                 maxLines: 2,

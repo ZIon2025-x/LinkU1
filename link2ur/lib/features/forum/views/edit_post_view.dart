@@ -213,6 +213,11 @@ class _EditPostViewState extends State<EditPostView> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isBusy = _isUploading;
+    final labelStyle = TextStyle(
+      fontSize: 14,
+      fontWeight: FontWeight.w600,
+      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+    );
 
     return BlocListener<ForumBloc, ForumState>(
       listenWhen: (prev, curr) =>
@@ -273,11 +278,7 @@ class _EditPostViewState extends State<EditPostView> {
         children: [
           Text(
             context.l10n.forumCreatePostPostTitle,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-            ),
+            style: labelStyle,
           ),
           AppSpacing.vSm,
           TextField(
@@ -291,11 +292,7 @@ class _EditPostViewState extends State<EditPostView> {
           AppSpacing.vMd,
           Text(
             context.l10n.forumCreatePostPostContent,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-            ),
+            style: labelStyle,
           ),
           AppSpacing.vSm,
           TextField(
@@ -311,22 +308,14 @@ class _EditPostViewState extends State<EditPostView> {
           AppSpacing.vMd,
           Text(
             '${context.l10n.forumCreatePostImages}（${context.l10n.commonImageCount(_totalImageCount, _kMaxImages)}）',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-            ),
+            style: labelStyle,
           ),
           AppSpacing.vSm,
           _buildImageSection(isDark),
           AppSpacing.vMd,
           Text(
             context.l10n.forumPdfAttachmentCount(_hasPdf ? '1' : '0', '1'),
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-            ),
+            style: labelStyle,
           ),
           AppSpacing.vSm,
           _buildPdfSection(isDark),

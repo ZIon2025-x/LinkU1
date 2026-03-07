@@ -314,6 +314,7 @@ class DesktopDrawer extends StatelessWidget {
   /// 未读消息徽章
   Widget _buildUnreadBadge(BuildContext context) {
     return BlocBuilder<NotificationBloc, NotificationState>(
+      buildWhen: (prev, curr) => prev.unreadCount.totalCount != curr.unreadCount.totalCount,
       builder: (context, notifState) {
         final notifCount = notifState.unreadCount.totalCount;
         int chatCount = 0;

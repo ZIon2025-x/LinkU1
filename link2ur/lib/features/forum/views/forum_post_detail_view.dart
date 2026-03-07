@@ -259,11 +259,12 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                 if (value == 'report') {
                   _showReportDialog(context);
                 } else if (value == 'edit') {
-                  final post = context.read<ForumBloc>().state.selectedPost;
+                  final forumBloc = context.read<ForumBloc>();
+                  final post = forumBloc.state.selectedPost;
                   if (post != null) {
                     context.push('/forum/posts/${post.id}/edit', extra: {
                       'post': post,
-                      'bloc': context.read<ForumBloc>(),
+                      'bloc': forumBloc,
                     });
                   }
                 } else if (value == 'delete') {

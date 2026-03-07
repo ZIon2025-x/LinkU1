@@ -60,7 +60,10 @@ class _LeaderboardContentState extends State<_LeaderboardContent> {
     if (!mounted) return;
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
-      context.read<LeaderboardBloc>().add(const LeaderboardLoadMore());
+      final state = context.read<LeaderboardBloc>().state;
+      if (state.hasMore && state.status != LeaderboardStatus.loading) {
+        context.read<LeaderboardBloc>().add(const LeaderboardLoadMore());
+      }
     }
   }
 

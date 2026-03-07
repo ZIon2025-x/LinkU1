@@ -860,66 +860,51 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
                     ),
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  Wrap(
-                    spacing: AppSpacing.sm,
-                    runSpacing: AppSpacing.sm,
-                    children: [
-                      _UnifiedQuickAction(
-                        label: context.l10n.aiChatViewMyTasks,
-                        onTap: () {
-                          context.read<UnifiedChatBloc>().add(
-                                UnifiedChatSendMessage(
-                                    context.l10n.aiChatViewMyTasks),
-                              );
-                        },
-                      ),
-                      _UnifiedQuickAction(
-                        label: context.l10n.aiChatSearchTasks,
-                        onTap: () {
-                          context.read<UnifiedChatBloc>().add(
-                                UnifiedChatSendMessage(
-                                    context.l10n.aiChatSearchTasks),
-                              );
-                        },
-                      ),
-                      _UnifiedQuickAction(
-                        label: context.l10n.aiChatPostTask,
-                        onTap: () {
-                          context.read<UnifiedChatBloc>().add(
-                                UnifiedChatSendMessage(
-                                    context.l10n.aiChatPostTask),
-                              );
-                        },
-                      ),
-                      _UnifiedQuickAction(
-                        label: context.l10n.aiChatMyPoints,
-                        onTap: () {
-                          context.read<UnifiedChatBloc>().add(
-                                UnifiedChatSendMessage(
-                                    context.l10n.aiChatMyPoints),
-                              );
-                        },
-                      ),
-                      _UnifiedQuickAction(
-                        label: context.l10n.aiChatActivities,
-                        onTap: () {
-                          context.read<UnifiedChatBloc>().add(
-                                UnifiedChatSendMessage(
-                                    context.l10n.aiChatActivities),
-                              );
-                        },
-                      ),
-                      _UnifiedQuickAction(
-                        label: context.l10n.aiChatContactSupport,
-                        onTap: () {
-                          context.read<UnifiedChatBloc>().add(
-                                UnifiedChatSendMessage(
-                                    context.l10n.aiChatContactSupport),
-                              );
-                        },
-                      ),
-                    ],
-                  ),
+                  Builder(builder: (context) {
+                    final bloc = context.read<UnifiedChatBloc>();
+                    return Wrap(
+                      spacing: AppSpacing.sm,
+                      runSpacing: AppSpacing.sm,
+                      children: [
+                        _UnifiedQuickAction(
+                          label: context.l10n.aiChatViewMyTasks,
+                          onTap: () => bloc.add(
+                              UnifiedChatSendMessage(
+                                  context.l10n.aiChatViewMyTasks)),
+                        ),
+                        _UnifiedQuickAction(
+                          label: context.l10n.aiChatSearchTasks,
+                          onTap: () => bloc.add(
+                              UnifiedChatSendMessage(
+                                  context.l10n.aiChatSearchTasks)),
+                        ),
+                        _UnifiedQuickAction(
+                          label: context.l10n.aiChatPostTask,
+                          onTap: () => bloc.add(
+                              UnifiedChatSendMessage(
+                                  context.l10n.aiChatPostTask)),
+                        ),
+                        _UnifiedQuickAction(
+                          label: context.l10n.aiChatMyPoints,
+                          onTap: () => bloc.add(
+                              UnifiedChatSendMessage(
+                                  context.l10n.aiChatMyPoints)),
+                        ),
+                        _UnifiedQuickAction(
+                          label: context.l10n.aiChatActivities,
+                          onTap: () => bloc.add(
+                              UnifiedChatSendMessage(
+                                  context.l10n.aiChatActivities)),
+                        ),
+                        _UnifiedQuickAction(
+                          label: context.l10n.aiChatContactSupport,
+                          onTap: () => bloc.add(
+                              UnifiedChatSendMessage(
+                                  context.l10n.aiChatContactSupport)),
+                        ),
+                      ],
+                    );
+                  }),
                 ],
               ),
             ),

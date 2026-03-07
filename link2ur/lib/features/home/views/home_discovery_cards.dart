@@ -11,6 +11,8 @@ class _PostCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final metaColor = isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight;
+    final metaStyle = TextStyle(fontSize: 11, color: metaColor);
     final locale = Localizations.localeOf(context);
     final displayTitle = Helpers.normalizeContentNewlines(item.displayTitle(locale));
     final displayDesc = item.displayDescription(locale) != null
@@ -127,16 +129,16 @@ class _PostCard extends StatelessWidget {
                     child: Row(
                       children: [
                         Icon(Icons.favorite_border, size: 14,
-                            color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight),
+                            color: metaColor),
                         const SizedBox(width: 3),
                         Text('${item.likeCount ?? 0}',
-                            style: TextStyle(fontSize: 11, color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight)),
+                            style: metaStyle),
                         const SizedBox(width: 12),
                         Icon(Icons.chat_bubble_outline, size: 14,
-                            color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight),
+                            color: metaColor),
                         const SizedBox(width: 3),
                         Text('${item.commentCount ?? 0}',
-                            style: TextStyle(fontSize: 11, color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight)),
+                            style: metaStyle),
                       ],
                     ),
                   ),
