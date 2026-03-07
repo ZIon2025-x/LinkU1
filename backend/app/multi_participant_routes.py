@@ -826,11 +826,12 @@ def apply_to_activity(
 
 
 # ===========================================
-# 用户API：申请参与多人任务（保留向后兼容）
+# 用户API：申请参与多人任务（已由 async_routers.py POST /tasks/{task_id}/apply 统一处理）
+# 注释掉路由装饰器，避免与 async_routers 中的 /tasks/{task_id}/apply 路由重复注册。
 # ===========================================
 
-@router.post("/tasks/{task_id}/apply")
-def apply_to_multi_participant_task(
+# @router.post("/tasks/{task_id}/apply")  # 已禁用：与 async_routers 重复
+def _apply_to_multi_participant_task_legacy(
     task_id: str,
     request: TaskApplyRequest,
     current_user=Depends(get_current_user_secure_sync_csrf),

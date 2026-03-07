@@ -46,8 +46,7 @@ List<RouteBase> get taskExpertRoutes => [
         builder: (context, state) {
           final id = int.tryParse(state.pathParameters['id'] ?? '');
           if (id == null || id <= 0) {
-            return const Scaffold(
-                body: Center(child: Text('Invalid service ID')));
+            return const SizedBox.shrink();
           }
           return ServiceDetailView(serviceId: id);
         },

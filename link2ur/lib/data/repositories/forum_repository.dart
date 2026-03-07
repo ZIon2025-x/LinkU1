@@ -261,14 +261,19 @@ class ForumRepository {
   }
 
   /// 将后端返回的嵌套回复树展平为列表（根回复在前，子回复按顺序紧跟），与 iOS 展示顺序一致
-  static List<ForumReply> _flattenReplyTree(List<dynamic> rawList) {
+  /// [visited] 用于检测循环引用，防止无限递归
+  static List<ForumReply> _flattenReplyTree(List<dynamic> rawList, {Set<int>? visited}) {
+    visited ??= {};
     final result = <ForumReply>[];
     for (final e in rawList) {
       final map = Map<String, dynamic>.from(e as Map<String, dynamic>);
-      result.add(ForumReply.fromJson(map));
+      final reply = ForumReply.fromJson(map);
+      if (visited.contains(reply.id)) continue;
+      visited.add(reply.id);
+      result.add(reply);
       final children = map['replies'] as List<dynamic>?;
       if (children != null && children.isNotEmpty) {
-        result.addAll(_flattenReplyTree(children));
+        result.addAll(_flattenReplyTree(children, visited: visited));
       }
     }
     return result;

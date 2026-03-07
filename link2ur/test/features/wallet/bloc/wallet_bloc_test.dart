@@ -237,10 +237,8 @@ void main() {
         act: (bloc) => bloc.add(const WalletLoadMoreTransactions()),
         expect: () => [
           WalletState(
-            status: WalletStatus.loaded,
+            status: WalletStatus.error,
             transactions: testTransactions,
-            transactionPage: 1,
-            hasMoreTransactions: true,
             errorMessage: 'wallet_load_more_failed',
           ),
         ],

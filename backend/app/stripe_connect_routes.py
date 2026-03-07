@@ -2040,49 +2040,8 @@ def get_account_transactions(
         )
 
 
-@router.post("/account/onboarding-session", response_model=schemas.StripeConnectAccountSessionResponse)
-def create_onboarding_session(
-    current_user: models.User = Depends(get_current_user_secure_sync_csrf),
-    db: Session = Depends(get_db)
-):
-    """
-    创建账户 onboarding session（用于嵌入式组件）
-    
-    用于重新开始或继续账户设置流程，返回 client_secret 用于嵌入式组件
-    """
-    if not _is_valid_stripe_account_id(current_user.stripe_account_id):
-        raise HTTPException(
-            status_code=404,
-            detail="未找到 Stripe Connect 账户，请先创建账户"
-        )
-    
-    try:
-        account = stripe.Account.retrieve(current_user.stripe_account_id)
-        
-        # 验证账户所有权（通过 metadata 中的 user_id）
-        if not verify_account_ownership(current_user.stripe_account_id, current_user):
-            logger.error(f"Account ownership verification failed for user {current_user.id}, account {current_user.stripe_account_id}")
-            raise HTTPException(
-                status_code=403,
-                detail="账户验证失败：账户不属于当前用户"
-            )
-        
-        # 创建 AccountSession 用于嵌入式组件
-        onboarding_session = create_account_session_safe(
-            account.id,
-            enable_account_onboarding=True
-        )
-        
-        return {
-            "client_secret": onboarding_session.client_secret
-        }
-        
-    except stripe.error.StripeError as e:
-        logger.error(f"Stripe error creating onboarding link: {e}")
-        raise HTTPException(
-            status_code=400,
-            detail=f"创建 onboarding 链接失败: {str(e)}"
-        )
+# NOTE: 原先此处有两个 POST /account/onboarding-session 路由（重复定义），
+# 已合并为下方唯一的 /account/onboarding-session 端点（返回 StripeConnectAccountEmbeddedResponse）。
 
 
 @router.post("/account_session", response_model=schemas.StripeConnectAccountSessionResponse)

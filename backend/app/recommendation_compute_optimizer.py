@@ -95,7 +95,8 @@ class RecommendationComputeCache:
         if task_ids:
             tasks = self.db.query(Task).filter(
                 Task.id.in_(task_ids),
-                Task.status == "open"
+                Task.status == "open",
+                Task.is_visible == True
             ).all()
             # 按缓存顺序排序
             task_dict = {task.id: task for task in tasks}
@@ -108,6 +109,7 @@ class RecommendationComputeCache:
         recent_time = get_utc_time() - timedelta(hours=24)
         tasks = self.db.query(Task).filter(
             Task.status == "open",
+            Task.is_visible == True,
             Task.created_at >= recent_time
         ).order_by(Task.created_at.desc()).limit(limit).all()
         

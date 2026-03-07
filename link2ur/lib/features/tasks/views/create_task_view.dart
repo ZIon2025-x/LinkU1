@@ -218,6 +218,7 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
         final repo = context.read<TaskRepository>();
         for (final img in _selectedImages) {
           final url = await repo.uploadTaskImage(await img.readAsBytes(), img.name);
+          if (!mounted) return;
           imageUrls.add(url);
         }
       } catch (e) {

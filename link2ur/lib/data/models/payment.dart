@@ -103,7 +103,13 @@ class TaskPaymentResponse extends Equatable {
   }
 
   @override
-  List<Object?> get props => [paymentId, finalAmount, clientSecret];
+  List<Object?> get props => [
+        paymentId, feeType, originalAmount, originalAmountDisplay,
+        couponDiscount, couponDiscountDisplay, couponName, couponType, couponDescription,
+        finalAmount, finalAmountDisplay, currency,
+        clientSecret, paymentIntentId, customerId, ephemeralKeySecret,
+        note, calculationSteps,
+      ];
 }
 
 /// Stripe Connect 状态

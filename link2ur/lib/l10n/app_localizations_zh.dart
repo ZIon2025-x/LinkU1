@@ -6211,6 +6211,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get errorExpiredCard => '银行卡已过期，请更换银行卡。';
 
   @override
+  String get errorCouponPointsLoadTransactionsFailed => '加载交易记录失败';
+
+  @override
+  String get errorCouponPointsLoadMoreTransactionsFailed => '加载更多交易记录失败';
+
+  @override
+  String get errorInvalidPaymentAmount => '无效的支付金额';
+
+  @override
+  String get errorVerificationEmailNotFound => '未找到邮箱';
+
+  @override
+  String get errorCreateTaskFailed => '创建任务失败';
+
+  @override
+  String get errorTaskApplicationIdNotFound => '未找到申请ID';
+
+  @override
   String get searchTitle => '搜索';
 
   @override
@@ -15343,6 +15361,24 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get errorExpiredCard => '銀行卡已過期，請更換銀行卡。';
+
+  @override
+  String get errorCouponPointsLoadTransactionsFailed => '載入交易記錄失敗';
+
+  @override
+  String get errorCouponPointsLoadMoreTransactionsFailed => '載入更多交易記錄失敗';
+
+  @override
+  String get errorInvalidPaymentAmount => '無效的支付金額';
+
+  @override
+  String get errorVerificationEmailNotFound => '未找到郵箱';
+
+  @override
+  String get errorCreateTaskFailed => '建立任務失敗';
+
+  @override
+  String get errorTaskApplicationIdNotFound => '未找到申請ID';
 
   @override
   String get searchTitle => '搜尋';

@@ -21,6 +21,7 @@ List<RouteBase> get messageRoutes => [
         name: 'chat',
         builder: (context, state) {
           final userId = state.pathParameters['userId'] ?? '';
+          if (userId.isEmpty) return const SizedBox.shrink();
           return ChatView(userId: userId);
         },
       ),
@@ -30,8 +31,7 @@ List<RouteBase> get messageRoutes => [
         builder: (context, state) {
           final taskId = int.tryParse(state.pathParameters['taskId'] ?? '');
           if (taskId == null || taskId <= 0) {
-            return const Scaffold(
-                body: Center(child: Text('Invalid task ID')));
+            return const SizedBox.shrink();
           }
           return TaskChatView(taskId: taskId);
         },
@@ -51,6 +51,7 @@ List<RouteBase> get messageRoutes => [
         name: 'notificationList',
         builder: (context, state) {
           final type = state.pathParameters['type'];
+          if (type == null || type.isEmpty) return const SizedBox.shrink();
           return NotificationListView(type: type);
         },
       ),

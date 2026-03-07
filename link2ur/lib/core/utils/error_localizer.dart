@@ -150,6 +150,18 @@ class ErrorLocalizer {
         return context.l10n.errorRequestFailedGeneric;
       case 'wallet_load_more_failed':
         return context.l10n.errorRequestFailedGeneric;
+      case 'coupon_points_load_transactions_failed':
+        return context.l10n.errorCouponPointsLoadTransactionsFailed;
+      case 'coupon_points_load_more_transactions_failed':
+        return context.l10n.errorCouponPointsLoadMoreTransactionsFailed;
+      case 'error_invalid_payment_amount':
+        return context.l10n.errorInvalidPaymentAmount;
+      case 'verification_email_not_found':
+        return context.l10n.errorVerificationEmailNotFound;
+      case 'create_task_failed':
+        return context.l10n.errorCreateTaskFailed;
+      case 'task_application_id_not_found':
+        return context.l10n.errorTaskApplicationIdNotFound;
       default:
         // 服务端返回的已翻译消息，直接使用
         return errorMessage;

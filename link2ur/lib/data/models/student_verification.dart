@@ -139,7 +139,7 @@ class University extends Equatable {
 
   factory University.fromJson(Map<String, dynamic> json) {
     return University(
-      id: json['id'] as int,
+      id: json['id'] as int? ?? 0,
       name: json['name'] as String? ?? '',
       nameCn: json['name_cn'] as String?,
     );

@@ -1227,8 +1227,10 @@ def _request_lang_sync(request: Request, current_user: Optional[models.User]) ->
     return "en"
 
 
-@router.get("/tasks/{task_id}", response_model=schemas.TaskOut)
-def get_task_detail(
+# NOTE: 此同步版本已被 async_routers.py 中的异步版本取代。
+# 保留代码但注释掉路由装饰器，避免 /api/tasks/{task_id} 路由重复注册。
+# @router.get("/tasks/{task_id}", response_model=schemas.TaskOut)
+def _get_task_detail_legacy(
     task_id: int,
     request: Request,
     background_tasks: BackgroundTasks,
@@ -4919,6 +4921,7 @@ def user_profile(
         .filter(
             FleaMarketItem.seller_id == user_id,
             FleaMarketItem.status == "sold",
+            FleaMarketItem.is_visible == True,
         )
         .order_by(FleaMarketItem.updated_at.desc())
         .limit(5)

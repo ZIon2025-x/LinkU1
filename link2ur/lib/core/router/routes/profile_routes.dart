@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 
 import '../app_routes.dart';
@@ -39,6 +40,7 @@ List<RouteBase> get profileRoutes => [
         name: 'userProfile',
         builder: (context, state) {
           final id = state.pathParameters['id'] ?? '';
+          if (id.isEmpty) return const SizedBox.shrink();
           return UserProfileView(userId: id);
         },
       ),

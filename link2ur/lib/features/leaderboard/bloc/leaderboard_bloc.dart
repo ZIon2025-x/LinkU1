@@ -365,7 +365,7 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
     LeaderboardClearActionMessage event,
     Emitter<LeaderboardState> emit,
   ) {
-    emit(state.copyWith(actionMessage: null, reportSuccess: false));
+    emit(state.copyWith());
   }
 
   final LeaderboardRepository _leaderboardRepository;

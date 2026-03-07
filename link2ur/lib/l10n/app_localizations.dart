@@ -11870,6 +11870,42 @@ abstract class AppLocalizations {
   /// **'Card expired. Please use a different card.'**
   String get errorExpiredCard;
 
+  /// No description provided for @errorCouponPointsLoadTransactionsFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load transactions'**
+  String get errorCouponPointsLoadTransactionsFailed;
+
+  /// No description provided for @errorCouponPointsLoadMoreTransactionsFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load more transactions'**
+  String get errorCouponPointsLoadMoreTransactionsFailed;
+
+  /// No description provided for @errorInvalidPaymentAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid payment amount'**
+  String get errorInvalidPaymentAmount;
+
+  /// No description provided for @errorVerificationEmailNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Email not found'**
+  String get errorVerificationEmailNotFound;
+
+  /// No description provided for @errorCreateTaskFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to create task'**
+  String get errorCreateTaskFailed;
+
+  /// No description provided for @errorTaskApplicationIdNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Application ID not found'**
+  String get errorTaskApplicationIdNotFound;
+
   /// No description provided for @searchTitle.
   ///
   /// In en, this message translates to:

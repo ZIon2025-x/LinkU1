@@ -103,7 +103,10 @@ class PushNotificationService with WidgetsBindingObserver {
 
   /// 上传推送 Token 到服务器
   /// 与原生 iOS 项目 APIService.registerDeviceToken 保持一致
-  Future<void> _uploadTokenToServer(String token) async {
+  /// 失败时最多重试 3 次（延迟 5s, 15s, 30s）
+  static const _uploadRetryDelays = [5, 15, 30];
+
+  Future<void> _uploadTokenToServer(String token, {int attempt = 0}) async {
     try {
       if (_apiService == null) {
         AppLogger.warning('ApiService not set, skipping token upload');
@@ -139,7 +142,15 @@ class PushNotificationService with WidgetsBindingObserver {
       );
       AppLogger.info('Push token uploaded to server');
     } catch (e) {
-      AppLogger.error('Failed to upload push token to server', e);
+      if (attempt < _uploadRetryDelays.length) {
+        AppLogger.warning(
+          'Failed to upload push token (attempt ${attempt + 1}/${_uploadRetryDelays.length}), '
+          'retrying in ${_uploadRetryDelays[attempt]}s',
+        );
+        await Future.delayed(Duration(seconds: _uploadRetryDelays[attempt]));
+        return _uploadTokenToServer(token, attempt: attempt + 1);
+      }
+      AppLogger.error('Failed to upload push token after ${_uploadRetryDelays.length} retries', e);
     }
   }
 

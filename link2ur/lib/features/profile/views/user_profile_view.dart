@@ -712,9 +712,10 @@ class _UserProfileViewState extends State<UserProfileView> {
                                   setSheetState(
                                       () => isSubmitting = false);
                                   if (ctx.mounted) {
+                                    final errorText = ctx.localizeError(e.toString());
                                     ScaffoldMessenger.of(ctx).showSnackBar(
                                       SnackBar(
-                                          content: Text(context.localizeError(e.toString()))),
+                                          content: Text(errorText)),
                                     );
                                   }
                                 }
@@ -748,7 +749,7 @@ class _UserProfileViewState extends State<UserProfileView> {
           },
         );
       },
-    ).then((_) {
+    ).whenComplete(() {
       titleController.dispose();
       descriptionController.dispose();
       priceController.dispose();

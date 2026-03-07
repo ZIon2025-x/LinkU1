@@ -105,9 +105,13 @@ class LeaderboardRepository {
     final cacheKey =
         CacheManager.buildKey('${CacheManager.prefixLeaderboard}items_', params);
 
-    final cached = _cache.get<Map<String, dynamic>>(cacheKey);
-    if (cached != null && (keyword == null || keyword.isEmpty)) {
-      return LeaderboardItemsResponse.fromJson(cached);
+    // 仅无搜索关键词时使用缓存（搜索结果不缓存）
+    final useCache = keyword == null || keyword.isEmpty;
+    if (useCache) {
+      final cached = _cache.get<Map<String, dynamic>>(cacheKey);
+      if (cached != null) {
+        return LeaderboardItemsResponse.fromJson(cached);
+      }
     }
 
     final response = await _apiService.get<Map<String, dynamic>>(
@@ -124,7 +128,9 @@ class LeaderboardRepository {
       throw LeaderboardException(response.message ?? '获取排行榜项目失败');
     }
 
-    await _cache.set(cacheKey, response.data!, ttl: CacheManager.longTTL);
+    if (useCache) {
+      await _cache.set(cacheKey, response.data!, ttl: CacheManager.longTTL);
+    }
 
     return LeaderboardItemsResponse.fromJson(response.data!);
   }

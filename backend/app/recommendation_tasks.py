@@ -164,7 +164,8 @@ if CELERY_AVAILABLE:
                 Task.id == UserTaskInteraction.task_id
             ).filter(
                 UserTaskInteraction.interaction_time >= recent_time,
-                Task.status == "open"
+                Task.status == "open",
+                Task.is_visible == True
             ).group_by(
                 Task.id
             ).order_by(

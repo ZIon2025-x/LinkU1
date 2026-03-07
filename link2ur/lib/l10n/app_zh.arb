@@ -3075,6 +3075,12 @@
   "errorInsufficientFunds": "余额不足，请更换支付方式或充值后重试。",
   "errorCardDeclined": "银行卡被拒绝，请更换银行卡或联系银行。",
   "errorExpiredCard": "银行卡已过期，请更换银行卡。",
+  "errorCouponPointsLoadTransactionsFailed": "加载交易记录失败",
+  "errorCouponPointsLoadMoreTransactionsFailed": "加载更多交易记录失败",
+  "errorInvalidPaymentAmount": "无效的支付金额",
+  "errorVerificationEmailNotFound": "未找到邮箱",
+  "errorCreateTaskFailed": "创建任务失败",
+  "errorTaskApplicationIdNotFound": "未找到申请ID",
 
   "searchTitle": "搜索",
   "searchHint": "搜索任务、帖子、商品",

@@ -334,6 +334,8 @@ class ApiEndpoints {
       '/api/activities/$id/favorite/status';
   static const String myActivities = '/api/my/activities';
   static String officialActivityApply(int id) => '/api/official-activities/$id/apply';
+  /// 取消官方活动报名（DELETE 同路径）— 后端 official_activity_routes.py
+  static String officialActivityCancel(int id) => '/api/official-activities/$id/apply';
   static String officialActivityResult(int id) => '/api/official-activities/$id/result';
 
   // ==================== 积分/优惠券 ====================

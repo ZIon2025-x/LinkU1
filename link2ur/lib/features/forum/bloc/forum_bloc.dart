@@ -766,7 +766,6 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
       final replies = await _forumRepository.getPostReplies(
         event.postId,
         page: page,
-        pageSize: pageSize,
       );
       final hasMore = replies.length >= pageSize;
 

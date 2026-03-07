@@ -323,8 +323,12 @@ async def get_flea_market_items(
         
         # 状态筛选
         if seller_id:
-            # 卖家筛选时，允许按 active/sold 状态查看自己的商品
-            query = query.where(models.FleaMarketItem.status == status_filter)
+            # 卖家筛选时，允许按 active/sold 状态查看
+            # 内容审核隐藏的商品不应展示给任何人（公开端点无认证）
+            query = query.where(
+                models.FleaMarketItem.status == status_filter,
+                models.FleaMarketItem.is_visible == True
+            )
         else:
             # ⚠️ 优化：只显示 active 状态且未被预留的商品（sold_task_id 为空）
             # 如果 sold_task_id 不为空，说明商品已被购买但等待支付，不应该在列表中显示

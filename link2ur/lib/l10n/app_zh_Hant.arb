@@ -3014,6 +3014,12 @@
   "errorInsufficientFunds": "餘額不足，請更換支付方式或儲值後重試。",
   "errorCardDeclined": "銀行卡被拒絕，請更換銀行卡或聯繫銀行。",
   "errorExpiredCard": "銀行卡已過期，請更換銀行卡。",
+  "errorCouponPointsLoadTransactionsFailed": "載入交易記錄失敗",
+  "errorCouponPointsLoadMoreTransactionsFailed": "載入更多交易記錄失敗",
+  "errorInvalidPaymentAmount": "無效的支付金額",
+  "errorVerificationEmailNotFound": "未找到郵箱",
+  "errorCreateTaskFailed": "建立任務失敗",
+  "errorTaskApplicationIdNotFound": "未找到申請ID",
 
   "searchTitle": "搜尋",
   "searchHint": "搜尋任務、貼文、商品",

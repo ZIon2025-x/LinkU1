@@ -30,8 +30,7 @@ List<RouteBase> get leaderboardRoutes => [
         builder: (context, state) {
           final id = int.tryParse(state.pathParameters['id'] ?? '');
           if (id == null || id <= 0) {
-            return const Scaffold(
-                body: Center(child: Text('Invalid item ID')));
+            return const SizedBox.shrink();
           }
           return LeaderboardItemDetailView(itemId: id);
         },
@@ -44,8 +43,7 @@ List<RouteBase> get leaderboardRoutes => [
           if (id == null || id <= 0) {
             return SlideUpTransitionPage(
               key: state.pageKey,
-              child: const Scaffold(
-                  body: Center(child: Text('Invalid leaderboard ID'))),
+              child: const SizedBox.shrink(),
             );
           }
           return SlideUpTransitionPage(
@@ -63,8 +61,7 @@ List<RouteBase> get leaderboardRoutes => [
             return platformDetailPage(
               context,
               key: state.pageKey,
-              child: const Scaffold(
-                  body: Center(child: Text('Invalid leaderboard ID'))),
+              child: const SizedBox.shrink(),
             );
           }
           return platformDetailPage(

@@ -22,8 +22,7 @@ List<RouteBase> get activityRoutes => [
             return platformDetailPage(
               context,
               key: state.pageKey,
-              child: const Scaffold(
-                  body: Center(child: Text('Invalid activity ID'))),
+              child: const SizedBox.shrink(),
             );
           }
           return platformDetailPage(

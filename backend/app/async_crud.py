@@ -988,6 +988,7 @@ class AsyncTaskCRUD:
                 try:
                     # 重新构建简单查询
                     simple_query = select(models.Task).where(
+                        models.Task.is_visible == True,
                         or_(
                             models.Task.status == "open",
                             models.Task.status == "taken"
@@ -997,6 +998,7 @@ class AsyncTaskCRUD:
                     tasks = list(result.scalars().all())
                     # 简单计数
                     count_result = await db.execute(select(func.count(models.Task.id)).where(
+                        models.Task.is_visible == True,
                         or_(
                             models.Task.status == "open",
                             models.Task.status == "taken"

@@ -169,6 +169,8 @@ class _CreatePostViewState extends State<CreatePostView> {
     // 在 await 之前捕获 bloc 和 repo 引用，避免 async gap 后 context 失效
     final repo = context.read<ForumRepository>();
     final bloc = context.read<ForumBloc>();
+    final messenger = ScaffoldMessenger.of(context);
+    final errorLocalizer = context.localizeError;
     final List<String> imageUrls = [];
     final List<ForumPostAttachment> uploadedAttachments = [];
 
@@ -178,19 +180,21 @@ class _CreatePostViewState extends State<CreatePostView> {
       if (_selectedImages.isNotEmpty) {
         for (final file in _selectedImages) {
           final url = await repo.uploadPostImage(await file.readAsBytes(), file.name);
+          if (!mounted) return;
           imageUrls.add(url);
         }
       }
       if (_selectedFiles.isNotEmpty) {
         for (final file in _selectedFiles) {
           final att = await repo.uploadPostFile(file.bytes!, file.name);
+          if (!mounted) return;
           uploadedAttachments.add(att);
         }
       }
     } catch (e) {
       if (!mounted) return;
       setState(() => _isUploading = false);
-      AppFeedback.showError(this.context, this.context.localizeError(e.toString()));
+      messenger.showSnackBar(SnackBar(content: Text(errorLocalizer(e.toString()))));
       return;
     }
 

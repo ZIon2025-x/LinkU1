@@ -42,8 +42,7 @@ List<RouteBase> get taskRoutes => [
             return platformDetailPage(
               context,
               key: state.pageKey,
-              child: const Scaffold(
-                  body: Center(child: Text('Invalid task ID'))),
+              child: const SizedBox.shrink(),
             );
           }
           final notificationId = state.extra is int ? state.extra as int : null;

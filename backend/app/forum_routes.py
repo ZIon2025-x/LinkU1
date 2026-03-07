@@ -967,7 +967,7 @@ async def _resolve_linked_item_name(db: AsyncSession, item_type: Optional[str], 
             pid = int(item_id)
             row = await db.execute(
                 select(models.FleaMarketItem.title)
-                .where(models.FleaMarketItem.id == pid)
+                .where(models.FleaMarketItem.id == pid, models.FleaMarketItem.is_visible == True)
             )
             return row.scalar_one_or_none()
         elif item_type == "expert":

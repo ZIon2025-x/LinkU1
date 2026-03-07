@@ -168,6 +168,10 @@ class WebSocketService extends WidgetsBindingObserver {
 
     try {
       final json = jsonEncode(message);
+      if (json.length > _maxMessageSize) {
+        AppLogger.warning('Message too large to send: ${json.length} bytes (max $_maxMessageSize)');
+        return;
+      }
       _channel!.sink.add(json);
     } catch (e) {
       AppLogger.error('WebSocket send error', e);

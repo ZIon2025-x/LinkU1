@@ -44,11 +44,8 @@ class TaskExpertRepository {
       final cached = _cache.get<dynamic>(cacheKey);
       if (cached != null) {
         if (cached is List) {
-          // 跳过缓存的空列表（可能是暂时性问题导致的空数据）
-          if (cached.isNotEmpty) {
-            return TaskExpertListResponse.fromList(cached,
-                page: page, pageSize: pageSize);
-          }
+          return TaskExpertListResponse.fromList(cached,
+              page: page, pageSize: pageSize);
         } else if (cached is Map<String, dynamic>) {
           return TaskExpertListResponse.fromJson(cached);
         }

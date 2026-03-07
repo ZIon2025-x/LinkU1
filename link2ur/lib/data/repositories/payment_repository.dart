@@ -179,7 +179,7 @@ class PaymentRepository {
       );
 
       if (!response.isSuccess || response.data == null) {
-        return [];
+        throw PaymentException(response.message ?? 'Failed to load payouts');
       }
 
       await _cache.set(cacheKey, response.data!, ttl: CacheManager.personalTTL);

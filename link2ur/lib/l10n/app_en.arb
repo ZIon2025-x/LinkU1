@@ -3085,6 +3085,12 @@
   "errorInsufficientFunds": "Insufficient balance. Please change payment method or top up.",
   "errorCardDeclined": "Card declined. Please change card or contact your bank.",
   "errorExpiredCard": "Card expired. Please use a different card.",
+  "errorCouponPointsLoadTransactionsFailed": "Failed to load transactions",
+  "errorCouponPointsLoadMoreTransactionsFailed": "Failed to load more transactions",
+  "errorInvalidPaymentAmount": "Invalid payment amount",
+  "errorVerificationEmailNotFound": "Email not found",
+  "errorCreateTaskFailed": "Failed to create task",
+  "errorTaskApplicationIdNotFound": "Application ID not found",
 
   "searchTitle": "Search",
   "searchHint": "Search tasks, posts, items",

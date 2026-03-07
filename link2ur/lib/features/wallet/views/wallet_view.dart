@@ -75,13 +75,14 @@ class _WalletContent extends StatelessWidget {
                       )
                     : RefreshIndicator(
                         onRefresh: () async {
-                          context
-                              .read<WalletBloc>()
-                              .add(const WalletLoadRequested());
-                          await context
-                              .read<WalletBloc>()
-                              .stream
-                              .firstWhere((s) => !s.isLoading);
+                          final bloc = context.read<WalletBloc>();
+                          bloc.add(const WalletLoadRequested());
+                          await bloc.stream
+                              .firstWhere((s) => !s.isLoading)
+                              .timeout(
+                                const Duration(seconds: 10),
+                                onTimeout: () => bloc.state,
+                              );
                         },
                         child: SingleChildScrollView(
                           physics: const AlwaysScrollableScrollPhysics(),

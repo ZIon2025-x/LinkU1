@@ -6487,6 +6487,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorExpiredCard => 'Card expired. Please use a different card.';
 
   @override
+  String get errorCouponPointsLoadTransactionsFailed =>
+      'Failed to load transactions';
+
+  @override
+  String get errorCouponPointsLoadMoreTransactionsFailed =>
+      'Failed to load more transactions';
+
+  @override
+  String get errorInvalidPaymentAmount => 'Invalid payment amount';
+
+  @override
+  String get errorVerificationEmailNotFound => 'Email not found';
+
+  @override
+  String get errorCreateTaskFailed => 'Failed to create task';
+
+  @override
+  String get errorTaskApplicationIdNotFound => 'Application ID not found';
+
+  @override
   String get searchTitle => 'Search';
 
   @override

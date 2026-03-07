@@ -662,7 +662,7 @@ async def _resolve_linked_item(db: AsyncSession, item_type: str, item_id: str) -
         elif item_type == "product":
             result = await db.execute(
                 select(models.FleaMarketItem.title, models.FleaMarketItem.images)
-                .where(models.FleaMarketItem.id == item_id)
+                .where(models.FleaMarketItem.id == item_id, models.FleaMarketItem.is_visible == True)
             )
             row = result.first()
             if row:

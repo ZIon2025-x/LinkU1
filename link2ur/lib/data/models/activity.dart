@@ -316,6 +316,20 @@ class Activity extends Equatable {
       'images': images,
       'service_images': serviceImages,
       'has_time_slots': hasTimeSlots,
+      'reward_applicants': rewardApplicants,
+      'applicant_reward_amount': applicantRewardAmount,
+      'applicant_points_reward': applicantPointsReward,
+      'reserved_points_total': reservedPointsTotal,
+      'distributed_points_total': distributedPointsTotal,
+      'completion_rule': completionRule,
+      'reward_distribution': rewardDistribution,
+      'has_applied': hasApplied,
+      'user_task_id': userTaskId,
+      'user_task_status': userTaskStatus,
+      'user_task_is_paid': userTaskIsPaid,
+      'user_task_has_negotiation': userTaskHasNegotiation,
+      'type': type,
+      'participant_status': participantStatus,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
       'activity_type': activityType,
@@ -452,7 +466,20 @@ class Activity extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, title, status, updatedAt, activityType, isDrawn, isOfficial];
+  List<Object?> get props => [
+        id, title, titleEn, titleZh, description, descriptionEn, descriptionZh,
+        expertId, expertServiceId, location, taskType, rewardType,
+        originalPricePerParticipant, discountPercentage, discountedPricePerParticipant,
+        currency, pointsReward, maxParticipants, minParticipants, currentParticipants,
+        completionRule, rewardDistribution, status, isPublic, visibility,
+        deadline, activityEndDate, images, serviceImages, hasTimeSlots,
+        rewardApplicants, applicantRewardAmount, applicantPointsReward,
+        reservedPointsTotal, distributedPointsTotal,
+        hasApplied, userTaskId, userTaskStatus, userTaskIsPaid, userTaskHasNegotiation,
+        type, participantStatus, createdAt, updatedAt,
+        activityType, prizeType, prizeDescription, prizeDescriptionEn,
+        prizeCount, drawMode, drawAt, drawnAt, winners, isDrawn, isOfficial, currentApplicants,
+      ];
 }
 
 /// 活动列表响应

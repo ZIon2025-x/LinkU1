@@ -538,6 +538,38 @@ async def get_expert(
     )
 
 
+@task_expert_router.get("/me", response_model=schemas.TaskExpertOut)
+async def get_my_expert_profile(
+    current_expert: models.TaskExpert = Depends(get_current_expert),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取当前用户的达人资料"""
+    from app import async_crud
+    user = await async_crud.async_user_crud.get_user_by_id(db, current_expert.id)
+    return {
+        "id": current_expert.id,
+        "name": current_expert.expert_name or (user.name if user else ""),
+        "avatar": current_expert.avatar or (user.avatar if user else "") or "",
+        "user_level": "normal",
+        "avg_rating": float(current_expert.rating) if current_expert.rating else 0.0,
+        "completed_tasks": current_expert.completed_tasks or 0,
+        "total_tasks": 0,
+        "completion_rate": 0.0,
+        "is_verified": False,
+        "success_rate": 0.0,
+        "location": user.residence_city if user and hasattr(user, 'residence_city') and user.residence_city else "Online",
+        "status": current_expert.status,
+        "total_services": current_expert.total_services,
+        "bio": current_expert.bio or "",
+        "expertise_areas": [],
+        "featured_skills": [],
+        "achievements": [],
+        "response_time": "",
+        "created_at": format_iso_utc(current_expert.created_at),
+        "updated_at": format_iso_utc(current_expert.updated_at) if current_expert.updated_at else None,
+    }
+
+
 @task_expert_router.put("/me", response_model=schemas.TaskExpertOut)
 async def update_expert_profile(
     expert_data: schemas.TaskExpertUpdate,

@@ -597,7 +597,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
         emit(state.copyWith(
           isSubmitting: false,
           actionMessage: 'cancel_failed',
-          errorMessage: 'Application ID not found',
+          errorMessage: 'task_application_id_not_found',
         ));
         return;
       }

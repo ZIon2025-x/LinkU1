@@ -132,10 +132,14 @@ class TaskRepository {
   Future<void> sendRecommendationFeedback(int taskId, {
     required String action,
   }) async {
-    await _apiService.post(
+    final response = await _apiService.post(
       ApiEndpoints.recommendationFeedback(taskId),
       data: {'action': action},
     );
+
+    if (!response.isSuccess) {
+      throw TaskException(response.message ?? '推荐反馈提交失败');
+    }
   }
 
   /// 获取附近任务（通过 /api/tasks 加location参数）

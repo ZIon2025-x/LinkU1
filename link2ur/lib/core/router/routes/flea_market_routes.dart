@@ -40,9 +40,7 @@ List<RouteBase> get fleaMarketRoutes => [
           if (item is! FleaMarketItem) {
             return SlideUpTransitionPage(
               key: state.pageKey,
-              child: const Scaffold(
-                body: Center(child: Text('Invalid navigation')),
-              ),
+              child: const SizedBox.shrink(),
             );
           }
           return SlideUpTransitionPage(
