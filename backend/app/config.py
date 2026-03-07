@@ -16,20 +16,46 @@ logger = logging.getLogger(__name__)
 class Config:
     """应用配置类"""
 
-    # 数据库配置
-    DATABASE_URL = os.getenv(
-        "DATABASE_URL", "postgresql+psycopg2://postgres:password@localhost:5432/linku_db"
-    )
-    ASYNC_DATABASE_URL = os.getenv(
-        "ASYNC_DATABASE_URL",
-        "postgresql+asyncpg://postgres:password@localhost:5432/linku_db",
-    )
+    # 数据库配置（生产环境必须通过环境变量设置）
+    _DB_DEV_FALLBACK = "postgresql+psycopg2://postgres:password@localhost:5432/linku_db"
+    _ASYNC_DB_DEV_FALLBACK = "postgresql+asyncpg://postgres:password@localhost:5432/linku_db"
+    DATABASE_URL = os.getenv("DATABASE_URL", "")
+    ASYNC_DATABASE_URL = os.getenv("ASYNC_DATABASE_URL", "")
 
     # JWT配置
     SECRET_KEY = os.getenv("SECRET_KEY", "")
     SIGNED_URL_SECRET = os.getenv("SIGNED_URL_SECRET", "")
     _DEV_SECRET_KEY = "linku-dev-only-insecure-key-do-not-use-in-production"
+
+    # 环境检测（提前定义，供 SECRET_KEY 校验使用）
+    _IS_PROD_ENV = (
+        os.getenv("ENVIRONMENT", "development") == "production" or
+        os.getenv("RAILWAY_ENVIRONMENT", "").lower() == "production"
+    )
+
+    # 数据库 URL 校验：生产环境必须设置，开发环境使用本地默认值
+    if not DATABASE_URL:
+        if _IS_PROD_ENV:
+            raise RuntimeError(
+                "FATAL: DATABASE_URL is not set in production! "
+                "Set DATABASE_URL in your environment variables."
+            )
+        DATABASE_URL = _DB_DEV_FALLBACK
+    if not ASYNC_DATABASE_URL:
+        if _IS_PROD_ENV:
+            raise RuntimeError(
+                "FATAL: ASYNC_DATABASE_URL is not set in production! "
+                "Set ASYNC_DATABASE_URL in your environment variables."
+            )
+        ASYNC_DATABASE_URL = _ASYNC_DB_DEV_FALLBACK
+
     if not SECRET_KEY:
+        if _IS_PROD_ENV:
+            raise RuntimeError(
+                "FATAL: SECRET_KEY environment variable is NOT set in production! "
+                "Refusing to start with insecure defaults. "
+                "Set SECRET_KEY in your environment variables."
+            )
         import warnings
         warnings.warn(
             "SECRET_KEY environment variable is not set! "
@@ -39,6 +65,14 @@ class Config:
             stacklevel=2
         )
         SECRET_KEY = _DEV_SECRET_KEY
+
+    if not SIGNED_URL_SECRET:
+        if _IS_PROD_ENV:
+            logger.warning(
+                "SIGNED_URL_SECRET is not set in production! "
+                "Signed URLs will not work correctly. Falling back to SECRET_KEY."
+            )
+        SIGNED_URL_SECRET = SECRET_KEY
     ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "15"))
     REFRESH_TOKEN_EXPIRE_HOURS = int(os.getenv("REFRESH_TOKEN_EXPIRE_HOURS", "12"))  # 12小时
     CLOCK_SKEW_TOLERANCE = int(os.getenv("CLOCK_SKEW_TOLERANCE", "300"))
@@ -86,11 +120,16 @@ class Config:
         # 在Railway环境中，优先使用REDIS_URL
         if REDIS_URL and not REDIS_URL.startswith("redis://localhost"):
             # 使用Railway提供的Redis URL
-            logger.debug("Railway Redis配置 - REDIS_URL: %s...", REDIS_URL[:20] if REDIS_URL else "None")
-            logger.debug("Railway Redis配置 - USE_REDIS: %s", USE_REDIS)
+            logger.info("Railway Redis配置 - REDIS_URL: %s...", REDIS_URL[:20] if REDIS_URL else "None")
         else:
-            # 如果没有有效的Redis URL，禁用Redis
-            logger.debug("Railway Redis配置 - 没有有效的Redis URL，禁用Redis")
+            if _IS_PROD_ENV:
+                logger.error(
+                    "Railway 生产环境未检测到有效的 REDIS_URL！"
+                    "会话管理、缓存和 Celery 任务将不可用。"
+                    "请在 Railway 中配置 Redis 插件或设置 REDIS_URL 环境变量。"
+                )
+            else:
+                logger.warning("Railway Redis配置 - 没有有效的Redis URL，禁用Redis")
             USE_REDIS = False
 
     # Cookie配置 - 智能环境检测
