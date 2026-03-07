@@ -151,9 +151,10 @@ class _LeaderboardDetailContentState
     void onShare() {
       final lb = state.selectedLeaderboard;
       if (lb == null) return;
+      final locale = Localizations.localeOf(context);
       ShareUtil.share(
-        title: lb.displayName(Localizations.localeOf(context)),
-        description: lb.displayDescription(Localizations.localeOf(context)) ?? '',
+        title: lb.displayName(locale),
+        description: lb.displayDescription(locale) ?? '',
         url: ShareUtil.leaderboardUrl(lb.id),
         imageUrl: lb.coverImage,
       );
@@ -322,6 +323,7 @@ class _LeaderboardDetailContentState
 
     final lb = state.selectedLeaderboard!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final locale = Localizations.localeOf(context);
     final items = state.items;
 
     return RefreshIndicator(
@@ -339,14 +341,14 @@ class _LeaderboardDetailContentState
           ),
 
           // 描述
-          if (lb.displayDescription(Localizations.localeOf(context)) != null &&
-              lb.displayDescription(Localizations.localeOf(context))!.isNotEmpty)
+          if (lb.displayDescription(locale) != null &&
+              lb.displayDescription(locale)!.isNotEmpty)
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(
                     AppSpacing.md, AppSpacing.md, AppSpacing.md, 0),
                 child: SelectableText(
-                  lb.displayDescription(Localizations.localeOf(context))!,
+                  lb.displayDescription(locale)!,
                   contextMenuBuilder: systemContextMenuBuilder,
                   style: AppTypography.body.copyWith(
                     color: isDark

@@ -349,6 +349,7 @@ class _ExpertCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final locale = Localizations.localeOf(context);
 
     return GestureDetector(
       onTap: () {
@@ -420,9 +421,9 @@ class _ExpertCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 4),
-                  if (expert.displaySpecialties(Localizations.localeOf(context)).isNotEmpty)
+                  if (expert.displaySpecialties(locale).isNotEmpty)
                     Text(
-                      expert.displaySpecialties(Localizations.localeOf(context)).join(' · '),
+                      expert.displaySpecialties(locale).join(' · '),
                       style: AppTypography.caption.copyWith(
                         color: isDark
                             ? AppColors.textSecondaryDark

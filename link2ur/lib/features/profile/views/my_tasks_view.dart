@@ -366,6 +366,7 @@ class _TaskCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final locale = Localizations.localeOf(context);
     return AppCard(
       onTap: () {
         context.safePush('/tasks/${task.id}');
@@ -433,7 +434,7 @@ class _TaskCard extends StatelessWidget {
 
           // 标题
           Text(
-            task.displayTitle(Localizations.localeOf(context)),
+            task.displayTitle(locale),
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
@@ -441,10 +442,10 @@ class _TaskCard extends StatelessWidget {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
-          if (task.displayDescription(Localizations.localeOf(context)) != null) ...[
+          if (task.displayDescription(locale) != null) ...[
             AppSpacing.vSm,
             Text(
-              task.displayDescription(Localizations.localeOf(context))!,
+              task.displayDescription(locale)!,
               style: const TextStyle(
                 fontSize: 14,
                 color: AppColors.textSecondaryLight,

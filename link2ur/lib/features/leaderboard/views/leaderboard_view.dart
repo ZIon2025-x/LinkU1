@@ -163,6 +163,7 @@ class _LeaderboardCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final locale = Localizations.localeOf(context);
     final colors = _gradient;
 
     return GestureDetector(
@@ -223,7 +224,7 @@ class _LeaderboardCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        leaderboard.displayName(Localizations.localeOf(context)),
+                        leaderboard.displayName(locale),
                         style: AppTypography.bodyBold.copyWith(
                           fontSize: 17,
                           color: isDark
@@ -233,10 +234,10 @@ class _LeaderboardCard extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      if (leaderboard.displayDescription(Localizations.localeOf(context)) != null) ...[
+                      if (leaderboard.displayDescription(locale) != null) ...[
                         const SizedBox(height: 4),
                         Text(
-                          leaderboard.displayDescription(Localizations.localeOf(context))!,
+                          leaderboard.displayDescription(locale)!,
                           style: AppTypography.caption.copyWith(
                             color: isDark
                                 ? AppColors.textSecondaryDark

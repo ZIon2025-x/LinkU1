@@ -20,6 +20,7 @@ class UserCreate(UserBase):
     terms_agreed_at: Optional[str] = None
     invitation_code: Optional[str] = None  # 邀请码（注册时使用）
     phone_verification_code: Optional[str] = None  # 手机验证码（如果提供了手机号，则必填）
+    verification_code: Optional[str] = None  # Email verification code (6 digits, stored in Redis)
     
     @model_validator(mode='after')
     def check_contact_method(self):
