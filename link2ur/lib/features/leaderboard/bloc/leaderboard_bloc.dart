@@ -810,12 +810,10 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
     try {
       List<String>? imageUrls;
       if (event.imageDataList != null && event.imageDataList!.isNotEmpty) {
-        imageUrls = [];
-        for (final (bytes, name) in event.imageDataList!) {
-          final url = await _leaderboardRepository.uploadImage(
-              bytes, name, category: 'leaderboard_item');
-          imageUrls.add(url);
-        }
+        imageUrls = await Future.wait(
+          event.imageDataList!.map((e) => _leaderboardRepository.uploadImage(
+              e.$1, e.$2, category: 'leaderboard_item')),
+        );
       }
 
       await _leaderboardRepository.submitItem(

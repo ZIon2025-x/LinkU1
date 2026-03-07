@@ -18,7 +18,6 @@ import '../../../core/utils/sheet_adaptation.dart';
 import '../../../core/utils/task_type_helper.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/animated_list_item.dart';
-import '../../../core/router/app_router.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
@@ -699,9 +698,12 @@ class _TaskGridCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return GestureDetector(
-      onTap: () {
+      onTap: () async {
         AppHaptics.selection();
-        context.safePush('/tasks/${task.id}');
+        await context.push('/tasks/${task.id}');
+        if (context.mounted) {
+          context.read<TaskListBloc>().add(const TaskListRefreshRequested());
+        }
       },
       child: Container(
         decoration: BoxDecoration(

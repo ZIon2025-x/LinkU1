@@ -282,6 +282,7 @@ class ForumPost extends Equatable {
     this.likeCount = 0,
     this.replyCount = 0,
     this.viewCount = 0,
+    this.favoriteCount = 0,
     this.isLiked = false,
     this.isFavorited = false,
     this.isPinned = false,
@@ -314,6 +315,7 @@ class ForumPost extends Equatable {
   final int likeCount;
   final int replyCount;
   final int viewCount;
+  final int favoriteCount;
   final bool isLiked;
   final bool isFavorited;
   final bool isPinned;
@@ -351,10 +353,7 @@ class ForumPost extends Equatable {
 
     return ForumPost(
       id: _parseInt(json['id']),
-      title: json['title_zh'] as String? ??
-          json['title_en'] as String? ??
-          json['title'] as String? ??
-          '',
+      title: json['title'] as String? ?? '',
       titleEn: json['title_en'] as String?,
       titleZh: json['title_zh'] as String?,
       content: json['content'] as String?,
@@ -389,6 +388,7 @@ class ForumPost extends Equatable {
       likeCount: json['like_count'] as int? ?? 0,
       replyCount: json['reply_count'] as int? ?? 0,
       viewCount: json['view_count'] as int? ?? 0,
+      favoriteCount: json['favorite_count'] as int? ?? 0,
       isLiked: json['is_liked'] as bool? ?? false,
       isFavorited: json['is_favorited'] as bool? ?? false,
       isPinned: json['is_pinned'] as bool? ?? false,
@@ -422,6 +422,7 @@ class ForumPost extends Equatable {
       'like_count': likeCount,
       'reply_count': replyCount,
       'view_count': viewCount,
+      'favorite_count': favoriteCount,
       'is_liked': isLiked,
       'is_favorited': isFavorited,
       'is_pinned': isPinned,
@@ -435,6 +436,7 @@ class ForumPost extends Equatable {
     bool? isLiked,
     bool? isFavorited,
     int? replyCount,
+    int? favoriteCount,
     String? content,
   }) {
     return ForumPost(
@@ -460,6 +462,7 @@ class ForumPost extends Equatable {
       likeCount: likeCount ?? this.likeCount,
       replyCount: replyCount ?? this.replyCount,
       viewCount: viewCount,
+      favoriteCount: favoriteCount ?? this.favoriteCount,
       isLiked: isLiked ?? this.isLiked,
       isFavorited: isFavorited ?? this.isFavorited,
       isPinned: isPinned,
@@ -486,9 +489,11 @@ class ForumReply extends Equatable {
     this.author,
     this.parentReplyId,
     this.parentReplyAuthor,
+    this.replyLevel = 0,
     this.likeCount = 0,
     this.isLiked = false,
     this.createdAt,
+    this.updatedAt,
   });
 
   final int id;
@@ -498,9 +503,11 @@ class ForumReply extends Equatable {
   final UserBrief? author;
   final int? parentReplyId;
   final UserBrief? parentReplyAuthor;
+  final int replyLevel;
   final int likeCount;
   final bool isLiked;
   final DateTime? createdAt;
+  final DateTime? updatedAt;
 
   /// 是否是子回复
   bool get isSubReply => parentReplyId != null;
@@ -517,9 +524,11 @@ class ForumReply extends Equatable {
       author: author,
       parentReplyId: parentReplyId,
       parentReplyAuthor: parentReplyAuthor,
+      replyLevel: replyLevel,
       likeCount: likeCount ?? this.likeCount,
       isLiked: isLiked ?? this.isLiked,
       createdAt: createdAt,
+      updatedAt: updatedAt,
     );
   }
 
@@ -537,10 +546,14 @@ class ForumReply extends Equatable {
           ? UserBrief.fromJson(
               json['parent_reply_author'] as Map<String, dynamic>)
           : null,
+      replyLevel: json['reply_level'] as int? ?? 0,
       likeCount: json['like_count'] as int? ?? 0,
       isLiked: json['is_liked'] as bool? ?? false,
       createdAt: json['created_at'] != null
-          ? DateTime.tryParse(json['created_at'])
+          ? DateTime.tryParse(json['created_at'].toString())
+          : null,
+      updatedAt: json['updated_at'] != null
+          ? DateTime.tryParse(json['updated_at'].toString())
           : null,
     );
   }

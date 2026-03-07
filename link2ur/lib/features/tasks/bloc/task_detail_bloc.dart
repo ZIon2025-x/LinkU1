@@ -8,6 +8,7 @@ import '../../../data/models/review.dart';
 import '../../../data/models/refund_request.dart';
 import '../../../data/repositories/task_repository.dart';
 import '../../../data/repositories/notification_repository.dart';
+import '../../../core/utils/app_exception.dart';
 import '../../../core/utils/logger.dart';
 
 // ==================== Events ====================
@@ -1134,7 +1135,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'operation_failed',
-        errorMessage: e.toString(),
+        errorMessage: e is AppException ? e.message : e.toString(),
       ));
     }
   }

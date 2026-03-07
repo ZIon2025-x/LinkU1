@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -10,10 +8,11 @@ import '../../../core/utils/task_status_helper.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/widgets/error_state_view.dart';
-import '../../../core/router/app_router.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/animated_list_item.dart';
 import '../../../core/widgets/skeleton_view.dart';
@@ -60,8 +59,6 @@ class _MyTasksViewState extends State<MyTasksView>
   bool _pendingLoading = true;
   String? _pendingError;
 
-  Timer? _delayedLoadTimer;
-
   static const _tabs = _TaskTab.values;
 
   @override
@@ -76,15 +73,12 @@ class _MyTasksViewState extends State<MyTasksView>
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadAllMyTasks();
-      _delayedLoadTimer = Timer(const Duration(milliseconds: 200), () {
-        if (mounted) _loadPendingApplications();
-      });
+      _loadPendingApplications();
     });
   }
 
   @override
   void dispose() {
-    _delayedLoadTimer?.cancel();
     _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     for (final sc in _scrollControllers.values) {
@@ -245,7 +239,7 @@ class _MyTasksViewState extends State<MyTasksView>
 
     if (error != null && _allMyTasks.isEmpty) {
       return ErrorStateView(
-        message: error,
+        message: context.localizeError(error),
         onRetry: _loadAllMyTasks,
       );
     }
@@ -254,7 +248,6 @@ class _MyTasksViewState extends State<MyTasksView>
       return EmptyStateView(
         icon: Icons.assignment_outlined,
         title: _getEmptyTitle(tab, l10n),
-        message: _getEmptyMessage(tab, l10n),
       );
     }
 
@@ -271,7 +264,10 @@ class _MyTasksViewState extends State<MyTasksView>
             key: ValueKey(tasks[index].id),
             index: index,
             maxAnimatedIndex: 11,
-            child: _TaskCard(task: tasks[index]),
+            child: _TaskCard(
+              task: tasks[index],
+              onReturn: _loadAllMyTasks,
+            ),
           );
         },
       ),
@@ -287,7 +283,7 @@ class _MyTasksViewState extends State<MyTasksView>
 
     if (_pendingError != null && _pendingApplications.isEmpty) {
       return ErrorStateView(
-        message: _pendingError!,
+        message: context.localizeError(_pendingError!),
         onRetry: () => _loadPendingApplications(),
       );
     }
@@ -313,7 +309,10 @@ class _MyTasksViewState extends State<MyTasksView>
             key: ValueKey(_pendingApplications[index].id),
             index: index,
             maxAnimatedIndex: 11,
-            child: _ApplicationCard(application: _pendingApplications[index]),
+            child: _ApplicationCard(
+              application: _pendingApplications[index],
+              onReturn: _loadPendingApplications,
+            ),
           );
         },
       ),
@@ -339,37 +338,21 @@ class _MyTasksViewState extends State<MyTasksView>
     }
   }
 
-  String _getEmptyMessage(_TaskTab tab, dynamic l10n) {
-    switch (tab) {
-      case _TaskTab.all:
-        return l10n.myTasksEmptyAll;
-      case _TaskTab.posted:
-        return l10n.myTasksEmptyPosted;
-      case _TaskTab.taken:
-        return l10n.myTasksEmptyTaken;
-      case _TaskTab.inProgress:
-        return l10n.myTasksEmptyInProgress;
-      case _TaskTab.pending:
-        return l10n.myTasksEmptyPending;
-      case _TaskTab.completed:
-        return l10n.myTasksEmptyCompleted;
-      case _TaskTab.cancelled:
-        return l10n.myTasksEmptyCancelled;
-    }
-  }
 }
 
 class _TaskCard extends StatelessWidget {
-  const _TaskCard({required this.task});
+  const _TaskCard({required this.task, required this.onReturn});
 
   final Task task;
+  final VoidCallback onReturn;
 
   @override
   Widget build(BuildContext context) {
     final locale = Localizations.localeOf(context);
     return AppCard(
-      onTap: () {
-        context.safePush('/tasks/${task.id}');
+      onTap: () async {
+        await context.push('/tasks/${task.id}');
+        if (context.mounted) onReturn();
       },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -528,9 +511,10 @@ class _TaskCard extends StatelessWidget {
 
 /// 待处理申请卡片 - 对齐iOS MyTasksApplicationCard
 class _ApplicationCard extends StatelessWidget {
-  const _ApplicationCard({required this.application});
+  const _ApplicationCard({required this.application, required this.onReturn});
 
   final TaskApplication application;
+  final VoidCallback onReturn;
 
   @override
   Widget build(BuildContext context) {
@@ -538,8 +522,9 @@ class _ApplicationCard extends StatelessWidget {
     final l10n = context.l10n;
 
     return AppCard(
-      onTap: () {
-        context.safePush('/tasks/${application.taskId}');
+      onTap: () async {
+        await context.push('/tasks/${application.taskId}');
+        if (context.mounted) onReturn();
       },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

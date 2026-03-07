@@ -59,17 +59,19 @@ class AuthRegisterRequested extends AuthEvent {
     required this.email,
     required this.password,
     required this.name,
+    required this.verificationCode,
     this.invitationCode,
   });
 
   final String email;
   final String password;
   final String name;
+  final String verificationCode;
   /// 邀请码或8位邀请人用户ID（选填）
   final String? invitationCode;
 
   @override
-  List<Object?> get props => [email, password, name, invitationCode];
+  List<Object?> get props => [email, password, name, verificationCode, invitationCode];
 }
 
 /// 登出

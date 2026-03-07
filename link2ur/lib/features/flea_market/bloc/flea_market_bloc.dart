@@ -805,15 +805,13 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     ));
 
     try {
-      final uploadedUrls = <String>[];
-      for (final (bytes, filename) in event.newImagesToUpload) {
-        final url = await _fleaMarketRepository.uploadImage(
-          bytes,
-          filename,
+      final uploadedUrls = await Future.wait(
+        event.newImagesToUpload.map((e) => _fleaMarketRepository.uploadImage(
+          e.$1,
+          e.$2,
           itemId: event.itemId,
-        );
-        uploadedUrls.add(url);
-      }
+        )),
+      );
 
       final allImages = [...event.existingImageUrls, ...uploadedUrls];
 

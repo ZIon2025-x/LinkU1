@@ -196,6 +196,7 @@ void main() {
                 email: any(named: 'email'),
                 password: any(named: 'password'),
                 name: any(named: 'name'),
+                verificationCode: any(named: 'verificationCode'),
                 invitationCode: any(named: 'invitationCode'),
               )).thenAnswer((_) async => testUser);
           return authBloc;
@@ -204,6 +205,7 @@ void main() {
           email: 'new@example.com',
           password: 'password123',
           name: 'New User',
+          verificationCode: '123456',
           invitationCode: '123456',
         )),
         expect: () => [
@@ -222,20 +224,22 @@ void main() {
                 email: any(named: 'email'),
                 password: any(named: 'password'),
                 name: any(named: 'name'),
+                verificationCode: any(named: 'verificationCode'),
                 invitationCode: any(named: 'invitationCode'),
-              )).thenThrow(const AuthException('邮箱已被注册'));
+              )).thenThrow(const AuthException('email_already_registered'));
           return authBloc;
         },
         act: (bloc) => bloc.add(const AuthRegisterRequested(
           email: 'existing@example.com',
           password: 'password123',
           name: 'User',
+          verificationCode: '123456',
         )),
         expect: () => [
           const AuthState(status: AuthStatus.loading),
           const AuthState(
             status: AuthStatus.error,
-            errorMessage: '邮箱已被注册',
+            errorMessage: 'email_already_registered',
           ),
         ],
       );

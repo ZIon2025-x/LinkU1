@@ -931,8 +931,6 @@ class _CommentsSection extends StatelessWidget {
     final withComments =
         votes.where((v) => v['comment'] != null && (v['comment'] as String).isNotEmpty).toList();
 
-    if (withComments.isEmpty) return const SizedBox.shrink();
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
       child: Container(
@@ -977,28 +975,45 @@ class _CommentsSection extends StatelessWidget {
                         : AppColors.textPrimaryLight,
                   ),
                 ),
-                const SizedBox(width: 6),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    '${withComments.length}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primary,
+                if (withComments.isNotEmpty) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '${withComments.length}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primary,
+                      ),
                     ),
                   ),
-                ),
+                ],
               ],
             ),
             const SizedBox(height: 12),
 
-            ...withComments.map((vote) => _CommentCard(vote: vote, isDark: isDark)),
+            if (withComments.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Center(
+                  child: Text(
+                    context.l10n.leaderboardNoComments,
+                    style: AppTypography.caption.copyWith(
+                      color: isDark
+                          ? AppColors.textTertiaryDark
+                          : AppColors.textTertiaryLight,
+                    ),
+                  ),
+                ),
+              )
+            else
+              ...withComments.map((vote) => _CommentCard(vote: vote, isDark: isDark)),
           ],
         ),
       ),
@@ -1182,7 +1197,13 @@ class _ImageSection extends StatefulWidget {
 }
 
 class _ImageSectionState extends State<_ImageSection> {
-  int _currentPage = 0;
+  final ValueNotifier<int> _currentPage = ValueNotifier(0);
+
+  @override
+  void dispose() {
+    _currentPage.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1223,7 +1244,7 @@ class _ImageSectionState extends State<_ImageSection> {
         children: [
           PageView.builder(
             itemCount: widget.images.length,
-            onPageChanged: (index) => setState(() => _currentPage = index),
+            onPageChanged: (index) => _currentPage.value = index,
             itemBuilder: (context, index) {
               return GestureDetector(
                 onTap: () {
@@ -1249,32 +1270,37 @@ class _ImageSectionState extends State<_ImageSection> {
               right: 0,
               bottom: 50,
               child: Center(
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children:
-                        List.generate(widget.images.length, (index) {
-                      final isSelected = _currentPage == index;
-                      return AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        margin: const EdgeInsets.symmetric(horizontal: 2),
-                        width: isSelected ? 8 : 6,
-                        height: isSelected ? 8 : 6,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: isSelected
-                              ? Colors.white
-                              : Colors.white.withValues(alpha: 0.4),
-                        ),
-                      );
-                    }),
-                  ),
+                child: ValueListenableBuilder<int>(
+                  valueListenable: _currentPage,
+                  builder: (context, currentPage, _) {
+                    return Container(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children:
+                            List.generate(widget.images.length, (index) {
+                          final isSelected = currentPage == index;
+                          return AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            margin: const EdgeInsets.symmetric(horizontal: 2),
+                            width: isSelected ? 8 : 6,
+                            height: isSelected ? 8 : 6,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: isSelected
+                                  ? Colors.white
+                                  : Colors.white.withValues(alpha: 0.4),
+                            ),
+                          );
+                        }),
+                      ),
+                    );
+                  },
                 ),
               ),
             ),

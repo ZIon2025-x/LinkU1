@@ -274,147 +274,118 @@ def register_debug(request_data: dict, _: None = Depends(require_debug_environme
 @router.post("/register")
 async def register(
     user: schemas.UserCreate,
+    request: Request,
+    response: Response,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_async_db),
 ):
-    """用户注册 - 根据配置决定是否需要邮箱验证"""
+    """User registration — validates email verification code, creates user, auto-login"""
     from app.validators import UserValidator, validate_input
-    from app.email_verification import EmailVerificationManager, send_verification_email_with_token
-    from app.config import Config
     from app.security import get_password_hash
     from app.password_validator import password_validator
-    from datetime import datetime
     from app.async_crud import async_user_crud
-    
-    # 使用验证器验证输入数据
+    from app.verification_code_manager import verify_and_delete_code
+
+    # --- Input validation ---
     try:
         validated_data = validate_input(user.dict(), UserValidator)
-        # 确保邀请码字段被保留（即使验证器可能没有包含它）
         if hasattr(user, 'invitation_code') and user.invitation_code:
             validated_data['invitation_code'] = user.invitation_code
-        # 保存手机验证码（用于后续验证，但不存储到数据库）
         phone_verification_code = validated_data.pop('phone_verification_code', None)
         if phone_verification_code:
             validated_data['_phone_verification_code'] = phone_verification_code
-    except HTTPException as e:
-        raise e
-    
-    # 注册接口需要邮箱（手机号登录通过验证码登录接口，不需要注册接口）
+    except HTTPException:
+        raise
+
+    # --- Basic checks (English error codes) ---
     if not validated_data.get('email'):
-        raise HTTPException(
-            status_code=400,
-            detail="注册需要提供邮箱地址"
-        )
-    
-    # 如果提供了手机号，必须提供手机验证码
+        raise HTTPException(status_code=400, detail="email_required")
+
+    agreed_to_terms = validated_data.get('agreed_to_terms', False)
+    if not agreed_to_terms:
+        raise HTTPException(status_code=400, detail="terms_not_agreed")
+
+    # --- Email verification code ---
+    verification_code = user.verification_code
+    if not verification_code or not verification_code.strip():
+        raise HTTPException(status_code=400, detail="verification_code_invalid")
+
+    email = validated_data['email'].strip().lower()
+
+    # Brute-force protection
+    try:
+        from app.redis_cache import get_redis_client
+        _redis = get_redis_client()
+        if _redis:
+            attempt_key = f"verify_attempt:register:{email}"
+            attempts = _redis.incr(attempt_key)
+            if attempts == 1:
+                _redis.expire(attempt_key, 900)
+            if attempts > 5:
+                raise HTTPException(status_code=429, detail="verification_code_invalid")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.warning(f"Rate limit check failed for registration: {e}")
+
+    if not verify_and_delete_code(email, verification_code.strip()):
+        raise HTTPException(status_code=400, detail="verification_code_invalid")
+
+    # --- Phone verification (if phone provided) ---
     phone = validated_data.get('phone')
     phone_verification_code = validated_data.pop('_phone_verification_code', None)
-    
     if phone:
         if not phone_verification_code:
-            raise HTTPException(
-                status_code=400,
-                detail="如果提供了手机号，必须提供手机验证码进行验证"
-            )
-        
-        # 验证手机号格式
+            raise HTTPException(status_code=400, detail="Phone verification code required")
+
         import re
         if not phone.startswith('+'):
-            raise HTTPException(
-                status_code=400,
-                detail="手机号格式不正确，必须以国家代码开头（如 +44）"
-            )
+            raise HTTPException(status_code=400, detail="Invalid phone format")
         if not re.match(r'^\+\d{10,15}$', phone):
-            raise HTTPException(
-                status_code=400,
-                detail="手机号格式不正确，请检查国家代码和手机号"
-            )
-        
-        # 验证手机验证码
+            raise HTTPException(status_code=400, detail="Invalid phone format")
+
         phone_verified = False
         try:
-            from app.phone_verification_code_manager import verify_and_delete_code
+            from app.phone_verification_code_manager import verify_and_delete_code as verify_phone
             from app.twilio_sms import twilio_sms
-            
-            # 如果使用 Twilio Verify API，使用其验证方法
             if twilio_sms.use_verify_api and twilio_sms.verify_client:
                 phone_verified = twilio_sms.verify_code(phone, phone_verification_code)
             else:
-                # 否则使用自定义验证码（存储在 Redis 中）
-                phone_verified = verify_and_delete_code(phone, phone_verification_code)
+                phone_verified = verify_phone(phone, phone_verification_code)
         except Exception as e:
-            logger.error(f"验证手机验证码过程出错: {e}")
-            phone_verified = False
-        
+            logger.error(f"Phone verification error: {e}")
         if not phone_verified:
-            raise HTTPException(
-                status_code=400,
-                detail="手机验证码错误或已过期，请重新获取验证码"
-            )
-        
-        logger.info(f"手机号验证成功: phone={phone}")
-        
-        # 检查手机号是否已被注册
+            raise HTTPException(status_code=400, detail="verification_code_invalid")
+
         db_phone_user = await async_user_crud.get_user_by_phone(db, phone)
         if db_phone_user:
-            raise HTTPException(
-                status_code=400,
-                detail="该手机号已被注册，请使用其他手机号或直接登录"
-            )
-    
-    # 调试信息
-    # 注册请求处理中（已移除敏感信息日志）
-    
-    # 检查邮箱是否已被注册（正式用户）
-    db_user = await async_user_crud.get_user_by_email(db, validated_data['email'])
+            raise HTTPException(status_code=400, detail="email_already_registered")
+
+    # --- Uniqueness checks ---
+    db_user = await async_user_crud.get_user_by_email(db, email)
     if db_user:
-        raise HTTPException(
-            status_code=400, 
-            detail="该邮箱已被注册，请使用其他邮箱或直接登录"
-        )
-    
-    # 检查用户名是否已被注册（正式用户）
+        raise HTTPException(status_code=400, detail="email_already_registered")
+
     db_name = await async_user_crud.get_user_by_name(db, validated_data['name'])
     if db_name:
-        raise HTTPException(
-            status_code=400, 
-            detail="该用户名已被使用，请选择其他用户名"
-        )
+        raise HTTPException(status_code=400, detail="username_already_taken")
 
-    # 检查用户名是否包含客服相关关键词，防止用户注册客服账号
+    # Reserved keywords check
     customer_service_keywords = ["客服", "customer", "service", "support", "help"]
     name_lower = validated_data['name'].lower()
-    if any(keyword.lower() in name_lower for keyword in customer_service_keywords):
-        raise HTTPException(
-            status_code=400, 
-            detail="用户名不能包含客服相关关键词"
-        )
-    
-    # 检查用户是否同意条款（防止绕过前端验证）
-    agreed_to_terms = validated_data.get('agreed_to_terms', False)
-    if not agreed_to_terms:
-        raise HTTPException(
-            status_code=400,
-            detail="您必须同意用户协议和隐私政策才能注册"
-        )
-    
-    # 验证密码强度
-    password_validation = password_validator.validate_password(
-        validated_data['password'], 
-        username=validated_data['name'],
-        email=validated_data['email']
-    )
-    
-    if not password_validation.is_valid:
-        error_message = "密码不符合安全要求：\n" + "\n".join(password_validation.errors)
-        if password_validation.suggestions:
-            error_message += "\n\n建议：\n" + "\n".join(password_validation.suggestions)
-        raise HTTPException(
-            status_code=400,
-            detail=error_message
-        )
+    if any(kw.lower() in name_lower for kw in customer_service_keywords):
+        raise HTTPException(status_code=400, detail="username_contains_reserved_keywords")
 
-    # 处理邀请码或用户ID（如果提供）
+    # --- Password strength ---
+    password_validation = password_validator.validate_password(
+        validated_data['password'],
+        username=validated_data['name'],
+        email=email
+    )
+    if not password_validation.is_valid:
+        raise HTTPException(status_code=400, detail="password_too_weak")
+
+    # --- Invitation code processing ---
     invitation_code_id = None
     inviter_id = None
     invitation_code_text = None
@@ -430,96 +401,118 @@ async def register(
         inviter_id, invitation_code_id, invitation_code_text, error_msg = await asyncio.to_thread(
             _process_invitation_sync
         )
-        if inviter_id:
-            logger.debug(f"邀请人ID验证成功: {inviter_id}")
-        elif invitation_code_id:
-            logger.debug(f"邀请码验证成功: {invitation_code_text}, ID: {invitation_code_id}")
-        elif error_msg:
-            logger.debug(f"邀请码/用户ID验证失败: {error_msg}")
-            # 邀请码/用户ID无效不影响注册，只记录警告
-    
-    # 检查是否跳过邮件验证（开发环境）
-    if Config.SKIP_EMAIL_VERIFICATION:
-        logger.info("开发环境：跳过邮件验证，直接创建用户")
-        
-        # 使用异步CRUD创建用户
-        user_data = schemas.UserCreate(**validated_data)
-        new_user = await async_user_crud.create_user(db, user_data)
-        
-        # 更新用户状态为已验证和激活，并设置邀请信息
-        from sqlalchemy import update
-        await db.execute(
-            update(User)
-            .where(User.id == new_user.id)
-            .values(
-                is_verified=1,
-                is_active=1,
-                user_level="normal",
-                inviter_id=inviter_id,
-                invitation_code_id=invitation_code_id,
-                invitation_code_text=invitation_code_text
-            )
+
+    # --- Create user (verified, since email code was valid) ---
+    user_data = schemas.UserCreate(**validated_data)
+    new_user = await async_user_crud.create_user(db, user_data)
+
+    from sqlalchemy import update
+    await db.execute(
+        update(models.User)
+        .where(models.User.id == new_user.id)
+        .values(
+            is_verified=1,
+            is_active=1,
+            user_level="normal",
+            inviter_id=inviter_id,
+            invitation_code_id=invitation_code_id,
+            invitation_code_text=invitation_code_text
         )
-        await db.commit()
-        await db.refresh(new_user)
-        
-        # 处理邀请码奖励（开发环境：用户创建成功后立即发放）
-        if invitation_code_id:
-            _user_id_str = new_user.id  # str, 提前提取基本类型，避免 ORM 对象跨线程访问
-            _inv_code_id = invitation_code_id
-            def _use_invitation_sync():
-                from app.database import SessionLocal
-                from app.coupon_points_crud import use_invitation_code
-                _db = SessionLocal()
-                try:
-                    return use_invitation_code(_db, _user_id_str, _inv_code_id)
-                finally:
-                    _db.close()
-            success, error_msg = await asyncio.to_thread(_use_invitation_sync)
-            if success:
-                logger.info(f"邀请码奖励发放成功: 用户 {new_user.id}, 邀请码ID {invitation_code_id}")
-            else:
-                logger.warning(f"邀请码奖励发放失败: {error_msg}")
-        
-        # 开发环境：用户注册成功，无需邮箱验证
-        logger.info(f"用户注册成功（开发环境）: user_id={new_user.id}, email={validated_data['email']}")
-        
-        return {
-            "message": "注册成功！（开发环境：已跳过邮箱验证）",
-            "email": validated_data['email'],
-            "verification_required": False,
-            "user_id": new_user.id
-        }
-    else:
-        # 生产环境：需要邮箱验证
-        logger.info("生产环境：需要邮箱验证")
-        
-        # 生成验证令牌
-        verification_token = EmailVerificationManager.generate_verification_token(validated_data['email'])
-        
-        # 创建待验证用户（这里需要同步操作，因为EmailVerificationManager使用同步数据库）
-        user_data = schemas.UserCreate(**validated_data)
-        
-        # 通过 asyncio.to_thread 在线程池中执行同步 DB 操作，避免阻塞事件循环
-        def _create_pending_user_sync():
+    )
+    await db.commit()
+    await db.refresh(new_user)
+
+    # --- Invitation code reward ---
+    if invitation_code_id:
+        _user_id_str = new_user.id
+        _inv_code_id = invitation_code_id
+        def _use_invitation_sync():
             from app.database import SessionLocal
+            from app.coupon_points_crud import use_invitation_code
             _db = SessionLocal()
             try:
-                return EmailVerificationManager.create_pending_user(_db, user_data, verification_token)
+                return use_invitation_code(_db, _user_id_str, _inv_code_id)
             finally:
                 _db.close()
-        await asyncio.to_thread(_create_pending_user_sync)
-        
-        # 发送验证邮件（新用户注册，默认使用英文，因为还没有用户记录，user_id为None）
-        send_verification_email_with_token(background_tasks, validated_data['email'], verification_token, language='en', db=None, user_id=None)
-        
-        logger.info(f"用户注册待验证（生产环境）: email={validated_data['email']}, 验证邮件已发送")
-        
-        return {
-            "message": "注册成功！请检查您的邮箱并点击验证链接完成注册。",
-            "email": validated_data['email'],
-            "verification_required": True
-        }
+        success, error_msg = await asyncio.to_thread(_use_invitation_sync)
+        if success:
+            logger.info(f"Invitation reward granted: user {new_user.id}")
+        else:
+            logger.warning(f"Invitation reward failed: {error_msg}")
+
+    # --- Create session (same as secure_login) ---
+    from app.secure_auth import SecureAuthManager, get_client_ip, get_device_fingerprint
+    from app.secure_auth import is_mobile_app_request, create_user_refresh_token
+    from app.cookie_manager import CookieManager
+
+    device_fingerprint = get_device_fingerprint(request)
+    client_ip = get_client_ip(request)
+    user_agent = request.headers.get("user-agent", "")
+    is_ios_app = is_mobile_app_request(request)
+
+    refresh_token = create_user_refresh_token(
+        new_user.id, client_ip, device_fingerprint, is_ios_app=is_ios_app
+    )
+
+    session = SecureAuthManager.create_session(
+        user_id=new_user.id,
+        device_fingerprint=device_fingerprint,
+        ip_address=client_ip,
+        user_agent=user_agent,
+        refresh_token=refresh_token,
+        is_ios_app=is_ios_app
+    )
+
+    origin = request.headers.get("origin", "")
+    CookieManager.set_session_cookies(
+        response=response,
+        session_id=session.session_id,
+        refresh_token=refresh_token,
+        user_id=new_user.id,
+        user_agent=user_agent,
+        origin=origin
+    )
+
+    from app.csrf import CSRFProtection
+    csrf_token = CSRFProtection.generate_csrf_token()
+    CookieManager.set_csrf_cookie(response, csrf_token, user_agent, origin)
+
+    is_mobile = any(kw in user_agent.lower() for kw in [
+        'mobile', 'iphone', 'ipad', 'android', 'blackberry',
+        'windows phone', 'opera mini', 'iemobile'
+    ])
+
+    if is_mobile:
+        response.headers["X-Session-ID"] = session.session_id
+        response.headers["X-User-ID"] = str(new_user.id)
+        response.headers["X-Auth-Status"] = "authenticated"
+        response.headers["X-Mobile-Auth"] = "true"
+
+    logger.info(f"User registered and logged in: user_id={new_user.id}, email={email}")
+
+    response_data = {
+        "message": "Registration successful",
+        "user": {
+            "id": new_user.id,
+            "name": new_user.name,
+            "email": new_user.email,
+            "user_level": new_user.user_level or "normal",
+            "is_verified": 1,
+        },
+        "session_id": session.session_id,
+        "expires_in": 300,
+        "mobile_auth": is_mobile,
+        "auth_headers": {
+            "X-Session-ID": session.session_id,
+            "X-User-ID": new_user.id,
+            "X-Auth-Status": "authenticated"
+        } if is_mobile else None
+    }
+
+    if is_mobile:
+        response_data["refresh_token"] = refresh_token
+
+    return response_data
 
 
 @router.get("/verify-email")

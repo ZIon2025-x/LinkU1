@@ -2619,6 +2619,48 @@ abstract class AppLocalizations {
   /// **'Registration Failed'**
   String get errorRegisterFailed;
 
+  /// No description provided for @errorEmailRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Email is required for registration'**
+  String get errorEmailRequired;
+
+  /// No description provided for @errorEmailAlreadyRegistered.
+  ///
+  /// In en, this message translates to:
+  /// **'This email is already registered, please use another or log in'**
+  String get errorEmailAlreadyRegistered;
+
+  /// No description provided for @errorUsernameAlreadyTaken.
+  ///
+  /// In en, this message translates to:
+  /// **'This username is already taken, please choose another'**
+  String get errorUsernameAlreadyTaken;
+
+  /// No description provided for @errorUsernameReservedKeywords.
+  ///
+  /// In en, this message translates to:
+  /// **'Username contains reserved keywords'**
+  String get errorUsernameReservedKeywords;
+
+  /// No description provided for @errorTermsNotAgreed.
+  ///
+  /// In en, this message translates to:
+  /// **'You must agree to the Terms of Service and Privacy Policy'**
+  String get errorTermsNotAgreed;
+
+  /// No description provided for @errorPasswordTooWeak.
+  ///
+  /// In en, this message translates to:
+  /// **'Password does not meet security requirements'**
+  String get errorPasswordTooWeak;
+
+  /// No description provided for @errorVerificationCodeInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification code is incorrect or expired'**
+  String get errorVerificationCodeInvalid;
+
   /// No description provided for @errorError.
   ///
   /// In en, this message translates to:
@@ -3794,6 +3836,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'View applied and favorited activities'**
   String get profileMyApplicationsSubtitle;
+
+  /// No description provided for @profileExpertManagement.
+  ///
+  /// In en, this message translates to:
+  /// **'Expert Applications'**
+  String get profileExpertManagement;
+
+  /// No description provided for @profileExpertManagementSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Review incoming service applications'**
+  String get profileExpertManagementSubtitle;
 
   /// No description provided for @profilePointsCoupons.
   ///
@@ -17557,6 +17611,108 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed to publish post, please try again'**
   String get errorForumCreatePostFailed;
+
+  /// No description provided for @errorActivityLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load activities, please try again'**
+  String get errorActivityLoadFailed;
+
+  /// No description provided for @errorActivityLoadMoreFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load more activities'**
+  String get errorActivityLoadMoreFailed;
+
+  /// No description provided for @errorActivityRefreshFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to refresh activities'**
+  String get errorActivityRefreshFailed;
+
+  /// No description provided for @errorActivityApplyFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to apply for activity, please try again'**
+  String get errorActivityApplyFailed;
+
+  /// No description provided for @errorActivityDetailLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load activity details'**
+  String get errorActivityDetailLoadFailed;
+
+  /// No description provided for @errorActivityToggleFavoriteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to update favorite status'**
+  String get errorActivityToggleFavoriteFailed;
+
+  /// No description provided for @errorProfileLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load profile'**
+  String get errorProfileLoadFailed;
+
+  /// No description provided for @errorProfileUpdateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to update profile, please try again'**
+  String get errorProfileUpdateFailed;
+
+  /// No description provided for @errorProfileUpdateAvatarFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to update avatar'**
+  String get errorProfileUpdateAvatarFailed;
+
+  /// No description provided for @errorProfileUploadAvatarFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to upload avatar'**
+  String get errorProfileUploadAvatarFailed;
+
+  /// No description provided for @errorProfileLoadTasksFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load tasks'**
+  String get errorProfileLoadTasksFailed;
+
+  /// No description provided for @errorProfileLoadPublicFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load user profile'**
+  String get errorProfileLoadPublicFailed;
+
+  /// No description provided for @errorProfileLoadForumPostsFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load forum posts'**
+  String get errorProfileLoadForumPostsFailed;
+
+  /// No description provided for @errorProfileLoadPreferencesFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load preferences'**
+  String get errorProfileLoadPreferencesFailed;
+
+  /// No description provided for @errorProfileUpdatePreferencesFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to update preferences'**
+  String get errorProfileUpdatePreferencesFailed;
+
+  /// No description provided for @errorProfileSendEmailCodeFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to send email verification code'**
+  String get errorProfileSendEmailCodeFailed;
+
+  /// No description provided for @errorProfileSendPhoneCodeFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to send phone verification code'**
+  String get errorProfileSendPhoneCodeFailed;
 }
 
 class _AppLocalizationsDelegate

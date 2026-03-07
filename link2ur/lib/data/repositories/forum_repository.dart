@@ -322,9 +322,9 @@ class ForumRepository {
     return ForumReply.fromJson(response.data!);
   }
 
-  /// 点赞帖子
-  Future<void> likePost(int postId) async {
-    final response = await _apiService.post(
+  /// 点赞帖子，返回 {liked, like_count} 用于校正乐观更新
+  Future<({bool liked, int likeCount})> likePost(int postId) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.forumLikes,
       data: {'target_type': 'post', 'target_id': postId},
     );
@@ -334,11 +334,17 @@ class ForumRepository {
     }
     // 使帖子详情缓存失效，刷新或再次进入时从服务端拉取最新 is_liked
     await _cache.remove('${CacheManager.prefixForumPostDetail}$postId');
+
+    final data = response.data;
+    return (
+      liked: data?['liked'] as bool? ?? false,
+      likeCount: data?['like_count'] as int? ?? 0,
+    );
   }
 
-  /// 点赞回复
-  Future<void> likeReply(int replyId) async {
-    final response = await _apiService.post(
+  /// 点赞回复，返回 {liked, like_count} 用于校正乐观更新
+  Future<({bool liked, int likeCount})> likeReply(int replyId) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.forumLikes,
       data: {'target_type': 'reply', 'target_id': replyId},
     );
@@ -346,11 +352,17 @@ class ForumRepository {
     if (!response.isSuccess) {
       throw ForumException(response.message ?? '点赞失败');
     }
+
+    final data = response.data;
+    return (
+      liked: data?['liked'] as bool? ?? false,
+      likeCount: data?['like_count'] as int? ?? 0,
+    );
   }
 
-  /// 收藏帖子
-  Future<void> favoritePost(int postId) async {
-    final response = await _apiService.post(
+  /// 收藏帖子，返回 {favorited, favorite_count} 用于校正乐观更新
+  Future<({bool favorited, int favoriteCount})> favoritePost(int postId) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.forumFavorites,
       data: {'post_id': postId},
     );
@@ -360,6 +372,12 @@ class ForumRepository {
     }
     // 使帖子详情缓存失效，刷新或再次进入时从服务端拉取最新 is_favorited
     await _cache.remove('${CacheManager.prefixForumPostDetail}$postId');
+
+    final data = response.data;
+    return (
+      favorited: data?['favorited'] as bool? ?? false,
+      favoriteCount: data?['favorite_count'] as int? ?? 0,
+    );
   }
 
   /// 获取我的帖子

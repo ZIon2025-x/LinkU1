@@ -145,6 +145,7 @@ class AuthRepository {
     required String email,
     required String password,
     required String name,
+    required String verificationCode,
     String? invitationCode,
   }) async {
     final response = await _apiService.post<Map<String, dynamic>>(
@@ -153,18 +154,20 @@ class AuthRepository {
         'email': email,
         'password': password,
         'name': name,
+        'verification_code': verificationCode,
+        'agreed_to_terms': true,
         if (invitationCode != null && invitationCode.isNotEmpty)
           'invitation_code': invitationCode,
       },
     );
 
     if (!response.isSuccess) {
-      throw AuthException(response.message ?? '注册失败');
+      throw AuthException(response.message ?? 'auth_error_register_failed');
     }
 
     if (response.data == null) {
       AppLogger.error('Register response data is null');
-      throw const AuthException('注册响应数据为空');
+      throw const AuthException('auth_error_register_failed');
     }
 
     AppLogger.debug('Register response keys: ${response.data!.keys.toList()}');

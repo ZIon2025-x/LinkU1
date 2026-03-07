@@ -125,6 +125,7 @@ class _RegisterViewState extends State<RegisterView>
           email: _emailController.text.trim(),
           password: _passwordController.text,
           name: _nameController.text.trim(),
+          verificationCode: _codeController.text.trim(),
           invitationCode: _invitationCodeController.text.trim().isNotEmpty
               ? _invitationCodeController.text.trim()
               : null,

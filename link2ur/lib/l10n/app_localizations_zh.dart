@@ -1300,6 +1300,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get errorRegisterFailed => '注册失败';
 
   @override
+  String get errorEmailRequired => '注册需要提供邮箱地址';
+
+  @override
+  String get errorEmailAlreadyRegistered => '该邮箱已被注册，请使用其他邮箱或直接登录';
+
+  @override
+  String get errorUsernameAlreadyTaken => '该用户名已被使用，请选择其他用户名';
+
+  @override
+  String get errorUsernameReservedKeywords => '用户名包含保留关键词';
+
+  @override
+  String get errorTermsNotAgreed => '您必须同意用户协议和隐私政策才能注册';
+
+  @override
+  String get errorPasswordTooWeak => '密码不符合安全要求';
+
+  @override
+  String get errorVerificationCodeInvalid => '验证码错误或已过期';
+
+  @override
   String get errorError => '错误';
 
   @override
@@ -1961,6 +1982,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get profileMyApplicationsSubtitle => '查看申请和收藏的活动';
+
+  @override
+  String get profileExpertManagement => '达人申请管理';
+
+  @override
+  String get profileExpertManagementSubtitle => '审核收到的服务申请';
 
   @override
   String get profilePointsCoupons => '积分与优惠券';
@@ -9166,6 +9193,57 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get errorForumCreatePostFailed => '发帖失败，请重试';
+
+  @override
+  String get errorActivityLoadFailed => '加载活动失败，请重试';
+
+  @override
+  String get errorActivityLoadMoreFailed => '加载更多活动失败';
+
+  @override
+  String get errorActivityRefreshFailed => '刷新活动失败';
+
+  @override
+  String get errorActivityApplyFailed => '报名活动失败，请重试';
+
+  @override
+  String get errorActivityDetailLoadFailed => '加载活动详情失败';
+
+  @override
+  String get errorActivityToggleFavoriteFailed => '更新收藏状态失败';
+
+  @override
+  String get errorProfileLoadFailed => '加载个人资料失败';
+
+  @override
+  String get errorProfileUpdateFailed => '更新个人资料失败，请重试';
+
+  @override
+  String get errorProfileUpdateAvatarFailed => '更新头像失败';
+
+  @override
+  String get errorProfileUploadAvatarFailed => '上传头像失败';
+
+  @override
+  String get errorProfileLoadTasksFailed => '加载任务列表失败';
+
+  @override
+  String get errorProfileLoadPublicFailed => '加载用户资料失败';
+
+  @override
+  String get errorProfileLoadForumPostsFailed => '加载论坛帖子失败';
+
+  @override
+  String get errorProfileLoadPreferencesFailed => '加载偏好设置失败';
+
+  @override
+  String get errorProfileUpdatePreferencesFailed => '更新偏好设置失败';
+
+  @override
+  String get errorProfileSendEmailCodeFailed => '发送邮箱验证码失败';
+
+  @override
+  String get errorProfileSendPhoneCodeFailed => '发送手机验证码失败';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -10464,6 +10542,27 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get errorRegisterFailed => '註冊失敗';
 
   @override
+  String get errorEmailRequired => '註冊需要提供郵箱地址';
+
+  @override
+  String get errorEmailAlreadyRegistered => '該郵箱已被註冊，請使用其他郵箱或直接登入';
+
+  @override
+  String get errorUsernameAlreadyTaken => '該用戶名已被使用，請選擇其他用戶名';
+
+  @override
+  String get errorUsernameReservedKeywords => '用戶名包含保留關鍵詞';
+
+  @override
+  String get errorTermsNotAgreed => '您必須同意用戶協議和隱私政策才能註冊';
+
+  @override
+  String get errorPasswordTooWeak => '密碼不符合安全要求';
+
+  @override
+  String get errorVerificationCodeInvalid => '驗證碼錯誤或已過期';
+
+  @override
   String get errorError => '錯誤';
 
   @override
@@ -11125,6 +11224,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get profileMyApplicationsSubtitle => '查看申請和收藏的活動';
+
+  @override
+  String get profileExpertManagement => '達人申請管理';
+
+  @override
+  String get profileExpertManagementSubtitle => '審核收到的服務申請';
 
   @override
   String get profilePointsCoupons => '積分與優惠券';
@@ -18330,4 +18435,55 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get errorForumCreatePostFailed => '發帖失敗，請重試';
+
+  @override
+  String get errorActivityLoadFailed => '載入活動失敗，請重試';
+
+  @override
+  String get errorActivityLoadMoreFailed => '載入更多活動失敗';
+
+  @override
+  String get errorActivityRefreshFailed => '刷新活動失敗';
+
+  @override
+  String get errorActivityApplyFailed => '報名活動失敗，請重試';
+
+  @override
+  String get errorActivityDetailLoadFailed => '載入活動詳情失敗';
+
+  @override
+  String get errorActivityToggleFavoriteFailed => '更新收藏狀態失敗';
+
+  @override
+  String get errorProfileLoadFailed => '載入個人資料失敗';
+
+  @override
+  String get errorProfileUpdateFailed => '更新個人資料失敗，請重試';
+
+  @override
+  String get errorProfileUpdateAvatarFailed => '更新頭像失敗';
+
+  @override
+  String get errorProfileUploadAvatarFailed => '上傳頭像失敗';
+
+  @override
+  String get errorProfileLoadTasksFailed => '載入任務列表失敗';
+
+  @override
+  String get errorProfileLoadPublicFailed => '載入用戶資料失敗';
+
+  @override
+  String get errorProfileLoadForumPostsFailed => '載入論壇帖子失敗';
+
+  @override
+  String get errorProfileLoadPreferencesFailed => '載入偏好設定失敗';
+
+  @override
+  String get errorProfileUpdatePreferencesFailed => '更新偏好設定失敗';
+
+  @override
+  String get errorProfileSendEmailCodeFailed => '發送郵箱驗證碼失敗';
+
+  @override
+  String get errorProfileSendPhoneCodeFailed => '發送手機驗證碼失敗';
 }

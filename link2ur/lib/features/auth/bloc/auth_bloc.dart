@@ -191,6 +191,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         email: event.email,
         password: event.password,
         name: event.name,
+        verificationCode: event.verificationCode,
         invitationCode: event.invitationCode,
       );
 

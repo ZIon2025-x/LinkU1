@@ -216,11 +216,14 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
       setState(() => _isUploadingImages = true);
       try {
         final repo = context.read<TaskRepository>();
-        for (final img in _selectedImages) {
-          final url = await repo.uploadTaskImage(await img.readAsBytes(), img.name);
-          if (!mounted) return;
-          imageUrls.add(url);
-        }
+        final urls = await Future.wait(
+          _selectedImages.map((img) async {
+            final bytes = await img.readAsBytes();
+            return repo.uploadTaskImage(bytes, img.name);
+          }),
+        );
+        if (!mounted) return;
+        imageUrls.addAll(urls);
       } catch (e) {
         if (mounted) {
           setState(() => _isUploadingImages = false);

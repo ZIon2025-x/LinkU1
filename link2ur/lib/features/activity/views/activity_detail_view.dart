@@ -64,6 +64,9 @@ class _ActivityDetailViewContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocListener<ActivityBloc, ActivityState>(
+      listenWhen: (prev, curr) =>
+          curr.actionMessage != null &&
+          prev.actionMessage != curr.actionMessage,
       listener: (context, state) {
         if (state.actionMessage == 'registration_success') {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -83,6 +86,7 @@ class _ActivityDetailViewContent extends StatelessWidget {
             ),
           );
         }
+        context.read<ActivityBloc>().add(const ActivityClearActionMessage());
       },
       child: BlocBuilder<ActivityBloc, ActivityState>(
         buildWhen: (prev, curr) =>
@@ -2063,7 +2067,10 @@ class _ActivityApplySheetState extends State<ActivityApplySheet> {
           prev.actionMessage != curr.actionMessage,
       listener: (context, state) {
         if (state.actionMessage == 'registration_success') {
-          Navigator.of(context).pop(); // 仅成功时关闭弹窗
+          final navigator = Navigator.of(context);
+          if (navigator.canPop()) {
+            navigator.pop(); // 仅成功时关闭弹窗
+          }
           // snackbar 由外层 listener 处理
         }
         // registration_failed: stay open so user can retry

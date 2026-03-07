@@ -111,6 +111,10 @@ class ActivityLoadFavoriteStatus extends ActivityEvent {
   List<Object?> get props => [activityId];
 }
 
+class ActivityClearActionMessage extends ActivityEvent {
+  const ActivityClearActionMessage();
+}
+
 // ==================== State ====================
 
 enum OfficialApplyStatus { idle, applying, applied, full, error }
@@ -250,6 +254,7 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
     on<ActivityLoadResult>(_onLoadResult);
     on<ActivityToggleFavorite>(_onToggleFavorite);
     on<ActivityLoadFavoriteStatus>(_onLoadFavoriteStatus);
+    on<ActivityClearActionMessage>(_onClearActionMessage);
   }
 
   final ActivityRepository _activityRepository;
@@ -277,7 +282,7 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
       AppLogger.error('Failed to load activities', e);
       emit(state.copyWith(
         status: ActivityStatus.error,
-        errorMessage: e.toString(),
+        errorMessage: 'activity_load_failed',
       ));
     }
   }
@@ -304,7 +309,7 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
       ));
     } catch (e) {
       AppLogger.error('Failed to load more activities', e);
-      emit(state.copyWith(isLoadingMore: false, errorMessage: e.toString()));
+      emit(state.copyWith(isLoadingMore: false, errorMessage: 'activity_load_more_failed'));
     }
   }
 
@@ -328,7 +333,7 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
     } catch (e) {
       AppLogger.error('Failed to refresh activities', e);
       // 刷新失败时仍需 emit，以便 RefreshIndicator 的 firstWhere 完成、loading 立即停止
-      emit(state.copyWith(errorMessage: e.toString()));
+      emit(state.copyWith(errorMessage: 'activity_refresh_failed'));
     }
   }
 
@@ -359,7 +364,7 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'registration_failed',
-        errorMessage: e.toString(),
+        errorMessage: 'activity_apply_failed',
       ));
     }
   }
@@ -405,7 +410,7 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
       AppLogger.error('Failed to load activity detail', e);
       emit(state.copyWith(
         detailStatus: ActivityStatus.error,
-        errorMessage: e.toString(),
+        errorMessage: 'activity_detail_load_failed',
       ));
     }
   }
@@ -459,13 +464,10 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
       emit(state.copyWith(officialApplyStatus: OfficialApplyStatus.applied));
       // 刷新详情以更新名额计数，并加载结果
       add(ActivityLoadDetail(event.activityId));
-    } on Exception catch (e) {
-      final msg = e.toString().toLowerCase();
-      if (msg.contains('已满') || msg.contains('full') || msg.contains('no more')) {
-        emit(state.copyWith(officialApplyStatus: OfficialApplyStatus.full));
-      } else {
-        emit(state.copyWith(officialApplyStatus: OfficialApplyStatus.error));
-      }
+    } on ActivityFullException {
+      emit(state.copyWith(officialApplyStatus: OfficialApplyStatus.full));
+    } on Exception {
+      emit(state.copyWith(officialApplyStatus: OfficialApplyStatus.error));
     }
   }
 
@@ -513,7 +515,7 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
       emit(state.copyWith(
         isFavorited: previous,
         isTogglingFavorite: false,
-        errorMessage: e.toString(),
+        errorMessage: 'activity_toggle_favorite_failed',
       ));
     }
   }
@@ -528,5 +530,12 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
     } catch (e) {
       AppLogger.warning('Failed to load favorite status for ${event.activityId}', e);
     }
+  }
+
+  void _onClearActionMessage(
+    ActivityClearActionMessage event,
+    Emitter<ActivityState> emit,
+  ) {
+    emit(state.copyWith(actionMessage: null));
   }
 }

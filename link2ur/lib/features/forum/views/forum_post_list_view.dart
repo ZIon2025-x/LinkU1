@@ -33,8 +33,7 @@ class ForumPostListView extends StatelessWidget {
     return BlocProvider(
       create: (context) => ForumBloc(
         forumRepository: context.read<ForumRepository>(),
-      )..add(ForumLoadPosts(categoryId: category?.id))
-        ..add(ForumCategoryChanged(category?.id)),
+      )..add(ForumCategoryChanged(category?.id)),
       child: _ForumPostListViewContent(category: category),
     );
   }

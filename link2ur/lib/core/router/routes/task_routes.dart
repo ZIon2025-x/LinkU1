@@ -5,7 +5,6 @@ import '../app_routes.dart';
 import '../page_transitions.dart';
 import '../../../features/tasks/views/tasks_view.dart';
 import '../../../features/tasks/views/create_task_view.dart' show CreateTaskView, TaskDraftData;
-import '../../../features/tasks/views/task_filter_view.dart';
 import '../../../features/tasks/views/task_detail_view.dart';
 
 /// 任务相关路由（列表、创建、筛选、详情）
@@ -28,12 +27,7 @@ List<RouteBase> get taskRoutes => [
           );
         },
       ),
-      GoRoute(
-        path: AppRoutes.taskFilter,
-        name: 'taskFilter',
-        builder: (context, state) => const TaskFilterView(),
-      ),
-      GoRoute(
+GoRoute(
         path: AppRoutes.taskDetail,
         name: 'taskDetail',
         pageBuilder: (context, state) {

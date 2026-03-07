@@ -652,7 +652,27 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
     ));
 
     try {
-      await _forumRepository.likePost(event.postId);
+      final result = await _forumRepository.likePost(event.postId);
+      // 用服务器返回的真实数据校正乐观更新
+      final correctedPosts = state.posts.map((post) {
+        if (post.id == event.postId) {
+          return post.copyWith(
+            isLiked: result.liked,
+            likeCount: result.likeCount,
+          );
+        }
+        return post;
+      }).toList();
+      final correctedSelectedPost = state.selectedPost?.id == event.postId
+          ? state.selectedPost!.copyWith(
+              isLiked: result.liked,
+              likeCount: result.likeCount,
+            )
+          : state.selectedPost;
+      emit(state.copyWith(
+        posts: correctedPosts,
+        selectedPost: correctedSelectedPost,
+      ));
     } catch (e) {
       AppLogger.error('Failed to like post', e);
       emit(state.copyWith(
@@ -690,7 +710,27 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
     ));
 
     try {
-      await _forumRepository.favoritePost(event.postId);
+      final result = await _forumRepository.favoritePost(event.postId);
+      // 用服务器返回的真实数据校正乐观更新
+      final correctedPosts = state.posts.map((post) {
+        if (post.id == event.postId) {
+          return post.copyWith(
+            isFavorited: result.favorited,
+            favoriteCount: result.favoriteCount,
+          );
+        }
+        return post;
+      }).toList();
+      final correctedSelectedPost = state.selectedPost?.id == event.postId
+          ? state.selectedPost!.copyWith(
+              isFavorited: result.favorited,
+              favoriteCount: result.favoriteCount,
+            )
+          : state.selectedPost;
+      emit(state.copyWith(
+        posts: correctedPosts,
+        selectedPost: correctedSelectedPost,
+      ));
     } catch (e) {
       AppLogger.error('Failed to favorite post', e);
       // 回滚到原始状态并发出错误信息
@@ -1022,7 +1062,18 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
     emit(state.copyWith(replies: updatedReplies));
 
     try {
-      await _forumRepository.likeReply(event.replyId);
+      final result = await _forumRepository.likeReply(event.replyId);
+      // 用服务器返回的真实数据校正乐观更新
+      final correctedReplies = state.replies.map((r) {
+        if (r.id == event.replyId) {
+          return r.copyWith(
+            isLiked: result.liked,
+            likeCount: result.likeCount,
+          );
+        }
+        return r;
+      }).toList();
+      emit(state.copyWith(replies: correctedReplies));
     } catch (e) {
       AppLogger.error('Failed to like reply', e);
       emit(state.copyWith(

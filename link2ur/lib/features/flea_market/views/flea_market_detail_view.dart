@@ -123,6 +123,8 @@ class _FleaMarketDetailContent extends StatelessWidget {
             'reject_failed' => l10n.fleaMarketRejectFailed,
             'counter_offer_failed' => l10n.fleaMarketCounterOfferFailed,
             'counter_offer_respond_failed' => l10n.fleaMarketCounterOfferFailed,
+            'counter_offer_success' => l10n.expertApplicationCounterOfferSent,
+            'item_deleted' => l10n.fleaMarketItemDeleted,
             _ => state.actionMessage ?? '',
           };
           final displayMessage = state.errorMessage != null
@@ -136,13 +138,20 @@ class _FleaMarketDetailContent extends StatelessWidget {
               state.actionMessage == 'approve_success' ||
               state.actionMessage == 'reject_success' ||
               state.actionMessage == 'counter_offer_accepted' ||
-              state.actionMessage == 'counter_offer_rejected';
+              state.actionMessage == 'counter_offer_rejected' ||
+              state.actionMessage == 'counter_offer_success' ||
+              state.actionMessage == 'item_deleted';
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(displayMessage),
               backgroundColor: isSuccess ? AppColors.success : AppColors.error,
             ),
           );
+          // 删除成功后返回列表页
+          if (state.actionMessage == 'item_deleted' && context.mounted) {
+            context.pop();
+            return;
+          }
         }
 
         // 卖家自动加载购买申请列表 - 对标iOS onAppear loadPurchaseRequests
@@ -430,12 +439,6 @@ class _FleaMarketDetailContent extends StatelessWidget {
                       context
                           .read<FleaMarketBloc>()
                           .add(FleaMarketDeleteItem(itemId));
-                      Navigator.of(context).pop();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                            content: Text(context
-                                .l10n.fleaMarketItemDeleted)),
-                      );
                     },
                   );
                 },
@@ -1371,7 +1374,13 @@ class _ImageGallery extends StatefulWidget {
 }
 
 class _ImageGalleryState extends State<_ImageGallery> {
-  int _currentPage = 0;
+  final ValueNotifier<int> _currentPage = ValueNotifier(0);
+
+  @override
+  void dispose() {
+    _currentPage.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1414,8 +1423,7 @@ class _ImageGalleryState extends State<_ImageGallery> {
           // 图片
           PageView.builder(
             itemCount: images.length,
-            onPageChanged: (index) =>
-                setState(() => _currentPage = index),
+            onPageChanged: (index) => _currentPage.value = index,
             itemBuilder: (context, index) {
               return GestureDetector(
                 onTap: () {
@@ -1445,63 +1453,72 @@ class _ImageGalleryState extends State<_ImageGallery> {
             },
           ),
 
-          // 图片计数器 - 对标iOS counter badge (top-right)
+          // 图片计数器 + 页面指示器
           if (images.length > 1)
-            Positioned(
-              top: MediaQuery.of(context).padding.top + 50,
-              right: 16,
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  '${_currentPage + 1}/${images.length}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
-
-          // 页面指示器 - 对标iOS custom dots in capsule
-          if (images.length > 1)
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 40,
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: List.generate(images.length, (index) {
-                      final isSelected = _currentPage == index;
-                      return AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        margin: const EdgeInsets.symmetric(horizontal: 2),
-                        width: isSelected ? 8 : 6,
-                        height: isSelected ? 8 : 6,
+            ValueListenableBuilder<int>(
+              valueListenable: _currentPage,
+              builder: (context, currentPage, _) {
+                return Stack(
+                  children: [
+                    // 计数器 - 对标iOS counter badge (top-right)
+                    Positioned(
+                      top: MediaQuery.of(context).padding.top + 50,
+                      right: 16,
+                      child: Container(
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: isSelected
-                              ? Colors.white
-                              : Colors.white.withValues(alpha: 0.4),
+                          color: Colors.black.withValues(alpha: 0.4),
+                          borderRadius: BorderRadius.circular(999),
                         ),
-                      );
-                    }),
-                  ),
-                ),
-              ),
+                        child: Text(
+                          '${currentPage + 1}/${images.length}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // 页面指示器 - 对标iOS custom dots in capsule
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 40,
+                      child: Center(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.3),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: List.generate(images.length, (index) {
+                              final isSelected = currentPage == index;
+                              return AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                margin: const EdgeInsets.symmetric(horizontal: 2),
+                                width: isSelected ? 8 : 6,
+                                height: isSelected ? 8 : 6,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: isSelected
+                                      ? Colors.white
+                                      : Colors.white.withValues(alpha: 0.4),
+                                ),
+                              );
+                            }),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
         ],
       ),

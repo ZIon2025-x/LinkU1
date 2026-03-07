@@ -64,6 +64,20 @@ class ErrorLocalizer {
         return context.l10n.errorLoginFailed;
       case 'auth_error_register_failed':
         return context.l10n.errorRegisterFailed;
+      case 'email_required':
+        return context.l10n.errorEmailRequired;
+      case 'email_already_registered':
+        return context.l10n.errorEmailAlreadyRegistered;
+      case 'username_already_taken':
+        return context.l10n.errorUsernameAlreadyTaken;
+      case 'username_contains_reserved_keywords':
+        return context.l10n.errorUsernameReservedKeywords;
+      case 'terms_not_agreed':
+        return context.l10n.errorTermsNotAgreed;
+      case 'password_too_weak':
+        return context.l10n.errorPasswordTooWeak;
+      case 'verification_code_invalid':
+        return context.l10n.errorVerificationCodeInvalid;
       case 'auth_error_send_code_failed':
         return context.l10n.errorCodeSendCodeFailed;
       case 'auth_reset_password_success':
@@ -164,6 +178,40 @@ class ErrorLocalizer {
         return context.l10n.errorTaskApplicationIdNotFound;
       case 'forum_create_post_failed':
         return context.l10n.errorForumCreatePostFailed;
+      case 'activity_load_failed':
+        return context.l10n.errorActivityLoadFailed;
+      case 'activity_load_more_failed':
+        return context.l10n.errorActivityLoadMoreFailed;
+      case 'activity_refresh_failed':
+        return context.l10n.errorActivityRefreshFailed;
+      case 'activity_apply_failed':
+        return context.l10n.errorActivityApplyFailed;
+      case 'activity_detail_load_failed':
+        return context.l10n.errorActivityDetailLoadFailed;
+      case 'activity_toggle_favorite_failed':
+        return context.l10n.errorActivityToggleFavoriteFailed;
+      case 'profile_load_failed':
+        return context.l10n.errorProfileLoadFailed;
+      case 'profile_update_failed':
+        return context.l10n.errorProfileUpdateFailed;
+      case 'profile_update_avatar_failed':
+        return context.l10n.errorProfileUpdateAvatarFailed;
+      case 'profile_upload_avatar_failed':
+        return context.l10n.errorProfileUploadAvatarFailed;
+      case 'profile_load_tasks_failed':
+        return context.l10n.errorProfileLoadTasksFailed;
+      case 'profile_load_public_failed':
+        return context.l10n.errorProfileLoadPublicFailed;
+      case 'profile_load_forum_posts_failed':
+        return context.l10n.errorProfileLoadForumPostsFailed;
+      case 'profile_load_preferences_failed':
+        return context.l10n.errorProfileLoadPreferencesFailed;
+      case 'profile_update_preferences_failed':
+        return context.l10n.errorProfileUpdatePreferencesFailed;
+      case 'profile_send_email_code_failed':
+        return context.l10n.errorProfileSendEmailCodeFailed;
+      case 'profile_send_phone_code_failed':
+        return context.l10n.errorProfileSendPhoneCodeFailed;
       case 'You have already reviewed this task.':
         return context.l10n.taskDetailTaskAlreadyReviewed;
       case 'Task is not completed yet.':

@@ -6,7 +6,6 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
-import '../../../core/router/app_router.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/utils/error_localizer.dart';
@@ -279,8 +278,13 @@ class _MyPostsViewState extends State<MyPostsView>
             child: _FleaMarketItemCard(
               item: item,
               category: category,
-              onTap: () {
-                if (item.id.isNotEmpty) context.safePush('/flea-market/${item.id}');
+              onTap: () async {
+                if (item.id.isEmpty) return;
+                await context.push('/flea-market/${item.id}');
+                if (context.mounted) {
+                  _loadAllRelated(forceRefresh: true);
+                  if (category == _MyItemsCategory.favorites) _loadFavorites();
+                }
               },
             ),
           );

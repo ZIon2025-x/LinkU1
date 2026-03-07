@@ -181,9 +181,11 @@ class _MyForumPostsViewState extends State<MyForumPostsView>
 
     return RefreshIndicator(
       onRefresh: () async {
-        context.read<ProfileBloc>().add(
-              ProfileLoadMyForumActivity(type: type),
-            );
+        final bloc = context.read<ProfileBloc>();
+        bloc.add(ProfileLoadMyForumActivity(type: type));
+        await bloc.stream
+            .firstWhere((s) => s.status != ProfileStatus.loading)
+            .timeout(const Duration(seconds: 10), onTimeout: () => bloc.state);
       },
       child: ListView.separated(
         clipBehavior: Clip.none,

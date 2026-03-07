@@ -230,7 +230,11 @@ class ActivityRepository {
       ApiEndpoints.officialActivityApply(activityId),
     );
     if (!response.isSuccess) {
-      throw ActivityException(response.message ?? '申请官方活动失败');
+      final msg = (response.message ?? '').toLowerCase();
+      if (msg.contains('已满') || msg.contains('full') || msg.contains('no more')) {
+        throw const ActivityFullException();
+      }
+      throw ActivityException(response.message ?? 'activity_official_apply_failed');
     }
   }
 
@@ -259,4 +263,9 @@ class ActivityRepository {
 /// 活动异常
 class ActivityException extends AppException {
   const ActivityException(super.message);
+}
+
+/// 活动名额已满异常
+class ActivityFullException extends AppException {
+  const ActivityFullException() : super('activity_official_full');
 }

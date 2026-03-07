@@ -164,7 +164,7 @@ class ApiEndpoints {
       '/api/task-experts/services/$serviceId';
   static String taskExpertServiceReviews(int serviceId) =>
       '/api/task-experts/services/$serviceId/reviews';
-  static String taskExpertReviews(String expertId) => // [RESERVED]
+  static String taskExpertReviews(String expertId) =>
       '/api/task-experts/$expertId/reviews';
   static const String applyToBeExpert = '/api/task-experts/apply';
   static const String myExpertApplication = '/api/task-experts/my-application';

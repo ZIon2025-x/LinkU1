@@ -1347,6 +1347,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorRegisterFailed => 'Registration Failed';
 
   @override
+  String get errorEmailRequired => 'Email is required for registration';
+
+  @override
+  String get errorEmailAlreadyRegistered =>
+      'This email is already registered, please use another or log in';
+
+  @override
+  String get errorUsernameAlreadyTaken =>
+      'This username is already taken, please choose another';
+
+  @override
+  String get errorUsernameReservedKeywords =>
+      'Username contains reserved keywords';
+
+  @override
+  String get errorTermsNotAgreed =>
+      'You must agree to the Terms of Service and Privacy Policy';
+
+  @override
+  String get errorPasswordTooWeak =>
+      'Password does not meet security requirements';
+
+  @override
+  String get errorVerificationCodeInvalid =>
+      'Verification code is incorrect or expired';
+
+  @override
   String get errorError => 'Error';
 
   @override
@@ -2053,6 +2080,13 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get profileMyApplicationsSubtitle =>
       'View applied and favorited activities';
+
+  @override
+  String get profileExpertManagement => 'Expert Applications';
+
+  @override
+  String get profileExpertManagementSubtitle =>
+      'Review incoming service applications';
 
   @override
   String get profilePointsCoupons => 'Points & Coupons';
@@ -9537,4 +9571,62 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get errorForumCreatePostFailed =>
       'Failed to publish post, please try again';
+
+  @override
+  String get errorActivityLoadFailed =>
+      'Failed to load activities, please try again';
+
+  @override
+  String get errorActivityLoadMoreFailed => 'Failed to load more activities';
+
+  @override
+  String get errorActivityRefreshFailed => 'Failed to refresh activities';
+
+  @override
+  String get errorActivityApplyFailed =>
+      'Failed to apply for activity, please try again';
+
+  @override
+  String get errorActivityDetailLoadFailed => 'Failed to load activity details';
+
+  @override
+  String get errorActivityToggleFavoriteFailed =>
+      'Failed to update favorite status';
+
+  @override
+  String get errorProfileLoadFailed => 'Failed to load profile';
+
+  @override
+  String get errorProfileUpdateFailed =>
+      'Failed to update profile, please try again';
+
+  @override
+  String get errorProfileUpdateAvatarFailed => 'Failed to update avatar';
+
+  @override
+  String get errorProfileUploadAvatarFailed => 'Failed to upload avatar';
+
+  @override
+  String get errorProfileLoadTasksFailed => 'Failed to load tasks';
+
+  @override
+  String get errorProfileLoadPublicFailed => 'Failed to load user profile';
+
+  @override
+  String get errorProfileLoadForumPostsFailed => 'Failed to load forum posts';
+
+  @override
+  String get errorProfileLoadPreferencesFailed => 'Failed to load preferences';
+
+  @override
+  String get errorProfileUpdatePreferencesFailed =>
+      'Failed to update preferences';
+
+  @override
+  String get errorProfileSendEmailCodeFailed =>
+      'Failed to send email verification code';
+
+  @override
+  String get errorProfileSendPhoneCodeFailed =>
+      'Failed to send phone verification code';
 }

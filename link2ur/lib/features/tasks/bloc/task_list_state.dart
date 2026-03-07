@@ -70,7 +70,7 @@ class TaskListState extends Equatable {
       selectedCity: selectedCity ?? this.selectedCity,
       searchQuery: searchQuery ?? this.searchQuery,
       sortBy: sortBy ?? this.sortBy,
-      errorMessage: errorMessage ?? this.errorMessage,
+      errorMessage: errorMessage,
       isRefreshing: isRefreshing ?? this.isRefreshing,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
     );

@@ -18,8 +18,6 @@ class AppRoutes {
   static const String tasks = '/tasks';
   static const String taskDetail = '/tasks/:id';
   static const String createTask = '/tasks/create';
-  static const String taskFilter = '/tasks/filter';
-
   // 跳蚤市场
   static const String fleaMarket = '/flea-market';
   static const String fleaMarketDetail = '/flea-market/:id';
@@ -124,6 +122,9 @@ const authRequiredRoutes = <String>{
   AppRoutes.myPosts,
   AppRoutes.myForumPosts,
   AppRoutes.myServiceApplications,
+  AppRoutes.expertApplicationsManagement,
+  AppRoutes.applyLeaderboard,
+  AppRoutes.submitLeaderboardItem,
   AppRoutes.wallet,
   AppRoutes.payment,
   AppRoutes.stripeConnectOnboarding,

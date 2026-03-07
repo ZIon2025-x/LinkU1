@@ -2725,11 +2725,12 @@ class _CompleteTaskSheetContentState extends State<_CompleteTaskSheetContent> {
     try {
       List<String>? imageUrls;
       if (_selectedImages.isNotEmpty) {
-        imageUrls = [];
-        for (final img in _selectedImages) {
-          final url = await widget.taskRepo.uploadTaskImage(await img.readAsBytes(), img.name);
-          imageUrls.add(url);
-        }
+        imageUrls = await Future.wait(
+          _selectedImages.map((img) async {
+            final bytes = await img.readAsBytes();
+            return widget.taskRepo.uploadTaskImage(bytes, img.name);
+          }),
+        );
       }
 
       final text = _textController.text.trim();

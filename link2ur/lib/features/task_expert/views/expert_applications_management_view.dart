@@ -15,25 +15,27 @@ import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/animated_list_item.dart';
+import '../../../data/repositories/task_expert_repository.dart';
 import '../bloc/task_expert_bloc.dart';
 
 /// 达人服务申请管理页面
 /// 达人查看并处理收到的服务申请（同意/拒绝/议价）
-class ExpertApplicationsManagementView extends StatefulWidget {
+class ExpertApplicationsManagementView extends StatelessWidget {
   const ExpertApplicationsManagementView({super.key});
 
   @override
-  State<ExpertApplicationsManagementView> createState() =>
-      _ExpertApplicationsManagementViewState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => TaskExpertBloc(
+        taskExpertRepository: context.read<TaskExpertRepository>(),
+      )..add(const TaskExpertLoadExpertApplications()),
+      child: const _ExpertApplicationsManagementContent(),
+    );
+  }
 }
 
-class _ExpertApplicationsManagementViewState
-    extends State<ExpertApplicationsManagementView> {
-  @override
-  void initState() {
-    super.initState();
-    context.read<TaskExpertBloc>().add(const TaskExpertLoadExpertApplications());
-  }
+class _ExpertApplicationsManagementContent extends StatelessWidget {
+  const _ExpertApplicationsManagementContent();
 
   @override
   Widget build(BuildContext context) {

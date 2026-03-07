@@ -365,7 +365,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       AppLogger.error('Failed to load profile', e);
       emit(state.copyWith(
         status: ProfileStatus.error,
-        errorMessage: e.toString(),
+        errorMessage: 'profile_load_failed',
       ));
     }
   }
@@ -398,7 +398,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       emit(state.copyWith(
         isUpdating: false,
         actionMessage: 'update_failed',
-        errorMessage: e.toString(),
+        errorMessage: 'profile_update_failed',
       ));
     }
   }
@@ -422,7 +422,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       emit(state.copyWith(
         isUpdating: false,
         actionMessage: 'update_failed',
-        errorMessage: e.toString(),
+        errorMessage: 'profile_update_avatar_failed',
       ));
     }
   }
@@ -446,7 +446,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       emit(state.copyWith(
         isUpdating: false,
         actionMessage: 'upload_failed',
-        errorMessage: e.toString(),
+        errorMessage: 'profile_upload_avatar_failed',
       ));
     }
   }
@@ -492,7 +492,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       }
     } catch (e) {
       AppLogger.error('Failed to load my tasks', e);
-      emit(state.copyWith(status: ProfileStatus.error, errorMessage: e.toString()));
+      emit(state.copyWith(status: ProfileStatus.error, errorMessage: 'profile_load_tasks_failed'));
     }
   }
 
@@ -514,7 +514,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       AppLogger.error('Failed to load public profile', e);
       emit(state.copyWith(
         status: ProfileStatus.error,
-        errorMessage: e.toString(),
+        errorMessage: 'profile_load_public_failed',
       ));
     }
   }
@@ -542,7 +542,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       ));
     } catch (e) {
       AppLogger.error('Failed to load my forum posts', e);
-      emit(state.copyWith(status: ProfileStatus.error, errorMessage: e.toString()));
+      emit(state.copyWith(status: ProfileStatus.error, errorMessage: 'profile_load_forum_posts_failed'));
     }
   }
 
@@ -601,7 +601,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       }
     } catch (e) {
       AppLogger.error('Failed to load forum activity', e);
-      emit(state.copyWith(status: ProfileStatus.error, errorMessage: e.toString()));
+      emit(state.copyWith(status: ProfileStatus.error, errorMessage: 'profile_load_forum_posts_failed'));
     }
   }
 
@@ -615,7 +615,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       emit(state.copyWith(status: ProfileStatus.loaded, preferences: preferences));
     } catch (e) {
       AppLogger.error('Failed to load preferences', e);
-      emit(state.copyWith(status: ProfileStatus.error, errorMessage: e.toString()));
+      emit(state.copyWith(status: ProfileStatus.error, errorMessage: 'profile_load_preferences_failed'));
     }
   }
 
@@ -638,7 +638,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       emit(state.copyWith(
         isUpdating: false,
         actionMessage: 'update_failed',
-        errorMessage: e.toString(),
+        errorMessage: 'profile_update_preferences_failed',
       ));
     }
   }
@@ -665,8 +665,8 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       AppLogger.error('Failed to send email code', e);
       emit(state.copyWith(
         isSendingEmailCode: false,
-        actionMessage: e.toString(),
-        errorMessage: e.toString(),
+        actionMessage: 'send_code_failed',
+        errorMessage: 'profile_send_email_code_failed',
       ));
     }
   }
@@ -693,8 +693,8 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       AppLogger.error('Failed to send phone code', e);
       emit(state.copyWith(
         isSendingPhoneCode: false,
-        actionMessage: e.toString(),
-        errorMessage: e.toString(),
+        actionMessage: 'send_code_failed',
+        errorMessage: 'profile_send_phone_code_failed',
       ));
     }
   }

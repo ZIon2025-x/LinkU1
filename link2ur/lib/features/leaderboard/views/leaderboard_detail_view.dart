@@ -482,8 +482,13 @@ class _LeaderboardDetailContentState
                     return Padding(
                       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                       child: GestureDetector(
-                        onTap: () =>
-                            context.push('/leaderboard/item/${item.id}'),
+                        onTap: () async {
+                          await context.push('/leaderboard/item/${item.id}');
+                          if (context.mounted) {
+                            context.read<LeaderboardBloc>().add(
+                                LeaderboardLoadDetail(leaderboardId));
+                          }
+                        },
                         child: _RankItemCard(
                           item: item,
                           rank: index + 1,
