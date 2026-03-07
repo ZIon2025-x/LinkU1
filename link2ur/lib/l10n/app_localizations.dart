@@ -17551,6 +17551,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'You are not a participant of this task'**
   String get errorReviewNotParticipant;
+
+  /// No description provided for @errorForumCreatePostFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to publish post, please try again'**
+  String get errorForumCreatePostFailed;
 }
 
 class _AppLocalizationsDelegate

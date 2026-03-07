@@ -59,10 +59,10 @@ class AnimatedLikeButton extends StatefulWidget {
 
 class _AnimatedLikeButtonState extends State<AnimatedLikeButton>
     with TickerProviderStateMixin {
-  late AnimationController _scaleController;
-  late AnimationController _particleController;
-  late Animation<double> _scaleAnimation;
-  late Animation<double> _particleAnimation;
+  late final AnimationController _scaleController;
+  late final AnimationController _particleController;
+  late final Animation<double> _scaleAnimation;
+  late final Animation<double> _particleAnimation;
 
   bool _wasLiked = false;
 
@@ -150,7 +150,8 @@ class _AnimatedLikeButtonState extends State<AnimatedLikeButton>
             SizedBox(
               width: widget.size + 16,
               height: widget.size + 16,
-              child: AnimatedBuilder(
+              child: RepaintBoundary(
+                child: AnimatedBuilder(
                 animation: Listenable.merge(
                     [_scaleController, _particleController]),
                 builder: (context, _) {
@@ -175,6 +176,7 @@ class _AnimatedLikeButtonState extends State<AnimatedLikeButton>
                     ),
                   );
                 },
+              ),
               ),
             ),
             if (widget.showCount && widget.count != null) ...[

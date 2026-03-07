@@ -53,7 +53,7 @@ class AnimatedProgressBar extends StatefulWidget {
 
 class _AnimatedProgressBarState extends State<AnimatedProgressBar>
     with TickerProviderStateMixin {
-  late AnimationController _progressController;
+  late final AnimationController _progressController;
   late Animation<double> _progressAnimation;
   AnimationController? _pulseController;
   Animation<double>? _pulseAnimation;
@@ -168,7 +168,8 @@ class _AnimatedProgressBarState extends State<AnimatedProgressBar>
           ),
           const SizedBox(height: 6),
         ],
-        AnimatedBuilder(
+        RepaintBoundary(
+          child: AnimatedBuilder(
           animation: Listenable.merge([
             _progressController,
             if (_pulseController != null) _pulseController!,
@@ -189,6 +190,7 @@ class _AnimatedProgressBarState extends State<AnimatedProgressBar>
               size: Size(double.infinity, widget.height),
             );
           },
+        ),
         ),
       ],
     );

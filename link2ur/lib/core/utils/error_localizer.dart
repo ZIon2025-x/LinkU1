@@ -162,6 +162,8 @@ class ErrorLocalizer {
         return context.l10n.errorCreateTaskFailed;
       case 'task_application_id_not_found':
         return context.l10n.errorTaskApplicationIdNotFound;
+      case 'forum_create_post_failed':
+        return context.l10n.errorForumCreatePostFailed;
       case 'You have already reviewed this task.':
         return context.l10n.taskDetailTaskAlreadyReviewed;
       case 'Task is not completed yet.':

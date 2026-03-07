@@ -27,16 +27,7 @@ class PaymentCountdownView extends StatefulWidget {
 
 class _PaymentCountdownViewState extends State<PaymentCountdownView> {
   Timer? _timer;
-  Duration _timeRemaining = Duration.zero;
-
-  bool get _isExpired => _timeRemaining.inSeconds <= 0;
-
-  String get _formattedTime {
-    if (_isExpired) return '0:00';
-    final minutes = _timeRemaining.inMinutes;
-    final seconds = _timeRemaining.inSeconds % 60;
-    return '$minutes:${seconds.toString().padLeft(2, '0')}';
-  }
+  final ValueNotifier<Duration> _timeRemaining = ValueNotifier(Duration.zero);
 
   @override
   void initState() {
@@ -48,32 +39,32 @@ class _PaymentCountdownViewState extends State<PaymentCountdownView> {
   @override
   void dispose() {
     _timer?.cancel();
+    _timeRemaining.dispose();
     super.dispose();
   }
 
   void _updateTimeRemaining() {
     final expiresAt = widget.expiresAt;
     if (expiresAt == null || expiresAt.isEmpty) {
-      _timeRemaining = Duration.zero;
+      _timeRemaining.value = Duration.zero;
       return;
     }
 
     final expiryDate = DateTime.tryParse(expiresAt);
     if (expiryDate == null) {
-      _timeRemaining = Duration.zero;
+      _timeRemaining.value = Duration.zero;
       return;
     }
 
     final remaining = expiryDate.difference(DateTime.now());
-    _timeRemaining = remaining.isNegative ? Duration.zero : remaining;
+    _timeRemaining.value = remaining.isNegative ? Duration.zero : remaining;
   }
 
   void _startTimer() {
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       _updateTimeRemaining();
-      if (mounted) setState(() {});
 
-      if (_isExpired) {
+      if (_timeRemaining.value.inSeconds <= 0) {
         _timer?.cancel();
         widget.onExpired?.call();
       }
@@ -86,43 +77,52 @@ class _PaymentCountdownViewState extends State<PaymentCountdownView> {
       return const SizedBox.shrink();
     }
 
-    final statusColor = _isExpired ? AppColors.error : AppColors.warning;
+    return ValueListenableBuilder<Duration>(
+      valueListenable: _timeRemaining,
+      builder: (context, remaining, _) {
+        final isExpired = remaining.inSeconds <= 0;
+        final statusColor = isExpired ? AppColors.error : AppColors.warning;
+        final formattedTime = isExpired
+            ? '0:00'
+            : '${remaining.inMinutes}:${(remaining.inSeconds % 60).toString().padLeft(2, '0')}';
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: statusColor.withValues(alpha: 0.1),
-        borderRadius: AppRadius.allSmall,
-        border: Border.all(
-          color: statusColor.withValues(alpha: 0.3),
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            _isExpired
-                ? Icons.warning_amber_rounded
-                : Icons.access_time_filled,
-            size: 14,
-            color: statusColor,
-          ),
-          const SizedBox(width: 6),
-          Text(
-            _isExpired
-                ? AppLocalizations.of(context)!.paymentCountdownExpired
-                : AppLocalizations.of(context)!.paymentCountdownRemaining(_formattedTime),
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: statusColor,
-              fontFeatures: _isExpired
-                  ? null
-                  : const [FontFeature.tabularFigures()],
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: statusColor.withValues(alpha: 0.1),
+            borderRadius: AppRadius.allSmall,
+            border: Border.all(
+              color: statusColor.withValues(alpha: 0.3),
             ),
           ),
-        ],
-      ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                isExpired
+                    ? Icons.warning_amber_rounded
+                    : Icons.access_time_filled,
+                size: 14,
+                color: statusColor,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                isExpired
+                    ? AppLocalizations.of(context)!.paymentCountdownExpired
+                    : AppLocalizations.of(context)!.paymentCountdownRemaining(formattedTime),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: statusColor,
+                  fontFeatures: isExpired
+                      ? null
+                      : const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -146,16 +146,7 @@ class PaymentCountdownBanner extends StatefulWidget {
 
 class _PaymentCountdownBannerState extends State<PaymentCountdownBanner> {
   Timer? _timer;
-  Duration _timeRemaining = Duration.zero;
-
-  bool get _isExpired => _timeRemaining.inSeconds <= 0;
-
-  String get _formattedTime {
-    if (_isExpired) return '0:00';
-    final minutes = _timeRemaining.inMinutes;
-    final seconds = _timeRemaining.inSeconds % 60;
-    return '$minutes:${seconds.toString().padLeft(2, '0')}';
-  }
+  final ValueNotifier<Duration> _timeRemaining = ValueNotifier(Duration.zero);
 
   @override
   void initState() {
@@ -167,31 +158,31 @@ class _PaymentCountdownBannerState extends State<PaymentCountdownBanner> {
   @override
   void dispose() {
     _timer?.cancel();
+    _timeRemaining.dispose();
     super.dispose();
   }
 
   void _updateTimeRemaining() {
     final expiresAt = widget.expiresAt;
     if (expiresAt == null || expiresAt.isEmpty) {
-      _timeRemaining = Duration.zero;
+      _timeRemaining.value = Duration.zero;
       return;
     }
 
     final expiryDate = DateTime.tryParse(expiresAt);
     if (expiryDate == null) {
-      _timeRemaining = Duration.zero;
+      _timeRemaining.value = Duration.zero;
       return;
     }
 
     final remaining = expiryDate.difference(DateTime.now());
-    _timeRemaining = remaining.isNegative ? Duration.zero : remaining;
+    _timeRemaining.value = remaining.isNegative ? Duration.zero : remaining;
   }
 
   void _startTimer() {
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       _updateTimeRemaining();
-      if (mounted) setState(() {});
-      if (_isExpired) {
+      if (_timeRemaining.value.inSeconds <= 0) {
         _timer?.cancel();
         widget.onExpired?.call();
       }
@@ -204,62 +195,71 @@ class _PaymentCountdownBannerState extends State<PaymentCountdownBanner> {
       return const SizedBox.shrink();
     }
 
-    final statusColor = _isExpired ? AppColors.error : AppColors.warning;
+    return ValueListenableBuilder<Duration>(
+      valueListenable: _timeRemaining,
+      builder: (context, remaining, _) {
+        final isExpired = remaining.inSeconds <= 0;
+        final statusColor = isExpired ? AppColors.error : AppColors.warning;
+        final formattedTime = isExpired
+            ? '0:00'
+            : '${remaining.inMinutes}:${(remaining.inSeconds % 60).toString().padLeft(2, '0')}';
 
-    return Container(
-      padding: AppSpacing.allMd,
-      decoration: BoxDecoration(
-        color: statusColor.withValues(alpha: 0.1),
-        borderRadius: AppRadius.allMedium,
-        border: Border.all(
-          color: statusColor.withValues(alpha: 0.3),
-          width: 1.5,
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            _isExpired
-                ? Icons.warning_amber_rounded
-                : Icons.access_time_filled,
-            size: 20,
-            color: statusColor,
+        return Container(
+          padding: AppSpacing.allMd,
+          decoration: BoxDecoration(
+            color: statusColor.withValues(alpha: 0.1),
+            borderRadius: AppRadius.allMedium,
+            border: Border.all(
+              color: statusColor.withValues(alpha: 0.3),
+              width: 1.5,
+            ),
           ),
-          AppSpacing.hMd,
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+          child: Row(
+            children: [
+              Icon(
+                isExpired
+                    ? Icons.warning_amber_rounded
+                    : Icons.access_time_filled,
+                size: 20,
+                color: statusColor,
+              ),
+              AppSpacing.hMd,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isExpired
+                          ? AppLocalizations.of(context)!.paymentCountdownTimeout
+                          : AppLocalizations.of(context)!.paymentCountdownCompleteInTime,
+                      style: AppTypography.bodyBold.copyWith(
+                        color: statusColor,
+                      ),
+                    ),
+                    if (!isExpired)
+                      Text(
+                        AppLocalizations.of(context)!.paymentCountdownTimeLeft(formattedTime),
+                        style: AppTypography.caption.copyWith(
+                          color: AppColors.textSecondaryLight,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              if (!isExpired)
                 Text(
-                  _isExpired
-                      ? AppLocalizations.of(context)!.paymentCountdownTimeout
-                      : AppLocalizations.of(context)!.paymentCountdownCompleteInTime,
-                  style: AppTypography.bodyBold.copyWith(
+                  formattedTime,
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
                     color: statusColor,
+                    fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),
-                if (!_isExpired)
-                  Text(
-                    AppLocalizations.of(context)!.paymentCountdownTimeLeft(_formattedTime),
-                    style: AppTypography.caption.copyWith(
-                      color: AppColors.textSecondaryLight,
-                    ),
-                  ),
-              ],
-            ),
+            ],
           ),
-          if (!_isExpired)
-            Text(
-              _formattedTime,
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: statusColor,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
-            ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

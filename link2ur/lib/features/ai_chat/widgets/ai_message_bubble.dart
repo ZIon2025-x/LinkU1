@@ -304,8 +304,8 @@ class _ActionButton extends StatelessWidget {
 
 class _ThinkingIndicatorState extends State<_ThinkingIndicator>
     with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _animation;
+  late final AnimationController _controller;
+  late final Animation<double> _animation;
 
   @override
   void initState() {

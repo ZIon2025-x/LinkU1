@@ -162,7 +162,8 @@ class _VoteComparisonBarState extends State<VoteComparisonBar>
           ),
           const SizedBox(height: 6),
         ],
-        AnimatedBuilder(
+        RepaintBoundary(
+          child: AnimatedBuilder(
           animation: _controller,
           builder: (context, _) {
             return CustomPaint(
@@ -176,6 +177,7 @@ class _VoteComparisonBarState extends State<VoteComparisonBar>
               size: Size(double.infinity, widget.height),
             );
           },
+        ),
         ),
       ],
     );

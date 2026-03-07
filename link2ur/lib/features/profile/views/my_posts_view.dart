@@ -37,7 +37,7 @@ enum _MyItemsCategory {
 
 class _MyPostsViewState extends State<MyPostsView>
     with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+  late final TabController _tabController;
 
   /// 一次拉取「与我相关且任务来源为跳蚤市场」的商品，本地按 tab 筛选
   List<FleaMarketItem> _allRelatedItems = [];
@@ -54,11 +54,7 @@ class _MyPostsViewState extends State<MyPostsView>
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
-    _tabController.addListener(() {
-      if (!_tabController.indexIsChanging) {
-        AppHaptics.tabSwitch();
-      }
-    });
+    _tabController.addListener(_onTabChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadAllRelated();
       _loadFavorites();
@@ -67,9 +63,16 @@ class _MyPostsViewState extends State<MyPostsView>
 
   @override
   void dispose() {
+    _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     _purchasedScrollController.dispose();
     super.dispose();
+  }
+
+  void _onTabChanged() {
+    if (!_tabController.indexIsChanging) {
+      AppHaptics.tabSwitch();
+    }
   }
 
   /// 根据 tab 从「与我相关」列表中筛选：出售中 / 收的闲置 / 已售出

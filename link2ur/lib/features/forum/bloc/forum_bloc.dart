@@ -814,7 +814,7 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
       emit(state.copyWith(
         isCreatingPost: false,
         createPostSuccess: false,
-        errorMessage: e.toString(),
+        errorMessage: 'forum_create_post_failed',
       ));
     }
   }

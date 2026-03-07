@@ -73,7 +73,11 @@ class _SystemNotificationList extends StatefulWidget {
   State<_SystemNotificationList> createState() => _SystemNotificationListState();
 }
 
-class _SystemNotificationListState extends State<_SystemNotificationList> {
+class _SystemNotificationListState extends State<_SystemNotificationList>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   @override
   void initState() {
     super.initState();
@@ -87,6 +91,7 @@ class _SystemNotificationListState extends State<_SystemNotificationList> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return BlocBuilder<NotificationBloc, NotificationState>(
       buildWhen: (previous, current) =>
           previous.status != current.status ||
@@ -169,7 +174,11 @@ class _InteractionNotificationList extends StatefulWidget {
 }
 
 class _InteractionNotificationListState
-    extends State<_InteractionNotificationList> {
+    extends State<_InteractionNotificationList>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   @override
   void initState() {
     super.initState();
@@ -183,6 +192,7 @@ class _InteractionNotificationListState
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return BlocBuilder<NotificationBloc, NotificationState>(
       buildWhen: (previous, current) =>
           previous.status != current.status ||

@@ -28,7 +28,7 @@ class MyForumPostsView extends StatefulWidget {
 
 class _MyForumPostsViewState extends State<MyForumPostsView>
     with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+  late final TabController _tabController;
   final _blocProviderKey = GlobalKey();
 
   @override

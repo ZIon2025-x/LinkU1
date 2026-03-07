@@ -51,11 +51,11 @@ class _RegisterViewState extends State<RegisterView>
   late TapGestureRecognizer _privacyTapRecognizer;
 
   // ---- 动画 ----
-  late AnimationController _animController;
-  late Animation<double> _logoScale;
-  late Animation<double> _fadeIn;
+  late final AnimationController _animController;
+  late final Animation<double> _logoScale;
+  late final Animation<double> _fadeIn;
   // 背景流动渐变
-  late AnimationController _bgAnimController;
+  late final AnimationController _bgAnimController;
 
   @override
   void initState() {

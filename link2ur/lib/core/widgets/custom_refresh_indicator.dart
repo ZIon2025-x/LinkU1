@@ -84,7 +84,7 @@ class RefreshArcIndicator extends StatefulWidget {
 
 class _RefreshArcIndicatorState extends State<RefreshArcIndicator>
     with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
+  late final AnimationController _controller;
 
   @override
   void initState() {

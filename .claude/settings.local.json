@@ -34,7 +34,14 @@
       "Bash(export PUB_CACHE=\"F:/DevCache/.pub-cache\")",
       "Bash(powershell:*)",
       "Bash(PATH=\"F:/flutter/bin:$PATH\" PUB_CACHE=\"F:/DevCache/.pub-cache\" flutter test:*)",
-      "Bash(do grep:*)"
+      "Bash(do grep:*)",
+      "Bash(for file in /f/python_work/LinkU/link2ur/lib/core/widgets/animated_circular_progress.dart /f/python_work/LinkU/link2ur/lib/core/widgets/animated_like_button.dart /f/python_work/LinkU/link2ur/lib/core/widgets/animated_progress_bar.dart /f/python_work/LinkU/link2ur/lib/core/widgets/animated_star_rating.dart /f/python_work/LinkU/link2ur/lib/core/widgets/credit_score_gauge.dart /f/python_work/LinkU/link2ur/lib/core/widgets/skill_radar_chart.dart /f/python_work/LinkU/link2ur/lib/core/widgets/sparkline_chart.dart /f/python_work/LinkU/link2ur/lib/core/widgets/vote_comparison_bar.dart)",
+      "Bash(do echo \"=== $file ===\")",
+      "Read(//f/python_work/LinkU/link2ur/**)",
+      "Bash(for f in \"lib/core/widgets/animated_counter.dart\" \"lib/core/widgets/animated_like_button.dart\" \"lib/core/widgets/animated_progress_bar.dart\" \"lib/core/widgets/animated_timeline.dart\" \"lib/core/widgets/bouncing_widget.dart\" \"lib/core/widgets/custom_refresh_indicator.dart\" \"lib/core/widgets/enhanced_text_field.dart\" \"lib/core/widgets/splash_view.dart\" \"lib/core/widgets/vote_comparison_bar.dart\" \"lib/features/ai_chat/widgets/ai_message_bubble.dart\" \"lib/features/auth/views/login_view.dart\" \"lib/features/auth/views/register_view.dart\" \"lib/features/tasks/views/task_detail_view.dart\")",
+      "Bash(do echo \"=== $f ===\")",
+      "Bash(/tmp/check_issues.txt:*)",
+      "Read(//tmp/**)"
     ]
   }
 }

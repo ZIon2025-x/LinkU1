@@ -42,11 +42,11 @@ class _LoginViewState extends State<LoginView>
   Timer? _countdownTimer;
 
   // ---- 动画 ----
-  late AnimationController _animController;
-  late Animation<double> _logoScale;
-  late Animation<double> _fadeIn;
+  late final AnimationController _animController;
+  late final Animation<double> _logoScale;
+  late final Animation<double> _fadeIn;
   // 背景流动渐变 — 缓慢循环，极低开销
-  late AnimationController _bgAnimController;
+  late final AnimationController _bgAnimController;
 
   @override
   void initState() {

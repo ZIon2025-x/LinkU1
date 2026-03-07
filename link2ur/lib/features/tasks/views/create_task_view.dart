@@ -472,32 +472,31 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
           onTap: enabled
               ? () => setState(() => _selectedCategory = key)
               : null,
-          child: Opacity(
-            opacity: enabled ? 1.0 : 0.4,
-            child: Container(
+          child: Container(
               padding:
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
-                color: isSelected ? AppColors.primary : Colors.transparent,
+                color: isSelected
+                    ? (enabled ? AppColors.primary : AppColors.primary.withValues(alpha: 0.4))
+                    : Colors.transparent,
                 borderRadius: AppRadius.allSmall,
                 border: Border.all(
                   color: isSelected
-                      ? AppColors.primary
-                      : AppColors.dividerLight,
+                      ? (enabled ? AppColors.primary : AppColors.primary.withValues(alpha: 0.4))
+                      : (enabled ? AppColors.dividerLight : AppColors.dividerLight.withValues(alpha: 0.4)),
                 ),
               ),
               child: Text(
                 label,
                 style: TextStyle(
                   color: isSelected
-                      ? Colors.white
-                      : AppColors.textSecondaryLight,
+                      ? (enabled ? Colors.white : Colors.white.withValues(alpha: 0.4))
+                      : (enabled ? AppColors.textSecondaryLight : AppColors.textSecondaryLight.withValues(alpha: 0.4)),
                   fontWeight:
                       isSelected ? FontWeight.w500 : FontWeight.normal,
                 ),
               ),
             ),
-          ),
         );
       }).toList(),
     );

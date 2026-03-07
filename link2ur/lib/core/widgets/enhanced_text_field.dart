@@ -77,8 +77,8 @@ class _EnhancedTextFieldState extends State<EnhancedTextField>
   bool _obscureText = true;
   String? _validationError;
 
-  late AnimationController _animController;
-  late Animation<double> _borderAnimation;
+  late final AnimationController _animController;
+  late final Animation<double> _borderAnimation;
 
   @override
   void initState() {

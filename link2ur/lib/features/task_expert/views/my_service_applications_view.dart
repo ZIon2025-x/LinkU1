@@ -27,7 +27,7 @@ enum _ActivityTab { all, applied, favorited }
 
 class _MyServiceApplicationsViewState extends State<MyServiceApplicationsView>
     with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+  late final TabController _tabController;
 
   // 各分类数据（对齐iOS cachedActivities）
   List<Activity> _allActivities = [];
@@ -46,11 +46,7 @@ class _MyServiceApplicationsViewState extends State<MyServiceApplicationsView>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    _tabController.addListener(() {
-      if (!_tabController.indexIsChanging) {
-        AppHaptics.tabSwitch();
-      }
-    });
+    _tabController.addListener(_onTabChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadAllActivities();
     });
@@ -58,8 +54,15 @@ class _MyServiceApplicationsViewState extends State<MyServiceApplicationsView>
 
   @override
   void dispose() {
+    _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     super.dispose();
+  }
+
+  void _onTabChanged() {
+    if (!_tabController.indexIsChanging) {
+      AppHaptics.tabSwitch();
+    }
   }
 
   /// 对齐iOS loadAllActivities() — 加载全部数据并从中过滤

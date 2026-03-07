@@ -9163,6 +9163,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get errorReviewNotParticipant => '您不是此任务的参与者';
+
+  @override
+  String get errorForumCreatePostFailed => '发帖失败，请重试';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -18324,4 +18327,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get errorReviewNotParticipant => '您不是此任務的參與者';
+
+  @override
+  String get errorForumCreatePostFailed => '發帖失敗，請重試';
 }

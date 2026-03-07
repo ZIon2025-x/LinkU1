@@ -39,7 +39,7 @@ class _CouponPointsContent extends StatefulWidget {
 
 class _CouponPointsContentState extends State<_CouponPointsContent>
     with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+  late final TabController _tabController;
 
   @override
   void initState() {

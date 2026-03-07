@@ -161,7 +161,8 @@ class _AnimatedStarRatingState extends State<AnimatedStarRating>
             onTapUp: widget.onRatingChanged != null
                 ? (TapUpDetails d) => _handleTap(index, d.localPosition.dx)
                 : null,
-            child: AnimatedBuilder(
+            child: RepaintBoundary(
+              child: AnimatedBuilder(
               animation: _controllers[index],
               builder: (context, _) {
                 final scale = index < widget.rating.ceil()
@@ -182,6 +183,7 @@ class _AnimatedStarRatingState extends State<AnimatedStarRating>
                   ),
                 );
               },
+            ),
             ),
           ),
         );

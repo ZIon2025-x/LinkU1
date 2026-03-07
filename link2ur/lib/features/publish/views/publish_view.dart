@@ -11,13 +11,13 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/widgets/cross_platform_image.dart';
 import '../../../core/utils/haptic_feedback.dart';
-import '../../../core/utils/logger.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/widgets/app_feedback.dart';
 import '../../../core/widgets/content_constraint.dart';
+import '../../../core/widgets/link_search_dialog.dart';
 import '../../../core/widgets/location_picker.dart';
 import '../../../data/models/flea_market.dart';
 import '../../../data/models/forum.dart';
@@ -63,185 +63,6 @@ class PublishView extends StatelessWidget {
   }
 }
 
-/// 关联内容弹窗内容：内部持有 TextEditingController，随弹窗 dispose，避免 disposed 后仍被使用。
-class _PostLinkSearchDialogContent extends StatefulWidget {
-  const _PostLinkSearchDialogContent({
-    required this.discoveryRepo,
-    required this.isDark,
-  });
-
-  final DiscoveryRepository discoveryRepo;
-  final bool isDark;
-
-  @override
-  State<_PostLinkSearchDialogContent> createState() => _PostLinkSearchDialogContentState();
-}
-
-class _PostLinkSearchDialogContentState extends State<_PostLinkSearchDialogContent> {
-  late final TextEditingController _queryCtrl;
-  List<Map<String, dynamic>> _userRelated = [];
-  List<Map<String, dynamic>> _results = [];
-  bool _loadingRelated = true;
-  bool _loading = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _queryCtrl = TextEditingController();
-    _loadUserRelated();
-  }
-
-  Future<void> _loadUserRelated() async {
-    try {
-      final list = await widget.discoveryRepo.getLinkableContentForUser();
-      if (mounted) {
-        setState(() {
-          _userRelated = list;
-          _loadingRelated = false;
-        });
-      }
-    } catch (e) {
-      AppLogger.warning('Failed to load linkable content for post: $e');
-      if (mounted) setState(() => _loadingRelated = false);
-    }
-  }
-
-  @override
-  void dispose() {
-    _queryCtrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _runSearch(String q) async {
-    if (q.trim().isEmpty) return;
-    setState(() => _loading = true);
-    try {
-      final list = await widget.discoveryRepo.searchLinkableContent(query: q.trim());
-      if (mounted) {
-        setState(() {
-          _results = list;
-          _loading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _loading = false);
-        AppFeedback.showError(context, e.toString());
-      }
-    }
-  }
-
-  Widget _buildLinkableList(List<Map<String, dynamic>> list, double height) {
-    return SizedBox(
-      height: height,
-      child: ListView.builder(
-        itemCount: list.length,
-        itemBuilder: (context, i) {
-          final r = list[i];
-          final type = r['item_type'] as String? ?? '';
-          final name = r['name'] as String? ?? r['title'] as String? ?? context.l10n.commonUnnamed;
-          final id = r['item_id']?.toString() ?? '';
-          final subtitle = r['subtitle'] as String? ?? type;
-          return ListTile(
-            title: Text(name),
-            subtitle: Text(subtitle),
-            onTap: () {
-              Navigator.of(context).pop(<String, String>{'type': type, 'id': id, 'name': name});
-            },
-          );
-        },
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = widget.isDark;
-    return AlertDialog(
-      title: Text(context.l10n.publishRelatedContent),
-      content: SingleChildScrollView(
-        child: SizedBox(
-          width: double.maxFinite,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _queryCtrl,
-                      decoration: InputDecoration(
-                        hintText: context.l10n.publishSearchHint,
-                        border: const OutlineInputBorder(),
-                      ),
-                      onSubmitted: _runSearch,
-                    ),
-                  ),
-                  AppSpacing.hSm,
-                  IconButton(
-                    icon: const Icon(Icons.search),
-                    onPressed: () => _runSearch(_queryCtrl.text),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              if (_loadingRelated)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 24),
-                  child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                )
-              else if (_userRelated.isNotEmpty) ...[
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    context.l10n.publishRelatedToMe,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                    ),
-                  ),
-                ),
-                AppSpacing.vXs,
-                _buildLinkableList(_userRelated, 200),
-                const SizedBox(height: 12),
-              ],
-              if (_loading) const Center(child: CircularProgressIndicator()),
-              if (!_loading && _results.isNotEmpty) ...[
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    context.l10n.publishSearchResults,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                    ),
-                  ),
-                ),
-                AppSpacing.vXs,
-                _buildLinkableList(_results, 220),
-              ],
-              if (!_loading && _results.isEmpty && _queryCtrl.text.trim().isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Text(context.l10n.publishNoResultsTryKeywords),
-                ),
-            ],
-          ),
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
-        ),
-      ],
-    );
-  }
-}
-
 // ── 发布类型 ──
 enum _PublishType { task, fleaMarket, post }
 
@@ -272,6 +93,7 @@ class _PublishContentState extends State<_PublishContent>
   DateTime? _taskDeadline;
   final List<XFile> _taskImages = [];
   static const int _kTaskMaxImages = 5;
+  static const int _kFleaMaxImages = 5;
 
   // ── 闲置表单 ──
   final _fleaFormKey = GlobalKey<FormState>();
@@ -295,7 +117,7 @@ class _PublishContentState extends State<_PublishContent>
   String? _postLinkedType;
   String? _postLinkedId;
   String? _postLinkedName;
-  bool _postUploading = false;
+  bool _isUploading = false;
 
   // ── 关闭动画 ──
   late final AnimationController _closeAnimCtrl;
@@ -428,9 +250,13 @@ class _PublishContentState extends State<_PublishContent>
       AppFeedback.showWarning(context, context.l10n.feedbackSelectCategory);
       return;
     }
+    if (_taskDeadline != null && _taskDeadline!.isBefore(DateTime.now())) {
+      AppFeedback.showWarning(context, context.l10n.createTaskSelectDeadline);
+      return;
+    }
     final List<String> imageUrls = [];
     if (_taskImages.isNotEmpty) {
-      setState(() => _postUploading = true);
+      setState(() => _isUploading = true);
       try {
         final repo = context.read<TaskRepository>();
         for (final file in _taskImages) {
@@ -439,12 +265,12 @@ class _PublishContentState extends State<_PublishContent>
         }
       } catch (e) {
         if (mounted) {
-          setState(() => _postUploading = false);
+          setState(() => _isUploading = false);
           AppFeedback.showError(context, context.l10n.createTaskImageUploadFailed);
         }
         return;
       }
-      if (mounted) setState(() => _postUploading = false);
+      if (mounted) setState(() => _isUploading = false);
     }
     if (!mounted) return;
     final reward = _taskRewardToBeQuoted
@@ -470,13 +296,34 @@ class _PublishContentState extends State<_PublishContent>
     context.read<CreateTaskBloc>().add(CreateTaskSubmitted(request));
   }
 
-  void _submitFleaMarket() {
+  Future<void> _submitFleaMarket() async {
     if (!_fleaFormKey.currentState!.validate()) return;
     final price = double.tryParse(_fleaPriceCtrl.text.trim());
     if (price == null || price < 0) {
       AppFeedback.showError(context, context.l10n.fleaMarketInvalidPrice);
       return;
     }
+
+    final List<String> imageUrls = [];
+    if (_fleaImages.isNotEmpty) {
+      setState(() => _isUploading = true);
+      try {
+        final repo = context.read<FleaMarketRepository>();
+        for (final file in _fleaImages) {
+          final url = await repo.uploadImage(await file.readAsBytes(), file.name);
+          if (url.isNotEmpty) imageUrls.add(url);
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() => _isUploading = false);
+          AppFeedback.showError(context, context.l10n.commonImageUploadFailed(e.toString()));
+        }
+        return;
+      }
+      if (mounted) setState(() => _isUploading = false);
+    }
+
+    if (!mounted) return;
     final request = CreateFleaMarketRequest(
       title: _fleaTitleCtrl.text.trim(),
       description: _fleaDescCtrl.text.trim().isEmpty ? null : _fleaDescCtrl.text.trim(),
@@ -485,7 +332,7 @@ class _PublishContentState extends State<_PublishContent>
       location: _fleaLocation,
       latitude: _fleaLatitude,
       longitude: _fleaLongitude,
-      images: [],
+      images: imageUrls,
     );
     context.read<FleaMarketBloc>().add(FleaMarketCreateItem(request));
   }
@@ -516,7 +363,7 @@ class _PublishContentState extends State<_PublishContent>
     final List<ForumPostAttachment> attachments = [];
 
     if (_postImages.isNotEmpty || _postPdfFile != null) {
-      setState(() => _postUploading = true);
+      setState(() => _isUploading = true);
       try {
         for (final file in _postImages) {
           final url = await repo.uploadPostImage(await file.readAsBytes(), file.name);
@@ -528,12 +375,12 @@ class _PublishContentState extends State<_PublishContent>
         }
       } catch (e) {
         if (mounted) {
-          setState(() => _postUploading = false);
+          setState(() => _isUploading = false);
           AppFeedback.showError(context, context.localizeError(e.toString()));
         }
         return;
       }
-      if (mounted) setState(() => _postUploading = false);
+      if (mounted) setState(() => _isUploading = false);
     }
     if (!mounted) return;
     context.read<ForumBloc>().add(
@@ -605,7 +452,7 @@ class _PublishContentState extends State<_PublishContent>
       if (files.isNotEmpty) {
         setState(() {
           for (final f in files) {
-            if (_fleaImages.length < 9) _fleaImages.add(f);
+            if (_fleaImages.length < _kFleaMaxImages) _fleaImages.add(f);
           }
         });
       }
@@ -706,7 +553,7 @@ class _PublishContentState extends State<_PublishContent>
     final isTaskSubmitting = context.select<CreateTaskBloc, bool>((b) => b.state.isSubmitting);
     final isFleaSubmitting = context.select<FleaMarketBloc, bool>((b) => b.state.isSubmitting);
     final isPostSubmitting = context.select<ForumBloc, bool>((b) => b.state.isCreatingPost);
-    final isSubmitting = isTaskSubmitting || isFleaSubmitting || isPostSubmitting || _postUploading;
+    final isSubmitting = isTaskSubmitting || isFleaSubmitting || isPostSubmitting || _isUploading;
     final postCategories = context.select<ForumBloc, List<ForumCategory>>((b) => b.state.categories);
     final postCurrentUser = context.select<AuthBloc, User?>((b) => b.state.user);
 
@@ -1085,11 +932,14 @@ class _PublishContentState extends State<_PublishContent>
             duration: const Duration(milliseconds: 250),
             switchInCurve: Curves.easeOutCubic,
             switchOutCurve: Curves.easeInCubic,
-            child: switch (type) {
-              _PublishType.task => _buildTaskForm(isDark),
-              _PublishType.fleaMarket => _buildFleaMarketForm(isDark),
-              _PublishType.post => _buildPostForm(isDark, postCategories, postCurrentUser),
-            },
+            child: KeyedSubtree(
+              key: ValueKey(type),
+              child: switch (type) {
+                _PublishType.task => _buildTaskForm(isDark),
+                _PublishType.fleaMarket => _buildFleaMarketForm(isDark),
+                _PublishType.post => _buildPostForm(isDark, postCategories, postCurrentUser),
+              },
+            ),
           ),
         ),
         _buildBottomBar(isDark, bottomPadding, isSubmitting),
@@ -1292,11 +1142,11 @@ class _PublishContentState extends State<_PublishContent>
         ),
         children: [
           // ── 任务类型（下拉框，半宽） ──
-          _sectionTitle(context.l10n.createTaskType),
+          _sectionTitle(context.l10n.createTaskType, isDark: isDark),
           _buildTaskCategoryDropdown(isDark, taskCategories),
           AppSpacing.vLg,
 
-          _sectionTitle(context.l10n.createTaskTitleField),
+          _sectionTitle(context.l10n.createTaskTitleField, isDark: isDark),
           TextFormField(
             controller: _taskTitleCtrl,
             decoration: _inputDecoration(
@@ -1310,7 +1160,7 @@ class _PublishContentState extends State<_PublishContent>
           ),
           AppSpacing.vMd,
 
-          _sectionTitle(context.l10n.taskDetailTaskDescription),
+          _sectionTitle(context.l10n.taskDetailTaskDescription, isDark: isDark),
           TextFormField(
             controller: _taskDescCtrl,
             decoration: _inputDecoration(
@@ -1325,11 +1175,11 @@ class _PublishContentState extends State<_PublishContent>
           ),
           AppSpacing.vMd,
 
-          _sectionTitle(context.l10n.createTaskImages),
+          _sectionTitle(context.l10n.createTaskAddImages, isDark: isDark),
           _buildTaskImagePicker(isDark),
           AppSpacing.vMd,
 
-          _sectionTitle(context.l10n.createTaskReward),
+          _sectionTitle(context.l10n.createTaskReward, isDark: isDark),
           CheckboxListTile(
             value: _taskRewardToBeQuoted,
             onChanged: (v) => setState(() => _taskRewardToBeQuoted = v ?? false),
@@ -1382,7 +1232,7 @@ class _PublishContentState extends State<_PublishContent>
             ),
           AppSpacing.vLg,
 
-          _sectionTitle(context.l10n.createTaskLocation),
+          _sectionTitle(context.l10n.createTaskLocation, isDark: isDark),
           LocationInputField(
             hintText: context.l10n.createTaskLocationHint,
             onChanged: (address) {
@@ -1398,7 +1248,7 @@ class _PublishContentState extends State<_PublishContent>
           ),
           AppSpacing.vLg,
 
-          _sectionTitle(context.l10n.createTaskDeadline),
+          _sectionTitle(context.l10n.createTaskDeadline, isDark: isDark),
           GestureDetector(
             onTap: _selectDeadline,
             child: Container(
@@ -1472,11 +1322,11 @@ class _PublishContentState extends State<_PublishContent>
           bottom: 120 + viewInsets.bottom,
         ),
         children: [
-          _sectionTitle(context.l10n.fleaMarketProductImages),
+          _sectionTitle(context.l10n.fleaMarketProductImages, isDark: isDark),
           _buildFleaImagePicker(isDark),
           AppSpacing.vLg,
 
-          _sectionTitle(context.l10n.fleaMarketProductTitle),
+          _sectionTitle(context.l10n.fleaMarketProductTitle, isDark: isDark),
           TextFormField(
             controller: _fleaTitleCtrl,
             decoration: _inputDecoration(
@@ -1492,7 +1342,7 @@ class _PublishContentState extends State<_PublishContent>
           ),
           AppSpacing.vMd,
 
-          _sectionTitle(context.l10n.fleaMarketDescOptional),
+          _sectionTitle(context.l10n.fleaMarketDescOptional, isDark: isDark),
           TextFormField(
             controller: _fleaDescCtrl,
             decoration: _inputDecoration(
@@ -1505,7 +1355,7 @@ class _PublishContentState extends State<_PublishContent>
           ),
           AppSpacing.vMd,
 
-          _sectionTitle(context.l10n.fleaMarketPrice),
+          _sectionTitle(context.l10n.fleaMarketPrice, isDark: isDark),
           TextFormField(
             controller: _fleaPriceCtrl,
             decoration: _inputDecoration(
@@ -1525,7 +1375,7 @@ class _PublishContentState extends State<_PublishContent>
           AppSpacing.vMd,
 
           // ── 分类（窄下拉框） ──
-          _sectionTitle(context.l10n.fleaMarketCategoryLabel),
+          _sectionTitle(context.l10n.fleaMarketCategoryLabel, isDark: isDark),
           _buildNarrowDropdown<String>(
             isDark: isDark,
             value: _fleaCategory,
@@ -1538,7 +1388,7 @@ class _PublishContentState extends State<_PublishContent>
           ),
           AppSpacing.vMd,
 
-          _sectionTitle(context.l10n.fleaMarketLocationOptional),
+          _sectionTitle(context.l10n.fleaMarketLocationOptional, isDark: isDark),
           LocationInputField(
             hintText: context.l10n.fleaMarketLocationHint,
             onChanged: (address) {
@@ -1589,7 +1439,7 @@ class _PublishContentState extends State<_PublishContent>
         children: [
           // ── 帖子分类（窄下拉框，仅可发布的板块） ──
           if (postableCategories.isNotEmpty) ...[
-            _sectionTitle(context.l10n.forumSelectCategory),
+            _sectionTitle(context.l10n.forumSelectCategory, isDark: isDark),
             _buildNarrowDropdown<int>(
               isDark: isDark,
               value: _postCategoryId,
@@ -1603,7 +1453,7 @@ class _PublishContentState extends State<_PublishContent>
             AppSpacing.vLg,
           ],
 
-          _sectionTitle(context.l10n.forumEnterTitle),
+          _sectionTitle(context.l10n.forumEnterTitle, isDark: isDark),
           TextFormField(
             controller: _postTitleCtrl,
             decoration: _inputDecoration(
@@ -1616,7 +1466,7 @@ class _PublishContentState extends State<_PublishContent>
           ),
           AppSpacing.vMd,
 
-          _sectionTitle(context.l10n.forumShareThoughts),
+          _sectionTitle(context.l10n.forumShareThoughts, isDark: isDark),
           TextFormField(
             controller: _postContentCtrl,
             decoration: _inputDecoration(
@@ -1628,15 +1478,15 @@ class _PublishContentState extends State<_PublishContent>
             minLines: 5,
           ),
           AppSpacing.vMd,
-          _sectionTitle(context.l10n.publishImagesOptional('$_kPostMaxImages')),
+          _sectionTitle(context.l10n.publishImagesOptional('$_kPostMaxImages'), isDark: isDark),
           _buildPostImagePicker(isDark),
           AppSpacing.vMd,
-          _sectionTitle(context.l10n.forumPdfAttachmentOptional),
+          _sectionTitle(context.l10n.forumPdfAttachmentOptional, isDark: isDark),
           _buildPostPdfSection(isDark),
           AppSpacing.vMd,
-          _sectionTitle(context.l10n.publishRelatedContentOptional),
+          _sectionTitle(context.l10n.publishRelatedContentOptional, isDark: isDark),
           _buildPostLinkedChip(isDark),
-          if (_postUploading) ...[
+          if (_isUploading) ...[
             AppSpacing.vMd,
             const Center(child: CircularProgressIndicator()),
           ],
@@ -1843,7 +1693,7 @@ class _PublishContentState extends State<_PublishContent>
             ],
           );
         }),
-        if (_fleaImages.length < 9)
+        if (_fleaImages.length < _kFleaMaxImages)
           GestureDetector(
             onTap: _pickImages,
             child: Container(
@@ -1868,7 +1718,7 @@ class _PublishContentState extends State<_PublishContent>
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '${_fleaImages.length}/9',
+                    '${_fleaImages.length}/$_kFleaMaxImages',
                     style: TextStyle(
                       fontSize: 10,
                       color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
@@ -2133,7 +1983,7 @@ class _PublishContentState extends State<_PublishContent>
 
     final result = await showDialog<Map<String, String>>(
       context: context,
-      builder: (ctx) => _PostLinkSearchDialogContent(
+      builder: (ctx) => LinkSearchDialog(
         discoveryRepo: discoveryRepo,
         isDark: isDark,
       ),
@@ -2148,8 +1998,7 @@ class _PublishContentState extends State<_PublishContent>
   }
 
   // ==================== 工具方法 ====================
-  Widget _sectionTitle(String title) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  Widget _sectionTitle(String title, {required bool isDark}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(

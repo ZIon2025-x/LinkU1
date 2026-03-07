@@ -99,9 +99,9 @@ class _AnimatedTimelineNode extends StatefulWidget {
 
 class _AnimatedTimelineNodeState extends State<_AnimatedTimelineNode>
     with TickerProviderStateMixin {
-  late AnimationController _entryController;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
+  late final AnimationController _entryController;
+  late final Animation<double> _fadeAnimation;
+  late final Animation<Offset> _slideAnimation;
 
   AnimationController? _pulseController;
   Animation<double>? _pulseAnimation;

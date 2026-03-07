@@ -9533,4 +9533,8 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get errorReviewNotParticipant =>
       'You are not a participant of this task';
+
+  @override
+  String get errorForumCreatePostFailed =>
+      'Failed to publish post, please try again';
 }

@@ -278,6 +278,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                 final isAuthor = currentUserId != null &&
                     post != null &&
                     post.authorId.toString() == currentUserId;
+                final errorColor = Theme.of(context).colorScheme.error;
                 return [
                   if (isAuthor) ...[
                     PopupMenuItem<String>(
@@ -295,11 +296,11 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                       child: Row(
                         children: [
                           Icon(Icons.delete_outline, size: 20,
-                              color: Theme.of(context).colorScheme.error),
+                              color: errorColor),
                           AppSpacing.hSm,
                           Text(context.l10n.commonDelete,
                               style: TextStyle(
-                                  color: Theme.of(context).colorScheme.error)),
+                                  color: errorColor)),
                         ],
                       ),
                     ),

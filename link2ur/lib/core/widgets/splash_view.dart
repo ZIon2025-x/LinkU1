@@ -16,10 +16,10 @@ class SplashView extends StatefulWidget {
 
 class _SplashViewState extends State<SplashView>
     with TickerProviderStateMixin {
-  late AnimationController _breathController;
-  late AnimationController _textController;
-  late Animation<double> _breathAnimation;
-  late Animation<double> _textAnimation;
+  late final AnimationController _breathController;
+  late final AnimationController _textController;
+  late final Animation<double> _breathAnimation;
+  late final Animation<double> _textAnimation;
 
   @override
   void initState() {

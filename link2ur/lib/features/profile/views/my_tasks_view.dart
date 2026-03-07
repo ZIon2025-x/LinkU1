@@ -46,7 +46,7 @@ class MyTasksView extends StatefulWidget {
 
 class _MyTasksViewState extends State<MyTasksView>
     with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+  late final TabController _tabController;
 
   /// 只拉一次「全部我的任务」，各 Tab 在本地按状态/角色筛选展示
   List<Task> _allMyTasks = [];

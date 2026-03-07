@@ -4313,5 +4313,6 @@
   "fleaMarketErrorCounterOfferFailed": "发起还价失败",
   "fleaMarketErrorRespondCounterOfferFailed": "回应还价失败",
   "errorReviewTaskNotCompleted": "任务尚未完成",
-  "errorReviewNotParticipant": "您不是此任务的参与者"
+  "errorReviewNotParticipant": "您不是此任务的参与者",
+  "errorForumCreatePostFailed": "发帖失败，请重试"
 }

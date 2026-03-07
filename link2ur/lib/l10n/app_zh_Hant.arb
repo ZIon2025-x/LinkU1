@@ -4252,5 +4252,6 @@
   "fleaMarketErrorCounterOfferFailed": "發起議價失敗",
   "fleaMarketErrorRespondCounterOfferFailed": "回應議價失敗",
   "errorReviewTaskNotCompleted": "任務尚未完成",
-  "errorReviewNotParticipant": "您不是此任務的參與者"
+  "errorReviewNotParticipant": "您不是此任務的參與者",
+  "errorForumCreatePostFailed": "發帖失敗，請重試"
 }

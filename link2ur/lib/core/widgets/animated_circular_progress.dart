@@ -115,7 +115,8 @@ class _AnimatedCircularProgressState extends State<AnimatedCircularProgress>
         SizedBox(
           width: widget.size,
           height: widget.size,
-          child: AnimatedBuilder(
+          child: RepaintBoundary(
+            child: AnimatedBuilder(
             animation: _controller,
             builder: (context, _) {
               return CustomPaint(
@@ -142,6 +143,7 @@ class _AnimatedCircularProgressState extends State<AnimatedCircularProgress>
                 ),
               );
             },
+          ),
           ),
         ),
         if (widget.label != null) ...[

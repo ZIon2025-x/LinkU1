@@ -283,7 +283,7 @@ class _ReviewBottomSheetState extends State<ReviewBottomSheet> {
       if (!mounted) return;
       setState(() {
         _isSubmitting = false;
-        _errorMessage = e.toString().replaceAll('Exception: ', '');
+        _errorMessage = context.localizeError(e.toString());
       });
     }
   }

@@ -1039,7 +1039,13 @@ class _ActivityImageCarousel extends StatefulWidget {
 }
 
 class _ActivityImageCarouselState extends State<_ActivityImageCarousel> {
-  int _currentPage = 0;
+  final ValueNotifier<int> _currentPage = ValueNotifier<int>(0);
+
+  @override
+  void dispose() {
+    _currentPage.dispose();
+    super.dispose();
+  }
 
   List<String> get _allImages {
     final images = <String>[];
@@ -1065,8 +1071,7 @@ class _ActivityImageCarouselState extends State<_ActivityImageCarousel> {
           // 图片 PageView
           PageView.builder(
             itemCount: images.length,
-            onPageChanged: (index) =>
-                setState(() => _currentPage = index),
+            onPageChanged: (index) => _currentPage.value = index,
             itemBuilder: (context, index) {
               return ScrollSafeTap(
                 onTap: () {
@@ -1115,39 +1120,44 @@ class _ActivityImageCarouselState extends State<_ActivityImageCarousel> {
               left: 0,
               right: 0,
               bottom: 45,
-              child: Center(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(999),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: List.generate(images.length, (index) {
-                          final isSelected = _currentPage == index;
-                          return AnimatedContainer(
-                            duration: const Duration(milliseconds: 250),
-                            margin: const EdgeInsets.symmetric(horizontal: 3),
-                            width: isSelected ? 16 : 6,
-                            height: 6,
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? Colors.white
-                                  : Colors.white.withValues(alpha: 0.4),
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                          );
-                        }),
+              child: ValueListenableBuilder<int>(
+                valueListenable: _currentPage,
+                builder: (context, currentPage, _) {
+                  return Center(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(999),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: List.generate(images.length, (index) {
+                              final isSelected = currentPage == index;
+                              return AnimatedContainer(
+                                duration: const Duration(milliseconds: 250),
+                                margin: const EdgeInsets.symmetric(horizontal: 3),
+                                width: isSelected ? 16 : 6,
+                                height: 6,
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? Colors.white
+                                      : Colors.white.withValues(alpha: 0.4),
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                              );
+                            }),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                ),
+                  );
+                },
               ),
             ),
         ],

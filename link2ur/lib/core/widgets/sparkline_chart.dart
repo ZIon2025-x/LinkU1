@@ -53,7 +53,7 @@ class _SparklineChartState extends State<SparklineChart>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   late final Animation<double> _drawAnimation;
-  int? _touchedIndex;
+  final ValueNotifier<int?> _touchedIndex = ValueNotifier<int?>(null);
 
   @override
   void initState() {
@@ -75,6 +75,7 @@ class _SparklineChartState extends State<SparklineChart>
   @override
   void dispose() {
     _controller.dispose();
+    _touchedIndex.dispose();
     super.dispose();
   }
 
@@ -83,15 +84,11 @@ class _SparklineChartState extends State<SparklineChart>
     final dx = details.localPosition.dx;
     final step = width / (widget.data.length - 1);
     final index = (dx / step).round().clamp(0, widget.data.length - 1);
-    setState(() {
-      _touchedIndex = index;
-    });
+    _touchedIndex.value = index;
   }
 
   void _onPanEnd() {
-    setState(() {
-      _touchedIndex = null;
-    });
+    _touchedIndex.value = null;
   }
 
   @override
@@ -117,23 +114,28 @@ class _SparklineChartState extends State<SparklineChart>
             child: RepaintBoundary(
             child: SizedBox(
             height: widget.height,
-            child: AnimatedBuilder(
-              animation: _controller,
-              builder: (context, _) {
-                return CustomPaint(
-                  painter: _SparklinePainter(
-                    data: widget.data,
-                    progress: _drawAnimation.value,
-                    color: color,
-                    lineWidth: widget.lineWidth,
-                    showDots: widget.showDots,
-                    fillGradient: widget.fillGradient,
-                    isDark: isDark,
-                    minVal: minVal,
-                    maxVal: maxVal,
-                    touchedIndex: _touchedIndex,
-                  ),
-                  size: Size(width, widget.height),
+            child: ValueListenableBuilder<int?>(
+              valueListenable: _touchedIndex,
+              builder: (context, touched, _) {
+                return AnimatedBuilder(
+                  animation: _controller,
+                  builder: (context, _) {
+                    return CustomPaint(
+                      painter: _SparklinePainter(
+                        data: widget.data,
+                        progress: _drawAnimation.value,
+                        color: color,
+                        lineWidth: widget.lineWidth,
+                        showDots: widget.showDots,
+                        fillGradient: widget.fillGradient,
+                        isDark: isDark,
+                        minVal: minVal,
+                        maxVal: maxVal,
+                        touchedIndex: touched,
+                      ),
+                      size: Size(width, widget.height),
+                    );
+                  },
                 );
               },
             ),

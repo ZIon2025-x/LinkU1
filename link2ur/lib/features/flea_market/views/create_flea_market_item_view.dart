@@ -204,21 +204,15 @@ class _CreateFleaMarketItemContentState
       listener: (context, state) {
         if (state.actionMessage != null) {
           final l10n = context.l10n;
+          final isSuccess = state.actionMessage == 'item_published';
           final message = switch (state.actionMessage) {
             'item_published' => l10n.actionItemPublished,
             'publish_failed' => l10n.actionPublishFailed,
-            'purchase_success' => l10n.actionPurchaseSuccess,
-            'purchase_failed' => l10n.actionPurchaseFailed,
-            'item_updated' => l10n.actionItemUpdated,
-            'update_failed' => l10n.actionUpdateFailed,
-            'refresh_success' => l10n.actionRefreshSuccess,
-            'refresh_failed' => l10n.actionRefreshFailed,
             _ => state.actionMessage ?? '',
           };
           final displayMessage = state.errorMessage != null
               ? '$message: ${state.errorMessage}'
               : message;
-          final isSuccess = state.actionMessage == 'item_published';
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(displayMessage),
