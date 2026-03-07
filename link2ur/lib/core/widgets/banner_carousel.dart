@@ -106,8 +106,9 @@ class _BannerCarouselState extends State<BannerCarousel> {
   Widget build(BuildContext context) {
     if (widget.banners.isEmpty) return const SizedBox.shrink();
 
-    final mq = MediaQuery.of(context);
-    final cacheWidth = (mq.size.width * mq.devicePixelRatio).toInt();
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+    final cacheWidth = (screenWidth * dpr).toInt();
 
     return SizedBox(
       height: widget.height,

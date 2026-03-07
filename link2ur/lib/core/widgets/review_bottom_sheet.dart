@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../design/app_colors.dart';
 import '../design/app_typography.dart';
+import '../utils/error_localizer.dart';
 import '../utils/l10n_extension.dart';
 import 'animated_star_rating.dart';
 import 'buttons.dart';
@@ -274,8 +275,8 @@ class _ReviewBottomSheetState extends State<ReviewBottomSheet> {
       } else {
         setState(() {
           _isSubmitting = false;
-          _errorMessage = result.error ??
-              context.l10n.actionReviewFailed;
+          _errorMessage = context.localizeError(
+              result.error ?? context.l10n.actionReviewFailed);
         });
       }
     } catch (e) {

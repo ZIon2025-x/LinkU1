@@ -82,6 +82,11 @@ class _StudentVerificationContentState
           title: Text(context.l10n.studentVerificationVerification),
         ),
         body: BlocBuilder<StudentVerificationBloc, StudentVerificationState>(
+          buildWhen: (prev, curr) =>
+              prev.isLoading != curr.isLoading ||
+              prev.status != curr.status ||
+              prev.errorMessage != curr.errorMessage ||
+              prev.verification != curr.verification,
           builder: (context, state) {
             if (state.isLoading) {
               return const LoadingView();

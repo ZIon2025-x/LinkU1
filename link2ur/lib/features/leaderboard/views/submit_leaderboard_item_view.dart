@@ -145,6 +145,10 @@ class _SubmitLeaderboardItemContentState
         }
       },
       child: BlocBuilder<LeaderboardBloc, LeaderboardState>(
+        buildWhen: (prev, curr) =>
+            prev.isSubmitting != curr.isSubmitting ||
+            prev.errorMessage != curr.errorMessage ||
+            prev.actionMessage != curr.actionMessage,
         builder: (context, state) {
           final errorMsg = _localError ?? state.errorMessage;
 

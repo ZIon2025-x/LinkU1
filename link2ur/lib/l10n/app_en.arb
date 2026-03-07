@@ -1024,6 +1024,7 @@
     }
   },
   "taskDetailMyReviews": "My Reviews",
+  "taskDetailReviewsTitle": "Task Reviews",
   "taskDetailAnonymousUser": "Anonymous User",
   "taskDetailUnknownUser": "Unknown User",
   "taskDetailApplyInfo": "Application Info",
@@ -4402,5 +4403,7 @@
   "fleaMarketErrorAcceptFailed": "Failed to accept purchase request",
   "fleaMarketErrorRejectFailed": "Failed to reject purchase request",
   "fleaMarketErrorCounterOfferFailed": "Failed to counter-offer",
-  "fleaMarketErrorRespondCounterOfferFailed": "Failed to respond to counter-offer"
+  "fleaMarketErrorRespondCounterOfferFailed": "Failed to respond to counter-offer",
+  "errorReviewTaskNotCompleted": "Task is not completed yet",
+  "errorReviewNotParticipant": "You are not a participant of this task"
 }

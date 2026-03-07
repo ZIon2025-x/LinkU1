@@ -536,6 +536,8 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
             ),
             AppSpacing.vXl,
             BlocBuilder<CustomerServiceBloc, CustomerServiceState>(
+              buildWhen: (prev, curr) =>
+                  prev.errorMessage != curr.errorMessage,
               builder: (context, state) {
                 if (state.errorMessage != null) {
                   return Padding(

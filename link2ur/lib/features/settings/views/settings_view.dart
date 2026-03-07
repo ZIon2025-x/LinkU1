@@ -91,6 +91,9 @@ class _SettingsViewState extends State<SettingsView> {
         title: Text(context.l10n.profileSettings),
       ),
       body: BlocBuilder<AuthBloc, AuthState>(
+        buildWhen: (prev, curr) =>
+            prev.isAuthenticated != curr.isAuthenticated ||
+            prev.user != curr.user,
         builder: (context, authState) {
           if (!authState.isAuthenticated) {
             return Center(

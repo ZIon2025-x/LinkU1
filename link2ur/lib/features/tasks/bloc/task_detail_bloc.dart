@@ -299,6 +299,7 @@ class TaskDetailState extends Equatable {
     this.isLoadingRefundHistory = false,
     this.reviews = const [],
     this.isLoadingReviews = false,
+    this.reviewsLoaded = false,
     this.hasSubmittedReview = false,
   });
 
@@ -324,6 +325,8 @@ class TaskDetailState extends Equatable {
   // 评价
   final List<Review> reviews;
   final bool isLoadingReviews;
+  /// 是否已请求过评价列表（防止 reviews 为空时反复触发加载）
+  final bool reviewsLoaded;
   /// 当前会话中是否已提交过评价（覆盖匿名评价不在 reviews 列表中的情况）
   final bool hasSubmittedReview;
 
@@ -349,6 +352,7 @@ class TaskDetailState extends Equatable {
     bool? isLoadingRefundHistory,
     List<Review>? reviews,
     bool? isLoadingReviews,
+    bool? reviewsLoaded,
     bool? hasSubmittedReview,
   }) {
     return TaskDetailState(
@@ -376,6 +380,7 @@ class TaskDetailState extends Equatable {
           isLoadingRefundHistory ?? this.isLoadingRefundHistory,
       reviews: reviews ?? this.reviews,
       isLoadingReviews: isLoadingReviews ?? this.isLoadingReviews,
+      reviewsLoaded: reviewsLoaded ?? this.reviewsLoaded,
       hasSubmittedReview: hasSubmittedReview ?? this.hasSubmittedReview,
     );
   }
@@ -397,6 +402,7 @@ class TaskDetailState extends Equatable {
         isLoadingRefundHistory,
         reviews,
         isLoadingReviews,
+        reviewsLoaded,
         hasSubmittedReview,
       ];
 }
@@ -541,11 +547,12 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
     try {
       final raw = await _taskRepository.getTaskReviews(_taskId!);
       final reviews = raw.map((e) => Review.fromJson(e)).toList();
-      emit(state.copyWith(reviews: reviews, isLoadingReviews: false));
+      emit(state.copyWith(reviews: reviews, isLoadingReviews: false, reviewsLoaded: true));
     } catch (e) {
       AppLogger.error('Failed to load reviews', e);
       emit(state.copyWith(
         isLoadingReviews: false,
+        reviewsLoaded: true,
         errorMessage: e.toString(),
       ));
     }

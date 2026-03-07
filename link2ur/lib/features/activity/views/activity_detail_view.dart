@@ -2535,7 +2535,7 @@ class _ActivityTimeSlotCard extends StatelessWidget {
       opacity: opacity,
       duration: const Duration(milliseconds: 200),
       child: Container(
-        width: (MediaQuery.of(context).size.width - 48 - AppSpacing.sm) / 2,
+        width: (MediaQuery.sizeOf(context).width - 48 - AppSpacing.sm) / 2,
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: isSelected

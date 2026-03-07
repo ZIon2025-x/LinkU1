@@ -1215,7 +1215,7 @@ class _ImageSectionState extends State<_ImageSection> {
       );
     }
 
-    final aspectHeight = MediaQuery.of(context).size.width * 17 / 20;
+    final aspectHeight = MediaQuery.sizeOf(context).width * 17 / 20;
 
     return SizedBox(
       height: aspectHeight.clamp(200, 400).toDouble(),

@@ -540,6 +540,14 @@ class _PaymentContentState extends State<_PaymentContent> {
         }
       },
       child: BlocBuilder<PaymentBloc, PaymentState>(
+        buildWhen: (prev, curr) =>
+            prev.status != curr.status ||
+            prev.paymentResponse != curr.paymentResponse ||
+            prev.selectedUserCouponId != curr.selectedUserCouponId ||
+            prev.selectedCouponName != curr.selectedCouponName ||
+            prev.preferredPaymentMethod != curr.preferredPaymentMethod ||
+            prev.errorMessage != curr.errorMessage ||
+            prev.isMethodSwitching != curr.isMethodSwitching,
         builder: (context, state) {
           return PopScope(
             canPop: !state.isProcessing,

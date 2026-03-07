@@ -1498,6 +1498,9 @@ class _ApplyServiceSheetState extends State<_ApplyServiceSheet> {
                           context.l10n.taskExpertOptionalTimeSlots),
                       const SizedBox(height: 8),
                       BlocBuilder<TaskExpertBloc, TaskExpertState>(
+                        buildWhen: (prev, curr) =>
+                            prev.isLoadingTimeSlots != curr.isLoadingTimeSlots ||
+                            prev.timeSlots != curr.timeSlots,
                         builder: (context, state) {
                           if (state.isLoadingTimeSlots) {
                             return const Center(
@@ -1704,6 +1707,8 @@ class _ApplyServiceSheetState extends State<_ApplyServiceSheet> {
                 child: SafeArea(
                   top: false,
                   child: BlocBuilder<TaskExpertBloc, TaskExpertState>(
+                    buildWhen: (prev, curr) =>
+                        prev.isSubmitting != curr.isSubmitting,
                     builder: (context, state) {
                       final canSubmit = !state.isSubmitting &&
                           (widget.service.hasTimeSlots

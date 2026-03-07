@@ -100,6 +100,11 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
         }
       },
       child: BlocBuilder<AuthBloc, AuthState>(
+        buildWhen: (prev, curr) =>
+            prev.codeSendStatus != curr.codeSendStatus ||
+            prev.resetPasswordStatus != curr.resetPasswordStatus ||
+            prev.errorMessage != curr.errorMessage ||
+            prev.resetPasswordMessage != curr.resetPasswordMessage,
         builder: (context, state) {
           final isSendingCode =
               state.codeSendStatus == CodeSendStatus.sending;

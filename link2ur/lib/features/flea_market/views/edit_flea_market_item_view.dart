@@ -273,6 +273,10 @@ class _EditFleaMarketItemViewContentState
         }
       },
       child: BlocBuilder<FleaMarketBloc, FleaMarketState>(
+        buildWhen: (prev, curr) =>
+            prev.isSubmitting != curr.isSubmitting ||
+            prev.isUploadingImage != curr.isUploadingImage ||
+            prev.errorMessage != curr.errorMessage,
         builder: (context, state) {
           final isLoading = state.isSubmitting || state.isUploadingImage;
           final errorMessage = state.errorMessage;

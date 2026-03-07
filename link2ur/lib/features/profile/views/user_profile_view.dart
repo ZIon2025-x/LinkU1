@@ -51,6 +51,10 @@ class _UserProfileViewState extends State<UserProfileView> {
         forumRepository: context.read<ForumRepository>(),
       )..add(ProfileLoadPublicProfile(widget.userId)),
       child: BlocBuilder<ProfileBloc, ProfileState>(
+        buildWhen: (prev, curr) =>
+            prev.isLoading != curr.isLoading ||
+            prev.errorMessage != curr.errorMessage ||
+            prev.publicUser != curr.publicUser,
         builder: (context, state) {
           return Scaffold(
             appBar: AppBar(

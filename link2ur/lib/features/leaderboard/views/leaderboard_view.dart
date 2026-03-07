@@ -71,6 +71,10 @@ class _LeaderboardContentState extends State<_LeaderboardContent> {
         title: Text(context.l10n.leaderboardLeaderboard),
       ),
       body: BlocBuilder<LeaderboardBloc, LeaderboardState>(
+        buildWhen: (prev, curr) =>
+            prev.status != curr.status ||
+            prev.leaderboards != curr.leaderboards ||
+            prev.errorMessage != curr.errorMessage,
         builder: (context, state) {
           if (state.status == LeaderboardStatus.loading &&
               state.leaderboards.isEmpty) {

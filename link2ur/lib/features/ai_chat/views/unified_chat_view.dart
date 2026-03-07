@@ -103,8 +103,17 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
     final aiChatService = context.read<AIChatService>();
     final commonRepo = context.read<CommonRepository>();
     final blocContext = context;
-    final screenHeight = MediaQuery.of(context).size.height;
+    final screenHeight = MediaQuery.sizeOf(context).height;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // 缓存 Future，避免 DraggableScrollableSheet 重建时反复发起请求
+    final historyFuture = Future.wait([
+      aiChatService.getConversations(),
+      commonRepo.getCustomerServiceChats().catchError((_) => <Map<String, dynamic>>[]),
+    ]).then((results) => (
+      aiList: results[0] as List<AIConversation>,
+      csList: results[1] as List<Map<String, dynamic>>,
+    ));
 
     showModalBottomSheet<void>(
       context: context,
@@ -119,13 +128,7 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
             builder: (_, scrollController) {
               return FutureBuilder<
                   ({List<AIConversation> aiList, List<Map<String, dynamic>> csList})>(
-                future: Future.wait([
-                  aiChatService.getConversations(),
-                  commonRepo.getCustomerServiceChats().catchError((_) => <Map<String, dynamic>>[]),
-                ]).then((results) => (
-                  aiList: results[0] as List<AIConversation>,
-                  csList: results[1] as List<Map<String, dynamic>>,
-                )),
+                future: historyFuture,
                 builder: (ctx, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());

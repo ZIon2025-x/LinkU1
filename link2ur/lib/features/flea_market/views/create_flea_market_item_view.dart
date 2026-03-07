@@ -380,6 +380,8 @@ class _CreateFleaMarketItemContentState
 
                 // 提交按钮
                 BlocBuilder<FleaMarketBloc, FleaMarketState>(
+                  buildWhen: (prev, curr) =>
+                      prev.isSubmitting != curr.isSubmitting,
                   builder: (context, state) {
                     final busy = _isUploadingImages || state.isSubmitting;
                     return SizedBox(

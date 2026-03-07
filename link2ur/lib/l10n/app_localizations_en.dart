@@ -2160,6 +2160,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskDetailMyReviews => 'My Reviews';
 
   @override
+  String get taskDetailReviewsTitle => 'Task Reviews';
+
+  @override
   String get taskDetailAnonymousUser => 'Anonymous User';
 
   @override
@@ -4993,7 +4996,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingWelcomeTitle => 'Welcome to Link²Ur';
 
   @override
-  String get onboardingWelcomeSubtitle => 'Campus Mutual Aid Platform';
+  String get onboardingWelcomeSubtitle => 'UK Life Mutual Aid Platform';
 
   @override
   String get onboardingWelcomeDescription =>
@@ -7363,7 +7366,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authRegisterNewAccount => 'Create account';
 
   @override
-  String get authRegisterSubtitle => 'Join Link²Ur, start exchanging skills';
+  String get authRegisterSubtitle => 'Join Link²Ur, start helping each other';
 
   @override
   String get homeLoadFailed => 'Failed to load';
@@ -8254,7 +8257,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get infoTermsContent =>
-      'Link²Ur Terms of Service\n\nLast updated: January 1, 2024\n\n1. Service Overview\nLink²Ur is a campus mutual-aid platform designed to help users publish and accept various life service tasks.\n\n2. User Responsibilities\n- Users must provide truthful and accurate personal information\n- Users must comply with platform rules and applicable laws\n- Users are responsible for the content they publish\n\n3. Platform Responsibilities\n- The platform provides information intermediary services\n- The platform implements escrow protection for transaction funds\n- The platform reserves the right to take action against violations\n\n4. Payment & Settlement\n- All payments are processed through third-party payment platforms\n- Tasks are automatically settled upon completion\n- The platform charges reasonable service fees\n\n5. Privacy Protection\nPlease refer to our Privacy Policy for detailed information.\n\n6. Disclaimer\nAs an information intermediary, the platform does not bear direct responsibility for transactions between users.\n\nIf you have any questions, please contact our customer service team.';
+      'Link²Ur Terms of Service\n\nLast updated: January 1, 2024\n\n1. Service Overview\nLink²Ur is a UK life mutual-aid platform designed to help users publish and accept various life service tasks.\n\n2. User Responsibilities\n- Users must provide truthful and accurate personal information\n- Users must comply with platform rules and applicable laws\n- Users are responsible for the content they publish\n\n3. Platform Responsibilities\n- The platform provides information intermediary services\n- The platform implements escrow protection for transaction funds\n- The platform reserves the right to take action against violations\n\n4. Payment & Settlement\n- All payments are processed through third-party payment platforms\n- Tasks are automatically settled upon completion\n- The platform charges reasonable service fees\n\n5. Privacy Protection\nPlease refer to our Privacy Policy for detailed information.\n\n6. Disclaimer\nAs an information intermediary, the platform does not bear direct responsibility for transactions between users.\n\nIf you have any questions, please contact our customer service team.';
 
   @override
   String get infoPrivacyContent =>
@@ -9523,4 +9526,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get fleaMarketErrorRespondCounterOfferFailed =>
       'Failed to respond to counter-offer';
+
+  @override
+  String get errorReviewTaskNotCompleted => 'Task is not completed yet';
+
+  @override
+  String get errorReviewNotParticipant =>
+      'You are not a participant of this task';
 }

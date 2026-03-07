@@ -2064,6 +2064,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskDetailMyReviews => '我的评价';
 
   @override
+  String get taskDetailReviewsTitle => '任务评价';
+
+  @override
   String get taskDetailAnonymousUser => '匿名用户';
 
   @override
@@ -4797,7 +4800,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get onboardingWelcomeTitle => '欢迎来到 Link²Ur';
 
   @override
-  String get onboardingWelcomeSubtitle => '校园互助平台';
+  String get onboardingWelcomeSubtitle => '英国生活互助平台';
 
   @override
   String get onboardingWelcomeDescription => '发布任务、接受任务、买卖二手商品，一切尽在掌握';
@@ -7068,7 +7071,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get authRegisterNewAccount => '注册新账号';
 
   @override
-  String get authRegisterSubtitle => '加入 Link²Ur，开始技能互助';
+  String get authRegisterSubtitle => '加入 Link²Ur，开始生活互助';
 
   @override
   String get homeLoadFailed => '加载失败';
@@ -7930,7 +7933,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get infoTermsContent =>
-      'Link²Ur 服务条款\n\n最后更新日期：2024年1月1日\n\n1. 服务概述\nLink²Ur 是一个校园互助平台，旨在帮助用户发布和接受各类生活服务任务。\n\n2. 用户责任\n- 用户应提供真实、准确的个人信息\n- 用户应遵守平台规则和相关法律法规\n- 用户对其发布的内容承担责任\n\n3. 平台责任\n- 平台提供信息中介服务\n- 平台对交易资金实行托管保障\n- 平台有权对违规行为进行处理\n\n4. 支付与结算\n- 所有支付通过第三方支付平台处理\n- 任务完成后平台自动结算\n- 平台收取合理的服务费用\n\n5. 隐私保护\n请参阅我们的隐私政策了解详细信息。\n\n6. 免责声明\n平台作为信息中介，不对用户之间的交易承担直接责任。\n\n如有任何疑问，请联系我们的客服团队。';
+      'Link²Ur 服务条款\n\n最后更新日期：2024年1月1日\n\n1. 服务概述\nLink²Ur 是一个英国生活互助平台，旨在帮助用户发布和接受各类生活服务任务。\n\n2. 用户责任\n- 用户应提供真实、准确的个人信息\n- 用户应遵守平台规则和相关法律法规\n- 用户对其发布的内容承担责任\n\n3. 平台责任\n- 平台提供信息中介服务\n- 平台对交易资金实行托管保障\n- 平台有权对违规行为进行处理\n\n4. 支付与结算\n- 所有支付通过第三方支付平台处理\n- 任务完成后平台自动结算\n- 平台收取合理的服务费用\n\n5. 隐私保护\n请参阅我们的隐私政策了解详细信息。\n\n6. 免责声明\n平台作为信息中介，不对用户之间的交易承担直接责任。\n\n如有任何疑问，请联系我们的客服团队。';
 
   @override
   String get infoPrivacyContent =>
@@ -9154,6 +9157,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get fleaMarketErrorRespondCounterOfferFailed => '回应还价失败';
+
+  @override
+  String get errorReviewTaskNotCompleted => '任务尚未完成';
+
+  @override
+  String get errorReviewNotParticipant => '您不是此任务的参与者';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -11214,6 +11223,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get taskDetailMyReviews => '我的評價';
+
+  @override
+  String get taskDetailReviewsTitle => '任務評價';
 
   @override
   String get taskDetailAnonymousUser => '匿名用戶';
@@ -13949,7 +13961,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get onboardingWelcomeTitle => '歡迎來到 Link²Ur';
 
   @override
-  String get onboardingWelcomeSubtitle => '校園互助平台';
+  String get onboardingWelcomeSubtitle => '英國生活互助平台';
 
   @override
   String get onboardingWelcomeDescription => '發布任務、接受任務、買賣二手商品，一切盡在掌握';
@@ -16220,7 +16232,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get authRegisterNewAccount => '註冊新帳號';
 
   @override
-  String get authRegisterSubtitle => '加入 Link²Ur，開始技能互助';
+  String get authRegisterSubtitle => '加入 Link²Ur，開始生活互助';
 
   @override
   String get homeLoadFailed => '載入失敗';
@@ -17082,7 +17094,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get infoTermsContent =>
-      'Link²Ur 服務條款\n\n最後更新日期：2024年1月1日\n\n1. 服務概述\nLink²Ur 是一個校園互助平台，旨在幫助用戶發布和接受各類生活服務任務。\n\n2. 用戶責任\n- 用戶應提供真實、準確的個人資訊\n- 用戶應遵守平台規則和相關法律法規\n- 用戶對其發布的內容承擔責任\n\n3. 平台責任\n- 平台提供資訊中介服務\n- 平台對交易資金實行託管保障\n- 平台有權對違規行為進行處理\n\n4. 支付與結算\n- 所有支付透過第三方支付平台處理\n- 任務完成後平台自動結算\n- 平台收取合理的服務費用\n\n5. 隱私保護\n請參閱我們的隱私政策了解詳細資訊。\n\n6. 免責聲明\n平台作為資訊中介，不對用戶之間的交易承擔直接責任。\n\n如有任何疑問，請聯繫我們的客服團隊。';
+      'Link²Ur 服務條款\n\n最後更新日期：2024年1月1日\n\n1. 服務概述\nLink²Ur 是一個英國生活互助平台，旨在幫助用戶發布和接受各類生活服務任務。\n\n2. 用戶責任\n- 用戶應提供真實、準確的個人資訊\n- 用戶應遵守平台規則和相關法律法規\n- 用戶對其發布的內容承擔責任\n\n3. 平台責任\n- 平台提供資訊中介服務\n- 平台對交易資金實行託管保障\n- 平台有權對違規行為進行處理\n\n4. 支付與結算\n- 所有支付透過第三方支付平台處理\n- 任務完成後平台自動結算\n- 平台收取合理的服務費用\n\n5. 隱私保護\n請參閱我們的隱私政策了解詳細資訊。\n\n6. 免責聲明\n平台作為資訊中介，不對用戶之間的交易承擔直接責任。\n\n如有任何疑問，請聯繫我們的客服團隊。';
 
   @override
   String get infoPrivacyContent =>
@@ -18306,4 +18318,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get fleaMarketErrorRespondCounterOfferFailed => '回應議價失敗';
+
+  @override
+  String get errorReviewTaskNotCompleted => '任務尚未完成';
+
+  @override
+  String get errorReviewNotParticipant => '您不是此任務的參與者';
 }

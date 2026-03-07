@@ -3993,6 +3993,12 @@ abstract class AppLocalizations {
   /// **'My Reviews'**
   String get taskDetailMyReviews;
 
+  /// No description provided for @taskDetailReviewsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Task Reviews'**
+  String get taskDetailReviewsTitle;
+
   /// No description provided for @taskDetailAnonymousUser.
   ///
   /// In en, this message translates to:
@@ -9191,7 +9197,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingWelcomeSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Campus Mutual Aid Platform'**
+  /// **'UK Life Mutual Aid Platform'**
   String get onboardingWelcomeSubtitle;
 
   /// No description provided for @onboardingWelcomeDescription.
@@ -13541,7 +13547,7 @@ abstract class AppLocalizations {
   /// No description provided for @authRegisterSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Join Link²Ur, start exchanging skills'**
+  /// **'Join Link²Ur, start helping each other'**
   String get authRegisterSubtitle;
 
   /// No description provided for @homeLoadFailed.
@@ -15191,7 +15197,7 @@ abstract class AppLocalizations {
   /// No description provided for @infoTermsContent.
   ///
   /// In en, this message translates to:
-  /// **'Link²Ur Terms of Service\n\nLast updated: January 1, 2024\n\n1. Service Overview\nLink²Ur is a campus mutual-aid platform designed to help users publish and accept various life service tasks.\n\n2. User Responsibilities\n- Users must provide truthful and accurate personal information\n- Users must comply with platform rules and applicable laws\n- Users are responsible for the content they publish\n\n3. Platform Responsibilities\n- The platform provides information intermediary services\n- The platform implements escrow protection for transaction funds\n- The platform reserves the right to take action against violations\n\n4. Payment & Settlement\n- All payments are processed through third-party payment platforms\n- Tasks are automatically settled upon completion\n- The platform charges reasonable service fees\n\n5. Privacy Protection\nPlease refer to our Privacy Policy for detailed information.\n\n6. Disclaimer\nAs an information intermediary, the platform does not bear direct responsibility for transactions between users.\n\nIf you have any questions, please contact our customer service team.'**
+  /// **'Link²Ur Terms of Service\n\nLast updated: January 1, 2024\n\n1. Service Overview\nLink²Ur is a UK life mutual-aid platform designed to help users publish and accept various life service tasks.\n\n2. User Responsibilities\n- Users must provide truthful and accurate personal information\n- Users must comply with platform rules and applicable laws\n- Users are responsible for the content they publish\n\n3. Platform Responsibilities\n- The platform provides information intermediary services\n- The platform implements escrow protection for transaction funds\n- The platform reserves the right to take action against violations\n\n4. Payment & Settlement\n- All payments are processed through third-party payment platforms\n- Tasks are automatically settled upon completion\n- The platform charges reasonable service fees\n\n5. Privacy Protection\nPlease refer to our Privacy Policy for detailed information.\n\n6. Disclaimer\nAs an information intermediary, the platform does not bear direct responsibility for transactions between users.\n\nIf you have any questions, please contact our customer service team.'**
   String get infoTermsContent;
 
   /// No description provided for @infoPrivacyContent.
@@ -17533,6 +17539,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed to respond to counter-offer'**
   String get fleaMarketErrorRespondCounterOfferFailed;
+
+  /// No description provided for @errorReviewTaskNotCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Task is not completed yet'**
+  String get errorReviewTaskNotCompleted;
+
+  /// No description provided for @errorReviewNotParticipant.
+  ///
+  /// In en, this message translates to:
+  /// **'You are not a participant of this task'**
+  String get errorReviewNotParticipant;
 }
 
 class _AppLocalizationsDelegate

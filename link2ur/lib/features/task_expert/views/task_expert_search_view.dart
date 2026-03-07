@@ -153,6 +153,9 @@ class _TaskExpertSearchContentState
           _buildFilterRow(context, isDark),
           Expanded(
             child: BlocBuilder<TaskExpertBloc, TaskExpertState>(
+              buildWhen: (prev, curr) =>
+                  prev.isLoading != curr.isLoading ||
+                  prev.experts != curr.experts,
               builder: (context, state) {
                 final results = state.experts;
 

@@ -827,6 +827,7 @@
     }
   },
   "taskDetailMyReviews": "我的評價",
+  "taskDetailReviewsTitle": "任務評價",
   "taskDetailAnonymousUser": "匿名用戶",
   "taskDetailUnknownUser": "未知用戶",
   "taskDetailApplyInfo": "申請信息",
@@ -4249,5 +4250,7 @@
   "fleaMarketErrorAcceptFailed": "接受購買請求失敗",
   "fleaMarketErrorRejectFailed": "拒絕購買請求失敗",
   "fleaMarketErrorCounterOfferFailed": "發起議價失敗",
-  "fleaMarketErrorRespondCounterOfferFailed": "回應議價失敗"
+  "fleaMarketErrorRespondCounterOfferFailed": "回應議價失敗",
+  "errorReviewTaskNotCompleted": "任務尚未完成",
+  "errorReviewNotParticipant": "您不是此任務的參與者"
 }

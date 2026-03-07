@@ -10,14 +10,12 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/design/app_radius.dart';
-import '../../../core/router/app_router.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/cross_platform_image.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/bouncing_widget.dart';
 import '../../../core/widgets/animated_star_rating.dart';
-import '../../../core/widgets/review_bottom_sheet.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/adaptive_dialogs.dart';
 import '../../../core/utils/sheet_adaptation.dart';
@@ -26,11 +24,9 @@ import '../../../core/utils/helpers.dart';
 import '../../../data/models/task.dart';
 import '../../../data/models/task_application.dart';
 import '../../../data/models/review.dart';
-import '../../auth/bloc/auth_bloc.dart';
 import '../../../data/models/refund_request.dart';
 import '../../../data/repositories/task_repository.dart';
 import '../bloc/task_detail_bloc.dart';
-import 'task_detail_helpers.dart';
 
 // ============================================================
 // 任务来源标签
@@ -1153,7 +1149,7 @@ class TaskReviewsSection extends StatelessWidget {
               const Icon(Icons.rate_review, size: 18, color: AppColors.warning),
               const SizedBox(width: 8),
               Text(
-                context.l10n.taskDetailMyReviews,
+                context.l10n.taskDetailReviewsTitle,
                 style: AppTypography.title3.copyWith(
                   color: isDark
                       ? AppColors.textPrimaryDark
@@ -1180,11 +1176,27 @@ class _ReviewItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final reviewerName = review.isAnonymous
+        ? context.l10n.taskDetailAnonymousUser
+        : review.reviewer?.name;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (reviewerName != null) ...[
+            Text(
+              reviewerName,
+              style: AppTypography.caption.copyWith(
+                fontWeight: FontWeight.w600,
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
+              ),
+            ),
+            const SizedBox(height: 4),
+          ],
           Row(
             children: [
               AnimatedStarRating(
@@ -1203,6 +1215,27 @@ class _ReviewItem extends StatelessWidget {
                     color: isDark
                         ? AppColors.textTertiaryDark
                         : AppColors.textTertiaryLight,
+                  ),
+                ),
+              ],
+              if (review.isAnonymous) ...[
+                const SizedBox(width: AppSpacing.sm),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? AppColors.textTertiaryDark.withValues(alpha: 0.2)
+                        : AppColors.textTertiaryLight.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    context.l10n.taskDetailReviewAnonymous,
+                    style: AppTypography.caption.copyWith(
+                      fontSize: 10,
+                      color: isDark
+                          ? AppColors.textTertiaryDark
+                          : AppColors.textTertiaryLight,
+                    ),
                   ),
                 ),
               ],
@@ -1317,525 +1350,6 @@ class RefundStatusCard extends StatelessWidget {
       default:
         return context.l10n.refundStatusUnknown;
     }
-  }
-}
-
-// ============================================================
-// 操作按钮区域 — 7 个条件按钮块
-// ============================================================
-
-class TaskActionButtonsView extends StatelessWidget {
-  const TaskActionButtonsView({
-    super.key,
-    required this.task,
-    required this.isPoster,
-    required this.isTaker,
-    required this.isDark,
-    required this.state,
-    this.onPosterPay,
-  });
-
-  final Task task;
-  final bool isPoster;
-  final bool isTaker;
-  final bool isDark;
-  final TaskDetailState state;
-  /// 发布者点击「支付平台服务费」时的回调，由调用方打开支付页
-  final VoidCallback? onPosterPay;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // 1. 发布者支付按钮
-        _buildPosterPaymentButton(context),
-        // 2. 申请者按钮 (非发布者)
-        _buildApplicantButtons(context),
-        // 3. 接单者完成按钮
-        _buildTakerCompleteButton(context),
-        // 4. 发布者确认 + 退款
-        _buildPosterConfirmationButtons(context),
-        // 4b. 接单者退款状态 + 反驳入口
-        _buildTakerRefundSection(context),
-        // 5. 沟通按钮
-        _buildCommunicationButton(context),
-        // 6. 评价按钮
-        _buildReviewButton(context),
-        // 7. 取消按钮
-        _buildCancelButton(context),
-      ],
-    );
-  }
-
-  // 1. 发布者支付按钮
-  Widget _buildPosterPaymentButton(BuildContext context) {
-    if (!isPoster ||
-        task.status != AppConstants.taskStatusPendingPayment) {
-      return const SizedBox.shrink();
-    }
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-      child: PrimaryButton(
-        text: context.l10n.taskDetailPlatformServiceFee,
-        icon: Icons.credit_card,
-        onPressed: task.isPaymentExpired ? null : onPosterPay,
-      ),
-    );
-  }
-
-  // 2. 申请者按钮 (非发布者)
-  Widget _buildApplicantButtons(BuildContext context) {
-    if (isPoster) return const SizedBox.shrink();
-
-    // 有申请记录
-    final userApp = state.userApplication;
-    if (userApp != null) {
-      if (userApp.isPending) {
-        return Padding(
-          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-          child: PrimaryButton(
-            text: context.l10n.taskDetailWaitingPosterConfirm,
-            icon: Icons.access_time,
-          ),
-        );
-      }
-      // approved/rejected 由 ApplicationStatusCard 在内容区显示
-      return const SizedBox.shrink();
-    }
-
-    // 详情接口返回 hasApplied
-    if (task.hasApplied) {
-      if (task.userApplicationStatus == 'pending') {
-        return Padding(
-          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-          child: PrimaryButton(
-            text: context.l10n.taskDetailWaitingPosterConfirm,
-            icon: Icons.access_time,
-          ),
-        );
-      }
-      return Padding(
-        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-        child: PrimaryButton(
-          text: context.l10n.taskDetailAlreadyApplied,
-          icon: Icons.check_circle,
-        ),
-      );
-    }
-
-    // 未申请 + 任务 open + 无接单者 → 弹出申请框（留言 + 议价 + 金额）
-    if (task.status == AppConstants.taskStatusOpen &&
-        task.takerId == null) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-        child: PrimaryButton(
-          text: context.l10n.actionsApplyForTask,
-          icon: Icons.pan_tool,
-          isLoading: state.isSubmitting,
-          onPressed: state.isSubmitting
-              ? null
-              : () {
-                  final bloc = context.read<TaskDetailBloc>();
-                  SheetAdaptation.showAdaptiveModalBottomSheet<void>(
-                    context: context,
-                    isScrollControlled: true,
-                    backgroundColor: Colors.transparent,
-                    showDragHandle: false,
-                    builder: (ctx) => BlocProvider.value(
-                      value: bloc,
-                      child: BlocListener<TaskDetailBloc, TaskDetailState>(
-                        listenWhen: (prev, cur) =>
-                            cur.actionMessage == 'application_submitted',
-                        listener: (c, _) => Navigator.of(c).pop(),
-                        child: ApplyTaskSheet(task: task),
-                      ),
-                    ),
-                  );
-                },
-        ),
-      );
-    }
-
-    return const SizedBox.shrink();
-  }
-
-  // 3. 接单者完成按钮
-  Widget _buildTakerCompleteButton(BuildContext context) {
-    if (task.status != AppConstants.taskStatusInProgress || !isTaker) {
-      return const SizedBox.shrink();
-    }
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-      child: PrimaryButton(
-        text: context.l10n.actionsMarkComplete,
-        icon: Icons.check_circle,
-        isLoading: state.isSubmitting,
-        onPressed: state.isSubmitting
-            ? null
-            : () {
-                final bloc = context.read<TaskDetailBloc>();
-                final taskRepo = context.read<TaskRepository>();
-                showModalBottomSheet<void>(
-                  context: context,
-                  isScrollControlled: true,
-                  shape: const RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.vertical(top: Radius.circular(20)),
-                  ),
-                  builder: (sc) => _EvidenceCollectionSheet(
-                    bloc: bloc,
-                    taskRepo: taskRepo,
-                  ),
-                );
-              },
-        gradient: LinearGradient(
-          colors: [AppColors.success, AppColors.success.withValues(alpha: 0.8)],
-        ),
-      ),
-    );
-  }
-
-  // 4. 发布者确认 + 退款区域
-  Widget _buildPosterConfirmationButtons(BuildContext context) {
-    if (task.status != AppConstants.taskStatusPendingConfirmation ||
-        !isPoster) {
-      return const SizedBox.shrink();
-    }
-
-    return Column(
-      children: [
-        // 确认完成按钮
-        Padding(
-          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-          child: PrimaryButton(
-            text: context.l10n.actionsConfirmComplete,
-            icon: Icons.verified,
-            isLoading: state.isSubmitting,
-            onPressed: state.isSubmitting
-                ? null
-                : () {
-                    context.read<TaskDetailBloc>().add(
-                        const TaskDetailConfirmCompletionRequested());
-                  },
-            gradient: LinearGradient(
-              colors: [AppColors.success, AppColors.success.withValues(alpha: 0.8)],
-            ),
-          ),
-        ),
-        // 退款区域
-        if (state.refundRequest != null) ...[
-          RefundStatusCard(
-            refundRequest: state.refundRequest!,
-            isDark: isDark,
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          if (state.refundRequest!.isPending)
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.md),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: state.isSubmitting
-                          ? null
-                          : () {
-                              context.read<TaskDetailBloc>().add(
-                                  TaskDetailCancelRefund(
-                                      state.refundRequest!.id));
-                            },
-                      child: state.isSubmitting
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2),
-                            )
-                          : Text(context.l10n.refundWithdrawApply),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () {
-                        context.read<TaskDetailBloc>().add(
-                            const TaskDetailLoadRefundHistory());
-                        SheetAdaptation.showAdaptiveModalBottomSheet(
-                          context: context,
-                          isScrollControlled: true,
-                          shape: const RoundedRectangleBorder(
-                            borderRadius: BorderRadius.vertical(
-                                top: Radius.circular(20)),
-                          ),
-                          builder: (_) => BlocProvider.value(
-                            value: context.read<TaskDetailBloc>(),
-                            child: const RefundHistorySheet(),
-                          ),
-                        );
-                      },
-                      child: Text(context.l10n.refundViewHistory),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          const SizedBox(height: AppSpacing.sm),
-        ] else if (!state.isLoadingRefundStatus) ...[
-          Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-            child: PrimaryButton(
-              text: context.l10n.refundTaskIncompleteApplyRefund,
-              icon: Icons.undo,
-              onPressed: () {
-                final bloc = context.read<TaskDetailBloc>();
-                SheetAdaptation.showAdaptiveModalBottomSheet<bool>(
-                  context: context,
-                  isScrollControlled: true,
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(20)),
-                  ),
-                  builder: (_) => BlocProvider.value(
-                    value: bloc,
-                    child: RefundRequestSheet(
-                      taskId: task.id,
-                      taskAmount: task.displayReward,
-                    ),
-                  ),
-                ).then((submitted) {
-                  if (submitted == true) {
-                    // 退款申请提交后重新加载退款状态
-                    bloc.add(const TaskDetailLoadRefundStatus());
-                  }
-                });
-              },
-              gradient: LinearGradient(
-                colors: [AppColors.error, AppColors.error.withValues(alpha: 0.8)],
-              ),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-
-  // 4b. 接单者退款状态 + 反驳入口（对齐 iOS taker refund section）
-  Widget _buildTakerRefundSection(BuildContext context) {
-    // 仅接单者 + pendingConfirmation + 有退款申请时显示
-    if (!isTaker ||
-        task.status != AppConstants.taskStatusPendingConfirmation ||
-        state.refundRequest == null) {
-      return const SizedBox.shrink();
-    }
-
-    return Column(
-      children: [
-        RefundStatusCard(
-          refundRequest: state.refundRequest!,
-          isDark: isDark,
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        // 退款待处理 且 未反驳 → 显示反驳按钮
-        if (state.refundRequest!.isPending &&
-            !state.refundRequest!.hasRebuttal)
-          Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-            child: PrimaryButton(
-              text: context.l10n.refundSubmitRebuttalEvidence,
-              icon: Icons.gavel,
-              onPressed: () {
-                final bloc = context.read<TaskDetailBloc>();
-                SheetAdaptation.showAdaptiveModalBottomSheet<bool>(
-                  context: context,
-                  isScrollControlled: true,
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(20)),
-                  ),
-                  builder: (_) => BlocProvider.value(
-                    value: bloc,
-                    child: RefundRebuttalSheet(
-                      refundId: state.refundRequest!.id,
-                    ),
-                  ),
-                ).then((submitted) {
-                  if (submitted == true) {
-                    bloc.add(const TaskDetailLoadRefundStatus());
-                  }
-                });
-              },
-            ),
-          ),
-        // 已有反驳 → 显示反驳信息
-        if (state.refundRequest!.hasRebuttal)
-          Padding(
-            padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md),
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.success.withValues(alpha: 0.06),
-                borderRadius: AppRadius.allMedium,
-                border: Border.all(
-                    color: AppColors.success.withValues(alpha: 0.2)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.check_circle_outline,
-                      color: AppColors.success, size: 18),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      context.l10n.refundRebuttalSubmitted,
-                      style: AppTypography.caption.copyWith(
-                          color: AppColors.success),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        const SizedBox(height: AppSpacing.sm),
-      ],
-    );
-  }
-
-  // 5. 沟通按钮
-  Widget _buildCommunicationButton(BuildContext context) {
-    final isActive = task.status == AppConstants.taskStatusInProgress ||
-        task.status == AppConstants.taskStatusPendingConfirmation ||
-        task.status == AppConstants.taskStatusPendingPayment;
-
-    if (!isActive || (!isPoster && !isTaker)) {
-      return const SizedBox.shrink();
-    }
-
-    final contactText = getContactButtonText(task, isPoster, context);
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-      child: PrimaryButton(
-        text: contactText,
-        icon: Icons.message,
-        onPressed: () {
-          AppHaptics.selection();
-          // 导航到任务聊天 (非私聊)
-          context.goToTaskChat(task.id);
-        },
-      ),
-    );
-  }
-
-  // 6. 评价按钮
-  Widget _buildReviewButton(BuildContext context) {
-    // 只有任务完成且用户是发布者或接单者才能评价
-    if (task.status != AppConstants.taskStatusCompleted) {
-      return const SizedBox.shrink();
-    }
-    if (!isPoster && !isTaker) return const SizedBox.shrink();
-    // reviews 还在加载时不渲染评价按钮，避免闪烁
-    if (state.isLoadingReviews) return const SizedBox.shrink();
-
-    final currentUid = context.read<AuthBloc>().state.user?.id;
-    final hasCurrentUserReviewed = state.hasSubmittedReview ||
-        (currentUid != null &&
-            state.reviews.any((r) => r.reviewerId == currentUid));
-    if (hasCurrentUserReviewed) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-        child: PrimaryButton(
-          text: context.l10n.taskDetailTaskAlreadyReviewed,
-          icon: Icons.check_circle,
-        ),
-      );
-    }
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-      child: PrimaryButton(
-        text: context.l10n.actionsRateTask,
-        icon: Icons.star,
-        onPressed: () {
-          SheetAdaptation.showAdaptiveModalBottomSheet(
-            context: context,
-            isScrollControlled: true,
-            backgroundColor: Colors.transparent,
-            showDragHandle: false,
-            builder: (sheetContext) => ReviewBottomSheet(
-              onSubmit: (rating, comment, isAnonymous) async {
-                final bloc = context.read<TaskDetailBloc>();
-                bloc.add(
-                  TaskDetailReviewRequested(
-                    CreateReviewRequest(
-                      rating: rating,
-                      comment: comment,
-                      isAnonymous: isAnonymous,
-                    ),
-                  ),
-                );
-                await for (final s in bloc.stream) {
-                  if (s.actionMessage == 'review_submitted' ||
-                      s.actionMessage == 'review_failed') {
-                    return (
-                      success: s.actionMessage == 'review_submitted',
-                      error: s.errorMessage,
-                    );
-                  }
-                }
-                return (success: false, error: null);
-              },
-            ),
-          );
-        },
-        gradient: LinearGradient(
-          colors: [AppColors.warning, AppColors.warning.withValues(alpha: 0.8)],
-        ),
-      ),
-    );
-  }
-
-  // 7. 取消按钮
-  Widget _buildCancelButton(BuildContext context) {
-    if ((!isPoster && !isTaker) ||
-        (task.status != AppConstants.taskStatusOpen &&
-            task.status != AppConstants.taskStatusInProgress)) {
-      return const SizedBox.shrink();
-    }
-
-    return TextButton(
-      onPressed: () => _showCancelConfirm(context),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.cancel_outlined, size: 18, color: AppColors.error),
-          const SizedBox(width: 6),
-          Text(
-            context.l10n.actionsCancelTask,
-            style: AppTypography.body.copyWith(
-              color: AppColors.error,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showCancelConfirm(BuildContext context) {
-    final l10n = context.l10n;
-    AdaptiveDialogs.showConfirmDialog<bool>(
-      context: context,
-      title: l10n.taskDetailCancelTask,
-      content: l10n.taskDetailCancelTaskConfirm,
-      cancelText: l10n.actionsCancel,
-      confirmText: l10n.taskDetailCancelTask,
-      isDestructive: true,
-    ).then((confirmed) {
-      if (!context.mounted || confirmed != true) return;
-      context.read<TaskDetailBloc>().add(const TaskDetailCancelRequested());
-    });
   }
 }
 
@@ -2575,6 +2089,8 @@ class RefundHistorySheet extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return BlocBuilder<TaskDetailBloc, TaskDetailState>(
+      buildWhen: (prev, curr) =>
+          prev.refundHistory != curr.refundHistory,
       builder: (context, state) {
         return Container(
           constraints: BoxConstraints(

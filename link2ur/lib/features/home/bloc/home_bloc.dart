@@ -53,11 +53,12 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
     // 对标iOS: 已有数据时不显示全屏loading（避免闪烁）
     final hasExistingData = state.recommendedTasks.isNotEmpty;
-    if (!hasExistingData) {
-      emit(state.copyWith(status: HomeStatus.loading));
-    }
-    if (state.openActivities.isEmpty) {
-      emit(state.copyWith(isLoadingOpenActivities: true));
+    final needsActivityLoading = state.openActivities.isEmpty;
+    if (!hasExistingData || needsActivityLoading) {
+      emit(state.copyWith(
+        status: !hasExistingData ? HomeStatus.loading : null,
+        isLoadingOpenActivities: needsActivityLoading ? true : null,
+      ));
     }
 
     try {
@@ -93,26 +94,23 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         );
       }
 
-      // 并行加载开放中的活动（首页「热门活动」；无则隐藏区域）
-      List<Activity> openList = [];
-      try {
-        final actRes = await _activityRepository.getActivities(
-          status: 'open',
-        );
-        openList = actRes.activities;
-      } catch (_) {
-        AppLogger.info('Open activities load failed, home hot section will be hidden');
-      }
-
-      // 加载 Banner（后端数据）
-      List<app.Banner> bannerList = [];
-      try {
-        if (_commonRepository != null) {
-          bannerList = await _commonRepository.getBanners();
-        }
-      } catch (_) {
-        AppLogger.info('Banner load failed, will show hardcoded banners only');
-      }
+      // 并行加载活动 + Banner（避免串行等待）
+      final parallelResults = await Future.wait([
+        _activityRepository.getActivities(status: 'open')
+            .then((r) => r.activities)
+            .catchError((_) {
+          AppLogger.info('Open activities load failed, home hot section will be hidden');
+          return <Activity>[];
+        }),
+        _commonRepository != null
+            ? _commonRepository.getBanners().catchError((_) {
+                AppLogger.info('Banner load failed, will show hardcoded banners only');
+                return <app.Banner>[];
+              })
+            : Future.value(<app.Banner>[]),
+      ]);
+      final openList = parallelResults[0] as List<Activity>;
+      final bannerList = parallelResults[1] as List<app.Banner>;
 
       emit(state.copyWith(
         status: HomeStatus.loaded,
@@ -172,26 +170,23 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         result = await _taskRepository.getTasks();
       }
 
-      // 刷新开放中的活动（首页「热门活动」）
-      List<Activity> openList = [];
-      try {
-        final actRes = await _activityRepository.getActivities(
-          status: 'open',
-        );
-        openList = actRes.activities;
-      } catch (e) {
-        AppLogger.warning('Failed to load activities for home', e);
-      }
-
-      // 刷新 Banner
-      List<app.Banner> bannerList = state.banners;
-      try {
-        if (_commonRepository != null) {
-          bannerList = await _commonRepository.getBanners();
-        }
-      } catch (e) {
-        AppLogger.warning('Failed to refresh banners', e);
-      }
+      // 并行刷新活动 + Banner
+      final parallelResults = await Future.wait([
+        _activityRepository.getActivities(status: 'open')
+            .then((r) => r.activities)
+            .catchError((e) {
+          AppLogger.warning('Failed to load activities for home', e);
+          return <Activity>[];
+        }),
+        _commonRepository != null
+            ? _commonRepository.getBanners().catchError((e) {
+                AppLogger.warning('Failed to refresh banners', e);
+                return state.banners;
+              })
+            : Future.value(state.banners),
+      ]);
+      final openList = parallelResults[0] as List<Activity>;
+      final bannerList = parallelResults[1] as List<app.Banner>;
 
       emit(state.copyWith(
         status: HomeStatus.loaded,

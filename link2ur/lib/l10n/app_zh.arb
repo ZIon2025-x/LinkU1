@@ -827,6 +827,7 @@
     }
   },
   "taskDetailMyReviews": "我的评价",
+  "taskDetailReviewsTitle": "任务评价",
   "taskDetailAnonymousUser": "匿名用户",
   "taskDetailUnknownUser": "未知用户",
   "taskDetailApplyInfo": "申请信息",
@@ -4310,5 +4311,7 @@
   "fleaMarketErrorAcceptFailed": "接受购买请求失败",
   "fleaMarketErrorRejectFailed": "拒绝购买请求失败",
   "fleaMarketErrorCounterOfferFailed": "发起还价失败",
-  "fleaMarketErrorRespondCounterOfferFailed": "回应还价失败"
+  "fleaMarketErrorRespondCounterOfferFailed": "回应还价失败",
+  "errorReviewTaskNotCompleted": "任务尚未完成",
+  "errorReviewNotParticipant": "您不是此任务的参与者"
 }

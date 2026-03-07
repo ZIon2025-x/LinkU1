@@ -247,10 +247,10 @@ class _TaskDetailContent extends StatelessWidget {
       bloc.add(const TaskDetailLoadRefundStatus());
     }
 
-    // 已完成时加载评价
+    // 已完成时加载评价（reviewsLoaded 防止0条时反复请求）
     if (task.status == AppConstants.taskStatusCompleted &&
         !state.isLoadingReviews &&
-        state.reviews.isEmpty) {
+        !state.reviewsLoaded) {
       bloc.add(const TaskDetailLoadReviews());
     }
   }
@@ -1561,6 +1561,7 @@ class _TaskHeaderCard extends StatelessWidget {
           height: 150,
           width: double.infinity,
           fit: BoxFit.cover,
+          cacheWidth: 600,
           errorBuilder: (_, __, ___) => const SizedBox.shrink(),
           loadingBuilder: (context, child, loadingProgress) {
             if (loadingProgress == null) return child;

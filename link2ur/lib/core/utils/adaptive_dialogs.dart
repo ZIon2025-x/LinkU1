@@ -255,24 +255,20 @@ class AdaptiveDialogs {
         ),
         actions: [
           CupertinoDialogAction(
-            onPressed: () {
-              controller.dispose();
-              Navigator.of(ctx).pop();
-            },
+            onPressed: () => Navigator.of(ctx).pop(),
             child: Text(cancelText),
           ),
           CupertinoDialogAction(
             isDefaultAction: true,
-            onPressed: () {
-              final value = controller.text;
-              controller.dispose();
-              Navigator.of(ctx).pop(value);
-            },
+            onPressed: () => Navigator.of(ctx).pop(controller.text),
             child: Text(confirmText),
           ),
         ],
       ),
-    );
+    ).then((result) {
+      controller.dispose();
+      return result;
+    });
   }
 
   static Future<String?> _showMaterialInputDialog({
@@ -313,23 +309,19 @@ class AdaptiveDialogs {
         ),
         actions: [
           TextButton(
-            onPressed: () {
-              controller.dispose();
-              Navigator.of(ctx).pop();
-            },
+            onPressed: () => Navigator.of(ctx).pop(),
             child: Text(cancelText),
           ),
           FilledButton(
-            onPressed: () {
-              final value = controller.text;
-              controller.dispose();
-              Navigator.of(ctx).pop(value);
-            },
+            onPressed: () => Navigator.of(ctx).pop(controller.text),
             child: Text(confirmText),
           ),
         ],
       ),
-    );
+    ).then((result) {
+      controller.dispose();
+      return result;
+    });
   }
 
   // ---------------------------------------------------------------------------

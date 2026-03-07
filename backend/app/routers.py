@@ -2203,13 +2203,17 @@ def create_review(
 
 @router.get("/tasks/{task_id}/reviews", response_model=list[schemas.ReviewOut])
 @measure_api_performance("get_task_reviews")
-@cache_response(ttl=180, key_prefix="task_reviews")  # 缓存3分钟
-def get_task_reviews(task_id: int, db: Session = Depends(get_db)):
+def get_task_reviews(
+    task_id: int,
+    db: Session = Depends(get_db),
+    current_user: Optional[models.User] = Depends(get_current_user_optional),
+):
     # 内容审核检查：隐藏的任务不返回评价
     task = crud.get_task(db, task_id)
     if not task or not task.is_visible:
         raise HTTPException(status_code=404, detail="Task not found")
-    reviews = crud.get_task_reviews(db, task_id)
+    current_user_id = current_user.id if current_user else None
+    reviews = crud.get_task_reviews(db, task_id, current_user_id=current_user_id)
     return [schemas.ReviewOut.model_validate(r) for r in reviews]
 
 

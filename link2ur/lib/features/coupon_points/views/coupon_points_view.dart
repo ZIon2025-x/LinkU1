@@ -131,6 +131,9 @@ class _CouponPointsContentState extends State<_CouponPointsContent>
           ),
         ),
         body: BlocBuilder<CouponPointsBloc, CouponPointsState>(
+          buildWhen: (prev, curr) =>
+              prev.status != curr.status ||
+              prev.errorMessage != curr.errorMessage,
           builder: (context, state) {
             if (state.status == CouponPointsStatus.loading) {
               return const LoadingView();
@@ -169,6 +172,14 @@ class _PointsTab extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return BlocBuilder<CouponPointsBloc, CouponPointsState>(
+      buildWhen: (prev, curr) =>
+          prev.pointsAccount != curr.pointsAccount ||
+          prev.transactions != curr.transactions ||
+          prev.hasMoreTransactions != curr.hasMoreTransactions ||
+          prev.currentTransactionType != curr.currentTransactionType ||
+          prev.availableCoupons != curr.availableCoupons ||
+          prev.isSubmitting != curr.isSubmitting ||
+          prev.actionMessage != curr.actionMessage,
       builder: (context, state) {
         return RefreshIndicator(
           onRefresh: () async {
@@ -506,6 +517,8 @@ class _CouponsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<CouponPointsBloc, CouponPointsState>(
+      buildWhen: (prev, curr) =>
+          prev.myCoupons != curr.myCoupons,
       builder: (context, state) {
         return RefreshIndicator(
           onRefresh: () async {
@@ -735,6 +748,12 @@ class _CheckInTab extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return BlocBuilder<CouponPointsBloc, CouponPointsState>(
+      buildWhen: (prev, curr) =>
+          prev.isCheckedInToday != curr.isCheckedInToday ||
+          prev.consecutiveDays != curr.consecutiveDays ||
+          prev.checkInRewards != curr.checkInRewards ||
+          prev.isSubmitting != curr.isSubmitting ||
+          prev.actionMessage != curr.actionMessage,
       builder: (context, state) {
         return RefreshIndicator(
           onRefresh: () async {

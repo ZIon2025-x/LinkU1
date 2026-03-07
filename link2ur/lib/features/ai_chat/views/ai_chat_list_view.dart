@@ -46,6 +46,9 @@ class _AIChatListContent extends StatelessWidget {
         ],
       ),
       body: BlocBuilder<AIChatBloc, AIChatState>(
+        buildWhen: (prev, curr) =>
+            prev.status != curr.status ||
+            prev.conversations != curr.conversations,
         builder: (context, state) {
           if (state.status == AIChatStatus.loading) {
             return const Center(child: CircularProgressIndicator());

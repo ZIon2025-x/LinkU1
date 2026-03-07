@@ -1,7 +1,7 @@
 """评价相关 CRUD，独立模块便于维护与测试。"""
 from html import escape
 
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from app import models, schemas
@@ -162,16 +162,19 @@ def create_review(
     return db_review
 
 
-def get_task_reviews(db: Session, task_id: int):
-    """获取任务评价 - 只返回实名评价，匿名评价不显示在任务页面"""
-    return (
-        db.query(models.Review)
-        .filter(
-            models.Review.task_id == task_id,
-            models.Review.is_anonymous == 0,
+def get_task_reviews(db: Session, task_id: int, current_user_id: str | None = None):
+    """获取任务评价 - 返回非匿名评价 + 当前用户自己的匿名评价"""
+    query = db.query(models.Review).filter(models.Review.task_id == task_id)
+    if current_user_id:
+        query = query.filter(
+            or_(
+                models.Review.is_anonymous == 0,
+                models.Review.user_id == current_user_id,
+            )
         )
-        .all()
-    )
+    else:
+        query = query.filter(models.Review.is_anonymous == 0)
+    return query.all()
 
 
 def get_user_received_reviews(db: Session, user_id: str):

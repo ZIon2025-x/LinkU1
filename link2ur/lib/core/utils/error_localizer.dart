@@ -162,6 +162,12 @@ class ErrorLocalizer {
         return context.l10n.errorCreateTaskFailed;
       case 'task_application_id_not_found':
         return context.l10n.errorTaskApplicationIdNotFound;
+      case 'You have already reviewed this task.':
+        return context.l10n.taskDetailTaskAlreadyReviewed;
+      case 'Task is not completed yet.':
+        return context.l10n.errorReviewTaskNotCompleted;
+      case 'You are not a participant of this task.':
+        return context.l10n.errorReviewNotParticipant;
       default:
         // 服务端返回的已翻译消息，直接使用
         return errorMessage;
