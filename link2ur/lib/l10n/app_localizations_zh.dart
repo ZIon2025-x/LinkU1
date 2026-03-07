@@ -9034,6 +9034,108 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get contentRejectedHint => '您的内容未通过审核。';
+
+  @override
+  String get captchaSecurityVerification => '安全验证';
+
+  @override
+  String get loginMethodPassword => '密码登录';
+
+  @override
+  String get loginMethodEmailCode => '邮箱验证码';
+
+  @override
+  String get loginMethodPhoneCode => '手机验证码';
+
+  @override
+  String get verificationStatusPending => '审核中';
+
+  @override
+  String get verificationStatusVerified => '已认证';
+
+  @override
+  String get verificationStatusExpired => '已过期';
+
+  @override
+  String get verificationStatusRevoked => '已撤销';
+
+  @override
+  String get verificationStatusUnverified => '未认证';
+
+  @override
+  String get fleaMarketErrorGetListFailed => '获取商品列表失败';
+
+  @override
+  String get fleaMarketErrorGetCategoriesFailed => '获取分类失败';
+
+  @override
+  String get fleaMarketErrorInvalidItemId => '无效的商品 ID';
+
+  @override
+  String get fleaMarketErrorGetDetailFailed => '获取商品详情失败';
+
+  @override
+  String get fleaMarketErrorPublishFailed => '发布商品失败';
+
+  @override
+  String get fleaMarketErrorPurchaseFailed => '购买失败';
+
+  @override
+  String get fleaMarketErrorSendPurchaseRequestFailed => '发送购买请求失败';
+
+  @override
+  String get fleaMarketErrorOperationFailed => '操作失败';
+
+  @override
+  String get fleaMarketErrorRefreshFailed => '刷新失败';
+
+  @override
+  String get fleaMarketErrorReportFailed => '举报失败';
+
+  @override
+  String get fleaMarketErrorGetMyRelatedFailed => '获取与我相关的闲置失败';
+
+  @override
+  String get fleaMarketErrorGetPurchaseHistoryFailed => '获取购买历史失败';
+
+  @override
+  String get fleaMarketErrorGetFavoritesFailed => '获取收藏列表失败';
+
+  @override
+  String get fleaMarketErrorUserNotLoggedIn => '用户未登录';
+
+  @override
+  String get fleaMarketErrorGetMyItemsFailed => '获取我的商品失败';
+
+  @override
+  String get fleaMarketErrorGetSalesFailed => '获取销售记录失败';
+
+  @override
+  String get fleaMarketErrorApproveFailed => '批准请求失败';
+
+  @override
+  String get fleaMarketErrorUploadImageFailed => '上传图片失败';
+
+  @override
+  String get fleaMarketErrorUpdateFailed => '更新商品失败';
+
+  @override
+  String get fleaMarketErrorDeleteFailed => '删除商品失败';
+
+  @override
+  String get fleaMarketErrorGetPurchaseRequestsFailed => '获取购买请求失败';
+
+  @override
+  String get fleaMarketErrorAcceptFailed => '接受购买请求失败';
+
+  @override
+  String get fleaMarketErrorRejectFailed => '拒绝购买请求失败';
+
+  @override
+  String get fleaMarketErrorCounterOfferFailed => '发起还价失败';
+
+  @override
+  String get fleaMarketErrorRespondCounterOfferFailed => '回应还价失败';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -18066,4 +18168,106 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get contentRejectedHint => '您的內容未通過審核。';
+
+  @override
+  String get captchaSecurityVerification => '安全驗證';
+
+  @override
+  String get loginMethodPassword => '密碼登入';
+
+  @override
+  String get loginMethodEmailCode => '電子郵件驗證碼';
+
+  @override
+  String get loginMethodPhoneCode => '手機驗證碼';
+
+  @override
+  String get verificationStatusPending => '審核中';
+
+  @override
+  String get verificationStatusVerified => '已認證';
+
+  @override
+  String get verificationStatusExpired => '已過期';
+
+  @override
+  String get verificationStatusRevoked => '已撤銷';
+
+  @override
+  String get verificationStatusUnverified => '未認證';
+
+  @override
+  String get fleaMarketErrorGetListFailed => '獲取商品列表失敗';
+
+  @override
+  String get fleaMarketErrorGetCategoriesFailed => '獲取分類失敗';
+
+  @override
+  String get fleaMarketErrorInvalidItemId => '無效的商品 ID';
+
+  @override
+  String get fleaMarketErrorGetDetailFailed => '獲取商品詳情失敗';
+
+  @override
+  String get fleaMarketErrorPublishFailed => '發佈商品失敗';
+
+  @override
+  String get fleaMarketErrorPurchaseFailed => '購買失敗';
+
+  @override
+  String get fleaMarketErrorSendPurchaseRequestFailed => '發送購買請求失敗';
+
+  @override
+  String get fleaMarketErrorOperationFailed => '操作失敗';
+
+  @override
+  String get fleaMarketErrorRefreshFailed => '重新整理失敗';
+
+  @override
+  String get fleaMarketErrorReportFailed => '舉報失敗';
+
+  @override
+  String get fleaMarketErrorGetMyRelatedFailed => '獲取與我相關的閒置失敗';
+
+  @override
+  String get fleaMarketErrorGetPurchaseHistoryFailed => '獲取購買歷史失敗';
+
+  @override
+  String get fleaMarketErrorGetFavoritesFailed => '獲取收藏列表失敗';
+
+  @override
+  String get fleaMarketErrorUserNotLoggedIn => '用戶未登入';
+
+  @override
+  String get fleaMarketErrorGetMyItemsFailed => '獲取我的商品失敗';
+
+  @override
+  String get fleaMarketErrorGetSalesFailed => '獲取銷售記錄失敗';
+
+  @override
+  String get fleaMarketErrorApproveFailed => '批准請求失敗';
+
+  @override
+  String get fleaMarketErrorUploadImageFailed => '上傳圖片失敗';
+
+  @override
+  String get fleaMarketErrorUpdateFailed => '更新商品失敗';
+
+  @override
+  String get fleaMarketErrorDeleteFailed => '刪除商品失敗';
+
+  @override
+  String get fleaMarketErrorGetPurchaseRequestsFailed => '獲取購買請求失敗';
+
+  @override
+  String get fleaMarketErrorAcceptFailed => '接受購買請求失敗';
+
+  @override
+  String get fleaMarketErrorRejectFailed => '拒絕購買請求失敗';
+
+  @override
+  String get fleaMarketErrorCounterOfferFailed => '發起議價失敗';
+
+  @override
+  String get fleaMarketErrorRespondCounterOfferFailed => '回應議價失敗';
 }

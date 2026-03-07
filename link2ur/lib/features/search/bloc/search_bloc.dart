@@ -2,6 +2,7 @@ import 'dart:ui' show Locale;
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:stream_transform/stream_transform.dart';
 
 import '../../../data/repositories/task_repository.dart';
 import '../../../data/repositories/forum_repository.dart';
@@ -11,6 +12,10 @@ import '../../../data/repositories/activity_repository.dart';
 import '../../../data/repositories/leaderboard_repository.dart';
 import '../../../data/services/storage_service.dart';
 import '../../../core/utils/logger.dart';
+
+EventTransformer<E> _debounce<E>(Duration duration) {
+  return (events, mapper) => events.debounce(duration).switchMap(mapper);
+}
 
 // ==================== Events ====================
 
@@ -43,6 +48,18 @@ class LoadRecentSearches extends SearchEvent {
   const LoadRecentSearches();
 }
 
+/// 加载更多搜索结果
+/// TODO: Backend APIs need per-type pagination support for this to work fully.
+/// Currently a no-op placeholder — each search source returns at most 10 results.
+class SearchLoadMore extends SearchEvent {
+  const SearchLoadMore([this.locale]);
+
+  final Locale? locale;
+
+  @override
+  List<Object?> get props => [locale];
+}
+
 /// 清除搜索记录（历史）
 class SearchHistoryCleared extends SearchEvent {
   const SearchHistoryCleared();
@@ -66,6 +83,8 @@ class SearchState extends Equatable {
     this.forumCategoryResults = const [],
     this.recentSearches = const [],
     this.errorMessage,
+    this.searchPage = 1,
+    this.searchHasMore = true,
   });
 
   final SearchStatus status;
@@ -81,6 +100,11 @@ class SearchState extends Equatable {
   /// 最近搜索关键词列表（从 StorageService 加载）
   final List<String> recentSearches;
   final String? errorMessage;
+  /// 搜索分页：当前页码
+  /// TODO: Backend pagination support needed per search type
+  final int searchPage;
+  /// 搜索分页：是否还有更多结果
+  final bool searchHasMore;
 
   bool get isLoading => status == SearchStatus.loading;
   bool get hasResults =>
@@ -115,6 +139,8 @@ class SearchState extends Equatable {
     List<Map<String, dynamic>>? forumCategoryResults,
     List<String>? recentSearches,
     String? errorMessage,
+    int? searchPage,
+    bool? searchHasMore,
   }) {
     return SearchState(
       status: status ?? this.status,
@@ -129,6 +155,8 @@ class SearchState extends Equatable {
       forumCategoryResults: forumCategoryResults ?? this.forumCategoryResults,
       recentSearches: recentSearches ?? this.recentSearches,
       errorMessage: errorMessage,
+      searchPage: searchPage ?? this.searchPage,
+      searchHasMore: searchHasMore ?? this.searchHasMore,
     );
   }
 
@@ -146,6 +174,8 @@ class SearchState extends Equatable {
         forumCategoryResults,
         recentSearches,
         errorMessage,
+        searchPage,
+        searchHasMore,
       ];
 }
 
@@ -166,7 +196,11 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
         _activityRepository = activityRepository,
         _leaderboardRepository = leaderboardRepository,
         super(const SearchState()) {
-    on<SearchSubmitted>(_onSubmitted);
+    on<SearchSubmitted>(
+      _onSubmitted,
+      transformer: _debounce(const Duration(milliseconds: 500)),
+    );
+    on<SearchLoadMore>(_onLoadMore);
     on<SearchCleared>(_onCleared);
     on<LoadRecentSearches>(_onLoadRecentSearches);
     on<SearchHistoryCleared>(_onSearchHistoryCleared);
@@ -215,6 +249,9 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
         leaderboardResults: results[5],
         leaderboardItemResults: results[6],
         forumCategoryResults: results[7],
+        searchPage: 1,
+        // Each source returns at most 10; hasMore if any source returned 10
+        searchHasMore: results.any((r) => r.length >= 10),
       ));
       // 写入最近搜索记录
       await StorageService.instance.addSearchHistory(query);
@@ -228,6 +265,19 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
         errorMessage: 'search_error_failed',
       ));
     }
+  }
+
+  /// Load more search results (next page).
+  /// TODO: Each search source needs independent pagination tracking to fully
+  /// support load-more. Currently this is a placeholder that logs a warning.
+  Future<void> _onLoadMore(
+    SearchLoadMore event,
+    Emitter<SearchState> emit,
+  ) async {
+    if (!state.searchHasMore || state.isLoading) return;
+    AppLogger.warning('SearchLoadMore: per-type backend pagination not yet implemented');
+    // Once backend supports paginated search per type, increment searchPage
+    // and append results to existing lists.
   }
 
   Future<void> _onCleared(

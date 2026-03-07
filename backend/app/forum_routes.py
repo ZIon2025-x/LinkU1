@@ -4587,7 +4587,7 @@ async def toggle_like(
             select(models.ForumPost).where(models.ForumPost.id == like.target_id)
         )
         target = result.scalar_one_or_none()
-        if not target or target.is_deleted:
+        if not target or target.is_deleted or not target.is_visible:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="帖子不存在或已删除"
@@ -4601,7 +4601,7 @@ async def toggle_like(
             .where(models.ForumReply.id == like.target_id)
         )
         target = result.scalar_one_or_none()
-        if not target or target.is_deleted:
+        if not target or target.is_deleted or not target.is_visible:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="回复不存在或已删除"
@@ -4675,12 +4675,12 @@ async def get_post_likes(
         select(models.ForumPost).where(models.ForumPost.id == post_id)
     )
     post = post_result.scalar_one_or_none()
-    if not post or post.is_deleted:
+    if not post or post.is_deleted or not post.is_visible:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="帖子不存在或已删除"
         )
-    
+
     # 查询点赞列表
     query = select(models.ForumLike).where(
         models.ForumLike.target_type == "post",
@@ -4736,12 +4736,12 @@ async def get_reply_likes(
         select(models.ForumReply).where(models.ForumReply.id == reply_id)
     )
     reply = reply_result.scalar_one_or_none()
-    if not reply or reply.is_deleted:
+    if not reply or reply.is_deleted or not reply.is_visible:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="回复不存在或已删除"
         )
-    
+
     # 查询点赞列表
     query = select(models.ForumLike).where(
         models.ForumLike.target_type == "reply",
@@ -4799,12 +4799,12 @@ async def toggle_favorite(
     )
     post = result.scalar_one_or_none()
     
-    if not post or post.is_deleted:
+    if not post or post.is_deleted or not post.is_visible:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="帖子不存在或已删除"
         )
-    
+
     # 检查帖子所属板块的可见性（学校板块需要权限）
     await assert_forum_visible(current_user, post.category_id, db, raise_exception=True)
     
@@ -7212,6 +7212,7 @@ async def search_linkable_content(
             )
             .where(
                 models.FleaMarketItem.status == "active",
+                models.FleaMarketItem.is_visible == True,
                 or_(
                     models.FleaMarketItem.title.ilike(search_term),
                     models.FleaMarketItem.description.ilike(search_term),
@@ -7479,6 +7480,7 @@ async def get_linkable_content_for_user(
         .where(
             models.FleaMarketFavorite.user_id == current_user.id,
             models.FleaMarketItem.status == "active",
+            models.FleaMarketItem.is_visible == True,
         )
         .limit(limit_per_type)
     )

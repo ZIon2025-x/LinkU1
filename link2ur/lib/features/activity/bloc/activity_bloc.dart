@@ -304,7 +304,7 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
       ));
     } catch (e) {
       AppLogger.error('Failed to load more activities', e);
-      emit(state.copyWith(hasMore: false, isLoadingMore: false));
+      emit(state.copyWith(isLoadingMore: false, errorMessage: e.toString()));
     }
   }
 
@@ -371,7 +371,6 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
     emit(state.copyWith(
       detailStatus: ActivityStatus.loading,
       officialApplyStatus: OfficialApplyStatus.idle,
-      clearOfficialResult: true,
       isFavorited: false,
     ));
 
@@ -381,6 +380,7 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
       emit(state.copyWith(
         detailStatus: ActivityStatus.loaded,
         activityDetail: activity,
+        clearOfficialResult: true,
       ));
 
       // 对齐iOS loadExpertInfo: 加载达人信息（名字、头像）
@@ -417,7 +417,10 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
     Emitter<ActivityState> emit,
   ) async {
     final repo = _taskExpertRepository;
-    if (repo == null) return;
+    if (repo == null) {
+      emit(state.copyWith(timeSlots: const []));
+      return;
+    }
 
     emit(state.copyWith(isLoadingTimeSlots: true));
 

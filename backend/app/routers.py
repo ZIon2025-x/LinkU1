@@ -4829,6 +4829,7 @@ def user_profile(
         db.query(Task)
         .filter(
             Task.status == "completed",
+            Task.is_visible == True,
             (
                 ((Task.poster_id == user_id) & (Task.is_public == 1))
                 | ((Task.taker_id == user_id) & (Task.taker_public == 1))
@@ -12913,7 +12914,7 @@ async def get_task_translations_batch(
         from app.models import Task
         is_zh = target_lang in ('zh-CN', 'zh')
         col = (field_type + '_zh') if is_zh else (field_type + '_en')
-        tasks_batch = db.query(Task).filter(Task.id.in_(task_ids)).all()
+        tasks_batch = db.query(Task).filter(Task.id.in_(task_ids), Task.is_visible == True).all()
         task_map = {t.id: t for t in tasks_batch}
 
         result = {}

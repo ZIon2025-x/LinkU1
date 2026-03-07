@@ -9396,4 +9396,111 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get contentRejectedHint => 'Your content did not pass review.';
+
+  @override
+  String get captchaSecurityVerification => 'Security Verification';
+
+  @override
+  String get loginMethodPassword => 'Password Login';
+
+  @override
+  String get loginMethodEmailCode => 'Email Code';
+
+  @override
+  String get loginMethodPhoneCode => 'Phone Code';
+
+  @override
+  String get verificationStatusPending => 'Pending';
+
+  @override
+  String get verificationStatusVerified => 'Verified';
+
+  @override
+  String get verificationStatusExpired => 'Expired';
+
+  @override
+  String get verificationStatusRevoked => 'Revoked';
+
+  @override
+  String get verificationStatusUnverified => 'Unverified';
+
+  @override
+  String get fleaMarketErrorGetListFailed => 'Failed to load items';
+
+  @override
+  String get fleaMarketErrorGetCategoriesFailed => 'Failed to load categories';
+
+  @override
+  String get fleaMarketErrorInvalidItemId => 'Invalid item ID';
+
+  @override
+  String get fleaMarketErrorGetDetailFailed => 'Failed to load item details';
+
+  @override
+  String get fleaMarketErrorPublishFailed => 'Failed to publish item';
+
+  @override
+  String get fleaMarketErrorPurchaseFailed => 'Purchase failed';
+
+  @override
+  String get fleaMarketErrorSendPurchaseRequestFailed =>
+      'Failed to send purchase request';
+
+  @override
+  String get fleaMarketErrorOperationFailed => 'Operation failed';
+
+  @override
+  String get fleaMarketErrorRefreshFailed => 'Refresh failed';
+
+  @override
+  String get fleaMarketErrorReportFailed => 'Report failed';
+
+  @override
+  String get fleaMarketErrorGetMyRelatedFailed =>
+      'Failed to load my related items';
+
+  @override
+  String get fleaMarketErrorGetPurchaseHistoryFailed =>
+      'Failed to load purchase history';
+
+  @override
+  String get fleaMarketErrorGetFavoritesFailed => 'Failed to load favorites';
+
+  @override
+  String get fleaMarketErrorUserNotLoggedIn => 'User not logged in';
+
+  @override
+  String get fleaMarketErrorGetMyItemsFailed => 'Failed to load my items';
+
+  @override
+  String get fleaMarketErrorGetSalesFailed => 'Failed to load sales records';
+
+  @override
+  String get fleaMarketErrorApproveFailed => 'Failed to approve request';
+
+  @override
+  String get fleaMarketErrorUploadImageFailed => 'Failed to upload image';
+
+  @override
+  String get fleaMarketErrorUpdateFailed => 'Failed to update item';
+
+  @override
+  String get fleaMarketErrorDeleteFailed => 'Failed to delete item';
+
+  @override
+  String get fleaMarketErrorGetPurchaseRequestsFailed =>
+      'Failed to load purchase requests';
+
+  @override
+  String get fleaMarketErrorAcceptFailed => 'Failed to accept purchase request';
+
+  @override
+  String get fleaMarketErrorRejectFailed => 'Failed to reject purchase request';
+
+  @override
+  String get fleaMarketErrorCounterOfferFailed => 'Failed to counter-offer';
+
+  @override
+  String get fleaMarketErrorRespondCounterOfferFailed =>
+      'Failed to respond to counter-offer';
 }

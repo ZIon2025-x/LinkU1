@@ -167,7 +167,7 @@ class _ItemDetailContent extends StatelessWidget {
 
     if (state.status == LeaderboardStatus.error && state.itemDetail == null) {
       return ErrorStateView.loadFailed(
-        message: state.errorMessage ?? '加载失败',
+        message: state.errorMessage ?? context.l10n.errorLoadFailedTitle,
         onRetry: () => context
             .read<LeaderboardBloc>()
             .add(LeaderboardLoadItemDetail(itemId)),

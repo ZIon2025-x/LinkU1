@@ -365,7 +365,7 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
     LeaderboardClearActionMessage event,
     Emitter<LeaderboardState> emit,
   ) {
-    emit(state.copyWith());
+    emit(state.copyWith(actionMessage: null, reportSuccess: false));
   }
 
   final LeaderboardRepository _leaderboardRepository;
@@ -621,6 +621,7 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
   ) async {
     final originalItems = List<LeaderboardItem>.from(state.items);
     final originalDetail = state.itemDetail;
+    final originalItemVotes = List<Map<String, dynamic>>.from(state.itemVotes);
 
     // 判断是否需要取消投票：再次点击同类型 → 发送 remove
     final currentItem = state.items.cast<LeaderboardItem?>().firstWhere(
@@ -676,6 +677,7 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
       emit(state.copyWith(
         items: originalItems,
         itemDetail: originalDetail,
+        itemVotes: originalItemVotes,
         actionMessage: 'vote_failed',
         errorMessage: e is LeaderboardException ? e.message : e.toString(),
       ));
@@ -944,7 +946,6 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
         description: event.description,
       );
       emit(state.copyWith(reportSuccess: true));
-      emit(state.copyWith(reportSuccess: false));
     } catch (e) {
       AppLogger.error('Failed to report leaderboard', e);
       emit(state.copyWith(
@@ -965,7 +966,6 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
         description: event.description,
       );
       emit(state.copyWith(reportSuccess: true));
-      emit(state.copyWith(reportSuccess: false));
     } catch (e) {
       AppLogger.error('Failed to report leaderboard item', e);
       emit(state.copyWith(

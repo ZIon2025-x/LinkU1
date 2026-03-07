@@ -40,7 +40,7 @@ class RecommendationQueryOptimizer:
             return {}
         
         try:
-            query = self.db.query(Task).filter(Task.id.in_(task_ids))
+            query = self.db.query(Task).filter(Task.id.in_(task_ids), Task.is_visible == True)
             
             # 预加载关联数据，避免N+1查询
             if preload_relations:

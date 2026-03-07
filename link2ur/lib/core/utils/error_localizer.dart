@@ -43,7 +43,13 @@ class ErrorLocalizer {
       return context.l10n.errorUnknownGeneric;
     }
 
-    switch (errorMessage) {
+    // Strip exception class prefix (e.g. "FleaMarketException: msg" → "msg")
+    final colonIdx = errorMessage.indexOf(': ');
+    final code = (colonIdx > 0 && colonIdx < 40)
+        ? errorMessage.substring(colonIdx + 2)
+        : errorMessage;
+
+    switch (code) {
       case 'error_network_timeout':
         return context.l10n.errorNetworkTimeout;
       case 'error_request_failed':
@@ -67,11 +73,59 @@ class ErrorLocalizer {
       case 'search_error_failed':
         return context.l10n.errorRequestFailedGeneric;
       case 'flea_market_error_invalid_item_id':
-        return context.l10n.errorInvalidInput;
+        return context.l10n.fleaMarketErrorInvalidItemId;
       case 'flea_market_item_deleted':
         return context.l10n.fleaMarketItemDeleted;
       case 'flea_market_item_not_found':
         return context.l10n.fleaMarketItemNotFound;
+      case 'flea_market_error_get_list_failed':
+        return context.l10n.fleaMarketErrorGetListFailed;
+      case 'flea_market_error_get_categories_failed':
+        return context.l10n.fleaMarketErrorGetCategoriesFailed;
+      case 'flea_market_error_get_detail_failed':
+        return context.l10n.fleaMarketErrorGetDetailFailed;
+      case 'flea_market_error_publish_failed':
+        return context.l10n.fleaMarketErrorPublishFailed;
+      case 'flea_market_error_purchase_failed':
+        return context.l10n.fleaMarketErrorPurchaseFailed;
+      case 'flea_market_error_send_purchase_request_failed':
+        return context.l10n.fleaMarketErrorSendPurchaseRequestFailed;
+      case 'flea_market_error_operation_failed':
+        return context.l10n.fleaMarketErrorOperationFailed;
+      case 'flea_market_error_refresh_failed':
+        return context.l10n.fleaMarketErrorRefreshFailed;
+      case 'flea_market_error_report_failed':
+        return context.l10n.fleaMarketErrorReportFailed;
+      case 'flea_market_error_get_my_related_failed':
+        return context.l10n.fleaMarketErrorGetMyRelatedFailed;
+      case 'flea_market_error_get_purchase_history_failed':
+        return context.l10n.fleaMarketErrorGetPurchaseHistoryFailed;
+      case 'flea_market_error_get_favorites_failed':
+        return context.l10n.fleaMarketErrorGetFavoritesFailed;
+      case 'flea_market_error_user_not_logged_in':
+        return context.l10n.fleaMarketErrorUserNotLoggedIn;
+      case 'flea_market_error_get_my_items_failed':
+        return context.l10n.fleaMarketErrorGetMyItemsFailed;
+      case 'flea_market_error_get_sales_failed':
+        return context.l10n.fleaMarketErrorGetSalesFailed;
+      case 'flea_market_error_approve_failed':
+        return context.l10n.fleaMarketErrorApproveFailed;
+      case 'flea_market_error_upload_image_failed':
+        return context.l10n.fleaMarketErrorUploadImageFailed;
+      case 'flea_market_error_update_failed':
+        return context.l10n.fleaMarketErrorUpdateFailed;
+      case 'flea_market_error_delete_failed':
+        return context.l10n.fleaMarketErrorDeleteFailed;
+      case 'flea_market_error_get_purchase_requests_failed':
+        return context.l10n.fleaMarketErrorGetPurchaseRequestsFailed;
+      case 'flea_market_error_accept_failed':
+        return context.l10n.fleaMarketErrorAcceptFailed;
+      case 'flea_market_error_reject_failed':
+        return context.l10n.fleaMarketErrorRejectFailed;
+      case 'flea_market_error_counter_offer_failed':
+        return context.l10n.fleaMarketErrorCounterOfferFailed;
+      case 'flea_market_error_respond_counter_offer_failed':
+        return context.l10n.fleaMarketErrorRespondCounterOfferFailed;
       case 'refund_not_found':
         return context.l10n.refundNotFound;
       case 'customer_service_no_available_agent':

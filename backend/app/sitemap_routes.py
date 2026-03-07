@@ -120,7 +120,8 @@ def generate_sitemap(db: Session = Depends(get_db)):
         # 添加跳蚤市场商品（计划中）
         try:
             items = db.query(FleaMarketItem).filter(
-                FleaMarketItem.status == 'active'
+                FleaMarketItem.status == 'active',
+                FleaMarketItem.is_visible == True
             ).all()
             
             for item in items:

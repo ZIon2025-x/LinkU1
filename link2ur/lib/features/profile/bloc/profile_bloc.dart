@@ -455,6 +455,9 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     ProfileLoadMyTasks event,
     Emitter<ProfileState> emit,
   ) async {
+    if (event.page == 1) {
+      emit(state.copyWith(status: ProfileStatus.loading));
+    }
     try {
       if (event.isPosted) {
         final response = await _taskRepository.getMyPostedTasks(
@@ -466,6 +469,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
             ? response.tasks
             : [...state.postedTasks, ...response.tasks];
         emit(state.copyWith(
+          status: ProfileStatus.loaded,
           postedTasks: updatedTasks,
           postedTasksPage: response.page,
           postedTasksHasMore: response.hasMore,
@@ -480,6 +484,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
             ? response.tasks
             : [...state.myTasks, ...response.tasks];
         emit(state.copyWith(
+          status: ProfileStatus.loaded,
           myTasks: updatedTasks,
           myTasksPage: response.page,
           myTasksHasMore: response.hasMore,
@@ -487,7 +492,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       }
     } catch (e) {
       AppLogger.error('Failed to load my tasks', e);
-      emit(state.copyWith(errorMessage: e.toString()));
+      emit(state.copyWith(status: ProfileStatus.error, errorMessage: e.toString()));
     }
   }
 
@@ -518,6 +523,9 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     ProfileLoadMyForumPosts event,
     Emitter<ProfileState> emit,
   ) async {
+    if (event.page == 1) {
+      emit(state.copyWith(status: ProfileStatus.loading));
+    }
     try {
       final response = await _forumRepository.getMyPosts(
         page: event.page,
@@ -527,13 +535,14 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
           ? response.posts
           : [...state.myForumPosts, ...response.posts];
       emit(state.copyWith(
+        status: ProfileStatus.loaded,
         myForumPosts: updatedPosts,
         forumPostsPage: response.page,
         forumPostsHasMore: response.hasMore,
       ));
     } catch (e) {
       AppLogger.error('Failed to load my forum posts', e);
-      emit(state.copyWith(errorMessage: e.toString()));
+      emit(state.copyWith(status: ProfileStatus.error, errorMessage: e.toString()));
     }
   }
 
@@ -541,6 +550,9 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     ProfileLoadMyForumActivity event,
     Emitter<ProfileState> emit,
   ) async {
+    if (event.page == 1) {
+      emit(state.copyWith(status: ProfileStatus.loading));
+    }
     try {
       ForumPostListResponse response;
       if (event.type == 'favorited') {
@@ -552,6 +564,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
             ? response.posts
             : [...state.favoritedPosts, ...response.posts];
         emit(state.copyWith(
+          status: ProfileStatus.loaded,
           favoritedPosts: updatedPosts,
           favoritedPostsPage: response.page,
           favoritedPostsHasMore: response.hasMore,
@@ -565,6 +578,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
             ? response.posts
             : [...state.likedPosts, ...response.posts];
         emit(state.copyWith(
+          status: ProfileStatus.loaded,
           likedPosts: updatedPosts,
           likedPostsPage: response.page,
           likedPostsHasMore: response.hasMore,
@@ -579,6 +593,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
             ? response.posts
             : [...state.myForumPosts, ...response.posts];
         emit(state.copyWith(
+          status: ProfileStatus.loaded,
           myForumPosts: updatedPosts,
           forumPostsPage: response.page,
           forumPostsHasMore: response.hasMore,
@@ -586,7 +601,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       }
     } catch (e) {
       AppLogger.error('Failed to load forum activity', e);
-      emit(state.copyWith(errorMessage: e.toString()));
+      emit(state.copyWith(status: ProfileStatus.error, errorMessage: e.toString()));
     }
   }
 
@@ -594,12 +609,13 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     ProfileLoadPreferences event,
     Emitter<ProfileState> emit,
   ) async {
+    emit(state.copyWith(status: ProfileStatus.loading));
     try {
       final preferences = await _userRepository.getUserPreferences();
-      emit(state.copyWith(preferences: preferences));
+      emit(state.copyWith(status: ProfileStatus.loaded, preferences: preferences));
     } catch (e) {
       AppLogger.error('Failed to load preferences', e);
-      emit(state.copyWith(errorMessage: e.toString()));
+      emit(state.copyWith(status: ProfileStatus.error, errorMessage: e.toString()));
     }
   }
 
@@ -622,6 +638,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       emit(state.copyWith(
         isUpdating: false,
         actionMessage: 'update_failed',
+        errorMessage: e.toString(),
       ));
     }
   }
@@ -630,6 +647,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     ProfileSendEmailCode event,
     Emitter<ProfileState> emit,
   ) async {
+    if (state.isSendingEmailCode) return;
     emit(state.copyWith(
       isSendingEmailCode: true,
       showEmailCodeField: true,
@@ -657,6 +675,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     ProfileSendPhoneCode event,
     Emitter<ProfileState> emit,
   ) async {
+    if (state.isSendingPhoneCode) return;
     emit(state.copyWith(
       isSendingPhoneCode: true,
       showPhoneCodeField: true,

@@ -117,7 +117,8 @@ class RecommendationFallback:
         ).filter(
             and_(
                 UserTaskInteraction.interaction_time >= recent_time,
-                Task.status == "open"
+                Task.status == "open",
+                Task.is_visible == True
             )
         )
         
@@ -146,7 +147,7 @@ class RecommendationFallback:
             return self._get_new_tasks(limit, task_type, location, keyword)
         
         task_ids = [task_id for task_id, _ in popular_task_ids]
-        tasks = self.db.query(Task).filter(Task.id.in_(task_ids)).all()
+        tasks = self.db.query(Task).filter(Task.id.in_(task_ids), Task.is_visible == True).all()
         
         # 按交互数排序
         task_dict = {task.id: task for task in tasks}
@@ -168,7 +169,8 @@ class RecommendationFallback:
         from sqlalchemy import and_, or_
         
         query = self.db.query(Task).filter(
-            Task.status == "open"
+            Task.status == "open",
+            Task.is_visible == True
         ).order_by(desc(Task.created_at))
         
         # 应用筛选
@@ -203,6 +205,7 @@ class RecommendationFallback:
         
         query = self.db.query(Task).filter(
             Task.status == "open",
+            Task.is_visible == True,
             Task.reward.isnot(None)
         ).order_by(desc(Task.reward))
         
@@ -241,6 +244,7 @@ class RecommendationFallback:
         
         query = self.db.query(Task).filter(
             Task.status == "open",
+            Task.is_visible == True,
             Task.deadline.isnot(None),
             Task.deadline >= now,
             Task.deadline <= soon

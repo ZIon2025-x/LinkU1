@@ -290,7 +290,7 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
                 confirmText: context.l10n.commonDiscard,
                 isDestructive: true,
               ).then((confirmed) {
-                if (confirmed == true) Navigator.of(context).pop();
+                if (confirmed == true && context.mounted) Navigator.of(context).pop();
               });
             }
           },

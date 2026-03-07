@@ -298,7 +298,7 @@ class TaskRecommendationEngine:
                 return []
             
             # 批量查询任务
-            tasks = self.db.query(Task).filter(Task.id.in_(task_ids)).all()
+            tasks = self.db.query(Task).filter(Task.id.in_(task_ids), Task.is_visible == True).all()
             task_dict = {task.id: task for task in tasks}
             
             # 重建推荐结果
@@ -357,6 +357,7 @@ class TaskRecommendationEngine:
         # 5. 获取所有开放任务（应用筛选条件）
         query = self.db.query(Task).filter(
             Task.status == "open",
+            Task.is_visible == True,
             Task.poster_id != user.id,  # 排除自己发布的任务
             ~Task.id.in_(excluded_task_ids) if excluded_task_ids else True  # 排除已排除的任务
         )
@@ -483,13 +484,14 @@ class TaskRecommendationEngine:
         
         query = self.db.query(Task).filter(
             Task.id.in_(task_ids),
-            Task.status == "open"
+            Task.status == "open",
+            Task.is_visible == True
         )
-        
+
         # 应用筛选条件
         if task_type and task_type.strip() and task_type != "all":
             query = query.filter(Task.task_type == task_type.strip())
-        
+
         if location and location.strip() and location != "all":
             loc = location.strip()
             if loc.lower() == 'online':
@@ -594,9 +596,9 @@ class TaskRecommendationEngine:
                 task_dict = query_optimizer.batch_get_tasks_with_details(task_ids, preload_relations=True)
             except ImportError:
                 # 如果优化模块不可用，使用原始方法
-                tasks = self.db.query(Task).filter(Task.id.in_(task_ids)).all()
+                tasks = self.db.query(Task).filter(Task.id.in_(task_ids), Task.is_visible == True).all()
                 task_dict = {task.id: task for task in tasks}
-            
+
             result = []
             for task_id, score in diversified_task_ids:
                 if task_id in task_dict:
@@ -769,9 +771,9 @@ class TaskRecommendationEngine:
             task_dict = query_optimizer.batch_get_tasks_with_details(task_ids, preload_relations=True)
         except ImportError:
             # 如果优化模块不可用，使用原始方法
-            tasks = self.db.query(Task).filter(Task.id.in_(task_ids)).all()
+            tasks = self.db.query(Task).filter(Task.id.in_(task_ids), Task.is_visible == True).all()
             task_dict = {task.id: task for task in tasks}
-        
+
         result = []
         for task_id, score in diversified_task_ids:
             if task_id in task_dict:
@@ -933,6 +935,7 @@ class TaskRecommendationEngine:
         from sqlalchemy import or_
         query = self.db.query(Task).filter(
             Task.status == "open",
+            Task.is_visible == True,
             Task.poster_id != user.id,
             or_(*location_conditions),
             ~Task.id.in_(excluded_task_ids) if excluded_task_ids else True
@@ -1144,9 +1147,10 @@ class TaskRecommendationEngine:
         task_ids = [task_id for task_id, _ in sorted(scored_tasks.items(), key=lambda x: x[1], reverse=True)]
         tasks = self.db.query(Task).filter(
             Task.id.in_(task_ids),
-            Task.status == "open"
+            Task.status == "open",
+            Task.is_visible == True
         ).all()
-        
+
         task_dict = {task.id: task for task in tasks}
         
         result = []
@@ -1192,6 +1196,7 @@ class TaskRecommendationEngine:
         
         tasks = self.db.query(Task).filter(
             Task.status == "open",
+            Task.is_visible == True,
             Task.poster_id.in_(school_user_ids_list),
             ~Task.id.in_(excluded_task_ids) if excluded_task_ids else True
         ).order_by(desc(Task.created_at)).limit(limit).all()
@@ -1217,6 +1222,7 @@ class TaskRecommendationEngine:
         
         tasks = self.db.query(Task).filter(
             Task.status == "open",
+            Task.is_visible == True,
             Task.poster_id.in_(high_rated_user_ids),
             ~Task.id.in_(excluded_task_ids) if excluded_task_ids else True
         ).order_by(desc(Task.created_at)).limit(limit).all()
@@ -1246,6 +1252,7 @@ class TaskRecommendationEngine:
         
         tasks = self.db.query(Task).filter(
             Task.status == "open",
+            Task.is_visible == True,
             Task.poster_id.in_(local_user_ids),
             Task.location.ilike(f"%{user.residence_city}%"),
             ~Task.id.in_(excluded_task_ids) if excluded_task_ids else True
@@ -1260,6 +1267,7 @@ class TaskRecommendationEngine:
         
         query = self.db.query(Task).filter(
             Task.status == "open",
+            Task.is_visible == True,
             Task.created_at >= recent_time
         )
         
@@ -1295,6 +1303,7 @@ class TaskRecommendationEngine:
         now = get_utc_time()
         query = self.db.query(Task).filter(
             Task.status == "open",
+            Task.is_visible == True,
             Task.poster_id != user.id,
             Task.deadline.isnot(None),
             Task.deadline > now,
@@ -1426,6 +1435,7 @@ class TaskRecommendationEngine:
         # 构建查询
         query = self.db.query(Task).filter(
             Task.status == "open",
+            Task.is_visible == True,
             Task.poster_id != user.id,
             Task.created_at >= recent_time,
             ~Task.id.in_(excluded_task_ids) if excluded_task_ids else True

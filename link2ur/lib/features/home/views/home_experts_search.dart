@@ -1078,16 +1078,16 @@ class _MenuView extends StatelessWidget {
                   icon: Icons.list_alt,
                   title: context.l10n.menuTaskHall,
                   onTap: () {
-                    Navigator.pop(context);
                     context.push('/tasks');
+                    Navigator.pop(context);
                   },
                 ),
                 _MenuListItem(
                   icon: Icons.star,
                   title: context.l10n.menuTaskExperts,
                   onTap: () {
-                    Navigator.pop(context);
                     context.push('/task-experts');
+                    Navigator.pop(context);
                   },
                 ),
                 _MenuListItem(
@@ -1102,40 +1102,40 @@ class _MenuView extends StatelessWidget {
                   icon: Icons.emoji_events,
                   title: context.l10n.menuLeaderboard,
                   onTap: () {
-                    Navigator.pop(context);
                     context.push('/leaderboard');
+                    Navigator.pop(context);
                   },
                 ),
                 _MenuListItem(
                   icon: Icons.shopping_cart,
                   title: context.l10n.menuFleaMarket,
                   onTap: () {
-                    Navigator.pop(context);
                     context.push('/flea-market');
+                    Navigator.pop(context);
                   },
                 ),
                 _MenuListItem(
                   icon: Icons.calendar_month,
                   title: context.l10n.menuActivity,
                   onTap: () {
-                    Navigator.pop(context);
                     context.push('/activities');
+                    Navigator.pop(context);
                   },
                 ),
                 _MenuListItem(
                   icon: Icons.stars,
                   title: context.l10n.menuPointsCoupons,
                   onTap: () {
-                    Navigator.pop(context);
                     context.push('/coupon-points');
+                    Navigator.pop(context);
                   },
                 ),
                 _MenuListItem(
                   icon: Icons.verified_user,
                   title: context.l10n.menuStudentVerification,
                   onTap: () {
-                    Navigator.pop(context);
                     context.push('/student-verification');
+                    Navigator.pop(context);
                   },
                 ),
                 const Divider(height: 32),
@@ -1143,8 +1143,8 @@ class _MenuView extends StatelessWidget {
                   icon: Icons.settings,
                   title: context.l10n.menuSettings,
                   onTap: () {
-                    Navigator.pop(context);
                     context.push('/settings');
+                    Navigator.pop(context);
                   },
                 ),
               ],

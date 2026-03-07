@@ -98,12 +98,13 @@ class ForumLoadPostDetail extends ForumEvent {
 }
 
 class ForumLoadReplies extends ForumEvent {
-  const ForumLoadReplies(this.postId);
+  const ForumLoadReplies(this.postId, {this.page = 1});
 
   final int postId;
+  final int page;
 
   @override
-  List<Object?> get props => [postId];
+  List<Object?> get props => [postId, page];
 }
 
 class ForumCreatePost extends ForumEvent {
@@ -228,6 +229,9 @@ class ForumState extends Equatable {
     this.isLoadingMyPosts = false,
     this.isLoadingFavoritedPosts = false,
     this.reportSuccess = false,
+    this.repliesPage = 1,
+    this.repliesHasMore = true,
+    this.isLoadingMoreReplies = false,
   });
 
   final ForumStatus status;
@@ -254,6 +258,12 @@ class ForumState extends Equatable {
   final bool isLoadingMyPosts;
   final bool isLoadingFavoritedPosts;
   final bool reportSuccess;
+  /// 回复分页：当前页码
+  final int repliesPage;
+  /// 回复分页：是否还有更多
+  final bool repliesHasMore;
+  /// 回复分页：是否正在加载更多回复
+  final bool isLoadingMoreReplies;
 
   bool get isLoading => status == ForumStatus.loading;
 
@@ -281,6 +291,9 @@ class ForumState extends Equatable {
     bool? isLoadingMyPosts,
     bool? isLoadingFavoritedPosts,
     bool? reportSuccess,
+    int? repliesPage,
+    bool? repliesHasMore,
+    bool? isLoadingMoreReplies,
   }) {
     return ForumState(
       status: status ?? this.status,
@@ -307,6 +320,9 @@ class ForumState extends Equatable {
       isLoadingFavoritedPosts:
           isLoadingFavoritedPosts ?? this.isLoadingFavoritedPosts,
       reportSuccess: reportSuccess ?? this.reportSuccess,
+      repliesPage: repliesPage ?? this.repliesPage,
+      repliesHasMore: repliesHasMore ?? this.repliesHasMore,
+      isLoadingMoreReplies: isLoadingMoreReplies ?? this.isLoadingMoreReplies,
     );
   }
 
@@ -334,6 +350,9 @@ class ForumState extends Equatable {
         isLoadingMyPosts,
         isLoadingFavoritedPosts,
         reportSuccess,
+        repliesPage,
+        repliesHasMore,
+        isLoadingMoreReplies,
       ];
 }
 
@@ -732,12 +751,48 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
     ForumLoadReplies event,
     Emitter<ForumState> emit,
   ) async {
+    final page = event.page;
+    const pageSize = 20;
+
+    // 加载更多时防止重复请求
+    if (page > 1 && state.isLoadingMoreReplies) return;
+    if (page > 1 && !state.repliesHasMore) return;
+
+    if (page > 1) {
+      emit(state.copyWith(isLoadingMoreReplies: true));
+    }
+
     try {
-      final replies = await _forumRepository.getPostReplies(event.postId);
-      emit(state.copyWith(replies: replies));
+      final replies = await _forumRepository.getPostReplies(
+        event.postId,
+        page: page,
+        pageSize: pageSize,
+      );
+      final hasMore = replies.length >= pageSize;
+
+      if (page == 1) {
+        // 首页：替换列表
+        emit(state.copyWith(
+          replies: replies,
+          repliesPage: 1,
+          repliesHasMore: hasMore,
+          isLoadingMoreReplies: false,
+        ));
+      } else {
+        // 后续页：追加列表
+        emit(state.copyWith(
+          replies: [...state.replies, ...replies],
+          repliesPage: page,
+          repliesHasMore: hasMore,
+          isLoadingMoreReplies: false,
+        ));
+      }
     } catch (e) {
       AppLogger.error('Failed to load replies', e);
-      emit(state.copyWith(errorMessage: e.toString()));
+      emit(state.copyWith(
+        errorMessage: e.toString(),
+        isLoadingMoreReplies: false,
+      ));
     }
   }
 
@@ -800,8 +855,8 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
   ) async {
     try {
       await _forumRepository.reportPost(event.postId, reason: event.reason);
+      // Single emit — UI is responsible for clearing reportSuccess after handling
       emit(state.copyWith(reportSuccess: true));
-      emit(state.copyWith(reportSuccess: false));
     } catch (e) {
       AppLogger.error('Failed to report post', e);
       emit(state.copyWith(
@@ -819,7 +874,9 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
     try {
       final response = await _forumRepository.getMyPosts(page: event.page);
       emit(state.copyWith(
-        myPosts: response.posts,
+        myPosts: event.page == 1
+            ? response.posts
+            : [...state.myPosts, ...response.posts],
         isLoadingMyPosts: false,
       ));
     } catch (e) {
@@ -841,7 +898,9 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
       final response =
           await _forumRepository.getFavoritePosts(page: event.page);
       emit(state.copyWith(
-        favoritedPosts: response.posts,
+        favoritedPosts: event.page == 1
+            ? response.posts
+            : [...state.favoritedPosts, ...response.posts],
         isLoadingFavoritedPosts: false,
       ));
     } catch (e) {

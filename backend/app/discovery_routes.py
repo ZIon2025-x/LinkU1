@@ -267,6 +267,7 @@ async def _fetch_flea_market_items(db: AsyncSession, limit: int) -> list:
         )
         .where(
             models.FleaMarketItem.status == "active",
+            models.FleaMarketItem.is_visible == True,
         )
         .order_by(desc(models.FleaMarketItem.created_at))
         .limit(limit)
@@ -688,7 +689,11 @@ async def _resolve_linked_item(db: AsyncSession, item_type: str, item_id: str) -
         elif item_type == "forum_post":
             result = await db.execute(
                 select(models.ForumPost.title)
-                .where(models.ForumPost.id == int(item_id))
+                .where(
+                    models.ForumPost.id == int(item_id),
+                    models.ForumPost.is_deleted == False,
+                    models.ForumPost.is_visible == True,
+                )
             )
             row = result.first()
             if row:

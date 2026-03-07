@@ -24,6 +24,7 @@ def list_tasks(
         .filter(
             and_(
                 Task.status == "open",
+                Task.is_visible == True,
                 or_(
                     and_(
                         Task.deadline.isnot(None),
@@ -165,6 +166,7 @@ def count_tasks(
         .filter(
             and_(
                 Task.status == "open",
+                Task.is_visible == True,
                 or_(
                     and_(
                         Task.deadline.isnot(None),

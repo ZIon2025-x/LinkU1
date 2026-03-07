@@ -403,5 +403,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       clearRecommendedFilterCategory: event.clearCategory,
       recommendedSortBy: event.sortBy,
     ));
+    // Reload data from page 1 with updated filters
+    add(const HomeLoadRecommended());
   }
 }

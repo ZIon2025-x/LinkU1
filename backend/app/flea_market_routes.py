@@ -509,6 +509,14 @@ async def get_flea_market_item(
                 detail="商品不存在"
             )
 
+        # 内容审核中的商品，仅卖家本人可见
+        if not item.is_visible:
+            if not current_user or str(current_user.id) != str(item.seller_id):
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="商品不存在"
+                )
+
         # 已删除的商品返回 410 Gone，让搜索引擎尽快移除索引
         if item.status == "deleted":
             raise HTTPException(
@@ -1580,7 +1588,7 @@ async def direct_purchase_item(
     try:
         # 解析ID
         db_id = parse_flea_market_id(item_id)
-        
+
         # 查询商品（使用FOR UPDATE锁，防止并发）
         result = await db.execute(
             select(models.FleaMarketItem)
@@ -1588,8 +1596,8 @@ async def direct_purchase_item(
             .with_for_update()
         )
         item = result.scalar_one_or_none()
-        
-        if not item:
+
+        if not item or not item.is_visible:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="商品不存在"
@@ -1895,14 +1903,14 @@ async def create_purchase_request(
     try:
         # 解析ID
         db_id = parse_flea_market_id(item_id)
-        
+
         # 查询商品
         result = await db.execute(
             select(models.FleaMarketItem).where(models.FleaMarketItem.id == db_id)
         )
         item = result.scalar_one_or_none()
-        
-        if not item:
+
+        if not item or not item.is_visible:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="商品不存在"
@@ -2306,7 +2314,7 @@ async def accept_purchase_request(
     try:
         # 解析ID
         db_id = parse_flea_market_id(item_id)
-        
+
         # 查询商品（使用FOR UPDATE锁，防止并发）
         result = await db.execute(
             select(models.FleaMarketItem)
@@ -2314,8 +2322,8 @@ async def accept_purchase_request(
             .with_for_update()
         )
         item = result.scalar_one_or_none()
-        
-        if not item:
+
+        if not item or not item.is_visible:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="商品不存在"
@@ -2963,12 +2971,12 @@ async def toggle_favorite_item(
             select(models.FleaMarketItem).where(models.FleaMarketItem.id == db_id)
         )
         item = result.scalar_one_or_none()
-        if not item:
+        if not item or not item.is_visible:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="商品不存在"
             )
-        
+
         # 检查是否已收藏
         favorite_result = await db.execute(
             select(models.FleaMarketFavorite)
@@ -3082,6 +3090,7 @@ async def get_my_favorite_items(
             )
             .where(models.FleaMarketFavorite.user_id == current_user.id)
             .where(models.FleaMarketItem.status != "deleted")  # 排除已删除的商品
+            .where(models.FleaMarketItem.is_visible == True)  # 排除审核中的商品
             .order_by(models.FleaMarketFavorite.created_at.desc())
         )
         
@@ -3162,13 +3171,13 @@ async def report_item(
     """举报商品"""
     try:
         db_id = parse_flea_market_id(item_id)
-        
+
         # 检查商品是否存在
         result = await db.execute(
             select(models.FleaMarketItem).where(models.FleaMarketItem.id == db_id)
         )
         item = result.scalar_one_or_none()
-        if not item:
+        if not item or not item.is_visible:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="商品不存在"

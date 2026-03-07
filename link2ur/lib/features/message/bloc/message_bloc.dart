@@ -339,6 +339,10 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
     }
     _lastTaskChatsLoadTime = DateTime.now();
 
+    if (state.status == MessageStatus.initial) {
+      emit(state.copyWith(status: MessageStatus.loading));
+    }
+
     try {
       // 同步加载本地偏好
       _loadPreferences(emit);

@@ -1,4 +1,6 @@
 import 'package:equatable/equatable.dart';
+import '../../l10n/app_localizations.dart';
+
 import '../../core/constants/app_constants.dart';
 
 /// 学生认证模型
@@ -43,7 +45,24 @@ class StudentVerification extends Equatable {
   bool get isExpiringSoon =>
       daysRemaining != null && daysRemaining! <= 30 && daysRemaining! > 0;
 
-  /// 状态显示文本
+  /// 状态显示文本（本地化）
+  String statusTextWith(AppLocalizations l10n) {
+    switch (status) {
+      case AppConstants.verificationStatusPending:
+        return l10n.verificationStatusPending;
+      case 'verified':
+        return l10n.verificationStatusVerified;
+      case AppConstants.verificationStatusExpired:
+        return l10n.verificationStatusExpired;
+      case AppConstants.verificationStatusRevoked:
+        return l10n.verificationStatusRevoked;
+      default:
+        return l10n.verificationStatusUnverified;
+    }
+  }
+
+  /// 状态显示文本（已废弃，请使用 statusTextWith(l10n)）
+  @Deprecated('Use statusTextWith(l10n) instead')
   String get statusText {
     switch (status) {
       case AppConstants.verificationStatusPending:

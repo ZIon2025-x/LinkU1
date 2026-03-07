@@ -679,6 +679,8 @@ class _UserProfileViewState extends State<UserProfileView> {
 
                                 final taskRepo =
                                     context.read<TaskRepository>();
+                                // 保存外部 ScaffoldMessenger 引用，pop 之后 ctx 已失效
+                                final messenger = ScaffoldMessenger.of(context);
                                 setSheetState(() => isSubmitting = true);
                                 try {
                                   final loc =
@@ -700,19 +702,19 @@ class _UserProfileViewState extends State<UserProfileView> {
                                   );
                                   if (ctx.mounted) {
                                     Navigator.pop(ctx);
-                                    ScaffoldMessenger.of(ctx).showSnackBar(
-                                      SnackBar(
-                                          content: Text(l10n
-                                              .profileDirectRequestSuccess)),
-                                    );
                                   }
+                                  messenger.showSnackBar(
+                                    SnackBar(
+                                        content: Text(l10n
+                                            .profileDirectRequestSuccess)),
+                                  );
                                 } catch (e) {
                                   setSheetState(
                                       () => isSubmitting = false);
                                   if (ctx.mounted) {
                                     ScaffoldMessenger.of(ctx).showSnackBar(
                                       SnackBar(
-                                          content: Text(ctx.localizeError(e.toString()))),
+                                          content: Text(context.localizeError(e.toString()))),
                                     );
                                   }
                                 }

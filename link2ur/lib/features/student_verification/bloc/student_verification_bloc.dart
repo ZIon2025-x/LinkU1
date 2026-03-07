@@ -189,7 +189,7 @@ class StudentVerificationBloc
         emit(state.copyWith(
           isSubmitting: false,
           actionMessage: 'renewal_failed',
-          errorMessage: 'Email not found',
+          errorMessage: 'verification_email_not_found',
         ));
         return;
       }
@@ -203,6 +203,7 @@ class StudentVerificationBloc
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'renewal_failed',
+        errorMessage: e.toString(),
       ));
     }
   }

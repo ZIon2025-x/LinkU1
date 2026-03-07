@@ -781,7 +781,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
         isSubmitting: false,
         items: updatedItems,
         selectedItem:
-            state.selectedItem?.id == updatedItem.id ? updatedItem : null,
+            state.selectedItem?.id == updatedItem.id ? updatedItem : state.selectedItem,
         actionMessage: 'item_updated',
       ));
     } catch (e) {
@@ -835,7 +835,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
         isUploadingImage: false,
         items: updatedItems,
         selectedItem:
-            state.selectedItem?.id == updatedItem.id ? updatedItem : null,
+            state.selectedItem?.id == updatedItem.id ? updatedItem : state.selectedItem,
         actionMessage: 'item_updated',
       ));
     } catch (e) {
@@ -909,6 +909,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
       if (emit.isDone) return;
       emit(state.copyWith(isFavorited: favoriteIds.contains(itemId)));
     } catch (e) {
+      // Don't update isFavorited on failure — keep existing state
       AppLogger.error('Failed to check favorite status', e);
     }
   }

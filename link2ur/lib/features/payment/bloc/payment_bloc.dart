@@ -231,11 +231,22 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
         preferredPaymentMethod: event.preferredPaymentMethod,
       );
 
+      // Validate payment amount
+      if (response.finalAmount < 0) {
+        emit(state.copyWith(
+          status: PaymentStatus.error,
+          errorMessage: 'error_invalid_payment_amount',
+          isMethodSwitching: false,
+        ));
+        return;
+      }
+
       emit(state.copyWith(
         status: PaymentStatus.ready,
         paymentResponse: response,
         preferredPaymentMethod: event.preferredPaymentMethod,
         isMethodSwitching: false,
+        clearError: true,
       ));
     } catch (e) {
       AppLogger.error('Failed to create payment intent', e);

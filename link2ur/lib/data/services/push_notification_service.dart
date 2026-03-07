@@ -194,7 +194,7 @@ class PushNotificationService with WidgetsBindingObserver {
           'link2ur_default',
           'Link²Ur 通知',
           description: '其他通知',
-          importance: Importance.defaultImportance,
+          importance: Importance.defaultImportance, // ignore: avoid_redundant_argument_values
         ),
       ];
 

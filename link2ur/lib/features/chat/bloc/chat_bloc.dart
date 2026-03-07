@@ -211,7 +211,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     on<ChatPeerTypingReceived>(_onPeerTyping);
     on<ChatReadReceiptReceived>(_onReadReceipt);
     on<ChatClearError>((event, emit) {
-      emit(state.copyWith(errorMessage: null));
+      emit(state.copyWith());
     });
     on<_ChatPeerTypingTimeout>((event, emit) {
       emit(state.copyWith(peerIsTyping: false));
@@ -623,7 +623,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       if (event.senderId != state.userId) return;
       final updated = state.messages.map((m) {
         if (m.isRead) return m;
-        if (m.senderId == state.userId) return m; // 对方发的消息不标记
+        if (m.senderId != state.userId) return m;
         return m.copyWith(isRead: true);
       }).toList();
       emit(state.copyWith(messages: updated));

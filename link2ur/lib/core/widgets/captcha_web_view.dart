@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
+import '../utils/l10n_extension.dart';
+
 /// 验证码类型
 enum CaptchaType {
   recaptchaV2,
@@ -56,9 +58,9 @@ class CaptchaWebView extends StatefulWidget {
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  const Text(
-                    '安全验证',
-                    style: TextStyle(
+                  Text(
+                    context.l10n.captchaSecurityVerification,
+                    style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
                     ),

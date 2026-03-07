@@ -420,7 +420,7 @@ async def _search_tasks(executor: ToolExecutor, input: dict) -> dict:
     min_reward = input.get("min_reward")
     max_reward = input.get("max_reward")
 
-    conditions = [models.Task.is_public == 1, models.Task.status == "open"]
+    conditions = [models.Task.is_public == 1, models.Task.status == "open", models.Task.is_visible == True]
     if keyword:
         like_kw = f"%{keyword}%"
         conditions.append(or_(
@@ -715,7 +715,7 @@ async def _search_flea_market(executor: ToolExecutor, input: dict) -> dict:
     min_price = input.get("min_price")
     max_price = input.get("max_price")
 
-    conditions = [models.FleaMarketItem.status == "active"]
+    conditions = [models.FleaMarketItem.status == "active", models.FleaMarketItem.is_visible == True]
     if keyword:
         like_kw = f"%{keyword}%"
         conditions.append(or_(
@@ -1008,7 +1008,7 @@ async def _get_flea_market_item_detail(executor: ToolExecutor, input: dict) -> d
         return {"error": msgs["item_not_found"]}
 
     item, seller_name = row
-    if item.status not in ("active", "sold"):
+    if item.status not in ("active", "sold") or not item.is_visible:
         return {"error": msgs["item_not_found"]}
 
     return {
@@ -1520,7 +1520,7 @@ async def _get_my_flea_market_items(executor: ToolExecutor, input: dict) -> dict
         rows = (await executor.db.execute(
             select(models.FleaMarketItem)
             .join(models.FleaMarketFavorite, models.FleaMarketItem.id == models.FleaMarketFavorite.item_id)
-            .where(models.FleaMarketFavorite.user_id == user_id)
+            .where(models.FleaMarketFavorite.user_id == user_id, models.FleaMarketItem.is_visible == True)
             .order_by(desc(models.FleaMarketFavorite.created_at))
             .limit(10)
         )).scalars().all()
@@ -1604,6 +1604,7 @@ async def _search_forum_posts(executor: ToolExecutor, input: dict) -> dict:
             .where(and_(
                 models.ForumFavorite.user_id == user_id,
                 models.ForumPost.is_deleted == False,
+                models.ForumPost.is_visible == True,
                 models.ForumPost.category_id.in_(allowed_cat_ids),
             ))
             .order_by(desc(models.ForumFavorite.created_at))
@@ -1628,7 +1629,9 @@ async def _search_forum_posts(executor: ToolExecutor, input: dict) -> dict:
             .where(and_(
                 models.ForumReply.author_id == user_id,
                 models.ForumReply.is_deleted == False,
+                models.ForumReply.is_visible == True,
                 models.ForumPost.is_deleted == False,
+                models.ForumPost.is_visible == True,
                 models.ForumPost.category_id.in_(allowed_cat_ids),
             ))
             .order_by(desc(models.ForumReply.created_at))

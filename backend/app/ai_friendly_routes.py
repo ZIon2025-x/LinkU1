@@ -28,11 +28,13 @@ def get_site_info(db: Session = Depends(get_db)):
     try:
         # 获取统计数据
         task_count = db.query(func.count(Task.id)).filter(
-            Task.status == "open"
+            Task.status == "open",
+            Task.is_visible == True
         ).scalar() or 0
-        
+
         flea_market_count = db.query(func.count(FleaMarketItem.id)).filter(
-            FleaMarketItem.status == 'active'
+            FleaMarketItem.status == 'active',
+            FleaMarketItem.is_visible == True
         ).scalar() or 0
         
         forum_post_count = db.query(func.count(ForumPost.id)).filter(
@@ -137,7 +139,8 @@ def get_tasks_summary(
     """
     try:
         tasks = db.query(Task).filter(
-            Task.status == "open"
+            Task.status == "open",
+            Task.is_visible == True
         ).order_by(Task.created_at.desc()).limit(limit).all()
         
         task_summaries = []

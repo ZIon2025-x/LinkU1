@@ -35,13 +35,13 @@ class _AIChatListContent extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('AI 助手'),
+        title: Text(context.l10n.aiChatTitle),
         centerTitle: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () => context.push(AppRoutes.supportChat),
-            tooltip: '新对话',
+            tooltip: context.l10n.aiChatNewConversation,
           ),
         ],
       ),
@@ -99,9 +99,10 @@ class _ConversationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final title = conversation.title.isEmpty ? '新对话' : conversation.title;
+    final l10n = context.l10n;
+    final title = conversation.title.isEmpty ? l10n.aiChatNewConversation : conversation.title;
     final timeStr = conversation.updatedAt != null
-        ? _formatTime(conversation.updatedAt!)
+        ? _formatTime(context, conversation.updatedAt!)
         : '';
 
     return Dismissible(
@@ -143,13 +144,14 @@ class _ConversationTile extends StatelessWidget {
     );
   }
 
-  String _formatTime(DateTime time) {
+  String _formatTime(BuildContext context, DateTime time) {
     final now = DateTime.now();
     final diff = now.difference(time);
-    if (diff.inMinutes < 1) return '刚刚';
-    if (diff.inHours < 1) return '${diff.inMinutes}分钟前';
-    if (diff.inDays < 1) return '${diff.inHours}小时前';
-    if (diff.inDays < 7) return '${diff.inDays}天前';
+    final l10n = context.l10n;
+    if (diff.inMinutes < 1) return l10n.timeJustNow;
+    if (diff.inHours < 1) return l10n.timeMinutesAgo(diff.inMinutes);
+    if (diff.inDays < 1) return l10n.timeHoursAgo(diff.inHours);
+    if (diff.inDays < 7) return l10n.timeDaysAgo(diff.inDays);
     return '${time.month}/${time.day}';
   }
 }

@@ -17293,6 +17293,210 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your content did not pass review.'**
   String get contentRejectedHint;
+
+  /// No description provided for @captchaSecurityVerification.
+  ///
+  /// In en, this message translates to:
+  /// **'Security Verification'**
+  String get captchaSecurityVerification;
+
+  /// No description provided for @loginMethodPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Password Login'**
+  String get loginMethodPassword;
+
+  /// No description provided for @loginMethodEmailCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Email Code'**
+  String get loginMethodEmailCode;
+
+  /// No description provided for @loginMethodPhoneCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone Code'**
+  String get loginMethodPhoneCode;
+
+  /// No description provided for @verificationStatusPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get verificationStatusPending;
+
+  /// No description provided for @verificationStatusVerified.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified'**
+  String get verificationStatusVerified;
+
+  /// No description provided for @verificationStatusExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Expired'**
+  String get verificationStatusExpired;
+
+  /// No description provided for @verificationStatusRevoked.
+  ///
+  /// In en, this message translates to:
+  /// **'Revoked'**
+  String get verificationStatusRevoked;
+
+  /// No description provided for @verificationStatusUnverified.
+  ///
+  /// In en, this message translates to:
+  /// **'Unverified'**
+  String get verificationStatusUnverified;
+
+  /// No description provided for @fleaMarketErrorGetListFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load items'**
+  String get fleaMarketErrorGetListFailed;
+
+  /// No description provided for @fleaMarketErrorGetCategoriesFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load categories'**
+  String get fleaMarketErrorGetCategoriesFailed;
+
+  /// No description provided for @fleaMarketErrorInvalidItemId.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid item ID'**
+  String get fleaMarketErrorInvalidItemId;
+
+  /// No description provided for @fleaMarketErrorGetDetailFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load item details'**
+  String get fleaMarketErrorGetDetailFailed;
+
+  /// No description provided for @fleaMarketErrorPublishFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to publish item'**
+  String get fleaMarketErrorPublishFailed;
+
+  /// No description provided for @fleaMarketErrorPurchaseFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase failed'**
+  String get fleaMarketErrorPurchaseFailed;
+
+  /// No description provided for @fleaMarketErrorSendPurchaseRequestFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to send purchase request'**
+  String get fleaMarketErrorSendPurchaseRequestFailed;
+
+  /// No description provided for @fleaMarketErrorOperationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Operation failed'**
+  String get fleaMarketErrorOperationFailed;
+
+  /// No description provided for @fleaMarketErrorRefreshFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh failed'**
+  String get fleaMarketErrorRefreshFailed;
+
+  /// No description provided for @fleaMarketErrorReportFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Report failed'**
+  String get fleaMarketErrorReportFailed;
+
+  /// No description provided for @fleaMarketErrorGetMyRelatedFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load my related items'**
+  String get fleaMarketErrorGetMyRelatedFailed;
+
+  /// No description provided for @fleaMarketErrorGetPurchaseHistoryFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load purchase history'**
+  String get fleaMarketErrorGetPurchaseHistoryFailed;
+
+  /// No description provided for @fleaMarketErrorGetFavoritesFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load favorites'**
+  String get fleaMarketErrorGetFavoritesFailed;
+
+  /// No description provided for @fleaMarketErrorUserNotLoggedIn.
+  ///
+  /// In en, this message translates to:
+  /// **'User not logged in'**
+  String get fleaMarketErrorUserNotLoggedIn;
+
+  /// No description provided for @fleaMarketErrorGetMyItemsFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load my items'**
+  String get fleaMarketErrorGetMyItemsFailed;
+
+  /// No description provided for @fleaMarketErrorGetSalesFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load sales records'**
+  String get fleaMarketErrorGetSalesFailed;
+
+  /// No description provided for @fleaMarketErrorApproveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to approve request'**
+  String get fleaMarketErrorApproveFailed;
+
+  /// No description provided for @fleaMarketErrorUploadImageFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to upload image'**
+  String get fleaMarketErrorUploadImageFailed;
+
+  /// No description provided for @fleaMarketErrorUpdateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to update item'**
+  String get fleaMarketErrorUpdateFailed;
+
+  /// No description provided for @fleaMarketErrorDeleteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to delete item'**
+  String get fleaMarketErrorDeleteFailed;
+
+  /// No description provided for @fleaMarketErrorGetPurchaseRequestsFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load purchase requests'**
+  String get fleaMarketErrorGetPurchaseRequestsFailed;
+
+  /// No description provided for @fleaMarketErrorAcceptFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to accept purchase request'**
+  String get fleaMarketErrorAcceptFailed;
+
+  /// No description provided for @fleaMarketErrorRejectFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to reject purchase request'**
+  String get fleaMarketErrorRejectFailed;
+
+  /// No description provided for @fleaMarketErrorCounterOfferFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to counter-offer'**
+  String get fleaMarketErrorCounterOfferFailed;
+
+  /// No description provided for @fleaMarketErrorRespondCounterOfferFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to respond to counter-offer'**
+  String get fleaMarketErrorRespondCounterOfferFailed;
 }
 
 class _AppLocalizationsDelegate

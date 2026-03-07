@@ -260,6 +260,9 @@ class CouponPointsBloc extends Bloc<CouponPointsEvent, CouponPointsState> {
       ));
     } catch (e) {
       AppLogger.error('Failed to load transactions', e);
+      emit(state.copyWith(
+        errorMessage: 'coupon_points_load_transactions_failed',
+      ));
     }
   }
 
@@ -284,6 +287,9 @@ class CouponPointsBloc extends Bloc<CouponPointsEvent, CouponPointsState> {
       ));
     } catch (e) {
       AppLogger.error('Failed to load more transactions', e);
+      emit(state.copyWith(
+        errorMessage: 'coupon_points_load_more_transactions_failed',
+      ));
     }
   }
 

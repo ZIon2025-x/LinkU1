@@ -64,7 +64,7 @@ class FleaMarketRepository {
       );
 
       if (!response.isSuccess || response.data == null) {
-        throw FleaMarketException(response.message ?? '获取商品列表失败');
+        throw FleaMarketException(response.message ?? 'flea_market_error_get_list_failed');
       }
 
       if (cacheKey != null) {
@@ -96,7 +96,7 @@ class FleaMarketRepository {
       );
 
       if (!response.isSuccess || response.data == null) {
-        throw FleaMarketException(response.message ?? '获取分类失败');
+        throw FleaMarketException(response.message ?? 'flea_market_error_get_categories_failed');
       }
 
       await _cache.set(cacheKey, response.data!, ttl: CacheManager.staticTTL);
@@ -113,7 +113,7 @@ class FleaMarketRepository {
   Future<FleaMarketItem> getItemById(String id, {CancelToken? cancelToken}) async {
     final idTrim = id.trim();
     if (idTrim.isEmpty || idTrim == '0') {
-      throw const FleaMarketException('无效的商品 ID');
+      throw const FleaMarketException('flea_market_error_invalid_item_id');
     }
 
     final cacheKey = '${CacheManager.prefixFleaMarketDetail}$id';
@@ -139,7 +139,7 @@ class FleaMarketRepository {
       }
 
       if (!response.isSuccess || response.data == null) {
-        throw FleaMarketException(response.message ?? '获取商品详情失败');
+        throw FleaMarketException(response.message ?? 'flea_market_error_get_detail_failed');
       }
 
       await _cache.set(cacheKey, response.data!, ttl: CacheManager.defaultTTL);
@@ -161,7 +161,7 @@ class FleaMarketRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw FleaMarketException(response.message ?? '发布商品失败');
+      throw FleaMarketException(response.message ?? 'flea_market_error_publish_failed');
     }
 
     // 创建后失效列表缓存
@@ -178,7 +178,7 @@ class FleaMarketRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw FleaMarketException(response.message ?? '购买失败');
+      throw FleaMarketException(response.message ?? 'flea_market_error_purchase_failed');
     }
 
     // 购买后失效缓存：
@@ -206,7 +206,7 @@ class FleaMarketRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw FleaMarketException(response.message ?? '发送购买请求失败');
+      throw FleaMarketException(response.message ?? 'flea_market_error_send_purchase_request_failed');
     }
 
     // 发送请求后失效我的购买请求缓存
@@ -222,7 +222,7 @@ class FleaMarketRepository {
     );
 
     if (!response.isSuccess) {
-      throw FleaMarketException(response.message ?? '操作失败');
+      throw FleaMarketException(response.message ?? 'flea_market_error_operation_failed');
     }
 
     return response.data?['is_favorited'] as bool? ?? false;
@@ -235,7 +235,7 @@ class FleaMarketRepository {
     );
 
     if (!response.isSuccess) {
-      throw FleaMarketException(response.message ?? '刷新失败');
+      throw FleaMarketException(response.message ?? 'flea_market_error_refresh_failed');
     }
   }
 
@@ -247,7 +247,7 @@ class FleaMarketRepository {
     );
 
     if (!response.isSuccess) {
-      throw FleaMarketException(response.message ?? '举报失败');
+      throw FleaMarketException(response.message ?? 'flea_market_error_report_failed');
     }
   }
 
@@ -266,7 +266,7 @@ class FleaMarketRepository {
       ApiEndpoints.fleaMarketMyRelatedItems,
     );
     if (!response.isSuccess || response.data == null) {
-      throw FleaMarketException(response.message ?? '获取与我相关的闲置失败');
+      throw FleaMarketException(response.message ?? 'flea_market_error_get_my_related_failed');
     }
     final data = response.data!;
     final rawItems = data['items'] as List<dynamic>? ?? [];
@@ -316,7 +316,7 @@ class FleaMarketRepository {
       );
 
       if (!response.isSuccess || response.data == null) {
-        throw FleaMarketException(response.message ?? '获取购买历史失败');
+        throw FleaMarketException(response.message ?? 'flea_market_error_get_purchase_history_failed');
       }
 
       final data = response.data!;
@@ -356,7 +356,7 @@ class FleaMarketRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw FleaMarketException(response.message ?? '获取收藏列表失败');
+      throw FleaMarketException(response.message ?? 'flea_market_error_get_favorites_failed');
     }
 
     return FleaMarketListResponse.fromJson(response.data!);
@@ -370,7 +370,7 @@ class FleaMarketRepository {
   }) async {
     final userId = StorageService.instance.getUserId();
     if (userId == null) {
-      throw const FleaMarketException('用户未登录');
+      throw const FleaMarketException('flea_market_error_user_not_logged_in');
     }
 
     final params = {
@@ -393,7 +393,7 @@ class FleaMarketRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw FleaMarketException(response.message ?? '获取我的商品失败');
+      throw FleaMarketException(response.message ?? 'flea_market_error_get_my_items_failed');
     }
 
     await _cache.set(cacheKey, response.data!, ttl: CacheManager.personalTTL);
@@ -409,7 +409,7 @@ class FleaMarketRepository {
   }) async {
     final userId = StorageService.instance.getUserId();
     if (userId == null) {
-      throw const FleaMarketException('用户未登录');
+      throw const FleaMarketException('flea_market_error_user_not_logged_in');
     }
 
     final params = {
@@ -435,7 +435,7 @@ class FleaMarketRepository {
       );
 
       if (!response.isSuccess || response.data == null) {
-        throw FleaMarketException(response.message ?? '获取销售记录失败');
+        throw FleaMarketException(response.message ?? 'flea_market_error_get_sales_failed');
       }
 
       await _cache.set(cacheKey, response.data!, ttl: CacheManager.personalTTL);
@@ -455,7 +455,7 @@ class FleaMarketRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw FleaMarketException(response.message ?? '批准请求失败');
+      throw FleaMarketException(response.message ?? 'flea_market_error_approve_failed');
     }
 
     return response.data!;
@@ -480,7 +480,7 @@ class FleaMarketRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw FleaMarketException(response.message ?? '上传图片失败');
+      throw FleaMarketException(response.message ?? 'flea_market_error_upload_image_failed');
     }
 
     return response.data!['url'] as String? ?? '';
@@ -508,7 +508,7 @@ class FleaMarketRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw FleaMarketException(response.message ?? '更新商品失败');
+      throw FleaMarketException(response.message ?? 'flea_market_error_update_failed');
     }
 
     final item = FleaMarketItem.fromJson(response.data!);
@@ -527,7 +527,7 @@ class FleaMarketRepository {
     );
 
     if (!response.isSuccess) {
-      throw FleaMarketException(response.message ?? '删除商品失败');
+      throw FleaMarketException(response.message ?? 'flea_market_error_delete_failed');
     }
 
     await _cache.invalidateFleaMarketCache();
@@ -541,7 +541,7 @@ class FleaMarketRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw FleaMarketException(response.message ?? '获取购买请求失败');
+      throw FleaMarketException(response.message ?? 'flea_market_error_get_purchase_requests_failed');
     }
 
     final items = response.data!['items'] as List<dynamic>? ?? [];
@@ -558,7 +558,7 @@ class FleaMarketRepository {
     );
 
     if (!response.isSuccess) {
-      throw FleaMarketException(response.message ?? '接受购买请求失败');
+      throw FleaMarketException(response.message ?? 'flea_market_error_accept_failed');
     }
 
     await _cache.invalidateFleaMarketCache();
@@ -575,7 +575,7 @@ class FleaMarketRepository {
     );
 
     if (!response.isSuccess) {
-      throw FleaMarketException(response.message ?? '拒绝购买请求失败');
+      throw FleaMarketException(response.message ?? 'flea_market_error_reject_failed');
     }
 
     await _cache.invalidateFleaMarketCache();
@@ -597,7 +597,7 @@ class FleaMarketRepository {
     );
 
     if (!response.isSuccess) {
-      throw FleaMarketException(response.message ?? '发起还价失败');
+      throw FleaMarketException(response.message ?? 'flea_market_error_counter_offer_failed');
     }
   }
 
@@ -616,7 +616,7 @@ class FleaMarketRepository {
     );
 
     if (!response.isSuccess) {
-      throw FleaMarketException(response.message ?? '回应还价失败');
+      throw FleaMarketException(response.message ?? 'flea_market_error_respond_counter_offer_failed');
     }
 
     await _cache.invalidateFleaMarketCache();
@@ -629,7 +629,7 @@ class FleaMarketRepository {
     );
 
     if (!response.isSuccess) {
-      throw FleaMarketException(response.message ?? '操作失败');
+      throw FleaMarketException(response.message ?? 'flea_market_error_operation_failed');
     }
   }
 }
