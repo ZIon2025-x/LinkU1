@@ -98,8 +98,8 @@
   "authResendCode": "重新发送",
   "authLoginMethod": "登录方式",
   "authEmailPassword": "邮箱/ID密码",
-  "authEmailCode": "邮箱验证码",
-  "authPhoneCode": "手机验证码",
+  "authEmailCode": "邮箱登录",
+  "authPhoneCode": "手机登录",
   "authEnterEmail": "请输入邮箱",
   "authEnterEmailOrId": "请输入邮箱或ID",
   "authEnterPassword": "请输入密码",
@@ -4340,5 +4340,10 @@
   "errorProfileLoadPreferencesFailed": "加载偏好设置失败",
   "errorProfileUpdatePreferencesFailed": "更新偏好设置失败",
   "errorProfileSendEmailCodeFailed": "发送邮箱验证码失败",
-  "errorProfileSendPhoneCodeFailed": "发送手机验证码失败"
+  "errorProfileSendPhoneCodeFailed": "发送手机验证码失败",
+  "errorIapNotAvailableWeb": "Web端不支持应用内购买",
+  "errorIapStoreNotAvailable": "应用商店不可用",
+  "errorIapLoadProductsFailed": "加载产品失败",
+  "errorIapVerificationFailed": "验证失败，请联系客服",
+  "errorIapPurchaseFailed": "购买失败"
 }

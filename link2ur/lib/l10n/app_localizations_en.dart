@@ -210,10 +210,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authEmailPassword => 'Email/ID & Password';
 
   @override
-  String get authEmailCode => 'Email Code';
+  String get authEmailCode => 'Email Login';
 
   @override
-  String get authPhoneCode => 'Phone Verification';
+  String get authPhoneCode => 'Phone Login';
 
   @override
   String get authEnterEmail => 'Enter email';
@@ -9629,4 +9629,21 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get errorProfileSendPhoneCodeFailed =>
       'Failed to send phone verification code';
+
+  @override
+  String get errorIapNotAvailableWeb =>
+      'In-app purchase is not available on web';
+
+  @override
+  String get errorIapStoreNotAvailable => 'App store is not available';
+
+  @override
+  String get errorIapLoadProductsFailed => 'Failed to load products';
+
+  @override
+  String get errorIapVerificationFailed =>
+      'Verification failed, please contact support';
+
+  @override
+  String get errorIapPurchaseFailed => 'Purchase failed';
 }

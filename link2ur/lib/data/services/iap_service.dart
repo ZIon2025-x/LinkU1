@@ -58,18 +58,19 @@ class IAPService {
     // Web 上不支持应用内购买
     if (kIsWeb) {
       AppLogger.info('IAP: Not available on Web');
-      errorMessage = 'Web 端不支持应用内购买';
+      errorMessage = 'iap_not_available_web';
       return;
     }
 
     final available = await _iap.isAvailable();
     if (!available) {
       AppLogger.warning('IAP: Store not available');
-      errorMessage = '应用商店不可用';
+      errorMessage = 'iap_store_not_available';
       return;
     }
 
-    // 监听购买流
+    // 监听购买流（cancel 旧订阅防止泄漏）
+    _subscription?.cancel();
     _subscription = _iap.purchaseStream.listen(
       _onPurchaseUpdate,
       onDone: () => _subscription?.cancel(),
@@ -93,7 +94,7 @@ class IAPService {
       final response = await _iap.queryProductDetails(_productIds);
       if (response.error != null) {
         AppLogger.error('IAP: Query products error', response.error);
-        errorMessage = '加载产品失败: ${response.error?.message}';
+        errorMessage = 'iap_load_products_failed';
       }
 
       if (response.notFoundIDs.isNotEmpty) {
@@ -108,7 +109,7 @@ class IAPService {
       AppLogger.info('IAP: Loaded ${products.length} products');
     } catch (e) {
       AppLogger.error('IAP: Load products failed', e);
-      errorMessage = '加载产品失败';
+      errorMessage = 'iap_load_products_failed';
     } finally {
       isLoading = false;
     }
@@ -123,7 +124,7 @@ class IAPService {
       AppLogger.info('IAP: Purchase initiated for ${product.id}');
     } catch (e) {
       AppLogger.error('IAP: Purchase failed', e);
-      onPurchaseComplete?.call(false, '购买失败: $e');
+      onPurchaseComplete?.call(false, 'iap_purchase_failed');
     }
   }
 
@@ -153,26 +154,24 @@ class IAPService {
             _purchasedProductIds.add(purchase.productID);
             onPurchaseComplete?.call(true, null);
           } else {
-            onPurchaseComplete?.call(false, '验证失败，请联系客服');
+            onPurchaseComplete?.call(false, 'iap_verification_failed');
+          }
+          // 仅在 purchased/restored 时完成交易
+          if (purchase.pendingCompletePurchase) {
+            await _iap.completePurchase(purchase);
           }
           break;
 
         case PurchaseStatus.error:
           AppLogger.error(
               'IAP: Purchase error - ${purchase.error?.message}');
-          onPurchaseComplete?.call(
-              false, purchase.error?.message ?? '购买失败');
+          onPurchaseComplete?.call(false, 'iap_purchase_failed');
           break;
 
         case PurchaseStatus.canceled:
           AppLogger.info('IAP: Purchase cancelled');
           onPurchaseComplete?.call(false, null);
           break;
-      }
-
-      // 完成交易
-      if (purchase.pendingCompletePurchase) {
-        await _iap.completePurchase(purchase);
       }
     }
   }

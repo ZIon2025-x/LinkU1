@@ -237,7 +237,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     ));
 
     try {
-      await _authRepository.sendEmailCode(event.email);
+      await _authRepository.sendEmailCode(event.email, purpose: event.purpose);
       emit(state.copyWith(codeSendStatus: CodeSendStatus.sent));
     } on AuthException catch (e) {
       emit(state.copyWith(

@@ -141,7 +141,7 @@ class _RegisterViewState extends State<RegisterView>
       return;
     }
     AppHaptics.selection();
-    context.read<AuthBloc>().add(AuthSendEmailCodeRequested(email: email));
+    context.read<AuthBloc>().add(AuthSendEmailCodeRequested(email: email, purpose: 'register'));
   }
 
   void _startCountdown() {
@@ -187,7 +187,7 @@ class _RegisterViewState extends State<RegisterView>
         listener: (context, state) {
           if (state.status == AuthStatus.authenticated) {
             context.go(AppRoutes.main);
-          } else if (state.hasError) {
+          } else if (state.hasError || state.codeSendStatus == CodeSendStatus.error) {
             final localizedError =
                 ErrorLocalizer.localize(context, state.errorMessage);
             ScaffoldMessenger.of(context).showSnackBar(

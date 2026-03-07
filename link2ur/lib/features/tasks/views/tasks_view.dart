@@ -407,7 +407,7 @@ class _TasksViewContentState extends State<_TasksViewContent> {
             await context.read<TaskListBloc>().stream.firstWhere(
                   (s) => !s.isLoading,
                   orElse: () => state,
-                );
+                ).timeout(const Duration(seconds: 10), onTimeout: () => state);
           },
           key: const ValueKey('content'),
           child: Builder(

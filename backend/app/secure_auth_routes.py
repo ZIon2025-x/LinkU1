@@ -1125,7 +1125,7 @@ def send_email_verification_code(
             # 失败时继续，不阻止请求
         
         email = request_data.email.strip().lower()
-        
+
         # 验证邮箱格式
         import re
         email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
@@ -1134,7 +1134,18 @@ def send_email_verification_code(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="邮箱格式不正确"
             )
-        
+
+        # 注册用途：检查邮箱是否已被注册
+        if request_data.purpose == "register":
+            from app.database import SessionLocal
+            with SessionLocal() as db:
+                existing_user = crud.get_user_by_email(db, email)
+                if existing_user:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="email_already_registered"
+                    )
+
         # 生成6位数字验证码
         verification_code = generate_verification_code(6)
         

@@ -85,8 +85,8 @@
   "authResendCode": "Resend Code",
   "authLoginMethod": "Login Method",
   "authEmailPassword": "Email/ID & Password",
-  "authEmailCode": "Email Code",
-  "authPhoneCode": "Phone Verification",
+  "authEmailCode": "Email Login",
+  "authPhoneCode": "Phone Login",
   "authEnterEmail": "Enter email",
   "authEnterEmailOrId": "Enter email or ID",
   "authEnterPassword": "Enter password",
@@ -4432,5 +4432,10 @@
   "errorProfileLoadPreferencesFailed": "Failed to load preferences",
   "errorProfileUpdatePreferencesFailed": "Failed to update preferences",
   "errorProfileSendEmailCodeFailed": "Failed to send email verification code",
-  "errorProfileSendPhoneCodeFailed": "Failed to send phone verification code"
+  "errorProfileSendPhoneCodeFailed": "Failed to send phone verification code",
+  "errorIapNotAvailableWeb": "In-app purchase is not available on web",
+  "errorIapStoreNotAvailable": "App store is not available",
+  "errorIapLoadProductsFailed": "Failed to load products",
+  "errorIapVerificationFailed": "Verification failed, please contact support",
+  "errorIapPurchaseFailed": "Purchase failed"
 }

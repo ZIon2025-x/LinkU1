@@ -486,13 +486,13 @@ abstract class AppLocalizations {
   /// No description provided for @authEmailCode.
   ///
   /// In en, this message translates to:
-  /// **'Email Code'**
+  /// **'Email Login'**
   String get authEmailCode;
 
   /// No description provided for @authPhoneCode.
   ///
   /// In en, this message translates to:
-  /// **'Phone Verification'**
+  /// **'Phone Login'**
   String get authPhoneCode;
 
   /// No description provided for @authEnterEmail.
@@ -17713,6 +17713,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed to send phone verification code'**
   String get errorProfileSendPhoneCodeFailed;
+
+  /// No description provided for @errorIapNotAvailableWeb.
+  ///
+  /// In en, this message translates to:
+  /// **'In-app purchase is not available on web'**
+  String get errorIapNotAvailableWeb;
+
+  /// No description provided for @errorIapStoreNotAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'App store is not available'**
+  String get errorIapStoreNotAvailable;
+
+  /// No description provided for @errorIapLoadProductsFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load products'**
+  String get errorIapLoadProductsFailed;
+
+  /// No description provided for @errorIapVerificationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification failed, please contact support'**
+  String get errorIapVerificationFailed;
+
+  /// No description provided for @errorIapPurchaseFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase failed'**
+  String get errorIapPurchaseFailed;
 }
 
 class _AppLocalizationsDelegate

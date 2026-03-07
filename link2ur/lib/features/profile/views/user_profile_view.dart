@@ -29,16 +29,10 @@ import '../bloc/profile_bloc.dart';
 
 /// 公开用户资料页
 /// 参考iOS UserProfileView.swift
-class UserProfileView extends StatefulWidget {
+class UserProfileView extends StatelessWidget {
   const UserProfileView({super.key, required this.userId});
 
   final String userId;
-
-  @override
-  State<UserProfileView> createState() => _UserProfileViewState();
-}
-
-class _UserProfileViewState extends State<UserProfileView> {
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +43,7 @@ class _UserProfileViewState extends State<UserProfileView> {
         userRepository: context.read<UserRepository>(),
         taskRepository: context.read<TaskRepository>(),
         forumRepository: context.read<ForumRepository>(),
-      )..add(ProfileLoadPublicProfile(widget.userId)),
+      )..add(ProfileLoadPublicProfile(userId)),
       child: BlocBuilder<ProfileBloc, ProfileState>(
         buildWhen: (prev, curr) =>
             prev.isLoading != curr.isLoading ||
@@ -67,7 +61,7 @@ class _UserProfileViewState extends State<UserProfileView> {
                         message: state.errorMessage!,
                         onRetry: () {
                           context.read<ProfileBloc>().add(
-                                ProfileLoadPublicProfile(widget.userId),
+                                ProfileLoadPublicProfile(userId),
                               );
                         },
                       )
@@ -82,7 +76,7 @@ class _UserProfileViewState extends State<UserProfileView> {
                                 child: RefreshIndicator(
                                   onRefresh: () async {
                                     context.read<ProfileBloc>().add(
-                                          ProfileLoadPublicProfile(widget.userId),
+                                          ProfileLoadPublicProfile(userId),
                                         );
                                   },
                                   child: SingleChildScrollView(

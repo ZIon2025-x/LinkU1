@@ -189,10 +189,14 @@ class AuthRepository {
   }
 
   /// 发送邮箱验证码
-  Future<void> sendEmailCode(String email) async {
+  /// [purpose] 为 "register" 时后端会检查邮箱是否已注册
+  Future<void> sendEmailCode(String email, {String? purpose}) async {
     final response = await _apiService.post(
       ApiEndpoints.sendVerificationCode,
-      data: {'email': email},
+      data: {
+        'email': email,
+        if (purpose != null) 'purpose': purpose,
+      },
     );
 
     if (!response.isSuccess) {

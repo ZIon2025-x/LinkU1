@@ -212,6 +212,16 @@ class ErrorLocalizer {
         return context.l10n.errorProfileSendEmailCodeFailed;
       case 'profile_send_phone_code_failed':
         return context.l10n.errorProfileSendPhoneCodeFailed;
+      case 'iap_not_available_web':
+        return context.l10n.errorIapNotAvailableWeb;
+      case 'iap_store_not_available':
+        return context.l10n.errorIapStoreNotAvailable;
+      case 'iap_load_products_failed':
+        return context.l10n.errorIapLoadProductsFailed;
+      case 'iap_verification_failed':
+        return context.l10n.errorIapVerificationFailed;
+      case 'iap_purchase_failed':
+        return context.l10n.errorIapPurchaseFailed;
       case 'You have already reviewed this task.':
         return context.l10n.taskDetailTaskAlreadyReviewed;
       case 'Task is not completed yet.':

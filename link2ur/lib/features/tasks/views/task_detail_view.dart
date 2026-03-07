@@ -307,13 +307,14 @@ class _TaskDetailContent extends StatelessWidget {
         (task.status == AppConstants.taskStatusOpen ||
             task.status == AppConstants.taskStatusInProgress);
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     SheetAdaptation.showAdaptiveModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (_) => Container(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
         decoration: BoxDecoration(
-          color: Theme.of(context).brightness == Brightness.dark
+          color: isDark
               ? AppColors.cardBackgroundDark
               : Colors.white,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
@@ -867,6 +868,7 @@ class _TaskDetailContent extends StatelessWidget {
         notificationId != null &&
         task.status == AppConstants.taskStatusOpen &&
         state.userApplication?.status == 'pending') {
+      final nid = notificationId!;
       return Row(
         children: [
           Expanded(
@@ -875,7 +877,7 @@ class _TaskDetailContent extends StatelessWidget {
                 context.read<TaskDetailBloc>().add(
                   TaskDetailRespondNegotiationRequested(
                     action: 'reject',
-                    notificationId: notificationId!,
+                    notificationId: nid,
                   ),
                 );
               },
@@ -891,7 +893,7 @@ class _TaskDetailContent extends StatelessWidget {
                 context.read<TaskDetailBloc>().add(
                   TaskDetailRespondNegotiationRequested(
                     action: 'accept',
-                    notificationId: notificationId!,
+                    notificationId: nid,
                   ),
                 );
               },
@@ -1056,16 +1058,19 @@ class _TaskDetailContent extends StatelessWidget {
               ),
             ),
           );
-          await for (final s in bloc.stream) {
-            if (s.actionMessage == 'review_submitted' ||
-                s.actionMessage == 'review_failed') {
-              return (
-                success: s.actionMessage == 'review_submitted',
-                error: s.errorMessage,
-              );
-            }
+          try {
+            final s = await bloc.stream
+                .firstWhere((s) =>
+                    s.actionMessage == 'review_submitted' ||
+                    s.actionMessage == 'review_failed')
+                .timeout(const Duration(seconds: 10));
+            return (
+              success: s.actionMessage == 'review_submitted',
+              error: s.errorMessage,
+            );
+          } catch (_) {
+            return (success: false, error: null);
           }
-          return (success: false, error: null);
         },
       ),
     );
@@ -1090,11 +1095,12 @@ class _TaskDetailContent extends StatelessWidget {
   }
 
   void _showCounterOfferSheet(BuildContext context, Task task) {
+    final bloc = context.read<TaskDetailBloc>();
     showDialog<void>(
       context: context,
       builder: (dialogContext) => _CounterOfferDialog(
         onSubmit: (price) {
-          context.read<TaskDetailBloc>().add(
+          bloc.add(
                 TaskDetailSubmitCounterOfferRequested(price: price),
               );
         },

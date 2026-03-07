@@ -98,8 +98,8 @@
   "authResendCode": "重新發送",
   "authLoginMethod": "登入方式",
   "authEmailPassword": "郵箱/ID密碼",
-  "authEmailCode": "郵箱驗證碼",
-  "authPhoneCode": "手機驗證碼",
+  "authEmailCode": "郵箱登入",
+  "authPhoneCode": "手機登入",
   "authEnterEmail": "請輸入郵箱",
   "authEnterEmailOrId": "請輸入郵箱或ID",
   "authEnterPassword": "請輸入密碼",
@@ -4279,5 +4279,10 @@
   "errorProfileLoadPreferencesFailed": "載入偏好設定失敗",
   "errorProfileUpdatePreferencesFailed": "更新偏好設定失敗",
   "errorProfileSendEmailCodeFailed": "發送郵箱驗證碼失敗",
-  "errorProfileSendPhoneCodeFailed": "發送手機驗證碼失敗"
+  "errorProfileSendPhoneCodeFailed": "發送手機驗證碼失敗",
+  "errorIapNotAvailableWeb": "Web端不支援應用內購買",
+  "errorIapStoreNotAvailable": "應用商店不可用",
+  "errorIapLoadProductsFailed": "載入產品失敗",
+  "errorIapVerificationFailed": "驗證失敗，請聯繫客服",
+  "errorIapPurchaseFailed": "購買失敗"
 }

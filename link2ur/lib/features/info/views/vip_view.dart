@@ -465,7 +465,7 @@ class _VipViewState extends State<VipView> {
         AppSpacing.vMd,
         _PlanCard(
           title: l10n.infoVipMonthly,
-          price: '\$4.99',
+          price: IAPService.instance.getProduct(IAPService.vipMonthlyId)?.price ?? '\$4.99',
           period: l10n.vipPerMonth,
           features: [
             l10n.vipPlanFeatureMonthly1,
@@ -478,7 +478,7 @@ class _VipViewState extends State<VipView> {
         AppSpacing.vSm,
         _PlanCard(
           title: l10n.infoVipYearly,
-          price: '\$39.99',
+          price: IAPService.instance.getProduct(IAPService.vipYearlyId)?.price ?? '\$39.99',
           period: l10n.vipPerYear,
           features: [
             l10n.vipPlanFeatureYearly1,

@@ -71,7 +71,10 @@ class _ApplyLeaderboardViewState extends State<ApplyLeaderboardView> {
     }
 
     AppHaptics.medium();
-    blocContext.read<LeaderboardBloc>().add(
+    final bloc = blocContext.read<LeaderboardBloc>();
+    final bytes = _coverImage != null ? await _coverImage!.readAsBytes() : null;
+    if (!mounted) return;
+    bloc.add(
           LeaderboardApplyRequested(
             name: _titleController.text.trim(),
             location: _locationController.text.trim(),
@@ -81,7 +84,7 @@ class _ApplyLeaderboardViewState extends State<ApplyLeaderboardView> {
             applicationReason: _reasonController.text.trim().isEmpty
                 ? null
                 : _reasonController.text.trim(),
-            coverImageBytes: _coverImage != null ? await _coverImage!.readAsBytes() : null,
+            coverImageBytes: bytes,
             coverImageName: _coverImage?.name,
           ),
         );

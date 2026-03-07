@@ -174,7 +174,7 @@ void main() {
       'optimistically updates like state and commits on success',
       build: () {
         when(() => mockForumRepository.likePost(any()))
-            .thenAnswer((_) async {});
+            .thenAnswer((_) async => (liked: true, likeCount: 6));
         return forumBloc;
       },
       seed: () => ForumState(
@@ -228,7 +228,7 @@ void main() {
       'calls favoritePost on repository and updates posts',
       build: () {
         when(() => mockForumRepository.favoritePost(any()))
-            .thenAnswer((_) async {});
+            .thenAnswer((_) async => (favorited: true, favoriteCount: 1));
         return forumBloc;
       },
       seed: () => ForumState(

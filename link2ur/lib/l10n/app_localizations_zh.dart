@@ -207,10 +207,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get authEmailPassword => '邮箱/ID密码';
 
   @override
-  String get authEmailCode => '邮箱验证码';
+  String get authEmailCode => '邮箱登录';
 
   @override
-  String get authPhoneCode => '手机验证码';
+  String get authPhoneCode => '手机登录';
 
   @override
   String get authEnterEmail => '请输入邮箱';
@@ -9244,6 +9244,21 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get errorProfileSendPhoneCodeFailed => '发送手机验证码失败';
+
+  @override
+  String get errorIapNotAvailableWeb => 'Web端不支持应用内购买';
+
+  @override
+  String get errorIapStoreNotAvailable => '应用商店不可用';
+
+  @override
+  String get errorIapLoadProductsFailed => '加载产品失败';
+
+  @override
+  String get errorIapVerificationFailed => '验证失败，请联系客服';
+
+  @override
+  String get errorIapPurchaseFailed => '购买失败';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -9449,10 +9464,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get authEmailPassword => '郵箱/ID密碼';
 
   @override
-  String get authEmailCode => '郵箱驗證碼';
+  String get authEmailCode => '郵箱登入';
 
   @override
-  String get authPhoneCode => '手機驗證碼';
+  String get authPhoneCode => '手機登入';
 
   @override
   String get authEnterEmail => '請輸入郵箱';
@@ -18486,4 +18501,19 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get errorProfileSendPhoneCodeFailed => '發送手機驗證碼失敗';
+
+  @override
+  String get errorIapNotAvailableWeb => 'Web端不支援應用內購買';
+
+  @override
+  String get errorIapStoreNotAvailable => '應用商店不可用';
+
+  @override
+  String get errorIapLoadProductsFailed => '載入產品失敗';
+
+  @override
+  String get errorIapVerificationFailed => '驗證失敗，請聯繫客服';
+
+  @override
+  String get errorIapPurchaseFailed => '購買失敗';
 }

@@ -33,6 +33,7 @@ class WebSocketService extends WidgetsBindingObserver {
   static const Duration _initialReconnectDelay = Duration(seconds: 1);
   static const Duration _maxReconnectDelay = Duration(seconds: 60);
   bool _appInForeground = true;
+  bool _isObserverRegistered = false;
 
   /// 消息流控制器
   final _messageController = StreamController<WebSocketMessage>.broadcast();
@@ -57,7 +58,10 @@ class WebSocketService extends WidgetsBindingObserver {
     _isConnecting = true;
 
     // 注册生命周期观察者（自适应心跳）
-    WidgetsBinding.instance.addObserver(this);
+    if (!_isObserverRegistered) {
+      WidgetsBinding.instance.addObserver(this);
+      _isObserverRegistered = true;
+    }
 
     // 检查网络状态 — 无网络时不尝试连接，等待网络恢复
     if (!NetworkMonitor.instance.isConnected) {
@@ -141,7 +145,10 @@ class WebSocketService extends WidgetsBindingObserver {
     _shouldBeConnected = false;
     _cancelReconnect();
     _stopHeartbeat();
-    WidgetsBinding.instance.removeObserver(this);
+    if (_isObserverRegistered) {
+      WidgetsBinding.instance.removeObserver(this);
+      _isObserverRegistered = false;
+    }
     _networkSubscription?.cancel();
     _networkSubscription = null;
     _subscription?.cancel();
@@ -369,7 +376,10 @@ class WebSocketService extends WidgetsBindingObserver {
     _shouldBeConnected = false;
     _cancelReconnect();
     _stopHeartbeat();
-    WidgetsBinding.instance.removeObserver(this);
+    if (_isObserverRegistered) {
+      WidgetsBinding.instance.removeObserver(this);
+      _isObserverRegistered = false;
+    }
     _networkSubscription?.cancel();
     _networkSubscription = null;
     _subscription?.cancel();

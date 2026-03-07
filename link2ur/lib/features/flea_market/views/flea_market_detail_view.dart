@@ -296,7 +296,8 @@ class _FleaMarketDetailContent extends StatelessWidget {
         final bloc = context.read<FleaMarketBloc>();
         bloc.add(FleaMarketLoadDetailRequested(item.id));
         await bloc.stream.firstWhere((s) =>
-            s.isDetailLoaded || s.detailStatus == FleaMarketStatus.error);
+            s.isDetailLoaded || s.detailStatus == FleaMarketStatus.error)
+            .timeout(const Duration(seconds: 10), onTimeout: () => bloc.state);
       },
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),

@@ -390,12 +390,13 @@ class _PaymentContentState extends State<_PaymentContent> {
   /// 对齐 iOS WeChatPayWebView.swift
   /// 通过 URL 检测 payment-success / payment-cancel 判断支付结果
   Future<void> _openWeChatWebView(String checkoutUrl) async {
+    final navigator = Navigator.of(context, rootNavigator: true);
     final result = await pushWithSwipeBack<bool>(
       context,
       WeChatPayWebView(
         checkoutUrl: checkoutUrl,
-        onPaymentSuccess: () => Navigator.of(context, rootNavigator: true).pop(true),
-        onPaymentCancel: () => Navigator.of(context, rootNavigator: true).pop(false),
+        onPaymentSuccess: () => navigator.pop(true),
+        onPaymentCancel: () => navigator.pop(false),
       ),
       useRootNavigator: true,
     );

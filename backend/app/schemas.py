@@ -47,6 +47,7 @@ class EmailVerificationCodeRequest(BaseModel):
     """请求发送邮箱验证码"""
     email: str
     captcha_token: Optional[str] = None  # CAPTCHA 验证 token
+    purpose: Optional[str] = None  # "register" 时检查邮箱是否已注册
 
 class EmailVerificationCodeLogin(BaseModel):
     """使用邮箱验证码登录"""
@@ -3715,7 +3716,10 @@ class CustomLeaderboardBase(BaseModel):
 
 
 class CustomLeaderboardCreate(CustomLeaderboardBase):
-    pass
+    name_zh: Optional[str] = None
+    name_en: Optional[str] = None
+    description_zh: Optional[str] = None
+    description_en: Optional[str] = None
 
 
 class CustomLeaderboardAdminUpdate(BaseModel):

@@ -333,7 +333,7 @@ class _FleaMarketViewContentState extends State<_FleaMarketViewContent> {
         await bloc.stream.firstWhere(
           (s) => !s.isRefreshing,
           orElse: () => state,
-        );
+        ).timeout(const Duration(seconds: 10), onTimeout: () => state);
       },
       child: MasonryGridView.count(
         crossAxisCount: columnCount,

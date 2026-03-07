@@ -12,6 +12,7 @@ import '../../../core/design/app_radius.dart';
 import '../../../core/widgets/cross_platform_image.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/utils/error_localizer.dart';
+import '../../../core/utils/logger.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/utils/validators.dart';
@@ -134,7 +135,7 @@ class _PublishContentState extends State<_PublishContent>
       vsync: this,
       duration: AppConstants.animationDuration,
     );
-    _loadRecentItems();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadRecentItems());
   }
 
   Future<void> _loadRecentItems() async {
@@ -178,7 +179,8 @@ class _PublishContentState extends State<_PublishContent>
       items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       final top3 = items.take(3).toList();
       if (mounted) setState(() => _recentItems = top3);
-    } catch (_) {
+    } catch (e) {
+      AppLogger.warning('Failed to load recent items: $e');
       if (mounted) setState(() => _recentItems = []);
     }
   }

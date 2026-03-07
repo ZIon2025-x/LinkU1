@@ -82,12 +82,14 @@ class AuthForceLogout extends AuthEvent {}
 
 /// 发送邮箱验证码
 class AuthSendEmailCodeRequested extends AuthEvent {
-  const AuthSendEmailCodeRequested({required this.email});
+  const AuthSendEmailCodeRequested({required this.email, this.purpose});
 
   final String email;
+  /// "register" 时后端会检查邮箱是否已注册
+  final String? purpose;
 
   @override
-  List<Object> get props => [email];
+  List<Object?> get props => [email, purpose];
 }
 
 /// 发送手机验证码
