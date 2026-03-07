@@ -160,6 +160,7 @@ async def _fetch_forum_posts(db: AsyncSession, limit: int, visible_category_ids:
             models.ForumPost.view_count,
             models.ForumPost.created_at,
             models.ForumPost.author_id,
+            models.ForumPost.admin_author_id,
             models.User.name.label("author_name"),
             models.User.avatar.label("author_avatar"),
             models.ForumCategory.name.label("category_name"),
@@ -206,6 +207,16 @@ async def _fetch_forum_posts(db: AsyncSession, limit: int, visible_category_ids:
         if getattr(row, "category_name_en", None):
             extra["category_name_en"] = row.category_name_en
 
+        # 管理员发帖：统一显示为官方账号
+        if row.admin_author_id:
+            display_user_id = row.admin_author_id
+            display_user_name = "Link²Ur"
+            display_user_avatar = "/static/logo.png"
+        else:
+            display_user_id = str(row.author_id) if row.author_id else None
+            display_user_name = row.author_name or "匿名用户"
+            display_user_avatar = row.author_avatar
+
         items.append({
             "feed_type": "forum_post",
             "id": f"post_{row.id}",
@@ -216,9 +227,9 @@ async def _fetch_forum_posts(db: AsyncSession, limit: int, visible_category_ids:
             "description_zh": description_zh,
             "description_en": description_en,
             "images": post_images if post_images else None,
-            "user_id": str(row.author_id) if row.author_id else None,
-            "user_name": row.author_name or "匿名用户",
-            "user_avatar": row.author_avatar,
+            "user_id": display_user_id,
+            "user_name": display_user_name,
+            "user_avatar": display_user_avatar,
             "price": None,
             "original_price": None,
             "discount_percentage": None,
