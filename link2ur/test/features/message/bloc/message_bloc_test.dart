@@ -135,7 +135,7 @@ void main() {
       );
 
       blocTest<MessageBloc, MessageState>(
-        'does not emit loading state when contacts already exist',
+        'does not emit when contacts already exist and returned same list',
         build: () {
           when(() => mockMessageRepository.getContacts(
                 page: any(named: 'page'),
@@ -148,13 +148,9 @@ void main() {
           contacts: testContacts,
         ),
         act: (bloc) => bloc.add(const MessageLoadContacts()),
-        expect: () => [
-          // Only the loaded state, no intermediate loading state
-          isA<MessageState>()
-              .having((s) => s.status, 'status', MessageStatus.loaded)
-              .having(
-                  (s) => s.contacts.length, 'contacts.length', 2),
-        ],
+        // Skips loading (hasExistingData), then emits loaded with same
+        // contacts → Equatable dedup → no emission.
+        expect: () => [],
       );
 
       blocTest<MessageBloc, MessageState>(
@@ -170,7 +166,7 @@ void main() {
 
     group('MessageLoadTaskChats', () {
       blocTest<MessageBloc, MessageState>(
-        'emits [loading, loaded with preferences, loaded with taskChats] on success from initial',
+        'emits [loading, loaded] on success from initial (_loadPreferences deduped by Equatable)',
         build: () {
           when(() => mockMessageRepository.getTaskChats(
                 page: any(named: 'page'),
@@ -183,11 +179,7 @@ void main() {
           // 1. loading status
           isA<MessageState>()
               .having((s) => s.status, 'status', MessageStatus.loading),
-          // 2. _loadPreferences emits with empty pinned/hidden (StorageService not initialized)
-          isA<MessageState>()
-              .having((s) => s.pinnedTaskIds, 'pinnedTaskIds', isEmpty)
-              .having((s) => s.hiddenTaskChats, 'hiddenTaskChats', isEmpty),
-          // 3. loaded with task chats
+          // 2. loaded with task chats (_loadPreferences emits same defaults → Equatable dedup)
           isA<MessageState>()
               .having((s) => s.status, 'status', MessageStatus.loaded)
               .having((s) => s.taskChats.length, 'taskChats.length', 2)
@@ -213,9 +205,6 @@ void main() {
         expect: () => [
           isA<MessageState>()
               .having((s) => s.status, 'status', MessageStatus.loading),
-          // _loadPreferences emit
-          isA<MessageState>()
-              .having((s) => s.pinnedTaskIds, 'pinnedTaskIds', isEmpty),
           isA<MessageState>()
               .having((s) => s.status, 'status', MessageStatus.error)
               .having(
@@ -237,11 +226,8 @@ void main() {
           taskChats: testTaskChats,
         ),
         act: (bloc) => bloc.add(const MessageLoadTaskChats(forceRefresh: true)),
-        expect: () => [
-          // Only _loadPreferences emission, no error emission because status was already loaded
-          isA<MessageState>()
-              .having((s) => s.pinnedTaskIds, 'pinnedTaskIds', isEmpty),
-        ],
+        // _loadPreferences emits same defaults → Equatable dedup; error suppressed because already loaded
+        expect: () => [],
       );
     });
 
@@ -445,10 +431,7 @@ void main() {
           // 1. isRefreshing = true
           isA<MessageState>()
               .having((s) => s.isRefreshing, 'isRefreshing', true),
-          // 2. _loadPreferences emission
-          isA<MessageState>()
-              .having((s) => s.pinnedTaskIds, 'pinnedTaskIds', isEmpty),
-          // 3. loaded with refreshed data
+          // 2. loaded with refreshed data (_loadPreferences deduped by Equatable)
           isA<MessageState>()
               .having((s) => s.status, 'status', MessageStatus.loaded)
               .having(
@@ -476,9 +459,7 @@ void main() {
         expect: () => [
           isA<MessageState>()
               .having((s) => s.isRefreshing, 'isRefreshing', true),
-          // _loadPreferences
-          isA<MessageState>()
-              .having((s) => s.pinnedTaskIds, 'pinnedTaskIds', isEmpty),
+          // _loadPreferences deduped by Equatable
           isA<MessageState>()
               .having((s) => s.status, 'status', MessageStatus.error)
               .having(

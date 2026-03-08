@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:link2ur/features/ai_chat/bloc/unified_chat_bloc.dart';
-import 'package:link2ur/features/ai_chat/bloc/ai_chat_bloc.dart';
 import 'package:link2ur/data/services/ai_chat_service.dart';
 import 'package:link2ur/data/models/ai_chat.dart';
 import 'package:link2ur/data/models/customer_service.dart';
@@ -227,13 +226,10 @@ void main() {
             bloc.add(const UnifiedChatRequestHumanCS()),
         wait: const Duration(milliseconds: 300),
         expect: () => [
-          // 1. Immediate emit: mode -> transferring
+          // 1. Immediate emit: mode -> transferring (CS connecting deduped by Equatable)
           isA<UnifiedChatState>()
               .having((s) => s.mode, 'mode', ChatMode.transferring),
-          // 2. CS sub-bloc emits connecting -> _CSStateChanged -> mode stays transferring
-          isA<UnifiedChatState>()
-              .having((s) => s.mode, 'mode', ChatMode.transferring),
-          // 3. CS sub-bloc emits connected -> _CSStateChanged -> mode -> csConnected
+          // 2. CS sub-bloc emits connected -> _CSStateChanged -> mode -> csConnected
           isA<UnifiedChatState>()
               .having((s) => s.mode, 'mode', ChatMode.csConnected)
               .having((s) => s.csServiceName, 'csServiceName', 'Agent Smith')
@@ -252,13 +248,10 @@ void main() {
             bloc.add(const UnifiedChatRequestHumanCS()),
         wait: const Duration(milliseconds: 300),
         expect: () => [
-          // 1. Immediate emit: mode -> transferring
+          // 1. Immediate emit: mode -> transferring (CS connecting deduped by Equatable)
           isA<UnifiedChatState>()
               .having((s) => s.mode, 'mode', ChatMode.transferring),
-          // 2. CS sub-bloc emits connecting
-          isA<UnifiedChatState>()
-              .having((s) => s.mode, 'mode', ChatMode.transferring),
-          // 3. CS sub-bloc emits error -> _CSStateChanged -> mode -> ai (fallback)
+          // 2. CS sub-bloc emits error -> _CSStateChanged -> mode -> ai (fallback)
           isA<UnifiedChatState>()
               .having((s) => s.mode, 'mode', ChatMode.ai)
               .having((s) => s.errorMessage, 'errorMessage', isNotNull),
@@ -446,9 +439,7 @@ void main() {
         },
         wait: const Duration(milliseconds: 500),
         expect: () => [
-          // UnifiedChatRequestHumanCS sequence
-          isA<UnifiedChatState>()
-              .having((s) => s.mode, 'mode', ChatMode.transferring),
+          // UnifiedChatRequestHumanCS sequence (CS connecting deduped by Equatable)
           isA<UnifiedChatState>()
               .having((s) => s.mode, 'mode', ChatMode.transferring),
           isA<UnifiedChatState>()
@@ -505,9 +496,7 @@ void main() {
         },
         wait: const Duration(milliseconds: 600),
         expect: () => [
-          // Connect sequence
-          isA<UnifiedChatState>()
-              .having((s) => s.mode, 'mode', ChatMode.transferring),
+          // Connect sequence (CS connecting deduped by Equatable)
           isA<UnifiedChatState>()
               .having((s) => s.mode, 'mode', ChatMode.transferring),
           isA<UnifiedChatState>()
@@ -818,10 +807,7 @@ void main() {
             bloc.add(const UnifiedChatRequestHumanCS()),
         wait: const Duration(milliseconds: 300),
         expect: () => [
-          // Immediate: transferring
-          isA<UnifiedChatState>()
-              .having((s) => s.mode, 'mode', ChatMode.transferring),
-          // CS connecting
+          // Immediate: transferring (CS connecting deduped by Equatable)
           isA<UnifiedChatState>()
               .having((s) => s.mode, 'mode', ChatMode.transferring),
           // CS connected
@@ -863,9 +849,7 @@ void main() {
         },
         wait: const Duration(milliseconds: 500),
         expect: () => [
-          // Connect sequence
-          isA<UnifiedChatState>()
-              .having((s) => s.mode, 'mode', ChatMode.transferring),
+          // Connect sequence (CS connecting deduped by Equatable)
           isA<UnifiedChatState>()
               .having((s) => s.mode, 'mode', ChatMode.transferring),
           isA<UnifiedChatState>()
@@ -881,18 +865,14 @@ void main() {
         'CS error falls back to AI mode with error message',
         build: () {
           when(() => mockCommonRepo.assignCustomerService())
-              .thenThrow(
-                  const CommonException('customer_service_unavailable'));
+              .thenThrow(Exception('customer_service_unavailable'));
           return buildBloc();
         },
         act: (bloc) =>
             bloc.add(const UnifiedChatRequestHumanCS()),
         wait: const Duration(milliseconds: 300),
         expect: () => [
-          // Immediate: transferring
-          isA<UnifiedChatState>()
-              .having((s) => s.mode, 'mode', ChatMode.transferring),
-          // CS connecting
+          // Immediate: transferring (CS connecting deduped by Equatable)
           isA<UnifiedChatState>()
               .having((s) => s.mode, 'mode', ChatMode.transferring),
           // CS error -> fallback to AI
@@ -926,10 +906,7 @@ void main() {
             bloc.add(const UnifiedChatRequestHumanCS()),
         wait: const Duration(milliseconds: 300),
         expect: () => [
-          // Immediate: transferring
-          isA<UnifiedChatState>()
-              .having((s) => s.mode, 'mode', ChatMode.transferring),
-          // CS connecting
+          // Immediate: transferring (CS connecting deduped by Equatable)
           isA<UnifiedChatState>()
               .having((s) => s.mode, 'mode', ChatMode.transferring),
           // CS ended (is_ended == 1)
@@ -1125,9 +1102,7 @@ void main() {
         },
         wait: const Duration(milliseconds: 500),
         expect: () => [
-          // Connect sequence
-          isA<UnifiedChatState>()
-              .having((s) => s.mode, 'mode', ChatMode.transferring),
+          // Connect sequence (CS connecting deduped by Equatable)
           isA<UnifiedChatState>()
               .having((s) => s.mode, 'mode', ChatMode.transferring),
           isA<UnifiedChatState>()

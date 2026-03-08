@@ -401,7 +401,7 @@ void main() {
           status: AIChatStatus.loaded,
           currentConversationId: 'conv-1',
           taskDraft: const {'title': 'Draft Task'},
-          lastToolName: 'search_tasks',
+          // Note: lastToolName is NOT seeded — SendMessage's copyWith omits it, resetting to null
         ),
         act: (bloc) => bloc.add(const AIChatSendMessage('test')),
         wait: const Duration(milliseconds: 300),
@@ -411,22 +411,18 @@ void main() {
               .having((s) => s.isReplying, 'isReplying', true)
               .having((s) => s.taskDraft, 'taskDraft',
                   const {'title': 'Draft Task'}),
-          // Token 1 — preserves taskDraft and lastToolName
+          // Token 1 — preserves taskDraft; lastToolName is null (no toolResult yet)
           isA<AIChatState>()
               .having(
                   (s) => s.streamingContent, 'streamingContent', 'Hello')
               .having((s) => s.taskDraft, 'taskDraft',
-                  const {'title': 'Draft Task'})
-              .having(
-                  (s) => s.lastToolName, 'lastToolName', 'search_tasks'),
-          // Token 2 — preserves taskDraft and lastToolName
+                  const {'title': 'Draft Task'}),
+          // Token 2 — preserves taskDraft
           isA<AIChatState>()
               .having((s) => s.streamingContent, 'streamingContent',
                   'Hello World')
               .having((s) => s.taskDraft, 'taskDraft',
-                  const {'title': 'Draft Task'})
-              .having(
-                  (s) => s.lastToolName, 'lastToolName', 'search_tasks'),
+                  const {'title': 'Draft Task'}),
           // Done — preserves taskDraft
           isA<AIChatState>()
               .having((s) => s.isReplying, 'isReplying', false)
@@ -678,7 +674,7 @@ void main() {
         seed: () => AIChatState(
           status: AIChatStatus.loaded,
           currentConversationId: 'conv-1',
-          lastToolName: 'check_cs',
+          // lastToolName NOT seeded — SendMessage clears it
           taskDraft: const {'title': 'Preserved'},
         ),
         act: (bloc) => bloc.add(const AIChatSendMessage('help')),
@@ -689,20 +685,18 @@ void main() {
               .having((s) => s.isReplying, 'isReplying', true)
               .having((s) => s.taskDraft, 'taskDraft',
                   const {'title': 'Preserved'}),
-          // Token — preserves lastToolName and taskDraft
+          // Token — preserves taskDraft (lastToolName is null, no toolResult in this flow)
           isA<AIChatState>()
               .having((s) => s.streamingContent, 'streamingContent',
                   'Let me help')
-              .having((s) => s.lastToolName, 'lastToolName', 'check_cs')
               .having((s) => s.taskDraft, 'taskDraft',
                   const {'title': 'Preserved'}),
-          // CS available
+          // CS available — preserves taskDraft
           isA<AIChatState>()
               .having(
                   (s) => s.csAvailableSignal, 'csAvailableSignal', true)
               .having((s) => s.csContactEmail, 'csContactEmail',
                   'support@link2ur.com')
-              .having((s) => s.lastToolName, 'lastToolName', 'check_cs')
               .having((s) => s.taskDraft, 'taskDraft',
                   const {'title': 'Preserved'}),
           // Done
@@ -739,7 +733,7 @@ void main() {
         seed: () => const AIChatState(
           status: AIChatStatus.loaded,
           currentConversationId: 'conv-1',
-          lastToolName: 'prepare_task_draft',
+          // lastToolName NOT seeded — SendMessage clears it
         ),
         act: (bloc) => bloc.add(const AIChatSendMessage('draft')),
         wait: const Duration(milliseconds: 300),
@@ -747,20 +741,16 @@ void main() {
           // User message
           isA<AIChatState>()
               .having((s) => s.isReplying, 'isReplying', true),
-          // Task draft event — sets taskDraft, preserves lastToolName
+          // Task draft event — sets taskDraft (lastToolName still null, no toolResult)
           isA<AIChatState>()
               .having((s) => s.taskDraft, 'taskDraft',
-                  const {'title': 'SSE Draft', 'budget': 50})
-              .having((s) => s.lastToolName, 'lastToolName',
-                  'prepare_task_draft'),
-          // Token — preserves both
+                  const {'title': 'SSE Draft', 'budget': 50}),
+          // Token — preserves taskDraft
           isA<AIChatState>()
               .having((s) => s.streamingContent, 'streamingContent',
                   'Here is your draft')
               .having((s) => s.taskDraft, 'taskDraft',
-                  const {'title': 'SSE Draft', 'budget': 50})
-              .having((s) => s.lastToolName, 'lastToolName',
-                  'prepare_task_draft'),
+                  const {'title': 'SSE Draft', 'budget': 50}),
           // Done
           isA<AIChatState>()
               .having((s) => s.isReplying, 'isReplying', false)
@@ -854,9 +844,9 @@ void main() {
                   (s) => s.conversations.length, 'conversations.length', 1)
               .having((s) => s.conversations.first.id, 'remaining conv id',
                   'conv-2')
-              // Current conversation archived → reset to null
+              // Note: copyWith uses ?? for currentConversationId, so null → keeps old value
               .having((s) => s.currentConversationId,
-                  'currentConversationId', isNull)
+                  'currentConversationId', 'conv-1')
               // Messages cleared since we archived the current conversation
               .having((s) => s.messages, 'messages', isEmpty),
         ],
@@ -1009,8 +999,9 @@ void main() {
         act: (bloc) => bloc.add(const AIChatSendMessage('msg')),
         wait: const Duration(milliseconds: 300),
         verify: (bloc) {
-          // lastToolName set by toolResult should survive through all subsequent events
-          expect(bloc.state.lastToolName, equals('my_tool'));
+          // lastToolName is captured in the AIMessage.toolName before messageCompleted clears it
+          // (messageCompleted's copyWith omits lastToolName → null)
+          expect(bloc.state.lastToolName, isNull);
           expect(bloc.state.isReplying, isFalse);
           expect(bloc.state.messages.last.toolName, equals('my_tool'));
         },

@@ -1693,3 +1693,139 @@ export async function getFilterLogs(params: {
   const res = await api.get('/api/admin/content-moderation/filter-logs', { params });
   return res.data;
 }
+
+// ==================== Newbie Tasks Config ====================
+
+export async function getNewbieTasksConfig() {
+  const res = await api.get('/api/admin/newbie-tasks/config');
+  return res.data;
+}
+
+export async function updateNewbieTaskConfig(taskKey: string, data: {
+  title_zh?: string; title_en?: string; reward_amount?: number; is_active?: boolean;
+}) {
+  const res = await api.put(`/api/admin/newbie-tasks/config/${taskKey}`, data);
+  return res.data;
+}
+
+export async function getStageBonusConfig() {
+  const res = await api.get('/api/admin/stage-bonus/config');
+  return res.data;
+}
+
+export async function updateStageBonusConfig(stage: number, data: {
+  bonus_amount?: number; is_active?: boolean;
+}) {
+  const res = await api.put(`/api/admin/stage-bonus/config/${stage}`, data);
+  return res.data;
+}
+
+// ==================== Official Tasks ====================
+
+export async function getOfficialTasks(params?: {
+  offset?: number; limit?: number; status?: string;
+}) {
+  const res = await api.get('/api/admin/official-tasks', { params });
+  return res.data;
+}
+
+export async function createOfficialTask(data: {
+  title_zh: string; title_en: string; description_zh?: string; description_en?: string;
+  topic_tag?: string; task_type: string; reward_type: string; reward_amount: number;
+  max_per_user?: number; valid_from?: string; valid_until?: string;
+}) {
+  const res = await api.post('/api/admin/official-tasks', data);
+  return res.data;
+}
+
+export async function updateOfficialTask(id: number, data: Record<string, any>) {
+  const res = await api.put(`/api/admin/official-tasks/${id}`, data);
+  return res.data;
+}
+
+export async function deleteOfficialTask(id: number) {
+  const res = await api.delete(`/api/admin/official-tasks/${id}`);
+  return res.data;
+}
+
+export async function getOfficialTaskStats(id: number) {
+  const res = await api.get(`/api/admin/official-tasks/${id}/stats`);
+  return res.data;
+}
+
+// ==================== Manual Rewards ====================
+
+export async function sendManualReward(data: {
+  user_id: string; reward_type: string; amount: number; reason: string;
+}) {
+  const res = await api.post('/api/admin/rewards/send', data);
+  return res.data;
+}
+
+export async function getRewardLogs(params?: {
+  offset?: number; limit?: number; user_id?: string;
+}) {
+  const res = await api.get('/api/admin/rewards/logs', { params });
+  return res.data;
+}
+
+// ==================== Check-in Reward Config ====================
+
+export async function getCheckinRewards() {
+  const res = await api.get('/api/admin/checkin/rewards');
+  return res.data;
+}
+
+export async function createCheckinReward(data: {
+  consecutive_days: number; reward_type: string; points_reward: number; is_active: boolean;
+}) {
+  const res = await api.post('/api/admin/checkin/rewards', data);
+  return res.data;
+}
+
+export async function updateCheckinReward(id: number, data: {
+  consecutive_days?: number; reward_type?: string; points_reward?: number; is_active?: boolean;
+}) {
+  const res = await api.put(`/api/admin/checkin/rewards/${id}`, data);
+  return res.data;
+}
+
+// ==================== Skill Categories ====================
+
+export async function getSkillCategoriesAdmin(params?: {
+  offset?: number; limit?: number;
+}) {
+  const res = await api.get('/api/admin/skill-categories', { params });
+  return res.data;
+}
+
+export async function createSkillCategory(data: {
+  name_zh: string; name_en: string; icon?: string; display_order?: number;
+}) {
+  const res = await api.post('/api/admin/skill-categories', data);
+  return res.data;
+}
+
+export async function updateSkillCategory(id: number, data: {
+  name_zh?: string; name_en?: string; icon?: string; display_order?: number;
+}) {
+  const res = await api.put(`/api/admin/skill-categories/${id}`, data);
+  return res.data;
+}
+
+export async function deleteSkillCategory(id: number) {
+  const res = await api.delete(`/api/admin/skill-categories/${id}`);
+  return res.data;
+}
+
+// ==================== Skill Leaderboard ====================
+
+export async function getSkillLeaderboard(category: string) {
+  const res = await api.get(`/api/leaderboard/skills/${category}`);
+  return res.data;
+}
+
+export async function refreshSkillLeaderboard() {
+  const res = await api.post('/api/admin/leaderboard/refresh');
+  return res.data;
+}

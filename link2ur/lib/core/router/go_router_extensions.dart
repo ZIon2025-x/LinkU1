@@ -150,6 +150,18 @@ extension GoRouterExtension on BuildContext {
     if (!_NavigationThrottle.acquire()) return;
     push(AppRoutes.supportChat);
   }
+
+  /// 跳转到新手任务中心
+  void goToNewbieTasks() {
+    if (!_NavigationThrottle.acquire()) return;
+    push(AppRoutes.newbieTasks);
+  }
+
+  /// 跳转到技能排行榜
+  void goToSkillLeaderboard() {
+    if (!_NavigationThrottle.acquire()) return;
+    push(AppRoutes.skillLeaderboard);
+  }
 }
 
 /// 将 Bloc Stream 转为 GoRouter 可监听的 ChangeNotifier

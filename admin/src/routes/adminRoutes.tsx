@@ -31,6 +31,12 @@ const StudentVerificationManagement = lazy(() => import('../pages/admin/student-
 const OAuthClientsManagement = lazy(() => import('../pages/admin/oauth-clients/OAuthClientsManagement'));
 const CancelRequestsManagement = lazy(() => import('../pages/admin/cancel-requests/CancelRequestsManagement'));
 const ContentModerationPage = lazy(() => import('../pages/admin/content-moderation').then(m => ({ default: m.ContentModerationPage })));
+const NewbieTaskConfig = lazy(() => import('../pages/admin/newbie-tasks/NewbieTaskConfig'));
+const OfficialTaskManagement = lazy(() => import('../pages/admin/official-tasks/OfficialTaskManagement'));
+const ManualRewards = lazy(() => import('../pages/admin/manual-rewards/ManualRewards'));
+const CheckinRewardConfig = lazy(() => import('../pages/admin/checkin-rewards/CheckinRewardConfig'));
+const SkillCategoryManagement = lazy(() => import('../pages/admin/skill-categories/SkillCategoryManagement'));
+const SkillLeaderboardManagement = lazy(() => import('../pages/admin/skill-leaderboard/SkillLeaderboardManagement'));
 
 // Loading component
 const LoadingFallback = () => (
@@ -129,6 +135,24 @@ export const AdminRoutes: React.FC = () => {
 
           {/* Content Moderation */}
           <Route path="content-moderation" element={<ContentModerationPage />} />
+
+          {/* Newbie Task Configuration */}
+          <Route path="newbie-tasks" element={<NewbieTaskConfig />} />
+
+          {/* Official Task Management */}
+          <Route path="official-tasks" element={<OfficialTaskManagement />} />
+
+          {/* Manual Rewards */}
+          <Route path="manual-rewards" element={<ManualRewards />} />
+
+          {/* Check-in Reward Configuration */}
+          <Route path="checkin-rewards" element={<CheckinRewardConfig />} />
+
+          {/* Skill Category Management */}
+          <Route path="skill-categories" element={<SkillCategoryManagement />} />
+
+          {/* Skill Leaderboard */}
+          <Route path="skill-leaderboard" element={<SkillLeaderboardManagement />} />
 
           {/* Settings */}
           <Route path="settings" element={<Settings />} />

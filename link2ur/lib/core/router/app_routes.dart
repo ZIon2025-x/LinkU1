@@ -93,6 +93,12 @@ class AppRoutes {
   // 积分与优惠券
   static const String couponPoints = '/coupon-points';
 
+  // 新手任务
+  static const String newbieTasks = '/newbie-tasks';
+
+  // 技能排行榜
+  static const String skillLeaderboard = '/skill-leaderboard';
+
   // 搜索
   static const String search = '/search';
 
@@ -133,6 +139,7 @@ const authRequiredRoutes = <String>{
   AppRoutes.couponPoints,
   AppRoutes.studentVerification,
   AppRoutes.taskPreferences,
+  AppRoutes.newbieTasks,
   AppRoutes.chat,
   AppRoutes.taskChat,
   AppRoutes.taskChatList,

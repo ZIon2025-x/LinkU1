@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../data/models/badge.dart';
 import '../constants/app_assets.dart';
 import '../design/app_colors.dart';
 import '../design/app_radius.dart';
@@ -154,6 +155,7 @@ class AvatarView extends StatelessWidget {
     this.backgroundColor,
     this.isOfficial = false,
     this.isAnonymous = false,
+    this.displayedBadge,
   });
 
   final String? imageUrl;
@@ -164,9 +166,56 @@ class AvatarView extends StatelessWidget {
   final bool isOfficial;
   /// 匿名用户：使用 assets/images/any.png，不请求网络头像
   final bool isAnonymous;
+  /// Optional badge to display as a colored indicator around the avatar.
+  /// When present, a small colored dot is shown at the top-right corner.
+  final UserBadge? displayedBadge;
+
+  /// Maps badge rank to a display color.
+  static Color _badgeColor(String? rank) {
+    return switch (rank) {
+      'gold' => const Color(0xFFFFD700),
+      'silver' => const Color(0xFFC0C0C0),
+      'bronze' => const Color(0xFFCD7F32),
+      _ => AppColors.primary,
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
+    final avatar = _buildAvatar(context);
+    if (displayedBadge == null) return avatar;
+
+    // Wrap with a small colored dot indicator at top-right
+    final dotSize = (size * 0.22).clamp(8.0, 16.0);
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          avatar,
+          Positioned(
+            top: 0,
+            right: 0,
+            child: Container(
+              width: dotSize,
+              height: dotSize,
+              decoration: BoxDecoration(
+                color: _badgeColor(displayedBadge!.rank),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  width: 1.5,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAvatar(BuildContext context) {
     // 1. 匿名用户 → 统一匿名头像 any.png
     if (isAnonymous) {
       return _buildLocalAsset(AppAssets.any);

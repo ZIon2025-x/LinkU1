@@ -170,6 +170,42 @@ const defaultMenuItems: MenuItem[] = [
     icon: '🔐',
     path: '/admin/oauth-clients',
   },
+  {
+    key: 'newbie-tasks',
+    label: '新手任务配置',
+    icon: '🌱',
+    path: '/admin/newbie-tasks',
+  },
+  {
+    key: 'official-tasks',
+    label: '官方任务',
+    icon: '📌',
+    path: '/admin/official-tasks',
+  },
+  {
+    key: 'manual-rewards',
+    label: '手动奖励',
+    icon: '🎁',
+    path: '/admin/manual-rewards',
+  },
+  {
+    key: 'checkin-rewards',
+    label: '签到奖励配置',
+    icon: '📅',
+    path: '/admin/checkin-rewards',
+  },
+  {
+    key: 'skill-categories',
+    label: '技能分类',
+    icon: '🏷️',
+    path: '/admin/skill-categories',
+  },
+  {
+    key: 'skill-leaderboard',
+    label: '技能排行榜',
+    icon: '🥇',
+    path: '/admin/skill-leaderboard',
+  },
 ];
 
 const PATH_LABELS: Record<string, string> = {
@@ -198,6 +234,12 @@ const PATH_LABELS: Record<string, string> = {
   '/admin/student-verification': '学生认证',
   '/admin/content-moderation': '内容审核',
   '/admin/oauth-clients': 'OAuth客户端',
+  '/admin/newbie-tasks': '新手任务配置',
+  '/admin/official-tasks': '官方任务',
+  '/admin/manual-rewards': '手动奖励',
+  '/admin/checkin-rewards': '签到奖励配置',
+  '/admin/skill-categories': '技能分类',
+  '/admin/skill-leaderboard': '技能排行榜',
   '/admin/settings': '设置',
   '/admin/2fa': '双因素认证',
 };

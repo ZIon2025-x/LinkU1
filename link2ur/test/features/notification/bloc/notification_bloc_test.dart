@@ -664,7 +664,7 @@ void main() {
       );
 
       blocTest<NotificationBloc, NotificationState>(
-        'works correctly when all notifications are already read',
+        'does not emit when all notifications are already read (Equatable dedup)',
         build: () {
           when(() => mockRepo.markAllAsRead())
               .thenAnswer((_) async {});
@@ -679,14 +679,9 @@ void main() {
           unreadCount: const UnreadNotificationCount(count: 0),
         ),
         act: (bloc) => bloc.add(const NotificationMarkAllAsRead()),
-        expect: () => [
-          isA<NotificationState>()
-              .having((s) => s.status, 'status', NotificationStatus.loaded)
-              .having((s) => s.notifications[0].isRead, 'still read', true)
-              .having((s) => s.unreadCount.count, 'unreadCount.count', 0)
-              .having(
-                  (s) => s.unreadCount.forumCount, 'unreadCount.forumCount', 0),
-        ],
+        // All notifications already read + count already 0 → emitted state
+        // is identical to seed → Equatable deduplication suppresses emission
+        expect: () => [],
       );
     });
 

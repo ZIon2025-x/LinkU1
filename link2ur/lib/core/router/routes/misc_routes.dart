@@ -7,6 +7,8 @@ import '../../../features/wallet/views/wallet_view.dart';
 import '../../../features/settings/views/settings_view.dart';
 import '../../../features/student_verification/views/student_verification_view.dart';
 import '../../../features/forum/views/forum_post_list_view.dart';
+import '../../../features/newbie_tasks/views/newbie_tasks_center_view.dart';
+import '../../../features/skill_leaderboard/views/skill_leaderboard_view.dart';
 
 /// 杂项路由：发布、钱包、设置、学生认证、论坛分类列表
 List<RouteBase> get miscRoutes => [
@@ -40,5 +42,15 @@ List<RouteBase> get miscRoutes => [
           final category = state.extra as dynamic;
           return ForumPostListView(category: category);
         },
+      ),
+      GoRoute(
+        path: AppRoutes.newbieTasks,
+        name: 'newbieTasks',
+        builder: (context, state) => const NewbieTasksCenterView(),
+      ),
+      GoRoute(
+        path: AppRoutes.skillLeaderboard,
+        name: 'skillLeaderboard',
+        builder: (context, state) => const SkillLeaderboardView(),
       ),
     ];

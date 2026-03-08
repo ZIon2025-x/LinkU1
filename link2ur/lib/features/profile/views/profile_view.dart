@@ -24,6 +24,7 @@ import '../../../data/repositories/user_repository.dart';
 import '../../../data/repositories/task_repository.dart';
 import '../../../data/repositories/forum_repository.dart';
 import '../../auth/bloc/auth_bloc.dart';
+import '../../badges/views/badges_display_view.dart';
 import 'avatar_picker_view.dart';
 import '../bloc/profile_bloc.dart';
 

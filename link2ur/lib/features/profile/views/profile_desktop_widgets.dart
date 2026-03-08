@@ -38,6 +38,14 @@ Widget _buildDesktopProfile(
 
         // 横向用户信息 + 统计
         _buildDesktopUserCard(context, profileState, user, isDark),
+        const SizedBox(height: 24),
+
+        // 徽章展示区域
+        BadgesDisplayView(
+          onBadgeTap: () {
+            // Could open badge selector dialog in the future
+          },
+        ),
         const SizedBox(height: 32),
 
         // 两列菜单

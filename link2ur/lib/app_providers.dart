@@ -16,6 +16,11 @@ import 'data/repositories/payment_repository.dart';
 import 'data/repositories/student_verification_repository.dart';
 import 'data/repositories/common_repository.dart';
 import 'data/repositories/discovery_repository.dart';
+import 'data/repositories/newbie_tasks_repository.dart';
+import 'data/repositories/official_tasks_repository.dart';
+import 'data/repositories/user_skills_repository.dart';
+import 'data/repositories/skill_leaderboard_repository.dart';
+import 'data/repositories/badges_repository.dart';
 import 'data/services/ai_chat_service.dart';
 import 'data/services/api_service.dart';
 import 'features/auth/bloc/auth_bloc.dart';
@@ -96,6 +101,21 @@ class AppProviders extends StatelessWidget {
         ),
         RepositoryProvider<AIChatService>(
           create: (_) => AIChatService(apiService: apiService),
+        ),
+        RepositoryProvider<NewbieTasksRepository>(
+          create: (_) => NewbieTasksRepository(apiService: apiService),
+        ),
+        RepositoryProvider<OfficialTasksRepository>(
+          create: (_) => OfficialTasksRepository(apiService: apiService),
+        ),
+        RepositoryProvider<UserSkillsRepository>(
+          create: (_) => UserSkillsRepository(apiService: apiService),
+        ),
+        RepositoryProvider<SkillLeaderboardRepository>(
+          create: (_) => SkillLeaderboardRepository(apiService: apiService),
+        ),
+        RepositoryProvider<BadgesRepository>(
+          create: (_) => BadgesRepository(apiService: apiService),
         ),
       ],
       child: MultiBlocProvider(

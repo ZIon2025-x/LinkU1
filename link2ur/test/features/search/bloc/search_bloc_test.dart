@@ -3,12 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:link2ur/features/search/bloc/search_bloc.dart';
-import 'package:link2ur/data/models/task.dart';
-import 'package:link2ur/data/models/forum.dart';
-import 'package:link2ur/data/models/flea_market.dart';
-import 'package:link2ur/data/models/activity.dart';
-import 'package:link2ur/data/models/leaderboard.dart';
-import 'package:link2ur/data/models/task_expert.dart';
 
 import '../../../helpers/test_helpers.dart';
 
@@ -189,12 +183,13 @@ void main() {
         'can be called from initial state without error',
         build: () => bloc,
         act: (bloc) => bloc.add(const SearchCleared()),
+        // _onCleared always emits via copyWith; even though values match
+        // initial defaults, the new list instances differ from const [],
+        // so Equatable does NOT deduplicate.
         expect: () => [
-          // State changes because query/results are explicitly set (even if
-          // same as initial defaults), and errorMessage is reset to null.
-          // Equatable may deduplicate if the emitted state matches initial.
-          // Since initial state already has all empty lists and '', Equatable
-          // will suppress the emission.
+          isA<SearchState>()
+              .having((s) => s.status, 'status', SearchStatus.initial)
+              .having((s) => s.query, 'query', ''),
         ],
       );
     });
