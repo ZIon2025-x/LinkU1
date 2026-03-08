@@ -391,12 +391,15 @@ class FleaMarketState extends Equatable {
         actionMessage,
         selectedItem,
         detailStatus,
+        isUploadingImage,
+        uploadedImageUrl,
         purchaseRequests,
         isLoadingPurchaseRequests,
         isFavorited,
         isTogglingFavorite,
         isLoadingMore,
         acceptPaymentData,
+        clearAcceptPaymentData,
       ];
 }
 

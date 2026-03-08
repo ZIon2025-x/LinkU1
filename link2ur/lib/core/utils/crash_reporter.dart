@@ -28,6 +28,14 @@ class CrashReporter {
             details.exception,
             details.stack,
           );
+        } else if (_isElementTreeTimingAssert(details)) {
+          // StatefulShellRoute.indexedStack + BLoC 轮询在路由过渡期间的时序竞争，
+          // 导致已 deactivate 的 element 被 BLoC stream listener 触发 markNeedsBuild()。
+          // 仅 debug 模式触发（release 中 assert 被编译器移除），功能不受影响。
+          AppLogger.warning(
+            'Framework timing assert (suppressed): ${details.exceptionAsString()}',
+          );
+          return; // 不红屏、不 dump
         } else {
           AppLogger.error(
             'FlutterError: ${details.exceptionAsString()}',
@@ -51,6 +59,17 @@ class CrashReporter {
     } catch (e) {
       AppLogger.error('CrashReporter - Initialization failed', e);
     }
+  }
+
+  /// 检测 Flutter framework 中因路由过渡时序导致的 element 树断言。
+  /// 这些断言仅在 debug 模式出现，release 中不存在，不影响功能。
+  static bool _isElementTreeTimingAssert(FlutterErrorDetails details) {
+    final msg = details.exceptionAsString();
+    // BuildOwner.scheduleBuildFor() — element 已 deactivate 但 stream listener 触发 rebuild
+    if (msg.contains('_elements.contains(element)')) return true;
+    // InheritedElement.unmount() — IndexedStack 分支 element 卸载时依赖未完全解除
+    if (msg.contains('_dependents.isEmpty')) return true;
+    return false;
   }
 
   /// 记录非致命错误

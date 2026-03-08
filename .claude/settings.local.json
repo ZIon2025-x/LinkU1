@@ -42,7 +42,9 @@
       "Bash(do echo \"=== $f ===\")",
       "Bash(/tmp/check_issues.txt:*)",
       "Read(//tmp/**)",
-      "Bash(F:/flutter/bin/flutter analyze:*)"
+      "Bash(F:/flutter/bin/flutter analyze:*)",
+      "Bash(PATH=\"/f/flutter/bin:$PATH\" PUB_CACHE=\"/f/DevCache/.pub-cache\" flutter test)",
+      "Bash(PATH=\"/f/flutter/bin:$PATH\" PUB_CACHE=\"/f/DevCache/.pub-cache\" flutter test:*)"
     ]
   }
 }

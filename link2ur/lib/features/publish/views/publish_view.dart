@@ -247,7 +247,7 @@ class _PublishContentState extends State<_PublishContent>
 
   // ==================== 提交 ====================
   Future<void> _submitTask() async {
-    if (!_taskFormKey.currentState!.validate()) return;
+    if (_taskFormKey.currentState == null || !_taskFormKey.currentState!.validate()) return;
     if (_taskCategoryNotifier.value == null) {
       AppFeedback.showWarning(context, context.l10n.feedbackSelectCategory);
       return;
@@ -299,7 +299,7 @@ class _PublishContentState extends State<_PublishContent>
   }
 
   Future<void> _submitFleaMarket() async {
-    if (!_fleaFormKey.currentState!.validate()) return;
+    if (_fleaFormKey.currentState == null || !_fleaFormKey.currentState!.validate()) return;
     final price = double.tryParse(_fleaPriceCtrl.text.trim());
     if (price == null || price < 0) {
       AppFeedback.showError(context, context.l10n.fleaMarketInvalidPrice);

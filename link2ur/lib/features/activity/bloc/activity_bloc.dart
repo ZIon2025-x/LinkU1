@@ -536,6 +536,6 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
     ActivityClearActionMessage event,
     Emitter<ActivityState> emit,
   ) {
-    emit(state.copyWith(actionMessage: null));
+    emit(state.copyWith());
   }
 }
