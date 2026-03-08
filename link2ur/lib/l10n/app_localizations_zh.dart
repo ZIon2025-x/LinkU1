@@ -9372,6 +9372,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get errorBadgesLoadFailed => '加载徽章失败';
+
+  @override
+  String get forumReplyFallbackParent => '↩ 回复了一条评论';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -18629,4 +18632,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get errorIapPurchaseFailed => '購買失敗';
+
+  @override
+  String get forumReplyFallbackParent => '↩ 回覆了一則留言';
 }

@@ -4417,5 +4417,7 @@
   "errorOfficialTaskExpired": "该任务已过期",
   "errorNewbieTasksLoadFailed": "加载任务失败",
   "errorLeaderboardLoadFailed": "加载排行榜失败",
-  "errorBadgesLoadFailed": "加载徽章失败"
+  "errorBadgesLoadFailed": "加载徽章失败",
+
+  "forumReplyFallbackParent": "↩ 回复了一条评论"
 }

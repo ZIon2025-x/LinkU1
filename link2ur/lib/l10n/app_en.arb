@@ -4509,5 +4509,7 @@
   "errorOfficialTaskExpired": "This task has expired",
   "errorNewbieTasksLoadFailed": "Failed to load tasks",
   "errorLeaderboardLoadFailed": "Failed to load leaderboard",
-  "errorBadgesLoadFailed": "Failed to load badges"
+  "errorBadgesLoadFailed": "Failed to load badges",
+
+  "forumReplyFallbackParent": "↩ Replied to a comment"
 }

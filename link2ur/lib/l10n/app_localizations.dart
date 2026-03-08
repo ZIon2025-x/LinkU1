@@ -17953,6 +17953,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed to load badges'**
   String get errorBadgesLoadFailed;
+
+  /// No description provided for @forumReplyFallbackParent.
+  ///
+  /// In en, this message translates to:
+  /// **'↩ Replied to a comment'**
+  String get forumReplyFallbackParent;
 }
 
 class _AppLocalizationsDelegate

@@ -42,6 +42,8 @@ class ForumPostDetailView extends StatefulWidget {
 class _ForumPostDetailViewState extends State<ForumPostDetailView> {
   final _replyController = TextEditingController();
   final _replyFocusNode = FocusNode();
+  final ScrollController _scrollController = ScrollController();
+  final Map<int, GlobalKey> _replyKeys = {};
   int? _replyToId;
   String? _replyToName;
 
@@ -49,6 +51,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
   void dispose() {
     _replyController.dispose();
     _replyFocusNode.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -66,6 +69,11 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
       _replyToId = null;
       _replyToName = null;
     });
+  }
+
+  void _pruneReplyKeys(List<ForumReply> replies) {
+    final liveIds = replies.map((r) => r.id).toSet();
+    _replyKeys.removeWhere((id, _) => !liveIds.contains(id));
   }
 
   void _showReportDialog(BuildContext context) async {
@@ -116,6 +124,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                 listenWhen: (prev, curr) =>
                     prev.isReplying && !curr.isReplying && curr.replies.length > prev.replies.length,
                 listener: (context, state) {
+                  _pruneReplyKeys(state.replies);
                   _replyController.clear();
                   _clearReplyTo();
                 },
@@ -124,6 +133,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                 listenWhen: (prev, curr) =>
                     curr.replies.length < prev.replies.length,
                 listener: (context, state) {
+                  _pruneReplyKeys(state.replies);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text(context.l10n.forumReplyDeleted)),
                   );
@@ -242,7 +252,9 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                         final contentForDesc = p != null
                             ? (p.displayContent(locale) ?? p.content)
                             : null;
-                        final rawDesc = contentForDesc?.replaceAll(RegExp(r'<[^>]*>'), '').trim() ?? '';
+                        final rawDesc = Helpers.normalizeContentNewlines(
+                          contentForDesc?.replaceAll(RegExp(r'<[^>]*>'), '').trim() ?? '',
+                        );
                         final description = rawDesc.length > 200 ? '${rawDesc.substring(0, 200)}...' : rawDesc;
                         final imageUrl = p?.images.isNotEmpty == true ? p!.images.first : null;
                         ShareUtil.share(
@@ -363,6 +375,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
             // 使用 CustomScrollView + Sliver 替代 SingleChildScrollView + Column
             // 评论区使用 SliverList 懒加载，避免一次性构建所有评论 widget
             return CustomScrollView(
+              controller: _scrollController,
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               slivers: [
                 // 图片轮播（顶部）
@@ -471,11 +484,20 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                             .withValues(alpha: 0.3),
                       ),
                       itemBuilder: (context, index) {
+                        final reply = state.replies[index];
+                        final key = _replyKeys.putIfAbsent(reply.id, () => GlobalKey());
+                        final parentReply = reply.parentReplyId != null
+                            ? state.replies.where((r) => r.id == reply.parentReplyId).firstOrNull
+                            : null;
                         return _ReplyCard(
-                          reply: state.replies[index],
+                          key: key,
+                          reply: reply,
+                          parentReply: parentReply,
                           isDark: isDark,
                           postId: widget.postId,
                           onReplyTo: _setReplyTo,
+                          scrollController: _scrollController,
+                          replyKeys: _replyKeys,
                         );
                       },
                     ),
@@ -969,27 +991,30 @@ class _ReplySectionHeader extends StatelessWidget {
 
 class _ReplyCard extends StatelessWidget {
   const _ReplyCard({
+    super.key,
     required this.reply,
     required this.isDark,
     required this.postId,
     required this.onReplyTo,
+    this.parentReply,
+    this.scrollController,
+    this.replyKeys,
   });
 
   final ForumReply reply;
   final bool isDark;
   final int postId;
   final void Function(int replyId, String authorName) onReplyTo;
+  final ForumReply? parentReply;
+  final ScrollController? scrollController;
+  final Map<int, GlobalKey>? replyKeys;
 
   @override
   Widget build(BuildContext context) {
     final isSubReply = reply.isSubReply;
 
     return Padding(
-      padding: EdgeInsets.only(
-        top: 16,
-        bottom: 16,
-        left: isSubReply ? 32 : 0, // 子回复缩进
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 16),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1024,6 +1049,34 @@ class _ReplyCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Quote block for nested replies
+                if (parentReply != null) ...[
+                  _ReplyQuoteBlock(
+                    parentReply: parentReply!,
+                    isDark: isDark,
+                    onTap: () {
+                      final key = replyKeys?[parentReply!.id];
+                      if (key?.currentContext != null) {
+                        Scrollable.ensureVisible(
+                          key!.currentContext!,
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeOut,
+                          alignment: 0.2,
+                        );
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 6),
+                ] else if (reply.isSubReply) ...[
+                  Text(
+                    context.l10n.forumReplyFallbackParent,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                ],
                 // 作者行
                 Row(
                   children: [
@@ -1105,31 +1158,6 @@ class _ReplyCard extends StatelessWidget {
                   ],
                 ),
 
-                // 嵌套回复引用块 — "回复 @xxx"
-                if (isSubReply)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? Colors.white.withValues(alpha: 0.04)
-                            : AppColors.skeletonBase.withValues(alpha: 0.6),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        reply.parentReplyAuthor != null
-                            ? '${context.l10n.forumReplyTo} @${reply.parentReplyAuthor!.name}'
-                            : context.l10n.forumReplyTo,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.primary.withValues(alpha: 0.8),
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                    ),
-                  ),
 
                 const SizedBox(height: 6),
                 // 内容（支持后端返回的字面量 \n 换行），可框选复制
@@ -1536,5 +1564,67 @@ class _LinkedChip extends StatelessWidget {
       default:
         return Icons.link;
     }
+  }
+}
+
+class _ReplyQuoteBlock extends StatelessWidget {
+  const _ReplyQuoteBlock({
+    required this.parentReply,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  final ForumReply parentReply;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final authorName = parentReply.author?.name ?? parentReply.authorId;
+    final content = parentReply.content;
+    final bgColor = isDark
+        ? Colors.white.withValues(alpha: 0.06)
+        : Colors.black.withValues(alpha: 0.04);
+    final borderColor = isDark
+        ? AppColors.textTertiaryDark.withValues(alpha: 0.4)
+        : AppColors.textTertiaryLight.withValues(alpha: 0.4);
+    final textColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(6),
+          border: Border(
+            left: BorderSide(color: borderColor, width: 2.5),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '↩ $authorName',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: textColor,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              Helpers.normalizeContentNewlines(content),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12,
+                color: textColor,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

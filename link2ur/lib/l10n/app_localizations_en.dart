@@ -9760,4 +9760,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get errorBadgesLoadFailed => 'Failed to load badges';
+
+  @override
+  String get forumReplyFallbackParent => '↩ Replied to a comment';
 }

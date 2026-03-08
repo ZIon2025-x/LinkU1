@@ -4284,5 +4284,7 @@
   "errorIapStoreNotAvailable": "應用商店不可用",
   "errorIapLoadProductsFailed": "載入產品失敗",
   "errorIapVerificationFailed": "驗證失敗，請聯繫客服",
-  "errorIapPurchaseFailed": "購買失敗"
+  "errorIapPurchaseFailed": "購買失敗",
+
+  "forumReplyFallbackParent": "↩ 回覆了一則留言"
 }
