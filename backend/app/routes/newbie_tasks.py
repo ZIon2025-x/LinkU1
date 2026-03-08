@@ -13,6 +13,7 @@ from sqlalchemy import text
 from app import models, schemas
 from app.deps import get_db, get_current_user_secure_sync_csrf
 from app.coupon_points_crud import add_points_transaction
+from app.push_notification_service import send_push_notification
 from app.utils.time_utils import get_utc_time
 
 logger = logging.getLogger(__name__)
@@ -247,6 +248,7 @@ def _auto_detect_and_update(db: Session, user: models.User) -> None:
     """
     For all pending tasks, auto-detect if conditions are met
     and update status to 'completed'.
+    Sends a push notification for each newly completed task.
     """
     pending_tasks = (
         db.query(models.UserTasksProgress)
@@ -258,13 +260,41 @@ def _auto_detect_and_update(db: Session, user: models.User) -> None:
     )
     now = get_utc_time()
     updated = False
+    newly_completed_keys = []
     for task_progress in pending_tasks:
         if _detect_task_completion(db, user, task_progress.task_key):
             task_progress.status = "completed"
             task_progress.completed_at = now
             updated = True
+            newly_completed_keys.append(task_progress.task_key)
     if updated:
         db.commit()
+
+    # Send push notifications for newly completed tasks
+    if newly_completed_keys:
+        # Build config lookup for notification content
+        configs = {
+            c.task_key: c
+            for c in db.query(models.NewbieTaskConfig)
+            .filter(models.NewbieTaskConfig.task_key.in_(newly_completed_keys))
+            .all()
+        }
+        for task_key in newly_completed_keys:
+            config = configs.get(task_key)
+            if not config:
+                continue
+            try:
+                send_push_notification(
+                    db=db,
+                    user_id=user.id,
+                    title="任务完成！",
+                    body=f"你已完成'{config.title_zh}'，快去领取{config.reward_amount}积分奖励！",
+                    notification_type="newbie_task_completed",
+                    data={"type": "newbie_task", "task_key": task_key},
+                )
+            except Exception:
+                logger.warning(f"Failed to send push notification for newbie task '{task_key}' to user {user.id}")
+                pass  # Non-critical, don't fail if notification fails
 
 
 def _check_stage_completion(db: Session, user_id: str, stage: int) -> bool:

@@ -4437,5 +4437,77 @@
   "errorIapStoreNotAvailable": "App store is not available",
   "errorIapLoadProductsFailed": "Failed to load products",
   "errorIapVerificationFailed": "Verification failed, please contact support",
-  "errorIapPurchaseFailed": "Purchase failed"
+  "errorIapPurchaseFailed": "Purchase failed",
+
+  "newbieTaskCenter": "Task Center",
+  "newbieTaskStage1": "Complete Profile",
+  "newbieTaskStage2": "Start Sharing",
+  "newbieTaskStage3": "Achievements",
+  "newbieTaskPending": "Incomplete",
+  "newbieTaskCompleted": "Claim",
+  "newbieTaskClaimed": "Claimed",
+  "newbieTaskClaimReward": "Claim Reward",
+  "newbieTaskStageBonus": "Stage Bonus",
+  "newbieTaskPoints": "{amount} Points",
+  "@newbieTaskPoints": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "newbieTaskProgress": "{completed}/{total} Completed",
+  "@newbieTaskProgress": {
+    "placeholders": {
+      "completed": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "newbieTaskAllCompleted": "All tasks completed!",
+  "officialTask": "Official",
+  "officialTaskSubmissions": "{count} submissions",
+  "@officialTaskSubmissions": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+
+  "skillLeaderboard": "Skill Leaderboard",
+  "leaderboardTop10": "Top 10",
+  "leaderboardMyRank": "My Rank",
+  "leaderboardNotRanked": "Not ranked yet",
+  "leaderboardTasks": "Tasks",
+  "leaderboardRating": "Rating",
+  "leaderboardScore": "Score",
+
+  "myBadges": "My Badges",
+  "badgeSelector": "Select Display Badge",
+  "badgeNone": "No Badge",
+  "badgeTop": "Top {rank}",
+  "@badgeTop": {
+    "placeholders": {
+      "rank": {
+        "type": "String"
+      }
+    }
+  },
+
+  "profileViews": "Profile Views",
+  "editBio": "Edit Bio",
+  "addSkills": "Add Skills",
+  "skillTags": "Skill Tags",
+
+  "errorNewbieTaskNotCompleted": "This task is not yet completed",
+  "errorNewbieTaskAlreadyClaimed": "This reward has already been claimed",
+  "errorOfficialTaskMaxReached": "Maximum submissions reached",
+  "errorOfficialTaskExpired": "This task has expired",
+  "errorNewbieTasksLoadFailed": "Failed to load tasks",
+  "errorLeaderboardLoadFailed": "Failed to load leaderboard",
+  "errorBadgesLoadFailed": "Failed to load badges"
 }

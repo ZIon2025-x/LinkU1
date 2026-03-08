@@ -228,6 +228,20 @@ class ErrorLocalizer {
         return context.l10n.errorReviewTaskNotCompleted;
       case 'You are not a participant of this task.':
         return context.l10n.errorReviewNotParticipant;
+      case 'newbie_task_not_completed':
+        return context.l10n.errorNewbieTaskNotCompleted;
+      case 'newbie_task_already_claimed':
+        return context.l10n.errorNewbieTaskAlreadyClaimed;
+      case 'official_task_max_reached':
+        return context.l10n.errorOfficialTaskMaxReached;
+      case 'official_task_expired':
+        return context.l10n.errorOfficialTaskExpired;
+      case 'newbie_tasks_load_failed':
+        return context.l10n.errorNewbieTasksLoadFailed;
+      case 'leaderboard_load_failed':
+        return context.l10n.errorLeaderboardLoadFailed;
+      case 'badges_load_failed':
+        return context.l10n.errorBadgesLoadFailed;
       default:
         // 服务端返回的已翻译消息，直接使用
         return errorMessage;

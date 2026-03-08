@@ -4345,5 +4345,77 @@
   "errorIapStoreNotAvailable": "应用商店不可用",
   "errorIapLoadProductsFailed": "加载产品失败",
   "errorIapVerificationFailed": "验证失败，请联系客服",
-  "errorIapPurchaseFailed": "购买失败"
+  "errorIapPurchaseFailed": "购买失败",
+
+  "newbieTaskCenter": "任务中心",
+  "newbieTaskStage1": "完善资料",
+  "newbieTaskStage2": "开始分享",
+  "newbieTaskStage3": "成就达成",
+  "newbieTaskPending": "未完成",
+  "newbieTaskCompleted": "领取",
+  "newbieTaskClaimed": "已领取",
+  "newbieTaskClaimReward": "领取奖励",
+  "newbieTaskStageBonus": "阶段奖励",
+  "newbieTaskPoints": "{amount} 积分",
+  "@newbieTaskPoints": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "newbieTaskProgress": "{completed}/{total} 已完成",
+  "@newbieTaskProgress": {
+    "placeholders": {
+      "completed": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "newbieTaskAllCompleted": "所有任务已完成！",
+  "officialTask": "官方",
+  "officialTaskSubmissions": "{count} 次提交",
+  "@officialTaskSubmissions": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+
+  "skillLeaderboard": "技能排行榜",
+  "leaderboardTop10": "前 10 名",
+  "leaderboardMyRank": "我的排名",
+  "leaderboardNotRanked": "暂未上榜",
+  "leaderboardTasks": "任务数",
+  "leaderboardRating": "评分",
+  "leaderboardScore": "积分",
+
+  "myBadges": "我的徽章",
+  "badgeSelector": "选择展示徽章",
+  "badgeNone": "无徽章",
+  "badgeTop": "前 {rank} 名",
+  "@badgeTop": {
+    "placeholders": {
+      "rank": {
+        "type": "String"
+      }
+    }
+  },
+
+  "profileViews": "主页浏览量",
+  "editBio": "编辑简介",
+  "addSkills": "添加技能",
+  "skillTags": "技能标签",
+
+  "errorNewbieTaskNotCompleted": "该任务尚未完成",
+  "errorNewbieTaskAlreadyClaimed": "该奖励已被领取",
+  "errorOfficialTaskMaxReached": "已达最大提交次数",
+  "errorOfficialTaskExpired": "该任务已过期",
+  "errorNewbieTasksLoadFailed": "加载任务失败",
+  "errorLeaderboardLoadFailed": "加载排行榜失败",
+  "errorBadgesLoadFailed": "加载徽章失败"
 }
