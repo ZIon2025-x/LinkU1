@@ -4794,6 +4794,16 @@ def user_profile(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
+    # Increment profile views (don't count self-views)
+    try:
+        is_self_view = current_user and current_user.id == user.id
+        if not is_self_view:
+            user.profile_views = (user.profile_views or 0) + 1
+            db.commit()
+            db.refresh(user)
+    except Exception:
+        db.rollback()
+
     # 计算注册天数
     from app.utils.time_utils import get_utc_time
 
@@ -4895,6 +4905,7 @@ def user_profile(
         "completed_task_count": user.completed_task_count,
         "is_expert": is_expert,
         "is_student_verified": is_student_verified,
+        "profile_views": user.profile_views or 0,
     }
     
     # 获取用户近期论坛帖子（已发布的，最多5条）
@@ -5239,6 +5250,7 @@ class ProfileUpdate(BaseModel):
     phone_verification_code: Optional[str] = None  # 修改手机号时需要验证码
     residence_city: Optional[str] = None
     language_preference: Optional[str] = None
+    bio: Optional[str] = None
 
 
 @router.patch("/profile")
@@ -5331,7 +5343,11 @@ def update_profile(
             if data.language_preference not in ['zh', 'en']:
                 raise HTTPException(status_code=400, detail="语言偏好只能是 'zh' 或 'en'")
             update_data["language_preference"] = data.language_preference
-        
+
+        # 处理 bio 更新
+        if data.bio is not None:
+            update_data["bio"] = data.bio
+
         # 处理邮箱更新
         if data.email is not None:
             new_email = data.email.strip() if data.email else None
