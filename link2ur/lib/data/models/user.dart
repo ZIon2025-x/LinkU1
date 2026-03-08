@@ -3,6 +3,7 @@ import 'dart:ui' show Locale;
 import 'package:equatable/equatable.dart';
 
 import '../../l10n/app_localizations.dart';
+import 'badge.dart';
 
 /// 用户模型
 /// 参考iOS User.swift
@@ -25,6 +26,8 @@ class User extends Equatable {
     this.languagePreference,
     this.isAdmin = false,
     this.createdAt,
+    this.profileViews,
+    this.displayedBadge,
   });
 
   final String id;
@@ -44,6 +47,8 @@ class User extends Equatable {
   final String? languagePreference;
   final bool isAdmin;
   final DateTime? createdAt;
+  final int? profileViews;
+  final UserBadge? displayedBadge;
 
   /// 头像URL
   String? get avatarUrl => avatar;
@@ -84,8 +89,13 @@ class User extends Equatable {
       residenceCity: json['residence_city'] as String?,
       languagePreference: json['language_preference'] as String?,
       isAdmin: _parseBool(json['is_admin']),
-      createdAt: json['created_at'] != null 
-          ? DateTime.tryParse(json['created_at'].toString()) 
+      createdAt: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at'].toString())
+          : null,
+      profileViews: json['profile_views'] as int?,
+      displayedBadge: json['displayed_badge'] != null
+          ? UserBadge.fromJson(
+              json['displayed_badge'] as Map<String, dynamic>)
           : null,
     );
   }
@@ -117,6 +127,8 @@ class User extends Equatable {
       'language_preference': languagePreference,
       'is_admin': isAdmin,
       'created_at': createdAt?.toIso8601String(),
+      'profile_views': profileViews,
+      'displayed_badge': displayedBadge?.toJson(),
     };
   }
 
@@ -138,6 +150,8 @@ class User extends Equatable {
     String? languagePreference,
     bool? isAdmin,
     DateTime? createdAt,
+    int? profileViews,
+    UserBadge? displayedBadge,
   }) {
     return User(
       id: id ?? this.id,
@@ -157,6 +171,8 @@ class User extends Equatable {
       languagePreference: languagePreference ?? this.languagePreference,
       isAdmin: isAdmin ?? this.isAdmin,
       createdAt: createdAt ?? this.createdAt,
+      profileViews: profileViews ?? this.profileViews,
+      displayedBadge: displayedBadge ?? this.displayedBadge,
     );
   }
 
@@ -179,6 +195,8 @@ class User extends Equatable {
         languagePreference,
         isAdmin,
         createdAt,
+        profileViews,
+        displayedBadge,
       ];
 
   /// 信用分（百分制，由avgRating转换）

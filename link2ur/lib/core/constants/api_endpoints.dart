@@ -466,6 +466,26 @@ class ApiEndpoints {
   static String legalDocument({required String type, String lang = 'zh'}) =>
       '/api/legal/$type?lang=$lang';
 
+  // ==================== Newbie Tasks ====================
+  // 后端: newbie_tasks_routes.py
+  static const String newbieTasksProgress = '/api/newbie-tasks/progress';
+  static const String newbieTasksClaim = '/api/newbie-tasks'; // /{task_key}/claim
+  static const String newbieTasksStages = '/api/newbie-tasks/stages';
+
+  // ==================== Official Tasks ====================
+  static const String officialTasks = '/api/official-tasks';
+
+  // ==================== User Skills ====================
+  static const String userSkillsMy = '/api/skills/my';
+  static const String skillCategories = '/api/skills/categories';
+
+  // ==================== Skill Leaderboard ====================
+  static const String leaderboardSkills = '/api/leaderboard/skills';
+
+  // ==================== Badges ====================
+  static const String badgesMy = '/api/badges/my';
+  static const String badgesUser = '/api/badges/user'; // /{user_id}
+
   // ==================== AI Agent ====================
   // 后端: ai_agent_routes.py (prefix: /api/ai)
   static const String aiConversations = '/api/ai/conversations';
