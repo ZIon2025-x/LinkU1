@@ -2,6 +2,8 @@ part of 'profile_view.dart';
 
 /// 我的内容 (对齐iOS myContentSection)
 Widget _buildMyContentSection(BuildContext context, bool isDark) {
+  final isExpert =
+      context.read<AuthBloc>().state.user?.isExpert ?? false;
   return Padding(
     padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
     child: Column(
@@ -76,14 +78,17 @@ Widget _buildMyContentSection(BuildContext context, bool isDark) {
                 color: AppColors.purple,
                 onTap: () => context.push('/my-service-applications'),
               ),
-              _profileDivider(isDark),
-              _ProfileRow(
-                icon: Icons.assignment_ind,         // person.badge.clock.fill
-                title: context.l10n.profileExpertManagement,
-                subtitle: context.l10n.profileExpertManagementSubtitle,
-                color: AppColors.indigo,
-                onTap: () => context.push('/expert-applications-management'),
-              ),
+              if (isExpert) ...[
+                _profileDivider(isDark),
+                _ProfileRow(
+                  icon: Icons.assignment_ind,
+                  title: context.l10n.profileExpertManagement,
+                  subtitle: context.l10n.profileExpertManagementSubtitle,
+                  color: AppColors.indigo,
+                  onTap: () =>
+                      context.push('/expert-applications-management'),
+                ),
+              ],
             ],
           ),
         ),
