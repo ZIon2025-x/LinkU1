@@ -26,6 +26,7 @@ class TestBadgesAPI:
     # 共享状态
     _cookies: dict = {}
     _access_token: str = ""
+    _csrf_token: str = ""
     _user_id: str = ""
     _badge_id: str = ""
 
@@ -55,6 +56,7 @@ class TestBadgesAPI:
             cookies = dict(response.cookies)
             if cookies:
                 TestBadgesAPI._cookies = cookies
+                TestBadgesAPI._csrf_token = cookies.get("csrf_token", "")
 
             data = response.json()
             if "access_token" in data:
@@ -66,11 +68,14 @@ class TestBadgesAPI:
 
         return False
 
-    def _get_auth_headers(self) -> dict:
+    def _get_auth_headers(self, include_csrf: bool = False) -> dict:
         """获取认证头"""
+        headers = {}
         if TestBadgesAPI._access_token:
-            return {"Authorization": f"Bearer {TestBadgesAPI._access_token}"}
-        return {}
+            headers["Authorization"] = f"Bearer {TestBadgesAPI._access_token}"
+        if include_csrf and TestBadgesAPI._csrf_token:
+            headers["X-CSRF-Token"] = TestBadgesAPI._csrf_token
+        return headers
 
     # =========================================================================
     # 获取我的徽章测试
@@ -155,7 +160,7 @@ class TestBadgesAPI:
 
             response = client.put(
                 f"{self.base_url}/api/badges/{badge_id}/display",
-                headers=self._get_auth_headers(),
+                headers=self._get_auth_headers(include_csrf=True),
                 cookies=TestBadgesAPI._cookies,
                 json={"display": True}
             )
@@ -182,7 +187,7 @@ class TestBadgesAPI:
 
             response = client.put(
                 f"{self.base_url}/api/badges/99999999/display",
-                headers=self._get_auth_headers(),
+                headers=self._get_auth_headers(include_csrf=True),
                 cookies=TestBadgesAPI._cookies,
                 json={"display": True}
             )

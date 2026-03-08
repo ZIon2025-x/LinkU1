@@ -1714,7 +1714,7 @@ export async function getStageBonusConfig() {
 }
 
 export async function updateStageBonusConfig(stage: number, data: {
-  bonus_amount?: number; is_active?: boolean;
+  reward_amount?: number; is_active?: boolean;
 }) {
   const res = await api.put(`/api/admin/stage-bonus/config/${stage}`, data);
   return res.data;

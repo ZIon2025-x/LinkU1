@@ -20,7 +20,10 @@ interface NewbieTask {
 
 interface StageBonus {
   stage: number;
-  bonus_amount: number;
+  title_zh: string;
+  title_en: string;
+  reward_type: string;
+  reward_amount: number;
   is_active: boolean;
 }
 
@@ -34,7 +37,7 @@ interface EditForm {
 
 interface StageBonusForm {
   stage: number;
-  bonus_amount: number;
+  reward_amount: number;
   is_active: boolean;
 }
 
@@ -46,7 +49,7 @@ const NewbieTaskConfig: React.FC = () => {
   const [editForm, setEditForm] = useState<EditForm>({ task_key: '', title_zh: '', title_en: '', reward_amount: 0, is_active: true });
   const [editLoading, setEditLoading] = useState(false);
   const [stageBonusModalOpen, setStageBonusModalOpen] = useState(false);
-  const [stageBonusForm, setStageBonusForm] = useState<StageBonusForm>({ stage: 1, bonus_amount: 0, is_active: true });
+  const [stageBonusForm, setStageBonusForm] = useState<StageBonusForm>({ stage: 1, reward_amount: 0, is_active: true });
   const [stageBonusEditLoading, setStageBonusEditLoading] = useState(false);
 
   const fetchData = useCallback(async () => {
@@ -102,7 +105,7 @@ const NewbieTaskConfig: React.FC = () => {
   const handleEditStageBonus = (bonus: StageBonus) => {
     setStageBonusForm({
       stage: bonus.stage,
-      bonus_amount: bonus.bonus_amount,
+      reward_amount: bonus.reward_amount,
       is_active: bonus.is_active,
     });
     setStageBonusModalOpen(true);
@@ -112,7 +115,7 @@ const NewbieTaskConfig: React.FC = () => {
     setStageBonusEditLoading(true);
     try {
       await updateStageBonusConfig(stageBonusForm.stage, {
-        bonus_amount: stageBonusForm.bonus_amount,
+        reward_amount: stageBonusForm.reward_amount,
         is_active: stageBonusForm.is_active,
       });
       message.success('Stage bonus config updated');
@@ -154,7 +157,7 @@ const NewbieTaskConfig: React.FC = () => {
 
   const bonusColumns: Column<StageBonus>[] = [
     { key: 'stage', title: 'Stage', dataIndex: 'stage', width: 100, align: 'center' },
-    { key: 'bonus_amount', title: 'Bonus Amount', dataIndex: 'bonus_amount', width: 150, align: 'right' },
+    { key: 'reward_amount', title: 'Reward Amount', dataIndex: 'reward_amount', width: 150, align: 'right' },
     {
       key: 'is_active', title: 'Active', dataIndex: 'is_active', width: 80, align: 'center',
       render: (val: boolean) => (
@@ -305,8 +308,8 @@ const NewbieTaskConfig: React.FC = () => {
             <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Bonus Amount</label>
             <input
               type="number"
-              value={stageBonusForm.bonus_amount}
-              onChange={(e) => setStageBonusForm(f => ({ ...f, bonus_amount: parseInt(e.target.value) || 0 }))}
+              value={stageBonusForm.reward_amount}
+              onChange={(e) => setStageBonusForm(f => ({ ...f, reward_amount: parseInt(e.target.value) || 0 }))}
               style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
             />
           </div>

@@ -4265,6 +4265,7 @@ class StageBonusConfigUpdate(BaseModel):
     reward_type: Optional[str] = None
     reward_amount: Optional[int] = None
     coupon_id: Optional[int] = None
+    is_active: Optional[bool] = None
 
 class StageProgressOut(BaseModel):
     stage: int
