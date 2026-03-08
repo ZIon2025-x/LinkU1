@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../data/models/student_verification.dart';
 import '../../../data/repositories/student_verification_repository.dart';
+import '../../../core/utils/cache_manager.dart';
 import '../../../core/utils/logger.dart';
 
 // ==================== Events ====================
@@ -162,6 +163,7 @@ class StudentVerificationBloc
 
     try {
       await _repository.verifyStudentEmail(token: event.code);
+      await CacheManager.shared.invalidateForumCache();
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'verification_success',
