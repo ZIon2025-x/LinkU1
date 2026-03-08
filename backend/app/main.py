@@ -463,6 +463,25 @@ app.include_router(admin_official_router, tags=["管理员-官方账号与活动
 from app.official_activity_routes import official_activity_router
 app.include_router(official_activity_router)
 
+# Newbie Tasks & Incentive System
+from app.routes.newbie_tasks import router as newbie_tasks_router
+app.include_router(newbie_tasks_router, tags=["新手任务"])
+
+from app.routes.user_skills import router as user_skills_router
+app.include_router(user_skills_router, tags=["用户技能"])
+
+from app.routes.official_tasks import router as official_tasks_router
+app.include_router(official_tasks_router, tags=["官方任务"])
+
+from app.routes.leaderboard import router as leaderboard_router
+app.include_router(leaderboard_router, tags=["技能排行榜"])
+
+from app.routes.badges import router as badges_router
+app.include_router(badges_router, tags=["勋章系统"])
+
+from app.routes.admin_incentive import router as admin_incentive_router
+app.include_router(admin_incentive_router, tags=["管理员-激励系统"])
+
 # 图片代理（Flutter Web 跨域加载 Cloudflare/CDN 图片）
 from app.image_proxy_routes import router as image_proxy_router
 app.include_router(image_proxy_router, prefix="/api", tags=["图片代理"])
