@@ -76,7 +76,7 @@ def list_active_tasks(
         d["user_submission_count"] = submission_counts.get(task.id, 0)
         response.append(d)
 
-    return response
+    return {"data": response}
 
 
 @router.get("/{task_id}")

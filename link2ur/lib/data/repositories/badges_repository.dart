@@ -25,8 +25,8 @@ class BadgesRepository {
 
   /// 切换徽章展示状态
   Future<Map<String, dynamic>> toggleBadgeDisplay(int badgeId) async {
-    final response = await _apiService.post<Map<String, dynamic>>(
-      '${ApiEndpoints.badgesMy}/$badgeId/toggle-display',
+    final response = await _apiService.put<Map<String, dynamic>>(
+      '/api/badges/$badgeId/display',
     );
 
     if (!response.isSuccess || response.data == null) {

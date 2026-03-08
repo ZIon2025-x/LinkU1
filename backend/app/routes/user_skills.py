@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/skills", tags=["用户技能"])
 
 
-@router.get("/my", response_model=List[schemas.UserSkillOut])
+@router.get("/my")
 def get_my_skills(
     current_user=Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db),
@@ -28,10 +28,10 @@ def get_my_skills(
         .filter(models.UserSkill.user_id == current_user.id)
         .all()
     )
-    return [
+    return {"data": [
         {"id": s.id, "skill_category": s.skill_category, "skill_name": s.skill_name}
         for s in skills
-    ]
+    ]}
 
 
 @router.post("/my", response_model=schemas.UserSkillOut, status_code=201)
@@ -91,7 +91,7 @@ def delete_my_skill(
     return {"message": "技能已删除"}
 
 
-@router.get("/categories", response_model=List[schemas.SkillCategoryOut])
+@router.get("/categories")
 def get_skill_categories(
     db: Session = Depends(get_db),
 ):
@@ -102,7 +102,7 @@ def get_skill_categories(
         .order_by(models.SkillCategory.display_order)
         .all()
     )
-    return [
+    return {"data": [
         {
             "id": c.id,
             "name_zh": c.name_zh,
@@ -112,4 +112,4 @@ def get_skill_categories(
             "is_active": c.is_active,
         }
         for c in categories
-    ]
+    ]}

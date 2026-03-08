@@ -6163,6 +6163,13 @@ def create_payment(
         raise HTTPException(status_code=404, detail="Task not found or no permission.")
     if task.is_paid:
         return {"message": "Task already paid."}
+    # 计算任务金额和平台服务费（用于 metadata 交叉校验）
+    from app.utils.fee_calculator import calculate_application_fee_pence
+    task_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
+    task_amount_pence = round(task_amount * 100)
+    task_source = getattr(task, "task_source", None)
+    task_type = getattr(task, "task_type", None)
+    application_fee_pence = calculate_application_fee_pence(task_amount_pence, task_source, task_type)
     # 创建Stripe支付会话
     session = stripe.checkout.Session.create(
         payment_method_types=["card", "wechat_pay", "alipay"],
@@ -6171,7 +6178,7 @@ def create_payment(
                 "price_data": {
                     "currency": "gbp",
                     "product_data": {"name": task.title},
-                    "unit_amount": round((float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0) * 100),
+                    "unit_amount": task_amount_pence,
                 },
                 "quantity": 1,
             }
@@ -6179,7 +6186,12 @@ def create_payment(
         mode="payment",
         success_url=f"{Config.BASE_URL}/api/users/tasks/{task_id}/pay/success",
         cancel_url=f"{Config.BASE_URL}/api/users/tasks/{task_id}/pay/cancel",
-        metadata={"task_id": task_id},
+        metadata={
+            "task_id": task_id,
+            "application_fee": application_fee_pence,
+            "task_source": task_source or "",
+            "task_type": task_type or "",
+        },
     )
     return {"checkout_url": session.url}
 

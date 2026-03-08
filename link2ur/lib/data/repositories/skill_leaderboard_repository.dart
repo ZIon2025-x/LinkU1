@@ -12,37 +12,42 @@ class SkillLeaderboardRepository {
   /// 获取排行榜分类
   Future<List<Map<String, dynamic>>> getCategories() async {
     final response = await _apiService.get<Map<String, dynamic>>(
-      '${ApiEndpoints.leaderboardSkills}/categories',
+      ApiEndpoints.leaderboardSkills,
     );
 
     if (!response.isSuccess || response.data == null) {
       throw SkillLeaderboardException(response.message ?? '获取排行榜分类失败');
     }
 
-    final items = response.data!['data'] as List<dynamic>? ?? [];
-    return items.map((e) => e as Map<String, dynamic>).toList();
+    final data = response.data!;
+    // Handle both wrapped {"data": [...]} and raw list responses
+    if (data['data'] is List) {
+      return (data['data'] as List).map((e) => e as Map<String, dynamic>).toList();
+    }
+    return [];
   }
 
   /// 获取指定分类的排行榜
   Future<List<Map<String, dynamic>>> getLeaderboard(String category) async {
     final response = await _apiService.get<Map<String, dynamic>>(
-      ApiEndpoints.leaderboardSkills,
-      queryParameters: {'category': category},
+      '${ApiEndpoints.leaderboardSkills}/${Uri.encodeComponent(category)}',
     );
 
     if (!response.isSuccess || response.data == null) {
       throw SkillLeaderboardException(response.message ?? '获取排行榜失败');
     }
 
-    final items = response.data!['data'] as List<dynamic>? ?? [];
-    return items.map((e) => e as Map<String, dynamic>).toList();
+    final data = response.data!;
+    if (data['data'] is List) {
+      return (data['data'] as List).map((e) => e as Map<String, dynamic>).toList();
+    }
+    return [];
   }
 
   /// 获取我在指定分类的排名
   Future<Map<String, dynamic>> getMyRank(String category) async {
     final response = await _apiService.get<Map<String, dynamic>>(
-      '${ApiEndpoints.leaderboardSkills}/my-rank',
-      queryParameters: {'category': category},
+      '${ApiEndpoints.leaderboardSkills}/${Uri.encodeComponent(category)}/my-rank',
     );
 
     if (!response.isSuccess || response.data == null) {

@@ -27,7 +27,7 @@ def get_my_badges(
         .filter(models.UserBadge.user_id == current_user.id)
         .all()
     )
-    return [
+    return {"data": [
         {
             "id": b.id,
             "badge_type": b.badge_type,
@@ -37,7 +37,7 @@ def get_my_badges(
             "granted_at": b.granted_at,
         }
         for b in badges
-    ]
+    ]}
 
 
 @router.put("/{badge_id}/display")
@@ -92,7 +92,7 @@ def get_user_badges(
         .filter(models.UserBadge.user_id == user_id)
         .all()
     )
-    return [
+    return {"data": [
         {
             "id": b.id,
             "badge_type": b.badge_type,
@@ -102,4 +102,4 @@ def get_user_badges(
             "granted_at": b.granted_at,
         }
         for b in badges
-    ]
+    ]}

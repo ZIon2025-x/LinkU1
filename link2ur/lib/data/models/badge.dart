@@ -23,7 +23,7 @@ class UserBadge extends Equatable {
       id: json['id'] as int? ?? 0,
       badgeType: json['badge_type'] as String? ?? '',
       skillCategory: json['skill_category'] as String?,
-      rank: json['rank'] as String?,
+      rank: json['rank']?.toString(),
       isDisplayed: json['is_displayed'] as bool? ?? false,
       grantedAt: json['granted_at'] != null
           ? DateTime.tryParse(json['granted_at'].toString())

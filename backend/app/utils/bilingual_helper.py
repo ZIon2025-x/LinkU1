@@ -18,20 +18,29 @@ def _protect_encoding_markers(text: str) -> Tuple[str, bool]:
     """
     保护编码标记，在翻译前替换为 HTML 标签占位符
     多数翻译 API 会保留 HTML 标签，从而保留换行与空格
-    
+
+    同时处理两种换行形式：
+    - 字面量 \\n（Flutter 编码格式）
+    - 真实换行符 \\n（直接来自 TextField 输入）
+
     返回: (处理后的文本, 是否包含编码标记)
     """
     has_encoding = False
     result = text
-    
+
     if '\\n' in text:
         has_encoding = True
         result = result.replace('\\n', _ENCODE_PLACEHOLDER_NEWLINE)
-    
+
+    # 保护真实换行符（来自 Flutter TextField 的原始输入）
+    if '\n' in result:
+        has_encoding = True
+        result = result.replace('\n', _ENCODE_PLACEHOLDER_NEWLINE)
+
     if '\\c' in text:
         has_encoding = True
         result = result.replace('\\c', _ENCODE_PLACEHOLDER_SPACE)
-    
+
     return result, has_encoding
 
 
@@ -61,7 +70,8 @@ async def _translate_with_encoding_protection(
     if translated:
         restored = _restore_encoding_markers(translated)
         # 检查占位符是否成功恢复
-        if has_encoding and ('\\n' in restored or '\\c' in restored):
+        # 恢复后的文本可能包含真实换行符（\n ASCII 10）或字面量 \\n，均视为成功
+        if has_encoding and ('\n' in restored or '\\n' in restored or '\\c' in restored):
             # 占位符成功恢复，返回结果
             return restored
         elif has_encoding:
@@ -94,9 +104,9 @@ async def _translate_segmented(
     from app.utils.translation_async import translate_async
     
     # 按编码标记分割文本
-    # 使用正则表达式匹配 \n 和 \c，保留分隔符
+    # 使用正则表达式匹配字面量 \n、\c 以及真实换行符，保留分隔符
     import re
-    parts = re.split(r'(\\n+|\\c+)', text)
+    parts = re.split(r'(\n+|\\n+|\\c+)', text)
     
     if len(parts) == 1:
         # 没有编码标记，直接翻译
@@ -111,8 +121,8 @@ async def _translate_segmented(
     # 分段翻译
     translated_parts = []
     for i, part in enumerate(parts):
-        if part.startswith('\\'):
-            # 这是编码标记，直接保留
+        if part.startswith('\\') or part == '\n' or (part and all(c == '\n' for c in part)):
+            # 这是编码标记或真实换行符，直接保留
             translated_parts.append(part)
         else:
             # 这是文本内容，需要翻译

@@ -192,7 +192,7 @@ def recalculate_leaderboard(db: Session, category: Optional[str] = None) -> None
 # ==================== Endpoints ====================
 
 
-@router.get("/skills", response_model=List[schemas.SkillCategoryOut])
+@router.get("/skills")
 def list_skill_categories(db: Session = Depends(get_db)):
     """
     List all active skill categories, ordered by display_order.
@@ -204,10 +204,10 @@ def list_skill_categories(db: Session = Depends(get_db)):
         .order_by(models.SkillCategory.display_order)
         .all()
     )
-    return categories
+    return {"data": [schemas.SkillCategoryOut.model_validate(c).model_dump() for c in categories]}
 
 
-@router.get("/skills/{category}", response_model=List[schemas.LeaderboardEntryOut])
+@router.get("/skills/{category}")
 def get_leaderboard(category: str, db: Session = Depends(get_db)):
     """
     Get Top 10 leaderboard entries for a skill category.
@@ -227,7 +227,7 @@ def get_leaderboard(category: str, db: Session = Depends(get_db)):
         .all()
     )
 
-    return [
+    return {"data": [
         {
             "user_id": entry.SkillLeaderboard.user_id,
             "user_name": entry.User.name,
@@ -240,10 +240,10 @@ def get_leaderboard(category: str, db: Session = Depends(get_db)):
             "rank": entry.SkillLeaderboard.rank,
         }
         for entry in entries
-    ]
+    ]}
 
 
-@router.get("/skills/{category}/my-rank", response_model=Optional[schemas.LeaderboardEntryOut])
+@router.get("/skills/{category}/my-rank")
 def get_my_rank(
     category: str,
     current_user: models.User = Depends(get_current_user_secure_sync_csrf),

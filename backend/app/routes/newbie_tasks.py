@@ -347,7 +347,7 @@ def _update_stage_progress(db: Session, user_id: str, stage: int) -> None:
 # ==================== Endpoints ====================
 
 
-@router.get("/progress", response_model=List[schemas.UserTaskProgressOut])
+@router.get("/progress")
 def get_progress(
     current_user: models.User = Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db),
@@ -397,7 +397,7 @@ def get_progress(
 
     # Sort by stage then display_order
     result.sort(key=lambda x: (x.config.stage, x.config.display_order))
-    return result
+    return {"data": [r.model_dump() if hasattr(r, 'model_dump') else r for r in result]}
 
 
 @router.post("/{task_key}/claim")
@@ -474,7 +474,7 @@ def claim_task_reward(
     }
 
 
-@router.get("/stages", response_model=List[schemas.StageProgressOut])
+@router.get("/stages")
 def get_stages(
     current_user: models.User = Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db),
@@ -515,7 +515,7 @@ def get_stages(
             )
         )
 
-    return result
+    return {"data": [r.model_dump() if hasattr(r, 'model_dump') else r for r in result]}
 
 
 @router.post("/stages/{stage}/claim")
