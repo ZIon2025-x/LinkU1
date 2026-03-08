@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/design/app_colors.dart';
+import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/widgets/loading_view.dart';
@@ -241,7 +242,6 @@ class _OverallProgressCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final completedCount = state.completedCount;
     final totalCount = state.totalCount;
     final progress = totalCount > 0 ? completedCount / totalCount : 0.0;

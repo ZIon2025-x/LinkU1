@@ -17743,6 +17743,216 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Purchase failed'**
   String get errorIapPurchaseFailed;
+
+  /// No description provided for @newbieTaskCenter.
+  ///
+  /// In en, this message translates to:
+  /// **'Task Center'**
+  String get newbieTaskCenter;
+
+  /// No description provided for @newbieTaskStage1.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete Profile'**
+  String get newbieTaskStage1;
+
+  /// No description provided for @newbieTaskStage2.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Sharing'**
+  String get newbieTaskStage2;
+
+  /// No description provided for @newbieTaskStage3.
+  ///
+  /// In en, this message translates to:
+  /// **'Achievements'**
+  String get newbieTaskStage3;
+
+  /// No description provided for @newbieTaskPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Incomplete'**
+  String get newbieTaskPending;
+
+  /// No description provided for @newbieTaskCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Claim'**
+  String get newbieTaskCompleted;
+
+  /// No description provided for @newbieTaskClaimed.
+  ///
+  /// In en, this message translates to:
+  /// **'Claimed'**
+  String get newbieTaskClaimed;
+
+  /// No description provided for @newbieTaskClaimReward.
+  ///
+  /// In en, this message translates to:
+  /// **'Claim Reward'**
+  String get newbieTaskClaimReward;
+
+  /// No description provided for @newbieTaskStageBonus.
+  ///
+  /// In en, this message translates to:
+  /// **'Stage Bonus'**
+  String get newbieTaskStageBonus;
+
+  /// No description provided for @newbieTaskPoints.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} Points'**
+  String newbieTaskPoints(String amount);
+
+  /// No description provided for @newbieTaskProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'{completed}/{total} Completed'**
+  String newbieTaskProgress(String completed, String total);
+
+  /// No description provided for @newbieTaskAllCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'All tasks completed!'**
+  String get newbieTaskAllCompleted;
+
+  /// No description provided for @officialTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Official'**
+  String get officialTask;
+
+  /// No description provided for @officialTaskSubmissions.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} submissions'**
+  String officialTaskSubmissions(String count);
+
+  /// No description provided for @skillLeaderboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Skill Leaderboard'**
+  String get skillLeaderboard;
+
+  /// No description provided for @leaderboardTop10.
+  ///
+  /// In en, this message translates to:
+  /// **'Top 10'**
+  String get leaderboardTop10;
+
+  /// No description provided for @leaderboardMyRank.
+  ///
+  /// In en, this message translates to:
+  /// **'My Rank'**
+  String get leaderboardMyRank;
+
+  /// No description provided for @leaderboardNotRanked.
+  ///
+  /// In en, this message translates to:
+  /// **'Not ranked yet'**
+  String get leaderboardNotRanked;
+
+  /// No description provided for @leaderboardTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'Tasks'**
+  String get leaderboardTasks;
+
+  /// No description provided for @leaderboardRating.
+  ///
+  /// In en, this message translates to:
+  /// **'Rating'**
+  String get leaderboardRating;
+
+  /// No description provided for @myBadges.
+  ///
+  /// In en, this message translates to:
+  /// **'My Badges'**
+  String get myBadges;
+
+  /// No description provided for @badgeSelector.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Display Badge'**
+  String get badgeSelector;
+
+  /// No description provided for @badgeNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No Badge'**
+  String get badgeNone;
+
+  /// No description provided for @badgeTop.
+  ///
+  /// In en, this message translates to:
+  /// **'Top {rank}'**
+  String badgeTop(String rank);
+
+  /// No description provided for @profileViews.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile Views'**
+  String get profileViews;
+
+  /// No description provided for @editBio.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Bio'**
+  String get editBio;
+
+  /// No description provided for @addSkills.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Skills'**
+  String get addSkills;
+
+  /// No description provided for @skillTags.
+  ///
+  /// In en, this message translates to:
+  /// **'Skill Tags'**
+  String get skillTags;
+
+  /// No description provided for @errorNewbieTaskNotCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'This task is not yet completed'**
+  String get errorNewbieTaskNotCompleted;
+
+  /// No description provided for @errorNewbieTaskAlreadyClaimed.
+  ///
+  /// In en, this message translates to:
+  /// **'This reward has already been claimed'**
+  String get errorNewbieTaskAlreadyClaimed;
+
+  /// No description provided for @errorOfficialTaskMaxReached.
+  ///
+  /// In en, this message translates to:
+  /// **'Maximum submissions reached'**
+  String get errorOfficialTaskMaxReached;
+
+  /// No description provided for @errorOfficialTaskExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'This task has expired'**
+  String get errorOfficialTaskExpired;
+
+  /// No description provided for @errorNewbieTasksLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load tasks'**
+  String get errorNewbieTasksLoadFailed;
+
+  /// No description provided for @errorLeaderboardLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load leaderboard'**
+  String get errorLeaderboardLoadFailed;
+
+  /// No description provided for @errorBadgesLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load badges'**
+  String get errorBadgesLoadFailed;
 }
 
 class _AppLocalizationsDelegate

@@ -9646,4 +9646,118 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get errorIapPurchaseFailed => 'Purchase failed';
+
+  @override
+  String get newbieTaskCenter => 'Task Center';
+
+  @override
+  String get newbieTaskStage1 => 'Complete Profile';
+
+  @override
+  String get newbieTaskStage2 => 'Start Sharing';
+
+  @override
+  String get newbieTaskStage3 => 'Achievements';
+
+  @override
+  String get newbieTaskPending => 'Incomplete';
+
+  @override
+  String get newbieTaskCompleted => 'Claim';
+
+  @override
+  String get newbieTaskClaimed => 'Claimed';
+
+  @override
+  String get newbieTaskClaimReward => 'Claim Reward';
+
+  @override
+  String get newbieTaskStageBonus => 'Stage Bonus';
+
+  @override
+  String newbieTaskPoints(String amount) {
+    return '$amount Points';
+  }
+
+  @override
+  String newbieTaskProgress(String completed, String total) {
+    return '$completed/$total Completed';
+  }
+
+  @override
+  String get newbieTaskAllCompleted => 'All tasks completed!';
+
+  @override
+  String get officialTask => 'Official';
+
+  @override
+  String officialTaskSubmissions(String count) {
+    return '$count submissions';
+  }
+
+  @override
+  String get skillLeaderboard => 'Skill Leaderboard';
+
+  @override
+  String get leaderboardTop10 => 'Top 10';
+
+  @override
+  String get leaderboardMyRank => 'My Rank';
+
+  @override
+  String get leaderboardNotRanked => 'Not ranked yet';
+
+  @override
+  String get leaderboardTasks => 'Tasks';
+
+  @override
+  String get leaderboardRating => 'Rating';
+
+  @override
+  String get myBadges => 'My Badges';
+
+  @override
+  String get badgeSelector => 'Select Display Badge';
+
+  @override
+  String get badgeNone => 'No Badge';
+
+  @override
+  String badgeTop(String rank) {
+    return 'Top $rank';
+  }
+
+  @override
+  String get profileViews => 'Profile Views';
+
+  @override
+  String get editBio => 'Edit Bio';
+
+  @override
+  String get addSkills => 'Add Skills';
+
+  @override
+  String get skillTags => 'Skill Tags';
+
+  @override
+  String get errorNewbieTaskNotCompleted => 'This task is not yet completed';
+
+  @override
+  String get errorNewbieTaskAlreadyClaimed =>
+      'This reward has already been claimed';
+
+  @override
+  String get errorOfficialTaskMaxReached => 'Maximum submissions reached';
+
+  @override
+  String get errorOfficialTaskExpired => 'This task has expired';
+
+  @override
+  String get errorNewbieTasksLoadFailed => 'Failed to load tasks';
+
+  @override
+  String get errorLeaderboardLoadFailed => 'Failed to load leaderboard';
+
+  @override
+  String get errorBadgesLoadFailed => 'Failed to load badges';
 }

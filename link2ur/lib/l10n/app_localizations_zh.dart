@@ -9259,6 +9259,119 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get errorIapPurchaseFailed => '购买失败';
+
+  @override
+  String get newbieTaskCenter => '任务中心';
+
+  @override
+  String get newbieTaskStage1 => '完善资料';
+
+  @override
+  String get newbieTaskStage2 => '开始分享';
+
+  @override
+  String get newbieTaskStage3 => '成就达成';
+
+  @override
+  String get newbieTaskPending => '未完成';
+
+  @override
+  String get newbieTaskCompleted => '领取';
+
+  @override
+  String get newbieTaskClaimed => '已领取';
+
+  @override
+  String get newbieTaskClaimReward => '领取奖励';
+
+  @override
+  String get newbieTaskStageBonus => '阶段奖励';
+
+  @override
+  String newbieTaskPoints(String amount) {
+    return '$amount 积分';
+  }
+
+  @override
+  String newbieTaskProgress(String completed, String total) {
+    return '$completed/$total 已完成';
+  }
+
+  @override
+  String get newbieTaskAllCompleted => '所有任务已完成！';
+
+  @override
+  String get officialTask => '官方';
+
+  @override
+  String officialTaskSubmissions(String count) {
+    return '$count 次提交';
+  }
+
+  @override
+  String get skillLeaderboard => '技能排行榜';
+
+  @override
+  String get leaderboardTop10 => '前 10 名';
+
+  @override
+  String get leaderboardMyRank => '我的排名';
+
+  @override
+  String get leaderboardNotRanked => '暂未上榜';
+
+  @override
+  String get leaderboardTasks => '任务数';
+
+  @override
+  String get leaderboardRating => '评分';
+
+  @override
+  String get myBadges => '我的徽章';
+
+  @override
+  String get badgeSelector => '选择展示徽章';
+
+  @override
+  String get badgeNone => '无徽章';
+
+  @override
+  String badgeTop(String rank) {
+    return '前 $rank 名';
+  }
+
+  @override
+  String get profileViews => '主页浏览量';
+
+  @override
+  String get editBio => '编辑简介';
+
+  @override
+  String get addSkills => '添加技能';
+
+  @override
+  String get skillTags => '技能标签';
+
+  @override
+  String get errorNewbieTaskNotCompleted => '该任务尚未完成';
+
+  @override
+  String get errorNewbieTaskAlreadyClaimed => '该奖励已被领取';
+
+  @override
+  String get errorOfficialTaskMaxReached => '已达最大提交次数';
+
+  @override
+  String get errorOfficialTaskExpired => '该任务已过期';
+
+  @override
+  String get errorNewbieTasksLoadFailed => '加载任务失败';
+
+  @override
+  String get errorLeaderboardLoadFailed => '加载排行榜失败';
+
+  @override
+  String get errorBadgesLoadFailed => '加载徽章失败';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).

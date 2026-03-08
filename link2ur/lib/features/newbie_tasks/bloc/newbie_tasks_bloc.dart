@@ -140,9 +140,9 @@ class NewbieTasksBloc extends Bloc<NewbieTasksEvent, NewbieTasksState> {
         _officialTasksRepository.getOfficialTasks(),
       ]);
 
-      final progressData = results[0] as List<Map<String, dynamic>>;
-      final stagesData = results[1] as List<Map<String, dynamic>>;
-      final officialData = results[2] as List<Map<String, dynamic>>;
+      final progressData = results[0];
+      final stagesData = results[1];
+      final officialData = results[2];
 
       final tasks =
           progressData.map((e) => NewbieTaskProgress.fromJson(e)).toList();

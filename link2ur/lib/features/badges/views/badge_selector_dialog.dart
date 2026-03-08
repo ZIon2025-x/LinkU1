@@ -5,7 +5,6 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/error_localizer.dart';
-import '../../../core/utils/l10n_extension.dart';
 import '../../../data/models/badge.dart';
 import '../bloc/badges_bloc.dart';
 
@@ -41,7 +40,6 @@ class BadgeSelectorDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: AppRadius.allLarge),
