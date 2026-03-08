@@ -164,6 +164,9 @@ class User(Base):
     flea_market_notice_agreed_at = Column(DateTime(timezone=True), nullable=True)  # 跳蚤市场须知同意时间
     stripe_account_id = Column(String(255), nullable=True, unique=True)  # Stripe Connect 账户 ID
     stripe_customer_id = Column(String(255), nullable=True, unique=True)  # Stripe Customer ID（用于支付）
+    bio = Column(Text, default="")
+    profile_views = Column(Integer, default=0)
+    displayed_badge_id = Column(Integer, ForeignKey("user_badges.id", ondelete="SET NULL"), nullable=True)
     # 关系
     tasks_posted = relationship(
         "Task", back_populates="poster", foreign_keys="Task.poster_id"
@@ -3319,3 +3322,149 @@ class AISystemPrompt(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), default=get_utc_time)
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
+
+
+# ============ Newbie Tasks & Incentive System ============
+
+class UserSkill(Base):
+    __tablename__ = "user_skills"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    skill_category = Column(String(50), nullable=False)
+    skill_name = Column(String(100), nullable=False)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+    __table_args__ = (UniqueConstraint("user_id", "skill_name"),)
+
+
+class NewbieTaskConfig(Base):
+    __tablename__ = "newbie_task_config"
+    id = Column(Integer, primary_key=True, index=True)
+    task_key = Column(String(50), unique=True, nullable=False)
+    stage = Column(Integer, nullable=False)
+    title_zh = Column(String(200), nullable=False)
+    title_en = Column(String(200), nullable=False)
+    description_zh = Column(Text, default="")
+    description_en = Column(Text, default="")
+    reward_type = Column(String(20), nullable=False, default="points")
+    reward_amount = Column(Integer, nullable=False, default=0)
+    coupon_id = Column(Integer, ForeignKey("coupons.id"), nullable=True)
+    display_order = Column(Integer, default=0)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
+
+
+class StageBonusConfig(Base):
+    __tablename__ = "stage_bonus_config"
+    id = Column(Integer, primary_key=True, index=True)
+    stage = Column(Integer, unique=True, nullable=False)
+    title_zh = Column(String(200), nullable=False)
+    title_en = Column(String(200), nullable=False)
+    reward_type = Column(String(20), nullable=False, default="points")
+    reward_amount = Column(Integer, nullable=False, default=0)
+    coupon_id = Column(Integer, ForeignKey("coupons.id"), nullable=True)
+    is_active = Column(Boolean, default=True)
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
+
+
+class UserTasksProgress(Base):
+    __tablename__ = "user_tasks_progress"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    task_key = Column(String(50), nullable=False)
+    status = Column(String(20), nullable=False, default="pending")
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+    claimed_at = Column(DateTime(timezone=True), nullable=True)
+    __table_args__ = (UniqueConstraint("user_id", "task_key"),)
+
+
+class StageBonusProgress(Base):
+    __tablename__ = "stage_bonus_progress"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    stage = Column(Integer, nullable=False)
+    status = Column(String(20), nullable=False, default="pending")
+    claimed_at = Column(DateTime(timezone=True), nullable=True)
+    __table_args__ = (UniqueConstraint("user_id", "stage"),)
+
+
+class OfficialTask(Base):
+    __tablename__ = "official_tasks"
+    id = Column(Integer, primary_key=True, index=True)
+    title_zh = Column(String(200), nullable=False)
+    title_en = Column(String(200), nullable=False)
+    description_zh = Column(Text, default="")
+    description_en = Column(Text, default="")
+    topic_tag = Column(String(50), nullable=True)
+    task_type = Column(String(20), nullable=False, default="forum_post")
+    reward_type = Column(String(20), nullable=False, default="points")
+    reward_amount = Column(Integer, nullable=False, default=0)
+    coupon_id = Column(Integer, ForeignKey("coupons.id"), nullable=True)
+    max_per_user = Column(Integer, nullable=False, default=1)
+    valid_from = Column(DateTime(timezone=True), nullable=True)
+    valid_until = Column(DateTime(timezone=True), nullable=True)
+    is_active = Column(Boolean, default=True)
+    created_by = Column(Integer, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
+
+
+class OfficialTaskSubmission(Base):
+    __tablename__ = "official_task_submissions"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    official_task_id = Column(Integer, ForeignKey("official_tasks.id", ondelete="CASCADE"), nullable=False)
+    forum_post_id = Column(Integer, nullable=True)
+    status = Column(String(20), nullable=False, default="submitted")
+    submitted_at = Column(DateTime(timezone=True), default=get_utc_time)
+    claimed_at = Column(DateTime(timezone=True), nullable=True)
+    reward_amount = Column(Integer, default=0)
+
+
+class SkillCategory(Base):
+    __tablename__ = "skill_categories"
+    id = Column(Integer, primary_key=True, index=True)
+    name_zh = Column(String(100), nullable=False)
+    name_en = Column(String(100), nullable=False)
+    icon = Column(String(200), default="")
+    display_order = Column(Integer, default=0)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+
+
+class SkillLeaderboard(Base):
+    __tablename__ = "skill_leaderboard"
+    id = Column(Integer, primary_key=True, index=True)
+    skill_category = Column(String(50), nullable=False)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    completed_tasks = Column(Integer, default=0)
+    total_amount = Column(Integer, default=0)
+    avg_rating = Column(Float, default=0.0)
+    score = Column(Float, default=0.0)
+    rank = Column(Integer, default=0)
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time)
+    __table_args__ = (UniqueConstraint("skill_category", "user_id"),)
+
+
+class UserBadge(Base):
+    __tablename__ = "user_badges"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    badge_type = Column(String(50), nullable=False, default="skill_rank")
+    skill_category = Column(String(50), nullable=False)
+    rank = Column(Integer, nullable=False)
+    is_displayed = Column(Boolean, default=False)
+    granted_at = Column(DateTime(timezone=True), default=get_utc_time)
+    __table_args__ = (UniqueConstraint("user_id", "skill_category"),)
+
+
+class AdminRewardLog(Base):
+    __tablename__ = "admin_reward_logs"
+    id = Column(Integer, primary_key=True, index=True)
+    admin_id = Column(Integer, nullable=False)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    reward_type = Column(String(20), nullable=False)
+    points_amount = Column(Integer, nullable=True)
+    coupon_id = Column(Integer, ForeignKey("coupons.id"), nullable=True)
+    reason = Column(Text, default="")
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)

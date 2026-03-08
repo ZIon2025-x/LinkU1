@@ -4197,3 +4197,214 @@ class OfficialActivityResultOut(BaseModel):
 class OfficialAccountSetup(BaseModel):
     user_id: str
     official_badge: Optional[str] = "官方"
+
+
+# ============ User Skills ============
+
+class UserSkillCreate(BaseModel):
+    skill_category: str
+    skill_name: str
+
+class UserSkillOut(BaseModel):
+    id: int
+    skill_category: str
+    skill_name: str
+    class Config:
+        from_attributes = True
+
+# ============ Newbie Tasks ============
+
+class NewbieTaskConfigOut(BaseModel):
+    task_key: str
+    stage: int
+    title_zh: str
+    title_en: str
+    description_zh: str = ""
+    description_en: str = ""
+    reward_type: str
+    reward_amount: int
+    coupon_id: Optional[int] = None
+    display_order: int = 0
+    is_active: bool = True
+    class Config:
+        from_attributes = True
+
+class NewbieTaskConfigUpdate(BaseModel):
+    title_zh: Optional[str] = None
+    title_en: Optional[str] = None
+    description_zh: Optional[str] = None
+    description_en: Optional[str] = None
+    reward_type: Optional[str] = None
+    reward_amount: Optional[int] = None
+    coupon_id: Optional[int] = None
+    is_active: Optional[bool] = None
+
+class UserTaskProgressOut(BaseModel):
+    task_key: str
+    status: str
+    completed_at: Optional[datetime.datetime] = None
+    claimed_at: Optional[datetime.datetime] = None
+    config: NewbieTaskConfigOut
+    class Config:
+        from_attributes = True
+
+class StageBonusConfigOut(BaseModel):
+    stage: int
+    title_zh: str
+    title_en: str
+    reward_type: str
+    reward_amount: int
+    coupon_id: Optional[int] = None
+    is_active: bool = True
+    class Config:
+        from_attributes = True
+
+class StageBonusConfigUpdate(BaseModel):
+    title_zh: Optional[str] = None
+    title_en: Optional[str] = None
+    reward_type: Optional[str] = None
+    reward_amount: Optional[int] = None
+    coupon_id: Optional[int] = None
+
+class StageProgressOut(BaseModel):
+    stage: int
+    status: str
+    claimed_at: Optional[datetime.datetime] = None
+    config: StageBonusConfigOut
+    class Config:
+        from_attributes = True
+
+# ============ Official Tasks ============
+
+class OfficialTaskCreate(BaseModel):
+    title_zh: str
+    title_en: str
+    description_zh: str = ""
+    description_en: str = ""
+    topic_tag: Optional[str] = None
+    task_type: str = "forum_post"
+    reward_type: str = "points"
+    reward_amount: int = 0
+    coupon_id: Optional[int] = None
+    max_per_user: int = 1
+    valid_from: Optional[datetime.datetime] = None
+    valid_until: Optional[datetime.datetime] = None
+
+class OfficialTaskUpdate(BaseModel):
+    title_zh: Optional[str] = None
+    title_en: Optional[str] = None
+    description_zh: Optional[str] = None
+    description_en: Optional[str] = None
+    topic_tag: Optional[str] = None
+    task_type: Optional[str] = None
+    reward_type: Optional[str] = None
+    reward_amount: Optional[int] = None
+    coupon_id: Optional[int] = None
+    max_per_user: Optional[int] = None
+    valid_from: Optional[datetime.datetime] = None
+    valid_until: Optional[datetime.datetime] = None
+    is_active: Optional[bool] = None
+
+class OfficialTaskOut(BaseModel):
+    id: int
+    title_zh: str
+    title_en: str
+    description_zh: str = ""
+    description_en: str = ""
+    topic_tag: Optional[str] = None
+    task_type: str
+    reward_type: str
+    reward_amount: int
+    coupon_id: Optional[int] = None
+    max_per_user: int
+    valid_from: Optional[datetime.datetime] = None
+    valid_until: Optional[datetime.datetime] = None
+    is_active: bool
+    created_at: Optional[datetime.datetime] = None
+    class Config:
+        from_attributes = True
+
+class OfficialTaskSubmissionOut(BaseModel):
+    id: int
+    official_task_id: int
+    forum_post_id: Optional[int] = None
+    status: str
+    submitted_at: Optional[datetime.datetime] = None
+    claimed_at: Optional[datetime.datetime] = None
+    reward_amount: int = 0
+    class Config:
+        from_attributes = True
+
+class OfficialTaskSubmit(BaseModel):
+    forum_post_id: int
+
+# ============ Skill Leaderboard ============
+
+class SkillCategoryCreate(BaseModel):
+    name_zh: str
+    name_en: str
+    icon: str = ""
+    display_order: int = 0
+
+class SkillCategoryUpdate(BaseModel):
+    name_zh: Optional[str] = None
+    name_en: Optional[str] = None
+    icon: Optional[str] = None
+    display_order: Optional[int] = None
+    is_active: Optional[bool] = None
+
+class SkillCategoryOut(BaseModel):
+    id: int
+    name_zh: str
+    name_en: str
+    icon: str = ""
+    display_order: int = 0
+    is_active: bool = True
+    class Config:
+        from_attributes = True
+
+class LeaderboardEntryOut(BaseModel):
+    user_id: str
+    user_name: str = ""
+    user_avatar: str = ""
+    skill_category: str
+    completed_tasks: int = 0
+    total_amount: int = 0
+    avg_rating: float = 0.0
+    score: float = 0.0
+    rank: int = 0
+    class Config:
+        from_attributes = True
+
+# ============ Badges ============
+
+class UserBadgeOut(BaseModel):
+    id: int
+    badge_type: str
+    skill_category: str
+    rank: int
+    is_displayed: bool = False
+    granted_at: Optional[datetime.datetime] = None
+    class Config:
+        from_attributes = True
+
+# ============ Admin Rewards ============
+
+class AdminRewardSend(BaseModel):
+    user_id: str
+    reward_type: str
+    points_amount: Optional[int] = None
+    coupon_id: Optional[int] = None
+    reason: str = ""
+
+class AdminRewardLogOut(BaseModel):
+    id: int
+    admin_id: int
+    user_id: str
+    reward_type: str
+    points_amount: Optional[int] = None
+    coupon_id: Optional[int] = None
+    reason: str = ""
+    created_at: Optional[datetime.datetime] = None
+    class Config:
+        from_attributes = True
