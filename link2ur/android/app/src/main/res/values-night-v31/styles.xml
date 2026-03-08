@@ -4,8 +4,6 @@
     <!-- Android 12+ 夜间主题也必须是 MaterialComponents -->
     <style name="LaunchTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="android:forceDarkAllowed">false</item>
-        <item name="android:windowFullscreen">false</item>
-        <item name="android:windowDrawsSystemBarBackgrounds">false</item>
         <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
         <item name="android:windowSplashScreenBackground">#12121A</item>
         <item name="android:windowSplashScreenAnimatedIcon">@drawable/android12splash</item>

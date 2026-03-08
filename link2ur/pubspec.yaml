@@ -1,7 +1,7 @@
 name: link2ur
 description: "Link2Ur - 英国生活互助平台"
 publish_to: 'none'
-version: 1.0.6+1
+version: 1.0.6+2
 
 environment:
   sdk: ^3.5.0
@@ -104,7 +104,6 @@ dependencies:
   # 原生启动画面
   flutter_native_splash: ^2.4.4
   stream_transform: ^2.1.1
-  flutter_app_badger: ^1.5.0
 
 dev_dependencies:
   flutter_test:

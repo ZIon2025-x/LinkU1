@@ -98,8 +98,6 @@ const Footer: React.FC = () => {
                 src="/static/get-it-on-google-play-badge-seeklogo.png"
                 alt="Get it on Google Play"
                 title="Get it on Google Play"
-                comingSoon
-                comingSoonMessage="测试中，马上上线"
               />
               <StoreBadge
                 href={APP_GALLERY_URL}

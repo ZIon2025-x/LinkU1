@@ -28,7 +28,7 @@ export const APP_STORE_URL =
 
 /** Google Play 链接。可通过环境变量 REACT_APP_GOOGLE_PLAY_URL 覆盖。 */
 export const GOOGLE_PLAY_URL =
-  process.env.REACT_APP_GOOGLE_PLAY_URL || 'https://play.google.com/store/apps/details?id=com.link2ur.app';
+  process.env.REACT_APP_GOOGLE_PLAY_URL || 'https://play.google.com/store/apps/details?id=com.link2ur';
 
 /** Huawei AppGallery 链接。可通过环境变量 REACT_APP_APP_GALLERY_URL 覆盖。 */
 export const APP_GALLERY_URL =

@@ -1549,7 +1549,7 @@ async def websocket_chat(
     session_id = None
     cookies = websocket.cookies
     is_service_auth = False
-    
+
     # 检查用户session_id cookie
     if "session_id" in cookies:
         session_id = cookies["session_id"]
