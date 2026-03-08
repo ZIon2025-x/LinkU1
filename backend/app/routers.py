@@ -12410,9 +12410,9 @@ async def translate_text(
             logger.debug(f"开始翻译: text={text[:50]}..., target={target_lang}, source={source_lang}")
             
             translation_manager = get_translation_manager()
-            # 使用异步翻译（在线程池中执行，不阻塞事件循环）
-            from app.utils.translation_async import translate_async
-            translated_text = await translate_async(
+            # 使用带换行保护的翻译（自动分段处理含换行的文本）
+            from app.utils.bilingual_helper import _translate_with_encoding_protection
+            translated_text = await _translate_with_encoding_protection(
                 translation_manager,
                 text=text,
                 target_lang=target_lang,

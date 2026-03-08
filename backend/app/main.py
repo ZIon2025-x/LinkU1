@@ -1661,6 +1661,7 @@ async def websocket_chat(
             try:
                 await websocket.accept()
                 connection_established = True
+                new_connection.is_accepted = True  # 标记为已接受，允许心跳循环发送 ping
                 logger.debug(f"WebSocket connection established for user {user_id} (total: {len(ws_manager.connections)})")
             except Exception as accept_error:
                 # accept 失败，回滚连接注册
@@ -1725,8 +1726,9 @@ async def websocket_chat(
                     await websocket.send_json({"type": "ping"})
                     last_ping_time = current_time
                 except Exception as e:
-                    logger.error(f"Failed to send ping to user {user_id}: {e}")
-            
+                    logger.warning(f"Failed to send ping to user {user_id}: {e}")
+                    break  # 连接已断开，退出循环交由外层 except 清理
+
             # 统一接收消息（心跳和业务消息都在这里处理，避免竞争）
             try:
                 data = await asyncio.wait_for(

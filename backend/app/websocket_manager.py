@@ -28,6 +28,7 @@ class WebSocketConnection:
         self.pong_count = 0
         self.missing_pongs = 0
         self.is_alive = True
+        self.is_accepted = False  # websocket.accept() 成功后由外部设置为 True
     
     def update_activity(self):
         """更新活动时间"""
@@ -210,7 +211,10 @@ class WebSocketManager:
                     if not connection.is_alive:
                         dead_connections.append(user_id)
                         continue
-                    
+                    # 跳过尚未完成 accept() 的连接，避免 "Need to call accept first" 错误
+                    if not connection.is_accepted:
+                        continue
+
                     try:
                         # 发送 ping
                         await connection.websocket.send_json({"type": "ping"})

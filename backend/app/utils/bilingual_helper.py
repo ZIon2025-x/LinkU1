@@ -52,61 +52,40 @@ async def _translate_with_encoding_protection(
     max_retries: int = 2
 ) -> Optional[str]:
     """
-    带编码标记保护的翻译函数
-    如果占位符方法失败，使用分段翻译策略
+    带编码标记保护的翻译函数。
+
+    策略：
+    - 含换行/空格标记的文本 → 直接使用分段翻译（最可靠）
+      因为翻译API可能截断长文本、丢弃或改写 <br/> 占位符，
+      导致部分或全部换行丢失。分段翻译逐段处理，彻底避免此问题。
+    - 不含编码标记的文本 → 直接翻译
     """
     from app.utils.translation_async import translate_async
 
-    # 方法1：使用占位符保护（优先）
-    protected_text, has_encoding = _protect_encoding_markers(text)
+    _, has_encoding = _protect_encoding_markers(text)
 
-    logger.info(
-        f"[翻译调试] has_encoding={has_encoding}, "
-        f"原文前50字={repr(text[:50])}, "
-        f"保护后前50字={repr(protected_text[:50])}"
-    )
+    if has_encoding:
+        # 文本包含换行或空格标记 → 使用分段翻译
+        return await _translate_segmented(
+            translation_manager,
+            text,
+            target_lang,
+            source_lang,
+            max_retries
+        )
 
+    # 不含编码标记，直接翻译
     translated = await translate_async(
         translation_manager,
-        text=protected_text,
+        text=text,
         target_lang=target_lang,
         source_lang=source_lang,
         max_retries=max_retries
     )
 
     if translated:
-        restored = _restore_encoding_markers(translated)
-        has_newline = '\n' in restored
-        has_literal_n = '\\n' in restored
-        has_literal_c = '\\c' in restored
+        return html.unescape(translated)
 
-        logger.info(
-            f"[翻译调试] 翻译结果前50字={repr(translated[:50])}, "
-            f"恢复后前50字={repr(restored[:50])}, "
-            f"has_newline={has_newline}, has_literal_n={has_literal_n}"
-        )
-
-        # 检查占位符是否成功恢复
-        # 恢复后的文本可能包含真实换行符（\n ASCII 10）或字面量 \\n，均视为成功
-        if has_encoding and (has_newline or has_literal_n or has_literal_c):
-            # 占位符成功恢复，返回结果
-            logger.info("[翻译调试] 占位符方法成功")
-            return restored
-        elif has_encoding:
-            # 占位符丢失，使用分段翻译策略
-            logger.info("[翻译调试] 占位符丢失，切换到分段翻译策略")
-            return await _translate_segmented(
-                translation_manager,
-                text,
-                target_lang,
-                source_lang,
-                max_retries
-            )
-        else:
-            # 没有编码标记，直接返回
-            return restored
-
-    logger.warning(f"[翻译调试] 翻译失败，返回 None，原文前50字={repr(text[:50])}")
     return None
 
 
@@ -126,8 +105,6 @@ async def _translate_segmented(
     # 使用正则表达式匹配字面量 \n、\c 以及真实换行符，保留分隔符
     import re
     parts = re.split(r'(\n+|\\n+|\\c+)', text)
-
-    logger.info(f"[分段翻译] 分割成 {len(parts)} 段: {[repr(p[:20]) for p in parts]}")
 
     if len(parts) == 1:
         # 没有编码标记，直接翻译
