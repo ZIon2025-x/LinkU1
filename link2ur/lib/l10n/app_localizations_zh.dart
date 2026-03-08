@@ -4401,6 +4401,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get forumCreatePostAddImage => '添加图片';
 
   @override
+  String get forumDraftDialogTitle => '你有未完成的内容';
+
+  @override
+  String get forumDraftDontSave => '不保存';
+
+  @override
+  String get forumDraftSaveDraft => '保存草稿';
+
+  @override
+  String get forumDraftBannerText => '你有一个未发送的草稿';
+
+  @override
+  String get forumDraftRestore => '恢复';
+
+  @override
   String get fleaMarketCreatePublishing => '发布中...';
 
   @override
@@ -13772,6 +13787,21 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get forumCreatePostAddImage => '添加圖片';
+
+  @override
+  String get forumDraftDialogTitle => '你有未完成的內容';
+
+  @override
+  String get forumDraftDontSave => '不保存';
+
+  @override
+  String get forumDraftSaveDraft => '儲存草稿';
+
+  @override
+  String get forumDraftBannerText => '你有一個未發送的草稿';
+
+  @override
+  String get forumDraftRestore => '恢復';
 
   @override
   String get fleaMarketCreatePublishing => '發布中...';

@@ -4585,6 +4585,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get forumCreatePostAddImage => 'Add image';
 
   @override
+  String get forumDraftDialogTitle => 'You have unsaved content';
+
+  @override
+  String get forumDraftDontSave => 'Don\'t save';
+
+  @override
+  String get forumDraftSaveDraft => 'Save draft';
+
+  @override
+  String get forumDraftBannerText => 'You have an unsaved draft';
+
+  @override
+  String get forumDraftRestore => 'Restore';
+
+  @override
   String get fleaMarketCreatePublishing => 'Publishing...';
 
   @override

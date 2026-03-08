@@ -8487,6 +8487,36 @@ abstract class AppLocalizations {
   /// **'Add image'**
   String get forumCreatePostAddImage;
 
+  /// No description provided for @forumDraftDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'You have unsaved content'**
+  String get forumDraftDialogTitle;
+
+  /// No description provided for @forumDraftDontSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Don\'t save'**
+  String get forumDraftDontSave;
+
+  /// No description provided for @forumDraftSaveDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Save draft'**
+  String get forumDraftSaveDraft;
+
+  /// No description provided for @forumDraftBannerText.
+  ///
+  /// In en, this message translates to:
+  /// **'You have an unsaved draft'**
+  String get forumDraftBannerText;
+
+  /// No description provided for @forumDraftRestore.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore'**
+  String get forumDraftRestore;
+
   /// No description provided for @fleaMarketCreatePublishing.
   ///
   /// In en, this message translates to:

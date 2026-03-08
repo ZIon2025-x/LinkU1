@@ -1,13 +1,16 @@
+import 'dart:async' show unawaited;
+import 'dart:convert';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_spacing.dart';
-import '../../../core/utils/adaptive_dialogs.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/app_feedback.dart';
@@ -42,6 +45,9 @@ class _CreatePostViewState extends State<CreatePostView> {
   final List<PlatformFile> _selectedFiles = [];
 
   bool _isUploading = false;
+  static const String _kDraftKey = 'forum_create_post_draft';
+  static const Duration _kDraftMaxAge = Duration(days: 7);
+  bool _hasDraft = false;
 
   bool get _hasUnsavedChanges {
     return _titleController.text.isNotEmpty ||
@@ -53,6 +59,63 @@ class _CreatePostViewState extends State<CreatePostView> {
   String? _linkedItemType;
   String? _linkedItemId;
   String? _linkedName;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkForDraft();
+  }
+
+  Future<void> _saveDraft() async {
+    final prefs = await SharedPreferences.getInstance();
+    final draft = jsonEncode({
+      'title': _titleController.text,
+      'content': _contentController.text,
+      'categoryId': _selectedCategoryId,
+      'savedAt': DateTime.now().toIso8601String(),
+    });
+    await prefs.setString(_kDraftKey, draft);
+  }
+
+  Future<void> _clearDraft() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_kDraftKey);
+  }
+
+  Future<void> _checkForDraft() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_kDraftKey);
+    if (raw == null) return;
+    try {
+      final map = jsonDecode(raw) as Map<String, dynamic>;
+      final savedAt = DateTime.tryParse(map['savedAt'] as String? ?? '');
+      if (savedAt == null || DateTime.now().difference(savedAt) > _kDraftMaxAge) {
+        await _clearDraft();
+        return;
+      }
+      if (!mounted) return;
+      setState(() => _hasDraft = true);
+    } catch (_) {
+      await _clearDraft();
+    }
+  }
+
+  Future<void> _restoreDraft() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_kDraftKey);
+    if (raw == null) return;
+    try {
+      final map = jsonDecode(raw) as Map<String, dynamic>;
+      _titleController.text = map['title'] as String? ?? '';
+      _contentController.text = map['content'] as String? ?? '';
+      setState(() {
+        _selectedCategoryId = map['categoryId'] as int?;
+        _hasDraft = false;
+      });
+    } catch (_) {
+      setState(() => _hasDraft = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -231,6 +294,7 @@ class _CreatePostViewState extends State<CreatePostView> {
           if (!state.isCreatingPost && state.errorMessage != null) {
             AppFeedback.showError(context, context.localizeError(state.errorMessage));
           } else if (state.createPostSuccess) {
+            unawaited(_clearDraft());
             AppFeedback.showSuccess(
                 context, context.l10n.feedbackPostPublishSuccess);
             context.pop();
@@ -245,14 +309,36 @@ class _CreatePostViewState extends State<CreatePostView> {
             canPop: !_hasUnsavedChanges,
             onPopInvokedWithResult: (didPop, _) {
               if (!didPop) {
-                AdaptiveDialogs.showConfirmDialog(
+                showDialog<String>(
                   context: context,
-                  title: context.l10n.commonDiscardChanges,
-                  content: context.l10n.commonDiscardChangesMessage,
-                  confirmText: context.l10n.commonDiscard,
-                  isDestructive: true,
-                ).then((confirmed) {
-                  if (confirmed == true && context.mounted) Navigator.of(context).pop();
+                  builder: (ctx) => AlertDialog(
+                    title: Text(context.l10n.forumDraftDialogTitle),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(ctx).pop('cancel'),
+                        child: Text(context.l10n.commonCancel),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.of(ctx).pop('discard'),
+                        child: Text(context.l10n.forumDraftDontSave),
+                      ),
+                      FilledButton(
+                        onPressed: () => Navigator.of(ctx).pop('save'),
+                        child: Text(context.l10n.forumDraftSaveDraft),
+                      ),
+                    ],
+                  ),
+                ).then((result) {
+                  if (!context.mounted) return;
+                  if (result == 'save') {
+                    _saveDraft().then((_) {
+                      if (context.mounted) Navigator.of(context).pop();
+                    });
+                  } else if (result == 'discard') {
+                    _clearDraft().then((_) {
+                      if (context.mounted) Navigator.of(context).pop();
+                    });
+                  }
                 });
               }
             },
@@ -278,9 +364,54 @@ class _CreatePostViewState extends State<CreatePostView> {
             body: ListView(
               padding: AppSpacing.allMd,
               children: [
+                if (_hasDraft)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      borderRadius: AppRadius.allMedium,
+                      border: Border.all(
+                          color: AppColors.primary.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.edit_note, size: 18, color: AppColors.primary),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: Text(
+                            context.l10n.forumDraftBannerText,
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => _clearDraft().then((_) {
+                            if (mounted) setState(() => _hasDraft = false);
+                          }),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            minimumSize: Size.zero,
+                          ),
+                          child: Text(context.l10n.commonDiscard, style: const TextStyle(fontSize: 13)),
+                        ),
+                        FilledButton(
+                          onPressed: _restoreDraft,
+                          style: FilledButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
+                            minimumSize: Size.zero,
+                            textStyle: const TextStyle(fontSize: 13),
+                          ),
+                          child: Text(context.l10n.forumDraftRestore),
+                        ),
+                      ],
+                    ),
+                  ),
                 // 分类选择
                 if (state.categories.isNotEmpty) ...[
                   DropdownButtonFormField<int>(
+                    key: ValueKey(_selectedCategoryId),
                     initialValue: _selectedCategoryId,
                     decoration: InputDecoration(
                       labelText: context.l10n.forumSelectCategory,
