@@ -20,3 +20,6 @@ faker>=18.0.0,<25.0.0
 
 # Stripe SDK（用于支付沙盒测试）
 stripe>=7.0.0,<10.0.0
+
+# SQLAlchemy（用于单元测试中导入 app 模块）
+sqlalchemy>=2.0.0,<3.0.0

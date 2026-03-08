@@ -199,9 +199,13 @@ class TestLeaderboardAPI:
 
             if response.status_code == 200:
                 data = response.json()
-                assert isinstance(data, dict), \
+                # 用户无排名时接口返回 null，属于正常情况
+                assert data is None or isinstance(data, dict), \
                     f"返回数据格式不正确: {type(data)}"
-                print(f"✅ 我的排名: {data}")
+                if data:
+                    print(f"✅ 我的排名: {data}")
+                else:
+                    print("ℹ️  用户暂无排名 (null)")
             elif response.status_code == 404:
                 print("ℹ️  排名接口尚未实现或用户无排名 (404)")
             else:
