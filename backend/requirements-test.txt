@@ -23,3 +23,6 @@ stripe>=7.0.0,<10.0.0
 
 # SQLAlchemy（用于单元测试中导入 app 模块）
 sqlalchemy>=2.0.0,<3.0.0
+
+# Aho-Corasick（用于 content_filter 模块）
+pyahocorasick>=2.0.0,<3.0.0
