@@ -4,7 +4,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_spacing.dart';
+import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/widgets/error_state_view.dart';
 import '../bloc/expert_dashboard_bloc.dart';
 
 /// Stats tab for the Expert Dashboard — shows 5 stat cards.
@@ -17,9 +19,21 @@ class ExpertDashboardStatsTab extends StatelessWidget {
       buildWhen: (prev, curr) =>
           prev.stats != curr.stats || prev.status != curr.status,
       builder: (context, state) {
-        if (state.status == ExpertDashboardStatus.loading &&
+        if ((state.status == ExpertDashboardStatus.initial ||
+                state.status == ExpertDashboardStatus.loading) &&
             state.stats.isEmpty) {
           return const Center(child: CircularProgressIndicator());
+        }
+
+        if (state.status == ExpertDashboardStatus.error &&
+            state.stats.isEmpty) {
+          return ErrorStateView(
+            message: context.localizeError(
+                state.errorMessage ?? 'expert_dashboard_load_stats_failed'),
+            onRetry: () => context
+                .read<ExpertDashboardBloc>()
+                .add(const ExpertDashboardLoadStats()),
+          );
         }
 
         final stats = state.stats;
