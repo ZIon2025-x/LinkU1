@@ -64,7 +64,11 @@ class ProfileView extends StatelessWidget {
           return _buildNotLoggedIn(context);
         }
 
+        // key 绑定 userId：登出后重新登录另一个账号时，
+        // 强制重建 BlocProvider（StatefulShellRoute.indexedStack 保持 tab 存活，
+        // 不加 key 时 Flutter 复用旧 BlocProvider，导致显示上一个账号的数据）
         return BlocProvider(
+          key: ValueKey('profile_${authState.user!.id}'),
           create: (context) => ProfileBloc(
             userRepository: context.read<UserRepository>(),
             taskRepository: context.read<TaskRepository>(),

@@ -44,8 +44,8 @@ class CreditScoreGauge extends StatefulWidget {
 class _CreditScoreGaugeState extends State<CreditScoreGauge>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
-  late final Animation<double> _sweepAnimation;
-  late final Animation<double> _numberAnimation;
+  late Animation<double> _sweepAnimation;
+  late Animation<double> _numberAnimation;
 
   @override
   void initState() {
