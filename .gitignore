@@ -77,6 +77,10 @@ backend/app/.env
 *.pem
 !requirements*.txt
 
+# Firebase service account keys
+*firebase-adminsdk*.json
+*serviceAccountKey*.json
+
 # Logs
 *.log
 

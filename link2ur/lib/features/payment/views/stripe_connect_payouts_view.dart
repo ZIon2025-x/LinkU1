@@ -121,11 +121,17 @@ class _StripeConnectPayoutsViewState extends State<StripeConnectPayoutsView> {
     }
   }
 
-  void _showDashboardUnavailableSnackBar() {
+  void _showDashboardUnavailableSnackBar([String? reason]) {
     if (!mounted) return;
     final l10n = context.l10n;
+    final msg = switch (reason) {
+      'onboarding_incomplete' => l10n.stripeConnectDashboardOnboardingIncomplete,
+      'account_restricted' => l10n.stripeConnectDashboardAccountRestricted,
+      'unsupported_account_type' => l10n.stripeConnectDashboardUnsupportedType,
+      _ => l10n.stripeConnectDashboardUnavailable,
+    };
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(l10n.stripeConnectDashboardUnavailable)),
+      SnackBar(content: Text(msg)),
     );
   }
 
@@ -143,7 +149,7 @@ class _StripeConnectPayoutsViewState extends State<StripeConnectPayoutsView> {
         );
         return;
       }
-      _showDashboardUnavailableSnackBar();
+      _showDashboardUnavailableSnackBar(details.dashboardUnavailableReason);
     } catch (_) {
       _showDashboardUnavailableSnackBar();
     }

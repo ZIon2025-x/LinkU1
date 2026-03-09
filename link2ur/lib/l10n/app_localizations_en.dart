@@ -1607,6 +1607,18 @@ class AppLocalizationsEn extends AppLocalizations {
       'Unable to open Stripe dashboard';
 
   @override
+  String get stripeConnectDashboardOnboardingIncomplete =>
+      'Please complete account setup first';
+
+  @override
+  String get stripeConnectDashboardAccountRestricted =>
+      'Account restricted, please contact Stripe support';
+
+  @override
+  String get stripeConnectDashboardUnsupportedType =>
+      'This feature is not supported for your account type';
+
+  @override
   String get stripeOnboardingCreateFailed =>
       'Unable to create payout setup session, please try again';
 

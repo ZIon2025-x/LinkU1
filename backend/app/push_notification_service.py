@@ -8,6 +8,7 @@ import logging
 import json
 import base64
 import tempfile
+import time
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 from sqlalchemy.orm import Session
@@ -69,6 +70,71 @@ APNS_USE_SANDBOX = os.getenv("APNS_USE_SANDBOX", "false").lower() == "true"  # �
 
 # 临时文件路径（用于存储从环境变量读取的密钥）
 _temp_key_file: Optional[str] = None
+
+# ===== FCM (Firebase Cloud Messaging) 配置 =====
+FCM_AVAILABLE = False
+FCM_IMPORT_ERROR = None
+FIREBASE_CREDENTIALS = os.getenv("FIREBASE_CREDENTIALS")  # Base64 编码的 service account JSON
+FIREBASE_CREDENTIALS_FILE = os.getenv("FIREBASE_CREDENTIALS_FILE")  # 本地开发用文件路径
+
+try:
+    import firebase_admin
+    from firebase_admin import credentials as firebase_credentials, messaging as firebase_messaging
+    FCM_AVAILABLE = True
+except ImportError as e:
+    FCM_IMPORT_ERROR = str(e)
+    logger.warning(f"firebase-admin 未安装，Android 推送通知不可用。错误: {e}")
+    logger.warning("请安装: pip install firebase-admin")
+
+_firebase_initialized = False
+
+
+def _init_firebase():
+    """
+    初始化 Firebase Admin SDK（延迟初始化，仅在首次发送 FCM 时调用）
+    """
+    global _firebase_initialized
+    if _firebase_initialized:
+        return True
+
+    if not FCM_AVAILABLE:
+        logger.error(f"firebase-admin 未安装: {FCM_IMPORT_ERROR}")
+        return False
+
+    try:
+        # 检查是否已经被其他模块初始化
+        firebase_admin.get_app()
+        _firebase_initialized = True
+        return True
+    except ValueError:
+        pass  # 未初始化，继续
+
+    try:
+        cred = None
+
+        # 方式1: 从环境变量加载 Base64 编码的 service account JSON（适合 Railway 等云平台）
+        if FIREBASE_CREDENTIALS:
+            cred_json = json.loads(base64.b64decode(FIREBASE_CREDENTIALS).decode('utf-8'))
+            cred = firebase_credentials.Certificate(cred_json)
+            logger.info("从环境变量 FIREBASE_CREDENTIALS 加载 Firebase 凭证")
+
+        # 方式2: 从文件路径加载（本地开发）
+        elif FIREBASE_CREDENTIALS_FILE and Path(FIREBASE_CREDENTIALS_FILE).exists():
+            cred = firebase_credentials.Certificate(FIREBASE_CREDENTIALS_FILE)
+            logger.info(f"从文件加载 Firebase 凭证: {FIREBASE_CREDENTIALS_FILE}")
+
+        if cred is None:
+            logger.error("Firebase 凭证未配置（需要 FIREBASE_CREDENTIALS 或 FIREBASE_CREDENTIALS_FILE）")
+            return False
+
+        firebase_admin.initialize_app(cred)
+        _firebase_initialized = True
+        logger.info("Firebase Admin SDK 初始化成功")
+        return True
+
+    except Exception as e:
+        logger.error(f"Firebase Admin SDK 初始化失败: {e}")
+        return False
 
 
 def normalize_device_token(device_token: str) -> Optional[str]:
@@ -355,9 +421,15 @@ def send_push_notification(
                         localized_content=None  # 不再使用多语言 payload
                     )
                 elif device_token.platform == "android":
-                    # TODO: 实现 FCM 推送
-                    logger.warning("Android FCM 推送尚未实现")
-                    result = False
+                    result = send_fcm_notification(
+                        device_token.device_token,
+                        title=device_push_title,
+                        body=device_push_body,
+                        notification_type=notification_type,
+                        data=data,
+                        badge=badge,
+                        sound=sound,
+                    )
                 else:
                     logger.warning(f"未知平台: {device_token.platform}")
                     result = False
@@ -631,6 +703,86 @@ def send_apns_notification(
         import traceback
         logger.error(f"详细错误信息: {traceback.format_exc()}")
         return None  # None 表示系统错误，不应该标记令牌为不活跃
+
+
+def send_fcm_notification(
+    device_token: str,
+    title: Optional[str] = None,
+    body: Optional[str] = None,
+    notification_type: str = "general",
+    data: Optional[Dict[str, Any]] = None,
+    badge: Optional[int] = None,
+    sound: str = "default",
+) -> Optional[bool]:
+    """
+    发送 FCM 推送通知 (Android)
+
+    Returns:
+        True: 推送成功
+        False: 推送失败且设备令牌无效（应标记为不活跃）
+        None: 系统错误（不应标记令牌为不活跃）
+    """
+    if not FCM_AVAILABLE:
+        logger.error(f"firebase-admin 未安装: {FCM_IMPORT_ERROR}")
+        return None
+
+    if not _init_firebase():
+        return None
+
+    try:
+        # 构建 data payload（FCM data 值必须是字符串）
+        fcm_data = {"type": notification_type}
+        if data:
+            for k, v in data.items():
+                fcm_data[k] = str(v) if v is not None else ""
+
+        if badge is not None:
+            fcm_data["badge"] = str(badge)
+
+        # 构建 FCM 消息
+        message = firebase_messaging.Message(
+            token=device_token,
+            notification=firebase_messaging.Notification(
+                title=title or "Notification",
+                body=body or "",
+            ),
+            android=firebase_messaging.AndroidConfig(
+                priority="high",
+                notification=firebase_messaging.AndroidNotification(
+                    sound=sound if sound != "default" else "default",
+                    channel_id="link2ur_notifications",
+                ),
+            ),
+            data=fcm_data,
+        )
+
+        # 发送
+        response = firebase_messaging.send(message)
+        logger.info(f"FCM 推送成功: device_token={device_token[:20]}..., message_id={response}")
+        return True
+
+    except Exception as e:
+        error_str = str(e).lower()
+        exc_name = type(e).__name__
+
+        # 令牌无效的错误
+        # firebase_admin.messaging 抛出的异常：
+        # - UNREGISTERED: app 已卸载或 token 过期
+        # - INVALID_ARGUMENT: token 格式错误
+        # - NOT_FOUND: token 不存在
+        token_invalid_keywords = [
+            'unregistered', 'not-registered',
+            'invalid-registration-token', 'invalid-argument',
+            'registration-token-not-registered',
+            'missingregistration', 'invalidregistration',
+        ]
+        if any(kw in error_str for kw in token_invalid_keywords):
+            logger.warning(f"FCM 设备令牌无效 ({exc_name}): {e}")
+            return False
+
+        # 其他错误（配额、服务端错误等）不停用令牌
+        logger.error(f"FCM 推送失败 ({exc_name}): {e}")
+        return None
 
 
 def send_push_notification_async_safe(

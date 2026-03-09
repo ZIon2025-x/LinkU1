@@ -2059,6 +2059,7 @@ class StripeConnectAccountDetailsResponse(BaseModel):
     charges_enabled: bool
     payouts_enabled: bool
     dashboard_url: Optional[str] = None  # Stripe 仪表板登录链接
+    dashboard_unavailable_reason: Optional[str] = None  # 仪表板不可用原因码
     address: Optional[StripeConnectAddress] = None  # 地址信息
     individual: Optional[StripeConnectIndividual] = None  # 个人信息
     requirements: Optional[Dict[str, Any]] = None

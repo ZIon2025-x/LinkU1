@@ -1520,6 +1520,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get stripeConnectDashboardUnavailable => '暂无法打开 Stripe 子账户页面';
 
   @override
+  String get stripeConnectDashboardOnboardingIncomplete => '请先完成账户设置后再访问';
+
+  @override
+  String get stripeConnectDashboardAccountRestricted => '账户已被限制，请联系 Stripe 支持';
+
+  @override
+  String get stripeConnectDashboardUnsupportedType => '当前账户类型不支持此功能';
+
+  @override
   String get stripeOnboardingCreateFailed => '无法创建收款设置会话，请重试';
 
   @override
@@ -11128,6 +11137,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get stripeConnectDashboardUnavailable => '暫無法打開 Stripe 子賬戶頁面';
+
+  @override
+  String get stripeConnectDashboardOnboardingIncomplete => '請先完成賬戶設置後再訪問';
+
+  @override
+  String get stripeConnectDashboardAccountRestricted => '賬戶已被限制，請聯繫 Stripe 支持';
+
+  @override
+  String get stripeConnectDashboardUnsupportedType => '當前賬戶類型不支持此功能';
 
   @override
   String get stripeOnboardingCreateFailed => '無法創建收款設置會話，請重試';

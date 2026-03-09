@@ -297,6 +297,7 @@ class StripeConnectAccountDetails extends Equatable {
     this.chargesEnabled = false,
     this.payoutsEnabled = false,
     this.dashboardUrl,
+    this.dashboardUnavailableReason,
   });
 
   final String accountId;
@@ -308,6 +309,7 @@ class StripeConnectAccountDetails extends Equatable {
   final bool chargesEnabled;
   final bool payoutsEnabled;
   final String? dashboardUrl;
+  final String? dashboardUnavailableReason;
 
   factory StripeConnectAccountDetails.fromJson(Map<String, dynamic> json) {
     return StripeConnectAccountDetails(
@@ -320,6 +322,7 @@ class StripeConnectAccountDetails extends Equatable {
       chargesEnabled: json['charges_enabled'] as bool? ?? false,
       payoutsEnabled: json['payouts_enabled'] as bool? ?? false,
       dashboardUrl: json['dashboard_url'] as String?,
+      dashboardUnavailableReason: json['dashboard_unavailable_reason'] as String?,
     );
   }
 

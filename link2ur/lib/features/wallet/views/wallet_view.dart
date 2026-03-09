@@ -446,8 +446,9 @@ class _StripeConnectSection extends StatelessWidget {
                     title: context.l10n.stripeConnectOpenDashboard,
                   );
                 } else {
+                  final msg = _dashboardUnavailableMessage(context, details.dashboardUnavailableReason);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(context.l10n.stripeConnectDashboardUnavailable)),
+                    SnackBar(content: Text(msg)),
                   );
                 }
               } catch (_) {
@@ -708,6 +709,16 @@ String _localizeCouponType(BuildContext context, String type) {
     default:
       return type;
   }
+}
+
+String _dashboardUnavailableMessage(BuildContext context, String? reason) {
+  final l10n = context.l10n;
+  return switch (reason) {
+    'onboarding_incomplete' => l10n.stripeConnectDashboardOnboardingIncomplete,
+    'account_restricted' => l10n.stripeConnectDashboardAccountRestricted,
+    'unsupported_account_type' => l10n.stripeConnectDashboardUnsupportedType,
+    _ => l10n.stripeConnectDashboardUnavailable,
+  };
 }
 
 String _localizeCouponStatus(BuildContext context, String status) {

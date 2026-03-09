@@ -1464,24 +1464,34 @@ def get_account_details(
                 detail="账户验证失败：账户不属于当前用户"
             )
         
-        # 创建仪表板登录链接（Express 账户）
+        # 获取账户类型
+        account_type = getattr(account, 'type', 'express')
+
+        # 创建仪表板登录链接（仅 Express 账户支持）
         dashboard_url = None
-        try:
-            login_link = stripe.Account.create_login_link(current_user.stripe_account_id)
-            dashboard_url = login_link.url
-        except stripe.error.StripeError as e:
-            logger.warning(f"Failed to create dashboard login link: {e}")
-            # 如果无法创建登录链接，仍然返回其他信息
-        
+        dashboard_unavailable_reason = None
+        if account_type != 'express':
+            dashboard_unavailable_reason = 'unsupported_account_type'
+        elif not account.details_submitted:
+            dashboard_unavailable_reason = 'onboarding_incomplete'
+        else:
+            try:
+                login_link = stripe.Account.create_login_link(current_user.stripe_account_id)
+                dashboard_url = login_link.url
+            except stripe.error.StripeError as e:
+                logger.warning(f"Failed to create dashboard login link: {e}")
+                error_code = getattr(e, 'code', '') or ''
+                if 'restricted' in str(e).lower() or 'disabled' in str(e).lower():
+                    dashboard_unavailable_reason = 'account_restricted'
+                else:
+                    dashboard_unavailable_reason = 'stripe_error'
+
         # 获取账户的显示名称和邮箱
         display_name = getattr(account, 'display_name', None) or getattr(account, 'business_profile', {}).get('name', None) if hasattr(account, 'business_profile') else None
         email = getattr(account, 'email', None) or current_user.email
-        
+
         # 获取国家信息
         country = getattr(account, 'country', 'GB')
-        
-        # 获取账户类型
-        account_type = getattr(account, 'type', 'express')
         
         # 获取地址信息
         address_info = None
@@ -1537,6 +1547,7 @@ def get_account_details(
             "charges_enabled": account.charges_enabled,
             "payouts_enabled": account.payouts_enabled,
             "dashboard_url": dashboard_url,
+            "dashboard_unavailable_reason": dashboard_unavailable_reason,
             "address": address_info,
             "individual": individual_info,
             "requirements": {

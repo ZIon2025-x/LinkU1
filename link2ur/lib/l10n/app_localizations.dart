@@ -3027,6 +3027,24 @@ abstract class AppLocalizations {
   /// **'Unable to open Stripe dashboard'**
   String get stripeConnectDashboardUnavailable;
 
+  /// No description provided for @stripeConnectDashboardOnboardingIncomplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Please complete account setup first'**
+  String get stripeConnectDashboardOnboardingIncomplete;
+
+  /// No description provided for @stripeConnectDashboardAccountRestricted.
+  ///
+  /// In en, this message translates to:
+  /// **'Account restricted, please contact Stripe support'**
+  String get stripeConnectDashboardAccountRestricted;
+
+  /// No description provided for @stripeConnectDashboardUnsupportedType.
+  ///
+  /// In en, this message translates to:
+  /// **'This feature is not supported for your account type'**
+  String get stripeConnectDashboardUnsupportedType;
+
   /// No description provided for @stripeOnboardingCreateFailed.
   ///
   /// In en, this message translates to:
