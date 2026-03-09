@@ -4226,6 +4226,12 @@ class NewbieTaskConfigOut(BaseModel):
     coupon_id: Optional[int] = None
     display_order: int = 0
     is_active: bool = True
+
+    @field_validator("is_active", mode="before")
+    @classmethod
+    def coerce_is_active(cls, v):
+        return True if v is None else v
+
     class Config:
         from_attributes = True
 
@@ -4256,6 +4262,12 @@ class StageBonusConfigOut(BaseModel):
     reward_amount: int
     coupon_id: Optional[int] = None
     is_active: bool = True
+
+    @field_validator("is_active", mode="before")
+    @classmethod
+    def coerce_is_active(cls, v):
+        return True if v is None else v
+
     class Config:
         from_attributes = True
 
