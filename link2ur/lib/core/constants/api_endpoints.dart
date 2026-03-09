@@ -184,7 +184,7 @@ class ApiEndpoints {
       '/api/task-experts/services/$serviceId/time-slots';
   static String myServiceTimeSlots(int serviceId) =>
       '/api/task-experts/me/services/$serviceId/time-slots';
-  static const String myExpertStats = '/api/task-experts/me/stats';
+  static const String myExpertStats = '/api/task-experts/me/dashboard/stats';
   static String myExpertServiceById(String id) =>
       '/api/task-experts/me/services/$id';
   static String myExpertServiceTimeSlots(String serviceId) =>

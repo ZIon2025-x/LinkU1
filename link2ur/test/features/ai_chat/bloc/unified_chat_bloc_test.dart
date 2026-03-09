@@ -926,10 +926,7 @@ void main() {
       });
 
       test('copyWith creates correct copy', () {
-        const state = UnifiedChatState(
-          mode: ChatMode.ai,
-          isTyping: false,
-        );
+        const state = UnifiedChatState();
         final newState = state.copyWith(
           mode: ChatMode.csConnected,
           isTyping: true,

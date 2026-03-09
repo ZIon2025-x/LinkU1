@@ -180,7 +180,7 @@ Widget _buildStatsSection(
           child: GestureDetector(
             onTap: () {
               AppHaptics.selection();
-              context.push('/profile/my-tasks');
+              context.push('/profile/my-tasks?tab=3'); // inProgress tab
             },
             behavior: HitTestBehavior.opaque,
             child: Column(
@@ -211,7 +211,7 @@ Widget _buildStatsSection(
           child: GestureDetector(
             onTap: () {
               AppHaptics.selection();
-              context.push('/profile/my-tasks');
+              context.push('/profile/my-tasks?tab=5'); // completed tab
             },
             behavior: HitTestBehavior.opaque,
             child: Column(

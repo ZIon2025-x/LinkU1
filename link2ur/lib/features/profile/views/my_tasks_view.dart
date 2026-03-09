@@ -37,7 +37,10 @@ enum _TaskTab {
 /// 我的任务页面
 /// 对齐iOS MyTasksView - 7个Tab：全部/已发布/已接取/进行中/待处理/已完成/已取消
 class MyTasksView extends StatefulWidget {
-  const MyTasksView({super.key});
+  const MyTasksView({super.key, this.initialTab});
+
+  /// 初始显示的 Tab 索引（对应 _TaskTab.values 的下标）
+  final int? initialTab;
 
   @override
   State<MyTasksView> createState() => _MyTasksViewState();
@@ -64,7 +67,11 @@ class _MyTasksViewState extends State<MyTasksView>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: _tabs.length, vsync: this);
+    _tabController = TabController(
+      length: _tabs.length,
+      vsync: this,
+      initialIndex: widget.initialTab ?? 0,
+    );
     _tabController.addListener(_onTabChanged);
 
     for (final tab in _tabs) {
@@ -169,10 +176,14 @@ class _MyTasksViewState extends State<MyTasksView>
     setState(() => _pendingLoading = true);
     try {
       final repo = context.read<TaskRepository>();
-      final applications = await repo.getMyApplications();
+      final allApplications = await repo.getMyApplications();
+      // 只保留待处理的申请（status == pending）
+      final pending = allApplications
+          .where((app) => app.isPending)
+          .toList();
       if (mounted) {
         setState(() {
-          _pendingApplications = applications;
+          _pendingApplications = pending;
           _pendingLoading = false;
           _pendingError = null;
         });
@@ -349,14 +360,38 @@ class _TaskCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final locale = Localizations.localeOf(context);
-    // 后端 my-tasks 接口只返回 poster_id，不返回 poster 嵌套对象
-    // 当 poster 为 null 时，用当前登录用户信息做 fallback
     final authUser = context.read<AuthBloc>().state.user;
-    final posterName = task.poster?.name
-        ?? (task.posterId == authUser?.id ? authUser?.name : null)
-        ?? context.l10n.profileAnonymousUser;
-    final posterAvatar = task.poster?.avatar
-        ?? (task.posterId == authUser?.id ? authUser?.avatar : null);
+
+    // 判断是否为官方/多人任务（poster_id 为空）
+    final isOfficialTask = task.posterId.isEmpty;
+
+    // 显示名称和头像的逻辑：
+    // 1. 官方任务（无 poster_id）→ 显示 "Link²Ur 官方"
+    // 2. poster 嵌套对象存在 → 用 poster 信息
+    // 3. poster_id == 当前用户 → 用当前用户信息
+    // 4. 兜底 → 匿名用户
+    final String posterName;
+    final String? posterAvatar;
+    final bool isOfficial;
+    if (isOfficialTask) {
+      posterName = 'Link²Ur';
+      posterAvatar = null;
+      isOfficial = true;
+    } else if (task.poster != null) {
+      posterName = task.poster!.name.isNotEmpty
+          ? task.poster!.name
+          : context.l10n.profileAnonymousUser;
+      posterAvatar = task.poster!.avatar;
+      isOfficial = false;
+    } else if (task.posterId == authUser?.id) {
+      posterName = authUser?.name ?? context.l10n.profileAnonymousUser;
+      posterAvatar = authUser?.avatar;
+      isOfficial = false;
+    } else {
+      posterName = context.l10n.profileAnonymousUser;
+      posterAvatar = null;
+      isOfficial = false;
+    }
     return AppCard(
       onTap: () async {
         await context.push('/tasks/${task.id}');
@@ -372,6 +407,7 @@ class _TaskCard extends StatelessWidget {
                 imageUrl: posterAvatar,
                 name: posterName,
                 size: 36,
+                isOfficial: isOfficial,
               ),
               AppSpacing.hSm,
               Expanded(
@@ -446,6 +482,25 @@ class _TaskCard extends StatelessWidget {
             ),
           ],
           AppSpacing.vMd,
+
+          // 多人任务参与人数
+          if (task.isMultiParticipant) ...[
+            Row(
+              children: [
+                const Icon(Icons.people_outline, size: 16, color: AppColors.primary),
+                const SizedBox(width: 4),
+                Text(
+                  '${task.currentParticipants}/${task.maxParticipants}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+            AppSpacing.vSm,
+          ],
 
           // 底部：价格和位置（待报价任务显示「待报价」）
           Row(

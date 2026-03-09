@@ -28,7 +28,11 @@ List<RouteBase> get profileRoutes => [
       GoRoute(
         path: AppRoutes.myTasks,
         name: 'myTasks',
-        builder: (context, state) => const MyTasksView(),
+        builder: (context, state) {
+          final tabStr = state.uri.queryParameters['tab'];
+          final tab = tabStr != null ? int.tryParse(tabStr) : null;
+          return MyTasksView(initialTab: tab);
+        },
       ),
       GoRoute(
         path: AppRoutes.myPosts,

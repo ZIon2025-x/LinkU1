@@ -18,21 +18,18 @@ void main() {
       senderId: 'user2',
       receiverId: 'user1',
       content: 'Hello',
-      createdAt: null,
     ),
     const Message(
       id: 2,
       senderId: 'user1',
       receiverId: 'user2',
       content: 'Hi there',
-      createdAt: null,
     ),
     const Message(
       id: 3,
       senderId: 'user2',
       receiverId: 'user1',
       content: 'How are you?',
-      createdAt: null,
     ),
   ];
 
@@ -58,7 +55,6 @@ void main() {
     senderId: 'user1',
     receiverId: 'user2',
     content: 'New message',
-    messageType: 'text',
   );
 
   // Sent task message returned from server
@@ -66,7 +62,6 @@ void main() {
     id: 101,
     senderId: 'user1',
     content: 'Task message sent',
-    messageType: 'text',
     taskId: 42,
   );
 
@@ -228,8 +223,6 @@ void main() {
           status: ChatStatus.loaded,
           messages: testMessages,
           userId: 'user2',
-          page: 1,
-          hasMore: true,
         ),
         act: (bloc) => bloc.add(const ChatLoadMore()),
         expect: () => [
@@ -279,7 +272,6 @@ void main() {
           userId: 'user2',
           taskId: 42,
           taskStatus: 'in_progress',
-          hasMore: true,
           nextCursor: 'cursor_abc',
         ),
         act: (bloc) => bloc.add(const ChatLoadMore()),
@@ -320,7 +312,6 @@ void main() {
           status: ChatStatus.loaded,
           messages: testMessages,
           userId: 'user2',
-          hasMore: true,
           isLoadingMore: true,
         ),
         act: (bloc) => bloc.add(const ChatLoadMore()),
@@ -335,8 +326,6 @@ void main() {
           messages: taskMessages,
           userId: 'user2',
           taskId: 42,
-          hasMore: true,
-          nextCursor: null,
         ),
         act: (bloc) => bloc.add(const ChatLoadMore()),
         expect: () => [
@@ -464,7 +453,6 @@ void main() {
           verify(() => mockMessageRepository.sendTaskChatMessage(
                 42,
                 content: 'Task message sent',
-                messageType: 'text',
               )).called(1);
         },
       );
@@ -691,23 +679,21 @@ void main() {
       blocTest<ChatBloc, ChatState>(
         'processes read receipt from peer in private chat (isRead not in Message.props)',
         build: () => chatBloc,
-        seed: () => ChatState(
+        seed: () => const ChatState(
           status: ChatStatus.loaded,
           userId: 'user2',
           messages: [
-            const Message(
+            Message(
               id: 1,
               senderId: 'user1',
               receiverId: 'user2',
               content: 'Hello',
-              isRead: false,
             ),
-            const Message(
+            Message(
               id: 2,
               senderId: 'user2',
               receiverId: 'user1',
               content: 'Hi',
-              isRead: false,
             ),
           ],
         ),
@@ -721,16 +707,15 @@ void main() {
       blocTest<ChatBloc, ChatState>(
         'does not emit when receipt is from non-peer in private chat',
         build: () => chatBloc,
-        seed: () => ChatState(
+        seed: () => const ChatState(
           status: ChatStatus.loaded,
           userId: 'user2',
           messages: [
-            const Message(
+            Message(
               id: 1,
               senderId: 'user1',
               receiverId: 'user2',
               content: 'Hello',
-              isRead: false,
             ),
           ],
         ),
@@ -751,7 +736,6 @@ void main() {
               id: 1,
               senderId: 'user1',
               content: 'Task msg',
-              isRead: false,
               taskId: 42,
             ),
             // user3's message — from receipt sender, should stay unread
@@ -759,7 +743,6 @@ void main() {
               id: 2,
               senderId: 'user3',
               content: 'Another msg',
-              isRead: false,
               taskId: 42,
             ),
           ],

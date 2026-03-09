@@ -5,7 +5,6 @@ import 'package:mocktail/mocktail.dart';
 import 'package:link2ur/features/message/bloc/message_bloc.dart';
 import 'package:link2ur/data/models/message.dart';
 import 'package:link2ur/data/models/user.dart';
-import 'package:link2ur/data/repositories/message_repository.dart';
 
 import '../../../helpers/test_helpers.dart';
 
@@ -15,17 +14,16 @@ void main() {
 
   // Test data
   final testContacts = [
-    ChatContact(
+    const ChatContact(
       id: 'c1',
-      user: const UserBrief(id: 'u1', name: 'Alice'),
+      user: UserBrief(id: 'u1', name: 'Alice'),
       lastMessage: 'Hello',
       unreadCount: 2,
     ),
-    ChatContact(
+    const ChatContact(
       id: 'c2',
-      user: const UserBrief(id: 'u2', name: 'Bob'),
+      user: UserBrief(id: 'u2', name: 'Bob'),
       lastMessage: 'Hi',
-      unreadCount: 0,
     ),
   ];
 
@@ -36,7 +34,7 @@ void main() {
       participants: const [UserBrief(id: 'u1', name: 'Alice')],
       lastMessage: 'Task msg 1',
       unreadCount: 3,
-      lastMessageTime: DateTime(2026, 3, 8, 10, 0),
+      lastMessageTime: DateTime(2026, 3, 8, 10),
     ),
     TaskChat(
       taskId: 2,
@@ -44,7 +42,7 @@ void main() {
       participants: const [UserBrief(id: 'u2', name: 'Bob')],
       lastMessage: 'Task msg 2',
       unreadCount: 1,
-      lastMessageTime: DateTime(2026, 3, 8, 9, 0),
+      lastMessageTime: DateTime(2026, 3, 8, 9),
     ),
   ];
 
@@ -54,7 +52,6 @@ void main() {
       taskTitle: 'Task C',
       participants: const [UserBrief(id: 'u3', name: 'Charlie')],
       lastMessage: 'Task msg 3',
-      unreadCount: 0,
       lastMessageTime: DateTime(2026, 3, 7),
     ),
   ];
@@ -246,8 +243,6 @@ void main() {
         seed: () => MessageState(
           status: MessageStatus.loaded,
           taskChats: testTaskChats,
-          taskChatsPage: 1,
-          hasMoreTaskChats: true,
         ),
         act: (bloc) => bloc.add(const MessageLoadMoreTaskChats()),
         expect: () => [
@@ -286,7 +281,6 @@ void main() {
         seed: () => MessageState(
           status: MessageStatus.loaded,
           taskChats: testTaskChats,
-          hasMoreTaskChats: true,
           isLoadingMore: true,
         ),
         act: (bloc) => bloc.add(const MessageLoadMoreTaskChats()),
@@ -305,8 +299,6 @@ void main() {
         seed: () => MessageState(
           status: MessageStatus.loaded,
           taskChats: testTaskChats,
-          taskChatsPage: 1,
-          hasMoreTaskChats: true,
         ),
         act: (bloc) => bloc.add(const MessageLoadMoreTaskChats()),
         expect: () => [
@@ -361,14 +353,13 @@ void main() {
       blocTest<MessageBloc, MessageState>(
         'does not emit when unreadCount is already 0',
         build: () => messageBloc,
-        seed: () => MessageState(
+        seed: () => const MessageState(
           status: MessageStatus.loaded,
           taskChats: [
             TaskChat(
               taskId: 1,
               taskTitle: 'Task A',
-              participants: const [],
-              unreadCount: 0,
+              participants: [],
             ),
           ],
         ),
@@ -500,7 +491,7 @@ void main() {
       });
 
       test('displayTaskChats filters hidden chats without new messages', () {
-        final hiddenTime = DateTime(2026, 3, 8, 11, 0); // after last message
+        final hiddenTime = DateTime(2026, 3, 8, 11); // after last message
         final state = MessageState(
           taskChats: testTaskChats,
           hiddenTaskChats: {1: hiddenTime},
@@ -513,7 +504,7 @@ void main() {
 
       test('displayTaskChats shows hidden chat with new message after hide',
           () {
-        final hiddenTime = DateTime(2026, 3, 8, 9, 0); // before last message
+        final hiddenTime = DateTime(2026, 3, 8, 9); // before last message
         final state = MessageState(
           taskChats: testTaskChats,
           hiddenTaskChats: {1: hiddenTime},
@@ -526,7 +517,7 @@ void main() {
       test('displayTaskChats sorts pinned chats first', () {
         final state = MessageState(
           taskChats: testTaskChats,
-          pinnedTaskIds: {2},
+          pinnedTaskIds: const {2},
         );
         final display = state.displayTaskChats;
         // Task 2 is pinned, should be first
@@ -620,7 +611,7 @@ void main() {
       test('MessageLoadTaskChats with different forceRefresh are not equal',
           () {
         const event1 = MessageLoadTaskChats(forceRefresh: true);
-        const event2 = MessageLoadTaskChats(forceRefresh: false);
+        const event2 = MessageLoadTaskChats();
         expect(event1, isNot(equals(event2)));
       });
 

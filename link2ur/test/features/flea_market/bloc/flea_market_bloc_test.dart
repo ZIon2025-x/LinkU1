@@ -21,7 +21,6 @@ void main() {
     title: 'Test Item',
     price: 25.0,
     sellerId: 'seller1',
-    status: 'active',
   );
 
   const testItem2 = FleaMarketItem(
@@ -29,7 +28,6 @@ void main() {
     title: 'Another Item',
     price: 50.0,
     sellerId: 'seller2',
-    status: 'active',
   );
 
   const testListResponse = FleaMarketListResponse(
@@ -134,7 +132,6 @@ void main() {
         seed: () => const FleaMarketState(
           status: FleaMarketStatus.loaded,
           items: [testItem],
-          hasMore: true,
         ),
         act: (bloc) => bloc.add(const FleaMarketLoadMore()),
         expect: () => [
@@ -210,7 +207,7 @@ void main() {
           return bloc;
         },
         act: (bloc) => bloc.add(
-            FleaMarketCreateItem(testCreateRequest)),
+            const FleaMarketCreateItem(testCreateRequest)),
         expect: () => [
           isA<FleaMarketState>()
               .having(
@@ -242,7 +239,7 @@ void main() {
           return bloc;
         },
         act: (bloc) => bloc.add(
-            FleaMarketCreateItem(testCreateRequest)),
+            const FleaMarketCreateItem(testCreateRequest)),
         expect: () => [
           isA<FleaMarketState>()
               .having(
@@ -302,7 +299,6 @@ void main() {
         seed: () => const FleaMarketState(
           status: FleaMarketStatus.loaded,
           selectedItem: testItem,
-          isFavorited: false,
         ),
         act: (bloc) => bloc.add(
             const FleaMarketToggleFavorite('1')),

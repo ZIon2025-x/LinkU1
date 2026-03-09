@@ -181,7 +181,6 @@ void main() {
         seed: () => const LeaderboardState(
           status: LeaderboardStatus.loaded,
           leaderboards: [testLeaderboard],
-          hasMore: true,
         ),
         act: (bloc) => bloc.add(const LeaderboardLoadMore()),
         expect: () => [
@@ -334,7 +333,6 @@ void main() {
         seed: () => const LeaderboardState(
           status: LeaderboardStatus.loaded,
           selectedLeaderboard: testLeaderboard,
-          isFavorited: false,
         ),
         act: (bloc) => bloc.add(
             const LeaderboardToggleFavorite(1)),

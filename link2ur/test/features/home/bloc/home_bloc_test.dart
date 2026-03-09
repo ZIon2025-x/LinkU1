@@ -58,7 +58,6 @@ void main() {
     title: 'Test Activity',
     expertId: 'expert1',
     expertServiceId: 1,
-    status: 'open',
   );
 
   const testActivityListResponse = ActivityListResponse(
@@ -274,7 +273,6 @@ void main() {
         seed: () => const HomeState(
           status: HomeStatus.loaded,
           recommendedTasks: [testTask],
-          hasMoreRecommended: true,
         ),
         act: (bloc) =>
             bloc.add(const HomeLoadRecommended(loadMore: true)),

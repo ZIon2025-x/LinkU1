@@ -49,7 +49,6 @@ void main() {
   const testUserCoupon = UserCoupon(
     id: 1,
     coupon: testCoupon,
-    status: 'unused',
   );
 
   setUp(() {
@@ -181,7 +180,6 @@ void main() {
         seed: () => CouponPointsState(
           status: CouponPointsStatus.loaded,
           transactions: testTransactions,
-          hasMoreTransactions: true,
         ),
         act: (bloc) =>
             bloc.add(const CouponPointsLoadMoreTransactions()),

@@ -120,12 +120,16 @@ class _TaskPreferencesViewState extends State<TaskPreferencesView> {
                 ),
               ],
             ),
-            body: state.preferences == null && state.status == ProfileStatus.loading
-                ? const LoadingView()
-                : SingleChildScrollView(
+            body: SingleChildScrollView(
               padding: const EdgeInsets.all(AppSpacing.md),
               child: Column(
                 children: [
+                  // 加载中提示（非全页阻塞，轻量线性指示器）
+                  if (state.status == ProfileStatus.loading)
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: AppSpacing.md),
+                      child: LinearProgressIndicator(),
+                    ),
                   // 偏好任务类型
                   _PreferenceSection(
                     title: l10n.taskPreferencesTypes,
