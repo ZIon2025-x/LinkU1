@@ -5,6 +5,7 @@ import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../data/repositories/task_expert_repository.dart';
 import '../bloc/expert_dashboard_bloc.dart';
+import 'expert_dashboard_stats_tab.dart';
 
 /// 达人工作台 — 5-tab shell
 class ExpertDashboardView extends StatelessWidget {
@@ -82,7 +83,7 @@ class _ExpertDashboardContent extends StatelessWidget {
           ),
           body: const TabBarView(
             children: [
-              Center(child: Text('Tab 0')),
+              ExpertDashboardStatsTab(),
               Center(child: Text('Tab 1')),
               Center(child: Text('Tab 2')),
               Center(child: Text('Tab 3')),
