@@ -8,6 +8,7 @@ import '../bloc/expert_dashboard_bloc.dart';
 import 'expert_dashboard_applications_tab.dart';
 import 'expert_dashboard_services_tab.dart';
 import 'expert_dashboard_stats_tab.dart';
+import 'expert_dashboard_time_slots_tab.dart';
 
 /// 达人工作台 — 5-tab shell
 class ExpertDashboardView extends StatelessWidget {
@@ -88,7 +89,7 @@ class _ExpertDashboardContent extends StatelessWidget {
               ExpertDashboardStatsTab(),
               ExpertDashboardServicesTab(),
               ExpertDashboardApplicationsTab(),
-              Center(child: Text('Tab 3')),
+              ExpertDashboardTimeSlotsTab(),
               Center(child: Text('Tab 4')),
             ],
           ),
