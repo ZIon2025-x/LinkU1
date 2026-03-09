@@ -86,7 +86,7 @@ Widget _buildMyContentSection(BuildContext context, bool isDark) {
                   subtitle: context.l10n.profileExpertManagementSubtitle,
                   color: AppColors.indigo,
                   onTap: () =>
-                      context.push('/expert-applications-management'),
+                      context.push('/expert-dashboard'),
                 ),
               ],
             ],

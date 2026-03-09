@@ -61,4 +61,18 @@ List<RouteBase> get taskExpertRoutes => [
         name: 'expertApplicationsManagement',
         builder: (context, state) => const ExpertApplicationsManagementView(),
       ),
+      GoRoute(
+        path: AppRoutes.expertDashboard,
+        name: 'expertDashboard',
+        builder: (context, state) => const Scaffold(
+          body: Center(child: Text('Expert Dashboard')),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.expertProfileEdit,
+        name: 'expertProfileEdit',
+        builder: (context, state) => const Scaffold(
+          body: Center(child: Text('Expert Profile Edit')),
+        ),
+      ),
     ];

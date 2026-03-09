@@ -32,6 +32,8 @@ class AppRoutes {
   static const String serviceDetail = '/service/:id';
   static const String myServiceApplications = '/my-service-applications';
   static const String expertApplicationsManagement = '/expert-applications-management';
+  static const String expertDashboard = '/expert-dashboard';
+  static const String expertProfileEdit = '/expert-profile-edit';
 
   // 论坛
   static const String forum = '/forum';
@@ -129,6 +131,8 @@ const authRequiredRoutes = <String>{
   AppRoutes.myForumPosts,
   AppRoutes.myServiceApplications,
   AppRoutes.expertApplicationsManagement,
+  AppRoutes.expertDashboard,
+  AppRoutes.expertProfileEdit,
   AppRoutes.applyLeaderboard,
   AppRoutes.submitLeaderboardItem,
   AppRoutes.wallet,
