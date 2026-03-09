@@ -9,6 +9,7 @@ import '../services/storage_service.dart';
 import '../../core/constants/api_endpoints.dart';
 import '../../core/utils/cache_manager.dart';
 import '../../core/utils/app_exception.dart';
+import '../../core/utils/logger.dart';
 
 /// 用户仓库
 /// 与iOS APIService+Users + 后端路由对齐
