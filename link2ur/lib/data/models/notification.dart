@@ -2,6 +2,7 @@ import 'dart:ui' show Locale;
 
 import 'package:equatable/equatable.dart';
 
+import '../../core/utils/json_utils.dart';
 import '../../core/utils/localized_string.dart';
 
 /// 通知模型
@@ -76,9 +77,7 @@ class AppNotification extends Equatable {
       contentEn: json['content_en'] as String?,
       relatedId: json['related_id'] as int?,
       relatedType: json['related_type'] as String?,
-      isRead: (json['is_read'] is int)
-          ? (json['is_read'] as int) == 1
-          : (json['is_read'] as bool? ?? false),
+      isRead: parseBool(json['is_read']),
       taskId: json['task_id'] as int?,
       variables: json['variables'] as Map<String, dynamic>?,
       createdAt: json['created_at'] != null

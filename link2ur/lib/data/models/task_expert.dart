@@ -542,8 +542,8 @@ class ServiceTimeSlot extends Equatable {
       activityPrice: (json['activity_price'] as num?)?.toDouble(),
       pricePerParticipant:
           (json['price_per_participant'] as num?)?.toDouble(),
-      isExpired: json['is_expired'] as bool?,
-      userHasApplied: json['user_has_applied'] as bool? ?? false,
+      isExpired: parseBoolNullable(json['is_expired']),
+      userHasApplied: parseBool(json['user_has_applied']),
     );
   }
 

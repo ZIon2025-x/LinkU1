@@ -2,6 +2,7 @@ import 'dart:ui' show Locale;
 
 import 'package:equatable/equatable.dart';
 
+import '../../core/utils/json_utils.dart';
 import '../../l10n/app_localizations.dart';
 import 'badge.dart';
 
@@ -435,7 +436,7 @@ class UserProfileReview {
       comment: json['comment'] as String?,
       createdAt: json['created_at']?.toString() ?? '',
       taskId: json['task_id'] as int? ?? 0,
-      isAnonymous: json['is_anonymous'] as bool? ?? false,
+      isAnonymous: parseBool(json['is_anonymous']),
       reviewerName: json['reviewer_name'] as String?,
       reviewerAvatar: json['reviewer_avatar'] as String?,
     );
@@ -551,8 +552,8 @@ class UserBrief {
       id: json['id']?.toString() ?? '',
       name: json['name'] as String? ?? '',
       avatar: json['avatar'] as String?,
-      isVerified: json['is_verified'] as bool? ?? false,
-      isAdmin: json['is_admin'] as bool? ?? false,
+      isVerified: parseBool(json['is_verified']),
+      isAdmin: parseBool(json['is_admin']),
     );
   }
 
