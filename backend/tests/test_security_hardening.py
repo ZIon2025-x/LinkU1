@@ -28,7 +28,7 @@ def test_set_cors_headers_without_request_uses_controlled_origin(monkeypatch):
 
 
 def test_resolve_legacy_private_file_path_blocks_traversal(tmp_path):
-    from app.routers import _resolve_legacy_private_file_path
+    from app.file_utils import _resolve_legacy_private_file_path
 
     base_private_dir = tmp_path / "uploads" / "private"
     base_private_dir.mkdir(parents=True, exist_ok=True)

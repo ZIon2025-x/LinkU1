@@ -1,129 +1,15 @@
-"""
-文件处理工具函数
-提供通用的文件扩展名检测等功能
-"""
-import re
+"""Lightweight file path utilities (no heavy imports)."""
+
 from pathlib import Path
-from typing import Optional
-from fastapi import UploadFile
-
-# 安全文件ID正则：只允许字母、数字、下划线和短横线
-_SAFE_FILE_ID_PATTERN = re.compile(r'^[a-zA-Z0-9_-]+$')
+from fastapi import HTTPException
 
 
-def is_safe_file_id(file_id: str) -> bool:
-    """
-    验证文件ID是否安全（防止路径遍历攻击）
-    
-    只允许字母、数字、下划线和短横线，禁止 ../ 等路径遍历字符。
-    
-    Args:
-        file_id: 待验证的文件ID
-        
-    Returns:
-        True 如果文件ID安全，False 如果包含非法字符
-    """
-    if not file_id or len(file_id) > 255:
-        return False
-    return bool(_SAFE_FILE_ID_PATTERN.match(file_id))
-
-
-def detect_file_extension(
-    filename: Optional[str] = None,
-    content_type: Optional[str] = None,
-    content: Optional[bytes] = None
-) -> str:
-    """
-    智能检测文件扩展名
-    优先级：filename > content_type > magic bytes
-    
-    Args:
-        filename: 文件名（可能为 None 或 "blob"）
-        content_type: Content-Type（如 "image/jpeg"）
-        content: 文件内容（用于 magic bytes 检测）
-    
-    Returns:
-        文件扩展名（如 ".jpg"），如果无法检测则返回空字符串
-    """
-    # 方法1: 从 filename 获取扩展名
-    if filename:
-        ext = Path(filename).suffix.lower()
-        if ext:  # 如果成功获取到扩展名
-            return ext
-    
-    # 方法2: 从 Content-Type 获取扩展名
-    if content_type:
-        content_type_lower = content_type.lower()
-        if 'jpeg' in content_type_lower or 'jpg' in content_type_lower:
-            return '.jpg'
-        elif 'png' in content_type_lower:
-            return '.png'
-        elif 'gif' in content_type_lower:
-            return '.gif'
-        elif 'webp' in content_type_lower:
-            return '.webp'
-        elif 'pdf' in content_type_lower:
-            return '.pdf'
-        elif 'msword' in content_type_lower or 'word' in content_type_lower:
-            return '.doc'
-        elif 'wordprocessingml' in content_type_lower or 'docx' in content_type_lower:
-            return '.docx'
-        elif 'text/plain' in content_type_lower or 'text' in content_type_lower:
-            return '.txt'
-    
-    # 方法3: 从文件内容的 magic bytes 检测
-    if content and len(content) >= 4:
-        # JPEG: FF D8 FF
-        if content[:3] == b'\xff\xd8\xff':
-            return '.jpg'
-        # PNG: 89 50 4E 47
-        elif content[:4] == b'\x89PNG':
-            return '.png'
-        # GIF: 47 49 46 38
-        elif content[:4] == b'GIF8':
-            return '.gif'
-        # WEBP: RIFF...WEBP
-        elif len(content) >= 12 and content[:4] == b'RIFF' and content[8:12] == b'WEBP':
-            return '.webp'
-        # PDF: %PDF
-        elif content[:4] == b'%PDF':
-            return '.pdf'
-    
-    return ''
-
-
-def get_file_extension_from_upload(
-    upload_file: UploadFile,
-    content: Optional[bytes] = None
-) -> str:
-    """
-    从 UploadFile 对象检测文件扩展名
-    
-    Args:
-        upload_file: FastAPI UploadFile 对象
-        content: 文件内容（可选，如果提供会使用 magic bytes 检测）
-    
-    Returns:
-        文件扩展名（如 ".jpg"），如果无法检测则返回空字符串
-    """
-    return detect_file_extension(
-        filename=upload_file.filename,
-        content_type=upload_file.content_type,
-        content=content
-    )
-
-
-def get_file_extension_from_filename(filename: Optional[str]) -> str:
-    """
-    从文件名获取扩展名（简单版本，不检测内容）
-    
-    Args:
-        filename: 文件名
-    
-    Returns:
-        文件扩展名（如 ".jpg"），如果无法检测则返回空字符串
-    """
-    if not filename:
-        return ''
-    return Path(filename).suffix.lower()
-
+def _resolve_legacy_private_file_path(base_private_dir: Path, file_path_str: str) -> Path:
+    """解析旧存储路径并阻止目录越界。"""
+    base_dir = base_private_dir.resolve()
+    resolved_path = (base_dir / file_path_str).resolve()
+    try:
+        resolved_path.relative_to(base_dir)
+    except ValueError:
+        raise HTTPException(status_code=403, detail="非法文件路径")
+    return resolved_path
