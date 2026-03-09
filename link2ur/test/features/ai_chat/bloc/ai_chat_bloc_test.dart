@@ -17,8 +17,8 @@ final testConversation = ai_models.AIConversation(
   title: 'Test Conversation',
   modelUsed: 'claude-3',
   totalTokens: 100,
-  createdAt: DateTime(2026, 1, 1),
-  updatedAt: DateTime(2026, 1, 1),
+  createdAt: DateTime(2026),
+  updatedAt: DateTime(2026),
 );
 
 final testConversation2 = ai_models.AIConversation(
@@ -34,14 +34,14 @@ final testUserMessage = ai_models.AIMessage(
   id: 1,
   role: 'user',
   content: 'Hello AI',
-  createdAt: DateTime(2026, 1, 1),
+  createdAt: DateTime(2026),
 );
 
 final testAssistantMessage = ai_models.AIMessage(
   id: 2,
   role: 'assistant',
   content: 'Hello! How can I help?',
-  createdAt: DateTime(2026, 1, 1),
+  createdAt: DateTime(2026),
 );
 
 // ==================== Tests ====================
@@ -397,10 +397,10 @@ void main() {
                   ]));
           return bloc;
         },
-        seed: () => AIChatState(
+        seed: () => const AIChatState(
           status: AIChatStatus.loaded,
           currentConversationId: 'conv-1',
-          taskDraft: const {'title': 'Draft Task'},
+          taskDraft: {'title': 'Draft Task'},
           // Note: lastToolName is NOT seeded — SendMessage's copyWith omits it, resetting to null
         ),
         act: (bloc) => bloc.add(const AIChatSendMessage('test')),
@@ -436,15 +436,15 @@ void main() {
         build: () {
           when(() => mockService.sendMessage('conv-1', 'find tasks'))
               .thenAnswer((_) => Stream.fromIterable([
-                    ai_models.AIChatEvent(
+                    const ai_models.AIChatEvent(
                       type: ai_models.AIChatEventType.toolCall,
                       toolName: 'search_tasks',
-                      toolInput: const {'query': 'flutter'},
+                      toolInput: {'query': 'flutter'},
                     ),
-                    ai_models.AIChatEvent(
+                    const ai_models.AIChatEvent(
                       type: ai_models.AIChatEventType.toolResult,
                       toolName: 'search_tasks',
-                      toolResult: const {'tasks': []},
+                      toolResult: {'tasks': []},
                     ),
                     const ai_models.AIChatEvent(
                       type: ai_models.AIChatEventType.token,
@@ -457,10 +457,10 @@ void main() {
                   ]));
           return bloc;
         },
-        seed: () => AIChatState(
+        seed: () => const AIChatState(
           status: AIChatStatus.loaded,
           currentConversationId: 'conv-1',
-          taskDraft: const {'title': 'Existing Draft'},
+          taskDraft: {'title': 'Existing Draft'},
         ),
         act: (bloc) => bloc.add(const AIChatSendMessage('find tasks')),
         wait: const Duration(milliseconds: 300),
@@ -510,10 +510,10 @@ void main() {
                       type: ai_models.AIChatEventType.toolCall,
                       toolName: 'prepare_task_draft',
                     ),
-                    ai_models.AIChatEvent(
+                    const ai_models.AIChatEvent(
                       type: ai_models.AIChatEventType.toolResult,
                       toolName: 'prepare_task_draft',
-                      toolResult: const {
+                      toolResult: {
                         'draft': {
                           'title': 'New Task',
                           'description': 'Task description',
@@ -585,10 +585,10 @@ void main() {
                   ]));
           return bloc;
         },
-        seed: () => AIChatState(
+        seed: () => const AIChatState(
           status: AIChatStatus.loaded,
           currentConversationId: 'conv-1',
-          taskDraft: const {'title': 'Keep this'},
+          taskDraft: {'title': 'Keep this'},
         ),
         act: (bloc) => bloc.add(const AIChatSendMessage('test')),
         wait: const Duration(milliseconds: 300),
@@ -671,11 +671,11 @@ void main() {
                   ]));
           return bloc;
         },
-        seed: () => AIChatState(
+        seed: () => const AIChatState(
           status: AIChatStatus.loaded,
           currentConversationId: 'conv-1',
           // lastToolName NOT seeded — SendMessage clears it
-          taskDraft: const {'title': 'Preserved'},
+          taskDraft: {'title': 'Preserved'},
         ),
         act: (bloc) => bloc.add(const AIChatSendMessage('help')),
         wait: const Duration(milliseconds: 300),
@@ -712,9 +712,9 @@ void main() {
         build: () {
           when(() => mockService.sendMessage('conv-1', 'draft'))
               .thenAnswer((_) => Stream.fromIterable([
-                    ai_models.AIChatEvent(
+                    const ai_models.AIChatEvent(
                       type: ai_models.AIChatEventType.taskDraft,
-                      taskDraft: const {
+                      taskDraft: {
                         'title': 'SSE Draft',
                         'budget': 50,
                       },
@@ -796,10 +796,10 @@ void main() {
       blocTest<AIChatBloc, AIChatState>(
         'clears taskDraft while preserving csAvailableSignal, csContactEmail, and lastToolName',
         build: () => bloc,
-        seed: () => AIChatState(
+        seed: () => const AIChatState(
           status: AIChatStatus.loaded,
           currentConversationId: 'conv-1',
-          taskDraft: const {'title': 'To Be Cleared'},
+          taskDraft: {'title': 'To Be Cleared'},
           csAvailableSignal: true,
           csContactEmail: 'cs@link2ur.com',
           lastToolName: 'prepare_task_draft',
@@ -918,10 +918,10 @@ void main() {
                       type: ai_models.AIChatEventType.toolCall,
                       toolName: 'some_tool',
                     ),
-                    ai_models.AIChatEvent(
+                    const ai_models.AIChatEvent(
                       type: ai_models.AIChatEventType.toolResult,
                       toolName: 'some_tool',
-                      toolResult: const {'data': 'value'},
+                      toolResult: {'data': 'value'},
                     ),
                     const ai_models.AIChatEvent(
                       type: ai_models.AIChatEventType.csAvailable,
@@ -939,10 +939,10 @@ void main() {
                   ]));
           return bloc;
         },
-        seed: () => AIChatState(
+        seed: () => const AIChatState(
           status: AIChatStatus.loaded,
           currentConversationId: 'conv-1',
-          taskDraft: const {'title': 'Persistent Draft'},
+          taskDraft: {'title': 'Persistent Draft'},
         ),
         act: (bloc) => bloc.add(const AIChatSendMessage('msg')),
         wait: const Duration(milliseconds: 300),
@@ -968,18 +968,18 @@ void main() {
                       type: ai_models.AIChatEventType.toolCall,
                       toolName: 'my_tool',
                     ),
-                    ai_models.AIChatEvent(
+                    const ai_models.AIChatEvent(
                       type: ai_models.AIChatEventType.toolResult,
                       toolName: 'my_tool',
-                      toolResult: const {'ok': true},
+                      toolResult: {'ok': true},
                     ),
                     const ai_models.AIChatEvent(
                       type: ai_models.AIChatEventType.csAvailable,
                       csAvailable: false,
                     ),
-                    ai_models.AIChatEvent(
+                    const ai_models.AIChatEvent(
                       type: ai_models.AIChatEventType.taskDraft,
-                      taskDraft: const {'draft': true},
+                      taskDraft: {'draft': true},
                     ),
                     const ai_models.AIChatEvent(
                       type: ai_models.AIChatEventType.token,

@@ -13,7 +13,7 @@ void main() {
 
   // -------------------- Test data --------------------
 
-  final now = DateTime(2026, 3, 8, 12, 0);
+  final now = DateTime(2026, 3, 8, 12);
 
   final systemNotification1 = AppNotification(
     id: 1,
@@ -21,7 +21,6 @@ void main() {
     type: 'task_applied',
     title: '新申请',
     content: '有人申请了你的任务',
-    isRead: false,
     createdAt: now,
   );
 
@@ -31,7 +30,6 @@ void main() {
     type: 'system',
     title: '系统通知',
     content: '系统维护公告',
-    isRead: false,
     createdAt: now.subtract(const Duration(hours: 1)),
   );
 
@@ -51,7 +49,6 @@ void main() {
     type: 'forum_reply',
     title: '论坛回复',
     content: '有人回复了你的帖子',
-    isRead: false,
     createdAt: now.subtract(const Duration(minutes: 10)),
   );
 
@@ -61,7 +58,6 @@ void main() {
     type: 'forum_like',
     title: '论坛点赞',
     content: '有人点赞了你的帖子',
-    isRead: false,
     createdAt: now.subtract(const Duration(minutes: 30)),
   );
 
@@ -71,7 +67,6 @@ void main() {
     type: 'leaderboard_rank_up',
     title: '排行榜',
     content: '你的排名上升了',
-    isRead: false,
     createdAt: now.subtract(const Duration(minutes: 20)),
   );
 
@@ -139,7 +134,7 @@ void main() {
           verify(() => mockRepo.getNotifications(
                 page: any(named: 'page'),
                 pageSize: any(named: 'pageSize'),
-                type: null,
+                type: any(named: 'type'),
                 cancelToken: any(named: 'cancelToken'),
               )).called(1);
         },

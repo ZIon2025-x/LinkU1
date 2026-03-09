@@ -214,7 +214,7 @@ class _ClearBadgeItem extends StatelessWidget {
         ),
       ),
       trailing: isSelected
-          ? Icon(Icons.check_circle, color: AppColors.primary, size: 24)
+          ? const Icon(Icons.check_circle, color: AppColors.primary, size: 24)
           : Icon(
               Icons.radio_button_unchecked,
               color: theme.colorScheme.onSurface.withAlpha(60),
@@ -270,7 +270,7 @@ class _BadgeSelectionItem extends StatelessWidget {
             )
           : null,
       trailing: badge.isDisplayed
-          ? Icon(Icons.check_circle, color: AppColors.primary, size: 24)
+          ? const Icon(Icons.check_circle, color: AppColors.primary, size: 24)
           : Icon(
               Icons.radio_button_unchecked,
               color: theme.colorScheme.onSurface.withAlpha(60),

@@ -24,7 +24,6 @@ void main() {
     expertServiceId: 1,
     maxParticipants: 10,
     currentParticipants: 3,
-    status: 'open',
   );
 
   const testActivity2 = Activity(
@@ -32,7 +31,6 @@ void main() {
     title: 'Another Activity',
     expertId: 'expert2',
     expertServiceId: 2,
-    status: 'open',
   );
 
   const testListResponse = ActivityListResponse(
@@ -172,7 +170,6 @@ void main() {
         seed: () => const ActivityState(
           status: ActivityStatus.loaded,
           activities: [testActivity],
-          hasMore: true,
         ),
         act: (bloc) => bloc.add(const ActivityLoadMore()),
         expect: () => [
@@ -206,7 +203,6 @@ void main() {
         seed: () => const ActivityState(
           status: ActivityStatus.loaded,
           activities: [testActivity],
-          hasMore: true,
           isLoadingMore: true,
         ),
         act: (bloc) => bloc.add(const ActivityLoadMore()),
@@ -406,7 +402,6 @@ void main() {
         seed: () => const ActivityState(
           status: ActivityStatus.loaded,
           activityDetail: testActivity,
-          isFavorited: false,
         ),
         act: (bloc) => bloc.add(
             const ActivityToggleFavorite(activityId: 1)),

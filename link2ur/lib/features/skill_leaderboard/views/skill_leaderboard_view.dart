@@ -62,7 +62,7 @@ class _SkillLeaderboardBody extends StatelessWidget {
               return _buildContent(context, state);
             case LeaderboardStatus.loaded:
               if (state.categories.isEmpty) {
-                return EmptyStateView(
+                return const EmptyStateView(
                   icon: Icons.leaderboard_outlined,
                   title: 'No Categories',
                   description: 'No skill categories available yet.',
@@ -190,7 +190,7 @@ class _LeaderboardList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (state.entries.isEmpty) {
-      return EmptyStateView(
+      return const EmptyStateView(
         icon: Icons.leaderboard_outlined,
         title: 'No Rankings Yet',
         description: 'No one has ranked in this category yet.',

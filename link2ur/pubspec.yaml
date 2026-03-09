@@ -97,6 +97,9 @@ dependencies:
   # App Review
   in_app_review: ^2.0.9
 
+  # App Badge (Android launcher badge)
+  flutter_app_badger: ^1.6.0
+
   # 加密 / HMAC（移动端请求签名）
   crypto: ^3.0.3
   encrypt: ^5.0.3

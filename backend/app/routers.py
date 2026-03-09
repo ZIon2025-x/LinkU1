@@ -4637,7 +4637,23 @@ def get_my_profile(
         ).count()
         
         in_progress_tasks_count = regular_in_progress_count + multi_participant_in_progress_count + multi_task_creator_in_progress_count
-        
+
+        # 检查用户是否是任务达人
+        from app.models import TaskExpert
+        task_expert = db.query(TaskExpert).filter(
+            TaskExpert.id == current_user.id,
+            TaskExpert.status == "active"
+        ).first()
+        is_expert = task_expert is not None
+
+        # 检查用户是否通过学生认证
+        from app.models import StudentVerification
+        student_verification = db.query(StudentVerification).filter(
+            StudentVerification.user_id == current_user.id,
+            StudentVerification.status == "verified"
+        ).order_by(StudentVerification.created_at.desc()).first()
+        is_student_verified = student_verification is not None
+
         formatted_user = {
             "id": current_user.id,
             "name": getattr(current_user, 'name', ''),
@@ -4651,6 +4667,8 @@ def get_my_profile(
             "task_count": in_progress_tasks_count,  # 修改为进行中的任务数，而不是所有任务数
             "completed_task_count": getattr(current_user, 'completed_task_count', 0),
             "avg_rating": avg_rating,
+            "is_expert": is_expert,
+            "is_student_verified": is_student_verified,
             "residence_city": residence_city,
             "language_preference": language_preference,
             "name_updated_at": getattr(current_user, 'name_updated_at', None),

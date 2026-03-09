@@ -126,7 +126,7 @@ class TaskItemWidget extends StatelessWidget {
 
     return Row(
       children: [
-        Icon(
+        const Icon(
           Icons.card_giftcard_rounded,
           size: 14,
           color: AppColors.accent,
