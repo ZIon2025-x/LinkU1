@@ -94,8 +94,10 @@ void main() {
       blocTest<ProfileBloc, ProfileState>(
         'emits [loading, loaded] with user on success',
         build: () {
-          when(() => mockUserRepo.getProfile())
-              .thenAnswer((_) async => testUser);
+          when(() => mockUserRepo.getProfile(
+                cancelToken: any(named: 'cancelToken'),
+                forceRefresh: any(named: 'forceRefresh'),
+              )).thenAnswer((_) async => testUser);
           return bloc;
         },
         act: (bloc) => bloc.add(const ProfileLoadRequested()),
@@ -111,8 +113,10 @@ void main() {
       blocTest<ProfileBloc, ProfileState>(
         'emits [loading, error] when load fails',
         build: () {
-          when(() => mockUserRepo.getProfile())
-              .thenThrow(Exception('Network error'));
+          when(() => mockUserRepo.getProfile(
+                cancelToken: any(named: 'cancelToken'),
+                forceRefresh: any(named: 'forceRefresh'),
+              )).thenThrow(Exception('Network error'));
           return bloc;
         },
         act: (bloc) => bloc.add(const ProfileLoadRequested()),

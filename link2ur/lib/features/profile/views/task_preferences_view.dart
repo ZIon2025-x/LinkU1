@@ -4,13 +4,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
-import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/logger.dart';
 import '../../../data/repositories/user_repository.dart';
-import '../../../data/repositories/task_repository.dart';
-import '../../../data/repositories/forum_repository.dart';
-import '../../../core/widgets/loading_view.dart';
-import '../bloc/profile_bloc.dart';
 
 /// 任务偏好设置页
 /// 参考iOS TaskPreferencesView.swift
@@ -26,6 +22,8 @@ class _TaskPreferencesViewState extends State<TaskPreferencesView> {
   final Set<String> _selectedLocations = {};
   final Set<String> _selectedLevels = {};
   int _minDeadlineDays = 1;
+  bool _loading = true;
+  bool _saving = false;
 
   static const _taskTypes = [
     ('Housekeeping', 'housekeeping'),
@@ -52,13 +50,64 @@ class _TaskPreferencesViewState extends State<TaskPreferencesView> {
 
   static const _taskLevels = ['Normal', 'VIP', 'Super'];
 
-  void _savePreferences(BuildContext context) {
-    context.read<ProfileBloc>().add(ProfileUpdatePreferences({
-          'task_types': _selectedTaskTypes.toList(),
-          'locations': _selectedLocations.toList(),
-          'task_levels': _selectedLevels.toList(),
-          'min_deadline_days': _minDeadlineDays,
-        }));
+  @override
+  void initState() {
+    super.initState();
+    _loadPreferences();
+  }
+
+  Future<void> _loadPreferences() async {
+    try {
+      final repo = context.read<UserRepository>();
+      final prefs = await repo.getUserPreferences()
+          .timeout(const Duration(seconds: 8));
+      if (!mounted) return;
+      setState(() {
+        final types = prefs['task_types'];
+        if (types is List) {
+          _selectedTaskTypes.addAll(types.cast<String>());
+        }
+        final locs = prefs['locations'];
+        if (locs is List) {
+          _selectedLocations.addAll(locs.cast<String>());
+        }
+        final lvls = prefs['task_levels'];
+        if (lvls is List) {
+          _selectedLevels.addAll(lvls.cast<String>());
+        }
+        _minDeadlineDays = prefs['min_deadline_days'] as int? ?? 1;
+        _loading = false;
+      });
+    } catch (e) {
+      AppLogger.error('[TaskPreferences] load failed', e);
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _savePreferences() async {
+    setState(() => _saving = true);
+    try {
+      final repo = context.read<UserRepository>();
+      await repo.updateUserPreferences({
+        'task_types': _selectedTaskTypes.toList(),
+        'locations': _selectedLocations.toList(),
+        'task_levels': _selectedLevels.toList(),
+        'min_deadline_days': _minDeadlineDays,
+      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.profilePreferencesUpdated)),
+      );
+      Navigator.of(context).pop();
+    } catch (e) {
+      AppLogger.error('[TaskPreferences] save failed', e);
+      if (mounted) {
+        setState(() => _saving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('保存失败，请重试')),
+        );
+      }
+    }
   }
 
   void _toggleItem(Set<String> set, String item) {
@@ -75,192 +124,142 @@ class _TaskPreferencesViewState extends State<TaskPreferencesView> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
 
-    return BlocProvider(
-      create: (context) => ProfileBloc(
-        userRepository: context.read<UserRepository>(),
-        taskRepository: context.read<TaskRepository>(),
-        forumRepository: context.read<ForumRepository>(),
-      )..add(const ProfileLoadPreferences()),
-      child: BlocConsumer<ProfileBloc, ProfileState>(
-        listener: (context, state) {
-          // Initialize form fields when preferences load
-          if (state.preferences != null && _selectedTaskTypes.isEmpty) {
-            final prefs = state.preferences!;
-            setState(() {
-              _selectedTaskTypes.addAll(prefs['task_types'] as List<String>? ?? []);
-              _selectedLocations.addAll(prefs['locations'] as List<String>? ?? []);
-              _selectedLevels.addAll(prefs['task_levels'] as List<String>? ?? []);
-              _minDeadlineDays = prefs['min_deadline_days'] as int? ?? 1;
-            });
-          }
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(l10n.taskPreferencesTitle),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(l10n.commonDone),
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          children: [
+            if (_loading)
+              const Padding(
+                padding: EdgeInsets.only(bottom: AppSpacing.md),
+                child: LinearProgressIndicator(),
+              ),
 
-          // Handle save success
-          if (state.actionMessage == 'preferences_updated') {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(l10n.profilePreferencesUpdated)),
-            );
-            Navigator.of(context).pop();
-          }
-
-          // Handle errors
-          if (state.errorMessage != null && state.actionMessage == null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(context.localizeError(state.errorMessage))),
-            );
-          }
-        },
-        builder: (context, state) {
-          return Scaffold(
-            appBar: AppBar(
-              title: Text(l10n.taskPreferencesTitle),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: Text(l10n.commonDone),
-                ),
-              ],
+            // 偏好任务类型
+            _PreferenceSection(
+              title: l10n.taskPreferencesTypes,
+              description: l10n.taskPreferencesTypesDesc,
+              child: Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.sm,
+                children: _taskTypes.map((type) {
+                  final isSelected = _selectedTaskTypes.contains(type.$1);
+                  return _ToggleChip(
+                    label: type.$1,
+                    isSelected: isSelected,
+                    onTap: () => _toggleItem(_selectedTaskTypes, type.$1),
+                  );
+                }).toList(),
+              ),
             ),
-            body: SingleChildScrollView(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: Column(
-                children: [
-                  // 加载中提示（非全页阻塞，轻量线性指示器）
-                  if (state.status == ProfileStatus.loading)
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: AppSpacing.md),
-                      child: LinearProgressIndicator(),
-                    ),
-                  // 偏好任务类型
-                  _PreferenceSection(
-                    title: l10n.taskPreferencesTypes,
-                    description: l10n.taskPreferencesTypesDesc,
-                    child: Wrap(
-                      spacing: AppSpacing.sm,
-                      runSpacing: AppSpacing.sm,
-                      children: _taskTypes.map((type) {
-                        final isSelected =
-                            _selectedTaskTypes.contains(type.$1);
-                        return _ToggleChip(
-                          label: type.$1,
-                          isSelected: isSelected,
-                          onTap: () =>
-                              _toggleItem(_selectedTaskTypes, type.$1),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
+            const SizedBox(height: AppSpacing.lg),
 
-                  // 偏好地点
-                  _PreferenceSection(
-                    title: l10n.taskPreferencesLocations,
-                    description: l10n.taskPreferencesLocationsDesc,
-                    child: Wrap(
-                      spacing: AppSpacing.sm,
-                      runSpacing: AppSpacing.sm,
-                      children: _locations.map((loc) {
-                        final isSelected =
-                            _selectedLocations.contains(loc);
-                        return _ToggleChip(
-                          label: loc,
-                          isSelected: isSelected,
-                          onTap: () =>
-                              _toggleItem(_selectedLocations, loc),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
+            // 偏好地点
+            _PreferenceSection(
+              title: l10n.taskPreferencesLocations,
+              description: l10n.taskPreferencesLocationsDesc,
+              child: Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.sm,
+                children: _locations.map((loc) {
+                  final isSelected = _selectedLocations.contains(loc);
+                  return _ToggleChip(
+                    label: loc,
+                    isSelected: isSelected,
+                    onTap: () => _toggleItem(_selectedLocations, loc),
+                  );
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
 
-                  // 偏好等级
-                  _PreferenceSection(
-                    title: l10n.taskPreferencesLevels,
-                    description: l10n.taskPreferencesLevelsDesc,
-                    child: Row(
-                      children: _taskLevels.map((level) {
-                        final isSelected =
-                            _selectedLevels.contains(level);
-                        return Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 4),
-                            child: _ToggleChip(
-                              label: level,
-                              isSelected: isSelected,
-                              onTap: () =>
-                                  _toggleItem(_selectedLevels, level),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-
-                  // 最短截止时间
-                  _PreferenceSection(
-                    title: l10n.taskPreferencesMinDeadline,
-                    description: l10n.taskPreferencesMinDeadlineDesc,
-                    child: Row(
-                      children: [
-                        Text(
-                          '$_minDeadlineDays ${l10n.taskPreferencesDays}',
-                          style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600),
-                        ),
-                        const Spacer(),
-                        IconButton(
-                          onPressed: _minDeadlineDays > 1
-                              ? () => setState(
-                                  () => _minDeadlineDays--)
-                              : null,
-                          icon: const Icon(Icons.remove_circle_outline),
-                        ),
-                        IconButton(
-                          onPressed: _minDeadlineDays < 30
-                              ? () => setState(
-                                  () => _minDeadlineDays++)
-                              : null,
-                          icon: const Icon(Icons.add_circle_outline),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-
-                  // 保存按钮
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton(
-                      onPressed: state.isUpdating ? null : () => _savePreferences(context),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.large),
-                        ),
+            // 偏好等级
+            _PreferenceSection(
+              title: l10n.taskPreferencesLevels,
+              description: l10n.taskPreferencesLevelsDesc,
+              child: Row(
+                children: _taskLevels.map((level) {
+                  final isSelected = _selectedLevels.contains(level);
+                  return Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: _ToggleChip(
+                        label: level,
+                        isSelected: isSelected,
+                        onTap: () => _toggleItem(_selectedLevels, level),
                       ),
-                      child: state.isUpdating
-                          ? const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                  color: Colors.white, strokeWidth: 2))
-                          : Text(l10n.taskPreferencesSave,
-                              style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600)),
                     ),
+                  );
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+
+            // 最短截止时间
+            _PreferenceSection(
+              title: l10n.taskPreferencesMinDeadline,
+              description: l10n.taskPreferencesMinDeadlineDesc,
+              child: Row(
+                children: [
+                  Text(
+                    '$_minDeadlineDays ${l10n.taskPreferencesDays}',
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w600),
                   ),
-                  const SizedBox(height: AppSpacing.xl),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: _minDeadlineDays > 1
+                        ? () => setState(() => _minDeadlineDays--)
+                        : null,
+                    icon: const Icon(Icons.remove_circle_outline),
+                  ),
+                  IconButton(
+                    onPressed: _minDeadlineDays < 30
+                        ? () => setState(() => _minDeadlineDays++)
+                        : null,
+                    icon: const Icon(Icons.add_circle_outline),
+                  ),
                 ],
               ),
             ),
-          );
-        },
+            const SizedBox(height: AppSpacing.xl),
+
+            // 保存按钮
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton(
+                onPressed: _saving ? null : _savePreferences,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.large),
+                  ),
+                ),
+                child: _saving
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                            color: Colors.white, strokeWidth: 2))
+                    : Text(l10n.taskPreferencesSave,
+                        style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w600)),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+          ],
+        ),
       ),
     );
   }

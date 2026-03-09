@@ -79,6 +79,8 @@ void main() {
                 keyword: any(named: 'keyword'),
                 category: any(named: 'category'),
                 location: any(named: 'location'),
+                sort: any(named: 'sort'),
+                forceRefresh: any(named: 'forceRefresh'),
                 cancelToken: any(named: 'cancelToken'),
               )).thenAnswer((_) async => testListResponse);
           return bloc;
@@ -108,6 +110,8 @@ void main() {
                 keyword: any(named: 'keyword'),
                 category: any(named: 'category'),
                 location: any(named: 'location'),
+                sort: any(named: 'sort'),
+                forceRefresh: any(named: 'forceRefresh'),
                 cancelToken: any(named: 'cancelToken'),
               )).thenThrow(Exception('Network error'));
           return bloc;
@@ -138,6 +142,8 @@ void main() {
                 keyword: any(named: 'keyword'),
                 category: any(named: 'category'),
                 location: any(named: 'location'),
+                sort: any(named: 'sort'),
+                forceRefresh: any(named: 'forceRefresh'),
                 cancelToken: any(named: 'cancelToken'),
               )).thenAnswer((_) async => const TaskExpertListResponse(
                 experts: [testExpert2],
@@ -183,6 +189,8 @@ void main() {
                 keyword: any(named: 'keyword'),
                 category: any(named: 'category'),
                 location: any(named: 'location'),
+                sort: any(named: 'sort'),
+                forceRefresh: any(named: 'forceRefresh'),
                 cancelToken: any(named: 'cancelToken'),
               )).thenAnswer((_) async => const TaskExpertListResponse(
                 experts: [testExpert],
@@ -609,6 +617,7 @@ void main() {
                 keyword: any(named: 'keyword'),
                 category: any(named: 'category'),
                 location: any(named: 'location'),
+                sort: any(named: 'sort'),
                 forceRefresh: any(named: 'forceRefresh'),
                 cancelToken: any(named: 'cancelToken'),
               )).thenAnswer((_) async => testListResponse);
