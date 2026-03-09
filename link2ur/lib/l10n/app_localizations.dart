@@ -18284,6 +18284,24 @@ abstract class AppLocalizations {
   /// **'Remove this time slot?'**
   String get expertTimeSlotConfirmDelete;
 
+  /// No description provided for @expertTimeSlotExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Expired'**
+  String get expertTimeSlotExpired;
+
+  /// No description provided for @expertTimeSlotUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Unavailable'**
+  String get expertTimeSlotUnavailable;
+
+  /// No description provided for @expertTimeSlotEndAfterStart.
+  ///
+  /// In en, this message translates to:
+  /// **'End time must be after start time'**
+  String get expertTimeSlotEndAfterStart;
+
   /// No description provided for @expertScheduleTitle.
   ///
   /// In en, this message translates to:
@@ -18325,6 +18343,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Availability restored'**
   String get expertScheduleClosedRemoved;
+
+  /// No description provided for @expertScheduleToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get expertScheduleToday;
 
   /// No description provided for @expertProfileEditTitle.
   ///

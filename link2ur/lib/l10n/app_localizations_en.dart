@@ -9929,6 +9929,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get expertTimeSlotConfirmDelete => 'Remove this time slot?';
 
   @override
+  String get expertTimeSlotExpired => 'Expired';
+
+  @override
+  String get expertTimeSlotUnavailable => 'Unavailable';
+
+  @override
+  String get expertTimeSlotEndAfterStart => 'End time must be after start time';
+
+  @override
   String get expertScheduleTitle => 'Schedule';
 
   @override
@@ -9948,6 +9957,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get expertScheduleClosedRemoved => 'Availability restored';
+
+  @override
+  String get expertScheduleToday => 'Today';
 
   @override
   String get expertProfileEditTitle => 'Edit Profile';

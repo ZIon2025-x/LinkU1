@@ -9539,6 +9539,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get expertTimeSlotConfirmDelete => '移除此时间段？';
 
   @override
+  String get expertTimeSlotExpired => '已过期';
+
+  @override
+  String get expertTimeSlotUnavailable => '不可用';
+
+  @override
+  String get expertTimeSlotEndAfterStart => '结束时间必须晚于开始时间';
+
+  @override
   String get expertScheduleTitle => '日程管理';
 
   @override
@@ -9558,6 +9567,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get expertScheduleClosedRemoved => '可用状态已恢复';
+
+  @override
+  String get expertScheduleToday => '今天';
 
   @override
   String get expertProfileEditTitle => '编辑资料';
@@ -19024,6 +19036,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get expertTimeSlotConfirmDelete => '移除此時間段？';
 
   @override
+  String get expertTimeSlotExpired => '已過期';
+
+  @override
+  String get expertTimeSlotUnavailable => '不可用';
+
+  @override
+  String get expertTimeSlotEndAfterStart => '結束時間必須晚於開始時間';
+
+  @override
   String get expertScheduleTitle => '日程管理';
 
   @override
@@ -19043,6 +19064,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get expertScheduleClosedRemoved => '可用狀態已恢復';
+
+  @override
+  String get expertScheduleToday => '今天';
 
   @override
   String get expertProfileEditTitle => '編輯資料';
