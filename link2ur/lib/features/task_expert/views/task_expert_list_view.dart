@@ -7,6 +7,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
+import '../../../core/constants/expert_constants.dart';
 import '../../../core/constants/uk_cities.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/utils/l10n_extension.dart';
@@ -20,20 +21,6 @@ import '../../../data/repositories/task_expert_repository.dart';
 import '../../../data/models/task_expert.dart';
 import '../bloc/task_expert_bloc.dart';
 
-/// 达人类型列表（与后端 models.py FeaturedTaskExpert.category 对齐）
-const List<Map<String, String>> _expertCategories = [
-  {'key': 'all'},
-  {'key': 'programming'},
-  {'key': 'translation'},
-  {'key': 'tutoring'},
-  {'key': 'food'},
-  {'key': 'beverage'},
-  {'key': 'cake'},
-  {'key': 'errand_transport'},
-  {'key': 'social_entertainment'},
-  {'key': 'beauty_skincare'},
-  {'key': 'handicraft'},
-];
 
 /// 任务达人列表页
 /// 参考iOS TaskExpertListView.swift
@@ -328,8 +315,7 @@ class _TaskExpertListViewContentState extends State<_TaskExpertListViewContent> 
                     Wrap(
                       spacing: 10,
                       runSpacing: 10,
-                      children: _expertCategories.map((cat) {
-                        final key = cat['key']!;
+                      children: kExpertCategoryKeys.map((key) {
                         return _FilterChip(
                           label: _categoryLabel(ctx, key),
                           isSelected: tempCategory == key,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/constants/expert_constants.dart';
 import '../../../core/constants/uk_cities.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
@@ -16,19 +17,6 @@ import '../../../data/models/task_expert.dart';
 import '../../../data/repositories/task_expert_repository.dart';
 import '../bloc/task_expert_bloc.dart';
 
-const List<Map<String, String>> _expertCategories = [
-  {'key': 'all'},
-  {'key': 'programming'},
-  {'key': 'translation'},
-  {'key': 'tutoring'},
-  {'key': 'food'},
-  {'key': 'beverage'},
-  {'key': 'cake'},
-  {'key': 'errand_transport'},
-  {'key': 'social_entertainment'},
-  {'key': 'beauty_skincare'},
-  {'key': 'handicraft'},
-];
 
 /// 任务达人搜索页
 /// 参考iOS TaskExpertSearchView.swift
@@ -231,8 +219,7 @@ class _TaskExpertSearchContentState
           Expanded(
             child: _buildDropdown(
               value: _selectedCategory,
-              items: _expertCategories
-                  .map((c) => c['key']!)
+              items: kExpertCategoryKeys
                   .map((key) => DropdownMenuItem(
                         value: key,
                         child: Text(
