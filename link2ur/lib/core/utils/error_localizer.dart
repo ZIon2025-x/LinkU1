@@ -242,6 +242,23 @@ class ErrorLocalizer {
         return context.l10n.errorLeaderboardLoadFailed;
       case 'badges_load_failed':
         return context.l10n.errorBadgesLoadFailed;
+      // Expert dashboard action messages
+      case 'expertServiceSubmitted':
+        return context.l10n.expertServiceSubmitted;
+      case 'expertServiceUpdated':
+        return context.l10n.expertServiceUpdated;
+      case 'expertServiceDeleted':
+        return context.l10n.expertServiceDeleted;
+      case 'expertTimeSlotCreated':
+        return context.l10n.expertTimeSlotCreated;
+      case 'expertTimeSlotDeleted':
+        return context.l10n.expertTimeSlotDeleted;
+      case 'expertScheduleMarkedRest':
+        return context.l10n.expertScheduleClosedAdded;
+      case 'expertScheduleUnmarked':
+        return context.l10n.expertScheduleClosedRemoved;
+      case 'expertProfileUpdateSubmitted':
+        return context.l10n.expertProfileEditSubmitted;
       default:
         // 服务端返回的已翻译消息，直接使用
         return errorMessage;

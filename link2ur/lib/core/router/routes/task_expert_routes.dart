@@ -10,6 +10,7 @@ import '../../../features/task_expert/views/task_expert_detail_view.dart';
 import '../../../features/task_expert/views/service_detail_view.dart';
 import '../../../features/task_expert/views/my_service_applications_view.dart';
 import '../../../features/task_expert/views/expert_applications_management_view.dart';
+import '../../../features/task_expert/views/expert_dashboard_view.dart';
 
 /// 任务达人相关路由
 List<RouteBase> get taskExpertRoutes => [
@@ -64,9 +65,7 @@ List<RouteBase> get taskExpertRoutes => [
       GoRoute(
         path: AppRoutes.expertDashboard,
         name: 'expertDashboard',
-        builder: (context, state) => const Scaffold(
-          body: Center(child: Text('Expert Dashboard')),
-        ),
+        builder: (context, state) => const ExpertDashboardView(),
       ),
       GoRoute(
         path: AppRoutes.expertProfileEdit,
