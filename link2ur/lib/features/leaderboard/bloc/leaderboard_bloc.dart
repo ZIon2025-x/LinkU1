@@ -420,6 +420,12 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
         return fav != null ? lb.copyWith(isFavorited: fav) : lb;
       }).toList();
 
+      // 收藏的排行榜置顶，保持各组内原有顺序
+      updated.sort((a, b) {
+        if (a.isFavorited == b.isFavorited) return 0;
+        return a.isFavorited ? -1 : 1;
+      });
+
       emit(state.copyWith(leaderboards: updated));
     } catch (e) {
       AppLogger.error('Failed to load leaderboard favorites batch', e);
@@ -477,8 +483,13 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
         keyword: kw,
       );
 
+      final merged = [...state.leaderboards, ...response.leaderboards]
+        ..sort((a, b) {
+          if (a.isFavorited == b.isFavorited) return 0;
+          return a.isFavorited ? -1 : 1;
+        });
       emit(state.copyWith(
-        leaderboards: [...state.leaderboards, ...response.leaderboards],
+        leaderboards: merged,
         page: nextPage,
         hasMore: response.hasMore,
       ));
@@ -898,36 +909,46 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
             );
     final previous = listItem?.isFavorited ?? state.isFavorited;
 
+    final updatedList = state.leaderboards.isEmpty
+        ? state.leaderboards
+        : state.leaderboards
+            .map((lb) => lb.id == event.leaderboardId
+                ? lb.copyWith(isFavorited: !previous)
+                : lb)
+            .toList()
+      ..sort((a, b) {
+        if (a.isFavorited == b.isFavorited) return 0;
+        return a.isFavorited ? -1 : 1;
+      });
+
     emit(state.copyWith(
       isFavorited: !previous,
       selectedLeaderboard:
           state.selectedLeaderboard?.copyWith(isFavorited: !previous),
-      leaderboards: state.leaderboards.isEmpty
-          ? state.leaderboards
-          : state.leaderboards
-              .map((lb) =>
-                  lb.id == event.leaderboardId
-                      ? lb.copyWith(isFavorited: !previous)
-                      : lb)
-              .toList(),
+      leaderboards: updatedList,
     ));
 
     try {
       await _leaderboardRepository.toggleFavorite(event.leaderboardId);
     } catch (e) {
       AppLogger.error('Failed to toggle favorite', e);
+      final rolledBack = state.leaderboards.isEmpty
+          ? state.leaderboards
+          : state.leaderboards
+              .map((lb) => lb.id == event.leaderboardId
+                  ? lb.copyWith(isFavorited: previous)
+                  : lb)
+              .toList()
+        ..sort((a, b) {
+          if (a.isFavorited == b.isFavorited) return 0;
+          return a.isFavorited ? -1 : 1;
+        });
+
       emit(state.copyWith(
         isFavorited: previous,
         selectedLeaderboard:
             state.selectedLeaderboard?.copyWith(isFavorited: previous),
-        leaderboards: state.leaderboards.isEmpty
-            ? state.leaderboards
-            : state.leaderboards
-                .map((lb) =>
-                    lb.id == event.leaderboardId
-                        ? lb.copyWith(isFavorited: previous)
-                        : lb)
-                .toList(),
+        leaderboards: rolledBack,
       ));
     }
   }
