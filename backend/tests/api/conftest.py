@@ -83,7 +83,19 @@ def auth_client():
         data = response.json()
         access_token = data.get("access_token", "")
         if access_token:
+            # JWT Bearer token — 直接绕过 CSRF 检查
             client.headers.update({"Authorization": f"Bearer {access_token}"})
+        else:
+            # 无 JWT：后端使用 cookie session 认证。
+            # POST/PUT/PATCH/DELETE 需要双提交 CSRF token（X-CSRF-Token header == csrf_token cookie）。
+            # csrf_token cookie 是非 HttpOnly 的，httpx 可以读取。
+            csrf_token = client.cookies.get("csrf_token", "")
+            if csrf_token:
+                client.headers.update({"X-CSRF-Token": csrf_token})
+            else:
+                # 没有 CSRF token 也没有 JWT，写操作会失败
+                import warnings
+                warnings.warn("auth_client: 登录响应未包含 csrf_token cookie，POST/PUT/DELETE 测试可能返回 401")
 
         yield client
 
