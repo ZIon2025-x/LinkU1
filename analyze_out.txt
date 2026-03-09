@@ -1,0 +1,140 @@
+Analyzing link2ur...                                            
+
+   info - The imported package 'flutter_app_badger' isn't a dependency of the importing package - lib\core\utils\badge_service.dart:5:8 - depend_on_referenced_packages
+  error - Target of URI doesn't exist: 'package:flutter_app_badger/flutter_app_badger.dart' - lib\core\utils\badge_service.dart:5:8 - uri_does_not_exist
+  error - Undefined name 'FlutterAppBadger' - lib\core\utils\badge_service.dart:32:11 - undefined_identifier
+  error - Undefined name 'FlutterAppBadger' - lib\core\utils\badge_service.dart:34:11 - undefined_identifier
+  error - Undefined name 'FlutterAppBadger' - lib\core\utils\badge_service.dart:50:9 - undefined_identifier
+   info - Use 'const' with the constructor to improve performance - lib\features\badges\views\badge_selector_dialog.dart:217:13 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\badges\views\badge_selector_dialog.dart:273:13 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\newbie_tasks\views\widgets\task_item_widget.dart:129:9 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\skill_leaderboard\views\skill_leaderboard_view.dart:65:24 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\skill_leaderboard\views\skill_leaderboard_view.dart:193:14 - prefer_const_constructors
+   info - The value of the argument is redundant because it matches the default value - test\features\activity\bloc\activity_bloc_test.dart:27:13 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\activity\bloc\activity_bloc_test.dart:35:13 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\activity\bloc\activity_bloc_test.dart:175:20 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\activity\bloc\activity_bloc_test.dart:209:20 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\activity\bloc\activity_bloc_test.dart:409:24 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\ai_chat\bloc\ai_chat_bloc_test.dart:20:32 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\ai_chat\bloc\ai_chat_bloc_test.dart:21:32 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\ai_chat\bloc\ai_chat_bloc_test.dart:37:32 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\ai_chat\bloc\ai_chat_bloc_test.dart:44:32 - avoid_redundant_argument_values
+   info - Use 'const' with the constructor to improve performance - test\features\ai_chat\bloc\ai_chat_bloc_test.dart:400:21 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - test\features\ai_chat\bloc\ai_chat_bloc_test.dart:439:21 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - test\features\ai_chat\bloc\ai_chat_bloc_test.dart:444:21 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - test\features\ai_chat\bloc\ai_chat_bloc_test.dart:460:21 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - test\features\ai_chat\bloc\ai_chat_bloc_test.dart:513:21 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - test\features\ai_chat\bloc\ai_chat_bloc_test.dart:588:21 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - test\features\ai_chat\bloc\ai_chat_bloc_test.dart:674:21 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - test\features\ai_chat\bloc\ai_chat_bloc_test.dart:715:21 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - test\features\ai_chat\bloc\ai_chat_bloc_test.dart:799:21 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - test\features\ai_chat\bloc\ai_chat_bloc_test.dart:921:21 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - test\features\ai_chat\bloc\ai_chat_bloc_test.dart:942:21 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - test\features\ai_chat\bloc\ai_chat_bloc_test.dart:971:21 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - test\features\ai_chat\bloc\ai_chat_bloc_test.dart:980:21 - prefer_const_constructors
+   info - The value of the argument is redundant because it matches the default value - test\features\ai_chat\bloc\unified_chat_bloc_test.dart:930:17 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\ai_chat\bloc\unified_chat_bloc_test.dart:931:21 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\chat\bloc\chat_bloc_test.dart:21:18 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\chat\bloc\chat_bloc_test.dart:28:18 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\chat\bloc\chat_bloc_test.dart:35:18 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\chat\bloc\chat_bloc_test.dart:61:18 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\chat\bloc\chat_bloc_test.dart:69:18 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\chat\bloc\chat_bloc_test.dart:231:17 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\chat\bloc\chat_bloc_test.dart:232:20 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\chat\bloc\chat_bloc_test.dart:282:20 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\chat\bloc\chat_bloc_test.dart:323:20 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\chat\bloc\chat_bloc_test.dart:338:20 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\chat\bloc\chat_bloc_test.dart:339:23 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\chat\bloc\chat_bloc_test.dart:467:30 - avoid_redundant_argument_values
+   info - Use 'const' with the constructor to improve performance - test\features\chat\bloc\chat_bloc_test.dart:694:21 - prefer_const_constructors
+   info - Use 'const' literals as arguments to constructors of '@immutable' classes - test\features\chat\bloc\chat_bloc_test.dart:697:21 - prefer_const_literals_to_create_immutables
+   info - The value of the argument is redundant because it matches the default value - test\features\chat\bloc\chat_bloc_test.dart:703:23 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\chat\bloc\chat_bloc_test.dart:710:23 - avoid_redundant_argument_values
+   info - Use 'const' with the constructor to improve performance - test\features\chat\bloc\chat_bloc_test.dart:724:21 - prefer_const_constructors
+   info - Use 'const' literals as arguments to constructors of '@immutable' classes - test\features\chat\bloc\chat_bloc_test.dart:727:21 - prefer_const_literals_to_create_immutables
+   info - The value of the argument is redundant because it matches the default value - test\features\chat\bloc\chat_bloc_test.dart:733:23 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\chat\bloc\chat_bloc_test.dart:754:23 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\chat\bloc\chat_bloc_test.dart:762:23 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\coupon_points\bloc\coupon_points_bloc_test.dart:52:13 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\coupon_points\bloc\coupon_points_bloc_test.dart:184:32 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\flea_market\bloc\flea_market_bloc_test.dart:24:13 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\flea_market\bloc\flea_market_bloc_test.dart:32:13 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\flea_market\bloc\flea_market_bloc_test.dart:137:20 - avoid_redundant_argument_values
+   info - Use 'const' with the constructor to improve performance - test\features\flea_market\bloc\flea_market_bloc_test.dart:213:13 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - test\features\flea_market\bloc\flea_market_bloc_test.dart:245:13 - prefer_const_constructors
+   info - The value of the argument is redundant because it matches the default value - test\features\flea_market\bloc\flea_market_bloc_test.dart:305:24 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\home\bloc\home_bloc_test.dart:61:13 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\home\bloc\home_bloc_test.dart:277:31 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\leaderboard\bloc\leaderboard_bloc_test.dart:184:20 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\leaderboard\bloc\leaderboard_bloc_test.dart:337:24 - avoid_redundant_argument_values
+warning - Unused import: 'package:link2ur/data/repositories/message_repository.dart' - test\features\message\bloc\message_bloc_test.dart:8:8 - unused_import
+   info - Use 'const' with the constructor to improve performance - test\features\message\bloc\message_bloc_test.dart:18:5 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - test\features\message\bloc\message_bloc_test.dart:24:5 - prefer_const_constructors
+   info - The value of the argument is redundant because it matches the default value - test\features\message\bloc\message_bloc_test.dart:28:20 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\message\bloc\message_bloc_test.dart:39:49 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\message\bloc\message_bloc_test.dart:47:48 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\message\bloc\message_bloc_test.dart:57:20 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\message\bloc\message_bloc_test.dart:249:26 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\message\bloc\message_bloc_test.dart:250:29 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\message\bloc\message_bloc_test.dart:289:29 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\message\bloc\message_bloc_test.dart:308:26 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\message\bloc\message_bloc_test.dart:309:29 - avoid_redundant_argument_values
+   info - Use 'const' with the constructor to improve performance - test\features\message\bloc\message_bloc_test.dart:364:21 - prefer_const_constructors
+   info - Use 'const' literals as arguments to constructors of '@immutable' classes - test\features\message\bloc\message_bloc_test.dart:366:22 - prefer_const_literals_to_create_immutables
+   info - Use 'const' with the constructor to improve performance - test\features\message\bloc\message_bloc_test.dart:367:13 - prefer_const_constructors
+   info - The value of the argument is redundant because it matches the default value - test\features\message\bloc\message_bloc_test.dart:371:28 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\message\bloc\message_bloc_test.dart:503:53 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\message\bloc\message_bloc_test.dart:516:52 - avoid_redundant_argument_values
+   info - Use 'const' literals as arguments to constructors of '@immutable' classes - test\features\message\bloc\message_bloc_test.dart:529:26 - prefer_const_literals_to_create_immutables
+   info - The value of the argument is redundant because it matches the default value - test\features\message\bloc\message_bloc_test.dart:623:59 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\notification\bloc\notification_bloc_test.dart:16:40 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\notification\bloc\notification_bloc_test.dart:24:13 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\notification\bloc\notification_bloc_test.dart:34:13 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\notification\bloc\notification_bloc_test.dart:54:13 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\notification\bloc\notification_bloc_test.dart:64:13 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\notification\bloc\notification_bloc_test.dart:74:13 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\notification\bloc\notification_bloc_test.dart:134:19 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\notification\bloc\notification_bloc_test.dart:142:23 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\notification\bloc\notification_bloc_test.dart:180:19 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\notification\bloc\notification_bloc_test.dart:240:19 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\notification\bloc\notification_bloc_test.dart:288:19 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\notification\bloc\notification_bloc_test.dart:347:23 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\notification\bloc\notification_bloc_test.dart:403:17 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\notification\bloc\notification_bloc_test.dart:404:20 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\notification\bloc\notification_bloc_test.dart:435:17 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\notification\bloc\notification_bloc_test.dart:465:17 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\notification\bloc\notification_bloc_test.dart:466:20 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\notification\bloc\notification_bloc_test.dart:474:19 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\notification\bloc\notification_bloc_test.dart:495:17 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\notification\bloc\notification_bloc_test.dart:526:17 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\notification\bloc\notification_bloc_test.dart:557:17 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\notification\bloc\notification_bloc_test.dart:586:17 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\notification\bloc\notification_bloc_test.dart:588:24 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\notification\bloc\notification_bloc_test.dart:588:76 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\notification\bloc\notification_bloc_test.dart:611:17 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\notification\bloc\notification_bloc_test.dart:649:17 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\notification\bloc\notification_bloc_test.dart:677:17 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\notification\bloc\notification_bloc_test.dart:679:24 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\notification\bloc\notification_bloc_test.dart:741:17 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\notification\bloc\notification_bloc_test.dart:784:17 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\notification\bloc\notification_bloc_test.dart:820:17 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\notification\bloc\notification_bloc_test.dart:905:24 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\profile\bloc\profile_bloc_test.dart:650:23 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\search\bloc\search_bloc_test.dart:206:26 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\search\bloc\search_bloc_test.dart:230:26 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\search\bloc\search_bloc_test.dart:523:23 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\search\bloc\search_bloc_test.dart:528:23 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\settings\bloc\settings_bloc_test.dart:107:23 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\settings\bloc\settings_bloc_test.dart:335:33 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\settings\bloc\settings_bloc_test.dart:341:33 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\settings\bloc\settings_bloc_test.dart:355:41 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\settings\bloc\settings_bloc_test.dart:361:52 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\settings\bloc\settings_bloc_test.dart:367:53 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\student_verification\bloc\student_verification_bloc_test.dart:20:35 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\student_verification\bloc\student_verification_bloc_test.dart:21:34 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\student_verification\bloc\student_verification_bloc_test.dart:26:17 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\task_expert\bloc\task_expert_bloc_test.dart:153:20 - avoid_redundant_argument_values
+   info - Use 'const' with the constructor to improve performance - test\features\tasks\bloc\create_task_bloc_test.dart:24:23 - prefer_const_constructors
+   info - The value of the argument is redundant because it matches the default value - test\features\tasks\bloc\create_task_bloc_test.dart:123:41 - avoid_redundant_argument_values
+   info - The value of the argument is redundant because it matches the default value - test\features\tasks\bloc\create_task_bloc_test.dart:136:41 - avoid_redundant_argument_values
+

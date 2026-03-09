@@ -44,7 +44,10 @@
       "Read(//tmp/**)",
       "Bash(F:/flutter/bin/flutter analyze:*)",
       "Bash(PATH=\"/f/flutter/bin:$PATH\" PUB_CACHE=\"/f/DevCache/.pub-cache\" flutter test)",
-      "Bash(PATH=\"/f/flutter/bin:$PATH\" PUB_CACHE=\"/f/DevCache/.pub-cache\" flutter test:*)"
+      "Bash(PATH=\"/f/flutter/bin:$PATH\" PUB_CACHE=\"/f/DevCache/.pub-cache\" flutter test:*)",
+      "Bash(export PATH=\"/c/flutter/bin:$PATH\")",
+      "Read(//c/flutter/bin/**)",
+      "Read(//mnt/f/flutter/bin/**)"
     ]
   }
 }
