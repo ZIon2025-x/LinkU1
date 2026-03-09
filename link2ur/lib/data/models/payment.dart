@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
 
+import '../../core/utils/json_utils.dart';
+
 /// 任务支付响应模型
 /// 参考后端 TaskPaymentResponse
 class TaskPaymentResponse extends Equatable {
@@ -142,10 +144,10 @@ class StripeConnectStatus extends Equatable {
     return StripeConnectStatus(
       isConnected: accountId != null,
       accountId: accountId,
-      chargesEnabled: json['charges_enabled'] as bool? ?? false,
-      payoutsEnabled: json['payouts_enabled'] as bool? ?? false,
-      detailsSubmitted: json['details_submitted'] as bool? ?? false,
-      needsOnboarding: json['needs_onboarding'] as bool? ?? true,
+      chargesEnabled: parseBool(json['charges_enabled']),
+      payoutsEnabled: parseBool(json['payouts_enabled']),
+      detailsSubmitted: parseBool(json['details_submitted']),
+      needsOnboarding: parseBool(json['needs_onboarding'], true),
       clientSecret: json['client_secret'] as String?,
       onboardingUrl: json['onboarding_url'] as String?,
     );
@@ -318,9 +320,9 @@ class StripeConnectAccountDetails extends Equatable {
       email: json['email'] as String?,
       country: json['country'] as String? ?? '',
       type: json['type'] as String? ?? '',
-      detailsSubmitted: json['details_submitted'] as bool? ?? false,
-      chargesEnabled: json['charges_enabled'] as bool? ?? false,
-      payoutsEnabled: json['payouts_enabled'] as bool? ?? false,
+      detailsSubmitted: parseBool(json['details_submitted']),
+      chargesEnabled: parseBool(json['charges_enabled']),
+      payoutsEnabled: parseBool(json['payouts_enabled']),
       dashboardUrl: json['dashboard_url'] as String?,
       dashboardUnavailableReason: json['dashboard_unavailable_reason'] as String?,
     );
@@ -385,7 +387,7 @@ class ExternalAccount extends Equatable {
       expMonth: json['exp_month'] as int?,
       expYear: json['exp_year'] as int?,
       funding: json['funding'] as String?,
-      isDefault: json['default_for_currency'] as bool? ?? false,
+      isDefault: parseBool(json['default_for_currency']),
     );
   }
 

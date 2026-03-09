@@ -2,6 +2,7 @@ import 'dart:ui' show Locale;
 
 import 'package:equatable/equatable.dart';
 
+import '../../core/utils/json_utils.dart';
 import '../../core/utils/localized_string.dart';
 import 'user.dart';
 
@@ -81,7 +82,7 @@ class Leaderboard extends Equatable {
       itemCount: json['item_count'] as int? ?? 0,
       voteCount: json['vote_count'] as int? ?? 0,
       viewCount: json['view_count'] as int? ?? 0,
-      isFavorited: json['is_favorited'] as bool? ?? false,
+      isFavorited: parseBool(json['is_favorited']),
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'])
           : null,
@@ -244,7 +245,7 @@ class LeaderboardItem extends Equatable {
       voteScore: (json['vote_score'] as num?)?.toDouble() ?? 0.0,
       userVote: json['user_vote'] as String?,
       userVoteComment: json['user_vote_comment'] as String?,
-      userVoteIsAnonymous: json['user_vote_is_anonymous'] as bool?,
+      userVoteIsAnonymous: parseBoolNullable(json['user_vote_is_anonymous']),
       displayComment: json['display_comment'] as String?,
       displayCommentType: json['display_comment_type'] as String?,
       displayCommentInfo:
@@ -345,7 +346,7 @@ class LeaderboardItemsResponse {
     final total = json['total'] as int? ?? 0;
     final limit = json['limit'] as int? ?? 50;
     final offset = json['offset'] as int? ?? 0;
-    final hasMore = json['has_more'] as bool? ?? (offset + limit < total);
+    final hasMore = parseBoolNullable(json['has_more']) ?? (offset + limit < total);
     return LeaderboardItemsResponse(
       items: rawList
           .map((e) => LeaderboardItem.fromJson(e as Map<String, dynamic>))
@@ -387,7 +388,7 @@ class LeaderboardListResponse {
       total: json['total'] as int? ?? 0,
       page: json['page'] as int? ?? 1,
       pageSize: json['page_size'] as int? ?? json['limit'] as int? ?? 20,
-      hasMoreFromServer: json['has_more'] as bool?,
+      hasMoreFromServer: parseBoolNullable(json['has_more']),
     );
   }
 }

@@ -13,52 +13,21 @@ from pathlib import Path
 from typing import Optional, Dict, Any, List
 from sqlalchemy.orm import Session
 
-# Python 3.10+ 兼容性补丁：修复 apns2 的 collections.Iterable 导入问题
-# 在 Python 3.10+ 中，collections.Iterable 已移至 collections.abc.Iterable
-if sys.version_info >= (3, 10):
-    import collections
-    import collections.abc
-    # 重新添加已移除的别名，以兼容旧版本的 apns2
-    if not hasattr(collections, 'Iterable'):
-        collections.Iterable = collections.abc.Iterable
-    if not hasattr(collections, 'Mapping'):
-        collections.Mapping = collections.abc.Mapping
-    if not hasattr(collections, 'MutableMapping'):
-        collections.MutableMapping = collections.abc.MutableMapping
-    if not hasattr(collections, 'MutableSet'):
-        collections.MutableSet = collections.abc.MutableSet
-
 logger = logging.getLogger(__name__)
 
-# 尝试导入 apns2（优先使用 compat-fork-apns2，它支持 Python 3.11 和 PyJWT 2.x）
-APNS2_ERRORS = None
+# APNs HTTP/2 直接实现（使用 httpx + PyJWT，不再依赖 compat-fork-apns2）
+APNS_HTTPX_AVAILABLE = False
 try:
-    # 优先尝试导入 compat-fork-apns2（兼容 Python 3.11 和 PyJWT 2.x）
-    try:
-        from compat_fork_apns2.client import APNsClient
-        from compat_fork_apns2.payload import Payload
-        from compat_fork_apns2.credentials import TokenCredentials
-        from compat_fork_apns2 import errors as apns2_errors
-        APNS2_AVAILABLE = True
-        APNS2_IMPORT_ERROR = None
-        APNS2_LIBRARY = "compat-fork-apns2"
-        APNS2_ERRORS = apns2_errors
-    except ImportError:
-        # 回退到原始的 apns2（可能不兼容 Python 3.11 + PyJWT 2.x）
-        from apns2.client import APNsClient
-        from apns2.payload import Payload
-        from apns2.credentials import TokenCredentials
-        from apns2 import errors as apns2_errors
-        APNS2_AVAILABLE = True
-        APNS2_IMPORT_ERROR = None
-        APNS2_LIBRARY = "apns2"
-        APNS2_ERRORS = apns2_errors
+    import httpx
+    import jwt  # PyJWT
+    APNS_HTTPX_AVAILABLE = True
 except ImportError as e:
-    APNS2_AVAILABLE = False
-    APNS2_IMPORT_ERROR = str(e)
-    APNS2_LIBRARY = None
-    logger.warning(f"apns2 未安装，推送通知功能将不可用。错误: {e}")
-    logger.warning("请确保已安装 apns2 或 compat-fork-apns2: pip install compat-fork-apns2")
+    logger.warning(f"httpx 或 PyJWT 未安装，iOS 推送不可用: {e}")
+
+# APNs JWT token 缓存（有效期 50 分钟，Apple 最长 60 分钟）
+_apns_jwt_token: Optional[str] = None
+_apns_jwt_expires_at: float = 0
+_APNS_JWT_LIFETIME = 50 * 60  # 50 分钟
 
 # APNs 配置
 APNS_KEY_ID = os.getenv("APNS_KEY_ID")
@@ -471,6 +440,38 @@ def send_push_notification(
         return False
 
 
+def _get_apns_jwt() -> Optional[str]:
+    """
+    获取或刷新 APNs JWT token（缓存 50 分钟，Apple 最长允许 60 分钟）
+    """
+    global _apns_jwt_token, _apns_jwt_expires_at
+
+    now = time.time()
+    if _apns_jwt_token and now < _apns_jwt_expires_at:
+        return _apns_jwt_token
+
+    key_file = get_apns_key_file()
+    if not key_file:
+        logger.error("APNs 密钥文件不存在或无法加载")
+        return None
+
+    try:
+        with open(key_file, 'r') as f:
+            auth_key = f.read()
+
+        _apns_jwt_token = jwt.encode(
+            {"iss": APNS_TEAM_ID, "iat": int(now)},
+            auth_key,
+            algorithm="ES256",
+            headers={"kid": APNS_KEY_ID},
+        )
+        _apns_jwt_expires_at = now + _APNS_JWT_LIFETIME
+        return _apns_jwt_token
+    except Exception as e:
+        logger.error(f"生成 APNs JWT 失败: {e}")
+        return None
+
+
 def send_apns_notification(
     device_token: str,
     title: Optional[str] = None,
@@ -482,227 +483,104 @@ def send_apns_notification(
     localized_content: Optional[Dict[str, Dict[str, str]]] = None
 ) -> Optional[bool]:
     """
-    发送 APNs 推送通知
-    
-    Args:
-        device_token: iOS 设备令牌
-        title: 通知标题（如果提供了 localized_content，此参数将被忽略）
-        body: 通知内容（如果提供了 localized_content，此参数将被忽略）
-        notification_type: 通知类型
-        data: 额外的通知数据
-        badge: 应用徽章数字
-        sound: 通知声音
-        localized_content: 本地化内容字典，格式为 {"en": {"title": "...", "body": "..."}, "zh": {...}}
-                          如果提供，iOS端会根据系统语言选择显示
-        
+    通过 httpx HTTP/2 直接调用 APNs API 发送推送通知
+
     Returns:
         True: 推送成功
         False: 推送失败且设备令牌无效（应标记为不活跃）
-        None: 系统错误（如配置错误、apns2 未安装等，不应标记令牌为不活跃）
+        None: 系统错误（不应标记令牌为不活跃）
     """
-    try:
-        # 检查 APNs 配置
-        if not APNS_KEY_ID or not APNS_TEAM_ID:
-            logger.error("APNs 配置不完整（缺少 KEY_ID 或 TEAM_ID），跳过推送通知")
-            logger.error(f"APNS_KEY_ID: {APNS_KEY_ID is not None}, APNS_TEAM_ID: {APNS_TEAM_ID is not None}")
-            return None  # None 表示系统错误，不应该标记令牌为不活跃
-        
-        # 获取密钥文件路径
-        key_file = get_apns_key_file()
-        if not key_file:
-            logger.error("APNs 密钥文件不存在或无法加载，跳过推送通知")
-            logger.error(f"APNS_KEY_FILE: {APNS_KEY_FILE}, APNS_KEY_CONTENT: {APNS_KEY_CONTENT is not None}")
-            return None  # None 表示系统错误，不应该标记令牌为不活跃
-        
-        logger.info(f"APNs 配置检查通过，使用密钥文件: {key_file}")
-        
-        # 检查 apns2 是否可用
-        if not APNS2_AVAILABLE:
-            logger.error(f"apns2 未安装，无法发送推送通知。导入错误: {APNS2_IMPORT_ERROR}")
-            logger.error("请确保已安装 compat-fork-apns2: pip install compat-fork-apns2")
-            logger.error("如果已安装，请检查 Python 环境和依赖是否正确加载")
-            logger.error("在 Railway 环境中，请确保 requirements.txt 中的 compat-fork-apns2>=0.7.0 已正确安装")
-            # 系统错误，不应该标记令牌为不活跃（返回特殊值表示系统错误）
-            return None  # None 表示系统错误，不应该标记令牌为不活跃
-        
-        # 记录使用的库版本（用于调试）
-        if APNS2_LIBRARY:
-            logger.debug(f"使用 {APNS2_LIBRARY} 库发送推送通知")
-        
-        # 构建通知负载
-        payload_data = {
-            "type": notification_type
-        }
-        if data:
-            payload_data.update(data)
-        
-        # 使用传入的 title 和 body（已经根据用户语言偏好生成）
-        alert_title = title or "Notification"
-        alert_body = body or ""
-        
-        logger.debug(f"[推送通知] 标题: {alert_title[:50]}..., 内容: {alert_body[:100]}...")
-        
-        # 构建 payload
-        payload = Payload(
-            alert={"title": alert_title, "body": alert_body},
-            badge=badge,
-            sound=sound,
-            custom=payload_data
-        )
-        
-        # 创建 Token 凭证（使用 .p8 密钥文件）
-        credentials = TokenCredentials(
-            auth_key_path=key_file,
-            auth_key_id=APNS_KEY_ID,
-            team_id=APNS_TEAM_ID
-        )
-        
-        # 创建 APNs 客户端
-        # 注意：每次调用都创建新客户端，避免连接复用问题
+    if not APNS_HTTPX_AVAILABLE:
+        logger.error("httpx 或 PyJWT 未安装，无法发送 APNs 推送")
+        return None
+
+    if not APNS_KEY_ID or not APNS_TEAM_ID:
+        logger.error(f"APNs 配置不完整: KEY_ID={APNS_KEY_ID is not None}, TEAM_ID={APNS_TEAM_ID is not None}")
+        return None
+
+    token = _get_apns_jwt()
+    if not token:
+        return None
+
+    # 构建 APNs payload
+    aps = {
+        "alert": {"title": title or "Notification", "body": body or ""},
+        "sound": sound,
+    }
+    if badge is not None:
+        aps["badge"] = badge
+
+    payload = {"aps": aps}
+    if notification_type:
+        payload["type"] = notification_type
+    if data:
+        payload.update(data)
+
+    # APNs URL
+    host = "https://api.development.push.apple.com" if APNS_USE_SANDBOX else "https://api.push.apple.com"
+    url = f"{host}/3/device/{device_token}"
+
+    headers = {
+        "authorization": f"bearer {token}",
+        "apns-topic": APNS_BUNDLE_ID,
+        "apns-push-type": "alert",
+        "apns-priority": "10",
+    }
+
+    logger.info(f"[APNs] 发送推送: token={device_token[:20]}..., topic={APNS_BUNDLE_ID}, sandbox={APNS_USE_SANDBOX}")
+
+    _MAX_RETRIES = 2
+    _RETRY_DELAYS = [1, 3]
+
+    for attempt in range(_MAX_RETRIES + 1):
         try:
-            apns_client = APNsClient(
-                credentials=credentials,
-                use_sandbox=APNS_USE_SANDBOX,
-                use_alternative_port=False
-            )
-            logger.debug(f"[APNs诊断] APNs 客户端创建成功")
-        except Exception as e:
-            import traceback
-            error_traceback = traceback.format_exc()
-            logger.error(f"[APNs诊断] 创建 APNs 客户端失败: {str(e)}")
-            logger.error(f"[APNs诊断] 异常堆栈:\n{error_traceback}")
-            return None
-        
-        # 发送通知
-        topic = APNS_BUNDLE_ID
-        
-        # 记录详细的诊断信息（用于调试 BadDeviceToken 错误）
-        logger.info(f"[APNs诊断] 准备发送推送: device_token长度={len(device_token)}, device_token前32字符={device_token[:32] if len(device_token) >= 32 else device_token}, topic={topic}, use_sandbox={APNS_USE_SANDBOX}, bundle_id={APNS_BUNDLE_ID}, key_id={APNS_KEY_ID}, team_id={APNS_TEAM_ID}")
-        
-        # 验证设备令牌格式（APNs 支持 64 或 128 个十六进制字符）
-        if len(device_token) not in (64, 128):
-            logger.warning(f"[APNs诊断] 设备令牌长度异常: 期望64或128字符，实际{len(device_token)}字符")
-        if not all(c in '0123456789abcdefABCDEF' for c in device_token):
-            logger.warning(f"[APNs诊断] 设备令牌格式异常: 包含非十六进制字符")
-        
-        # 🔒 修复：添加瞬态网络错误重试逻辑
-        # 仅对 ConnectionError/TimeoutError/OSError 重试，APNs 业务错误不重试
-        import time
-        _TRANSIENT_EXCEPTIONS = (ConnectionError, TimeoutError, OSError, IOError)
-        _MAX_RETRIES = 2
-        _RETRY_DELAYS = [1, 3]  # 秒
-        
-        response = None
-        for _attempt in range(_MAX_RETRIES + 1):
+            with httpx.Client(http2=True, timeout=10.0) as client:
+                response = client.post(url, json=payload, headers=headers)
+
+            status = response.status_code
+
+            if status == 200:
+                logger.info(f"[APNs] 推送成功: token={device_token[:20]}..., apns-id={response.headers.get('apns-id', 'N/A')}")
+                return True
+
+            # 解析错误原因
+            reason = ""
             try:
-                logger.debug(f"[APNs诊断] 调用 send_notification（第{_attempt+1}次），device_token={device_token[:20]}..., topic={topic}")
-                response = apns_client.send_notification(device_token, payload, topic)
-                logger.debug(f"[APNs诊断] send_notification 返回: {response}")
-                break  # 成功（无异常）则跳出重试循环
-            except _TRANSIENT_EXCEPTIONS as e:
-                if _attempt < _MAX_RETRIES:
-                    logger.warning(f"[APNs] 瞬态网络错误（第{_attempt+1}次），{_RETRY_DELAYS[_attempt]}秒后重试: {type(e).__name__}: {e}")
-                    time.sleep(_RETRY_DELAYS[_attempt])
-                    continue
-                # 重试耗尽，记录错误并返回 None（不停用 token）
-                logger.error(f"[APNs] 重试{_MAX_RETRIES}次后仍失败: {type(e).__name__}: {e}")
-                return None
-            except Exception as e:
-                # 非网络异常，走原有的 token 无效/系统错误判断逻辑
-                logger.error(f"[APNs诊断] 发送通知时发生异常: {str(e)}", exc_info=True)
-                logger.error(f"[APNs诊断] 异常类型: {type(e).__name__}")
-                # 检查是否是设备令牌相关的错误（同时检查异常类型名，因为 str(e) 可能为空）
-                error_str = str(e).lower()
-                exc_name = type(e).__name__
-                token_invalid_keywords = ['baddevicetoken', 'unregistered', 'devicetokennotfortopic', 'invalid token']
-                if exc_name in ['BadDeviceToken', 'Unregistered', 'DeviceTokenNotForTopic'] or \
-                   any(kw in error_str for kw in token_invalid_keywords):
-                    logger.warning(f"设备令牌无效（异常: {exc_name}），应标记为不活跃")
-                    if exc_name == 'BadDeviceToken':
-                        logger.info("[APNs诊断] 提示: BadDeviceToken 通常表示令牌无效、过期，或沙盒/生产环境不匹配（APNS_USE_SANDBOX 需与 App 分发渠道一致）")
-                    return False
-                # 其他异常视为系统错误
-                return None
-        
-        # 当 response 为 None 时不重试，避免同一条推送被发送两次。
-        # 原因：apns2 在部分情况下（如异步/连接状态）可能已成功发送但返回 None，
-        # 若此时再重试发送相同 payload，用户会收到两条相同推送。
-        if response is None:
-            logger.warning(f"[APNs诊断] send_notification 返回 None，不重试以避免重复推送")
+                reason = response.json().get("reason", "")
+            except Exception:
+                pass
+
+            logger.warning(f"[APNs] 推送失败: status={status}, reason={reason}")
+
+            # 令牌无效 → 标记不活跃
+            if status == 410 or reason in ("BadDeviceToken", "Unregistered", "DeviceTokenNotForTopic"):
+                return False
+
+            # 服务端临时错误 → 重试
+            if status in (500, 503) and attempt < _MAX_RETRIES:
+                time.sleep(_RETRY_DELAYS[attempt])
+                continue
+
+            # 其他错误（403 ExpiredProviderToken 等）→ 系统错误
+            # 如果是 JWT 过期，清除缓存以便下次重新生成
+            if reason == "ExpiredProviderToken":
+                global _apns_jwt_token, _apns_jwt_expires_at
+                _apns_jwt_token = None
+                _apns_jwt_expires_at = 0
             return None
 
-        # 检查响应
-        if response.is_successful:
-            logger.info(f"APNs 推送通知已发送: device_token={device_token[:20]}..., topic={topic}, title={alert_title[:30] if alert_title else 'None'}...")
-            return True
-        else:
-            # APNs 返回的错误，需要根据错误类型决定是否标记令牌为不活跃
-            logger.warning(f"APNs 推送通知失败: reason={response.reason}, status={response.status_code}")
-            
-            # 以下错误表示设备令牌无效，应该标记为不活跃：
-            # - BadDeviceToken (400): 设备令牌格式错误或无效
-            # - Unregistered (410): 设备令牌已失效（应用已卸载或令牌过期）
-            # - DeviceTokenNotForTopic (400): 设备令牌不属于此应用
-            should_deactivate = response.status_code in [400, 410] or \
-                               response.reason in ['BadDeviceToken', 'Unregistered', 'DeviceTokenNotForTopic']
-            
-            if should_deactivate:
-                logger.warning(f"设备令牌无效，应标记为不活跃: reason={response.reason}, status={response.status_code}")
-                return False  # False 表示推送失败且应该标记令牌为不活跃
-            else:
-                # 其他错误（如 PayloadTooLarge, TopicDisallowed 等）不应该标记令牌为不活跃
-                logger.warning(f"推送失败但令牌可能有效，不标记为不活跃: reason={response.reason}, status={response.status_code}")
-                return None  # None 表示系统/配置错误，不应该标记令牌为不活跃
-        
-    except Exception as e:
-        # 检查异常类型名称（更健壮的方法，不依赖于具体的模块路径）
-        exception_type_name = type(e).__name__
-        exception_module = type(e).__module__
-        
-        logger.debug(f"捕获到异常: {exception_type_name} (模块: {exception_module})")
-        
-        # 检查是否是 apns2 库抛出的特定异常（表示设备令牌无效）
-        # 使用异常类型名称检查，因为模块路径可能不同（apns2.errors 或 compat_fork_apns2.errors）
-        if 'apns2' in exception_module.lower() or 'compat_fork_apns2' in exception_module.lower():
-            # 以下异常表示设备令牌无效，应该标记为不活跃
-            if exception_type_name in ['BadDeviceToken', 'Unregistered', 'DeviceTokenNotForTopic']:
-                logger.warning(f"设备令牌无效（异常类型: {exception_type_name}），应标记为不活跃: {e}")
-                return False  # False 表示推送失败且应该标记令牌为不活跃
-            
-            # 其他 apns2 异常（如 PayloadTooLarge, TopicDisallowed 等）不应该标记令牌为不活跃
-            if exception_type_name in ['PayloadTooLarge', 'TopicDisallowed', 'BadCollapseId',
-                                      'BadExpirationDate', 'BadMessageId', 'BadPriority',
-                                      'BadTopic', 'ExpiredProviderToken', 'Forbidden',
-                                      'InvalidProviderToken', 'MissingDeviceToken',
-                                      'MissingTopic', 'ServiceUnavailable', 'Shutdown',
-                                      'TooManyProviderTokenUpdates', 'TooManyRequests',
-                                      'UnknownError']:
-                logger.warning(f"推送失败但令牌可能有效（异常类型: {exception_type_name}），不标记为不活跃: {e}")
-                return None  # None 表示系统/配置错误，不应该标记令牌为不活跃
-        
-        # 如果 APNS2_ERRORS 可用，也尝试使用 isinstance 检查（更精确）
-        if APNS2_ERRORS is not None:
-            try:
-                # 以下异常表示设备令牌无效，应该标记为不活跃
-                if isinstance(e, (APNS2_ERRORS.BadDeviceToken, 
-                                 APNS2_ERRORS.Unregistered,
-                                 APNS2_ERRORS.DeviceTokenNotForTopic)):
-                    logger.warning(f"设备令牌无效（异常类型: {exception_type_name}），应标记为不活跃: {e}")
-                    return False  # False 表示推送失败且应该标记令牌为不活跃
-                
-                # 其他 apns2 异常不应该标记令牌为不活跃
-                if hasattr(APNS2_ERRORS, exception_type_name):
-                    logger.warning(f"推送失败但令牌可能有效（异常类型: {exception_type_name}），不标记为不活跃: {e}")
-                    return None  # None 表示系统/配置错误，不应该标记令牌为不活跃
-            except (AttributeError, TypeError):
-                # 如果 APNS2_ERRORS 中没有对应的异常类，继续使用类型名称检查的结果
-                pass
-        
-        # 其他未预期的异常（网络错误、超时等）不应该标记令牌为不活跃
-        logger.error(f"发送 APNs 推送通知失败: {e}", exc_info=True)
-        import traceback
-        logger.error(f"详细错误信息: {traceback.format_exc()}")
-        return None  # None 表示系统错误，不应该标记令牌为不活跃
+        except (httpx.ConnectError, httpx.TimeoutException, ConnectionError, TimeoutError) as e:
+            if attempt < _MAX_RETRIES:
+                logger.warning(f"[APNs] 网络错误（第{attempt+1}次），{_RETRY_DELAYS[attempt]}秒后重试: {e}")
+                time.sleep(_RETRY_DELAYS[attempt])
+                continue
+            logger.error(f"[APNs] 重试{_MAX_RETRIES}次后仍失败: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"[APNs] 未预期错误: {e}", exc_info=True)
+            return None
+
+    return None
 
 
 def send_fcm_notification(

@@ -2,6 +2,7 @@ import 'dart:ui' show Locale;
 
 import 'package:equatable/equatable.dart';
 
+import '../../core/utils/json_utils.dart';
 import '../../core/utils/localized_string.dart';
 
 /// Discovery Feed 内容项
@@ -161,7 +162,7 @@ class DiscoveryFeedItem extends Equatable {
       activityInfo: json['activity_info'] != null
           ? ActivityBrief.fromJson(json['activity_info'] as Map<String, dynamic>)
           : null,
-      isExperienced: json['is_experienced'] as bool?,
+      isExperienced: parseBoolNullable(json['is_experienced']),
       extraData: json['extra_data'] as Map<String, dynamic>?,
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'].toString())
@@ -306,7 +307,7 @@ class DiscoveryFeedResponse {
               .toList() ??
           [],
       page: json['page'] as int? ?? 1,
-      hasMore: json['has_more'] as bool? ?? false,
+      hasMore: parseBool(json['has_more']),
     );
   }
 }

@@ -3,6 +3,7 @@ import 'dart:ui' show Locale;
 import 'package:equatable/equatable.dart';
 
 import '../../core/constants/app_constants.dart';
+import '../../core/utils/json_utils.dart';
 import '../../core/utils/localized_string.dart';
 import 'user.dart';
 
@@ -381,12 +382,12 @@ class Task extends Equatable {
       taker: json['taker'] != null
           ? UserBrief.fromJson(json['taker'] as Map<String, dynamic>)
           : null,
-      isMultiParticipant: json['is_multi_participant'] as bool? ?? false,
+      isMultiParticipant: parseBool(json['is_multi_participant']),
       maxParticipants: json['max_participants'] as int? ?? 1,
       currentParticipants: json['current_participants'] as int? ?? 0,
       taskSource: json['task_source'] as String?,
       taskLevel: json['task_level'] as String?,
-      hasApplied: json['has_applied'] as bool? ?? false,
+      hasApplied: parseBool(json['has_applied']),
       userApplicationStatus: json['user_application_status'] as String?,
       completionEvidence: _parseCompletionEvidence(json['completion_evidence']),
       paymentExpiresAt: json['payment_expires_at'] as String?,
@@ -395,7 +396,7 @@ class Task extends Equatable {
       baseReward: (json['base_reward'] as num?)?.toDouble(),
       originatingUserId: json['originating_user_id']?.toString(),
       expertCreatorId: json['expert_creator_id']?.toString(),
-      hasReviewed: json['has_reviewed'] as bool? ?? false,
+      hasReviewed: parseBool(json['has_reviewed']),
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'])
           : null,
@@ -407,13 +408,13 @@ class Task extends Equatable {
       acceptedAt: json['accepted_at'] != null ? DateTime.tryParse(json['accepted_at'].toString()) : null,
       completedAt: json['completed_at'] != null ? DateTime.tryParse(json['completed_at'].toString()) : null,
       confirmedAt: json['confirmed_at'] != null ? DateTime.tryParse(json['confirmed_at'].toString()) : null,
-      autoConfirmed: json['auto_confirmed'] as bool? ?? false,
+      autoConfirmed: parseBool(json['auto_confirmed']),
       confirmationRemainingSeconds: json['confirmation_remaining_seconds'] as int?,
       pointsReward: json['points_reward'] as int?,
       minParticipants: json['min_participants'] as int?,
       platformFeeRate: (json['platform_fee_rate'] as num?)?.toDouble(),
       platformFeeAmount: (json['platform_fee_amount'] as num?)?.toDouble(),
-      rewardToBeQuoted: json['reward_to_be_quoted'] as bool? ?? false,
+      rewardToBeQuoted: parseBool(json['reward_to_be_quoted']),
       counterOfferPrice: (json['counter_offer_price'] as num?)?.toDouble(),
       counterOfferStatus: json['counter_offer_status'] as String?,
       counterOfferUserId: json['counter_offer_user_id'] as String?,

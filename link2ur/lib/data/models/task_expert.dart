@@ -2,6 +2,7 @@ import 'dart:ui' show Locale;
 
 import 'package:equatable/equatable.dart';
 
+import '../../core/utils/json_utils.dart';
 import '../../core/utils/localized_string.dart';
 import '../../l10n/app_localizations.dart';
 
@@ -164,7 +165,7 @@ class TaskExpert extends Equatable {
       responseTimeZh: json['response_time_zh'] as String?,
       // 扩展字段（与 React 前端 TaskExpert interface 一致）
       location: json['location'] as String?,
-      isVerified: json['is_verified'] as bool? ?? false,
+      isVerified: parseBool(json['is_verified']),
       userLevel: json['user_level'] as String?,
       completionRate: (json['completion_rate'] as num?)?.toDouble(),
       successRate: (json['success_rate'] as num?)?.toDouble(),
@@ -174,7 +175,7 @@ class TaskExpert extends Equatable {
           ? DateTime.tryParse(json['created_at'])
           : null,
       // 官方账号字段
-      isOfficial: json['is_official'] as bool? ?? false,
+      isOfficial: parseBool(json['is_official']),
       officialBadge: json['official_badge'] as String?,
     );
   }
@@ -393,7 +394,7 @@ class TaskExpertService extends Equatable {
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'])
           : null,
-      hasTimeSlots: json['has_time_slots'] as bool? ?? false,
+      hasTimeSlots: parseBool(json['has_time_slots']),
       timeSlotDurationMinutes: json['time_slot_duration_minutes'] as int?,
       timeSlotStartTime: json['time_slot_start_time'] as String?,
       timeSlotEndTime: json['time_slot_end_time'] as String?,
@@ -402,9 +403,9 @@ class TaskExpertService extends Equatable {
       userApplicationStatus: json['user_application_status'] as String?,
       userTaskId: json['user_task_id'] as int?,
       userTaskStatus: json['user_task_status'] as String?,
-      userTaskIsPaid: json['user_task_is_paid'] as bool?,
+      userTaskIsPaid: parseBoolNullable(json['user_task_is_paid']),
       userApplicationHasNegotiation:
-          json['user_application_has_negotiation'] as bool?,
+          parseBoolNullable(json['user_application_has_negotiation']),
     );
   }
 
@@ -535,9 +536,9 @@ class ServiceTimeSlot extends Equatable {
       slotEndDatetime: json['slot_end_datetime'] as String? ?? '',
       currentParticipants: json['current_participants'] as int? ?? 0,
       maxParticipants: json['max_participants'] as int? ?? 1,
-      isAvailable: json['is_available'] as bool? ?? true,
+      isAvailable: parseBool(json['is_available'], true),
       activityId: json['activity_id'] as int?,
-      hasActivity: json['has_activity'] as bool?,
+      hasActivity: parseBoolNullable(json['has_activity']),
       activityPrice: (json['activity_price'] as num?)?.toDouble(),
       pricePerParticipant:
           (json['price_per_participant'] as num?)?.toDouble(),

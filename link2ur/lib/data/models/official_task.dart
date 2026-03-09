@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
 
+import '../../core/utils/json_utils.dart';
+
 /// Official task model (platform-created tasks with rewards)
 class OfficialTask extends Equatable {
   final int id;
@@ -57,7 +59,7 @@ class OfficialTask extends Equatable {
       validUntil: json['valid_until'] != null
           ? DateTime.tryParse(json['valid_until'].toString())
           : null,
-      isActive: json['is_active'] as bool? ?? true,
+      isActive: parseBool(json['is_active'], true),
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'].toString())
           : null,

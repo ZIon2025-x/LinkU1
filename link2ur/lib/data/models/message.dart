@@ -2,6 +2,7 @@ import 'dart:ui' show Locale;
 
 import 'package:equatable/equatable.dart';
 
+import '../../core/utils/json_utils.dart';
 import '../../core/utils/localized_string.dart';
 import 'user.dart';
 
@@ -32,7 +33,7 @@ class ChatContact extends Equatable {
           ? DateTime.tryParse(json['last_message_time'])
           : null,
       unreadCount: json['unread_count'] as int? ?? 0,
-      isOnline: json['is_online'] as bool? ?? false,
+      isOnline: parseBool(json['is_online']),
     );
   }
 
@@ -137,7 +138,7 @@ class Message extends Equatable {
       senderName: json['sender_name'] as String?,
       senderAvatar: json['sender_avatar'] as String?,
       taskId: json['task_id'] as int?,
-      isRead: json['is_read'] as bool? ?? false,
+      isRead: parseBool(json['is_read']),
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'].toString())
           : null,
@@ -313,7 +314,7 @@ class TaskChat extends Equatable {
       takerId: json['taker_id']?.toString(),
       expertCreatorId: json['expert_creator_id']?.toString(),
       images: images,
-      isMultiParticipant: json['is_multi_participant'] as bool? ?? false,
+      isMultiParticipant: parseBool(json['is_multi_participant']),
       participants: (json['participants'] as List<dynamic>?)
               ?.map((e) => UserBrief.fromJson(e as Map<String, dynamic>))
               .toList() ??

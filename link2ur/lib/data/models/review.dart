@@ -1,4 +1,6 @@
 import 'package:equatable/equatable.dart';
+
+import '../../core/utils/json_utils.dart';
 import 'user.dart';
 
 /// 评价模型
@@ -36,7 +38,7 @@ class Review extends Equatable {
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'])
           : null,
-      isAnonymous: json['is_anonymous'] as bool? ?? false,
+      isAnonymous: parseBool(json['is_anonymous']),
     );
   }
 

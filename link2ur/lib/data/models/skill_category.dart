@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
 
+import '../../core/utils/json_utils.dart';
+
 /// Skill category model
 class SkillCategory extends Equatable {
   final int id;
@@ -25,7 +27,7 @@ class SkillCategory extends Equatable {
       nameEn: json['name_en'] as String? ?? '',
       icon: json['icon'] as String?,
       displayOrder: json['display_order'] as int? ?? 0,
-      isActive: json['is_active'] as bool? ?? true,
+      isActive: parseBool(json['is_active'], true),
     );
   }
 

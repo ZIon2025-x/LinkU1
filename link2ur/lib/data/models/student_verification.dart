@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 import '../../l10n/app_localizations.dart';
 
 import '../../core/constants/app_constants.dart';
+import '../../core/utils/json_utils.dart';
 
 /// 学生认证模型
 /// 参考后端 StudentVerification status response
@@ -80,7 +81,7 @@ class StudentVerification extends Equatable {
 
   factory StudentVerification.fromJson(Map<String, dynamic> json) {
     return StudentVerification(
-      isVerified: json['is_verified'] as bool? ?? false,
+      isVerified: parseBool(json['is_verified']),
       status: json['status'] as String?,
       university: json['university'] != null
           ? University.fromJson(json['university'] as Map<String, dynamic>)
@@ -93,12 +94,12 @@ class StudentVerification extends Equatable {
           ? DateTime.tryParse(json['expires_at'])
           : null,
       daysRemaining: json['days_remaining'] as int?,
-      canRenew: json['can_renew'] as bool? ?? false,
+      canRenew: parseBool(json['can_renew']),
       renewableFrom: json['renewable_from'] != null
           ? DateTime.tryParse(json['renewable_from'])
           : null,
-      emailLocked: json['email_locked'] as bool? ?? false,
-      tokenExpired: json['token_expired'] as bool? ?? false,
+      emailLocked: parseBool(json['email_locked']),
+      tokenExpired: parseBool(json['token_expired']),
     );
   }
 

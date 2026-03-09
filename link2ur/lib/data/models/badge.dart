@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
 
+import '../../core/utils/json_utils.dart';
+
 /// User badge model
 class UserBadge extends Equatable {
   final int id;
@@ -24,7 +26,7 @@ class UserBadge extends Equatable {
       badgeType: json['badge_type'] as String? ?? '',
       skillCategory: json['skill_category'] as String?,
       rank: json['rank']?.toString(),
-      isDisplayed: json['is_displayed'] as bool? ?? false,
+      isDisplayed: parseBool(json['is_displayed']),
       grantedAt: json['granted_at'] != null
           ? DateTime.tryParse(json['granted_at'].toString())
           : null,

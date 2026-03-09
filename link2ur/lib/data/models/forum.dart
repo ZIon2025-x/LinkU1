@@ -2,6 +2,7 @@ import 'dart:ui' show Locale;
 
 import 'package:equatable/equatable.dart';
 
+import '../../core/utils/json_utils.dart';
 import '../../core/utils/localized_string.dart';
 import 'user.dart';
 
@@ -115,7 +116,7 @@ class ForumCategory extends Equatable {
       type: json['type'] as String?,
       country: json['country'] as String?,
       universityCode: json['university_code'] as String?,
-      isFavorited: json['is_favorited'] as bool? ?? false,
+      isFavorited: parseBool(json['is_favorited']),
       lastPostAt: json['last_post_at'] != null
           ? DateTime.tryParse(json['last_post_at'].toString())
           : null,
@@ -123,7 +124,7 @@ class ForumCategory extends Equatable {
           ? LatestPostInfo.fromJson(
               json['latest_post'] as Map<String, dynamic>)
           : null,
-      isAdminOnly: json['is_admin_only'] as bool? ?? false,
+      isAdminOnly: parseBool(json['is_admin_only']),
     );
   }
 
@@ -389,11 +390,11 @@ class ForumPost extends Equatable {
       replyCount: json['reply_count'] as int? ?? 0,
       viewCount: json['view_count'] as int? ?? 0,
       favoriteCount: json['favorite_count'] as int? ?? 0,
-      isLiked: json['is_liked'] as bool? ?? false,
-      isFavorited: json['is_favorited'] as bool? ?? false,
-      isPinned: json['is_pinned'] as bool? ?? false,
-      isFeatured: json['is_featured'] as bool? ?? false,
-      isLocked: json['is_locked'] as bool? ?? false,
+      isLiked: parseBool(json['is_liked']),
+      isFavorited: parseBool(json['is_favorited']),
+      isPinned: parseBool(json['is_pinned']),
+      isFeatured: parseBool(json['is_featured']),
+      isLocked: parseBool(json['is_locked']),
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'].toString())
           : null,
@@ -548,7 +549,7 @@ class ForumReply extends Equatable {
           : null,
       replyLevel: json['reply_level'] as int? ?? 0,
       likeCount: json['like_count'] as int? ?? 0,
-      isLiked: json['is_liked'] as bool? ?? false,
+      isLiked: parseBool(json['is_liked']),
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'].toString())
           : null,

@@ -2,6 +2,7 @@ import 'dart:ui' show Locale;
 
 import 'package:equatable/equatable.dart';
 
+import '../../core/utils/json_utils.dart';
 import '../../core/utils/localized_string.dart';
 
 /// 活动模型
@@ -228,7 +229,7 @@ class Activity extends Equatable {
       completionRule: json['completion_rule'] as String? ?? 'all',
       rewardDistribution: json['reward_distribution'] as String? ?? 'equal',
       status: json['status'] as String? ?? 'open',
-      isPublic: json['is_public'] as bool? ?? true,
+      isPublic: parseBool(json['is_public'], true),
       visibility: json['visibility'] as String? ?? 'public',
       deadline: json['deadline'] != null
           ? DateTime.tryParse(json['deadline'])
@@ -242,18 +243,18 @@ class Activity extends Equatable {
       serviceImages: (json['service_images'] as List<dynamic>?)
           ?.map((e) => e as String)
           .toList(),
-      hasTimeSlots: json['has_time_slots'] as bool? ?? false,
-      rewardApplicants: json['reward_applicants'] as bool? ?? false,
+      hasTimeSlots: parseBool(json['has_time_slots']),
+      rewardApplicants: parseBool(json['reward_applicants']),
       applicantRewardAmount:
           (json['applicant_reward_amount'] as num?)?.toDouble(),
       applicantPointsReward: json['applicant_points_reward'] as int?,
       reservedPointsTotal: json['reserved_points_total'] as int?,
       distributedPointsTotal: json['distributed_points_total'] as int?,
-      hasApplied: json['has_applied'] as bool?,
+      hasApplied: parseBoolNullable(json['has_applied']),
       userTaskId: json['user_task_id'] as int?,
       userTaskStatus: json['user_task_status'] as String?,
-      userTaskIsPaid: json['user_task_is_paid'] as bool?,
-      userTaskHasNegotiation: json['user_task_has_negotiation'] as bool?,
+      userTaskIsPaid: parseBoolNullable(json['user_task_is_paid']),
+      userTaskHasNegotiation: parseBoolNullable(json['user_task_has_negotiation']),
       type: json['type'] as String?,
       participantStatus: json['participant_status'] as String?,
       createdAt: json['created_at'] != null
@@ -280,8 +281,8 @@ class Activity extends Equatable {
               .map((w) => ActivityWinner.fromJson(w as Map<String, dynamic>))
               .toList()
           : null,
-      isDrawn: json['is_drawn'] as bool? ?? false,
-      isOfficial: json['is_official'] as bool? ?? false,
+      isDrawn: parseBool(json['is_drawn']),
+      isOfficial: parseBool(json['is_official']),
       currentApplicants: json['current_applicants'] as int?,
     );
   }
@@ -585,7 +586,7 @@ class OfficialActivityResult extends Equatable {
 
   factory OfficialActivityResult.fromJson(Map<String, dynamic> json) =>
       OfficialActivityResult(
-        isDrawn: json['is_drawn'] as bool? ?? false,
+        isDrawn: parseBool(json['is_drawn']),
         drawnAt: json['drawn_at'] != null
             ? DateTime.tryParse(json['drawn_at'] as String)
             : null,

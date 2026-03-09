@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
 
+import '../../core/utils/json_utils.dart';
+
 /// Newbie task configuration
 class NewbieTaskConfig extends Equatable {
   final String taskKey;
@@ -40,7 +42,7 @@ class NewbieTaskConfig extends Equatable {
       rewardAmount: json['reward_amount'] as int? ?? 0,
       couponId: json['coupon_id'] as int?,
       displayOrder: json['display_order'] as int? ?? 0,
-      isActive: json['is_active'] as bool? ?? true,
+      isActive: parseBool(json['is_active'], true),
     );
   }
 
@@ -194,7 +196,7 @@ class StageBonusConfig extends Equatable {
       rewardType: json['reward_type'] as String? ?? 'points',
       rewardAmount: json['reward_amount'] as int? ?? 0,
       couponId: json['coupon_id'] as int?,
-      isActive: json['is_active'] as bool? ?? true,
+      isActive: parseBool(json['is_active'], true),
     );
   }
 
