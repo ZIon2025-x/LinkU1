@@ -6,13 +6,13 @@ import { getErrorMessage } from '../../../utils/errorHandler';
 interface NotificationForm {
   title: string;
   content: string;
-  user_ids: string[];
+  user_ids_input: string;   // 原始输入文本，绑定到输入框
 }
 
 const initialForm: NotificationForm = {
   title: '',
   content: '',
-  user_ids: [],
+  user_ids_input: '',
 };
 
 /**
@@ -29,14 +29,24 @@ const NotificationManagement: React.FC = () => {
       return;
     }
 
+    // 解析用户ID：逗号分隔，过滤空白
+    const parsedIds = form.user_ids_input
+      .split(',')
+      .map(id => id.trim())
+      .filter(id => id.length > 0);
+
     setLoading(true);
     try {
       await sendAdminNotification({
         title: form.title,
         content: form.content,
-        user_ids: form.user_ids.length > 0 ? form.user_ids : [],
+        // 有 ID 时传数组，否则不传（后端收到 null → 发给所有人）
+        user_ids: parsedIds.length > 0 ? parsedIds : undefined as any,
       });
-      message.success('通知发送成功！');
+      const target = parsedIds.length > 0
+        ? `已发送给 ${parsedIds.length} 个指定用户`
+        : '已发送给所有用户';
+      message.success(`通知发送成功！${target}`);
       setForm(initialForm);
     } catch (error: any) {
       message.error(getErrorMessage(error));
@@ -44,11 +54,6 @@ const NotificationManagement: React.FC = () => {
       setLoading(false);
     }
   }, [form]);
-
-  const handleUserIdsChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const ids = e.target.value.split(',').map(id => id.trim()).filter(id => id.length > 0);
-    setForm(prev => ({ ...prev, user_ids: ids }));
-  }, []);
 
   const handleReset = useCallback(() => {
     setForm(initialForm);
@@ -111,7 +116,8 @@ const NotificationManagement: React.FC = () => {
           <input
             type="text"
             placeholder="用逗号分隔多个用户ID，如：1,2,3"
-            onChange={handleUserIdsChange}
+            value={form.user_ids_input}
+            onChange={(e) => setForm(prev => ({ ...prev, user_ids_input: e.target.value }))}
             style={{
               width: '100%',
               padding: '10px 14px',

@@ -24,6 +24,12 @@ try:
 except ImportError as e:
     logger.warning(f"httpx 或 PyJWT 未安装，iOS 推送不可用: {e}")
 
+# APNs HTTP/2 长连接（模块级复用，避免每次推送新建连接）
+# Apple 官方建议: "Keep your connections with APNs open across multiple notifications"
+import threading
+_apns_client: Optional["httpx.Client"] = None
+_apns_client_lock = threading.Lock()
+
 # APNs JWT token 缓存（有效期 50 分钟，Apple 最长 60 分钟）
 _apns_jwt_token: Optional[str] = None
 _apns_jwt_expires_at: float = 0
@@ -472,6 +478,39 @@ def _get_apns_jwt() -> Optional[str]:
         return None
 
 
+def _get_apns_client() -> "httpx.Client":
+    """获取或创建 APNs HTTP/2 长连接客户端（线程安全）"""
+    global _apns_client
+    if _apns_client is not None and not _apns_client.is_closed:
+        return _apns_client
+    with _apns_client_lock:
+        # Double-check after acquiring lock
+        if _apns_client is not None and not _apns_client.is_closed:
+            return _apns_client
+        _apns_client = httpx.Client(
+            http2=True,
+            timeout=10.0,
+            # 保持连接存活，Apple 允许长连接
+            limits=httpx.Limits(
+                max_connections=5,
+                max_keepalive_connections=2,
+                keepalive_expiry=300,  # 5 分钟无活动才关闭
+            ),
+        )
+        logger.info("[APNs] 创建 HTTP/2 长连接客户端")
+        return _apns_client
+
+
+def close_apns_client():
+    """关闭 APNs 连接（应用关闭时调用）"""
+    global _apns_client
+    with _apns_client_lock:
+        if _apns_client is not None and not _apns_client.is_closed:
+            _apns_client.close()
+            _apns_client = None
+            logger.info("[APNs] HTTP/2 连接已关闭")
+
+
 def send_apns_notification(
     device_token: str,
     title: Optional[str] = None,
@@ -534,8 +573,8 @@ def send_apns_notification(
 
     for attempt in range(_MAX_RETRIES + 1):
         try:
-            with httpx.Client(http2=True, timeout=10.0) as client:
-                response = client.post(url, json=payload, headers=headers)
+            client = _get_apns_client()
+            response = client.post(url, json=payload, headers=headers)
 
             status = response.status_code
 
@@ -570,6 +609,8 @@ def send_apns_notification(
             return None
 
         except (httpx.ConnectError, httpx.TimeoutException, ConnectionError, TimeoutError) as e:
+            # 连接错误时重置客户端，下次重试会新建连接
+            close_apns_client()
             if attempt < _MAX_RETRIES:
                 logger.warning(f"[APNs] 网络错误（第{attempt+1}次），{_RETRY_DELAYS[attempt]}秒后重试: {e}")
                 time.sleep(_RETRY_DELAYS[attempt])
@@ -663,31 +704,15 @@ def send_fcm_notification(
         return None
 
 
-def send_push_notification_async_safe(
-    async_db,
+def _send_push_sync(
     user_id: str,
-    title: Optional[str] = None,
-    body: Optional[str] = None,
-    notification_type: str = "general",
-    data: Optional[Dict[str, Any]] = None,
-    template_vars: Optional[Dict[str, Any]] = None
+    title: Optional[str],
+    body: Optional[str],
+    notification_type: str,
+    data: Optional[Dict[str, Any]],
+    template_vars: Optional[Dict[str, Any]],
 ) -> bool:
-    """
-    在异步环境中安全地发送推送通知
-    自动处理同步/异步数据库会话转换
-    
-    Args:
-        async_db: 异步数据库会话（AsyncSession，实际不使用，仅为类型提示）
-        user_id: 用户ID
-        title: 通知标题（如果为 None，将从模板生成所有语言）
-        body: 通知内容（如果为 None，将从模板生成所有语言）
-        notification_type: 通知类型
-        data: 额外的通知数据
-        template_vars: 模板变量字典（用于国际化模板，如 applicant_name, task_title 等）
-        
-    Returns:
-        bool: 是否成功发送
-    """
+    """在独立同步 DB session 中执行推送（供线程池调用）"""
     try:
         from app.database import SessionLocal
         sync_db = SessionLocal()
@@ -699,13 +724,57 @@ def send_push_notification_async_safe(
                 body=body,
                 notification_type=notification_type,
                 data=data,
-                template_vars=template_vars
+                template_vars=template_vars,
             )
         finally:
             sync_db.close()
     except Exception as e:
-        logger.error(f"发送推送通知失败（异步环境）: {e}")
+        logger.error(f"发送推送通知失败（线程池）: {e}")
         return False
+
+
+def send_push_notification_async_safe(
+    async_db,
+    user_id: str,
+    title: Optional[str] = None,
+    body: Optional[str] = None,
+    notification_type: str = "general",
+    data: Optional[Dict[str, Any]] = None,
+    template_vars: Optional[Dict[str, Any]] = None
+) -> bool:
+    """
+    在异步环境中安全地发送推送通知
+    通过线程池 fire-and-forget 执行，不阻塞事件循环
+
+    调用方式：
+    - send_push_notification_async_safe(db, ...)  → fire-and-forget，提交到线程池后立即返回
+    注意：不可 await（非协程），直接调用即可
+
+    Args:
+        async_db: 异步数据库会话（不使用，保持接口兼容）
+        user_id: 用户ID
+        title: 通知标题（如果为 None，将从模板生成所有语言）
+        body: 通知内容（如果为 None，将从模板生成所有语言）
+        notification_type: 通知类型
+        data: 额外的通知数据
+        template_vars: 模板变量字典（用于国际化模板，如 applicant_name, task_title 等）
+
+    Returns:
+        bool: True（已提交到线程池，不等待实际结果）
+    """
+    import asyncio
+    try:
+        loop = asyncio.get_running_loop()
+        # 在事件循环中：提交到线程池，fire-and-forget
+        loop.run_in_executor(
+            None,
+            _send_push_sync,
+            user_id, title, body, notification_type, data, template_vars,
+        )
+    except RuntimeError:
+        # 没有运行中的事件循环（同步调用环境）：直接同步执行
+        _send_push_sync(user_id, title, body, notification_type, data, template_vars)
+    return True
 
 
 def send_batch_push_notifications(

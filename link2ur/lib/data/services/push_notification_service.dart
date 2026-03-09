@@ -22,6 +22,9 @@ class PushNotificationService with WidgetsBindingObserver {
   /// App 是否在前台（用于决定是否显示本地通知）
   bool _appInForeground = true;
 
+  /// 是否已完成初始化（本地通知 + native callback）
+  bool _initialized = false;
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _appInForeground = state == AppLifecycleState.resumed;
@@ -49,8 +52,11 @@ class PushNotificationService with WidgetsBindingObserver {
     _apiService = apiService;
   }
 
-  /// 初始化推送通知服务
+  /// 初始化推送通知服务（仅注册本地通知和 native 回调，不上传 token）
+  /// token 上传在用户登录成功后由 [uploadToken] 触发
   Future<void> init() async {
+    if (_initialized) return;
+
     // Web 上不支持推送通知
     if (kIsWeb) {
       AppLogger.info('PushNotificationService: Skipped on Web');
@@ -66,19 +72,49 @@ class PushNotificationService with WidgetsBindingObserver {
     // 监听原生端推送事件
     _channel.setMethodCallHandler(_handleNativeCall);
 
-    // 获取已有的推送 Token（原生端注册后缓存）
+    // 获取已有的推送 Token 并缓存到本地（但不上传，等登录后再上传）
     try {
       final token = await _channel.invokeMethod<String>('getDeviceToken');
       if (token != null) {
-        AppLogger.info('Push token obtained from native');
+        AppLogger.info('Push token obtained from native (saved locally)');
         await StorageService.instance.savePushToken(token);
-        await _uploadTokenToServer(token);
       }
     } catch (e) {
       AppLogger.warning('Native push channel not ready: $e');
     }
 
+    _initialized = true;
     AppLogger.info('PushNotificationService initialized');
+  }
+
+  /// 上传本地缓存的推送 Token 到服务器
+  /// 在用户登录成功后调用，确保 token 绑定到正确的用户
+  Future<void> uploadToken() async {
+    if (kIsWeb) return;
+    final token = StorageService.instance.getPushToken();
+    if (token != null) {
+      await _uploadTokenToServer(token);
+    } else {
+      // 本地没有缓存的 token，尝试从原生端获取
+      try {
+        final nativeToken = await _channel.invokeMethod<String>('getDeviceToken');
+        if (nativeToken != null) {
+          await StorageService.instance.savePushToken(nativeToken);
+          await _uploadTokenToServer(nativeToken);
+        }
+      } catch (e) {
+        AppLogger.warning('Failed to get push token from native: $e');
+      }
+    }
+  }
+
+  /// 同步推送语言偏好到服务器（用户切换语言时调用）
+  Future<void> syncLanguage() async {
+    if (kIsWeb) return;
+    final token = StorageService.instance.getPushToken();
+    if (token != null) {
+      await _uploadTokenToServer(token);
+    }
   }
 
   /// 处理原生端回调
@@ -88,7 +124,11 @@ class PushNotificationService with WidgetsBindingObserver {
         final token = call.arguments as String;
         AppLogger.info('Push token refreshed');
         await StorageService.instance.savePushToken(token);
-        await _uploadTokenToServer(token);
+        // 仅在用户已登录时上传（有 auth token 说明已登录）
+        final hasAuth = await StorageService.instance.isLoggedIn();
+        if (hasAuth) {
+          await _uploadTokenToServer(token);
+        }
         break;
       case 'onRemoteMessage':
         final data = Map<String, dynamic>.from(call.arguments as Map);

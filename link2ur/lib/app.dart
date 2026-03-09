@@ -258,6 +258,12 @@ class _DeferredBlocLoaderState extends State<_DeferredBlocLoader>
       listener: (context, state) {
         if (state.isAuthenticated) {
           context.read<NotificationBloc>().add(const NotificationStartPolling());
+          // 登录成功后上传推送 Token（绑定到当前用户）
+          unawaited(
+            PushNotificationService.instance
+                .uploadToken()
+                .catchError((e, st) => AppLogger.error('Push token upload after login failed', e, st)),
+          );
         } else {
           context.read<NotificationBloc>().add(const NotificationStopPolling());
         }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:equatable/equatable.dart';
@@ -7,6 +8,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../data/repositories/user_repository.dart';
 import '../../../data/services/storage_service.dart';
 import '../../../data/services/api_service.dart';
+import '../../../data/services/push_notification_service.dart';
 import '../../../core/utils/cache_manager.dart';
 import '../../../core/utils/translation_cache_manager.dart';
 import '../../../core/utils/logger.dart';
@@ -256,6 +258,8 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
         // 未登录或网络错误时忽略
       }
     }
+    // 同步推送语言偏好到服务器（重新上传 token 带新的 device_language）
+    unawaited(PushNotificationService.instance.syncLanguage());
   }
 
   Future<void> _onNotificationToggled(

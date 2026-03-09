@@ -1154,7 +1154,7 @@ async def review_leaderboard(
             # 发送推送通知
             try:
                 from app.push_notification_service import send_push_notification_async_safe
-                await send_push_notification_async_safe(
+                send_push_notification_async_safe(
                     db=db,
                     user_id=leaderboard.applicant_id,
                     notification_type="leaderboard_approved",
@@ -1191,7 +1191,7 @@ async def review_leaderboard(
             # 发送推送通知
             try:
                 from app.push_notification_service import send_push_notification_async_safe
-                await send_push_notification_async_safe(
+                send_push_notification_async_safe(
                     db=db,
                     user_id=leaderboard.applicant_id,
                     notification_type="leaderboard_rejected",

@@ -272,7 +272,7 @@ export const getCustomerServicesForAdmin = async (page: number = 1, size: number
 export const sendAdminNotification = async (notification: {
   title: string;
   content: string;
-  user_ids: string[];
+  user_ids?: string[];
   type?: string;
 }) => {
   const res = await api.post('/api/admin/notifications/send', notification);

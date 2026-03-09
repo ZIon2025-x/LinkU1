@@ -480,6 +480,10 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
         _messageRepository
             .markTaskChatRead(event.taskId, uptoMessageId: uptoId)
             .catchError((e) => AppLogger.warning('Failed to mark task chat read', e));
+      } else {
+        AppLogger.warning(
+          'markTaskChatRead skipped: ${chat == null ? "no chat found" : "lastMessageObj.id is null"} for taskId=${event.taskId}',
+        );
       }
     }
   }

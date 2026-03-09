@@ -6,6 +6,7 @@ import 'package:stream_transform/stream_transform.dart';
 
 import '../../../data/models/user.dart';
 import '../../../data/repositories/auth_repository.dart';
+import '../../../data/services/push_notification_service.dart';
 import '../../../core/utils/logger.dart';
 import '../../../core/utils/cache_manager.dart';
 
@@ -222,6 +223,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthLogoutRequested event,
     Emitter<AuthState> emit,
   ) async {
+    // 先注销推送 Token（在 auth token 还有效时发送 DELETE 请求）
+    try {
+      await PushNotificationService.instance.unregisterToken();
+    } catch (e) {
+      AppLogger.error('Unregister push token failed', e);
+    }
     try {
       await _authRepository.logout();
     } catch (e) {

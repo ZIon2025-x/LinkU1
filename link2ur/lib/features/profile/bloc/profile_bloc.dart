@@ -730,6 +730,10 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     ProfileEmailCountdownTick event,
     Emitter<ProfileState> emit,
   ) {
+    if (state.emailCountdown <= 0) {
+      _emailTimer?.cancel();
+      return;
+    }
     final newCount = state.emailCountdown - 1;
     if (newCount <= 0) {
       _emailTimer?.cancel();
@@ -743,6 +747,10 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     ProfilePhoneCountdownTick event,
     Emitter<ProfileState> emit,
   ) {
+    if (state.phoneCountdown <= 0) {
+      _phoneTimer?.cancel();
+      return;
+    }
     final newCount = state.phoneCountdown - 1;
     if (newCount <= 0) {
       _phoneTimer?.cancel();

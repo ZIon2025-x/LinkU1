@@ -1549,13 +1549,20 @@ async def shutdown_event():
     except Exception as e:
         logger.debug(f"Celery Worker 清理失败: {e}")
     
-    # 5. 关闭数据库连接池（必须在事件循环还活着的时候做）
+    # 5. 关闭 APNs HTTP/2 长连接
+    try:
+        from app.push_notification_service import close_apns_client
+        close_apns_client()
+    except Exception as e:
+        logger.warning(f"关闭 APNs 连接时出错: {e}")
+
+    # 6. 关闭数据库连接池（必须在事件循环还活着的时候做）
     try:
         from app.database import close_database_pools
         await close_database_pools()
     except Exception as e:
         logger.warning(f"关闭数据库连接池时出错: {e}")
-    
+
     logger.info("资源清理完成")
 
 

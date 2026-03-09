@@ -2053,7 +2053,7 @@ async def review_category_request(
             
             # 发送推送通知
             try:
-                await send_push_notification_async_safe(
+                send_push_notification_async_safe(
                     db=db,
                     user_id=category_request.requester_id,
                     notification_type="forum_category_approved",
@@ -2122,7 +2122,7 @@ async def review_category_request(
             
             # 发送推送通知
             try:
-                await send_push_notification_async_safe(
+                send_push_notification_async_safe(
                     db=db,
                     user_id=category_request.requester_id,
                     notification_type="forum_category_rejected",

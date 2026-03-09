@@ -911,15 +911,15 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
 
     final updatedList = state.leaderboards.isEmpty
         ? state.leaderboards
-        : state.leaderboards
+        : (state.leaderboards
             .map((lb) => lb.id == event.leaderboardId
                 ? lb.copyWith(isFavorited: !previous)
                 : lb)
             .toList()
-      ..sort((a, b) {
-        if (a.isFavorited == b.isFavorited) return 0;
-        return a.isFavorited ? -1 : 1;
-      });
+          ..sort((a, b) {
+            if (a.isFavorited == b.isFavorited) return 0;
+            return a.isFavorited ? -1 : 1;
+          }));
 
     emit(state.copyWith(
       isFavorited: !previous,
@@ -934,15 +934,15 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
       AppLogger.error('Failed to toggle favorite', e);
       final rolledBack = state.leaderboards.isEmpty
           ? state.leaderboards
-          : state.leaderboards
+          : (state.leaderboards
               .map((lb) => lb.id == event.leaderboardId
                   ? lb.copyWith(isFavorited: previous)
                   : lb)
               .toList()
-        ..sort((a, b) {
-          if (a.isFavorited == b.isFavorited) return 0;
-          return a.isFavorited ? -1 : 1;
-        });
+            ..sort((a, b) {
+              if (a.isFavorited == b.isFavorited) return 0;
+              return a.isFavorited ? -1 : 1;
+            }));
 
       emit(state.copyWith(
         isFavorited: previous,

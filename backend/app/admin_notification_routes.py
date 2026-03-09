@@ -33,7 +33,7 @@ def admin_send_notification(
     """管理员发送通知（写库 + 推送）"""
     from app.push_notification_service import send_push_notification
 
-    if user_ids:
+    if user_ids is not None and len(user_ids) > 0:
         # 发送给指定用户
         for user_id in user_ids:
             user = crud.get_user_by_id(db, user_id)

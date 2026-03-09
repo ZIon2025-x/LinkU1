@@ -353,6 +353,9 @@ class CouponPointsBloc extends Bloc<CouponPointsEvent, CouponPointsState> {
       ));
     } catch (e) {
       AppLogger.error('Failed to load check-in status', e);
+      emit(state.copyWith(
+        errorMessage: 'coupon_points_load_check_in_status_failed',
+      ));
     }
   }
 
@@ -366,6 +369,9 @@ class CouponPointsBloc extends Bloc<CouponPointsEvent, CouponPointsState> {
       emit(state.copyWith(availableCoupons: coupons));
     } catch (e) {
       AppLogger.error('Failed to load available coupons', e);
+      emit(state.copyWith(
+        errorMessage: 'coupon_points_load_available_coupons_failed',
+      ));
     }
   }
 
@@ -379,6 +385,9 @@ class CouponPointsBloc extends Bloc<CouponPointsEvent, CouponPointsState> {
       emit(state.copyWith(myCoupons: coupons));
     } catch (e) {
       AppLogger.error('Failed to load my coupons', e);
+      emit(state.copyWith(
+        errorMessage: 'coupon_points_load_my_coupons_failed',
+      ));
     }
   }
 
