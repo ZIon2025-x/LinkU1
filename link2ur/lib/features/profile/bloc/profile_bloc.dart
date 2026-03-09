@@ -356,7 +356,8 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     emit(state.copyWith(status: ProfileStatus.loading));
 
     try {
-      final user = await _userRepository.getProfile();
+      // 始终强制刷新，确保切换账号后不会显示旧数据
+      final user = await _userRepository.getProfile(forceRefresh: true);
       emit(state.copyWith(
         status: ProfileStatus.loaded,
         user: user,

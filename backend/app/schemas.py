@@ -6,6 +6,17 @@ from pydantic import BaseModel, Field, validator, field_validator, model_validat
 from pydantic import condecimal
 
 
+class UserBrief(BaseModel):
+    """用户简要信息（嵌套在任务等对象中返回）"""
+    id: str
+    name: str
+    avatar: Optional[str] = None
+    is_verified: Optional[int] = 0
+
+    class Config:
+        from_attributes = True
+
+
 class UserBase(BaseModel):
     name: str
     email: Optional[str] = None  # 邮箱可为空（手机号登录时为空）

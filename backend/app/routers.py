@@ -1491,7 +1491,13 @@ def _get_task_detail_legacy(
     setattr(task, "completion_evidence", completion_evidence if completion_evidence else None)
     
     # 使用 TaskOut.from_orm 确保所有字段（包括 task_source）都被正确序列化
-    return schemas.TaskOut.from_orm(task, full_location_access=_full_location_access)
+    task_dict = schemas.TaskOut.from_orm(task, full_location_access=_full_location_access).model_dump()
+    # 任务相关方可以看到 poster/taker 信息
+    if task.poster is not None:
+        task_dict["poster"] = schemas.UserBrief.model_validate(task.poster).model_dump()
+    if task.taker is not None:
+        task_dict["taker"] = schemas.UserBrief.model_validate(task.taker).model_dump()
+    return task_dict
 
 
 @router.get("/recommendations")
@@ -4745,8 +4751,18 @@ def get_my_tasks(
             label="后台翻译任务",
         )
 
+    # 序列化任务，并附带相关用户简要信息（当前用户是任务相关方）
+    task_list = []
+    for t in tasks:
+        task_dict = schemas.TaskOut.model_validate(t).model_dump()
+        if t.poster is not None:
+            task_dict["poster"] = schemas.UserBrief.model_validate(t.poster).model_dump()
+        if t.taker is not None:
+            task_dict["taker"] = schemas.UserBrief.model_validate(t.taker).model_dump()
+        task_list.append(task_dict)
+
     return {
-        "tasks": [schemas.TaskOut.model_validate(t) for t in tasks],
+        "tasks": task_list,
         "total": total,
         "page": page,
         "page_size": page_size,
