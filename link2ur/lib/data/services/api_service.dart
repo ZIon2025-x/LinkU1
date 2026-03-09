@@ -88,7 +88,7 @@ class ApiService {
   }
 
   /// 请求拦截
-  void _onRequest(
+  Future<void> _onRequest(
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
