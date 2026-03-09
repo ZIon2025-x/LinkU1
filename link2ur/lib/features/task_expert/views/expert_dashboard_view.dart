@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/router/app_routes.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../data/repositories/task_expert_repository.dart';
@@ -59,6 +61,13 @@ class _ExpertDashboardContent extends StatelessWidget {
         child: Scaffold(
           appBar: AppBar(
             title: Text(context.l10n.expertDashboardTitle),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.edit),
+                tooltip: context.l10n.expertProfileEditTitle,
+                onPressed: () => context.push(AppRoutes.expertProfileEdit),
+              ),
+            ],
             bottom: TabBar(
               isScrollable: true,
               tabs: [

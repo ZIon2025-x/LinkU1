@@ -11,6 +11,7 @@ import '../../../features/task_expert/views/service_detail_view.dart';
 import '../../../features/task_expert/views/my_service_applications_view.dart';
 import '../../../features/task_expert/views/expert_applications_management_view.dart';
 import '../../../features/task_expert/views/expert_dashboard_view.dart';
+import '../../../features/task_expert/views/expert_profile_edit_view.dart';
 
 /// 任务达人相关路由
 List<RouteBase> get taskExpertRoutes => [
@@ -70,8 +71,6 @@ List<RouteBase> get taskExpertRoutes => [
       GoRoute(
         path: AppRoutes.expertProfileEdit,
         name: 'expertProfileEdit',
-        builder: (context, state) => const Scaffold(
-          body: Center(child: Text('Expert Profile Edit')),
-        ),
+        builder: (context, state) => const ExpertProfileEditView(),
       ),
     ];
