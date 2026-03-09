@@ -312,7 +312,7 @@ def send_manual_reward(
     }
 
 
-@router.get("/rewards/logs")
+@router.get("/reward-logs")
 def list_reward_logs(
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),

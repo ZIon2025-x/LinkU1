@@ -1765,7 +1765,7 @@ export async function sendManualReward(data: {
 export async function getRewardLogs(params?: {
   offset?: number; limit?: number; user_id?: string;
 }) {
-  const res = await api.get('/api/admin/rewards/logs', { params });
+  const res = await api.get('/api/admin/reward-logs', { params });
   return res.data;
 }
 
