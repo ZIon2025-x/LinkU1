@@ -462,6 +462,7 @@ class CacheManager {
     await invalidatePaymentCache();
     await invalidateNotificationsCache();
     await invalidateMessagesCache();
+    await remove('user_profile_me');
     AppLogger.debug('Personal data cache invalidated');
   }
 

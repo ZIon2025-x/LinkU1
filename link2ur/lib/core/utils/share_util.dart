@@ -18,31 +18,18 @@ class ShareUtil {
   static String leaderboardItemUrl(int itemId) => '$_baseUrl/leaderboard/item/$itemId';
   static String taskExpertUrl(String expertId) => '$_baseUrl/task-experts/$expertId';
 
-  /// 统一分享入口
-  ///
-  /// 有 URL 时走 uri 模式（系统抓取 OG 标签生成链接卡片），
-  /// 无 URL 时走 text 模式并附带首图文件。
+  /// 统一分享入口：根据 [imageUrl] 拉取首图并调起系统分享
   static Future<void> share({
     required String title,
     String description = '',
     String? url,
     String? imageUrl,
   }) async {
-    // 有 URL 时走 uri 模式，不需要本地图片文件（OG 标签提供缩略图）
-    if (url != null && url.trim().isNotEmpty) {
-      await NativeShare.share(
-        title: title,
-        description: description,
-        url: url,
-      );
-      return;
-    }
-
-    // 无 URL 时走 text 模式，附带首图
     final files = await NativeShare.fileFromFirstImageUrl(imageUrl);
     await NativeShare.share(
       title: title,
       description: description,
+      url: url,
       files: files,
     );
   }

@@ -349,6 +349,14 @@ class _TaskCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final locale = Localizations.localeOf(context);
+    // 后端 my-tasks 接口只返回 poster_id，不返回 poster 嵌套对象
+    // 当 poster 为 null 时，用当前登录用户信息做 fallback
+    final authUser = context.read<AuthBloc>().state.user;
+    final posterName = task.poster?.name
+        ?? (task.posterId == authUser?.id ? authUser?.name : null)
+        ?? context.l10n.profileAnonymousUser;
+    final posterAvatar = task.poster?.avatar
+        ?? (task.posterId == authUser?.id ? authUser?.avatar : null);
     return AppCard(
       onTap: () async {
         await context.push('/tasks/${task.id}');
@@ -361,8 +369,8 @@ class _TaskCard extends StatelessWidget {
           Row(
             children: [
               AvatarView(
-                imageUrl: task.poster?.avatar,
-                name: task.poster?.name,
+                imageUrl: posterAvatar,
+                name: posterName,
                 size: 36,
               ),
               AppSpacing.hSm,
@@ -371,7 +379,7 @@ class _TaskCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      task.poster?.name ?? context.l10n.profileAnonymousUser,
+                      posterName,
                       style: const TextStyle(fontWeight: FontWeight.w500),
                     ),
                     Text(

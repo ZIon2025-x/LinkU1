@@ -69,6 +69,11 @@ class CrashReporter {
     if (msg.contains('_elements.contains(element)')) return true;
     // InheritedElement.unmount() — IndexedStack 分支 element 卸载时依赖未完全解除
     if (msg.contains('_dependents.isEmpty')) return true;
+    // 以下为上述时序竞争的级联错误，原始错误已被抑制但这些次生错误仍会显示：
+    // cupertino/route.dart — CupertinoPage 手势控制器在路由过渡中被重置后收到 dragUpdate
+    if (msg.contains('_backGestureController != null')) return true;
+    // Element.renderObject — 已 deactivate 的 element 被访问 renderObject（如 Hero 或 BLoC rebuild）
+    if (msg.contains('renderObject of inactive element')) return true;
     return false;
   }
 
