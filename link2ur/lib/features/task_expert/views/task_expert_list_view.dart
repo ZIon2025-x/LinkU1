@@ -21,7 +21,6 @@ import '../../../data/repositories/task_expert_repository.dart';
 import '../../../data/models/task_expert.dart';
 import '../bloc/task_expert_bloc.dart';
 
-
 /// 任务达人列表页
 /// 参考iOS TaskExpertListView.swift
 class TaskExpertListView extends StatelessWidget {
@@ -315,7 +314,7 @@ class _TaskExpertListViewContentState extends State<_TaskExpertListViewContent> 
                     Wrap(
                       spacing: 10,
                       runSpacing: 10,
-                      children: kExpertCategoryKeys.map((key) {
+                      children: ExpertConstants.categoryKeys.map((key) {
                         return _FilterChip(
                           label: _categoryLabel(ctx, key),
                           isSelected: tempCategory == key,

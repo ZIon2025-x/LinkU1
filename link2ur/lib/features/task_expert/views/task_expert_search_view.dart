@@ -17,7 +17,6 @@ import '../../../data/models/task_expert.dart';
 import '../../../data/repositories/task_expert_repository.dart';
 import '../bloc/task_expert_bloc.dart';
 
-
 /// 任务达人搜索页
 /// 参考iOS TaskExpertSearchView.swift
 class TaskExpertSearchView extends StatelessWidget {
@@ -219,7 +218,7 @@ class _TaskExpertSearchContentState
           Expanded(
             child: _buildDropdown(
               value: _selectedCategory,
-              items: kExpertCategoryKeys
+              items: ExpertConstants.categoryKeys
                   .map((key) => DropdownMenuItem(
                         value: key,
                         child: Text(

@@ -1,20 +1,24 @@
-/// Expert category keys — aligned with backend FeaturedTaskExpert.category
-const List<String> kExpertCategoryKeys = [
-  'all',
-  'programming',
-  'translation',
-  'tutoring',
-  'food',
-  'beverage',
-  'cake',
-  'errand_transport',
-  'social_entertainment',
-  'beauty_skincare',
-  'handicraft',
-];
+class ExpertConstants {
+  ExpertConstants._();
 
-/// Expert service currencies
-const List<String> kExpertServiceCurrencies = ['GBP', 'CNY', 'USD'];
+  /// Expert category keys — aligned with backend FeaturedTaskExpert.category
+  static const List<String> categoryKeys = [
+    'all',
+    'programming',
+    'translation',
+    'tutoring',
+    'food',
+    'beverage',
+    'cake',
+    'errand_transport',
+    'social_entertainment',
+    'beauty_skincare',
+    'handicraft',
+  ];
 
-/// Max images per service
-const int kExpertServiceMaxImages = 4;
+  /// Expert service currencies
+  static const List<String> serviceCurrencies = ['GBP', 'CNY', 'USD'];
+
+  /// Max images per service
+  static const int serviceMaxImages = 4;
+}
