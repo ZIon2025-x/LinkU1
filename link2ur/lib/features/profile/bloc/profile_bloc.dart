@@ -610,13 +610,15 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     ProfileLoadPreferences event,
     Emitter<ProfileState> emit,
   ) async {
+    AppLogger.info('[Preferences] _onLoadPreferences started');
     emit(state.copyWith(status: ProfileStatus.loading));
     try {
       final preferences = await _userRepository.getUserPreferences()
           .timeout(const Duration(seconds: 10));
+      AppLogger.info('[Preferences] loaded successfully: $preferences');
       emit(state.copyWith(status: ProfileStatus.loaded, preferences: preferences));
     } catch (e) {
-      AppLogger.error('Failed to load preferences', e);
+      AppLogger.error('[Preferences] failed: $e');
       // 超时或失败时使用默认空偏好，让用户可以正常使用页面
       emit(state.copyWith(
         status: ProfileStatus.loaded,

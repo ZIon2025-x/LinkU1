@@ -184,9 +184,11 @@ class UserRepository {
 
   /// 获取用户偏好设置
   Future<Map<String, dynamic>> getUserPreferences() async {
+    AppLogger.info('[UserPreferences] 开始请求 ${ApiEndpoints.userPreferences}');
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.userPreferences,
     );
+    AppLogger.info('[UserPreferences] 响应: isSuccess=${response.isSuccess}, data=${response.data}, statusCode=${response.statusCode}');
 
     if (!response.isSuccess || response.data == null) {
       throw UserException(response.message ?? '获取偏好设置失败');
