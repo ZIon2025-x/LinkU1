@@ -23,6 +23,7 @@ class TaskExpertRepository {
     String? keyword,
     String? category,
     String? location,
+    String? sort, // 'rating_desc', 'completed_desc', 'newest'
     bool forceRefresh = false,
     CancelToken? cancelToken,
   }) async {
@@ -34,6 +35,7 @@ class TaskExpertRepository {
       if (category != null) 'category': category,
       if (location != null) 'location': location,
       if (keyword != null && keyword.trim().isNotEmpty) 'keyword': keyword.trim(),
+      if (sort != null) 'sort': sort,
     };
 
     final cacheKey =

@@ -47,6 +47,7 @@ class _TaskExpertSearchContentState
   bool _hasSearched = false;
   String _selectedCategory = 'all';
   String _selectedCity = 'all';
+  String _selectedSort = 'rating_desc';
 
   @override
   void dispose() {
@@ -67,6 +68,7 @@ class _TaskExpertSearchContentState
     bloc.add(TaskExpertFilterChanged(
       category: _selectedCategory,
       city: _selectedCity,
+      sort: _selectedSort,
     ));
     bloc.add(TaskExpertLoadRequested(
       skill: keyword.isEmpty ? null : keyword,
@@ -110,6 +112,20 @@ class _TaskExpertSearchContentState
       return UKCities.zhName[key] ?? key;
     }
     return key;
+  }
+
+  String _sortLabel(BuildContext context, String key) {
+    final l10n = context.l10n;
+    switch (key) {
+      case 'rating_desc':
+        return l10n.expertSearchSortRating;
+      case 'completed_desc':
+        return l10n.expertSearchSortCompleted;
+      case 'newest':
+        return l10n.expertSearchSortNewest;
+      default:
+        return key;
+    }
   }
 
   @override
@@ -275,8 +291,54 @@ class _TaskExpertSearchContentState
               },
             ),
           ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: _buildSortDropdown(
+              isDark: isDark,
+              dropdownBg: dropdownBg,
+              borderColor: borderColor,
+              textColor: textColor,
+              hintColor: hintColor,
+            ),
+          ),
         ],
       ),
+    );
+  }
+
+  Widget _buildSortDropdown({
+    required bool isDark,
+    required Color dropdownBg,
+    required Color borderColor,
+    required Color textColor,
+    required Color hintColor,
+  }) {
+    const sortKeys = ['rating_desc', 'completed_desc', 'newest'];
+
+    return _buildDropdown(
+      value: _selectedSort,
+      items: sortKeys
+          .map((key) => DropdownMenuItem(
+                value: key,
+                child: Text(
+                  _sortLabel(context, key),
+                  style: AppTypography.body.copyWith(color: textColor),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ))
+          .toList(),
+      hint: context.l10n.expertSearchSortLabel,
+      isDark: isDark,
+      dropdownBg: dropdownBg,
+      borderColor: borderColor,
+      textColor: textColor,
+      hintColor: hintColor,
+      isSortDropdown: true,
+      onChanged: (val) {
+        if (val == null) return;
+        setState(() => _selectedSort = val);
+        if (_hasSearched) _search();
+      },
     );
   }
 
@@ -290,8 +352,9 @@ class _TaskExpertSearchContentState
     required Color textColor,
     required Color hintColor,
     required ValueChanged<String?> onChanged,
+    bool isSortDropdown = false,
   }) {
-    final isDefault = value == 'all';
+    final isDefault = isSortDropdown ? value == 'rating_desc' : value == 'all';
 
     return Container(
       height: 40,

@@ -108,9 +108,9 @@ class TaskExpertLoadServiceTimeSlots extends TaskExpertEvent {
   List<Object?> get props => [serviceId];
 }
 
-/// 达人筛选条件改变（类型 + 城市）
+/// 达人筛选条件改变（类型 + 城市 + 排序）
 class TaskExpertFilterChanged extends TaskExpertEvent {
-  const TaskExpertFilterChanged({this.category, this.city});
+  const TaskExpertFilterChanged({this.category, this.city, this.sort});
 
   /// 达人类型，'all' 或 null 表示全部
   final String? category;
@@ -118,8 +118,11 @@ class TaskExpertFilterChanged extends TaskExpertEvent {
   /// 城市，'all' 或 null 表示全部
   final String? city;
 
+  /// 排序方式，'rating_desc' / 'completed_desc' / 'newest'
+  final String? sort;
+
   @override
-  List<Object?> get props => [category, city];
+  List<Object?> get props => [category, city, sort];
 }
 
 /// 加载达人收到的申请列表
@@ -229,6 +232,7 @@ class TaskExpertState extends Equatable {
     this.isLoadingTimeSlots = false,
     this.selectedCategory = 'all',
     this.selectedCity = 'all',
+    this.selectedSort = 'rating_desc',
     this.searchKeyword,
     this.myExpertApplicationStatus,
   });
@@ -264,6 +268,9 @@ class TaskExpertState extends Equatable {
 
   /// 选中的城市筛选，'all' 表示全部
   final String selectedCity;
+
+  /// 选中的排序方式，'rating_desc' / 'completed_desc' / 'newest'
+  final String selectedSort;
 
   /// 当前搜索关键词
   final String? searchKeyword;
@@ -302,6 +309,7 @@ class TaskExpertState extends Equatable {
     bool? isLoadingTimeSlots,
     String? selectedCategory,
     String? selectedCity,
+    String? selectedSort,
     String? searchKeyword,
     Map<String, dynamic>? myExpertApplicationStatus,
     bool clearMyExpertApplicationStatus = false,
@@ -332,6 +340,7 @@ class TaskExpertState extends Equatable {
       isLoadingTimeSlots: isLoadingTimeSlots ?? this.isLoadingTimeSlots,
       selectedCategory: selectedCategory ?? this.selectedCategory,
       selectedCity: selectedCity ?? this.selectedCity,
+      selectedSort: selectedSort ?? this.selectedSort,
       searchKeyword: searchKeyword ?? this.searchKeyword,
       myExpertApplicationStatus: clearMyExpertApplicationStatus
           ? null
@@ -366,6 +375,7 @@ class TaskExpertState extends Equatable {
         isLoadingTimeSlots,
         selectedCategory,
         selectedCity,
+        selectedSort,
         searchKeyword,
         myExpertApplicationStatus,
       ];
@@ -410,6 +420,9 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
   /// 获取类型筛选参数，'all' 时返回 null
   String? _categoryParam(String cat) => cat == 'all' ? null : cat;
 
+  /// 获取排序参数，始终传递（默认 'rating_desc'）
+  String _sortParam(String sort) => sort;
+
   Future<void> _onLoadRequested(
     TaskExpertLoadRequested event,
     Emitter<TaskExpertState> emit,
@@ -426,6 +439,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
         keyword: keyword,
         category: _categoryParam(state.selectedCategory),
         location: _cityParam(state.selectedCity),
+        sort: _sortParam(state.selectedSort),
       );
 
       emit(state.copyWith(
@@ -457,6 +471,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
         keyword: (state.searchKeyword?.isNotEmpty ?? false) ? state.searchKeyword : null,
         category: _categoryParam(state.selectedCategory),
         location: _cityParam(state.selectedCity),
+        sort: _sortParam(state.selectedSort),
       );
 
       emit(state.copyWith(
@@ -478,6 +493,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
         keyword: (state.searchKeyword?.isNotEmpty ?? false) ? state.searchKeyword : null,
         category: _categoryParam(state.selectedCategory),
         location: _cityParam(state.selectedCity),
+        sort: _sortParam(state.selectedSort),
         forceRefresh: true,
       );
 
@@ -499,10 +515,12 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
   ) async {
     final newCategory = event.category ?? state.selectedCategory;
     final newCity = event.city ?? state.selectedCity;
+    final newSort = event.sort ?? state.selectedSort;
 
     emit(state.copyWith(
       selectedCategory: newCategory,
       selectedCity: newCity,
+      selectedSort: newSort,
       status: TaskExpertStatus.loading,
     ));
 
@@ -511,6 +529,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
         keyword: (state.searchKeyword?.isNotEmpty ?? false) ? state.searchKeyword : null,
         category: _categoryParam(newCategory),
         location: _cityParam(newCity),
+        sort: _sortParam(newSort),
       );
 
       emit(state.copyWith(
