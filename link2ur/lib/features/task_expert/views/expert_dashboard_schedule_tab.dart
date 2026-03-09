@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_radius.dart';
@@ -7,6 +8,12 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/utils/adaptive_dialogs.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../bloc/expert_dashboard_bloc.dart';
+
+/// Formats a [DateTime] as `yyyy-MM-dd` without depending on any package.
+String _toDateStr(DateTime date) =>
+    '${date.year.toString().padLeft(4, '0')}-'
+    '${date.month.toString().padLeft(2, '0')}-'
+    '${date.day.toString().padLeft(2, '0')}';
 
 /// Schedule tab — shows a month calendar with closed (unavailable) dates
 /// marked in red. Tapping a date opens a dialog to toggle its closed status.
@@ -38,16 +45,9 @@ class _ExpertDashboardScheduleTabState
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 
-  String _formatDate(DateTime date) {
-    final y = date.year.toString().padLeft(4, '0');
-    final m = date.month.toString().padLeft(2, '0');
-    final d = date.day.toString().padLeft(2, '0');
-    return '$y-$m-$d';
-  }
-
   Map<String, dynamic>? _findClosedEntry(
       DateTime day, List<Map<String, dynamic>> closedDates) {
-    final dateStr = _formatDate(day);
+    final dateStr = _toDateStr(day);
     try {
       return closedDates.firstWhere((d) => d['closed_date'] == dateStr);
     } catch (_) {
@@ -66,7 +66,7 @@ class _ExpertDashboardScheduleTabState
       final confirmed = await AdaptiveDialogs.showConfirmDialog<bool>(
         context: context,
         title: context.l10n.expertScheduleRemoveClosed,
-        content: _formatDate(day),
+        content: _toDateStr(day),
         isDestructive: true,
         onConfirm: () => true,
       );
@@ -83,7 +83,7 @@ class _ExpertDashboardScheduleTabState
   }
 
   void _showMarkClosedDialog(BuildContext context, DateTime day) {
-    final dateStr = _formatDate(day);
+    final dateStr = _toDateStr(day);
     _reasonController.clear();
 
     showDialog<void>(
@@ -182,7 +182,7 @@ class _ExpertDashboardScheduleTabState
                     _onDayTapped(context, day, state.closedDates),
               ),
               const SizedBox(height: AppSpacing.lg),
-              _Legend(),
+              const _Legend(),
             ],
           ),
         );
@@ -207,18 +207,10 @@ class _CalendarHeader extends StatelessWidget {
   final VoidCallback onNextMonth;
 
   String _monthLabel(BuildContext context) {
-    // Format as "March 2026" / "2026年3月" depending on locale.
-    final locale = Localizations.localeOf(context).languageCode;
-    final y = focusedMonth.year;
-    final m = focusedMonth.month;
-    if (locale == 'zh') {
-      return '$y年$m月';
-    }
-    const monthNames = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
-    ];
-    return '${monthNames[m - 1]} $y';
+    // Use intl DateFormat so all locales (en, zh, zh_Hant, …) are handled
+    // correctly without manual month-name arrays or language-code branches.
+    final locale = Localizations.localeOf(context).toString();
+    return DateFormat.yMMMM(locale).format(focusedMonth);
   }
 
   @override
@@ -273,10 +265,7 @@ class _CalendarGrid extends StatelessWidget {
   }
 
   bool _isClosed(DateTime day) {
-    final y = day.year.toString().padLeft(4, '0');
-    final m = day.month.toString().padLeft(2, '0');
-    final d = day.day.toString().padLeft(2, '0');
-    final dateStr = '$y-$m-$d';
+    final dateStr = _toDateStr(day);
     return closedDates.any((e) => e['closed_date'] == dateStr);
   }
 
@@ -444,6 +433,8 @@ class _DayCell extends StatelessWidget {
 // =============================================================================
 
 class _Legend extends StatelessWidget {
+  const _Legend();
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -452,7 +443,7 @@ class _Legend extends StatelessWidget {
       children: [
         _LegendItem(
           color: AppColors.primary,
-          label: _today(context),
+          label: context.l10n.expertScheduleToday,
           isDark: isDark,
         ),
         const SizedBox(width: AppSpacing.lg),
@@ -463,11 +454,6 @@ class _Legend extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  String _today(BuildContext context) {
-    final locale = Localizations.localeOf(context).languageCode;
-    return locale == 'zh' ? '今天' : 'Today';
   }
 }
 

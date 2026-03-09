@@ -4352,6 +4352,7 @@
   "expertScheduleClosedReasonHint": "例如：節假日",
   "expertScheduleClosedAdded": "已標記為不可用",
   "expertScheduleClosedRemoved": "可用狀態已恢復",
+  "expertScheduleToday": "今天",
   "expertProfileEditTitle": "編輯資料",
   "expertProfileEditName": "顯示名稱",
   "expertProfileEditNameHint": "你的達人顯示名稱",

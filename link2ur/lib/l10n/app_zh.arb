@@ -4485,6 +4485,7 @@
   "expertScheduleClosedReasonHint": "例如：节假日",
   "expertScheduleClosedAdded": "已标记为不可用",
   "expertScheduleClosedRemoved": "可用状态已恢复",
+  "expertScheduleToday": "今天",
   "expertProfileEditTitle": "编辑资料",
   "expertProfileEditName": "显示名称",
   "expertProfileEditNameHint": "你的达人显示名称",

@@ -4577,6 +4577,7 @@
   "expertScheduleClosedReasonHint": "e.g. Public holiday",
   "expertScheduleClosedAdded": "Marked as unavailable",
   "expertScheduleClosedRemoved": "Availability restored",
+  "expertScheduleToday": "Today",
   "expertProfileEditTitle": "Edit Profile",
   "expertProfileEditName": "Display Name",
   "expertProfileEditNameHint": "Your expert display name",
