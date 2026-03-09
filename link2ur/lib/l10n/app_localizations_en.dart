@@ -9164,6 +9164,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get expertApplicationBasePrice => 'Base Price';
 
   @override
+  String get expertApplicationViewTask => 'View Task';
+
+  @override
   String get commonUnnamed => 'Unnamed';
 
   @override

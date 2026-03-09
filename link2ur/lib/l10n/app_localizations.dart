@@ -16886,6 +16886,12 @@ abstract class AppLocalizations {
   /// **'Base Price'**
   String get expertApplicationBasePrice;
 
+  /// No description provided for @expertApplicationViewTask.
+  ///
+  /// In en, this message translates to:
+  /// **'View Task'**
+  String get expertApplicationViewTask;
+
   /// No description provided for @commonUnnamed.
   ///
   /// In en, this message translates to:

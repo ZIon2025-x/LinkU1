@@ -11,6 +11,7 @@ import '../../../core/design/app_radius.dart';
 import '../../../core/utils/adaptive_dialogs.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/router/go_router_extensions.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
@@ -21,7 +22,12 @@ import '../bloc/task_expert_bloc.dart';
 /// 达人服务申请管理页面
 /// 达人查看并处理收到的服务申请（同意/拒绝/议价）
 class ExpertApplicationsManagementView extends StatelessWidget {
-  const ExpertApplicationsManagementView({super.key});
+  const ExpertApplicationsManagementView({
+    super.key,
+    this.showAppBar = true,
+  });
+
+  final bool showAppBar;
 
   @override
   Widget build(BuildContext context) {
@@ -29,109 +35,122 @@ class ExpertApplicationsManagementView extends StatelessWidget {
       create: (context) => TaskExpertBloc(
         taskExpertRepository: context.read<TaskExpertRepository>(),
       )..add(const TaskExpertLoadExpertApplications()),
-      child: const _ExpertApplicationsManagementContent(),
+      child: _ExpertApplicationsManagementContent(showAppBar: showAppBar),
     );
   }
 }
 
 class _ExpertApplicationsManagementContent extends StatelessWidget {
-  const _ExpertApplicationsManagementContent();
+  const _ExpertApplicationsManagementContent({this.showAppBar = true});
+
+  final bool showAppBar;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
 
+    if (!showAppBar) {
+      return _buildBody(context);
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.expertApplicationsTitle),
       ),
-      body: BlocConsumer<TaskExpertBloc, TaskExpertState>(
-        listenWhen: (prev, curr) => prev.actionMessage != curr.actionMessage,
-        listener: (context, state) {
-          if (state.actionMessage == null) return;
-          final msg = switch (state.actionMessage) {
-            'application_approved' => l10n.expertApplicationApproved,
-            'application_rejected' => l10n.expertApplicationRejected,
-            'counter_offer_sent' => l10n.expertApplicationCounterOfferSent,
-            'application_action_failed' =>
-              state.errorMessage ?? l10n.expertApplicationActionFailed,
-            _ => null,
-          };
-          if (msg != null) {
-            final isError = state.actionMessage == 'application_action_failed';
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(msg),
-                backgroundColor: isError ? AppColors.error : AppColors.success,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
-        },
-        builder: (context, state) {
-          if (state.isLoading && state.expertApplications.isEmpty) {
-            return const SkeletonList();
-          }
+      body: _buildBody(context),
+    );
+  }
 
-          if (state.status == TaskExpertStatus.error &&
-              state.expertApplications.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.error_outline,
-                      size: 48,
-                      color: AppColors.error.withValues(alpha: 0.5)),
-                  AppSpacing.vMd,
-                  Text(state.errorMessage ?? l10n.expertApplicationActionFailed),
-                  AppSpacing.vMd,
-                  TextButton(
-                    onPressed: () => context
-                        .read<TaskExpertBloc>()
-                        .add(const TaskExpertLoadExpertApplications()),
-                    child: Text(l10n.commonRetry),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          if (state.expertApplications.isEmpty) {
-            return EmptyStateView(
-              icon: Icons.inbox_outlined,
-              title: l10n.expertApplicationsEmpty,
-              message: l10n.expertApplicationsEmptyMessage,
-            );
-          }
-
-          return RefreshIndicator(
-            onRefresh: () async {
-              context
-                  .read<TaskExpertBloc>()
-                  .add(const TaskExpertLoadExpertApplications());
-            },
-            child: ListView.separated(
-              clipBehavior: Clip.none,
-              padding: const EdgeInsets.all(AppSpacing.md),
-              itemCount: state.expertApplications.length,
-              separatorBuilder: (_, __) =>
-                  const SizedBox(height: AppSpacing.md),
-              itemBuilder: (context, index) {
-                final app = state.expertApplications[index];
-                return AnimatedListItem(
-                  key: ValueKey(app['id']),
-                  index: index,
-                  maxAnimatedIndex: 11,
-                  child: _ApplicationCard(
-                    application: app,
-                    isSubmitting: state.isSubmitting,
-                  ),
-                );
-              },
+  Widget _buildBody(BuildContext context) {
+    return BlocConsumer<TaskExpertBloc, TaskExpertState>(
+      listenWhen: (prev, curr) => prev.actionMessage != curr.actionMessage,
+      listener: (context, state) {
+        if (state.actionMessage == null) return;
+        final l10n = context.l10n;
+        final msg = switch (state.actionMessage) {
+          'application_approved' => l10n.expertApplicationApproved,
+          'application_rejected' => l10n.expertApplicationRejected,
+          'counter_offer_sent' => l10n.expertApplicationCounterOfferSent,
+          'application_action_failed' =>
+            state.errorMessage ?? l10n.expertApplicationActionFailed,
+          _ => null,
+        };
+        if (msg != null) {
+          final isError = state.actionMessage == 'application_action_failed';
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(msg),
+              backgroundColor: isError ? AppColors.error : AppColors.success,
+              behavior: SnackBarBehavior.floating,
             ),
           );
-        },
-      ),
+        }
+      },
+      builder: (context, state) {
+        final l10n = context.l10n;
+
+        if (state.isLoading && state.expertApplications.isEmpty) {
+          return const SkeletonList();
+        }
+
+        if (state.status == TaskExpertStatus.error &&
+            state.expertApplications.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline,
+                    size: 48,
+                    color: AppColors.error.withValues(alpha: 0.5)),
+                AppSpacing.vMd,
+                Text(state.errorMessage ?? l10n.expertApplicationActionFailed),
+                AppSpacing.vMd,
+                TextButton(
+                  onPressed: () => context
+                      .read<TaskExpertBloc>()
+                      .add(const TaskExpertLoadExpertApplications()),
+                  child: Text(l10n.commonRetry),
+                ),
+              ],
+            ),
+          );
+        }
+
+        if (state.expertApplications.isEmpty) {
+          return EmptyStateView(
+            icon: Icons.inbox_outlined,
+            title: l10n.expertApplicationsEmpty,
+            message: l10n.expertApplicationsEmptyMessage,
+          );
+        }
+
+        return RefreshIndicator(
+          onRefresh: () async {
+            context
+                .read<TaskExpertBloc>()
+                .add(const TaskExpertLoadExpertApplications());
+          },
+          child: ListView.separated(
+            clipBehavior: Clip.none,
+            padding: const EdgeInsets.all(AppSpacing.md),
+            itemCount: state.expertApplications.length,
+            separatorBuilder: (_, __) =>
+                const SizedBox(height: AppSpacing.md),
+            itemBuilder: (context, index) {
+              final app = state.expertApplications[index];
+              return AnimatedListItem(
+                key: ValueKey(app['id']),
+                index: index,
+                maxAnimatedIndex: 11,
+                child: _ApplicationCard(
+                  application: app,
+                  isSubmitting: state.isSubmitting,
+                ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }
@@ -397,8 +416,35 @@ class _ApplicationCard extends StatelessWidget {
                 ],
               ),
             ),
-          ] else
-            const SizedBox(height: AppSpacing.md),
+          ] else ...[
+            // "查看任务" button for approved applications with a linked task
+            if (application['status'] == 'approved' &&
+                application['task_id'] != null) ...[
+              const SizedBox(height: AppSpacing.xs),
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () {
+                      final rawId = application['task_id'];
+                      final taskId =
+                          rawId is int ? rawId : int.tryParse(rawId.toString());
+                      if (taskId != null) context.goToTaskDetail(taskId);
+                    },
+                    icon: const Icon(Icons.open_in_new, size: 16),
+                    label: Text(l10n.expertApplicationViewTask),
+                    style: TextButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
+                ),
+              ),
+            ] else
+              const SizedBox(height: AppSpacing.md),
+          ],
         ],
       ),
     );

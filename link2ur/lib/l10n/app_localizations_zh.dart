@@ -8810,6 +8810,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get expertApplicationBasePrice => '基础价格';
 
   @override
+  String get expertApplicationViewTask => '查看任务';
+
+  @override
   String get commonUnnamed => '未命名';
 
   @override
@@ -18403,6 +18406,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get expertApplicationBasePrice => '基礎價格';
+
+  @override
+  String get expertApplicationViewTask => '查看任務';
 
   @override
   String get commonUnnamed => '未命名';

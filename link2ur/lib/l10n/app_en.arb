@@ -4223,6 +4223,7 @@
   "expertApplicationMessage": "Message",
   "expertApplicationPrice": "Offered Price",
   "expertApplicationBasePrice": "Base Price",
+  "expertApplicationViewTask": "View Task",
 
   "commonUnnamed": "Unnamed",
   "commonImageUploadFailed": "Image upload failed: {error}",

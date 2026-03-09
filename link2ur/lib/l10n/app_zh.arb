@@ -4141,6 +4141,7 @@
   "expertApplicationMessage": "留言",
   "expertApplicationPrice": "出价",
   "expertApplicationBasePrice": "基础价格",
+  "expertApplicationViewTask": "查看任务",
 
   "commonUnnamed": "未命名",
   "commonImageUploadFailed": "上传图片失败: {error}",
