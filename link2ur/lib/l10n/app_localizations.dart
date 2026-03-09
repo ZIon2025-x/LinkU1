@@ -17989,6 +17989,420 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'↩ Replied to a comment'**
   String get forumReplyFallbackParent;
+
+  /// No description provided for @expertOfficialBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Official'**
+  String get expertOfficialBadge;
+
+  /// No description provided for @expertDashboardTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Expert Centre'**
+  String get expertDashboardTitle;
+
+  /// No description provided for @expertDashboardTabStats.
+  ///
+  /// In en, this message translates to:
+  /// **'Dashboard'**
+  String get expertDashboardTabStats;
+
+  /// No description provided for @expertDashboardTabServices.
+  ///
+  /// In en, this message translates to:
+  /// **'Services'**
+  String get expertDashboardTabServices;
+
+  /// No description provided for @expertDashboardTabApplications.
+  ///
+  /// In en, this message translates to:
+  /// **'Applications'**
+  String get expertDashboardTabApplications;
+
+  /// No description provided for @expertDashboardTabTimeSlots.
+  ///
+  /// In en, this message translates to:
+  /// **'Time Slots'**
+  String get expertDashboardTabTimeSlots;
+
+  /// No description provided for @expertDashboardTabSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule'**
+  String get expertDashboardTabSchedule;
+
+  /// No description provided for @expertDashboardEditProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Profile'**
+  String get expertDashboardEditProfile;
+
+  /// No description provided for @expertDashboardTotalServices.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Services'**
+  String get expertDashboardTotalServices;
+
+  /// No description provided for @expertDashboardActiveServices.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get expertDashboardActiveServices;
+
+  /// No description provided for @expertDashboardTotalApplications.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Applications'**
+  String get expertDashboardTotalApplications;
+
+  /// No description provided for @expertDashboardPendingApplications.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get expertDashboardPendingApplications;
+
+  /// No description provided for @expertDashboardUpcomingSlots.
+  ///
+  /// In en, this message translates to:
+  /// **'Upcoming Slots'**
+  String get expertDashboardUpcomingSlots;
+
+  /// No description provided for @expertServicesEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No services yet'**
+  String get expertServicesEmpty;
+
+  /// No description provided for @expertServicesEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap + to create your first service'**
+  String get expertServicesEmptyMessage;
+
+  /// No description provided for @expertServiceCreate.
+  ///
+  /// In en, this message translates to:
+  /// **'New Service'**
+  String get expertServiceCreate;
+
+  /// No description provided for @expertServiceEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Service'**
+  String get expertServiceEdit;
+
+  /// No description provided for @expertServiceDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Service'**
+  String get expertServiceDelete;
+
+  /// No description provided for @expertServiceConfirmDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this service?'**
+  String get expertServiceConfirmDelete;
+
+  /// No description provided for @expertServiceConfirmDeleteMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This action cannot be undone.'**
+  String get expertServiceConfirmDeleteMessage;
+
+  /// No description provided for @expertServiceName.
+  ///
+  /// In en, this message translates to:
+  /// **'Service Name'**
+  String get expertServiceName;
+
+  /// No description provided for @expertServiceNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. English Tutoring'**
+  String get expertServiceNameHint;
+
+  /// No description provided for @expertServiceNameEn.
+  ///
+  /// In en, this message translates to:
+  /// **'Service Name (English)'**
+  String get expertServiceNameEn;
+
+  /// No description provided for @expertServiceDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Description'**
+  String get expertServiceDescription;
+
+  /// No description provided for @expertServiceDescriptionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe what you offer...'**
+  String get expertServiceDescriptionHint;
+
+  /// No description provided for @expertServiceDescriptionEn.
+  ///
+  /// In en, this message translates to:
+  /// **'Description (English)'**
+  String get expertServiceDescriptionEn;
+
+  /// No description provided for @expertServicePrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Price'**
+  String get expertServicePrice;
+
+  /// No description provided for @expertServicePriceHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. 30'**
+  String get expertServicePriceHint;
+
+  /// No description provided for @expertServiceCurrency.
+  ///
+  /// In en, this message translates to:
+  /// **'Currency'**
+  String get expertServiceCurrency;
+
+  /// No description provided for @expertServiceImages.
+  ///
+  /// In en, this message translates to:
+  /// **'Images (up to 4)'**
+  String get expertServiceImages;
+
+  /// No description provided for @expertServiceSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Service submitted for review'**
+  String get expertServiceSubmitted;
+
+  /// No description provided for @expertServiceDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Service deleted'**
+  String get expertServiceDeleted;
+
+  /// No description provided for @expertServiceUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Service updated'**
+  String get expertServiceUpdated;
+
+  /// No description provided for @expertServiceStatusActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get expertServiceStatusActive;
+
+  /// No description provided for @expertServiceStatusPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending Review'**
+  String get expertServiceStatusPending;
+
+  /// No description provided for @expertServiceStatusRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get expertServiceStatusRejected;
+
+  /// No description provided for @expertServiceStatusInactive.
+  ///
+  /// In en, this message translates to:
+  /// **'Inactive'**
+  String get expertServiceStatusInactive;
+
+  /// No description provided for @expertTimeSlotsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No time slots'**
+  String get expertTimeSlotsEmpty;
+
+  /// No description provided for @expertTimeSlotsEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a service and add time slots'**
+  String get expertTimeSlotsEmptyMessage;
+
+  /// No description provided for @expertTimeSlotCreate.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Time Slot'**
+  String get expertTimeSlotCreate;
+
+  /// No description provided for @expertTimeSlotDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Date'**
+  String get expertTimeSlotDate;
+
+  /// No description provided for @expertTimeSlotStartTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Time'**
+  String get expertTimeSlotStartTime;
+
+  /// No description provided for @expertTimeSlotEndTime.
+  ///
+  /// In en, this message translates to:
+  /// **'End Time'**
+  String get expertTimeSlotEndTime;
+
+  /// No description provided for @expertTimeSlotPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Price per Person'**
+  String get expertTimeSlotPrice;
+
+  /// No description provided for @expertTimeSlotMaxParticipants.
+  ///
+  /// In en, this message translates to:
+  /// **'Max Participants'**
+  String get expertTimeSlotMaxParticipants;
+
+  /// No description provided for @expertTimeSlotCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Time slot added'**
+  String get expertTimeSlotCreated;
+
+  /// No description provided for @expertTimeSlotDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Time slot removed'**
+  String get expertTimeSlotDeleted;
+
+  /// No description provided for @expertTimeSlotConfirmDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove this time slot?'**
+  String get expertTimeSlotConfirmDelete;
+
+  /// No description provided for @expertScheduleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule'**
+  String get expertScheduleTitle;
+
+  /// No description provided for @expertScheduleSetClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as Unavailable'**
+  String get expertScheduleSetClosed;
+
+  /// No description provided for @expertScheduleRemoveClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove Unavailability'**
+  String get expertScheduleRemoveClosed;
+
+  /// No description provided for @expertScheduleClosedReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason (optional)'**
+  String get expertScheduleClosedReason;
+
+  /// No description provided for @expertScheduleClosedReasonHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Public holiday'**
+  String get expertScheduleClosedReasonHint;
+
+  /// No description provided for @expertScheduleClosedAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Marked as unavailable'**
+  String get expertScheduleClosedAdded;
+
+  /// No description provided for @expertScheduleClosedRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Availability restored'**
+  String get expertScheduleClosedRemoved;
+
+  /// No description provided for @expertProfileEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Profile'**
+  String get expertProfileEditTitle;
+
+  /// No description provided for @expertProfileEditName.
+  ///
+  /// In en, this message translates to:
+  /// **'Display Name'**
+  String get expertProfileEditName;
+
+  /// No description provided for @expertProfileEditNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Your expert display name'**
+  String get expertProfileEditNameHint;
+
+  /// No description provided for @expertProfileEditBio.
+  ///
+  /// In en, this message translates to:
+  /// **'Bio'**
+  String get expertProfileEditBio;
+
+  /// No description provided for @expertProfileEditBioHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tell clients about yourself...'**
+  String get expertProfileEditBioHint;
+
+  /// No description provided for @expertProfileEditAvatar.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile Photo'**
+  String get expertProfileEditAvatar;
+
+  /// No description provided for @expertProfileEditSubmit.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit for Review'**
+  String get expertProfileEditSubmit;
+
+  /// No description provided for @expertProfileEditSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Submitted — pending admin review'**
+  String get expertProfileEditSubmitted;
+
+  /// No description provided for @expertProfileEditAlreadyPending.
+  ///
+  /// In en, this message translates to:
+  /// **'You already have a pending update request'**
+  String get expertProfileEditAlreadyPending;
+
+  /// No description provided for @expertViewTask.
+  ///
+  /// In en, this message translates to:
+  /// **'View Task'**
+  String get expertViewTask;
+
+  /// No description provided for @expertSearchSortLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Sort by'**
+  String get expertSearchSortLabel;
+
+  /// No description provided for @expertSearchSortRating.
+  ///
+  /// In en, this message translates to:
+  /// **'Rating'**
+  String get expertSearchSortRating;
+
+  /// No description provided for @expertSearchSortCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Most Completed'**
+  String get expertSearchSortCompleted;
+
+  /// No description provided for @expertSearchSortNewest.
+  ///
+  /// In en, this message translates to:
+  /// **'Newest'**
+  String get expertSearchSortNewest;
 }
 
 class _AppLocalizationsDelegate

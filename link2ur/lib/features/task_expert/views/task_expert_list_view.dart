@@ -559,7 +559,7 @@ class _ExpertCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
-                            expert.officialBadge ?? '官方',
+                            expert.officialBadge ?? context.l10n.expertOfficialBadge,
                             style: const TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,

@@ -9390,6 +9390,213 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get forumReplyFallbackParent => '↩ 回复了一条评论';
+
+  @override
+  String get expertOfficialBadge => '官方';
+
+  @override
+  String get expertDashboardTitle => '达人中心';
+
+  @override
+  String get expertDashboardTabStats => '看板';
+
+  @override
+  String get expertDashboardTabServices => '我的服务';
+
+  @override
+  String get expertDashboardTabApplications => '申请管理';
+
+  @override
+  String get expertDashboardTabTimeSlots => '时间段';
+
+  @override
+  String get expertDashboardTabSchedule => '日程';
+
+  @override
+  String get expertDashboardEditProfile => '编辑资料';
+
+  @override
+  String get expertDashboardTotalServices => '服务总数';
+
+  @override
+  String get expertDashboardActiveServices => '上架中';
+
+  @override
+  String get expertDashboardTotalApplications => '申请总数';
+
+  @override
+  String get expertDashboardPendingApplications => '待处理';
+
+  @override
+  String get expertDashboardUpcomingSlots => '即将到来的时间段';
+
+  @override
+  String get expertServicesEmpty => '暂无服务';
+
+  @override
+  String get expertServicesEmptyMessage => '点击 + 创建第一个服务';
+
+  @override
+  String get expertServiceCreate => '新建服务';
+
+  @override
+  String get expertServiceEdit => '编辑服务';
+
+  @override
+  String get expertServiceDelete => '删除服务';
+
+  @override
+  String get expertServiceConfirmDelete => '删除此服务？';
+
+  @override
+  String get expertServiceConfirmDeleteMessage => '此操作不可撤销。';
+
+  @override
+  String get expertServiceName => '服务名称';
+
+  @override
+  String get expertServiceNameHint => '例如：英语辅导';
+
+  @override
+  String get expertServiceNameEn => '服务名称（英文）';
+
+  @override
+  String get expertServiceDescription => '描述';
+
+  @override
+  String get expertServiceDescriptionHint => '描述你提供的服务内容...';
+
+  @override
+  String get expertServiceDescriptionEn => '描述（英文）';
+
+  @override
+  String get expertServicePrice => '价格';
+
+  @override
+  String get expertServicePriceHint => '例如：30';
+
+  @override
+  String get expertServiceCurrency => '货币';
+
+  @override
+  String get expertServiceImages => '图片（最多4张）';
+
+  @override
+  String get expertServiceSubmitted => '服务已提交审核';
+
+  @override
+  String get expertServiceDeleted => '服务已删除';
+
+  @override
+  String get expertServiceUpdated => '服务已更新';
+
+  @override
+  String get expertServiceStatusActive => '上架中';
+
+  @override
+  String get expertServiceStatusPending => '待审核';
+
+  @override
+  String get expertServiceStatusRejected => '已拒绝';
+
+  @override
+  String get expertServiceStatusInactive => '已下架';
+
+  @override
+  String get expertTimeSlotsEmpty => '暂无时间段';
+
+  @override
+  String get expertTimeSlotsEmptyMessage => '选择服务后添加时间段';
+
+  @override
+  String get expertTimeSlotCreate => '添加时间段';
+
+  @override
+  String get expertTimeSlotDate => '日期';
+
+  @override
+  String get expertTimeSlotStartTime => '开始时间';
+
+  @override
+  String get expertTimeSlotEndTime => '结束时间';
+
+  @override
+  String get expertTimeSlotPrice => '每人价格';
+
+  @override
+  String get expertTimeSlotMaxParticipants => '最大人数';
+
+  @override
+  String get expertTimeSlotCreated => '时间段已添加';
+
+  @override
+  String get expertTimeSlotDeleted => '时间段已移除';
+
+  @override
+  String get expertTimeSlotConfirmDelete => '移除此时间段？';
+
+  @override
+  String get expertScheduleTitle => '日程管理';
+
+  @override
+  String get expertScheduleSetClosed => '设为不可用';
+
+  @override
+  String get expertScheduleRemoveClosed => '取消不可用';
+
+  @override
+  String get expertScheduleClosedReason => '原因（可选）';
+
+  @override
+  String get expertScheduleClosedReasonHint => '例如：节假日';
+
+  @override
+  String get expertScheduleClosedAdded => '已标记为不可用';
+
+  @override
+  String get expertScheduleClosedRemoved => '可用状态已恢复';
+
+  @override
+  String get expertProfileEditTitle => '编辑资料';
+
+  @override
+  String get expertProfileEditName => '显示名称';
+
+  @override
+  String get expertProfileEditNameHint => '你的达人显示名称';
+
+  @override
+  String get expertProfileEditBio => '简介';
+
+  @override
+  String get expertProfileEditBioHint => '介绍一下自己...';
+
+  @override
+  String get expertProfileEditAvatar => '头像';
+
+  @override
+  String get expertProfileEditSubmit => '提交审核';
+
+  @override
+  String get expertProfileEditSubmitted => '已提交，等待管理员审核';
+
+  @override
+  String get expertProfileEditAlreadyPending => '你已有一条待审核的更新请求';
+
+  @override
+  String get expertViewTask => '查看任务';
+
+  @override
+  String get expertSearchSortLabel => '排序方式';
+
+  @override
+  String get expertSearchSortRating => '评分';
+
+  @override
+  String get expertSearchSortCompleted => '完成数最多';
+
+  @override
+  String get expertSearchSortNewest => '最新加入';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -18665,4 +18872,211 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get forumReplyFallbackParent => '↩ 回覆了一則留言';
+
+  @override
+  String get expertOfficialBadge => '官方';
+
+  @override
+  String get expertDashboardTitle => '達人中心';
+
+  @override
+  String get expertDashboardTabStats => '看板';
+
+  @override
+  String get expertDashboardTabServices => '我的服務';
+
+  @override
+  String get expertDashboardTabApplications => '申請管理';
+
+  @override
+  String get expertDashboardTabTimeSlots => '時間段';
+
+  @override
+  String get expertDashboardTabSchedule => '日程';
+
+  @override
+  String get expertDashboardEditProfile => '編輯資料';
+
+  @override
+  String get expertDashboardTotalServices => '服務總數';
+
+  @override
+  String get expertDashboardActiveServices => '上架中';
+
+  @override
+  String get expertDashboardTotalApplications => '申請總數';
+
+  @override
+  String get expertDashboardPendingApplications => '待處理';
+
+  @override
+  String get expertDashboardUpcomingSlots => '即將到來的時間段';
+
+  @override
+  String get expertServicesEmpty => '暫無服務';
+
+  @override
+  String get expertServicesEmptyMessage => '點擊 + 建立第一個服務';
+
+  @override
+  String get expertServiceCreate => '新建服務';
+
+  @override
+  String get expertServiceEdit => '編輯服務';
+
+  @override
+  String get expertServiceDelete => '刪除服務';
+
+  @override
+  String get expertServiceConfirmDelete => '刪除此服務？';
+
+  @override
+  String get expertServiceConfirmDeleteMessage => '此操作不可撤銷。';
+
+  @override
+  String get expertServiceName => '服務名稱';
+
+  @override
+  String get expertServiceNameHint => '例如：英語輔導';
+
+  @override
+  String get expertServiceNameEn => '服務名稱（英文）';
+
+  @override
+  String get expertServiceDescription => '描述';
+
+  @override
+  String get expertServiceDescriptionHint => '描述你提供的服務內容...';
+
+  @override
+  String get expertServiceDescriptionEn => '描述（英文）';
+
+  @override
+  String get expertServicePrice => '價格';
+
+  @override
+  String get expertServicePriceHint => '例如：30';
+
+  @override
+  String get expertServiceCurrency => '貨幣';
+
+  @override
+  String get expertServiceImages => '圖片（最多4張）';
+
+  @override
+  String get expertServiceSubmitted => '服務已提交審核';
+
+  @override
+  String get expertServiceDeleted => '服務已刪除';
+
+  @override
+  String get expertServiceUpdated => '服務已更新';
+
+  @override
+  String get expertServiceStatusActive => '上架中';
+
+  @override
+  String get expertServiceStatusPending => '待審核';
+
+  @override
+  String get expertServiceStatusRejected => '已拒絕';
+
+  @override
+  String get expertServiceStatusInactive => '已下架';
+
+  @override
+  String get expertTimeSlotsEmpty => '暫無時間段';
+
+  @override
+  String get expertTimeSlotsEmptyMessage => '選擇服務後新增時間段';
+
+  @override
+  String get expertTimeSlotCreate => '新增時間段';
+
+  @override
+  String get expertTimeSlotDate => '日期';
+
+  @override
+  String get expertTimeSlotStartTime => '開始時間';
+
+  @override
+  String get expertTimeSlotEndTime => '結束時間';
+
+  @override
+  String get expertTimeSlotPrice => '每人價格';
+
+  @override
+  String get expertTimeSlotMaxParticipants => '最大人數';
+
+  @override
+  String get expertTimeSlotCreated => '時間段已新增';
+
+  @override
+  String get expertTimeSlotDeleted => '時間段已移除';
+
+  @override
+  String get expertTimeSlotConfirmDelete => '移除此時間段？';
+
+  @override
+  String get expertScheduleTitle => '日程管理';
+
+  @override
+  String get expertScheduleSetClosed => '設為不可用';
+
+  @override
+  String get expertScheduleRemoveClosed => '取消不可用';
+
+  @override
+  String get expertScheduleClosedReason => '原因（可選）';
+
+  @override
+  String get expertScheduleClosedReasonHint => '例如：節假日';
+
+  @override
+  String get expertScheduleClosedAdded => '已標記為不可用';
+
+  @override
+  String get expertScheduleClosedRemoved => '可用狀態已恢復';
+
+  @override
+  String get expertProfileEditTitle => '編輯資料';
+
+  @override
+  String get expertProfileEditName => '顯示名稱';
+
+  @override
+  String get expertProfileEditNameHint => '你的達人顯示名稱';
+
+  @override
+  String get expertProfileEditBio => '簡介';
+
+  @override
+  String get expertProfileEditBioHint => '介紹一下自己...';
+
+  @override
+  String get expertProfileEditAvatar => '頭像';
+
+  @override
+  String get expertProfileEditSubmit => '提交審核';
+
+  @override
+  String get expertProfileEditSubmitted => '已提交，等待管理員審核';
+
+  @override
+  String get expertProfileEditAlreadyPending => '你已有一條待審核的更新請求';
+
+  @override
+  String get expertViewTask => '查看任務';
+
+  @override
+  String get expertSearchSortLabel => '排序方式';
+
+  @override
+  String get expertSearchSortRating => '評分';
+
+  @override
+  String get expertSearchSortCompleted => '完成數最多';
+
+  @override
+  String get expertSearchSortNewest => '最新加入';
 }

@@ -9778,4 +9778,214 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get forumReplyFallbackParent => '↩ Replied to a comment';
+
+  @override
+  String get expertOfficialBadge => 'Official';
+
+  @override
+  String get expertDashboardTitle => 'Expert Centre';
+
+  @override
+  String get expertDashboardTabStats => 'Dashboard';
+
+  @override
+  String get expertDashboardTabServices => 'Services';
+
+  @override
+  String get expertDashboardTabApplications => 'Applications';
+
+  @override
+  String get expertDashboardTabTimeSlots => 'Time Slots';
+
+  @override
+  String get expertDashboardTabSchedule => 'Schedule';
+
+  @override
+  String get expertDashboardEditProfile => 'Edit Profile';
+
+  @override
+  String get expertDashboardTotalServices => 'Total Services';
+
+  @override
+  String get expertDashboardActiveServices => 'Active';
+
+  @override
+  String get expertDashboardTotalApplications => 'Total Applications';
+
+  @override
+  String get expertDashboardPendingApplications => 'Pending';
+
+  @override
+  String get expertDashboardUpcomingSlots => 'Upcoming Slots';
+
+  @override
+  String get expertServicesEmpty => 'No services yet';
+
+  @override
+  String get expertServicesEmptyMessage => 'Tap + to create your first service';
+
+  @override
+  String get expertServiceCreate => 'New Service';
+
+  @override
+  String get expertServiceEdit => 'Edit Service';
+
+  @override
+  String get expertServiceDelete => 'Delete Service';
+
+  @override
+  String get expertServiceConfirmDelete => 'Delete this service?';
+
+  @override
+  String get expertServiceConfirmDeleteMessage =>
+      'This action cannot be undone.';
+
+  @override
+  String get expertServiceName => 'Service Name';
+
+  @override
+  String get expertServiceNameHint => 'e.g. English Tutoring';
+
+  @override
+  String get expertServiceNameEn => 'Service Name (English)';
+
+  @override
+  String get expertServiceDescription => 'Description';
+
+  @override
+  String get expertServiceDescriptionHint => 'Describe what you offer...';
+
+  @override
+  String get expertServiceDescriptionEn => 'Description (English)';
+
+  @override
+  String get expertServicePrice => 'Price';
+
+  @override
+  String get expertServicePriceHint => 'e.g. 30';
+
+  @override
+  String get expertServiceCurrency => 'Currency';
+
+  @override
+  String get expertServiceImages => 'Images (up to 4)';
+
+  @override
+  String get expertServiceSubmitted => 'Service submitted for review';
+
+  @override
+  String get expertServiceDeleted => 'Service deleted';
+
+  @override
+  String get expertServiceUpdated => 'Service updated';
+
+  @override
+  String get expertServiceStatusActive => 'Active';
+
+  @override
+  String get expertServiceStatusPending => 'Pending Review';
+
+  @override
+  String get expertServiceStatusRejected => 'Rejected';
+
+  @override
+  String get expertServiceStatusInactive => 'Inactive';
+
+  @override
+  String get expertTimeSlotsEmpty => 'No time slots';
+
+  @override
+  String get expertTimeSlotsEmptyMessage =>
+      'Select a service and add time slots';
+
+  @override
+  String get expertTimeSlotCreate => 'Add Time Slot';
+
+  @override
+  String get expertTimeSlotDate => 'Date';
+
+  @override
+  String get expertTimeSlotStartTime => 'Start Time';
+
+  @override
+  String get expertTimeSlotEndTime => 'End Time';
+
+  @override
+  String get expertTimeSlotPrice => 'Price per Person';
+
+  @override
+  String get expertTimeSlotMaxParticipants => 'Max Participants';
+
+  @override
+  String get expertTimeSlotCreated => 'Time slot added';
+
+  @override
+  String get expertTimeSlotDeleted => 'Time slot removed';
+
+  @override
+  String get expertTimeSlotConfirmDelete => 'Remove this time slot?';
+
+  @override
+  String get expertScheduleTitle => 'Schedule';
+
+  @override
+  String get expertScheduleSetClosed => 'Mark as Unavailable';
+
+  @override
+  String get expertScheduleRemoveClosed => 'Remove Unavailability';
+
+  @override
+  String get expertScheduleClosedReason => 'Reason (optional)';
+
+  @override
+  String get expertScheduleClosedReasonHint => 'e.g. Public holiday';
+
+  @override
+  String get expertScheduleClosedAdded => 'Marked as unavailable';
+
+  @override
+  String get expertScheduleClosedRemoved => 'Availability restored';
+
+  @override
+  String get expertProfileEditTitle => 'Edit Profile';
+
+  @override
+  String get expertProfileEditName => 'Display Name';
+
+  @override
+  String get expertProfileEditNameHint => 'Your expert display name';
+
+  @override
+  String get expertProfileEditBio => 'Bio';
+
+  @override
+  String get expertProfileEditBioHint => 'Tell clients about yourself...';
+
+  @override
+  String get expertProfileEditAvatar => 'Profile Photo';
+
+  @override
+  String get expertProfileEditSubmit => 'Submit for Review';
+
+  @override
+  String get expertProfileEditSubmitted => 'Submitted — pending admin review';
+
+  @override
+  String get expertProfileEditAlreadyPending =>
+      'You already have a pending update request';
+
+  @override
+  String get expertViewTask => 'View Task';
+
+  @override
+  String get expertSearchSortLabel => 'Sort by';
+
+  @override
+  String get expertSearchSortRating => 'Rating';
+
+  @override
+  String get expertSearchSortCompleted => 'Most Completed';
+
+  @override
+  String get expertSearchSortNewest => 'Newest';
 }
