@@ -465,14 +465,17 @@ async def visible_forums(user: Optional[models.User], db: AsyncSession) -> List[
     verification = verification_result.scalar_one_or_none()
     
     if not verification:
+        logger.warning(f"用户 {user.id} 没有有效的学生认证记录（需 status='verified' 且未过期且大学 is_active）")
         return []
-    
+
     university = verification.university
-    
+    logger.info(f"用户 {user.id} 学生认证: university={university.name}, country={getattr(university, 'country', None)}, email_domain={getattr(university, 'email_domain', None)}, code={getattr(university, 'code', None)}, expires_at={verification.expires_at}")
+
     # 显式判断：是否为英国大学，非 UK 大学认证用户不开放学校板块访问
     # 防御性编程：即使调用方没走 require_student_verified，也要在这里二次判断非UK大学
     # 这是最后一道防线，确保非 UK 大学认证用户无法访问学校板块
     if not is_uk_university(university):
+        logger.warning(f"用户 {user.id} 的大学 {university.name} 不是UK大学，不展示学校板块")
         return []
     
     # 获取 university_code
@@ -1506,8 +1509,10 @@ async def get_visible_forums(
         return {"categories": [schemas.ForumCategoryOut.model_validate(f) for f in forums]}
     
     # 检查是否为学生认证用户
+    logger.info(f"get_visible_forums: current_user={current_user.id if current_user else None}")
     visible_ids = await visible_forums(current_user, db)
-    
+    logger.info(f"get_visible_forums: visible_ids={visible_ids}")
+
     if not visible_ids:
         # 未学生认证：仅返回普通板块（用户可以查看，但不能发帖）
         forums_result = await db.execute(

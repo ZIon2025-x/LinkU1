@@ -203,7 +203,6 @@ void main() {
         seed: () => const SearchState(
           status: SearchStatus.loaded,
           query: 'flutter',
-          searchHasMore: true,
         ),
         act: (bloc) => bloc.add(const SearchLoadMore()),
         expect: () => [],
@@ -227,7 +226,6 @@ void main() {
         seed: () => const SearchState(
           status: SearchStatus.loading,
           query: 'flutter',
-          searchHasMore: true,
         ),
         act: (bloc) => bloc.add(const SearchLoadMore()),
         expect: () => [],
@@ -520,12 +518,10 @@ void main() {
         const a = SearchState(
           status: SearchStatus.loaded,
           query: 'test',
-          searchPage: 1,
         );
         const b = SearchState(
           status: SearchStatus.loaded,
           query: 'test',
-          searchPage: 1,
         );
         expect(a, equals(b));
       });

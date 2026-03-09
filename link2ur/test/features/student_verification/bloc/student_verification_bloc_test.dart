@@ -17,13 +17,12 @@ void main() {
     isVerified: true,
     status: 'verified',
     email: 'student@uni.edu',
-    verifiedAt: DateTime(2026, 1, 1),
-    expiresAt: DateTime(2027, 1, 1),
+    verifiedAt: DateTime(2026),
+    expiresAt: DateTime(2027),
     daysRemaining: 365,
   );
 
   const unverifiedStatus = StudentVerification(
-    isVerified: false,
     status: 'pending',
   );
 

@@ -150,7 +150,6 @@ void main() {
         seed: () => const TaskExpertState(
           status: TaskExpertStatus.loaded,
           experts: [testExpert],
-          hasMore: true,
         ),
         act: (bloc) => bloc.add(const TaskExpertLoadMore()),
         expect: () => [

@@ -21,7 +21,7 @@ void main() {
     posterId: 'user1',
   );
 
-  final testRequest = CreateTaskRequest(
+  const testRequest = CreateTaskRequest(
     title: 'Test Task',
     taskType: 'delivery',
     reward: 10.0,
@@ -55,7 +55,7 @@ void main() {
               .thenAnswer((_) async => testTask);
           return bloc;
         },
-        act: (bloc) => bloc.add(CreateTaskSubmitted(testRequest)),
+        act: (bloc) => bloc.add(const CreateTaskSubmitted(testRequest)),
         expect: () => [
           const CreateTaskState(status: CreateTaskStatus.submitting),
           const CreateTaskState(
@@ -72,7 +72,7 @@ void main() {
               .thenThrow(Exception('Network error'));
           return bloc;
         },
-        act: (bloc) => bloc.add(CreateTaskSubmitted(testRequest)),
+        act: (bloc) => bloc.add(const CreateTaskSubmitted(testRequest)),
         expect: () => [
           const CreateTaskState(status: CreateTaskStatus.submitting),
           isA<CreateTaskState>()
@@ -93,8 +93,8 @@ void main() {
           return bloc;
         },
         act: (bloc) {
-          bloc.add(CreateTaskSubmitted(testRequest));
-          bloc.add(CreateTaskSubmitted(testRequest));
+          bloc.add(const CreateTaskSubmitted(testRequest));
+          bloc.add(const CreateTaskSubmitted(testRequest));
         },
         wait: const Duration(milliseconds: 200),
         expect: () => [
@@ -120,7 +120,7 @@ void main() {
         ),
         act: (bloc) => bloc.add(const CreateTaskReset()),
         expect: () => [
-          const CreateTaskState(status: CreateTaskStatus.initial),
+          const CreateTaskState(),
         ],
       );
 
@@ -133,7 +133,7 @@ void main() {
         ),
         act: (bloc) => bloc.add(const CreateTaskReset()),
         expect: () => [
-          const CreateTaskState(status: CreateTaskStatus.initial),
+          const CreateTaskState(),
         ],
       );
     });

@@ -104,7 +104,6 @@ void main() {
         'emits isDeletingAccount=true then error when apiService is null '
         '(StorageService.instance throws)',
         build: () => SettingsBloc(
-          apiService: null,
           userRepository: mockUserRepo,
         ),
         act: (bloc) => bloc.add(const SettingsDeleteAccount()),
@@ -332,13 +331,11 @@ void main() {
         const a = SettingsState(
           themeMode: ThemeMode.dark,
           locale: 'en',
-          notificationsEnabled: true,
           soundEnabled: false,
         );
         const b = SettingsState(
           themeMode: ThemeMode.dark,
           locale: 'en',
-          notificationsEnabled: true,
           soundEnabled: false,
         );
         expect(a, equals(b));
@@ -352,19 +349,19 @@ void main() {
 
       test('states with different locale are not equal', () {
         const a = SettingsState(locale: 'en');
-        const b = SettingsState(locale: 'zh');
+        const b = SettingsState();
         expect(a, isNot(equals(b)));
       });
 
       test('states with different isDeletingAccount are not equal', () {
         const a = SettingsState(isDeletingAccount: true);
-        const b = SettingsState(isDeletingAccount: false);
+        const b = SettingsState();
         expect(a, isNot(equals(b)));
       });
 
       test('states with different deleteAccountError are not equal', () {
         const a = SettingsState(deleteAccountError: 'error');
-        const b = SettingsState(deleteAccountError: null);
+        const b = SettingsState();
         expect(a, isNot(equals(b)));
       });
     });

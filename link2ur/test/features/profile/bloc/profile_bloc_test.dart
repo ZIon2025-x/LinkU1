@@ -647,7 +647,6 @@ void main() {
         final state = ProfileState(
           status: ProfileStatus.loaded,
           user: testUser,
-          isUpdating: false,
         );
         final copied = state.copyWith();
         expect(copied.status, equals(ProfileStatus.loaded));

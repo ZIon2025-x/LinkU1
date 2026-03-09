@@ -624,7 +624,6 @@ void main() {
             forumNotification1,
           ],
           total: 3,
-          page: 1,
           hasMore: false,
           unreadCount: const UnreadNotificationCount(count: 2, forumCount: 1),
         ),
@@ -652,9 +651,7 @@ void main() {
           status: NotificationStatus.loaded,
           notifications: [readSystemNotification],
           total: 1,
-          page: 1,
           hasMore: false,
-          unreadCount: const UnreadNotificationCount(count: 0),
         ),
         act: (bloc) => bloc.add(const NotificationMarkAllAsRead()),
         // All notifications already read + count already 0 → emitted state
@@ -716,7 +713,6 @@ void main() {
           status: NotificationStatus.loaded,
           notifications: [systemNotification1],
           total: 1,
-          page: 1,
           hasMore: false,
           selectedType: 'system',
           unreadCount: const UnreadNotificationCount(count: 2, forumCount: 1),
@@ -759,7 +755,6 @@ void main() {
           status: NotificationStatus.loaded,
           notifications: [systemNotification1, systemNotification2],
           total: 2,
-          page: 1,
           hasMore: false,
           selectedType: 'system',
         ),
@@ -795,7 +790,6 @@ void main() {
           status: NotificationStatus.loaded,
           notifications: [systemNotification1],
           total: 1,
-          page: 1,
           hasMore: false,
           // selectedType is null
         ),
@@ -879,9 +873,7 @@ void main() {
       });
 
       test('hasUnread returns false when both counts are 0', () {
-        const state = NotificationState(
-          unreadCount: UnreadNotificationCount(count: 0),
-        );
+        const state = NotificationState();
         expect(state.hasUnread, isFalse);
       });
     });
