@@ -177,7 +177,9 @@ class ApiEndpoints {
   static const String myExpertClosedDates = '/api/task-experts/me/closed-dates';
   static const String myServiceApplications =
       '/api/users/me/service-applications';
-  // --- 达人服务时间段 [RESERVED] ---
+  // --- 达人服务时间段 ---
+  // Legacy int-ID variants used by getServiceTimeSlots()/getMyServiceTimeSlots().
+  // Prefer myExpertServiceTimeSlots(String) for expert-dashboard operations.
   static String serviceTimeSlots(int serviceId) =>
       '/api/task-experts/services/$serviceId/time-slots';
   static String myServiceTimeSlots(int serviceId) =>
@@ -191,7 +193,8 @@ class ApiEndpoints {
       '/api/task-experts/me/services/$serviceId/time-slots/$slotId';
   static String myExpertClosedDateById(String id) =>
       '/api/task-experts/me/closed-dates/$id';
-  // --- 达人资料更新请求 [RESERVED] ---
+  // --- 达人资料更新请求 ---
+  // Used by submitProfileUpdateRequest() (and the deprecated requestExpertProfileUpdate()).
   static const String myExpertProfileUpdateRequest =
       '/api/task-experts/me/profile-update-request';
   // --- 达人审核申请操作 ---

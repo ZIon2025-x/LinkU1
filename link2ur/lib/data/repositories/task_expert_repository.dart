@@ -372,6 +372,7 @@ class TaskExpertRepository {
   }
 
   /// 获取我的达人服务列表
+  @Deprecated('Use getMyServices() instead')
   Future<List<Map<String, dynamic>>> getMyExpertServices() async {
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.myExpertServices,
@@ -433,8 +434,9 @@ class TaskExpertRepository {
   }
 
   /// 获取我的服务列表（达人管理）
+  /// 后端返回: { "total": ..., "items": [...], "limit": ..., "offset": ..., "has_more": ... }
   Future<List<Map<String, dynamic>>> getMyServices() async {
-    final response = await _apiService.get<dynamic>(
+    final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.myExpertServices,
     );
 
@@ -442,14 +444,7 @@ class TaskExpertRepository {
       throw TaskExpertException(response.message ?? '获取服务列表失败');
     }
 
-    final List<dynamic> items;
-    if (response.data is List) {
-      items = response.data as List<dynamic>;
-    } else if (response.data is Map<String, dynamic>) {
-      items = (response.data as Map<String, dynamic>)['items'] as List<dynamic>? ?? [];
-    } else {
-      items = [];
-    }
+    final items = response.data!['items'] as List<dynamic>? ?? [];
     return items.map((e) => e as Map<String, dynamic>).toList();
   }
 
@@ -493,8 +488,9 @@ class TaskExpertRepository {
   }
 
   /// 获取我的服务时间段（字符串 ID 版本）
+  /// 后端返回: 直接数组 List[ServiceTimeSlotOut]
   Future<List<Map<String, dynamic>>> getMyExpertServiceTimeSlots(String serviceId) async {
-    final response = await _apiService.get<dynamic>(
+    final response = await _apiService.get<List<dynamic>>(
       ApiEndpoints.myExpertServiceTimeSlots(serviceId),
     );
 
@@ -502,17 +498,7 @@ class TaskExpertRepository {
       throw TaskExpertException(response.message ?? '获取时间段失败');
     }
 
-    final List<dynamic> items;
-    if (response.data is List) {
-      items = response.data as List<dynamic>;
-    } else if (response.data is Map<String, dynamic>) {
-      items = (response.data as Map<String, dynamic>)['time_slots']
-              as List<dynamic>? ??
-          [];
-    } else {
-      items = [];
-    }
-    return items.map((e) => e as Map<String, dynamic>).toList();
+    return response.data!.map((e) => e as Map<String, dynamic>).toList();
   }
 
   /// 创建服务时间段
@@ -541,8 +527,9 @@ class TaskExpertRepository {
   }
 
   /// 获取我的休息日列表（完整 Map 格式）
+  /// 后端返回: 直接数组 List[ExpertClosedDateOut]
   Future<List<Map<String, dynamic>>> getMyClosedDates() async {
-    final response = await _apiService.get<dynamic>(
+    final response = await _apiService.get<List<dynamic>>(
       ApiEndpoints.myExpertClosedDates,
     );
 
@@ -550,15 +537,7 @@ class TaskExpertRepository {
       throw TaskExpertException(response.message ?? '获取休息日失败');
     }
 
-    final List<dynamic> items;
-    if (response.data is List) {
-      items = response.data as List<dynamic>;
-    } else if (response.data is Map<String, dynamic>) {
-      items = (response.data as Map<String, dynamic>)['items'] as List<dynamic>? ?? [];
-    } else {
-      items = [];
-    }
-    return items.map((e) => e as Map<String, dynamic>).toList();
+    return response.data!.map((e) => e as Map<String, dynamic>).toList();
   }
 
   /// 创建休息日
@@ -623,8 +602,10 @@ class TaskExpertRepository {
   }
 
   /// 获取达人休息日
+  /// 后端实际返回直接数组，此方法仅返回日期字符串列表。
+  @Deprecated('Use getMyClosedDates() instead')
   Future<List<String>> getMyExpertClosedDates() async {
-    final response = await _apiService.get<Map<String, dynamic>>(
+    final response = await _apiService.get<List<dynamic>>(
       ApiEndpoints.myExpertClosedDates,
     );
 
@@ -632,8 +613,11 @@ class TaskExpertRepository {
       throw TaskExpertException(response.message ?? '获取休息日失败');
     }
 
-    final dates = response.data!['dates'] as List<dynamic>? ?? [];
-    return dates.map((e) => e.toString()).toList();
+    // 后端返回 List[ExpertClosedDateOut]，每项含 closed_date 字段
+    return response.data!
+        .map((e) => (e as Map<String, dynamic>)['closed_date']?.toString() ?? '')
+        .where((d) => d.isNotEmpty)
+        .toList();
   }
 
   /// 获取服务时间段
@@ -689,6 +673,7 @@ class TaskExpertRepository {
   }
 
   /// 请求更新达人资料
+  @Deprecated('Use submitProfileUpdateRequest() instead')
   Future<void> requestExpertProfileUpdate(Map<String, dynamic> data) async {
     final response = await _apiService.post(
       ApiEndpoints.myExpertProfileUpdateRequest,
