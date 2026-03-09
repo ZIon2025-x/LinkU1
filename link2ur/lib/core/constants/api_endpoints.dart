@@ -182,6 +182,15 @@ class ApiEndpoints {
       '/api/task-experts/services/$serviceId/time-slots';
   static String myServiceTimeSlots(int serviceId) =>
       '/api/task-experts/me/services/$serviceId/time-slots';
+  static const String myExpertStats = '/api/task-experts/me/stats';
+  static String myExpertServiceById(String id) =>
+      '/api/task-experts/me/services/$id';
+  static String myExpertServiceTimeSlots(String serviceId) =>
+      '/api/task-experts/me/services/$serviceId/time-slots';
+  static String myExpertServiceTimeSlotById(String serviceId, String slotId) =>
+      '/api/task-experts/me/services/$serviceId/time-slots/$slotId';
+  static String myExpertClosedDateById(String id) =>
+      '/api/task-experts/me/closed-dates/$id';
   // --- 达人资料更新请求 [RESERVED] ---
   static const String myExpertProfileUpdateRequest =
       '/api/task-experts/me/profile-update-request';

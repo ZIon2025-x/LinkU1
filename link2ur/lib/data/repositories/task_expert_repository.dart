@@ -419,6 +419,196 @@ class TaskExpertRepository {
     return response.data!;
   }
 
+  /// 获取达人统计数据
+  Future<Map<String, dynamic>> getMyExpertStats() async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.myExpertStats,
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw TaskExpertException(response.message ?? '获取统计数据失败');
+    }
+
+    return response.data!;
+  }
+
+  /// 获取我的服务列表（达人管理）
+  Future<List<Map<String, dynamic>>> getMyServices() async {
+    final response = await _apiService.get<dynamic>(
+      ApiEndpoints.myExpertServices,
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw TaskExpertException(response.message ?? '获取服务列表失败');
+    }
+
+    final List<dynamic> items;
+    if (response.data is List) {
+      items = response.data as List<dynamic>;
+    } else if (response.data is Map<String, dynamic>) {
+      items = (response.data as Map<String, dynamic>)['items'] as List<dynamic>? ?? [];
+    } else {
+      items = [];
+    }
+    return items.map((e) => e as Map<String, dynamic>).toList();
+  }
+
+  /// 创建我的服务
+  Future<Map<String, dynamic>> createService(Map<String, dynamic> data) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.myExpertServices,
+      data: data,
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw TaskExpertException(response.message ?? '创建服务失败');
+    }
+
+    return response.data!;
+  }
+
+  /// 更新我的服务
+  Future<Map<String, dynamic>> updateService(String id, Map<String, dynamic> data) async {
+    final response = await _apiService.put<Map<String, dynamic>>(
+      ApiEndpoints.myExpertServiceById(id),
+      data: data,
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw TaskExpertException(response.message ?? '更新服务失败');
+    }
+
+    return response.data!;
+  }
+
+  /// 删除我的服务
+  Future<void> deleteService(String id) async {
+    final response = await _apiService.delete(
+      ApiEndpoints.myExpertServiceById(id),
+    );
+
+    if (!response.isSuccess) {
+      throw TaskExpertException(response.message ?? '删除服务失败');
+    }
+  }
+
+  /// 获取我的服务时间段（字符串 ID 版本）
+  Future<List<Map<String, dynamic>>> getMyExpertServiceTimeSlots(String serviceId) async {
+    final response = await _apiService.get<dynamic>(
+      ApiEndpoints.myExpertServiceTimeSlots(serviceId),
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw TaskExpertException(response.message ?? '获取时间段失败');
+    }
+
+    final List<dynamic> items;
+    if (response.data is List) {
+      items = response.data as List<dynamic>;
+    } else if (response.data is Map<String, dynamic>) {
+      items = (response.data as Map<String, dynamic>)['time_slots']
+              as List<dynamic>? ??
+          [];
+    } else {
+      items = [];
+    }
+    return items.map((e) => e as Map<String, dynamic>).toList();
+  }
+
+  /// 创建服务时间段
+  Future<Map<String, dynamic>> createServiceTimeSlot(String serviceId, Map<String, dynamic> data) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.myExpertServiceTimeSlots(serviceId),
+      data: data,
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw TaskExpertException(response.message ?? '创建时间段失败');
+    }
+
+    return response.data!;
+  }
+
+  /// 删除服务时间段
+  Future<void> deleteServiceTimeSlot(String serviceId, String slotId) async {
+    final response = await _apiService.delete(
+      ApiEndpoints.myExpertServiceTimeSlotById(serviceId, slotId),
+    );
+
+    if (!response.isSuccess) {
+      throw TaskExpertException(response.message ?? '删除时间段失败');
+    }
+  }
+
+  /// 获取我的休息日列表（完整 Map 格式）
+  Future<List<Map<String, dynamic>>> getMyClosedDates() async {
+    final response = await _apiService.get<dynamic>(
+      ApiEndpoints.myExpertClosedDates,
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw TaskExpertException(response.message ?? '获取休息日失败');
+    }
+
+    final List<dynamic> items;
+    if (response.data is List) {
+      items = response.data as List<dynamic>;
+    } else if (response.data is Map<String, dynamic>) {
+      items = (response.data as Map<String, dynamic>)['items'] as List<dynamic>? ?? [];
+    } else {
+      items = [];
+    }
+    return items.map((e) => e as Map<String, dynamic>).toList();
+  }
+
+  /// 创建休息日
+  Future<Map<String, dynamic>> createClosedDate(String date, {String? reason}) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.myExpertClosedDates,
+      data: {
+        'date': date,
+        if (reason != null && reason.isNotEmpty) 'reason': reason,
+      },
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw TaskExpertException(response.message ?? '创建休息日失败');
+    }
+
+    return response.data!;
+  }
+
+  /// 删除休息日
+  Future<void> deleteClosedDate(String id) async {
+    final response = await _apiService.delete(
+      ApiEndpoints.myExpertClosedDateById(id),
+    );
+
+    if (!response.isSuccess) {
+      throw TaskExpertException(response.message ?? '删除休息日失败');
+    }
+  }
+
+  /// 提交达人资料更新请求
+  Future<void> submitProfileUpdateRequest({
+    String? name,
+    String? bio,
+    String? avatarUrl,
+  }) async {
+    final response = await _apiService.post(
+      ApiEndpoints.myExpertProfileUpdateRequest,
+      data: {
+        if (name != null && name.isNotEmpty) 'name': name,
+        if (bio != null && bio.isNotEmpty) 'bio': bio,
+        if (avatarUrl != null && avatarUrl.isNotEmpty) 'avatar_url': avatarUrl,
+      },
+    );
+
+    if (!response.isSuccess) {
+      throw TaskExpertException(response.message ?? '提交资料更新请求失败');
+    }
+  }
+
   /// 获取达人日程
   Future<Map<String, dynamic>> getMyExpertSchedule() async {
     final response = await _apiService.get<Map<String, dynamic>>(
