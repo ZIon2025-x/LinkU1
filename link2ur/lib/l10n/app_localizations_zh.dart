@@ -6868,6 +6868,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get couponRedeemCode => '兑换码';
 
   @override
+  String get couponRedeemConfirmTitle => '确认兑换';
+
+  @override
+  String couponRedeemConfirmContent(int points, String couponName) {
+    return '确定使用 $points 积分兑换「$couponName」吗？';
+  }
+
+  @override
   String get couponNoPointsRecords => '暂无积分记录';
 
   @override
@@ -16596,6 +16604,14 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get couponRedeemCode => '兌換碼';
+
+  @override
+  String get couponRedeemConfirmTitle => '確認兌換';
+
+  @override
+  String couponRedeemConfirmContent(int points, String couponName) {
+    return '確定使用 $points 積分兌換「$couponName」嗎？';
+  }
 
   @override
   String get couponNoPointsRecords => '暫無積分記錄';

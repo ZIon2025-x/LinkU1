@@ -3306,6 +3306,14 @@
   "couponCheckInTab": "簽到",
   "couponRedeemReward": "兌換獎勵",
   "couponRedeemCode": "兌換碼",
+  "couponRedeemConfirmTitle": "確認兌換",
+  "couponRedeemConfirmContent": "確定使用 {points} 積分兌換「{couponName}」嗎？",
+  "@couponRedeemConfirmContent": {
+    "placeholders": {
+      "points": {"type": "int"},
+      "couponName": {"type": "String"}
+    }
+  },
   "couponNoPointsRecords": "暫無積分記錄",
   "couponEnterInviteCodeTitle": "輸入邀請碼",
   "couponEnterInviteCodeHint": "請輸入邀請碼或兌換碼",

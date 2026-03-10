@@ -653,16 +653,36 @@ class _AvailableCouponCard extends StatelessWidget {
                 : context.l10n.couponClaim,
             onPressed: isSubmitting
                 ? null
-                : () => context
-                    .read<CouponPointsBloc>()
-                    .add(coupon.pointsRequired > 0
-                        ? CouponPointsRedeemCoupon(coupon.id)
-                        : CouponPointsClaimCoupon(coupon.id)),
+                : () {
+                    if (coupon.pointsRequired > 0) {
+                      _confirmRedeem(context, coupon);
+                    } else {
+                      context
+                          .read<CouponPointsBloc>()
+                          .add(CouponPointsClaimCoupon(coupon.id));
+                    }
+                  },
             filled: true,
           ),
         ],
       ),
     );
+  }
+
+  void _confirmRedeem(BuildContext context, Coupon coupon) async {
+    final bloc = context.read<CouponPointsBloc>();
+    final confirmed = await AdaptiveDialogs.showConfirmDialog<bool>(
+      context: context,
+      title: context.l10n.couponRedeemConfirmTitle,
+      content: context.l10n.couponRedeemConfirmContent(
+        coupon.pointsRequired,
+        coupon.name,
+      ),
+      onConfirm: () => true,
+    );
+    if (confirmed == true) {
+      bloc.add(CouponPointsRedeemCoupon(coupon.id));
+    }
   }
 }
 

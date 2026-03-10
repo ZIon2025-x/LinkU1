@@ -7178,6 +7178,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get couponRedeemCode => 'Redeem Code';
 
   @override
+  String get couponRedeemConfirmTitle => 'Confirm Redemption';
+
+  @override
+  String couponRedeemConfirmContent(int points, String couponName) {
+    return 'Use $points points to redeem \"$couponName\"?';
+  }
+
+  @override
   String get couponNoPointsRecords => 'No Points Records';
 
   @override

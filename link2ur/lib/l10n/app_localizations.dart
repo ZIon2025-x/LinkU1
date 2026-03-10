@@ -13142,6 +13142,18 @@ abstract class AppLocalizations {
   /// **'Redeem Code'**
   String get couponRedeemCode;
 
+  /// No description provided for @couponRedeemConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Redemption'**
+  String get couponRedeemConfirmTitle;
+
+  /// No description provided for @couponRedeemConfirmContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Use {points} points to redeem \"{couponName}\"?'**
+  String couponRedeemConfirmContent(int points, String couponName);
+
   /// No description provided for @couponNoPointsRecords.
   ///
   /// In en, this message translates to:

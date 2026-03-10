@@ -3377,6 +3377,14 @@
   "couponCheckInTab": "Check-in",
   "couponRedeemReward": "Redeem Reward",
   "couponRedeemCode": "Redeem Code",
+  "couponRedeemConfirmTitle": "Confirm Redemption",
+  "couponRedeemConfirmContent": "Use {points} points to redeem \"{couponName}\"?",
+  "@couponRedeemConfirmContent": {
+    "placeholders": {
+      "points": {"type": "int"},
+      "couponName": {"type": "String"}
+    }
+  },
   "couponNoPointsRecords": "No Points Records",
   "couponEnterInviteCodeTitle": "Enter Invite Code",
   "couponEnterInviteCodeHint": "Enter invite code or redeem code",

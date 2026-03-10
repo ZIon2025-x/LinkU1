@@ -3367,6 +3367,14 @@
   "couponCheckInTab": "签到",
   "couponRedeemReward": "兑换奖励",
   "couponRedeemCode": "兑换码",
+  "couponRedeemConfirmTitle": "确认兑换",
+  "couponRedeemConfirmContent": "确定使用 {points} 积分兑换「{couponName}」吗？",
+  "@couponRedeemConfirmContent": {
+    "placeholders": {
+      "points": {"type": "int"},
+      "couponName": {"type": "String"}
+    }
+  },
   "couponNoPointsRecords": "暂无积分记录",
   "couponEnterInviteCodeTitle": "输入邀请码",
   "couponEnterInviteCodeHint": "请输入邀请码或兑换码",
