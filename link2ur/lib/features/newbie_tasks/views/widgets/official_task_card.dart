@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/design/app_colors.dart';
 import '../../../../core/design/app_radius.dart';
 import '../../../../core/design/app_spacing.dart';
+import '../../../../core/utils/l10n_extension.dart';
 import '../../../../data/models/official_task.dart';
 
 /// Card for official tasks with "官方" badge.
@@ -19,6 +20,8 @@ class OfficialTaskCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = context.l10n;
+    final locale = Localizations.localeOf(context);
 
     return Semantics(
       button: true,
@@ -54,9 +57,9 @@ class OfficialTaskCard extends StatelessWidget {
                     ),
                     borderRadius: AppRadius.allTiny,
                   ),
-                  child: const Text(
-                    '官方',
-                    style: TextStyle(
+                  child: Text(
+                    l10n.officialTask,
+                    style: const TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
                       color: Colors.white,
@@ -93,9 +96,9 @@ class OfficialTaskCard extends StatelessWidget {
                       color: AppColors.successLight,
                       borderRadius: AppRadius.allTiny,
                     ),
-                    child: const Text(
-                      '已完成',
-                      style: TextStyle(
+                    child: Text(
+                      l10n.officialTaskCompleted,
+                      style: const TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w500,
                         color: AppColors.success,
@@ -107,7 +110,7 @@ class OfficialTaskCard extends StatelessWidget {
             AppSpacing.vSm,
             // Title
             Text(
-              task.titleZh,
+              task.displayTitle(locale),
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
@@ -118,10 +121,10 @@ class OfficialTaskCard extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
-            if (task.descriptionZh.isNotEmpty) ...[
+            if (task.displayDescription(locale).isNotEmpty) ...[
               const SizedBox(height: 4),
               Text(
-                task.descriptionZh,
+                task.displayDescription(locale),
                 style: TextStyle(
                   fontSize: 13,
                   color: isDark
@@ -154,7 +157,7 @@ class OfficialTaskCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        _rewardText,
+                        _rewardText(context),
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -168,7 +171,7 @@ class OfficialTaskCard extends StatelessWidget {
                 // Validity period
                 if (task.validUntil != null)
                   Text(
-                    '截止 ${_formatDate(task.validUntil!)}',
+                    l10n.officialTaskDeadline(_formatDate(task.validUntil!)),
                     style: TextStyle(
                       fontSize: 11,
                       color: isDark
@@ -180,7 +183,10 @@ class OfficialTaskCard extends StatelessWidget {
                 if (task.maxPerUser > 1) ...[
                   AppSpacing.hSm,
                   Text(
-                    '${task.userSubmissionCount}/${task.maxPerUser} 次',
+                    l10n.officialTaskSubmissionCount(
+                      '${task.userSubmissionCount}',
+                      '${task.maxPerUser}',
+                    ),
                     style: TextStyle(
                       fontSize: 11,
                       color: isDark
@@ -198,13 +204,14 @@ class OfficialTaskCard extends StatelessWidget {
     );
   }
 
-  String get _rewardText {
+  String _rewardText(BuildContext context) {
+    final l10n = context.l10n;
     if (task.rewardType == 'points') {
-      return '${task.rewardAmount} 积分';
+      return l10n.newbieTaskPoints('${task.rewardAmount}');
     } else if (task.rewardType == 'coupon') {
-      return '优惠券奖励';
+      return l10n.newbieTaskCouponReward;
     }
-    return '${task.rewardAmount} 奖励';
+    return l10n.newbieTaskReward('${task.rewardAmount}');
   }
 
   String _formatDate(DateTime date) {

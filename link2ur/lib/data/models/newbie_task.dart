@@ -1,6 +1,9 @@
+import 'dart:ui' show Locale;
+
 import 'package:equatable/equatable.dart';
 
 import '../../core/utils/json_utils.dart';
+import '../../core/utils/localized_string.dart';
 
 /// Newbie task configuration
 class NewbieTaskConfig extends Equatable {
@@ -59,6 +62,12 @@ class NewbieTaskConfig extends Equatable {
         'display_order': displayOrder,
         'is_active': isActive,
       };
+
+  String displayTitle(Locale locale) =>
+      localizedString(titleZh, titleEn, titleZh, locale);
+
+  String displayDescription(Locale locale) =>
+      localizedString(descriptionZh, descriptionEn, descriptionZh, locale);
 
   NewbieTaskConfig copyWith({
     String? taskKey,
@@ -209,6 +218,9 @@ class StageBonusConfig extends Equatable {
         'coupon_id': couponId,
         'is_active': isActive,
       };
+
+  String displayTitle(Locale locale) =>
+      localizedString(titleZh, titleEn, titleZh, locale);
 
   StageBonusConfig copyWith({
     int? stage,

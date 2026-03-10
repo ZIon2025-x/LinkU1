@@ -9397,7 +9397,43 @@ class AppLocalizationsZh extends AppLocalizations {
   String get newbieTaskAllCompleted => '所有任务已完成！';
 
   @override
+  String get newbieTaskProgressTitle => '新手任务进度';
+
+  @override
+  String get newbieTaskGetRewardsHint => '完成任务获取积分和优惠券奖励';
+
+  @override
+  String get newbieTaskNoTasks => '暂无任务';
+
+  @override
+  String get newbieTaskCouponReward => '优惠券奖励';
+
+  @override
+  String newbieTaskReward(String amount) {
+    return '$amount 奖励';
+  }
+
+  @override
+  String get newbieTaskLocked => '未解锁';
+
+  @override
+  String get newbieOfficialTasksTitle => '官方任务';
+
+  @override
   String get officialTask => '官方';
+
+  @override
+  String get officialTaskCompleted => '已完成';
+
+  @override
+  String officialTaskDeadline(String date) {
+    return '截止 $date';
+  }
+
+  @override
+  String officialTaskSubmissionCount(String count, String max) {
+    return '$count/$max 次';
+  }
 
   @override
   String officialTaskSubmissions(String count) {
@@ -9453,6 +9489,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get errorNewbieTaskAlreadyClaimed => '该奖励已被领取';
+
+  @override
+  String get errorNewbieTaskClaimFailed => '领取奖励失败';
+
+  @override
+  String get errorNewbieStageClaimFailed => '领取阶段奖励失败';
 
   @override
   String get errorOfficialTaskMaxReached => '已达最大提交次数';
@@ -19043,6 +19085,117 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get errorIapPurchaseFailed => '購買失敗';
+
+  @override
+  String get newbieTaskCenter => '任務中心';
+
+  @override
+  String get newbieTaskStage1 => '完善資料';
+
+  @override
+  String get newbieTaskStage2 => '開始分享';
+
+  @override
+  String get newbieTaskStage3 => '成就達成';
+
+  @override
+  String get newbieTaskPending => '未完成';
+
+  @override
+  String get newbieTaskCompleted => '領取';
+
+  @override
+  String get newbieTaskClaimed => '已領取';
+
+  @override
+  String get newbieTaskClaimReward => '領取獎勵';
+
+  @override
+  String get newbieTaskStageBonus => '階段獎勵';
+
+  @override
+  String newbieTaskPoints(String amount) {
+    return '$amount 積分';
+  }
+
+  @override
+  String newbieTaskProgress(String completed, String total) {
+    return '$completed/$total 已完成';
+  }
+
+  @override
+  String get newbieTaskAllCompleted => '所有任務已完成！';
+
+  @override
+  String get newbieTaskProgressTitle => '新手任務進度';
+
+  @override
+  String get newbieTaskGetRewardsHint => '完成任務獲取積分和優惠券獎勵';
+
+  @override
+  String get newbieTaskNoTasks => '暫無任務';
+
+  @override
+  String get newbieTaskCouponReward => '優惠券獎勵';
+
+  @override
+  String newbieTaskReward(String amount) {
+    return '$amount 獎勵';
+  }
+
+  @override
+  String get newbieTaskLocked => '未解鎖';
+
+  @override
+  String get newbieOfficialTasksTitle => '官方任務';
+
+  @override
+  String get officialTask => '官方';
+
+  @override
+  String get officialTaskCompleted => '已完成';
+
+  @override
+  String officialTaskDeadline(String date) {
+    return '截止 $date';
+  }
+
+  @override
+  String officialTaskSubmissionCount(String count, String max) {
+    return '$count/$max 次';
+  }
+
+  @override
+  String officialTaskSubmissions(String count) {
+    return '$count 次提交';
+  }
+
+  @override
+  String get errorNewbieTaskNotCompleted => '該任務尚未完成';
+
+  @override
+  String get errorNewbieTaskAlreadyClaimed => '該獎勵已被領取';
+
+  @override
+  String get errorNewbieTaskClaimFailed => '領取獎勵失敗';
+
+  @override
+  String get errorNewbieStageClaimFailed => '領取階段獎勵失敗';
+
+  @override
+  String get errorOfficialTaskMaxReached => '已達最大提交次數';
+
+  @override
+  String get errorOfficialTaskExpired => '該任務已過期';
+
+  @override
+  String get errorNewbieTasksLoadFailed => '載入任務失敗';
+
+  @override
+  String get errorLeaderboardLoadFailed => '載入排行榜失敗';
+
+  @override
+  String get errorBadgesLoadFailed => '載入徽章失敗';
 
   @override
   String get forumReplyFallbackParent => '↩ 回覆了一則留言';

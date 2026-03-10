@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/design/app_colors.dart';
 import '../../../../core/design/app_radius.dart';
 import '../../../../core/design/app_spacing.dart';
+import '../../../../core/utils/l10n_extension.dart';
 import '../../../../data/models/newbie_task.dart';
 
 /// Stage header with progress indicator (e.g., "2/4 完成").
@@ -27,6 +28,7 @@ class StageProgressWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = context.l10n;
     final claimedCount = tasks.where((t) => t.isClaimed).length;
     final totalCount = tasks.length;
     final progress = totalCount > 0 ? claimedCount / totalCount : 0.0;
@@ -82,7 +84,7 @@ class StageProgressWidget extends StatelessWidget {
                 borderRadius: AppRadius.allPill,
               ),
               child: Text(
-                '$claimedCount/$totalCount 完成',
+                l10n.newbieTaskProgress('$claimedCount', '$totalCount'),
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -135,14 +137,15 @@ class StageBonusCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = context.l10n;
     final config = stageProgress.config;
     final allClaimed = tasks.isNotEmpty && tasks.every((t) => t.isClaimed);
 
     final rewardText = config.rewardType == 'points'
-        ? '${config.rewardAmount} 积分'
+        ? l10n.newbieTaskPoints('${config.rewardAmount}')
         : config.rewardType == 'coupon'
-            ? '优惠券奖励'
-            : '${config.rewardAmount} 奖励';
+            ? l10n.newbieTaskCouponReward
+            : l10n.newbieTaskReward('${config.rewardAmount}');
 
     return Container(
       padding: AppSpacing.allMd,
@@ -207,7 +210,7 @@ class StageBonusCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '阶段完成奖励',
+                  l10n.newbieTaskStageBonus,
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -252,6 +255,9 @@ class StageBonusCard extends StatelessWidget {
   }
 
   Widget _buildTrailing(BuildContext context, bool allClaimed) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = context.l10n;
+
     if (stageProgress.isClaimed) {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -259,14 +265,14 @@ class StageBonusCard extends StatelessWidget {
           color: AppColors.successLight,
           borderRadius: AppRadius.allPill,
         ),
-        child: const Row(
+        child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.check, size: 14, color: AppColors.success),
-            SizedBox(width: 2),
+            const Icon(Icons.check, size: 14, color: AppColors.success),
+            const SizedBox(width: 2),
             Text(
-              '已领取',
-              style: TextStyle(
+              l10n.newbieTaskClaimed,
+              style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
                 color: AppColors.success,
@@ -300,9 +306,9 @@ class StageBonusCard extends StatelessWidget {
                     color: AppColors.accent,
                   ),
                 )
-              : const Text(
-                  '领取奖励',
-                  style: TextStyle(
+              : Text(
+                  l10n.newbieTaskClaimReward,
+                  style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
                   ),
@@ -311,24 +317,34 @@ class StageBonusCard extends StatelessWidget {
       );
     }
 
-    // Not all tasks completed yet — show lock
+    // Not all tasks completed yet — show lock (dark mode aware)
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: AppColors.backgroundLight,
+        color: isDark
+            ? AppColors.secondaryBackgroundDark
+            : AppColors.backgroundLight,
         borderRadius: AppRadius.allPill,
       ),
-      child: const Row(
+      child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.lock_outline, size: 14, color: AppColors.textSecondaryLight),
-          SizedBox(width: 2),
+          Icon(
+            Icons.lock_outline,
+            size: 14,
+            color: isDark
+                ? AppColors.textSecondaryDark
+                : AppColors.textSecondaryLight,
+          ),
+          const SizedBox(width: 2),
           Text(
-            '未解锁',
+            l10n.newbieTaskLocked,
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w500,
-              color: AppColors.textSecondaryLight,
+              color: isDark
+                  ? AppColors.textSecondaryDark
+                  : AppColors.textSecondaryLight,
             ),
           ),
         ],

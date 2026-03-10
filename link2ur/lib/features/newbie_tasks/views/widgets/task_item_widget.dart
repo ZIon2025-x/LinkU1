@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/design/app_colors.dart';
 import '../../../../core/design/app_radius.dart';
 import '../../../../core/design/app_spacing.dart';
+import '../../../../core/utils/l10n_extension.dart';
 import '../../../../data/models/newbie_task.dart';
 
 /// Reusable widget for a single newbie task item.
@@ -23,6 +24,7 @@ class TaskItemWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final config = task.config;
+    final locale = Localizations.localeOf(context);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -47,7 +49,7 @@ class TaskItemWidget extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  config.titleZh,
+                  config.displayTitle(locale),
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
@@ -56,10 +58,10 @@ class TaskItemWidget extends StatelessWidget {
                         : AppColors.textPrimaryLight,
                   ),
                 ),
-                if (config.descriptionZh.isNotEmpty) ...[
+                if (config.displayDescription(locale).isNotEmpty) ...[
                   const SizedBox(height: 2),
                   Text(
-                    config.descriptionZh,
+                    config.displayDescription(locale),
                     style: TextStyle(
                       fontSize: 13,
                       color: isDark
@@ -71,7 +73,7 @@ class TaskItemWidget extends StatelessWidget {
                   ),
                 ],
                 const SizedBox(height: 4),
-                _buildRewardPreview(config),
+                _buildRewardPreview(context, config),
               ],
             ),
           ),
@@ -117,12 +119,13 @@ class TaskItemWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildRewardPreview(NewbieTaskConfig config) {
+  Widget _buildRewardPreview(BuildContext context, NewbieTaskConfig config) {
+    final l10n = context.l10n;
     final rewardText = config.rewardType == 'points'
-        ? '${config.rewardAmount} 积分'
+        ? l10n.newbieTaskPoints('${config.rewardAmount}')
         : config.rewardType == 'coupon'
-            ? '优惠券奖励'
-            : '${config.rewardAmount} 奖励';
+            ? l10n.newbieTaskCouponReward
+            : l10n.newbieTaskReward('${config.rewardAmount}');
 
     return Row(
       children: [
@@ -145,6 +148,9 @@ class TaskItemWidget extends StatelessWidget {
   }
 
   Widget _buildTrailing(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = context.l10n;
+
     // Claimed — blue checkmark badge
     if (task.isClaimed) {
       return Container(
@@ -153,14 +159,14 @@ class TaskItemWidget extends StatelessWidget {
           color: AppColors.infoLight,
           borderRadius: AppRadius.allPill,
         ),
-        child: const Row(
+        child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.check, size: 14, color: AppColors.primary),
-            SizedBox(width: 2),
+            const Icon(Icons.check, size: 14, color: AppColors.primary),
+            const SizedBox(width: 2),
             Text(
-              '已领取',
-              style: TextStyle(
+              l10n.newbieTaskClaimed,
+              style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
                 color: AppColors.primary,
@@ -195,9 +201,9 @@ class TaskItemWidget extends StatelessWidget {
                     color: Colors.white,
                   ),
                 )
-              : const Text(
-                  '可领取',
-                  style: TextStyle(
+              : Text(
+                  l10n.newbieTaskCompleted,
+                  style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                   ),
@@ -206,19 +212,23 @@ class TaskItemWidget extends StatelessWidget {
       );
     }
 
-    // Pending — grey badge
+    // Pending — grey badge (dark mode aware)
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: AppColors.backgroundLight,
+        color: isDark
+            ? AppColors.secondaryBackgroundDark
+            : AppColors.backgroundLight,
         borderRadius: AppRadius.allPill,
       ),
-      child: const Text(
-        '未完成',
+      child: Text(
+        l10n.newbieTaskPending,
         style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w500,
-          color: AppColors.textSecondaryLight,
+          color: isDark
+              ? AppColors.textSecondaryDark
+              : AppColors.textSecondaryLight,
         ),
       ),
     );

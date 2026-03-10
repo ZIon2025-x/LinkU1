@@ -1,6 +1,9 @@
+import 'dart:ui' show Locale;
+
 import 'package:equatable/equatable.dart';
 
 import '../../core/utils/json_utils.dart';
+import '../../core/utils/localized_string.dart';
 
 /// Official task model (platform-created tasks with rewards)
 class OfficialTask extends Equatable {
@@ -85,6 +88,12 @@ class OfficialTask extends Equatable {
         'created_at': createdAt?.toIso8601String(),
         'user_submission_count': userSubmissionCount,
       };
+
+  String displayTitle(Locale locale) =>
+      localizedString(titleZh, titleEn, titleZh, locale);
+
+  String displayDescription(Locale locale) =>
+      localizedString(descriptionZh, descriptionEn, descriptionZh, locale);
 
   OfficialTask copyWith({
     int? id,

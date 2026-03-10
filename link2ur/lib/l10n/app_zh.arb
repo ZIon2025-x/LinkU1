@@ -4408,7 +4408,41 @@
     }
   },
   "newbieTaskAllCompleted": "所有任务已完成！",
+  "newbieTaskProgressTitle": "新手任务进度",
+  "newbieTaskGetRewardsHint": "完成任务获取积分和优惠券奖励",
+  "newbieTaskNoTasks": "暂无任务",
+  "newbieTaskCouponReward": "优惠券奖励",
+  "newbieTaskReward": "{amount} 奖励",
+  "@newbieTaskReward": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "newbieTaskLocked": "未解锁",
+  "newbieOfficialTasksTitle": "官方任务",
   "officialTask": "官方",
+  "officialTaskCompleted": "已完成",
+  "officialTaskDeadline": "截止 {date}",
+  "@officialTaskDeadline": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "officialTaskSubmissionCount": "{count}/{max} 次",
+  "@officialTaskSubmissionCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
   "officialTaskSubmissions": "{count} 次提交",
   "@officialTaskSubmissions": {
     "placeholders": {
@@ -4445,6 +4479,8 @@
 
   "errorNewbieTaskNotCompleted": "该任务尚未完成",
   "errorNewbieTaskAlreadyClaimed": "该奖励已被领取",
+  "errorNewbieTaskClaimFailed": "领取奖励失败",
+  "errorNewbieStageClaimFailed": "领取阶段奖励失败",
   "errorOfficialTaskMaxReached": "已达最大提交次数",
   "errorOfficialTaskExpired": "该任务已过期",
   "errorNewbieTasksLoadFailed": "加载任务失败",

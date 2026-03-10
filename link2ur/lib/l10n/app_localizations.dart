@@ -18008,11 +18008,71 @@ abstract class AppLocalizations {
   /// **'All tasks completed!'**
   String get newbieTaskAllCompleted;
 
+  /// No description provided for @newbieTaskProgressTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Task Progress'**
+  String get newbieTaskProgressTitle;
+
+  /// No description provided for @newbieTaskGetRewardsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete tasks to earn points and coupons'**
+  String get newbieTaskGetRewardsHint;
+
+  /// No description provided for @newbieTaskNoTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'No tasks available'**
+  String get newbieTaskNoTasks;
+
+  /// No description provided for @newbieTaskCouponReward.
+  ///
+  /// In en, this message translates to:
+  /// **'Coupon reward'**
+  String get newbieTaskCouponReward;
+
+  /// No description provided for @newbieTaskReward.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} reward'**
+  String newbieTaskReward(String amount);
+
+  /// No description provided for @newbieTaskLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Locked'**
+  String get newbieTaskLocked;
+
+  /// No description provided for @newbieOfficialTasksTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Official Tasks'**
+  String get newbieOfficialTasksTitle;
+
   /// No description provided for @officialTask.
   ///
   /// In en, this message translates to:
   /// **'Official'**
   String get officialTask;
+
+  /// No description provided for @officialTaskCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get officialTaskCompleted;
+
+  /// No description provided for @officialTaskDeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Due {date}'**
+  String officialTaskDeadline(String date);
+
+  /// No description provided for @officialTaskSubmissionCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count}/{max} times'**
+  String officialTaskSubmissionCount(String count, String max);
 
   /// No description provided for @officialTaskSubmissions.
   ///
@@ -18115,6 +18175,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This reward has already been claimed'**
   String get errorNewbieTaskAlreadyClaimed;
+
+  /// No description provided for @errorNewbieTaskClaimFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to claim reward'**
+  String get errorNewbieTaskClaimFailed;
+
+  /// No description provided for @errorNewbieStageClaimFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to claim stage bonus'**
+  String get errorNewbieStageClaimFailed;
 
   /// No description provided for @errorOfficialTaskMaxReached.
   ///

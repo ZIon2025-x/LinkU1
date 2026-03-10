@@ -1689,6 +1689,9 @@ class AsyncNotificationCRUD:
         title: str,
         content: str,
         related_id: Optional[str] = None,
+        title_en: Optional[str] = None,
+        content_en: Optional[str] = None,
+        related_type: Optional[str] = None,
     ) -> models.Notification:
         """创建通知（如果已存在则更新）"""
         from sqlalchemy.exc import IntegrityError
@@ -1710,6 +1713,9 @@ class AsyncNotificationCRUD:
                 title=title,
                 content=content,
                 related_id=related_id_int,
+                title_en=title_en,
+                content_en=content_en,
+                related_type=related_type,
             )
             db.add(db_notification)
             await db.commit()
@@ -1732,6 +1738,12 @@ class AsyncNotificationCRUD:
                 # 更新现有通知的内容和时间
                 existing_notification.content = content
                 existing_notification.title = title
+                if title_en is not None:
+                    existing_notification.title_en = title_en
+                if content_en is not None:
+                    existing_notification.content_en = content_en
+                if related_type is not None:
+                    existing_notification.related_type = related_type
                 existing_notification.created_at = get_utc_time()
                 existing_notification.is_read = 0  # 重置为未读
                 existing_notification.read_at = None  # 清除已读时间

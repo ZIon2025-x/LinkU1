@@ -4500,7 +4500,41 @@
     }
   },
   "newbieTaskAllCompleted": "All tasks completed!",
+  "newbieTaskProgressTitle": "Task Progress",
+  "newbieTaskGetRewardsHint": "Complete tasks to earn points and coupons",
+  "newbieTaskNoTasks": "No tasks available",
+  "newbieTaskCouponReward": "Coupon reward",
+  "newbieTaskReward": "{amount} reward",
+  "@newbieTaskReward": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "newbieTaskLocked": "Locked",
+  "newbieOfficialTasksTitle": "Official Tasks",
   "officialTask": "Official",
+  "officialTaskCompleted": "Completed",
+  "officialTaskDeadline": "Due {date}",
+  "@officialTaskDeadline": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "officialTaskSubmissionCount": "{count}/{max} times",
+  "@officialTaskSubmissionCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
   "officialTaskSubmissions": "{count} submissions",
   "@officialTaskSubmissions": {
     "placeholders": {
@@ -4537,6 +4571,8 @@
 
   "errorNewbieTaskNotCompleted": "This task is not yet completed",
   "errorNewbieTaskAlreadyClaimed": "This reward has already been claimed",
+  "errorNewbieTaskClaimFailed": "Failed to claim reward",
+  "errorNewbieStageClaimFailed": "Failed to claim stage bonus",
   "errorOfficialTaskMaxReached": "Maximum submissions reached",
   "errorOfficialTaskExpired": "This task has expired",
   "errorNewbieTasksLoadFailed": "Failed to load tasks",

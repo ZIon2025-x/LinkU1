@@ -9798,7 +9798,44 @@ class AppLocalizationsEn extends AppLocalizations {
   String get newbieTaskAllCompleted => 'All tasks completed!';
 
   @override
+  String get newbieTaskProgressTitle => 'Task Progress';
+
+  @override
+  String get newbieTaskGetRewardsHint =>
+      'Complete tasks to earn points and coupons';
+
+  @override
+  String get newbieTaskNoTasks => 'No tasks available';
+
+  @override
+  String get newbieTaskCouponReward => 'Coupon reward';
+
+  @override
+  String newbieTaskReward(String amount) {
+    return '$amount reward';
+  }
+
+  @override
+  String get newbieTaskLocked => 'Locked';
+
+  @override
+  String get newbieOfficialTasksTitle => 'Official Tasks';
+
+  @override
   String get officialTask => 'Official';
+
+  @override
+  String get officialTaskCompleted => 'Completed';
+
+  @override
+  String officialTaskDeadline(String date) {
+    return 'Due $date';
+  }
+
+  @override
+  String officialTaskSubmissionCount(String count, String max) {
+    return '$count/$max times';
+  }
 
   @override
   String officialTaskSubmissions(String count) {
@@ -9855,6 +9892,12 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get errorNewbieTaskAlreadyClaimed =>
       'This reward has already been claimed';
+
+  @override
+  String get errorNewbieTaskClaimFailed => 'Failed to claim reward';
+
+  @override
+  String get errorNewbieStageClaimFailed => 'Failed to claim stage bonus';
 
   @override
   String get errorOfficialTaskMaxReached => 'Maximum submissions reached';

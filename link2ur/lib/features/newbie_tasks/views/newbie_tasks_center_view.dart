@@ -5,6 +5,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/utils/error_localizer.dart';
+import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../data/repositories/newbie_tasks_repository.dart';
@@ -36,6 +37,8 @@ class _TaskCenterContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
     return BlocListener<NewbieTasksBloc, NewbieTasksState>(
       listenWhen: (prev, curr) =>
           prev.errorMessage != curr.errorMessage &&
@@ -50,7 +53,7 @@ class _TaskCenterContent extends StatelessWidget {
         builder: (context, state) {
           return Scaffold(
             appBar: AppBar(
-              title: const Text('任务中心'),
+              title: Text(l10n.newbieTaskCenter),
             ),
             body: state.isLoading && state.tasks.isEmpty
                 ? const LoadingView()
@@ -83,6 +86,7 @@ class _TaskCenterContent extends StatelessWidget {
 
   Widget _buildBody(BuildContext context, NewbieTasksState state) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = context.l10n;
 
     return CustomScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -92,14 +96,17 @@ class _TaskCenterContent extends StatelessWidget {
           child: _OverallProgressCard(state: state),
         ),
 
-        // Stage 1: 完善身份
-        ..._buildStageSection(context, state, 1, '完善身份', isDark),
+        // Stage 1
+        ..._buildStageSection(
+            context, state, 1, l10n.newbieTaskStage1, isDark),
 
-        // Stage 2: 开始曝光
-        ..._buildStageSection(context, state, 2, '开始曝光', isDark),
+        // Stage 2
+        ..._buildStageSection(
+            context, state, 2, l10n.newbieTaskStage2, isDark),
 
-        // Stage 3: 长期成就
-        ..._buildStageSection(context, state, 3, '长期成就', isDark),
+        // Stage 3
+        ..._buildStageSection(
+            context, state, 3, l10n.newbieTaskStage3, isDark),
 
         // Official Tasks section
         if (state.officialTasks.isNotEmpty) ...[
@@ -127,7 +134,7 @@ class _TaskCenterContent extends StatelessWidget {
                   ),
                   AppSpacing.hSm,
                   Text(
-                    '官方任务',
+                    l10n.newbieOfficialTasksTitle,
                     style: TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.w700,
@@ -242,6 +249,7 @@ class _OverallProgressCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final completedCount = state.completedCount;
     final totalCount = state.totalCount;
     final progress = totalCount > 0 ? completedCount / totalCount : 0.0;
@@ -277,7 +285,7 @@ class _OverallProgressCard extends StatelessWidget {
                 ),
                 AppSpacing.hSm,
                 Text(
-                  '新手任务进度',
+                  l10n.newbieTaskProgressTitle,
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -311,9 +319,9 @@ class _OverallProgressCard extends StatelessWidget {
             Text(
               totalCount > 0
                   ? completedCount == totalCount
-                      ? '恭喜！所有任务已完成'
-                      : '完成任务获取积分和优惠券奖励'
-                  : '暂无任务',
+                      ? l10n.newbieTaskAllCompleted
+                      : l10n.newbieTaskGetRewardsHint
+                  : l10n.newbieTaskNoTasks,
               style: TextStyle(
                 fontSize: 13,
                 color: Colors.white.withValues(alpha: 0.7),

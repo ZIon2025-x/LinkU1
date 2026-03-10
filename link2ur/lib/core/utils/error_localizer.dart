@@ -278,6 +278,10 @@ class ErrorLocalizer {
         return context.l10n.errorNewbieTaskNotCompleted;
       case 'newbie_task_already_claimed':
         return context.l10n.errorNewbieTaskAlreadyClaimed;
+      case 'newbie_task_claim_failed':
+        return context.l10n.errorNewbieTaskClaimFailed;
+      case 'newbie_stage_claim_failed':
+        return context.l10n.errorNewbieStageClaimFailed;
       case 'official_task_max_reached':
         return context.l10n.errorOfficialTaskMaxReached;
       case 'official_task_expired':

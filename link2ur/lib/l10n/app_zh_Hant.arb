@@ -4392,5 +4392,88 @@
   "expertSearchSortLabel": "排序方式",
   "expertSearchSortRating": "評分",
   "expertSearchSortCompleted": "完成數最多",
-  "expertSearchSortNewest": "最新加入"
+  "expertSearchSortNewest": "最新加入",
+
+  "newbieTaskCenter": "任務中心",
+  "newbieTaskStage1": "完善資料",
+  "newbieTaskStage2": "開始分享",
+  "newbieTaskStage3": "成就達成",
+  "newbieTaskPending": "未完成",
+  "newbieTaskCompleted": "領取",
+  "newbieTaskClaimed": "已領取",
+  "newbieTaskClaimReward": "領取獎勵",
+  "newbieTaskStageBonus": "階段獎勵",
+  "newbieTaskPoints": "{amount} 積分",
+  "@newbieTaskPoints": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "newbieTaskProgress": "{completed}/{total} 已完成",
+  "@newbieTaskProgress": {
+    "placeholders": {
+      "completed": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "newbieTaskAllCompleted": "所有任務已完成！",
+  "newbieTaskProgressTitle": "新手任務進度",
+  "newbieTaskGetRewardsHint": "完成任務獲取積分和優惠券獎勵",
+  "newbieTaskNoTasks": "暫無任務",
+  "newbieTaskCouponReward": "優惠券獎勵",
+  "newbieTaskReward": "{amount} 獎勵",
+  "@newbieTaskReward": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "newbieTaskLocked": "未解鎖",
+  "newbieOfficialTasksTitle": "官方任務",
+  "officialTask": "官方",
+  "officialTaskCompleted": "已完成",
+  "officialTaskDeadline": "截止 {date}",
+  "@officialTaskDeadline": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "officialTaskSubmissions": "{count} 次提交",
+  "@officialTaskSubmissions": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "officialTaskSubmissionCount": "{count}/{max} 次",
+  "@officialTaskSubmissionCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+
+  "errorNewbieTaskNotCompleted": "該任務尚未完成",
+  "errorNewbieTaskAlreadyClaimed": "該獎勵已被領取",
+  "errorNewbieTaskClaimFailed": "領取獎勵失敗",
+  "errorNewbieStageClaimFailed": "領取階段獎勵失敗",
+  "errorOfficialTaskMaxReached": "已達最大提交次數",
+  "errorOfficialTaskExpired": "該任務已過期",
+  "errorNewbieTasksLoadFailed": "載入任務失敗",
+  "errorLeaderboardLoadFailed": "載入排行榜失敗",
+  "errorBadgesLoadFailed": "載入徽章失敗"
 }
