@@ -16,8 +16,10 @@ import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/app_feedback.dart';
 import '../../../core/widgets/cross_platform_image.dart';
 import '../../../core/widgets/link_search_dialog.dart';
+import '../../../core/utils/forum_permission_helper.dart';
 import '../../../data/repositories/discovery_repository.dart';
 import '../../../data/repositories/forum_repository.dart';
+import '../../auth/bloc/auth_bloc.dart';
 import '../bloc/forum_bloc.dart';
 import '../../../data/models/forum.dart';
 
@@ -295,6 +297,12 @@ class _CreatePostViewState extends State<CreatePostView> {
             AppFeedback.showError(context, context.localizeError(state.errorMessage));
           } else if (state.createPostSuccess) {
             unawaited(_clearDraft());
+            // 清空表单内容，使 _hasUnsavedChanges 为 false，
+            // 否则 PopScope(canPop: !_hasUnsavedChanges) 会拦截 pop
+            _titleController.clear();
+            _contentController.clear();
+            _selectedImages.clear();
+            _selectedFiles.clear();
             AppFeedback.showSuccess(
                 context, context.l10n.feedbackPostPublishSuccess);
             context.pop();
@@ -408,26 +416,43 @@ class _CreatePostViewState extends State<CreatePostView> {
                       ],
                     ),
                   ),
-                // 分类选择
+                // 分类选择（过滤掉仅管理员可发帖的板块）
                 if (state.categories.isNotEmpty) ...[
-                  DropdownButtonFormField<int>(
-                    key: ValueKey(_selectedCategoryId),
-                    initialValue: _selectedCategoryId,
-                    decoration: InputDecoration(
-                      labelText: context.l10n.forumSelectCategory,
-                      border: const OutlineInputBorder(),
-                    ),
-                    items: state.categories.map((category) {
-                      return DropdownMenuItem<int>(
-                        value: category.id,
-                        child: Text(category.displayName(
-                            Localizations.localeOf(context))),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      setState(() => _selectedCategoryId = value);
-                    },
-                  ),
+                  Builder(builder: (context) {
+                    final currentUser =
+                        context.read<AuthBloc>().state.user;
+                    final postableCategories =
+                        ForumPermissionHelper.filterPostableCategories(
+                            state.categories, currentUser);
+                    // 如果当前选中的分类不在可发帖列表中，重置
+                    if (_selectedCategoryId != null &&
+                        !postableCategories
+                            .any((c) => c.id == _selectedCategoryId)) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) {
+                          setState(() => _selectedCategoryId = null);
+                        }
+                      });
+                    }
+                    return DropdownButtonFormField<int>(
+                      key: ValueKey(_selectedCategoryId),
+                      initialValue: _selectedCategoryId,
+                      decoration: InputDecoration(
+                        labelText: context.l10n.forumSelectCategory,
+                        border: const OutlineInputBorder(),
+                      ),
+                      items: postableCategories.map((category) {
+                        return DropdownMenuItem<int>(
+                          value: category.id,
+                          child: Text(category.displayName(
+                              Localizations.localeOf(context))),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() => _selectedCategoryId = value);
+                      },
+                    );
+                  }),
                   AppSpacing.vMd,
                 ],
                 // 标题

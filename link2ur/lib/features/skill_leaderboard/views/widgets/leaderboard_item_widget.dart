@@ -113,28 +113,10 @@ class LeaderboardItemWidget extends StatelessWidget {
   }
 
   Widget _buildAvatar() {
-    if (entry.userAvatar != null && entry.userAvatar!.isNotEmpty) {
-      return ClipOval(
-        child: AsyncImageView(
-          imageUrl: entry.userAvatar,
-          width: 40,
-          height: 40,
-          memCacheWidth: 80,
-          memCacheHeight: 80,
-        ),
-      );
-    }
-    return CircleAvatar(
-      radius: 20,
-      backgroundColor: AppColors.primary.withAlpha(50),
-      child: Text(
-        entry.userName.isNotEmpty ? entry.userName[0].toUpperCase() : '?',
-        style: const TextStyle(
-          color: AppColors.primary,
-          fontWeight: FontWeight.w600,
-          fontSize: 16,
-        ),
-      ),
+    return AvatarView(
+      imageUrl: entry.userAvatar,
+      name: entry.userName,
+      size: 40,
     );
   }
 

@@ -127,6 +127,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       final user = await _authRepository.loginWithCode(
         email: event.email,
         code: event.code,
+        invitationCode: event.invitationCode,
       );
 
       await CacheManager.shared.invalidateForumCache();
@@ -161,6 +162,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       final user = await _authRepository.loginWithPhoneCode(
         phone: event.phone,
         code: event.code,
+        invitationCode: event.invitationCode,
       );
 
       await CacheManager.shared.invalidateForumCache();

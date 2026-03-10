@@ -1,6 +1,5 @@
 import 'dart:ui';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -982,27 +981,10 @@ class _OfficialPrizeInfoCard extends StatelessWidget {
                           padding: const EdgeInsets.only(bottom: 8),
                           child: Row(
                             children: [
-                              CircleAvatar(
-                                radius: 16,
-                                backgroundColor: AppColors.primary
-                                    .withValues(alpha: 0.1),
-                                backgroundImage: w.avatarUrl != null &&
-                                        w.avatarUrl!.isNotEmpty
-                                    ? CachedNetworkImageProvider(w.avatarUrl!)
-                                    : null,
-                                child: w.avatarUrl == null ||
-                                        w.avatarUrl!.isEmpty
-                                    ? Text(
-                                        w.name.isNotEmpty
-                                            ? w.name[0].toUpperCase()
-                                            : '?',
-                                        style: const TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                          color: AppColors.primary,
-                                        ),
-                                      )
-                                    : null,
+                              AvatarView(
+                                imageUrl: w.avatarUrl,
+                                name: w.name,
+                                size: 32,
                               ),
                               const SizedBox(width: 10),
                               Expanded(

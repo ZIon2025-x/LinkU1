@@ -25,6 +25,7 @@ class HomeState extends Equatable {
     this.isLoadingDiscovery = false,
     this.hasMoreDiscovery = true,
     this.discoveryPage = 1,
+    this.discoverySeed,
     this.openActivities = const [],
     this.isLoadingOpenActivities = false,
     this.banners = const [],
@@ -50,6 +51,8 @@ class HomeState extends Equatable {
   final bool isLoadingDiscovery;
   final bool hasMoreDiscovery;
   final int discoveryPage;
+  /// 后端返回的随机种子，翻页时回传保证排序一致
+  final int? discoverySeed;
 
   /// 开放中的活动（首页「热门活动」用；空则隐藏区域）
   final List<Activity> openActivities;
@@ -84,6 +87,7 @@ class HomeState extends Equatable {
     bool? isLoadingDiscovery,
     bool? hasMoreDiscovery,
     int? discoveryPage,
+    int? discoverySeed,
     List<Activity>? openActivities,
     bool? isLoadingOpenActivities,
     List<app.Banner>? banners,
@@ -107,6 +111,7 @@ class HomeState extends Equatable {
       isLoadingDiscovery: isLoadingDiscovery ?? this.isLoadingDiscovery,
       hasMoreDiscovery: hasMoreDiscovery ?? this.hasMoreDiscovery,
       discoveryPage: discoveryPage ?? this.discoveryPage,
+      discoverySeed: discoverySeed ?? this.discoverySeed,
       openActivities: openActivities ?? this.openActivities,
       isLoadingOpenActivities: isLoadingOpenActivities ?? this.isLoadingOpenActivities,
       banners: banners ?? this.banners,
@@ -134,6 +139,7 @@ class HomeState extends Equatable {
         isLoadingDiscovery,
         hasMoreDiscovery,
         discoveryPage,
+        discoverySeed,
         openActivities,
         isLoadingOpenActivities,
         banners,

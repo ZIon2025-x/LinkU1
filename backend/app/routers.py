@@ -5370,9 +5370,16 @@ def update_profile(
                 raise HTTPException(status_code=400, detail="语言偏好只能是 'zh' 或 'en'")
             update_data["language_preference"] = data.language_preference
 
-        # 处理 bio 更新
+        # 处理 bio 更新（检测联系方式并自动替换）
         if data.bio is not None:
-            update_data["bio"] = data.bio
+            from app.content_filter.contact_detector import ContactDetector
+            bio_text = data.bio.strip()
+            if bio_text:
+                detector = ContactDetector()
+                result = detector.detect(bio_text)
+                if result.has_contact:
+                    bio_text = result.masked_text
+            update_data["bio"] = bio_text if bio_text else None
 
         # 处理邮箱更新
         if data.email is not None:

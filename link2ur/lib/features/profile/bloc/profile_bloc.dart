@@ -382,6 +382,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       final data = event.data;
       final user = await _userRepository.updateProfile(
         name: data['name'] as String?,
+        bio: data['bio'] as String?,
         residenceCity: data['residence_city'] as String?,
         languagePreference: data['language_preference'] as String?,
         email: data['email'] as String?,

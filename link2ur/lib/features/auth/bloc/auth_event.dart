@@ -30,13 +30,15 @@ class AuthLoginWithCodeRequested extends AuthEvent {
   const AuthLoginWithCodeRequested({
     required this.email,
     required this.code,
+    this.invitationCode,
   });
 
   final String email;
   final String code;
+  final String? invitationCode;
 
   @override
-  List<Object> get props => [email, code];
+  List<Object?> get props => [email, code, invitationCode];
 }
 
 /// 手机验证码登录
@@ -44,13 +46,15 @@ class AuthLoginWithPhoneRequested extends AuthEvent {
   const AuthLoginWithPhoneRequested({
     required this.phone,
     required this.code,
+    this.invitationCode,
   });
 
   final String phone;
   final String code;
+  final String? invitationCode;
 
   @override
-  List<Object> get props => [phone, code];
+  List<Object?> get props => [phone, code, invitationCode];
 }
 
 /// 注册

@@ -44,6 +44,7 @@ class _EditProfileContent extends StatefulWidget {
 class _EditProfileContentState extends State<_EditProfileContent> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  final _bioController = TextEditingController();
   final _residenceCityController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -55,6 +56,7 @@ class _EditProfileContentState extends State<_EditProfileContent> {
   final _phoneNotifier = ValueNotifier<String>('');
 
   String _originalName = '';
+  String _originalBio = '';
   String _originalCity = '';
   String? _originalEmail;
   String? _originalPhone;
@@ -62,6 +64,7 @@ class _EditProfileContentState extends State<_EditProfileContent> {
   bool get _hasUnsavedChanges {
     if (!_initialized) return false;
     return _nameController.text != _originalName ||
+        _bioController.text != _originalBio ||
         _residenceCityController.text != _originalCity ||
         _emailController.text.trim() != (_originalEmail ?? '') ||
         _phoneController.text.trim() != (_originalPhone ?? '');
@@ -70,6 +73,7 @@ class _EditProfileContentState extends State<_EditProfileContent> {
   @override
   void dispose() {
     _nameController.dispose();
+    _bioController.dispose();
     _residenceCityController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
@@ -84,10 +88,12 @@ class _EditProfileContentState extends State<_EditProfileContent> {
     if (!_initialized && state.user != null) {
       final user = state.user!;
       _nameController.text = user.name;
+      _bioController.text = user.bio ?? '';
       _residenceCityController.text = user.residenceCity ?? '';
       _emailController.text = user.email ?? '';
       _phoneController.text = user.phone ?? '';
       _originalName = user.name;
+      _originalBio = user.bio ?? '';
       _originalCity = user.residenceCity ?? '';
       _originalEmail = user.email ?? '';
       _originalPhone = user.phone ?? '';
@@ -171,6 +177,7 @@ class _EditProfileContentState extends State<_EditProfileContent> {
     final state = context.read<ProfileBloc>().state;
     final data = <String, dynamic>{
       'name': _nameController.text.trim(),
+      'bio': _bioController.text.trim(),
     };
 
     final city = _residenceCityController.text.trim();
@@ -356,6 +363,22 @@ class _EditProfileContentState extends State<_EditProfileContent> {
                       }
                       return null;
                     },
+                  ),
+                  AppSpacing.vMd,
+
+                  // Bio
+                  TextFormField(
+                    controller: _bioController,
+                    decoration: InputDecoration(
+                      labelText: context.l10n.profileBio,
+                      hintText: context.l10n.profileBioHint,
+                      prefixIcon: const Icon(Icons.info_outline),
+                      border: OutlineInputBorder(
+                          borderRadius: AppRadius.allMedium),
+                      alignLabelWithHint: true,
+                    ),
+                    maxLines: 3,
+                    maxLength: 200,
                   ),
                   AppSpacing.vMd,
 

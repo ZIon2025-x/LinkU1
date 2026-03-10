@@ -64,13 +64,18 @@ class AuthRepository {
   Future<User> loginWithCode({
     required String email,
     required String code,
+    String? invitationCode,
   }) async {
+    final data = <String, dynamic>{
+      'email': email,
+      'verification_code': code,
+    };
+    if (invitationCode != null && invitationCode.isNotEmpty) {
+      data['invitation_code'] = invitationCode;
+    }
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.loginWithCode,
-      data: {
-        'email': email,
-        'verification_code': code,
-      },
+      data: data,
     );
 
     if (!response.isSuccess) {
@@ -104,13 +109,18 @@ class AuthRepository {
   Future<User> loginWithPhoneCode({
     required String phone,
     required String code,
+    String? invitationCode,
   }) async {
+    final data = <String, dynamic>{
+      'phone': phone,
+      'verification_code': code,
+    };
+    if (invitationCode != null && invitationCode.isNotEmpty) {
+      data['invitation_code'] = invitationCode;
+    }
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.loginWithPhoneCode,
-      data: {
-        'phone': phone,
-        'verification_code': code,
-      },
+      data: data,
     );
 
     if (!response.isSuccess) {

@@ -279,6 +279,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authInvitationCodeHint => 'Enter invite code or 8-digit user ID';
 
   @override
+  String get authInvitationCodeInvalidTitle => 'Invitation Code Not Found';
+
+  @override
+  String get authInvitationCodeInvalidMessage =>
+      'The invitation code or user ID you entered does not exist. Would you like to continue without it?';
+
+  @override
+  String get authContinueWithoutInvitation => 'Continue without it';
+
+  @override
   String get authAgreeToTerms => 'I have read and agree to the';
 
   @override
@@ -988,6 +998,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileSelectAvatar => 'Select Avatar';
+
+  @override
+  String get profileAvatarUploadCustom => 'Upload photo';
+
+  @override
+  String get profileAvatarFromGallery => 'Choose from gallery';
+
+  @override
+  String get profileAvatarFromCamera => 'Take a photo';
+
+  @override
+  String get profileAvatarPresets => 'Default avatars';
 
   @override
   String get locationTitle => 'Location';

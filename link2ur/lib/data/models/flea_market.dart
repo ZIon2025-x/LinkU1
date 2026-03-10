@@ -20,6 +20,7 @@ class FleaMarketItem extends Equatable {
     this.sellerUserLevel,
     this.viewCount = 0,
     this.favoriteCount = 0,
+    this.isFavorited,
     this.refreshedAt,
     this.createdAt,
     this.updatedAt,
@@ -63,6 +64,7 @@ class FleaMarketItem extends Equatable {
   final String? sellerUserLevel; // normal, vip, super
   final int viewCount;
   final int favoriteCount;
+  final bool? isFavorited;
   final DateTime? refreshedAt;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -136,6 +138,7 @@ class FleaMarketItem extends Equatable {
       sellerUserLevel: _toStringNullable(json['seller_user_level']),
       viewCount: _toInt(json['view_count']),
       favoriteCount: _toInt(json['favorite_count']),
+      isFavorited: _toBoolNullable(json['is_favorited']),
       refreshedAt: _toDateTimeNullable(json['refreshed_at']),
       createdAt: _toDateTimeNullable(json['created_at']),
       updatedAt: _toDateTimeNullable(json['updated_at']),
@@ -182,6 +185,7 @@ class FleaMarketItem extends Equatable {
       'seller_user_level': sellerUserLevel,
       'view_count': viewCount,
       'favorite_count': favoriteCount,
+      'is_favorited': isFavorited,
       'refreshed_at': refreshedAt?.toIso8601String(),
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
@@ -220,6 +224,7 @@ class FleaMarketItem extends Equatable {
     String? sellerUserLevel,
     int? viewCount,
     int? favoriteCount,
+    bool? isFavorited,
     DateTime? refreshedAt,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -256,6 +261,7 @@ class FleaMarketItem extends Equatable {
       sellerUserLevel: sellerUserLevel ?? this.sellerUserLevel,
       viewCount: viewCount ?? this.viewCount,
       favoriteCount: favoriteCount ?? this.favoriteCount,
+      isFavorited: isFavorited ?? this.isFavorited,
       refreshedAt: refreshedAt ?? this.refreshedAt,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,

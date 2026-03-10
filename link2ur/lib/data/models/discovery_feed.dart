@@ -29,6 +29,7 @@ class DiscoveryFeedItem extends Equatable {
     this.currency,
     this.rating,
     this.likeCount,
+    this.isFavorited,
     this.commentCount,
     this.upvoteCount,
     this.downvoteCount,
@@ -61,6 +62,7 @@ class DiscoveryFeedItem extends Equatable {
   final String? currency;
   final double? rating;
   final int? likeCount;
+  final bool? isFavorited;
   final int? commentCount;
   final int? upvoteCount;
   final int? downvoteCount;
@@ -149,6 +151,7 @@ class DiscoveryFeedItem extends Equatable {
       currency: json['currency'] as String?,
       rating: (json['rating'] as num?)?.toDouble(),
       likeCount: json['like_count'] as int?,
+      isFavorited: parseBoolNullable(json['is_favorited']),
       commentCount: json['comment_count'] as int?,
       upvoteCount: json['upvote_count'] as int?,
       downvoteCount: json['downvote_count'] as int?,
@@ -294,11 +297,14 @@ class DiscoveryFeedResponse {
     required this.items,
     required this.page,
     required this.hasMore,
+    this.seed,
   });
 
   final List<DiscoveryFeedItem> items;
   final int page;
   final bool hasMore;
+  /// 随机种子，翻页时回传保证排序一致
+  final int? seed;
 
   factory DiscoveryFeedResponse.fromJson(Map<String, dynamic> json) {
     return DiscoveryFeedResponse(
@@ -308,6 +314,7 @@ class DiscoveryFeedResponse {
           [],
       page: json['page'] as int? ?? 1,
       hasMore: parseBool(json['has_more']),
+      seed: json['seed'] as int?,
     );
   }
 }

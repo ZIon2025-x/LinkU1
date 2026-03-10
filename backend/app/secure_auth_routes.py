@@ -1452,10 +1452,25 @@ def login_with_phone_verification_code(
         
         phone = normalize_phone_number(login_data.phone.strip())
         verification_code = login_data.verification_code.strip()
-        
+
+        # 🔑 邀请码预验证（仅对新用户生效，在消耗验证码之前验证，以便失败时可重试）
+        invitation_code_input = (login_data.invitation_code or "").strip()
+        _invitation_result = None  # (inviter_id, invitation_code_id, invitation_code_text)
+        if invitation_code_input:
+            # 先查询用户是否已存在，老用户跳过邀请码验证（邀请码仅对新注册用户有意义）
+            existing_user = crud.get_user_by_phone(db, phone)
+            if not existing_user:
+                from app.coupon_points_crud import process_invitation_input
+                inviter_id, inv_code_id, inv_code_text, error_msg = process_invitation_input(db, invitation_code_input)
+                if error_msg:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="invitation_code_invalid"
+                    )
+                _invitation_result = (inviter_id, inv_code_id, inv_code_text)
+
         # 验证手机号格式（前端已发送完整号码，如 +447700123456）
         # 验证格式：必须以 + 开头，后面是10-15位数字
-        import re
         if not phone.startswith('+'):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -1585,6 +1600,29 @@ def login_with_phone_verification_code(
                 
                 user = db_user
                 logger.info(f"新用户已创建（手机号登录）: id={user_id}, phone={phone_digits}, name={username}, email={temp_email}, is_verified=1")
+
+                # 处理邀请码（新用户专属）
+                if _invitation_result:
+                    _inv_inviter_id, _inv_code_id, _inv_code_text = _invitation_result
+                    try:
+                        user.inviter_id = _inv_inviter_id
+                        user.invitation_code_id = _inv_code_id
+                        user.invitation_code_text = _inv_code_text
+                        db.commit()
+                        db.refresh(user)
+                        logger.info(f"新用户邀请码已设置: user={user_id}, inviter={_inv_inviter_id}, code_id={_inv_code_id}")
+
+                        # 发放邀请码奖励
+                        if _inv_code_id:
+                            from app.coupon_points_crud import use_invitation_code
+                            reward_ok, reward_err = use_invitation_code(db, user_id, _inv_code_id)
+                            if reward_ok:
+                                logger.info(f"邀请码奖励已发放: user={user_id}")
+                            else:
+                                logger.warning(f"邀请码奖励发放失败: {reward_err}")
+                    except Exception as inv_e:
+                        logger.warning(f"处理邀请码失败（不影响登录）: {inv_e}")
+
             except Exception as e:
                 db.rollback()
                 logger.error(f"创建新用户失败: {e}")
@@ -1592,7 +1630,7 @@ def login_with_phone_verification_code(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail=f"创建用户失败: {str(e)}"
                 )
-        
+
         # 检查用户状态
         if user.is_suspended:
             client_ip = get_client_ip(request)
@@ -1739,7 +1777,23 @@ def login_with_verification_code(
         
         email = login_data.email.strip().lower()
         verification_code = login_data.verification_code.strip()
-        
+
+        # 🔑 邀请码预验证（仅对新用户生效，在消耗验证码之前验证，以便失败时可重试）
+        invitation_code_input = (login_data.invitation_code or "").strip()
+        _invitation_result = None  # (inviter_id, invitation_code_id, invitation_code_text)
+        if invitation_code_input:
+            # 先查询用户是否已存在，老用户跳过邀请码验证（邀请码仅对新注册用户有意义）
+            existing_user = crud.get_user_by_email(db, email)
+            if not existing_user:
+                from app.coupon_points_crud import process_invitation_input
+                inviter_id, inv_code_id, inv_code_text, error_msg = process_invitation_input(db, invitation_code_input)
+                if error_msg:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="invitation_code_invalid"
+                    )
+                _invitation_result = (inviter_id, inv_code_id, inv_code_text)
+
         # 🔒 暴力破解保护：限制验证码尝试次数
         try:
             from app.redis_cache import get_redis_client
@@ -1833,6 +1887,29 @@ def login_with_verification_code(
                 
                 user = db_user
                 logger.info(f"新用户已创建: id={user_id}, email={email}, name={username}, is_verified=1")
+
+                # 处理邀请码（新用户专属）
+                if _invitation_result:
+                    _inv_inviter_id, _inv_code_id, _inv_code_text = _invitation_result
+                    try:
+                        user.inviter_id = _inv_inviter_id
+                        user.invitation_code_id = _inv_code_id
+                        user.invitation_code_text = _inv_code_text
+                        db.commit()
+                        db.refresh(user)
+                        logger.info(f"新用户邀请码已设置: user={user_id}, inviter={_inv_inviter_id}, code_id={_inv_code_id}")
+
+                        # 发放邀请码奖励
+                        if _inv_code_id:
+                            from app.coupon_points_crud import use_invitation_code
+                            reward_ok, reward_err = use_invitation_code(db, user_id, _inv_code_id)
+                            if reward_ok:
+                                logger.info(f"邀请码奖励已发放: user={user_id}")
+                            else:
+                                logger.warning(f"邀请码奖励发放失败: {reward_err}")
+                    except Exception as inv_e:
+                        logger.warning(f"处理邀请码失败（不影响登录）: {inv_e}")
+
             except Exception as e:
                 db.rollback()
                 logger.error(f"创建新用户失败: {e}")
@@ -1840,7 +1917,7 @@ def login_with_verification_code(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail=f"创建用户失败: {str(e)}"
                 )
-        
+
         # 检查用户状态
         if user.is_suspended:
             client_ip = get_client_ip(request)

@@ -610,11 +610,15 @@ class _FleaMarketItemCard extends StatelessWidget {
                       ),
                       // 收藏数
                       Icon(
-                        Icons.favorite_border,
+                        item.isFavorited == true
+                            ? Icons.favorite
+                            : Icons.favorite_border,
                         size: 14,
-                        color: isDark
-                            ? AppColors.textTertiaryDark
-                            : AppColors.textTertiaryLight,
+                        color: item.isFavorited == true
+                            ? AppColors.error
+                            : isDark
+                                ? AppColors.textTertiaryDark
+                                : AppColors.textTertiaryLight,
                       ),
                       if (item.favoriteCount > 0) ...[
                         const SizedBox(width: 2),

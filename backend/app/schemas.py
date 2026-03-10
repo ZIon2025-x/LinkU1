@@ -65,6 +65,7 @@ class EmailVerificationCodeLogin(BaseModel):
     email: str
     verification_code: str
     captcha_token: Optional[str] = None  # CAPTCHA 验证 token
+    invitation_code: Optional[str] = None  # 邀请码或8位邀请人用户ID（选填，仅新用户生效）
 
 class PhoneVerificationCodeRequest(BaseModel):
     """请求发送手机验证码"""
@@ -76,6 +77,7 @@ class PhoneVerificationCodeLogin(BaseModel):
     phone: str
     verification_code: str
     captcha_token: Optional[str] = None  # CAPTCHA 验证 token
+    invitation_code: Optional[str] = None  # 邀请码或8位邀请人用户ID（选填，仅新用户生效）
 
 class UpdateEmailRequest(BaseModel):
     """请求发送邮箱修改验证码"""
@@ -2624,6 +2626,7 @@ class FleaMarketItemResponse(BaseModel):
     seller_user_level: Optional[str] = None  # 卖家会员等级：normal, vip, super（用于「会员卖家」角标）
     view_count: int
     favorite_count: int = 0  # 收藏数量
+    is_favorited: bool = False  # 当前用户是否已收藏
     refreshed_at: str
     created_at: str
     updated_at: str

@@ -56,7 +56,6 @@ class _PostCard extends StatelessWidget {
                       width: w,
                       height: h,
                       memCacheWidth: (w * MediaQuery.devicePixelRatioOf(context)).round(),
-                      memCacheHeight: (h * MediaQuery.devicePixelRatioOf(context)).round(),
                     ),
                   );
                 },
@@ -132,8 +131,14 @@ class _PostCard extends StatelessWidget {
                     padding: const EdgeInsets.only(top: 6),
                     child: Row(
                       children: [
-                        Icon(Icons.favorite_border, size: 14,
-                            color: metaColor),
+                        Icon(
+                            item.isFavorited == true
+                                ? Icons.favorite
+                                : Icons.favorite_border,
+                            size: 14,
+                            color: item.isFavorited == true
+                                ? AppColors.error
+                                : metaColor),
                         const SizedBox(width: 3),
                         Text('${item.likeCount ?? 0}',
                             style: metaStyle),
@@ -211,7 +216,6 @@ class _ProductCard extends StatelessWidget {
                       width: w,
                       height: w,
                       memCacheWidth: (w * MediaQuery.devicePixelRatioOf(context)).round(),
-                      memCacheHeight: (w * MediaQuery.devicePixelRatioOf(context)).round(),
                     ),
                   );
                 },
@@ -267,11 +271,16 @@ class _ProductCard extends StatelessWidget {
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.favorite_border,
+                            Icon(
+                                item.isFavorited == true
+                                    ? Icons.favorite
+                                    : Icons.favorite_border,
                                 size: 12,
-                                color: isDark
-                                    ? AppColors.textTertiaryDark
-                                    : AppColors.textTertiaryLight),
+                                color: item.isFavorited == true
+                                    ? AppColors.error
+                                    : isDark
+                                        ? AppColors.textTertiaryDark
+                                        : AppColors.textTertiaryLight),
                             const SizedBox(width: 2),
                             Text(
                               '${item.likeCount}',
@@ -626,7 +635,6 @@ class _RankingCard extends StatelessWidget {
                       width: w,
                       height: h,
                       memCacheWidth: (w * MediaQuery.devicePixelRatioOf(context)).round(),
-                      memCacheHeight: (h * MediaQuery.devicePixelRatioOf(context)).round(),
                     ),
                   );
                 },
@@ -779,7 +787,6 @@ class _ServiceCard extends StatelessWidget {
                       width: w,
                       height: h,
                       memCacheWidth: (w * MediaQuery.devicePixelRatioOf(context)).round(),
-                      memCacheHeight: (h * MediaQuery.devicePixelRatioOf(context)).round(),
                     ),
                   );
                 },

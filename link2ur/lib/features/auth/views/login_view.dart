@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:ui';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/constants/app_assets.dart';
 import '../../../core/utils/haptic_feedback.dart';
@@ -32,10 +34,14 @@ class _LoginViewState extends State<LoginView>
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _codeController = TextEditingController();
+  final _invitationCodeController = TextEditingController();
 
   bool _obscurePassword = true;
   LoginMethod _loginMethod = LoginMethod.password;
   bool _showSessionExpiredBanner = false;
+  bool _agreeTerms = false;
+  late TapGestureRecognizer _termsTapRecognizer;
+  late TapGestureRecognizer _privacyTapRecognizer;
 
   // ---- 倒计时 ----
   int _countdown = 0;
@@ -78,6 +84,12 @@ class _LoginViewState extends State<LoginView>
       ),
     );
 
+    // 协议链接手势
+    _termsTapRecognizer = TapGestureRecognizer()
+      ..onTap = () => launchUrl(Uri.parse('https://link2ur.com/terms'));
+    _privacyTapRecognizer = TapGestureRecognizer()
+      ..onTap = () => launchUrl(Uri.parse('https://link2ur.com/privacy'));
+
     // 启动
     _animController.forward();
 
@@ -99,14 +111,32 @@ class _LoginViewState extends State<LoginView>
     _emailController.dispose();
     _passwordController.dispose();
     _codeController.dispose();
+    _invitationCodeController.dispose();
+    _termsTapRecognizer.dispose();
+    _privacyTapRecognizer.dispose();
     super.dispose();
   }
 
   // ---- 业务逻辑 ----
 
-  void _onLogin() {
+  void _onLogin({bool skipInvitationCode = false}) {
     if (!_formKey.currentState!.validate()) return;
+
+    // 验证码登录需勾选协议
+    if (_loginMethod != LoginMethod.password && !_agreeTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.l10n.authPleaseAgreeToTerms),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
     final bloc = context.read<AuthBloc>();
+    final invitationCode = skipInvitationCode
+        ? null
+        : _invitationCodeController.text.trim();
 
     switch (_loginMethod) {
       case LoginMethod.password:
@@ -119,16 +149,17 @@ class _LoginViewState extends State<LoginView>
         bloc.add(AuthLoginWithCodeRequested(
           email: _emailController.text.trim(),
           code: _codeController.text.trim(),
+          invitationCode: invitationCode,
         ));
         break;
       case LoginMethod.phoneCode:
         final rawPhone = _emailController.text.trim();
-        // 去掉前导0后拼接 +44（英国号码国际格式不含前导0）
         final localNumber = rawPhone.startsWith('0') ? rawPhone.substring(1) : rawPhone;
         final fullPhone = '+44$localNumber';
         bloc.add(AuthLoginWithPhoneRequested(
           phone: fullPhone,
           code: _codeController.text.trim(),
+          invitationCode: invitationCode,
         ));
         break;
     }
@@ -175,7 +206,34 @@ class _LoginViewState extends State<LoginView>
       _emailController.clear();
       _passwordController.clear();
       _codeController.clear();
+      _invitationCodeController.clear();
+      _agreeTerms = false;
     });
+  }
+
+  /// 邀请码无效时弹对话框，让用户选择是否跳过邀请码继续登录
+  void _showInvitationCodeErrorDialog() {
+    final l10n = context.l10n;
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.authInvitationCodeInvalidTitle),
+        content: Text(l10n.authInvitationCodeInvalidMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(l10n.commonCancel),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              _onLogin(skipInvitationCode: true);
+            },
+            child: Text(l10n.authContinueWithoutInvitation),
+          ),
+        ],
+      ),
+    );
   }
 
   // ---- 构建 ----
@@ -230,14 +288,20 @@ class _LoginViewState extends State<LoginView>
               setState(() => _showSessionExpiredBanner = false);
             }
           } else if (state.hasError) {
-            final localizedError =
-                ErrorLocalizer.localize(context, state.errorMessage);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(localizedError),
-                backgroundColor: AppColors.error,
-              ),
-            );
+            final errMsg = state.errorMessage ?? '';
+            if (errMsg.contains('invitation_code_invalid')) {
+              // 邀请码无效 — 弹对话框让用户选择是否继续登录
+              _showInvitationCodeErrorDialog();
+            } else {
+              final localizedError =
+                  ErrorLocalizer.localize(context, state.errorMessage);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(localizedError),
+                  backgroundColor: AppColors.error,
+                ),
+              );
+            }
           } else if (state.codeSendStatus == CodeSendStatus.sent) {
             setState(() => _countdown = 60);
             _startCountdown();
@@ -630,6 +694,19 @@ class _LoginViewState extends State<LoginView>
 
                 // 输入区域
                 _buildInputFields(isDark, state),
+
+                // 邀请码（仅验证码登录显示）
+                if (_loginMethod != LoginMethod.password) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  _buildInvitationCodeField(isDark),
+                ],
+
+                // 协议勾选（仅验证码登录显示）
+                if (_loginMethod != LoginMethod.password) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  _buildTermsCheckbox(isDark),
+                ],
+
                 const SizedBox(height: AppSpacing.xl),
 
                 // 登录按钮
@@ -1024,6 +1101,101 @@ class _LoginViewState extends State<LoginView>
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  // ==================== 邀请码输入框 ====================
+
+  Widget _buildInvitationCodeField(bool isDark) {
+    return _StyledTextField(
+      controller: _invitationCodeController,
+      label: context.l10n.authInvitationCodeOptional,
+      placeholder: context.l10n.authInvitationCodeHint,
+      icon: Icons.card_giftcard_outlined,
+      keyboardType: TextInputType.text,
+      textInputAction: TextInputAction.done,
+      isDark: isDark,
+    );
+  }
+
+  // ==================== 同意条款 ====================
+
+  Widget _buildTermsCheckbox(bool isDark) {
+    return Semantics(
+      button: true,
+      label: 'Toggle terms agreement',
+      child: GestureDetector(
+        onTap: () {
+          AppHaptics.selection();
+          setState(() => _agreeTerms = !_agreeTerms);
+        },
+        behavior: HitTestBehavior.opaque,
+        child: Row(
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 22,
+              height: 22,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(6),
+                color: _agreeTerms ? AppColors.primary : Colors.transparent,
+                border: Border.all(
+                  color: _agreeTerms
+                      ? AppColors.primary
+                      : (isDark
+                          ? Colors.white.withValues(alpha: 0.3)
+                          : AppColors.textSecondaryLight.withValues(alpha: 0.4)),
+                  width: 1.5,
+                ),
+                boxShadow: _agreeTerms
+                    ? [
+                        BoxShadow(
+                          color: AppColors.primary.withValues(alpha: 0.3),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: _agreeTerms
+                  ? const Icon(Icons.check, size: 15, color: Colors.white)
+                  : null,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text.rich(
+                TextSpan(
+                  text: context.l10n.authIAgreePrefix,
+                  style: AppTypography.subheadline.copyWith(
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
+                  ),
+                  children: [
+                    TextSpan(
+                      text: context.l10n.authTermsOfService,
+                      style: AppTypography.subheadline.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      recognizer: _termsTapRecognizer,
+                    ),
+                    TextSpan(text: context.l10n.authAnd),
+                    TextSpan(
+                      text: context.l10n.authPrivacyPolicy,
+                      style: AppTypography.subheadline.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      recognizer: _privacyTapRecognizer,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

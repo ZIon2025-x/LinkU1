@@ -293,6 +293,7 @@ async def get_flea_market_items(
     keyword: Optional[str] = Query(None),
     status_filter: Optional[str] = Query("active", alias="status", pattern="^(active|sold)$"),
     seller_id: Optional[str] = Query(None, description="卖家ID，用于筛选特定卖家的商品"),
+    current_user: Optional[models.User] = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """获取商品列表（分页、搜索、筛选）- 带Redis缓存"""
@@ -302,8 +303,8 @@ async def get_flea_market_items(
         if not seller_id:
             status_filter = "active"
         
-        # 尝试从缓存获取（如果有seller_id筛选，不使用缓存）
-        if not seller_id:
+        # 尝试从缓存获取（如果有seller_id筛选或用户已登录，不使用缓存）
+        if not seller_id and not current_user:
             from app.redis_cache import redis_cache
             cache_key = get_cache_key_for_items(page, pageSize, category, keyword, status_filter)
             cached_result = redis_cache.get(cache_key)
@@ -421,7 +422,18 @@ async def get_flea_market_items(
             )
             for row in fav_result.all():
                 favorite_counts_map[row[0]] = row[1]
-        
+
+        # 批量查询当前用户的收藏状态
+        user_favorited_ids = set()
+        if current_user and item_ids:
+            user_fav_result = await db.execute(
+                select(models.FleaMarketFavorite.item_id).where(
+                    models.FleaMarketFavorite.user_id == current_user.id,
+                    models.FleaMarketFavorite.item_id.in_(item_ids)
+                )
+            )
+            user_favorited_ids = {row[0] for row in user_fav_result.all()}
+
         # 构建响应
         processed_items = []
         for item in items:
@@ -457,12 +469,13 @@ async def get_flea_market_items(
                 seller_user_level=seller_levels.get(item.seller_id),
                 view_count=item.view_count or 0,
                 favorite_count=favorite_count,
+                is_favorited=item.id in user_favorited_ids,
                 refreshed_at=format_iso_utc(item.refreshed_at),
                 created_at=format_iso_utc(item.created_at),
                 updated_at=format_iso_utc(item.updated_at),
                 days_until_auto_delist=days_until_auto_delist,
             ))
-        
+
         response = schemas.FleaMarketItemListResponse(
             items=processed_items,
             page=page,
@@ -470,9 +483,9 @@ async def get_flea_market_items(
             total=total,
             hasMore=skip + len(processed_items) < total
         )
-        
-        # 缓存结果（5分钟）：仅在不按卖家筛选时缓存；必须存 dict，否则 json 会变成 str(obj) 导致取回时 ResponseValidationError
-        if not seller_id:
+
+        # 缓存结果（5分钟）：仅在不按卖家筛选且未登录时缓存；is_favorited 是用户维度数据，不能缓存
+        if not seller_id and not current_user:
             try:
                 from app.redis_cache import redis_cache
                 redis_cache.set(cache_key, response.model_dump(), ttl=300)

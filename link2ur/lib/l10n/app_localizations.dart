@@ -615,6 +615,24 @@ abstract class AppLocalizations {
   /// **'Enter invite code or 8-digit user ID'**
   String get authInvitationCodeHint;
 
+  /// No description provided for @authInvitationCodeInvalidTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Invitation Code Not Found'**
+  String get authInvitationCodeInvalidTitle;
+
+  /// No description provided for @authInvitationCodeInvalidMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'The invitation code or user ID you entered does not exist. Would you like to continue without it?'**
+  String get authInvitationCodeInvalidMessage;
+
+  /// No description provided for @authContinueWithoutInvitation.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue without it'**
+  String get authContinueWithoutInvitation;
+
   /// No description provided for @authAgreeToTerms.
   ///
   /// In en, this message translates to:
@@ -1958,6 +1976,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Select Avatar'**
   String get profileSelectAvatar;
+
+  /// No description provided for @profileAvatarUploadCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload photo'**
+  String get profileAvatarUploadCustom;
+
+  /// No description provided for @profileAvatarFromGallery.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose from gallery'**
+  String get profileAvatarFromGallery;
+
+  /// No description provided for @profileAvatarFromCamera.
+  ///
+  /// In en, this message translates to:
+  /// **'Take a photo'**
+  String get profileAvatarFromCamera;
+
+  /// No description provided for @profileAvatarPresets.
+  ///
+  /// In en, this message translates to:
+  /// **'Default avatars'**
+  String get profileAvatarPresets;
 
   /// No description provided for @locationTitle.
   ///

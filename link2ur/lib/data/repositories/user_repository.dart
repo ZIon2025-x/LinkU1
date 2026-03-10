@@ -110,9 +110,10 @@ class UserRepository {
   }
 
   /// 更新用户资料（邮箱/手机号+验证码）
-  /// 注意：avatar 走专用端点 updateAvatar()；后端不支持 bio 字段
+  /// 注意：avatar 走专用端点 updateAvatar()
   Future<User> updateProfile({
     String? name,
+    String? bio,
     String? residenceCity,
     String? languagePreference,
     String? email,
@@ -122,6 +123,7 @@ class UserRepository {
   }) async {
     final data = <String, dynamic>{};
     if (name != null) data['name'] = name;
+    if (bio != null) data['bio'] = bio;
     if (residenceCity != null) data['residence_city'] = residenceCity;
     if (languagePreference != null) {
       data['language_preference'] = languagePreference;

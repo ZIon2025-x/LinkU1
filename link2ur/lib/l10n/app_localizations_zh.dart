@@ -273,6 +273,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get authInvitationCodeHint => '请输入邀请码或8位用户ID';
 
   @override
+  String get authInvitationCodeInvalidTitle => '邀请码未找到';
+
+  @override
+  String get authInvitationCodeInvalidMessage => '您输入的邀请码或用户ID不存在，是否跳过继续登录？';
+
+  @override
+  String get authContinueWithoutInvitation => '跳过继续登录';
+
+  @override
   String get authAgreeToTerms => '我已阅读并同意';
 
   @override
@@ -961,6 +970,18 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get profileSelectAvatar => '选择头像';
+
+  @override
+  String get profileAvatarUploadCustom => '上传照片';
+
+  @override
+  String get profileAvatarFromGallery => '从相册选择';
+
+  @override
+  String get profileAvatarFromCamera => '拍照';
+
+  @override
+  String get profileAvatarPresets => '默认头像';
 
   @override
   String get locationTitle => '位置';
@@ -10011,6 +10032,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get authInvitationCodeHint => '請輸入邀請碼或8位用戶ID';
 
   @override
+  String get authInvitationCodeInvalidTitle => '邀請碼未找到';
+
+  @override
+  String get authInvitationCodeInvalidMessage => '您輸入的邀請碼或用戶ID不存在，是否跳過繼續登入？';
+
+  @override
+  String get authContinueWithoutInvitation => '跳過繼續登入';
+
+  @override
   String get authAgreeToTerms => '我已閱讀並同意';
 
   @override
@@ -10699,6 +10729,18 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get profileSelectAvatar => '選擇頭像';
+
+  @override
+  String get profileAvatarUploadCustom => '上傳照片';
+
+  @override
+  String get profileAvatarFromGallery => '從相簿選擇';
+
+  @override
+  String get profileAvatarFromCamera => '拍照';
+
+  @override
+  String get profileAvatarPresets => '預設頭像';
 
   @override
   String get locationTitle => '位置';

@@ -17,15 +17,18 @@ class DiscoveryRepository {
   final ApiService _apiService;
 
   /// 获取发现 Feed
+  /// [seed] 随机种子，翻页时回传保证排序一致；首次加载不传
   Future<DiscoveryFeedResponse> getFeed({
     int page = 1,
     int limit = 20,
+    int? seed,
   }) async {
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.discoveryFeed,
       queryParameters: {
         'page': page,
         'limit': limit,
+        if (seed != null) 'seed': seed,
       },
     );
     if (!response.isSuccess || response.data == null) {

@@ -350,11 +350,13 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     emit(state.copyWith(isLoadingDiscovery: true));
 
     try {
+      // 首次加载不传 seed，后端自动生成
       final response = await _discoveryRepository.getFeed();
       emit(state.copyWith(
         discoveryItems: response.items,
         hasMoreDiscovery: response.hasMore,
         discoveryPage: 1,
+        discoverySeed: response.seed,
         isLoadingDiscovery: false,
       ));
     } catch (e) {
@@ -376,9 +378,15 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       final nextPage = state.discoveryPage + 1;
       final response = await _discoveryRepository.getFeed(
         page: nextPage,
+        seed: state.discoverySeed,
       );
+      // 按 ID 去重，防止后端混排偶尔跨页重复
+      final existingIds = state.discoveryItems.map((e) => e.id).toSet();
+      final newItems = response.items
+          .where((item) => !existingIds.contains(item.id))
+          .toList();
       emit(state.copyWith(
-        discoveryItems: [...state.discoveryItems, ...response.items],
+        discoveryItems: [...state.discoveryItems, ...newItems],
         hasMoreDiscovery: response.hasMore,
         discoveryPage: nextPage,
         isLoadingDiscovery: false,

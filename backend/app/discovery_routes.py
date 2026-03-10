@@ -32,16 +32,19 @@ router = APIRouter(prefix="/api/discovery", tags=["发现"])
 async def get_discovery_feed(
     page: int = Query(1, ge=1, description="页码"),
     limit: int = Query(20, ge=1, le=50, description="每页数量"),
+    seed: Optional[int] = Query(None, description="随机种子，保证分页结果一致；首次请求不传则自动生成"),
     request: Request = None,
     current_user: Optional[models.User] = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """获取发现 Feed — 混排多种内容类型
-    
+
     加权随机策略：低频类型（评价、排行榜）权重更高，确保曝光
     同一类型不连续出现超过 2 条
-    
+
     帖子仅展示当前用户可见板块下的（普通板块 + 已认证学校板块）
+
+    seed: 客户端首次加载不传，后端自动生成并返回；翻页时传回相同 seed 保证排序一致
     """
     # 每种类型获取的数量（多取一些用于混排）
     fetch_limit = limit * 2
@@ -65,14 +68,14 @@ async def get_discovery_feed(
     
     # 1. 帖子（仅可见板块）
     try:
-        posts = await _fetch_forum_posts(db, fetch_limit, visible_category_ids)
+        posts = await _fetch_forum_posts(db, fetch_limit, visible_category_ids, current_user=current_user)
         all_items.extend(posts)
     except Exception as e:
         logger.warning(f"Failed to fetch forum posts for feed: {e}")
     
     # 2. 跳蚤市场商品
     try:
-        products = await _fetch_flea_market_items(db, fetch_limit)
+        products = await _fetch_flea_market_items(db, fetch_limit, current_user=current_user)
         all_items.extend(products)
     except Exception as e:
         logger.warning(f"Failed to fetch flea market items for feed: {e}")
@@ -105,13 +108,18 @@ async def get_discovery_feed(
     except Exception as e:
         logger.warning(f"Failed to fetch expert services for feed: {e}")
     
-    # 加权随机混排
-    feed_items = _weighted_shuffle(all_items, limit, page)
-    
+    # 首次请求自动生成 seed，翻页时复用保证排序一致
+    if seed is None:
+        seed = random.randint(0, 2**31 - 1)
+
+    # 加权随机混排（确定性 seed）
+    feed_items = _weighted_shuffle(all_items, limit, page, seed=seed)
+
     return {
         "items": feed_items,
         "page": page,
         "has_more": len(all_items) > page * limit,
+        "seed": seed,
     }
 
 
@@ -141,7 +149,7 @@ def _first_image(images_value) -> Optional[str]:
 
 # ==================== 数据获取函数 ====================
 
-async def _fetch_forum_posts(db: AsyncSession, limit: int, visible_category_ids: List[int] = None) -> list:
+async def _fetch_forum_posts(db: AsyncSession, limit: int, visible_category_ids: List[int] = None, current_user=None) -> list:
     """获取最新帖子（仅用户可见板块：普通板块 + 已认证学校板块）"""
     query = (
         select(
@@ -184,8 +192,23 @@ async def _fetch_forum_posts(db: AsyncSession, limit: int, visible_category_ids:
     
     query = query.order_by(desc(models.ForumPost.created_at)).limit(limit)
     result = await db.execute(query)
+    rows_list = result.all()
+
+    # 批量查询当前用户的帖子点赞状态
+    user_liked_post_ids = set()
+    if current_user and rows_list:
+        post_ids = [row.id for row in rows_list]
+        user_like_result = await db.execute(
+            select(models.ForumLike.target_id).where(
+                models.ForumLike.user_id == current_user.id,
+                models.ForumLike.target_type == "post",
+                models.ForumLike.target_id.in_(post_ids),
+            )
+        )
+        user_liked_post_ids = {row[0] for row in user_like_result.all()}
+
     items = []
-    for row in result:
+    for row in rows_list:
         content_preview = (row.content or "")[:100]
         title_zh = getattr(row, "title_zh", None)
         title_en = getattr(row, "title_en", None)
@@ -243,13 +266,14 @@ async def _fetch_forum_posts(db: AsyncSession, limit: int, visible_category_ids:
             "target_item": None,
             "activity_info": None,
             "is_experienced": None,
+            "is_favorited": row.id in user_liked_post_ids if current_user else None,
             "extra_data": extra if extra else None,
             "created_at": row.created_at.isoformat() if row.created_at else None,
         })
     return items
 
 
-async def _fetch_flea_market_items(db: AsyncSession, limit: int) -> list:
+async def _fetch_flea_market_items(db: AsyncSession, limit: int, current_user=None) -> list:
     """获取跳蚤市场商品
     注意: FleaMarketItem 没有 favorite_count 和 is_deleted 列
     - 收藏数通过子查询获取
@@ -263,7 +287,7 @@ async def _fetch_flea_market_items(db: AsyncSession, limit: int) -> list:
         .scalar_subquery()
         .label("fav_count")
     )
-    
+
     query = (
         select(
             models.FleaMarketItem.id,
@@ -284,8 +308,22 @@ async def _fetch_flea_market_items(db: AsyncSession, limit: int) -> list:
         .limit(limit)
     )
     result = await db.execute(query)
+    rows_list = result.all()
+
+    # 预取当前用户的收藏状态
+    user_favorited_ids = set()
+    if current_user and rows_list:
+        product_ids = [row.id for row in rows_list]
+        user_fav_result = await db.execute(
+            select(models.FleaMarketFavorite.item_id).where(
+                models.FleaMarketFavorite.user_id == current_user.id,
+                models.FleaMarketFavorite.item_id.in_(product_ids)
+            )
+        )
+        user_favorited_ids = {row[0] for row in user_fav_result.all()}
+
     items = []
-    for row in result:
+    for row in rows_list:
         first_img = _first_image(row.images)
         items.append({
             "feed_type": "product",
@@ -308,6 +346,7 @@ async def _fetch_flea_market_items(db: AsyncSession, limit: int) -> list:
             "target_item": None,
             "activity_info": None,
             "is_experienced": None,
+            "is_favorited": row.id in user_favorited_ids,
             "extra_data": None,
             "created_at": row.created_at.isoformat() if row.created_at else None,
         })
@@ -390,6 +429,7 @@ async def _fetch_competitor_reviews(db: AsyncSession, limit: int) -> list:
             },
             "activity_info": None,
             "is_experienced": None,
+            "is_favorited": None,
             "extra_data": None,
             "created_at": row.created_at.isoformat() if row.created_at else None,
         })
@@ -490,6 +530,7 @@ async def _fetch_service_reviews(db: AsyncSession, limit: int) -> list:
             },
             "activity_info": activity_info,
             "is_experienced": None,
+            "is_favorited": None,
             "extra_data": None,
             "created_at": row.created_at.isoformat() if row.created_at else None,
         })
@@ -582,6 +623,7 @@ async def _fetch_rankings(db: AsyncSession, limit: int) -> list:
             "target_item": None,
             "activity_info": None,
             "is_experienced": None,
+            "is_favorited": None,
             "extra_data": {"top3": top3},
             "created_at": row.created_at.isoformat() if row.created_at else None,
         })
@@ -650,6 +692,7 @@ async def _fetch_expert_services(db: AsyncSession, limit: int) -> list:
             "target_item": None,
             "activity_info": None,
             "is_experienced": None,
+            "is_favorited": None,
             "extra_data": None,
             "created_at": row.created_at.isoformat() if row.created_at else None,
         })
@@ -716,16 +759,20 @@ async def _resolve_linked_item(db: AsyncSession, item_type: str, item_id: str) -
     return None
 
 
-def _weighted_shuffle(items: list, limit: int, page: int) -> list:
+def _weighted_shuffle(items: list, limit: int, page: int, seed: int = None) -> list:
     """加权随机混排
-    
+
     - 低频类型（service_review, competitor_review, ranking）权重更高
     - 高频类型（forum_post, product）权重较低
     - 同一类型不连续出现超过 2 条
+    - 使用 seed 保证跨页分页结果一致（同一 seed 排列相同）
     """
     if not items:
         return []
-    
+
+    # 使用固定 seed 的 Random 实例，确保分页结果稳定
+    rng = random.Random(seed)
+
     type_weights = {
         "forum_post": 1.0,
         "product": 1.0,
@@ -734,28 +781,28 @@ def _weighted_shuffle(items: list, limit: int, page: int) -> list:
         "ranking": 2.5,
         "service": 1.5,
     }
-    
+
     by_type = {}
     for item in items:
         ft = item["feed_type"]
         if ft not in by_type:
             by_type[ft] = []
         by_type[ft].append(item)
-    
+
     for ft in by_type:
         by_type[ft].sort(key=lambda x: x.get("created_at") or "", reverse=True)
-    
+
     result = []
     consecutive_count = {}
     last_type = None
-    
+
     total_needed = limit * page
     max_iterations = total_needed * 3
     iterations = 0
-    
+
     while len(result) < total_needed and by_type and iterations < max_iterations:
         iterations += 1
-        
+
         available = {}
         for ft, items_list in by_type.items():
             if not items_list:
@@ -763,16 +810,16 @@ def _weighted_shuffle(items: list, limit: int, page: int) -> list:
             if last_type == ft and consecutive_count.get(ft, 0) >= 2:
                 continue
             available[ft] = items_list
-        
+
         if not available:
             consecutive_count = {}
             last_type = None
             continue
-        
+
         types = list(available.keys())
         weights = [type_weights.get(t, 1.0) for t in types]
         total_weight = sum(weights)
-        rand = random.random() * total_weight
+        rand = rng.random() * total_weight
         cumulative = 0
         chosen_type = types[0]
         for t, w in zip(types, weights):
@@ -780,18 +827,18 @@ def _weighted_shuffle(items: list, limit: int, page: int) -> list:
             if rand <= cumulative:
                 chosen_type = t
                 break
-        
+
         item = available[chosen_type].pop(0)
         result.append(item)
-        
+
         if chosen_type == last_type:
             consecutive_count[chosen_type] = consecutive_count.get(chosen_type, 0) + 1
         else:
             consecutive_count = {chosen_type: 1}
             last_type = chosen_type
-        
+
         if not by_type[chosen_type]:
             del by_type[chosen_type]
-    
+
     start = (page - 1) * limit
     return result[start:start + limit]
