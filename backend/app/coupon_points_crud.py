@@ -129,18 +129,18 @@ def add_points_transaction(
         # 对于消费类型，检查余额是否足够
         if account.balance < abs(amount):
             raise ValueError(
-                f"积分余额不足，当前余额：{account.balance / 100:.2f}，"
-                f"需要：{abs(amount) / 100:.2f}"
+                f"积分余额不足，当前余额：{account.balance} 积分，"
+                f"需要：{abs(amount)} 积分"
             )
-    
+
     # 在锁内计算新余额（确保准确性）
     new_balance = account.balance + amount
-    
+
     # 验证余额不会变成负数（额外安全检查）
     if new_balance < 0:
         raise ValueError(
-            f"积分余额不能为负数，当前余额：{account.balance / 100:.2f}，"
-            f"操作金额：{amount / 100:.2f}，结果余额：{new_balance / 100:.2f}"
+            f"积分余额不能为负数，当前余额：{account.balance} 积分，"
+            f"操作金额：{amount} 积分，结果余额：{new_balance} 积分"
         )
     
     # 创建交易记录

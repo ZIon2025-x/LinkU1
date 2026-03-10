@@ -216,7 +216,7 @@ class _PointsTab extends StatelessWidget {
                         ),
                         AppSpacing.vSm,
                         Text(
-                          state.pointsAccount.balanceDisplay,
+                          '${state.pointsAccount.balance}',
                           style: const TextStyle(
                             fontSize: 36,
                             fontWeight: FontWeight.bold,
@@ -225,7 +225,7 @@ class _PointsTab extends StatelessWidget {
                         ),
                         AppSpacing.vSm,
                         Text(
-                          '${context.l10n.pointsTotalEarned}: £${(state.pointsAccount.totalEarned / 100).toStringAsFixed(2)}  ${context.l10n.pointsTotalSpent}: £${(state.pointsAccount.totalSpent / 100).toStringAsFixed(2)}',
+                          '${context.l10n.pointsTotalEarned}: ${state.pointsAccount.totalEarned}  ${context.l10n.pointsTotalSpent}: ${state.pointsAccount.totalSpent}',
                           style: AppTypography.caption.copyWith(
                             color: Colors.white.withValues(alpha: 0.7),
                           ),
@@ -454,7 +454,7 @@ class _TransactionRow extends StatelessWidget {
             ),
           ),
           Text(
-            '${transaction.isIncome ? '+' : ''}${transaction.amountDisplay.isNotEmpty ? transaction.amountDisplay : transaction.amount}',
+            '${transaction.isIncome ? '+' : ''}${transaction.amount}',
             style: AppTypography.bodyBold.copyWith(
               color:
                   transaction.isIncome ? AppColors.success : AppColors.error,

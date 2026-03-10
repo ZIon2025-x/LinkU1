@@ -51,62 +51,16 @@ def get_account_info(
     from decimal import Decimal
     
     account = get_or_create_points_account(db, current_user.id)
-    
-    # 格式化显示
-    balance_display = f"{account.balance / 100:.2f}"
-    
-    # 计算累计获得（仅现金收入：用户作为接受人收到的 Stripe 转账）
-    # 从 PaymentTransfer 表统计：taker_id=当前用户
-    # 包含 succeeded（API 成功即标记）和 历史遗留的 pending 且 transfer_id 非空（Stripe 已转出）
-    task_earnings_decimal = db.query(
-        func.sum(models.PaymentTransfer.amount).label('total')
-    ).filter(
-        models.PaymentTransfer.taker_id == current_user.id,
-        or_(
-            models.PaymentTransfer.status == 'succeeded',
-            and_(
-                models.PaymentTransfer.status == 'pending',
-                models.PaymentTransfer.transfer_id.isnot(None)
-            )
-        )
-    ).scalar() or Decimal('0.0')
-    
-    # 将英镑转换为便士（乘以 100）
-    total_earned_pence = int(task_earnings_decimal * 100)
-    
-    # 计算累计消费（所有支出来源）
-    # 1. 任务支付：用户作为发布人支付的金额（Stripe支付）
-    # PaymentHistory.final_amount 已经是便士单位（BigInteger）
-    task_payments = db.query(
-        func.sum(models.PaymentHistory.final_amount).label('total')
-    ).filter(
-        and_(
-            models.PaymentHistory.user_id == current_user.id,
-            models.PaymentHistory.status == 'succeeded'
-        )
-    ).scalar() or 0
-    
-    # 2. 积分消费（从积分交易记录中统计，含 coupon_redeem 与 crud 一致）
-    # PointsTransaction.amount 已经是便士单位
-    points_spent = db.query(
-        func.sum(func.abs(models.PointsTransaction.amount)).label('total')
-    ).filter(
-        and_(
-            models.PointsTransaction.user_id == current_user.id,
-            models.PointsTransaction.type.in_(['spend', 'expire', 'coupon_redeem'])
-        )
-    ).scalar() or 0
-    
-    # 累计消费 = 任务支付（便士）+ 积分消费（便士）
-    # 确保为 int（DB sum 可能返回 Decimal）
-    total_spent_pence = int((task_payments or 0) + (points_spent or 0))
-    
+
+    # 积分页面：直接显示积分数量（非英镑），balance_display 为整数字符串
+    balance_display = str(account.balance)
+
     return {
         "balance": account.balance,
         "balance_display": balance_display,
         "currency": account.currency,
-        "total_earned": total_earned_pence,
-        "total_spent": total_spent_pence,
+        "total_earned": account.total_earned,
+        "total_spent": account.total_spent,
         "usage_restrictions": {
             "allowed": [
                 "抵扣申请费（任务发布费）",
@@ -134,11 +88,11 @@ def get_transactions(
     skip = (page - 1) * limit
     transactions, total = get_points_transactions(db, current_user.id, skip, limit, type_filter=type)
     
-    # 格式化显示
+    # 格式化显示（积分页面：显示积分数量，非英镑）
     data = []
     for t in transactions:
-        amount_display = f"{abs(t.amount) / 100:.2f}"
-        balance_display = f"{t.balance_after / 100:.2f}"
+        amount_display = str(abs(t.amount))
+        balance_display = str(t.balance_after)
         data.append({
             "id": t.id,
             "type": t.type,
@@ -1857,7 +1811,7 @@ def get_payment_history(
                 "total_amount": p.total_amount,
                 "total_amount_display": f"{p.total_amount / 100:.2f}",
                 "points_used": p.points_used,
-                "points_used_display": f"{p.points_used / 100:.2f}" if p.points_used else None,
+                "points_used_display": str(p.points_used) if p.points_used else None,
                 "coupon_discount": p.coupon_discount,
                 "coupon_discount_display": f"{p.coupon_discount / 100:.2f}" if p.coupon_discount else None,
                 "stripe_amount": p.stripe_amount,
@@ -2047,7 +2001,7 @@ def check_in_api(
                     reward = {
                         "type": "points",
                         "points_reward": today_check_in.points_reward,
-                        "points_reward_display": f"{today_check_in.points_reward / 100:.2f}",
+                        "points_reward_display": str(today_check_in.points_reward),
                         "description": today_check_in.reward_description or f"连续签到{today_check_in.consecutive_days}天",
                     }
                 elif today_check_in.reward_type == "coupon" and today_check_in.coupon_id:
@@ -2072,8 +2026,8 @@ def check_in_api(
         reward = {
             "type": "points",
             "points_reward": check_in_record.points_reward,
-            "points_reward_display": f"{check_in_record.points_reward / 100:.2f}",
-            "description": check_in_record.reward_description or f"连续签到{check_in_record.consecutive_days}天，获得{check_in_record.points_reward / 100:.2f}积分"
+            "points_reward_display": str(check_in_record.points_reward),
+            "description": check_in_record.reward_description or f"连续签到{check_in_record.consecutive_days}天，获得{check_in_record.points_reward}积分"
         }
     elif check_in_record.reward_type == "coupon" and check_in_record.coupon_id:
         reward = {
@@ -2159,7 +2113,7 @@ def get_check_in_rewards(
         
         if r.reward_type == "points" and r.points_reward:
             reward_data["points_reward"] = r.points_reward
-            reward_data["points_reward_display"] = f"{r.points_reward / 100:.2f}"
+            reward_data["points_reward_display"] = str(r.points_reward)
             reward_data["coupon_id"] = None
         elif r.reward_type == "coupon" and r.coupon_id:
             reward_data["points_reward"] = None
@@ -2184,7 +2138,7 @@ def validate_invitation_code_api(
     if not is_valid:
         raise HTTPException(status_code=400, detail=error_msg or "邀请码无效")
     
-    points_reward_display = f"{invitation_code.points_reward / 100:.2f}"
+    points_reward_display = str(invitation_code.points_reward)
     
     coupon = None
     if invitation_code.coupon_id:

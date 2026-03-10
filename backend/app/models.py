@@ -1082,7 +1082,7 @@ class PointsAccount(Base):
     
     id = Column(BigInteger, primary_key=True, index=True)
     user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False)
-    balance = Column(BigInteger, default=0)  # 当前积分余额（整数，100积分=£1.00）
+    balance = Column(BigInteger, default=0)  # 当前积分余额（整数，单位：积分）
     currency = Column(String(3), default="GBP")
     total_earned = Column(BigInteger, default=0)  # 累计获得积分
     total_spent = Column(BigInteger, default=0)  # 累计消费积分

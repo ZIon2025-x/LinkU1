@@ -861,7 +861,7 @@ def create_invitation_code(
     db.commit()
     db.refresh(invitation_code)
     
-    points_reward_display = f"{invitation_code.points_reward / 100:.2f}"
+    points_reward_display = str(invitation_code.points_reward)
     
     return {
         "id": invitation_code.id,
@@ -903,7 +903,7 @@ def get_invitation_codes_list(
             )
         ).scalar() or 0
         
-        points_reward_display = f"{ic.points_reward / 100:.2f}"
+        points_reward_display = str(ic.points_reward)
         
         data.append({
             "id": ic.id,
@@ -975,8 +975,8 @@ def get_invitation_code_detail(
     if invitation_code.max_uses:
         remaining_uses = max(0, invitation_code.max_uses - used_count)
     
-    points_reward_display = f"{invitation_code.points_reward / 100:.2f}"
-    total_points_display = f"{total_points / 100:.2f}"
+    points_reward_display = str(invitation_code.points_reward)
+    total_points_display = str(total_points)
     
     # 获取优惠券信息
     coupon = None
@@ -1270,7 +1270,7 @@ def get_invitation_code_users(
                     "name": coupon_obj.name
                 }
         
-        points_received_display = f"{usage.points_received / 100:.2f}" if usage.points_received else "0.00"
+        points_received_display = str(usage.points_received) if usage.points_received else "0"
         
         data.append({
             "user_id": usage.user_id,
@@ -1371,7 +1371,7 @@ def get_invitation_code_statistics(
             "used_at": usage.used_at
         })
     
-    total_points_display = f"{total_points / 100:.2f}"
+    total_points_display = str(total_points)
     
     return {
         "code": invitation_code.code,
@@ -1406,11 +1406,11 @@ def get_user_details(
     if points_account:
         points_account_data = {
             "balance": points_account.balance,
-            "balance_display": f"{points_account.balance / 100:.2f}",
+            "balance_display": str(points_account.balance),
             "total_earned": points_account.total_earned,
-            "total_earned_display": f"{points_account.total_earned / 100:.2f}",
+            "total_earned_display": str(points_account.total_earned),
             "total_spent": points_account.total_spent,
-            "total_spent_display": f"{points_account.total_spent / 100:.2f}"
+            "total_spent_display": str(points_account.total_spent)
         }
     else:
         points_account_data = {
@@ -1491,7 +1491,7 @@ def get_user_details(
             "id": trans.id,
             "type": trans.type,
             "amount": trans.amount,
-            "amount_display": f"{trans.amount / 100:.2f}",
+            "amount_display": str(trans.amount),
             "source": trans.source,
             "description": trans.description,
             "created_at": trans.created_at
@@ -1568,10 +1568,10 @@ def adjust_user_points(
     db: Session = Depends(get_db)
 ):
     """调整用户积分（管理员，大额调整需超级管理员权限）"""
-    # 🔒 安全修复：大额积分调整（>10000积分 = £100）需要超级管理员权限
-    LARGE_ADJUSTMENT_THRESHOLD = 1_000_000  # 10000积分（以分为单位）
+    # 🔒 安全修复：大额积分调整需要超级管理员权限
+    LARGE_ADJUSTMENT_THRESHOLD = 1_000_000
     if abs(adjust_data.amount) > LARGE_ADJUSTMENT_THRESHOLD:
-        _require_super_admin(current_admin, f"大额积分调整（>{LARGE_ADJUSTMENT_THRESHOLD // 100}积分）")
+        _require_super_admin(current_admin, f"大额积分调整（>{LARGE_ADJUSTMENT_THRESHOLD}积分）")
     
     from app.rate_limiting import rate_limiter, RATE_LIMITS
     
@@ -1590,12 +1590,12 @@ def adjust_user_points(
             headers={"Retry-After": str(rate_limit_info.get("retry_after", 300))}
         )
     
-    # 单次调整金额上限验证（单次最多调整100万积分，即£10,000）
-    MAX_ADJUST_AMOUNT = 100_000_000  # 100万积分
+    # 单次调整金额上限验证
+    MAX_ADJUST_AMOUNT = 100_000_000
     if adjust_data.amount > MAX_ADJUST_AMOUNT:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"单次积分调整不能超过 {MAX_ADJUST_AMOUNT / 100:.0f} 积分（£{MAX_ADJUST_AMOUNT / 10000:.2f}）"
+            detail=f"单次积分调整不能超过 {MAX_ADJUST_AMOUNT} 积分"
         )
     
     user = db.query(models.User).filter(models.User.id == user_id).first()
@@ -1620,7 +1620,7 @@ def adjust_user_points(
         if points_account.balance < adjust_data.amount:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"积分不足，当前余额：{points_account.balance / 100:.2f}，需要扣除：{adjust_data.amount / 100:.2f}"
+                detail=f"积分不足，当前余额：{points_account.balance} 积分，需要扣除：{int(adjust_data.amount)} 积分"
             )
         new_balance = points_account.balance - adjust_data.amount
         transaction_type = "spend"
@@ -1634,7 +1634,7 @@ def adjust_user_points(
             )
         transaction_type = "earn" if new_balance > old_balance else "spend"
         diff = abs(new_balance - old_balance)
-        description = f"管理员设置积分为：{new_balance / 100:.2f}（原余额：{old_balance / 100:.2f}）{adjust_data.reason or ''}"
+        description = f"管理员设置积分为：{new_balance}（原余额：{old_balance}）{adjust_data.reason or ''}"
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -1700,9 +1700,9 @@ def adjust_user_points(
         "success": True,
         "message": "积分调整成功",
         "old_balance": old_balance,
-        "old_balance_display": f"{old_balance / 100:.2f}",
+        "old_balance_display": str(old_balance),
         "new_balance": new_balance,
-        "new_balance_display": f"{new_balance / 100:.2f}",
+        "new_balance_display": str(new_balance),
         "transaction_id": transaction.id
     }
 
@@ -1738,12 +1738,12 @@ def batch_reward_points(
             headers={"Retry-After": str(rate_limit_info.get("retry_after", 3600))}
         )
     
-    # 金额上限验证（单次批量发放最多100万积分，即£10,000）
-    MAX_BATCH_POINTS = 100_000_000  # 100万积分（以分为单位）
+    # 金额上限验证
+    MAX_BATCH_POINTS = 100_000_000
     if request.amount > MAX_BATCH_POINTS:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"单次批量发放积分不能超过 {MAX_BATCH_POINTS / 100:.0f} 积分（£{MAX_BATCH_POINTS / 10000:.2f}）"
+            detail=f"单次批量发放积分不能超过 {MAX_BATCH_POINTS} 积分"
         )
     
     # 用户数量上限验证（单次最多发放给10,000个用户）
@@ -1802,14 +1802,14 @@ def batch_reward_points(
             detail=f"单次批量发放用户数量不能超过 {MAX_BATCH_USERS} 个，当前：{len(target_user_ids)} 个"
         )
     
-    # 总金额上限验证（总发放金额不能超过1000万积分，即£100,000）
-    MAX_TOTAL_POINTS = 1_000_000_000  # 1000万积分
+    # 总金额上限验证
+    MAX_TOTAL_POINTS = 1_000_000_000
     total_points = request.amount * len(target_user_ids)
     if total_points > MAX_TOTAL_POINTS:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"批量发放总金额不能超过 {MAX_TOTAL_POINTS / 100:.0f} 积分（£{MAX_TOTAL_POINTS / 10000:.2f}），"
-                   f"当前：{total_points / 100:.0f} 积分（£{total_points / 10000:.2f}）"
+            detail=f"批量发放总金额不能超过 {MAX_TOTAL_POINTS} 积分，"
+                   f"当前：{total_points} 积分"
         )
     
     # 创建发放记录
@@ -2212,7 +2212,7 @@ def get_reward_detail(
         for detail in failed_details
     ]
     
-    points_value_display = f"{admin_reward.points_value / 100:.2f}" if admin_reward.points_value else None
+    points_value_display = str(admin_reward.points_value) if admin_reward.points_value else None
     
     return {
         "id": admin_reward.id,
@@ -2257,7 +2257,7 @@ def get_rewards_list(
     
     data = []
     for reward in rewards:
-        points_value_display = f"{reward.points_value / 100:.2f}" if reward.points_value else None
+        points_value_display = str(reward.points_value) if reward.points_value else None
         
         data.append({
             "id": reward.id,
@@ -2326,7 +2326,7 @@ def update_points_settings(
     from app.crud import upsert_system_setting
     
     # 更新各项配置
-    upsert_system_setting(db, "points_exchange_rate", str(settings.points_exchange_rate), "积分兑换比例（100积分=£1.00）")
+    upsert_system_setting(db, "points_exchange_rate", str(settings.points_exchange_rate), "积分兑换比例")
     upsert_system_setting(db, "points_task_complete_bonus", str(settings.points_task_complete_bonus), "任务完成奖励积分（平台赠送，非任务报酬）")
     upsert_system_setting(db, "points_invite_reward", str(settings.points_invite_reward), "邀请新用户奖励积分（平台赠送）")
     upsert_system_setting(db, "points_invite_task_bonus", str(settings.points_invite_task_bonus), "被邀请用户完成任务，邀请者获得积分奖励（平台赠送，非任务报酬）")
@@ -2361,7 +2361,7 @@ def get_checkin_settings(
     
     reward_list = []
     for reward in rewards:
-        points_reward_display = f"{reward.points_reward / 100:.2f}" if reward.points_reward else None
+        points_reward_display = str(reward.points_reward) if reward.points_reward else None
         coupon = None
         if reward.coupon_id:
             coupon_obj = get_coupon_by_id(db, reward.coupon_id)
@@ -2383,7 +2383,7 @@ def get_checkin_settings(
             "is_active": reward.is_active
         })
     
-    daily_base_points_display = f"{daily_base_points / 100:.2f}"
+    daily_base_points_display = str(daily_base_points)
     
     return {
         "daily_base_points": daily_base_points,
@@ -2433,7 +2433,7 @@ def get_checkin_rewards_list(
     
     data = []
     for reward in rewards:
-        points_reward_display = f"{reward.points_reward / 100:.2f}" if reward.points_reward else None
+        points_reward_display = str(reward.points_reward) if reward.points_reward else None
         coupon = None
         if reward.coupon_id:
             coupon_obj = get_coupon_by_id(db, reward.coupon_id)
@@ -2519,7 +2519,7 @@ def create_checkin_reward(
     db.commit()
     db.refresh(reward)
     
-    points_reward_display = f"{reward.points_reward / 100:.2f}" if reward.points_reward else None
+    points_reward_display = str(reward.points_reward) if reward.points_reward else None
     
     return {
         "id": reward.id,
@@ -2591,7 +2591,7 @@ def update_checkin_reward(
     db.commit()
     db.refresh(reward)
     
-    points_reward_display = f"{reward.points_reward / 100:.2f}" if reward.points_reward else None
+    points_reward_display = str(reward.points_reward) if reward.points_reward else None
     
     return {
         "id": reward.id,

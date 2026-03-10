@@ -1885,7 +1885,7 @@ class UserDetailOut(BaseModel):
 
 class UserPointsAdjustRequest(BaseModel):
     action: str  # add, subtract, set
-    amount: float  # 金额（£）
+    amount: float  # 积分数量
     description: str
     reason: str
 
