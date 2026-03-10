@@ -174,6 +174,7 @@ class _LeaderboardDetailContentState
         actions: [
           IconButton(
             icon: const Icon(Icons.share_outlined),
+            tooltip: 'Share',
             onPressed: onShare,
           ),
           IconButton(
@@ -181,6 +182,7 @@ class _LeaderboardDetailContentState
               state.isFavorited ? Icons.favorite : Icons.favorite_border,
               color: state.isFavorited ? AppColors.error : null,
             ),
+            tooltip: 'Favorite',
             onPressed: onToggleFavorite,
           ),
           PopupMenuButton<String>(
@@ -215,7 +217,10 @@ class _LeaderboardDetailContentState
       forceMaterialTransparency: true,
       leading: Padding(
         padding: const EdgeInsets.all(4),
-        child: GestureDetector(
+        child: Semantics(
+          button: true,
+          label: 'Go back',
+          child: GestureDetector(
           onTap: () => context.pop(),
           child: Container(
             width: 36,
@@ -227,6 +232,7 @@ class _LeaderboardDetailContentState
             child: const Icon(Icons.arrow_back_ios_new,
                 size: 18, color: Colors.white),
           ),
+        ),
         ),
       ),
       actions: [
@@ -284,7 +290,10 @@ class _LeaderboardDetailContentState
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: GestureDetector(
+      child: Semantics(
+        button: true,
+        label: 'Action button',
+        child: GestureDetector(
         onTap: onTap,
         child: Container(
           width: 36,
@@ -295,6 +304,7 @@ class _LeaderboardDetailContentState
           ),
           child: Icon(icon, size: 18, color: color ?? Colors.white),
         ),
+      ),
       ),
     );
   }
@@ -481,7 +491,11 @@ class _LeaderboardDetailContentState
                     final item = items[index];
                     return Padding(
                       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                      child: GestureDetector(
+                      child: Semantics(
+                        button: true,
+                        label: 'View details',
+                        excludeSemantics: true,
+                        child: GestureDetector(
                         onTap: () async {
                           await context.push('/leaderboard/item/${item.id}');
                           if (context.mounted) {
@@ -494,6 +508,7 @@ class _LeaderboardDetailContentState
                           rank: index + 1,
                           isDark: isDark,
                         ),
+                      ),
                       ),
                     );
                   },
@@ -538,7 +553,10 @@ class _SortFilterRow extends StatelessWidget {
               currentSort == entry.$1 || (currentSort == null && entry.$1 == 'vote_score');
           return Padding(
             padding: const EdgeInsets.only(right: 8),
-            child: GestureDetector(
+            child: Semantics(
+              button: true,
+              label: 'Sort option',
+              child: GestureDetector(
               onTap: () {
                 AppHaptics.selection();
                 context.read<LeaderboardBloc>().add(
@@ -575,6 +593,7 @@ class _SortFilterRow extends StatelessWidget {
                   ),
                 ),
               ),
+            ),
             ),
           );
         }).toList(),
@@ -951,7 +970,10 @@ class _VoteCircle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return Semantics(
+      button: true,
+      label: 'Vote button',
+      child: GestureDetector(
       onTap: onTap,
       child: Container(
         width: 32,
@@ -971,6 +993,7 @@ class _VoteCircle extends StatelessWidget {
           color: isActive ? color : AppColors.textTertiaryLight,
         ),
       ),
+    ),
     );
   }
 }

@@ -22,6 +22,7 @@ class AsyncImageView extends StatelessWidget {
     this.fadeInDuration = const Duration(milliseconds: 150),
     this.memCacheWidth,
     this.memCacheHeight,
+    this.semanticLabel,
   });
 
   final String? imageUrl;
@@ -41,6 +42,9 @@ class AsyncImageView extends StatelessWidget {
 
   /// 内存缓存高度（像素），设置后解码图片会按此尺寸缩小，显著降低内存占用。
   final int? memCacheHeight;
+
+  /// Semantic label for accessibility.
+  final String? semanticLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -94,6 +98,14 @@ class AsyncImageView extends StatelessWidget {
     if (borderRadius != null) {
       image = ClipRRect(
         borderRadius: borderRadius!,
+        child: image,
+      );
+    }
+
+    if (semanticLabel != null) {
+      image = Semantics(
+        label: semanticLabel,
+        image: true,
         child: image,
       );
     }
@@ -156,6 +168,7 @@ class AvatarView extends StatelessWidget {
     this.isOfficial = false,
     this.isAnonymous = false,
     this.displayedBadge,
+    this.semanticLabel,
   });
 
   final String? imageUrl;
@@ -170,6 +183,9 @@ class AvatarView extends StatelessWidget {
   /// When present, a small colored dot is shown at the top-right corner.
   final UserBadge? displayedBadge;
 
+  /// Semantic label for accessibility. Falls back to [name] or 'Avatar'.
+  final String? semanticLabel;
+
   /// Maps badge rank to a display color.
   static Color _badgeColor(String? rank) {
     return switch (rank) {
@@ -182,7 +198,12 @@ class AvatarView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final avatar = _buildAvatar(context);
+    final rawAvatar = _buildAvatar(context);
+    final avatar = Semantics(
+      label: semanticLabel ?? name ?? 'Avatar',
+      image: true,
+      child: rawAvatar,
+    );
     if (displayedBadge == null) return avatar;
 
     // Wrap with a small colored dot indicator at top-right
@@ -316,6 +337,7 @@ class TappableImage extends StatelessWidget {
     this.fit = BoxFit.cover,
     this.borderRadius,
     this.onTap,
+    this.semanticLabel,
   });
 
   final String? imageUrl;
@@ -325,16 +347,24 @@ class TappableImage extends StatelessWidget {
   final BorderRadius? borderRadius;
   final VoidCallback? onTap;
 
+  /// Semantic label for accessibility.
+  final String? semanticLabel;
+
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AsyncImageView(
-        imageUrl: imageUrl,
-        width: width,
-        height: height,
-        fit: fit,
-        borderRadius: borderRadius ?? AppRadius.allMedium,
+    return Semantics(
+      button: true,
+      label: semanticLabel ?? 'Image',
+      child: GestureDetector(
+        onTap: onTap,
+        child: AsyncImageView(
+          imageUrl: imageUrl,
+          width: width,
+          height: height,
+          fit: fit,
+          borderRadius: borderRadius ?? AppRadius.allMedium,
+          semanticLabel: semanticLabel,
+        ),
       ),
     );
   }

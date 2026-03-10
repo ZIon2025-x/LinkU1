@@ -98,6 +98,7 @@ class _TaskExpertListViewContentState extends State<_TaskExpertListViewContent> 
         actions: [
           IconButton(
             icon: Icon(_isSearching ? Icons.close : Icons.search),
+            tooltip: _isSearching ? 'Close' : 'Search',
             onPressed: _toggleSearch,
           ),
           // 筛选按钮（有激活筛选时显示小圆点）
@@ -109,6 +110,7 @@ class _TaskExpertListViewContentState extends State<_TaskExpertListViewContent> 
                 children: [
                   IconButton(
                     icon: const Icon(Icons.tune, size: 22),
+                    tooltip: 'Filter',
                     onPressed: () => _showFilterPanel(context),
                   ),
                   if (state.hasActiveFilters)
@@ -424,15 +426,18 @@ class _FilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        AppHaptics.selection();
-        onTap();
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          gradient: isSelected
+    return Semantics(
+      button: true,
+      label: 'Toggle filter',
+      child: GestureDetector(
+        onTap: () {
+          AppHaptics.selection();
+          onTap();
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            gradient: isSelected
               ? const LinearGradient(colors: AppColors.gradientPrimary)
               : null,
           color: isSelected
@@ -463,6 +468,7 @@ class _FilterChip extends StatelessWidget {
           ),
         ),
       ),
+      ),
     );
   }
 }
@@ -477,20 +483,24 @@ class _ExpertCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final locale = Localizations.localeOf(context);
 
-    return GestureDetector(
-      onTap: () {
-        AppHaptics.selection();
-        if (expert.id.isNotEmpty) {
-          context.safePush('/task-experts/${expert.id}');
-        }
-      },
-      child: Container(
-        padding: AppSpacing.allMd,
-        decoration: BoxDecoration(
-          color: isDark
-              ? AppColors.cardBackgroundDark
-              : AppColors.cardBackgroundLight,
-          borderRadius: AppRadius.allLarge,
+    return Semantics(
+      button: true,
+      label: 'View details',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: () {
+          AppHaptics.selection();
+          if (expert.id.isNotEmpty) {
+            context.safePush('/task-experts/${expert.id}');
+          }
+        },
+        child: Container(
+          padding: AppSpacing.allMd,
+          decoration: BoxDecoration(
+            color: isDark
+                ? AppColors.cardBackgroundDark
+                : AppColors.cardBackgroundLight,
+            borderRadius: AppRadius.allLarge,
           border: Border.all(
             color: (isDark ? AppColors.separatorDark : AppColors.separatorLight)
                 .withValues(alpha: 0.3),
@@ -658,6 +668,7 @@ class _ExpertCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

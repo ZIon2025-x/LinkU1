@@ -241,7 +241,10 @@ class _SubmitLeaderboardItemContentState
                           scrollDirection: Axis.horizontal,
                           children: [
                             if (_selectedImages.length < _maxImages)
-                              GestureDetector(
+                              Semantics(
+                                button: true,
+                                label: 'Add image',
+                                child: GestureDetector(
                                 onTap: _pickImages,
                                 child: Container(
                                   width: 90,
@@ -276,6 +279,7 @@ class _SubmitLeaderboardItemContentState
                                   ),
                                 ),
                               ),
+                              ),
                             ..._selectedImages.asMap().entries.map((entry) {
                               final idx = entry.key;
                               final img = entry.value;
@@ -295,7 +299,10 @@ class _SubmitLeaderboardItemContentState
                                     Positioned(
                                       top: 2,
                                       right: 2,
-                                      child: GestureDetector(
+                                      child: Semantics(
+                                        button: true,
+                                        label: 'Remove image',
+                                        child: GestureDetector(
                                         onTap: () => _removeImage(idx),
                                         child: Container(
                                           decoration: const BoxDecoration(
@@ -307,6 +314,7 @@ class _SubmitLeaderboardItemContentState
                                               size: 14, color: Colors.white),
                                         ),
                                       ),
+                                    ),
                                     ),
                                   ],
                                 ),

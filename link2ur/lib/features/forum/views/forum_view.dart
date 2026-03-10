@@ -285,10 +285,13 @@ class _DesktopSegmentState extends State<_DesktopSegment> {
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
       cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+      child: Semantics(
+        button: true,
+        label: 'Select tab',
+        child: GestureDetector(
+          onTap: widget.onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
           decoration: BoxDecoration(
             color: widget.isSelected
                 ? (widget.isDark ? AppColors.secondaryBackgroundDark : Colors.white)
@@ -313,6 +316,7 @@ class _DesktopSegmentState extends State<_DesktopSegment> {
             ),
           ),
         ),
+      ),
       ),
     );
   }
@@ -343,10 +347,13 @@ class _DesktopCreateButtonState extends State<_DesktopCreateButton> {
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
       cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Semantics(
+        button: true,
+        label: 'Create post',
+        child: GestureDetector(
+          onTap: widget.onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
             color: _isHovered ? AppColors.primary : AppColors.primary.withValues(alpha: 0.9),
             borderRadius: BorderRadius.circular(8),
@@ -366,6 +373,7 @@ class _DesktopCreateButtonState extends State<_DesktopCreateButton> {
             ],
           ),
         ),
+      ),
       ),
     );
   }
@@ -387,11 +395,14 @@ class _CommunityTabButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+    return Semantics(
+      button: true,
+      label: 'Select tab',
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -421,6 +432,7 @@ class _CommunityTabButton extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }
@@ -841,13 +853,17 @@ class _CategoryCard extends StatelessWidget {
     final locale = Localizations.localeOf(context);
     final colors = _gradient;
 
-    return GestureDetector(
-      onTap: () {
-        AppHaptics.selection();
-        context.push('/forum/category/${category.id}',
-            extra: category);
-      },
-      child: GlassContainer(
+    return Semantics(
+      button: true,
+      label: 'View category',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: () {
+          AppHaptics.selection();
+          context.push('/forum/category/${category.id}',
+              extra: category);
+        },
+        child: GlassContainer(
         borderRadius: AppRadius.allLarge,
         padding: AppSpacing.allMd,
         blurSigma: 14,
@@ -933,6 +949,7 @@ class _CategoryCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }
@@ -1123,12 +1140,16 @@ class _LeaderboardCard extends StatelessWidget {
     final locale = Localizations.localeOf(context);
     final colors = _gradient;
 
-    return GestureDetector(
-      onTap: () {
-        AppHaptics.selection();
-        context.push('/leaderboard/${leaderboard.id}');
-      },
-      child: Stack(
+    return Semantics(
+      button: true,
+      label: 'View leaderboard',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: () {
+          AppHaptics.selection();
+          context.push('/leaderboard/${leaderboard.id}');
+        },
+        child: Stack(
         clipBehavior: Clip.none,
         children: [
           GlassContainer(
@@ -1283,6 +1304,7 @@ class _LeaderboardCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }

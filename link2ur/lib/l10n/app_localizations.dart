@@ -12014,6 +12014,144 @@ abstract class AppLocalizations {
   /// **'Application ID not found'**
   String get errorTaskApplicationIdNotFound;
 
+  /// No description provided for @errorTaskDetailLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load task details. Please try again.'**
+  String get errorTaskDetailLoadFailed;
+
+  /// No description provided for @errorTaskApplicationsLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load applications.'**
+  String get errorTaskApplicationsLoadFailed;
+
+  /// No description provided for @errorTaskReviewsLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load reviews.'**
+  String get errorTaskReviewsLoadFailed;
+
+  /// No description provided for @errorTaskApplyFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to submit application. Please try again.'**
+  String get errorTaskApplyFailed;
+
+  /// No description provided for @errorTaskCancelApplicationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to cancel application.'**
+  String get errorTaskCancelApplicationFailed;
+
+  /// No description provided for @errorTaskAcceptApplicantFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to accept applicant.'**
+  String get errorTaskAcceptApplicantFailed;
+
+  /// No description provided for @errorTaskRejectApplicantFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to reject applicant.'**
+  String get errorTaskRejectApplicantFailed;
+
+  /// No description provided for @errorTaskCompleteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to submit completion. Please try again.'**
+  String get errorTaskCompleteFailed;
+
+  /// No description provided for @errorTaskConfirmCompletionFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to confirm completion.'**
+  String get errorTaskConfirmCompletionFailed;
+
+  /// No description provided for @errorTaskCancelFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to cancel task.'**
+  String get errorTaskCancelFailed;
+
+  /// No description provided for @errorTaskReviewFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to submit review.'**
+  String get errorTaskReviewFailed;
+
+  /// No description provided for @errorTaskRefundRequestFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to submit refund request.'**
+  String get errorTaskRefundRequestFailed;
+
+  /// No description provided for @errorTaskRefundHistoryLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load refund history.'**
+  String get errorTaskRefundHistoryLoadFailed;
+
+  /// No description provided for @errorTaskCancelRefundFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to cancel refund request.'**
+  String get errorTaskCancelRefundFailed;
+
+  /// No description provided for @errorTaskRebuttalFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to submit dispute.'**
+  String get errorTaskRebuttalFailed;
+
+  /// No description provided for @errorTaskSendMessageFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to send message.'**
+  String get errorTaskSendMessageFailed;
+
+  /// No description provided for @errorTaskCounterOfferFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to submit counter offer.'**
+  String get errorTaskCounterOfferFailed;
+
+  /// No description provided for @errorTaskRespondCounterOfferFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to respond to counter offer.'**
+  String get errorTaskRespondCounterOfferFailed;
+
+  /// No description provided for @errorTaskRespondNegotiationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to respond to negotiation.'**
+  String get errorTaskRespondNegotiationFailed;
+
+  /// No description provided for @errorTaskVisibilityUpdateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to update task visibility.'**
+  String get errorTaskVisibilityUpdateFailed;
+
+  /// No description provided for @errorTaskListLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load tasks.'**
+  String get errorTaskListLoadFailed;
+
+  /// No description provided for @errorTaskQuoteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to submit quote. Please try again.'**
+  String get errorTaskQuoteFailed;
+
+  /// No description provided for @errorTaskQuoteAcceptFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Quote submitted, but automatic acceptance failed. Please contact support.'**
+  String get errorTaskQuoteAcceptFailed;
+
   /// No description provided for @searchTitle.
   ///
   /// In en, this message translates to:

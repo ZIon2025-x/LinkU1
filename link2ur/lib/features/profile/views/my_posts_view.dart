@@ -169,6 +169,7 @@ class _MyPostsViewState extends State<MyPostsView>
           IconButton(
             icon: const Icon(Icons.add_circle, size: 28),
             color: AppColors.primary,
+            tooltip: 'New post',
             onPressed: () async {
               await context.push('/flea-market/create');
               if (mounted) { _loadAllRelated(forceRefresh: true); _loadFavorites(); }
@@ -323,24 +324,28 @@ class _FleaMarketItemCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: isDark
-              ? AppColors.cardBackgroundDark
-              : AppColors.cardBackgroundLight,
-          borderRadius: AppRadius.allLarge,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return Semantics(
+      button: true,
+      label: 'View details',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          decoration: BoxDecoration(
+            color: isDark
+                ? AppColors.cardBackgroundDark
+                : AppColors.cardBackgroundLight,
+            borderRadius: AppRadius.allLarge,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // 图片区域 + 状态标签
             Stack(
@@ -456,6 +461,7 @@ class _FleaMarketItemCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

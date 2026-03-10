@@ -176,6 +176,52 @@ class ErrorLocalizer {
         return context.l10n.errorCreateTaskFailed;
       case 'task_application_id_not_found':
         return context.l10n.errorTaskApplicationIdNotFound;
+      case 'task_detail_load_failed':
+        return context.l10n.errorTaskDetailLoadFailed;
+      case 'task_applications_load_failed':
+        return context.l10n.errorTaskApplicationsLoadFailed;
+      case 'task_reviews_load_failed':
+        return context.l10n.errorTaskReviewsLoadFailed;
+      case 'task_apply_failed':
+        return context.l10n.errorTaskApplyFailed;
+      case 'task_cancel_application_failed':
+        return context.l10n.errorTaskCancelApplicationFailed;
+      case 'task_accept_applicant_failed':
+        return context.l10n.errorTaskAcceptApplicantFailed;
+      case 'task_reject_applicant_failed':
+        return context.l10n.errorTaskRejectApplicantFailed;
+      case 'task_complete_failed':
+        return context.l10n.errorTaskCompleteFailed;
+      case 'task_confirm_completion_failed':
+        return context.l10n.errorTaskConfirmCompletionFailed;
+      case 'task_cancel_failed':
+        return context.l10n.errorTaskCancelFailed;
+      case 'task_review_failed':
+        return context.l10n.errorTaskReviewFailed;
+      case 'task_refund_request_failed':
+        return context.l10n.errorTaskRefundRequestFailed;
+      case 'task_refund_history_load_failed':
+        return context.l10n.errorTaskRefundHistoryLoadFailed;
+      case 'task_cancel_refund_failed':
+        return context.l10n.errorTaskCancelRefundFailed;
+      case 'task_rebuttal_failed':
+        return context.l10n.errorTaskRebuttalFailed;
+      case 'task_send_message_failed':
+        return context.l10n.errorTaskSendMessageFailed;
+      case 'task_counter_offer_failed':
+        return context.l10n.errorTaskCounterOfferFailed;
+      case 'task_respond_counter_offer_failed':
+        return context.l10n.errorTaskRespondCounterOfferFailed;
+      case 'task_respond_negotiation_failed':
+        return context.l10n.errorTaskRespondNegotiationFailed;
+      case 'task_visibility_update_failed':
+        return context.l10n.errorTaskVisibilityUpdateFailed;
+      case 'task_list_load_failed':
+        return context.l10n.errorTaskListLoadFailed;
+      case 'task_quote_failed':
+        return context.l10n.errorTaskQuoteFailed;
+      case 'task_quote_accept_failed':
+        return context.l10n.errorTaskQuoteAcceptFailed;
       case 'forum_create_post_failed':
         return context.l10n.errorForumCreatePostFailed;
       case 'activity_load_failed':

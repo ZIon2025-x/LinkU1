@@ -279,10 +279,13 @@ class _QuickActionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: AppCard(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+    return Semantics(
+      button: true,
+      label: 'Open action',
+      child: GestureDetector(
+        onTap: onTap,
+        child: AppCard(
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -323,6 +326,7 @@ class _QuickActionCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }
@@ -497,14 +501,18 @@ class _TransactionsSection extends StatelessWidget {
               Text(context.l10n.walletTransactionHistory,
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               if (transactions.isNotEmpty)
-                GestureDetector(
-                  onTap: () => context.push('/coupon-points'),
-                  child: Text(
-                    context.l10n.walletViewAll,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w500,
+                Semantics(
+                  button: true,
+                  label: 'View all',
+                  child: GestureDetector(
+                    onTap: () => context.push('/coupon-points'),
+                    child: Text(
+                      context.l10n.walletViewAll,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
                 ),

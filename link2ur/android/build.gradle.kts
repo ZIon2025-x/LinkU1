@@ -25,6 +25,21 @@ subprojects {
             }
         }
     }
+    // 为缺少 namespace 的旧插件自动从 AndroidManifest.xml 的 package 属性注入
+    // 必须在 afterEvaluate 之前（pluginManager callback 在 apply 时触发）
+    pluginManager.withPlugin("com.android.library") {
+        val android = extensions.getByType(com.android.build.gradle.LibraryExtension::class.java)
+        if (android.namespace.isNullOrEmpty()) {
+            val manifest = file("src/main/AndroidManifest.xml")
+            if (manifest.exists()) {
+                val pkg = Regex("""package\s*=\s*"([^"]+)"""")
+                    .find(manifest.readText())?.groupValues?.get(1)
+                if (!pkg.isNullOrEmpty()) {
+                    android.namespace = pkg
+                }
+            }
+        }
+    }
     // 强制所有子项目（含第三方插件）使用 Java 17，消除 "源值 8 已过时" 警告
     afterEvaluate {
         tasks.withType<JavaCompile>().configureEach {

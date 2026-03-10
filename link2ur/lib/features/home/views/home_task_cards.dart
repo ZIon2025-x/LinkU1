@@ -23,8 +23,12 @@ class _HorizontalTaskCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return GestureDetector(
-      onTap: () {
+    return Semantics(
+      button: true,
+      label: 'View task',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: () {
         AppHaptics.selection();
         context.safePush('/tasks/${task.id}');
       },
@@ -347,6 +351,7 @@ class _HorizontalTaskCard extends StatelessWidget {
               ),
           ],
         ),
+      ),
       ),
     );
   }

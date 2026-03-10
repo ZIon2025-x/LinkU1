@@ -288,18 +288,22 @@ class _ProfileContent extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          GestureDetector(
-            onTap: () async {
-              AppHaptics.selection();
-              await context.push('/profile/edit');
-              if (context.mounted) {
-                context.read<ProfileBloc>().add(const ProfileLoadRequested());
-              }
-            },
-            child: const SizedBox(
-              width: 44,
-              height: 44,
-              child: Center(child: Icon(Icons.edit_outlined, size: 22)),
+          Semantics(
+            button: true,
+            label: 'Edit profile',
+            child: GestureDetector(
+              onTap: () async {
+                AppHaptics.selection();
+                await context.push('/profile/edit');
+                if (context.mounted) {
+                  context.read<ProfileBloc>().add(const ProfileLoadRequested());
+                }
+              },
+              child: const SizedBox(
+                width: 44,
+                height: 44,
+                child: Center(child: Icon(Icons.edit_outlined, size: 22)),
+              ),
             ),
           ),
         ],

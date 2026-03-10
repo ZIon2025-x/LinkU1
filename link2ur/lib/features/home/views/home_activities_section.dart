@@ -99,7 +99,11 @@ class _PopularActivitiesSection extends StatelessWidget {
         separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.md),
         itemBuilder: (context, index) {
           final activity = activities[index];
-          return _RealActivityCard(activity: activity, locale: locale);
+          return AnimatedListItem(
+            index: index,
+            maxAnimatedIndex: 9,
+            child: _RealActivityCard(activity: activity, locale: locale),
+          );
         },
       ),
     );
@@ -122,11 +126,15 @@ class _RealActivityCard extends StatelessWidget {
     final price = activity.discountedPricePerParticipant ??
         activity.originalPricePerParticipant;
 
-    return GestureDetector(
-      onTap: () => context.push('/activities/${activity.id}'),
-      child: Container(
-        width: 280,
-        clipBehavior: Clip.antiAlias,
+    return Semantics(
+      button: true,
+      label: 'View activity',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: () => context.push('/activities/${activity.id}'),
+        child: Container(
+          width: 280,
+          clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: isDark ? AppColors.cardBackgroundDark : Colors.white,
           borderRadius: AppRadius.allLarge,
@@ -322,6 +330,7 @@ class _RealActivityCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

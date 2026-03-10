@@ -156,12 +156,16 @@ class MessageGroupBubbleView extends StatelessWidget {
             isOutgoing ? MainAxisAlignment.end : MainAxisAlignment.start,
         children: [
           if (!isOutgoing) ...[
-            GestureDetector(
-              onTap: onAvatarTap,
-              child: AvatarView(
-                imageUrl: group.senderAvatar,
-                name: group.senderName,
-                size: 36,
+            Semantics(
+              button: true,
+              label: 'View profile',
+              child: GestureDetector(
+                onTap: onAvatarTap,
+                child: AvatarView(
+                  imageUrl: group.senderAvatar,
+                  name: group.senderName,
+                  size: 36,
+                ),
               ),
             ),
             AppSpacing.hSm,
@@ -387,14 +391,18 @@ class _SystemMessageBubble extends StatelessWidget {
       runSpacing: 6,
       alignment: WrapAlignment.center,
       children: imageUrls.map((url) {
-        return GestureDetector(
-          onTap: () => onImageTap?.call(url),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: AsyncImageView(
-              imageUrl: url,
-              width: 80,
-              height: 80,
+        return Semantics(
+          button: true,
+          label: 'View image',
+          child: GestureDetector(
+            onTap: () => onImageTap?.call(url),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: AsyncImageView(
+                imageUrl: url,
+                width: 80,
+                height: 80,
+              ),
             ),
           ),
         );
@@ -566,13 +574,17 @@ class _GroupBubbleItemState extends State<_GroupBubbleItem>
         return _buildInteractiveWrapper(
           isOutgoing: isOutgoing,
           isDark: isDark,
-          child: GestureDetector(
-            onTap: _isSelected ? _dismiss : () => widget.onImageTap?.call(displayUrl),
-            child: AsyncImageView(
-              imageUrl: displayUrl,
-              width: 200,
-              height: 200,
-              borderRadius: borderRadius,
+          child: Semantics(
+            button: true,
+            label: 'View image',
+            child: GestureDetector(
+              onTap: _isSelected ? _dismiss : () => widget.onImageTap?.call(displayUrl),
+              child: AsyncImageView(
+                imageUrl: displayUrl,
+                width: 200,
+                height: 200,
+                borderRadius: borderRadius,
+              ),
             ),
           ),
         );
@@ -626,13 +638,16 @@ class _GroupBubbleItemState extends State<_GroupBubbleItem>
             isOutgoing ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
           // ── 气泡主体（缩放 + 高亮） ──
-          GestureDetector(
-            onLongPressStart: _onLongPressStart,
-            onLongPress: _onLongPress,
-            onLongPressCancel: _onLongPressCancel,
-            onLongPressEnd: _onLongPressEnd,
-            onTap: _isSelected ? _dismiss : null,
-            child: AnimatedBuilder(
+          Semantics(
+            button: true,
+            label: 'Select message',
+            child: GestureDetector(
+              onLongPressStart: _onLongPressStart,
+              onLongPress: _onLongPress,
+              onLongPressCancel: _onLongPressCancel,
+              onLongPressEnd: _onLongPressEnd,
+              onTap: _isSelected ? _dismiss : null,
+              child: AnimatedBuilder(
               animation: _scaleAnimation,
               builder: (context, builtChild) {
                 return Transform.scale(
@@ -673,6 +688,7 @@ class _GroupBubbleItemState extends State<_GroupBubbleItem>
                       ),
                   ],
                 ),
+                ),
               ),
             ),
           ),
@@ -711,42 +727,46 @@ class _GroupBubbleItemState extends State<_GroupBubbleItem>
           else if (_translatedText != null && _showTranslation)
             Padding(
               padding: const EdgeInsets.only(top: 4),
-              child: GestureDetector(
-                onTap: () => setState(() => _showTranslation = false),
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? Colors.white.withValues(alpha: 0.06)
-                        : AppColors.primary.withValues(alpha: 0.05),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: isOutgoing
-                        ? CrossAxisAlignment.end
-                        : CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _translatedText!,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: isDark
-                              ? AppColors.textPrimaryDark
-                              : AppColors.textPrimaryLight,
+              child: Semantics(
+                button: true,
+                label: 'Hide translation',
+                child: GestureDetector(
+                  onTap: () => setState(() => _showTranslation = false),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.06)
+                          : AppColors.primary.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: isOutgoing
+                          ? CrossAxisAlignment.end
+                          : CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _translatedText!,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: isDark
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimaryLight,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        context.l10n.chatTranslate,
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: isDark
-                              ? AppColors.textTertiaryDark
-                              : AppColors.textTertiaryLight,
+                        const SizedBox(height: 2),
+                        Text(
+                          context.l10n.chatTranslate,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: isDark
+                                ? AppColors.textTertiaryDark
+                                : AppColors.textTertiaryLight,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),

@@ -112,19 +112,22 @@ class _AvatarPickerViewState extends State<AvatarPickerView> {
                       final isSelected =
                           _selectedAvatar == _avatarOptions[index];
 
-                      return GestureDetector(
-                        onTap: state.isUpdating
-                            ? null
-                            : () {
-                                setState(() {
-                                  _selectedAvatar = _avatarOptions[index];
-                                });
-                                context.read<ProfileBloc>().add(
-                                      ProfileUpdateAvatar(
-                                          _avatarOptions[index]),
-                                    );
-                              },
-                        child: Stack(
+                      return Semantics(
+                        button: true,
+                        label: 'Select avatar',
+                        child: GestureDetector(
+                          onTap: state.isUpdating
+                              ? null
+                              : () {
+                                  setState(() {
+                                    _selectedAvatar = _avatarOptions[index];
+                                  });
+                                  context.read<ProfileBloc>().add(
+                                        ProfileUpdateAvatar(
+                                            _avatarOptions[index]),
+                                      );
+                                },
+                          child: Stack(
                           alignment: Alignment.center,
                           children: [
                             Container(
@@ -173,6 +176,7 @@ class _AvatarPickerViewState extends State<AvatarPickerView> {
                                 ),
                               ),
                           ],
+                        ),
                         ),
                       );
                     },

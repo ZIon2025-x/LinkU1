@@ -519,24 +519,28 @@ class _TransactionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isIncome = transaction.isIncome;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
-          borderRadius: BorderRadius.circular(AppRadius.medium),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: (isIncome ? AppColors.success : AppColors.primary)
-                    .withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
+    return Semantics(
+      button: true,
+      label: 'View details',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            borderRadius: BorderRadius.circular(AppRadius.medium),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: (isIncome ? AppColors.success : AppColors.primary)
+                      .withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
               child: Icon(
                 isIncome ? Icons.arrow_downward : Icons.arrow_upward,
                 color: isIncome ? AppColors.success : AppColors.primary,
@@ -578,6 +582,7 @@ class _TransactionCard extends StatelessWidget {
             const Icon(Icons.chevron_right, size: 16, color: AppColors.textTertiary),
           ],
         ),
+      ),
       ),
     );
   }
@@ -649,6 +654,7 @@ class _PayoutSheetState extends State<_PayoutSheet> {
               IconButton(
                 onPressed: () => Navigator.pop(context),
                 icon: const Icon(Icons.close),
+                tooltip: 'Close',
               ),
             ],
           ),
@@ -787,6 +793,7 @@ class _AccountDetailsSheet extends StatelessWidget {
               IconButton(
                 onPressed: () => Navigator.pop(context),
                 icon: const Icon(Icons.close),
+                tooltip: 'Close',
               ),
             ],
           ),
@@ -1084,6 +1091,7 @@ class _TransactionDetailSheet extends StatelessWidget {
               IconButton(
                 onPressed: () => Navigator.pop(context),
                 icon: const Icon(Icons.close),
+                tooltip: 'Close',
               ),
             ],
           ),

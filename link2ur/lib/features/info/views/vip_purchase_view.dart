@@ -228,7 +228,10 @@ class _VIPPurchaseViewState extends State<VIPPurchaseView> {
                 final product = _products[index];
                 final isSelected = _selectedIndex == index;
 
-                return GestureDetector(
+                return Semantics(
+                  button: true,
+                  label: 'Select plan',
+                  child: GestureDetector(
                   onTap: () => setState(() => _selectedIndex = index),
                   child: Container(
                     margin: const EdgeInsets.only(bottom: AppSpacing.md),
@@ -303,6 +306,7 @@ class _VIPPurchaseViewState extends State<VIPPurchaseView> {
                       ],
                     ),
                   ),
+                ),
                 );
               }),
 

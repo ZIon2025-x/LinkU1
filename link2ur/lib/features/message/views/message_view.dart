@@ -340,7 +340,10 @@ class _QuickActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return Semantics(
+      button: true,
+      label: 'Quick action',
+      child: GestureDetector(
       onTap: onTap,
       child: SizedBox(
         width: 80,
@@ -435,6 +438,7 @@ class _QuickActionButton extends StatelessWidget {
           ],
         ),
       ),
+    ),
     );
   }
 }
@@ -553,7 +557,11 @@ class _TaskChatItem extends StatelessWidget {
     final gradient = _statusGradient;
     final l10n = context.l10n;
 
-    return GestureDetector(
+    return Semantics(
+      button: true,
+      label: 'View details',
+      excludeSemantics: true,
+      child: GestureDetector(
       onTap: () {
         AppHaptics.selection();
         // 进入前先本地标记已读，列表立即去红点；进入后 ChatBloc 会请求后端标记已读
@@ -667,6 +675,7 @@ class _TaskChatItem extends StatelessWidget {
           ],
         ),
       ),
+    ),
     );
   }
 

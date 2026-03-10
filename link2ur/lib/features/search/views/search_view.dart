@@ -163,6 +163,7 @@ class _SearchContentState extends State<_SearchContent> {
               if (value.text.isEmpty) return const SizedBox.shrink();
               return IconButton(
                 icon: const Icon(Icons.clear, size: 18),
+                tooltip: 'Clear',
                 onPressed: () {
                   _searchController.clear();
                   context.read<SearchBloc>().add(const SearchCleared());
@@ -488,19 +489,23 @@ class _SearchResultCard extends StatelessWidget {
     final title = result['title'] as String? ?? '';
     final description = result['description'] as String? ?? '';
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-        padding: AppSpacing.allMd,
-        decoration: BoxDecoration(
-          color: isDark
-              ? AppColors.cardBackgroundDark
-              : AppColors.cardBackgroundLight,
-          borderRadius: AppRadius.allMedium,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return Semantics(
+      button: true,
+      label: 'View details',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+          padding: AppSpacing.allMd,
+          decoration: BoxDecoration(
+            color: isDark
+                ? AppColors.cardBackgroundDark
+                : AppColors.cardBackgroundLight,
+            borderRadius: AppRadius.allMedium,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               title,
@@ -527,6 +532,7 @@ class _SearchResultCard extends StatelessWidget {
             ],
           ],
         ),
+      ),
       ),
     );
   }

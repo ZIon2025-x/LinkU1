@@ -20,28 +20,32 @@ class _PostCard extends StatelessWidget {
         : null;
     final categoryName = item.displayCategoryName(locale);
 
-    return GestureDetector(
-      onTap: () {
-        final postId = item.id.replaceFirst('post_', '');
-        context.push('/forum/posts/$postId');
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.cardBackgroundDark : Colors.white,
-          borderRadius: BorderRadius.circular(_kDiscoveryCardRadius),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 3,
-              offset: const Offset(0, 1),
-            ),
-          ],
-        ),
-        clipBehavior: Clip.hardEdge,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (item.hasImages)
+    return Semantics(
+      button: true,
+      label: 'View post',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: () {
+          final postId = item.id.replaceFirst('post_', '');
+          context.push('/forum/posts/$postId');
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.cardBackgroundDark : Colors.white,
+            borderRadius: BorderRadius.circular(_kDiscoveryCardRadius),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 3,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          clipBehavior: Clip.hardEdge,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (item.hasImages)
               LayoutBuilder(
                 builder: (context, constraints) {
                   final w = constraints.maxWidth;
@@ -148,6 +152,7 @@ class _PostCard extends StatelessWidget {
           ],
         ),
       ),
+      ),
     );
   }
 }
@@ -169,34 +174,38 @@ class _ProductCard extends StatelessWidget {
         ? Helpers.normalizeContentNewlines(item.displayDescription(locale)!)
         : null;
 
-    return GestureDetector(
-      onTap: () {
-        final id = item.id.replaceFirst('product_', '');
-        if (id.isNotEmpty) {
-          context.push('/flea-market/$id');
-        }
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.cardBackgroundDark : Colors.white,
-          borderRadius: BorderRadius.circular(_kDiscoveryCardRadius),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 3,
-              offset: const Offset(0, 1),
-            ),
-          ],
-        ),
-        clipBehavior: Clip.hardEdge,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (item.hasImages)
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final w = constraints.maxWidth;
-                  return ClipRect(
+    return Semantics(
+      button: true,
+      label: 'View product',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: () {
+          final id = item.id.replaceFirst('product_', '');
+          if (id.isNotEmpty) {
+            context.push('/flea-market/$id');
+          }
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.cardBackgroundDark : Colors.white,
+            borderRadius: BorderRadius.circular(_kDiscoveryCardRadius),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 3,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          clipBehavior: Clip.hardEdge,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (item.hasImages)
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final w = constraints.maxWidth;
+                    return ClipRect(
                     child: AsyncImageView(
                       imageUrl: item.firstImage!,
                       width: w,
@@ -283,6 +292,7 @@ class _ProductCard extends StatelessWidget {
           ],
         ),
       ),
+      ),
     );
   }
 }
@@ -304,29 +314,33 @@ class _CompetitorReviewCard extends StatelessWidget {
         : null;
     final isUpvote = item.voteType == 'upvote';
 
-    return GestureDetector(
-      onTap: () {
-        if (item.targetItem != null) {
-          context.push('/leaderboard/item/${item.targetItem!.itemId}');
-        }
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.cardBackgroundDark : Colors.white,
-          borderRadius: BorderRadius.circular(_kDiscoveryCardRadius),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 3,
-              offset: const Offset(0, 1),
-            ),
-          ],
-        ),
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const _FeedTypeBadge(feedType: 'competitor_review'),
+    return Semantics(
+      button: true,
+      label: 'View review',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: () {
+          if (item.targetItem != null) {
+            context.push('/leaderboard/item/${item.targetItem!.itemId}');
+          }
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.cardBackgroundDark : Colors.white,
+            borderRadius: BorderRadius.circular(_kDiscoveryCardRadius),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 3,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const _FeedTypeBadge(feedType: 'competitor_review'),
             const SizedBox(height: 8),
             if (displayDesc != null && displayDesc.isNotEmpty)
               Container(
@@ -407,6 +421,7 @@ class _CompetitorReviewCard extends StatelessWidget {
           ],
         ),
       ),
+      ),
     );
   }
 }
@@ -428,29 +443,33 @@ class _ServiceReviewCard extends StatelessWidget {
         : null;
     final hasActivity = item.activityInfo != null;
 
-    return GestureDetector(
-      onTap: () {
-        if (item.targetItem != null) {
-          context.push('/service/${item.targetItem!.itemId}');
-        }
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.cardBackgroundDark : Colors.white,
-          borderRadius: BorderRadius.circular(_kDiscoveryCardRadius),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 3,
-              offset: const Offset(0, 1),
-            ),
-          ],
-        ),
-        clipBehavior: Clip.hardEdge,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (hasActivity)
+    return Semantics(
+      button: true,
+      label: 'View service review',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: () {
+          if (item.targetItem != null) {
+            context.push('/service/${item.targetItem!.itemId}');
+          }
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.cardBackgroundDark : Colors.white,
+            borderRadius: BorderRadius.circular(_kDiscoveryCardRadius),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 3,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          clipBehavior: Clip.hardEdge,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (hasActivity)
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -545,6 +564,7 @@ class _ServiceReviewCard extends StatelessWidget {
           ],
         ),
       ),
+      ),
     );
   }
 }
@@ -563,14 +583,18 @@ class _RankingCard extends StatelessWidget {
     final locale = Localizations.localeOf(context);
     final top3 = item.top3;
 
-    return GestureDetector(
-      onTap: () {
-        final id = item.id.replaceFirst('ranking_', '');
-        context.push('/leaderboard/$id');
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: isDark
+    return Semantics(
+      button: true,
+      label: 'View ranking',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: () {
+          final id = item.id.replaceFirst('ranking_', '');
+          context.push('/leaderboard/$id');
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: isDark
               ? null
               : const LinearGradient(
                   begin: Alignment.topLeft,
@@ -700,6 +724,7 @@ class _RankingCard extends StatelessWidget {
           ],
         ),
       ),
+      ),
     );
   }
 }
@@ -718,32 +743,36 @@ class _ServiceCard extends StatelessWidget {
     final locale = Localizations.localeOf(context);
     final displayTitle = Helpers.normalizeContentNewlines(item.displayTitle(locale));
 
-    return GestureDetector(
-      onTap: () {
-        final id = item.id.replaceFirst('service_', '');
-        context.push('/service/$id');
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.cardBackgroundDark : Colors.white,
-          borderRadius: BorderRadius.circular(_kDiscoveryCardRadius),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 3,
-              offset: const Offset(0, 1),
-            ),
-          ],
-        ),
-        clipBehavior: Clip.hardEdge,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (item.hasImages)
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final w = constraints.maxWidth;
-                  final h = w * 3 / 4;
+    return Semantics(
+      button: true,
+      label: 'View service',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: () {
+          final id = item.id.replaceFirst('service_', '');
+          context.push('/service/$id');
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.cardBackgroundDark : Colors.white,
+            borderRadius: BorderRadius.circular(_kDiscoveryCardRadius),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 3,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          clipBehavior: Clip.hardEdge,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (item.hasImages)
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final w = constraints.maxWidth;
+                    final h = w * 3 / 4;
                   return ClipRect(
                     child: AsyncImageView(
                       imageUrl: item.firstImage!,
@@ -829,6 +858,7 @@ class _ServiceCard extends StatelessWidget {
           ],
         ),
       ),
+      ),
     );
   }
 }
@@ -884,16 +914,20 @@ class _DiscoveryUserRow extends StatelessWidget {
     final canGoUser =
         userId != null && userId!.isNotEmpty;
     if (canGoExpert || canGoUser) {
-      return GestureDetector(
-        onTap: () {
-          if (canGoExpert) {
-            context.push('/task-experts/$expertId');
-          } else {
-            context.push('/user/$userId');
-          }
-        },
-        behavior: HitTestBehavior.opaque,
-        child: content,
+      return Semantics(
+        button: true,
+        label: 'View profile',
+        child: GestureDetector(
+          onTap: () {
+            if (canGoExpert) {
+              context.push('/task-experts/$expertId');
+            } else {
+              context.push('/user/$userId');
+            }
+          },
+          behavior: HitTestBehavior.opaque,
+          child: content,
+        ),
       );
     }
     return content;

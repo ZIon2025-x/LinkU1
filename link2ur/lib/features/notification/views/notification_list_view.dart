@@ -8,6 +8,7 @@ import '../../../core/design/app_radius.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/widgets/animated_list_item.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
@@ -146,11 +147,15 @@ class _NotificationListViewContentState
                             );
                           }
                           final notification = notifications[index];
-                          return _NotificationCard(
+                          return AnimatedListItem(
                             key: ValueKey(notification.id),
-                            notification: notification,
-                            onTap: () =>
-                                _handleNotificationTap(context, notification),
+                            index: index,
+                            maxAnimatedIndex: 9,
+                            child: _NotificationCard(
+                              notification: notification,
+                              onTap: () =>
+                                  _handleNotificationTap(context, notification),
+                            ),
                           );
                         },
                       ),
@@ -327,7 +332,11 @@ class _NotificationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final locale = Localizations.localeOf(context);
-    return GestureDetector(
+    return Semantics(
+      button: true,
+      label: 'View details',
+      excludeSemantics: true,
+      child: GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.md),
@@ -407,6 +416,7 @@ class _NotificationCard extends StatelessWidget {
           ],
         ),
       ),
+    ),
     );
   }
 

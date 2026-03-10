@@ -86,11 +86,11 @@ class ApiEndpoints {
       '/api/tasks/$taskId/dispute-timeline';
 
   // --- 多参与者 ---
-  static String taskParticipants(String taskId) =>
+  static String taskParticipants(int taskId) =>
       '/api/tasks/$taskId/participants';
-  static String participantComplete(String taskId) =>
+  static String participantComplete(int taskId) =>
       '/api/tasks/$taskId/participants/me/complete';
-  static String participantExitRequest(String taskId) =>
+  static String participantExitRequest(int taskId) =>
       '/api/tasks/$taskId/participants/me/exit-request';
 
   // --- 申请管理 ---

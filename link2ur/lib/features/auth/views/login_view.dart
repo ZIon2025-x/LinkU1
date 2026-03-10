@@ -199,6 +199,7 @@ class _LoginViewState extends State<LoginView>
                       ? AppColors.textPrimaryDark
                       : AppColors.textPrimaryLight,
                 ),
+                tooltip: 'Back',
                 onPressed: () => Navigator.of(context).pop(),
               )
             : null,
@@ -247,6 +248,7 @@ class _LoginViewState extends State<LoginView>
         },
         buildWhen: (prev, curr) =>
             prev.status != curr.status ||
+            prev.errorMessage != curr.errorMessage ||
             prev.codeSendStatus != curr.codeSendStatus,
         builder: (context, state) {
           return GestureDetector(
@@ -281,6 +283,9 @@ class _LoginViewState extends State<LoginView>
                             // 会话过期横幅提示
                             if (_showSessionExpiredBanner)
                               _buildSessionExpiredBanner(isDark),
+
+                            // 内联错误提示
+                            _buildInlineError(state),
 
                             // 登录卡片
                             _buildFormCard(isDark, state),
@@ -527,19 +532,57 @@ class _LoginViewState extends State<LoginView>
                 ),
               ),
             ),
-            GestureDetector(
-              onTap: () => setState(() => _showSessionExpiredBanner = false),
-              child: Icon(
-                Icons.close,
-                size: 18,
-                color: isDark
-                    ? Colors.orange.shade400
-                    : Colors.orange.shade600,
+            Semantics(
+              button: true,
+              label: 'Close banner',
+              child: GestureDetector(
+                onTap: () => setState(() => _showSessionExpiredBanner = false),
+                child: Icon(
+                  Icons.close,
+                  size: 18,
+                  color: isDark
+                      ? Colors.orange.shade400
+                      : Colors.orange.shade600,
+                ),
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  // ==================== 内联错误提示 ====================
+
+  Widget _buildInlineError(AuthState state) {
+    final hasError = state.hasError && state.errorMessage != null;
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeInOut,
+      alignment: Alignment.topCenter,
+      child: hasError
+          ? Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppColors.error.withAlpha(25),
+                borderRadius: AppRadius.allSmall,
+                border: Border.all(color: AppColors.error.withAlpha(76)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.error_outline, color: AppColors.error, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      ErrorLocalizer.localize(context, state.errorMessage),
+                      style: const TextStyle(color: AppColors.error, fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : const SizedBox.shrink(),
     );
   }
 
@@ -619,9 +662,12 @@ class _LoginViewState extends State<LoginView>
         children: LoginMethod.values.map((method) {
           final isSelected = _loginMethod == method;
           return Expanded(
-            child: GestureDetector(
-              onTap: () => _onMethodChanged(method),
-              child: Container(
+            child: Semantics(
+              button: true,
+              label: 'Select login method',
+              child: GestureDetector(
+                onTap: () => _onMethodChanged(method),
+                child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
                   color: isSelected
@@ -640,19 +686,20 @@ class _LoginViewState extends State<LoginView>
                         ]
                       : null,
                 ),
-                child: Text(
-                  _getMethodLabel(method),
-                  textAlign: TextAlign.center,
-                  style: AppTypography.caption.copyWith(
-                    color: isSelected
-                        ? (isDark
-                            ? AppColors.textPrimaryDark
-                            : AppColors.textPrimaryLight)
-                        : (isDark
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondaryLight),
-                    fontWeight:
-                        isSelected ? FontWeight.w600 : FontWeight.normal,
+                  child: Text(
+                    _getMethodLabel(method),
+                    textAlign: TextAlign.center,
+                    style: AppTypography.caption.copyWith(
+                      color: isSelected
+                          ? (isDark
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimaryLight)
+                          : (isDark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondaryLight),
+                      fontWeight:
+                          isSelected ? FontWeight.w600 : FontWeight.normal,
+                    ),
                   ),
                 ),
               ),
@@ -723,6 +770,7 @@ class _LoginViewState extends State<LoginView>
                   : AppColors.textSecondaryLight,
               size: 20,
             ),
+            tooltip: 'Toggle password visibility',
             onPressed: () =>
                 setState(() => _obscurePassword = !_obscurePassword),
           ),
@@ -986,12 +1034,15 @@ class _LoginViewState extends State<LoginView>
   /// 对标iOS: 渐变 + 高光叠层 + 双重阴影
   Widget _buildGradientLoginButton(AuthState state) {
     final isDisabled = state.isLoading;
-    return GestureDetector(
-      onTap: isDisabled ? null : _onLogin,
-      child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 200),
-        opacity: isDisabled ? 0.5 : 1.0,
-        child: Container(
+    return Semantics(
+      button: true,
+      label: 'Log in',
+      child: GestureDetector(
+        onTap: isDisabled ? null : _onLogin,
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 200),
+          opacity: isDisabled ? 0.5 : 1.0,
+          child: Container(
           height: 56,
           decoration: BoxDecoration(
             borderRadius: AppRadius.allMedium,
@@ -1060,6 +1111,7 @@ class _LoginViewState extends State<LoginView>
               ),
             ],
           ),
+          ),
         ),
       ),
     );
@@ -1114,15 +1166,19 @@ class _LoginViewState extends State<LoginView>
             ),
             const SizedBox(width: AppSpacing.xs),
             Flexible(
-              child: GestureDetector(
-                onTap: () => _onMethodChanged(LoginMethod.emailCode),
-                child: Text(
-                  l10n.authNoAccountUseCode,
-                  style: AppTypography.subheadline.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w600,
+              child: Semantics(
+                button: true,
+                label: 'Use verification code',
+                child: GestureDetector(
+                  onTap: () => _onMethodChanged(LoginMethod.emailCode),
+                  child: Text(
+                    l10n.authNoAccountUseCode,
+                    style: AppTypography.subheadline.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    softWrap: true,
                   ),
-                  softWrap: true,
                 ),
               ),
             ),

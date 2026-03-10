@@ -119,9 +119,13 @@ class _BadgesDisplayBody extends StatelessWidget {
         spacing: AppSpacing.sm,
         runSpacing: AppSpacing.sm,
         children: badges.map((badge) {
-          return GestureDetector(
-            onTap: onBadgeTap,
-            child: _BadgeChip(badge: badge),
+          return Semantics(
+            button: true,
+            label: 'View badge details',
+            child: GestureDetector(
+              onTap: onBadgeTap,
+              child: _BadgeChip(badge: badge),
+            ),
           );
         }).toList(),
       ),

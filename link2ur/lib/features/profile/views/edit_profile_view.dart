@@ -307,9 +307,12 @@ class _EditProfileContentState extends State<_EditProfileContent> {
                 children: [
                   // Avatar
                   Center(
-                    child: GestureDetector(
-                      onTap: state.isUpdating ? null : () => _openAvatarPicker(avatarUrl),
-                      child: Stack(
+                    child: Semantics(
+                      button: true,
+                      label: 'Change avatar',
+                      child: GestureDetector(
+                        onTap: state.isUpdating ? null : () => _openAvatarPicker(avatarUrl),
+                        child: Stack(
                         children: [
                           _buildEditAvatar(avatarUrl),
                           Positioned(
@@ -328,6 +331,7 @@ class _EditProfileContentState extends State<_EditProfileContent> {
                             ),
                           ),
                         ],
+                      ),
                       ),
                     ),
                   ),

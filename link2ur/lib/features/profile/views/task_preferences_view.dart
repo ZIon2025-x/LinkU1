@@ -221,12 +221,14 @@ class _TaskPreferencesViewState extends State<TaskPreferencesView> {
                         ? () => setState(() => _minDeadlineDays--)
                         : null,
                     icon: const Icon(Icons.remove_circle_outline),
+                    tooltip: 'Decrease',
                   ),
                   IconButton(
                     onPressed: _minDeadlineDays < 30
                         ? () => setState(() => _minDeadlineDays++)
                         : null,
                     icon: const Icon(Icons.add_circle_outline),
+                    tooltip: 'Increase',
                   ),
                 ],
               ),
@@ -322,23 +324,26 @@ class _ToggleChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primary.withValues(alpha: 0.1)
-              : Theme.of(context).cardColor,
-          borderRadius: BorderRadius.circular(AppRadius.medium),
-          border: Border.all(
+    return Semantics(
+      button: true,
+      label: 'Toggle preference',
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
             color: isSelected
-                ? AppColors.primary
-                : AppColors.separator,
-            width: isSelected ? 2 : 1,
+                ? AppColors.primary.withValues(alpha: 0.1)
+                : Theme.of(context).cardColor,
+            borderRadius: BorderRadius.circular(AppRadius.medium),
+            border: Border.all(
+              color: isSelected
+                  ? AppColors.primary
+                  : AppColors.separator,
+              width: isSelected ? 2 : 1,
+            ),
           ),
-        ),
-        child: Text(
+          child: Text(
           label,
           style: TextStyle(
             fontSize: 14,
@@ -349,6 +354,7 @@ class _ToggleChip extends StatelessWidget {
                 isSelected ? FontWeight.w600 : FontWeight.normal,
           ),
         ),
+      ),
       ),
     );
   }

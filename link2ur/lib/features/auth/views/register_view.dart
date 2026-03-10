@@ -175,6 +175,7 @@ class _RegisterViewState extends State<RegisterView>
                       ? AppColors.textPrimaryDark
                       : AppColors.textPrimaryLight,
                 ),
+                tooltip: 'Back',
                 onPressed: () => Navigator.of(context).pop(),
               )
             : null,
@@ -206,6 +207,7 @@ class _RegisterViewState extends State<RegisterView>
         },
         buildWhen: (prev, curr) =>
             prev.status != curr.status ||
+            prev.errorMessage != curr.errorMessage ||
             prev.codeSendStatus != curr.codeSendStatus,
         builder: (context, state) {
           return GestureDetector(
@@ -236,6 +238,9 @@ class _RegisterViewState extends State<RegisterView>
                             // Logo + 品牌名
                             _buildLogoSection(isDark),
                             const SizedBox(height: 32),
+
+                            // 内联错误提示
+                            _buildInlineError(state),
 
                             // 注册卡片
                             _buildFormCard(isDark, state),
@@ -431,6 +436,41 @@ class _RegisterViewState extends State<RegisterView>
     );
   }
 
+  // ==================== 内联错误提示 ====================
+
+  Widget _buildInlineError(AuthState state) {
+    final hasError = (state.hasError || state.codeSendStatus == CodeSendStatus.error) &&
+        state.errorMessage != null;
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeInOut,
+      alignment: Alignment.topCenter,
+      child: hasError
+          ? Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppColors.error.withAlpha(25),
+                borderRadius: AppRadius.allSmall,
+                border: Border.all(color: AppColors.error.withAlpha(76)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.error_outline, color: AppColors.error, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      ErrorLocalizer.localize(context, state.errorMessage),
+                      style: const TextStyle(color: AppColors.error, fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : const SizedBox.shrink(),
+    );
+  }
+
   // ==================== 表单卡片 ====================
 
   Widget _buildFormCard(bool isDark, AuthState state) {
@@ -547,6 +587,7 @@ class _RegisterViewState extends State<RegisterView>
                           : AppColors.textSecondaryLight,
                       size: 20,
                     ),
+                    tooltip: 'Toggle password visibility',
                     onPressed: () =>
                         setState(() => _obscurePassword = !_obscurePassword),
                   ),
@@ -588,6 +629,7 @@ class _RegisterViewState extends State<RegisterView>
                           : AppColors.textSecondaryLight,
                       size: 20,
                     ),
+                    tooltip: 'Toggle password visibility',
                     onPressed: () => setState(
                         () => _obscureConfirmPassword = !_obscureConfirmPassword),
                   ),
@@ -779,16 +821,19 @@ class _RegisterViewState extends State<RegisterView>
   // ==================== 同意条款 ====================
 
   Widget _buildTermsCheckbox(bool isDark) {
-    return GestureDetector(
-      onTap: () {
-        AppHaptics.selection();
-        setState(() => _agreeTerms = !_agreeTerms);
-      },
-      behavior: HitTestBehavior.opaque,
-      child: Row(
-        children: [
-          // 自定义复选框
-          AnimatedContainer(
+    return Semantics(
+      button: true,
+      label: 'Toggle terms agreement',
+      child: GestureDetector(
+        onTap: () {
+          AppHaptics.selection();
+          setState(() => _agreeTerms = !_agreeTerms);
+        },
+        behavior: HitTestBehavior.opaque,
+        child: Row(
+          children: [
+            // 自定义复选框
+            AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             width: 22,
             height: 22,
@@ -851,7 +896,8 @@ class _RegisterViewState extends State<RegisterView>
               ),
             ),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -860,12 +906,15 @@ class _RegisterViewState extends State<RegisterView>
 
   Widget _buildGradientRegisterButton(AuthState state) {
     final isDisabled = state.isLoading || !_agreeTerms;
-    return GestureDetector(
-      onTap: isDisabled ? null : _onRegister,
-      child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 200),
-        opacity: isDisabled ? 0.5 : 1.0,
-        child: Container(
+    return Semantics(
+      button: true,
+      label: 'Create account',
+      child: GestureDetector(
+        onTap: isDisabled ? null : _onRegister,
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 200),
+          opacity: isDisabled ? 0.5 : 1.0,
+          child: Container(
           height: 56,
           decoration: BoxDecoration(
             borderRadius: AppRadius.allMedium,
@@ -934,6 +983,7 @@ class _RegisterViewState extends State<RegisterView>
               ),
             ],
           ),
+          ),
         ),
       ),
     );
@@ -954,13 +1004,17 @@ class _RegisterViewState extends State<RegisterView>
           ),
         ),
         const SizedBox(width: AppSpacing.xs),
-        GestureDetector(
-          onTap: () => context.pop(),
-          child: Text(
-            context.l10n.authLoginNow,
-            style: AppTypography.subheadline.copyWith(
-              color: AppColors.primary,
-              fontWeight: FontWeight.w600,
+        Semantics(
+          button: true,
+          label: 'Go to login',
+          child: GestureDetector(
+            onTap: () => context.pop(),
+            child: Text(
+              context.l10n.authLoginNow,
+              style: AppTypography.subheadline.copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ),

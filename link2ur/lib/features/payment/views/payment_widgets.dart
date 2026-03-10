@@ -96,9 +96,13 @@ class _CouponSelectorSheetState extends State<_CouponSelectorSheet> {
                 itemBuilder: (context, index) {
                   final coupon = _coupons[index];
                   final isSelected = coupon['id'] == widget.selectedUserCouponId;
-                  return GestureDetector(
-                    onTap: () => Navigator.pop(context, coupon),
-                    child: Container(
+                  return Semantics(
+                    button: true,
+                    label: 'View details',
+                    excludeSemantics: true,
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(context, coupon),
+                      child: Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: isSelected
@@ -153,6 +157,7 @@ class _CouponSelectorSheetState extends State<_CouponSelectorSheet> {
                                 color: AppColors.primary),
                         ],
                       ),
+                    ),
                     ),
                   );
                 },

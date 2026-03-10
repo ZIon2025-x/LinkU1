@@ -6571,6 +6571,86 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorTaskApplicationIdNotFound => 'Application ID not found';
 
   @override
+  String get errorTaskDetailLoadFailed =>
+      'Failed to load task details. Please try again.';
+
+  @override
+  String get errorTaskApplicationsLoadFailed => 'Failed to load applications.';
+
+  @override
+  String get errorTaskReviewsLoadFailed => 'Failed to load reviews.';
+
+  @override
+  String get errorTaskApplyFailed =>
+      'Failed to submit application. Please try again.';
+
+  @override
+  String get errorTaskCancelApplicationFailed =>
+      'Failed to cancel application.';
+
+  @override
+  String get errorTaskAcceptApplicantFailed => 'Failed to accept applicant.';
+
+  @override
+  String get errorTaskRejectApplicantFailed => 'Failed to reject applicant.';
+
+  @override
+  String get errorTaskCompleteFailed =>
+      'Failed to submit completion. Please try again.';
+
+  @override
+  String get errorTaskConfirmCompletionFailed =>
+      'Failed to confirm completion.';
+
+  @override
+  String get errorTaskCancelFailed => 'Failed to cancel task.';
+
+  @override
+  String get errorTaskReviewFailed => 'Failed to submit review.';
+
+  @override
+  String get errorTaskRefundRequestFailed => 'Failed to submit refund request.';
+
+  @override
+  String get errorTaskRefundHistoryLoadFailed =>
+      'Failed to load refund history.';
+
+  @override
+  String get errorTaskCancelRefundFailed => 'Failed to cancel refund request.';
+
+  @override
+  String get errorTaskRebuttalFailed => 'Failed to submit dispute.';
+
+  @override
+  String get errorTaskSendMessageFailed => 'Failed to send message.';
+
+  @override
+  String get errorTaskCounterOfferFailed => 'Failed to submit counter offer.';
+
+  @override
+  String get errorTaskRespondCounterOfferFailed =>
+      'Failed to respond to counter offer.';
+
+  @override
+  String get errorTaskRespondNegotiationFailed =>
+      'Failed to respond to negotiation.';
+
+  @override
+  String get errorTaskVisibilityUpdateFailed =>
+      'Failed to update task visibility.';
+
+  @override
+  String get errorTaskListLoadFailed => 'Failed to load tasks.';
+
+  @override
+  String get errorTaskQuoteFailed =>
+      'Failed to submit quote. Please try again.';
+
+  @override
+  String get errorTaskQuoteAcceptFailed =>
+      'Quote submitted, but automatic acceptance failed. Please contact support.';
+
+  @override
   String get searchTitle => 'Search';
 
   @override

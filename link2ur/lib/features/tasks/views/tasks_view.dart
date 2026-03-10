@@ -192,6 +192,7 @@ class _TasksViewContentState extends State<_TasksViewContent> {
                 icon: const Icon(Icons.clear, size: 18),
                 constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                 padding: EdgeInsets.zero,
+                tooltip: 'Clear',
                 onPressed: () {
                   _searchController.clear();
                   _debouncer.cancel();
@@ -213,6 +214,7 @@ class _TasksViewContentState extends State<_TasksViewContent> {
                         constraints:
                             const BoxConstraints(minWidth: 36, minHeight: 36),
                         padding: EdgeInsets.zero,
+                        tooltip: 'Filter',
                         onPressed: () => _showFilterPanel(context),
                       ),
                       if (state.hasActiveFilters)
@@ -257,16 +259,19 @@ class _TasksViewContentState extends State<_TasksViewContent> {
                   state.selectedCategory == category['key'];
               final label = _categoryLabel(context, category['key'] as String);
 
-              return GestureDetector(
-                onTap: () {
-                  AppHaptics.selection();
-                  context.read<TaskListBloc>().add(
-                        TaskListCategoryChanged(
-                            category['key'] as String),
-                      );
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              return Semantics(
+                button: true,
+                label: 'Select category',
+                child: GestureDetector(
+                  onTap: () {
+                    AppHaptics.selection();
+                    context.read<TaskListBloc>().add(
+                          TaskListCategoryChanged(
+                              category['key'] as String),
+                        );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
                     gradient: isSelected
                         ? const LinearGradient(
@@ -302,6 +307,7 @@ class _TasksViewContentState extends State<_TasksViewContent> {
                       fontSize: 14,
                     ),
                   ),
+                ),
                 ),
               );
             },
@@ -640,20 +646,23 @@ class _TasksViewContentState extends State<_TasksViewContent> {
     required bool isDark,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
-      onTap: () {
-        AppHaptics.selection();
-        onTap();
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          gradient: isSelected
-              ? const LinearGradient(colors: AppColors.gradientPrimary)
-              : null,
-          color: isSelected
-              ? null
-              : (isDark
+    return Semantics(
+      button: true,
+      label: 'Toggle filter',
+      child: GestureDetector(
+        onTap: () {
+          AppHaptics.selection();
+          onTap();
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            gradient: isSelected
+                ? const LinearGradient(colors: AppColors.gradientPrimary)
+                : null,
+            color: isSelected
+                ? null
+                : (isDark
                   ? AppColors.surface2(Brightness.dark)
                   : AppColors.surface1(Brightness.light)),
           borderRadius: BorderRadius.circular(20),
@@ -679,6 +688,7 @@ class _TasksViewContentState extends State<_TasksViewContent> {
           ),
         ),
       ),
+      ),
     );
   }
 }
@@ -697,20 +707,24 @@ class _TaskGridCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return GestureDetector(
-      onTap: () async {
-        AppHaptics.selection();
-        await context.push('/tasks/${task.id}');
-        if (context.mounted) {
-          context.read<TaskListBloc>().add(const TaskListRefreshRequested());
-        }
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: isDark
-              ? AppColors.cardBackgroundDark
-              : AppColors.cardBackgroundLight,
-          borderRadius: AppRadius.allLarge,
+    return Semantics(
+      button: true,
+      label: 'View details',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: () async {
+          AppHaptics.selection();
+          await context.push('/tasks/${task.id}');
+          if (context.mounted) {
+            context.read<TaskListBloc>().add(const TaskListRefreshRequested());
+          }
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            color: isDark
+                ? AppColors.cardBackgroundDark
+                : AppColors.cardBackgroundLight,
+            borderRadius: AppRadius.allLarge,
           // 对标iOS: 0.5pt separator边框
           border: Border.all(
             color: (isDark ? AppColors.separatorDark : AppColors.separatorLight)
@@ -748,6 +762,7 @@ class _TaskGridCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

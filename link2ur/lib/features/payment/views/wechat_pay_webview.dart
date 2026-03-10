@@ -98,6 +98,7 @@ class _WeChatPayWebViewState extends State<WeChatPayWebView> {
         title: Text(l10n.paymentWeChatPay),
         leading: IconButton(
           icon: const Icon(Icons.close),
+          tooltip: 'Close',
           onPressed: _confirmCancel,
         ),
       ),

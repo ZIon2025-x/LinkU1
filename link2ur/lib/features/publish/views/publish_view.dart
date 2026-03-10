@@ -971,21 +971,25 @@ class _PublishContentState extends State<_PublishContent>
       ),
       child: Row(
         children: [
-          GestureDetector(
-            onTap: () {
-              AppHaptics.light();
-              setState(() => _selectedType = null);
-            },
-            behavior: HitTestBehavior.opaque,
-            child: Container(
-              width: 44,
-              height: 44,
-              alignment: Alignment.center,
-              child: Icon(
-                Icons.arrow_back_ios_new_rounded,
+          Semantics(
+            button: true,
+            label: 'Go back',
+            child: GestureDetector(
+              onTap: () {
+                AppHaptics.light();
+                setState(() => _selectedType = null);
+              },
+              behavior: HitTestBehavior.opaque,
+              child: Container(
+                width: 44,
+                height: 44,
+                alignment: Alignment.center,
+                child: Icon(
+                  Icons.arrow_back_ios_new_rounded,
                 size: 20,
                 color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
               ),
+            ),
             ),
           ),
           Expanded(
@@ -1054,22 +1058,26 @@ class _PublishContentState extends State<_PublishContent>
         ],
       ),
       child: Center(
-        child: GestureDetector(
-          onTap: _dismiss,
-          behavior: HitTestBehavior.opaque,
-          child: Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.08)
-                  : Colors.black.withValues(alpha: 0.05),
-            ),
-            child: Icon(
-              Icons.close_rounded,
-              size: 22,
-              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+        child: Semantics(
+          button: true,
+          label: 'Close',
+          child: GestureDetector(
+            onTap: _dismiss,
+            behavior: HitTestBehavior.opaque,
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.08)
+                    : Colors.black.withValues(alpha: 0.05),
+              ),
+              child: Icon(
+                Icons.close_rounded,
+                size: 22,
+                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+              ),
             ),
           ),
         ),
@@ -1097,22 +1105,26 @@ class _PublishContentState extends State<_PublishContent>
         ],
       ),
       child: Center(
-        child: GestureDetector(
-          onTap: _dismiss,
-          behavior: HitTestBehavior.opaque,
-          child: Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.08)
-                  : Colors.black.withValues(alpha: 0.05),
-            ),
-            child: Icon(
-              Icons.close_rounded,
-              size: 22,
-              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+        child: Semantics(
+          button: true,
+          label: 'Close',
+          child: GestureDetector(
+            onTap: _dismiss,
+            behavior: HitTestBehavior.opaque,
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.08)
+                    : Colors.black.withValues(alpha: 0.05),
+              ),
+              child: Icon(
+                Icons.close_rounded,
+                size: 22,
+                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+              ),
             ),
           ),
         ),
@@ -1251,10 +1263,13 @@ class _PublishContentState extends State<_PublishContent>
           AppSpacing.vLg,
 
           _sectionTitle(context.l10n.createTaskDeadline, isDark: isDark),
-          GestureDetector(
-            onTap: _selectDeadline,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          Semantics(
+            button: true,
+            label: 'Select deadline',
+            child: GestureDetector(
+              onTap: _selectDeadline,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               decoration: BoxDecoration(
                 color: isDark
                     ? Colors.white.withValues(alpha: 0.06)
@@ -1286,6 +1301,7 @@ class _PublishContentState extends State<_PublishContent>
                   ),
                 ],
               ),
+            ),
             ),
           ),
           AppSpacing.vLg,
@@ -1682,13 +1698,17 @@ class _PublishContentState extends State<_PublishContent>
               Positioned(
                 top: -4,
                 right: -4,
-                child: GestureDetector(
-                  onTap: () => _removeImage(entry.key),
-                  child: Container(
-                    width: 22,
-                    height: 22,
-                    decoration: const BoxDecoration(color: AppColors.error, shape: BoxShape.circle),
-                    child: const Icon(Icons.close, size: 14, color: Colors.white),
+                child: Semantics(
+                  button: true,
+                  label: 'Remove image',
+                  child: GestureDetector(
+                    onTap: () => _removeImage(entry.key),
+                    child: Container(
+                      width: 22,
+                      height: 22,
+                      decoration: const BoxDecoration(color: AppColors.error, shape: BoxShape.circle),
+                      child: const Icon(Icons.close, size: 14, color: Colors.white),
+                    ),
                   ),
                 ),
               ),
@@ -1696,11 +1716,14 @@ class _PublishContentState extends State<_PublishContent>
           );
         }),
         if (_fleaImages.length < _kFleaMaxImages)
-          GestureDetector(
-            onTap: _pickImages,
-            child: Container(
-              width: 80,
-              height: 80,
+          Semantics(
+            button: true,
+            label: 'Add images',
+            child: GestureDetector(
+              onTap: _pickImages,
+              child: Container(
+                width: 80,
+                height: 80,
               decoration: BoxDecoration(
                 color: isDark ? Colors.white.withValues(alpha: 0.06) : AppColors.backgroundLight,
                 borderRadius: AppRadius.allSmall,
@@ -1729,6 +1752,7 @@ class _PublishContentState extends State<_PublishContent>
                 ],
               ),
             ),
+            ),
           ),
       ],
     );
@@ -1750,13 +1774,17 @@ class _PublishContentState extends State<_PublishContent>
               Positioned(
                 top: -4,
                 right: -4,
-                child: GestureDetector(
-                  onTap: () => _removeTaskImage(entry.key),
-                  child: Container(
-                    width: 22,
-                    height: 22,
-                    decoration: const BoxDecoration(color: AppColors.error, shape: BoxShape.circle),
-                    child: const Icon(Icons.close, size: 14, color: Colors.white),
+                child: Semantics(
+                  button: true,
+                  label: 'Remove image',
+                  child: GestureDetector(
+                    onTap: () => _removeTaskImage(entry.key),
+                    child: Container(
+                      width: 22,
+                      height: 22,
+                      decoration: const BoxDecoration(color: AppColors.error, shape: BoxShape.circle),
+                      child: const Icon(Icons.close, size: 14, color: Colors.white),
+                    ),
                   ),
                 ),
               ),
@@ -1764,8 +1792,11 @@ class _PublishContentState extends State<_PublishContent>
           );
         }),
         if (_taskImages.length < _kTaskMaxImages)
-          GestureDetector(
-            onTap: _pickTaskImages,
+          Semantics(
+            button: true,
+            label: 'Add images',
+            child: GestureDetector(
+              onTap: _pickTaskImages,
             child: Container(
               width: 80,
               height: 80,
@@ -1797,6 +1828,7 @@ class _PublishContentState extends State<_PublishContent>
                 ],
               ),
             ),
+            ),
           ),
       ],
     );
@@ -1818,13 +1850,17 @@ class _PublishContentState extends State<_PublishContent>
               Positioned(
                 top: -4,
                 right: -4,
-                child: GestureDetector(
-                  onTap: () => _removePostImage(entry.key),
-                  child: Container(
-                    width: 22,
-                    height: 22,
-                    decoration: const BoxDecoration(color: AppColors.error, shape: BoxShape.circle),
-                    child: const Icon(Icons.close, size: 14, color: Colors.white),
+                child: Semantics(
+                  button: true,
+                  label: 'Remove image',
+                  child: GestureDetector(
+                    onTap: () => _removePostImage(entry.key),
+                    child: Container(
+                      width: 22,
+                      height: 22,
+                      decoration: const BoxDecoration(color: AppColors.error, shape: BoxShape.circle),
+                      child: const Icon(Icons.close, size: 14, color: Colors.white),
+                    ),
                   ),
                 ),
               ),
@@ -1832,8 +1868,11 @@ class _PublishContentState extends State<_PublishContent>
           );
         }),
         if (_postImages.length < _kPostMaxImages)
-          GestureDetector(
-            onTap: _pickPostImages,
+          Semantics(
+            button: true,
+            label: 'Add images',
+            child: GestureDetector(
+              onTap: _pickPostImages,
             child: Container(
               width: 80,
               height: 80,
@@ -1864,6 +1903,7 @@ class _PublishContentState extends State<_PublishContent>
                   ),
                 ],
               ),
+            ),
             ),
           ),
       ],

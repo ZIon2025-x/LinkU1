@@ -128,17 +128,21 @@ class _ActivityDetailViewContent extends StatelessWidget {
       forceMaterialTransparency: true,
       leading: Padding(
         padding: const EdgeInsets.all(4),
-        child: GestureDetector(
-          onTap: () => context.pop(),
-          child: Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.3),
-              shape: BoxShape.circle,
+        child: Semantics(
+          button: true,
+          label: 'Go back',
+          child: GestureDetector(
+            onTap: () => context.pop(),
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.3),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.arrow_back_ios_new,
+                  size: 18, color: Colors.white),
             ),
-            child: const Icon(Icons.arrow_back_ios_new,
-                size: 18, color: Colors.white),
           ),
         ),
       ),
@@ -162,11 +166,15 @@ class _ActivityDetailViewContent extends StatelessWidget {
           if (state.activityDetail!.expertId.isNotEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: GestureDetector(
-                onTap: () {
-                  context.safePush('/task-experts/${state.activityDetail!.expertId}');
-                },
-                child: _buildExpertAvatarSmall(state.expert),
+              child: Semantics(
+                button: true,
+                label: 'View expert profile',
+                child: GestureDetector(
+                  onTap: () {
+                    context.safePush('/task-experts/${state.activityDetail!.expertId}');
+                  },
+                  child: _buildExpertAvatarSmall(state.expert),
+                ),
               ),
             ),
         ],
@@ -180,16 +188,20 @@ class _ActivityDetailViewContent extends StatelessWidget {
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: GestureDetector(
-        onTap: onPressed,
-        child: Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.3),
-            shape: BoxShape.circle,
+      child: Semantics(
+        button: true,
+        label: 'Share',
+        child: GestureDetector(
+          onTap: onPressed,
+          child: Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.3),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 18, color: Colors.white),
           ),
-          child: Icon(icon, size: 18, color: Colors.white),
         ),
       ),
     );
@@ -351,38 +363,42 @@ class _ActivityDetailViewContent extends StatelessWidget {
           child: Row(
             children: [
               // 收藏按钮 - 对标iOS favorite button
-              GestureDetector(
-                onTap: state.isTogglingFavorite
-                    ? null
-                    : () => context.read<ActivityBloc>().add(
-                          ActivityToggleFavorite(activityId: activity.id)),
-                child: SizedBox(
-                  width: 50,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        state.isFavorited
-                            ? Icons.favorite
-                            : Icons.favorite_border,
-                        size: 20,
-                        color: state.isFavorited
-                            ? AppColors.error
-                            : isDark
+              Semantics(
+                button: true,
+                label: 'Toggle favorite',
+                child: GestureDetector(
+                  onTap: state.isTogglingFavorite
+                      ? null
+                      : () => context.read<ActivityBloc>().add(
+                            ActivityToggleFavorite(activityId: activity.id)),
+                  child: SizedBox(
+                    width: 50,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          state.isFavorited
+                              ? Icons.favorite
+                              : Icons.favorite_border,
+                          size: 20,
+                          color: state.isFavorited
+                              ? AppColors.error
+                              : isDark
+                                  ? AppColors.textTertiaryDark
+                                  : AppColors.textTertiaryLight,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          context.l10n.activityFavorite,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: isDark
                                 ? AppColors.textTertiaryDark
                                 : AppColors.textTertiaryLight,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        context.l10n.activityFavorite,
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: isDark
-                              ? AppColors.textTertiaryDark
-                              : AppColors.textTertiaryLight,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -551,28 +567,33 @@ class _ActivityDetailViewContent extends StatelessWidget {
     required bool isLoading,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
-      onTap: isLoading ? null : onTap,
-      child: Container(
-        height: 50,
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: AppColors.gradientDeepBlue,
+    return Semantics(
+      button: true,
+      label: text,
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: isLoading ? null : onTap,
+        child: Container(
+          height: 50,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: AppColors.gradientDeepBlue,
+            ),
+            borderRadius: BorderRadius.circular(12),
           ),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Center(
-          child: isLoading
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                      strokeWidth: 2, color: Colors.white),
-                )
-              : Text(
-                  text,
-                  style: AppTypography.bodyBold.copyWith(color: Colors.white),
-                ),
+          child: Center(
+            child: isLoading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white),
+                  )
+                : Text(
+                    text,
+                    style: AppTypography.bodyBold.copyWith(color: Colors.white),
+                  ),
+          ),
         ),
       ),
     );
@@ -2142,12 +2163,16 @@ class _ActivityApplySheetState extends State<ActivityApplySheet> {
           horizontal: AppSpacing.md, vertical: AppSpacing.sm),
       child: Row(
         children: [
-          GestureDetector(
-            onTap: () => Navigator.of(context).pop(),
-            child: Text(
-              context.l10n.commonCancel,
-              style: AppTypography.body.copyWith(
-                color: AppColors.textSecondaryLight,
+          Semantics(
+            button: true,
+            label: 'Cancel',
+            child: GestureDetector(
+              onTap: () => Navigator.of(context).pop(),
+              child: Text(
+                context.l10n.commonCancel,
+                style: AppTypography.body.copyWith(
+                  color: AppColors.textSecondaryLight,
+                ),
               ),
             ),
           ),
@@ -2342,31 +2367,35 @@ class _ActivityApplySheetState extends State<ActivityApplySheet> {
               // 日期选择器 - 对标iOS DatePicker
               if (!_isFlexibleTime) ...[
                 const Divider(height: 24),
-                GestureDetector(
-                  onTap: () => _showDatePicker(context),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.event, size: 20, color: AppColors.primary),
-                      const SizedBox(width: AppSpacing.sm),
-                      Text(
-                        context.l10n.activityPreferredDate,
-                        style: AppTypography.body.copyWith(
-                          color: isDark
-                              ? AppColors.textSecondaryDark
-                              : AppColors.textSecondaryLight,
+                Semantics(
+                  button: true,
+                  label: 'Select date',
+                  child: GestureDetector(
+                    onTap: () => _showDatePicker(context),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.event, size: 20, color: AppColors.primary),
+                        const SizedBox(width: AppSpacing.sm),
+                        Text(
+                          context.l10n.activityPreferredDate,
+                          style: AppTypography.body.copyWith(
+                            color: isDark
+                                ? AppColors.textSecondaryDark
+                                : AppColors.textSecondaryLight,
+                          ),
                         ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        DateFormat('yyyy-MM-dd').format(_preferredDate),
-                        style: AppTypography.bodyBold.copyWith(
-                          color: AppColors.primary,
+                        const Spacer(),
+                        Text(
+                          DateFormat('yyyy-MM-dd').format(_preferredDate),
+                          style: AppTypography.bodyBold.copyWith(
+                            color: AppColors.primary,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 4),
-                      const Icon(Icons.chevron_right,
-                          size: 18, color: AppColors.textTertiaryLight),
-                    ],
+                        const SizedBox(width: 4),
+                        const Icon(Icons.chevron_right,
+                            size: 18, color: AppColors.textTertiaryLight),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -2414,42 +2443,46 @@ class _ActivityApplySheetState extends State<ActivityApplySheet> {
         child: Padding(
           padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.md, vertical: 12),
-          child: GestureDetector(
-            onTap: (state.isSubmitting || !canApply) ? null : _onApply,
-            child: AnimatedOpacity(
-              opacity: canApply ? 1.0 : 0.5,
-              duration: const Duration(milliseconds: 200),
-              child: Container(
-                height: 50,
-                decoration: BoxDecoration(
-                  gradient: canApply
-                      ? const LinearGradient(
-                          colors: AppColors.gradientDeepBlue)
-                      : null,
-                  color: canApply ? null : AppColors.textTertiaryLight,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Center(
-                  child: state.isSubmitting
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white),
-                        )
-                      : Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.send,
-                                size: 18, color: Colors.white),
-                            const SizedBox(width: 8),
-                            Text(
-                              context.l10n.activityConfirmApply,
-                              style: AppTypography.bodyBold
-                                  .copyWith(color: Colors.white),
-                            ),
-                          ],
-                        ),
+          child: Semantics(
+            button: true,
+            label: 'Submit application',
+            child: GestureDetector(
+              onTap: (state.isSubmitting || !canApply) ? null : _onApply,
+              child: AnimatedOpacity(
+                opacity: canApply ? 1.0 : 0.5,
+                duration: const Duration(milliseconds: 200),
+                child: Container(
+                  height: 50,
+                  decoration: BoxDecoration(
+                    gradient: canApply
+                        ? const LinearGradient(
+                            colors: AppColors.gradientDeepBlue)
+                        : null,
+                    color: canApply ? null : AppColors.textTertiaryLight,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Center(
+                    child: state.isSubmitting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white),
+                          )
+                        : Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.send,
+                                  size: 18, color: Colors.white),
+                              const SizedBox(width: 8),
+                              Text(
+                                context.l10n.activityConfirmApply,
+                                style: AppTypography.bodyBold
+                                    .copyWith(color: Colors.white),
+                              ),
+                            ],
+                          ),
+                  ),
                 ),
               ),
             ),

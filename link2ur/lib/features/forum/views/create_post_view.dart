@@ -525,9 +525,12 @@ class _CreatePostViewState extends State<CreatePostView> {
               Positioned(
                 top: -4,
                 right: -4,
-                child: GestureDetector(
-                  onTap: () => _removeImage(entry.key),
-                  child: Container(
+                child: Semantics(
+                  button: true,
+                  label: 'Remove image',
+                  child: GestureDetector(
+                    onTap: () => _removeImage(entry.key),
+                    child: Container(
                     width: 22,
                     height: 22,
                     decoration: const BoxDecoration(
@@ -541,13 +544,17 @@ class _CreatePostViewState extends State<CreatePostView> {
                     ),
                   ),
                 ),
+                ),
               ),
             ],
           );
         }),
         if (_selectedImages.length < _kMaxImages)
-          GestureDetector(
-            onTap: _pickImages,
+          Semantics(
+            button: true,
+            label: 'Add image',
+            child: GestureDetector(
+              onTap: _pickImages,
             child: Container(
               width: 80,
               height: 80,
@@ -585,6 +592,7 @@ class _CreatePostViewState extends State<CreatePostView> {
                 ],
               ),
             ),
+          ),
           ),
       ],
     );
@@ -648,9 +656,13 @@ class _CreatePostViewState extends State<CreatePostView> {
                     ],
                   ),
                 ),
-                GestureDetector(
-                  onTap: () => _removeFile(entry.key),
-                  child: const Icon(Icons.close, size: 20, color: AppColors.error),
+                Semantics(
+                  button: true,
+                  label: 'Remove file',
+                  child: GestureDetector(
+                    onTap: () => _removeFile(entry.key),
+                    child: const Icon(Icons.close, size: 20, color: AppColors.error),
+                  ),
                 ),
               ],
             ),

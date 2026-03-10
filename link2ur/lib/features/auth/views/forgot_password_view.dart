@@ -292,6 +292,7 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
                                     ? Icons.visibility_off
                                     : Icons.visibility,
                               ),
+                              tooltip: 'Toggle password visibility',
                               onPressed: () {
                                 setState(() =>
                                     _obscurePassword = !_obscurePassword);
@@ -319,6 +320,7 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
                                     ? Icons.visibility_off
                                     : Icons.visibility,
                               ),
+                              tooltip: 'Toggle password visibility',
                               onPressed: () {
                                 setState(() =>
                                     _obscureConfirm = !_obscureConfirm);

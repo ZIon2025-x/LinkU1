@@ -14,6 +14,7 @@ import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/error_state_view.dart';
+import '../../../core/widgets/animated_list_item.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/utils/app_exception.dart';
@@ -108,6 +109,7 @@ class _ForumPostListViewContentState
             ),
           IconButton(
             icon: const Icon(Icons.post_add, color: AppColors.primary),
+            tooltip: 'New post',
             onPressed: () async {
               await context.push('/forum/posts/create');
               if (context.mounted) {
@@ -209,9 +211,11 @@ class _ForumPostListViewContentState
                         );
                       }
                       final post = posts[index];
-                      return RepaintBoundary(
+                      return AnimatedListItem(
+                        key: ValueKey(post.id),
+                        index: index,
+                        maxAnimatedIndex: 9,
                         child: _PostCard(
-                          key: ValueKey(post.id),
                           post: post,
                           onTap: () =>
                               context.safePush('/forum/posts/${post.id}'),
@@ -238,10 +242,14 @@ class _PostCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final locale = Localizations.localeOf(context);
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.md),
+    return Semantics(
+      button: true,
+      label: 'View post',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
           color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(AppRadius.large),
@@ -342,6 +350,7 @@ class _PostCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

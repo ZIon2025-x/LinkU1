@@ -349,16 +349,20 @@ class _EditPostViewState extends State<EditPostView> {
               Positioned(
                 top: -4,
                 right: -4,
-                child: GestureDetector(
-                  onTap: () => _removeExistingUrl(entry.key),
-                  child: Container(
-                    width: 22,
-                    height: 22,
-                    decoration: const BoxDecoration(
-                      color: AppColors.error,
-                      shape: BoxShape.circle,
+                child: Semantics(
+                  button: true,
+                  label: 'Remove image',
+                  child: GestureDetector(
+                    onTap: () => _removeExistingUrl(entry.key),
+                    child: Container(
+                      width: 22,
+                      height: 22,
+                      decoration: const BoxDecoration(
+                        color: AppColors.error,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.close, size: 14, color: Colors.white),
                     ),
-                    child: const Icon(Icons.close, size: 14, color: Colors.white),
                   ),
                 ),
               ),
@@ -379,16 +383,20 @@ class _EditPostViewState extends State<EditPostView> {
               Positioned(
                 top: -4,
                 right: -4,
-                child: GestureDetector(
-                  onTap: () => _removeNewFile(entry.key),
-                  child: Container(
-                    width: 22,
-                    height: 22,
-                    decoration: const BoxDecoration(
-                      color: AppColors.error,
-                      shape: BoxShape.circle,
+                child: Semantics(
+                  button: true,
+                  label: 'Remove image',
+                  child: GestureDetector(
+                    onTap: () => _removeNewFile(entry.key),
+                    child: Container(
+                      width: 22,
+                      height: 22,
+                      decoration: const BoxDecoration(
+                        color: AppColors.error,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.close, size: 14, color: Colors.white),
                     ),
-                    child: const Icon(Icons.close, size: 14, color: Colors.white),
                   ),
                 ),
               ),
@@ -396,11 +404,14 @@ class _EditPostViewState extends State<EditPostView> {
           );
         }),
         if (_totalImageCount < _kMaxImages)
-          GestureDetector(
-            onTap: _pickImages,
-            child: Container(
-              width: 80,
-              height: 80,
+          Semantics(
+            button: true,
+            label: 'Add image',
+            child: GestureDetector(
+              onTap: _pickImages,
+              child: Container(
+                width: 80,
+                height: 80,
               decoration: BoxDecoration(
                 color: isDark ? Colors.white.withValues(alpha: 0.06) : AppColors.backgroundLight,
                 borderRadius: AppRadius.allSmall,
@@ -429,6 +440,7 @@ class _EditPostViewState extends State<EditPostView> {
                 ],
               ),
             ),
+          ),
           ),
       ],
     );

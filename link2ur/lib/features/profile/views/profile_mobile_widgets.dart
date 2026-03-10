@@ -43,20 +43,23 @@ Widget _buildUserInfoSection(
     child: Column(
       children: [
         // 头像 + 角标（点击可更换头像）
-        GestureDetector(
-          onTap: () {
-            pushWithSwipeBack(
-              context,
-              AvatarPickerView(
-                currentAvatar: user.avatar,
-                onSelected: (newAvatar) {
-                  // 头像更新后刷新 Profile
-                  context.read<ProfileBloc>().add(const ProfileLoadRequested());
-                },
-              ),
-            );
-          },
-          child: Stack(
+        Semantics(
+          button: true,
+          label: 'Change avatar',
+          child: GestureDetector(
+            onTap: () {
+              pushWithSwipeBack(
+                context,
+                AvatarPickerView(
+                  currentAvatar: user.avatar,
+                  onSelected: (newAvatar) {
+                    // 头像更新后刷新 Profile
+                    context.read<ProfileBloc>().add(const ProfileLoadRequested());
+                  },
+                ),
+              );
+            },
+            child: Stack(
             alignment: Alignment.bottomRight,
             children: [
               // 渐变环 + 头像
@@ -93,6 +96,7 @@ Widget _buildUserInfoSection(
                 userLevel: user.userLevel,
               ),
             ],
+          ),
           ),
         ),
         const SizedBox(height: 16),
@@ -177,13 +181,16 @@ Widget _buildStatsSection(
     child: Row(
       children: [
         Expanded(
-          child: GestureDetector(
-            onTap: () {
-              AppHaptics.selection();
-              context.push('/profile/my-tasks?tab=3'); // inProgress tab
-            },
-            behavior: HitTestBehavior.opaque,
-            child: Column(
+          child: Semantics(
+            button: true,
+            label: 'View in progress',
+            child: GestureDetector(
+              onTap: () {
+                AppHaptics.selection();
+                context.push('/profile/my-tasks?tab=3'); // inProgress tab
+              },
+              behavior: HitTestBehavior.opaque,
+              child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 AnimatedCounter(
@@ -204,17 +211,21 @@ Widget _buildStatsSection(
                 ),
               ],
             ),
+            ),
           ),
         ),
         Container(width: 1, height: 30, color: isDark ? AppColors.dividerDark : AppColors.dividerLight),
         Expanded(
-          child: GestureDetector(
-            onTap: () {
-              AppHaptics.selection();
-              context.push('/profile/my-tasks?tab=5'); // completed tab
-            },
-            behavior: HitTestBehavior.opaque,
-            child: Column(
+          child: Semantics(
+            button: true,
+            label: 'View completed',
+            child: GestureDetector(
+              onTap: () {
+                AppHaptics.selection();
+                context.push('/profile/my-tasks?tab=5'); // completed tab
+              },
+              behavior: HitTestBehavior.opaque,
+              child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 AnimatedCounter(
@@ -234,6 +245,7 @@ Widget _buildStatsSection(
                   ),
                 ),
               ],
+            ),
             ),
           ),
         ),

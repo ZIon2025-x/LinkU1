@@ -70,7 +70,7 @@ class TaskListBloc extends Bloc<TaskListEvent, TaskListState> {
       } else {
         emit(state.copyWith(
           status: TaskListStatus.error,
-          errorMessage: e.toString(),
+          errorMessage: 'task_list_load_failed',
           isRefreshing: false,
         ));
       }

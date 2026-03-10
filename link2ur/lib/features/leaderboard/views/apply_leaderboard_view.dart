@@ -226,7 +226,10 @@ class _ApplyLeaderboardViewState extends State<ApplyLeaderboardView> {
               Positioned(
                 top: 8,
                 right: 8,
-                child: GestureDetector(
+                child: Semantics(
+                  button: true,
+                  label: 'Remove image',
+                  child: GestureDetector(
                   onTap: _removeCoverImage,
                   child: Container(
                     width: 32,
@@ -239,11 +242,15 @@ class _ApplyLeaderboardViewState extends State<ApplyLeaderboardView> {
                   ),
                 ),
               ),
+              ),
               // 重新选择按钮
               Positioned(
                 bottom: 8,
                 right: 8,
-                child: GestureDetector(
+                child: Semantics(
+                  button: true,
+                  label: 'Change image',
+                  child: GestureDetector(
                   onTap: _pickCoverImage,
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -264,12 +271,16 @@ class _ApplyLeaderboardViewState extends State<ApplyLeaderboardView> {
                     ),
                   ),
                 ),
+                ),
               ),
             ],
           )
         else
           // 空白选择区域
-          GestureDetector(
+          Semantics(
+            button: true,
+            label: 'Add cover image',
+            child: GestureDetector(
             onTap: _pickCoverImage,
             child: Container(
               width: double.infinity,
@@ -304,6 +315,7 @@ class _ApplyLeaderboardViewState extends State<ApplyLeaderboardView> {
                 ],
               ),
             ),
+          ),
           ),
       ],
     );

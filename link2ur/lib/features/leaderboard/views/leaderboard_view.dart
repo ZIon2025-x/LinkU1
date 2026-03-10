@@ -8,6 +8,7 @@ import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/widgets/animated_list_item.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
@@ -126,9 +127,11 @@ class _LeaderboardContentState extends State<_LeaderboardContent> {
                     ),
                   );
                 }
-                return RepaintBoundary(
+                return AnimatedListItem(
+                  key: ValueKey(state.leaderboards[index].id),
+                  index: index,
+                  maxAnimatedIndex: 9,
                   child: _LeaderboardCard(
-                    key: ValueKey(state.leaderboards[index].id),
                     leaderboard: state.leaderboards[index],
                   ),
                 );
@@ -166,7 +169,11 @@ class _LeaderboardCard extends StatelessWidget {
     final locale = Localizations.localeOf(context);
     final colors = _gradient;
 
-    return GestureDetector(
+    return Semantics(
+      button: true,
+      label: 'View details',
+      excludeSemantics: true,
+      child: GestureDetector(
       onTap: () {
         context.push('/leaderboard/${leaderboard.id}');
       },
@@ -342,6 +349,7 @@ class _LeaderboardCard extends StatelessWidget {
           ),
         ],
       ),
+    ),
     );
   }
 

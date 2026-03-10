@@ -587,6 +587,7 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
       appBar: AppBar(
         title: Text(l10n.paymentPayment),
         leading: IconButton(
+          tooltip: 'Cancel',
           icon: Text(
             l10n.paymentCancel,
             style: const TextStyle(

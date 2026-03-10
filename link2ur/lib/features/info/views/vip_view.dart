@@ -556,7 +556,11 @@ class _PlanCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return Semantics(
+      button: true,
+      label: 'View details',
+      excludeSemantics: true,
+      child: GestureDetector(
       onTap: onTap,
       child: Container(
         padding: AppSpacing.allLg,
@@ -644,6 +648,7 @@ class _PlanCard extends StatelessWidget {
           ],
         ),
       ),
+    ),
     );
   }
 }
@@ -665,7 +670,10 @@ class _FaqItemState extends State<_FaqItem> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        GestureDetector(
+        Semantics(
+          button: true,
+          label: 'Toggle FAQ',
+          child: GestureDetector(
           onTap: () => setState(() => _isExpanded = !_isExpanded),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
@@ -685,6 +693,7 @@ class _FaqItemState extends State<_FaqItem> {
               ],
             ),
           ),
+        ),
         ),
         AnimatedCrossFade(
           firstChild: const SizedBox.shrink(),

@@ -111,6 +111,8 @@ class PushNotificationService with WidgetsBindingObserver {
   /// 同步推送语言偏好到服务器（用户切换语言时调用）
   Future<void> syncLanguage() async {
     if (kIsWeb) return;
+    final hasAuth = await StorageService.instance.isLoggedIn();
+    if (!hasAuth) return;
     final token = StorageService.instance.getPushToken();
     if (token != null) {
       await _uploadTokenToServer(token);
@@ -146,7 +148,14 @@ class PushNotificationService with WidgetsBindingObserver {
   /// 失败时最多重试 3 次（延迟 5s, 15s, 30s）
   static const _uploadRetryDelays = [5, 15, 30];
 
+  /// 防重入：避免多次 uploadToken 调用导致重试链堆积
+  bool _uploading = false;
+
   Future<void> _uploadTokenToServer(String token, {int attempt = 0}) async {
+    if (attempt == 0) {
+      if (_uploading) return;
+      _uploading = true;
+    }
     try {
       if (_apiService == null) {
         AppLogger.warning('ApiService not set, skipping token upload');
@@ -181,6 +190,7 @@ class PushNotificationService with WidgetsBindingObserver {
         },
       );
       AppLogger.info('Push token uploaded to server');
+      _uploading = false;
     } catch (e) {
       if (attempt < _uploadRetryDelays.length) {
         AppLogger.warning(
@@ -188,9 +198,11 @@ class PushNotificationService with WidgetsBindingObserver {
           'retrying in ${_uploadRetryDelays[attempt]}s',
         );
         await Future.delayed(Duration(seconds: _uploadRetryDelays[attempt]));
+        // 递归重试（_uploading 保持 true，直到成功或全部失败）
         return _uploadTokenToServer(token, attempt: attempt + 1);
       }
       AppLogger.error('Failed to upload push token after ${_uploadRetryDelays.length} retries', e);
+      _uploading = false;
     }
   }
 

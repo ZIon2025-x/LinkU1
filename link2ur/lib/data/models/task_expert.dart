@@ -91,7 +91,7 @@ class TaskExpert extends Equatable {
   // 默认字段已由后端根据 Accept-Language 选择，作为最终回退
 
   /// 显示名称（硬编码回退，国际化请使用 displayNameWith(l10n)）
-  String get displayName => expertName ?? '达人$id';
+  String get displayName => expertName ?? 'Expert #$id';
 
   /// 显示名称（国际化，expertName 为空时使用 l10n.taskExpertWithId）
   String displayNameWith(AppLocalizations l10n) =>

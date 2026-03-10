@@ -548,19 +548,22 @@ class _SettingsNavRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return GestureDetector(
-      onTap: () {
-        AppHaptics.selection();
-        onTap();
-      },
-      behavior: HitTestBehavior.opaque,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              size: 20,
+    return Semantics(
+      button: true,
+      label: 'Open setting',
+      child: GestureDetector(
+        onTap: () {
+          AppHaptics.selection();
+          onTap();
+        },
+        behavior: HitTestBehavior.opaque,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                size: 20,
               color: iconColor ??
                   (isDark
                       ? AppColors.textSecondaryDark
@@ -608,6 +611,7 @@ class _SettingsNavRow extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

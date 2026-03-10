@@ -277,7 +277,11 @@ class _NotificationItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return Semantics(
+      button: true,
+      label: 'View details',
+      excludeSemantics: true,
+      child: GestureDetector(
       onTap: () {
         if (!notification.isRead) {
           context.read<NotificationBloc>().add(
@@ -356,6 +360,7 @@ class _NotificationItem extends StatelessWidget {
           ],
         ),
       ),
+    ),
     );
   }
 

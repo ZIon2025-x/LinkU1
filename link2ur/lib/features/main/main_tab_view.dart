@@ -360,10 +360,14 @@ class _MainTabViewState extends State<MainTabView>
       child: Stack(
         alignment: Alignment.centerRight,
         children: [
-          GestureDetector(
+          Semantics(
+            button: true,
+            label: 'Close menu',
+            child: GestureDetector(
             onTap: onClose,
             behavior: HitTestBehavior.opaque,
             child: ColoredBox(color: Colors.black.withValues(alpha: 0.4)),
+          ),
           ),
           Material(
             color: Colors.transparent,
@@ -626,7 +630,10 @@ class _DesktopTopBar extends StatelessWidget {
             child: Row(
               children: [
                 // Logo
-                GestureDetector(
+                Semantics(
+                  button: true,
+                  label: 'Go to home',
+                  child: GestureDetector(
                   onTap: () => context.go('/'),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -672,6 +679,7 @@ class _DesktopTopBar extends StatelessWidget {
                     ],
                   ),
                 ),
+                ),
 
                 const SizedBox(width: 40),
 
@@ -680,7 +688,10 @@ class _DesktopTopBar extends StatelessWidget {
                   child: Center(
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 480),
-                      child: GestureDetector(
+                      child: Semantics(
+                        button: true,
+                        label: 'Open search',
+                        child: GestureDetector(
                         onTap: () => context.push('/search'),
                         child: MouseRegion(
                           cursor: SystemMouseCursors.click,
@@ -726,6 +737,7 @@ class _DesktopTopBar extends StatelessWidget {
                     ),
                   ),
                 ),
+                ),
 
                 const SizedBox(width: 20),
 
@@ -739,6 +751,7 @@ class _DesktopTopBar extends StatelessWidget {
                       icon: Icons.notifications_outlined,
                       isDark: isDark,
                       badge: count > 0 ? count : null,
+                      tooltip: 'Notifications',
                       onTap: () => context.push('/notifications'),
                     );
                   },
@@ -767,12 +780,14 @@ class _TopBarIconButton extends StatefulWidget {
     required this.isDark,
     required this.onTap,
     this.badge,
+    this.tooltip,
   });
 
   final IconData icon;
   final bool isDark;
   final VoidCallback onTap;
   final int? badge;
+  final String? tooltip;
 
   @override
   State<_TopBarIconButton> createState() => _TopBarIconButtonState();
@@ -783,11 +798,14 @@ class _TopBarIconButtonState extends State<_TopBarIconButton> {
 
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(
+    Widget child = MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
       cursor: SystemMouseCursors.click,
-      child: GestureDetector(
+      child: Semantics(
+        button: true,
+        label: 'Top bar action',
+        child: GestureDetector(
         onTap: widget.onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
@@ -828,7 +846,12 @@ class _TopBarIconButtonState extends State<_TopBarIconButton> {
           ),
         ),
       ),
+    ),
     );
+    if (widget.tooltip != null) {
+      child = Tooltip(message: widget.tooltip!, child: child);
+    }
+    return child;
   }
 }
 
@@ -925,7 +948,10 @@ class _GradientHamburgerButtonState extends State<_GradientHamburgerButton>
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
       cursor: SystemMouseCursors.click,
-      child: GestureDetector(
+      child: Semantics(
+        button: true,
+        label: 'Open menu',
+        child: GestureDetector(
         onTap: widget.onTap,
           child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
@@ -960,6 +986,7 @@ class _GradientHamburgerButtonState extends State<_GradientHamburgerButton>
           ),
         ),
       ),
+    ),
     );
   }
 

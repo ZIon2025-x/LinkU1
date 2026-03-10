@@ -68,6 +68,7 @@ class BadgeSelectorDialog extends StatelessWidget {
                   ),
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
+                    tooltip: 'Close',
                     icon: const Icon(Icons.close, size: 20),
                   ),
                 ],

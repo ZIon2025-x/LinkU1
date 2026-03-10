@@ -118,14 +118,18 @@ class _GreetingSectionWithCloudState extends State<_GreetingSectionWithCloud> {
                   ],
                 ),
               ),
-              GestureDetector(
-                onTap: () => context.push('/support-chat'),
-                child: ClipOval(
-                  child: Image.asset(
-                    AppAssets.any,
-                    width: 44,
-                    height: 44,
-                    fit: BoxFit.cover,
+              Semantics(
+                button: true,
+                label: 'Open support chat',
+                child: GestureDetector(
+                  onTap: () => context.push('/support-chat'),
+                  child: ClipOval(
+                    child: Image.asset(
+                      AppAssets.any,
+                      width: 44,
+                      height: 44,
+                      fit: BoxFit.cover,
+                    ),
                   ),
                 ),
               ),
@@ -217,14 +221,18 @@ class _GreetingSectionState extends State<_GreetingSection> {
               ],
             ),
           ),
-          GestureDetector(
-            onTap: () => context.push('/support-chat'),
-            child: ClipOval(
-              child: Image.asset(
-                AppAssets.any,
-                width: 44,
-                height: 44,
-                fit: BoxFit.cover,
+          Semantics(
+            button: true,
+            label: 'Open support chat',
+            child: GestureDetector(
+              onTap: () => context.push('/support-chat'),
+              child: ClipOval(
+                child: Image.asset(
+                  AppAssets.any,
+                  width: 44,
+                  height: 44,
+                  fit: BoxFit.cover,
+                ),
               ),
             ),
           ),
@@ -486,7 +494,11 @@ class _BannerItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return Semantics(
+      button: true,
+      label: 'View banner',
+      excludeSemantics: true,
+      child: GestureDetector(
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.fromLTRB(4, 4, 4, 10),
@@ -642,6 +654,7 @@ class _BannerItem extends StatelessWidget {
               ),
           ],
         ),
+      ),
       ),
     );
   }

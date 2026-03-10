@@ -5,6 +5,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:link2ur/features/tasks/bloc/task_detail_bloc.dart';
 import 'package:link2ur/data/models/task.dart';
 import 'package:link2ur/data/models/review.dart';
+import 'package:link2ur/data/repositories/task_repository.dart';
 
 import '../../../helpers/test_helpers.dart';
 
@@ -68,7 +69,7 @@ void main() {
       expect(taskDetailBloc.state.reviews, isEmpty);
     });
 
-    // ==================== 加载任务详情 ====================
+    // ==================== Load task detail ====================
 
     group('TaskDetailLoadRequested', () {
       blocTest<TaskDetailBloc, TaskDetailState>(
@@ -89,7 +90,7 @@ void main() {
       );
 
       blocTest<TaskDetailBloc, TaskDetailState>(
-        'emits [loading, error] when load fails',
+        'emits [loading, error with task_detail_load_failed] when load fails',
         build: () {
           when(() => mockTaskRepository.getTaskDetail(42))
               .thenThrow(Exception('Not found'));
@@ -98,18 +99,19 @@ void main() {
         act: (bloc) => bloc.add(const TaskDetailLoadRequested(42)),
         expect: () => [
           const TaskDetailState(status: TaskDetailStatus.loading),
-          isA<TaskDetailState>()
-              .having((s) => s.status, 'status', TaskDetailStatus.error)
-              .having((s) => s.errorMessage, 'errorMessage', isNotNull),
+          const TaskDetailState(
+            status: TaskDetailStatus.error,
+            errorMessage: 'task_detail_load_failed',
+          ),
         ],
       );
     });
 
-    // ==================== 申请任务 ====================
+    // ==================== Apply task ====================
 
     group('TaskDetailApplyRequested', () {
       blocTest<TaskDetailBloc, TaskDetailState>(
-        'emits [submitting, success] when apply succeeds',
+        'emits [isSubmitting=true, isSubmitting=false + actionMessage=application_submitted] on success',
         build: () {
           when(() => mockTaskRepository.applyTask(
                 42,
@@ -129,15 +131,44 @@ void main() {
           message: 'I can help!',
         )),
         expect: () => [
-          isA<TaskDetailState>().having((s) => s.isSubmitting, 'isSubmitting', true),
+          isA<TaskDetailState>()
+              .having((s) => s.isSubmitting, 'isSubmitting', true),
           isA<TaskDetailState>()
               .having((s) => s.isSubmitting, 'isSubmitting', false)
-              .having((s) => s.actionMessage, 'actionMessage', 'application_submitted'),
+              .having((s) => s.actionMessage, 'actionMessage',
+                  'application_submitted'),
         ],
       );
 
       blocTest<TaskDetailBloc, TaskDetailState>(
-        'emits error when apply fails',
+        'emits actionMessage=stripe_setup_required on TaskException(stripe_setup_required)',
+        build: () {
+          when(() => mockTaskRepository.applyTask(
+                42,
+                message: any(named: 'message'),
+                negotiatedPrice: any(named: 'negotiatedPrice'),
+                currency: any(named: 'currency'),
+              )).thenThrow(const TaskException('stripe_setup_required'));
+          return taskDetailBloc;
+        },
+        seed: () => const TaskDetailState(
+          status: TaskDetailStatus.loaded,
+          task: testTask,
+        ),
+        act: (bloc) => bloc.add(const TaskDetailApplyRequested()),
+        expect: () => [
+          isA<TaskDetailState>()
+              .having((s) => s.isSubmitting, 'isSubmitting', true),
+          isA<TaskDetailState>()
+              .having((s) => s.isSubmitting, 'isSubmitting', false)
+              .having((s) => s.actionMessage, 'actionMessage',
+                  'stripe_setup_required')
+              .having((s) => s.errorMessage, 'errorMessage', isNull),
+        ],
+      );
+
+      blocTest<TaskDetailBloc, TaskDetailState>(
+        'emits actionMessage=application_failed on generic error',
         build: () {
           when(() => mockTaskRepository.applyTask(
                 42,
@@ -155,27 +186,19 @@ void main() {
           message: 'I can help!',
         )),
         expect: () => [
-          isA<TaskDetailState>().having((s) => s.isSubmitting, 'isSubmitting', true),
+          isA<TaskDetailState>()
+              .having((s) => s.isSubmitting, 'isSubmitting', true),
           isA<TaskDetailState>()
               .having((s) => s.isSubmitting, 'isSubmitting', false)
-              .having((s) => s.actionMessage, 'actionMessage', 'application_failed'),
+              .having((s) => s.actionMessage, 'actionMessage',
+                  'application_failed')
+              .having((s) => s.errorMessage, 'errorMessage',
+                  'task_apply_failed'),
         ],
-      );
-
-      blocTest<TaskDetailBloc, TaskDetailState>(
-        'does nothing when already submitting',
-        build: () => taskDetailBloc,
-        seed: () => const TaskDetailState(
-          status: TaskDetailStatus.loaded,
-          task: testTask,
-          isSubmitting: true,
-        ),
-        act: (bloc) => bloc.add(const TaskDetailApplyRequested()),
-        expect: () => [],
       );
     });
 
-    // ==================== 批准申请（需支付） ====================
+    // ==================== Accept applicant ====================
 
     group('TaskDetailAcceptApplicant', () {
       blocTest<TaskDetailBloc, TaskDetailState>(
@@ -186,7 +209,7 @@ void main() {
                     'client_secret': 'pi_secret_123',
                     'customer_id': 'cus_123',
                     'ephemeral_key_secret': 'ek_123',
-                    'amount_display': '£25.00',
+                    'amount_display': '\u00a325.00',
                   });
           return taskDetailBloc;
         },
@@ -196,12 +219,16 @@ void main() {
         ),
         act: (bloc) => bloc.add(const TaskDetailAcceptApplicant(100)),
         expect: () => [
-          isA<TaskDetailState>().having((s) => s.isSubmitting, 'isSubmitting', true),
+          isA<TaskDetailState>()
+              .having((s) => s.isSubmitting, 'isSubmitting', true),
           isA<TaskDetailState>()
               .having((s) => s.isSubmitting, 'isSubmitting', false)
-              .having((s) => s.actionMessage, 'actionMessage', 'open_payment')
-              .having((s) => s.acceptPaymentData, 'acceptPaymentData', isNotNull)
-              .having((s) => s.acceptPaymentData?.clientSecret, 'clientSecret', 'pi_secret_123'),
+              .having(
+                  (s) => s.actionMessage, 'actionMessage', 'open_payment')
+              .having((s) => s.acceptPaymentData, 'acceptPaymentData',
+                  isNotNull)
+              .having((s) => s.acceptPaymentData?.clientSecret,
+                  'clientSecret', 'pi_secret_123'),
         ],
       );
 
@@ -222,16 +249,19 @@ void main() {
         ),
         act: (bloc) => bloc.add(const TaskDetailAcceptApplicant(100)),
         expect: () => [
-          isA<TaskDetailState>().having((s) => s.isSubmitting, 'isSubmitting', true),
+          isA<TaskDetailState>()
+              .having((s) => s.isSubmitting, 'isSubmitting', true),
           isA<TaskDetailState>()
               .having((s) => s.isSubmitting, 'isSubmitting', false)
-              .having((s) => s.actionMessage, 'actionMessage', 'application_accepted')
-              .having((s) => s.task?.status, 'task.status', 'in_progress'),
+              .having((s) => s.actionMessage, 'actionMessage',
+                  'application_accepted')
+              .having(
+                  (s) => s.task?.status, 'task.status', 'in_progress'),
         ],
       );
     });
 
-    // ==================== 完成任务 ====================
+    // ==================== Complete task ====================
 
     group('TaskDetailCompleteRequested', () {
       blocTest<TaskDetailBloc, TaskDetailState>(
@@ -250,15 +280,17 @@ void main() {
           status: TaskDetailStatus.loaded,
           task: inProgressTask,
         ),
-        act: (bloc) => bloc.add(const TaskDetailCompleteRequested(
-          evidenceText: 'Done!',
-        )),
+        act: (bloc) =>
+            bloc.add(const TaskDetailCompleteRequested(evidenceText: 'Done!')),
         expect: () => [
-          isA<TaskDetailState>().having((s) => s.isSubmitting, 'isSubmitting', true),
+          isA<TaskDetailState>()
+              .having((s) => s.isSubmitting, 'isSubmitting', true),
           isA<TaskDetailState>()
               .having((s) => s.isSubmitting, 'isSubmitting', false)
-              .having((s) => s.actionMessage, 'actionMessage', 'task_completed')
-              .having((s) => s.task?.status, 'task.status', 'completed'),
+              .having(
+                  (s) => s.actionMessage, 'actionMessage', 'task_completed')
+              .having(
+                  (s) => s.task?.status, 'task.status', 'completed'),
         ],
       );
 
@@ -278,15 +310,17 @@ void main() {
         ),
         act: (bloc) => bloc.add(const TaskDetailCompleteRequested()),
         expect: () => [
-          isA<TaskDetailState>().having((s) => s.isSubmitting, 'isSubmitting', true),
+          isA<TaskDetailState>()
+              .having((s) => s.isSubmitting, 'isSubmitting', true),
           isA<TaskDetailState>()
               .having((s) => s.isSubmitting, 'isSubmitting', false)
-              .having((s) => s.actionMessage, 'actionMessage', 'submit_failed'),
+              .having(
+                  (s) => s.actionMessage, 'actionMessage', 'submit_failed'),
         ],
       );
     });
 
-    // ==================== 确认完成 ====================
+    // ==================== Confirm completion ====================
 
     group('TaskDetailConfirmCompletionRequested', () {
       blocTest<TaskDetailBloc, TaskDetailState>(
@@ -294,8 +328,10 @@ void main() {
         build: () {
           when(() => mockTaskRepository.confirmCompletion(
                 42,
-                partialTransferAmount: any(named: 'partialTransferAmount'),
-                partialTransferReason: any(named: 'partialTransferReason'),
+                partialTransferAmount:
+                    any(named: 'partialTransferAmount'),
+                partialTransferReason:
+                    any(named: 'partialTransferReason'),
               )).thenAnswer((_) async {});
           when(() => mockTaskRepository.getTaskDetail(42))
               .thenAnswer((_) async => completedTask);
@@ -305,21 +341,24 @@ void main() {
           status: TaskDetailStatus.loaded,
           task: completedTask,
         ),
-        act: (bloc) => bloc.add(const TaskDetailConfirmCompletionRequested()),
+        act: (bloc) =>
+            bloc.add(const TaskDetailConfirmCompletionRequested()),
         expect: () => [
-          isA<TaskDetailState>().having((s) => s.isSubmitting, 'isSubmitting', true),
+          isA<TaskDetailState>()
+              .having((s) => s.isSubmitting, 'isSubmitting', true),
           isA<TaskDetailState>()
               .having((s) => s.isSubmitting, 'isSubmitting', false)
-              .having((s) => s.actionMessage, 'actionMessage', 'completion_confirmed'),
+              .having((s) => s.actionMessage, 'actionMessage',
+                  'completion_confirmed'),
         ],
       );
     });
 
-    // ==================== 取消任务 ====================
+    // ==================== Cancel task ====================
 
     group('TaskDetailCancelRequested', () {
       blocTest<TaskDetailBloc, TaskDetailState>(
-        'emits task_cancelled on success',
+        'emits task_cancelled when directly cancelled',
         build: () {
           const cancelledTask = Task(
             id: 42,
@@ -341,15 +380,17 @@ void main() {
           status: TaskDetailStatus.loaded,
           task: testTask,
         ),
-        act: (bloc) => bloc.add(const TaskDetailCancelRequested(
-          reason: 'Changed my mind',
-        )),
+        act: (bloc) => bloc.add(
+            const TaskDetailCancelRequested(reason: 'Changed my mind')),
         expect: () => [
-          isA<TaskDetailState>().having((s) => s.isSubmitting, 'isSubmitting', true),
+          isA<TaskDetailState>()
+              .having((s) => s.isSubmitting, 'isSubmitting', true),
           isA<TaskDetailState>()
               .having((s) => s.isSubmitting, 'isSubmitting', false)
-              .having((s) => s.actionMessage, 'actionMessage', 'task_cancelled')
-              .having((s) => s.task?.status, 'task.status', 'cancelled'),
+              .having((s) => s.actionMessage, 'actionMessage',
+                  'task_cancelled')
+              .having(
+                  (s) => s.task?.status, 'task.status', 'cancelled'),
         ],
       );
 
@@ -368,14 +409,15 @@ void main() {
           status: TaskDetailStatus.loaded,
           task: testTask,
         ),
-        act: (bloc) => bloc.add(const TaskDetailCancelRequested(
-          reason: 'Changed my mind',
-        )),
+        act: (bloc) => bloc.add(
+            const TaskDetailCancelRequested(reason: 'Changed my mind')),
         expect: () => [
-          isA<TaskDetailState>().having((s) => s.isSubmitting, 'isSubmitting', true),
+          isA<TaskDetailState>()
+              .having((s) => s.isSubmitting, 'isSubmitting', true),
           isA<TaskDetailState>()
               .having((s) => s.isSubmitting, 'isSubmitting', false)
-              .having((s) => s.actionMessage, 'actionMessage', 'cancel_request_submitted'),
+              .having((s) => s.actionMessage, 'actionMessage',
+                  'cancel_request_submitted'),
         ],
       );
 
@@ -394,15 +436,19 @@ void main() {
         ),
         act: (bloc) => bloc.add(const TaskDetailCancelRequested()),
         expect: () => [
-          isA<TaskDetailState>().having((s) => s.isSubmitting, 'isSubmitting', true),
+          isA<TaskDetailState>()
+              .having((s) => s.isSubmitting, 'isSubmitting', true),
           isA<TaskDetailState>()
               .having((s) => s.isSubmitting, 'isSubmitting', false)
-              .having((s) => s.actionMessage, 'actionMessage', 'cancel_failed'),
+              .having((s) => s.actionMessage, 'actionMessage',
+                  'cancel_failed')
+              .having((s) => s.errorMessage, 'errorMessage',
+                  'task_cancel_failed'),
         ],
       );
     });
 
-    // ==================== 清除支付数据 ====================
+    // ==================== Clear payment data ====================
 
     group('TaskDetailClearAcceptPaymentData', () {
       blocTest<TaskDetailBloc, TaskDetailState>(
@@ -418,11 +464,77 @@ void main() {
             ephemeralKeySecret: 'ek',
           ),
         ),
-        act: (bloc) => bloc.add(const TaskDetailClearAcceptPaymentData()),
+        act: (bloc) =>
+            bloc.add(const TaskDetailClearAcceptPaymentData()),
         expect: () => [
-          isA<TaskDetailState>()
-              .having((s) => s.acceptPaymentData, 'acceptPaymentData', isNull),
+          isA<TaskDetailState>().having(
+              (s) => s.acceptPaymentData, 'acceptPaymentData', isNull),
         ],
+      );
+    });
+
+    // ==================== Guard: null task ====================
+
+    group('Guard: null task (_taskId == null)', () {
+      blocTest<TaskDetailBloc, TaskDetailState>(
+        'apply does nothing when task is null',
+        build: () => taskDetailBloc,
+        act: (bloc) => bloc.add(const TaskDetailApplyRequested()),
+        expect: () => <TaskDetailState>[],
+      );
+
+      blocTest<TaskDetailBloc, TaskDetailState>(
+        'cancel does nothing when task is null',
+        build: () => taskDetailBloc,
+        act: (bloc) => bloc.add(const TaskDetailCancelRequested()),
+        expect: () => <TaskDetailState>[],
+      );
+
+      blocTest<TaskDetailBloc, TaskDetailState>(
+        'complete does nothing when task is null',
+        build: () => taskDetailBloc,
+        act: (bloc) => bloc.add(const TaskDetailCompleteRequested()),
+        expect: () => <TaskDetailState>[],
+      );
+    });
+
+    // ==================== Guard: isSubmitting ====================
+
+    group('Guard: isSubmitting deduplication', () {
+      blocTest<TaskDetailBloc, TaskDetailState>(
+        'apply is ignored when already submitting',
+        build: () => taskDetailBloc,
+        seed: () => const TaskDetailState(
+          status: TaskDetailStatus.loaded,
+          task: testTask,
+          isSubmitting: true,
+        ),
+        act: (bloc) => bloc.add(const TaskDetailApplyRequested()),
+        expect: () => <TaskDetailState>[],
+      );
+
+      blocTest<TaskDetailBloc, TaskDetailState>(
+        'cancel is ignored when already submitting',
+        build: () => taskDetailBloc,
+        seed: () => const TaskDetailState(
+          status: TaskDetailStatus.loaded,
+          task: testTask,
+          isSubmitting: true,
+        ),
+        act: (bloc) => bloc.add(const TaskDetailCancelRequested()),
+        expect: () => <TaskDetailState>[],
+      );
+
+      blocTest<TaskDetailBloc, TaskDetailState>(
+        'complete is ignored when already submitting',
+        build: () => taskDetailBloc,
+        seed: () => const TaskDetailState(
+          status: TaskDetailStatus.loaded,
+          task: testTask,
+          isSubmitting: true,
+        ),
+        act: (bloc) => bloc.add(const TaskDetailCompleteRequested()),
+        expect: () => <TaskDetailState>[],
       );
     });
 

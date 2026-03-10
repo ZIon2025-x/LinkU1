@@ -175,14 +175,17 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
             builder: (context, state) {
               final post = state.selectedPost;
               if (post == null) return Text(context.l10n.forumPostDetail);
-              return GestureDetector(
-                onTap: () {
-                  final userId = post.author?.id ?? post.authorId;
-                  if (userId.isNotEmpty) {
-                    context.goToUserProfile(userId, isAdmin: post.author?.isAdmin ?? false);
-                  }
-                },
-                child: Row(
+              return Semantics(
+                button: true,
+                label: 'View author profile',
+                child: GestureDetector(
+                  onTap: () {
+                    final userId = post.author?.id ?? post.authorId;
+                    if (userId.isNotEmpty) {
+                      context.goToUserProfile(userId, isAdmin: post.author?.isAdmin ?? false);
+                    }
+                  },
+                  child: Row(
                   children: [
                     AvatarView(
                       imageUrl: post.author?.avatar,
@@ -216,6 +219,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                     ),
                   ],
                 ),
+              ),
               );
             },
           ),
@@ -242,6 +246,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                       ),
                     IconButton(
                       icon: const Icon(Icons.share_outlined),
+                      tooltip: 'Share',
                       onPressed: () {
                         AppHaptics.selection();
                         final p = state.selectedPost;
@@ -574,10 +579,14 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                                 ),
                               ),
                               const Spacer(),
-                              GestureDetector(
-                                onTap: _clearReplyTo,
-                                child: const Icon(Icons.close,
-                                    size: 16, color: AppColors.textTertiaryLight),
+                              Semantics(
+                                button: true,
+                                label: 'Clear reply',
+                                child: GestureDetector(
+                                  onTap: _clearReplyTo,
+                                  child: const Icon(Icons.close,
+                                      size: 16, color: AppColors.textTertiaryLight),
+                                ),
                               ),
                             ],
                           ),
@@ -635,23 +644,26 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                                       if (value.text.trim().isEmpty) return const SizedBox.shrink();
                                       return Padding(
                                         padding: const EdgeInsets.only(right: 4),
-                                        child: GestureDetector(
-                                          onTap: state.isReplying
-                                              ? null
-                                              : () {
-                                                  AppHaptics.selection();
-                                                  context.read<ForumBloc>().add(
-                                                        ForumReplyPost(
-                                                          postId: widget.postId,
-                                                          content: _replyController
-                                                              .text
-                                                              .trim(),
-                                                          parentReplyId: _replyToId,
-                                                        ),
-                                                      );
-                                                  // 输入框在回复成功后再清空（由 BlocListener 监听 replies 增加后执行）
-                                                },
-                                          child: Container(
+                                        child: Semantics(
+                                          button: true,
+                                          label: 'Send reply',
+                                          child: GestureDetector(
+                                            onTap: state.isReplying
+                                                ? null
+                                                : () {
+                                                    AppHaptics.selection();
+                                                    context.read<ForumBloc>().add(
+                                                          ForumReplyPost(
+                                                            postId: widget.postId,
+                                                            content: _replyController
+                                                                .text
+                                                                .trim(),
+                                                            parentReplyId: _replyToId,
+                                                          ),
+                                                        );
+                                                    // 输入框在回复成功后再清空（由 BlocListener 监听 replies 增加后执行）
+                                                  },
+                                            child: Container(
                                             width: 36,
                                             height: 36,
                                             decoration: BoxDecoration(
@@ -672,6 +684,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                                                     color: AppColors.primary,
                                                   ),
                                           ),
+                                        ),
                                         ),
                                       );
                                     },
@@ -870,12 +883,15 @@ class _PostStats extends StatelessWidget {
           ),
           AppSpacing.hLg,
           // 收藏 (交互)
-          GestureDetector(
-            onTap: () {
-              AppHaptics.selection();
-              context.read<ForumBloc>().add(ForumFavoritePost(postId));
-            },
-            child: _StatLabel(
+          Semantics(
+            button: true,
+            label: 'Toggle favorite',
+            child: GestureDetector(
+              onTap: () {
+                AppHaptics.selection();
+                context.read<ForumBloc>().add(ForumFavoritePost(postId));
+              },
+              child: _StatLabel(
               icon: post.isFavorited
                   ? Icons.bookmark
                   : Icons.bookmark_border,
@@ -883,6 +899,7 @@ class _PostStats extends StatelessWidget {
               label: context.l10n.forumFavorite,
               color: post.isFavorited ? AppColors.gold : null,
             ),
+          ),
           ),
         ],
       ),
@@ -1019,13 +1036,16 @@ class _ReplyCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // 头像 — 点击跳转个人主页（优先使用 author.id 与后端一致，避免 authorId 与 author 不一致时跳错人）
-          GestureDetector(
-            onTap: () {
-              final userId = reply.author?.id ?? reply.authorId;
-              if (userId.isEmpty) return;
-              context.goToUserProfile(userId, isAdmin: reply.author?.isAdmin ?? false);
-            },
-            child: Container(
+          Semantics(
+            button: true,
+            label: 'View user profile',
+            child: GestureDetector(
+              onTap: () {
+                final userId = reply.author?.id ?? reply.authorId;
+                if (userId.isEmpty) return;
+                context.goToUserProfile(userId, isAdmin: reply.author?.isAdmin ?? false);
+              },
+              child: Container(
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 boxShadow: [
@@ -1043,6 +1063,7 @@ class _ReplyCard extends StatelessWidget {
                 isAnonymous: reply.author == null,
               ),
             ),
+          ),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -1080,14 +1101,17 @@ class _ReplyCard extends StatelessWidget {
                 // 作者行
                 Row(
                   children: [
-                    GestureDetector(
-                      onTap: () {
-                        final userId = reply.author?.id ?? reply.authorId;
-                        if (userId.isEmpty) return;
-                        context.goToUserProfile(userId, isAdmin: reply.author?.isAdmin ?? false);
-                      },
-                      child: Text(
-                        reply.author?.name ?? context.l10n.forumUserFallback(reply.authorId),
+                    Semantics(
+                      button: true,
+                      label: 'View author',
+                      child: GestureDetector(
+                        onTap: () {
+                          final userId = reply.author?.id ?? reply.authorId;
+                          if (userId.isEmpty) return;
+                          context.goToUserProfile(userId, isAdmin: reply.author?.isAdmin ?? false);
+                        },
+                        child: Text(
+                          reply.author?.name ?? context.l10n.forumUserFallback(reply.authorId),
                         style: TextStyle(
                           fontSize: isSubReply ? 13 : 14,
                           fontWeight: FontWeight.w600,
@@ -1096,6 +1120,7 @@ class _ReplyCard extends StatelessWidget {
                               : AppColors.textPrimaryLight,
                         ),
                       ),
+                    ),
                     ),
                     const Spacer(),
                     Text(
@@ -1111,13 +1136,16 @@ class _ReplyCard extends StatelessWidget {
                     AppSpacing.hSm,
                     Tooltip(
                       message: context.l10n.forumLikeReply,
-                      child: GestureDetector(
-                        onTap: () {
-                          AppHaptics.selection();
-                          context.read<ForumBloc>().add(ForumLikeReply(reply.id));
-                        },
-                        behavior: HitTestBehavior.opaque,
-                        child: Container(
+                      child: Semantics(
+                        button: true,
+                        label: 'Like reply',
+                        child: GestureDetector(
+                          onTap: () {
+                            AppHaptics.selection();
+                            context.read<ForumBloc>().add(ForumLikeReply(reply.id));
+                          },
+                          behavior: HitTestBehavior.opaque,
+                          child: Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
                         decoration: BoxDecoration(
@@ -1155,6 +1183,7 @@ class _ReplyCard extends StatelessWidget {
                       ),
                     ),
                     ),
+                    ),
                   ],
                 ),
 
@@ -1178,30 +1207,34 @@ class _ReplyCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Row(
                   children: [
-                    GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () {
-                        AppHaptics.selection();
-                        onReplyTo(
-                          reply.id,
-                          reply.author?.name ?? reply.authorId.toString(),
-                        );
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            context.l10n.forumReply,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: AppColors.primary,
+                    Semantics(
+                      button: true,
+                      label: 'Reply',
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () {
+                          AppHaptics.selection();
+                          onReplyTo(
+                            reply.id,
+                            reply.author?.name ?? reply.authorId.toString(),
+                          );
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              context.l10n.forumReply,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.primary,
+                              ),
                             ),
                           ),
                         ),
@@ -1215,24 +1248,27 @@ class _ReplyCard extends StatelessWidget {
                       if (!isAuthor) return const SizedBox.shrink();
                       return Padding(
                         padding: const EdgeInsets.only(left: AppSpacing.sm),
-                        child: GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: () {
-                            AdaptiveDialogs.showConfirmDialog(
-                              context: ctx,
-                              title: ctx.l10n.commonDelete,
-                              content: ctx.l10n.forumDeleteReplyConfirm,
-                              confirmText: ctx.l10n.commonDelete,
-                              cancelText: ctx.l10n.commonCancel,
-                              isDestructive: true,
-                              onConfirm: () {
-                                ctx.read<ForumBloc>().add(
-                                      ForumDeleteReply(reply.id,
-                                          postId: postId));
-                              },
-                            );
-                          },
-                          child: Padding(
+                        child: Semantics(
+                          button: true,
+                          label: 'Delete reply',
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () {
+                              AdaptiveDialogs.showConfirmDialog(
+                                context: ctx,
+                                title: ctx.l10n.commonDelete,
+                                content: ctx.l10n.forumDeleteReplyConfirm,
+                                confirmText: ctx.l10n.commonDelete,
+                                cancelText: ctx.l10n.commonCancel,
+                                isDestructive: true,
+                                onConfirm: () {
+                                  ctx.read<ForumBloc>().add(
+                                        ForumDeleteReply(reply.id,
+                                            postId: postId));
+                                },
+                              );
+                            },
+                            child: Padding(
                             padding:
                                 const EdgeInsets.symmetric(vertical: 4),
                             child: Icon(Icons.delete_outline,
@@ -1240,6 +1276,7 @@ class _ReplyCard extends StatelessWidget {
                                 color:
                                     Theme.of(ctx).colorScheme.error),
                           ),
+                        ),
                         ),
                       );
                     }),
@@ -1312,13 +1349,17 @@ class _PostImageCarouselState extends State<_PostImageCarousel> {
               itemCount: widget.images.length,
               onPageChanged: (page) => setState(() => _currentPage = page),
               itemBuilder: (context, index) {
-                return GestureDetector(
-                  onTap: () => _openFullScreen(context, index),
-                  child: AsyncImageView(
-                    imageUrl: widget.images[index],
-                    width: double.infinity,
-                    height: double.infinity,
-                    fit: BoxFit.contain,
+                return Semantics(
+                  button: true,
+                  label: 'View full image',
+                  child: GestureDetector(
+                    onTap: () => _openFullScreen(context, index),
+                    child: AsyncImageView(
+                      imageUrl: widget.images[index],
+                      width: double.infinity,
+                      height: double.infinity,
+                      fit: BoxFit.contain,
+                    ),
                   ),
                 );
               },
@@ -1422,36 +1463,40 @@ class _AttachmentChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final icon = att.isPdf ? Icons.picture_as_pdf : Icons.insert_drive_file;
     final color = att.isPdf ? const Color(0xFFE53935) : AppColors.primary;
-    return GestureDetector(
-      onTap: () => _open(context),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.06)
-              : color.withValues(alpha: 0.06),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
+    return Semantics(
+      button: true,
+      label: 'Open attachment',
+      child: GestureDetector(
+        onTap: () => _open(context),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
             color: isDark
-                ? Colors.white.withValues(alpha: 0.10)
-                : color.withValues(alpha: 0.15),
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 16, color: color),
-            const SizedBox(width: 6),
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 140),
-              child: Text(
-                att.filename,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 13, color: color, fontWeight: FontWeight.w500),
-              ),
+                ? Colors.white.withValues(alpha: 0.06)
+                : color.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.10)
+                  : color.withValues(alpha: 0.15),
             ),
-          ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 16, color: color),
+              const SizedBox(width: 6),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 140),
+                child: Text(
+                  att.filename,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 13, color: color, fontWeight: FontWeight.w500),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1473,37 +1518,41 @@ class _LinkedChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => _navigate(context),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.06)
-              : AppColors.purple.withValues(alpha: 0.06),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
+    return Semantics(
+      button: true,
+      label: 'View linked item',
+      child: GestureDetector(
+        onTap: () => _navigate(context),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
             color: isDark
-                ? Colors.white.withValues(alpha: 0.10)
-                : AppColors.purple.withValues(alpha: 0.15),
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(_iconData, size: 16, color: AppColors.purple),
-            const SizedBox(width: 6),
-            Flexible(
-              child: Text(
-                name ?? _typeLabel(context),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 13, color: AppColors.purple, fontWeight: FontWeight.w500),
-              ),
+                ? Colors.white.withValues(alpha: 0.06)
+                : AppColors.purple.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.10)
+                  : AppColors.purple.withValues(alpha: 0.15),
             ),
-            const SizedBox(width: 2),
-            Icon(Icons.chevron_right, size: 14, color: AppColors.purple.withValues(alpha: 0.6)),
-          ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(_iconData, size: 16, color: AppColors.purple),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  name ?? _typeLabel(context),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 13, color: AppColors.purple, fontWeight: FontWeight.w500),
+                ),
+              ),
+              const SizedBox(width: 2),
+              Icon(Icons.chevron_right, size: 14, color: AppColors.purple.withValues(alpha: 0.6)),
+            ],
+          ),
         ),
       ),
     );
@@ -1590,17 +1639,20 @@ class _ReplyQuoteBlock extends StatelessWidget {
         : AppColors.textTertiaryLight.withValues(alpha: 0.4);
     final textColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(6),
-          border: Border(
-            left: BorderSide(color: borderColor, width: 2.5),
+    return Semantics(
+      button: true,
+      label: 'Jump to parent',
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(6),
+            border: Border(
+              left: BorderSide(color: borderColor, width: 2.5),
+            ),
           ),
-        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1624,6 +1676,7 @@ class _ReplyQuoteBlock extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

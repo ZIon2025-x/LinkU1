@@ -56,6 +56,7 @@ class TaskExpertDetailView extends StatelessWidget {
               builder: (context, state) {
                 return IconButton(
                   icon: const Icon(Icons.share_outlined),
+                  tooltip: 'Share',
                   onPressed: () {
                     final expert = state.selectedExpert;
                     if (expert != null) {
@@ -1031,16 +1032,20 @@ class _ServiceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isDark
-              ? AppColors.cardBackgroundDark
-              : AppColors.cardBackgroundLight,
-          borderRadius: AppRadius.allLarge,
+    return Semantics(
+      button: true,
+      label: 'View details',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: isDark
+                ? AppColors.cardBackgroundDark
+                : AppColors.cardBackgroundLight,
+            borderRadius: AppRadius.allLarge,
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.05),
@@ -1188,6 +1193,7 @@ class _ServiceCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
       ),
     );
   }

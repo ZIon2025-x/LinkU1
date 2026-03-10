@@ -393,7 +393,10 @@ class _EditFleaMarketItemViewContentState
                             )),
                         // 添加按钮
                         if (totalImages < 5)
-                          GestureDetector(
+                          Semantics(
+                            button: true,
+                            label: 'Upload image',
+                            child: GestureDetector(
                             onTap: _pickImages,
                             child: Container(
                               width: 90,
@@ -424,6 +427,7 @@ class _EditFleaMarketItemViewContentState
                                 ],
                               ),
                             ),
+                          ),
                           ),
                       ],
                     ),
@@ -625,16 +629,20 @@ class _EditFleaMarketItemViewContentState
           Positioned(
             top: 4,
             right: 4,
-            child: GestureDetector(
-              onTap: onRemove,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.5),
-                  shape: BoxShape.circle,
+            child: Semantics(
+              button: true,
+              label: 'Remove image',
+              child: GestureDetector(
+                onTap: onRemove,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.5),
+                    shape: BoxShape.circle,
+                  ),
+                  padding: const EdgeInsets.all(4),
+                  child:
+                      const Icon(Icons.close, color: Colors.white, size: 14),
                 ),
-                padding: const EdgeInsets.all(4),
-                child:
-                    const Icon(Icons.close, color: Colors.white, size: 14),
               ),
             ),
           ),

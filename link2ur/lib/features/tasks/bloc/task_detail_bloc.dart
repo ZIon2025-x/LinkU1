@@ -8,7 +8,6 @@ import '../../../data/models/review.dart';
 import '../../../data/models/refund_request.dart';
 import '../../../data/repositories/task_repository.dart';
 import '../../../data/repositories/notification_repository.dart';
-import '../../../core/utils/app_exception.dart';
 import '../../../core/utils/logger.dart';
 
 // ==================== Events ====================
@@ -466,7 +465,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       AppLogger.error('Failed to load task detail', e);
       emit(state.copyWith(
         status: TaskDetailStatus.error,
-        errorMessage: e.toString(),
+        errorMessage: 'task_detail_load_failed',
       ));
     }
   }
@@ -503,7 +502,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       AppLogger.error('Failed to load applications', e);
       emit(state.copyWith(
         isLoadingApplications: false,
-        errorMessage: e.toString(),
+        errorMessage: 'task_applications_load_failed',
       ));
     }
   }
@@ -554,7 +553,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       emit(state.copyWith(
         isLoadingReviews: false,
         reviewsLoaded: true,
-        errorMessage: e.toString(),
+        errorMessage: 'task_reviews_load_failed',
       ));
     }
   }
@@ -587,7 +586,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
         isSubmitting: false,
         actionMessage:
             isStripeSetup ? 'stripe_setup_required' : 'application_failed',
-        errorMessage: isStripeSetup ? null : e.toString(),
+        errorMessage: isStripeSetup ? null : 'task_apply_failed',
       ));
     }
   }
@@ -623,7 +622,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'cancel_failed',
-        errorMessage: e.toString(),
+        errorMessage: 'task_cancel_application_failed',
       ));
     }
   }
@@ -644,12 +643,13 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       final needPayment = clientSecret != null && clientSecret.isNotEmpty;
 
       if (needPayment) {
+        final d = data!;
         final customerId =
-            (data!['customer_id'] as String?) ?? '';
+            (d['customer_id'] as String?) ?? '';
         final ephemeralKey =
-            (data['ephemeral_key_secret'] as String?) ?? '';
+            (d['ephemeral_key_secret'] as String?) ?? '';
         final amountDisplay =
-            data['amount_display'] as String?;
+            d['amount_display'] as String?;
         TaskApplication? approvedApp;
         try {
           approvedApp = state.applications
@@ -691,7 +691,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'operation_failed',
-        errorMessage: e.toString(),
+        errorMessage: 'task_accept_applicant_failed',
       ));
     }
   }
@@ -731,7 +731,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'operation_failed',
-        errorMessage: e.toString(),
+        errorMessage: 'task_reject_applicant_failed',
       ));
     }
   }
@@ -760,7 +760,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'submit_failed',
-        errorMessage: e.toString(),
+        errorMessage: 'task_complete_failed',
       ));
     }
   }
@@ -789,7 +789,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'confirm_failed',
-        errorMessage: e.toString(),
+        errorMessage: 'task_confirm_completion_failed',
       ));
     }
   }
@@ -816,7 +816,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'cancel_failed',
-        errorMessage: e.toString(),
+        errorMessage: 'task_cancel_failed',
       ));
     }
   }
@@ -849,7 +849,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'review_failed',
-        errorMessage: e.toString(),
+        errorMessage: 'task_review_failed',
       ));
     }
   }
@@ -885,7 +885,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'refund_failed',
-        errorMessage: e.toString(),
+        errorMessage: 'task_refund_request_failed',
       ));
     }
   }
@@ -909,7 +909,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       AppLogger.error('Failed to load refund history', e);
       emit(state.copyWith(
         isLoadingRefundHistory: false,
-        errorMessage: e.toString(),
+        errorMessage: 'task_refund_history_load_failed',
       ));
     }
   }
@@ -935,7 +935,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'revoke_failed',
-        errorMessage: e.toString(),
+        errorMessage: 'task_cancel_refund_failed',
       ));
     }
   }
@@ -975,7 +975,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'dispute_failed',
-        errorMessage: e.toString(),
+        errorMessage: 'task_rebuttal_failed',
       ));
     }
   }
@@ -994,16 +994,25 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
         event.applicationId,
         content: event.content,
       );
+      // Best-effort reload applications to show the new message
+      List<TaskApplication>? updatedApps;
+      try {
+        final raw = await _taskRepository.getTaskApplications(_taskId!);
+        updatedApps = raw.map((e) => TaskApplication.fromJson(e)).toList();
+      } catch (_) {
+        // Reload failed — message was still sent successfully
+      }
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'application_message_sent',
+        applications: updatedApps ?? state.applications,
       ));
     } catch (e) {
       AppLogger.error('Failed to send application message', e);
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'application_message_failed',
-        errorMessage: e.toString(),
+        errorMessage: 'task_send_message_failed',
       ));
     }
   }
@@ -1035,12 +1044,17 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
         try {
           final task = await _refreshTask();
           emit(state.copyWith(task: task));
-        } catch (_) {}
+        } catch (refreshError) {
+          AppLogger.warning(
+            'QuoteDesignatedPrice: refresh also failed after partial success',
+            refreshError,
+          );
+        }
       }
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'quote_failed',
-        errorMessage: e.toString(),
+        errorMessage: applied ? 'task_quote_accept_failed' : 'task_quote_failed',
       ));
     }
   }
@@ -1064,7 +1078,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'counter_offer_submit_failed',
-        errorMessage: e.toString(),
+        errorMessage: 'task_counter_offer_failed',
       ));
     }
   }
@@ -1090,7 +1104,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'counter_offer_respond_failed',
-        errorMessage: e.toString(),
+        errorMessage: 'task_respond_counter_offer_failed',
       ));
     }
   }
@@ -1100,8 +1114,13 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
     Emitter<TaskDetailState> emit,
   ) async {
     if (_taskId == null || state.isSubmitting) return;
-    assert(event.action == 'accept' || event.action == 'reject',
-        'action must be "accept" or "reject", got: ${event.action}');
+    if (event.action != 'accept' && event.action != 'reject') {
+      emit(state.copyWith(
+        isSubmitting: false,
+        errorMessage: 'Invalid negotiation action: ${event.action}',
+      ));
+      return;
+    }
     final appId = state.userApplication?.id;
     if (appId == null) {
       emit(state.copyWith(
@@ -1135,7 +1154,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'operation_failed',
-        errorMessage: e is AppException ? e.message : e.toString(),
+        errorMessage: 'task_respond_negotiation_failed',
       ));
     }
   }
@@ -1144,7 +1163,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
     TaskDetailToggleProfileVisibility event,
     Emitter<TaskDetailState> emit,
   ) async {
-    if (state.isSubmitting) return;
+    if (state.isSubmitting || state.task == null) return;
     emit(state.copyWith(isSubmitting: true));
 
     try {
@@ -1162,7 +1181,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'visibility_update_failed',
-        errorMessage: e.toString(),
+        errorMessage: 'task_visibility_update_failed',
       ));
     }
   }

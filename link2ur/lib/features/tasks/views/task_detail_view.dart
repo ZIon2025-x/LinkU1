@@ -88,10 +88,20 @@ class _TaskDetailContent extends StatelessWidget {
     );
 
     return BlocConsumer<TaskDetailBloc, TaskDetailState>(
+      buildWhen: (prev, curr) =>
+          prev.status != curr.status ||
+          prev.task != curr.task ||
+          prev.isSubmitting != curr.isSubmitting ||
+          prev.applications != curr.applications ||
+          prev.userApplication != curr.userApplication ||
+          prev.refundRequest != curr.refundRequest ||
+          prev.reviews != curr.reviews ||
+          prev.hasSubmittedReview != curr.hasSubmittedReview ||
+          prev.isLoadingApplications != curr.isLoadingApplications ||
+          prev.isLoadingReviews != curr.isLoadingReviews,
       listenWhen: (prev, curr) =>
-          // 操作消息提示
-          (curr.actionMessage != null &&
-              prev.actionMessage != curr.actionMessage) ||
+          prev.actionMessage != curr.actionMessage ||
+          prev.acceptPaymentData != curr.acceptPaymentData ||
           // 首次加载完成时触发关联数据加载
           (!prev.isLoaded && curr.isLoaded && curr.task != null),
       listener: (context, state) {
@@ -216,7 +226,7 @@ class _TaskDetailContent extends StatelessWidget {
           ),
           bottomNavigationBar:
               state.isLoaded && task != null
-                  ? _buildBottomBar(context, state, isPoster, isTaker)
+                  ? _buildBottomBar(context, state, isPoster, isTaker, currentUserId)
                   : null,
         );
       },
@@ -631,6 +641,7 @@ class _TaskDetailContent extends StatelessWidget {
     TaskDetailState state,
     bool isPoster,
     bool isTaker,
+    String? currentUserId,
   ) {
     final task = state.task!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -675,7 +686,7 @@ class _TaskDetailContent extends StatelessWidget {
               if (showChat) AppSpacing.hMd,
               Expanded(
                 child: _buildBottomActionButton(
-                    context, state, isPoster, isTaker),
+                    context, state, isPoster, isTaker, currentUserId),
               ),
             ],
           ),
@@ -690,6 +701,7 @@ class _TaskDetailContent extends StatelessWidget {
     TaskDetailState state,
     bool isPoster,
     bool isTaker,
+    String? currentUserId,
   ) {
     final task = state.task!;
 
@@ -944,10 +956,9 @@ class _TaskDetailContent extends StatelessWidget {
 
     // 已完成 + 可评价（reviews 列表 + 本次会话提交标记，覆盖匿名评价）
     // reviews 还在加载时不渲染评价按钮，避免闪烁
-    final currentUid = context.read<AuthBloc>().state.user?.id;
     final hasCurrentUserReviewed = state.hasSubmittedReview ||
-        (currentUid != null &&
-            state.reviews.any((r) => r.reviewerId == currentUid));
+        (currentUserId != null &&
+            state.reviews.any((r) => r.reviewerId == currentUserId));
     if (task.status == AppConstants.taskStatusCompleted &&
         (isPoster || isTaker) &&
         !hasCurrentUserReviewed &&
@@ -2328,6 +2339,7 @@ class _DisputeTimelineSheetState extends State<_DisputeTimelineSheet> {
                   ),
                   IconButton(
                     icon: const Icon(Icons.close),
+                    tooltip: 'Close',
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],

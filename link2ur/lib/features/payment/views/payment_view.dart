@@ -705,10 +705,14 @@ class _PaymentContentState extends State<_PaymentContent> {
               style: const TextStyle(color: AppColors.error, fontSize: 13),
             ),
           ),
-          GestureDetector(
-            onTap: () =>
-                context.read<PaymentBloc>().add(const PaymentClearError()),
-            child: const Icon(Icons.close, color: AppColors.error, size: 18),
+          Semantics(
+            button: true,
+            label: 'Dismiss error',
+            child: GestureDetector(
+              onTap: () =>
+                  context.read<PaymentBloc>().add(const PaymentClearError()),
+              child: const Icon(Icons.close, color: AppColors.error, size: 18),
+            ),
           ),
         ],
       ),
@@ -840,16 +844,19 @@ class _PaymentContentState extends State<_PaymentContent> {
   }
 
   Widget _buildCouponSection(PaymentState state) {
-    return GestureDetector(
-      onTap: _showCouponSelector,
-      child: Container(
-        padding: AppSpacing.allMd,
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
-          borderRadius: AppRadius.allMedium,
-          border: Border.all(color: AppColors.dividerLight),
-        ),
-        child: Row(
+    return Semantics(
+      button: true,
+      label: 'Select coupon',
+      child: GestureDetector(
+        onTap: _showCouponSelector,
+        child: Container(
+          padding: AppSpacing.allMd,
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            borderRadius: AppRadius.allMedium,
+            border: Border.all(color: AppColors.dividerLight),
+          ),
+          child: Row(
           children: [
             const Icon(Icons.local_offer_outlined,
                 color: AppColors.accentPink, size: 20),
@@ -883,11 +890,15 @@ class _PaymentContentState extends State<_PaymentContent> {
                     ),
             ),
             if (state.selectedUserCouponId != null)
-              GestureDetector(
-                onTap: _removeCoupon,
-                child: const Padding(
-                  padding: EdgeInsets.all(4),
-                  child: Icon(Icons.close, size: 16, color: AppColors.error),
+              Semantics(
+                button: true,
+                label: 'Remove coupon',
+                child: GestureDetector(
+                  onTap: _removeCoupon,
+                  child: const Padding(
+                    padding: EdgeInsets.all(4),
+                    child: Icon(Icons.close, size: 16, color: AppColors.error),
+                  ),
                 ),
               )
             else
@@ -895,6 +906,7 @@ class _PaymentContentState extends State<_PaymentContent> {
                   color: AppColors.textTertiaryLight, size: 20),
           ],
         ),
+      ),
       ),
     );
   }
@@ -1016,15 +1028,18 @@ class _PaymentMethodTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        AppHaptics.selection();
-        onTap();
-      },
-      child: Container(
-        padding: AppSpacing.allMd,
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
+    return Semantics(
+      button: true,
+      label: 'Select payment method',
+      child: GestureDetector(
+        onTap: () {
+          AppHaptics.selection();
+          onTap();
+        },
+        child: Container(
+          padding: AppSpacing.allMd,
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
           borderRadius: AppRadius.allMedium,
           border: Border.all(
             color: isSelected ? AppColors.primary : AppColors.dividerLight,
@@ -1060,6 +1075,7 @@ class _PaymentMethodTile extends StatelessWidget {
                   color: AppColors.textTertiaryLight, size: 20),
           ],
         ),
+      ),
       ),
     );
   }

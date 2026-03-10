@@ -141,6 +141,7 @@ class _ForumCategoryRequestViewState extends State<ForumCategoryRequestView> {
           title: Text(l10n.forumRequestNewCategory),
           leading: IconButton(
             icon: const Icon(Icons.close),
+            tooltip: 'Close',
             onPressed: () => context.pop(),
           ),
         ),

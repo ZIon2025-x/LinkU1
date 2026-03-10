@@ -414,6 +414,7 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
                   return IconButton(
                     onPressed: () =>
                         setDialogState(() => selectedRating = index + 1),
+                    tooltip: '${index + 1} star${index == 0 ? '' : 's'}',
                     icon: Icon(
                       index < selectedRating ? Icons.star : Icons.star_border,
                       color: AppColors.warning,
@@ -581,6 +582,7 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
                 [
                   IconButton(
                     icon: const Icon(Icons.add_comment_outlined),
+                    tooltip: 'New conversation',
                     onPressed: () => context
                         .read<UnifiedChatBloc>()
                         .add(const UnifiedChatInit()),
@@ -621,6 +623,7 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
                 [
                   IconButton(
                     icon: const Icon(Icons.star_outline),
+                    tooltip: 'Rate',
                     onPressed: _showRatingDialog,
                   ),
                 ]
@@ -1315,6 +1318,7 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
                 AppSpacing.hSm,
                 IconButton(
                   onPressed: isDisabled ? null : _sendMessage,
+                  tooltip: 'Send',
                   icon: isDisabled
                       ? const LoadingIndicator(size: 20)
                       : const Icon(
@@ -1419,26 +1423,30 @@ class _UnifiedQuickActionChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          border: Border.all(color: AppColors.primary.withValues(alpha: 0.5)),
-          borderRadius: AppRadius.allPill,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (icon != null) ...[
-              Icon(icon, size: 14, color: AppColors.primary),
-              const SizedBox(width: 4),
+    return Semantics(
+      button: true,
+      label: label,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            border: Border.all(color: AppColors.primary.withValues(alpha: 0.5)),
+            borderRadius: AppRadius.allPill,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 14, color: AppColors.primary),
+                const SizedBox(width: 4),
+              ],
+              Text(
+                label,
+                style: const TextStyle(fontSize: 12, color: AppColors.primary),
+              ),
             ],
-            Text(
-              label,
-              style: const TextStyle(fontSize: 12, color: AppColors.primary),
-            ),
-          ],
+          ),
         ),
       ),
     );

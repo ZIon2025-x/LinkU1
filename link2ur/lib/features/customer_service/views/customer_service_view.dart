@@ -105,6 +105,7 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
                   return IconButton(
                     onPressed: () =>
                         setDialogState(() => selectedRating = index + 1),
+                    tooltip: '${index + 1} star${index == 0 ? '' : 's'}',
                     icon: Icon(
                       index < selectedRating ? Icons.star : Icons.star_border,
                       color: AppColors.warning,
@@ -321,6 +322,7 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
               ? null
               : IconButton(
                   icon: const Icon(Icons.arrow_back),
+                  tooltip: 'Back',
                   onPressed: () => Navigator.of(context).pop(),
                 ),
           actions: [
@@ -344,11 +346,13 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
                     if (state.isConnected || state.isEnded)
                       IconButton(
                         icon: const Icon(Icons.history),
+                        tooltip: 'History',
                         onPressed: _showChatHistory,
                       ),
                     if (state.isEnded)
                       IconButton(
                         icon: const Icon(Icons.star_outline),
+                        tooltip: 'Rate',
                         onPressed: _showRatingDialog,
                       ),
                     if (state.isConnected)
@@ -757,6 +761,7 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
                     : () => context
                         .read<CustomerServiceBloc>()
                         .add(const CustomerServiceConnectRequested()),
+                tooltip: 'Connect',
                 icon: state.isConnecting
                     ? const LoadingIndicator(size: 20)
                     : const Icon(Icons.phone, color: AppColors.primary),
@@ -802,6 +807,7 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
               onPressed: !state.isConnected || state.isSending
                   ? null
                   : _sendMessage,
+              tooltip: 'Send',
               icon: state.isSending
                   ? const LoadingIndicator(size: 20)
                   : Icon(

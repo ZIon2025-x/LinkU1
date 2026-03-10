@@ -652,13 +652,17 @@ class _ViewAllButtonState extends State<_ViewAllButton> {
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
       cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              context.l10n.commonViewAll,
+      child: Semantics(
+        button: true,
+        label: 'View all',
+        excludeSemantics: true,
+        child: GestureDetector(
+          onTap: widget.onTap,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                context.l10n.commonViewAll,
               style: TextStyle(
                 fontSize: 14,
                 color: _isHovered ? AppColors.primary : AppColors.primary.withValues(alpha: 0.8),
@@ -671,7 +675,8 @@ class _ViewAllButtonState extends State<_ViewAllButton> {
               color: _isHovered ? AppColors.primary : AppColors.primary.withValues(alpha: 0.8),
               size: 16,
             ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -834,11 +839,15 @@ class _DesktopTaskCardState extends State<_DesktopTaskCard> {
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
       cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: () => context.safePush('/tasks/${task.id}'),
-        // 简化：去掉 AnimatedContainer + BoxShadow 动画 + Matrix4 transform
-        // 改为静态容器 + Opacity 控制 hover 效果（成本远低于 shadow 动画）
-        child: AnimatedOpacity(
+      child: Semantics(
+        button: true,
+        label: 'View task',
+        excludeSemantics: true,
+        child: GestureDetector(
+          onTap: () => context.safePush('/tasks/${task.id}'),
+          // 简化：去掉 AnimatedContainer + BoxShadow 动画 + Matrix4 transform
+          // 改为静态容器 + Opacity 控制 hover 效果（成本远低于 shadow 动画）
+          child: AnimatedOpacity(
           duration: const Duration(milliseconds: 150),
           opacity: _isHovered ? 0.85 : 1.0,
           child: Container(
@@ -1065,6 +1074,7 @@ class _DesktopTaskCardState extends State<_DesktopTaskCard> {
         ),
       ),
       ),
+      ),
     );
   }
 }
@@ -1180,27 +1190,32 @@ class _FilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primary.withValues(alpha: 0.1)
-              : (isDark ? Colors.white.withValues(alpha: 0.06) : AppColors.skeletonBase),
-          borderRadius: BorderRadius.circular(20),
-          border: isSelected
-              ? Border.all(color: AppColors.primary, width: 1.5)
-              : null,
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+    return Semantics(
+      button: true,
+      label: label,
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
             color: isSelected
-                ? AppColors.primary
-                : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+                ? AppColors.primary.withValues(alpha: 0.1)
+                : (isDark ? Colors.white.withValues(alpha: 0.06) : AppColors.skeletonBase),
+            borderRadius: BorderRadius.circular(20),
+            border: isSelected
+                ? Border.all(color: AppColors.primary, width: 1.5)
+                : null,
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+              color: isSelected
+                  ? AppColors.primary
+                  : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+            ),
           ),
         ),
       ),

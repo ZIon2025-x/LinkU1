@@ -400,20 +400,24 @@ class _ExpertCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final locale = Localizations.localeOf(context);
 
-    return GestureDetector(
-      onTap: () {
-        AppHaptics.selection();
-        onTap?.call();
-      },
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        decoration: BoxDecoration(
-          color: isDark
-              ? AppColors.cardBackgroundDark
-              : AppColors.cardBackgroundLight,
-          borderRadius: AppRadius.allLarge,
-          border: Border.all(
-            color: (isDark ? AppColors.separatorDark : AppColors.separatorLight)
+    return Semantics(
+      button: true,
+      label: 'View details',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: () {
+          AppHaptics.selection();
+          onTap?.call();
+        },
+        child: Container(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: BoxDecoration(
+            color: isDark
+                ? AppColors.cardBackgroundDark
+                : AppColors.cardBackgroundLight,
+            borderRadius: AppRadius.allLarge,
+            border: Border.all(
+              color: (isDark ? AppColors.separatorDark : AppColors.separatorLight)
                 .withValues(alpha: 0.3),
             width: 0.5,
           ),
@@ -510,6 +514,7 @@ class _ExpertCard extends StatelessWidget {
               ),
           ],
         ),
+      ),
       ),
     );
   }

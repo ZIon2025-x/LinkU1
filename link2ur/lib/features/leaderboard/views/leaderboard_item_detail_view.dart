@@ -111,6 +111,7 @@ class _ItemDetailContent extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.share_outlined),
+            tooltip: 'Share',
             onPressed: onShare,
           ),
         ],
@@ -125,7 +126,10 @@ class _ItemDetailContent extends StatelessWidget {
       forceMaterialTransparency: true,
       leading: Padding(
         padding: const EdgeInsets.all(4),
-        child: GestureDetector(
+        child: Semantics(
+          button: true,
+          label: 'Go back',
+          child: GestureDetector(
           onTap: () => context.pop(),
           child: Container(
             width: 36,
@@ -138,11 +142,15 @@ class _ItemDetailContent extends StatelessWidget {
                 size: 18, color: Colors.white),
           ),
         ),
+        ),
       ),
       actions: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: GestureDetector(
+          child: Semantics(
+            button: true,
+            label: 'Share item',
+            child: GestureDetector(
             onTap: onShare,
             child: Container(
               width: 36,
@@ -154,6 +162,7 @@ class _ItemDetailContent extends StatelessWidget {
               child: const Icon(Icons.share_outlined,
                   size: 18, color: Colors.white),
             ),
+          ),
           ),
         ),
       ],
@@ -255,7 +264,10 @@ class _ItemDetailContent extends StatelessWidget {
                 children: [
                   // 反对按钮
                   Expanded(
-                    child: GestureDetector(
+                    child: Semantics(
+                      button: true,
+                      label: 'Downvote',
+                      child: GestureDetector(
                       onTap: () => _showVoteSheet(context, 'downvote', item),
                       child: Container(
                         height: 50,
@@ -289,10 +301,14 @@ class _ItemDetailContent extends StatelessWidget {
                       ),
                     ),
                   ),
+                  ),
                   const SizedBox(width: 12),
                   // 支持按钮
                   Expanded(
-                    child: GestureDetector(
+                    child: Semantics(
+                      button: true,
+                      label: 'Upvote',
+                      child: GestureDetector(
                       onTap: () => _showVoteSheet(context, 'upvote', item),
                       child: Container(
                         height: 50,
@@ -325,6 +341,7 @@ class _ItemDetailContent extends StatelessWidget {
                         ),
                       ),
                     ),
+                  ),
                   ),
                 ],
               ),
@@ -559,7 +576,10 @@ class _NameCard extends StatelessWidget {
             ),
             if (item.submitterName != null) ...[
               const SizedBox(height: 8),
-              GestureDetector(
+              Semantics(
+                button: true,
+                label: 'View submitter',
+                child: GestureDetector(
                 onTap: () {
                   final uid = item.submitterId ?? item.submittedBy;
                   if (uid.isNotEmpty) context.goToUserProfile(uid);
@@ -592,6 +612,7 @@ class _NameCard extends StatelessWidget {
                     ],
                   ),
                 ),
+              ),
               ),
             ],
           ],
@@ -886,7 +907,10 @@ class _ContactRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return Semantics(
+      button: true,
+      label: 'Contact link',
+      child: GestureDetector(
       onTap: onTap,
       onLongPress: () {
         AppHaptics.medium();
@@ -914,6 +938,7 @@ class _ContactRow extends StatelessWidget {
           ],
         ),
       ),
+    ),
     );
   }
 }
@@ -1068,7 +1093,10 @@ class _CommentCard extends StatelessWidget {
                 isAnonymous: isAnonymous,
               ),
               const SizedBox(width: 8),
-              GestureDetector(
+              Semantics(
+                button: true,
+                label: 'View profile',
+                child: GestureDetector(
                 onTap: () {
                   if (!isAnonymous && authorId != null) {
                     context.goToUserProfile(authorId.toString());
@@ -1078,6 +1106,7 @@ class _CommentCard extends StatelessWidget {
                   displayName,
                   style: AppTypography.bodyBold.copyWith(fontSize: 13),
                 ),
+              ),
               ),
               const SizedBox(width: 6),
               // 投票类型标签
@@ -1130,7 +1159,10 @@ class _CommentCard extends StatelessWidget {
           // 点赞
           Align(
             alignment: Alignment.centerRight,
-            child: GestureDetector(
+            child: Semantics(
+              button: true,
+              label: 'Like comment',
+              child: GestureDetector(
               onTap: () {
                 if (voteId != null) {
                   AppHaptics.selection();
@@ -1163,6 +1195,7 @@ class _CommentCard extends StatelessWidget {
                 ],
               ),
             ),
+          ),
           ),
         ],
       ),
@@ -1246,7 +1279,10 @@ class _ImageSectionState extends State<_ImageSection> {
             itemCount: widget.images.length,
             onPageChanged: (index) => _currentPage.value = index,
             itemBuilder: (context, index) {
-              return GestureDetector(
+              return Semantics(
+                button: true,
+                label: 'View full image',
+                child: GestureDetector(
                 onTap: () {
                   pushWithSwipeBack(
                     context,
@@ -1261,6 +1297,7 @@ class _ImageSectionState extends State<_ImageSection> {
                   width: double.infinity,
                   height: double.infinity,
                 ),
+              ),
               );
             },
           ),

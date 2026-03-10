@@ -20,7 +20,11 @@ class OfficialTaskCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return GestureDetector(
+    return Semantics(
+      button: true,
+      label: 'View details',
+      excludeSemantics: true,
+      child: GestureDetector(
       onTap: onTap,
       child: Container(
         padding: AppSpacing.allMd,
@@ -190,6 +194,7 @@ class OfficialTaskCard extends StatelessWidget {
           ],
         ),
       ),
+    ),
     );
   }
 

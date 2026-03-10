@@ -536,6 +536,7 @@ class _TaskChatContentState extends State<_TaskChatContent> {
                     duration: const Duration(milliseconds: 200),
                     child: const Icon(Icons.add_circle_outline),
                   ),
+                  tooltip: 'More actions',
                   onPressed: _toggleActionMenu,
                   color: _showActionMenu
                       ? AppColors.primary
@@ -585,6 +586,7 @@ class _TaskChatContentState extends State<_TaskChatContent> {
                     builder: (context, value, child) {
                       return IconButton(
                         icon: const Icon(Icons.send),
+                        tooltip: 'Send',
                         onPressed: value.text.trim().isEmpty
                             ? null
                             : _sendMessage,
@@ -637,26 +639,30 @@ class _QuickActionChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          border: Border.all(color: AppColors.primary.withValues(alpha: 0.5)),
-          borderRadius: AppRadius.allPill,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (icon != null) ...[
-              Icon(icon, size: 14, color: AppColors.primary),
-              const SizedBox(width: 4),
+    return Semantics(
+      button: true,
+      label: label,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            border: Border.all(color: AppColors.primary.withValues(alpha: 0.5)),
+            borderRadius: AppRadius.allPill,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 14, color: AppColors.primary),
+                const SizedBox(width: 4),
+              ],
+              Text(
+                label,
+                style: const TextStyle(fontSize: 12, color: AppColors.primary),
+              ),
             ],
-            Text(
-              label,
-              style: const TextStyle(fontSize: 12, color: AppColors.primary),
-            ),
-          ],
+          ),
         ),
       ),
     );

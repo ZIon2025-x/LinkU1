@@ -243,17 +243,21 @@ class _HomeViewContentState extends State<_HomeViewContent> {
       ),
       child: Row(
         children: [
-          GestureDetector(
-            onTap: () {
-              AppHaptics.selection();
-              _showMenuSheet(context);
-            },
-            child: SizedBox(
-              width: 44, height: 44,
-              child: Center(
-                child: Icon(Icons.menu,
-                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                    size: 24),
+          Semantics(
+            button: true,
+            label: 'Open menu',
+            child: GestureDetector(
+              onTap: () {
+                AppHaptics.selection();
+                _showMenuSheet(context);
+              },
+              child: SizedBox(
+                width: 44, height: 44,
+                child: Center(
+                  child: Icon(Icons.menu,
+                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                      size: 24),
+                ),
               ),
             ),
           ),
@@ -282,17 +286,21 @@ class _HomeViewContentState extends State<_HomeViewContent> {
             ),
           ),
           const Spacer(),
-          GestureDetector(
-            onTap: () {
-              AppHaptics.selection();
-              context.push('/search');
-            },
-            child: SizedBox(
-              width: 44, height: 44,
-              child: Center(
-                child: Icon(Icons.search,
-                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                    size: 24),
+          Semantics(
+            button: true,
+            label: 'Search',
+            child: GestureDetector(
+              onTap: () {
+                AppHaptics.selection();
+                context.push('/search');
+              },
+              child: SizedBox(
+                width: 44, height: 44,
+                child: Center(
+                  child: Icon(Icons.search,
+                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                      size: 24),
+                ),
               ),
             ),
           ),
@@ -345,12 +353,15 @@ class _DesktopSegmentButtonState extends State<_DesktopSegmentButton> {
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
       cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-          decoration: BoxDecoration(
-            color: widget.isSelected
+      child: Semantics(
+        button: true,
+        label: widget.label,
+        child: GestureDetector(
+          onTap: widget.onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+            decoration: BoxDecoration(
+              color: widget.isSelected
                 ? (widget.isDark ? AppColors.secondaryBackgroundDark : AppColors.cardBackgroundLight)
                 : (_isHovered
                     ? (widget.isDark
@@ -382,6 +393,7 @@ class _DesktopSegmentButtonState extends State<_DesktopSegmentButton> {
           ),
         ),
       ),
+      ),
     );
   }
 }
@@ -402,16 +414,20 @@ class _TabButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              title,
+    return Semantics(
+      button: true,
+      label: title,
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                title,
               style: AppTypography.body.copyWith(
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                 color: isSelected
@@ -433,6 +449,7 @@ class _TabButton extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

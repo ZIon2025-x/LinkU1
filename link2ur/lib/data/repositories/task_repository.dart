@@ -410,6 +410,8 @@ class TaskRepository {
     if (!response.isSuccess) {
       throw TaskException(response.message ?? '议价失败');
     }
+
+    await _cache.invalidateTaskDetailCache(taskId);
   }
 
   /// 回复议价（接受/拒绝，需要一次性签名 token 防重放）
@@ -430,6 +432,8 @@ class TaskRepository {
     if (!response.isSuccess) {
       throw TaskException(response.message ?? '回复议价失败');
     }
+
+    await _cache.invalidateTaskDetailCache(taskId);
   }
 
   /// 被指定方提交反报价
@@ -441,6 +445,8 @@ class TaskRepository {
     if (!response.isSuccess) {
       throw TaskException(response.message ?? '提交反报价失败');
     }
+
+    await _cache.invalidateTaskDetailCache(taskId);
   }
 
   /// 发布方响应被指定方的反报价
@@ -455,6 +461,8 @@ class TaskRepository {
     if (!response.isSuccess) {
       throw TaskException(response.message ?? '回复反报价失败');
     }
+
+    await _cache.invalidateTaskDetailCache(taskId);
   }
 
   /// 完成任务
@@ -590,6 +598,8 @@ class TaskRepository {
     if (!response.isSuccess) {
       throw TaskException(response.message ?? '评价失败');
     }
+
+    await _cache.invalidateTaskDetailCache(taskId);
   }
 
   /// 获取任务评价列表
@@ -691,6 +701,8 @@ class TaskRepository {
       throw TaskException(response.message ?? '发起争议失败');
     }
 
+    await _cache.invalidateTaskDetailCache(taskId);
+
     return response.data!;
   }
 
@@ -721,6 +733,8 @@ class TaskRepository {
     if (!response.isSuccess || response.data == null) {
       throw TaskException(response.message ?? '退款请求失败');
     }
+
+    await _cache.invalidateTaskDetailCache(taskId);
 
     return response.data!;
   }
@@ -766,6 +780,8 @@ class TaskRepository {
     if (!response.isSuccess) {
       throw TaskException(response.message ?? '取消退款请求失败');
     }
+
+    await _cache.invalidateTaskDetailCache(taskId);
   }
 
   /// 提交退款反驳（对齐后端 RefundRequestRebuttal schema）
@@ -786,6 +802,8 @@ class TaskRepository {
     if (!response.isSuccess) {
       throw TaskException(response.message ?? '提交反驳失败');
     }
+
+    await _cache.invalidateTaskDetailCache(taskId);
   }
 
   /// 获取争议时间线（返回完整响应包含 task_id, task_title, timeline）
@@ -805,7 +823,7 @@ class TaskRepository {
 
   /// 获取任务参与者
   Future<List<Map<String, dynamic>>> getTaskParticipants(
-      String taskId) async {
+      int taskId) async {
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.taskParticipants(taskId),
     );
@@ -819,7 +837,7 @@ class TaskRepository {
   }
 
   /// 参与者标记完成
-  Future<void> participantComplete(String taskId) async {
+  Future<void> participantComplete(int taskId) async {
     final response = await _apiService.post(
       ApiEndpoints.participantComplete(taskId),
     );
@@ -830,7 +848,7 @@ class TaskRepository {
   }
 
   /// 参与者请求退出
-  Future<void> participantExitRequest(String taskId, {String? reason}) async {
+  Future<void> participantExitRequest(int taskId, {String? reason}) async {
     final response = await _apiService.post(
       ApiEndpoints.participantExitRequest(taskId),
       data: {

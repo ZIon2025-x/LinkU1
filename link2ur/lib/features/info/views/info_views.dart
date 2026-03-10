@@ -219,6 +219,7 @@ class LegalDocumentView extends StatelessWidget {
           if (url != null)
             IconButton(
               icon: const Icon(Icons.open_in_browser),
+              tooltip: 'Open in browser',
               onPressed: () async {
                 final uri = Uri.tryParse(url!);
                 if (uri != null) {

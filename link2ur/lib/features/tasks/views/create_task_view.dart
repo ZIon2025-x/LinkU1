@@ -9,6 +9,7 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/adaptive_dialogs.dart';
 import '../../../core/utils/helpers.dart';
+import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/app_feedback.dart';
 import '../../../core/widgets/buttons.dart';
@@ -279,7 +280,7 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
           AppFeedback.showSuccess(context, context.l10n.feedbackTaskPublishSuccess);
           context.pop();
         } else if (state.status == CreateTaskStatus.error) {
-          AppFeedback.showError(context, state.errorMessage ?? context.l10n.feedbackPublishFailed);
+          AppFeedback.showError(context, context.localizeError(state.errorMessage ?? 'create_task_failed'));
         }
       },
       builder: (context, state) {
@@ -392,11 +393,14 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
                 AppSpacing.vLg,
 
                 _buildSectionTitle(context.l10n.createTaskDeadline),
-                GestureDetector(
-                  onTap: _selectDeadline,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 14),
+                Semantics(
+                  button: true,
+                  label: 'Select deadline',
+                  child: GestureDetector(
+                    onTap: _selectDeadline,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 14),
                     decoration: BoxDecoration(
                       color:
                           Theme.of(context).inputDecorationTheme.fillColor,
@@ -419,6 +423,7 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
                         ),
                       ],
                     ),
+                  ),
                   ),
                 ),
                 AppSpacing.vLg,
@@ -471,11 +476,14 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
       children: _getCategories(context).map((category) {
         final (key, label, enabled) = category;
         final isSelected = _selectedCategory == key;
-        return GestureDetector(
-          onTap: enabled
-              ? () => setState(() => _selectedCategory = key)
-              : null,
-          child: Container(
+        return Semantics(
+          button: true,
+          label: 'Select category',
+          child: GestureDetector(
+            onTap: enabled
+                ? () => setState(() => _selectedCategory = key)
+                : null,
+            child: Container(
               padding:
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
@@ -500,6 +508,7 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
                 ),
               ),
             ),
+          ),
         );
       }).toList(),
     );
@@ -526,15 +535,19 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
               Positioned(
                 top: 2,
                 right: 2,
-                child: GestureDetector(
-                  onTap: () => setState(() => _selectedImages.removeAt(idx)),
-                  child: Container(
-                    decoration: const BoxDecoration(
-                      color: Colors.black54,
-                      shape: BoxShape.circle,
+                child: Semantics(
+                  button: true,
+                  label: 'Remove image',
+                  child: GestureDetector(
+                    onTap: () => setState(() => _selectedImages.removeAt(idx)),
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        color: Colors.black54,
+                        shape: BoxShape.circle,
+                      ),
+                      padding: const EdgeInsets.all(2),
+                      child: const Icon(Icons.close, size: 16, color: Colors.white),
                     ),
-                    padding: const EdgeInsets.all(2),
-                    child: const Icon(Icons.close, size: 16, color: Colors.white),
                   ),
                 ),
               ),
@@ -542,19 +555,22 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
           );
         }),
         if (_selectedImages.length < 9)
-          GestureDetector(
-            onTap: _pickImages,
-            child: Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                border: Border.all(color: AppColors.dividerLight),
-                borderRadius: AppRadius.allMedium,
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.add_photo_alternate_outlined,
+          Semantics(
+            button: true,
+            label: 'Add images',
+            child: GestureDetector(
+              onTap: _pickImages,
+              child: Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  border: Border.all(color: AppColors.dividerLight),
+                  borderRadius: AppRadius.allMedium,
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.add_photo_alternate_outlined,
                       color: AppColors.textSecondaryLight),
                   const SizedBox(height: 4),
                   Text(
@@ -566,6 +582,7 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
                   ),
                 ],
               ),
+            ),
             ),
           ),
       ],

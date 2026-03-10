@@ -140,15 +140,18 @@ class _CategoryTabs extends StatelessWidget {
               locale.languageCode == 'zh' ? category.nameZh : category.nameEn;
 
           return Center(
-            child: GestureDetector(
-              onTap: () {
-                if (!isSelected) {
-                  context
-                      .read<SkillLeaderboardBloc>()
-                      .add(LeaderboardCategorySelected(category.nameEn));
-                }
-              },
-              child: AnimatedContainer(
+            child: Semantics(
+              button: true,
+              label: 'Select category',
+              child: GestureDetector(
+                onTap: () {
+                  if (!isSelected) {
+                    context
+                        .read<SkillLeaderboardBloc>()
+                        .add(LeaderboardCategorySelected(category.nameEn));
+                  }
+                },
+                child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
@@ -172,6 +175,7 @@ class _CategoryTabs extends StatelessWidget {
                         : theme.colorScheme.onSurface.withAlpha(180),
                   ),
                 ),
+              ),
               ),
             ),
           );

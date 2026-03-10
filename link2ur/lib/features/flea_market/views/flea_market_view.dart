@@ -119,39 +119,43 @@ class _FleaMarketViewContentState extends State<_FleaMarketViewContent> {
                         children: categories.map((cat) {
                           final (value, label) = cat;
                           final isSelected = state.selectedCategory == value;
-                          return GestureDetector(
-                            onTap: () {
-                              AppHaptics.selection();
-                              bloc.add(FleaMarketCategoryChanged(value));
-                              Navigator.pop(sheetContext);
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                              decoration: BoxDecoration(
-                                gradient: isSelected
-                                    ? const LinearGradient(colors: AppColors.gradientPrimary)
-                                    : null,
-                                color: isSelected
-                                    ? null
-                                    : (isDark
-                                        ? AppColors.surface2(Brightness.dark)
-                                        : AppColors.surface1(Brightness.light)),
-                                borderRadius: BorderRadius.circular(20),
-                                border: isSelected
-                                    ? null
-                                    : Border.all(
-                                        color: (isDark ? AppColors.separatorDark : AppColors.separatorLight)
-                                            .withValues(alpha: 0.3),
-                                      ),
-                              ),
-                              child: Text(
-                                label,
-                                style: TextStyle(
+                          return Semantics(
+                            button: true,
+                            label: 'Select category',
+                            child: GestureDetector(
+                              onTap: () {
+                                AppHaptics.selection();
+                                bloc.add(FleaMarketCategoryChanged(value));
+                                Navigator.pop(sheetContext);
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                                decoration: BoxDecoration(
+                                  gradient: isSelected
+                                      ? const LinearGradient(colors: AppColors.gradientPrimary)
+                                      : null,
                                   color: isSelected
-                                      ? Colors.white
-                                      : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
-                                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                                  fontSize: 14,
+                                      ? null
+                                      : (isDark
+                                          ? AppColors.surface2(Brightness.dark)
+                                          : AppColors.surface1(Brightness.light)),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: isSelected
+                                      ? null
+                                      : Border.all(
+                                          color: (isDark ? AppColors.separatorDark : AppColors.separatorLight)
+                                              .withValues(alpha: 0.3),
+                                        ),
+                                ),
+                                child: Text(
+                                  label,
+                                  style: TextStyle(
+                                    color: isSelected
+                                        ? Colors.white
+                                        : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
+                                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                                    fontSize: 14,
+                                  ),
                                 ),
                               ),
                             ),
@@ -211,11 +215,14 @@ class _FleaMarketViewContentState extends State<_FleaMarketViewContent> {
                 ),
                 const SizedBox(width: 8),
                 // 筛选按钮
-                GestureDetector(
-                  onTap: () => _showCategoryFilter(context),
-                  child: Container(
-                    height: 40,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                Semantics(
+                  button: true,
+                  label: 'Filter items',
+                  child: GestureDetector(
+                    onTap: () => _showCategoryFilter(context),
+                    child: Container(
+                      height: 40,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
                     decoration: BoxDecoration(
                       gradient: hasFilter
                           ? const LinearGradient(colors: AppColors.gradientPrimary)
@@ -255,6 +262,7 @@ class _FleaMarketViewContentState extends State<_FleaMarketViewContent> {
                       ],
                     ),
                   ),
+                ),
                 ),
               ],
             );
@@ -378,18 +386,22 @@ class _FleaMarketItemCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return GestureDetector(
-      onTap: () async {
-        if (item.id.isNotEmpty) {
-          // 等待详情页返回后刷新列表（对标 iOS: CacheManager.shared.invalidateFleaMarketCache()）
-          // 用户可能在详情页中购买/支付，返回后列表需要反映最新状态
-          await context.push('/flea-market/${item.id}');
-          if (context.mounted) {
-            context.read<FleaMarketBloc>().add(const FleaMarketRefreshRequested());
+    return Semantics(
+      button: true,
+      label: 'View item',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: () async {
+          if (item.id.isNotEmpty) {
+            // 等待详情页返回后刷新列表（对标 iOS: CacheManager.shared.invalidateFleaMarketCache()）
+            // 用户可能在详情页中购买/支付，返回后列表需要反映最新状态
+            await context.push('/flea-market/${item.id}');
+            if (context.mounted) {
+              context.read<FleaMarketBloc>().add(const FleaMarketRefreshRequested());
+            }
           }
-        }
-      },
-      child: Container(
+        },
+        child: Container(
         clipBehavior: Clip.hardEdge,
         decoration: BoxDecoration(
           color: isDark
@@ -623,6 +635,7 @@ class _FleaMarketItemCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

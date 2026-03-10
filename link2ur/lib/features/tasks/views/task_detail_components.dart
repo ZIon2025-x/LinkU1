@@ -696,26 +696,33 @@ class _ApplicationItem extends StatelessWidget {
           children: [
             Row(
               children: [
-                GestureDetector(
-                  onTap: () {
-                    if (application.applicantId != null) {
-                      context.push('/user/${application.applicantId}');
-                    }
-                  },
-                  child: AvatarView(
-                    imageUrl: application.applicantAvatar,
-                    name: application.applicantName,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
+                Semantics(
+                  button: true,
+                  label: 'View profile',
                   child: GestureDetector(
                     onTap: () {
                       if (application.applicantId != null) {
                         context.push('/user/${application.applicantId}');
                       }
                     },
-                    child: Column(
+                    child: AvatarView(
+                      imageUrl: application.applicantAvatar,
+                      name: application.applicantName,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Semantics(
+                    button: true,
+                    label: 'View profile',
+                    child: GestureDetector(
+                      onTap: () {
+                        if (application.applicantId != null) {
+                          context.push('/user/${application.applicantId}');
+                        }
+                      },
+                      child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
@@ -737,6 +744,7 @@ class _ApplicationItem extends StatelessWidget {
                             ),
                           ),
                       ],
+                    ),
                     ),
                   ),
                 ),
@@ -903,17 +911,20 @@ class _ApplicationMessageButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        AppHaptics.light();
-        _showMessageSheet(context);
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.1),
-          borderRadius: AppRadius.allMedium,
-          border: Border.all(
+    return Semantics(
+      button: true,
+      label: 'View message',
+      child: GestureDetector(
+        onTap: () {
+          AppHaptics.light();
+          _showMessageSheet(context);
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: AppColors.primary.withValues(alpha: 0.1),
+            borderRadius: AppRadius.allMedium,
+            border: Border.all(
             color: AppColors.primary.withValues(alpha: 0.3),
           ),
         ),
@@ -931,6 +942,7 @@ class _ApplicationMessageButton extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }
@@ -1497,6 +1509,7 @@ class _ApplyTaskSheetState extends State<ApplyTaskSheet> {
                     IconButton(
                       onPressed: () => Navigator.of(context).pop(),
                       icon: const Icon(Icons.close),
+                      tooltip: 'Close',
                     ),
                   ],
                 ),
@@ -2035,22 +2048,25 @@ class _RefundTypeChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primary.withValues(alpha: 0.1)
-              : Theme.of(context).cardColor,
-          borderRadius: AppRadius.allMedium,
-          border: Border.all(
-            color: isSelected ? AppColors.primary : AppColors.dividerLight,
-            width: isSelected ? 2 : 1,
+    return Semantics(
+      button: true,
+      label: 'Select refund type',
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? AppColors.primary.withValues(alpha: 0.1)
+                : Theme.of(context).cardColor,
+            borderRadius: AppRadius.allMedium,
+            border: Border.all(
+              color: isSelected ? AppColors.primary : AppColors.dividerLight,
+              width: isSelected ? 2 : 1,
+            ),
           ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               isSelected
@@ -2072,6 +2088,7 @@ class _RefundTypeChip extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }
@@ -2639,22 +2656,29 @@ class _EvidenceCollectionSheetState extends State<_EvidenceCollectionSheet> {
                   ),
                   Positioned(
                     top: 2, right: 2,
-                    child: GestureDetector(
-                      onTap: () => setState(() => _images.removeAt(entry.key)),
-                      child: Container(
-                        decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
-                        padding: const EdgeInsets.all(2),
-                        child: const Icon(Icons.close, size: 14, color: Colors.white),
+                    child: Semantics(
+                      button: true,
+                      label: 'Remove image',
+                      child: GestureDetector(
+                        onTap: () => setState(() => _images.removeAt(entry.key)),
+                        child: Container(
+                          decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                          padding: const EdgeInsets.all(2),
+                          child: const Icon(Icons.close, size: 14, color: Colors.white),
+                        ),
                       ),
                     ),
                   ),
                 ],
               )),
               if (_images.length < 5)
-                GestureDetector(
-                  onTap: _pickImages,
-                  child: Container(
-                    width: 72, height: 72,
+                Semantics(
+                  button: true,
+                  label: 'Add images',
+                  child: GestureDetector(
+                    onTap: _pickImages,
+                    child: Container(
+                      width: 72, height: 72,
                     decoration: BoxDecoration(
                       border: Border.all(color: AppColors.dividerLight),
                       borderRadius: BorderRadius.circular(8),
@@ -2667,6 +2691,7 @@ class _EvidenceCollectionSheetState extends State<_EvidenceCollectionSheet> {
                             style: const TextStyle(fontSize: 11, color: AppColors.textSecondaryLight)),
                       ],
                     ),
+                  ),
                   ),
                 ),
             ],

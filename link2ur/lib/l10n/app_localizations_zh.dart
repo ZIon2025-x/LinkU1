@@ -6283,6 +6283,75 @@ class AppLocalizationsZh extends AppLocalizations {
   String get errorTaskApplicationIdNotFound => '未找到申请ID';
 
   @override
+  String get errorTaskDetailLoadFailed => '加载任务详情失败，请重试';
+
+  @override
+  String get errorTaskApplicationsLoadFailed => '加载申请列表失败';
+
+  @override
+  String get errorTaskReviewsLoadFailed => '加载评价失败';
+
+  @override
+  String get errorTaskApplyFailed => '申请提交失败，请重试';
+
+  @override
+  String get errorTaskCancelApplicationFailed => '取消申请失败';
+
+  @override
+  String get errorTaskAcceptApplicantFailed => '接受申请人失败';
+
+  @override
+  String get errorTaskRejectApplicantFailed => '拒绝申请人失败';
+
+  @override
+  String get errorTaskCompleteFailed => '提交完成失败，请重试';
+
+  @override
+  String get errorTaskConfirmCompletionFailed => '确认完成失败';
+
+  @override
+  String get errorTaskCancelFailed => '取消任务失败';
+
+  @override
+  String get errorTaskReviewFailed => '提交评价失败';
+
+  @override
+  String get errorTaskRefundRequestFailed => '提交退款申请失败';
+
+  @override
+  String get errorTaskRefundHistoryLoadFailed => '加载退款记录失败';
+
+  @override
+  String get errorTaskCancelRefundFailed => '取消退款申请失败';
+
+  @override
+  String get errorTaskRebuttalFailed => '提交申诉失败';
+
+  @override
+  String get errorTaskSendMessageFailed => '发送消息失败';
+
+  @override
+  String get errorTaskCounterOfferFailed => '提交还价失败';
+
+  @override
+  String get errorTaskRespondCounterOfferFailed => '回复还价失败';
+
+  @override
+  String get errorTaskRespondNegotiationFailed => '回复议价失败';
+
+  @override
+  String get errorTaskVisibilityUpdateFailed => '更新任务可见性失败';
+
+  @override
+  String get errorTaskListLoadFailed => '加载任务列表失败';
+
+  @override
+  String get errorTaskQuoteFailed => '报价提交失败，请重试';
+
+  @override
+  String get errorTaskQuoteAcceptFailed => '报价已提交，但自动接单失败，请联系客服';
+
+  @override
   String get searchTitle => '搜索';
 
   @override
@@ -15900,6 +15969,75 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get errorTaskApplicationIdNotFound => '未找到申請ID';
+
+  @override
+  String get errorTaskDetailLoadFailed => '載入任務詳情失敗，請重試';
+
+  @override
+  String get errorTaskApplicationsLoadFailed => '載入申請列表失敗';
+
+  @override
+  String get errorTaskReviewsLoadFailed => '載入評價失敗';
+
+  @override
+  String get errorTaskApplyFailed => '申請提交失敗，請重試';
+
+  @override
+  String get errorTaskCancelApplicationFailed => '取消申請失敗';
+
+  @override
+  String get errorTaskAcceptApplicantFailed => '接受申請人失敗';
+
+  @override
+  String get errorTaskRejectApplicantFailed => '拒絕申請人失敗';
+
+  @override
+  String get errorTaskCompleteFailed => '提交完成失敗，請重試';
+
+  @override
+  String get errorTaskConfirmCompletionFailed => '確認完成失敗';
+
+  @override
+  String get errorTaskCancelFailed => '取消任務失敗';
+
+  @override
+  String get errorTaskReviewFailed => '提交評價失敗';
+
+  @override
+  String get errorTaskRefundRequestFailed => '提交退款申請失敗';
+
+  @override
+  String get errorTaskRefundHistoryLoadFailed => '載入退款記錄失敗';
+
+  @override
+  String get errorTaskCancelRefundFailed => '取消退款申請失敗';
+
+  @override
+  String get errorTaskRebuttalFailed => '提交申訴失敗';
+
+  @override
+  String get errorTaskSendMessageFailed => '傳送訊息失敗';
+
+  @override
+  String get errorTaskCounterOfferFailed => '提交還價失敗';
+
+  @override
+  String get errorTaskRespondCounterOfferFailed => '回覆還價失敗';
+
+  @override
+  String get errorTaskRespondNegotiationFailed => '回覆議價失敗';
+
+  @override
+  String get errorTaskVisibilityUpdateFailed => '更新任務可見性失敗';
+
+  @override
+  String get errorTaskListLoadFailed => '載入任務列表失敗';
+
+  @override
+  String get errorTaskQuoteFailed => '報價提交失敗，請重試';
+
+  @override
+  String get errorTaskQuoteAcceptFailed => '報價已提交，但自動接單失敗，請聯繫客服';
 
   @override
   String get searchTitle => '搜尋';

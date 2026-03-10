@@ -418,19 +418,23 @@ class _CreateFleaMarketItemContentState
               Positioned(
                 top: -4,
                 right: -4,
-                child: GestureDetector(
-                  onTap: () => _removeImage(entry.key),
-                  child: Container(
-                    width: 22,
-                    height: 22,
-                    decoration: const BoxDecoration(
-                      color: AppColors.error,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.close,
-                      size: 14,
-                      color: Colors.white,
+                child: Semantics(
+                  button: true,
+                  label: 'Remove image',
+                  child: GestureDetector(
+                    onTap: () => _removeImage(entry.key),
+                    child: Container(
+                      width: 22,
+                      height: 22,
+                      decoration: const BoxDecoration(
+                        color: AppColors.error,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.close,
+                        size: 14,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ),
@@ -441,7 +445,10 @@ class _CreateFleaMarketItemContentState
 
         // 添加按钮（后端最多 5 张）
         if (_selectedImages.length < 5)
-          GestureDetector(
+          Semantics(
+            button: true,
+            label: 'Upload image',
+            child: GestureDetector(
             onTap: _pickImages,
             child: Container(
               width: 80,
@@ -474,6 +481,7 @@ class _CreateFleaMarketItemContentState
                 ],
               ),
             ),
+          ),
           ),
       ],
     );

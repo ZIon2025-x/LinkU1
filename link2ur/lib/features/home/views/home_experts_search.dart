@@ -88,17 +88,21 @@ class _ExpertsTabContentState extends State<_ExpertsTabContent> {
                       valueListenable: _searchController,
                       builder: (context, value, _) {
                         if (value.text.isEmpty) return const SizedBox.shrink();
-                        return GestureDetector(
-                          onTap: () {
-                            _searchController.clear();
-                            _onSearchChanged('');
-                          },
-                          child: Icon(
-                            Icons.close,
-                            size: 18,
-                            color: isDark
-                                ? AppColors.textTertiaryDark
-                                : AppColors.textTertiaryLight,
+                        return Semantics(
+                          button: true,
+                          label: 'Clear search',
+                          child: GestureDetector(
+                            onTap: () {
+                              _searchController.clear();
+                              _onSearchChanged('');
+                            },
+                            child: Icon(
+                              Icons.close,
+                              size: 18,
+                              color: isDark
+                                  ? AppColors.textTertiaryDark
+                                  : AppColors.textTertiaryLight,
+                            ),
                           ),
                         );
                       },
@@ -140,11 +144,14 @@ class _ExpertsTabContentState extends State<_ExpertsTabContent> {
                 buildWhen: (prev, curr) =>
                     prev.hasActiveFilters != curr.hasActiveFilters,
                 builder: (context, state) {
-                  return GestureDetector(
-                    onTap: () => _showFilterPanel(context),
-                    child: Container(
-                      width: 40,
-                      height: 40,
+                  return Semantics(
+                    button: true,
+                    label: 'Filter',
+                    child: GestureDetector(
+                      onTap: () => _showFilterPanel(context),
+                      child: Container(
+                        width: 40,
+                        height: 40,
                       decoration: BoxDecoration(
                         color: isDark
                             ? AppColors.cardBackgroundDark
@@ -184,7 +191,8 @@ class _ExpertsTabContentState extends State<_ExpertsTabContent> {
                                 ),
                               ),
                             ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   );
@@ -435,27 +443,32 @@ class _ExpertsTabContentState extends State<_ExpertsTabContent> {
     required bool isDark,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
-      onTap: () { AppHaptics.selection(); onTap(); },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          gradient: isSelected
-              ? const LinearGradient(colors: AppColors.gradientPrimary) : null,
-          color: isSelected ? null
-              : (isDark ? AppColors.surface2(Brightness.dark) : AppColors.surface1(Brightness.light)),
-          borderRadius: BorderRadius.circular(20),
-          border: isSelected ? null : Border.all(
-            color: (isDark ? AppColors.separatorDark : AppColors.separatorLight)
-                .withValues(alpha: 0.3)),
+    return Semantics(
+      button: true,
+      label: label,
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: () { AppHaptics.selection(); onTap(); },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            gradient: isSelected
+                ? const LinearGradient(colors: AppColors.gradientPrimary) : null,
+            color: isSelected ? null
+                : (isDark ? AppColors.surface2(Brightness.dark) : AppColors.surface1(Brightness.light)),
+            borderRadius: BorderRadius.circular(20),
+            border: isSelected ? null : Border.all(
+              color: (isDark ? AppColors.separatorDark : AppColors.separatorLight)
+                  .withValues(alpha: 0.3)),
+          ),
+          child: Text(label,
+            style: TextStyle(
+              color: isSelected ? Colors.white
+                  : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+              fontSize: 13,
+            )),
         ),
-        child: Text(label,
-          style: TextStyle(
-            color: isSelected ? Colors.white
-                : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-            fontSize: 13,
-          )),
       ),
     );
   }
@@ -473,14 +486,18 @@ class _ExpertCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final locale = Localizations.localeOf(context);
 
-    return GestureDetector(
-      onTap: () {
-        AppHaptics.selection();
-        if (expert.id.isNotEmpty) {
-          context.safePush('/task-experts/${expert.id}');
-        }
-      },
-      child: GlassContainer(
+    return Semantics(
+      button: true,
+      label: 'View expert',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: () {
+          AppHaptics.selection();
+          if (expert.id.isNotEmpty) {
+            context.safePush('/task-experts/${expert.id}');
+          }
+        },
+        child: GlassContainer(
         borderRadius: AppRadius.allLarge,
         padding: AppSpacing.allMd,
         blurSigma: 14,
@@ -630,6 +647,7 @@ class _ExpertCard extends StatelessWidget {
           ],
         ),
       ),
+      ),
     );
   }
 }
@@ -657,21 +675,25 @@ class _TaskCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final locale = Localizations.localeOf(context);
 
-    return GestureDetector(
-      onTap: () {
-        AppHaptics.selection();
-        context.safePush('/tasks/${task.id}');
-      },
-      child: Container(
-        clipBehavior: Clip.hardEdge,
-        decoration: BoxDecoration(
-          color: isDark
-              ? AppColors.cardBackgroundDark
-              : AppColors.cardBackgroundLight,
-          borderRadius: AppRadius.allLarge,
-          // 对标iOS: 0.5pt separator边框
-          border: Border.all(
-            color: (isDark ? AppColors.separatorDark : AppColors.separatorLight)
+    return Semantics(
+      button: true,
+      label: 'View task',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: () {
+          AppHaptics.selection();
+          context.safePush('/tasks/${task.id}');
+        },
+        child: Container(
+          clipBehavior: Clip.hardEdge,
+          decoration: BoxDecoration(
+            color: isDark
+                ? AppColors.cardBackgroundDark
+                : AppColors.cardBackgroundLight,
+            borderRadius: AppRadius.allLarge,
+            // 对标iOS: 0.5pt separator边框
+            border: Border.all(
+              color: (isDark ? AppColors.separatorDark : AppColors.separatorLight)
                 .withValues(alpha: 0.3),
             width: 0.5,
           ),
@@ -1015,6 +1037,7 @@ class _TaskCard extends StatelessWidget {
           ],
         ),
       ),
+      ),
     );
   }
 }
@@ -1331,28 +1354,33 @@ class _SearchViewState extends State<_SearchView> {
             spacing: AppSpacing.sm,
             runSpacing: AppSpacing.sm,
             children: _getHotKeywords(context).map((keyword) {
-              return GestureDetector(
-                onTap: () {
-                  _searchController.text = keyword;
-                  setState(() => _searchQuery = keyword);
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? AppColors.secondaryBackgroundDark
-                        : AppColors.backgroundLight,
-                    borderRadius: AppRadius.allPill,
-                  ),
-                  child: Text(
-                    keyword,
-                    style: AppTypography.caption.copyWith(
+              return Semantics(
+                button: true,
+                label: 'Search $keyword',
+                excludeSemantics: true,
+                child: GestureDetector(
+                  onTap: () {
+                    _searchController.text = keyword;
+                    setState(() => _searchQuery = keyword);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
                       color: isDark
-                          ? AppColors.textPrimaryDark
-                          : AppColors.textPrimaryLight,
+                          ? AppColors.secondaryBackgroundDark
+                          : AppColors.backgroundLight,
+                      borderRadius: AppRadius.allPill,
+                    ),
+                    child: Text(
+                      keyword,
+                      style: AppTypography.caption.copyWith(
+                        color: isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimaryLight,
+                      ),
                     ),
                   ),
                 ),
@@ -1465,39 +1493,44 @@ class _SearchCategoryItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                borderRadius: AppRadius.allSmall,
+    return Semantics(
+      button: true,
+      label: title,
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: AppRadius.allSmall,
+                ),
+                child: Icon(icon, color: color, size: 20),
               ),
-              child: Icon(icon, color: color, size: 20),
-            ),
-            AppSpacing.hMd,
-            Expanded(
-              child: Text(
-                title,
-                style: AppTypography.body.copyWith(
-                  color: isDark
-                      ? AppColors.textPrimaryDark
-                      : AppColors.textPrimaryLight,
+              AppSpacing.hMd,
+              Expanded(
+                child: Text(
+                  title,
+                  style: AppTypography.body.copyWith(
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
+                  ),
                 ),
               ),
-            ),
-            Icon(
-              Icons.chevron_right,
-              color: isDark
-                  ? AppColors.textTertiaryDark
-                  : AppColors.textTertiaryLight,
-            ),
-          ],
+              Icon(
+                Icons.chevron_right,
+                color: isDark
+                    ? AppColors.textTertiaryDark
+                    : AppColors.textTertiaryLight,
+              ),
+            ],
+          ),
         ),
       ),
     );

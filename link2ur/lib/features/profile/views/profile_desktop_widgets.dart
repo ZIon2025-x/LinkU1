@@ -96,20 +96,23 @@ Widget _buildDesktopUserCard(
     child: Row(
       children: [
         // 头像
-        GestureDetector(
-          onTap: () {
-            pushWithSwipeBack(
-              context,
-              AvatarPickerView(
-                currentAvatar: user.avatar,
-                onSelected: (newAvatar) {
-                  // 头像更新后刷新 Profile
-                  context.read<ProfileBloc>().add(const ProfileLoadRequested());
-                },
-              ),
-            );
-          },
-          child: Stack(
+        Semantics(
+          button: true,
+          label: 'Change avatar',
+          child: GestureDetector(
+            onTap: () {
+              pushWithSwipeBack(
+                context,
+                AvatarPickerView(
+                  currentAvatar: user.avatar,
+                  onSelected: (newAvatar) {
+                    // 头像更新后刷新 Profile
+                    context.read<ProfileBloc>().add(const ProfileLoadRequested());
+                  },
+                ),
+              );
+            },
+            child: Stack(
             alignment: Alignment.bottomRight,
             children: [
               Container(
@@ -146,6 +149,7 @@ Widget _buildDesktopUserCard(
                 size: 24,
               ),
             ],
+          ),
           ),
         ),
         const SizedBox(width: 20),
@@ -288,9 +292,12 @@ class _DesktopEditButtonState extends State<_DesktopEditButton> {
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
       cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: AnimatedContainer(
+      child: Semantics(
+        button: true,
+        label: 'Edit profile',
+        child: GestureDetector(
+          onTap: widget.onTap,
+          child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
           decoration: BoxDecoration(
@@ -329,6 +336,7 @@ class _DesktopEditButtonState extends State<_DesktopEditButton> {
               ),
             ],
           ),
+        ),
         ),
       ),
     );

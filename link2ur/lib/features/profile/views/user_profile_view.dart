@@ -600,30 +600,37 @@ class UserProfileView extends StatelessWidget {
                     const SizedBox(height: AppSpacing.md),
 
                     // 截止日期
-                    GestureDetector(
-                      onTap: () async {
-                        final now = DateTime.now();
-                        final picked = await showDatePicker(
-                          context: ctx,
-                          initialDate: selectedDeadline ??
-                              now.add(const Duration(days: 7)),
-                          firstDate: now,
-                          lastDate: now.add(const Duration(days: 365)),
-                        );
-                        if (picked != null) {
-                          setSheetState(() => selectedDeadline = picked);
-                        }
-                      },
-                      child: InputDecorator(
+                    Semantics(
+                      button: true,
+                      label: 'Select deadline',
+                      child: GestureDetector(
+                        onTap: () async {
+                          final now = DateTime.now();
+                          final picked = await showDatePicker(
+                            context: ctx,
+                            initialDate: selectedDeadline ??
+                                now.add(const Duration(days: 7)),
+                            firstDate: now,
+                            lastDate: now.add(const Duration(days: 365)),
+                          );
+                          if (picked != null) {
+                            setSheetState(() => selectedDeadline = picked);
+                          }
+                        },
+                        child: InputDecorator(
                         decoration: InputDecoration(
                           labelText: l10n.profileDirectRequestHintDeadline,
                           prefixIcon:
                               const Icon(Icons.event_outlined, size: 20),
                           suffixIcon: selectedDeadline != null
-                              ? GestureDetector(
-                                  onTap: () => setSheetState(
-                                      () => selectedDeadline = null),
-                                  child: const Icon(Icons.close, size: 18),
+                              ? Semantics(
+                                  button: true,
+                                  label: 'Clear deadline',
+                                  child: GestureDetector(
+                                    onTap: () => setSheetState(
+                                        () => selectedDeadline = null),
+                                    child: const Icon(Icons.close, size: 18),
+                                  ),
                                 )
                               : null,
                           border: OutlineInputBorder(
@@ -643,6 +650,7 @@ class UserProfileView extends StatelessWidget {
                                     : AppColors.textTertiaryLight),
                           ),
                         ),
+                      ),
                       ),
                     ),
                     const SizedBox(height: AppSpacing.lg),
@@ -871,25 +879,29 @@ class UserProfileView extends StatelessWidget {
               separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.sm),
               itemBuilder: (context, index) {
                 final item = items[index];
-                return GestureDetector(
-                  onTap: () => context.goToFleaMarketDetail('${item.id}'),
-                  child: Container(
-                    width: 120,
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).cardColor,
-                      borderRadius: BorderRadius.circular(AppRadius.medium),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Thumbnail
+                return Semantics(
+                  button: true,
+                  label: 'View details',
+                  excludeSemantics: true,
+                  child: GestureDetector(
+                    onTap: () => context.goToFleaMarketDetail('${item.id}'),
+                    child: Container(
+                      width: 120,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).cardColor,
+                        borderRadius: BorderRadius.circular(AppRadius.medium),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Thumbnail
                         ClipRRect(
                           borderRadius: const BorderRadius.vertical(
                             top: Radius.circular(AppRadius.medium),
@@ -932,6 +944,7 @@ class UserProfileView extends StatelessWidget {
                         ),
                       ],
                     ),
+                  ),
                   ),
                 );
               },

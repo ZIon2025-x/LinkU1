@@ -255,16 +255,20 @@ class _FleaMarketDetailContent extends StatelessWidget {
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.3),
-            shape: BoxShape.circle,
+      child: Semantics(
+        button: true,
+        label: 'Action button',
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.3),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 14, color: color ?? Colors.white),
           ),
-          child: Icon(icon, size: 14, color: color ?? Colors.white),
         ),
       ),
     );
@@ -425,55 +429,62 @@ class _FleaMarketDetailContent extends StatelessWidget {
     return Row(
       children: [
         // 删除按钮
-        GestureDetector(
-          onTap: state.isSubmitting
-              ? null
-              : () {
-                  AdaptiveDialogs.showConfirmDialog(
-                    context: context,
-                    title: context.l10n.commonDelete,
-                    content: context.l10n.fleaMarketDeleteItemConfirm,
-                    cancelText: context.l10n.commonCancel,
-                    confirmText: context.l10n.commonDelete,
-                    isDestructive: true,
-                    onConfirm: () {
-                      context
-                          .read<FleaMarketBloc>()
-                          .add(FleaMarketDeleteItem(itemId));
-                    },
-                  );
-                },
-          child: Builder(builder: (context) {
-            final errorColor = Theme.of(context).colorScheme.error;
-            return Container(
-              height: 50,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                color: errorColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(25),
-                border: Border.all(
-                  color: errorColor.withValues(alpha: 0.3),
+        Semantics(
+          button: true,
+          label: 'Delete item',
+          child: GestureDetector(
+            onTap: state.isSubmitting
+                ? null
+                : () {
+                    AdaptiveDialogs.showConfirmDialog(
+                      context: context,
+                      title: context.l10n.commonDelete,
+                      content: context.l10n.fleaMarketDeleteItemConfirm,
+                      cancelText: context.l10n.commonCancel,
+                      confirmText: context.l10n.commonDelete,
+                      isDestructive: true,
+                      onConfirm: () {
+                        context
+                            .read<FleaMarketBloc>()
+                            .add(FleaMarketDeleteItem(itemId));
+                      },
+                    );
+                  },
+            child: Builder(builder: (context) {
+              final errorColor = Theme.of(context).colorScheme.error;
+              return Container(
+                height: 50,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: errorColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(25),
+                  border: Border.all(
+                    color: errorColor.withValues(alpha: 0.3),
+                  ),
                 ),
-              ),
-              child: Icon(Icons.delete_outline,
-                  size: 20, color: errorColor),
-            );
-          }),
+                child: Icon(Icons.delete_outline,
+                    size: 20, color: errorColor),
+              );
+            }),
+          ),
         ),
         const SizedBox(width: 8),
         // 刷新按钮 - 对标iOS orange gradient
-        GestureDetector(
-          onTap: state.isSubmitting
-              ? null
-              : () {
-                  AppHaptics.selection();
-                  context
-                      .read<FleaMarketBloc>()
-                      .add(FleaMarketRefreshItem(itemId));
-                },
-          child: Container(
-            height: 50,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+        Semantics(
+          button: true,
+          label: 'Refresh item',
+          child: GestureDetector(
+            onTap: state.isSubmitting
+                ? null
+                : () {
+                    AppHaptics.selection();
+                    context
+                        .read<FleaMarketBloc>()
+                        .add(FleaMarketRefreshItem(itemId));
+                  },
+            child: Container(
+              height: 50,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
@@ -513,49 +524,54 @@ class _FleaMarketDetailContent extends StatelessWidget {
             ),
           ),
         ),
+        ),
         const SizedBox(width: 12),
         // 编辑按钮 - 对标iOS primary gradient（路径须为 /flea-market/:id/edit，传 extra 供编辑页使用）
         Expanded(
-          child: GestureDetector(
-            onTap: () async {
-              AppHaptics.selection();
-              final item = state.selectedItem;
-              if (item != null) {
-                await context.push('/flea-market/${item.id}/edit', extra: item);
-                if (context.mounted) {
-                  context.read<FleaMarketBloc>().add(FleaMarketLoadDetailRequested(itemId));
+          child: Semantics(
+            button: true,
+            label: 'Edit item',
+            child: GestureDetector(
+              onTap: () async {
+                AppHaptics.selection();
+                final item = state.selectedItem;
+                if (item != null) {
+                  await context.push('/flea-market/${item.id}/edit', extra: item);
+                  if (context.mounted) {
+                    context.read<FleaMarketBloc>().add(FleaMarketLoadDetailRequested(itemId));
+                  }
                 }
-              }
-            },
-            child: Container(
-              height: 50,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppColors.primary,
-                    AppColors.primary.withValues(alpha: 0.8),
+              },
+              child: Container(
+                height: 50,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.primary,
+                      AppColors.primary.withValues(alpha: 0.8),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(25),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.4),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
                   ],
                 ),
-                borderRadius: BorderRadius.circular(25),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.4),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.edit, size: 16, color: Colors.white),
-                  const SizedBox(width: 8),
-                  Text(
-                    context.l10n.fleaMarketEditItemTitle,
-                    style:
-                        AppTypography.bodyBold.copyWith(color: Colors.white),
-                  ),
-                ],
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.edit, size: 16, color: Colors.white),
+                    const SizedBox(width: 8),
+                    Text(
+                      context.l10n.fleaMarketEditItemTitle,
+                      style:
+                          AppTypography.bodyBold.copyWith(color: Colors.white),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -628,24 +644,28 @@ class _FleaMarketDetailContent extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: GestureDetector(
-                onTap: state.isSubmitting
-                    ? null
-                    : () {
-                        AppHaptics.selection();
-                        _showRejectCounterOfferDialog(context, item);
-                      },
-                child: Container(
-                  height: 50,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: AppColors.error),
-                    borderRadius: BorderRadius.circular(25),
-                  ),
-                  child: Center(
-                    child: Text(
-                      l10n.fleaMarketRejectCounterOffer,
-                      style: AppTypography.bodyBold
-                          .copyWith(color: AppColors.error),
+              child: Semantics(
+                button: true,
+                label: 'Reject offer',
+                child: GestureDetector(
+                  onTap: state.isSubmitting
+                      ? null
+                      : () {
+                          AppHaptics.selection();
+                          _showRejectCounterOfferDialog(context, item);
+                        },
+                  child: Container(
+                    height: 50,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: AppColors.error),
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                    child: Center(
+                      child: Text(
+                        l10n.fleaMarketRejectCounterOffer,
+                        style: AppTypography.bodyBold
+                            .copyWith(color: AppColors.error),
+                      ),
                     ),
                   ),
                 ),
@@ -654,42 +674,46 @@ class _FleaMarketDetailContent extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               flex: 2,
-              child: GestureDetector(
-                onTap: state.isSubmitting
-                    ? null
-                    : () {
-                        AppHaptics.selection();
-                        _showAcceptCounterOfferDialog(
-                            context, item, priceText);
-                      },
-                child: Container(
-                  height: 50,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: AppColors.gradientPrimary,
-                    ),
-                    borderRadius: BorderRadius.circular(25),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primary.withValues(alpha: 0.4),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
+              child: Semantics(
+                button: true,
+                label: 'Accept offer',
+                child: GestureDetector(
+                  onTap: state.isSubmitting
+                      ? null
+                      : () {
+                          AppHaptics.selection();
+                          _showAcceptCounterOfferDialog(
+                              context, item, priceText);
+                        },
+                  child: Container(
+                    height: 50,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: AppColors.gradientPrimary,
                       ),
-                    ],
-                  ),
-                  child: Center(
-                    child: state.isSubmitting
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white),
-                          )
-                        : Text(
-                            l10n.fleaMarketAcceptCounterOffer,
-                            style: AppTypography.bodyBold
-                                .copyWith(color: Colors.white),
-                          ),
+                      borderRadius: BorderRadius.circular(25),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withValues(alpha: 0.4),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: state.isSubmitting
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.white),
+                            )
+                          : Text(
+                              l10n.fleaMarketAcceptCounterOffer,
+                              style: AppTypography.bodyBold
+                                  .copyWith(color: Colors.white),
+                            ),
+                    ),
                   ),
                 ),
               ),
@@ -791,90 +815,94 @@ class _FleaMarketDetailContent extends StatelessWidget {
             ? Icons.card_giftcard
             : Icons.shopping_cart;
 
-    return GestureDetector(
-      onTap: state.isSubmitting
-          ? null
-          : () {
-              AppHaptics.selection();
-              if (hasPendingPayment) {
-                // 对标 iOS：用商品详情返回的待支付信息打开支付页
-                final taskId = item.pendingPaymentTaskId!;
-                final clientSecret = item.pendingPaymentClientSecret!;
-                final paymentData = AcceptPaymentData(
-                  taskId: taskId,
-                  clientSecret: clientSecret,
-                  customerId: item.pendingPaymentCustomerId ?? '',
-                  ephemeralKeySecret:
-                      item.pendingPaymentEphemeralKeySecret ?? '',
-                  amountDisplay: item.pendingPaymentAmountDisplay,
-                  paymentExpiresAt: item.pendingPaymentExpiresAt,
-                  taskSource: AppConstants.taskSourceFleaMarket,
-                  fleaMarketItemId: itemId,
-                );
-                pushWithSwipeBack<bool>(
-                      context,
-                      ApprovalPaymentPage(paymentData: paymentData),
-                    )
-                    .then((paid) {
-                  if (!context.mounted) return;
-                  // ✅ 对标 iOS: 无论支付结果如何都刷新详情
-                  context
-                      .read<FleaMarketBloc>()
-                      .add(FleaMarketLoadDetailRequested(itemId));
-                  if (paid == true) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(context.l10n.actionPurchaseSuccess),
-                        backgroundColor: AppColors.success,
-                      ),
-                    );
-                  }
-                });
-              } else {
-                // 弹出购买/议价申请框（留言 + 是否议价 + 金额）
-                _FleaMarketPurchaseSheet.show(context, item, itemId);
-              }
-            },
-      child: Container(
-        height: 50,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: item.isFree && !hasPendingPayment
-                ? [AppColors.success, AppColors.success.withValues(alpha: 0.8)]
-                : AppColors.gradientRed,
-          ),
-          borderRadius: BorderRadius.circular(25),
-          boxShadow: [
-            BoxShadow(
-              color: (item.isFree && !hasPendingPayment
-                      ? AppColors.success
-                      : AppColors.priceRed)
-                  .withValues(alpha: 0.4),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
+    return Semantics(
+      button: true,
+      label: 'Buy now',
+      child: GestureDetector(
+        onTap: state.isSubmitting
+            ? null
+            : () {
+                AppHaptics.selection();
+                if (hasPendingPayment) {
+                  // 对标 iOS：用商品详情返回的待支付信息打开支付页
+                  final taskId = item.pendingPaymentTaskId!;
+                  final clientSecret = item.pendingPaymentClientSecret!;
+                  final paymentData = AcceptPaymentData(
+                    taskId: taskId,
+                    clientSecret: clientSecret,
+                    customerId: item.pendingPaymentCustomerId ?? '',
+                    ephemeralKeySecret:
+                        item.pendingPaymentEphemeralKeySecret ?? '',
+                    amountDisplay: item.pendingPaymentAmountDisplay,
+                    paymentExpiresAt: item.pendingPaymentExpiresAt,
+                    taskSource: AppConstants.taskSourceFleaMarket,
+                    fleaMarketItemId: itemId,
+                  );
+                  pushWithSwipeBack<bool>(
+                        context,
+                        ApprovalPaymentPage(paymentData: paymentData),
+                      )
+                      .then((paid) {
+                    if (!context.mounted) return;
+                    // ✅ 对标 iOS: 无论支付结果如何都刷新详情
+                    context
+                        .read<FleaMarketBloc>()
+                        .add(FleaMarketLoadDetailRequested(itemId));
+                    if (paid == true) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(context.l10n.actionPurchaseSuccess),
+                          backgroundColor: AppColors.success,
+                        ),
+                      );
+                    }
+                  });
+                } else {
+                  // 弹出购买/议价申请框（留言 + 是否议价 + 金额）
+                  _FleaMarketPurchaseSheet.show(context, item, itemId);
+                }
+              },
+        child: Container(
+          height: 50,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: item.isFree && !hasPendingPayment
+                  ? [AppColors.success, AppColors.success.withValues(alpha: 0.8)]
+                  : AppColors.gradientRed,
             ),
-          ],
-        ),
-        child: Center(
-          child: state.isSubmitting
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                      strokeWidth: 2, color: Colors.white),
-                )
-              : Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(buttonIcon, size: 16, color: Colors.white),
-                    const SizedBox(width: 8),
-                    Text(
-                      buttonText,
-                      style: AppTypography.bodyBold
-                          .copyWith(color: Colors.white),
-                    ),
-                  ],
-                ),
+            borderRadius: BorderRadius.circular(25),
+            boxShadow: [
+              BoxShadow(
+                color: (item.isFree && !hasPendingPayment
+                        ? AppColors.success
+                        : AppColors.priceRed)
+                    .withValues(alpha: 0.4),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Center(
+            child: state.isSubmitting
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white),
+                  )
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(buttonIcon, size: 16, color: Colors.white),
+                      const SizedBox(width: 8),
+                      Text(
+                        buttonText,
+                        style: AppTypography.bodyBold
+                            .copyWith(color: Colors.white),
+                      ),
+                    ],
+                  ),
+          ),
         ),
       ),
     );
@@ -1042,6 +1070,7 @@ class _FleaMarketPurchaseSheetState extends State<_FleaMarketPurchaseSheet> {
                       onPressed: _isSubmitting
                           ? null
                           : () => Navigator.of(context).pop(),
+                      tooltip: 'Close',
                       icon: const Icon(Icons.close),
                     ),
                   ],
@@ -1426,30 +1455,35 @@ class _ImageGalleryState extends State<_ImageGallery> {
             itemCount: images.length,
             onPageChanged: (index) => _currentPage.value = index,
             itemBuilder: (context, index) {
-              return GestureDetector(
-                onTap: () {
-                  pushWithSwipeBack(
-                    context,
-                    FullScreenImageView(
-                      images: images,
-                      initialIndex: index,
-                    ),
-                  );
-                },
-                child: index == 0
-                    ? Hero(
-                        tag: 'flea_market_image_${widget.item.id}',
-                        child: AsyncImageView(
+              return Semantics(
+                button: true,
+                label: 'View image',
+                excludeSemantics: true,
+                child: GestureDetector(
+                  onTap: () {
+                    pushWithSwipeBack(
+                      context,
+                      FullScreenImageView(
+                        images: images,
+                        initialIndex: index,
+                      ),
+                    );
+                  },
+                  child: index == 0
+                      ? Hero(
+                          tag: 'flea_market_image_${widget.item.id}',
+                          child: AsyncImageView(
+                            imageUrl: images[index],
+                            width: double.infinity,
+                            height: double.infinity,
+                          ),
+                        )
+                      : AsyncImageView(
                           imageUrl: images[index],
                           width: double.infinity,
                           height: double.infinity,
                         ),
-                      )
-                    : AsyncImageView(
-                        imageUrl: images[index],
-                        width: double.infinity,
-                        height: double.infinity,
-                      ),
+                ),
               );
             },
           ),
@@ -1848,25 +1882,29 @@ class _SellerCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      child: GestureDetector(
-        onTap: () => context.push('/user/${item.sellerId}'),
-        child: Container(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          decoration: BoxDecoration(
-            color: isDark
-                ? AppColors.cardBackgroundDark
-                : AppColors.cardBackgroundLight,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
+      child: Semantics(
+        button: true,
+        label: 'View seller',
+        excludeSemantics: true,
+        child: GestureDetector(
+          onTap: () => context.push('/user/${item.sellerId}'),
+          child: Container(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? AppColors.cardBackgroundDark
+                  : AppColors.cardBackgroundLight,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
               Container(
                 width: 56,
                 height: 56,
@@ -1930,6 +1968,7 @@ class _SellerCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
       ),
     );
   }

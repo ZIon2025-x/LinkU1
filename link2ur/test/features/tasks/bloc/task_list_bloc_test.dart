@@ -79,7 +79,7 @@ void main() {
       );
 
       blocTest<TaskListBloc, TaskListState>(
-        'emits [loading, error] when load fails',
+        'emits [loading, error] with error code task_list_load_failed when load fails',
         build: () {
           when(() => mockTaskRepository.getTasks(
                 page: any(named: 'page'),
@@ -95,7 +95,69 @@ void main() {
           const TaskListState(status: TaskListStatus.loading),
           isA<TaskListState>()
               .having((s) => s.status, 'status', TaskListStatus.error)
-              .having((s) => s.errorMessage, 'errorMessage', isNotNull),
+              .having((s) => s.errorMessage, 'errorMessage',
+                  'task_list_load_failed'),
+        ],
+      );
+    });
+
+    // ==================== 刷新 ====================
+
+    group('TaskListRefreshRequested', () {
+      blocTest<TaskListBloc, TaskListState>(
+        'emits refreshing then loaded on success',
+        build: () {
+          when(() => mockTaskRepository.getTasks(
+                page: any(named: 'page'),
+                taskType: any(named: 'taskType'),
+                keyword: any(named: 'keyword'),
+                sortBy: any(named: 'sortBy'),
+                location: any(named: 'location'),
+              )).thenAnswer((_) async => testResponse);
+          return taskListBloc;
+        },
+        seed: () => const TaskListState(
+          status: TaskListStatus.loaded,
+          tasks: [testTask],
+          total: 1,
+        ),
+        act: (bloc) => bloc.add(const TaskListRefreshRequested()),
+        expect: () => [
+          isA<TaskListState>()
+              .having((s) => s.isRefreshing, 'isRefreshing', true),
+          isA<TaskListState>()
+              .having((s) => s.status, 'status', TaskListStatus.loaded)
+              .having((s) => s.isRefreshing, 'isRefreshing', false)
+              .having((s) => s.tasks, 'tasks', [testTask]),
+        ],
+      );
+
+      blocTest<TaskListBloc, TaskListState>(
+        'emits refreshing then error on failure',
+        build: () {
+          when(() => mockTaskRepository.getTasks(
+                page: any(named: 'page'),
+                taskType: any(named: 'taskType'),
+                keyword: any(named: 'keyword'),
+                sortBy: any(named: 'sortBy'),
+                location: any(named: 'location'),
+              )).thenThrow(Exception('Network error'));
+          return taskListBloc;
+        },
+        seed: () => const TaskListState(
+          status: TaskListStatus.loaded,
+          tasks: [testTask],
+          total: 1,
+        ),
+        act: (bloc) => bloc.add(const TaskListRefreshRequested()),
+        expect: () => [
+          isA<TaskListState>()
+              .having((s) => s.isRefreshing, 'isRefreshing', true),
+          isA<TaskListState>()
+              .having((s) => s.status, 'status', TaskListStatus.error)
+              .having((s) => s.isRefreshing, 'isRefreshing', false)
+              .having((s) => s.errorMessage, 'errorMessage',
+                  'task_list_load_failed'),
         ],
       );
     });

@@ -489,7 +489,10 @@ class _PersonalizationPage extends StatelessWidget {
             runSpacing: AppSpacing.sm,
             children: popularCities.map((city) {
               final isSelected = selectedCity == city;
-              return GestureDetector(
+              return Semantics(
+                button: true,
+                label: 'Select city',
+                child: GestureDetector(
                 onTap: () => onCityChanged(city),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
@@ -522,6 +525,7 @@ class _PersonalizationPage extends StatelessWidget {
                     ),
                   ),
                 ),
+              ),
               );
             }).toList(),
           ),
@@ -543,7 +547,10 @@ class _PersonalizationPage extends StatelessWidget {
             runSpacing: AppSpacing.sm,
             children: taskTypes.map((type) {
               final isSelected = selectedTaskTypes.contains(type);
-              return GestureDetector(
+              return Semantics(
+                button: true,
+                label: 'Select task type',
+                child: GestureDetector(
                 onTap: () => onTaskTypeToggled(type),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
@@ -576,6 +583,7 @@ class _PersonalizationPage extends StatelessWidget {
                     ),
                   ),
                 ),
+              ),
               );
             }).toList(),
           ),

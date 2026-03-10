@@ -187,12 +187,15 @@ Widget _buildSystemSection(BuildContext context, bool isDark) {
 Widget _buildLogoutButton(BuildContext context, bool isDark) {
   return Padding(
     padding: const EdgeInsets.fromLTRB(AppSpacing.md, 8, AppSpacing.md, 40),
-    child: GestureDetector(
-      onTap: () {
-        AppHaptics.heavy();
-        _showLogoutDialog(context);
-      },
-      child: Container(
+    child: Semantics(
+      button: true,
+      label: 'Log out',
+      child: GestureDetector(
+        onTap: () {
+          AppHaptics.heavy();
+          _showLogoutDialog(context);
+        },
+        child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
@@ -218,6 +221,7 @@ Widget _buildLogoutButton(BuildContext context, bool isDark) {
             ),
           ],
         ),
+      ),
       ),
     ),
   );
@@ -265,13 +269,16 @@ class _ProfileRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return GestureDetector(
-      onTap: () {
-        AppHaptics.selection();
-        onTap();
-      },
-      behavior: HitTestBehavior.opaque,
-      child: Padding(
+    return Semantics(
+      button: true,
+      label: 'Open menu item',
+      child: GestureDetector(
+        onTap: () {
+          AppHaptics.selection();
+          onTap();
+        },
+        behavior: HitTestBehavior.opaque,
+        child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
           children: [
@@ -339,6 +346,7 @@ class _ProfileRow extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }
