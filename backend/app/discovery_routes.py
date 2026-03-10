@@ -13,7 +13,6 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import select, func, or_, and_, desc
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app import models, schemas
 from app.deps import get_async_db_dependency
@@ -82,7 +81,7 @@ async def get_discovery_feed(
     
     # 3. 竞品评论（来自排行榜投票留言）
     try:
-        competitor_reviews = await _fetch_competitor_reviews(db, fetch_limit)
+        competitor_reviews = await _fetch_competitor_reviews(db, fetch_limit, current_user=current_user)
         all_items.extend(competitor_reviews)
     except Exception as e:
         logger.warning(f"Failed to fetch competitor reviews for feed: {e}")
@@ -115,10 +114,12 @@ async def get_discovery_feed(
     # 加权随机混排（确定性 seed）
     feed_items = _weighted_shuffle(all_items, limit, page, seed=seed)
 
+    # has_more: 返回的条数 == limit 说明可能还有更多；
+    # 不足 limit 说明数据已经耗尽
     return {
         "items": feed_items,
         "page": page,
-        "has_more": len(all_items) > page * limit,
+        "has_more": len(feed_items) == limit,
         "seed": seed,
     }
 
@@ -260,6 +261,7 @@ async def _fetch_forum_posts(db: AsyncSession, limit: int, visible_category_ids:
             "rating": None,
             "like_count": row.like_count,
             "comment_count": row.reply_count,
+            "view_count": row.view_count or 0,
             "upvote_count": None,
             "downvote_count": None,
             "linked_item": linked_item,
@@ -267,6 +269,7 @@ async def _fetch_forum_posts(db: AsyncSession, limit: int, visible_category_ids:
             "activity_info": None,
             "is_experienced": None,
             "is_favorited": row.id in user_liked_post_ids if current_user else None,
+            "user_vote_type": None,
             "extra_data": extra if extra else None,
             "created_at": row.created_at.isoformat() if row.created_at else None,
         })
@@ -340,6 +343,7 @@ async def _fetch_flea_market_items(db: AsyncSession, limit: int, current_user=No
             "rating": None,
             "like_count": row.fav_count or 0,
             "comment_count": None,
+            "view_count": row.view_count or 0,
             "upvote_count": None,
             "downvote_count": None,
             "linked_item": None,
@@ -347,13 +351,14 @@ async def _fetch_flea_market_items(db: AsyncSession, limit: int, current_user=No
             "activity_info": None,
             "is_experienced": None,
             "is_favorited": row.id in user_favorited_ids,
+            "user_vote_type": None,
             "extra_data": None,
             "created_at": row.created_at.isoformat() if row.created_at else None,
         })
     return items
 
 
-async def _fetch_competitor_reviews(db: AsyncSession, limit: int) -> list:
+async def _fetch_competitor_reviews(db: AsyncSession, limit: int, current_user=None) -> list:
     """获取竞品评论（来自排行榜投票留言）
     注意: 实际模型是 LeaderboardVote（不是 LeaderboardReview）
     - vote_type 可以是 upvote/downvote
@@ -393,13 +398,31 @@ async def _fetch_competitor_reviews(db: AsyncSession, limit: int) -> list:
         .limit(limit)
     )
     result = await db.execute(query)
+    rows_list = result.all()
+
+    # 批量查询当前用户对这些排行榜条目的投票状态
+    user_vote_map = {}  # item_id -> vote_type
+    if current_user and rows_list:
+        item_ids = list({row.vote_item_id for row in rows_list})
+        user_vote_result = await db.execute(
+            select(
+                models.LeaderboardVote.item_id,
+                models.LeaderboardVote.vote_type,
+            ).where(
+                models.LeaderboardVote.user_id == current_user.id,
+                models.LeaderboardVote.item_id.in_(item_ids),
+            )
+        )
+        for vrow in user_vote_result.all():
+            user_vote_map[vrow[0]] = vrow[1]
+
     items = []
-    for row in result:
+    for row in rows_list:
         reviewer_name = "匿名用户" if row.is_anonymous else (row.reviewer_name or "匿名用户")
         reviewer_avatar = None if row.is_anonymous else row.reviewer_avatar
-        
+
         item_thumb = _first_image(row.item_images)
-        
+
         items.append({
             "feed_type": "competitor_review",
             "id": f"creview_{row.vote_id}",
@@ -430,6 +453,7 @@ async def _fetch_competitor_reviews(db: AsyncSession, limit: int) -> list:
             "activity_info": None,
             "is_experienced": None,
             "is_favorited": None,
+            "user_vote_type": user_vote_map.get(row.vote_item_id) if current_user else None,
             "extra_data": None,
             "created_at": row.created_at.isoformat() if row.created_at else None,
         })
@@ -531,6 +555,7 @@ async def _fetch_service_reviews(db: AsyncSession, limit: int) -> list:
             "activity_info": activity_info,
             "is_experienced": None,
             "is_favorited": None,
+            "user_vote_type": None,
             "extra_data": None,
             "created_at": row.created_at.isoformat() if row.created_at else None,
         })
@@ -624,6 +649,7 @@ async def _fetch_rankings(db: AsyncSession, limit: int) -> list:
             "activity_info": None,
             "is_experienced": None,
             "is_favorited": None,
+            "user_vote_type": None,
             "extra_data": {"top3": top3},
             "created_at": row.created_at.isoformat() if row.created_at else None,
         })
@@ -693,6 +719,7 @@ async def _fetch_expert_services(db: AsyncSession, limit: int) -> list:
             "activity_info": None,
             "is_experienced": None,
             "is_favorited": None,
+            "user_vote_type": None,
             "extra_data": None,
             "created_at": row.created_at.isoformat() if row.created_at else None,
         })
@@ -759,9 +786,42 @@ async def _resolve_linked_item(db: AsyncSession, item_type: str, item_id: str) -
     return None
 
 
+def _compute_score(item: dict) -> float:
+    """计算内容热度分数（时间衰减 + 互动加权）
+
+    参考 Hacker News / 小红书排序思路:
+    - 互动分 = 点赞*3 + 评论*5 + 浏览*0.1 + 评分*2 + 赞成票*3
+    - 时间衰减: score / (age_hours + 2) ^ 1.2
+    - 保底分 1.0，确保无互动的新内容也能展示
+    """
+    likes = item.get("like_count") or 0
+    comments = item.get("comment_count") or 0
+    views = item.get("view_count") or 0
+    rating = item.get("rating") or 0
+    upvotes = item.get("upvote_count") or 0
+
+    engagement = likes * 3 + comments * 5 + views * 0.1 + rating * 2 + upvotes * 3
+
+    created_str = item.get("created_at")
+    if created_str:
+        try:
+            created = datetime.fromisoformat(created_str)
+            if created.tzinfo is None:
+                created = created.replace(tzinfo=timezone.utc)
+            age_hours = (datetime.now(timezone.utc) - created).total_seconds() / 3600
+        except (ValueError, TypeError):
+            age_hours = 999
+    else:
+        age_hours = 999
+
+    score = max(engagement, 1.0) / (age_hours + 2) ** 1.2
+    return score
+
+
 def _weighted_shuffle(items: list, limit: int, page: int, seed: int = None) -> list:
     """加权随机混排
 
+    - 每种类型内部按热度分数排序（时间衰减 + 互动加权），而非纯时间
     - 低频类型（service_review, competitor_review, ranking）权重更高
     - 高频类型（forum_post, product）权重较低
     - 同一类型不连续出现超过 2 条
@@ -789,8 +849,9 @@ def _weighted_shuffle(items: list, limit: int, page: int, seed: int = None) -> l
             by_type[ft] = []
         by_type[ft].append(item)
 
+    # 按热度分数排序（替代纯 created_at）
     for ft in by_type:
-        by_type[ft].sort(key=lambda x: x.get("created_at") or "", reverse=True)
+        by_type[ft].sort(key=_compute_score, reverse=True)
 
     result = []
     consecutive_count = {}

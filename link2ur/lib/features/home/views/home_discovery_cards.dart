@@ -416,12 +416,20 @@ class _CompetitorReviewCard extends StatelessWidget {
             const SizedBox(height: 8),
             Row(
               children: [
-                const Icon(Icons.thumb_up_outlined, size: 12, color: AppColors.success),
+                Icon(
+                    item.userVoteType == 'upvote'
+                        ? Icons.thumb_up
+                        : Icons.thumb_up_outlined,
+                    size: 12, color: AppColors.success),
                 const SizedBox(width: 3),
                 Text('${item.upvoteCount ?? 0}',
                     style: const TextStyle(fontSize: 12, color: AppColors.success)),
                 const SizedBox(width: 12),
-                const Icon(Icons.thumb_down_outlined, size: 12, color: AppColors.error),
+                Icon(
+                    item.userVoteType == 'downvote'
+                        ? Icons.thumb_down
+                        : Icons.thumb_down_outlined,
+                    size: 12, color: AppColors.error),
                 const SizedBox(width: 3),
                 Text('${item.downvoteCount ?? 0}',
                     style: const TextStyle(fontSize: 12, color: AppColors.error)),

@@ -34,6 +34,7 @@ class DiscoveryFeedItem extends Equatable {
     this.upvoteCount,
     this.downvoteCount,
     this.voteType,
+    this.userVoteType,
     this.linkedItem,
     this.targetItem,
     this.activityInfo,
@@ -68,6 +69,8 @@ class DiscoveryFeedItem extends Equatable {
   final int? downvoteCount;
   /// 竞品评论的投票类型：upvote=赞成，downvote=反对
   final String? voteType;
+  /// 当前用户对该排行榜条目的投票类型：upvote/downvote/null
+  final String? userVoteType;
   final LinkedItemBrief? linkedItem;
   final TargetItemBrief? targetItem;
   final ActivityBrief? activityInfo;
@@ -156,6 +159,7 @@ class DiscoveryFeedItem extends Equatable {
       upvoteCount: json['upvote_count'] as int?,
       downvoteCount: json['downvote_count'] as int?,
       voteType: json['vote_type'] as String?,
+      userVoteType: json['user_vote_type'] as String?,
       linkedItem: json['linked_item'] != null
           ? LinkedItemBrief.fromJson(json['linked_item'] as Map<String, dynamic>)
           : null,
