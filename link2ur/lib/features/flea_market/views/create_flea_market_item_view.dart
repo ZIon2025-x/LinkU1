@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/router/app_routes.dart';
 import '../../../core/utils/adaptive_dialogs.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/cross_platform_image.dart';
@@ -202,6 +203,20 @@ class _CreateFleaMarketItemContentState
     return BlocListener<FleaMarketBloc, FleaMarketState>(
       listenWhen: (prev, curr) => prev.actionMessage != curr.actionMessage,
       listener: (context, state) {
+        if (state.actionMessage == 'stripe_setup_required') {
+          AdaptiveDialogs.showConfirmDialog(
+            context: context,
+            title: context.l10n.stripeSetupRequired,
+            contentWidget: const Icon(Icons.account_balance_wallet_outlined,
+                size: 40, color: AppColors.primary),
+            cancelText: context.l10n.commonCancel,
+            confirmText: context.l10n.stripeSetupAction,
+            onConfirm: () {
+              context.push(AppRoutes.stripeConnectOnboarding);
+            },
+          );
+          return;
+        }
         if (state.actionMessage != null) {
           final l10n = context.l10n;
           final isSuccess = state.actionMessage == 'item_published';

@@ -161,6 +161,9 @@ class FleaMarketRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
+      if (response.statusCode == 428) {
+        throw const FleaMarketException('stripe_setup_required');
+      }
       throw FleaMarketException(response.message ?? 'flea_market_error_publish_failed');
     }
 

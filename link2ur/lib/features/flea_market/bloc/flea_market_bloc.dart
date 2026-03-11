@@ -600,10 +600,13 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
       // 刷新列表
       add(const FleaMarketRefreshRequested());
     } catch (e) {
+      final isStripeSetup = e is FleaMarketException &&
+          e.message == 'stripe_setup_required';
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: 'publish_failed',
-        errorMessage: e.toString(),
+        actionMessage:
+            isStripeSetup ? 'stripe_setup_required' : 'publish_failed',
+        errorMessage: isStripeSetup ? null : e.toString(),
       ));
     }
   }

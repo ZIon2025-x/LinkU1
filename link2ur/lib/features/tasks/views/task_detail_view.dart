@@ -145,7 +145,7 @@ class _TaskDetailContent extends StatelessWidget {
             cancelText: context.l10n.commonCancel,
             confirmText: context.l10n.stripeSetupAction,
             onConfirm: () {
-              context.push('/wallet');
+              context.push(AppRoutes.stripeConnectOnboarding);
             },
           );
           return;

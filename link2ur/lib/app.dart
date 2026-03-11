@@ -122,17 +122,50 @@ class _Link2UrAppState extends State<Link2UrApp> {
       authBloc: _authBloc,
       child: _DeferredBlocLoader(
         child: _WebSplashTimeout(
-          child: BlocListener<AuthBloc, AuthState>(
-            listenWhen: (prev, curr) {
-              final wasChecking = prev.status == AuthStatus.initial ||
-                  prev.status == AuthStatus.checking;
-              final isChecking = curr.status == AuthStatus.initial ||
-                  curr.status == AuthStatus.checking;
-              return wasChecking && !isChecking;
-            },
-            listener: (context, state) {
-              FlutterNativeSplash.remove();
-            },
+          child: MultiBlocListener(
+            listeners: [
+              BlocListener<AuthBloc, AuthState>(
+                listenWhen: (prev, curr) {
+                  final wasChecking = prev.status == AuthStatus.initial ||
+                      prev.status == AuthStatus.checking;
+                  final isChecking = curr.status == AuthStatus.initial ||
+                      curr.status == AuthStatus.checking;
+                  return wasChecking && !isChecking;
+                },
+                listener: (context, state) {
+                  FlutterNativeSplash.remove();
+                },
+              ),
+              // 全局会话过期监听：在任何页面弹出提示，引导用户重新登录
+              BlocListener<AuthBloc, AuthState>(
+                listenWhen: (prev, curr) =>
+                    !prev.sessionExpired && curr.sessionExpired,
+                listener: (context, state) {
+                  final l10n = AppLocalizations.of(context);
+                  final router = _appRouter.router;
+                  showDialog<void>(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (dialogContext) => AlertDialog(
+                      title: Text(l10n?.loginRequired ?? '需要登录'),
+                      content: Text(
+                        l10n?.authSessionExpired ??
+                            '登录已过期，请重新登录',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () {
+                            Navigator.of(dialogContext).pop();
+                            router.go('/login');
+                          },
+                          child: Text(l10n?.loginLoginNow ?? '立即登录'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ],
             child: BlocBuilder<SettingsBloc, SettingsState>(
               buildWhen: (prev, curr) =>
                   prev.themeMode != curr.themeMode ||
