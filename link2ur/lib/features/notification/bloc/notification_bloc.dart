@@ -198,11 +198,18 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
   static const _interactionTypePrefixes = ['forum_'];
   /// 互动消息精确类型
   static const _interactionExactTypes = ['leaderboard_vote', 'leaderboard_like'];
+  /// 以 forum_ 开头但属于系统通知的类型（管理员审批，存在 Notification 表）
+  static const _forumSystemTypes = [
+    'forum_category_approved',
+    'forum_category_rejected',
+  ];
 
   /// 判断是否为互动消息类型
-  static bool _isInteractionType(String type) =>
-      _interactionTypePrefixes.any((prefix) => type.startsWith(prefix)) ||
-      _interactionExactTypes.contains(type);
+  static bool _isInteractionType(String type) {
+    if (_forumSystemTypes.contains(type)) return false;
+    return _interactionTypePrefixes.any((prefix) => type.startsWith(prefix)) ||
+        _interactionExactTypes.contains(type);
+  }
 
   /// 判断是否为系统消息类型（非互动类型）
   static bool _isSystemType(String type) => !_isInteractionType(type);

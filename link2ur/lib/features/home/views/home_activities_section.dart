@@ -165,7 +165,6 @@ class _RealActivityCard extends StatelessWidget {
                                 width: 280,
                                 height: 160,
                                 memCacheWidth: 560,
-                                memCacheHeight: 320,
                               )
                           : Container(
                               decoration: BoxDecoration(

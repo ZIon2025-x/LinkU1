@@ -16,50 +16,150 @@ import '../../../data/models/notification.dart' as models;
 
 /// 通知中心页
 /// 参考iOS NotificationCenterView.swift
-class NotificationCenterView extends StatelessWidget {
+class NotificationCenterView extends StatefulWidget {
   const NotificationCenterView({super.key});
 
   @override
+  State<NotificationCenterView> createState() => _NotificationCenterViewState();
+}
+
+class _NotificationCenterViewState extends State<NotificationCenterView>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(_onTabChanged);
+  }
+
+  @override
+  void dispose() {
+    _tabController.removeListener(_onTabChanged);
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  /// 切换 tab 时重新加载对应类型的通知，避免两个 tab 共享同一份列表导致空白
+  void _onTabChanged() {
+    if (_tabController.indexIsChanging) return; // 只在动画结束后触发
+    final type = _tabController.index == 0 ? 'system' : 'interaction';
+    context.read<NotificationBloc>().add(NotificationLoadRequested(type: type));
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(context.l10n.notificationsNotifications),
-          actions: [
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(context.l10n.notificationsNotifications),
+        actions: [
+          BlocBuilder<NotificationBloc, NotificationState>(
+            buildWhen: (previous, current) =>
+                previous.notifications.isEmpty !=
+                current.notifications.isEmpty,
+            builder: (context, state) {
+              return TextButton(
+                onPressed: state.notifications.isEmpty
+                    ? null
+                    : () {
+                        context.read<NotificationBloc>().add(
+                              const NotificationMarkAllAsRead(),
+                            );
+                      },
+                child: Text(context.l10n.notificationMarkAllRead),
+              );
+            },
+          ),
+        ],
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: [
             BlocBuilder<NotificationBloc, NotificationState>(
-              buildWhen: (previous, current) =>
-                  previous.notifications.isEmpty !=
-                  current.notifications.isEmpty,
+              buildWhen: (prev, curr) =>
+                  prev.unreadCount.count != curr.unreadCount.count,
               builder: (context, state) {
-                return TextButton(
-                  onPressed: state.notifications.isEmpty
-                      ? null
-                      : () {
-                          context.read<NotificationBloc>().add(
-                                const NotificationMarkAllAsRead(),
-                              );
-                        },
-                  child: Text(context.l10n.notificationMarkAllRead),
+                final count = state.unreadCount.count;
+                return Tab(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          context.l10n.notificationSystemNotifications,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (count > 0) ...[
+                        const SizedBox(width: 4),
+                        _UnreadBadge(count: count),
+                      ],
+                    ],
+                  ),
+                );
+              },
+            ),
+            BlocBuilder<NotificationBloc, NotificationState>(
+              buildWhen: (prev, curr) =>
+                  prev.unreadCount.forumCount != curr.unreadCount.forumCount,
+              builder: (context, state) {
+                final count = state.unreadCount.forumCount;
+                return Tab(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          context.l10n.notificationInteractionMessages,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (count > 0) ...[
+                        const SizedBox(width: 4),
+                        _UnreadBadge(count: count),
+                      ],
+                    ],
+                  ),
                 );
               },
             ),
           ],
-          bottom: TabBar(
-            tabs: [
-              Tab(text: context.l10n.notificationSystemNotifications),
-              Tab(text: context.l10n.notificationInteractionMessages),
-            ],
-            labelColor: AppColors.primary,
-            unselectedLabelColor: AppColors.textSecondaryLight,
-            indicatorColor: AppColors.primary,
-          ),
+          labelColor: AppColors.primary,
+          unselectedLabelColor: AppColors.textSecondaryLight,
+          indicatorColor: AppColors.primary,
         ),
-        body: const TabBarView(
-          children: [
-            _SystemNotificationList(),
-            _InteractionNotificationList(),
-          ],
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: const [
+          _SystemNotificationList(),
+          _InteractionNotificationList(),
+        ],
+      ),
+    );
+  }
+}
+
+/// Tab 上的未读数角标
+class _UnreadBadge extends StatelessWidget {
+  const _UnreadBadge({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+      decoration: BoxDecoration(
+        color: AppColors.error,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        count > 99 ? '99+' : '$count',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );

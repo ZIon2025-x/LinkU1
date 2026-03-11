@@ -56,28 +56,25 @@ class AsyncImageView extends StatelessWidget {
 
     final dpr = MediaQuery.devicePixelRatioOf(context);
 
-    // 优先使用显式 memCacheWidth/Height；如果 width/height 有限，按 DPR 计算
+    // 只约束宽度（不同时约束宽高），让图片解码器自动维持原始宽高比。
+    // 同时指定 memCacheWidth + memCacheHeight 在部分设备/图片格式（含EXIF旋转）
+    // 下可能导致解码比例错误，渲染时图片被拉伸或压扁。
     final knownCacheWidth = memCacheWidth ??
         (width != null && width!.isFinite ? (width! * dpr).round() : null);
-    final knownCacheHeight = memCacheHeight ??
-        (height != null && height!.isFinite ? (height! * dpr).round() : null);
 
-    // 如果已经有有效的缓存尺寸，直接构建图片（最常见路径）
-    if (knownCacheWidth != null || knownCacheHeight != null) {
-      return _buildImage(url, knownCacheWidth, knownCacheHeight);
+    // 如果已经有有效的缓存宽度，直接构建图片（最常见路径）
+    if (knownCacheWidth != null) {
+      return _buildImage(url, knownCacheWidth, null);
     }
 
-    // width/height 为 null 或 infinity 时，使用 LayoutBuilder 获取实际约束尺寸
+    // width 为 null 或 infinity 时，使用 LayoutBuilder 获取实际约束宽度
     // 避免全分辨率原图被解码到内存
     return LayoutBuilder(
       builder: (context, constraints) {
         final constraintWidth = constraints.maxWidth.isFinite
             ? (constraints.maxWidth * dpr).round()
             : null;
-        final constraintHeight = constraints.maxHeight.isFinite
-            ? (constraints.maxHeight * dpr).round()
-            : null;
-        return _buildImage(url, constraintWidth, constraintHeight);
+        return _buildImage(url, constraintWidth, null);
       },
     );
   }

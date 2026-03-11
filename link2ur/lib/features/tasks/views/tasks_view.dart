@@ -787,7 +787,6 @@ class _TaskGridCard extends StatelessWidget {
                           width: w,
                           height: h,
                           memCacheWidth: (w * dpr).round(),
-                          memCacheHeight: (h * dpr).round(),
                         ),
                       )
                     : _buildPlaceholderBackground(),
