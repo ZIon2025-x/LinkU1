@@ -44,12 +44,15 @@ void main() {
       // 统一错误捕获：FlutterError + PlatformDispatcher
       await CrashReporter.instance.initialize();
 
-      // 设置系统UI样式（Web 上这些调用会被忽略，但不会报错）
+      // Android 15+ 强制 edge-to-edge，设置透明系统栏
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
       SystemChrome.setSystemUIOverlayStyle(
         const SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
           statusBarIconBrightness: Brightness.dark,
           statusBarBrightness: Brightness.light,
+          systemNavigationBarColor: Colors.transparent,
+          systemNavigationBarDividerColor: Colors.transparent,
         ),
       );
 
