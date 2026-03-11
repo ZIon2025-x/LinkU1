@@ -194,18 +194,18 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     _pollingTimer = null;
   }
 
-  /// 互动消息类型前缀（论坛 + 排行榜）
-  static const _interactionTypePrefixes = ['forum_', 'leaderboard_'];
+  /// 互动消息类型前缀
+  static const _interactionTypePrefixes = ['forum_'];
+  /// 互动消息精确类型
+  static const _interactionExactTypes = ['leaderboard_vote', 'leaderboard_like'];
 
   /// 判断是否为互动消息类型
-  static bool _isInteractionType(String type) {
-    return _interactionTypePrefixes.any((prefix) => type.startsWith(prefix));
-  }
+  static bool _isInteractionType(String type) =>
+      _interactionTypePrefixes.any((prefix) => type.startsWith(prefix)) ||
+      _interactionExactTypes.contains(type);
 
   /// 判断是否为系统消息类型（非互动类型）
-  static bool _isSystemType(String type) {
-    return !_isInteractionType(type);
-  }
+  static bool _isSystemType(String type) => !_isInteractionType(type);
 
   /// 根据请求的类型过滤通知列表
   List<AppNotification> _filterNotifications(
@@ -232,38 +232,8 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
       NotificationListResponse response;
 
       if (event.type == 'interaction') {
-        // 互动消息：合并论坛通知 + 排行榜相关的系统通知
-        // 先加载论坛通知
-        final forumResponse = await _notificationRepository.getForumNotifications(
-          
-        );
-        // 再加载系统通知中的排行榜部分
-        final systemResponse = await _notificationRepository.getNotifications(
-          
-        );
-
-        // 合并：论坛通知 + 系统通知中 leaderboard_* 类型
-        final leaderboardNotifications = systemResponse.notifications
-            .where((n) => n.type.startsWith('leaderboard_'))
-            .toList();
-
-        final allInteraction = [
-          ...forumResponse.notifications,
-          ...leaderboardNotifications,
-        ];
-
-        // 按时间排序（最新在前）
-        allInteraction.sort((a, b) {
-          final aTime = a.createdAt ?? DateTime(2000);
-          final bTime = b.createdAt ?? DateTime(2000);
-          return bTime.compareTo(aTime);
-        });
-
-        response = NotificationListResponse(
-          notifications: allInteraction,
-          total: allInteraction.length,
+        response = await _notificationRepository.getInteractionNotifications(
           page: 1,
-          pageSize: 20,
         );
       } else {
         // 系统消息或全部
@@ -280,7 +250,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
         notifications: filtered,
         total: filtered.length,
         page: 1,
-        hasMore: event.type == 'interaction' ? false : response.hasMore,
+        hasMore: response.hasMore,
         selectedType: event.type,
       ));
     } catch (e) {
@@ -300,16 +270,24 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
 
     try {
       final nextPage = state.page + 1;
-      final response = await _notificationRepository.getNotifications(
-        page: nextPage,
-        type: state.selectedType,
-      );
+      final NotificationListResponse response;
+
+      if (state.selectedType == 'interaction') {
+        response = await _notificationRepository.getInteractionNotifications(
+          page: nextPage,
+        );
+      } else {
+        response = await _notificationRepository.getNotifications(
+          page: nextPage,
+          type: state.selectedType,
+        );
+      }
+
+      final filtered = _filterNotifications(
+          response.notifications, state.selectedType);
 
       emit(state.copyWith(
-        notifications: [
-          ...state.notifications,
-          ...response.notifications,
-        ],
+        notifications: [...state.notifications, ...filtered],
         page: nextPage,
         hasMore: response.hasMore,
       ));
@@ -353,27 +331,40 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     emit(state.copyWith(notifications: updatedList, unreadCount: newUnread));
 
     // 2. 异步请求后端，不阻塞 UI；失败仅打日志，下次轮询会拉回正确未读数
-    _notificationRepository.markAsRead(event.notificationId).catchError((e) {
-      AppLogger.error('Failed to mark notification as read', e);
-    });
+    if (isInteraction && target.type.startsWith('forum_')) {
+      _notificationRepository.markForumNotificationAsRead(event.notificationId).catchError((e) {
+        AppLogger.error('Failed to mark forum notification as read', e);
+      });
+    } else {
+      _notificationRepository.markAsRead(event.notificationId).catchError((e) {
+        AppLogger.error('Failed to mark notification as read', e);
+      });
+    }
   }
 
   Future<void> _onMarkAllAsRead(
     NotificationMarkAllAsRead event,
     Emitter<NotificationState> emit,
   ) async {
-    // 1. 乐观更新：立即全部已读、未读数清零，不等待后端
     final updatedList = state.notifications
         .map((n) => n.copyWith(isRead: true))
         .toList();
 
+    final resetUnread = state.selectedType == 'interaction'
+        ? UnreadNotificationCount(
+            count: state.unreadCount.count, forumCount: 0)
+        : UnreadNotificationCount(
+            count: 0, forumCount: state.unreadCount.forumCount);
+
     emit(state.copyWith(
       notifications: updatedList,
-      unreadCount: const UnreadNotificationCount(count: 0),
+      unreadCount: resetUnread,
     ));
 
-    // 2. 异步请求后端，不阻塞 UI；失败仅打日志，下次轮询会拉回正确未读数
-    _notificationRepository.markAllAsRead().catchError((e) {
+    final markType = state.selectedType == 'interaction'
+        ? 'interaction'
+        : 'system';
+    _notificationRepository.markAllAsRead(type: markType).catchError((e) {
       AppLogger.error('Failed to mark all as read', e);
     });
   }

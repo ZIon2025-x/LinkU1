@@ -364,10 +364,36 @@ class _NotificationItem extends StatelessWidget {
     );
   }
 
-  void _navigateToRelated(BuildContext context, models.AppNotification notification) {
+  void _navigateToRelated(
+      BuildContext context, models.AppNotification notification) {
+    final type = notification.type;
     final relatedId = notification.relatedId;
-    if (relatedId == null) return;
+    final taskId = notification.taskId;
 
+    // 论坛
+    if (type.startsWith('forum_')) {
+      if (type == 'forum_category_approved') {
+        context.safePush('/forum');
+        return;
+      }
+      if (type == 'forum_category_rejected') return;
+      if (relatedId != null) context.safePush('/forum/posts/$relatedId');
+      return;
+    }
+
+    // 排行榜
+    if (type.startsWith('leaderboard_')) {
+      if (relatedId == null) return;
+      if (type == 'leaderboard_approved' || type == 'leaderboard_rejected') {
+        context.safePush('/leaderboard/$relatedId');
+      } else {
+        context.goToLeaderboardItemDetail(relatedId);
+      }
+      return;
+    }
+
+    // 其他系统通知
+    if (relatedId == null && taskId == null) return;
     switch (notification.relatedType) {
       case 'task_id':
         context.safePush('/tasks/$relatedId');
@@ -379,6 +405,8 @@ class _NotificationItem extends StatelessWidget {
         context.safePush('/flea-market/$relatedId');
         break;
       default:
+        final id = taskId ?? relatedId;
+        if (id != null) context.safePush('/tasks/$id');
         break;
     }
   }

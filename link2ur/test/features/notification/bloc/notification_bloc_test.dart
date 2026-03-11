@@ -186,29 +186,17 @@ void main() {
       );
 
       blocTest<NotificationBloc, NotificationState>(
-        'emits [loading, loaded] with merged interaction notifications when type is interaction',
+        'emits [loading, loaded] with interaction notifications when type is interaction',
         build: () {
-          // getForumNotifications returns forum notifications
-          when(() => mockRepo.getForumNotifications(
+          // getInteractionNotifications returns unified interaction notifications
+          when(() => mockRepo.getInteractionNotifications(
                 page: any(named: 'page'),
                 pageSize: any(named: 'pageSize'),
-              )).thenAnswer((_) async => NotificationListResponse(
-                notifications: [forumNotification1, forumNotification2],
-                total: 2,
-                page: 1,
-                pageSize: 20,
-              ));
-          // getNotifications returns all (including leaderboard ones)
-          when(() => mockRepo.getNotifications(
-                page: any(named: 'page'),
-                pageSize: any(named: 'pageSize'),
-                type: any(named: 'type'),
-                cancelToken: any(named: 'cancelToken'),
               )).thenAnswer((_) async => NotificationListResponse(
                 notifications: [
-                  systemNotification1,
+                  forumNotification1,
                   leaderboardNotification,
-                  systemNotification2,
+                  forumNotification2,
                 ],
                 total: 3,
                 page: 1,
@@ -220,14 +208,12 @@ void main() {
             bloc.add(const NotificationLoadRequested(type: 'interaction')),
         expect: () => [
           const NotificationState(status: NotificationStatus.loading),
-          // Merged: forum_reply (10min ago), leaderboard (20min ago), forum_like (30min ago)
-          // sorted by createdAt descending
           NotificationState(
             status: NotificationStatus.loaded,
             notifications: [
-              forumNotification1, // 10 min ago
-              leaderboardNotification, // 20 min ago
-              forumNotification2, // 30 min ago
+              forumNotification1,
+              leaderboardNotification,
+              forumNotification2,
             ],
             total: 3,
             hasMore: false,
@@ -235,15 +221,9 @@ void main() {
           ),
         ],
         verify: (_) {
-          verify(() => mockRepo.getForumNotifications(
+          verify(() => mockRepo.getInteractionNotifications(
                 page: any(named: 'page'),
                 pageSize: any(named: 'pageSize'),
-              )).called(1);
-          verify(() => mockRepo.getNotifications(
-                page: any(named: 'page'),
-                pageSize: any(named: 'pageSize'),
-                type: any(named: 'type'),
-                cancelToken: any(named: 'cancelToken'),
               )).called(1);
         },
       );
@@ -305,12 +285,12 @@ void main() {
       );
 
       blocTest<NotificationBloc, NotificationState>(
-        'emits [loading, error] when getForumNotifications throws for interaction type',
+        'emits [loading, error] when getInteractionNotifications throws for interaction type',
         build: () {
-          when(() => mockRepo.getForumNotifications(
+          when(() => mockRepo.getInteractionNotifications(
                 page: any(named: 'page'),
                 pageSize: any(named: 'pageSize'),
-              )).thenThrow(Exception('Forum API error'));
+              )).thenThrow(Exception('Interaction API error'));
           return bloc;
         },
         act: (bloc) =>

@@ -101,9 +101,12 @@ class NotificationRepository {
   }
 
   /// 标记所有通知已读
-  Future<void> markAllAsRead() async {
-    final response = await _apiService.post(
+  Future<void> markAllAsRead({String? type}) async {
+    final response = await _apiService.post<dynamic>(
       ApiEndpoints.markAllNotificationsRead,
+      queryParameters: {
+        if (type != null) 'type': type,
+      },
     );
 
     if (!response.isSuccess) {
@@ -111,6 +114,17 @@ class NotificationRepository {
     }
 
     await _cache.invalidateNotificationsCache();
+  }
+
+  /// 标记论坛通知为已读（PUT 方法）
+  Future<void> markForumNotificationAsRead(int notificationId) async {
+    final response = await _apiService.put<dynamic>(
+      ApiEndpoints.forumNotificationRead(notificationId),
+    );
+
+    if (!response.isSuccess) {
+      throw NotificationException(response.message ?? '标记已读失败');
+    }
   }
 
   /// 获取未读通知数量
@@ -147,13 +161,13 @@ class NotificationRepository {
     return _parseNotificationResponse(response.data);
   }
 
-  /// 获取论坛通知
-  Future<NotificationListResponse> getForumNotifications({
+  /// 获取互动消息（论坛 + 排行榜互动，统一接口）
+  Future<NotificationListResponse> getInteractionNotifications({
     int page = 1,
     int pageSize = 20,
   }) async {
     final response = await _apiService.get<dynamic>(
-      ApiEndpoints.forumNotifications,
+      ApiEndpoints.interactionNotifications,
       queryParameters: {
         'page': page,
         'page_size': pageSize,
@@ -161,7 +175,7 @@ class NotificationRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw NotificationException(response.message ?? '获取论坛通知失败');
+      throw NotificationException(response.message ?? '获取互动消息失败');
     }
 
     return _parseNotificationResponse(response.data);

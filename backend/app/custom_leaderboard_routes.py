@@ -1949,6 +1949,7 @@ async def vote_item(
             "vote_score": item.vote_score
         }
     
+    is_new_vote = False
     if existing:
         if existing.vote_type == vote_type:
             # 用户已经投过相同的票，允许更新留言和匿名状态（不改变投票数）
@@ -2010,7 +2011,8 @@ async def vote_item(
         
         # 更新榜单投票计数（只有新投票时才+1）
         leaderboard.vote_count += 1
-    
+        is_new_vote = True
+
     # 重新查询获取最新值
     await db.refresh(item)
     
@@ -2019,10 +2021,28 @@ async def vote_item(
     calculate_vote_score(item)
     
     await db.commit()
-    
+
+    # 新投票时创建通知
+    if is_new_vote and item.submitted_by != current_user.id:
+        try:
+            from app import async_crud
+            await async_crud.async_notification_crud.create_notification(
+                db=db,
+                user_id=item.submitted_by,
+                notification_type="leaderboard_vote",
+                title="收到新投票",
+                content=f"有人在排行榜「{leaderboard.name}」中为「{item.name}」投了一票",
+                title_en=f"New vote on '{item.name}' in leaderboard '{leaderboard.name}'",
+                content_en=f"Someone voted on '{item.name}' in leaderboard '{leaderboard.name}'",
+                related_id=str(item.id),
+                related_type="leaderboard_item",
+            )
+        except Exception as e:
+            logger.warning(f"Failed to create leaderboard vote notification: {e}")
+
     from app.redis_cache import invalidate_leaderboard_cache
     invalidate_leaderboard_cache()
-    
+
     # 重新查询当前用户的投票记录（投票后可能已更新）
     user_vote = None
     user_vote_comment = None
@@ -2149,7 +2169,7 @@ async def like_vote_comment(
             user_id=current_user.id
         )
         db.add(new_like)
-        
+
         # 使用原子更新增加点赞数
         await db.execute(
             update(models.LeaderboardVote)
@@ -2157,10 +2177,33 @@ async def like_vote_comment(
             .values(like_count=models.LeaderboardVote.like_count + 1)
         )
         await db.commit()
-        
+
         # 重新查询获取最新值
         await db.refresh(vote)
-        
+
+        # 创建点赞通知
+        if vote.user_id != current_user.id:
+            try:
+                from app import async_crud
+                item_for_notif = await db.get(models.LeaderboardItem, vote.item_id)
+                leaderboard_name = ""
+                if item_for_notif:
+                    lb = await db.get(models.CustomLeaderboard, item_for_notif.leaderboard_id)
+                    leaderboard_name = lb.name if lb else ""
+                await async_crud.async_notification_crud.create_notification(
+                    db=db,
+                    user_id=vote.user_id,
+                    notification_type="leaderboard_like",
+                    title="留言被点赞",
+                    content=f"有人在排行榜「{leaderboard_name}」中点赞了你的留言",
+                    title_en=f"Someone liked your comment in leaderboard '{leaderboard_name}'",
+                    content_en=f"Someone liked your comment in leaderboard '{leaderboard_name}'",
+                    related_id=str(vote.item_id),
+                    related_type="leaderboard_item",
+                )
+            except Exception as e:
+                logger.warning(f"Failed to create leaderboard like notification: {e}")
+
         return {
             "message": "点赞成功",
             "like_count": vote.like_count or 0,

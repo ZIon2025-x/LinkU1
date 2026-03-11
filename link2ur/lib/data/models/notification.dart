@@ -133,17 +133,19 @@ class NotificationListResponse {
     required this.total,
     required this.page,
     required this.pageSize,
+    this.hasMoreFromServer,
   });
 
   final List<AppNotification> notifications;
   final int total;
   final int page;
   final int pageSize;
+  final bool? hasMoreFromServer;
 
-  bool get hasMore => notifications.length >= pageSize;
+  /// 优先使用后端返回的 has_more，回退到根据列表长度推断
+  bool get hasMore => hasMoreFromServer ?? notifications.length >= pageSize;
 
   factory NotificationListResponse.fromJson(Map<String, dynamic> json) {
-    // 后端不同接口可能返回 'items', 'notifications' 或其他键名
     final items = (json['items'] ?? json['notifications'] ?? json['data'])
         as List<dynamic>?;
     return NotificationListResponse(
@@ -155,10 +157,10 @@ class NotificationListResponse {
       total: json['total'] as int? ?? 0,
       page: json['page'] as int? ?? 1,
       pageSize: json['page_size'] as int? ?? 20,
+      hasMoreFromServer: json['has_more'] as bool?,
     );
   }
 
-  /// 从裸 List 响应构建（后端有时直接返回列表而非包装对象）
   factory NotificationListResponse.fromList(List<dynamic> list) {
     return NotificationListResponse(
       notifications: list

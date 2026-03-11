@@ -327,6 +327,8 @@ class ApiEndpoints {
   static const String unreadNotifications = '/api/users/notifications/unread';
   static const String unreadNotificationCount =
       '/api/users/notifications/unread/count';
+  static const String interactionNotifications =
+      '/api/users/notifications/interaction';
   static String notificationsWithRecentRead({int limit = 10}) =>
       '/api/users/notifications/with-recent-read?recent_read_limit=$limit';
   static String markNotificationRead(int id) =>

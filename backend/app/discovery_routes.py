@@ -729,57 +729,61 @@ async def _fetch_expert_services(db: AsyncSession, limit: int) -> list:
 # ==================== 辅助函数 ====================
 
 async def _resolve_linked_item(db: AsyncSession, item_type: str, item_id: str) -> Optional[dict]:
-    """解析帖子关联的内容，返回简要信息"""
+    """解析帖子关联的内容，返回简要信息
+
+    使用 SAVEPOINT (nested transaction) 隔离查询，避免单条失败污染整个事务
+    """
     try:
-        if item_type == "service":
-            result = await db.execute(
-                select(models.TaskExpertService.service_name, models.TaskExpertService.images)
-                .where(models.TaskExpertService.id == int(item_id))
-            )
-            row = result.first()
-            if row:
-                return {"item_type": "service", "item_id": item_id, "name": row.service_name, "thumbnail": _first_image(row.images)}
-        
-        elif item_type == "product":
-            result = await db.execute(
-                select(models.FleaMarketItem.title, models.FleaMarketItem.images)
-                .where(models.FleaMarketItem.id == item_id, models.FleaMarketItem.is_visible == True)
-            )
-            row = result.first()
-            if row:
-                return {"item_type": "product", "item_id": item_id, "name": row.title, "thumbnail": _first_image(row.images)}
-        
-        elif item_type == "activity":
-            result = await db.execute(
-                select(models.Activity.title, models.Activity.images)
-                .where(models.Activity.id == int(item_id))
-            )
-            row = result.first()
-            if row:
-                return {"item_type": "activity", "item_id": item_id, "name": row.title, "thumbnail": _first_image(row.images)}
-        
-        elif item_type == "ranking":
-            result = await db.execute(
-                select(models.CustomLeaderboard.name, models.CustomLeaderboard.cover_image)
-                .where(models.CustomLeaderboard.id == int(item_id))
-            )
-            row = result.first()
-            if row:
-                return {"item_type": "ranking", "item_id": item_id, "name": row.name, "thumbnail": row.cover_image}
-        
-        elif item_type == "forum_post":
-            result = await db.execute(
-                select(models.ForumPost.title)
-                .where(
-                    models.ForumPost.id == int(item_id),
-                    models.ForumPost.is_deleted == False,
-                    models.ForumPost.is_visible == True,
+        async with db.begin_nested():
+            if item_type == "service":
+                result = await db.execute(
+                    select(models.TaskExpertService.service_name, models.TaskExpertService.images)
+                    .where(models.TaskExpertService.id == int(item_id))
                 )
-            )
-            row = result.first()
-            if row:
-                return {"item_type": "forum_post", "item_id": item_id, "name": row.title, "thumbnail": None}
-    
+                row = result.first()
+                if row:
+                    return {"item_type": "service", "item_id": item_id, "name": row.service_name, "thumbnail": _first_image(row.images)}
+
+            elif item_type == "product":
+                result = await db.execute(
+                    select(models.FleaMarketItem.title, models.FleaMarketItem.images)
+                    .where(models.FleaMarketItem.id == int(item_id), models.FleaMarketItem.is_visible == True)
+                )
+                row = result.first()
+                if row:
+                    return {"item_type": "product", "item_id": item_id, "name": row.title, "thumbnail": _first_image(row.images)}
+
+            elif item_type == "activity":
+                result = await db.execute(
+                    select(models.Activity.title, models.Activity.images)
+                    .where(models.Activity.id == int(item_id))
+                )
+                row = result.first()
+                if row:
+                    return {"item_type": "activity", "item_id": item_id, "name": row.title, "thumbnail": _first_image(row.images)}
+
+            elif item_type == "ranking":
+                result = await db.execute(
+                    select(models.CustomLeaderboard.name, models.CustomLeaderboard.cover_image)
+                    .where(models.CustomLeaderboard.id == int(item_id))
+                )
+                row = result.first()
+                if row:
+                    return {"item_type": "ranking", "item_id": item_id, "name": row.name, "thumbnail": row.cover_image}
+
+            elif item_type == "forum_post":
+                result = await db.execute(
+                    select(models.ForumPost.title)
+                    .where(
+                        models.ForumPost.id == int(item_id),
+                        models.ForumPost.is_deleted == False,
+                        models.ForumPost.is_visible == True,
+                    )
+                )
+                row = result.first()
+                if row:
+                    return {"item_type": "forum_post", "item_id": item_id, "name": row.title, "thumbnail": None}
+
     except Exception as e:
         logger.warning(f"Failed to resolve linked item {item_type}/{item_id}: {e}")
     

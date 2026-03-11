@@ -5722,27 +5722,57 @@ def mark_chat_messages_read_api(
 
 
 # 通知相关API（已迁移为 async 以提升并发）
-@router.get("/notifications", response_model=list[schemas.NotificationOut])
+@router.get("/notifications", response_model=None)
 @cache_response(ttl=30, key_prefix="notifications")
 async def get_notifications_api(
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
     db: AsyncSession = Depends(get_async_db_dependency),
-    page: int = Query(1, ge=1, description="页码（与 page_size 配套）"),
+    page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(20, ge=1, le=100, description="每页数量"),
     limit: Optional[int] = Query(None, ge=1, le=100, description="兼容旧版：直接限制条数"),
 ):
-    """获取通知列表。支持 page+page_size（Flutter）或 limit（兼容）"""
+    """
+    获取系统通知列表（排除排行榜互动类型）。
+    Page 1: 全部未读 + 前 page_size 条已读
+    Page 2+: 继续加载已读
+    兼容旧版 limit 参数。
+    """
     from app.utils.notification_utils import enrich_notifications_with_task_id_async
 
-    if limit is not None:
-        skip, take = 0, limit
-    else:
-        skip, take = (page - 1) * page_size, page_size
+    leaderboard_interaction_types = ["leaderboard_vote", "leaderboard_like"]
 
-    notifications = await async_crud.async_notification_crud.get_user_notifications(
-        db, current_user.id, skip=skip, limit=take, unread_only=False
+    if limit is not None:
+        notifications = await async_crud.async_notification_crud.get_user_notifications(
+            db, current_user.id, skip=0, limit=limit, unread_only=False
+        )
+        enriched = await enrich_notifications_with_task_id_async(notifications, db)
+        return [n for n in enriched if n.type not in leaderboard_interaction_types]
+
+    all_notifications = await async_crud.async_notification_crud.get_user_notifications(
+        db, current_user.id, skip=0, limit=1000, unread_only=False
     )
-    return await enrich_notifications_with_task_id_async(notifications, db)
+    enriched = await enrich_notifications_with_task_id_async(all_notifications, db)
+    filtered = [n for n in enriched if n.type not in leaderboard_interaction_types]
+
+    unread = [n for n in filtered if n.is_read == 0]
+    read = [n for n in filtered if n.is_read != 0]
+
+    if page == 1:
+        read_page = read[:page_size]
+        result = unread + read_page
+    else:
+        offset = (page - 1) * page_size
+        result = read[offset:offset + page_size]
+
+    has_more = len(read) > page * page_size
+
+    return {
+        "notifications": result,
+        "total": len(filtered),
+        "page": page,
+        "page_size": page_size,
+        "has_more": has_more,
+    }
 
 
 @router.get("/notifications/unread", response_model=list[schemas.NotificationOut])
@@ -5782,10 +5812,204 @@ async def get_unread_notification_count_api(
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    count = await async_crud.async_notification_crud.get_unread_notification_count(
+    system_count = await async_crud.async_notification_crud.get_unread_notification_count(
         db, current_user.id
     )
-    return {"unread_count": count}
+    leaderboard_interaction_types = ["leaderboard_vote", "leaderboard_like"]
+    lb_unread_result = await db.execute(
+        select(func.count()).select_from(models.Notification).where(
+            models.Notification.user_id == current_user.id,
+            models.Notification.is_read == 0,
+            models.Notification.type.in_(leaderboard_interaction_types),
+        )
+    )
+    lb_unread = lb_unread_result.scalar() or 0
+
+    forum_unread_result = await db.execute(
+        select(func.count()).select_from(models.ForumNotification).where(
+            models.ForumNotification.to_user_id == current_user.id,
+            models.ForumNotification.is_read == False,
+        )
+    )
+    forum_unread = forum_unread_result.scalar() or 0
+
+    return {
+        "unread_count": system_count - lb_unread,
+        "forum_count": forum_unread + lb_unread,
+    }
+
+
+@router.get("/notifications/interaction")
+async def get_interaction_notifications_api(
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+):
+    """
+    获取互动消息（统一接口）
+    合并论坛通知 + 排行榜互动通知，按时间倒序排列，支持分页。
+    Page 1: 全部未读 + 前 page_size 条已读
+    Page 2+: 继续加载已读
+    """
+    from sqlalchemy.orm import selectinload
+    from app.forum_routes import visible_forums
+
+    # === 1. 查论坛通知 ===
+    forum_query = (
+        select(models.ForumNotification)
+        .where(models.ForumNotification.to_user_id == current_user.id)
+        .order_by(models.ForumNotification.created_at.desc())
+        .options(selectinload(models.ForumNotification.from_user))
+    )
+    forum_result = await db.execute(forum_query)
+    all_forum = forum_result.scalars().all()
+
+    # 过滤学校板块
+    visible_category_ids = []
+    general_result = await db.execute(
+        select(models.ForumCategory.id).where(
+            models.ForumCategory.type == 'general',
+            models.ForumCategory.is_visible == True
+        )
+    )
+    visible_category_ids.extend([r[0] for r in general_result.all()])
+    school_ids = await visible_forums(current_user, db)
+    visible_category_ids.extend(school_ids)
+
+    # 批量查 post/reply 的 category_id
+    post_notifs = [n for n in all_forum if n.target_type == "post"]
+    reply_notifs = [n for n in all_forum if n.target_type == "reply"]
+
+    post_category_map = {}
+    if post_notifs:
+        res = await db.execute(
+            select(models.ForumPost.id, models.ForumPost.category_id)
+            .where(models.ForumPost.id.in_([n.target_id for n in post_notifs]))
+        )
+        post_category_map = {r[0]: r[1] for r in res.all()}
+
+    reply_post_map = {}
+    reply_category_map = {}
+    if reply_notifs:
+        res = await db.execute(
+            select(models.ForumReply.id, models.ForumReply.post_id)
+            .where(models.ForumReply.id.in_([n.target_id for n in reply_notifs]))
+        )
+        reply_post_map = {r[0]: r[1] for r in res.all()}
+        if reply_post_map:
+            res2 = await db.execute(
+                select(models.ForumPost.id, models.ForumPost.category_id)
+                .where(models.ForumPost.id.in_(list(reply_post_map.values())))
+            )
+            pid_to_cat = {r[0]: r[1] for r in res2.all()}
+            reply_category_map = {
+                rid: pid_to_cat.get(pid)
+                for rid, pid in reply_post_map.items()
+                if pid in pid_to_cat
+            }
+
+    # 转换论坛通知为统一格式
+    forum_converted = []
+    _type_labels = {
+        "reply_post": ("回复了你的帖子", "replied to your post"),
+        "reply_reply": ("回复了你的评论", "replied to your comment"),
+        "like_post": ("点赞了你的帖子", "liked your post"),
+        "feature_post": ("精选了你的帖子", "featured your post"),
+        "pin_post": ("置顶了你的帖子", "pinned your post"),
+    }
+
+    for n in all_forum:
+        if n.target_type == "post":
+            cat_id = post_category_map.get(n.target_id)
+        else:
+            cat_id = reply_category_map.get(n.target_id)
+        if not cat_id or cat_id not in visible_category_ids:
+            continue
+
+        if n.target_type == "reply":
+            post_id = reply_post_map.get(n.target_id)
+        else:
+            post_id = n.target_id
+
+        from_name = n.from_user.name if n.from_user else "某人"
+        from_name_en = n.from_user.name if n.from_user else "Someone"
+        label_zh, label_en = _type_labels.get(
+            n.notification_type, ("与你互动", "interacted with you")
+        )
+
+        forum_converted.append({
+            "id": n.id,
+            "user_id": current_user.id,
+            "type": f"forum_{n.notification_type}",
+            "title": f"{from_name}{label_zh}",
+            "content": f"{from_name}{label_zh}",
+            "title_en": f"{from_name_en} {label_en}",
+            "content_en": f"{from_name_en} {label_en}",
+            "related_id": post_id,
+            "related_type": "forum_post_id",
+            "is_read": 1 if n.is_read else 0,
+            "created_at": n.created_at,
+            "task_id": None,
+            "variables": None,
+        })
+
+    # === 2. 查排行榜互动通知 ===
+    leaderboard_types = ["leaderboard_vote", "leaderboard_like"]
+    lb_result = await db.execute(
+        select(models.Notification)
+        .where(
+            models.Notification.user_id == current_user.id,
+            models.Notification.type.in_(leaderboard_types),
+        )
+        .order_by(models.Notification.created_at.desc())
+    )
+    lb_notifications = lb_result.scalars().all()
+
+    lb_converted = []
+    for n in lb_notifications:
+        lb_converted.append({
+            "id": n.id,
+            "user_id": n.user_id,
+            "type": n.type,
+            "title": n.title,
+            "content": n.content,
+            "title_en": n.title_en,
+            "content_en": n.content_en,
+            "related_id": n.related_id,
+            "related_type": n.related_type,
+            "is_read": n.is_read,
+            "created_at": n.created_at,
+            "task_id": None,
+            "variables": None,
+        })
+
+    # === 3. 合并 + 未读优先分页 ===
+    from datetime import datetime as dt
+    all_items = forum_converted + lb_converted
+    unread_items = [x for x in all_items if x["is_read"] in (False, 0)]
+    read_items = [x for x in all_items if x["is_read"] not in (False, 0)]
+
+    unread_items.sort(key=lambda x: x["created_at"] or dt.min, reverse=True)
+    read_items.sort(key=lambda x: x["created_at"] or dt.min, reverse=True)
+
+    if page == 1:
+        read_page = read_items[:page_size]
+        result_items = unread_items + read_page
+    else:
+        offset = (page - 1) * page_size
+        read_page = read_items[offset:offset + page_size]
+        result_items = read_page
+
+    has_more = len(read_items) > page * page_size
+
+    return {
+        "notifications": result_items,
+        "total": len(all_items),
+        "page": page,
+        "page_size": page_size,
+        "has_more": has_more,
+    }
 
 
 @router.post(
@@ -6121,20 +6345,55 @@ def delete_user_account(
 async def mark_all_notifications_read_api(
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
     db: AsyncSession = Depends(get_async_db_dependency),
+    type: Optional[str] = Query(None, description="system, interaction, or all (default: all)"),
 ):
     """
-    标记主通知系统的所有通知为已读
-
-    注意：此端点仅处理主通知系统（Notification 模型）。
-    论坛通知系统（ForumNotification 模型）有独立的端点：
-    PUT /api/forum/notifications/read-all（定义在 forum_routes.py）
-
-    两个通知系统是独立设计的，请勿合并。
+    标记通知为已读。
+    type=system: 只标记系统通知（排除 leaderboard_vote/like）
+    type=interaction: 标记论坛通知 + 排行榜互动通知
+    type=all 或 None: 标记全部
     """
-    await async_crud.async_notification_crud.mark_all_notifications_read(
-        db, current_user.id
-    )
-    return {"message": "All notifications marked as read"}
+    effective_type = type or "all"
+    leaderboard_interaction_types = ["leaderboard_vote", "leaderboard_like"]
+
+    if effective_type in ("system", "all"):
+        if effective_type == "system":
+            await db.execute(
+                update(models.Notification)
+                .where(
+                    models.Notification.user_id == current_user.id,
+                    models.Notification.is_read == 0,
+                    models.Notification.type.notin_(leaderboard_interaction_types),
+                )
+                .values(is_read=1)
+            )
+        else:
+            await async_crud.async_notification_crud.mark_all_notifications_read(
+                db, current_user.id
+            )
+
+    if effective_type in ("interaction", "all"):
+        await db.execute(
+            update(models.ForumNotification)
+            .where(
+                models.ForumNotification.to_user_id == current_user.id,
+                models.ForumNotification.is_read == False,
+            )
+            .values(is_read=True)
+        )
+        if effective_type == "interaction":
+            await db.execute(
+                update(models.Notification)
+                .where(
+                    models.Notification.user_id == current_user.id,
+                    models.Notification.is_read == 0,
+                    models.Notification.type.in_(leaderboard_interaction_types),
+                )
+                .values(is_read=1)
+            )
+
+    await db.commit()
+    return {"message": "Notifications marked as read"}
 
 
 @router.post("/notifications/send-announcement")

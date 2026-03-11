@@ -1,0 +1,15 @@
+test/features/notification/bloc/notification_bloc_test.dart:192:31: Error: The method 'getForumNotifications' isn't defined for the type 'MockNotificationRepository'.
+ - 'MockNotificationRepository' is from 'test/helpers/test_helpers.dart'.
+Try correcting the name to the name of an existing method, or defining a method named 'getForumNotifications'.
+          when(() => mockRepo.getForumNotifications(
+                              ^^^^^^^^^^^^^^^^^^^^^
+test/features/notification/bloc/notification_bloc_test.dart:238:33: Error: The method 'getForumNotifications' isn't defined for the type 'MockNotificationRepository'.
+ - 'MockNotificationRepository' is from 'test/helpers/test_helpers.dart'.
+Try correcting the name to the name of an existing method, or defining a method named 'getForumNotifications'.
+          verify(() => mockRepo.getForumNotifications(
+                                ^^^^^^^^^^^^^^^^^^^^^
+test/features/notification/bloc/notification_bloc_test.dart:310:31: Error: The method 'getForumNotifications' isn't defined for the type 'MockNotificationRepository'.
+ - 'MockNotificationRepository' is from 'test/helpers/test_helpers.dart'.
+Try correcting the name to the name of an existing method, or defining a method named 'getForumNotifications'.
+          when(() => mockRepo.getForumNotifications(
+                              ^^^^^^^^^^^^^^^^^^^^^
