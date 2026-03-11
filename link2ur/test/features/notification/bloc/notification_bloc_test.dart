@@ -64,9 +64,9 @@ void main() {
   final leaderboardNotification = AppNotification(
     id: 20,
     userId: 'user1',
-    type: 'leaderboard_rank_up',
-    title: '排行榜',
-    content: '你的排名上升了',
+    type: 'leaderboard_vote',
+    title: '排行榜投票',
+    content: '有人给你投票了',
     createdAt: now.subtract(const Duration(minutes: 20)),
   );
 
@@ -478,7 +478,7 @@ void main() {
       blocTest<NotificationBloc, NotificationState>(
         'optimistically marks forum notification as read and decrements forumCount',
         build: () {
-          when(() => mockRepo.markAsRead(any()))
+          when(() => mockRepo.markForumNotificationAsRead(any()))
               .thenAnswer((_) async {});
           return bloc;
         },
@@ -521,7 +521,7 @@ void main() {
           unreadCount: const UnreadNotificationCount(count: 1, forumCount: 1),
         ),
         act: (bloc) =>
-            bloc.add(const NotificationMarkAsRead(20)), // leaderboard_rank_up
+            bloc.add(const NotificationMarkAsRead(20)), // leaderboard_vote
         expect: () => [
           isA<NotificationState>()
               .having((s) => s.status, 'status', NotificationStatus.loaded)
@@ -590,9 +590,9 @@ void main() {
 
     group('NotificationMarkAllAsRead', () {
       blocTest<NotificationBloc, NotificationState>(
-        'marks all notifications as read and sets unreadCount to zero',
+        'marks all notifications as read and resets system unreadCount when selectedType is system',
         build: () {
-          when(() => mockRepo.markAllAsRead())
+          when(() => mockRepo.markAllAsRead(type: any(named: 'type')))
               .thenAnswer((_) async {});
           return bloc;
         },
@@ -601,29 +601,29 @@ void main() {
           notifications: [
             systemNotification1,
             systemNotification2,
-            forumNotification1,
           ],
-          total: 3,
+          total: 2,
           hasMore: false,
+          selectedType: 'system',
           unreadCount: const UnreadNotificationCount(count: 2, forumCount: 1),
         ),
         act: (bloc) => bloc.add(const NotificationMarkAllAsRead()),
         expect: () => [
           isA<NotificationState>()
               .having((s) => s.status, 'status', NotificationStatus.loaded)
-              .having((s) => s.notifications.length, 'notifications.length', 3)
+              .having((s) => s.notifications.length, 'notifications.length', 2)
               .having(
                   (s) => s.notifications.every((n) => n.isRead), 'all read', true)
               .having((s) => s.unreadCount.count, 'unreadCount.count', 0)
               .having(
-                  (s) => s.unreadCount.forumCount, 'unreadCount.forumCount', 0),
+                  (s) => s.unreadCount.forumCount, 'unreadCount.forumCount', 1),
         ],
       );
 
       blocTest<NotificationBloc, NotificationState>(
-        'does not emit when all notifications are already read (Equatable dedup)',
+        'emits state even when all notifications are already read (unreadCount reset)',
         build: () {
-          when(() => mockRepo.markAllAsRead())
+          when(() => mockRepo.markAllAsRead(type: any(named: 'type')))
               .thenAnswer((_) async {});
           return bloc;
         },
@@ -634,9 +634,14 @@ void main() {
           hasMore: false,
         ),
         act: (bloc) => bloc.add(const NotificationMarkAllAsRead()),
-        // All notifications already read + count already 0 → emitted state
-        // is identical to seed → Equatable deduplication suppresses emission
-        expect: () => [],
+        expect: () => [
+          isA<NotificationState>()
+              .having((s) => s.status, 'status', NotificationStatus.loaded)
+              .having((s) => s.notifications.length, 'notifications.length', 1)
+              .having(
+                  (s) => s.notifications[0].isRead, 'isRead', true)
+              .having((s) => s.unreadCount.count, 'unreadCount.count', 0),
+        ],
       );
     });
 

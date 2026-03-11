@@ -64,48 +64,24 @@ async def get_discovery_feed(
         visible_category_ids.extend(school_ids)
     
     all_items = []
-    
-    # 1. 帖子（仅可见板块）
-    try:
-        posts = await _fetch_forum_posts(db, fetch_limit, visible_category_ids, current_user=current_user)
-        all_items.extend(posts)
-    except Exception as e:
-        logger.warning(f"Failed to fetch forum posts for feed: {e}")
-    
-    # 2. 跳蚤市场商品
-    try:
-        products = await _fetch_flea_market_items(db, fetch_limit, current_user=current_user)
-        all_items.extend(products)
-    except Exception as e:
-        logger.warning(f"Failed to fetch flea market items for feed: {e}")
-    
-    # 3. 竞品评论（来自排行榜投票留言）
-    try:
-        competitor_reviews = await _fetch_competitor_reviews(db, fetch_limit, current_user=current_user)
-        all_items.extend(competitor_reviews)
-    except Exception as e:
-        logger.warning(f"Failed to fetch competitor reviews for feed: {e}")
-    
-    # 4. 达人服务评价
-    try:
-        service_reviews = await _fetch_service_reviews(db, fetch_limit)
-        all_items.extend(service_reviews)
-    except Exception as e:
-        logger.warning(f"Failed to fetch service reviews for feed: {e}")
-    
-    # 5. 排行榜
-    try:
-        rankings = await _fetch_rankings(db, fetch_limit)
-        all_items.extend(rankings)
-    except Exception as e:
-        logger.warning(f"Failed to fetch rankings for feed: {e}")
-    
-    # 6. 达人服务
-    try:
-        services = await _fetch_expert_services(db, fetch_limit)
-        all_items.extend(services)
-    except Exception as e:
-        logger.warning(f"Failed to fetch expert services for feed: {e}")
+
+    # 每个 fetch 用 SAVEPOINT 隔离，单个类型失败不影响其他类型
+    fetch_tasks = [
+        ("forum posts", lambda: _fetch_forum_posts(db, fetch_limit, visible_category_ids, current_user=current_user)),
+        ("flea market items", lambda: _fetch_flea_market_items(db, fetch_limit, current_user=current_user)),
+        ("competitor reviews", lambda: _fetch_competitor_reviews(db, fetch_limit, current_user=current_user)),
+        ("service reviews", lambda: _fetch_service_reviews(db, fetch_limit, current_user=current_user)),
+        ("rankings", lambda: _fetch_rankings(db, fetch_limit)),
+        ("expert services", lambda: _fetch_expert_services(db, fetch_limit)),
+    ]
+
+    for name, fetch_fn in fetch_tasks:
+        try:
+            async with db.begin_nested():
+                result_items = await fetch_fn()
+                all_items.extend(result_items)
+        except Exception as e:
+            logger.warning(f"Failed to fetch {name} for feed: {e}")
     
     # 首次请求自动生成 seed，翻页时复用保证排序一致
     if seed is None:
@@ -208,6 +184,14 @@ async def _fetch_forum_posts(db: AsyncSession, limit: int, visible_category_ids:
         )
         user_liked_post_ids = {row[0] for row in user_like_result.all()}
 
+    # 批量解析 linked items，避免 N+1 查询
+    linked_pairs = [
+        (row.linked_item_type, row.linked_item_id)
+        for row in rows_list
+        if row.linked_item_type and row.linked_item_id
+    ]
+    linked_items_map = await _batch_resolve_linked_items(db, linked_pairs) if linked_pairs else {}
+
     items = []
     for row in rows_list:
         content_preview = (row.content or "")[:100]
@@ -220,7 +204,7 @@ async def _fetch_forum_posts(db: AsyncSession, limit: int, visible_category_ids:
 
         linked_item = None
         if row.linked_item_type and row.linked_item_id:
-            linked_item = await _resolve_linked_item(db, row.linked_item_type, row.linked_item_id)
+            linked_item = linked_items_map.get((row.linked_item_type, str(row.linked_item_id)))
 
         post_images = _parse_images(row.images)
         extra = {}
@@ -460,7 +444,7 @@ async def _fetch_competitor_reviews(db: AsyncSession, limit: int, current_user=N
     return items
 
 
-async def _fetch_service_reviews(db: AsyncSession, limit: int) -> list:
+async def _fetch_service_reviews(db: AsyncSession, limit: int, current_user=None) -> list:
     """获取达人服务评价（含活动信息）
     注意:
     - Task 用 poster_id / taker_id 而非 created_by / assigned_to
@@ -588,37 +572,55 @@ async def _fetch_rankings(db: AsyncSession, limit: int) -> list:
         .limit(limit)
     )
     result = await db.execute(query)
-    items = []
-    for row in result:
-        # 获取 TOP 3（按 net_votes 排序）
-        top3_query = (
-            select(
-                models.LeaderboardItem.name,
-                models.LeaderboardItem.images,
-                models.LeaderboardItem.net_votes,
-                models.LeaderboardItem.upvotes,
-            )
-            .where(
-                models.LeaderboardItem.leaderboard_id == row.id,
-                models.LeaderboardItem.status == "approved",
-            )
-            .order_by(desc(models.LeaderboardItem.net_votes))
-            .limit(3)
+    rows_list = result.all()
+
+    if not rows_list:
+        return []
+
+    # 批量获取所有排行榜的 approved items（按 net_votes 排序），避免 N+1
+    leaderboard_ids = [row.id for row in rows_list]
+    # 使用窗口函数 ROW_NUMBER 取每个排行榜的 TOP 3
+    row_num = func.row_number().over(
+        partition_by=models.LeaderboardItem.leaderboard_id,
+        order_by=desc(models.LeaderboardItem.net_votes),
+    ).label("rn")
+    sub = (
+        select(
+            models.LeaderboardItem.leaderboard_id,
+            models.LeaderboardItem.name,
+            models.LeaderboardItem.images,
+            models.LeaderboardItem.net_votes,
+            models.LeaderboardItem.upvotes,
+            row_num,
         )
-        top3_result = await db.execute(top3_query)
-        top3 = [
-            {
-                "name": item.name,
-                "image": _first_image(item.images),
-                "rating": float(item.net_votes) if item.net_votes else 0,
-                "review_count": item.upvotes or 0,
-            }
-            for item in top3_result
-        ]
-        
+        .where(
+            models.LeaderboardItem.leaderboard_id.in_(leaderboard_ids),
+            models.LeaderboardItem.status == "approved",
+        )
+        .subquery()
+    )
+    top3_result = await db.execute(
+        select(sub).where(sub.c.rn <= 3)
+    )
+    # 按 leaderboard_id 分组
+    top3_map: dict[int, list] = {}
+    for item in top3_result:
+        lb_id = item.leaderboard_id
+        if lb_id not in top3_map:
+            top3_map[lb_id] = []
+        top3_map[lb_id].append({
+            "name": item.name,
+            "image": _first_image(item.images),
+            "rating": float(item.net_votes) if item.net_votes else 0,
+            "review_count": item.upvotes or 0,
+        })
+
+    items = []
+    for row in rows_list:
+        top3 = top3_map.get(row.id, [])
         if not top3:
             continue
-        
+
         name_zh = getattr(row, "name_zh", None)
         name_en = getattr(row, "name_en", None)
         desc_zh = getattr(row, "description_zh", None)
@@ -728,66 +730,109 @@ async def _fetch_expert_services(db: AsyncSession, limit: int) -> list:
 
 # ==================== 辅助函数 ====================
 
-async def _resolve_linked_item(db: AsyncSession, item_type: str, item_id: str) -> Optional[dict]:
-    """解析帖子关联的内容，返回简要信息
+async def _batch_resolve_linked_items(db: AsyncSession, pairs: list) -> dict:
+    """批量解析帖子关联的内容，返回 {(type, id_str): info_dict}
 
-    使用 SAVEPOINT (nested transaction) 隔离查询，避免单条失败污染整个事务
+    按类型分组后各执行一次 IN 查询，避免 N+1 问题。
+    使用 SAVEPOINT 隔离，单个类型查询失败不影响其他类型。
     """
-    try:
-        async with db.begin_nested():
-            if item_type == "service":
-                result = await db.execute(
-                    select(models.TaskExpertService.service_name, models.TaskExpertService.images)
-                    .where(models.TaskExpertService.id == int(item_id))
-                )
-                row = result.first()
-                if row:
-                    return {"item_type": "service", "item_id": item_id, "name": row.service_name, "thumbnail": _first_image(row.images)}
+    result_map = {}
 
-            elif item_type == "product":
-                result = await db.execute(
-                    select(models.FleaMarketItem.title, models.FleaMarketItem.images)
-                    .where(models.FleaMarketItem.id == int(item_id), models.FleaMarketItem.is_visible == True)
-                )
-                row = result.first()
-                if row:
-                    return {"item_type": "product", "item_id": item_id, "name": row.title, "thumbnail": _first_image(row.images)}
+    # 按类型分组
+    by_type: dict[str, list[str]] = {}
+    for item_type, item_id in pairs:
+        by_type.setdefault(item_type, []).append(str(item_id))
 
-            elif item_type == "activity":
-                result = await db.execute(
-                    select(models.Activity.title, models.Activity.images)
-                    .where(models.Activity.id == int(item_id))
+    # service
+    if "service" in by_type:
+        try:
+            ids = [int(x) for x in by_type["service"]]
+            async with db.begin_nested():
+                res = await db.execute(
+                    select(models.TaskExpertService.id, models.TaskExpertService.service_name, models.TaskExpertService.images)
+                    .where(models.TaskExpertService.id.in_(ids))
                 )
-                row = result.first()
-                if row:
-                    return {"item_type": "activity", "item_id": item_id, "name": row.title, "thumbnail": _first_image(row.images)}
+                for row in res:
+                    result_map[("service", str(row.id))] = {
+                        "item_type": "service", "item_id": str(row.id),
+                        "name": row.service_name, "thumbnail": _first_image(row.images),
+                    }
+        except Exception as e:
+            logger.warning(f"Failed to batch resolve linked services: {e}")
 
-            elif item_type == "ranking":
-                result = await db.execute(
-                    select(models.CustomLeaderboard.name, models.CustomLeaderboard.cover_image)
-                    .where(models.CustomLeaderboard.id == int(item_id))
+    # product
+    if "product" in by_type:
+        try:
+            ids = [int(x) for x in by_type["product"]]
+            async with db.begin_nested():
+                res = await db.execute(
+                    select(models.FleaMarketItem.id, models.FleaMarketItem.title, models.FleaMarketItem.images)
+                    .where(models.FleaMarketItem.id.in_(ids), models.FleaMarketItem.is_visible == True)
                 )
-                row = result.first()
-                if row:
-                    return {"item_type": "ranking", "item_id": item_id, "name": row.name, "thumbnail": row.cover_image}
+                for row in res:
+                    result_map[("product", str(row.id))] = {
+                        "item_type": "product", "item_id": str(row.id),
+                        "name": row.title, "thumbnail": _first_image(row.images),
+                    }
+        except Exception as e:
+            logger.warning(f"Failed to batch resolve linked products: {e}")
 
-            elif item_type == "forum_post":
-                result = await db.execute(
-                    select(models.ForumPost.title)
+    # activity
+    if "activity" in by_type:
+        try:
+            ids = [int(x) for x in by_type["activity"]]
+            async with db.begin_nested():
+                res = await db.execute(
+                    select(models.Activity.id, models.Activity.title, models.Activity.images)
+                    .where(models.Activity.id.in_(ids))
+                )
+                for row in res:
+                    result_map[("activity", str(row.id))] = {
+                        "item_type": "activity", "item_id": str(row.id),
+                        "name": row.title, "thumbnail": _first_image(row.images),
+                    }
+        except Exception as e:
+            logger.warning(f"Failed to batch resolve linked activities: {e}")
+
+    # ranking
+    if "ranking" in by_type:
+        try:
+            ids = [int(x) for x in by_type["ranking"]]
+            async with db.begin_nested():
+                res = await db.execute(
+                    select(models.CustomLeaderboard.id, models.CustomLeaderboard.name, models.CustomLeaderboard.cover_image)
+                    .where(models.CustomLeaderboard.id.in_(ids))
+                )
+                for row in res:
+                    result_map[("ranking", str(row.id))] = {
+                        "item_type": "ranking", "item_id": str(row.id),
+                        "name": row.name, "thumbnail": row.cover_image,
+                    }
+        except Exception as e:
+            logger.warning(f"Failed to batch resolve linked rankings: {e}")
+
+    # forum_post
+    if "forum_post" in by_type:
+        try:
+            ids = [int(x) for x in by_type["forum_post"]]
+            async with db.begin_nested():
+                res = await db.execute(
+                    select(models.ForumPost.id, models.ForumPost.title)
                     .where(
-                        models.ForumPost.id == int(item_id),
+                        models.ForumPost.id.in_(ids),
                         models.ForumPost.is_deleted == False,
                         models.ForumPost.is_visible == True,
                     )
                 )
-                row = result.first()
-                if row:
-                    return {"item_type": "forum_post", "item_id": item_id, "name": row.title, "thumbnail": None}
+                for row in res:
+                    result_map[("forum_post", str(row.id))] = {
+                        "item_type": "forum_post", "item_id": str(row.id),
+                        "name": row.title, "thumbnail": None,
+                    }
+        except Exception as e:
+            logger.warning(f"Failed to batch resolve linked forum posts: {e}")
 
-    except Exception as e:
-        logger.warning(f"Failed to resolve linked item {item_type}/{item_id}: {e}")
-    
-    return None
+    return result_map
 
 
 def _compute_score(item: dict) -> float:
