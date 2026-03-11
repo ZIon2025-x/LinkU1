@@ -392,10 +392,15 @@ async def get_task_by_id(
         if not current_user or str(current_user.id) != str(task.poster_id):
             raise HTTPException(status_code=404, detail="Task not found")
 
-    # 权限检查：除了 open 状态的任务，其他状态的任务只有任务相关人才能看到详情
+    # 权限检查：
+    # - open / completed 状态：公开可查看（completed 展示在用户主页上，第三方可点击）
+    # - 其他进行中状态（in_progress, pending_* 等）：仅任务相关人可见
     # 未登录用户（含搜索引擎爬虫）可看到公开摘要，便于 SEO 索引
     _is_summary_only = False
-    if task.status != "open":
+    _is_public_view = False  # 已登录但非相关用户查看公开任务（completed）
+    _public_viewable_statuses = {"open", "completed"}
+
+    if task.status not in _public_viewable_statuses:
         if not current_user:
             _is_summary_only = True
         else:
@@ -404,7 +409,7 @@ async def get_task_by_id(
             is_taker = task.taker_id is not None and (str(task.taker_id) == user_id_str)
             is_participant = False
             is_applicant = False
-            
+
             if task.is_multi_participant:
                 if task.created_by_expert and task.expert_creator_id and str(task.expert_creator_id) == user_id_str:
                     is_participant = True
@@ -418,7 +423,7 @@ async def get_task_by_id(
                     )
                     participant_result = await db.execute(participant_query)
                     is_participant = participant_result.scalar_one_or_none() is not None
-            
+
             if not is_poster and not is_taker and not is_participant:
                 application_query = select(models.TaskApplication).where(
                     and_(
@@ -428,16 +433,25 @@ async def get_task_by_id(
                 )
                 application_result = await db.execute(application_query)
                 is_applicant = application_result.scalar_one_or_none() is not None
-            
+
             if not is_poster and not is_taker and not is_participant and not is_applicant:
                 raise HTTPException(status_code=403, detail="无权限查看此任务")
+    elif task.status == "completed" and current_user:
+        # completed 任务公开可见，但非相关用户只能看脱敏摘要
+        user_id_str = str(current_user.id)
+        is_poster = task.poster_id is not None and (str(task.poster_id) == user_id_str)
+        is_taker = task.taker_id is not None and (str(task.taker_id) == user_id_str)
+        if not is_poster and not is_taker:
+            _is_public_view = True
 
-    # 未登录用户看摘要：返回公开字段，隐藏敏感字段
-    if _is_summary_only:
+    # 未登录用户 / 已登录但非相关用户查看公开任务：返回脱敏摘要
+    if _is_summary_only or _is_public_view:
         setattr(task, "has_applied", None)
         setattr(task, "user_application_status", None)
+        # 隐藏参与者 ID，防止通过 ID 关联个人信息
         task.taker_id = None
-        task.poster_id = None
+        if _is_summary_only:
+            task.poster_id = None
         return task
 
     # view_count 移到后台任务，不阻塞响应
