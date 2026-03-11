@@ -79,6 +79,20 @@ class UnifiedChatClearTaskDraft extends UnifiedChatEvent {
   const UnifiedChatClearTaskDraft();
 }
 
+/// 加载客服聊天历史（从历史记录入口进入）
+class UnifiedChatLoadCSHistory extends UnifiedChatEvent {
+  const UnifiedChatLoadCSHistory({
+    required this.chatId,
+    required this.isEnded,
+  });
+
+  final String chatId;
+  final bool isEnded;
+
+  @override
+  List<Object?> get props => [chatId, isEnded];
+}
+
 /// 内部：AI 子 BLoC 状态变化
 class _AIStateChanged extends UnifiedChatEvent {
   const _AIStateChanged(this.state);
@@ -192,7 +206,8 @@ class UnifiedChatBloc extends Bloc<UnifiedChatEvent, UnifiedChatState> {
   UnifiedChatBloc({
     required AIChatService aiChatService,
     required CommonRepository commonRepository,
-  })  : _aiBloc = AIChatBloc(aiChatService: aiChatService),
+  })  : _repository = commonRepository,
+        _aiBloc = AIChatBloc(aiChatService: aiChatService),
         _csBloc = CustomerServiceBloc(commonRepository: commonRepository),
         super(const UnifiedChatState()) {
     // Register handlers
@@ -204,6 +219,7 @@ class UnifiedChatBloc extends Bloc<UnifiedChatEvent, UnifiedChatState> {
     on<UnifiedChatReturnToAI>(_onReturnToAI);
     on<UnifiedChatLoadHistory>(_onLoadHistory);
     on<UnifiedChatClearTaskDraft>(_onClearTaskDraft);
+    on<UnifiedChatLoadCSHistory>(_onLoadCSHistory);
     on<_AIStateChanged>(_onAIStateChanged);
     on<_CSStateChanged>(_onCSStateChanged);
 
@@ -216,6 +232,7 @@ class UnifiedChatBloc extends Bloc<UnifiedChatEvent, UnifiedChatState> {
     );
   }
 
+  final CommonRepository _repository;
   final AIChatBloc _aiBloc;
   final CustomerServiceBloc _csBloc;
   StreamSubscription<AIChatState>? _aiSubscription;
@@ -306,6 +323,41 @@ class UnifiedChatBloc extends Bloc<UnifiedChatEvent, UnifiedChatState> {
   ) {
     _aiBloc.add(const AIChatClearTaskDraft());
     emit(state.copyWith(taskDraft: null)); // ignore: avoid_redundant_argument_values
+  }
+
+  /// 加载客服聊天历史
+  Future<void> _onLoadCSHistory(
+    UnifiedChatLoadCSHistory event,
+    Emitter<UnifiedChatState> emit,
+  ) async {
+    try {
+      final rawMessages =
+          await _repository.getCustomerServiceMessages(event.chatId);
+      final messages = rawMessages
+          .map((m) => CustomerServiceMessage.fromJson(m))
+          .toList();
+
+      if (event.isEnded) {
+        // 已结束：只读模式，仅展示历史消息
+        emit(state.copyWith(
+          mode: ChatMode.csEnded,
+          csMessages: messages,
+          csChatId: event.chatId,
+        ));
+      } else {
+        // 未结束：先加载历史消息，再通过 CS sub-bloc 恢复连接
+        emit(state.copyWith(
+          mode: ChatMode.csConnected,
+          csMessages: messages,
+          csChatId: event.chatId,
+        ));
+        _csBloc.add(const CustomerServiceConnectRequested());
+      }
+    } catch (e) {
+      emit(state.copyWith(
+        errorMessage: e.toString().replaceAll('CommonException: ', ''),
+      ));
+    }
   }
 
   /// AI 子 BLoC 状态投射

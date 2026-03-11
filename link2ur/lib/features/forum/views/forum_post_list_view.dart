@@ -234,7 +234,7 @@ class _ForumPostListViewContentState
 }
 
 class _PostCard extends StatelessWidget {
-  const _PostCard({super.key, required this.post, this.onTap});
+  const _PostCard({required this.post, this.onTap});
 
   final ForumPost post;
   final VoidCallback? onTap;

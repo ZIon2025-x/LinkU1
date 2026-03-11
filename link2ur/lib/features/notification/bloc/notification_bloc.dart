@@ -232,9 +232,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
       NotificationListResponse response;
 
       if (event.type == 'interaction') {
-        response = await _notificationRepository.getInteractionNotifications(
-          page: 1,
-        );
+        response = await _notificationRepository.getInteractionNotifications();
       } else {
         // 系统消息或全部
         response = await _notificationRepository.getNotifications(
@@ -351,8 +349,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
         .toList();
 
     final resetUnread = state.selectedType == 'interaction'
-        ? UnreadNotificationCount(
-            count: state.unreadCount.count, forumCount: 0)
+        ? UnreadNotificationCount(count: state.unreadCount.count)
         : UnreadNotificationCount(
             count: 0, forumCount: state.unreadCount.forumCount);
 

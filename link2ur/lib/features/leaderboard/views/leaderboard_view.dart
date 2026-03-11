@@ -147,7 +147,7 @@ class _LeaderboardContentState extends State<_LeaderboardContent> {
 /// 排行榜卡片 - 对标iOS LeaderboardCard样式
 /// 封面图(90x90) + 标题 + 描述 + 位置 + 分隔线 + 统计行(项目/投票/浏览)
 class _LeaderboardCard extends StatelessWidget {
-  const _LeaderboardCard({super.key, required this.leaderboard});
+  const _LeaderboardCard({required this.leaderboard});
 
   final Leaderboard leaderboard;
 

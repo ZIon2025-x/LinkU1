@@ -274,28 +274,16 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
                               ),
                             ),
                             trailing: const Icon(Icons.chevron_right, size: 20),
-                            onTap: () async {
+                            onTap: () {
                               if (chatId.isEmpty) return;
-                              try {
-                                final messages = await commonRepo
-                                    .getCustomerServiceMessages(chatId);
-                                if (!sheetContext.mounted) return;
-                                Navigator.pop(sheetContext);
-                                _showCSChatMessagesSheet(
-                                  context,
-                                  messages: messages,
-                                  isDark: isDark,
-                                );
-                              } catch (_) {
-                                if (sheetContext.mounted) {
-                                  ScaffoldMessenger.of(sheetContext).showSnackBar(
-                                    SnackBar(
-                                        content: Text(
-                                            context.l10n.customerServiceNoChatHistory),
-                                    ),
-                                  );
-                                }
-                              }
+                              final isEnded = chat['is_ended'] == true;
+                              blocContext.read<UnifiedChatBloc>().add(
+                                UnifiedChatLoadCSHistory(
+                                  chatId: chatId,
+                                  isEnded: isEnded,
+                                ),
+                              );
+                              if (sheetContext.mounted) Navigator.pop(sheetContext);
                             },
                           );
                         }),
@@ -320,80 +308,6 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
     if (diff.inDays < 1) return l10n.timeHoursAgo(diff.inHours);
     if (diff.inDays < 7) return l10n.timeDaysAgo(diff.inDays);
     return '${time.month}/${time.day}';
-  }
-
-  /// 仅展示某次客服对话的消息列表（只读）
-  void _showCSChatMessagesSheet(
-    BuildContext context, {
-    required List<Map<String, dynamic>> messages,
-    required bool isDark,
-  }) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (ctx) {
-        return DraggableScrollableSheet(
-          minChildSize: 0.3,
-          maxChildSize: 0.9,
-          builder: (_, scrollController) {
-            if (messages.isEmpty) {
-              return Padding(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                child: Text(
-                  context.l10n.customerServiceNoChatHistory,
-                  style: AppTypography.body.copyWith(
-                    color: isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondaryLight,
-                  ),
-                ),
-              );
-            }
-            return ListView.builder(
-              controller: scrollController,
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md,
-                vertical: AppSpacing.sm,
-              ),
-              itemCount: messages.length,
-              itemBuilder: (_, index) {
-                final msg = messages[index];
-                final content = msg['content']?.toString() ?? '';
-                final senderType = msg['sender_type']?.toString() ?? 'user';
-                final isUser = senderType == 'user';
-                final createdAt = msg['created_at']?.toString();
-                return ListTile(
-                  dense: true,
-                  leading: Icon(
-                    isUser ? Icons.person : Icons.support_agent,
-                    color: isUser ? AppColors.primary : AppColors.accent,
-                    size: 20,
-                  ),
-                  title: Text(
-                    content,
-                    style: const TextStyle(fontSize: 14),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  subtitle: createdAt != null && createdAt.isNotEmpty
-                      ? Text(
-                          createdAt,
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: isDark
-                                ? AppColors.textTertiaryDark
-                                : AppColors.textTertiaryLight,
-                          ),
-                        )
-                      : null,
-                );
-              },
-            );
-          },
-        );
-      },
-    );
   }
 
   void _showRatingDialog() {

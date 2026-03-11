@@ -321,7 +321,6 @@ class _NotificationListViewContentState
 
 class _NotificationCard extends StatelessWidget {
   const _NotificationCard({
-    super.key,
     required this.notification,
     this.onTap,
   });

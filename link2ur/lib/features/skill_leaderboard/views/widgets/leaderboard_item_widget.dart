@@ -116,7 +116,6 @@ class LeaderboardItemWidget extends StatelessWidget {
     return AvatarView(
       imageUrl: entry.userAvatar,
       name: entry.userName,
-      size: 40,
     );
   }
 
