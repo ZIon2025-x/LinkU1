@@ -1174,12 +1174,12 @@ const CustomerService: React.FC = () => {
     if (selectedSession && selectedSession.chat_id) {
       loadChatMessages(selectedSession.chat_id);
       
-      // 设置定期刷新聊天记录（作为实时消息的补充，频率更低）
+      // 设置定期刷新聊天记录（作为WebSocket的兜底补充）
       const interval = setInterval(() => {
         if (selectedSession && selectedSession.chat_id) {
           loadChatMessages(selectedSession.chat_id);
         }
-      }, 30000); // 每30秒刷新一次，作为实时消息的补充
+      }, 5000); // 每5秒刷新一次，作为WebSocket的兜底补充
       
       return () => {
         clearInterval(interval);

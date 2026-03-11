@@ -372,7 +372,7 @@ def send_timeout_warnings(db: Session, warning_minutes: int = 1) -> Dict[str, An
                     .filter(
                         Notification.user_id == chat.user_id,
                         Notification.type == "chat_timeout_warning",
-                        Notification.related_id == chat.chat_id,
+                        Notification.related_id == chat.id,
                         Notification.created_at > get_utc_time() - timedelta(minutes=1)
                     )
                     .first()
@@ -408,7 +408,7 @@ def send_timeout_warnings(db: Session, warning_minutes: int = 1) -> Dict[str, An
                     type="chat_timeout_warning",
                     title="对话即将超时",
                     content="您的客服对话即将因超时（2分钟无活动）自动结束，请尽快回复。",
-                    related_id=chat.chat_id,
+                    related_id=chat.id,
                 )
                 
                 # 通过WebSocket推送通知更新事件

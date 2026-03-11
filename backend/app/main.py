@@ -2055,6 +2055,7 @@ async def websocket_chat(
                     sender_type = "user"
 
                 message_response = {
+                    "type": "chat_message",
                     "from": user_id,  # 数据库已经存储格式化ID
                     "receiver_id": msg["receiver_id"],
                     "content": msg["content"],

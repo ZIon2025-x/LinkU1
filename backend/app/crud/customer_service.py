@@ -260,6 +260,7 @@ def get_customer_service_chat(db: Session, chat_id: str) -> dict:
         return None
 
     return {
+        "id": chat.id,
         "chat_id": chat.chat_id,
         "user_id": chat.user_id,
         "service_id": chat.service_id,

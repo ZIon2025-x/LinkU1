@@ -8606,6 +8606,7 @@ def send_customer_service_message(
             
             # 构建消息响应
             message_response = {
+                "type": "cs_message",
                 "from": current_user.id,
                 "receiver_id": chat["user_id"],
                 "content": message["content"],
@@ -8808,6 +8809,7 @@ def send_customer_service_chat_message(
     message_data: dict = Body(...),
     current_user=Depends(get_current_user_secure_sync_csrf),
     request: Request = None,
+    background_tasks: BackgroundTasks = BackgroundTasks(),
     db: Session = Depends(get_db),
 ):
     """用户发送消息到客服对话"""
@@ -8824,16 +8826,34 @@ def send_customer_service_chat_message(
         db, chat_id, current_user.id, "user", message_data.get("content", "")
     )
 
-    # 注意：不创建通知给客服，因为客服ID不在users表中
-    # 客服可以通过WebSocket实时接收消息通知
-    # crud.create_notification(
-    #     db,
-    #     chat['service_id'],
-    #     "message",
-    #     "新消息",
-    #     f"用户 {current_user.name} 给您发来一条消息",
-    #     current_user.id
-    # )
+    # 通过WebSocket实时推送给客服（使用后台任务异步发送）
+    async def send_websocket_message():
+        try:
+            from app.websocket_manager import get_ws_manager
+            ws_manager = get_ws_manager()
+
+            message_response = {
+                "id": message["id"],
+                "type": "cs_message",
+                "from": current_user.id,
+                "receiver_id": chat["service_id"],
+                "content": message["content"],
+                "created_at": str(message["created_at"]),
+                "sender_type": "user",
+                "original_sender_id": current_user.id,
+                "chat_id": chat_id,
+                "message_id": message["id"],
+            }
+
+            success = await ws_manager.send_to_user(chat["service_id"], message_response)
+            if success:
+                logger.info(f"User message sent to CS {chat['service_id']} via WebSocket")
+            else:
+                logger.debug(f"CS {chat['service_id']} not connected via WebSocket")
+        except Exception as e:
+            logger.error(f"Failed to push user message to CS via WebSocket: {e}")
+
+    background_tasks.add_task(send_websocket_message)
 
     return message
 
@@ -10044,7 +10064,7 @@ async def timeout_end_customer_service_chat(
             type="chat_timeout",
             title="对话超时结束",
             content="您的客服对话因超时（2分钟无活动）已自动结束。如需继续咨询，请重新联系客服。",
-            related_id=chat_id,
+            related_id=chat["id"],
         )
 
         # 通过WebSocket通知用户对话已结束

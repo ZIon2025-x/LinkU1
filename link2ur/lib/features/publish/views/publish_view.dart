@@ -120,6 +120,9 @@ class _PublishContentState extends State<_PublishContent>
   String? _postLinkedName;
   bool _isUploading = false;
 
+  /// Cached user-related linkable content, pre-loaded once.
+  List<Map<String, dynamic>>? _cachedUserRelated;
+
   // ── 关闭动画 ──
   late final AnimationController _closeAnimCtrl;
 
@@ -135,7 +138,20 @@ class _PublishContentState extends State<_PublishContent>
       vsync: this,
       duration: AppConstants.animationDuration,
     );
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadRecentItems());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadRecentItems();
+      _preloadUserRelated();
+    });
+  }
+
+  Future<void> _preloadUserRelated() async {
+    try {
+      final repo = context.read<DiscoveryRepository>();
+      final list = await repo.getLinkableContentForUser();
+      if (mounted) setState(() => _cachedUserRelated = list);
+    } catch (_) {
+      // Fallback: dialog will load on its own if cache is null
+    }
   }
 
   Future<void> _loadRecentItems() async {
@@ -2028,6 +2044,7 @@ class _PublishContentState extends State<_PublishContent>
       builder: (ctx) => LinkSearchDialog(
         discoveryRepo: discoveryRepo,
         isDark: isDark,
+        cachedUserRelated: _cachedUserRelated,
       ),
     );
     if (result != null && mounted) {

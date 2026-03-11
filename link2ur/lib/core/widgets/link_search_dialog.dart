@@ -15,10 +15,15 @@ class LinkSearchDialog extends StatefulWidget {
     super.key,
     required this.discoveryRepo,
     required this.isDark,
+    this.cachedUserRelated,
   });
 
   final DiscoveryRepository discoveryRepo;
   final bool isDark;
+
+  /// Pre-loaded user related content from parent page.
+  /// When provided, skips the API call on dialog open.
+  final List<Map<String, dynamic>>? cachedUserRelated;
 
   @override
   State<LinkSearchDialog> createState() => _LinkSearchDialogState();
@@ -35,7 +40,12 @@ class _LinkSearchDialogState extends State<LinkSearchDialog> {
   void initState() {
     super.initState();
     _queryCtrl = TextEditingController();
-    _loadUserRelated();
+    if (widget.cachedUserRelated != null) {
+      _userRelated = widget.cachedUserRelated!;
+      _loadingRelated = false;
+    } else {
+      _loadUserRelated();
+    }
   }
 
   Future<void> _loadUserRelated() async {

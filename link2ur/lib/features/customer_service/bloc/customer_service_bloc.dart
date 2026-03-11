@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../data/models/customer_service.dart';
 import '../../../data/repositories/common_repository.dart';
+import '../../../data/services/websocket_service.dart';
 import '../../../core/utils/logger.dart';
 
 // ==================== Events ====================
@@ -66,6 +69,21 @@ class CustomerServiceCheckQueue extends CustomerServiceEvent {
 /// 开始新对话
 class CustomerServiceStartNew extends CustomerServiceEvent {
   const CustomerServiceStartNew();
+}
+
+/// WebSocket收到客服消息
+class _CustomerServiceMessageReceived extends CustomerServiceEvent {
+  const _CustomerServiceMessageReceived(this.message);
+
+  final CustomerServiceMessage message;
+
+  @override
+  List<Object?> get props => [message];
+}
+
+/// 轮询刷新消息
+class _CustomerServicePollMessages extends CustomerServiceEvent {
+  const _CustomerServicePollMessages();
 }
 
 // ==================== State ====================
@@ -151,9 +169,49 @@ class CustomerServiceBloc
     on<CustomerServiceRateChat>(_onRateChat);
     on<CustomerServiceCheckQueue>(_onCheckQueue);
     on<CustomerServiceStartNew>(_onStartNew);
+    on<_CustomerServiceMessageReceived>(_onMessageReceived);
+    on<_CustomerServicePollMessages>(_onPollMessages);
   }
 
   final CommonRepository _repository;
+  StreamSubscription? _wsSubscription;
+  Timer? _pollTimer;
+
+  void _startListening(String chatId) {
+    // WebSocket监听客服消息
+    _wsSubscription?.cancel();
+    _wsSubscription =
+        WebSocketService.instance.messageStream.listen((wsMessage) {
+      if (wsMessage.type != 'cs_message') return;
+      final data = wsMessage.data;
+      if (data == null || data['chat_id'] != chatId) return;
+
+      final message = CustomerServiceMessage(
+        messageId: data['message_id'] as int?,
+        content: data['content'] as String? ?? '',
+        senderType: data['sender_type'] as String? ?? 'customer_service',
+        messageType: 'text',
+        createdAt: data['created_at'] as String?,
+        chatId: data['chat_id'] as String?,
+      );
+      add(_CustomerServiceMessageReceived(message));
+    });
+
+    // 轮询兜底：每5秒刷新一次消息（WebSocket可能不可用）
+    _pollTimer?.cancel();
+    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (!isClosed && state.isConnected) {
+        add(const _CustomerServicePollMessages());
+      }
+    });
+  }
+
+  void _stopListening() {
+    _wsSubscription?.cancel();
+    _wsSubscription = null;
+    _pollTimer?.cancel();
+    _pollTimer = null;
+  }
 
   /// 连接客服
   Future<void> _onConnect(
@@ -204,14 +262,20 @@ class CustomerServiceBloc
           ];
         }
 
+        final isEnded = chat.isEnded == 1;
         emit(state.copyWith(
-          status: chat.isEnded == 1
+          status: isEnded
               ? CustomerServiceStatus.ended
               : CustomerServiceStatus.connected,
           chat: chat,
           serviceInfo: service,
           messages: messages,
         ));
+
+        // 连接成功后开始监听实时消息
+        if (!isEnded) {
+          _startListening(chat.chatId);
+        }
       } else {
         emit(state.copyWith(
           status: CustomerServiceStatus.error,
@@ -243,6 +307,44 @@ class CustomerServiceBloc
       emit(state.copyWith(messages: messages));
     } catch (e) {
       AppLogger.error('Failed to load CS messages', e);
+    }
+  }
+
+  /// WebSocket收到客服消息
+  Future<void> _onMessageReceived(
+    _CustomerServiceMessageReceived event,
+    Emitter<CustomerServiceState> emit,
+  ) async {
+    // 去重：检查消息ID是否已存在
+    if (event.message.messageId != null &&
+        state.messages.any((m) => m.messageId == event.message.messageId)) {
+      return;
+    }
+    emit(state.copyWith(
+      messages: [...state.messages, event.message],
+    ));
+  }
+
+  /// 轮询刷新消息
+  Future<void> _onPollMessages(
+    _CustomerServicePollMessages event,
+    Emitter<CustomerServiceState> emit,
+  ) async {
+    if (state.chat == null || !state.isConnected) return;
+
+    try {
+      final rawMessages =
+          await _repository.getCustomerServiceMessages(state.chat!.chatId);
+      final messages = rawMessages
+          .map((m) => CustomerServiceMessage.fromJson(m))
+          .toList();
+
+      // 只在消息数量变化时更新（避免不必要的rebuild）
+      if (messages.length != state.messages.length) {
+        emit(state.copyWith(messages: messages));
+      }
+    } catch (e) {
+      // 轮询失败不影响使用，静默忽略
     }
   }
 
@@ -300,6 +402,7 @@ class CustomerServiceBloc
 
     try {
       await _repository.endCustomerServiceChat(state.chat!.chatId);
+      _stopListening();
       emit(state.copyWith(
         status: CustomerServiceStatus.ended,
         actionMessage: 'conversation_ended',
@@ -362,6 +465,13 @@ class CustomerServiceBloc
     CustomerServiceStartNew event,
     Emitter<CustomerServiceState> emit,
   ) async {
+    _stopListening();
     emit(const CustomerServiceState());
+  }
+
+  @override
+  Future<void> close() {
+    _stopListening();
+    return super.close();
   }
 }

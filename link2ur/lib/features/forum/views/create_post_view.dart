@@ -62,10 +62,24 @@ class _CreatePostViewState extends State<CreatePostView> {
   String? _linkedItemId;
   String? _linkedName;
 
+  /// Cached user-related linkable content, pre-loaded once.
+  List<Map<String, dynamic>>? _cachedUserRelated;
+
   @override
   void initState() {
     super.initState();
     _checkForDraft();
+    _preloadUserRelated();
+  }
+
+  Future<void> _preloadUserRelated() async {
+    try {
+      final repo = context.read<DiscoveryRepository>();
+      final list = await repo.getLinkableContentForUser();
+      if (mounted) setState(() => _cachedUserRelated = list);
+    } catch (_) {
+      // Fallback: dialog will load on its own if cache is null
+    }
   }
 
   Future<void> _saveDraft() async {
@@ -185,6 +199,7 @@ class _CreatePostViewState extends State<CreatePostView> {
       builder: (ctx) => LinkSearchDialog(
         discoveryRepo: discoveryRepo,
         isDark: isDark,
+        cachedUserRelated: _cachedUserRelated,
       ),
     );
     if (result != null && mounted) {
