@@ -215,15 +215,38 @@ def update_banner(
     
     for field, value in update_data.items():
         setattr(banner, field, value)
-    
+
     db.commit()
     db.refresh(banner)
-    
+
+    # 如果新图片在临时目录中，移动到正式目录
+    if "image_url" in update_data and "/banner/temp_" in (update_data["image_url"] or ""):
+        try:
+            from app.services import ImageCategory, get_image_upload_service
+
+            service = get_image_upload_service()
+            new_urls = service.move_from_temp(
+                category=ImageCategory.BANNER,
+                user_id=current_admin.id,
+                resource_id=str(banner_id),
+                image_urls=[update_data["image_url"]]
+            )
+
+            if new_urls and new_urls[0] != update_data["image_url"]:
+                banner.image_url = new_urls[0]
+                db.commit()
+                db.refresh(banner)
+                logger.info(f"移动更新的 Banner 图片到正式目录: {new_urls[0]}")
+
+            service.delete_temp(category=ImageCategory.BANNER, user_id=current_admin.id)
+        except Exception as e:
+            logger.warning(f"移动更新的 Banner 图片从临时目录失败: {e}")
+
     # 清除缓存
     clear_banner_cache()
-    
+
     logger.info(f"管理员 {current_admin.id} ({current_admin.name}) 更新了 Banner ID: {banner_id}")
-    
+
     return banner
 
 

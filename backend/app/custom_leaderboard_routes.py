@@ -538,9 +538,27 @@ async def create_item_admin(
     
     await db.commit()
     await db.refresh(new_item)
-    
+
+    # 如果图片在临时目录中，移到正式目录
+    if item_data.image_url and "/temp_" in item_data.image_url:
+        try:
+            from app.services import ImageCategory, get_image_upload_service
+            service = get_image_upload_service()
+            new_urls = service.move_from_temp(
+                category=ImageCategory.LEADERBOARD_ITEM,
+                user_id=str(current_admin.id),
+                resource_id=str(new_item.id),
+                image_urls=[item_data.image_url],
+            )
+            if new_urls and new_urls[0] != item_data.image_url:
+                new_item.images = json.dumps(new_urls)
+                await db.commit()
+                await db.refresh(new_item)
+        except Exception as e:
+            logger.warning(f"管理员创建竞品时移动临时图片失败: {e}")
+
     logger.info(f"管理员 {current_admin.username} 创建竞品: {new_item.id} - {new_item.name}")
-    
+
     # 构建与 get_items_admin 一致的返回（images 解析为 list）
     images_list = None
     if new_item.images:
@@ -601,11 +619,29 @@ async def update_item_admin(
         item.images = json.dumps([item_data.image_url]) if item_data.image_url else item.images
     if item_data.status is not None:
         item.status = item_data.status
-    
+
     item.updated_at = get_utc_time()
-    
+
     await db.commit()
     await db.refresh(item)
+
+    # 如果更新了图片且包含临时目录路径，移到正式目录
+    if item_data.image_url and "/temp_" in item_data.image_url:
+        try:
+            from app.services import ImageCategory, get_image_upload_service
+            service = get_image_upload_service()
+            new_urls = service.move_from_temp(
+                category=ImageCategory.LEADERBOARD_ITEM,
+                user_id=str(current_admin.id),
+                resource_id=str(item.id),
+                image_urls=[item_data.image_url],
+            )
+            if new_urls and new_urls[0] != item_data.image_url:
+                item.images = json.dumps(new_urls)
+                await db.commit()
+                await db.refresh(item)
+        except Exception as e:
+            logger.warning(f"管理员更新竞品时移动临时图片失败: {e}")
     
     logger.info(f"管理员 {current_admin.username} 更新竞品: {item_id}")
     

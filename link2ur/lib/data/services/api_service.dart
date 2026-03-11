@@ -195,6 +195,14 @@ class ApiService {
         return handler.reject(error);
       }
 
+      // 防止 refresh→retry→401 无限循环（如重定向丢失 headers 等场景）
+      final isRetryAfterRefresh = error.requestOptions.extra['_retriedAfterRefresh'] == true;
+      if (isRetryAfterRefresh) {
+        AppLogger.warning('401 after token refresh retry, not retrying again: ${error.requestOptions.uri}');
+        _notifyAuthFailure();
+        return handler.reject(error);
+      }
+
       // 如果正在刷新，等待刷新完成
       if (_isRefreshing) {
         try {
@@ -322,6 +330,10 @@ class ApiService {
       headers: {
         ...requestOptions.headers,
         'Authorization': 'Bearer $token',
+      },
+      extra: {
+        ...requestOptions.extra,
+        '_retriedAfterRefresh': true,
       },
     );
     return _dio.request(

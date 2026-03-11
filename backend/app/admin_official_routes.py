@@ -351,9 +351,27 @@ async def update_official_activity(
     if activity.is_drawn:
         raise HTTPException(status_code=400, detail="已开奖的活动不能修改")
 
-    for field, value in data.model_dump(exclude_none=True).items():
+    update_fields = data.model_dump(exclude_none=True)
+    for field, value in update_fields.items():
         setattr(activity, field, value)
     await db.commit()
+
+    # 如果更新了图片且包含临时目录路径，移到正式目录
+    if "images" in update_fields and update_fields["images"]:
+        has_temp = any("/temp_" in (url or "") for url in update_fields["images"])
+        if has_temp:
+            from app.services import ImageCategory, get_image_upload_service
+            service = get_image_upload_service()
+            new_images = service.move_from_temp(
+                ImageCategory.ACTIVITY,
+                str(admin.id),
+                str(activity.id),
+                update_fields["images"],
+            )
+            if new_images != update_fields["images"]:
+                activity.images = new_images
+                await db.commit()
+
     return {"success": True}
 
 

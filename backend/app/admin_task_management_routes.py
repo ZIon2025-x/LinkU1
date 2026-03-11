@@ -2,6 +2,7 @@
 管理员 - 任务管理路由
 从 routers.py 迁移
 """
+import json
 import logging
 from typing import Optional, List
 
@@ -166,6 +167,25 @@ def admin_update_task(
             reason=f"管理员 {current_user.id} ({current_user.name}) 更新了任务信息",
             ip_address=ip_address,
         )
+
+    # 如果更新了图片且包含临时目录路径，移到正式目录
+    if "images" in update_data and update_data["images"]:
+        has_temp = any("/temp_" in (url or "") for url in update_data["images"])
+        if has_temp:
+            try:
+                from app.services import ImageCategory, get_image_upload_service
+                service = get_image_upload_service()
+                new_images = service.move_from_temp(
+                    category=ImageCategory.TASK,
+                    user_id=current_user.id,
+                    resource_id=str(task_id),
+                    image_urls=update_data["images"],
+                )
+                if new_images != update_data["images"]:
+                    updated_task.images = json.dumps(new_images)
+                    db.commit()
+            except Exception as e:
+                logger.warning(f"管理员更新任务时移动临时图片失败: {e}")
 
     # 使任务详情缓存失效
     TaskService.invalidate_cache(task_id)

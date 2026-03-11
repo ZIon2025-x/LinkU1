@@ -487,7 +487,7 @@ class ApiEndpoints {
   static const String newbieTasksStages = '/api/newbie-tasks/stages';
 
   // ==================== Official Tasks ====================
-  static const String officialTasks = '/api/official-tasks';
+  static const String officialTasks = '/api/official-tasks/';
 
   // ==================== User Skills ====================
   static const String userSkillsMy = '/api/skills/my';
