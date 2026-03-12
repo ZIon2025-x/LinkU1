@@ -3,7 +3,6 @@ import '../../../core/utils/haptic_feedback.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/constants/app_constants.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
@@ -19,7 +18,6 @@ import '../../../core/widgets/decorative_background.dart';
 import '../../../core/widgets/credit_score_gauge.dart';
 import '../../../core/widgets/animated_counter.dart';
 import '../../../data/models/user.dart';
-import '../../../data/models/task.dart' show Task;
 import '../../../data/repositories/user_repository.dart';
 import '../../../data/repositories/task_repository.dart';
 import '../../../data/repositories/forum_repository.dart';
@@ -32,23 +30,10 @@ part 'profile_desktop_widgets.dart';
 part 'profile_mobile_widgets.dart';
 part 'profile_menu_widgets.dart';
 
-/// 单次遍历统计进行中 / 已完成任务数，供 mobile 和 desktop 共用
-({int inProgress, int completed}) _countTasks(List<Task> tasks) {
-  var inProgress = 0;
-  var completed = 0;
-  for (final t in tasks) {
-    switch (t.status) {
-      case AppConstants.taskStatusTaken:
-      case AppConstants.taskStatusInProgress:
-      case AppConstants.taskStatusPendingConfirmation:
-      case AppConstants.taskStatusPendingPayment:
-      case AppConstants.taskStatusPendingAcceptance:
-        inProgress++;
-      case AppConstants.taskStatusCompleted:
-        completed++;
-    }
-  }
-  return (inProgress: inProgress, completed: completed);
+/// 从 User 模型获取进行中 / 已完成任务数（后端统计，不受分页限制）
+/// 后端 /profile/me 返回的 task_count 即为进行中任务数
+({int inProgress, int completed}) _getTaskCounts(User user) {
+  return (inProgress: user.taskCount, completed: user.completedTaskCount);
 }
 
 /// 个人中心页

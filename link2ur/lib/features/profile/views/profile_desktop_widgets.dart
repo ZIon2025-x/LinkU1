@@ -73,7 +73,7 @@ Widget _buildDesktopProfile(
 /// Desktop user card — avatar, name, badges, stats in a horizontal row
 Widget _buildDesktopUserCard(
     BuildContext context, ProfileState state, User user, bool isDark) {
-  final (:inProgress, :completed) = _countTasks(state.myTasks);
+  final (:inProgress, :completed) = _getTaskCounts(user);
 
   return Container(
     padding: const EdgeInsets.all(24),
