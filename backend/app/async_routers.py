@@ -20,7 +20,7 @@ from app.csrf import csrf_cookie_bearer
 from app.security import cookie_bearer
 from app.rate_limiting import rate_limit
 from app.utils.time_utils import format_iso_utc
-from app.content_filter.filter_service import check_content, create_review
+from app.content_filter.filter_service import check_content, create_review, create_mask_record
 
 logger = logging.getLogger(__name__)
 
@@ -592,6 +592,11 @@ async def create_task_async(
                                f"[title]{task.title}[desc]{task.description}", combined_matched)
             await db.commit()
             await db.refresh(db_task)
+        elif final_action == "mask":
+            combined_matched = title_result.matched_words + desc_result.matched_words
+            await create_mask_record(db, "task", db_task.id, current_user.id,
+                                    {"title": task.title, "description": task.description}, combined_matched)
+            await db.commit()
 
         # 迁移临时图片到正式的任务ID文件夹（使用图片上传服务）
         if task.images and len(task.images) > 0:

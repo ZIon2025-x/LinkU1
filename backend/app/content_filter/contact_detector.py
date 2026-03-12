@@ -3,6 +3,7 @@ ContactDetector -- detects and masks contact information in text.
 
 Supported patterns:
 - China mobile phone numbers: 1[3-9]X + 8 digits (with optional separators)
+- UK mobile phone numbers: 07XX or +44 7XX (with optional separators)
 - WeChat IDs: keyword prefix + alphanumeric ID
 - QQ numbers: keyword prefix + 5-12 digits
 - Email addresses
@@ -28,12 +29,27 @@ _SEP = r"[\s\-.]?"
 
 # China mobile: 1[3-9]X followed by 8 more digits, with optional separators
 # Use word boundary / lookbehind/lookahead to avoid matching inside longer numbers
-_PHONE_RE = re.compile(
+_PHONE_CN_RE = re.compile(
     r"(?<!\d)"                   # not preceded by a digit
     r"1[3-9]\d" + _SEP +        # first 3 digits
     r"\d{4}" + _SEP +           # middle 4 digits
     r"\d{4}"                     # last 4 digits
     r"(?!\d)"                    # not followed by a digit
+)
+
+# UK mobile: 07XXX XXXXXX or +44 7XXX XXXXXX (with optional separators)
+_PHONE_UK_RE = re.compile(
+    r"(?<!\d)"
+    r"(?:"
+    r"(?:\+44[\s\-.]?7\d{3})"   # +44 7XXX international format
+    r"|"
+    r"(?:0044[\s\-.]?7\d{3})"   # 0044 7XXX international format
+    r"|"
+    r"(?:07\d{3})"              # 07XXX local format
+    r")"
+    + _SEP + r"\d{3}"           # middle 3 digits
+    + _SEP + r"\d{3}"           # last 3 digits
+    r"(?!\d)"
 )
 
 # WeChat: keyword + optional separator + ID (6-20 alphanumeric/underscore/dash)
@@ -67,7 +83,8 @@ _URL_RE = re.compile(
 _ALL_PATTERNS = [
     _URL_RE,
     _EMAIL_RE,
-    _PHONE_RE,
+    _PHONE_CN_RE,
+    _PHONE_UK_RE,
     _WECHAT_RE,
     _QQ_RE,
 ]

@@ -82,7 +82,7 @@ from app.flea_market_extensions import (
     get_cache_key_for_item_detail,
     invalidate_item_cache
 )
-from app.content_filter.filter_service import check_content, create_review
+from app.content_filter.filter_service import check_content, create_review, create_mask_record
 
 logger = logging.getLogger(__name__)
 
@@ -873,6 +873,12 @@ async def create_flea_market_item(
                                f"[title]{item_data.title}[desc]{item_data.description}", combined_matched)
             await db.commit()
             await db.refresh(new_item)
+        elif final_action == "mask":
+            combined_matched = title_result.matched_words + desc_result.matched_words
+            original_fields = {"title": item_data.title, "description": item_data.description}
+            await create_mask_record(db, "flea_market", new_item.id, current_user.id,
+                                    original_fields, combined_matched)
+            await db.commit()
 
         # 移动临时图片到正式目录并更新URL（使用图片上传服务）
         if item_data.images:

@@ -2,6 +2,7 @@
 管理员 - 内容审核管理
 敏感词 CRUD、谐音映射、审核队列、过滤日志
 """
+import json
 import logging
 from typing import List, Optional
 
@@ -84,7 +85,7 @@ class HomophoneMappingCreate(BaseModel):
 
 
 class ReviewAction(BaseModel):
-    action: str = Field(..., pattern=r"^(approved|rejected)$")
+    action: str = Field(..., pattern=r"^(approved|rejected|restored)$")
     reason: Optional[str] = None
 
 
@@ -441,7 +442,7 @@ async def review_content(
     admin: models.AdminUser = Depends(get_current_admin_async),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    """审批或拒绝一条审核记录"""
+    """审批、拒绝或恢复一条审核记录"""
     result = await db.execute(
         select(models.ContentReview).where(models.ContentReview.id == review_id)
     )
@@ -449,21 +450,27 @@ async def review_content(
     if not review:
         raise HTTPException(status_code=404, detail="审核记录不存在")
 
-    if review.status != "pending":
-        raise HTTPException(status_code=400, detail="该记录已审核，不可重复操作")
+    # pending 记录可以 approved/rejected；masked 记录可以 restored
+    if review.status == "pending" and body.action in ("approved", "rejected"):
+        pass  # allowed
+    elif review.status == "masked" and body.action == "restored":
+        pass  # allowed
+    else:
+        raise HTTPException(status_code=400, detail="该记录当前状态不支持此操作")
 
     review.status = body.action
     review.reviewed_by = admin.id
     review.reviewed_at = get_utc_time()
 
+    model_map = {
+        "task": models.Task,
+        "forum_post": models.ForumPost,
+        "forum_reply": models.ForumReply,
+        "flea_market": models.FleaMarketItem,
+    }
+
     # 审核通过 → 恢复内容可见性
     if body.action == "approved":
-        model_map = {
-            "task": models.Task,
-            "forum_post": models.ForumPost,
-            "forum_reply": models.ForumReply,
-            "flea_market": models.FleaMarketItem,
-        }
         model_cls = model_map.get(review.content_type)
         if model_cls:
             content_result = await db.execute(
@@ -472,6 +479,32 @@ async def review_content(
             content = content_result.scalar_one_or_none()
             if content:
                 content.is_visible = True
+
+    # 恢复屏蔽 → 用原文覆盖当前内容（含翻译字段）
+    elif body.action == "restored":
+        model_cls = model_map.get(review.content_type)
+        if model_cls:
+            content_result = await db.execute(
+                select(model_cls).where(model_cls.id == review.content_id)
+            )
+            content = content_result.scalar_one_or_none()
+            if content:
+                # original_text is JSON dict: {"title": "...", "content": "...", "title_en": "...", ...}
+                try:
+                    fields = json.loads(review.original_text)
+                except (json.JSONDecodeError, TypeError):
+                    fields = None
+
+                if isinstance(fields, dict):
+                    for field_name, field_value in fields.items():
+                        if hasattr(content, field_name):
+                            setattr(content, field_name, field_value)
+                else:
+                    # Fallback for legacy plain-text records
+                    if hasattr(content, "content"):
+                        content.content = review.original_text
+                    elif hasattr(content, "description"):
+                        content.description = review.original_text
 
     await db.commit()
 

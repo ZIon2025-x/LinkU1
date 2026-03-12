@@ -50,7 +50,7 @@ export interface ContentReview {
   user_id: string;
   original_text: string;
   matched_words: Array<{ word: string; category: string }>;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'masked' | 'restored';
   reviewed_by?: string;
   reviewed_at?: string;
   created_at: string;

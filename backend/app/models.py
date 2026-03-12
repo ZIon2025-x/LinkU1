@@ -2416,7 +2416,7 @@ class ContentReview(Base):
     user_id = Column(String(8), ForeignKey("users.id"), nullable=False)
     original_text = Column(Text, nullable=False)
     matched_words = Column(JSON, nullable=True)
-    status = Column(String(10), nullable=False, default="pending", index=True)  # pending/approved/rejected
+    status = Column(String(10), nullable=False, default="pending", index=True)  # pending/approved/rejected/masked/restored
     reviewed_by = Column(String(5), ForeignKey("admin_users.id"), nullable=True)
     reviewed_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=func.now())

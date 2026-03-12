@@ -2,6 +2,7 @@
 Singleton service that loads keywords/homophones from DB,
 and provides a global ContentFilter instance.
 """
+import json
 import logging
 import time
 from typing import Optional
@@ -103,3 +104,27 @@ async def create_review(
         status="pending",
     )
     db.add(review)
+
+
+async def create_mask_record(
+    db: AsyncSession,
+    content_type: str,
+    content_id: int,
+    user_id: str,
+    original_fields: dict,
+    matched_words: list,
+):
+    """Record original text when mask action is applied, so admin can restore later.
+
+    original_fields: dict mapping field names to their original values,
+    e.g. {"title": "...", "content": "...", "title_zh": "...", "content_en": "..."}
+    """
+    record = models.ContentReview(
+        content_type=content_type,
+        content_id=content_id,
+        user_id=user_id,
+        original_text=json.dumps(original_fields, ensure_ascii=False),
+        matched_words=[{"word": m["word"], "category": m["category"]} for m in matched_words],
+        status="masked",
+    )
+    db.add(record)

@@ -21,7 +21,7 @@ from app.utils.time_utils import get_utc_time
 from app.performance_monitor import measure_api_performance
 from app.cache import cache_response
 from app.push_notification_service import send_push_notification_async_safe
-from app.content_filter.filter_service import check_content, create_review
+from app.content_filter.filter_service import check_content, create_review, create_mask_record
 
 logger = logging.getLogger(__name__)
 
@@ -3038,6 +3038,11 @@ async def create_post(
         await create_review(db, "forum_post", db_post.id, filter_user_id,
                            f"[title]{post.title}[content]{post.content}", combined_matched)
         await db.flush()
+    elif final_action == "mask":
+        combined_matched = title_result.matched_words + content_result.matched_words
+        await create_mask_record(db, "forum_post", db_post.id, filter_user_id,
+                                {"title": post.title, "content": post.content}, combined_matched)
+        await db.flush()
 
     # 如果有图片，移动临时图片到永久路径
     if post_images:
@@ -4220,6 +4225,10 @@ async def create_reply(
         db_reply.is_visible = False
         await create_review(db, "forum_reply", db_reply.id, reply_filter_user_id,
                            reply.content, content_result.matched_words)
+        await db.flush()
+    elif content_result.action == "mask":
+        await create_mask_record(db, "forum_reply", db_reply.id, reply_filter_user_id,
+                                {"content": reply.content}, content_result.matched_words)
         await db.flush()
 
     # 更新帖子统计（仅当回复可见时）

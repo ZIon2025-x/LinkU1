@@ -478,8 +478,9 @@ const ReviewsTab: React.FC = () => {
     onError: (err) => message.error(getErrorMessage(err)),
   });
 
-  const handleReview = async (review: ContentReview, action: 'approved' | 'rejected') => {
-    const label = action === 'approved' ? '通过' : '拒绝';
+  const handleReview = async (review: ContentReview, action: 'approved' | 'rejected' | 'restored') => {
+    const labelMap: Record<string, string> = { approved: '通过', rejected: '拒绝', restored: '恢复原文' };
+    const label = labelMap[action] || action;
     if (!window.confirm(`确定${label}此内容吗？`)) return;
     try {
       await reviewContent(review.id, { action });
@@ -537,6 +538,8 @@ const ReviewsTab: React.FC = () => {
           pending: { text: '待审核', variant: 'warning' },
           approved: { text: '已通过', variant: 'success' },
           rejected: { text: '已拒绝', variant: 'danger' },
+          masked: { text: '已屏蔽', variant: 'info' },
+          restored: { text: '已恢复', variant: 'success' },
         };
         const cfg = map[value] || { text: value, variant: 'default' };
         return <StatusBadge text={cfg.text} variant={cfg.variant} />;
@@ -554,16 +557,28 @@ const ReviewsTab: React.FC = () => {
       title: '操作',
       width: 150,
       align: 'center',
-      render: (_, record) => record.status === 'pending' ? (
-        <div className={styles.actions}>
-          <button className={styles.btnApprove} onClick={() => handleReview(record, 'approved')}>通过</button>
-          <button className={styles.btnReject} onClick={() => handleReview(record, 'rejected')}>拒绝</button>
-        </div>
-      ) : (
-        <span style={{ color: '#6c757d', fontSize: 13 }}>
-          {record.reviewed_by ? `由 ${record.reviewed_by} 处理` : '-'}
-        </span>
-      ),
+      render: (_, record) => {
+        if (record.status === 'pending') {
+          return (
+            <div className={styles.actions}>
+              <button className={styles.btnApprove} onClick={() => handleReview(record, 'approved')}>通过</button>
+              <button className={styles.btnReject} onClick={() => handleReview(record, 'rejected')}>拒绝</button>
+            </div>
+          );
+        }
+        if (record.status === 'masked') {
+          return (
+            <div className={styles.actions}>
+              <button className={styles.btnApprove} onClick={() => handleReview(record, 'restored')}>恢复原文</button>
+            </div>
+          );
+        }
+        return (
+          <span style={{ color: '#6c757d', fontSize: 13 }}>
+            {record.reviewed_by ? `由 ${record.reviewed_by} 处理` : '-'}
+          </span>
+        );
+      },
     },
   ];
 
@@ -577,6 +592,8 @@ const ReviewsTab: React.FC = () => {
             <option value="pending">待审核</option>
             <option value="approved">已通过</option>
             <option value="rejected">已拒绝</option>
+            <option value="masked">已屏蔽</option>
+            <option value="restored">已恢复</option>
           </select>
         </div>
         <div className={styles.filterGroup}>
