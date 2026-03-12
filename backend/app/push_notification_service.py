@@ -262,13 +262,25 @@ def send_push_notification(
     """
     try:
         from app import models
-        
+
         # 获取用户信息（用于验证用户存在）
         user = db.query(models.User).filter(models.User.id == user_id).first()
         if not user:
             logger.warning(f"用户 {user_id} 不存在，无法发送推送通知")
             return False
-        
+
+        # 如果调用方没有指定 badge，自动计算未读总数（聊天未读 + 通知未读）
+        if badge is None:
+            try:
+                from app.crud.message import get_unread_messages
+                from app.crud.notification import get_unread_notification_count
+                chat_unread = len(get_unread_messages(db, user_id))
+                notification_unread = get_unread_notification_count(db, user_id)
+                badge = chat_unread + notification_unread
+            except Exception as e:
+                logger.warning(f"计算用户 {user_id} 未读角标失败，跳过 badge: {e}")
+                badge = None
+
         # 获取用户的所有激活的设备令牌，按更新时间倒序（新令牌更可能有效，优先发送）
         # 限制每用户最多尝试的令牌数，避免资源浪费（同一用户大量旧令牌时）
         max_tokens_per_user = int(os.getenv("PUSH_MAX_TOKENS_PER_USER", "5"))

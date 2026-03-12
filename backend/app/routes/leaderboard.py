@@ -62,7 +62,7 @@ def recalculate_leaderboard(db: Session, category: Optional[str] = None) -> None
             .subquery()
         )
 
-        # Join with review ratings
+        # Join with review ratings (only reviews written by the poster, not by the taker themselves)
         results = (
             db.query(
                 task_stats.c.taker_id,
@@ -76,7 +76,11 @@ def recalculate_leaderboard(db: Session, category: Optional[str] = None) -> None
                 & (models.Task.task_type == cat)
                 & (models.Task.status == "completed"),
             )
-            .outerjoin(models.Review, models.Review.task_id == models.Task.id)
+            .outerjoin(
+                models.Review,
+                (models.Review.task_id == models.Task.id)
+                & (models.Review.user_id != task_stats.c.taker_id),
+            )
             .group_by(
                 task_stats.c.taker_id,
                 task_stats.c.completed_tasks,
@@ -91,7 +95,8 @@ def recalculate_leaderboard(db: Session, category: Optional[str] = None) -> None
                 models.SkillLeaderboard.skill_category == cat
             ).delete(synchronize_session=False)
             db.query(models.UserBadge).filter(
-                models.UserBadge.skill_category == cat
+                models.UserBadge.skill_category == cat,
+                models.UserBadge.badge_type == "skill_rank",
             ).delete(synchronize_session=False)
             db.commit()
             continue

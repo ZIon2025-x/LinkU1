@@ -37,12 +37,15 @@ part 'profile_menu_widgets.dart';
   var inProgress = 0;
   var completed = 0;
   for (final t in tasks) {
-    if (t.status == 'assigned' ||
-        t.status == AppConstants.taskStatusInProgress ||
-        t.status == 'accepted') {
-      inProgress++;
-    } else if (t.status == AppConstants.taskStatusCompleted) {
-      completed++;
+    switch (t.status) {
+      case AppConstants.taskStatusTaken:
+      case AppConstants.taskStatusInProgress:
+      case AppConstants.taskStatusPendingConfirmation:
+      case AppConstants.taskStatusPendingPayment:
+      case AppConstants.taskStatusPendingAcceptance:
+        inProgress++;
+      case AppConstants.taskStatusCompleted:
+        completed++;
     }
   }
   return (inProgress: inProgress, completed: completed);
