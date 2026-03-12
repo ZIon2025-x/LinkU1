@@ -26,8 +26,8 @@ def recalculate_leaderboard(db: Session, category: Optional[str] = None) -> None
     Recalculate skill leaderboard scores and ranks.
 
     For each skill category (or a specific one):
-    1. Find users who have at least one skill in that category
-    2. Calculate their completed_tasks, total_amount, avg_rating
+    1. Find users who completed tasks with task_type matching the category
+    2. Calculate their completed_tasks, total_amount, avg_rating for that task_type only
     3. Score = completed_tasks * 50 + (total_amount / 100) * 2 + avg_rating * 10
     4. Upsert into skill_leaderboard, rank by score desc
     5. Grant badges to Top 10, remove badges for users who dropped out
@@ -46,67 +46,66 @@ def recalculate_leaderboard(db: Session, category: Optional[str] = None) -> None
     now = get_utc_time()
 
     for cat in categories:
-        # Find users who have at least one skill in this category
-        user_ids = [
-            row[0]
-            for row in db.query(models.UserSkill.user_id)
-            .filter(models.UserSkill.skill_category == cat)
-            .distinct()
-            .all()
-        ]
+        # Single query: aggregate task stats + avg review rating per user for this task_type
+        task_stats = (
+            db.query(
+                models.Task.taker_id,
+                func.count(models.Task.id).label("completed_tasks"),
+                func.coalesce(func.sum(models.Task.reward), 0).label("total_amount"),
+            )
+            .filter(
+                models.Task.task_type == cat,
+                models.Task.status == "completed",
+                models.Task.taker_id.isnot(None),
+            )
+            .group_by(models.Task.taker_id)
+            .subquery()
+        )
 
-        if not user_ids:
+        # Join with review ratings
+        results = (
+            db.query(
+                task_stats.c.taker_id,
+                task_stats.c.completed_tasks,
+                task_stats.c.total_amount,
+                func.avg(models.Review.rating).label("avg_rating"),
+            )
+            .outerjoin(
+                models.Task,
+                (models.Task.taker_id == task_stats.c.taker_id)
+                & (models.Task.task_type == cat)
+                & (models.Task.status == "completed"),
+            )
+            .outerjoin(models.Review, models.Review.task_id == models.Task.id)
+            .group_by(
+                task_stats.c.taker_id,
+                task_stats.c.completed_tasks,
+                task_stats.c.total_amount,
+            )
+            .all()
+        )
+
+        if not results:
             # No users in this category — clear leaderboard entries
             db.query(models.SkillLeaderboard).filter(
                 models.SkillLeaderboard.skill_category == cat
             ).delete(synchronize_session=False)
-            # Remove badges for this category
             db.query(models.UserBadge).filter(
                 models.UserBadge.skill_category == cat
             ).delete(synchronize_session=False)
             db.commit()
             continue
 
-        # Calculate stats for each user
+        # Calculate scores
         user_scores = []
-        for uid in user_ids:
-            # Completed tasks count (as taker)
-            completed_tasks = (
-                db.query(func.count(models.Task.id))
-                .filter(
-                    models.Task.taker_id == uid,
-                    models.Task.status == "completed",
-                )
-                .scalar()
-            ) or 0
-
-            # Total amount from completed tasks
-            total_amount = (
-                db.query(func.sum(models.Task.reward))
-                .filter(
-                    models.Task.taker_id == uid,
-                    models.Task.status == "completed",
-                )
-                .scalar()
-            ) or 0
-
-            # Average review rating
-            avg_rating = (
-                db.query(func.avg(models.Review.rating))
-                .join(models.Task, models.Review.task_id == models.Task.id)
-                .filter(
-                    models.Task.taker_id == uid,
-                    models.Task.status == "completed",
-                )
-                .scalar()
-            )
-            avg_rating = float(avg_rating) if avg_rating is not None else 0.0
-
-            # Calculate score
+        for row in results:
+            completed_tasks = row.completed_tasks
+            total_amount = float(row.total_amount)
+            avg_rating = float(row.avg_rating) if row.avg_rating is not None else 0.0
             score = completed_tasks * 50 + (total_amount / 100) * 2 + avg_rating * 10
 
             user_scores.append({
-                "user_id": uid,
+                "user_id": row.taker_id,
                 "completed_tasks": completed_tasks,
                 "total_amount": int(total_amount),
                 "avg_rating": round(avg_rating, 2),
@@ -117,8 +116,9 @@ def recalculate_leaderboard(db: Session, category: Optional[str] = None) -> None
         user_scores.sort(key=lambda x: x["score"], reverse=True)
 
         # Upsert leaderboard entries with ranks
-        existing_entry_ids = set()
+        current_user_ids = set()
         for rank_pos, entry in enumerate(user_scores, start=1):
+            current_user_ids.add(entry["user_id"])
             existing = (
                 db.query(models.SkillLeaderboard)
                 .filter(
@@ -134,7 +134,6 @@ def recalculate_leaderboard(db: Session, category: Optional[str] = None) -> None
                 existing.score = entry["score"]
                 existing.rank = rank_pos
                 existing.updated_at = now
-                existing_entry_ids.add(existing.id)
             else:
                 new_entry = models.SkillLeaderboard(
                     skill_category=cat,
@@ -147,6 +146,13 @@ def recalculate_leaderboard(db: Session, category: Optional[str] = None) -> None
                     updated_at=now,
                 )
                 db.add(new_entry)
+
+        # Remove stale leaderboard entries for users no longer qualifying
+        if current_user_ids:
+            db.query(models.SkillLeaderboard).filter(
+                models.SkillLeaderboard.skill_category == cat,
+                ~models.SkillLeaderboard.user_id.in_(current_user_ids),
+            ).delete(synchronize_session=False)
 
         db.commit()
 

@@ -3008,7 +3008,7 @@ async def approve_service_application(
         agreed_reward=price,
         currency=application.currency or service.currency,
         location=location,  # 使用任务达人的位置
-        task_type="其他",
+        task_type=featured_expert.category if featured_expert and featured_expert.category else "其他",
         task_level="expert",  # 任务达人服务创建的任务等级为 expert
         poster_id=application.applicant_id,  # 申请用户是发布人
         taker_id=application.expert_id,  # 任务达人接收方
