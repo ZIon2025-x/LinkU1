@@ -1158,7 +1158,7 @@ def send_email_verification_code(
             )
         
         # 根据用户语言偏好获取邮件模板（尝试从数据库获取用户信息）
-        from app import crud
+        # 注意：crud 已在文件顶部 import，不要在此重复 import（会导致 UnboundLocalError）
         from app.email_templates import get_user_language, get_login_verification_code_email
         from app.database import SessionLocal
         

@@ -465,7 +465,7 @@ def create_task_payment(
     - 前端只能创建支付意图，不能确认支付状态
     - 支付状态更新只能由 Stripe Webhook 触发，确保安全性
     """
-    from app import crud
+    # crud 已在文件顶部 import
     from app.coupon_points_crud import (
         get_or_create_points_account,
         add_points_transaction,
