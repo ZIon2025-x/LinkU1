@@ -10,10 +10,10 @@ class StripeConnectService {
   static const _channel = MethodChannel('com.link2ur/stripe_connect');
 
   /// 打开原生 Onboarding 页面
-  /// 
+  ///
   /// [publishableKey] Stripe Publishable Key
   /// [clientSecret] AccountSession client_secret（Flutter 层在调用前已获取 fresh secret）
-  /// 
+  ///
   /// 返回结果：
   /// - `completed`: 用户完成入驻
   /// - `cancelled`: 用户取消
@@ -27,7 +27,7 @@ class StripeConnectService {
         'publishableKey': publishableKey,
         'clientSecret': clientSecret,
       });
-      
+
       if (result is Map) {
         return result['status'] as String? ?? 'unknown';
       }
@@ -37,6 +37,33 @@ class StripeConnectService {
       rethrow;
     } catch (e) {
       AppLogger.error('StripeConnectService: openOnboarding unknown error', e);
+      rethrow;
+    }
+  }
+
+  /// 打开原生账户管理页面（用于已完成 onboarding 的 V2 账户更新收款信息）
+  ///
+  /// [publishableKey] Stripe Publishable Key
+  /// [clientSecret] AccountSession client_secret（需包含 account_management 组件）
+  Future<String> openAccountManagement({
+    required String publishableKey,
+    required String clientSecret,
+  }) async {
+    try {
+      final result = await _channel.invokeMethod('openAccountManagement', {
+        'publishableKey': publishableKey,
+        'clientSecret': clientSecret,
+      });
+
+      if (result is Map) {
+        return result['status'] as String? ?? 'unknown';
+      }
+      return 'unknown';
+    } on PlatformException catch (e) {
+      AppLogger.error('StripeConnectService: openAccountManagement failed', e);
+      rethrow;
+    } catch (e) {
+      AppLogger.error('StripeConnectService: openAccountManagement unknown error', e);
       rethrow;
     }
   }

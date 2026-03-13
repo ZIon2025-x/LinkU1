@@ -193,6 +193,41 @@ class _StripeConnectOnboardingViewState
     }
   }
 
+  /// 打开嵌入式账户管理（更新收款信息）
+  Future<void> _openAccountManagement() async {
+    final accountId = _accountDetails?.accountId;
+    if (accountId == null) return;
+
+    try {
+      final publishableKey = AppConfig.instance.stripePublishableKey;
+      if (publishableKey.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(context.l10n.stripeConnectKeyNotConfigured)),
+          );
+        }
+        return;
+      }
+
+      final session = await _paymentRepository.createAccountManagementSession(accountId);
+      final clientSecret = session['client_secret'] as String?;
+      if (clientSecret == null || clientSecret.isEmpty) return;
+
+      await StripeConnectService.instance.openAccountManagement(
+        publishableKey: publishableKey,
+        clientSecret: clientSecret,
+      );
+
+      // 管理完成后刷新账户详情
+      if (mounted) await _loadAccountDetails();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.localizeError(e.toString()))),
+      );
+    }
+  }
+
   /// 对标 iOS loadAccountDetails()
   Future<void> _loadAccountDetails() async {
     try {
@@ -345,6 +380,19 @@ class _StripeConnectOnboardingViewState
 
           // 操作按钮
           OutlinedButton.icon(
+            onPressed: _openAccountManagement,
+            icon: const Icon(Icons.edit_outlined, size: 18),
+            label: Text(l10n.stripeConnectManageAccount),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size(double.infinity, 48),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppRadius.medium),
+              ),
+              side: const BorderSide(color: AppColors.primary),
+            ),
+          ),
+          AppSpacing.vSm,
+          OutlinedButton.icon(
             onPressed: _loadAccountDetails,
             icon: const Icon(Icons.refresh, size: 18),
             label: Text(l10n.paymentRefreshAccountInfo),
@@ -353,7 +401,7 @@ class _StripeConnectOnboardingViewState
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(AppRadius.medium),
               ),
-              side: const BorderSide(color: AppColors.primary),
+              side: BorderSide(color: AppColors.primary.withValues(alpha: 0.5)),
             ),
           ),
           AppSpacing.vMd,

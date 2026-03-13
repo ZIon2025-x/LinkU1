@@ -1641,6 +1641,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'This feature is not supported for your account type';
 
   @override
+  String get stripeConnectManageAccount => 'Manage Account Info';
+
+  @override
   String get stripeOnboardingCreateFailed =>
       'Unable to create payout setup session, please try again';
 

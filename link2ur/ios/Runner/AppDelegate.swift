@@ -101,6 +101,24 @@ import SwiftUI
           from: controller,
           result: result
         )
+      case "openAccountManagement":
+        guard let self = self,
+              let args = call.arguments as? [String: Any],
+              let publishableKey = args["publishableKey"] as? String,
+              let clientSecret = args["clientSecret"] as? String else {
+          result(FlutterError(code: "INVALID_ARGS", message: "Missing publishableKey or clientSecret", details: nil))
+          return
+        }
+        guard let controller = self.currentFlutterViewController() else {
+          result(FlutterError(code: "NO_VC", message: "No Flutter view controller", details: nil))
+          return
+        }
+        self.stripeConnectHandler.openAccountManagement(
+          publishableKey: publishableKey,
+          clientSecret: clientSecret,
+          from: controller,
+          result: result
+        )
       default:
         result(FlutterMethodNotImplemented)
       }

@@ -651,6 +651,7 @@
   "stripeConnectDashboardOnboardingIncomplete": "Please complete account setup first",
   "stripeConnectDashboardAccountRestricted": "Account restricted, please contact Stripe support",
   "stripeConnectDashboardUnsupportedType": "This feature is not supported for your account type",
+  "stripeConnectManageAccount": "Manage Account Info",
   "stripeOnboardingCreateFailed": "Unable to create payout setup session, please try again",
   "stripeConnectKeyNotConfigured": "Payment configuration is missing. Please contact support.",
   "paymentGenericError": "Payment failed. Please try again.",

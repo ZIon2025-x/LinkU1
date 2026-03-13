@@ -12,10 +12,12 @@ import '../../../core/utils/logger.dart';
 import '../../../core/utils/sheet_adaptation.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/external_web_view.dart';
+import '../../../core/config/app_config.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../data/models/payment.dart';
 import '../../../data/repositories/payment_repository.dart';
+import '../../../data/services/stripe_connect_service.dart';
 
 /// Stripe Connect 提现管理页
 /// 对标 iOS StripeConnectPayoutsView.swift
@@ -149,7 +151,36 @@ class _StripeConnectPayoutsViewState extends State<StripeConnectPayoutsView> {
         );
         return;
       }
+      if (details.dashboardUnavailableReason == 'unsupported_account_type') {
+        // V2 账户使用嵌入式账户管理
+        await _openAccountManagement(details.accountId);
+        return;
+      }
       _showDashboardUnavailableSnackBar(details.dashboardUnavailableReason);
+    } catch (_) {
+      _showDashboardUnavailableSnackBar();
+    }
+  }
+
+  Future<void> _openAccountManagement(String accountId) async {
+    try {
+      final publishableKey = AppConfig.instance.stripePublishableKey;
+      if (publishableKey.isEmpty) return;
+
+      final session = await _repo.createAccountManagementSession(accountId);
+      final clientSecret = session['client_secret'] as String?;
+      if (clientSecret == null || clientSecret.isEmpty) {
+        _showDashboardUnavailableSnackBar();
+        return;
+      }
+
+      await StripeConnectService.instance.openAccountManagement(
+        publishableKey: publishableKey,
+        clientSecret: clientSecret,
+      );
+
+      // 管理完成后刷新数据
+      if (mounted) await _loadAll();
     } catch (_) {
       _showDashboardUnavailableSnackBar();
     }

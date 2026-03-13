@@ -1550,6 +1550,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get stripeConnectDashboardUnsupportedType => '当前账户类型不支持此功能';
 
   @override
+  String get stripeConnectManageAccount => '管理账户信息';
+
+  @override
   String get stripeOnboardingCreateFailed => '无法创建收款设置会话，请重试';
 
   @override
@@ -11307,6 +11310,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get stripeConnectDashboardUnsupportedType => '當前賬戶類型不支持此功能';
+
+  @override
+  String get stripeConnectManageAccount => '管理賬戶信息';
 
   @override
   String get stripeOnboardingCreateFailed => '無法創建收款設置會話，請重試';

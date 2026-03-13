@@ -253,6 +253,22 @@ class PaymentRepository {
     return response.data!;
   }
 
+  /// 创建账户管理 session（用于已完成 onboarding 的 V2 账户更新收款信息）
+  /// 返回包含 client_secret 的 Map
+  Future<Map<String, dynamic>> createAccountManagementSession(String accountId) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.stripeConnectAccountSession,
+      data: {
+        'account': accountId,
+        'enable_account_management': true,
+      },
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw PaymentException(response.message ?? '获取账户管理会话失败');
+    }
+    return response.data!;
+  }
+
   /// 获取Stripe Connect状态
   Future<StripeConnectStatus> getStripeConnectStatus() async {
     final response = await _apiService.get<Map<String, dynamic>>(

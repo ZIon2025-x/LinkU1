@@ -7411,7 +7411,7 @@ async def get_linkable_content_for_user(
 
     # 我的达人服务（当前用户是达人且有名下服务）
     expert_row = await db.execute(
-        select(models.TaskExpert.id).where(models.TaskExpert.user_id == current_user.id)
+        select(models.TaskExpert.id).where(models.TaskExpert.id == current_user.id)
     )
     expert_id = expert_row.scalar_one_or_none()
     if expert_id:

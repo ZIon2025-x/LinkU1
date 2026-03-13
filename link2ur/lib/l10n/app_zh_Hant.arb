@@ -1632,6 +1632,7 @@
   "stripeConnectDashboardOnboardingIncomplete": "請先完成賬戶設置後再訪問",
   "stripeConnectDashboardAccountRestricted": "賬戶已被限制，請聯繫 Stripe 支持",
   "stripeConnectDashboardUnsupportedType": "當前賬戶類型不支持此功能",
+  "stripeConnectManageAccount": "管理賬戶信息",
   "stripeOnboardingCreateFailed": "無法創建收款設置會話，請重試",
   "stripeConnectKeyNotConfigured": "支付配置缺失，請聯繫客服。",
   "paymentGenericError": "支付失敗，請重試。",

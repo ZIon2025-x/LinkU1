@@ -19,6 +19,8 @@ import '../../../data/models/coupon_points.dart';
 import '../../../data/models/payment.dart';
 import '../../../data/repositories/coupon_points_repository.dart';
 import '../../../data/repositories/payment_repository.dart';
+import '../../../data/services/stripe_connect_service.dart';
+import '../../../core/config/app_config.dart';
 import '../bloc/wallet_bloc.dart';
 
 /// 钱包页面
@@ -439,25 +441,29 @@ class _StripeConnectSection extends StatelessWidget {
             trailing: const Icon(Icons.chevron_right, size: 20),
             onTap: () async {
               final repo = context.read<PaymentRepository>();
+              final scaffoldMessenger = ScaffoldMessenger.of(context);
               try {
                 final details = await repo.getStripeConnectAccountDetails();
-                final url = details.dashboardUrl;
                 if (!context.mounted) return;
+                final url = details.dashboardUrl;
                 if (url != null && url.isNotEmpty) {
                   await ExternalWebView.openInApp(
                     context,
                     url: url,
                     title: context.l10n.stripeConnectOpenDashboard,
                   );
+                } else if (details.dashboardUnavailableReason == 'unsupported_account_type') {
+                  // V2 账户不支持 Express Dashboard，使用嵌入式账户管理
+                  await _openAccountManagement(context, details.accountId);
                 } else {
                   final msg = _dashboardUnavailableMessage(context, details.dashboardUnavailableReason);
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  scaffoldMessenger.showSnackBar(
                     SnackBar(content: Text(msg)),
                   );
                 }
               } catch (_) {
                 if (!context.mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
+                scaffoldMessenger.showSnackBar(
                   SnackBar(content: Text(context.l10n.stripeConnectDashboardUnavailable)),
                 );
               }
@@ -727,6 +733,42 @@ String _dashboardUnavailableMessage(BuildContext context, String? reason) {
     'unsupported_account_type' => l10n.stripeConnectDashboardUnsupportedType,
     _ => l10n.stripeConnectDashboardUnavailable,
   };
+}
+
+/// V2 账户打开嵌入式账户管理（替代 Express Dashboard）
+Future<void> _openAccountManagement(BuildContext context, String accountId) async {
+  final repo = context.read<PaymentRepository>();
+  final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+  try {
+    final publishableKey = AppConfig.instance.stripePublishableKey;
+    if (publishableKey.isEmpty) {
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(content: Text('Stripe key not configured')),
+      );
+      return;
+    }
+
+    final session = await repo.createAccountManagementSession(accountId);
+    final clientSecret = session['client_secret'] as String?;
+    if (clientSecret == null || clientSecret.isEmpty) {
+      if (!context.mounted) return;
+      scaffoldMessenger.showSnackBar(
+        SnackBar(content: Text(_dashboardUnavailableMessage(context, null))),
+      );
+      return;
+    }
+
+    await StripeConnectService.instance.openAccountManagement(
+      publishableKey: publishableKey,
+      clientSecret: clientSecret,
+    );
+  } catch (e) {
+    if (!context.mounted) return;
+    scaffoldMessenger.showSnackBar(
+      SnackBar(content: Text(context.localizeError(e.toString()))),
+    );
+  }
 }
 
 String _localizeCouponStatus(BuildContext context, String status) {

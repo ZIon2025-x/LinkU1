@@ -3087,6 +3087,12 @@ abstract class AppLocalizations {
   /// **'This feature is not supported for your account type'**
   String get stripeConnectDashboardUnsupportedType;
 
+  /// No description provided for @stripeConnectManageAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage Account Info'**
+  String get stripeConnectManageAccount;
+
   /// No description provided for @stripeOnboardingCreateFailed.
   ///
   /// In en, this message translates to:
