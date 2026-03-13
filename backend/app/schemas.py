@@ -2623,6 +2623,8 @@ class FleaMarketItemResponse(BaseModel):
     category: Optional[str]
     status: Literal["active", "sold", "deleted"]
     seller_id: str
+    seller_name: Optional[str] = None  # 卖家昵称
+    seller_avatar: Optional[str] = None  # 卖家头像URL
     seller_user_level: Optional[str] = None  # 卖家会员等级：normal, vip, super（用于「会员卖家」角标）
     view_count: int
     favorite_count: int = 0  # 收藏数量

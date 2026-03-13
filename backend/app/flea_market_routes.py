@@ -396,17 +396,22 @@ async def get_flea_market_items(
         result = await db.execute(query)
         items = result.scalars().all()
         
-        # 批量获取卖家会员等级（用于「会员卖家」角标）
+        # 批量获取卖家信息（昵称、头像、会员等级）
         seller_ids = list({item.seller_id for item in items})
         seller_levels = {}
+        seller_names = {}
+        seller_avatars = {}
         if seller_ids:
             seller_result = await db.execute(
-                select(models.User.id, models.User.user_level).where(models.User.id.in_(seller_ids))
+                select(models.User.id, models.User.name, models.User.avatar, models.User.user_level)
+                .where(models.User.id.in_(seller_ids))
             )
             for row in seller_result.all():
                 sid = row[0] if len(row) else None
                 if sid is not None:
-                    seller_levels[sid] = (row[1] if len(row) > 1 else None) or "normal"
+                    seller_names[sid] = row[1]
+                    seller_avatars[sid] = row[2]
+                    seller_levels[sid] = (row[3] if len(row) > 3 else None) or "normal"
         
         # 🔒 性能修复：批量查询所有商品的收藏计数，避免 N+1 查询
         item_ids = [item.id for item in items]
@@ -466,6 +471,8 @@ async def get_flea_market_items(
                 category=item.category,
                 status=item.status,
                 seller_id=item.seller_id,
+                seller_name=seller_names.get(item.seller_id),
+                seller_avatar=seller_avatars.get(item.seller_id),
                 seller_user_level=seller_levels.get(item.seller_id),
                 view_count=item.view_count or 0,
                 favorite_count=favorite_count,
@@ -653,11 +660,20 @@ async def get_flea_market_item(
                 user_purchase_request_status = user_purchase_request.status
                 user_purchase_request_proposed_price = float(user_purchase_request.proposed_price) if user_purchase_request.proposed_price else None
         
-        # 获取卖家会员等级（用于「会员卖家」角标）
+        # 获取卖家信息（昵称、头像、会员等级）
         seller_user_level = None
+        seller_name = None
+        seller_avatar = None
         if item.seller_id:
-            seller_result = await db.execute(select(models.User.user_level).where(models.User.id == item.seller_id))
-            seller_user_level = seller_result.scalar_one_or_none()
+            seller_result = await db.execute(
+                select(models.User.name, models.User.avatar, models.User.user_level)
+                .where(models.User.id == item.seller_id)
+            )
+            seller_row = seller_result.one_or_none()
+            if seller_row:
+                seller_name = seller_row[0]
+                seller_avatar = seller_row[1]
+                seller_user_level = seller_row[2]
         
         return schemas.FleaMarketItemResponse(
             id=format_flea_market_id(item.id),
@@ -670,6 +686,8 @@ async def get_flea_market_item(
             category=item.category,
             status=item.status,
             seller_id=item.seller_id,
+            seller_name=seller_name,
+            seller_avatar=seller_avatar,
             seller_user_level=seller_user_level,
             view_count=item.view_count or 0,
             favorite_count=favorite_count,
@@ -1317,13 +1335,18 @@ async def get_my_related_flea_items(
         item_ids = [item.id for item in items]
         seller_ids = list({item.seller_id for item in items})
         seller_levels = {}
+        seller_names = {}
+        seller_avatars = {}
         if seller_ids:
             seller_result = await db.execute(
-                select(models.User.id, models.User.user_level).where(models.User.id.in_(seller_ids))
+                select(models.User.id, models.User.name, models.User.avatar, models.User.user_level)
+                .where(models.User.id.in_(seller_ids))
             )
             for row in seller_result.all():
                 if row[0] is not None:
-                    seller_levels[row[0]] = (row[1] if len(row) > 1 else None) or "normal"
+                    seller_names[row[0]] = row[1]
+                    seller_avatars[row[0]] = row[2]
+                    seller_levels[row[0]] = (row[3] if len(row) > 3 else None) or "normal"
 
         favorite_counts_map = {}
         fav_result = await db.execute(
@@ -1417,6 +1440,8 @@ async def get_my_related_flea_items(
                 category=item.category,
                 status=item.status,
                 seller_id=item.seller_id,
+                seller_name=seller_names.get(item.seller_id),
+                seller_avatar=seller_avatars.get(item.seller_id),
                 seller_user_level=seller_levels.get(item.seller_id),
                 view_count=item.view_count or 0,
                 favorite_count=favorite_counts_map.get(item.id, 0),
@@ -1496,7 +1521,21 @@ async def get_my_purchases(
         # 执行查询
         result = await db.execute(query)
         rows = result.all()
-        
+
+        # 批量获取卖家信息
+        purchase_seller_ids = list({row[0].seller_id for row in rows if row[0].seller_id})
+        purchase_seller_names = {}
+        purchase_seller_avatars = {}
+        if purchase_seller_ids:
+            ps_result = await db.execute(
+                select(models.User.id, models.User.name, models.User.avatar)
+                .where(models.User.id.in_(purchase_seller_ids))
+            )
+            for ps_row in ps_result.all():
+                if ps_row[0] is not None:
+                    purchase_seller_names[ps_row[0]] = ps_row[1]
+                    purchase_seller_avatars[ps_row[0]] = ps_row[2]
+
         # 格式化响应（含待支付信息，便于用户在「收的闲置」中继续支付）
         formatted_items = []
         for row in rows:
@@ -1564,6 +1603,8 @@ async def get_my_purchases(
                 category=item.category,
                 status=item.status,
                 seller_id=item.seller_id,
+                seller_name=purchase_seller_names.get(item.seller_id),
+                seller_avatar=purchase_seller_avatars.get(item.seller_id),
                 view_count=item.view_count or 0,
                 refreshed_at=format_iso_utc(item.refreshed_at),
                 created_at=format_iso_utc(item.created_at),

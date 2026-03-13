@@ -1906,11 +1906,8 @@ class _SellerCard extends StatelessWidget {
             child: Row(
               children: [
               Container(
-                width: 56,
-                height: 56,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppColors.primary,
                   border: Border.all(color: Colors.white, width: 3),
                   boxShadow: [
                     BoxShadow(
@@ -1920,7 +1917,11 @@ class _SellerCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: const Icon(Icons.person, color: Colors.white, size: 24),
+                child: AvatarView(
+                  imageUrl: item.sellerAvatar,
+                  name: item.sellerName,
+                  size: 50,
+                ),
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
@@ -1929,14 +1930,17 @@ class _SellerCard extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Text(
-                          context.l10n.fleaMarketSeller,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: isDark
-                                ? AppColors.textPrimaryDark
-                                : AppColors.textPrimaryLight,
+                        Flexible(
+                          child: Text(
+                            item.sellerName ?? context.l10n.fleaMarketSeller,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: isDark
+                                  ? AppColors.textPrimaryDark
+                                  : AppColors.textPrimaryLight,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         const SizedBox(width: 6),

@@ -17,6 +17,8 @@ class FleaMarketItem extends Equatable {
     this.category,
     this.status = AppConstants.fleaMarketStatusActive,
     required this.sellerId,
+    this.sellerName,
+    this.sellerAvatar,
     this.sellerUserLevel,
     this.viewCount = 0,
     this.favoriteCount = 0,
@@ -61,6 +63,8 @@ class FleaMarketItem extends Equatable {
   final String? category;
   final String status; // active, sold, deleted
   final String sellerId;
+  final String? sellerName;
+  final String? sellerAvatar;
   final String? sellerUserLevel; // normal, vip, super
   final int viewCount;
   final int favoriteCount;
@@ -135,6 +139,8 @@ class FleaMarketItem extends Equatable {
       status: _toStringNullable(json['status']) ??
           AppConstants.fleaMarketStatusActive,
       sellerId: json['seller_id']?.toString() ?? '',
+      sellerName: _toStringNullable(json['seller_name']),
+      sellerAvatar: _toStringNullable(json['seller_avatar']),
       sellerUserLevel: _toStringNullable(json['seller_user_level']),
       viewCount: _toInt(json['view_count']),
       favoriteCount: _toInt(json['favorite_count']),
@@ -182,6 +188,8 @@ class FleaMarketItem extends Equatable {
       'category': category,
       'status': status,
       'seller_id': sellerId,
+      'seller_name': sellerName,
+      'seller_avatar': sellerAvatar,
       'seller_user_level': sellerUserLevel,
       'view_count': viewCount,
       'favorite_count': favoriteCount,
@@ -221,6 +229,8 @@ class FleaMarketItem extends Equatable {
     String? category,
     String? status,
     String? sellerId,
+    String? sellerName,
+    String? sellerAvatar,
     String? sellerUserLevel,
     int? viewCount,
     int? favoriteCount,
@@ -258,6 +268,8 @@ class FleaMarketItem extends Equatable {
       category: category ?? this.category,
       status: status ?? this.status,
       sellerId: sellerId ?? this.sellerId,
+      sellerName: sellerName ?? this.sellerName,
+      sellerAvatar: sellerAvatar ?? this.sellerAvatar,
       sellerUserLevel: sellerUserLevel ?? this.sellerUserLevel,
       viewCount: viewCount ?? this.viewCount,
       favoriteCount: favoriteCount ?? this.favoriteCount,
