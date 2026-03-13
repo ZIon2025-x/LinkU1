@@ -77,7 +77,6 @@ class _VideoPlayerViewState extends State<VideoPlayerView> {
                   image: CachedNetworkImageProvider(
                     widget.thumbnailUrl!,
                     maxWidth: 600,
-                    maxHeight: 400,
                   ),
                   fit: BoxFit.cover,
                 )

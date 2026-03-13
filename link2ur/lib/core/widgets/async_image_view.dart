@@ -262,7 +262,6 @@ class AvatarView extends StatelessWidget {
           height: size,
           fit: BoxFit.cover,
           memCacheWidth: cacheSize,
-          memCacheHeight: cacheSize,
           placeholder: (context, url) => _buildPlaceholder(context),
           errorWidget: (context, url, error) => _buildPlaceholder(context),
         ),

@@ -1048,7 +1048,6 @@ class _TargetItemTag extends StatelessWidget {
                 child: AsyncImageView(
                   imageUrl: target.thumbnail!,
                   memCacheWidth: 84,
-                  memCacheHeight: 84,
                 ),
               ),
             )
