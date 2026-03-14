@@ -3404,7 +3404,7 @@ class OfficialTask(Base):
     valid_from = Column(DateTime(timezone=True), nullable=True)
     valid_until = Column(DateTime(timezone=True), nullable=True)
     is_active = Column(Boolean, default=True)
-    created_by = Column(Integer, nullable=True)
+    created_by = Column(String(5), nullable=True)  # AdminUser.id is String(5)
     created_at = Column(DateTime(timezone=True), default=get_utc_time)
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
 
