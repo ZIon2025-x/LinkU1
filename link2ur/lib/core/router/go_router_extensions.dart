@@ -31,6 +31,16 @@ extension GoRouterExtension on BuildContext {
     push(location, extra: extra);
   }
 
+  /// 安全返回：有导航历史则 pop，否则跳转首页
+  /// 解决深链接直接打开详情页时 pop 无效的问题
+  void safePop<T extends Object?>([T? result]) {
+    if (canPop()) {
+      pop(result);
+    } else {
+      go('/');
+    }
+  }
+
   /// 带防抖的 go
   void safeGo(String location, {Object? extra}) {
     if (!_NavigationThrottle.acquire()) return;

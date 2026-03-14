@@ -2,7 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
+import '../../../core/router/go_router_extensions.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/constants/app_constants.dart';
@@ -132,7 +132,7 @@ class _ActivityDetailViewContent extends StatelessWidget {
           button: true,
           label: 'Go back',
           child: GestureDetector(
-            onTap: () => context.pop(),
+            onTap: () => context.safePop(),
             child: Container(
               width: 36,
               height: 36,

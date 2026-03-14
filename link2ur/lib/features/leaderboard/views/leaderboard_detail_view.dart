@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/router/go_router_extensions.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/utils/adaptive_dialogs.dart';
 import '../../../core/utils/system_context_menu.dart';
@@ -222,7 +223,7 @@ class _LeaderboardDetailContentState
           button: true,
           label: 'Go back',
           child: GestureDetector(
-          onTap: () => context.pop(),
+          onTap: () => context.safePop(),
           child: Container(
             width: 36,
             height: 36,

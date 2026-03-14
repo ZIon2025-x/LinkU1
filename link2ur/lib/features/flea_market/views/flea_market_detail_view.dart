@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/router/go_router_extensions.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_radius.dart';
@@ -208,7 +209,7 @@ class _FleaMarketDetailContent extends StatelessWidget {
         icon: Icons.arrow_back_ios_new,
         onTap: () {
           AppHaptics.selection();
-          context.pop();
+          context.safePop();
         },
       ),
       actions: [

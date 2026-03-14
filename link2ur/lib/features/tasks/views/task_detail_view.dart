@@ -216,7 +216,12 @@ class _TaskDetailContent extends StatelessWidget {
         final isTaker =
             task != null && task.takerId != null && currentUserId == task.takerId;
 
-        return Scaffold(
+        return PopScope(
+          canPop: context.canPop(),
+          onPopInvokedWithResult: (didPop, _) {
+            if (!didPop) context.go('/');
+          },
+          child: Scaffold(
           extendBodyBehindAppBar: true,
           appBar: _buildAppBar(context, state),
           body: Center(
@@ -229,6 +234,7 @@ class _TaskDetailContent extends StatelessWidget {
               state.isLoaded && task != null
                   ? _buildBottomBar(context, state, isPoster, isTaker, currentUserId)
                   : null,
+        ),
         );
       },
     );
@@ -280,7 +286,7 @@ class _TaskDetailContent extends StatelessWidget {
         child: GlassButton(
           onTap: () {
             AppHaptics.selection();
-            context.pop();
+            context.safePop();
           },
           child: const Icon(Icons.arrow_back_ios_new,
               size: 18, color: Colors.white),
