@@ -9473,6 +9473,22 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get officialTaskGoPost => '去发帖';
+
+  @override
+  String get officialTaskExpired => '已过期';
+
+  @override
+  String officialTaskRewardEarned(String amount) {
+    return '官方任务完成！获得 $amount 积分';
+  }
+
+  @override
+  String officialTaskLinked(String title) {
+    return '官方任务：$title';
+  }
+
+  @override
   String get skillLeaderboard => '技能排行榜';
 
   @override
@@ -19232,6 +19248,22 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String officialTaskSubmissions(String count) {
     return '$count 次提交';
+  }
+
+  @override
+  String get officialTaskGoPost => '去發帖';
+
+  @override
+  String get officialTaskExpired => '已過期';
+
+  @override
+  String officialTaskRewardEarned(String amount) {
+    return '官方任務完成！獲得 $amount 積分';
+  }
+
+  @override
+  String officialTaskLinked(String title) {
+    return '官方任務：$title';
   }
 
   @override

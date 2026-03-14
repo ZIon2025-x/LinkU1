@@ -18140,6 +18140,30 @@ abstract class AppLocalizations {
   /// **'{count} submissions'**
   String officialTaskSubmissions(String count);
 
+  /// No description provided for @officialTaskGoPost.
+  ///
+  /// In en, this message translates to:
+  /// **'Go Post'**
+  String get officialTaskGoPost;
+
+  /// No description provided for @officialTaskExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Expired'**
+  String get officialTaskExpired;
+
+  /// SnackBar message when user completes an official task
+  ///
+  /// In en, this message translates to:
+  /// **'Official task completed! Earned {amount} points'**
+  String officialTaskRewardEarned(String amount);
+
+  /// Banner shown in create post view when linked to an official task
+  ///
+  /// In en, this message translates to:
+  /// **'Official Task: {title}'**
+  String officialTaskLinked(String title);
+
   /// No description provided for @skillLeaderboard.
   ///
   /// In en, this message translates to:

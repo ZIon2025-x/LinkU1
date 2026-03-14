@@ -9876,6 +9876,22 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get officialTaskGoPost => 'Go Post';
+
+  @override
+  String get officialTaskExpired => 'Expired';
+
+  @override
+  String officialTaskRewardEarned(String amount) {
+    return 'Official task completed! Earned $amount points';
+  }
+
+  @override
+  String officialTaskLinked(String title) {
+    return 'Official Task: $title';
+  }
+
+  @override
   String get skillLeaderboard => 'Skill Leaderboard';
 
   @override
