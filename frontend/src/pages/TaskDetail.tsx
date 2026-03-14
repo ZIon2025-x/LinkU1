@@ -89,6 +89,21 @@ const TaskDetail: React.FC = () => {
   const [participants, setParticipants] = useState<any[]>([]);
   const [loadingParticipants, setLoadingParticipants] = useState(false);
   const [userParticipant, setUserParticipant] = useState<any>(null);
+  // 图片查看相关状态
+  const [enlargedImageIndex, setEnlargedImageIndex] = useState<number | null>(null);
+
+  // 图片放大键盘事件
+  useEffect(() => {
+    if (enlargedImageIndex === null || !task?.images) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setEnlargedImageIndex(null);
+      else if (e.key === 'ArrowLeft') setEnlargedImageIndex((enlargedImageIndex - 1 + task.images.length) % task.images.length);
+      else if (e.key === 'ArrowRight') setEnlargedImageIndex((enlargedImageIndex + 1) % task.images.length);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [enlargedImageIndex, task?.images]);
+
   // 收款账户注册弹窗
   const paymentCountdownExpiresAt = task?.status === 'pending_payment' && task?.payment_expires_at ? task.payment_expires_at : null;
   const { formatted: paymentCountdownFormatted, isExpired: paymentCountdownExpired } = usePaymentCountdown(paymentCountdownExpiresAt);
@@ -2697,7 +2712,77 @@ const TaskDetail: React.FC = () => {
             whiteSpace: 'pre-wrap'
           }}>{translatedDescription || getTaskDisplayDescription(task, language)}</div>
         </div>
-        
+
+        {/* 任务图片 */}
+        {task.images && Array.isArray(task.images) && task.images.length > 0 && (
+          <div style={{
+            background: '#f8fafc',
+            padding: '24px',
+            borderRadius: '16px',
+            border: '2px solid #e2e8f0',
+            marginBottom: '32px',
+            position: 'relative',
+            zIndex: 1
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+              <div style={{ fontSize: '20px' }}>🖼️</div>
+              <h3 style={{
+                fontSize: '18px',
+                fontWeight: '600',
+                color: '#1e293b',
+                margin: 0
+              }}>{language === 'zh' ? '任务图片' : 'Task Images'}</h3>
+              <span style={{ fontSize: '14px', color: '#94a3b8' }}>
+                {task.images.length} {language === 'zh' ? '张' : task.images.length === 1 ? 'image' : 'images'}
+              </span>
+            </div>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: `repeat(auto-fill, minmax(${task.images.length === 1 ? '300px' : '180px'}, 1fr))`,
+              gap: '12px'
+            }}>
+              {task.images.map((img: string, idx: number) => (
+                <div
+                  key={idx}
+                  onClick={() => setEnlargedImageIndex(idx)}
+                  style={{
+                    position: 'relative',
+                    paddingBottom: task.images.length === 1 ? '60%' : '100%',
+                    borderRadius: '12px',
+                    overflow: 'hidden',
+                    cursor: 'pointer',
+                    border: '2px solid #e2e8f0',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'scale(1.02)';
+                    e.currentTarget.style.borderColor = '#667eea';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(102,126,234,0.3)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'scale(1)';
+                    e.currentTarget.style.borderColor = '#e2e8f0';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                >
+                  <LazyImage
+                    src={ensureAbsoluteImageUrl(img)}
+                    alt={`${language === 'zh' ? '任务图片' : 'Task image'} ${idx + 1}`}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover'
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* 金额/积分显示区域 */}
         {(() => {
           const moneyReward = (task.agreed_reward ?? task.base_reward ?? task.reward) || 0;
@@ -4346,7 +4431,139 @@ const TaskDetail: React.FC = () => {
       )}
       
       {/* 登录弹窗 */}
-      <LoginModal 
+      {/* 图片放大查看 */}
+      {enlargedImageIndex !== null && task?.images && (
+        <div
+          onClick={() => setEnlargedImageIndex(null)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(0,0,0,0.9)',
+            zIndex: 2000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer'
+          }}
+        >
+          {/* 关闭按钮 */}
+          <button
+            onClick={() => setEnlargedImageIndex(null)}
+            style={{
+              position: 'absolute',
+              top: '20px',
+              right: '20px',
+              background: 'rgba(255,255,255,0.2)',
+              border: 'none',
+              color: '#fff',
+              fontSize: '28px',
+              width: '44px',
+              height: '44px',
+              borderRadius: '50%',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 2001
+            }}
+          >
+            ✕
+          </button>
+          {/* 上一张 */}
+          {task.images.length > 1 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setEnlargedImageIndex((enlargedImageIndex - 1 + task.images.length) % task.images.length);
+              }}
+              style={{
+                position: 'absolute',
+                left: '16px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'rgba(255,255,255,0.2)',
+                border: 'none',
+                color: '#fff',
+                fontSize: '24px',
+                width: '48px',
+                height: '48px',
+                borderRadius: '50%',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 2001
+              }}
+            >
+              ◀
+            </button>
+          )}
+          {/* 图片 */}
+          <img
+            src={ensureAbsoluteImageUrl(task.images[enlargedImageIndex])}
+            alt={`${language === 'zh' ? '任务图片' : 'Task image'} ${enlargedImageIndex + 1}`}
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: '90vw',
+              maxHeight: '85vh',
+              objectFit: 'contain',
+              borderRadius: '8px',
+              cursor: 'default'
+            }}
+          />
+          {/* 下一张 */}
+          {task.images.length > 1 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setEnlargedImageIndex((enlargedImageIndex + 1) % task.images.length);
+              }}
+              style={{
+                position: 'absolute',
+                right: '16px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'rgba(255,255,255,0.2)',
+                border: 'none',
+                color: '#fff',
+                fontSize: '24px',
+                width: '48px',
+                height: '48px',
+                borderRadius: '50%',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 2001
+              }}
+            >
+              ▶
+            </button>
+          )}
+          {/* 图片计数 */}
+          {task.images.length > 1 && (
+            <div style={{
+              position: 'absolute',
+              bottom: '24px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              color: '#fff',
+              fontSize: '16px',
+              fontWeight: '600',
+              background: 'rgba(0,0,0,0.5)',
+              padding: '8px 16px',
+              borderRadius: '20px'
+            }}>
+              {enlargedImageIndex + 1} / {task.images.length}
+            </div>
+          )}
+        </div>
+      )}
+
+      <LoginModal
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}
         onSuccess={() => {

@@ -1681,7 +1681,7 @@ export async function getContentReviews(params: {
 }
 
 export async function reviewContent(reviewId: number, data: {
-  action: 'approved' | 'rejected'; reason?: string;
+  action: 'approved' | 'rejected' | 'restored'; reason?: string;
 }) {
   const res = await api.put(`/api/admin/content-moderation/content-reviews/${reviewId}`, data);
   return res.data;
