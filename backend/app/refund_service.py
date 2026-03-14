@@ -245,7 +245,7 @@ def process_refund(
             if task.taker_id and task.escrow_amount > 0:
                 try:
                     from app.payment_transfer_service import create_transfer_record, execute_transfer
-                    from app import crud
+                    # crud 已在文件顶部 import，不要重复 import（会导致 UnboundLocalError）
                     from sqlalchemy import and_, func
                     
                     # ✅ 安全检查：检查是否已有成功的转账记录（防止重复转账）
