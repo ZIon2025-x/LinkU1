@@ -232,6 +232,7 @@ class ForumState extends Equatable {
     this.repliesPage = 1,
     this.repliesHasMore = true,
     this.isLoadingMoreReplies = false,
+    this.lastOfficialTaskReward,
   });
 
   final ForumStatus status;
@@ -264,6 +265,7 @@ class ForumState extends Equatable {
   final bool repliesHasMore;
   /// 回复分页：是否正在加载更多回复
   final bool isLoadingMoreReplies;
+  final Map<String, dynamic>? lastOfficialTaskReward;
 
   bool get isLoading => status == ForumStatus.loading;
 
@@ -294,6 +296,8 @@ class ForumState extends Equatable {
     int? repliesPage,
     bool? repliesHasMore,
     bool? isLoadingMoreReplies,
+    Map<String, dynamic>? lastOfficialTaskReward,
+    bool clearOfficialTaskReward = false,
   }) {
     return ForumState(
       status: status ?? this.status,
@@ -323,6 +327,7 @@ class ForumState extends Equatable {
       repliesPage: repliesPage ?? this.repliesPage,
       repliesHasMore: repliesHasMore ?? this.repliesHasMore,
       isLoadingMoreReplies: isLoadingMoreReplies ?? this.isLoadingMoreReplies,
+      lastOfficialTaskReward: clearOfficialTaskReward ? null : (lastOfficialTaskReward ?? this.lastOfficialTaskReward),
     );
   }
 
@@ -353,6 +358,7 @@ class ForumState extends Equatable {
         repliesPage,
         repliesHasMore,
         isLoadingMoreReplies,
+        lastOfficialTaskReward,
       ];
 }
 
@@ -847,6 +853,7 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
       emit(state.copyWith(
         isCreatingPost: false,
         createPostSuccess: true,
+        lastOfficialTaskReward: post.officialTaskReward,
         posts: [post, ...state.posts],
       ));
     } catch (e) {
