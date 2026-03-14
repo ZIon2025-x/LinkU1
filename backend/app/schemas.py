@@ -3312,11 +3312,18 @@ class ForumPostAttachment(BaseModel):
     content_type: Optional[str] = Field(None, description="MIME类型，如 application/pdf")
 
 
+class OfficialTaskRewardInfo(BaseModel):
+    """Reward info returned when an official task is completed via forum post."""
+    reward_type: str
+    reward_amount: int
+
+
 class ForumPostCreate(ForumPostBase):
     images: Optional[List[str]] = Field(None, max_length=5, description="帖子图片URL列表，最多5张")
     attachments: Optional[List[ForumPostAttachment]] = Field(None, max_length=1, description="文件附件列表，最多1个，可与图片同时存在")
     linked_item_type: Optional[str] = Field(None, description="关联内容类型: service/expert/activity/product/ranking/forum_post")
     linked_item_id: Optional[str] = Field(None, description="关联内容ID")
+    official_task_id: Optional[int] = Field(None, description="关联的官方任务ID，发帖时自动提交+领取奖励")
 
     @field_validator('images')
     @classmethod
@@ -3414,7 +3421,8 @@ class ForumPostOut(BaseModel):
     created_at: datetime.datetime
     updated_at: datetime.datetime
     last_reply_at: Optional[datetime.datetime] = None
-    
+    official_task_reward: Optional[OfficialTaskRewardInfo] = None
+
     class Config:
         from_attributes = True
 
