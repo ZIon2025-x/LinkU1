@@ -51,7 +51,7 @@ class UserRepository {
 
   /// 上传头像：先上传图片获取 URL，再 PATCH 更新
   Future<User> uploadAvatar(Uint8List bytes, String filename) async {
-    final imageUrl = await uploadPublicImage(bytes, filename);
+    final imageUrl = await _uploadAvatarImage(bytes, filename);
 
     final response = await _apiService.patch<Map<String, dynamic>>(
       ApiEndpoints.uploadAvatar,
@@ -233,7 +233,23 @@ class UserRepository {
     return response.data!['url'] as String? ?? '';
   }
 
-  /// 上传公开图片（头像、任务图片等）
+  /// 上传用户头像图片到 expert_avatar 分类（正式目录，非 temp）
+  Future<String> _uploadAvatarImage(Uint8List bytes, String filename) async {
+    final response = await _apiService.uploadFileBytes<Map<String, dynamic>>(
+      '${ApiEndpoints.uploadPublicImage}?category=expert_avatar',
+      bytes: bytes,
+      filename: filename,
+      fieldName: 'image',
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw UserException(response.message ?? '上传头像失败');
+    }
+
+    return response.data!['url'] as String? ?? '';
+  }
+
+  /// 上传公开图片（任务图片等）
   Future<String> uploadPublicImage(Uint8List bytes, String filename) async {
     final response = await _apiService.uploadFileBytes<Map<String, dynamic>>(
       ApiEndpoints.uploadPublicImage,

@@ -44,6 +44,67 @@ def extract_filename_from_url(url: str) -> Optional[str]:
         return None
 
 
+def delete_user_avatar(user_id: str, old_avatar_url: Optional[str] = None):
+    """删除用户的旧头像（支持 expert_avatars 和 temp 目录两种路径）"""
+    if not old_avatar_url:
+        return
+
+    try:
+        # 从 URL 提取实际存储路径
+        relative_path = _extract_relative_path(old_avatar_url)
+        if not relative_path:
+            # 回退到 expert_avatars 路径
+            delete_expert_avatar(user_id, old_avatar_url)
+            return
+
+        if _is_cloud_storage():
+            storage = _get_storage_backend()
+            if storage:
+                try:
+                    if storage.delete(relative_path):
+                        logger.info(f"删除用户 {user_id} 的旧头像（云存储）: {relative_path}")
+                        return
+                    else:
+                        logger.warning(f"删除用户 {user_id} 的旧头像失败（云存储）: {relative_path}")
+                except Exception as e:
+                    logger.warning(f"使用云存储删除头像失败 {user_id}: {e}")
+        else:
+            # 本地存储
+            RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
+            base = Path("/data/uploads") if RAILWAY_ENVIRONMENT else Path("uploads")
+            avatar_file = base / relative_path
+            if avatar_file.exists():
+                avatar_file.unlink()
+                logger.info(f"删除用户 {user_id} 的旧头像（本地）: {relative_path}")
+                # 如果文件夹为空，尝试删除
+                try:
+                    parent = avatar_file.parent
+                    if not any(parent.iterdir()):
+                        parent.rmdir()
+                except Exception:
+                    pass
+    except Exception as e:
+        logger.warning(f"删除用户头像失败 {user_id}: {e}")
+
+
+def _extract_relative_path(url: str) -> Optional[str]:
+    """从图片 URL 提取 R2/本地存储的相对路径"""
+    if not url:
+        return None
+    try:
+        parsed = urlparse(url if '://' in url else f'https://{url}')
+        path = parsed.path.lstrip('/')
+        # 去掉 uploads/ 前缀
+        if path.startswith('uploads/'):
+            path = path[len('uploads/'):]
+        # 验证路径包含公开图片目录
+        if path.startswith('public/'):
+            return path
+        return None
+    except Exception:
+        return None
+
+
 def delete_expert_avatar(expert_id: str, old_avatar_url: Optional[str] = None):
     """删除任务达人的旧头像"""
     if not old_avatar_url:

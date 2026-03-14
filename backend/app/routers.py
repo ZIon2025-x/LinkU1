@@ -5252,11 +5252,11 @@ def update_avatar(
         except Exception as e:
             logger.warning(f"头像更新后清除用户缓存失败 (user_id={current_user.id}): {e}")
 
-        # 删除旧头像文件（异步，失败不影响更新）
+        # 删除旧头像文件（失败不影响更新）
         if old_avatar and old_avatar != data.avatar and "/static/" not in old_avatar:
             try:
-                from app.image_cleanup import delete_expert_avatar
-                delete_expert_avatar(str(current_user.id), old_avatar)
+                from app.image_cleanup import delete_user_avatar
+                delete_user_avatar(str(current_user.id), old_avatar)
             except Exception as e:
                 logger.warning(f"删除旧头像失败 (user_id={current_user.id}): {e}")
 

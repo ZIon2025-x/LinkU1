@@ -389,6 +389,8 @@ class ImageProcessor:
             from PIL import Image, ExifTags
             
             with Image.open(io.BytesIO(content)) as img:
+                # 旋转后 img.format 会丢失，提前保存
+                original_format = img.format or 'JPEG'
                 # 查找 Orientation 标签
                 exif = img.getexif()
                 if not exif:
@@ -423,10 +425,10 @@ class ImageProcessor:
                 else:
                     return content
                 
-                # 保存修正后的图片
+                # 保存修正后的图片（高质量，避免不必要的压缩损失）
                 output = io.BytesIO()
-                img_format = img.format or 'JPEG'
-                img.save(output, format=img_format)
+                save_kwargs = self._get_save_kwargs(original_format.lower(), quality=95)
+                img.save(output, format=original_format, **save_kwargs)
                 return output.getvalue()
                 
         except Exception as e:
@@ -436,37 +438,38 @@ class ImageProcessor:
     def strip_metadata(self, content: bytes) -> Tuple[bytes, str]:
         """
         移除图片的 EXIF 等元数据（保护隐私）
-        
+
         Args:
             content: 原始图片内容
-            
+
         Returns:
             (去除元数据的图片内容, 文件扩展名)
         """
         if not self.pillow_available:
             ext = self._detect_extension(content)
             return content, ext
-        
+
         try:
             from PIL import Image
-            
+
             with Image.open(io.BytesIO(content)) as img:
-                # 创建不含 EXIF 的新图片
-                data = list(img.getdata())
-                img_without_exif = Image.new(img.mode, img.size)
-                img_without_exif.putdata(data)
-                
-                # 保存
-                output = io.BytesIO()
                 img_format = img.format or 'JPEG'
-                img_without_exif.save(output, format=img_format)
-                
+
+                # 复制像素数据，不携带元数据
+                cleaned = img.copy()
+                cleaned.info = {}
+
+                # 高质量保存，最终质量由后续 compress 步骤控制
+                output = io.BytesIO()
+                save_kwargs = self._get_save_kwargs(img_format.lower(), quality=95)
+                cleaned.save(output, format=img_format, **save_kwargs)
+
                 ext = f".{img_format.lower()}"
                 if ext == '.jpeg':
                     ext = '.jpg'
-                
+
                 return output.getvalue(), ext
-                
+
         except Exception as e:
             logger.error(f"移除元数据失败: {e}")
             ext = self._detect_extension(content)
