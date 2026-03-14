@@ -17,6 +17,8 @@ from sqlalchemy.orm.attributes import NO_VALUE
 
 from app import models, schemas
 from app.deps import get_async_db_dependency
+from app.database import get_db  # sync session for points transaction
+from app.coupon_points_crud import add_points_transaction
 from app.utils.time_utils import get_utc_time
 from app.performance_monitor import measure_api_performance
 from app.cache import cache_response
@@ -3093,7 +3095,86 @@ async def create_post(
     from app.redis_cache import invalidate_forum_cache, invalidate_discovery_cache
     invalidate_forum_cache()
     invalidate_discovery_cache()
-    
+
+    # === Official Task: submit + claim reward ===
+    official_task_reward = None
+    if post.official_task_id is not None and db_post.author_id:
+        try:
+            # Use sync session for add_points_transaction compatibility
+            sync_db = next(get_db())
+            try:
+                # Validate official task
+                task = sync_db.query(models.OfficialTask).filter(
+                    models.OfficialTask.id == post.official_task_id,
+                    models.OfficialTask.is_active == True,
+                    models.OfficialTask.task_type == "forum_post",
+                ).first()
+
+                if task is None:
+                    logger.warning(f"Official task {post.official_task_id} not found or inactive")
+                elif task.valid_until and task.valid_until < get_utc_time():
+                    logger.warning(f"Official task {post.official_task_id} has expired")
+                elif task.valid_from and task.valid_from > get_utc_time():
+                    logger.warning(f"Official task {post.official_task_id} not yet started")
+                else:
+                    # Check max_per_user with FOR UPDATE lock
+                    submission_count = sync_db.query(
+                        func.count(models.OfficialTaskSubmission.id)
+                    ).filter(
+                        models.OfficialTaskSubmission.user_id == db_post.author_id,
+                        models.OfficialTaskSubmission.official_task_id == task.id,
+                    ).with_for_update().scalar() or 0
+
+                    if submission_count >= task.max_per_user:
+                        logger.warning(f"User {db_post.author_id} reached max submissions for task {task.id}")
+                    else:
+                        # Create submission with status=claimed
+                        now = get_utc_time()
+                        submission = models.OfficialTaskSubmission(
+                            user_id=db_post.author_id,
+                            official_task_id=task.id,
+                            forum_post_id=db_post.id,
+                            status="claimed",
+                            submitted_at=now,
+                            claimed_at=now,
+                            reward_amount=task.reward_amount,
+                        )
+                        sync_db.add(submission)
+
+                        # Award points
+                        if task.reward_type == "points" and task.reward_amount > 0:
+                            add_points_transaction(
+                                db=sync_db,
+                                user_id=db_post.author_id,
+                                type="earn",
+                                amount=task.reward_amount,
+                                source="official_task",
+                                related_id=task.id,
+                                related_type="official_task",
+                                description=f"Official task reward: {task.title_zh or task.title_en}",
+                                idempotency_key=f"official_task_{task.id}_user_{db_post.author_id}_post_{db_post.id}",
+                            )
+
+                        sync_db.commit()
+                        official_task_reward = schemas.OfficialTaskRewardInfo(
+                            reward_type=task.reward_type,
+                            reward_amount=task.reward_amount,
+                        )
+                        logger.info(f"Official task {task.id} completed by user {db_post.author_id}, reward: {task.reward_amount} {task.reward_type}")
+            except Exception as e:
+                logger.error(f"Failed to process official task {post.official_task_id}: {e}")
+                try:
+                    sync_db.rollback()
+                except Exception:
+                    pass
+            finally:
+                try:
+                    sync_db.close()
+                except Exception:
+                    pass
+        except Exception as e:
+            logger.error(f"Failed to get sync db session for official task: {e}")
+
     # 加载关联数据
     await db.refresh(db_post, ["category"])
     if db_post.author_id:
@@ -3130,7 +3211,8 @@ async def create_post(
         linked_item_name=await _resolve_linked_item_name(db, db_post.linked_item_type, db_post.linked_item_id),
         created_at=db_post.created_at,
         updated_at=db_post.updated_at,
-        last_reply_at=db_post.last_reply_at
+        last_reply_at=db_post.last_reply_at,
+        official_task_reward=official_task_reward,
     )
 
 
