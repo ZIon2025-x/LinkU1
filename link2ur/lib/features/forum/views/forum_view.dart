@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/utils/auth_guard.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/utils/l10n_extension.dart';
@@ -931,11 +932,11 @@ class _CategoryCard extends StatelessWidget {
                 size: 22,
                 color: category.isFavorited ? AppColors.error : null,
               ),
-              onPressed: () {
+              onPressed: () => requireAuth(context, () {
                 AppHaptics.selection();
                 context.read<ForumBloc>().add(
                     ForumToggleCategoryFavorite(category.id));
-              },
+              }),
               tooltip: context.l10n.forumFavorite,
             ),
 

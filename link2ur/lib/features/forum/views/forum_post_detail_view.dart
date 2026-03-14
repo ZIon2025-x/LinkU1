@@ -10,6 +10,7 @@ import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/adaptive_dialogs.dart';
 import '../../../core/utils/system_context_menu.dart';
 import '../../../core/utils/helpers.dart';
+import '../../../core/utils/auth_guard.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/router/page_transitions.dart';
@@ -238,10 +239,10 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                           post.isFavorited ? Icons.star : Icons.star_border,
                           color: post.isFavorited ? AppColors.gold : null,
                         ),
-                        onPressed: () {
+                        onPressed: () => requireAuth(context, () {
                           AppHaptics.selection();
                           context.read<ForumBloc>().add(ForumFavoritePost(widget.postId));
-                        },
+                        }),
                         tooltip: context.l10n.forumFavorite,
                       ),
                     IconButton(
@@ -599,11 +600,11 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                               isLiked: post.isLiked,
                               size: 22,
                               likedColor: AppColors.accentPink,
-                              onTap: () {
+                              onTap: () => requireAuth(context, () {
                                 context
                                     .read<ForumBloc>()
                                     .add(ForumLikePost(widget.postId));
-                              },
+                              }),
                             ),
                             const SizedBox(width: 12),
                           ],
@@ -650,7 +651,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                                           child: GestureDetector(
                                             onTap: state.isReplying
                                                 ? null
-                                                : () {
+                                                : () => requireAuth(context, () {
                                                     AppHaptics.selection();
                                                     context.read<ForumBloc>().add(
                                                           ForumReplyPost(
@@ -662,7 +663,7 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                                                           ),
                                                         );
                                                     // 输入框在回复成功后再清空（由 BlocListener 监听 replies 增加后执行）
-                                                  },
+                                                  }),
                                             child: Container(
                                             width: 36,
                                             height: 36,
@@ -887,10 +888,10 @@ class _PostStats extends StatelessWidget {
             button: true,
             label: 'Toggle favorite',
             child: GestureDetector(
-              onTap: () {
+              onTap: () => requireAuth(context, () {
                 AppHaptics.selection();
                 context.read<ForumBloc>().add(ForumFavoritePost(postId));
-              },
+              }),
               child: _StatLabel(
               icon: post.isFavorited
                   ? Icons.bookmark
@@ -1140,10 +1141,10 @@ class _ReplyCard extends StatelessWidget {
                         button: true,
                         label: 'Like reply',
                         child: GestureDetector(
-                          onTap: () {
+                          onTap: () => requireAuth(context, () {
                             AppHaptics.selection();
                             context.read<ForumBloc>().add(ForumLikeReply(reply.id));
-                          },
+                          }),
                           behavior: HitTestBehavior.opaque,
                           child: Container(
                         padding: const EdgeInsets.symmetric(

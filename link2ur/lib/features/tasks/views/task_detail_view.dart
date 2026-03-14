@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/config/app_config.dart';
+import '../../../core/utils/auth_guard.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
@@ -790,7 +791,7 @@ class _TaskDetailContent extends StatelessWidget {
     if (!isPoster && task.canApply) {
       return PrimaryButton(
         text: context.l10n.actionsApplyForTask,
-        onPressed: () {
+        onPressed: () => requireAuth(context, () {
           final bloc = context.read<TaskDetailBloc>();
           SheetAdaptation.showAdaptiveModalBottomSheet<void>(
             context: context,
@@ -806,7 +807,7 @@ class _TaskDetailContent extends StatelessWidget {
               ),
             ),
           );
-        },
+        }),
       );
     }
 

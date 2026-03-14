@@ -236,7 +236,11 @@ class _MainTabViewState extends State<MainTabView>
           _leaderboardBloc.add(const LeaderboardLoadRequested());
         }
         break;
-      case 3: // Messages — 每次切到消息 Tab 都刷新未读，便于实时更新红点
+      case 3: // Messages — 未登录时跳转登录，已登录时刷新未读
+        if (!context.read<AuthBloc>().state.isAuthenticated) {
+          context.push('/login');
+          return;
+        }
         _messageBloc
           ..add(const MessageLoadContacts())
           ..add(const MessageLoadTaskChats());

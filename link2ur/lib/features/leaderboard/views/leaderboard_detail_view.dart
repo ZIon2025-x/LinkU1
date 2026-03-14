@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/utils/adaptive_dialogs.dart';
 import '../../../core/utils/system_context_menu.dart';
+import '../../../core/utils/auth_guard.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
@@ -160,12 +161,12 @@ class _LeaderboardDetailContentState
       );
     }
 
-    void onToggleFavorite() {
+    void onToggleFavorite() => requireAuth(context, () {
       AppHaptics.selection();
       context
           .read<LeaderboardBloc>()
           .add(LeaderboardToggleFavorite(leaderboardId));
-    }
+    });
 
     if (!hasHero) {
       return AppBar(

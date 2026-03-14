@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/auth_guard.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/design/app_spacing.dart';
@@ -234,14 +235,14 @@ class _FleaMarketDetailContent extends StatelessWidget {
               ? Icons.favorite
               : Icons.favorite_border,
           color: state.isFavorited ? AppColors.error : Colors.white,
-          onTap: () {
+          onTap: () => requireAuth(context, () {
             AppHaptics.selection();
             if (state.selectedItem != null) {
               context.read<FleaMarketBloc>().add(
                     FleaMarketToggleFavorite(state.selectedItem!.id),
                   );
             }
-          },
+          }),
         ),
       ],
     );
@@ -821,7 +822,7 @@ class _FleaMarketDetailContent extends StatelessWidget {
       child: GestureDetector(
         onTap: state.isSubmitting
             ? null
-            : () {
+            : () => requireAuth(context, () {
                 AppHaptics.selection();
                 if (hasPendingPayment) {
                   // 对标 iOS：用商品详情返回的待支付信息打开支付页
@@ -861,7 +862,7 @@ class _FleaMarketDetailContent extends StatelessWidget {
                   // 弹出购买/议价申请框（留言 + 是否议价 + 金额）
                   _FleaMarketPurchaseSheet.show(context, item, itemId);
                 }
-              },
+              }),
         child: Container(
           height: 50,
           decoration: BoxDecoration(

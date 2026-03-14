@@ -6,6 +6,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_typography.dart';
+import '../../../core/utils/auth_guard.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/animated_list_item.dart';
@@ -335,12 +336,12 @@ class _LeaderboardCard extends StatelessWidget {
                   size: 22,
                   color: leaderboard.isFavorited ? AppColors.error : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
                 ),
-                onPressed: () {
+                onPressed: () => requireAuth(context, () {
                   AppHaptics.selection();
                   context.read<LeaderboardBloc>().add(
                     LeaderboardToggleFavorite(leaderboard.id),
                   );
-                },
+                }),
                 padding: const EdgeInsets.all(4),
                 constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                 tooltip: context.l10n.forumFavorite,

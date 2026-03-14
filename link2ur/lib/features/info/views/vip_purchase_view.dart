@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 
 import '../../../core/design/app_colors.dart';
+import '../../../core/utils/auth_guard.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/adaptive_dialogs.dart';
@@ -120,6 +121,7 @@ class _VIPPurchaseViewState extends State<VIPPurchaseView> {
 
   Future<void> _purchase() async {
     if (_selectedIndex == null || _selectedIndex! >= _products.length) return;
+    if (!requireAuth(context)) return;
 
     final product = _products[_selectedIndex!];
 

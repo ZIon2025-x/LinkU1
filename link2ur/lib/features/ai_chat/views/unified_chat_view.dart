@@ -13,6 +13,7 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../core/utils/auth_guard.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/loading_view.dart';
@@ -90,6 +91,7 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
   void _sendMessage() {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
+    if (!requireAuth(context)) return;
 
     context.read<UnifiedChatBloc>().add(UnifiedChatSendMessage(text));
     _messageController.clear();
@@ -785,39 +787,39 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
                       children: [
                         _UnifiedQuickAction(
                           label: context.l10n.aiChatViewMyTasks,
-                          onTap: () => bloc.add(
+                          onTap: () => requireAuth(context, () => bloc.add(
                               UnifiedChatSendMessage(
-                                  context.l10n.aiChatViewMyTasks)),
+                                  context.l10n.aiChatViewMyTasks))),
                         ),
                         _UnifiedQuickAction(
                           label: context.l10n.aiChatSearchTasks,
-                          onTap: () => bloc.add(
+                          onTap: () => requireAuth(context, () => bloc.add(
                               UnifiedChatSendMessage(
-                                  context.l10n.aiChatSearchTasks)),
+                                  context.l10n.aiChatSearchTasks))),
                         ),
                         _UnifiedQuickAction(
                           label: context.l10n.aiChatPostTask,
-                          onTap: () => bloc.add(
+                          onTap: () => requireAuth(context, () => bloc.add(
                               UnifiedChatSendMessage(
-                                  context.l10n.aiChatPostTask)),
+                                  context.l10n.aiChatPostTask))),
                         ),
                         _UnifiedQuickAction(
                           label: context.l10n.aiChatMyPoints,
-                          onTap: () => bloc.add(
+                          onTap: () => requireAuth(context, () => bloc.add(
                               UnifiedChatSendMessage(
-                                  context.l10n.aiChatMyPoints)),
+                                  context.l10n.aiChatMyPoints))),
                         ),
                         _UnifiedQuickAction(
                           label: context.l10n.aiChatActivities,
-                          onTap: () => bloc.add(
+                          onTap: () => requireAuth(context, () => bloc.add(
                               UnifiedChatSendMessage(
-                                  context.l10n.aiChatActivities)),
+                                  context.l10n.aiChatActivities))),
                         ),
                         _UnifiedQuickAction(
                           label: context.l10n.aiChatContactSupport,
-                          onTap: () => bloc.add(
+                          onTap: () => requireAuth(context, () => bloc.add(
                               UnifiedChatSendMessage(
-                                  context.l10n.aiChatContactSupport)),
+                                  context.l10n.aiChatContactSupport))),
                         ),
                       ],
                     );

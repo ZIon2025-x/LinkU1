@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/design/app_colors.dart';
+import '../../../core/utils/auth_guard.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
@@ -368,8 +369,10 @@ class _ActivityDetailViewContent extends StatelessWidget {
                 child: GestureDetector(
                   onTap: state.isTogglingFavorite
                       ? null
-                      : () => context.read<ActivityBloc>().add(
-                            ActivityToggleFavorite(activityId: activity.id)),
+                      : () => requireAuth(context, () {
+                            context.read<ActivityBloc>().add(
+                                  ActivityToggleFavorite(activityId: activity.id));
+                          }),
                   child: SizedBox(
                     width: 50,
                     child: Column(
@@ -531,14 +534,14 @@ class _ActivityDetailViewContent extends StatelessWidget {
       context,
       text: context.l10n.activityRegisterNow,
       isLoading: state.isSubmitting,
-      onTap: () {
+      onTap: () => requireAuth(context, () {
         AppHaptics.selection();
         ActivityApplySheet.show(
           context,
           activityId: activityId,
           activity: activity,
         );
-      },
+      }),
     );
   }
 
