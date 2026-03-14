@@ -976,7 +976,7 @@ class UserProfileView extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.lg),
-          ...reviews.take(5).map((r) => Padding(
+          ...reviews.take(10).map((r) => Padding(
                 key: ValueKey('review_${r.createdAt}_${r.rating}'),
                 padding: const EdgeInsets.only(bottom: AppSpacing.md),
                 child: _ReviewItem(review: r),
