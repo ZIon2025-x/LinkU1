@@ -116,16 +116,19 @@ def update_stage_bonus_config(
 
 @router.get("/official-tasks")
 def list_all_official_tasks(
+    offset: int = 0,
+    limit: int = 20,
     current_admin: models.AdminUser = Depends(get_current_admin_secure_sync),
     db: Session = Depends(get_db),
 ):
-    """List all official tasks (including inactive)."""
-    tasks = (
-        db.query(models.OfficialTask)
-        .order_by(models.OfficialTask.created_at.desc())
-        .all()
-    )
-    return [schemas.OfficialTaskOut.model_validate(t).model_dump() for t in tasks]
+    """List all official tasks (including inactive) with pagination."""
+    query = db.query(models.OfficialTask).order_by(models.OfficialTask.created_at.desc())
+    total = query.count()
+    tasks = query.offset(offset).limit(limit).all()
+    return {
+        "items": [schemas.OfficialTaskOut.model_validate(t).model_dump() for t in tasks],
+        "total": total,
+    }
 
 
 @router.post("/official-tasks")

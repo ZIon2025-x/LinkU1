@@ -144,12 +144,31 @@ class NewbieTasksBloc extends Bloc<NewbieTasksEvent, NewbieTasksState> {
       final stagesData = results[1];
       final officialData = results[2];
 
+      AppLogger.info('NewbieTasks API response - '
+          'progress: ${progressData.length} items, '
+          'stages: ${stagesData.length} items, '
+          'official: ${officialData.length} items');
+      if (progressData.isNotEmpty) {
+        AppLogger.info('NewbieTasks first item: ${progressData.first}');
+      }
+
       final tasks =
           progressData.map((e) => NewbieTaskProgress.fromJson(e)).toList();
       final stages =
           stagesData.map((e) => StageProgress.fromJson(e)).toList();
       final officialTasks =
           officialData.map((e) => OfficialTask.fromJson(e)).toList();
+
+      AppLogger.info('NewbieTasks parsed - '
+          'tasks: ${tasks.length}, '
+          'stages: ${stages.length} (stages: ${stages.map((s) => s.stage).toList()}), '
+          'officialTasks: ${officialTasks.length}');
+      if (tasks.isNotEmpty) {
+        AppLogger.info('NewbieTasks first task: '
+            'key=${tasks.first.taskKey}, '
+            'status=${tasks.first.status}, '
+            'stage=${tasks.first.config.stage}');
+      }
 
       emit(state.copyWith(
         status: NewbieTasksStatus.loaded,
@@ -158,8 +177,8 @@ class NewbieTasksBloc extends Bloc<NewbieTasksEvent, NewbieTasksState> {
         officialTasks: officialTasks,
         clearClaiming: true,
       ));
-    } catch (e) {
-      AppLogger.error('Failed to load newbie tasks', e);
+    } catch (e, stackTrace) {
+      AppLogger.error('Failed to load newbie tasks: $e\n$stackTrace');
       emit(state.copyWith(
         status: NewbieTasksStatus.error,
         errorMessage: 'newbie_tasks_load_failed',
