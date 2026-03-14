@@ -145,7 +145,6 @@ class _CreatePostViewState extends State<CreatePostView> {
     try {
       final files = await _imagePicker.pickMultiImage(
         maxWidth: 1024,
-        maxHeight: 1024,
         imageQuality: 85,
       );
       if (files.isNotEmpty && mounted) {

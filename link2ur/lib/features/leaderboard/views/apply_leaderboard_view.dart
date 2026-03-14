@@ -45,7 +45,6 @@ class _ApplyLeaderboardViewState extends State<ApplyLeaderboardView> {
       final picked = await _imagePicker.pickImage(
         source: ImageSource.gallery,
         maxWidth: 1920,
-        maxHeight: 1080,
         imageQuality: 85,
       );
       if (picked != null) {

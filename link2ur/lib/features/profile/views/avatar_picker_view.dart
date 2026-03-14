@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/design/app_colors.dart';
@@ -60,37 +61,54 @@ class _AvatarPickerViewState extends State<AvatarPickerView> {
   }
 
   Future<void> _pickFromGallery(BuildContext blocContext) async {
-    final file = await _imagePicker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 512,
-      maxHeight: 512,
-      imageQuality: 85,
-    );
+    final file = await _imagePicker.pickImage(source: ImageSource.gallery);
     if (file == null) return;
-    final bytes = await file.readAsBytes();
-    setState(() {
-      _customAvatarBytes = bytes;
-      _selectedAvatar = null;
-    });
     if (!blocContext.mounted) return;
-    blocContext.read<ProfileBloc>().add(ProfileUploadAvatar(bytes, file.name));
+    await _cropAndUpload(file, blocContext);
   }
 
   Future<void> _pickFromCamera(BuildContext blocContext) async {
-    final file = await _imagePicker.pickImage(
-      source: ImageSource.camera,
+    final file = await _imagePicker.pickImage(source: ImageSource.camera);
+    if (file == null) return;
+    if (!blocContext.mounted) return;
+    await _cropAndUpload(file, blocContext);
+  }
+
+  Future<void> _cropAndUpload(XFile file, BuildContext blocContext) async {
+    final croppedFile = await ImageCropper().cropImage(
+      sourcePath: file.path,
+      aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
       maxWidth: 512,
       maxHeight: 512,
-      imageQuality: 85,
+      compressQuality: 85,
+      uiSettings: [
+        AndroidUiSettings(
+          toolbarTitle: context.l10n.profileSelectAvatar,
+          toolbarColor: AppColors.primary,
+          toolbarWidgetColor: Colors.white,
+          activeControlsWidgetColor: AppColors.primary,
+          cropStyle: CropStyle.circle,
+          lockAspectRatio: true,
+          hideBottomControls: true,
+        ),
+        IOSUiSettings(
+          title: context.l10n.profileSelectAvatar,
+          cropStyle: CropStyle.circle,
+          aspectRatioLockEnabled: true,
+          resetAspectRatioEnabled: false,
+        ),
+      ],
     );
-    if (file == null) return;
-    final bytes = await file.readAsBytes();
+    if (croppedFile == null) return;
+    final bytes = await croppedFile.readAsBytes();
     setState(() {
       _customAvatarBytes = bytes;
       _selectedAvatar = null;
     });
     if (!blocContext.mounted) return;
-    blocContext.read<ProfileBloc>().add(ProfileUploadAvatar(bytes, file.name));
+    blocContext.read<ProfileBloc>().add(
+      ProfileUploadAvatar(bytes, croppedFile.path.split('/').last),
+    );
   }
 
   void _showImageSourceSheet(BuildContext blocContext) {

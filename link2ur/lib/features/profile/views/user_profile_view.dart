@@ -89,6 +89,9 @@ class UserProfileView extends StatelessWidget {
                                         // 技能雷达图
                                         _buildSkillRadar(context, state.publicUser!),
                                         const SizedBox(height: AppSpacing.section),
+                                        // 收到的评价
+                                        if (state.publicProfileDetail?.reviews.isNotEmpty == true)
+                                          _buildReviewsSection(context, state.publicProfileDetail!.reviews),
                                         // 近期任务（后端 recent_tasks，该用户近期发布或参与的任务，最多 5 条）
                                         _buildRecentTasksSection(context, state.publicProfileDetail),
                                         // 近期论坛帖子
@@ -97,9 +100,6 @@ class UserProfileView extends StatelessWidget {
                                         // 已售闲置物品
                                         if (state.publicProfileDetail?.soldFleaItems.isNotEmpty == true)
                                           _buildSoldFleaItemsSection(context, state.publicProfileDetail!.soldFleaItems),
-                                        // 收到的评价
-                                        if (state.publicProfileDetail?.reviews.isNotEmpty == true)
-                                          _buildReviewsSection(context, state.publicProfileDetail!.reviews),
                                         const SizedBox(height: AppSpacing.xxl),
                                       ],
                                     ),

@@ -464,7 +464,6 @@ class _PublishContentState extends State<_PublishContent>
     try {
       final files = await _imagePicker.pickMultiImage(
         maxWidth: 1024,
-        maxHeight: 1024,
         imageQuality: 85,
       );
       if (files.isNotEmpty) {
@@ -487,7 +486,6 @@ class _PublishContentState extends State<_PublishContent>
     try {
       final files = await _imagePicker.pickMultiImage(
         maxWidth: 1024,
-        maxHeight: 1024,
         imageQuality: 85,
       );
       if (files.isNotEmpty && mounted) {
@@ -526,7 +524,6 @@ class _PublishContentState extends State<_PublishContent>
     try {
       final files = await _imagePicker.pickMultiImage(
         maxWidth: 1024,
-        maxHeight: 1024,
         imageQuality: 85,
       );
       if (files.isNotEmpty && mounted) {

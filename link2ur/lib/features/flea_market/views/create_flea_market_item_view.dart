@@ -88,7 +88,6 @@ class _CreateFleaMarketItemContentState
     try {
       final pickedFiles = await _imagePicker.pickMultiImage(
         maxWidth: 1024,
-        maxHeight: 1024,
         imageQuality: 85,
       );
 
