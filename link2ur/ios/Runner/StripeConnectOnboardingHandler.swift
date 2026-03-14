@@ -1,15 +1,15 @@
 import Foundation
 import Flutter
 import UIKit
-@_spi(PrivateBetaConnect) import StripeConnect
+@_spi(PrivateBetaConnect) @_spi(DashboardOnly) import StripeConnect
 
 @available(iOS 15, *)
-class StripeConnectOnboardingHandler: NSObject, StripeConnect.AccountOnboardingControllerDelegate, StripeConnect.AccountManagementControllerDelegate {
+class StripeConnectOnboardingHandler: NSObject, StripeConnect.AccountOnboardingControllerDelegate, StripeConnect.AccountManagementViewControllerDelegate {
 
     private var result: FlutterResult?
     private var embeddedComponentManager: StripeConnect.EmbeddedComponentManager?
     private var onboardingController: StripeConnect.AccountOnboardingController?
-    private var managementController: StripeConnect.AccountManagementController?
+    private var managementViewController: StripeConnect.AccountManagementViewController?
 
     private let termsURL = URL(string: "https://www.link2ur.com/terms")!
     private let privacyURL = URL(string: "https://www.link2ur.com/privacy")!
@@ -62,12 +62,13 @@ class StripeConnectOnboardingHandler: NSObject, StripeConnect.AccountOnboardingC
             fetchClientSecret: { () async -> String? in secret }
         )
 
-        let controller = embeddedComponentManager!.createAccountManagementController()
+        let vc = embeddedComponentManager!.createAccountManagementViewController()
 
-        controller.delegate = self
-        self.managementController = controller
+        vc.delegate = self
+        self.managementViewController = vc
 
-        controller.present(from: viewController)
+        vc.modalPresentationStyle = .fullScreen
+        viewController.present(vc, animated: true)
     }
 
     // MARK: - AccountOnboardingControllerDelegate
@@ -82,21 +83,23 @@ class StripeConnectOnboardingHandler: NSObject, StripeConnect.AccountOnboardingC
         cleanup()
     }
 
-    // MARK: - AccountManagementControllerDelegate
+    // MARK: - AccountManagementViewControllerDelegate
 
-    func accountManagementDidExit(_ accountManagement: StripeConnect.AccountManagementController) {
-        result?(["status": "completed"])
-        cleanup()
+    func accountManagement(_ accountManagement: StripeConnect.AccountManagementViewController, didFailLoadWithError error: Error) {
+        result?(FlutterError(code: "LOAD_FAILED", message: error.localizedDescription, details: nil))
+        dismissManagement()
     }
 
-    func accountManagement(_ accountManagement: StripeConnect.AccountManagementController, didFailLoadWithError error: Error) {
-        result?(FlutterError(code: "LOAD_FAILED", message: error.localizedDescription, details: nil))
-        cleanup()
+    private func dismissManagement() {
+        managementViewController?.dismiss(animated: true) { [weak self] in
+            self?.result?(["status": "completed"])
+            self?.cleanup()
+        }
     }
 
     private func cleanup() {
         onboardingController = nil
-        managementController = nil
+        managementViewController = nil
         embeddedComponentManager = nil
         result = nil
     }
