@@ -11,6 +11,7 @@ import '../../../core/widgets/error_state_view.dart';
 import '../../../data/repositories/newbie_tasks_repository.dart';
 import '../../../data/repositories/official_tasks_repository.dart';
 import '../bloc/newbie_tasks_bloc.dart';
+import 'widgets/official_task_bottom_sheet.dart';
 import 'widgets/official_task_card.dart';
 import 'widgets/stage_progress_widget.dart';
 import 'widgets/task_item_widget.dart';
@@ -157,6 +158,28 @@ class _TaskCenterContent extends StatelessWidget {
                 return OfficialTaskCard(
                   key: ValueKey('official_${task.id}'),
                   task: task,
+                  onTap: () async {
+                    final shouldNavigate = await showModalBottomSheet<bool>(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (_) => OfficialTaskBottomSheet(task: task),
+                    );
+                    if (!context.mounted) return;
+                    // If user tapped "Go Post", navigate and wait for return
+                    if (shouldNavigate == true) {
+                      final locale = Localizations.localeOf(context);
+                      await OfficialTaskBottomSheet.navigateToCreatePost(
+                        context, task, locale,
+                      );
+                    }
+                    // Refresh after CreatePostView returns (or sheet dismissed)
+                    if (context.mounted) {
+                      context
+                          .read<NewbieTasksBloc>()
+                          .add(const NewbieTasksLoadRequested());
+                    }
+                  },
                 );
               },
             ),
