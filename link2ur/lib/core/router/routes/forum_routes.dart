@@ -36,10 +36,20 @@ List<RouteBase> get forumRoutes => [
       GoRoute(
         path: AppRoutes.createPost,
         name: 'createPost',
-        pageBuilder: (context, state) => SlideUpTransitionPage(
-          key: state.pageKey,
-          child: const CreatePostView(),
-        ),
+        pageBuilder: (context, state) {
+          final officialTaskId = int.tryParse(
+            state.uri.queryParameters['officialTaskId'] ?? '',
+          );
+          final officialTaskTitle =
+              state.uri.queryParameters['officialTaskTitle'];
+          return SlideUpTransitionPage(
+            key: state.pageKey,
+            child: CreatePostView(
+              officialTaskId: officialTaskId,
+              officialTaskTitle: officialTaskTitle,
+            ),
+          );
+        },
       ),
       GoRoute(
         path: AppRoutes.forumCategoryRequest,

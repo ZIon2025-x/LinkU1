@@ -26,7 +26,14 @@ import '../../../data/models/forum.dart';
 /// 创建帖子页
 /// 支持同时上传图片和文件附件
 class CreatePostView extends StatefulWidget {
-  const CreatePostView({super.key});
+  const CreatePostView({
+    super.key,
+    this.officialTaskId,
+    this.officialTaskTitle,
+  });
+
+  final int? officialTaskId;
+  final String? officialTaskTitle;
 
   @override
   State<CreatePostView> createState() => _CreatePostViewState();
@@ -51,6 +58,8 @@ class _CreatePostViewState extends State<CreatePostView> {
   static const Duration _kDraftMaxAge = Duration(days: 7);
   bool _hasDraft = false;
 
+  bool get _isOfficialTaskFlow => widget.officialTaskId != null;
+
   bool get _hasUnsavedChanges {
     return _titleController.text.isNotEmpty ||
         _contentController.text.isNotEmpty ||
@@ -68,7 +77,9 @@ class _CreatePostViewState extends State<CreatePostView> {
   @override
   void initState() {
     super.initState();
-    _checkForDraft();
+    if (!_isOfficialTaskFlow) {
+      _checkForDraft();
+    }
     _preloadUserRelated();
   }
 
@@ -83,6 +94,7 @@ class _CreatePostViewState extends State<CreatePostView> {
   }
 
   Future<void> _saveDraft() async {
+    if (_isOfficialTaskFlow) return;
     final prefs = await SharedPreferences.getInstance();
     final draft = jsonEncode({
       'title': _titleController.text,
@@ -290,6 +302,7 @@ class _CreatePostViewState extends State<CreatePostView> {
           attachments: uploadedAttachments,
           linkedItemType: _linkedItemType,
           linkedItemId: _linkedItemId,
+          officialTaskId: widget.officialTaskId,
         ),
       ),
     );
@@ -310,17 +323,25 @@ class _CreatePostViewState extends State<CreatePostView> {
           if (!state.isCreatingPost && state.errorMessage != null) {
             AppFeedback.showError(context, context.localizeError(state.errorMessage));
           } else if (state.createPostSuccess) {
-            unawaited(_clearDraft());
-            // 清空表单内容，使 _hasUnsavedChanges 为 false，
-            // 否则 PopScope(canPop: !_hasUnsavedChanges) 会拦截 pop
-            _titleController.clear();
-            _contentController.clear();
-            _selectedImages.clear();
-            _selectedFiles.clear();
-            AppFeedback.showSuccess(
-                context, context.l10n.feedbackPostPublishSuccess);
-            context.pop();
-          }
+              unawaited(_clearDraft());
+              _titleController.clear();
+              _contentController.clear();
+              _selectedImages.clear();
+              _selectedFiles.clear();
+
+              // Show official task reward SnackBar if applicable
+              if (state.lastOfficialTaskReward != null) {
+                final amount = state.lastOfficialTaskReward!['reward_amount']?.toString() ?? '0';
+                AppFeedback.showSuccess(
+                  context,
+                  context.l10n.officialTaskRewardEarned(amount),
+                );
+              } else {
+                AppFeedback.showSuccess(
+                    context, context.l10n.feedbackPostPublishSuccess);
+              }
+              context.pop();
+            }
         },
         builder: (context, state) {
           final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -469,6 +490,41 @@ class _CreatePostViewState extends State<CreatePostView> {
                   }),
                   AppSpacing.vMd,
                 ],
+                // Official task linked banner
+              if (_isOfficialTaskFlow) ...[
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryLight.withValues(alpha: 0.1),
+                    borderRadius: AppRadius.allSmall,
+                    border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.flag_rounded,
+                          size: 16, color: AppColors.primary),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          context.l10n.officialTaskLinked(
+                            widget.officialTaskTitle ?? '',
+                          ),
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
                 // 标题
                 TextField(
                   controller: _titleController,
