@@ -50,7 +50,7 @@ const initialForm: TaskForm = {
   description_zh: '',
   description_en: '',
   topic_tag: '',
-  task_type: 'one_time',
+  task_type: 'forum_post',
   reward_type: 'points',
   reward_amount: 0,
   max_per_user: '',
@@ -323,10 +323,7 @@ const OfficialTaskManagement: React.FC = () => {
                 onChange={(e) => modal.updateField('task_type', e.target.value)}
                 style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
               >
-                <option value="one_time">One Time</option>
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-                <option value="recurring">Recurring</option>
+                <option value="forum_post">Forum Post</option>
               </select>
             </div>
           </div>
