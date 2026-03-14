@@ -7,6 +7,7 @@ import '../../../../core/design/app_spacing.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../../core/utils/l10n_extension.dart';
 import '../../../../data/models/official_task.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Bottom sheet showing official task details and "Go Post" action.
 class OfficialTaskBottomSheet extends StatelessWidget {
@@ -183,7 +184,7 @@ class OfficialTaskBottomSheet extends StatelessWidget {
   Widget _buildActionButton(
     BuildContext context,
     bool isDark,
-    dynamic l10n,
+    AppLocalizations l10n,
     Locale locale,
   ) {
     // Completed
