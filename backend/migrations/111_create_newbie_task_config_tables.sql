@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS stage_bonus_config (
 
 CREATE TABLE IF NOT EXISTS user_tasks_progress (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id VARCHAR(8) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     task_key VARCHAR(50) NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'pending',
     completed_at TIMESTAMP,
@@ -40,7 +40,7 @@ CREATE INDEX IF NOT EXISTS idx_user_tasks_progress_user_id ON user_tasks_progres
 
 CREATE TABLE IF NOT EXISTS stage_bonus_progress (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id VARCHAR(8) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     stage INTEGER NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'pending',
     claimed_at TIMESTAMP,
