@@ -25,16 +25,22 @@ Enable users to complete official tasks by posting in the forum with automatic t
 
 **File**: `backend/app/forum_routes.py` — `create_post()` endpoint
 
-Add optional `official_task_id` field to `ForumPostCreate` schema. When present in the post creation request, **before** `await db.commit()` (same transaction as the forum post):
+Add optional `official_task_id` field to `ForumPostCreate` schema. When present in the post creation request:
 
-1. Validate the official task: exists, is_active, not expired, task_type == "forum_post"
-2. Validate the user hasn't exceeded max_per_user (use `SELECT ... FOR UPDATE` to prevent race conditions)
-3. Create `OfficialTaskSubmission` record with status="claimed", set claimed_at and reward_amount
-4. Award points via `add_points_transaction()`
-5. Then commit everything together (forum post + submission + points in one transaction)
-6. Set `official_task_reward` on the response
+**Important**: `create_post` uses `AsyncSession` but `add_points_transaction` uses sync `Session`. These cannot share a transaction. The design uses two sequential transactions:
 
-If the official task validation fails (expired, limit reached, etc.), the forum post still succeeds — the task reward just isn't granted. Log a warning but don't fail the post creation. Return `official_task_reward: null`.
+**Transaction 1 (async, existing)**: Create and commit the forum post as normal.
+
+**Transaction 2 (sync, new, after post commit)**: Handle official task reward atomically:
+1. Open a sync `Session` via `get_db()`
+2. Validate the official task: exists, is_active, not expired, task_type == "forum_post"
+3. Validate the user hasn't exceeded max_per_user (use `SELECT ... FOR UPDATE` to prevent race conditions)
+4. Create `OfficialTaskSubmission` record with status="claimed", forum_post_id=new_post.id, set claimed_at and reward_amount
+5. Award points via `add_points_transaction()` (same sync session)
+6. Commit (submission + points are atomic)
+7. Set `official_task_reward` on the response
+
+If transaction 2 fails, the forum post (from transaction 1) is already committed and safe. The task reward is just not granted. Log a warning and return `official_task_reward: null`. This matches the design intent: post always succeeds, reward is best-effort.
 
 **Schema changes** (`backend/app/schemas.py`):
 
@@ -178,7 +184,7 @@ OfficialTaskCard.onTap
   → user writes post, taps publish
   → CreatePostRequest.toJson() includes official_task_id: 5
   → POST /api/forum/posts { ..., official_task_id: 5 }
-  → Backend (single transaction): create post + submission + claim + award points
+  → Backend: tx1 (async) create post → tx2 (sync) submission + claim + award points
   → Response: { ..., official_task_reward: { reward_type: "points", reward_amount: 100 } }
   → ForumBloc emits createPostSuccess + lastOfficialTaskReward
   → CreatePostView listener shows reward SnackBar, pops
