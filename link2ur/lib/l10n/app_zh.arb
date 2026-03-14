@@ -4468,6 +4468,27 @@
     }
   },
 
+  "officialTaskGoPost": "去发帖",
+  "officialTaskExpired": "已过期",
+  "officialTaskRewardEarned": "官方任务完成！获得 {amount} 积分",
+  "@officialTaskRewardEarned": {
+    "description": "SnackBar message when user completes an official task",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "officialTaskLinked": "官方任务：{title}",
+  "@officialTaskLinked": {
+    "description": "Banner shown in create post view when linked to an official task",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+
   "skillLeaderboard": "技能排行榜",
   "leaderboardTop10": "前 10 名",
   "leaderboardMyRank": "我的排名",
