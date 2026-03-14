@@ -237,22 +237,22 @@ class ImageUploadService:
                     error="无效的图片文件"
                 )
             
-            # 获取原始图片信息
-            original_info = self.processor.get_image_info(content)
-            width = original_info.get('width') if original_info else None
-            height = original_info.get('height') if original_info else None
-            
             # 图片处理
             processed_content = content
-            
+
             # 自动旋转
             if cfg.auto_orient:
                 processed_content = self.processor.auto_orient(processed_content)
-            
+
             # 移除元数据
             if cfg.strip_metadata:
                 processed_content, _ = self.processor.strip_metadata(processed_content)
-            
+
+            # 获取处理后的实际尺寸（auto_orient 可能旋转了图片）
+            processed_info = self.processor.get_image_info(processed_content)
+            width = processed_info.get('width') if processed_info else None
+            height = processed_info.get('height') if processed_info else None
+
             # 调整尺寸
             if cfg.max_dimension and width and height:
                 if width > cfg.max_dimension or height > cfg.max_dimension:
