@@ -292,6 +292,7 @@ class ForumPost extends Equatable {
     this.createdAt,
     this.updatedAt,
     this.lastReplyAt,
+    this.officialTaskReward,
   });
 
   final int id;
@@ -325,6 +326,7 @@ class ForumPost extends Equatable {
   final DateTime? createdAt;
   final DateTime? updatedAt;
   final DateTime? lastReplyAt;
+  final Map<String, dynamic>? officialTaskReward;
 
   /// 显示标题（根据 locale 选择 zh/en）
   String displayTitle(Locale locale) =>
@@ -404,6 +406,7 @@ class ForumPost extends Equatable {
       lastReplyAt: json['last_reply_at'] != null
           ? DateTime.tryParse(json['last_reply_at'].toString())
           : null,
+      officialTaskReward: json['official_task_reward'] as Map<String, dynamic>?,
     );
   }
 
@@ -439,6 +442,7 @@ class ForumPost extends Equatable {
     int? replyCount,
     int? favoriteCount,
     String? content,
+    Map<String, dynamic>? officialTaskReward,
   }) {
     return ForumPost(
       id: id,
@@ -472,12 +476,13 @@ class ForumPost extends Equatable {
       createdAt: createdAt,
       updatedAt: updatedAt,
       lastReplyAt: lastReplyAt,
+      officialTaskReward: officialTaskReward ?? this.officialTaskReward,
     );
   }
 
   @override
   List<Object?> get props =>
-      [id, title, likeCount, replyCount, updatedAt, isLiked, isFavorited];
+      [id, title, likeCount, replyCount, updatedAt, isLiked, isFavorited, officialTaskReward];
 }
 
 /// 论坛回复
@@ -606,6 +611,7 @@ class CreatePostRequest {
     this.attachments = const [],
     this.linkedItemType,
     this.linkedItemId,
+    this.officialTaskId,
   });
 
   final String title;
@@ -615,6 +621,7 @@ class CreatePostRequest {
   final List<ForumPostAttachment> attachments;
   final String? linkedItemType;
   final String? linkedItemId;
+  final int? officialTaskId;
 
   Map<String, dynamic> toJson() {
     return {
@@ -632,6 +639,7 @@ class CreatePostRequest {
           'linked_item_type': linkedItemType!,
           'linked_item_id': linkedItemId!,
         },
+      if (officialTaskId != null) 'official_task_id': officialTaskId,
     };
   }
 }
