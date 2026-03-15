@@ -794,8 +794,8 @@ def check_in(
 # ==================== 邀请码相关 CRUD ====================
 
 def is_user_id_format(code: str) -> bool:
-    """判断输入是否是用户ID格式（8位纯数字）"""
-    return code.isdigit() and len(code) == 8
+    """判断输入是否是用户ID格式（8位纯数字或hex，兼容旧版uuid[:8]）"""
+    return len(code) == 8 and all(c in '0123456789abcdef' for c in code.lower())
 
 
 def process_invitation_input(

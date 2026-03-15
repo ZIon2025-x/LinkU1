@@ -2396,7 +2396,7 @@ async def connect_webhook(request: Request, db: Session = Depends(get_db)):
                 metadata = account.get("metadata") or {}
                 user_id_meta = metadata.get("user_id")
                 if user_id_meta:
-                    user = db.query(models.User).filter(models.User.id == int(user_id_meta)).first()
+                    user = db.query(models.User).filter(models.User.id == str(user_id_meta)).first()
                     if user and user.stripe_account_id == account_id:
                         user.stripe_account_id = None
                         db.commit()

@@ -7609,7 +7609,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                                 if buyer_id:
                                     crud.create_notification(
                                         db=db,
-                                        user_id=int(buyer_id),
+                                        user_id=str(buyer_id),
                                         type="flea_market_payment_success",
                                         title="支付成功",
                                         content=f"您已成功购买「{item_title}」，可以联系卖家进行交易",
