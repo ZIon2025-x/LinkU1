@@ -736,6 +736,7 @@ String _dashboardUnavailableMessage(BuildContext context, String? reason) {
 }
 
 /// V2 账户打开嵌入式账户管理（替代 Express Dashboard）
+/// Android 不支持嵌入式账户管理组件，降级为打开 Express Dashboard URL
 Future<void> _openAccountManagement(BuildContext context, String accountId) async {
   final repo = context.read<PaymentRepository>();
   final scaffoldMessenger = ScaffoldMessenger.of(context);
@@ -753,9 +754,8 @@ Future<void> _openAccountManagement(BuildContext context, String accountId) asyn
     final clientSecret = session['client_secret'] as String?;
     if (clientSecret == null || clientSecret.isEmpty) {
       if (!context.mounted) return;
-      scaffoldMessenger.showSnackBar(
-        SnackBar(content: Text(_dashboardUnavailableMessage(context, null))),
-      );
+      // Android 降级：尝试打开 Express Dashboard URL
+      await _fallbackToExpressDashboard(context, repo);
       return;
     }
 
@@ -763,10 +763,40 @@ Future<void> _openAccountManagement(BuildContext context, String accountId) asyn
       publishableKey: publishableKey,
       clientSecret: clientSecret,
     );
+  } on UnsupportedError {
+    // Android 不支持嵌入式账户管理，降级到 Express Dashboard
+    if (!context.mounted) return;
+    await _fallbackToExpressDashboard(context, repo);
   } catch (e) {
     if (!context.mounted) return;
     scaffoldMessenger.showSnackBar(
       SnackBar(content: Text(context.localizeError(e.toString()))),
+    );
+  }
+}
+
+/// Android 降级方案：通过 Express Dashboard login link 打开账户管理
+Future<void> _fallbackToExpressDashboard(BuildContext context, PaymentRepository repo) async {
+  final scaffoldMessenger = ScaffoldMessenger.of(context);
+  try {
+    final details = await repo.getStripeConnectAccountDetails();
+    if (!context.mounted) return;
+    final url = details.dashboardUrl;
+    if (url != null && url.isNotEmpty) {
+      await ExternalWebView.openInApp(
+        context,
+        url: url,
+        title: context.l10n.stripeConnectOpenDashboard,
+      );
+    } else {
+      scaffoldMessenger.showSnackBar(
+        SnackBar(content: Text(_dashboardUnavailableMessage(context, details.dashboardUnavailableReason))),
+      );
+    }
+  } catch (_) {
+    if (!context.mounted) return;
+    scaffoldMessenger.showSnackBar(
+      SnackBar(content: Text(context.l10n.stripeConnectDashboardUnavailable)),
     );
   }
 }

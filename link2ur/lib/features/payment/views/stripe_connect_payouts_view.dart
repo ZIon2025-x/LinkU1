@@ -181,6 +181,31 @@ class _StripeConnectPayoutsViewState extends State<StripeConnectPayoutsView> {
 
       // 管理完成后刷新数据
       if (mounted) await _loadAll();
+    } on UnsupportedError {
+      // Android 不支持嵌入式账户管理，降级到 Express Dashboard
+      if (!mounted) return;
+      await _fallbackToExpressDashboard();
+    } catch (_) {
+      _showDashboardUnavailableSnackBar();
+    }
+  }
+
+  /// Android 降级：打开 Express Dashboard URL
+  Future<void> _fallbackToExpressDashboard() async {
+    try {
+      final details = await _repo.getStripeConnectAccountDetails();
+      if (!mounted) return;
+      final url = details.dashboardUrl;
+      if (url != null && url.isNotEmpty) {
+        await ExternalWebView.openInApp(
+          context,
+          url: url,
+          title: context.l10n.stripeConnectOpenDashboard,
+        );
+        if (mounted) await _loadAll();
+      } else {
+        _showDashboardUnavailableSnackBar(details.dashboardUnavailableReason);
+      }
     } catch (_) {
       _showDashboardUnavailableSnackBar();
     }

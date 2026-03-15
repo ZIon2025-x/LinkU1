@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/services.dart';
 import '../../core/utils/logger.dart';
 
@@ -45,10 +47,20 @@ class StripeConnectService {
   ///
   /// [publishableKey] Stripe Publishable Key
   /// [clientSecret] AccountSession client_secret（需包含 account_management 组件）
+  ///
+  /// 注意：Android Stripe Connect SDK 不支持嵌入式账户管理组件，
+  /// 调用方应在 Android 上改用 Express Dashboard URL。
+  /// 此方法在 Android 上会抛出 [UnsupportedError]。
   Future<String> openAccountManagement({
     required String publishableKey,
     required String clientSecret,
   }) async {
+    if (Platform.isAndroid) {
+      throw UnsupportedError(
+        'Embedded account management is not available on Android. '
+        'Use Express Dashboard URL instead.',
+      );
+    }
     try {
       final result = await _channel.invokeMethod('openAccountManagement', {
         'publishableKey': publishableKey,

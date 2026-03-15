@@ -10,6 +10,7 @@ import '../../../core/design/app_radius.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/buttons.dart';
+import '../../../core/widgets/external_web_view.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../data/models/payment.dart';
 import '../../../data/repositories/payment_repository.dart';
@@ -194,6 +195,7 @@ class _StripeConnectOnboardingViewState
   }
 
   /// 打开嵌入式账户管理（更新收款信息）
+  /// Android 不支持嵌入式组件，降级为打开 Express Dashboard URL
   Future<void> _openAccountManagement() async {
     final accountId = _accountDetails?.accountId;
     if (accountId == null) return;
@@ -211,7 +213,11 @@ class _StripeConnectOnboardingViewState
 
       final session = await _paymentRepository.createAccountManagementSession(accountId);
       final clientSecret = session['client_secret'] as String?;
-      if (clientSecret == null || clientSecret.isEmpty) return;
+      if (clientSecret == null || clientSecret.isEmpty) {
+        // 无 client_secret 时降级到 Express Dashboard
+        if (mounted) await _fallbackToExpressDashboard();
+        return;
+      }
 
       await StripeConnectService.instance.openAccountManagement(
         publishableKey: publishableKey,
@@ -220,10 +226,39 @@ class _StripeConnectOnboardingViewState
 
       // 管理完成后刷新账户详情
       if (mounted) await _loadAccountDetails();
+    } on UnsupportedError {
+      // Android 不支持嵌入式账户管理，降级到 Express Dashboard
+      if (mounted) await _fallbackToExpressDashboard();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(context.localizeError(e.toString()))),
+      );
+    }
+  }
+
+  /// Android 降级：打开 Express Dashboard URL
+  Future<void> _fallbackToExpressDashboard() async {
+    try {
+      final details = await _paymentRepository.getStripeConnectAccountDetails();
+      if (!mounted) return;
+      final url = details.dashboardUrl;
+      if (url != null && url.isNotEmpty) {
+        await ExternalWebView.openInApp(
+          context,
+          url: url,
+          title: context.l10n.stripeConnectOpenDashboard,
+        );
+        if (mounted) await _loadAccountDetails();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.stripeConnectDashboardUnavailable)),
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.stripeConnectDashboardUnavailable)),
       );
     }
   }

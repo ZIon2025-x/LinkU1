@@ -48,7 +48,12 @@
       "Bash(export PATH=\"/c/flutter/bin:$PATH\")",
       "Read(//c/flutter/bin/**)",
       "Read(//mnt/f/flutter/bin/**)",
-      "WebSearch"
+      "WebSearch",
+      "Read(//f/tmp/**)",
+      "Bash(cp /f/DevCache/.gradle/caches/modules-2/files-2.1/com.stripe/connect/22.8.0/37be236ebb2da969a8a4bb7909aad40747519f24/connect-22.8.0.aar connect.aar)",
+      "Bash(unzip -o connect.aar classes.jar -d connect_extract)",
+      "Bash(unzip -l connect_extract/classes.jar)",
+      "WebFetch(domain:docs.stripe.com)"
     ]
   }
 }
