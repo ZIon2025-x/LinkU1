@@ -986,10 +986,13 @@ class TaskRepository {
   }
 
   /// 发送申请消息
-  Future<void> sendApplicationMessage(int taskId, int applicationId, {required String content}) async {
+  Future<void> sendApplicationMessage(int taskId, int applicationId, {required String content, double? negotiatedPrice}) async {
     final response = await _apiService.post(
       ApiEndpoints.sendApplicationMessage(taskId, applicationId),
-      data: {'message': content},
+      data: {
+        'message': content,
+        if (negotiatedPrice != null) 'negotiated_price': negotiatedPrice,
+      },
     );
 
     if (!response.isSuccess) {

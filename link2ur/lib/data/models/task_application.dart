@@ -8,9 +8,11 @@ class TaskApplication extends Equatable {
     this.applicantId,
     this.applicantName,
     this.applicantAvatar,
+    this.applicantUserLevel,
     required this.status,
     this.message,
     this.proposedPrice,
+    this.currency,
     this.createdAt,
   });
 
@@ -19,9 +21,11 @@ class TaskApplication extends Equatable {
   final String? applicantId;
   final String? applicantName;
   final String? applicantAvatar;
+  final String? applicantUserLevel;
   final String status; // pending, approved, rejected
   final String? message;
   final double? proposedPrice;
+  final String? currency;
   final String? createdAt;
 
   bool get isPending => status == 'pending';
@@ -35,13 +39,15 @@ class TaskApplication extends Equatable {
       applicantId: json['applicant_id']?.toString(),
       applicantName: json['applicant_name'] as String?,
       applicantAvatar: json['applicant_avatar'] as String?,
+      applicantUserLevel: json['applicant_user_level'] as String?,
       status: json['status'] as String? ?? 'pending',
       message: json['message'] as String?,
       proposedPrice: (json['negotiated_price'] as num?)?.toDouble(),
+      currency: json['currency'] as String?,
       createdAt: json['created_at'] as String?,
     );
   }
 
   @override
-  List<Object?> get props => [id, taskId, status];
+  List<Object?> get props => [id, taskId, status, proposedPrice, message];
 }

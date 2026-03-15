@@ -993,6 +993,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
         _taskId!,
         event.applicationId,
         content: event.content,
+        negotiatedPrice: event.negotiatedPrice,
       );
       // Best-effort reload applications to show the new message
       List<TaskApplication>? updatedApps;
