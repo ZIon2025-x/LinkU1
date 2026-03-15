@@ -56,6 +56,33 @@ def detect_file_extension(
 
     return ''
 
+
+def get_file_extension_from_filename(filename: Optional[str]) -> Optional[str]:
+    """从文件名提取扩展名（小写），无文件名或无后缀时返回 None。"""
+    if not filename:
+        return None
+    ext = Path(filename).suffix.lower()
+    return ext if ext else None
+
+
+def get_file_extension_from_upload(file, *, content: Optional[bytes] = None) -> Optional[str]:
+    """从 UploadFile 对象推断扩展名（综合 filename、content_type、content）。
+
+    Args:
+        file: FastAPI UploadFile 对象（需有 .filename 和 .content_type 属性）
+        content: 已读取的文件字节内容（可选，用于 magic bytes 检测）
+
+    Returns:
+        扩展名字符串（如 '.jpg'），或 None
+    """
+    ext = detect_file_extension(
+        filename=getattr(file, 'filename', None),
+        content_type=getattr(file, 'content_type', None),
+        content=content,
+    )
+    return ext if ext else None
+
+
 # Only allow alphanumeric, hyphen, underscore, dot (no path separators or traversal)
 _SAFE_FILE_ID_RE = re.compile(r'^[\w\-]+$')
 
