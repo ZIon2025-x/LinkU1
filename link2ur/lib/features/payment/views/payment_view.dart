@@ -292,11 +292,17 @@ class _PaymentContentState extends State<_PaymentContent> {
       return;
     }
 
+    final clientSecret = response.clientSecret;
+    if (clientSecret == null || clientSecret.isEmpty) {
+      bloc.add(const PaymentMarkFailed('error_invalid_payment_amount'));
+      return;
+    }
+
     bloc.add(const PaymentStartProcessing());
 
     try {
       final success = await PaymentService.instance.presentPaymentSheet(
-        clientSecret: response.clientSecret!,
+        clientSecret: clientSecret,
         customerId: response.customerId,
         ephemeralKeySecret: response.ephemeralKeySecret,
       );
@@ -350,8 +356,16 @@ class _PaymentContentState extends State<_PaymentContent> {
         return;
       }
 
+      final applePaySecret = response.clientSecret;
+      if (applePaySecret == null || applePaySecret.isEmpty) {
+        if (mounted) {
+          bloc.add(const PaymentMarkFailed('error_invalid_payment_amount'));
+        }
+        return;
+      }
+
       final success = await paymentService.presentApplePay(
-        clientSecret: response.clientSecret!,
+        clientSecret: applePaySecret,
         amount: response.finalAmount,
         currency: response.currency,
         label: label,

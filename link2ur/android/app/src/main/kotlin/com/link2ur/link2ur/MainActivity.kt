@@ -21,9 +21,11 @@ class MainActivity : FlutterFragmentActivity() {
     private var stripeConnectChannel: MethodChannel? = null
     private var locationPickerResult: MethodChannel.Result? = null
     private var stripeConnectResult: MethodChannel.Result? = null
+    private var stripeAccountMgmtResult: MethodChannel.Result? = null
 
     private lateinit var locationPickerLauncher: ActivityResultLauncher<Intent>
     private lateinit var stripeConnectLauncher: ActivityResultLauncher<Intent>
+    private lateinit var stripeAccountMgmtLauncher: ActivityResultLauncher<Intent>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -58,6 +60,23 @@ class MainActivity : FlutterFragmentActivity() {
                 val error = result.data?.getStringExtra("error")
                 if (error != null) {
                     pendingResult?.error("ONBOARDING_FAILED", error, null)
+                } else {
+                    pendingResult?.success(mapOf("status" to "cancelled"))
+                }
+            }
+        }
+
+        stripeAccountMgmtLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            val pendingResult = stripeAccountMgmtResult
+            stripeAccountMgmtResult = null
+            if (result.resultCode == Activity.RESULT_OK) {
+                pendingResult?.success(mapOf("status" to "completed"))
+            } else {
+                val error = result.data?.getStringExtra("error")
+                if (error != null) {
+                    pendingResult?.error("ACCOUNT_MGMT_FAILED", error, null)
                 } else {
                     pendingResult?.success(mapOf("status" to "cancelled"))
                 }
@@ -148,6 +167,22 @@ class MainActivity : FlutterFragmentActivity() {
                             putExtra("clientSecret", clientSecret)
                         }
                         stripeConnectLauncher.launch(intent)
+                    } else {
+                        result.error("INVALID_ARGS", "Missing publishableKey or clientSecret", null)
+                    }
+                }
+                "openAccountManagement" -> {
+                    stripeAccountMgmtResult = result
+                    val args = call.arguments as? Map<*, *>
+                    val publishableKey = args?.get("publishableKey") as? String
+                    val clientSecret = args?.get("clientSecret") as? String
+
+                    if (publishableKey != null && clientSecret != null) {
+                        val intent = Intent(this, StripeConnectAccountManagementActivity::class.java).apply {
+                            putExtra("publishableKey", publishableKey)
+                            putExtra("clientSecret", clientSecret)
+                        }
+                        stripeAccountMgmtLauncher.launch(intent)
                     } else {
                         result.error("INVALID_ARGS", "Missing publishableKey or clientSecret", null)
                     }
