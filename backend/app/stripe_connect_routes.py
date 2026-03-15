@@ -2236,7 +2236,7 @@ async def connect_webhook(request: Request, db: Session = Depends(get_db)):
             metadata = account.get("metadata") or {}
             user_id = metadata.get("user_id")
             if user_id:
-                user = db.query(models.User).filter(models.User.id == int(user_id)).first()
+                user = db.query(models.User).filter(models.User.id == str(user_id)).first()
                 if user:
                     # 如果用户还没有 stripe_account_id，则设置
                     if not user.stripe_account_id:
@@ -2364,7 +2364,7 @@ async def connect_webhook(request: Request, db: Session = Depends(get_db)):
                 metadata = account.get("metadata") or {}
                 user_id = metadata.get("user_id")
                 if user_id:
-                    user = db.query(models.User).filter(models.User.id == int(user_id)).first()
+                    user = db.query(models.User).filter(models.User.id == str(user_id)).first()
                     if user:
                         # 更新用户的 stripe_account_id（可能之前没有保存）
                         user.stripe_account_id = account_id
@@ -2464,7 +2464,7 @@ async def connect_webhook(request: Request, db: Session = Depends(get_db)):
                 metadata = account.get("metadata") or {}
                 user_id = metadata.get("user_id")  # 从 metadata 获取 user_id
                 if user_id:
-                    user = db.query(models.User).filter(models.User.id == int(user_id)).first()
+                    user = db.query(models.User).filter(models.User.id == str(user_id)).first()
                     if user:
                         # 更新用户的 stripe_account_id（可能之前没有保存）
                         user.stripe_account_id = account_id
@@ -2575,7 +2575,7 @@ async def connect_webhook(request: Request, db: Session = Depends(get_db)):
                     metadata = account.get("metadata") or {}
                     user_id = metadata.get("user_id")
                     if user_id:
-                        user = db.query(models.User).filter(models.User.id == int(user_id)).first()
+                        user = db.query(models.User).filter(models.User.id == str(user_id)).first()
                         if user:
                             user.stripe_account_id = None
                             db.commit()

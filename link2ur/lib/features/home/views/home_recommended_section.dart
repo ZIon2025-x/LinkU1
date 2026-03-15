@@ -917,7 +917,7 @@ class _DesktopTaskCardState extends State<_DesktopTaskCard> {
                               ConstrainedBox(
                                 constraints: const BoxConstraints(maxWidth: 80),
                                 child: Text(
-                                  task.blurredLocation ?? task.location!,
+                                  task.location ?? 'Online',
                                   style: TextStyle(
                                     fontSize: 11, fontWeight: FontWeight.w500,
                                     color: isDark ? Colors.white : AppColors.desktopTextLight,

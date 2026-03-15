@@ -1539,7 +1539,7 @@ class _TaskHeaderCard extends StatelessWidget {
                 isPrimary: true,
               ),
               _buildTag(
-                text: task.displayLocation(currentUserId) ?? 'Online',
+                text: task.location ?? 'Online',
                 icon: task.isOnline
                     ? Icons.language
                     : Icons.location_on,

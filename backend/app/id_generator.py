@@ -41,12 +41,9 @@ def parse_customer_service_id(formatted_id: str) -> int:
     return int(formatted_id)
 
 
-def parse_user_id(formatted_id: str) -> int:
-    """将用户ID格式转换为数据库ID"""
-    if len(formatted_id) == 8 and formatted_id.isdigit():
-        # 取前6位作为数据库ID
-        return int(formatted_id[:6])
-    return int(formatted_id)
+def parse_user_id(formatted_id: str) -> str:
+    """返回用户ID字符串（User.id 为 String 类型，无需转 int）"""
+    return formatted_id
 
 
 def parse_admin_id(formatted_id: str) -> int:
@@ -54,6 +51,13 @@ def parse_admin_id(formatted_id: str) -> int:
     if formatted_id.startswith("A"):
         return int(formatted_id[1:])
     return int(formatted_id)
+
+
+def _is_user_id_format(user_id: str) -> bool:
+    """检查是否为用户ID格式：8位纯数字或8位hex（兼容旧版 uuid[:8]）"""
+    if len(user_id) != 8:
+        return False
+    return all(c in '0123456789abcdef' for c in user_id.lower())
 
 
 def get_id_type(user_id: Union[str, int]) -> str:
@@ -66,7 +70,7 @@ def get_id_type(user_id: Union[str, int]) -> str:
         return "customer_service"
     elif user_id.startswith("A"):
         return "admin"
-    elif user_id.isdigit() and len(user_id) == 8:
+    elif _is_user_id_format(user_id):
         return "user"
     else:
         return "unknown"
@@ -87,10 +91,10 @@ def is_admin_id(user_id: Union[str, int]) -> bool:
 
 
 def is_user_id(user_id: Union[str, int]) -> bool:
-    """判断是否为用户ID"""
+    """判断是否为用户ID（兼容旧版hex和新版纯数字）"""
     if isinstance(user_id, int):
         return True  # 数字ID默认为用户ID
-    return user_id.isdigit() and len(user_id) == 8
+    return _is_user_id_format(user_id)
 
 
 def format_flea_market_id(db_id: int) -> str:

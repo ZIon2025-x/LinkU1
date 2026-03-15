@@ -525,13 +525,13 @@ class TaskOut(TaskBase):
         return getattr(obj, 'current_participants', 0) or 0
     
     @classmethod
-    def from_orm(cls, obj, full_location_access: bool = False):
+    def from_orm(cls, obj, full_location_access: bool = True):
         """自定义ORM转换，处理时间字段和images字段
 
         Args:
             obj: Task ORM 对象
-            full_location_access: True 时返回完整地址和精确坐标（仅限任务相关人）；
-                                  False 时返回模糊化地址和低精度坐标（默认，保护隐私）
+            full_location_access: True 时返回完整地址和精确坐标（默认，不再隐藏）；
+                                  False 时返回模糊化地址和低精度坐标
         """
         from datetime import time
         import json

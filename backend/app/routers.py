@@ -1289,7 +1289,7 @@ def _get_task_detail_legacy(
         setattr(task, "completion_evidence", None)
         task.taker_id = None
         task.poster_id = None
-        return schemas.TaskOut.from_orm(task, full_location_access=False)
+        return schemas.TaskOut.from_orm(task, full_location_access=True)
 
     # 判断当前用户是否为任务相关人（发布者/接单者/参与者/申请者），决定是否返回完整地址和坐标
     _full_location_access = False
@@ -1491,7 +1491,8 @@ def _get_task_detail_legacy(
     setattr(task, "completion_evidence", completion_evidence if completion_evidence else None)
     
     # 使用 TaskOut.from_orm 确保所有字段（包括 task_source）都被正确序列化
-    task_dict = schemas.TaskOut.from_orm(task, full_location_access=_full_location_access).model_dump()
+    # full_location_access=True: 地址不再隐藏，所有人可见完整地址
+    task_dict = schemas.TaskOut.from_orm(task, full_location_access=True).model_dump()
     # 任务相关方可以看到 poster/taker 信息
     if task.poster is not None:
         task_dict["poster"] = schemas.UserBrief.model_validate(task.poster).model_dump()

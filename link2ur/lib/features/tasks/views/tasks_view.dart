@@ -839,7 +839,7 @@ class _TaskGridCard extends StatelessWidget {
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 80),
                   child: Text(
-                    task.blurredLocation ?? 'Online',
+                    task.location ?? 'Online',
                     style: AppTypography.caption.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.w600,

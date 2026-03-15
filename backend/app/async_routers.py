@@ -448,11 +448,12 @@ async def get_task_by_id(
     if _is_summary_only or _is_public_view:
         setattr(task, "has_applied", None)
         setattr(task, "user_application_status", None)
+        setattr(task, "completion_evidence", None)
         # 隐藏参与者 ID，防止通过 ID 关联个人信息
         task.taker_id = None
         if _is_summary_only:
             task.poster_id = None
-        return task
+        return schemas.TaskOut.from_orm(task, full_location_access=True)
 
     # view_count 移到后台任务，不阻塞响应
     def _bg_view_count(t_id: int):
@@ -502,8 +503,65 @@ async def get_task_by_id(
     else:
         setattr(task, "has_applied", None)
         setattr(task, "user_application_status", None)
-    
-    return task
+
+    # 任务完成证据（与同步路由一致）
+    completion_evidence = []
+    if task.status in ("pending_confirmation", "completed") and task.completed_at:
+        completion_message = (await db.execute(
+            select(models.Message).where(
+                models.Message.task_id == task_id,
+                models.Message.message_type == "system",
+                models.Message.meta.contains("task_completed_by_taker"),
+            ).order_by(models.Message.created_at.asc()).limit(1)
+        )).scalar_one_or_none()
+        if not completion_message:
+            all_system = (await db.execute(
+                select(models.Message).where(
+                    models.Message.task_id == task_id,
+                    models.Message.message_type == "system",
+                    models.Message.meta.isnot(None),
+                ).order_by(models.Message.created_at.asc())
+            )).scalars().all()
+            import json as _json
+            for msg in all_system:
+                try:
+                    if msg.meta and _json.loads(msg.meta).get("system_action") == "task_completed_by_taker":
+                        completion_message = msg
+                        break
+                except (ValueError, TypeError):
+                    continue
+        if completion_message and completion_message.id:
+            attachments = (await db.execute(
+                select(models.MessageAttachment).where(
+                    models.MessageAttachment.message_id == completion_message.id
+                )
+            )).scalars().all()
+            for att in attachments:
+                completion_evidence.append({
+                    "type": att.attachment_type or "file",
+                    "url": att.url or "",
+                    "file_id": att.blob_id,
+                })
+            if completion_message.meta:
+                try:
+                    meta_data = _json.loads(completion_message.meta)
+                    if meta_data.get("evidence_text"):
+                        completion_evidence.append({
+                            "type": "text",
+                            "content": meta_data["evidence_text"],
+                        })
+                except (ValueError, KeyError):
+                    pass
+    setattr(task, "completion_evidence", completion_evidence if completion_evidence else None)
+
+    # 使用 TaskOut.from_orm 确保所有字段（包括 platform_fee_rate/amount、task_source）都被正确序列化
+    task_dict = schemas.TaskOut.from_orm(task, full_location_access=True).model_dump()
+    # 任务相关方可以看到 poster/taker 信息
+    if task.poster is not None:
+        task_dict["poster"] = schemas.UserBrief.model_validate(task.poster).model_dump()
+    if task.taker is not None:
+        task_dict["taker"] = schemas.UserBrief.model_validate(task.taker).model_dump()
+    return task_dict
 
 
 # 简化的测试路由

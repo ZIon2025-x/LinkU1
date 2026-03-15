@@ -796,7 +796,7 @@ class _TaskCard extends StatelessWidget {
                               constraints:
                                   const BoxConstraints(maxWidth: 140),
                               child: Text(
-                                task.blurredLocation ?? task.location!,
+                                task.location ?? 'Online',
                                 style: const TextStyle(
                                   fontSize: 11,
                                   color: Colors.white,

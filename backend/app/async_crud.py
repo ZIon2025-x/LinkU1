@@ -125,8 +125,15 @@ class AsyncUserCRUD:
     async def create_user(db: AsyncSession, user: schemas.UserCreate) -> models.User:
         """创建用户"""
         try:
-            # 生成用户ID
-            user_id = str(uuid.uuid4())[:8]
+            # 生成唯一的8位数字用户ID
+            import random as _rnd
+            while True:
+                user_id = str(_rnd.randint(10000000, 99999999))
+                existing = await db.execute(
+                    select(models.User).where(models.User.id == user_id)
+                )
+                if not existing.scalar_one_or_none():
+                    break
             
             # 哈希密码
             hashed_password = get_password_hash(user.password)

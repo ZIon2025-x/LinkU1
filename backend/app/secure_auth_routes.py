@@ -96,8 +96,10 @@ def secure_login(
         username = user_credentials.email.strip()
         user = None
         
-        # 判断输入类型：8位纯数字为ID，否则为邮箱
-        if username.isdigit() and len(username) == 8:
+        # 判断输入类型：8位字符串（纯数字或hex）为ID，否则为邮箱
+        # 兼容旧版 uuid[:8] 生成的含字母ID和新版纯数字ID
+        is_user_id_format = len(username) == 8 and all(c in '0123456789abcdef' for c in username.lower())
+        if is_user_id_format:
             # ID登录：使用ID查找用户
             logger.info(f"ID登录：查找用户 id={username}")
             user = crud.get_user_by_id(db, username)
