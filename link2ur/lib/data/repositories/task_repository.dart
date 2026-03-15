@@ -989,7 +989,7 @@ class TaskRepository {
   Future<void> sendApplicationMessage(int taskId, int applicationId, {required String content}) async {
     final response = await _apiService.post(
       ApiEndpoints.sendApplicationMessage(taskId, applicationId),
-      data: {'content': content},
+      data: {'message': content},
     );
 
     if (!response.isSuccess) {
@@ -1001,7 +1001,7 @@ class TaskRepository {
   Future<void> replyApplicationMessage(int taskId, int applicationId, {required String content}) async {
     final response = await _apiService.post(
       ApiEndpoints.replyApplicationMessage(taskId, applicationId),
-      data: {'content': content},
+      data: {'message': content},
     );
 
     if (!response.isSuccess) {
