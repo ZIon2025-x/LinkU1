@@ -4513,5 +4513,17 @@
   "errorOfficialTaskExpired": "該任務已過期",
   "errorNewbieTasksLoadFailed": "載入任務失敗",
   "errorLeaderboardLoadFailed": "載入排行榜失敗",
-  "errorBadgesLoadFailed": "載入徽章失敗"
+  "errorBadgesLoadFailed": "載入徽章失敗",
+
+  "couponDetailTitle": "優惠券詳情",
+  "couponDetailDiscount": "優惠",
+  "couponDetailMinAmount": "最低消費",
+  "couponDetailNoThreshold": "無門檻",
+  "couponDetailValidPeriod": "有效期",
+  "couponDetailObtainedAt": "領取時間",
+  "couponDetailApplicableScenarios": "適用場景",
+  "couponDetailScenarioTask": "任務",
+  "couponDetailScenarioActivity": "活動",
+  "couponDetailScenarioService": "服務",
+  "couponDetailScenarioFleaMarket": "閒置市場"
 }

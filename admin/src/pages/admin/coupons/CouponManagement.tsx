@@ -105,7 +105,21 @@ export const CouponManagement: React.FC = () => {
       message.success('优惠券删除成功');
       table.refresh();
     } catch (error: any) {
-      message.error(`删除失败：${error.response?.data?.detail || error.message}`);
+      const detail = error.response?.data?.detail || error.message;
+      // 后端返回有使用记录时，提示是否强制删除（软删除）
+      if (error.response?.status === 400 && detail.includes('使用记录')) {
+        if (window.confirm(`${detail}\n\n确认强制删除？（优惠券将被停用，已使用的记录会保留）`)) {
+          try {
+            await deleteCoupon(coupon.id, true);
+            message.success('优惠券已强制删除');
+            table.refresh();
+          } catch (forceError: any) {
+            message.error(`强制删除失败：${forceError.response?.data?.detail || forceError.message}`);
+          }
+        }
+      } else {
+        message.error(`删除失败：${detail}`);
+      }
     }
   };
 
@@ -209,13 +223,19 @@ export const CouponManagement: React.FC = () => {
       },
     },
     {
-      key: 'usage',
-      title: '使用量',
+      key: 'claimed',
+      title: '领取量',
       width: 120,
       render: (_, record) => {
         const total = record.total_quantity || '∞';
-        return `${record.used_quantity} / ${total}`;
+        return `${record.claimed_quantity} / ${total}`;
       },
+    },
+    {
+      key: 'used',
+      title: '已使用',
+      width: 80,
+      render: (_, record) => record.used_quantity,
     },
     {
       key: 'status',

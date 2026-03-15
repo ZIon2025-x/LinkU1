@@ -44,6 +44,7 @@ export interface Coupon {
   max_discount?: number;
   currency?: string;
   total_quantity?: number;
+  claimed_quantity: number;
   used_quantity: number;
   remaining_quantity?: number;
   per_user_limit?: number;

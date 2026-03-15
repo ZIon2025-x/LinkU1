@@ -6,6 +6,7 @@ import '../../../core/design/app_typography.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/adaptive_dialogs.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/loading_view.dart';
@@ -697,69 +698,322 @@ class _MyCouponCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isUsable = coupon.isUsable;
 
-    return Container(
-        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-        padding: AppSpacing.allMd,
-        decoration: BoxDecoration(
-          color: (isDark
-              ? AppColors.cardBackgroundDark
-              : AppColors.cardBackgroundLight)
-              .withValues(alpha: isUsable ? 1.0 : 0.6),
-          borderRadius: AppRadius.allMedium,
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: (isUsable ? AppColors.accentPink : Colors.grey)
-                    .withValues(alpha: 0.1),
-                borderRadius: AppRadius.allSmall,
+    return GestureDetector(
+      onTap: () => _showCouponDetail(context, coupon),
+      child: Container(
+          margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+          padding: AppSpacing.allMd,
+          decoration: BoxDecoration(
+            color: (isDark
+                ? AppColors.cardBackgroundDark
+                : AppColors.cardBackgroundLight)
+                .withValues(alpha: isUsable ? 1.0 : 0.6),
+            borderRadius: AppRadius.allMedium,
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: (isUsable ? AppColors.accentPink : Colors.grey)
+                      .withValues(alpha: 0.1),
+                  borderRadius: AppRadius.allSmall,
+                ),
+                child: Icon(
+                  Icons.local_offer,
+                  color: isUsable ? AppColors.accentPink : Colors.grey,
+                ),
               ),
-              child: Icon(
-                Icons.local_offer,
-                color: isUsable ? AppColors.accentPink : Colors.grey,
-              ),
-            ),
-            AppSpacing.hMd,
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    coupon.coupon.name,
-                    style: AppTypography.bodyBold.copyWith(
-                      color: isDark
-                          ? AppColors.textPrimaryDark
-                          : AppColors.textPrimaryLight,
-                    ),
-                  ),
-                  Text(
-                    _localizeCouponStatus(context, coupon.status),
-                    style: AppTypography.caption.copyWith(
-                      color: isUsable ? AppColors.success : Colors.grey,
-                    ),
-                  ),
-                  if (coupon.validUntil != null)
+              AppSpacing.hMd,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Text(
-                      context.l10n.couponValidUntil(_formatDate(coupon.validUntil!)),
-                      style: AppTypography.caption2.copyWith(
+                      coupon.coupon.name,
+                      style: AppTypography.bodyBold.copyWith(
                         color: isDark
-                            ? AppColors.textTertiaryDark
-                            : AppColors.textTertiaryLight,
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimaryLight,
                       ),
                     ),
-                ],
+                    Text(
+                      _localizeCouponStatus(context, coupon.status),
+                      style: AppTypography.caption.copyWith(
+                        color: isUsable ? AppColors.success : Colors.grey,
+                      ),
+                    ),
+                    if (coupon.validUntil != null)
+                      Text(
+                        context.l10n.couponValidUntil(_formatDate(coupon.validUntil!)),
+                        style: AppTypography.caption2.copyWith(
+                          color: isDark
+                              ? AppColors.textTertiaryDark
+                              : AppColors.textTertiaryLight,
+                        ),
+                      ),
+                  ],
+                ),
               ),
-            ),
-          ],
-        ),
+              Icon(
+                Icons.chevron_right,
+                color: isDark
+                    ? AppColors.textTertiaryDark
+                    : AppColors.textTertiaryLight,
+                size: 20,
+              ),
+            ],
+          ),
+      ),
     );
   }
 
   String _formatDate(DateTime date) {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  }
+}
+
+/// 优惠券详情底部弹窗
+void _showCouponDetail(BuildContext context, UserCoupon userCoupon) {
+  final coupon = userCoupon.coupon;
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  final l10n = context.l10n;
+
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    backgroundColor: isDark
+        ? AppColors.cardBackgroundDark
+        : AppColors.cardBackgroundLight,
+    builder: (sheetContext) {
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.lg,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 拖拽指示器
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white24 : Colors.black12,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+
+              // 标题
+              Text(
+                l10n.couponDetailTitle,
+                style: AppTypography.title3.copyWith(
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimaryLight,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+
+              // 优惠券名称 + 折扣金额
+              Container(
+                width: double.infinity,
+                padding: AppSpacing.allMd,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: userCoupon.isUsable
+                        ? AppColors.gradientGold
+                        : [Colors.grey.shade400, Colors.grey.shade500],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: AppRadius.allMedium,
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      coupon.discountDisplayFormatted,
+                      style: const TextStyle(
+                        fontSize: 36,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      coupon.name,
+                      style: AppTypography.body.copyWith(color: Colors.white),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: AppRadius.allSmall,
+                      ),
+                      child: Text(
+                        _localizeCouponStatus(sheetContext, userCoupon.status),
+                        style: AppTypography.caption.copyWith(
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+
+              // 详情列表
+              _CouponDetailRow(
+                label: l10n.couponDetailDiscount,
+                value: coupon.discountDisplayFormatted,
+                isDark: isDark,
+              ),
+              _CouponDetailRow(
+                label: _localizeCouponType(sheetContext, coupon.type),
+                value: coupon.type == 'fixed_amount'
+                    ? l10n.couponTypeFixedAmount
+                    : l10n.couponTypePercentage,
+                isDark: isDark,
+              ),
+              _CouponDetailRow(
+                label: l10n.couponDetailMinAmount,
+                value: coupon.minAmount > 0
+                    ? '£${(coupon.minAmount / 100).toStringAsFixed(2)}'
+                    : l10n.couponDetailNoThreshold,
+                isDark: isDark,
+              ),
+              _CouponDetailRow(
+                label: l10n.couponDetailValidPeriod,
+                value: _formatPeriod(coupon.validFrom, coupon.validUntil),
+                isDark: isDark,
+              ),
+              if (userCoupon.obtainedAt != null)
+                _CouponDetailRow(
+                  label: l10n.couponDetailObtainedAt,
+                  value: _formatDateTime(userCoupon.obtainedAt!),
+                  isDark: isDark,
+                ),
+              if (coupon.applicableScenarios != null &&
+                  coupon.applicableScenarios!.isNotEmpty)
+                _CouponDetailRow(
+                  label: l10n.couponDetailApplicableScenarios,
+                  value: coupon.applicableScenarios!
+                      .map((s) => _localizeScenario(l10n, s))
+                      .join('、'),
+                  isDark: isDark,
+                ),
+              if (coupon.description != null && coupon.description!.isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  l10n.couponUsageInstructions,
+                  style: AppTypography.bodyBold.copyWith(
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  coupon.description!,
+                  style: AppTypography.body.copyWith(
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
+                  ),
+                ),
+              ],
+              const SizedBox(height: AppSpacing.md),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
+class _CouponDetailRow extends StatelessWidget {
+  const _CouponDetailRow({
+    required this.label,
+    required this.value,
+    required this.isDark,
+  });
+
+  final String label;
+  final String value;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 80,
+            child: Text(
+              label,
+              style: AppTypography.body.copyWith(
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: AppTypography.body.copyWith(
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : AppColors.textPrimaryLight,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _formatPeriod(DateTime? from, DateTime? until) {
+  final f = from != null ? _formatDateShort(from) : '—';
+  final u = until != null ? _formatDateShort(until) : '—';
+  return '$f ~ $u';
+}
+
+String _formatDateShort(DateTime date) {
+  return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+}
+
+String _formatDateTime(DateTime date) {
+  return '${_formatDateShort(date)} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+}
+
+String _localizeScenario(AppLocalizations l10n, String scenario) {
+  switch (scenario) {
+    case 'task':
+      return l10n.couponDetailScenarioTask;
+    case 'activity':
+      return l10n.couponDetailScenarioActivity;
+    case 'service':
+      return l10n.couponDetailScenarioService;
+    case 'flea_market':
+      return l10n.couponDetailScenarioFleaMarket;
+    default:
+      return scenario;
   }
 }
 

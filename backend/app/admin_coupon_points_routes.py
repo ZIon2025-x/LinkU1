@@ -357,6 +357,13 @@ def get_coupons_list(
     # 格式化数据
     data = []
     for coupon in coupons:
+        # 统计已领取数量（unused + used + expired，与 total_quantity 限制对应）
+        claimed_count = db.query(func.count(models.UserCoupon.id)).filter(
+            and_(
+                models.UserCoupon.coupon_id == coupon.id,
+                models.UserCoupon.status.in_(["unused", "used", "expired"])
+            )
+        ).scalar() or 0
         # 统计已使用数量
         used_count = db.query(func.count(models.UserCoupon.id)).filter(
             and_(
@@ -385,6 +392,7 @@ def get_coupons_list(
             "status": coupon.status,
             "usage_conditions": coupon.usage_conditions,
             "total_quantity": coupon.total_quantity,
+            "claimed_quantity": claimed_count,
             "used_quantity": used_count,
             "per_user_limit": coupon.per_user_limit,
             "can_combine": coupon.can_combine,
@@ -555,13 +563,24 @@ def delete_coupon(
         db.query(models.CouponRedemption).filter(models.CouponRedemption.coupon_id == coupon.id).delete()
         db.query(models.CouponUsageLog).filter(models.CouponUsageLog.coupon_id == coupon.id).delete()
     
+    # 将未使用的 UserCoupon 标记为 expired，避免用户看到可用但实际无法使用的券
+    expired_count = db.query(models.UserCoupon).filter(
+        and_(
+            models.UserCoupon.coupon_id == coupon.id,
+            models.UserCoupon.status == "unused"
+        )
+    ).update({"status": "expired"}, synchronize_session="fetch")
+
     # 软删除：设置状态为inactive
     coupon.status = "inactive"
     db.commit()
-    
+
+    if expired_count > 0:
+        logger.info(f"优惠券 {coupon_id} 删除时，{expired_count} 张未使用的用户优惠券已标记为过期")
+
     return {
         "success": True,
-        "message": "优惠券删除成功"
+        "message": f"优惠券删除成功，{expired_count} 张未使用的用户优惠券已失效"
     }
 
 

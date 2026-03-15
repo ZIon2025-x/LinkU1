@@ -9780,6 +9780,39 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get expertSearchSortNewest => '最新加入';
+
+  @override
+  String get couponDetailTitle => '优惠券详情';
+
+  @override
+  String get couponDetailDiscount => '优惠';
+
+  @override
+  String get couponDetailMinAmount => '最低消费';
+
+  @override
+  String get couponDetailNoThreshold => '无门槛';
+
+  @override
+  String get couponDetailValidPeriod => '有效期';
+
+  @override
+  String get couponDetailObtainedAt => '领取时间';
+
+  @override
+  String get couponDetailApplicableScenarios => '适用场景';
+
+  @override
+  String get couponDetailScenarioTask => '任务';
+
+  @override
+  String get couponDetailScenarioActivity => '活动';
+
+  @override
+  String get couponDetailScenarioService => '服务';
+
+  @override
+  String get couponDetailScenarioFleaMarket => '闲置市场';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -19514,4 +19547,37 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get expertSearchSortNewest => '最新加入';
+
+  @override
+  String get couponDetailTitle => '優惠券詳情';
+
+  @override
+  String get couponDetailDiscount => '優惠';
+
+  @override
+  String get couponDetailMinAmount => '最低消費';
+
+  @override
+  String get couponDetailNoThreshold => '無門檻';
+
+  @override
+  String get couponDetailValidPeriod => '有效期';
+
+  @override
+  String get couponDetailObtainedAt => '領取時間';
+
+  @override
+  String get couponDetailApplicableScenarios => '適用場景';
+
+  @override
+  String get couponDetailScenarioTask => '任務';
+
+  @override
+  String get couponDetailScenarioActivity => '活動';
+
+  @override
+  String get couponDetailScenarioService => '服務';
+
+  @override
+  String get couponDetailScenarioFleaMarket => '閒置市場';
 }

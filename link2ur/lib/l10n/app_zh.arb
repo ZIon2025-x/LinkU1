@@ -4598,5 +4598,17 @@
   "expertSearchSortLabel": "排序方式",
   "expertSearchSortRating": "评分",
   "expertSearchSortCompleted": "完成数最多",
-  "expertSearchSortNewest": "最新加入"
+  "expertSearchSortNewest": "最新加入",
+
+  "couponDetailTitle": "优惠券详情",
+  "couponDetailDiscount": "优惠",
+  "couponDetailMinAmount": "最低消费",
+  "couponDetailNoThreshold": "无门槛",
+  "couponDetailValidPeriod": "有效期",
+  "couponDetailObtainedAt": "领取时间",
+  "couponDetailApplicableScenarios": "适用场景",
+  "couponDetailScenarioTask": "任务",
+  "couponDetailScenarioActivity": "活动",
+  "couponDetailScenarioService": "服务",
+  "couponDetailScenarioFleaMarket": "闲置市场"
 }

@@ -18745,6 +18745,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Newest'**
   String get expertSearchSortNewest;
+
+  /// No description provided for @couponDetailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Coupon Details'**
+  String get couponDetailTitle;
+
+  /// No description provided for @couponDetailDiscount.
+  ///
+  /// In en, this message translates to:
+  /// **'Discount'**
+  String get couponDetailDiscount;
+
+  /// No description provided for @couponDetailMinAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Minimum Spend'**
+  String get couponDetailMinAmount;
+
+  /// No description provided for @couponDetailNoThreshold.
+  ///
+  /// In en, this message translates to:
+  /// **'No minimum'**
+  String get couponDetailNoThreshold;
+
+  /// No description provided for @couponDetailValidPeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'Valid Period'**
+  String get couponDetailValidPeriod;
+
+  /// No description provided for @couponDetailObtainedAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Obtained'**
+  String get couponDetailObtainedAt;
+
+  /// No description provided for @couponDetailApplicableScenarios.
+  ///
+  /// In en, this message translates to:
+  /// **'Applicable To'**
+  String get couponDetailApplicableScenarios;
+
+  /// No description provided for @couponDetailScenarioTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Tasks'**
+  String get couponDetailScenarioTask;
+
+  /// No description provided for @couponDetailScenarioActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'Activities'**
+  String get couponDetailScenarioActivity;
+
+  /// No description provided for @couponDetailScenarioService.
+  ///
+  /// In en, this message translates to:
+  /// **'Services'**
+  String get couponDetailScenarioService;
+
+  /// No description provided for @couponDetailScenarioFleaMarket.
+  ///
+  /// In en, this message translates to:
+  /// **'Flea Market'**
+  String get couponDetailScenarioFleaMarket;
 }
 
 class _AppLocalizationsDelegate

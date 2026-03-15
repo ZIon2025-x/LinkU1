@@ -4690,5 +4690,17 @@
   "expertSearchSortLabel": "Sort by",
   "expertSearchSortRating": "Rating",
   "expertSearchSortCompleted": "Most Completed",
-  "expertSearchSortNewest": "Newest"
+  "expertSearchSortNewest": "Newest",
+
+  "couponDetailTitle": "Coupon Details",
+  "couponDetailDiscount": "Discount",
+  "couponDetailMinAmount": "Minimum Spend",
+  "couponDetailNoThreshold": "No minimum",
+  "couponDetailValidPeriod": "Valid Period",
+  "couponDetailObtainedAt": "Obtained",
+  "couponDetailApplicableScenarios": "Applicable To",
+  "couponDetailScenarioTask": "Tasks",
+  "couponDetailScenarioActivity": "Activities",
+  "couponDetailScenarioService": "Services",
+  "couponDetailScenarioFleaMarket": "Flea Market"
 }

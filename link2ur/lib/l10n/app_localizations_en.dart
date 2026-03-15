@@ -10187,4 +10187,37 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get expertSearchSortNewest => 'Newest';
+
+  @override
+  String get couponDetailTitle => 'Coupon Details';
+
+  @override
+  String get couponDetailDiscount => 'Discount';
+
+  @override
+  String get couponDetailMinAmount => 'Minimum Spend';
+
+  @override
+  String get couponDetailNoThreshold => 'No minimum';
+
+  @override
+  String get couponDetailValidPeriod => 'Valid Period';
+
+  @override
+  String get couponDetailObtainedAt => 'Obtained';
+
+  @override
+  String get couponDetailApplicableScenarios => 'Applicable To';
+
+  @override
+  String get couponDetailScenarioTask => 'Tasks';
+
+  @override
+  String get couponDetailScenarioActivity => 'Activities';
+
+  @override
+  String get couponDetailScenarioService => 'Services';
+
+  @override
+  String get couponDetailScenarioFleaMarket => 'Flea Market';
 }
