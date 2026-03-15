@@ -37,7 +37,7 @@ class TaskApplication extends Equatable {
       applicantAvatar: json['applicant_avatar'] as String?,
       status: json['status'] as String? ?? 'pending',
       message: json['message'] as String?,
-      proposedPrice: (json['proposed_price'] as num?)?.toDouble(),
+      proposedPrice: (json['negotiated_price'] as num?)?.toDouble(),
       createdAt: json['created_at'] as String?,
     );
   }
