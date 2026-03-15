@@ -490,6 +490,7 @@ class _PaymentContentState extends State<_PaymentContent> {
       builder: (ctx) => _CouponSelectorSheet(
         selectedUserCouponId: context.read<PaymentBloc>().state.selectedUserCouponId,
         orderAmountPence: context.read<PaymentBloc>().state.paymentResponse?.originalAmount,
+        taskId: widget.taskId,
       ),
     );
 

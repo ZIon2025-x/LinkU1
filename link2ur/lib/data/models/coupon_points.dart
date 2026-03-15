@@ -247,6 +247,8 @@ class UserCoupon extends Equatable {
     this.status = AppConstants.couponStatusUnused,
     this.obtainedAt,
     this.validUntil,
+    this.applicable,
+    this.inapplicableReason,
   });
 
   final int id;
@@ -254,6 +256,10 @@ class UserCoupon extends Equatable {
   final String status; // unused, used, expired
   final DateTime? obtainedAt;
   final DateTime? validUntil;
+  /// 是否适用于指定任务（仅当请求传了 task_id 时后端才返回此字段）
+  final bool? applicable;
+  /// 不适用原因（仅当 applicable == false 时有值）
+  final String? inapplicableReason;
 
   /// 是否可用
   bool get isUsable => status == AppConstants.couponStatusUnused && !isExpired;
@@ -280,6 +286,9 @@ class UserCoupon extends Equatable {
     }
   }
 
+  /// 是否适用于指定任务（applicable 为 null 表示未校验，true 表示可用）
+  bool get isApplicable => applicable != false;
+
   factory UserCoupon.fromJson(Map<String, dynamic> json) {
     return UserCoupon(
       id: json['id'] as int,
@@ -291,9 +300,11 @@ class UserCoupon extends Equatable {
       validUntil: json['valid_until'] != null
           ? DateTime.tryParse(json['valid_until'])
           : null,
+      applicable: json['applicable'] as bool?,
+      inapplicableReason: json['inapplicable_reason'] as String?,
     );
   }
 
   @override
-  List<Object?> get props => [id, coupon, status];
+  List<Object?> get props => [id, coupon, status, applicable];
 }

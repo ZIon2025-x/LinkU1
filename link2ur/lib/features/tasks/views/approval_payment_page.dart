@@ -179,15 +179,16 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
 
   void _loadCouponsIfTaskPayment() {
     setState(() => _loadingCoupons = true);
-    context.read<CouponPointsRepository>().getMyCoupons(status: 'unused').then((list) {
+    context.read<CouponPointsRepository>().getMyCoupons(
+      status: 'unused',
+      taskId: widget.paymentData.taskId,
+    ).then((list) {
       if (mounted) {
-        // 过滤掉已过期（status 未同步）和不满足最低金额的优惠券
-        final orderAmount = _paymentResponse?.originalAmount;
         setState(() {
+          // 过滤掉已过期（status 未同步）的优惠券；
+          // 后端已按 task_id 做了适用性校验，不适用的券 applicable == false
           _availableCoupons = list
-              .where((c) =>
-                  c.isUsable &&
-                  (orderAmount == null || c.coupon.minAmount <= orderAmount))
+              .where((c) => c.isUsable && c.isApplicable)
               .toList();
           _loadingCoupons = false;
         });

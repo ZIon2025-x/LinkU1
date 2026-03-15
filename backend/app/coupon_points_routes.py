@@ -328,25 +328,35 @@ def claim_coupon_api(
 @router.get("/coupons/my", response_model=schemas.UserCouponList)
 def get_my_coupons(
     status: Optional[str] = Query(None, description="状态筛选：unused, used, expired"),
+    task_id: Optional[int] = Query(None, description="任务ID，传入后会对每张券做适用性校验"),
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
     current_user: models.User = Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db)
 ):
-    """获取用户优惠券列表"""
+    """获取用户优惠券列表
+
+    当传入 task_id 时，每张券会额外返回 applicable (bool) 和 inapplicable_reason (str|null)，
+    表示该券是否可用于该任务，以及不可用的原因。
+    """
     skip = (page - 1) * limit
     user_coupons, total = get_user_coupons(db, current_user.id, status, skip, limit)
-    
+
+    # 如果传了 task_id，查询任务信息用于适用性校验
+    task = None
+    if task_id:
+        task = db.query(models.Task).filter(models.Task.id == task_id).first()
+
     data = []
     for uc in user_coupons:
         coupon = get_coupon_by_id(db, uc.coupon_id)
         if not coupon:
             continue
-        
+
         discount_value_display = f"{coupon.discount_value / 100:.2f}"
         min_amount_display = f"{coupon.min_amount / 100:.2f}"
-        
-        data.append({
+
+        item = {
             "id": uc.id,
             "coupon": {
                 "id": coupon.id,
@@ -359,13 +369,29 @@ def get_my_coupons(
                 "min_amount_display": min_amount_display,
                 "currency": getattr(coupon, "currency", None) or "GBP",
                 "valid_until": coupon.valid_until,
-                "usage_conditions": getattr(coupon, "usage_conditions", None)
+                "usage_conditions": getattr(coupon, "usage_conditions", None),
+                "applicable_scenarios": getattr(coupon, "applicable_scenarios", None),
             },
             "status": uc.status,
             "obtained_at": uc.obtained_at,
-            "valid_until": coupon.valid_until
-        })
-    
+            "valid_until": coupon.valid_until,
+        }
+
+        # 如果有任务信息，校验优惠券适用性
+        if task and uc.status == "unused":
+            # 与支付端一致：优先 agreed_reward → base_reward
+            raw = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
+            task_amount = int(raw * 100)  # 转为便士
+            is_valid, error_msg, _ = validate_coupon_usage(
+                db, current_user.id, coupon.id, task_amount,
+                task_location=task.location,
+                task_type=task.task_type,
+            )
+            item["applicable"] = is_valid
+            item["inapplicable_reason"] = error_msg if not is_valid else None
+
+        data.append(item)
+
     return {"data": data}
 
 

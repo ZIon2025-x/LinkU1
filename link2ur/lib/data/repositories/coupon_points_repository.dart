@@ -131,14 +131,19 @@ class CouponPointsRepository {
   }
 
   /// 获取我的优惠券
+  ///
+  /// 当传入 [taskId] 时，后端会对每张券做适用性校验，
+  /// 返回的 JSON 包含 `applicable` (bool) 和 `inapplicable_reason` (String?)。
   Future<List<UserCoupon>> getMyCoupons({
     String? status,
+    int? taskId,
   }) async {
     // 后端返回 {"data": [...]}（coupon_points_routes.py）
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.myCoupons,
       queryParameters: {
         if (status != null) 'status': status,
+        if (taskId != null) 'task_id': taskId,
       },
     );
 
