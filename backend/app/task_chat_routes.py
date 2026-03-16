@@ -2469,13 +2469,26 @@ async def reject_application(
             responded_at=current_time
         )
         db.add(log_entry)
-        
+
+        # Check if any chatting or pending applications remain; revert task to open if none
+        remaining_count = await db.execute(
+            select(func.count()).select_from(models.TaskApplication).where(
+                models.TaskApplication.task_id == task_id,
+                models.TaskApplication.status.in_(["chatting", "pending"])
+            )
+        )
+        remaining = remaining_count.scalar()
+        if remaining == 0 and task.status == "chatting":
+            await db.execute(
+                update(models.Task).where(models.Task.id == task_id).values(status="open")
+            )
+
         await db.commit()
-        
+
         # 发送通知给申请者
         try:
             notification_time = get_utc_time()
-            
+
             # ⚠️ 直接使用文本内容，不存储 JSON
             content = f"您的任务申请已被拒绝：{task.title}"
             content_en = f"Your task application has been rejected: {task.title}"
@@ -2601,9 +2614,22 @@ async def withdraw_application(
             responded_at=current_time
         )
         db.add(log_entry)
-        
+
+        # Check if any chatting or pending applications remain; revert task to open if none
+        remaining_count = await db.execute(
+            select(func.count()).select_from(models.TaskApplication).where(
+                models.TaskApplication.task_id == task_id,
+                models.TaskApplication.status.in_(["chatting", "pending"])
+            )
+        )
+        remaining = remaining_count.scalar()
+        if remaining == 0 and task.status == "chatting":
+            await db.execute(
+                update(models.Task).where(models.Task.id == task_id).values(status="open")
+            )
+
         await db.commit()
-        
+
         # 发送通知给发布者（可选，但建议发送）
         try:
             notification_content = {
