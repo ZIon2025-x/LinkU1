@@ -426,6 +426,7 @@ class Message(Base):
     message_type = Column(String(20), default="normal")  # normal, system
     conversation_type = Column(String(20), default="task")  # task, customer_service, global
     meta = Column(Text, nullable=True)  # JSON格式存储元数据
+    application_id = Column(Integer, ForeignKey("task_applications.id", ondelete="CASCADE"), nullable=True)
     # 对话键（用于优化查询）：值为 least(sender_id, receiver_id) || '-' || greatest(sender_id, receiver_id)
     # 注意：conversation_key 由数据库触发器自动维护，应用层不需要手动设置
     conversation_key = Column(String(255), index=True, nullable=True)
@@ -438,7 +439,7 @@ class Message(Base):
         ),
         # 枚举约束：限定 message_type 的合法值
         CheckConstraint(
-            "message_type IN ('normal', 'system')",
+            "message_type IN ('normal', 'system', 'price_proposal')",
             name="ck_messages_type"
         ),
         # 枚举约束：限定 conversation_type 的合法值
@@ -453,6 +454,7 @@ class Message(Base):
         Index("ix_messages_task_created", task_id, created_at, id),  # 用于游标分页（查询时使用 ORDER BY created_at DESC, id DESC）
         Index("ix_messages_conversation_type", conversation_type, task_id),
         Index("ix_messages_task_id_id", task_id, id),  # 用于未读数聚合（配合 message_read_cursors）
+        Index("ix_messages_task_application", task_id, application_id),
     )
 
 
@@ -746,11 +748,11 @@ class PendingUser(Base):
 class TaskApplication(Base):
     """任务申请表"""
     __tablename__ = "task_applications"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
     applicant_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    status = Column(String(20), default="pending")  # pending, approved, rejected
+    status = Column(String(20), default="pending")  # pending, chatting, approved, rejected
     created_at = Column(DateTime(timezone=True), default=get_utc_time)
     message = Column(Text, nullable=True)  # 申请时的留言
     negotiated_price = Column(DECIMAL(12, 2), nullable=True)  # 议价价格
@@ -956,11 +958,12 @@ class MessageReadCursor(Base):
     id = Column(Integer, primary_key=True, index=True)
     task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False)
     user_id = Column(String(8), ForeignKey("users.id"), nullable=False)
+    application_id = Column(Integer, ForeignKey("task_applications.id", ondelete="CASCADE"), nullable=True)
     last_read_message_id = Column(Integer, ForeignKey("messages.id", ondelete="SET NULL"), nullable=True)  # 改为可空，删除消息时设为NULL
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, nullable=False)
-    
+
     __table_args__ = (
-        UniqueConstraint("task_id", "user_id", name="uq_message_read_cursors_task_user"),
+        UniqueConstraint("task_id", "user_id", "application_id", name="uq_message_read_cursors_task_user_application"),
         Index("ix_message_read_cursors_task_user", task_id, user_id),
         Index("ix_message_read_cursors_message", last_read_message_id),
     )
