@@ -6824,6 +6824,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                                 reject_msg = models.Message(
                                     task_id=task_id,
                                     application_id=other_app.id,
+                                    sender_id="system",
                                     content="The poster has selected another applicant for this task.",
                                     message_type="system",
                                     conversation_type="task",
@@ -6936,7 +6937,73 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                             logger.error(f"❌ [WEBHOOK] 创建/更新支付历史记录失败: {e}", exc_info=True)
                             # 支付历史记录失败不影响主流程
                     else:
-                        logger.warning(f"⚠️ 未找到申请: application_id={application_id_str}, task_id={task_id}, status=pending")
+                        # Application not in expected status — check if it was withdrawn (race condition)
+                        withdrawn_application = db.execute(
+                            select(models.TaskApplication).where(
+                                and_(
+                                    models.TaskApplication.id == application_id,
+                                    models.TaskApplication.task_id == task_id,
+                                    models.TaskApplication.status == "withdrawn"
+                                )
+                            )
+                        ).scalar_one_or_none()
+
+                        if withdrawn_application:
+                            logger.warning(
+                                f"⚠️ [WEBHOOK] 申请人已撤回申请，支付成功但需退款: "
+                                f"application_id={application_id_str}, task_id={task_id}, "
+                                f"payment_intent_id={payment_intent_id}"
+                            )
+                            # Revert task paid status since we will refund
+                            task.is_paid = 0
+                            task.payment_intent_id = None
+                            task.escrow_amount = None
+                            try:
+                                stripe.Refund.create(payment_intent=payment_intent_id)
+                                logger.info(
+                                    f"✅ [WEBHOOK] 已发起退款: payment_intent_id={payment_intent_id}, "
+                                    f"task_id={task_id}, application_id={application_id_str}"
+                                )
+                                # Notify the poster that payment was refunded
+                                try:
+                                    crud.create_notification(
+                                        db=db,
+                                        user_id=task.poster_id,
+                                        type="payment_refunded",
+                                        title="支付已退款",
+                                        content=f"申请人在支付处理期间撤回了申请，您的付款已自动退款：{task.title}",
+                                        related_id=str(task_id),
+                                        auto_commit=False,
+                                    )
+                                except Exception as notify_err:
+                                    logger.warning(f"⚠️ [WEBHOOK] 创建退款通知失败: {notify_err}")
+                            except Exception as refund_err:
+                                logger.error(
+                                    f"❌ [WEBHOOK] 退款失败，需人工处理: payment_intent_id={payment_intent_id}, "
+                                    f"task_id={task_id}, error={refund_err}",
+                                    exc_info=True
+                                )
+                        else:
+                            logger.warning(
+                                f"⚠️ [WEBHOOK] 未找到匹配的申请: application_id={application_id_str}, "
+                                f"task_id={task_id}, status not in [pending, chatting, withdrawn]. "
+                                f"Attempting refund for payment_intent_id={payment_intent_id}"
+                            )
+                            # Application not found at all or in unexpected status — refund to be safe
+                            task.is_paid = 0
+                            task.payment_intent_id = None
+                            task.escrow_amount = None
+                            try:
+                                stripe.Refund.create(payment_intent=payment_intent_id)
+                                logger.info(
+                                    f"✅ [WEBHOOK] 已发起退款（申请未找到）: payment_intent_id={payment_intent_id}"
+                                )
+                            except Exception as refund_err:
+                                logger.error(
+                                    f"❌ [WEBHOOK] 退款失败，需人工处理: payment_intent_id={payment_intent_id}, "
+                                    f"error={refund_err}",
+                                    exc_info=True
+                                )
                 else:
                     logger.info(f"ℹ️ 不是待确认的批准支付: is_pending_approval={is_pending_approval}, application_id={application_id_str}")
                     # 即使不是 pending_approval，也要记录支付历史
