@@ -86,6 +86,31 @@ class TaskDetailRejectApplicant extends TaskDetailEvent {
   List<Object?> get props => [applicationId];
 }
 
+/// 开始申请聊天（chat-before-payment 流程）
+class TaskDetailStartChat extends TaskDetailEvent {
+  const TaskDetailStartChat(this.applicationId);
+  final int applicationId;
+  @override
+  List<Object> get props => [applicationId];
+}
+
+/// 提议价格（chat-before-payment 流程）
+class TaskDetailProposePrice extends TaskDetailEvent {
+  const TaskDetailProposePrice(this.applicationId, this.price);
+  final int applicationId;
+  final double price;
+  @override
+  List<Object> get props => [applicationId, price];
+}
+
+/// 确认并支付（chat-before-payment 流程）
+class TaskDetailConfirmAndPay extends TaskDetailEvent {
+  const TaskDetailConfirmAndPay(this.applicationId);
+  final int applicationId;
+  @override
+  List<Object> get props => [applicationId];
+}
+
 /// 批准申请后后端返回的支付信息（需打开支付页完成支付，对齐 iOS）
 class AcceptPaymentData extends Equatable {
   const AcceptPaymentData({
@@ -425,6 +450,9 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
     on<TaskDetailAcceptApplicant>(_onAcceptApplicant);
     on<TaskDetailClearAcceptPaymentData>(_onClearAcceptPaymentData);
     on<TaskDetailRejectApplicant>(_onRejectApplicant);
+    on<TaskDetailStartChat>(_onStartChat);
+    on<TaskDetailProposePrice>(_onProposePrice);
+    on<TaskDetailConfirmAndPay>(_onConfirmAndPay);
     on<TaskDetailCompleteRequested>(_onCompleteRequested);
     on<TaskDetailConfirmCompletionRequested>(_onConfirmCompletion);
     on<TaskDetailCancelRequested>(_onCancelRequested);
@@ -1156,6 +1184,112 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
         isSubmitting: false,
         actionMessage: 'operation_failed',
         errorMessage: 'task_respond_negotiation_failed',
+      ));
+    }
+  }
+
+  // ==================== Chat-before-payment handlers ====================
+
+  Future<void> _onStartChat(
+    TaskDetailStartChat event,
+    Emitter<TaskDetailState> emit,
+  ) async {
+    if (_taskId == null || state.isSubmitting) return;
+    emit(state.copyWith(isSubmitting: true));
+    try {
+      await _taskRepository.startApplicationChat(_taskId!, event.applicationId);
+      final results = await Future.wait([
+        _refreshTask(),
+        _taskRepository.getTaskApplications(_taskId!),
+      ]);
+      final task = results[0] as Task;
+      final raw = results[1] as List<Map<String, dynamic>>;
+      final apps = raw.map((e) => TaskApplication.fromJson(e)).toList();
+      emit(state.copyWith(
+        isSubmitting: false,
+        applications: apps,
+        task: task,
+        actionMessage: 'chat_started',
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to start application chat', e);
+      emit(state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onProposePrice(
+    TaskDetailProposePrice event,
+    Emitter<TaskDetailState> emit,
+  ) async {
+    if (_taskId == null) return;
+    try {
+      await _taskRepository.proposePrice(
+          _taskId!, event.applicationId, event.price);
+      final raw = await _taskRepository.getTaskApplications(_taskId!);
+      final apps = raw.map((e) => TaskApplication.fromJson(e)).toList();
+      emit(state.copyWith(
+        applications: apps,
+        actionMessage: 'price_proposed',
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to propose price', e);
+      emit(state.copyWith(errorMessage: e.toString()));
+    }
+  }
+
+  Future<void> _onConfirmAndPay(
+    TaskDetailConfirmAndPay event,
+    Emitter<TaskDetailState> emit,
+  ) async {
+    if (_taskId == null || state.isSubmitting) return;
+    emit(state.copyWith(isSubmitting: true));
+    try {
+      final result =
+          await _taskRepository.confirmAndPay(_taskId!, event.applicationId);
+      if (result != null && result.containsKey('client_secret')) {
+        TaskApplication? approvedApp;
+        try {
+          approvedApp = state.applications
+              .firstWhere((a) => a.id == event.applicationId);
+        } catch (_) {
+          approvedApp = null;
+        }
+        final paymentData = AcceptPaymentData(
+          clientSecret: result['client_secret'] as String,
+          customerId: (result['customer_id'] as String?) ?? '',
+          ephemeralKeySecret:
+              (result['ephemeral_key_secret'] as String?) ?? '',
+          amountDisplay: result['amount'] != null
+              ? '£${(result['amount'] / 100).toStringAsFixed(2)}'
+              : result['amount_display'] as String?,
+          taskId: _taskId!,
+          applicationId: event.applicationId,
+          taskTitle: state.task?.title,
+          applicantName:
+              approvedApp?.applicantName ?? result['applicant_name'] as String?,
+        );
+        emit(state.copyWith(
+          isSubmitting: false,
+          acceptPaymentData: paymentData,
+          actionMessage: 'open_payment',
+        ));
+      } else {
+        // No payment needed — refresh state
+        final task = await _refreshTask();
+        emit(state.copyWith(
+          isSubmitting: false,
+          task: task,
+          actionMessage: 'application_accepted',
+        ));
+      }
+    } catch (e) {
+      AppLogger.error('Failed to confirm and pay', e);
+      emit(state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.toString(),
       ));
     }
   }
