@@ -57,6 +57,8 @@ class AppRoutes {
   static const String chat = '/chat/:userId';
   static const String taskChat = '/task-chat/:taskId';
   static const String taskChatList = '/task-chats';
+  static const String applicationChat =
+      '/tasks/:taskId/applications/:applicationId/chat';
 
   // 通知
   static const String notifications = '/notifications';
@@ -147,6 +149,7 @@ const authRequiredRoutes = <String>{
   AppRoutes.chat,
   AppRoutes.taskChat,
   AppRoutes.taskChatList,
+  AppRoutes.applicationChat,
   AppRoutes.notifications,
   AppRoutes.notificationList,
 };

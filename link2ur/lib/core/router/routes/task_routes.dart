@@ -6,6 +6,7 @@ import '../page_transitions.dart';
 import '../../../features/tasks/views/tasks_view.dart';
 import '../../../features/tasks/views/create_task_view.dart' show CreateTaskView, TaskDraftData;
 import '../../../features/tasks/views/task_detail_view.dart';
+import '../../../features/tasks/views/application_chat_view.dart';
 
 /// 任务相关路由（列表、创建、筛选、详情）
 List<RouteBase> get taskRoutes => [
@@ -44,6 +45,19 @@ GoRoute(
             context,
             key: state.pageKey,
             child: TaskDetailView(taskId: id, notificationId: notificationId),
+          );
+        },
+      ),
+      GoRoute(
+        path: '/tasks/:taskId/applications/:applicationId/chat',
+        name: 'applicationChat',
+        builder: (context, state) {
+          final taskId = int.parse(state.pathParameters['taskId']!);
+          final applicationId =
+              int.parse(state.pathParameters['applicationId']!);
+          return ApplicationChatView(
+            taskId: taskId,
+            applicationId: applicationId,
           );
         },
       ),
