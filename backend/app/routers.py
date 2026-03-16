@@ -6777,12 +6777,13 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                     logger.debug(f"🔍 查找申请: application_id={application_id}, task_id={task_id}")
                     
                     # 🔒 安全修复：使用 SELECT FOR UPDATE 防止并发 webhook 重复批准申请
+                    # 支持 pending 和 chatting 状态的申请（chatting 来自聊天后支付流程）
                     application = db.execute(
                         select(models.TaskApplication).where(
                             and_(
                                 models.TaskApplication.id == application_id,
                                 models.TaskApplication.task_id == task_id,
-                                models.TaskApplication.status == "pending"
+                                models.TaskApplication.status.in_(["pending", "chatting"])
                             )
                         ).with_for_update()
                     ).scalar_one_or_none()
@@ -6803,20 +6804,31 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                             task.agreed_reward = application.negotiated_price
                             logger.info(f"✅ [WEBHOOK] 更新任务成交价: {application.negotiated_price}")
                         
-                        # 自动拒绝所有其他待处理的申请
+                        # 自动拒绝所有其他待处理/聊天中的申请
                         other_applications = db.execute(
                             select(models.TaskApplication).where(
                                 and_(
                                     models.TaskApplication.task_id == task_id,
                                     models.TaskApplication.id != application_id,
-                                    models.TaskApplication.status == "pending"
+                                    models.TaskApplication.status.in_(["chatting", "pending"])
                                 )
                             )
                         ).scalars().all()
-                        
+
                         for other_app in other_applications:
+                            was_chatting = other_app.status == "chatting"
                             other_app.status = "rejected"
-                            logger.info(f"✅ [WEBHOOK] 自动拒绝其他申请: application_id={other_app.id}")
+                            logger.info(f"✅ [WEBHOOK] 自动拒绝其他申请: application_id={other_app.id}, was_chatting={was_chatting}")
+                            # 如果申请者之前在聊天中，发送系统消息通知
+                            if was_chatting:
+                                reject_msg = models.Message(
+                                    task_id=task_id,
+                                    application_id=other_app.id,
+                                    content="The poster has selected another applicant for this task.",
+                                    message_type="system",
+                                    conversation_type="task",
+                                )
+                                db.add(reject_msg)
                         
                         # 写入操作日志
                         from app.utils.time_utils import get_utc_time

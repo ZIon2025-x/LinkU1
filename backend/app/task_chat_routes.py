@@ -521,6 +521,7 @@ async def get_task_messages(
     task_id: int,
     limit: int = Query(20, ge=1, le=100),
     cursor: Optional[str] = Query(None),
+    application_id: Optional[int] = Query(None, description="按申请ID筛选消息（预付费聊天频道）"),
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
@@ -564,11 +565,37 @@ async def get_task_messages(
                 is_participant = participant_result.scalar_one_or_none() is not None
         
         if not is_poster and not is_taker and not is_participant:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="无权限查看该任务的消息"
+            # 如果提供了 application_id，允许该申请的申请者访问
+            if not application_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="无权限查看该任务的消息"
+                )
+
+        # 如果提供了 application_id，验证申请存在且调用者有权限
+        if application_id:
+            app_query = select(models.TaskApplication).where(
+                and_(
+                    models.TaskApplication.id == application_id,
+                    models.TaskApplication.task_id == task_id
+                )
             )
-        
+            app_result = await db.execute(app_query)
+            application = app_result.scalar_one_or_none()
+
+            if not application:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="申请不存在"
+                )
+
+            # 只有任务发布者或申请者可以查看该申请的消息
+            if not (task.poster_id == current_user.id or application.applicant_id == current_user.id):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="无权限查看该申请的消息"
+                )
+
         # 构建消息查询
         messages_query = select(models.Message).where(
             and_(
@@ -576,6 +603,12 @@ async def get_task_messages(
                 models.Message.conversation_type == 'task'
             )
         )
+
+        # 按 application_id 筛选消息
+        if application_id:
+            messages_query = messages_query.where(
+                models.Message.application_id == application_id
+            )
         
         # 游标分页处理
         if cursor:
@@ -818,6 +851,7 @@ class SendMessageRequest(BaseModel):
     content: str = Field(..., min_length=1, max_length=5000)
     meta: Optional[Dict[str, Any]] = Field(None, description="JSON格式元数据")
     attachments: List[Dict[str, Any]] = Field(default_factory=list, description="附件数组")
+    application_id: Optional[int] = Field(None, description="申请ID（预付费聊天频道）")
     
     @validator('meta')
     def validate_meta(cls, v):
@@ -833,7 +867,8 @@ class MarkReadRequest(BaseModel):
     """标记已读请求体"""
     upto_message_id: Optional[int] = None
     message_ids: Optional[List[int]] = None
-    
+    application_id: Optional[int] = Field(None, description="申请ID（预付费聊天频道）")
+
     @model_validator(mode='after')
     def validate_at_least_one(self):
         """验证至少提供一个字段"""
@@ -893,12 +928,49 @@ async def send_task_message(
         if task.is_multi_participant and task.created_by_expert:
             is_expert_creator = task.expert_creator_id == current_user.id
         
-        if not is_poster and not is_taker and not is_participant and not is_expert_creator:
+        # 如果提供了 application_id，验证申请并覆盖权限检查
+        application = None
+        application_receiver_id = None
+        if request.application_id:
+            app_query = select(models.TaskApplication).where(
+                and_(
+                    models.TaskApplication.id == request.application_id,
+                    models.TaskApplication.task_id == task_id
+                )
+            )
+            app_result = await db.execute(app_query)
+            application = app_result.scalar_one_or_none()
+
+            if not application:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="申请不存在"
+                )
+
+            if application.status != "chatting":
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="该申请当前不在聊天状态"
+                )
+
+            # 只有发布者或申请者可以在该频道发送消息
+            if not (task.poster_id == current_user.id or application.applicant_id == current_user.id):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="无权限在该申请频道发送消息"
+                )
+
+            # 确定接收者为对方
+            if current_user.id == task.poster_id:
+                application_receiver_id = application.applicant_id
+            else:
+                application_receiver_id = task.poster_id
+        elif not is_poster and not is_taker and not is_participant and not is_expert_creator:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="无权限发送消息"
             )
-        
+
         # 任务状态检查：仅拒绝「已结束」状态（已完成、已取消、已关闭、已过期），其余状态（含待确认、待支付、进行中等）均可发
         _ended_statuses = ("completed", "cancelled", "closed", "expired")
         if task.status in _ended_statuses:
@@ -994,13 +1066,14 @@ async def send_task_message(
         
         new_message = models.Message(
             sender_id=sender_id,
-            receiver_id=None,  # 任务消息不需要 receiver_id
+            receiver_id=application_receiver_id,  # 申请频道消息设置接收者，普通任务消息为 None
             content=request.content,
             task_id=task_id,
             message_type=message_type,
             conversation_type="task",
             meta=meta_str,
-            created_at=current_time
+            created_at=current_time,
+            application_id=request.application_id,
         )
         
         db.add(new_message)
@@ -1201,16 +1274,41 @@ async def mark_messages_read(
                 is_participant = participant_result.scalar_one_or_none() is not None
         
         if not is_poster and not is_taker and not is_participant:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="无权限标记该任务的消息"
+            # 如果提供了 application_id，允许该申请的申请者访问
+            if not request.application_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="无权限标记该任务的消息"
+                )
+
+        # 如果提供了 application_id，验证申请存在且调用者有权限
+        if request.application_id:
+            app_query = select(models.TaskApplication).where(
+                and_(
+                    models.TaskApplication.id == request.application_id,
+                    models.TaskApplication.task_id == task_id
+                )
             )
-        
+            app_result = await db.execute(app_query)
+            application = app_result.scalar_one_or_none()
+
+            if not application:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="申请不存在"
+                )
+
+            if not (task.poster_id == current_user.id or application.applicant_id == current_user.id):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="无权限标记该申请的消息"
+                )
+
         # 获取当前时间
         current_time = get_utc_time()
-        
+
         marked_count = 0
-        
+
         if request.upto_message_id:
             # 方式1：标记到指定消息ID为止的所有消息
             # 先获取该消息的 created_at 和 id
@@ -1230,19 +1328,20 @@ async def mark_messages_read(
                 )
             
             # 查询需要标记的消息（排除自己发送的消息）
-            messages_to_mark_query = select(models.Message).where(
-                and_(
-                    models.Message.task_id == task_id,
-                    models.Message.sender_id != current_user.id,
-                    or_(
-                        models.Message.created_at < upto_message.created_at,
-                        and_(
-                            models.Message.created_at == upto_message.created_at,
-                            models.Message.id <= upto_message.id
-                        )
+            mark_filters = [
+                models.Message.task_id == task_id,
+                models.Message.sender_id != current_user.id,
+                or_(
+                    models.Message.created_at < upto_message.created_at,
+                    and_(
+                        models.Message.created_at == upto_message.created_at,
+                        models.Message.id <= upto_message.id
                     )
                 )
-            )
+            ]
+            if request.application_id:
+                mark_filters.append(models.Message.application_id == request.application_id)
+            messages_to_mark_query = select(models.Message).where(and_(*mark_filters))
             messages_to_mark_result = await db.execute(messages_to_mark_query)
             messages_to_mark = messages_to_mark_result.scalars().all()
             
@@ -1273,16 +1372,20 @@ async def mark_messages_read(
             if new_reads:
                 db.add_all(new_reads)
             
-            # 更新或创建游标
-            cursor_query = select(models.MessageReadCursor).where(
-                and_(
-                    models.MessageReadCursor.task_id == task_id,
-                    models.MessageReadCursor.user_id == current_user.id
-                )
-            )
+            # 更新或创建游标（按 application_id 区分）
+            cursor_filters = [
+                models.MessageReadCursor.task_id == task_id,
+                models.MessageReadCursor.user_id == current_user.id,
+            ]
+            if request.application_id:
+                cursor_filters.append(models.MessageReadCursor.application_id == request.application_id)
+            else:
+                cursor_filters.append(models.MessageReadCursor.application_id.is_(None))
+
+            cursor_query = select(models.MessageReadCursor).where(and_(*cursor_filters))
             cursor_result = await db.execute(cursor_query)
             cursor = cursor_result.scalar_one_or_none()
-            
+
             if cursor:
                 # 只有当新游标大于等于当前游标时才更新（防止游标回退）
                 # 如果游标为 NULL（消息被删除后），也需要更新
@@ -1293,11 +1396,12 @@ async def mark_messages_read(
                 new_cursor = models.MessageReadCursor(
                     task_id=task_id,
                     user_id=current_user.id,
+                    application_id=request.application_id,
                     last_read_message_id=upto_message.id,
                     updated_at=current_time
                 )
                 db.add(new_cursor)
-        
+
         elif request.message_ids:
             # 方式2：标记指定消息ID列表
             # 查询这些消息（排除自己发送的消息）
@@ -1338,19 +1442,23 @@ async def mark_messages_read(
             if new_reads:
                 db.add_all(new_reads)
             
-            # 更新游标（使用最大的消息ID）
+            # 更新游标（使用最大的消息ID，按 application_id 区分）
             if messages_to_mark:
                 max_message_id = max([msg.id for msg in messages_to_mark])
-                
-                cursor_query = select(models.MessageReadCursor).where(
-                    and_(
-                        models.MessageReadCursor.task_id == task_id,
-                        models.MessageReadCursor.user_id == current_user.id
-                    )
-                )
+
+                cursor_filters = [
+                    models.MessageReadCursor.task_id == task_id,
+                    models.MessageReadCursor.user_id == current_user.id,
+                ]
+                if request.application_id:
+                    cursor_filters.append(models.MessageReadCursor.application_id == request.application_id)
+                else:
+                    cursor_filters.append(models.MessageReadCursor.application_id.is_(None))
+
+                cursor_query = select(models.MessageReadCursor).where(and_(*cursor_filters))
                 cursor_result = await db.execute(cursor_query)
                 cursor = cursor_result.scalar_one_or_none()
-                
+
                 if cursor:
                     # 处理游标为 NULL 的情况（消息被删除后游标可能为 NULL）
                     if cursor.last_read_message_id is None or max_message_id > cursor.last_read_message_id:
@@ -1360,6 +1468,7 @@ async def mark_messages_read(
                     new_cursor = models.MessageReadCursor(
                         task_id=task_id,
                         user_id=current_user.id,
+                        application_id=request.application_id,
                         last_read_message_id=max_message_id,
                         updated_at=current_time
                     )
@@ -2056,6 +2165,247 @@ async def propose_price(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"价格提议失败: {str(e)}"
+        )
+
+
+@task_chat_router.post("/tasks/{task_id}/applications/{application_id}/confirm-and-pay")
+async def confirm_and_pay(
+    task_id: int,
+    application_id: int,
+    request: Request,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """
+    确认并支付（聊天后支付）
+    发布者在与申请者聊天协商后，确认选择该申请者并创建支付意图。
+    使用 negotiated_price（如果有）或 task.reward 作为最终价格。
+    """
+    try:
+        async def _create_customer_and_ephemeral_key(stripe_module, user_obj, db_session):
+            """
+            为支付方创建/获取 Stripe Customer，并生成 Ephemeral Key。
+            """
+            customer_id = None
+            ephemeral_key_secret = None
+            try:
+                from app.utils.stripe_utils import get_or_create_stripe_customer
+                customer_id = get_or_create_stripe_customer(user_obj)
+                if customer_id and user_obj and (not user_obj.stripe_customer_id or user_obj.stripe_customer_id != customer_id):
+                    await db_session.execute(
+                        update(models.User)
+                        .where(models.User.id == user_obj.id)
+                        .values(stripe_customer_id=customer_id)
+                    )
+
+                ephemeral_key = stripe_module.EphemeralKey.create(
+                    customer=customer_id,
+                    stripe_version="2025-01-27.acacia",
+                )
+                ephemeral_key_secret = ephemeral_key.secret
+            except Exception as e:
+                logger.warning(f"无法创建 Stripe Customer 或 Ephemeral Key: {e}")
+                customer_id = None
+                ephemeral_key_secret = None
+
+            return customer_id, ephemeral_key_secret
+
+        # 使用 SELECT FOR UPDATE 锁定任务行（防止并发）
+        locked_task_query = select(models.Task).where(
+            models.Task.id == task_id
+        ).with_for_update()
+        locked_task_result = await db.execute(locked_task_query)
+        locked_task = locked_task_result.scalar_one_or_none()
+
+        if not locked_task:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="任务不存在"
+            )
+
+        # 权限检查：必须是发布者
+        if locked_task.poster_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="只有发布者可以确认并支付"
+            )
+
+        # 检查任务状态：必须是 chatting
+        if locked_task.status != "chatting":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"任务当前状态为 {locked_task.status}，只有 chatting 状态才能确认支付"
+            )
+
+        # 检查任务是否已支付（防止重复支付）
+        if locked_task.is_paid == 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="任务已支付，无法重复支付。"
+            )
+
+        # 使用 SELECT FOR UPDATE 锁定申请行
+        locked_app_query = select(models.TaskApplication).where(
+            and_(
+                models.TaskApplication.id == application_id,
+                models.TaskApplication.task_id == task_id
+            )
+        ).with_for_update()
+        locked_app_result = await db.execute(locked_app_query)
+        application = locked_app_result.scalar_one_or_none()
+
+        if not application:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="申请不存在"
+            )
+
+        # 申请必须是 chatting 状态
+        if application.status != "chatting":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"申请当前状态为 {application.status}，只有 chatting 状态才能确认支付"
+            )
+
+        # 确定最终价格：优先使用议价价格，否则使用任务原始奖励
+        final_price = float(application.negotiated_price) if application.negotiated_price is not None else float(locked_task.base_reward) if locked_task.base_reward is not None else 0.0
+
+        if final_price <= 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="任务金额必须大于0，无法进行支付"
+            )
+
+        # 检查申请人是否有 Stripe Connect 账户
+        applicant = await db.get(models.User, application.applicant_id)
+        if not applicant:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="申请人不存在"
+            )
+
+        if not applicant.stripe_account_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="申请人尚未创建 Stripe Connect 收款账户，无法进行支付。",
+                headers={"X-Stripe-Connect-Required": "true"}
+            )
+
+        # 检查 Stripe Connect 账户状态
+        try:
+            import stripe
+            import os
+
+            account = stripe.Account.retrieve(applicant.stripe_account_id)
+
+            if not account.details_submitted:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="申请人的 Stripe Connect 账户尚未完成设置。",
+                    headers={"X-Stripe-Connect-Onboarding-Required": "true"}
+                )
+
+            if not account.charges_enabled:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="申请人的 Stripe Connect 账户尚未启用收款功能。",
+                    headers={"X-Stripe-Connect-Charges-Not-Enabled": "true"}
+                )
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.warning(f"无法验证申请人 {application.applicant_id} 的 Stripe Connect 账户: {e}")
+
+        # 计算金额（pence）
+        final_price_pence = int(final_price * 100)
+
+        # 计算平台服务费
+        from app.utils.fee_calculator import calculate_application_fee_pence
+        task_source = getattr(locked_task, "task_source", None)
+        task_type = getattr(locked_task, "task_type", None)
+        application_fee_pence = calculate_application_fee_pence(final_price_pence, task_source, task_type)
+
+        # 创建 Stripe Payment Intent
+        import stripe
+        import os
+
+        taker_stripe_account_id = applicant.stripe_account_id
+
+        task_title_short = locked_task.title[:50] if locked_task.title else f"Task #{task_id}"
+        payment_description = f"任务 #{task_id}: {task_title_short} - 确认支付申请 #{application_id}"
+
+        from app.secure_auth import get_wechat_pay_payment_method_options
+        payment_method_options = get_wechat_pay_payment_method_options(request)
+        create_pi_kw = {
+            "amount": final_price_pence,
+            "currency": "gbp",
+            "payment_method_types": ["card", "wechat_pay", "alipay"],
+            "description": payment_description,
+            "metadata": {
+                "task_id": str(task_id),
+                "task_title": locked_task.title[:200] if locked_task.title else "",
+                "application_id": str(application_id),
+                "poster_id": str(current_user.id),
+                "poster_name": current_user.name or f"User {current_user.id}",
+                "taker_id": str(application.applicant_id),
+                "taker_name": applicant.name or f"User {application.applicant_id}",
+                "taker_stripe_account_id": taker_stripe_account_id,
+                "application_fee": str(application_fee_pence),
+                "task_amount": str(final_price_pence),
+                "task_amount_display": f"{final_price:.2f}",
+                "negotiated_price": str(application.negotiated_price) if application.negotiated_price else "",
+                "pending_approval": "true",
+                "platform": "Link²Ur",
+                "payment_type": "chat_confirm_payment",
+            },
+        }
+        if payment_method_options:
+            create_pi_kw["payment_method_options"] = payment_method_options
+        payment_intent = stripe.PaymentIntent.create(**create_pi_kw)
+
+        # 为支付方创建/获取 Customer + EphemeralKey
+        customer_id, ephemeral_key_secret = await _create_customer_and_ephemeral_key(
+            stripe_module=stripe,
+            user_obj=current_user,
+            db_session=db,
+        )
+
+        # 保存 payment_intent_id 到任务
+        locked_task.payment_intent_id = payment_intent.id
+
+        # 如果申请包含议价，更新 agreed_reward
+        if application.negotiated_price is not None:
+            locked_task.agreed_reward = application.negotiated_price
+
+        await db.commit()
+
+        logger.info(
+            f"✅ 确认支付成功: task_id={task_id}, application_id={application_id}, "
+            f"payment_intent_id={payment_intent.id}, amount={final_price_pence/100:.2f} GBP"
+        )
+
+        return {
+            "message": "请完成支付以确认选择该申请者",
+            "application_id": application_id,
+            "task_id": task_id,
+            "payment_intent_id": payment_intent.id,
+            "client_secret": payment_intent.client_secret,
+            "amount": final_price_pence,
+            "amount_display": f"{final_price_pence / 100:.2f}",
+            "currency": "GBP",
+            "customer_id": customer_id,
+            "ephemeral_key_secret": ephemeral_key_secret,
+        }
+
+    except HTTPException:
+        await db.rollback()
+        raise
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"确认支付失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"确认支付失败: {str(e)}"
         )
 
 
