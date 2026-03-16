@@ -9813,6 +9813,47 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get couponDetailScenarioFleaMarket => '闲置市场';
+
+  @override
+  String get agreeToChat => '同意沟通';
+
+  @override
+  String get modifyQuote => '修改报价';
+
+  @override
+  String get confirmAndPay => '确认并付款';
+
+  @override
+  String get chatStarted => '聊天通道已开启';
+
+  @override
+  String get priceProposed => '已提出新报价';
+
+  @override
+  String get applicationChatting => '沟通中';
+
+  @override
+  String get posterSelectedAnother => '发布者已选择了其他申请者';
+
+  @override
+  String get taskChat => '任务聊天';
+
+  @override
+  String currentPrice(String price) {
+    return '当前价格: £$price';
+  }
+
+  @override
+  String get typeMessage => '输入消息...';
+
+  @override
+  String get proposeNewPrice => '提出新报价';
+
+  @override
+  String get enterPrice => '输入价格';
+
+  @override
+  String get chatChannelClosed => '此聊天通道已关闭';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -19580,4 +19621,45 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get couponDetailScenarioFleaMarket => '閒置市場';
+
+  @override
+  String get agreeToChat => '同意溝通';
+
+  @override
+  String get modifyQuote => '修改報價';
+
+  @override
+  String get confirmAndPay => '確認並付款';
+
+  @override
+  String get chatStarted => '聊天通道已開啟';
+
+  @override
+  String get priceProposed => '已提出新報價';
+
+  @override
+  String get applicationChatting => '溝通中';
+
+  @override
+  String get posterSelectedAnother => '發佈者已選擇了其他申請者';
+
+  @override
+  String get taskChat => '任務聊天';
+
+  @override
+  String currentPrice(String price) {
+    return '當前價格: £$price';
+  }
+
+  @override
+  String get typeMessage => '輸入訊息...';
+
+  @override
+  String get proposeNewPrice => '提出新報價';
+
+  @override
+  String get enterPrice => '輸入價格';
+
+  @override
+  String get chatChannelClosed => '此聊天通道已關閉';
 }

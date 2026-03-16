@@ -10220,4 +10220,46 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get couponDetailScenarioFleaMarket => 'Flea Market';
+
+  @override
+  String get agreeToChat => 'Agree to Chat';
+
+  @override
+  String get modifyQuote => 'Modify Quote';
+
+  @override
+  String get confirmAndPay => 'Confirm & Pay';
+
+  @override
+  String get chatStarted => 'Chat channel opened';
+
+  @override
+  String get priceProposed => 'New price proposed';
+
+  @override
+  String get applicationChatting => 'Chatting';
+
+  @override
+  String get posterSelectedAnother =>
+      'The poster has selected another applicant';
+
+  @override
+  String get taskChat => 'Task Chat';
+
+  @override
+  String currentPrice(String price) {
+    return 'Current price: £$price';
+  }
+
+  @override
+  String get typeMessage => 'Type a message...';
+
+  @override
+  String get proposeNewPrice => 'Propose New Price';
+
+  @override
+  String get enterPrice => 'Enter price';
+
+  @override
+  String get chatChannelClosed => 'This chat channel is closed';
 }

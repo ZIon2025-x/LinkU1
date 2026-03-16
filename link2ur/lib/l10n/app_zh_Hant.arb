@@ -4525,5 +4525,23 @@
   "couponDetailScenarioTask": "任務",
   "couponDetailScenarioActivity": "活動",
   "couponDetailScenarioService": "服務",
-  "couponDetailScenarioFleaMarket": "閒置市場"
+  "couponDetailScenarioFleaMarket": "閒置市場",
+  "agreeToChat": "同意溝通",
+  "modifyQuote": "修改報價",
+  "confirmAndPay": "確認並付款",
+  "chatStarted": "聊天通道已開啟",
+  "priceProposed": "已提出新報價",
+  "applicationChatting": "溝通中",
+  "posterSelectedAnother": "發佈者已選擇了其他申請者",
+  "taskChat": "任務聊天",
+  "currentPrice": "當前價格: £{price}",
+  "@currentPrice": {
+    "placeholders": {
+      "price": {"type": "String"}
+    }
+  },
+  "typeMessage": "輸入訊息...",
+  "proposeNewPrice": "提出新報價",
+  "enterPrice": "輸入價格",
+  "chatChannelClosed": "此聊天通道已關閉"
 }

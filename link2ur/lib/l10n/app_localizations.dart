@@ -18811,6 +18811,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Flea Market'**
   String get couponDetailScenarioFleaMarket;
+
+  /// No description provided for @agreeToChat.
+  ///
+  /// In en, this message translates to:
+  /// **'Agree to Chat'**
+  String get agreeToChat;
+
+  /// No description provided for @modifyQuote.
+  ///
+  /// In en, this message translates to:
+  /// **'Modify Quote'**
+  String get modifyQuote;
+
+  /// No description provided for @confirmAndPay.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm & Pay'**
+  String get confirmAndPay;
+
+  /// No description provided for @chatStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat channel opened'**
+  String get chatStarted;
+
+  /// No description provided for @priceProposed.
+  ///
+  /// In en, this message translates to:
+  /// **'New price proposed'**
+  String get priceProposed;
+
+  /// No description provided for @applicationChatting.
+  ///
+  /// In en, this message translates to:
+  /// **'Chatting'**
+  String get applicationChatting;
+
+  /// No description provided for @posterSelectedAnother.
+  ///
+  /// In en, this message translates to:
+  /// **'The poster has selected another applicant'**
+  String get posterSelectedAnother;
+
+  /// No description provided for @taskChat.
+  ///
+  /// In en, this message translates to:
+  /// **'Task Chat'**
+  String get taskChat;
+
+  /// No description provided for @currentPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Current price: £{price}'**
+  String currentPrice(String price);
+
+  /// No description provided for @typeMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Type a message...'**
+  String get typeMessage;
+
+  /// No description provided for @proposeNewPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Propose New Price'**
+  String get proposeNewPrice;
+
+  /// No description provided for @enterPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter price'**
+  String get enterPrice;
+
+  /// No description provided for @chatChannelClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'This chat channel is closed'**
+  String get chatChannelClosed;
 }
 
 class _AppLocalizationsDelegate

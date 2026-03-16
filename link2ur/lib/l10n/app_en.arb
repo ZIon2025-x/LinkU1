@@ -4702,5 +4702,23 @@
   "couponDetailScenarioTask": "Tasks",
   "couponDetailScenarioActivity": "Activities",
   "couponDetailScenarioService": "Services",
-  "couponDetailScenarioFleaMarket": "Flea Market"
+  "couponDetailScenarioFleaMarket": "Flea Market",
+  "agreeToChat": "Agree to Chat",
+  "modifyQuote": "Modify Quote",
+  "confirmAndPay": "Confirm & Pay",
+  "chatStarted": "Chat channel opened",
+  "priceProposed": "New price proposed",
+  "applicationChatting": "Chatting",
+  "posterSelectedAnother": "The poster has selected another applicant",
+  "taskChat": "Task Chat",
+  "currentPrice": "Current price: £{price}",
+  "@currentPrice": {
+    "placeholders": {
+      "price": {"type": "String"}
+    }
+  },
+  "typeMessage": "Type a message...",
+  "proposeNewPrice": "Propose New Price",
+  "enterPrice": "Enter price",
+  "chatChannelClosed": "This chat channel is closed"
 }

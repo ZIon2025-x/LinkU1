@@ -4610,5 +4610,23 @@
   "couponDetailScenarioTask": "任务",
   "couponDetailScenarioActivity": "活动",
   "couponDetailScenarioService": "服务",
-  "couponDetailScenarioFleaMarket": "闲置市场"
+  "couponDetailScenarioFleaMarket": "闲置市场",
+  "agreeToChat": "同意沟通",
+  "modifyQuote": "修改报价",
+  "confirmAndPay": "确认并付款",
+  "chatStarted": "聊天通道已开启",
+  "priceProposed": "已提出新报价",
+  "applicationChatting": "沟通中",
+  "posterSelectedAnother": "发布者已选择了其他申请者",
+  "taskChat": "任务聊天",
+  "currentPrice": "当前价格: £{price}",
+  "@currentPrice": {
+    "placeholders": {
+      "price": {"type": "String"}
+    }
+  },
+  "typeMessage": "输入消息...",
+  "proposeNewPrice": "提出新报价",
+  "enterPrice": "输入价格",
+  "chatChannelClosed": "此聊天通道已关闭"
 }
