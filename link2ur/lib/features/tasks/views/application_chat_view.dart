@@ -14,9 +14,11 @@ import '../../../data/repositories/task_repository.dart';
 import '../../../data/services/api_service.dart';
 import '../../../data/services/storage_service.dart';
 import '../../../core/constants/api_endpoints.dart';
+import '../../../core/router/page_transitions.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../bloc/task_detail_bloc.dart';
+import 'approval_payment_page.dart';
 
 /// Application-scoped chat view for chat-before-payment flow.
 /// Accessed via /tasks/:taskId/applications/:applicationId/chat
@@ -250,13 +252,30 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
         if (state.actionMessage == 'price_proposed') {
           _loadMessages();
         }
-        // Handle payment data
-        if (state.acceptPaymentData != null) {
-          // Payment flow triggered — navigate to payment page
-          // The parent router handles this via acceptPaymentData
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Payment initiated')),
-          );
+        // Handle payment: open ApprovalPaymentPage (same pattern as task_detail_view)
+        if (state.actionMessage == 'open_payment' &&
+            state.acceptPaymentData != null) {
+          final data = state.acceptPaymentData!;
+          final taskId = widget.taskId;
+          final bloc = context.read<TaskDetailBloc>();
+          bloc.add(const TaskDetailClearAcceptPaymentData());
+          pushWithSwipeBack<bool>(
+            context,
+            ApprovalPaymentPage(paymentData: data),
+            fullscreenDialog: true,
+          ).then((result) {
+            if (!context.mounted) return;
+            if (result == true) {
+              context
+                  .read<TaskDetailBloc>()
+                  .add(TaskDetailLoadRequested(taskId));
+              context.read<TaskDetailBloc>().add(TaskDetailLoadApplications(
+                    currentUserId: _currentUserId,
+                  ));
+              _loadMessages();
+            }
+          });
+          return;
         }
         // Handle errors
         if (state.errorMessage != null) {
