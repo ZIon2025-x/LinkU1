@@ -1803,6 +1803,262 @@ async def accept_application(
         )
 
 
+@task_chat_router.post("/tasks/{task_id}/applications/{application_id}/start-chat")
+async def start_application_chat(
+    task_id: int,
+    application_id: int,
+    request: Request,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """
+    开始与申请者的聊天（单人任务专用）
+    发布者点击"聊一聊"后，将申请状态改为 chatting，任务状态改为 chatting，
+    并创建系统消息通知申请者。
+    """
+    try:
+        # 检查任务是否存在
+        task_query = select(models.Task).where(models.Task.id == task_id)
+        task_result = await db.execute(task_query)
+        task = task_result.scalar_one_or_none()
+
+        if not task:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="任务不存在"
+            )
+
+        # 权限检查：必须是发布者
+        if task.poster_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="只有发布者可以开始聊天"
+            )
+
+        # 多人任务不支持此流程
+        if task.is_multi_participant:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="多人任务不支持此操作，请使用原有流程"
+            )
+
+        # 检查任务状态
+        if task.status not in ("open", "chatting"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"任务当前状态为 {task.status}，无法开始聊天"
+            )
+
+        # 检查申请是否存在且属于该任务
+        application_query = select(models.TaskApplication).where(
+            and_(
+                models.TaskApplication.id == application_id,
+                models.TaskApplication.task_id == task_id
+            )
+        )
+        application_result = await db.execute(application_query)
+        application = application_result.scalar_one_or_none()
+
+        if not application:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="申请不存在"
+            )
+
+        # 幂等性：如果已经是 chatting 状态，直接返回成功
+        if application.status == "chatting":
+            return {
+                "message": "聊天已开始",
+                "application_id": application_id,
+                "task_id": task_id,
+                "applicant_id": application.applicant_id,
+                "status": "chatting"
+            }
+
+        # 申请必须是 pending 状态
+        if application.status != "pending":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"申请当前状态为 {application.status}，无法开始聊天"
+            )
+
+        # 更新申请状态为 chatting
+        await db.execute(
+            update(models.TaskApplication)
+            .where(models.TaskApplication.id == application_id)
+            .values(status="chatting")
+        )
+
+        # 如果任务状态为 open，更新为 chatting
+        if task.status == "open":
+            await db.execute(
+                update(models.Task)
+                .where(models.Task.id == task_id)
+                .values(status="chatting")
+            )
+
+        # 创建系统消息通知申请者
+        current_time = get_utc_time()
+        system_message = models.Message(
+            sender_id="system",
+            receiver_id=None,
+            content="发布者已开始与你的聊天，请在此频道沟通任务详情。",
+            task_id=task_id,
+            message_type="system",
+            conversation_type="task",
+            application_id=application_id,
+            created_at=current_time,
+        )
+        db.add(system_message)
+
+        await db.commit()
+
+        logger.info(f"✅ 开始聊天: task_id={task_id}, application_id={application_id}, applicant_id={application.applicant_id}")
+
+        return {
+            "message": "聊天已开始",
+            "application_id": application_id,
+            "task_id": task_id,
+            "applicant_id": application.applicant_id,
+            "status": "chatting"
+        }
+
+    except HTTPException:
+        await db.rollback()
+        raise
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"开始聊天失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"开始聊天失败: {str(e)}"
+        )
+
+
+@task_chat_router.post("/tasks/{task_id}/applications/{application_id}/propose-price")
+async def propose_price(
+    task_id: int,
+    application_id: int,
+    request: Request,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """
+    在聊天中提出新价格（发布者或申请者均可）
+    更新申请的 negotiated_price 并创建 price_proposal 消息
+    """
+    try:
+        # 解析请求体
+        body = await request.json()
+        proposed_price = body.get("proposedPrice")
+
+        if proposed_price is None or proposed_price <= 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="proposedPrice 必须大于 0"
+            )
+
+        # 检查任务是否存在
+        task_query = select(models.Task).where(models.Task.id == task_id)
+        task_result = await db.execute(task_query)
+        task = task_result.scalar_one_or_none()
+
+        if not task:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="任务不存在"
+            )
+
+        # 检查申请是否存在且属于该任务
+        application_query = select(models.TaskApplication).where(
+            and_(
+                models.TaskApplication.id == application_id,
+                models.TaskApplication.task_id == task_id
+            )
+        )
+        application_result = await db.execute(application_query)
+        application = application_result.scalar_one_or_none()
+
+        if not application:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="申请不存在"
+            )
+
+        # 申请必须是 chatting 状态
+        if application.status != "chatting":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"申请当前状态为 {application.status}，只有 chatting 状态才能提出价格"
+            )
+
+        # 权限检查：必须是发布者或申请者
+        is_poster = task.poster_id == current_user.id
+        is_applicant = application.applicant_id == current_user.id
+
+        if not is_poster and not is_applicant:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="只有发布者或申请者可以提出价格"
+            )
+
+        # 确定消息接收方
+        if is_poster:
+            receiver_id = application.applicant_id
+        else:
+            receiver_id = task.poster_id
+
+        # 更新申请的 negotiated_price
+        from decimal import Decimal
+        await db.execute(
+            update(models.TaskApplication)
+            .where(models.TaskApplication.id == application_id)
+            .values(negotiated_price=Decimal(str(proposed_price)))
+        )
+
+        # 创建 price_proposal 消息
+        current_time = get_utc_time()
+        meta_dict = {
+            "proposedPrice": float(proposed_price),
+            "proposedBy": current_user.id
+        }
+        price_message = models.Message(
+            sender_id=current_user.id,
+            receiver_id=receiver_id,
+            content=f"Proposed new price: £{proposed_price:.2f}",
+            task_id=task_id,
+            application_id=application_id,
+            message_type="price_proposal",
+            conversation_type="task",
+            meta=json.dumps(meta_dict),
+            created_at=current_time,
+        )
+        db.add(price_message)
+
+        await db.commit()
+
+        logger.info(
+            f"✅ 价格提议: task_id={task_id}, application_id={application_id}, "
+            f"proposed_price={proposed_price}, by user {current_user.id}"
+        )
+
+        return {
+            "status": "ok",
+            "negotiatedPrice": float(proposed_price)
+        }
+
+    except HTTPException:
+        await db.rollback()
+        raise
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"价格提议失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"价格提议失败: {str(e)}"
+        )
+
+
 @task_chat_router.post("/tasks/{task_id}/applications/{application_id}/reject")
 async def reject_application(
     task_id: int,
