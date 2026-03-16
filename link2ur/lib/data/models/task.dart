@@ -210,10 +210,10 @@ class Task extends Equatable {
   bool get isExpired => deadline != null && deadline!.isBefore(DateTime.now());
 
   /// 是否可以申请
-  bool get canApply => 
-      status == AppConstants.taskStatusOpen && 
-      !hasApplied && 
-      !isExpired && 
+  bool get canApply =>
+      (status == AppConstants.taskStatusOpen || status == AppConstants.taskStatusChatting) &&
+      !hasApplied &&
+      !isExpired &&
       currentParticipants < maxParticipants;
 
   // ==================== 任务来源判断 ====================

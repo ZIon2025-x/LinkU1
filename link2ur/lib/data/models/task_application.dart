@@ -31,6 +31,7 @@ class TaskApplication extends Equatable {
   bool get isPending => status == 'pending';
   bool get isApproved => status == 'approved';
   bool get isRejected => status == 'rejected';
+  bool get isChatting => status == 'chatting';
 
   factory TaskApplication.fromJson(Map<String, dynamic> json) {
     return TaskApplication(
