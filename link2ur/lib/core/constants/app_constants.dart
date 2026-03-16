@@ -35,6 +35,13 @@ class AppConstants {
   static const String taskStatusCancelled = 'cancelled';
   static const String taskStatusDisputed = 'disputed';
   static const String taskStatusPendingAcceptance = 'pending_acceptance';
+  static const String taskStatusChatting = 'chatting';
+
+  // Application statuses
+  static const String applicationStatusPending = 'pending';
+  static const String applicationStatusChatting = 'chatting';
+  static const String applicationStatusApproved = 'approved';
+  static const String applicationStatusRejected = 'rejected';
 
   /// 任务来源
   static const String taskSourceNormal = 'normal';
