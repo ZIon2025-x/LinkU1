@@ -554,11 +554,13 @@ class ApplicationsListView extends StatelessWidget {
     required this.applications,
     required this.isLoading,
     required this.isDark,
+    required this.task,
   });
 
   final List<TaskApplication> applications;
   final bool isLoading;
   final bool isDark;
+  final Task task;
 
   @override
   Widget build(BuildContext context) {
@@ -635,6 +637,7 @@ class ApplicationsListView extends StatelessWidget {
                       key: ValueKey(app.id),
                       application: app,
                       isDark: isDark,
+                      task: task,
                     ))
                 ,
         ],
@@ -648,10 +651,12 @@ class _ApplicationItem extends StatelessWidget {
     super.key,
     required this.application,
     required this.isDark,
+    required this.task,
   });
 
   final TaskApplication application;
   final bool isDark;
+  final Task task;
 
   void _confirmReject(BuildContext context) {
     AdaptiveDialogs.showConfirmDialog<bool>(
@@ -677,9 +682,11 @@ class _ApplicationItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final statusColor = application.isPending
         ? AppColors.warning
-        : application.isApproved
-            ? AppColors.success
-            : AppColors.error;
+        : application.isChatting
+            ? AppColors.primary
+            : application.isApproved
+                ? AppColors.success
+                : AppColors.error;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
@@ -817,21 +824,60 @@ class _ApplicationItem extends StatelessWidget {
                 ),
               ),
             ],
-            // 操作按钮 (仅 pending 时显示)
+            // 操作按钮 (pending 或 chatting 时显示)
             if (application.isPending) ...[
               const SizedBox(height: AppSpacing.md),
               Row(
                 children: [
-                  _ActionCircleButton(
-                    icon: Icons.check_circle,
-                    color: AppColors.success,
-                    onTap: () {
-                      AppHaptics.medium();
-                      context.read<TaskDetailBloc>().add(
-                            TaskDetailAcceptApplicant(application.id),
-                          );
-                    },
-                  ),
+                  if (task.isMultiParticipant)
+                    // 多人任务：保持原有的直接接受按钮
+                    _ActionCircleButton(
+                      icon: Icons.check_circle,
+                      color: AppColors.success,
+                      onTap: () {
+                        AppHaptics.medium();
+                        context.read<TaskDetailBloc>().add(
+                              TaskDetailAcceptApplicant(application.id),
+                            );
+                      },
+                    )
+                  else
+                    // 单人任务：同意沟通按钮
+                    Expanded(
+                      child: BouncingWidget(
+                        onTap: () {
+                          AppHaptics.medium();
+                          context.read<TaskDetailBloc>().add(
+                                TaskDetailStartChat(application.id),
+                              );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.md,
+                            vertical: AppSpacing.sm,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                            borderRadius: AppRadius.allSmall,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.chat_bubble_outline,
+                                  size: 18, color: AppColors.primary),
+                              const SizedBox(width: 6),
+                              Text(
+                                context.l10n.agreeToChat,
+                                style: AppTypography.caption.copyWith(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                   const SizedBox(width: 16),
                   _ActionCircleButton(
                     icon: Icons.cancel,
@@ -846,6 +892,54 @@ class _ApplicationItem extends StatelessWidget {
                 ],
               ),
             ],
+            // chatting 状态：显示打开聊天和拒绝按钮
+            if (application.isChatting) ...[
+              const SizedBox(height: AppSpacing.md),
+              Row(
+                children: [
+                  Expanded(
+                    child: BouncingWidget(
+                      onTap: () {
+                        context.push(
+                          '/tasks/${task.id}/applications/${application.id}/chat',
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.md,
+                          vertical: AppSpacing.sm,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.success.withValues(alpha: 0.1),
+                          borderRadius: AppRadius.allSmall,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.chat,
+                                size: 18, color: AppColors.success),
+                            const SizedBox(width: 6),
+                            Text(
+                              context.l10n.applicationChatting,
+                              style: AppTypography.caption.copyWith(
+                                color: AppColors.success,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  _ActionCircleButton(
+                    icon: Icons.cancel,
+                    color: AppColors.error,
+                    onTap: () => _confirmReject(context),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
@@ -854,6 +948,7 @@ class _ApplicationItem extends StatelessWidget {
 
   String _statusText(BuildContext context) {
     if (application.isPending) return context.l10n.taskDetailPendingReview;
+    if (application.isChatting) return context.l10n.applicationChatting;
     if (application.isApproved) return context.l10n.taskDetailApproved;
     if (application.isRejected) return context.l10n.taskDetailRejected;
     return context.l10n.taskDetailUnknown;

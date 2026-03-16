@@ -559,15 +559,17 @@ class _TaskDetailContent extends StatelessWidget {
                   const SizedBox(height: AppSpacing.md),
                 ],
 
-                // 申请列表 (isPoster && open)
+                // 申请列表 (isPoster && open/chatting)
                 if (isPoster &&
-                    task.status == AppConstants.taskStatusOpen) ...[
+                    (task.status == AppConstants.taskStatusOpen ||
+                     task.status == AppConstants.taskStatusChatting)) ...[
                   AnimatedListItem(
                     index: 3,
                     child: ApplicationsListView(
                       applications: state.applications,
                       isLoading: state.isLoadingApplications,
                       isDark: isDark,
+                      task: task,
                     ),
                   ),
                   const SizedBox(height: AppSpacing.md),
