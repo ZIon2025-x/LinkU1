@@ -365,6 +365,53 @@ class TaskRepository {
     return response.data;
   }
 
+  /// 开始申请聊天（chat-before-payment 流程）
+  Future<Map<String, dynamic>?> startApplicationChat(
+      int taskId, int applicationId) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.startApplicationChat(taskId, applicationId),
+    );
+
+    if (!response.isSuccess) {
+      throw TaskException(response.message ?? 'Failed to start chat');
+    }
+
+    await _cache.invalidateTaskDetailCache(taskId);
+    await _cache.invalidateMyTasksCache();
+    return response.data;
+  }
+
+  /// 提议价格（chat-before-payment 流程）
+  Future<Map<String, dynamic>?> proposePrice(
+      int taskId, int applicationId, double price) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.proposePrice(taskId, applicationId),
+      data: {'proposedPrice': price},
+    );
+
+    if (!response.isSuccess) {
+      throw TaskException(response.message ?? 'Failed to propose price');
+    }
+
+    return response.data;
+  }
+
+  /// 确认并支付（chat-before-payment 流程）
+  Future<Map<String, dynamic>?> confirmAndPay(
+      int taskId, int applicationId) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.confirmAndPay(taskId, applicationId),
+    );
+
+    if (!response.isSuccess) {
+      throw TaskException(response.message ?? 'Failed to initiate payment');
+    }
+
+    await _cache.invalidateTaskDetailCache(taskId);
+    await _cache.invalidateMyTasksCache();
+    return response.data;
+  }
+
   /// 拒绝申请
   Future<void> rejectApplication(int taskId, int applicationId) async {
     final response = await _apiService.post(
