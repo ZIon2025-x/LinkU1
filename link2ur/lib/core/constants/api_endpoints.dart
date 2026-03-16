@@ -116,6 +116,12 @@ class ApiEndpoints {
       '/api/tasks/$taskId/applications/$applicationId/send-message';
   static String replyApplicationMessage(int taskId, int applicationId) =>
       '/api/tasks/$taskId/applications/$applicationId/reply-message';
+  static String startApplicationChat(int taskId, int applicationId) =>
+      '/api/tasks/$taskId/applications/$applicationId/start-chat';
+  static String proposePrice(int taskId, int applicationId) =>
+      '/api/tasks/$taskId/applications/$applicationId/propose-price';
+  static String confirmAndPay(int taskId, int applicationId) =>
+      '/api/tasks/$taskId/applications/$applicationId/confirm-and-pay';
 
   // ==================== 跳蚤市场 ====================
   // 后端: flea_market_routes.py (prefix: /api/flea-market)
