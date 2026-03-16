@@ -6821,13 +6821,17 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                             logger.info(f"✅ [WEBHOOK] 自动拒绝其他申请: application_id={other_app.id}, was_chatting={was_chatting}")
                             # 如果申请者之前在聊天中，发送系统消息通知
                             if was_chatting:
+                                content_zh = "发布者已选择了其他申请者完成此任务。"
+                                content_en = "The poster has selected another applicant for this task."
                                 reject_msg = models.Message(
                                     task_id=task_id,
                                     application_id=other_app.id,
-                                    sender_id="system",
-                                    content="The poster has selected another applicant for this task.",
+                                    sender_id=None,
+                                    content=content_zh,
                                     message_type="system",
                                     conversation_type="task",
+                                    meta=json.dumps({"system_action": "application_rejected", "content_en": content_en}),
+                                    created_at=get_utc_time(),
                                 )
                                 db.add(reject_msg)
                         
@@ -7406,10 +7410,12 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                             from app.models import Message
                             import json
                             
+                            content_zh = f"⚠️ 此任务的支付发生Stripe争议，任务状态已冻结。原因: {reason}，金额: £{amount:.2f}。在争议解决前，所有资金操作将被暂停。"
+                            content_en = f"⚠️ A Stripe dispute has been raised for this task's payment. Task status is now frozen. Reason: {reason}, amount: £{amount:.2f}. All fund operations are suspended until the dispute is resolved."
                             system_message = Message(
                                 sender_id=None,
                                 receiver_id=None,
-                                content=f"⚠️ 此任务的支付发生Stripe争议，任务状态已冻结。原因: {reason}，金额: £{amount:.2f}。在争议解决前，所有资金操作将被暂停。",
+                                content=content_zh,
                                 task_id=task.id,
                                 message_type="system",
                                 conversation_type="task",
@@ -7417,7 +7423,8 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                                     "system_action": "stripe_dispute_frozen",
                                     "charge_id": charge_id,
                                     "reason": reason,
-                                    "amount": amount
+                                    "amount": amount,
+                                    "content_en": content_en
                                 }),
                                 created_at=get_utc_time()
                             )
@@ -7477,17 +7484,20 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                     from app.models import Message
                     import json
                     
+                    content_zh = f"✅ Stripe争议已关闭（状态: {status}），任务状态已解冻，资金操作已恢复正常。"
+                    content_en = f"✅ Stripe dispute has been closed (status: {status}). Task status is now unfrozen and fund operations have resumed."
                     system_message = Message(
                         sender_id=None,
                         receiver_id=None,
-                        content=f"✅ Stripe争议已关闭（状态: {status}），任务状态已解冻，资金操作已恢复正常。",
+                        content=content_zh,
                         task_id=task.id,
                         message_type="system",
                         conversation_type="task",
                         meta=json.dumps({
                             "system_action": "stripe_dispute_unfrozen",
                             "charge_id": charge_id,
-                            "status": status
+                            "status": status,
+                            "content_en": content_en
                         }),
                         created_at=get_utc_time()
                     )
