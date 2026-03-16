@@ -916,8 +916,40 @@ class _ApplicationItem extends StatelessWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.chat,
-                                size: 18, color: AppColors.success),
+                            Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                const Icon(Icons.chat,
+                                    size: 18, color: AppColors.success),
+                                if (application.unreadCount > 0)
+                                  Positioned(
+                                    right: -6,
+                                    top: -6,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(2),
+                                      decoration: const BoxDecoration(
+                                        color: AppColors.error,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      constraints: const BoxConstraints(
+                                        minWidth: 16,
+                                        minHeight: 16,
+                                      ),
+                                      child: Text(
+                                        application.unreadCount > 99
+                                            ? '99+'
+                                            : '${application.unreadCount}',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
                             const SizedBox(width: 6),
                             Text(
                               context.l10n.applicationChatting,

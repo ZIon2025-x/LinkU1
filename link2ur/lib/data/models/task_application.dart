@@ -14,6 +14,7 @@ class TaskApplication extends Equatable {
     this.proposedPrice,
     this.currency,
     this.createdAt,
+    this.unreadCount = 0,
   });
 
   final int id;
@@ -27,6 +28,7 @@ class TaskApplication extends Equatable {
   final double? proposedPrice;
   final String? currency;
   final String? createdAt;
+  final int unreadCount;
 
   bool get isPending => status == 'pending';
   bool get isApproved => status == 'approved';
@@ -46,9 +48,10 @@ class TaskApplication extends Equatable {
       proposedPrice: (json['negotiated_price'] as num?)?.toDouble(),
       currency: json['currency'] as String?,
       createdAt: json['created_at'] as String?,
+      unreadCount: (json['unread_count'] as num?)?.toInt() ?? 0,
     );
   }
 
   @override
-  List<Object?> get props => [id, taskId, status, proposedPrice, message];
+  List<Object?> get props => [id, taskId, status, proposedPrice, message, unreadCount];
 }
