@@ -18,3 +18,8 @@ ALTER TABLE message_read_cursors ADD COLUMN IF NOT EXISTS application_id INTEGER
 ALTER TABLE message_read_cursors DROP CONSTRAINT IF EXISTS uq_message_read_cursors_task_user;
 ALTER TABLE message_read_cursors DROP CONSTRAINT IF EXISTS uq_message_read_cursors_task_user_application;
 ALTER TABLE message_read_cursors ADD CONSTRAINT uq_message_read_cursors_task_user_application UNIQUE (task_id, user_id, application_id);
+
+-- 6. Partial unique index for legacy cursors where application_id IS NULL
+-- (PostgreSQL treats NULL != NULL in unique constraints)
+CREATE UNIQUE INDEX IF NOT EXISTS uq_mrc_task_user_no_app
+ON message_read_cursors(task_id, user_id) WHERE application_id IS NULL;
