@@ -2008,14 +2008,17 @@ async def start_application_chat(
 
         # 创建系统消息通知申请者
         current_time = get_utc_time()
+        content_zh = "发布者已开始与你的聊天，请在此频道沟通任务详情。"
+        content_en = "The poster has started a chat with you. Please discuss task details in this channel."
         system_message = models.Message(
-            sender_id="system",
+            sender_id=None,
             receiver_id=None,
-            content="发布者已开始与你的聊天，请在此频道沟通任务详情。",
+            content=content_zh,
             task_id=task_id,
             message_type="system",
             conversation_type="task",
             application_id=application_id,
+            meta=json.dumps({"system_action": "chat_started", "content_en": content_en}),
             created_at=current_time,
         )
         db.add(system_message)
@@ -2023,6 +2026,76 @@ async def start_application_chat(
         await db.commit()
 
         logger.info(f"✅ 开始聊天: task_id={task_id}, application_id={application_id}, applicant_id={application.applicant_id}")
+
+        # 发送通知给申请者
+        try:
+            notification_time = get_utc_time()
+
+            notif_content = f"发布者已同意与您聊天，讨论任务详情：{task.title}"
+            notif_content_en = f"The poster has agreed to chat with you about the task: {task.title}"
+
+            new_notification = models.Notification(
+                user_id=application.applicant_id,
+                type="application_chat_started",
+                title="发布者邀请您聊天",
+                content=notif_content,
+                title_en="Chat Invitation",
+                content_en=notif_content_en,
+                related_id=application_id,
+                related_type="application_id",
+                created_at=notification_time
+            )
+            db.add(new_notification)
+            await db.commit()
+
+            # 发送推送通知
+            try:
+                send_push_notification_async_safe(
+                    async_db=db,
+                    user_id=application.applicant_id,
+                    title=None,
+                    body=None,
+                    notification_type="application_chat_started",
+                    data={"task_id": task_id, "application_id": application_id},
+                    template_vars={
+                        "task_title": task.title,
+                        "task_id": task_id
+                    }
+                )
+            except Exception as e:
+                logger.warning(f"发送聊天开始推送通知失败: {e}")
+        except Exception as e:
+            logger.error(f"发送聊天开始通知失败: {e}")
+
+        # 通过WebSocket通知申请者
+        try:
+            from app.websocket_manager import get_ws_manager
+            ws_manager = get_ws_manager()
+
+            ws_message = {
+                "type": "task_message",
+                "message": {
+                    "id": system_message.id if hasattr(system_message, 'id') else None,
+                    "sender_id": "system",
+                    "sender_name": "System",
+                    "content": system_message.content,
+                    "task_id": task_id,
+                    "message_type": "system",
+                    "application_id": application_id,
+                    "created_at": format_iso_utc(current_time) if current_time else None,
+                }
+            }
+            await ws_manager.send_to_user(application.applicant_id, ws_message)
+        except Exception as e:
+            logger.warning(f"WebSocket通知申请者失败: {e}")
+
+        # 失效聊天缓存
+        try:
+            from app.redis_cache import invalidate_task_chat_cache
+            invalidate_task_chat_cache(application.applicant_id)
+            invalidate_task_chat_cache(current_user.id)
+        except Exception as e:
+            logger.warning(f"失效聊天缓存失败: {e}")
 
         return {
             "message": "聊天已开始",
@@ -2150,6 +2223,81 @@ async def propose_price(
             f"✅ 价格提议: task_id={task_id}, application_id={application_id}, "
             f"proposed_price={proposed_price}, by user {current_user.id}"
         )
+
+        # 发送通知给对方
+        try:
+            notification_time = get_utc_time()
+            sender_name = current_user.name or f"用户{current_user.id}"
+
+            notif_content = f"{sender_name} 提出了新价格 £{proposed_price:.2f}：{task.title}"
+            notif_content_en = f"{sender_name} proposed a new price £{proposed_price:.2f}: {task.title}"
+
+            new_notification = models.Notification(
+                user_id=receiver_id,
+                type="price_proposal",
+                title="收到新的价格提议",
+                content=notif_content,
+                title_en="New Price Proposal",
+                content_en=notif_content_en,
+                related_id=application_id,
+                related_type="application_id",
+                created_at=notification_time
+            )
+            db.add(new_notification)
+            await db.commit()
+
+            # 发送推送通知
+            try:
+                send_push_notification_async_safe(
+                    async_db=db,
+                    user_id=receiver_id,
+                    title=None,
+                    body=None,
+                    notification_type="price_proposal",
+                    data={"task_id": task_id, "application_id": application_id},
+                    template_vars={
+                        "sender_name": sender_name,
+                        "proposed_price": f"£{proposed_price:.2f}",
+                        "task_title": task.title,
+                        "task_id": task_id
+                    }
+                )
+            except Exception as e:
+                logger.warning(f"发送价格提议推送通知失败: {e}")
+        except Exception as e:
+            logger.error(f"发送价格提议通知失败: {e}")
+
+        # 通过WebSocket通知对方
+        try:
+            from app.websocket_manager import get_ws_manager
+            ws_manager = get_ws_manager()
+
+            ws_message = {
+                "type": "task_message",
+                "message": {
+                    "id": price_message.id if hasattr(price_message, 'id') else None,
+                    "sender_id": current_user.id,
+                    "sender_name": current_user.name,
+                    "sender_avatar": getattr(current_user, 'avatar', None),
+                    "content": price_message.content,
+                    "task_id": task_id,
+                    "message_type": "price_proposal",
+                    "application_id": application_id,
+                    "meta": meta_dict,
+                    "created_at": format_iso_utc(current_time) if current_time else None,
+                }
+            }
+            await ws_manager.send_to_user(receiver_id, ws_message)
+        except Exception as e:
+            logger.warning(f"WebSocket通知价格提议失败: {e}")
+
+        # 失效聊天缓存
+        try:
+            from app.redis_cache import invalidate_task_chat_cache
+            invalidate_task_chat_cache(receiver_id)
+            invalidate_task_chat_cache(current_user.id)
+        except Exception as e:
+            logger.warning(f"失效聊天缓存失败: {e}")
 
         return {
             "status": "ok",
