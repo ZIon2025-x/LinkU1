@@ -1044,7 +1044,75 @@ async def get_user_applications(
         logger.error(f"Error getting user applications: {e}")
         raise HTTPException(status_code=500, detail="Failed to get applications")
 
-def _format_application_item(app, user):
+async def _get_unread_count(db: AsyncSession, task_id: int, user_id: str, application_id: int) -> int:
+    """Get unread message count for a single application."""
+    # Find the user's read cursor for this application
+    cursor_query = select(models.MessageReadCursor.last_read_message_id).where(
+        and_(
+            models.MessageReadCursor.task_id == task_id,
+            models.MessageReadCursor.user_id == user_id,
+            models.MessageReadCursor.application_id == application_id,
+        )
+    )
+    cursor_result = await db.execute(cursor_query)
+    last_read_id = cursor_result.scalar_one_or_none()
+
+    # Count messages after the cursor (or all messages if no cursor)
+    count_query = select(func.count(models.Message.id)).where(
+        and_(
+            models.Message.task_id == task_id,
+            models.Message.application_id == application_id,
+            models.Message.sender_id != user_id,  # only count messages from others
+        )
+    )
+    if last_read_id is not None:
+        count_query = count_query.where(models.Message.id > last_read_id)
+
+    result = await db.execute(count_query)
+    return result.scalar() or 0
+
+
+async def _get_unread_counts_batch(
+    db: AsyncSession, task_id: int, user_id: str, application_ids: list[int]
+) -> dict[int, int]:
+    """Get unread message counts for multiple applications in batch."""
+    if not application_ids:
+        return {}
+
+    # Fetch all relevant cursors in one query
+    cursors_query = select(
+        models.MessageReadCursor.application_id,
+        models.MessageReadCursor.last_read_message_id,
+    ).where(
+        and_(
+            models.MessageReadCursor.task_id == task_id,
+            models.MessageReadCursor.user_id == user_id,
+            models.MessageReadCursor.application_id.in_(application_ids),
+        )
+    )
+    cursors_result = await db.execute(cursors_query)
+    cursor_map = {row.application_id: row.last_read_message_id for row in cursors_result}
+
+    # Count unread for each application
+    unread_map: dict[int, int] = {}
+    for app_id in application_ids:
+        last_read_id = cursor_map.get(app_id)
+        count_query = select(func.count(models.Message.id)).where(
+            and_(
+                models.Message.task_id == task_id,
+                models.Message.application_id == app_id,
+                models.Message.sender_id != user_id,
+            )
+        )
+        if last_read_id is not None:
+            count_query = count_query.where(models.Message.id > last_read_id)
+        result = await db.execute(count_query)
+        unread_map[app_id] = result.scalar() or 0
+
+    return unread_map
+
+
+def _format_application_item(app, user, unread_count: int = 0):
     """将 TaskApplication 格式化为 API 返回的 dict（共用给发布者列表与申请者查看自己的申请）"""
     negotiated_price_value = None
     if app.negotiated_price is not None:
@@ -1069,6 +1137,7 @@ def _format_application_item(app, user):
         "currency": app.currency or "GBP",
         "created_at": format_iso_utc(app.created_at) if app.created_at else None,
         "status": app.status,
+        "unread_count": unread_count,
     }
 
 
@@ -1114,14 +1183,18 @@ async def get_task_applications(
             own_app = own_result.scalar_one_or_none()
             if not own_app:
                 return []
-            return [_format_application_item(own_app, own_app.applicant)]
+            # Compute unread count for the user's own application
+            own_unread = 0
+            if own_app.status == "chatting":
+                own_unread = await _get_unread_count(db, task_id, user_id_str, own_app.id)
+            return [_format_application_item(own_app, own_app.applicant, own_unread)]
 
-        # 发布者/达人：返回待处理申请列表（与原有行为一致）
+        # 发布者/达人：返回 pending + chatting 申请列表
         applications_query = (
             select(models.TaskApplication)
             .options(selectinload(models.TaskApplication.applicant))
             .where(models.TaskApplication.task_id == task_id)
-            .where(models.TaskApplication.status == "pending")
+            .where(models.TaskApplication.status.in_(["pending", "chatting"]))
             .order_by(models.TaskApplication.created_at.desc())
             .offset(skip)
             .limit(limit)
@@ -1129,9 +1202,16 @@ async def get_task_applications(
         applications_result = await db.execute(applications_query)
         applications = applications_result.scalars().all()
 
+        # Batch-fetch unread counts for chatting applications
+        chatting_app_ids = [app.id for app in applications if app.status == "chatting"]
+        unread_map: dict[int, int] = {}
+        if chatting_app_ids:
+            unread_map = await _get_unread_counts_batch(db, task_id, user_id_str, chatting_app_ids)
+
         result = []
         for app in applications:
-            result.append(_format_application_item(app, app.applicant))
+            unread = unread_map.get(app.id, 0) if app.status == "chatting" else 0
+            result.append(_format_application_item(app, app.applicant, unread))
 
         return result
         
