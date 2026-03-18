@@ -563,27 +563,29 @@ class _TaskDetailContent extends StatelessWidget {
                   const SizedBox(height: AppSpacing.md),
                 ],
 
-                // 公开申请留言区 (所有用户可见, open/chatting 任务)
-                if (task.status == AppConstants.taskStatusOpen ||
-                    task.status == AppConstants.taskStatusChatting) ...[
+                // 公开申请留言区 (非发布者可见, open/chatting 任务)
+                // 发布者通过下方 ApplicationsListView 管理申请，不显示此区域避免重复
+                if (!isPoster &&
+                    (task.status == AppConstants.taskStatusOpen ||
+                     task.status == AppConstants.taskStatusChatting)) ...[
                   AnimatedListItem(
                     index: 3,
                     child: PublicApplicationsSection(
                       applications: state.applications,
                       isLoading: state.isLoadingApplications,
                       isDark: isDark,
-                      isPoster: isPoster,
+                      isPoster: false,
                     ),
                   ),
                   const SizedBox(height: AppSpacing.md),
                 ],
 
-                // 申请列表 (isPoster && open/chatting)
+                // 申请列表 (isPoster && open/chatting) — 含管理操作按钮
                 if (isPoster &&
                     (task.status == AppConstants.taskStatusOpen ||
                      task.status == AppConstants.taskStatusChatting)) ...[
                   AnimatedListItem(
-                    index: 3,
+                    index: 4,
                     child: ApplicationsListView(
                       applications: state.applications,
                       isLoading: state.isLoadingApplications,

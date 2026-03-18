@@ -1315,9 +1315,123 @@ class _ApplicationItem extends StatelessWidget {
                 ],
               ),
             ],
+            // 发布者公开回复 (显示已有回复 或 回复按钮)
+            if (application.posterReply != null &&
+                application.posterReply!.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.sm),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.06),
+                  borderRadius: AppRadius.allSmall,
+                  border: Border(
+                    left: BorderSide(
+                      color: AppColors.primary.withValues(alpha: 0.4),
+                      width: 3,
+                    ),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.reply, size: 14,
+                            color: AppColors.primary.withValues(alpha: 0.7)),
+                        const SizedBox(width: 4),
+                        Text(
+                          context.l10n.posterReply,
+                          style: AppTypography.caption.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 11,
+                          ),
+                        ),
+                        const Spacer(),
+                        if (application.posterReplyAt != null)
+                          Text(
+                            _formatTimeString(application.posterReplyAt!),
+                            style: AppTypography.caption.copyWith(
+                              color: isDark
+                                  ? AppColors.textTertiaryDark
+                                  : AppColors.textTertiaryLight,
+                              fontSize: 10,
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      application.posterReply!,
+                      style: AppTypography.body.copyWith(
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
+                        fontSize: 13,
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ] else ...[
+              // 未回复：显示回复按钮
+              const SizedBox(height: 4),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: () => _showPublicReplyDialog(context),
+                  icon: const Icon(Icons.reply, size: 16),
+                  label: Text(context.l10n.replyToApplication),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    textStyle: AppTypography.caption.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
+    );
+  }
+
+  void _showPublicReplyDialog(BuildContext context) {
+    final controller = TextEditingController();
+    final bloc = context.read<TaskDetailBloc>();
+
+    AdaptiveDialogs.showConfirmDialog(
+      context: context,
+      title: context.l10n.replyToApplication,
+      barrierDismissible: false,
+      contentWidget: TextField(
+        controller: controller,
+        maxLength: 500,
+        maxLines: 4,
+        decoration: InputDecoration(
+          hintText: context.l10n.publicReplyPlaceholder,
+          border: const OutlineInputBorder(),
+        ),
+      ),
+      confirmText: context.l10n.commonSubmit,
+      cancelText: context.l10n.commonCancel,
+      onConfirm: () {
+        final text = controller.text.trim();
+        if (text.isNotEmpty) {
+          bloc.add(TaskDetailPublicReply(
+            applicationId: application.id,
+            message: text,
+          ));
+        }
+        controller.dispose();
+      },
+      onCancel: () {
+        controller.dispose();
+      },
     );
   }
 
