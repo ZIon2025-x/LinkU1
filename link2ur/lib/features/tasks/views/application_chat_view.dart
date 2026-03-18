@@ -41,11 +41,7 @@ class ApplicationChatView extends StatelessWidget {
       create: (_) => TaskDetailBloc(
         taskRepository: taskRepository,
         notificationRepository: notificationRepository,
-      )
-        ..add(TaskDetailLoadRequested(taskId))
-        ..add(TaskDetailLoadApplications(
-          currentUserId: StorageService.instance.getUserId(),
-        )),
+      )..add(TaskDetailLoadRequested(taskId)),
       child: _ApplicationChatContent(
         taskId: taskId,
         applicationId: applicationId,
@@ -121,14 +117,14 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
       } else {
         setState(() {
           _isLoadingMessages = false;
-          _messagesError = response.message ?? 'Failed to load messages';
+          _messagesError = 'chat_load_more_failed';
         });
       }
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _isLoadingMessages = false;
-        _messagesError = e.toString();
+        _messagesError = 'chat_load_more_failed';
       });
     }
   }
@@ -149,7 +145,6 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
     final content = _messageController.text.trim();
     if (content.isEmpty || _isSendingMessage) return;
 
-    _messageController.clear();
     setState(() => _isSendingMessage = true);
 
     try {
@@ -167,6 +162,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
 
       if (response.isSuccess && response.data != null) {
         final message = Message.fromJson(response.data!);
+        _messageController.clear();
         setState(() {
           _messages = [..._messages, message];
           _isSendingMessage = false;
@@ -177,7 +173,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-                content: Text(response.message ?? 'Failed to send message')),
+                content: Text(context.localizeError('task_send_message_failed'))),
           );
         }
       }
@@ -185,43 +181,60 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
       if (!mounted) return;
       setState(() => _isSendingMessage = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
+        SnackBar(content: Text(context.localizeError('task_send_message_failed'))),
       );
     }
   }
 
   void _showProposePriceDialog() {
     final priceController = TextEditingController();
+    String? errorText;
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(context.l10n.proposeNewPrice),
-        content: TextField(
-          controller: priceController,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: InputDecoration(
-            hintText: context.l10n.enterPrice,
-            prefixText: '\u00a3',
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: Text(context.l10n.proposeNewPrice),
+          content: TextField(
+            controller: priceController,
+            keyboardType:
+                const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(
+              hintText: context.l10n.enterPrice,
+              prefixText: '\u00a3',
+              errorText: errorText,
+            ),
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
-          ),
-          TextButton(
-            onPressed: () {
-              final price = double.tryParse(priceController.text.trim());
-              if (price != null && price > 0) {
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child:
+                  Text(MaterialLocalizations.of(context).cancelButtonLabel),
+            ),
+            TextButton(
+              onPressed: () {
+                final price =
+                    double.tryParse(priceController.text.trim());
+                if (price == null || price <= 0) {
+                  setDialogState(() {
+                    errorText = context.l10n.enterPrice;
+                  });
+                  return;
+                }
+                if (price > 50000) {
+                  setDialogState(() {
+                    errorText = context.l10n.priceExceedsMaximum;
+                  });
+                  return;
+                }
                 Navigator.pop(dialogContext);
                 context.read<TaskDetailBloc>().add(
                       TaskDetailProposePrice(widget.applicationId, price),
                     );
-              }
-            },
-            child: Text(MaterialLocalizations.of(context).okButtonLabel),
-          ),
-        ],
+              },
+              child: Text(MaterialLocalizations.of(context).okButtonLabel),
+            ),
+          ],
+        ),
       ),
     ).then((_) => priceController.dispose());
   }
@@ -246,8 +259,18 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
       listenWhen: (prev, curr) =>
           prev.actionMessage != curr.actionMessage ||
           prev.errorMessage != curr.errorMessage ||
-          prev.acceptPaymentData != curr.acceptPaymentData,
+          prev.acceptPaymentData != curr.acceptPaymentData ||
+          (prev.status != curr.status && curr.status == TaskDetailStatus.loaded),
       listener: (context, state) {
+        // Dispatch LoadApplications after task is loaded (avoid race condition)
+        if (state.status == TaskDetailStatus.loaded && state.task != null) {
+          final bloc = context.read<TaskDetailBloc>();
+          if (state.applications.isEmpty && !state.isLoadingApplications) {
+            bloc.add(TaskDetailLoadApplications(
+              currentUserId: _currentUserId,
+            ));
+          }
+        }
         // Handle price proposed — reload messages
         if (state.actionMessage == 'price_proposed') {
           _loadMessages();
@@ -327,6 +350,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
     final price = application?.proposedPrice ?? state.task?.reward;
     final priceDisplay = price != null ? price.toStringAsFixed(2) : '--';
     final isChatActive = application?.isChatting ?? false;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -335,8 +359,10 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
       ),
       decoration: BoxDecoration(
         color: AppColors.primary.withValues(alpha: 0.08),
-        border: const Border(
-          bottom: BorderSide(color: AppColors.dividerLight),
+        border: Border(
+          bottom: BorderSide(
+            color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
+          ),
         ),
       ),
       child: Row(
@@ -371,21 +397,25 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
   }
 
   Widget _buildClosedBanner() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final tertiaryColor = isDark
+        ? AppColors.textTertiaryDark
+        : AppColors.textTertiaryLight;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      color: AppColors.textTertiaryLight.withValues(alpha: 0.1),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      color: tertiaryColor.withValues(alpha: 0.1),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.info_outline,
-              size: 16, color: AppColors.textTertiaryLight),
+          Icon(Icons.info_outline, size: 16, color: tertiaryColor),
           const SizedBox(width: 6),
           Text(
             context.l10n.chatChannelClosed,
-            style: const TextStyle(
-              fontSize: 13,
-              color: AppColors.textTertiaryLight,
-            ),
+            style: TextStyle(fontSize: 13, color: tertiaryColor),
           ),
         ],
       ),
@@ -405,16 +435,24 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
     }
 
     if (_messages.isEmpty) {
+      final isDark = Theme.of(context).brightness == Brightness.dark;
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.chat_bubble_outline,
-                size: 48, color: AppColors.textTertiaryLight),
+            Icon(Icons.chat_bubble_outline,
+                size: 48,
+                color: isDark
+                    ? AppColors.textTertiaryDark
+                    : AppColors.textTertiaryLight),
             AppSpacing.vMd,
             Text(
               context.l10n.typeMessage,
-              style: const TextStyle(color: AppColors.textSecondaryLight),
+              style: TextStyle(
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
+              ),
             ),
           ],
         ),
@@ -471,7 +509,11 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
               radius: 16,
               backgroundColor: AppColors.primary.withValues(alpha: 0.15),
               child: Text(
-                (message.senderName ?? '?').characters.first,
+                (message.senderName?.isNotEmpty == true
+                        ? message.senderName!
+                        : '?')
+                    .characters
+                    .first,
                 style: const TextStyle(
                     fontSize: 12, color: AppColors.primary),
               ),
@@ -514,8 +556,8 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
   }
 
   Widget _buildPriceProposalBubble(Message message, bool isMe) {
-    // Parse price from message content or metadata
     final priceText = message.content;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
@@ -525,14 +567,16 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
           constraints: const BoxConstraints(maxWidth: 260),
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFFF0F4FF), Color(0xFFE8EEFF)],
+            gradient: LinearGradient(
+              colors: isDark
+                  ? [const Color(0xFF1A2340), const Color(0xFF1E2A4A)]
+                  : [const Color(0xFFF0F4FF), const Color(0xFFE8EEFF)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(AppRadius.medium),
             border: Border.all(
-              color: AppColors.primary.withValues(alpha: 0.2),
+              color: AppColors.primary.withValues(alpha: isDark ? 0.4 : 0.2),
             ),
           ),
           child: Column(
@@ -558,10 +602,10 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
               const SizedBox(height: 8),
               Text(
                 priceText,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimaryLight,
+                  color: isDark ? Colors.white : AppColors.textPrimaryLight,
                 ),
               ),
             ],
@@ -572,22 +616,24 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
   }
 
   Widget _buildSystemMessage(Message message) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final tertiaryColor = isDark
+        ? AppColors.textTertiaryDark
+        : AppColors.textTertiaryLight;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 32),
       child: Center(
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: AppColors.textTertiaryLight.withValues(alpha: 0.1),
+            color: tertiaryColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(AppRadius.small),
           ),
           child: Text(
             message.content,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 12,
-              color: AppColors.textTertiaryLight,
-            ),
+            style: TextStyle(fontSize: 12, color: tertiaryColor),
           ),
         ),
       ),
@@ -624,7 +670,9 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
                 decoration: InputDecoration(
                   hintText: context.l10n.typeMessage,
                   filled: true,
-                  fillColor: AppColors.skeletonBase,
+                  fillColor: isDark
+                      ? Colors.white.withValues(alpha: 0.08)
+                      : AppColors.skeletonBase,
                   contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16, vertical: 10),
                   border: OutlineInputBorder(
@@ -665,6 +713,8 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
   }
 
   Widget _buildConfirmAndPayButton(TaskDetailState state) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
@@ -672,8 +722,10 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
       ),
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
-        border: const Border(
-          top: BorderSide(color: AppColors.dividerLight),
+        border: Border(
+          top: BorderSide(
+            color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
+          ),
         ),
       ),
       child: SafeArea(

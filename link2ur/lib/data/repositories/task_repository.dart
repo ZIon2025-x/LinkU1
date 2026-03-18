@@ -1068,7 +1068,10 @@ class TaskRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw TaskException(response.message ?? '回复失败');
+      if (response.statusCode == 409) {
+        throw const TaskException('public_reply_already_replied');
+      }
+      throw TaskException(response.message ?? 'public_reply_failed');
     }
 
     return response.data!;

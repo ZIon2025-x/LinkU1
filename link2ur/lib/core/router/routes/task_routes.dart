@@ -51,13 +51,24 @@ GoRoute(
       GoRoute(
         path: '/tasks/:taskId/applications/:applicationId/chat',
         name: 'applicationChat',
-        builder: (context, state) {
-          final taskId = int.parse(state.pathParameters['taskId']!);
+        pageBuilder: (context, state) {
+          final taskId = int.tryParse(state.pathParameters['taskId'] ?? '');
           final applicationId =
-              int.parse(state.pathParameters['applicationId']!);
-          return ApplicationChatView(
-            taskId: taskId,
-            applicationId: applicationId,
+              int.tryParse(state.pathParameters['applicationId'] ?? '');
+          if (taskId == null || taskId <= 0 || applicationId == null || applicationId <= 0) {
+            return platformDetailPage(
+              context,
+              key: state.pageKey,
+              child: const SizedBox.shrink(),
+            );
+          }
+          return platformDetailPage(
+            context,
+            key: state.pageKey,
+            child: ApplicationChatView(
+              taskId: taskId,
+              applicationId: applicationId,
+            ),
           );
         },
       ),

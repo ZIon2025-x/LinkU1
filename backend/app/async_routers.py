@@ -514,6 +514,7 @@ async def get_task_by_id(
                 models.Message.meta.contains("task_completed_by_taker"),
             ).order_by(models.Message.created_at.asc()).limit(1)
         )).scalar_one_or_none()
+        import json as _json
         if not completion_message:
             all_system = (await db.execute(
                 select(models.Message).where(
@@ -522,7 +523,6 @@ async def get_task_by_id(
                     models.Message.meta.isnot(None),
                 ).order_by(models.Message.created_at.asc())
             )).scalars().all()
-            import json as _json
             for msg in all_system:
                 try:
                     if msg.meta and _json.loads(msg.meta).get("system_action") == "task_completed_by_taker":

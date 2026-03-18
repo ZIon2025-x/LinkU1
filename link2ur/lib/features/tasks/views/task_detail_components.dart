@@ -665,13 +665,11 @@ class PublicApplicationsSection extends StatelessWidget {
     required this.applications,
     required this.isLoading,
     required this.isDark,
-    required this.isPoster,
   });
 
   final List<TaskApplication> applications;
   final bool isLoading;
   final bool isDark;
-  final bool isPoster;
 
   @override
   Widget build(BuildContext context) {
@@ -725,7 +723,6 @@ class PublicApplicationsSection extends StatelessWidget {
                 key: ValueKey('public_app_${app.id}'),
                 application: app,
                 isDark: isDark,
-                isPoster: isPoster,
               )),
         ],
       ),
@@ -738,12 +735,10 @@ class _PublicApplicationCard extends StatelessWidget {
     super.key,
     required this.application,
     required this.isDark,
-    required this.isPoster,
   });
 
   final TaskApplication application;
   final bool isDark;
-  final bool isPoster;
 
   @override
   Widget build(BuildContext context) {
@@ -920,66 +915,12 @@ class _PublicApplicationCard extends StatelessWidget {
               ),
             ],
 
-            // Reply button (poster only, no reply yet)
-            if (isPoster &&
-                application.posterReply == null) ...[
-              const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  onPressed: () => _showReplyDialog(context),
-                  icon: const Icon(Icons.reply, size: 16),
-                  label: Text(context.l10n.replyToApplication),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    textStyle: AppTypography.caption.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-            ],
           ],
         ),
       ),
     );
   }
 
-  void _showReplyDialog(BuildContext context) {
-    final controller = TextEditingController();
-    final bloc = context.read<TaskDetailBloc>();
-
-    AdaptiveDialogs.showConfirmDialog(
-      context: context,
-      title: context.l10n.replyToApplication,
-      barrierDismissible: false,
-      contentWidget: TextField(
-        controller: controller,
-        maxLength: 500,
-        maxLines: 4,
-        decoration: InputDecoration(
-          hintText: context.l10n.publicReplyPlaceholder,
-          border: const OutlineInputBorder(),
-        ),
-      ),
-      confirmText: context.l10n.commonSubmit,
-      cancelText: context.l10n.commonCancel,
-      onConfirm: () {
-        final text = controller.text.trim();
-        if (text.isNotEmpty) {
-          bloc.add(TaskDetailPublicReply(
-            applicationId: application.id,
-            message: text,
-          ));
-        }
-        controller.dispose();
-      },
-      onCancel: () {
-        controller.dispose();
-      },
-    );
-  }
 }
 
 class _ApplicationItem extends StatelessWidget {
@@ -1321,6 +1262,7 @@ class _ApplicationItem extends StatelessWidget {
               const SizedBox(height: AppSpacing.sm),
               Container(
                 width: double.infinity,
+                margin: const EdgeInsets.only(left: AppSpacing.lg),
                 padding: const EdgeInsets.all(AppSpacing.sm),
                 decoration: BoxDecoration(
                   color: AppColors.primary.withValues(alpha: 0.06),

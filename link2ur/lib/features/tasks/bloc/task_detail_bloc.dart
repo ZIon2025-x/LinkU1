@@ -590,14 +590,15 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
         isSubmitting: false,
         applications: updatedApps,
         actionMessage: 'public_reply_submitted',
+        errorMessage: '',
       ));
     } on TaskException catch (e) {
-      final errorCode = e.message.contains('409') || e.message.contains('Already replied')
+      final errorCode = e.message == 'public_reply_already_replied'
           ? 'public_reply_already_replied'
           : 'public_reply_failed';
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: 'public_reply_failed',
+        actionMessage: errorCode,
         errorMessage: errorCode,
       ));
     } catch (e) {
