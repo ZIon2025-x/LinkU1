@@ -3127,6 +3127,10 @@
   "errorTaskRespondCounterOfferFailed": "回复还价失败",
   "errorTaskRespondNegotiationFailed": "回复议价失败",
   "errorTaskVisibilityUpdateFailed": "更新任务可见性失败",
+  "errorTaskStartChatFailed": "开启聊天失败，请重试",
+  "errorTaskProposePriceFailed": "提出报价失败，请重试",
+  "errorTaskConfirmPayFailed": "发起支付失败，请重试",
+  "priceExceedsMaximum": "价格不能超过 £50,000",
   "errorTaskListLoadFailed": "加载任务列表失败",
   "errorTaskQuoteFailed": "报价提交失败，请重试",
   "errorTaskQuoteAcceptFailed": "报价已提交，但自动接单失败，请联系客服",
@@ -4330,6 +4334,8 @@
   "taskDetailShowOnProfileDesc": "将这个已完成的任务展示在你的公开主页上",
   "taskDetailVisibilityUpdated": "主页展示设置已更新",
   "taskDetailVisibilityUpdateFailed": "更新展示设置失败",
+  "actionChatStarted": "聊天已开始",
+  "actionPriceProposed": "报价已发送",
   "contentMaskedHint": "部分内容已被自动处理，请通过平台内聊天沟通。",
   "contentUnderReviewHint": "内容已提交，正在等待审核。",
   "contentRejectedHint": "您的内容未通过审核。",
@@ -4628,5 +4634,16 @@
   "typeMessage": "输入消息...",
   "proposeNewPrice": "提出新报价",
   "enterPrice": "输入价格",
-  "chatChannelClosed": "此聊天通道已关闭"
+  "chatChannelClosed": "此聊天通道已关闭",
+  "applicationMessages": "申请留言 ({count})",
+  "@applicationMessages": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "posterReply": "发布者回复",
+  "replyToApplication": "回复",
+  "replySubmitted": "回复已提交",
+  "publicReplyPlaceholder": "写下你对这条申请的回复...",
+  "alreadyReplied": "已经回复过此申请"
 }

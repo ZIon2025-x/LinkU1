@@ -3066,6 +3066,10 @@
   "errorTaskRespondCounterOfferFailed": "回覆還價失敗",
   "errorTaskRespondNegotiationFailed": "回覆議價失敗",
   "errorTaskVisibilityUpdateFailed": "更新任務可見性失敗",
+  "errorTaskStartChatFailed": "開啟聊天失敗，請重試",
+  "errorTaskProposePriceFailed": "提出報價失敗，請重試",
+  "errorTaskConfirmPayFailed": "發起支付失敗，請重試",
+  "priceExceedsMaximum": "價格不能超過 £50,000",
   "errorTaskListLoadFailed": "載入任務列表失敗",
   "errorTaskQuoteFailed": "報價提交失敗，請重試",
   "errorTaskQuoteAcceptFailed": "報價已提交，但自動接單失敗，請聯繫客服",
@@ -4269,6 +4273,8 @@
   "taskDetailShowOnProfileDesc": "將這個已完成的任務展示在你的公開主頁上",
   "taskDetailVisibilityUpdated": "主頁展示設定已更新",
   "taskDetailVisibilityUpdateFailed": "更新展示設定失敗",
+  "actionChatStarted": "聊天已開始",
+  "actionPriceProposed": "報價已發送",
   "contentMaskedHint": "部分內容已被自動處理，請透過平台內聊天溝通。",
   "contentUnderReviewHint": "內容已提交，正在等待審核。",
   "contentRejectedHint": "您的內容未通過審核。",
@@ -4543,5 +4549,16 @@
   "typeMessage": "輸入訊息...",
   "proposeNewPrice": "提出新報價",
   "enterPrice": "輸入價格",
-  "chatChannelClosed": "此聊天通道已關閉"
+  "chatChannelClosed": "此聊天通道已關閉",
+  "applicationMessages": "申請留言 ({count})",
+  "@applicationMessages": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "posterReply": "發佈者回覆",
+  "replyToApplication": "回覆",
+  "replySubmitted": "回覆已提交",
+  "publicReplyPlaceholder": "寫下你對這條申請的回覆...",
+  "alreadyReplied": "已經回覆過此申請"
 }

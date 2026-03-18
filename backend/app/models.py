@@ -757,7 +757,9 @@ class TaskApplication(Base):
     message = Column(Text, nullable=True)  # 申请时的留言
     negotiated_price = Column(DECIMAL(12, 2), nullable=True)  # 议价价格
     currency = Column(String(3), default="GBP")  # 货币类型
-    
+    poster_reply = Column(Text, nullable=True)  # 发布者公开回复
+    poster_reply_at = Column(DateTime(timezone=True), nullable=True)  # 回复时间
+
     # 关系
     task = relationship("Task", backref="applications")  # 任务关系
     applicant = relationship("User", foreign_keys=[applicant_id])  # 申请者关系

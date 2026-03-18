@@ -386,7 +386,7 @@ class TaskRepository {
       int taskId, int applicationId, double price) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.proposePrice(taskId, applicationId),
-      data: {'proposedPrice': price},
+      data: {'proposed_price': price},
     );
 
     if (!response.isSuccess) {
@@ -1057,6 +1057,21 @@ class TaskRepository {
     if (!response.isSuccess) {
       throw TaskException(response.message ?? '回复消息失败');
     }
+  }
+
+  /// 发布者公开回复申请
+  Future<Map<String, dynamic>> publicReplyApplication(
+      int taskId, int applicationId, String message) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.publicReplyApplication(taskId, applicationId),
+      data: {'message': message},
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw TaskException(response.message ?? '回复失败');
+    }
+
+    return response.data!;
   }
 }
 

@@ -12182,6 +12182,30 @@ abstract class AppLocalizations {
   /// **'Failed to update task visibility.'**
   String get errorTaskVisibilityUpdateFailed;
 
+  /// No description provided for @errorTaskStartChatFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to start chat. Please try again.'**
+  String get errorTaskStartChatFailed;
+
+  /// No description provided for @errorTaskProposePriceFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to propose price. Please try again.'**
+  String get errorTaskProposePriceFailed;
+
+  /// No description provided for @errorTaskConfirmPayFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to initiate payment. Please try again.'**
+  String get errorTaskConfirmPayFailed;
+
+  /// No description provided for @priceExceedsMaximum.
+  ///
+  /// In en, this message translates to:
+  /// **'Price cannot exceed £50,000'**
+  String get priceExceedsMaximum;
+
   /// No description provided for @errorTaskListLoadFailed.
   ///
   /// In en, this message translates to:
@@ -17624,6 +17648,18 @@ abstract class AppLocalizations {
   /// **'Failed to update visibility'**
   String get taskDetailVisibilityUpdateFailed;
 
+  /// No description provided for @actionChatStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat started'**
+  String get actionChatStarted;
+
+  /// No description provided for @actionPriceProposed.
+  ///
+  /// In en, this message translates to:
+  /// **'Price proposal sent'**
+  String get actionPriceProposed;
+
   /// No description provided for @contentMaskedHint.
   ///
   /// In en, this message translates to:
@@ -18889,6 +18925,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This chat channel is closed'**
   String get chatChannelClosed;
+
+  /// No description provided for @applicationMessages.
+  ///
+  /// In en, this message translates to:
+  /// **'Applications ({count})'**
+  String applicationMessages(int count);
+
+  /// No description provided for @posterReply.
+  ///
+  /// In en, this message translates to:
+  /// **'Poster Reply'**
+  String get posterReply;
+
+  /// No description provided for @replyToApplication.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply'**
+  String get replyToApplication;
+
+  /// No description provided for @replySubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply submitted'**
+  String get replySubmitted;
+
+  /// No description provided for @publicReplyPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Write your reply to this application...'**
+  String get publicReplyPlaceholder;
+
+  /// No description provided for @alreadyReplied.
+  ///
+  /// In en, this message translates to:
+  /// **'Already replied to this application'**
+  String get alreadyReplied;
 }
 
 class _AppLocalizationsDelegate

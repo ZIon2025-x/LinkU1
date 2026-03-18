@@ -187,8 +187,12 @@ class _TaskDetailContent extends StatelessWidget {
             'counter_offer_accepted' => l10n.taskDetailCounterOfferAccepted,
             'counter_offer_rejected' => l10n.taskDetailCounterOfferRejected,
             'counter_offer_respond_failed' => l10n.actionOperationFailed,
+            'public_reply_submitted' => l10n.replySubmitted,
+            'public_reply_failed' => l10n.actionOperationFailed,
             'visibility_updated' => l10n.taskDetailVisibilityUpdated,
             'visibility_update_failed' => l10n.taskDetailVisibilityUpdateFailed,
+            'chat_started' => l10n.actionChatStarted,
+            'price_proposed' => l10n.actionPriceProposed,
             _ => state.actionMessage ?? '',
           };
           final isError = state.actionMessage!.contains('failed') ||
@@ -250,7 +254,7 @@ class _TaskDetailContent extends StatelessWidget {
     final task = state.task!;
 
     // 加载申请列表 (发布者 + open 状态，或者所有已登录用户用于获取自己的申请状态)
-    if (currentUserId != null && !state.isLoadingApplications && state.applications.isEmpty) {
+    if (!state.isLoadingApplications && state.applications.isEmpty) {
       bloc.add(TaskDetailLoadApplications(currentUserId: currentUserId));
     }
 
@@ -554,6 +558,21 @@ class _TaskDetailContent extends StatelessWidget {
                       task: task,
                       application: state.userApplication,
                       isDark: isDark,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                ],
+
+                // 公开申请留言区 (所有用户可见, open/chatting 任务)
+                if (task.status == AppConstants.taskStatusOpen ||
+                    task.status == AppConstants.taskStatusChatting) ...[
+                  AnimatedListItem(
+                    index: 3,
+                    child: PublicApplicationsSection(
+                      applications: state.applications,
+                      isLoading: state.isLoadingApplications,
+                      isDark: isDark,
+                      isPoster: isPoster,
                     ),
                   ),
                   const SizedBox(height: AppSpacing.md),

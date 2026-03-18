@@ -15,6 +15,8 @@ class TaskApplication extends Equatable {
     this.currency,
     this.createdAt,
     this.unreadCount = 0,
+    this.posterReply,
+    this.posterReplyAt,
   });
 
   final int id;
@@ -23,12 +25,14 @@ class TaskApplication extends Equatable {
   final String? applicantName;
   final String? applicantAvatar;
   final String? applicantUserLevel;
-  final String status; // pending, approved, rejected
+  final String status; // pending, approved, rejected, chatting
   final String? message;
   final double? proposedPrice;
   final String? currency;
   final String? createdAt;
   final int unreadCount;
+  final String? posterReply;
+  final String? posterReplyAt;
 
   bool get isPending => status == 'pending';
   bool get isApproved => status == 'approved';
@@ -49,9 +53,60 @@ class TaskApplication extends Equatable {
       currency: json['currency'] as String?,
       createdAt: json['created_at'] as String?,
       unreadCount: (json['unread_count'] as num?)?.toInt() ?? 0,
+      posterReply: json['poster_reply'] as String?,
+      posterReplyAt: json['poster_reply_at'] as String?,
+    );
+  }
+
+  TaskApplication copyWith({
+    int? id,
+    int? taskId,
+    String? applicantId,
+    String? applicantName,
+    String? applicantAvatar,
+    String? applicantUserLevel,
+    String? status,
+    String? message,
+    double? proposedPrice,
+    String? currency,
+    String? createdAt,
+    int? unreadCount,
+    String? posterReply,
+    String? posterReplyAt,
+  }) {
+    return TaskApplication(
+      id: id ?? this.id,
+      taskId: taskId ?? this.taskId,
+      applicantId: applicantId ?? this.applicantId,
+      applicantName: applicantName ?? this.applicantName,
+      applicantAvatar: applicantAvatar ?? this.applicantAvatar,
+      applicantUserLevel: applicantUserLevel ?? this.applicantUserLevel,
+      status: status ?? this.status,
+      message: message ?? this.message,
+      proposedPrice: proposedPrice ?? this.proposedPrice,
+      currency: currency ?? this.currency,
+      createdAt: createdAt ?? this.createdAt,
+      unreadCount: unreadCount ?? this.unreadCount,
+      posterReply: posterReply ?? this.posterReply,
+      posterReplyAt: posterReplyAt ?? this.posterReplyAt,
     );
   }
 
   @override
-  List<Object?> get props => [id, taskId, status, proposedPrice, message, unreadCount];
+  List<Object?> get props => [
+        id,
+        taskId,
+        applicantId,
+        applicantName,
+        applicantAvatar,
+        applicantUserLevel,
+        status,
+        message,
+        proposedPrice,
+        currency,
+        createdAt,
+        unreadCount,
+        posterReply,
+        posterReplyAt,
+      ];
 }

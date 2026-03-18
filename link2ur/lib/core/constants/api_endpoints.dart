@@ -116,6 +116,8 @@ class ApiEndpoints {
       '/api/tasks/$taskId/applications/$applicationId/send-message';
   static String replyApplicationMessage(int taskId, int applicationId) =>
       '/api/tasks/$taskId/applications/$applicationId/reply-message';
+  static String publicReplyApplication(int taskId, int applicationId) =>
+      '/api/tasks/$taskId/applications/$applicationId/public-reply';
   static String startApplicationChat(int taskId, int applicationId) =>
       '/api/tasks/$taskId/applications/$applicationId/start-chat';
   static String proposePrice(int taskId, int applicationId) =>

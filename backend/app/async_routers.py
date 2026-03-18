@@ -1138,18 +1138,55 @@ def _format_application_item(app, user, unread_count: int = 0):
         "created_at": format_iso_utc(app.created_at) if app.created_at else None,
         "status": app.status,
         "unread_count": unread_count,
+        "poster_reply": app.poster_reply,
+        "poster_reply_at": format_iso_utc(app.poster_reply_at) if app.poster_reply_at else None,
+    }
+
+
+def _format_public_application_item(app, user):
+    """Format application for public (unauthenticated/unrelated) viewers — excludes applicant_id and unread_count."""
+    negotiated_price_value = None
+    if app.negotiated_price is not None:
+        try:
+            from decimal import Decimal
+            if isinstance(app.negotiated_price, Decimal):
+                negotiated_price_value = float(app.negotiated_price)
+            elif isinstance(app.negotiated_price, (int, float)):
+                negotiated_price_value = float(app.negotiated_price)
+            else:
+                negotiated_price_value = float(str(app.negotiated_price))
+        except (ValueError, TypeError, AttributeError):
+            negotiated_price_value = None
+    return {
+        "id": app.id,
+        "task_id": app.task_id,
+        "applicant_name": user.name if user else None,
+        "applicant_avatar": user.avatar if user and hasattr(user, 'avatar') else None,
+        "applicant_user_level": getattr(user, 'user_level', None) if user else None,
+        "message": app.message,
+        "negotiated_price": negotiated_price_value,
+        "currency": app.currency or "GBP",
+        "created_at": format_iso_utc(app.created_at) if app.created_at else None,
+        "status": app.status,
+        "poster_reply": app.poster_reply,
+        "poster_reply_at": format_iso_utc(app.poster_reply_at) if app.poster_reply_at else None,
     }
 
 
 @async_router.get("/tasks/{task_id}/applications", response_model=List[dict])
 async def get_task_applications(
     task_id: int,
-    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    current_user: Optional[models.User] = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_async_db_dependency),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
 ):
-    """获取任务的申请者列表。发布者/达人可见全部；非发布者仅返回当前用户自己的申请（用于详情页显示「已申请」状态）"""
+    """获取任务的申请者列表。
+    三种调用者：
+    1. 发布者/达人 → 完整数据（含 applicant_id, unread_count）
+    2. 已登录非发布者 → 公开列表 + 自己的完整申请（如果有）
+    3. 未登录 → 公开列表
+    """
     try:
         from sqlalchemy.orm import selectinload
 
@@ -1161,60 +1198,70 @@ async def get_task_applications(
         if not task:
             raise HTTPException(status_code=404, detail="Task not found")
 
-        user_id_str = str(current_user.id)
-        is_poster = task.poster_id is not None and str(task.poster_id) == user_id_str
+        user_id_str = str(current_user.id) if current_user else None
+        is_poster = (
+            user_id_str is not None
+            and task.poster_id is not None
+            and str(task.poster_id) == user_id_str
+        )
         is_expert_creator = (
-            getattr(task, "is_multi_participant", False)
+            user_id_str is not None
+            and getattr(task, "is_multi_participant", False)
             and getattr(task, "expert_creator_id", None) is not None
             and str(task.expert_creator_id) == user_id_str
         )
 
-        # 非发布者且非达人：只返回当前用户自己在该任务下的申请（任意状态），便于详情页显示「已申请/等待确认」
-        if not is_poster and not is_expert_creator:
-            own_query = (
+        # ── Poster / expert creator: full data ──
+        if is_poster or is_expert_creator:
+            applications_query = (
                 select(models.TaskApplication)
                 .options(selectinload(models.TaskApplication.applicant))
                 .where(models.TaskApplication.task_id == task_id)
-                .where(models.TaskApplication.applicant_id == user_id_str)
+                .where(models.TaskApplication.status.in_(["pending", "chatting", "approved"]))
                 .order_by(models.TaskApplication.created_at.desc())
-                .limit(1)
+                .offset(skip)
+                .limit(limit)
             )
-            own_result = await db.execute(own_query)
-            own_app = own_result.scalar_one_or_none()
-            if not own_app:
-                return []
-            # Compute unread count for the user's own application
-            own_unread = 0
-            if own_app.status == "chatting":
-                own_unread = await _get_unread_count(db, task_id, user_id_str, own_app.id)
-            return [_format_application_item(own_app, own_app.applicant, own_unread)]
+            applications_result = await db.execute(applications_query)
+            applications = applications_result.scalars().all()
 
-        # 发布者/达人：返回 pending + chatting 申请列表
-        applications_query = (
+            chatting_app_ids = [app.id for app in applications if app.status == "chatting"]
+            unread_map: dict[int, int] = {}
+            if chatting_app_ids:
+                unread_map = await _get_unread_counts_batch(db, task_id, user_id_str, chatting_app_ids)
+
+            result = []
+            for app in applications:
+                unread = unread_map.get(app.id, 0) if app.status == "chatting" else 0
+                result.append(_format_application_item(app, app.applicant, unread))
+            return result
+
+        # ── Public list (for logged-in non-poster AND unauthenticated) ──
+        public_query = (
             select(models.TaskApplication)
             .options(selectinload(models.TaskApplication.applicant))
             .where(models.TaskApplication.task_id == task_id)
-            .where(models.TaskApplication.status.in_(["pending", "chatting"]))
+            .where(models.TaskApplication.status.in_(["pending", "chatting", "approved"]))
             .order_by(models.TaskApplication.created_at.desc())
             .offset(skip)
             .limit(limit)
         )
-        applications_result = await db.execute(applications_query)
-        applications = applications_result.scalars().all()
-
-        # Batch-fetch unread counts for chatting applications
-        chatting_app_ids = [app.id for app in applications if app.status == "chatting"]
-        unread_map: dict[int, int] = {}
-        if chatting_app_ids:
-            unread_map = await _get_unread_counts_batch(db, task_id, user_id_str, chatting_app_ids)
+        public_result = await db.execute(public_query)
+        public_apps = public_result.scalars().all()
 
         result = []
-        for app in applications:
-            unread = unread_map.get(app.id, 0) if app.status == "chatting" else 0
-            result.append(_format_application_item(app, app.applicant, unread))
+        for app in public_apps:
+            # If the current user is this applicant, return full data
+            if user_id_str and str(app.applicant_id) == user_id_str:
+                own_unread = 0
+                if app.status == "chatting":
+                    own_unread = await _get_unread_count(db, task_id, user_id_str, app.id)
+                result.append(_format_application_item(app, app.applicant, own_unread))
+            else:
+                result.append(_format_public_application_item(app, app.applicant))
 
         return result
-        
+
     except HTTPException:
         raise
     except Exception as e:

@@ -50,6 +50,10 @@ class ErrorLocalizer {
         : errorMessage;
 
     switch (code) {
+      case 'public_reply_failed':
+        return context.l10n.actionOperationFailed;
+      case 'public_reply_already_replied':
+        return context.l10n.alreadyReplied;
       case 'error_network_timeout':
         return context.l10n.errorNetworkTimeout;
       case 'error_request_failed':
@@ -216,6 +220,12 @@ class ErrorLocalizer {
         return context.l10n.errorTaskRespondNegotiationFailed;
       case 'task_visibility_update_failed':
         return context.l10n.errorTaskVisibilityUpdateFailed;
+      case 'task_start_chat_failed':
+        return context.l10n.errorTaskStartChatFailed;
+      case 'task_propose_price_failed':
+        return context.l10n.errorTaskProposePriceFailed;
+      case 'task_confirm_pay_failed':
+        return context.l10n.errorTaskConfirmPayFailed;
       case 'task_list_load_failed':
         return context.l10n.errorTaskListLoadFailed;
       case 'task_quote_failed':

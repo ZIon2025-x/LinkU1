@@ -145,8 +145,19 @@ class AcceptPaymentData extends Equatable {
   final String? fleaMarketItemId;
 
   @override
-  List<Object?> get props =>
-      [taskId, clientSecret, customerId, ephemeralKeySecret, taskSource, fleaMarketItemId];
+  List<Object?> get props => [
+        taskId,
+        clientSecret,
+        customerId,
+        ephemeralKeySecret,
+        amountDisplay,
+        applicationId,
+        paymentExpiresAt,
+        taskTitle,
+        applicantName,
+        taskSource,
+        fleaMarketItemId,
+      ];
 }
 
 class TaskDetailCompleteRequested extends TaskDetailEvent {
@@ -301,6 +312,20 @@ class TaskDetailToggleProfileVisibility extends TaskDetailEvent {
 
   @override
   List<Object?> get props => [isPublic];
+}
+
+/// 发布者公开回复申请
+class TaskDetailPublicReply extends TaskDetailEvent {
+  const TaskDetailPublicReply({
+    required this.applicationId,
+    required this.message,
+  });
+
+  final int applicationId;
+  final String message;
+
+  @override
+  List<Object> get props => [applicationId, message];
 }
 
 // ==================== State ====================
@@ -467,6 +492,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
     on<TaskDetailRespondCounterOfferRequested>(_onRespondCounterOffer, transformer: droppable());
     on<TaskDetailRespondNegotiationRequested>(_onRespondNegotiation, transformer: droppable());
     on<TaskDetailToggleProfileVisibility>(_onToggleProfileVisibility, transformer: droppable());
+    on<TaskDetailPublicReply>(_onPublicReply, transformer: droppable());
   }
 
   final TaskRepository _taskRepository;
@@ -531,6 +557,55 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       emit(state.copyWith(
         isLoadingApplications: false,
         errorMessage: 'task_applications_load_failed',
+      ));
+    }
+  }
+
+  Future<void> _onPublicReply(
+    TaskDetailPublicReply event,
+    Emitter<TaskDetailState> emit,
+  ) async {
+    if (_taskId == null) return;
+    emit(state.copyWith(isSubmitting: true));
+
+    try {
+      final result = await _taskRepository.publicReplyApplication(
+        _taskId!,
+        event.applicationId,
+        event.message,
+      );
+
+      // Update the application in the list with the reply data
+      final updatedApps = state.applications.map((app) {
+        if (app.id == event.applicationId) {
+          return app.copyWith(
+            posterReply: result['poster_reply'] as String?,
+            posterReplyAt: result['poster_reply_at'] as String?,
+          );
+        }
+        return app;
+      }).toList();
+
+      emit(state.copyWith(
+        isSubmitting: false,
+        applications: updatedApps,
+        actionMessage: 'public_reply_submitted',
+      ));
+    } on TaskException catch (e) {
+      final errorCode = e.message.contains('409') || e.message.contains('Already replied')
+          ? 'public_reply_already_replied'
+          : 'public_reply_failed';
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'public_reply_failed',
+        errorMessage: errorCode,
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to submit public reply', e);
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'public_reply_failed',
+        errorMessage: 'public_reply_failed',
       ));
     }
   }
@@ -1215,7 +1290,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       AppLogger.error('Failed to start application chat', e);
       emit(state.copyWith(
         isSubmitting: false,
-        errorMessage: e.toString(),
+        errorMessage: 'task_start_chat_failed',
       ));
     }
   }
@@ -1224,19 +1299,24 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
     TaskDetailProposePrice event,
     Emitter<TaskDetailState> emit,
   ) async {
-    if (_taskId == null) return;
+    if (_taskId == null || state.isSubmitting) return;
+    emit(state.copyWith(isSubmitting: true));
     try {
       await _taskRepository.proposePrice(
           _taskId!, event.applicationId, event.price);
       final raw = await _taskRepository.getTaskApplications(_taskId!);
       final apps = raw.map((e) => TaskApplication.fromJson(e)).toList();
       emit(state.copyWith(
+        isSubmitting: false,
         applications: apps,
         actionMessage: 'price_proposed',
       ));
     } catch (e) {
       AppLogger.error('Failed to propose price', e);
-      emit(state.copyWith(errorMessage: e.toString()));
+      emit(state.copyWith(
+        isSubmitting: false,
+        errorMessage: 'task_propose_price_failed',
+      ));
     }
   }
 
@@ -1262,8 +1342,8 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
           customerId: (result['customer_id'] as String?) ?? '',
           ephemeralKeySecret:
               (result['ephemeral_key_secret'] as String?) ?? '',
-          amountDisplay: result['amount'] != null
-              ? '£${(result['amount'] / 100).toStringAsFixed(2)}'
+          amountDisplay: result['amount'] != null && result['amount'] is num
+              ? '£${((result['amount'] as num) / 100).toStringAsFixed(2)}'
               : result['amount_display'] as String?,
           taskId: _taskId!,
           applicationId: event.applicationId,
@@ -1289,7 +1369,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       AppLogger.error('Failed to confirm and pay', e);
       emit(state.copyWith(
         isSubmitting: false,
-        errorMessage: e.toString(),
+        errorMessage: 'task_confirm_pay_failed',
       ));
     }
   }

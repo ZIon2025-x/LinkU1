@@ -3137,6 +3137,10 @@
   "errorTaskRespondCounterOfferFailed": "Failed to respond to counter offer.",
   "errorTaskRespondNegotiationFailed": "Failed to respond to negotiation.",
   "errorTaskVisibilityUpdateFailed": "Failed to update task visibility.",
+  "errorTaskStartChatFailed": "Failed to start chat. Please try again.",
+  "errorTaskProposePriceFailed": "Failed to propose price. Please try again.",
+  "errorTaskConfirmPayFailed": "Failed to initiate payment. Please try again.",
+  "priceExceedsMaximum": "Price cannot exceed £50,000",
   "errorTaskListLoadFailed": "Failed to load tasks.",
   "errorTaskQuoteFailed": "Failed to submit quote. Please try again.",
   "errorTaskQuoteAcceptFailed": "Quote submitted, but automatic acceptance failed. Please contact support.",
@@ -4422,6 +4426,8 @@
   "taskDetailShowOnProfileDesc": "Display this completed task on your public profile",
   "taskDetailVisibilityUpdated": "Profile visibility updated",
   "taskDetailVisibilityUpdateFailed": "Failed to update visibility",
+  "actionChatStarted": "Chat started",
+  "actionPriceProposed": "Price proposal sent",
   "contentMaskedHint": "Some content has been automatically processed. Please use in-app chat for communication.",
   "contentUnderReviewHint": "Your content has been submitted and is pending review.",
   "contentRejectedHint": "Your content did not pass review.",
@@ -4720,5 +4726,16 @@
   "typeMessage": "Type a message...",
   "proposeNewPrice": "Propose New Price",
   "enterPrice": "Enter price",
-  "chatChannelClosed": "This chat channel is closed"
+  "chatChannelClosed": "This chat channel is closed",
+  "applicationMessages": "Applications ({count})",
+  "@applicationMessages": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "posterReply": "Poster Reply",
+  "replyToApplication": "Reply",
+  "replySubmitted": "Reply submitted",
+  "publicReplyPlaceholder": "Write your reply to this application...",
+  "alreadyReplied": "Already replied to this application"
 }

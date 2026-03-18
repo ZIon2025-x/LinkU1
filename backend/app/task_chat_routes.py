@@ -121,11 +121,14 @@ async def get_task_chat_list(
         # 获取所有相关的任务ID
         task_ids_set = set()
         
-        # 1. 作为发布者或接受者的任务
+        # 1. 作为发布者或接受者的任务（排除已取消的任务）
         tasks_query_1 = select(models.Task.id).where(
-            or_(
-                models.Task.poster_id == current_user.id,
-                models.Task.taker_id == current_user.id
+            and_(
+                or_(
+                    models.Task.poster_id == current_user.id,
+                    models.Task.taker_id == current_user.id
+                ),
+                models.Task.status != 'cancelled'
             )
         )
         result_1 = await db.execute(tasks_query_1)
@@ -415,7 +418,7 @@ async def get_task_chat_list(
         logger.error(f"获取任务聊天列表失败: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"获取任务聊天列表失败: {str(e)}"
+            detail="获取任务聊天列表失败，请稍后重试"
         )
 
 
@@ -512,7 +515,7 @@ async def get_task_chat_unread_count(
         logger.error(f"获取任务聊天未读数量失败: {e}\n{error_trace}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"获取任务聊天未读数量失败: {str(e)}"
+            detail="获取任务聊天未读数量失败，请稍后重试"
         )
 
 
@@ -609,6 +612,11 @@ async def get_task_messages(
             messages_query = messages_query.where(
                 models.Message.application_id == application_id
             )
+        else:
+            # 不带 application_id 时只返回主任务聊天（不含申请频道私聊）
+            messages_query = messages_query.where(
+                models.Message.application_id.is_(None)
+            )
         
         # 游标分页处理
         if cursor:
@@ -633,7 +641,7 @@ async def get_task_messages(
             except (ValueError, IndexError) as e:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"无效的游标格式: {str(e)}"
+                    detail="无效的游标格式"
                 )
         
         # 排序：最新→更旧
@@ -837,7 +845,7 @@ async def get_task_messages(
         logger.error(f"获取任务消息失败: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"获取任务消息失败: {str(e)}"
+            detail="获取任务消息失败，请稍后重试"
         )
 
 
@@ -1056,13 +1064,9 @@ async def send_task_message(
         # 创建消息
         meta_str = json.dumps(request.meta) if request.meta else None
         
-        # 从 meta 中读取 message_type，如果是系统消息，则设置为 "system"
-        # 系统消息的 sender_id 应该为 None
+        # 消息类型：用户只能发送 normal 消息，system 消息由服务端内部创建
         message_type = "normal"
         sender_id = current_user.id
-        if request.meta and request.meta.get("message_type") == "system":
-            message_type = "system"
-            sender_id = None  # 系统消息的 sender_id 为 None
         
         new_message = models.Message(
             sender_id=sender_id,
@@ -1108,36 +1112,44 @@ async def send_task_message(
         try:
             from app.websocket_manager import get_ws_manager
             ws_manager = get_ws_manager()
-            
+
             # 获取所有参与者ID
             participant_ids = set()
-            
-            # 添加发布者（对于单人任务，这是发布者；对于多人任务，这是申请活动的用户）
-            if task.poster_id:
-                participant_ids.add(task.poster_id)
-            
-            # 添加接受者（如果是单人任务）
-            if task.taker_id:
-                participant_ids.add(task.taker_id)
-            
-            # 如果是多人任务，添加所有参与者
-            if task.is_multi_participant:
-                # 添加任务达人（创建者）
-                if task.expert_creator_id:
-                    participant_ids.add(task.expert_creator_id)
-                
-                # 添加所有TaskParticipant（包括申请活动的用户和其他参与者）
-                participants_query = select(models.TaskParticipant).where(
-                    and_(
-                        models.TaskParticipant.task_id == task_id,
-                        models.TaskParticipant.status.in_(["accepted", "in_progress"])
+
+            if request.application_id and application:
+                # Application-scoped chat: only poster and the specific applicant
+                if task.poster_id:
+                    participant_ids.add(task.poster_id)
+                if application.applicant_id:
+                    participant_ids.add(application.applicant_id)
+            else:
+                # General task chat: all participants
+                # 添加发布者
+                if task.poster_id:
+                    participant_ids.add(task.poster_id)
+
+                # 添加接受者（如果是单人任务）
+                if task.taker_id:
+                    participant_ids.add(task.taker_id)
+
+                # 如果是多人任务，添加所有参与者
+                if task.is_multi_participant:
+                    # 添加任务达人（创建者）
+                    if task.expert_creator_id:
+                        participant_ids.add(task.expert_creator_id)
+
+                    # 添加所有TaskParticipant
+                    participants_query = select(models.TaskParticipant).where(
+                        and_(
+                            models.TaskParticipant.task_id == task_id,
+                            models.TaskParticipant.status.in_(["accepted", "in_progress"])
+                        )
                     )
-                )
-                participants_result = await db.execute(participants_query)
-                participants = participants_result.scalars().all()
-                for participant in participants:
-                    if participant.user_id:
-                        participant_ids.add(participant.user_id)
+                    participants_result = await db.execute(participants_query)
+                    participants = participants_result.scalars().all()
+                    for participant in participants:
+                        if participant.user_id:
+                            participant_ids.add(participant.user_id)
             
             # 构建消息响应
             message_response = {
@@ -1223,7 +1235,7 @@ async def send_task_message(
         logger.error(f"发送任务消息失败: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"发送任务消息失败: {str(e)}"
+            detail="发送任务消息失败，请稍后重试"
         )
 
 
@@ -1492,7 +1504,7 @@ async def mark_messages_read(
         logger.error(f"标记消息已读失败: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"标记消息已读失败: {str(e)}"
+            detail="标记消息已读失败，请稍后重试"
         )
 
 
@@ -1605,7 +1617,14 @@ async def accept_application(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="申请不存在"
             )
-        
+
+        # 申请必须是可接受的状态
+        if application.status not in ("pending", "chatting", "approved"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"申请当前状态为 {application.status}，无法接受"
+            )
+
         # 使用 SELECT FOR UPDATE 锁定任务行（防止并发）
         from sqlalchemy import update
         locked_task_query = select(models.Task).where(
@@ -1613,7 +1632,7 @@ async def accept_application(
         ).with_for_update()
         locked_task_result = await db.execute(locked_task_query)
         locked_task = locked_task_result.scalar_one_or_none()
-        
+
         # 幂等性检查：如果申请已经是 approved，检查是否有待支付的 PaymentIntent
         if application.status == "approved":
             logger.info(f"⚠️ 申请 {application_id} 已经是 approved 状态，检查是否有待支付的 PaymentIntent")
@@ -1787,8 +1806,8 @@ async def accept_application(
                 detail="任务金额必须大于0，无法进行支付"
             )
         
-        task_amount_pence = int(task_amount * 100)
-        
+        task_amount_pence = round(task_amount * 100)
+
         # 计算平台服务费（按任务来源/类型取费率）
         from app.utils.fee_calculator import calculate_application_fee_pence
         task_source = getattr(locked_task, "task_source", None)
@@ -1908,7 +1927,7 @@ async def accept_application(
         logger.error(f"接受申请失败: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"接受申请失败: {str(e)}"
+            detail="接受申请失败，请稍后重试"
         )
 
 
@@ -1926,8 +1945,10 @@ async def start_application_chat(
     并创建系统消息通知申请者。
     """
     try:
-        # 检查任务是否存在
-        task_query = select(models.Task).where(models.Task.id == task_id)
+        # 使用 FOR UPDATE 锁定任务行（防止并发开始聊天）
+        task_query = select(models.Task).where(
+            models.Task.id == task_id
+        ).with_for_update()
         task_result = await db.execute(task_query)
         task = task_result.scalar_one_or_none()
 
@@ -1958,13 +1979,13 @@ async def start_application_chat(
                 detail=f"任务当前状态为 {task.status}，无法开始聊天"
             )
 
-        # 检查申请是否存在且属于该任务
+        # 检查申请是否存在且属于该任务（加锁）
         application_query = select(models.TaskApplication).where(
             and_(
                 models.TaskApplication.id == application_id,
                 models.TaskApplication.task_id == task_id
             )
-        )
+        ).with_for_update()
         application_result = await db.execute(application_query)
         application = application_result.scalar_one_or_none()
 
@@ -2076,7 +2097,7 @@ async def start_application_chat(
                 "type": "task_message",
                 "message": {
                     "id": system_message.id if hasattr(system_message, 'id') else None,
-                    "sender_id": "system",
+                    "sender_id": None,
                     "sender_name": "System",
                     "content": system_message.content,
                     "task_id": task_id,
@@ -2113,7 +2134,7 @@ async def start_application_chat(
         logger.error(f"开始聊天失败: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"开始聊天失败: {str(e)}"
+            detail="开始聊天失败，请稍后重试"
         )
 
 
@@ -2132,12 +2153,26 @@ async def propose_price(
     try:
         # 解析请求体
         body = await request.json()
-        proposed_price = body.get("proposedPrice")
+        proposed_price = body.get("proposed_price") or body.get("proposedPrice")
 
-        if proposed_price is None or proposed_price <= 0:
+        if proposed_price is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="proposedPrice 必须大于 0"
+                detail="proposed_price 必须提供"
+            )
+
+        try:
+            proposed_price = float(proposed_price)
+        except (TypeError, ValueError):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="proposed_price 必须是有效的数字"
+            )
+
+        if proposed_price <= 0 or proposed_price > 50000:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="proposed_price 必须大于 0 且不超过 50000"
             )
 
         # 检查任务是否存在
@@ -2151,13 +2186,13 @@ async def propose_price(
                 detail="任务不存在"
             )
 
-        # 检查申请是否存在且属于该任务
+        # 检查申请是否存在且属于该任务（加锁防并发报价）
         application_query = select(models.TaskApplication).where(
             and_(
                 models.TaskApplication.id == application_id,
                 models.TaskApplication.task_id == task_id
             )
-        )
+        ).with_for_update()
         application_result = await db.execute(application_query)
         application = application_result.scalar_one_or_none()
 
@@ -2192,11 +2227,7 @@ async def propose_price(
 
         # 更新申请的 negotiated_price
         from decimal import Decimal
-        await db.execute(
-            update(models.TaskApplication)
-            .where(models.TaskApplication.id == application_id)
-            .values(negotiated_price=Decimal(str(proposed_price)))
-        )
+        application.negotiated_price = Decimal(str(proposed_price))
 
         # 创建 price_proposal 消息
         current_time = get_utc_time()
@@ -2312,7 +2343,7 @@ async def propose_price(
         logger.error(f"价格提议失败: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"价格提议失败: {str(e)}"
+            detail="价格提议失败，请稍后重试"
         )
 
 
@@ -2392,6 +2423,13 @@ async def confirm_and_pay(
                 detail="任务已支付，无法重复支付。"
             )
 
+        # 检查是否已有待处理的 PaymentIntent（防止重复创建）
+        if locked_task.payment_intent_id:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="已有待处理的支付，请等待支付完成或联系客服"
+            )
+
         # 使用 SELECT FOR UPDATE 锁定申请行
         locked_app_query = select(models.TaskApplication).where(
             and_(
@@ -2465,7 +2503,7 @@ async def confirm_and_pay(
             logger.warning(f"无法验证申请人 {application.applicant_id} 的 Stripe Connect 账户: {e}")
 
         # 计算金额（pence）
-        final_price_pence = int(final_price * 100)
+        final_price_pence = round(final_price * 100)
 
         # 计算平台服务费
         from app.utils.fee_calculator import calculate_application_fee_pence
@@ -2553,7 +2591,7 @@ async def confirm_and_pay(
         logger.error(f"确认支付失败: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"确认支付失败: {str(e)}"
+            detail="确认支付失败，请稍后重试"
         )
 
 
@@ -2568,46 +2606,53 @@ async def reject_application(
     拒绝申请
     """
     try:
-        # 检查任务是否存在
-        task_query = select(models.Task).where(models.Task.id == task_id)
+        # 检查任务是否存在（加锁防止并发）
+        task_query = select(models.Task).where(models.Task.id == task_id).with_for_update()
         task_result = await db.execute(task_query)
         task = task_result.scalar_one_or_none()
-        
+
         if not task:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="任务不存在"
             )
-        
+
         # 权限检查：必须是发布者
         if task.poster_id != current_user.id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="只有发布者可以拒绝申请"
             )
-        
-        # 检查申请是否存在且属于该任务
+
+        # 检查申请是否存在且属于该任务（加锁）
         application_query = select(models.TaskApplication).where(
             and_(
                 models.TaskApplication.id == application_id,
                 models.TaskApplication.task_id == task_id
             )
-        )
+        ).with_for_update()
         application_result = await db.execute(application_query)
         application = application_result.scalar_one_or_none()
-        
+
         if not application:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="申请不存在"
             )
-        
+
+        # 只能拒绝 pending 或 chatting 状态的申请
+        if application.status not in ("pending", "chatting"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"申请当前状态为 {application.status}，只能拒绝待处理或聊天中的申请"
+            )
+
         # 获取当前时间
         current_time = get_utc_time()
-        
+
         # 更新申请状态
         application.status = "rejected"
-        
+
         # 写入操作日志
         log_entry = models.NegotiationResponseLog(
             task_id=task_id,
@@ -2618,6 +2663,9 @@ async def reject_application(
         )
         db.add(log_entry)
 
+        # Flush so the status change is visible in the count query
+        await db.flush()
+
         # Check if any chatting or pending applications remain; revert task to open if none
         remaining_count = await db.execute(
             select(func.count()).select_from(models.TaskApplication).where(
@@ -2627,9 +2675,7 @@ async def reject_application(
         )
         remaining = remaining_count.scalar()
         if remaining == 0 and task.status == "chatting":
-            await db.execute(
-                update(models.Task).where(models.Task.id == task_id).values(status="open")
-            )
+            task.status = "open"
 
         await db.commit()
 
@@ -2690,7 +2736,7 @@ async def reject_application(
         logger.error(f"拒绝申请失败: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"拒绝申请失败: {str(e)}"
+            detail="拒绝申请失败，请稍后重试"
         )
 
 
@@ -2706,53 +2752,53 @@ async def withdraw_application(
     只有申请者本人可以撤回
     """
     try:
-        # 检查任务是否存在
-        task_query = select(models.Task).where(models.Task.id == task_id)
+        # 检查任务是否存在（加锁防止并发）
+        task_query = select(models.Task).where(models.Task.id == task_id).with_for_update()
         task_result = await db.execute(task_query)
         task = task_result.scalar_one_or_none()
-        
+
         if not task:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="任务不存在"
             )
-        
-        # 检查申请是否存在且属于该任务
+
+        # 检查申请是否存在且属于该任务（加锁）
         application_query = select(models.TaskApplication).where(
             and_(
                 models.TaskApplication.id == application_id,
                 models.TaskApplication.task_id == task_id
             )
-        )
+        ).with_for_update()
         application_result = await db.execute(application_query)
         application = application_result.scalar_one_or_none()
-        
+
         if not application:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="申请不存在"
             )
-        
+
         # 权限检查：必须是申请者本人
         if application.applicant_id != current_user.id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="只有申请者本人可以撤回申请"
             )
-        
-        # 检查申请状态
-        if application.status != "pending":
+
+        # 检查申请状态：pending 或 chatting 状态可撤回
+        if application.status not in ("pending", "chatting"):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="只能撤回待处理的申请"
+                detail="只能撤回待处理或聊天中的申请"
             )
-        
+
         # 获取当前时间
         current_time = get_utc_time()
-        
+
         # 更新申请状态为 rejected（等同于撤回）
         application.status = "rejected"
-        
+
         # 写入操作日志（用于审计区分撤回和拒绝）
         log_entry = models.NegotiationResponseLog(
             task_id=task_id,
@@ -2763,6 +2809,9 @@ async def withdraw_application(
         )
         db.add(log_entry)
 
+        # Flush so the status change is visible in the count query
+        await db.flush()
+
         # Check if any chatting or pending applications remain; revert task to open if none
         remaining_count = await db.execute(
             select(func.count()).select_from(models.TaskApplication).where(
@@ -2772,9 +2821,7 @@ async def withdraw_application(
         )
         remaining = remaining_count.scalar()
         if remaining == 0 and task.status == "chatting":
-            await db.execute(
-                update(models.Task).where(models.Task.id == task_id).values(status="open")
-            )
+            task.status = "open"
 
         await db.commit()
 
@@ -2840,7 +2887,7 @@ async def withdraw_application(
         logger.error(f"撤回申请失败: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"撤回申请失败: {str(e)}"
+            detail="撤回申请失败，请稍后重试"
         )
 
 
@@ -2890,7 +2937,14 @@ async def negotiate_application(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="申请不存在"
             )
-        
+
+        # 申请必须处于可议价状态
+        if application.status not in ("pending", "chatting"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"申请当前状态为 {application.status}，无法议价"
+            )
+
         # 校验货币一致性
         if application.currency and task.currency:
             if application.currency != task.currency:
@@ -3073,7 +3127,7 @@ async def negotiate_application(
         logger.error(f"发起再次议价失败: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"发起再次议价失败: {str(e)}"
+            detail="发起再次议价失败，请稍后重试"
         )
 
 
@@ -3187,7 +3241,7 @@ async def taker_counter_offer(
         logger.error(f"提交反报价失败: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"提交反报价失败: {str(e)}"
+            detail="提交反报价失败，请稍后重试"
         )
 
 
@@ -3344,7 +3398,7 @@ async def respond_taker_counter_offer(
         logger.error(f"响应反报价失败: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"响应反报价失败: {str(e)}"
+            detail="响应反报价失败，请稍后重试"
         )
 
 
@@ -3417,7 +3471,7 @@ async def get_negotiation_tokens(
                 try:
                     accept_token_data = json.loads(accept_token_data_str)
                     expires_at = accept_token_data.get("expires_at")
-                except:
+                except Exception:
                     pass
         
         # 如果没有从token中获取到，基于创建时间+24小时计算
@@ -3456,7 +3510,7 @@ async def get_negotiation_tokens(
         logger.error(f"获取议价token失败: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"获取议价token失败: {str(e)}"
+            detail="获取议价信息失败，请稍后重试"
         )
 
 
@@ -3640,8 +3694,8 @@ async def respond_negotiation(
                     detail="任务金额必须大于0，无法进行支付"
                 )
             
-            task_amount_pence = int(task_amount * 100)
-            
+            task_amount_pence = round(task_amount * 100)
+
             # 计算平台服务费（按任务来源/类型取费率）
             from app.utils.fee_calculator import calculate_application_fee_pence
             task_source = getattr(locked_task, "task_source", None)
@@ -3852,20 +3906,16 @@ async def respond_negotiation(
             
             # 发送通知给发布者
             try:
-                notification_content = {
-                    "type": "negotiation_rejected",
-                    "task_id": task_id,
-                    "task_title": task.title,
-                    "application_id": application_id
-                }
-                
+                content = f"申请者已拒绝您对任务「{task.title}」的议价提议。"
+                content_en = f"The applicant has rejected your negotiation offer for task「{task.title}」."
+
                 new_notification = models.Notification(
                     user_id=task.poster_id,
                     type="negotiation_rejected",
                     title="申请者已拒绝您的议价",
-                    content=json.dumps(notification_content),
+                    content=content,
                     title_en="Negotiation Rejected",
-                    content_en=f"The applicant has rejected your negotiation offer for task「{task.title}」",
+                    content_en=content_en,
                     related_id=application_id,
                     related_type="application_id",  # related_id 是 application_id
                     created_at=current_time
@@ -3913,7 +3963,7 @@ async def respond_negotiation(
         logger.error(f"处理再次议价失败: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"处理再次议价失败: {str(e)}"
+            detail="处理再次议价失败，请稍后重试"
         )
 
 
@@ -4196,7 +4246,7 @@ async def send_application_message(
         logger.error(f"发送申请留言失败: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"发送留言失败: {str(e)}"
+            detail="发送留言失败，请稍后重试"
         )
 
 
@@ -4287,11 +4337,15 @@ async def reply_application_message(
         # ⚠️ 直接使用文本内容，不存储 JSON
         content = f"申请者回复了您对任务「{task.title}」的留言：{request.message}"
         
+        content_en = f"The applicant has replied to your message for task「{task.title}」: {request.message}"
+
         reply_notification = models.Notification(
             user_id=task.poster_id,
             type="application_message_reply",
             title="申请者回复了您的留言",
+            title_en="Applicant Replied to Your Message",
             content=content,  # 直接使用文本，不存储 JSON
+            content_en=content_en,
             related_id=request.notification_id,  # 关联到原始通知
             related_type=None,  # 关联到通知ID，不是 task_id 或 application_id
             created_at=current_time
@@ -4338,6 +4392,92 @@ async def reply_application_message(
         logger.error(f"回复申请留言失败: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"回复留言失败: {str(e)}"
+            detail="回复留言失败，请稍后重试"
         )
+
+
+# ============================================================
+# 发布者公开回复申请 (每个申请只能回复一次)
+# ============================================================
+
+@task_chat_router.post("/tasks/{task_id}/applications/{application_id}/public-reply")
+async def public_reply_to_application(
+    task_id: int,
+    application_id: int,
+    request: Request,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """发布者对申请的公开回复（每个申请只能回复一次）"""
+    try:
+        body = await request.json()
+        message = body.get("message", "").strip()
+        if not message:
+            raise HTTPException(status_code=400, detail="Reply message is required")
+        if len(message) > 500:
+            raise HTTPException(status_code=400, detail="Reply message must be 500 characters or less")
+
+        # Verify task exists and caller is poster
+        task_result = await db.execute(
+            select(models.Task).where(models.Task.id == task_id)
+        )
+        task = task_result.scalar_one_or_none()
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+        if str(task.poster_id) != str(current_user.id):
+            raise HTTPException(status_code=403, detail="Only the task poster can reply")
+
+        # Verify application exists and belongs to this task
+        app_result = await db.execute(
+            select(models.TaskApplication).where(
+                models.TaskApplication.id == application_id,
+                models.TaskApplication.task_id == task_id,
+            )
+        )
+        application = app_result.scalar_one_or_none()
+        if not application:
+            raise HTTPException(status_code=404, detail="Application not found")
+
+        # Check if already replied
+        if application.poster_reply is not None:
+            raise HTTPException(status_code=409, detail="Already replied to this application")
+
+        # Set reply
+        application.poster_reply = message
+        application.poster_reply_at = get_utc_time()
+        await db.commit()
+
+        # Send notification to applicant
+        try:
+            notification_content = json.dumps({
+                "task_id": task_id,
+                "task_title": task.title if hasattr(task, 'title') else None,
+                "reply_message": message[:200],
+                "poster_name": current_user.name if hasattr(current_user, 'name') else None,
+            })
+            notification = models.Notification(
+                user_id=str(application.applicant_id),
+                type="public_reply",
+                title="发布者回复了你的申请",
+                title_en="The poster replied to your application",
+                content=notification_content,
+                related_id=task_id,
+                related_type="task_id",
+            )
+            db.add(notification)
+            await db.commit()
+        except Exception as e:
+            logger.warning(f"Failed to create notification for public reply: {e}")
+
+        return {
+            "id": application.id,
+            "poster_reply": application.poster_reply,
+            "poster_reply_at": format_iso_utc(application.poster_reply_at) if application.poster_reply_at else None,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in public reply for task {task_id}, app {application_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to submit reply: {str(e)}")
 

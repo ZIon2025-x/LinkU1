@@ -6665,6 +6665,21 @@ class AppLocalizationsEn extends AppLocalizations {
       'Failed to update task visibility.';
 
   @override
+  String get errorTaskStartChatFailed =>
+      'Failed to start chat. Please try again.';
+
+  @override
+  String get errorTaskProposePriceFailed =>
+      'Failed to propose price. Please try again.';
+
+  @override
+  String get errorTaskConfirmPayFailed =>
+      'Failed to initiate payment. Please try again.';
+
+  @override
+  String get priceExceedsMaximum => 'Price cannot exceed £50,000';
+
+  @override
   String get errorTaskListLoadFailed => 'Failed to load tasks.';
 
   @override
@@ -9587,6 +9602,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskDetailVisibilityUpdateFailed => 'Failed to update visibility';
 
   @override
+  String get actionChatStarted => 'Chat started';
+
+  @override
+  String get actionPriceProposed => 'Price proposal sent';
+
+  @override
   String get contentMaskedHint =>
       'Some content has been automatically processed. Please use in-app chat for communication.';
 
@@ -10262,4 +10283,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatChannelClosed => 'This chat channel is closed';
+
+  @override
+  String applicationMessages(int count) {
+    return 'Applications ($count)';
+  }
+
+  @override
+  String get posterReply => 'Poster Reply';
+
+  @override
+  String get replyToApplication => 'Reply';
+
+  @override
+  String get replySubmitted => 'Reply submitted';
+
+  @override
+  String get publicReplyPlaceholder =>
+      'Write your reply to this application...';
+
+  @override
+  String get alreadyReplied => 'Already replied to this application';
 }

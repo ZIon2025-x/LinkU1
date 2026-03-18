@@ -6367,6 +6367,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get errorTaskVisibilityUpdateFailed => '更新任务可见性失败';
 
   @override
+  String get errorTaskStartChatFailed => '开启聊天失败，请重试';
+
+  @override
+  String get errorTaskProposePriceFailed => '提出报价失败，请重试';
+
+  @override
+  String get errorTaskConfirmPayFailed => '发起支付失败，请重试';
+
+  @override
+  String get priceExceedsMaximum => '价格不能超过 £50,000';
+
+  @override
   String get errorTaskListLoadFailed => '加载任务列表失败';
 
   @override
@@ -9203,6 +9215,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskDetailVisibilityUpdateFailed => '更新展示设置失败';
 
   @override
+  String get actionChatStarted => '聊天已开始';
+
+  @override
+  String get actionPriceProposed => '报价已发送';
+
+  @override
   String get contentMaskedHint => '部分内容已被自动处理，请通过平台内聊天沟通。';
 
   @override
@@ -9854,6 +9872,26 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatChannelClosed => '此聊天通道已关闭';
+
+  @override
+  String applicationMessages(int count) {
+    return '申请留言 ($count)';
+  }
+
+  @override
+  String get posterReply => '发布者回复';
+
+  @override
+  String get replyToApplication => '回复';
+
+  @override
+  String get replySubmitted => '回复已提交';
+
+  @override
+  String get publicReplyPlaceholder => '写下你对这条申请的回复...';
+
+  @override
+  String get alreadyReplied => '已经回复过此申请';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -16219,6 +16257,18 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get errorTaskVisibilityUpdateFailed => '更新任務可見性失敗';
 
   @override
+  String get errorTaskStartChatFailed => '開啟聊天失敗，請重試';
+
+  @override
+  String get errorTaskProposePriceFailed => '提出報價失敗，請重試';
+
+  @override
+  String get errorTaskConfirmPayFailed => '發起支付失敗，請重試';
+
+  @override
+  String get priceExceedsMaximum => '價格不能超過 £50,000';
+
+  @override
   String get errorTaskListLoadFailed => '載入任務列表失敗';
 
   @override
@@ -19055,6 +19105,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get taskDetailVisibilityUpdateFailed => '更新展示設定失敗';
 
   @override
+  String get actionChatStarted => '聊天已開始';
+
+  @override
+  String get actionPriceProposed => '報價已發送';
+
+  @override
   String get contentMaskedHint => '部分內容已被自動處理，請透過平台內聊天溝通。';
 
   @override
@@ -19662,4 +19718,24 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get chatChannelClosed => '此聊天通道已關閉';
+
+  @override
+  String applicationMessages(int count) {
+    return '申請留言 ($count)';
+  }
+
+  @override
+  String get posterReply => '發佈者回覆';
+
+  @override
+  String get replyToApplication => '回覆';
+
+  @override
+  String get replySubmitted => '回覆已提交';
+
+  @override
+  String get publicReplyPlaceholder => '寫下你對這條申請的回覆...';
+
+  @override
+  String get alreadyReplied => '已經回覆過此申請';
 }
