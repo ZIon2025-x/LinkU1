@@ -2333,8 +2333,9 @@ async def get_service_detail(
             .where(models.ServiceApplication.service_id == service_id)
             .where(models.ServiceApplication.applicant_id == current_user.id)
             .order_by(models.ServiceApplication.created_at.desc())
+            .limit(1)
         )
-        application = application.scalar_one_or_none()
+        application = application.scalars().first()
         
         if application:
             user_application_id = application.id
