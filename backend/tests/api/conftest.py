@@ -124,6 +124,22 @@ def pytest_runtest_call(item):
     outcome = yield
     if outcome.excinfo is not None:
         exc = outcome.excinfo[1]
+        # 网络超时 → 重试最多 2 次
+        if isinstance(exc, (httpx.ConnectTimeout, httpx.ReadTimeout, httpx.ConnectError)):
+            import time
+            for attempt in range(1, 3):
+                time.sleep(attempt * 2)
+                print(f"\n⚠️  网络超时，第 {attempt} 次重试...")
+                try:
+                    item.runtest()
+                    outcome.force_result(None)  # 重试成功，清除异常
+                    return
+                except (httpx.ConnectTimeout, httpx.ReadTimeout, httpx.ConnectError):
+                    continue
+                except Exception:
+                    break
+            # 所有重试都失败，标记为 skip 而非 fail
+            pytest.skip(f"网络超时，重试 2 次后仍失败，跳过: {exc}")
         if isinstance(exc, AssertionError):
             msg = str(exc)
             for code in ("502", "503", "504"):

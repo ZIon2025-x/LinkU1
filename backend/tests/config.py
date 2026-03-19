@@ -9,6 +9,7 @@ LinkU API 测试配置
 
 import os
 import sys
+import time
 
 # =============================================================================
 # 生产环境保护列表 - 绝对不允许测试指向这些地址
@@ -138,6 +139,32 @@ def require_config(func):
         if not CONFIG_VALID:
             pytest.skip(CONFIG_ERROR_MESSAGE)
         return func(*args, **kwargs)
+    return wrapper
+
+
+MAX_RETRIES = int(os.getenv("TEST_MAX_RETRIES", "3"))
+
+
+def retry_on_timeout(func):
+    """
+    装饰器：网络超时时自动重试（最多 MAX_RETRIES 次）
+    """
+    import functools
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        import httpx
+        last_exc = None
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                return func(*args, **kwargs)
+            except (httpx.ConnectTimeout, httpx.ReadTimeout, httpx.ConnectError) as exc:
+                last_exc = exc
+                if attempt < MAX_RETRIES:
+                    wait = attempt * 2
+                    print(f"⚠️  第 {attempt} 次超时，{wait}s 后重试...")
+                    time.sleep(wait)
+        raise last_exc
     return wrapper
 
 
