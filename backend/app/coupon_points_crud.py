@@ -479,13 +479,20 @@ def validate_coupon_usage(
     if order_amount < coupon.min_amount:
         return False, f"订单金额不足，最低使用金额：{coupon.min_amount / 100:.2f}", None
     
+    # 检查适用场景（如 ["task", "errand", "flea_market"]）
+    if coupon.applicable_scenarios and task_type:
+        if task_type not in coupon.applicable_scenarios:
+            scenarios_display = ", ".join(coupon.applicable_scenarios)
+            return False, f"该优惠券仅适用于以下场景：{scenarios_display}", None
+
     # 检查使用条件限制
     if coupon.usage_conditions:
         conditions = coupon.usage_conditions
         
-        # 地点限制
+        # 地点限制（模糊匹配：任务地点包含配置的地点关键词即可，忽略大小写）
         if conditions.get("locations") and task_location:
-            if task_location not in conditions["locations"]:
+            loc_lower = task_location.lower()
+            if not any(loc.lower() in loc_lower for loc in conditions["locations"]):
                 return False, f"该优惠券仅限在 {', '.join(conditions['locations'])} 使用", None
         
         # 任务类型限制

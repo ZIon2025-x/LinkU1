@@ -185,11 +185,15 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
     ).then((list) {
       if (mounted) {
         setState(() {
-          // 过滤掉已过期（status 未同步）的优惠券；
-          // 后端已按 task_id 做了适用性校验，不适用的券 applicable == false
-          _availableCoupons = list
-              .where((c) => c.isUsable && c.isApplicable)
-              .toList();
+          // 过滤掉已过期（status 未同步）的优惠券；保留不适用的券（置灰显示原因）
+          // 可用的排前面，不适用的排后面
+          final usable = list.where((c) => c.isUsable).toList();
+          usable.sort((a, b) {
+            if (a.isApplicable && !b.isApplicable) return -1;
+            if (!a.isApplicable && b.isApplicable) return 1;
+            return 0;
+          });
+          _availableCoupons = usable;
           _loadingCoupons = false;
         });
       }
@@ -1158,16 +1162,22 @@ class _CouponSelectionCard extends StatelessWidget {
           ] else if (availableCoupons != null) ...[
             ...availableCoupons!.map((uc) {
               final c = uc.coupon;
+              final isApplicable = uc.isApplicable;
               final subtitle = c.minAmount > 0
                   ? l10n.couponMinAmountAvailable(c.minAmountDisplay)
                   : l10n.couponNoThreshold;
               return Padding(
                 padding: const EdgeInsets.only(top: 12),
-                child: _CouponRow(
-                  label: c.name,
-                  subtitle: '${c.discountDisplayFormatted} · $subtitle',
-                  isSelected: selectedUserCoupon?.id == uc.id,
-                  onTap: () => onSelectCoupon(uc),
+                child: Opacity(
+                  opacity: isApplicable ? 1.0 : 0.45,
+                  child: _CouponRow(
+                    label: c.name,
+                    subtitle: isApplicable
+                        ? '${c.discountDisplayFormatted} · $subtitle'
+                        : uc.inapplicableReason ?? l10n.couponNotApplicable,
+                    isSelected: selectedUserCoupon?.id == uc.id,
+                    onTap: isApplicable ? () => onSelectCoupon(uc) : null,
+                  ),
                 ),
               );
             }),
@@ -1183,13 +1193,13 @@ class _CouponRow extends StatelessWidget {
     required this.label,
     this.subtitle,
     required this.isSelected,
-    required this.onTap,
+    this.onTap,
   });
 
   final String label;
   final String? subtitle;
   final bool isSelected;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {

@@ -64,6 +64,14 @@ const LIMIT_WINDOWS: { value: string; label: string }[] = [
   { value: 'year', label: '每年' },
 ];
 
+/** 英镑 → 便士：四舍五入避免浮点精度问题（如 3.00 * 100 = 299.999…） */
+const poundsToPence = (pounds: number): number => Math.round(pounds * 100);
+/** 便士 → 英镑 */
+const penceToPounds = (pence: number): number => pence / 100;
+
+/** 禁用 number input 的滚轮事件，防止鼠标滚动页面时误改数值 */
+const noWheelProps = { onWheel: (e: React.WheelEvent<HTMLInputElement>) => e.currentTarget.blur() };
+
 const inputStyle: React.CSSProperties = {
   width: '100%',
   padding: '8px',
@@ -247,30 +255,54 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
 
           <div style={fieldStyle}>
             <label style={labelStyle}>
-              折扣值 {formData.type === 'percentage' ? '(基点)' : '(便士)'} <span style={{ color: 'red' }}>*</span>
+              折扣值 {formData.type === 'percentage' ? '(基点)' : '(英镑 £)'} <span style={{ color: 'red' }}>*</span>
             </label>
-            <input
-              type="number"
-              value={formData.discount_value}
-              onChange={(e) => updateField('discount_value', Number(e.target.value))}
-              placeholder={formData.type === 'percentage' ? '例如: 1000 表示 10%' : '例如: 1000 表示 £10'}
-              min="0"
-              disabled={isEdit}
-              style={inputStyle}
-            />
-            <small style={hintStyle}>
-              {formData.type === 'percentage'
-                ? '基点制：100=1%, 1000=10%, 10000=100%'
-                : '便士制：100=£1, 1000=£10'}
-            </small>
+            {formData.type === 'fixed_amount' ? (
+              <>
+                <input
+                  type="number"
+                  step="0.01"
+                  {...noWheelProps}
+                  value={formData.discount_value ? penceToPounds(formData.discount_value) : ''}
+                  onChange={(e) => updateField('discount_value', e.target.value ? poundsToPence(Number(e.target.value)) : 0)}
+                  placeholder="例如: 3 表示 £3.00"
+                  min="0"
+                  disabled={isEdit}
+                  style={inputStyle}
+                />
+                <small style={hintStyle}>
+                  直接输入英镑金额，如 3 = £3.00, 10.5 = £10.50
+                  {formData.discount_value > 0 && ` （当前: £${penceToPounds(formData.discount_value).toFixed(2)}, 内部值: ${formData.discount_value} 便士）`}
+                </small>
+              </>
+            ) : (
+              <>
+                <input
+                  type="number"
+                  {...noWheelProps}
+                  value={formData.discount_value}
+                  onChange={(e) => updateField('discount_value', Number(e.target.value))}
+                  placeholder="例如: 1000 表示 10%"
+                  min="0"
+                  max="10000"
+                  disabled={isEdit}
+                  style={inputStyle}
+                />
+                <small style={hintStyle}>
+                  基点制：100=1%, 1000=10%, 10000=100%
+                </small>
+              </>
+            )}
           </div>
 
           <div style={fieldStyle}>
-            <label style={labelStyle}>最低消费金额 (便士)</label>
+            <label style={labelStyle}>最低消费金额 (英镑 £)</label>
             <input
               type="number"
-              value={formData.min_amount}
-              onChange={(e) => updateField('min_amount', Number(e.target.value))}
+              step="0.01"
+              {...noWheelProps}
+              value={formData.min_amount ? penceToPounds(formData.min_amount) : 0}
+              onChange={(e) => updateField('min_amount', e.target.value ? poundsToPence(Number(e.target.value)) : 0)}
               placeholder="0 表示无限制"
               min="0"
               disabled={isEdit}
@@ -280,11 +312,13 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
 
           {formData.type === 'percentage' && (
             <div style={fieldStyle}>
-              <label style={labelStyle}>最大折扣金额 (便士)</label>
+              <label style={labelStyle}>最大折扣金额 (英镑 £)</label>
               <input
                 type="number"
-                value={formData.max_discount || ''}
-                onChange={(e) => updateField('max_discount', Number(e.target.value) || undefined)}
+                step="0.01"
+                {...noWheelProps}
+                value={formData.max_discount ? penceToPounds(formData.max_discount) : ''}
+                onChange={(e) => updateField('max_discount', e.target.value ? poundsToPence(Number(e.target.value)) : undefined)}
                 placeholder="留空表示无限制"
                 min="0"
                 disabled={isEdit}
@@ -320,6 +354,7 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
             <label style={labelStyle}>积分要求</label>
             <input
               type="number"
+              {...noWheelProps}
               value={formData.points_required}
               onChange={(e) => updateField('points_required', Number(e.target.value))}
               placeholder="0 表示不需要积分"
@@ -333,6 +368,7 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
             <label style={labelStyle}>总发行量</label>
             <input
               type="number"
+              {...noWheelProps}
               value={formData.total_quantity || ''}
               onChange={(e) => updateField('total_quantity', Number(e.target.value) || undefined)}
               placeholder="留空表示无限制"
@@ -345,6 +381,7 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
             <label style={labelStyle}>每用户限用次数</label>
             <input
               type="number"
+              {...noWheelProps}
               value={formData.per_user_limit}
               onChange={(e) => updateField('per_user_limit', Number(e.target.value))}
               min="1"
@@ -406,6 +443,7 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
                 <label style={labelStyle}>每周期限领次数</label>
                 <input
                   type="number"
+                  {...noWheelProps}
                   value={formData.per_user_per_window_limit ?? ''}
                   onChange={(e) => updateField('per_user_per_window_limit', e.target.value ? Number(e.target.value) : undefined)}
                   placeholder="例如: 1"
@@ -420,6 +458,7 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
             <label style={labelStyle}>每日限领次数</label>
             <input
               type="number"
+              {...noWheelProps}
               value={formData.per_day_limit ?? ''}
               onChange={(e) => updateField('per_day_limit', e.target.value ? Number(e.target.value) : undefined)}
               placeholder="留空表示不限制"
@@ -508,22 +547,26 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
 
           <div style={{ ...fieldStyle, display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
             <div style={{ flex: 1, minWidth: '140px' }}>
-              <label style={labelStyle}>最低任务金额 (便士)</label>
+              <label style={labelStyle}>最低任务金额 (英镑 £)</label>
               <input
                 type="number"
-                value={formData.min_task_amount ?? ''}
-                onChange={(e) => updateField('min_task_amount', e.target.value ? Number(e.target.value) : undefined)}
+                step="0.01"
+                {...noWheelProps}
+                value={formData.min_task_amount ? penceToPounds(formData.min_task_amount) : ''}
+                onChange={(e) => updateField('min_task_amount', e.target.value ? poundsToPence(Number(e.target.value)) : undefined)}
                 placeholder="留空不限制"
                 min="0"
                 style={inputStyle}
               />
             </div>
             <div style={{ flex: 1, minWidth: '140px' }}>
-              <label style={labelStyle}>最高任务金额 (便士)</label>
+              <label style={labelStyle}>最高任务金额 (英镑 £)</label>
               <input
                 type="number"
-                value={formData.max_task_amount ?? ''}
-                onChange={(e) => updateField('max_task_amount', e.target.value ? Number(e.target.value) : undefined)}
+                step="0.01"
+                {...noWheelProps}
+                value={formData.max_task_amount ? penceToPounds(formData.max_task_amount) : ''}
+                onChange={(e) => updateField('max_task_amount', e.target.value ? poundsToPence(Number(e.target.value)) : undefined)}
                 placeholder="留空不限制"
                 min="0"
                 style={inputStyle}

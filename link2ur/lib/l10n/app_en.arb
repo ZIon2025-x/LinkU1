@@ -4743,5 +4743,6 @@
   "taskDetailConfirmCompleteMessage": "Are you sure the task is completed satisfactorily? Once confirmed, the escrowed funds will be released to the task taker.",
   "taskDetailConfirmCompleteConfirm": "Confirm Complete",
   "taskDetailDisputeDescription": "If you are not satisfied with the task completion, you can raise a dispute and apply for a refund.",
-  "couponLoadFailed": "Failed to load coupons. Please try again later."
+  "couponLoadFailed": "Failed to load coupons. Please try again later.",
+  "couponNotApplicable": "Not applicable to this task"
 }

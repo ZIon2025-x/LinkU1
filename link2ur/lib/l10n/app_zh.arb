@@ -4651,5 +4651,6 @@
   "taskDetailConfirmCompleteMessage": "确认任务已满意完成？确认后，托管资金将释放给接单方。",
   "taskDetailConfirmCompleteConfirm": "确认完成",
   "taskDetailDisputeDescription": "如果您对任务完成情况不满意，可以提出争议并申请退款。",
-  "couponLoadFailed": "优惠券加载失败，请稍后重试"
+  "couponLoadFailed": "优惠券加载失败，请稍后重试",
+  "couponNotApplicable": "不适用于此任务"
 }

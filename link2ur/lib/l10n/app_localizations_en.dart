@@ -10325,4 +10325,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get couponLoadFailed =>
       'Failed to load coupons. Please try again later.';
+
+  @override
+  String get couponNotApplicable => 'Not applicable to this task';
 }

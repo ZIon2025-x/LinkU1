@@ -9910,6 +9910,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get couponLoadFailed => '优惠券加载失败，请稍后重试';
+
+  @override
+  String get couponNotApplicable => '不适用于此任务';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -19774,4 +19777,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get couponLoadFailed => '優惠券載入失敗，請稍後重試';
+
+  @override
+  String get couponNotApplicable => '不適用於此任務';
 }

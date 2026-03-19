@@ -4566,5 +4566,6 @@
   "taskDetailConfirmCompleteMessage": "確認任務已滿意完成？確認後，託管資金將釋放給接單方。",
   "taskDetailConfirmCompleteConfirm": "確認完成",
   "taskDetailDisputeDescription": "如果您對任務完成情況不滿意，可以提出爭議並申請退款。",
-  "couponLoadFailed": "優惠券載入失敗，請稍後重試"
+  "couponLoadFailed": "優惠券載入失敗，請稍後重試",
+  "couponNotApplicable": "不適用於此任務"
 }

@@ -18997,6 +18997,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed to load coupons. Please try again later.'**
   String get couponLoadFailed;
+
+  /// No description provided for @couponNotApplicable.
+  ///
+  /// In en, this message translates to:
+  /// **'Not applicable to this task'**
+  String get couponNotApplicable;
 }
 
 class _AppLocalizationsDelegate
