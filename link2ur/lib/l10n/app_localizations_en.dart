@@ -2792,7 +2792,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paymentNoAvailableBalance => 'No Available Balance';
 
   @override
-  String get paymentPayoutRecords => 'Payout Records';
+  String get paymentPayoutRecords => 'Withdrawal Records';
 
   @override
   String get paymentTotalBalance => 'Total Balance';
@@ -7877,7 +7877,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletSetupPayoutAccount => 'Setup payout account';
 
   @override
-  String get walletPayoutRecordsFull => 'Payout Records';
+  String get walletPayoutRecordsFull => 'Payment Records';
 
   @override
   String get walletWithdrawalRecords => 'Withdrawal Records';

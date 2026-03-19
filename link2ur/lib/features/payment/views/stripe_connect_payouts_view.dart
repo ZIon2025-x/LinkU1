@@ -104,9 +104,8 @@ class _StripeConnectPayoutsViewState extends State<StripeConnectPayoutsView> {
     setState(() => _isCreatingPayout = true);
 
     try {
-      // 后端接收 pence/cents
-      final amountInPence = (amount * 100).round();
-      await _repo.requestPayout(amount: amountInPence, currency: currency);
+      // 后端接收英镑金额（后端自行转换为 pence 调用 Stripe API）
+      await _repo.requestPayoutInPounds(amount: amount, currency: currency);
 
       if (!mounted) return;
 

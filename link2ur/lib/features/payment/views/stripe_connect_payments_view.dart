@@ -316,7 +316,7 @@ class _StripeTransactionCard extends StatelessWidget {
   }
 }
 
-/// 任务支付记录卡片
+/// 任务支付记录卡片（对标 iOS TaskPaymentRowView）
 class _TaskPaymentCard extends StatelessWidget {
   const _TaskPaymentCard({required this.payment});
 
@@ -327,6 +327,12 @@ class _TaskPaymentCard extends StatelessWidget {
     final l10n = context.l10n;
     final statusColor = _getStatusColor(payment.status);
     final statusText = _getStatusText(payment.status, l10n);
+
+    // 对标 iOS: payment.task?.title ?? "任务 #taskId"
+    final title = payment.taskTitle ??
+        (payment.taskId != null
+            ? '${l10n.paymentStatusTaskPayment} #${payment.taskId}'
+            : l10n.paymentStatusTaskPayment);
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -344,7 +350,7 @@ class _TaskPaymentCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(
-              Icons.receipt_long,
+              Icons.credit_card,
               color: AppColors.error,
               size: 20,
             ),
@@ -355,7 +361,7 @@ class _TaskPaymentCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  payment.taskTitle ?? l10n.paymentStatusTaskPayment,
+                  title,
                   style: const TextStyle(
                       fontSize: 14, fontWeight: FontWeight.w500),
                   maxLines: 1,
@@ -364,19 +370,39 @@ class _TaskPaymentCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    Text(
-                      l10n.paymentStatusTaskPayment,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: AppColors.primary.withValues(alpha: 0.8),
+                    // 状态标签（对标 iOS）
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: statusColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(4),
                       ),
+                      child: Text(
+                        statusText,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: statusColor,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // 支付方式（对标 iOS paymentMethodText）
+                    Text(
+                      _localizePaymentMethod(context, payment.paymentMethod),
+                      style: const TextStyle(
+                          fontSize: 11, color: AppColors.textTertiary),
                     ),
                     if (payment.createdAt != null) ...[
                       const SizedBox(width: 8),
-                      Text(
-                        _formatDate(payment.createdAt!),
-                        style: const TextStyle(
-                            fontSize: 11, color: AppColors.textTertiary),
+                      Flexible(
+                        child: Text(
+                          _formatDate(payment.createdAt!),
+                          style: const TextStyle(
+                              fontSize: 11, color: AppColors.textTertiary),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
                   ],
@@ -396,20 +422,11 @@ class _TaskPaymentCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 4),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  statusText,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: statusColor,
-                    fontWeight: FontWeight.w500,
-                  ),
+              Text(
+                l10n.paymentStatusTaskPayment,
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AppColors.textTertiary,
                 ),
               ),
             ],
@@ -417,6 +434,22 @@ class _TaskPaymentCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// 对标 iOS paymentMethodText
+  String _localizePaymentMethod(BuildContext context, String? method) {
+    if (method == null) return '';
+    final l10n = context.l10n;
+    switch (method.toLowerCase()) {
+      case 'stripe':
+        return 'Stripe';
+      case 'points':
+        return l10n.pointsPoints;
+      case 'mixed':
+        return l10n.paymentMixed;
+      default:
+        return method;
+    }
   }
 
   Color _getStatusColor(String status) {

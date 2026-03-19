@@ -224,37 +224,28 @@ class _ExternalWebViewPageState extends State<_ExternalWebViewPage> {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
-        leading: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(width: 8),
-            _NavButton(
-              icon: Icons.chevron_left,
-              enabled: _canGoBack,
-              onTap: () async {
-                await _webViewKey.currentState?.goBack();
-                _refreshNavState();
-              },
-            ),
-            _NavButton(
-              icon: Icons.chevron_right,
-              enabled: _canGoForward,
-              onTap: () async {
-                await _webViewKey.currentState?.goForward();
-                _refreshNavState();
-              },
-            ),
-          ],
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: () => Navigator.of(context).pop(),
         ),
-        leadingWidth: 88,
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(
-              context.l10n.webviewDone,
-              style: const TextStyle(color: AppColors.primary),
-            ),
+          _NavButton(
+            icon: Icons.chevron_left,
+            enabled: _canGoBack,
+            onTap: () async {
+              await _webViewKey.currentState?.goBack();
+              _refreshNavState();
+            },
           ),
+          _NavButton(
+            icon: Icons.chevron_right,
+            enabled: _canGoForward,
+            onTap: () async {
+              await _webViewKey.currentState?.goForward();
+              _refreshNavState();
+            },
+          ),
+          const SizedBox(width: 8),
         ],
       ),
       body: ExternalWebView(

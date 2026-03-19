@@ -5154,7 +5154,7 @@ abstract class AppLocalizations {
   /// No description provided for @paymentPayoutRecords.
   ///
   /// In en, this message translates to:
-  /// **'Payout Records'**
+  /// **'Withdrawal Records'**
   String get paymentPayoutRecords;
 
   /// No description provided for @paymentTotalBalance.
@@ -14471,7 +14471,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletPayoutRecordsFull.
   ///
   /// In en, this message translates to:
-  /// **'Payout Records'**
+  /// **'Payment Records'**
   String get walletPayoutRecordsFull;
 
   /// No description provided for @walletWithdrawalRecords.

@@ -164,7 +164,9 @@ class PaymentRepository {
 
     final cached = _cache.get<Map<String, dynamic>>(cacheKey);
     if (cached != null) {
-      final items = cached['items'] as List<dynamic>? ?? [];
+      final items = cached['transactions'] as List<dynamic>?
+          ?? cached['items'] as List<dynamic>?
+          ?? [];
       return items.map((e) => e as Map<String, dynamic>).toList();
     }
 
@@ -184,12 +186,16 @@ class PaymentRepository {
 
       await _cache.set(cacheKey, response.data!, ttl: CacheManager.personalTTL);
 
-      final items = response.data!['items'] as List<dynamic>? ?? [];
+      final items = response.data!['transactions'] as List<dynamic>?
+          ?? response.data!['items'] as List<dynamic>?
+          ?? [];
       return items.map((e) => e as Map<String, dynamic>).toList();
     } catch (e) {
       final stale = _cache.getStale<Map<String, dynamic>>(cacheKey);
       if (stale != null) {
-        final items = stale['items'] as List<dynamic>? ?? [];
+        final items = stale['transactions'] as List<dynamic>?
+            ?? stale['items'] as List<dynamic>?
+            ?? [];
         return items.map((e) => e as Map<String, dynamic>).toList();
       }
       rethrow;
@@ -358,7 +364,10 @@ class PaymentRepository {
       throw PaymentException(response.message ?? 'Failed to load external accounts');
     }
 
-    final items = response.data!['items'] as List<dynamic>? ?? [];
+    // 后端返回 "external_accounts" 键
+    final items = response.data!['external_accounts'] as List<dynamic>?
+        ?? response.data!['items'] as List<dynamic>?
+        ?? [];
     return items
         .map((e) => ExternalAccount.fromJson(e as Map<String, dynamic>))
         .toList();
@@ -377,7 +386,10 @@ class PaymentRepository {
       return [];
     }
 
-    final items = response.data!['items'] as List<dynamic>? ?? [];
+    // 后端返回 "transactions" 键（非 "items"）
+    final items = response.data!['transactions'] as List<dynamic>?
+        ?? response.data!['items'] as List<dynamic>?
+        ?? [];
     return items
         .map((e) => StripeConnectTransaction.fromJson(e as Map<String, dynamic>))
         .toList();
@@ -440,7 +452,9 @@ class PaymentRepository {
 
     final cached = _cache.get<Map<String, dynamic>>(cacheKey);
     if (cached != null) {
-      final items = cached['items'] as List<dynamic>? ?? [];
+      final items = cached['transactions'] as List<dynamic>?
+          ?? cached['items'] as List<dynamic>?
+          ?? [];
       return items.map((e) => e as Map<String, dynamic>).toList();
     }
 
@@ -455,7 +469,10 @@ class PaymentRepository {
 
     await _cache.set(cacheKey, response.data!, ttl: CacheManager.personalTTL);
 
-    final items = response.data!['items'] as List<dynamic>? ?? [];
+    // 后端返回 "transactions" 键
+    final items = response.data!['transactions'] as List<dynamic>?
+        ?? response.data!['items'] as List<dynamic>?
+        ?? [];
     return items.map((e) => e as Map<String, dynamic>).toList();
   }
 
@@ -502,9 +519,9 @@ class PaymentRepository {
     }
   }
 
-  /// 发起提现
-  Future<Map<String, dynamic>> requestPayout({
-    required int amount,
+  /// 发起提现（金额单位：英镑，后端自行转为 pence）
+  Future<Map<String, dynamic>> requestPayoutInPounds({
+    required double amount,
     String currency = 'gbp',
   }) async {
     final response = await _apiService.post<Map<String, dynamic>>(

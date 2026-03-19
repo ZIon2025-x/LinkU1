@@ -59,6 +59,8 @@ class _WalletContent extends StatelessWidget {
         buildWhen: (previous, current) =>
             previous.isLoading != current.isLoading ||
             previous.pointsAccount != current.pointsAccount ||
+            previous.connectBalance != current.connectBalance ||
+            previous.stripeConnectStatus != current.stripeConnectStatus ||
             previous.errorMessage != current.errorMessage ||
             previous.transactions != current.transactions,
         builder: (context, state) {
@@ -207,7 +209,7 @@ class _PointsCardState extends State<_PointsCard> {
               ),
             ),
             AppSpacing.vLg,
-            // 累计收入 / 累计消费 — 便士转英镑（/100）
+            // 累计收入 / 累计消费 — 积分值（便士等价）转英镑，对标 iOS formatCurrency
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [

@@ -2663,7 +2663,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get paymentNoAvailableBalance => '无可用余额';
 
   @override
-  String get paymentPayoutRecords => '支付记录';
+  String get paymentPayoutRecords => '提现记录';
 
   @override
   String get paymentTotalBalance => '总余额';
@@ -7553,7 +7553,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get walletSetupPayoutAccount => '设置收款账户';
 
   @override
-  String get walletPayoutRecordsFull => '收款记录';
+  String get walletPayoutRecordsFull => '支付记录';
 
   @override
   String get walletWithdrawalRecords => '提现记录';
@@ -12553,7 +12553,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get paymentNoAvailableBalance => '無可用餘額';
 
   @override
-  String get paymentPayoutRecords => '支付記錄';
+  String get paymentPayoutRecords => '提現記錄';
 
   @override
   String get paymentTotalBalance => '總餘額';
@@ -17443,7 +17443,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get walletSetupPayoutAccount => '設置收款帳戶';
 
   @override
-  String get walletPayoutRecordsFull => '收款記錄';
+  String get walletPayoutRecordsFull => '支付記錄';
 
   @override
   String get walletWithdrawalRecords => '提現記錄';

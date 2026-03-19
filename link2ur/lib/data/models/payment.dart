@@ -261,16 +261,16 @@ class StripeConnectBalance extends Equatable {
   }
 
   factory StripeConnectBalance.fromJson(Map<String, dynamic> json) {
-    // 后端返回的金额可能是 pence/cents，需要转换
+    // 后端已将 pence 转换为英镑（/100），这里直接使用
     final available = json['available'];
     final pending = json['pending'];
 
     double parseAmount(dynamic val) {
-      if (val is num) return val.toDouble() / 100;
+      if (val is num) return val.toDouble();
       if (val is List && val.isNotEmpty) {
         final first = val.first;
         if (first is Map<String, dynamic>) {
-          return ((first['amount'] as num?)?.toDouble() ?? 0) / 100;
+          return (first['amount'] as num?)?.toDouble() ?? 0;
         }
       }
       return 0;
@@ -406,6 +406,8 @@ class StripeConnectTransaction extends Equatable {
     this.type = '',
     this.source = '',
     this.createdAt = '',
+    this.created,
+    this.metadata,
   });
 
   final String id;
@@ -415,7 +417,9 @@ class StripeConnectTransaction extends Equatable {
   final String status;
   final String type; // income / expense
   final String source; // payout / transfer / charge / payment_intent
-  final String createdAt;
+  final String createdAt; // ISO 格式时间
+  final int? created; // Unix 时间戳（对标 iOS）
+  final Map<String, String>? metadata;
 
   bool get isIncome => type != 'expense';
 
@@ -434,6 +438,9 @@ class StripeConnectTransaction extends Equatable {
       type: json['type'] as String? ?? '',
       source: json['source'] as String? ?? '',
       createdAt: json['created_at'] as String? ?? '',
+      created: json['created'] as int?,
+      metadata: (json['metadata'] as Map<String, dynamic>?)
+          ?.map((k, v) => MapEntry(k, v.toString())),
     );
   }
 
@@ -452,30 +459,68 @@ class TaskPaymentRecord extends Equatable {
     this.status = '',
     this.paymentMethod,
     this.createdAt,
+    this.totalAmount,
+    this.stripeAmount,
+    this.pointsUsed,
+    this.couponDiscount,
+    this.applicationFee,
+    this.paymentIntentId,
   });
 
   final int id;
   final int? taskId;
   final String? taskTitle;
-  final double amount;
+  final double amount; // final_amount in pounds
   final String currency;
   final String status;
   final String? paymentMethod;
   final String? createdAt;
+  final double? totalAmount; // original total in pounds
+  final double? stripeAmount; // actual Stripe charge in pounds
+  final int? pointsUsed;
+  final double? couponDiscount; // discount in pounds
+  final double? applicationFee; // platform fee in pounds
+  final String? paymentIntentId;
 
   factory TaskPaymentRecord.fromJson(Map<String, dynamic> json) {
+    // 后端返回 final_amount（便士），转换为英镑
+    final rawAmount = json['amount'] ?? json['final_amount'] ?? json['total_amount'];
+    final amount = (rawAmount as num?)?.toDouble() ?? 0;
+    // 如果是 final_amount / total_amount（便士），需要 /100
+    final needsConversion = json.containsKey('final_amount') || json.containsKey('total_amount');
+    final amountPounds = (needsConversion && !json.containsKey('amount'))
+        ? amount / 100
+        : amount;
+
+    // task_title 可能在顶层或嵌套在 task 对象中
+    final taskData = json['task'] as Map<String, dynamic>?;
+    final taskTitle = json['task_title'] as String? ?? taskData?['title'] as String?;
+    final taskId = json['task_id'] as int? ?? taskData?['id'] as int?;
+
+    // 解析其他金额字段（便士→英镑）
+    double? parsePence(dynamic val) {
+      if (val == null) return null;
+      return (val as num).toDouble() / 100;
+    }
+
     return TaskPaymentRecord(
       id: json['id'] as int? ?? 0,
-      taskId: json['task_id'] as int?,
-      taskTitle: json['task_title'] as String?,
-      amount: (json['amount'] as num?)?.toDouble() ?? 0,
+      taskId: taskId,
+      taskTitle: taskTitle,
+      amount: amountPounds,
       currency: json['currency'] as String? ?? 'gbp',
       status: json['status'] as String? ?? '',
       paymentMethod: json['payment_method'] as String?,
       createdAt: json['created_at'] as String?,
+      totalAmount: json.containsKey('total_amount') ? parsePence(json['total_amount']) : null,
+      stripeAmount: json.containsKey('stripe_amount') ? parsePence(json['stripe_amount']) : null,
+      pointsUsed: json['points_used'] as int?,
+      couponDiscount: json.containsKey('coupon_discount') ? parsePence(json['coupon_discount']) : null,
+      applicationFee: json.containsKey('application_fee') ? parsePence(json['application_fee']) : null,
+      paymentIntentId: json['payment_intent_id'] as String?,
     );
   }
 
   @override
-  List<Object?> get props => [id, taskId, amount, status];
+  List<Object?> get props => [id, taskId, amount, status, paymentIntentId];
 }
