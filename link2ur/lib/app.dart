@@ -189,11 +189,7 @@ class _Link2UrAppState extends State<Link2UrApp> {
                       GlobalWidgetsLocalizations.delegate,
                       GlobalCupertinoLocalizations.delegate,
                     ],
-                    supportedLocales: const [
-                      Locale('zh', 'CN'),
-                      Locale('zh', 'TW'),
-                      Locale('en', 'US'),
-                    ],
+                    supportedLocales: AppLocalizations.supportedLocales,
                     locale: _localeFromString(settingsState.locale),
                     builder: (context, child) {
                       return OfflineModeIndicator(child: child ?? const SizedBox.shrink());
@@ -290,6 +286,9 @@ class _DeferredBlocLoaderState extends State<_DeferredBlocLoader>
       listenWhen: (prev, curr) => prev.isAuthenticated != curr.isAuthenticated,
       listener: (context, state) {
         if (state.isAuthenticated) {
+          context.read<NotificationBloc>().add(
+            const NotificationLoadUnreadNotificationCount(),
+          );
           context.read<NotificationBloc>().add(const NotificationStartPolling());
           // 登录成功后上传推送 Token（绑定到当前用户）
           unawaited(

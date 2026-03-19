@@ -125,7 +125,9 @@ const authRequiredRoutes = <String>{
   AppRoutes.publish,
   AppRoutes.createTask,
   AppRoutes.createFleaMarketItem,
+  AppRoutes.editFleaMarketItem,
   AppRoutes.createPost,
+  AppRoutes.forumPostEdit,
   AppRoutes.forumCategoryRequest,
   AppRoutes.editProfile,
   AppRoutes.myTasks,
@@ -152,4 +154,5 @@ const authRequiredRoutes = <String>{
   AppRoutes.applicationChat,
   AppRoutes.notifications,
   AppRoutes.notificationList,
+  AppRoutes.settings,
 };

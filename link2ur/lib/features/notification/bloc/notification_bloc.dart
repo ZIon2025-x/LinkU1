@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../data/models/notification.dart';
 import '../../../data/repositories/notification_repository.dart';
 import '../../../data/services/websocket_service.dart';
+import '../../../core/utils/badge_service.dart';
 import '../../../core/utils/logger.dart';
 
 // ==================== Events ====================
@@ -192,6 +193,8 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
   ) {
     _pollingTimer?.cancel();
     _pollingTimer = null;
+    // 登出时清除 App 图标角标
+    BadgeService.instance.clearBadge();
   }
 
   /// 互动消息类型前缀
@@ -334,6 +337,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
           );
 
     emit(state.copyWith(notifications: updatedList, unreadCount: newUnread));
+    BadgeService.instance.updateBadge(newUnread.totalCount);
 
     // 2. 异步请求后端，不阻塞 UI；失败仅打日志，下次轮询会拉回正确未读数
     if (isInteraction && target.type.startsWith('forum_')) {
@@ -364,6 +368,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
       notifications: updatedList,
       unreadCount: resetUnread,
     ));
+    BadgeService.instance.updateBadge(resetUnread.totalCount);
 
     final markType = state.selectedType == 'interaction'
         ? 'interaction'
@@ -381,6 +386,8 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
       final unreadCount =
           await _notificationRepository.getUnreadCount();
       emit(state.copyWith(unreadCount: unreadCount));
+      // 同步 App 图标角标（后端推送可能设置了角标，打开 app 后需刷新为真实未读数）
+      BadgeService.instance.updateBadge(unreadCount.totalCount);
     } catch (e) {
       AppLogger.error('Failed to load unread count', e);
     }
