@@ -2658,6 +2658,7 @@ def delete_checkin_reward(
 def update_task_points_reward(
     task_id: int,
     request: schemas.TaskPointsRewardUpdate,
+    http_request: Request,
     current_admin: models.AdminUser = Depends(get_current_admin_secure_sync),
     db: Session = Depends(get_db)
 ):
@@ -2668,7 +2669,8 @@ def update_task_points_reward(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="任务不存在"
         )
-    
+
+    old_points_reward = task.points_reward
     # 更新任务积分奖励
     task.points_reward = request.points_reward
     db.commit()

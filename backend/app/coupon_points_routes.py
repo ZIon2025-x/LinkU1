@@ -7,6 +7,7 @@ from datetime import datetime, date, timezone
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
+from sqlalchemy import and_
 from datetime import timedelta
 
 from app import schemas
