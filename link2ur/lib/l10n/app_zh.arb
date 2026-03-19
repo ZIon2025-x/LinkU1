@@ -4645,5 +4645,11 @@
   "replyToApplication": "回复",
   "replySubmitted": "回复已提交",
   "publicReplyPlaceholder": "写下你对这条申请的回复...",
-  "alreadyReplied": "已经回复过此申请"
+  "alreadyReplied": "已经回复过此申请",
+  "taskDetailRaiseDispute": "提出争议",
+  "taskDetailConfirmCompleteTitle": "确认任务完成",
+  "taskDetailConfirmCompleteMessage": "确认任务已满意完成？确认后，托管资金将释放给接单方。",
+  "taskDetailConfirmCompleteConfirm": "确认完成",
+  "taskDetailDisputeDescription": "如果您对任务完成情况不满意，可以提出争议并申请退款。",
+  "couponLoadFailed": "优惠券加载失败，请稍后重试"
 }

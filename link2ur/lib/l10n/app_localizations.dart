@@ -18961,6 +18961,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Already replied to this application'**
   String get alreadyReplied;
+
+  /// No description provided for @taskDetailRaiseDispute.
+  ///
+  /// In en, this message translates to:
+  /// **'Raise a Dispute'**
+  String get taskDetailRaiseDispute;
+
+  /// No description provided for @taskDetailConfirmCompleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Task Complete'**
+  String get taskDetailConfirmCompleteTitle;
+
+  /// No description provided for @taskDetailConfirmCompleteMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure the task is completed satisfactorily? Once confirmed, the escrowed funds will be released to the task taker.'**
+  String get taskDetailConfirmCompleteMessage;
+
+  /// No description provided for @taskDetailConfirmCompleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Complete'**
+  String get taskDetailConfirmCompleteConfirm;
+
+  /// No description provided for @taskDetailDisputeDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'If you are not satisfied with the task completion, you can raise a dispute and apply for a refund.'**
+  String get taskDetailDisputeDescription;
+
+  /// No description provided for @couponLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load coupons. Please try again later.'**
+  String get couponLoadFailed;
 }
 
 class _AppLocalizationsDelegate

@@ -4737,5 +4737,11 @@
   "replyToApplication": "Reply",
   "replySubmitted": "Reply submitted",
   "publicReplyPlaceholder": "Write your reply to this application...",
-  "alreadyReplied": "Already replied to this application"
+  "alreadyReplied": "Already replied to this application",
+  "taskDetailRaiseDispute": "Raise a Dispute",
+  "taskDetailConfirmCompleteTitle": "Confirm Task Complete",
+  "taskDetailConfirmCompleteMessage": "Are you sure the task is completed satisfactorily? Once confirmed, the escrowed funds will be released to the task taker.",
+  "taskDetailConfirmCompleteConfirm": "Confirm Complete",
+  "taskDetailDisputeDescription": "If you are not satisfied with the task completion, you can raise a dispute and apply for a refund.",
+  "couponLoadFailed": "Failed to load coupons. Please try again later."
 }

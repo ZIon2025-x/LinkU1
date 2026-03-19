@@ -9892,6 +9892,24 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get alreadyReplied => '已经回复过此申请';
+
+  @override
+  String get taskDetailRaiseDispute => '提出争议';
+
+  @override
+  String get taskDetailConfirmCompleteTitle => '确认任务完成';
+
+  @override
+  String get taskDetailConfirmCompleteMessage => '确认任务已满意完成？确认后，托管资金将释放给接单方。';
+
+  @override
+  String get taskDetailConfirmCompleteConfirm => '确认完成';
+
+  @override
+  String get taskDetailDisputeDescription => '如果您对任务完成情况不满意，可以提出争议并申请退款。';
+
+  @override
+  String get couponLoadFailed => '优惠券加载失败，请稍后重试';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -19738,4 +19756,22 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get alreadyReplied => '已經回覆過此申請';
+
+  @override
+  String get taskDetailRaiseDispute => '提出爭議';
+
+  @override
+  String get taskDetailConfirmCompleteTitle => '確認任務完成';
+
+  @override
+  String get taskDetailConfirmCompleteMessage => '確認任務已滿意完成？確認後，託管資金將釋放給接單方。';
+
+  @override
+  String get taskDetailConfirmCompleteConfirm => '確認完成';
+
+  @override
+  String get taskDetailDisputeDescription => '如果您對任務完成情況不滿意，可以提出爭議並申請退款。';
+
+  @override
+  String get couponLoadFailed => '優惠券載入失敗，請稍後重試';
 }

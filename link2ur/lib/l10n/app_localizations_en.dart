@@ -10304,4 +10304,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get alreadyReplied => 'Already replied to this application';
+
+  @override
+  String get taskDetailRaiseDispute => 'Raise a Dispute';
+
+  @override
+  String get taskDetailConfirmCompleteTitle => 'Confirm Task Complete';
+
+  @override
+  String get taskDetailConfirmCompleteMessage =>
+      'Are you sure the task is completed satisfactorily? Once confirmed, the escrowed funds will be released to the task taker.';
+
+  @override
+  String get taskDetailConfirmCompleteConfirm => 'Confirm Complete';
+
+  @override
+  String get taskDetailDisputeDescription =>
+      'If you are not satisfied with the task completion, you can raise a dispute and apply for a refund.';
+
+  @override
+  String get couponLoadFailed =>
+      'Failed to load coupons. Please try again later.';
 }

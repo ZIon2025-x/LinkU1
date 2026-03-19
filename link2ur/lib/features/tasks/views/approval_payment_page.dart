@@ -193,12 +193,18 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
           _loadingCoupons = false;
         });
       }
-    }).catchError((_) {
+    }).catchError((e) {
       if (mounted) {
         setState(() {
           _availableCoupons = [];
           _loadingCoupons = false;
         });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.l10n.couponLoadFailed),
+            backgroundColor: AppColors.error,
+          ),
+        );
       }
     });
   }

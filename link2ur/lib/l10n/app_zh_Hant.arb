@@ -4560,5 +4560,11 @@
   "replyToApplication": "回覆",
   "replySubmitted": "回覆已提交",
   "publicReplyPlaceholder": "寫下你對這條申請的回覆...",
-  "alreadyReplied": "已經回覆過此申請"
+  "alreadyReplied": "已經回覆過此申請",
+  "taskDetailRaiseDispute": "提出爭議",
+  "taskDetailConfirmCompleteTitle": "確認任務完成",
+  "taskDetailConfirmCompleteMessage": "確認任務已滿意完成？確認後，託管資金將釋放給接單方。",
+  "taskDetailConfirmCompleteConfirm": "確認完成",
+  "taskDetailDisputeDescription": "如果您對任務完成情況不滿意，可以提出爭議並申請退款。",
+  "couponLoadFailed": "優惠券載入失敗，請稍後重試"
 }

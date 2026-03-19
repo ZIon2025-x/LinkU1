@@ -347,6 +347,29 @@ class _TaskDetailContent extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               // 不画自定义拖拽条：主题 showDragHandle: true 已提供
+              // 提出争议（发布者 + pendingConfirmation + 无进行中退款）
+              if (isPoster &&
+                  task.status == AppConstants.taskStatusPendingConfirmation &&
+                  state.refundRequest == null)
+                ListTile(
+                  leading: const Icon(Icons.flag_outlined, color: AppColors.warning),
+                  title: Text(
+                    l10n.taskDetailRaiseDispute,
+                    style: const TextStyle(color: AppColors.warning, fontWeight: FontWeight.w500),
+                  ),
+                  subtitle: Text(
+                    l10n.taskDetailDisputeDescription,
+                    style: AppTypography.caption.copyWith(
+                      color: isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondaryLight,
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showRaiseDisputeSheet(context, task);
+                  },
+                ),
               // 争议详情（条件显示） - 对标iOS disputeDetail
               if (hasDisputeOrRefund)
                 ListTile(
@@ -407,6 +430,41 @@ class _TaskDetailContent extends StatelessWidget {
       if (!context.mounted || confirmed != true) return;
       context.read<TaskDetailBloc>().add(const TaskDetailCancelRequested());
     });
+  }
+
+  /// 确认完成二次确认弹窗
+  void _showConfirmCompleteDialog(BuildContext context) {
+    final l10n = context.l10n;
+    AdaptiveDialogs.showConfirmDialog<bool>(
+      context: context,
+      title: l10n.taskDetailConfirmCompleteTitle,
+      content: l10n.taskDetailConfirmCompleteMessage,
+      cancelText: l10n.actionsCancel,
+      confirmText: l10n.taskDetailConfirmCompleteConfirm,
+    ).then((confirmed) {
+      if (!context.mounted || confirmed != true) return;
+      context.read<TaskDetailBloc>().add(
+          const TaskDetailConfirmCompletionRequested());
+    });
+  }
+
+  /// 提出争议 — 打开退款申请表单
+  void _showRaiseDisputeSheet(BuildContext context, Task task) {
+    final bloc = context.read<TaskDetailBloc>();
+    SheetAdaptation.showAdaptiveModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => BlocProvider.value(
+        value: bloc,
+        child: RefundRequestSheet(
+          taskId: task.id,
+          taskAmount: task.displayReward,
+        ),
+      ),
+    );
   }
 
   /// 显示争议时间线 - 对标iOS showDisputeTimeline
@@ -511,10 +569,7 @@ class _TaskDetailContent extends StatelessWidget {
                     child: ConfirmationReminderCard(
                       deadline: task.confirmationDeadline!,
                       isDark: isDark,
-                      onConfirm: () {
-                        context.read<TaskDetailBloc>().add(
-                          const TaskDetailConfirmCompletionRequested());
-                      },
+                      onConfirm: () => _showConfirmCompleteDialog(context),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.md),
@@ -966,7 +1021,7 @@ class _TaskDetailContent extends StatelessWidget {
       );
     }
 
-    // 发布者 + 待确认 → 确认完成
+    // 发布者 + 待确认 → 确认完成（带二次确认弹窗）
     if (isPoster &&
         task.status == AppConstants.taskStatusPendingConfirmation) {
       return PrimaryButton(
@@ -974,10 +1029,7 @@ class _TaskDetailContent extends StatelessWidget {
         isLoading: state.isSubmitting,
         onPressed: state.isSubmitting
             ? null
-            : () {
-                context.read<TaskDetailBloc>().add(
-                    const TaskDetailConfirmCompletionRequested());
-              },
+            : () => _showConfirmCompleteDialog(context),
         gradient: LinearGradient(
           colors: [AppColors.success, AppColors.success.withValues(alpha: 0.8)],
         ),
