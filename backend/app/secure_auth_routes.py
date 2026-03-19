@@ -274,7 +274,7 @@ def refresh_session(
         
         # 如果session无效或已过期，尝试使用refresh_token恢复
         if not session:
-            logger.info("[SECURE_AUTH] Session已过期，尝试使用refresh_token恢复")
+            logger.debug("[SECURE_AUTH] Session已过期，尝试使用refresh_token恢复")
             # 从Cookie中获取refresh_token
             refresh_token = request.cookies.get("refresh_token")
             refresh_token_source = "cookie"
@@ -284,13 +284,13 @@ def refresh_session(
                 refresh_token_source = "header" if refresh_token else None
             
             # 记录诊断信息
-            logger.info(f"[SECURE_AUTH] Refresh token诊断 - 来源: {refresh_token_source}, 有token: {bool(refresh_token)}")
+            logger.debug(f"[SECURE_AUTH] Refresh token诊断 - 来源: {refresh_token_source}, 有token: {bool(refresh_token)}")
             if not refresh_token:
                 cookie_keys = list(request.cookies.keys())
                 user_agent = request.headers.get("user-agent", "unknown")[:100]
                 origin = request.headers.get("origin", "unknown")
                 referer = request.headers.get("referer", "unknown")
-                logger.warning(
+                logger.debug(
                     f"[SECURE_AUTH] 未找到refresh_token - Cookie和Header中都没有 | "
                     f"cookie_keys={cookie_keys}, origin={origin}, referer={referer}, ua={user_agent}"
                 )
@@ -306,7 +306,7 @@ def refresh_session(
                 
                 # 验证refresh_token
                 from app.secure_auth import verify_user_refresh_token
-                logger.info(f"[SECURE_AUTH] 开始验证refresh_token - token前8字符: {refresh_token[:8] if refresh_token else 'None'}..., IP: {client_ip}, 设备指纹: {device_fingerprint[:20] if device_fingerprint else 'None'}..., iOS: {is_ios_app}")
+                logger.debug(f"[SECURE_AUTH] 开始验证refresh_token - token前8字符: {refresh_token[:8] if refresh_token else 'None'}..., IP: {client_ip}, 设备指纹: {device_fingerprint[:20] if device_fingerprint else 'None'}..., iOS: {is_ios_app}")
                 user_id = verify_user_refresh_token(refresh_token, client_ip, device_fingerprint, is_ios_app)
                 if not user_id:
                     logger.warning(f"[SECURE_AUTH] refresh_token验证失败 - token前8字符: {refresh_token[:8] if refresh_token else 'None'}..., 可能原因: Redis中未找到/已过期/设备指纹不匹配")

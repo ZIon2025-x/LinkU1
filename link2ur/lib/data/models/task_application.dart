@@ -17,6 +17,8 @@ class TaskApplication extends Equatable {
     this.unreadCount = 0,
     this.posterReply,
     this.posterReplyAt,
+    this.taskStatus,
+    this.taskTitle,
   });
 
   final int id;
@@ -33,11 +35,15 @@ class TaskApplication extends Equatable {
   final int unreadCount;
   final String? posterReply;
   final String? posterReplyAt;
+  final String? taskStatus; // 任务状态：open, in_progress, completed, cancelled
+  final String? taskTitle;
 
   bool get isPending => status == 'pending';
   bool get isApproved => status == 'approved';
   bool get isRejected => status == 'rejected';
   bool get isChatting => status == 'chatting';
+  /// 任务仍在接受申请（open 状态）
+  bool get isTaskOpen => taskStatus == 'open';
 
   factory TaskApplication.fromJson(Map<String, dynamic> json) {
     return TaskApplication(
@@ -55,6 +61,8 @@ class TaskApplication extends Equatable {
       unreadCount: (json['unread_count'] as num?)?.toInt() ?? 0,
       posterReply: json['poster_reply'] as String?,
       posterReplyAt: json['poster_reply_at'] as String?,
+      taskStatus: json['task_status'] as String?,
+      taskTitle: json['task_title'] as String?,
     );
   }
 
@@ -73,6 +81,8 @@ class TaskApplication extends Equatable {
     int? unreadCount,
     String? posterReply,
     String? posterReplyAt,
+    String? taskStatus,
+    String? taskTitle,
   }) {
     return TaskApplication(
       id: id ?? this.id,
@@ -89,6 +99,8 @@ class TaskApplication extends Equatable {
       unreadCount: unreadCount ?? this.unreadCount,
       posterReply: posterReply ?? this.posterReply,
       posterReplyAt: posterReplyAt ?? this.posterReplyAt,
+      taskStatus: taskStatus ?? this.taskStatus,
+      taskTitle: taskTitle ?? this.taskTitle,
     );
   }
 
@@ -108,5 +120,7 @@ class TaskApplication extends Equatable {
         unreadCount,
         posterReply,
         posterReplyAt,
+        taskStatus,
+        taskTitle,
       ];
 }

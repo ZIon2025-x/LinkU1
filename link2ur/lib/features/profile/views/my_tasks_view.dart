@@ -177,9 +177,10 @@ class _MyTasksViewState extends State<MyTasksView>
     try {
       final repo = context.read<TaskRepository>();
       final allApplications = await repo.getMyApplications();
-      // 只保留待处理的申请（status == pending）
+      // 只保留任务状态为 open 且申请状态为 pending 的申请
+      // 任务不再 open 时（如已接取/完成/取消），申请已无意义
       final pending = allApplications
-          .where((app) => app.isPending)
+          .where((app) => app.isPending && app.isTaskOpen)
           .toList();
       if (mounted) {
         setState(() {
