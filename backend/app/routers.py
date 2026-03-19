@@ -2909,12 +2909,15 @@ def get_refund_status(
 ):
     """查询任务的退款申请状态（返回最新的退款申请）"""
     task = crud.get_task(db, task_id)
-    if not task or task.poster_id != current_user.id:
+    if not task:
         raise HTTPException(status_code=404, detail="Task not found or no permission")
-    
+    # 发布者和接单人都可以查看退款状态
+    uid = str(current_user.id)
+    if str(task.poster_id) != uid and str(task.taker_id or "") != uid:
+        raise HTTPException(status_code=404, detail="Task not found or no permission")
+
     refund_request = db.query(models.RefundRequest).filter(
         models.RefundRequest.task_id == task_id,
-        models.RefundRequest.poster_id == current_user.id
     ).order_by(models.RefundRequest.created_at.desc()).first()
     
     if not refund_request:
@@ -3326,12 +3329,15 @@ def get_refund_history(
 ):
     """获取任务的退款申请历史记录（所有退款申请）"""
     task = crud.get_task(db, task_id)
-    if not task or task.poster_id != current_user.id:
+    if not task:
         raise HTTPException(status_code=404, detail="Task not found or no permission")
-    
+    # 发布者和接单人都可以查看退款历史
+    uid = str(current_user.id)
+    if str(task.poster_id) != uid and str(task.taker_id or "") != uid:
+        raise HTTPException(status_code=404, detail="Task not found or no permission")
+
     refund_requests = db.query(models.RefundRequest).filter(
         models.RefundRequest.task_id == task_id,
-        models.RefundRequest.poster_id == current_user.id
     ).order_by(models.RefundRequest.created_at.desc()).all()
     
     if not refund_requests:

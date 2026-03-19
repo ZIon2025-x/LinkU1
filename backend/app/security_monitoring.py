@@ -262,6 +262,10 @@ async def check_security_middleware(request: Request, call_next):
         # 跳过OPTIONS请求（CORS预检请求）
         if request.method == "OPTIONS":
             return await call_next(request)
+
+        # 跳过WebSocket升级请求（由WebSocket路由处理）
+        if request.headers.get("upgrade", "").lower() == "websocket":
+            return await call_next(request)
         
         # 获取客户端IP
         client_ip = get_client_ip(request)
@@ -295,18 +299,26 @@ async def check_security_middleware(request: Request, call_next):
         
         # 继续处理请求
         response = await call_next(request)
-        
-        # 记录响应状态
+
+        # 记录响应状态（跳过常见认证端点的 401，减少爬虫/未登录用户的日志噪音）
         if response.status_code >= 400:
-            log_suspicious_activity(
-                "ERROR_RESPONSE",
-                None,
-                client_ip,
-                f"错误响应 {response.status_code}: {request.url.path}",
-                request,
-                "WARNING"
+            _path = request.url.path
+            _skip_401 = response.status_code == 401 and _path in (
+                "/api/users/profile/me",
+                "/api/users/messages/unread/count",
+                "/api/secure-auth/refresh",
+                "/api/secure-auth/refresh-token",
             )
-        
+            if not _skip_401:
+                log_suspicious_activity(
+                    "ERROR_RESPONSE",
+                    None,
+                    client_ip,
+                    f"错误响应 {response.status_code}: {_path}",
+                    request,
+                    "WARNING"
+                )
+
         return response
         
     except Exception as e:

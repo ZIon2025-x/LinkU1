@@ -385,13 +385,13 @@ class SecureAuthManager:
                     expire_hours * 3600,  # 根据设备类型设置TTL
                     json.dumps(session_data)
                 )
-                logger.info(f"会话已更新: {session_id[:8]}... (iOS: {session.is_ios_app}, TTL: {expire_hours}小时)")
+                logger.debug(f"会话已更新: {session_id[:8]}... (iOS: {session.is_ios_app}, TTL: {expire_hours}小时)")
                 return True
             else:
                 # 更新内存中的会话
                 if session_id in active_sessions:
                     active_sessions[session_id] = session
-                    logger.info(f"会话已更新: {session_id[:8]}...")
+                    logger.debug(f"会话已更新: {session_id[:8]}...")
                     return True
             return False
         except Exception as e:
@@ -766,7 +766,7 @@ def validate_session(request: Request) -> Optional[SessionInfo]:
         elif session.ip_address != current_ip:
             # iOS应用允许IP变化，其他会话严格验证
             if is_ios_app:
-                logger.info(f"[SECURE_AUTH] iOS应用IP地址变化（允许）- 会话IP: {session.ip_address}, 当前IP: {current_ip}")
+                logger.debug(f"[SECURE_AUTH] iOS应用IP地址变化（允许）- 会话IP: {session.ip_address}, 当前IP: {current_ip}")
                 # 更新会话的IP地址为当前IP
                 session.ip_address = current_ip
                 SecureAuthManager.update_session(session_id, session)
@@ -1023,7 +1023,7 @@ def verify_user_refresh_token(refresh_token: str, ip_address: str = "", device_f
     elif stored_ip and stored_ip != ip_address:
         if token_is_ios_app:
             # iOS应用允许IP地址变化（用户可能切换WiFi/移动网络）
-            logger.info(f"[SECURE_AUTH] refresh token IP地址变化（iOS应用允许）- 用户: {user_id}, 存储IP: {stored_ip}, 当前IP: {ip_address}")
+            logger.debug(f"[SECURE_AUTH] refresh token IP地址变化（iOS应用允许）- 用户: {user_id}, 存储IP: {stored_ip}, 当前IP: {ip_address}")
             # 更新存储的IP地址为当前IP
             data['ip_address'] = ip_address
             redis_client.setex(key_str, token_ttl_seconds, json.dumps(data))

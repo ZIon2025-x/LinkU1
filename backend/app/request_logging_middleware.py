@@ -38,6 +38,14 @@ SKIP_LOG_PATHS = {
     "/robots.txt",
 }
 
+# 401 降级为 DEBUG 的认证端点（未登录访问、会话过期等属正常行为）
+_AUTH_401_QUIET_PATHS = {
+    "/api/users/profile/me",
+    "/api/users/messages/unread/count",
+    "/api/secure-auth/refresh",
+    "/api/secure-auth/refresh-token",
+}
+
 # 慢请求阈值（秒）
 SLOW_REQUEST_THRESHOLD = 1.0
 # 警告阈值（秒）
@@ -53,6 +61,11 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
     """
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        # WebSocket upgrade 请求不走 HTTP 中间件链，直接放行
+        # BaseHTTPMiddleware 会拦截 WebSocket 升级请求导致 404
+        if request.headers.get("upgrade", "").lower() == "websocket":
+            return await call_next(request)
+
         # 1. 生成或接收 request_id
         req_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())[:12]
         request_id_var.set(req_id)
@@ -98,6 +111,9 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
                     logger.error(log_data)
                 elif duration >= SLOW_REQUEST_THRESHOLD:
                     logger.warning(f"SLOW {log_data}")
+                elif status_code == 401 and path in _AUTH_401_QUIET_PATHS:
+                    # 常见认证端点的 401 属正常行为（未登录、会话过期），降为 DEBUG
+                    logger.debug(log_data)
                 elif status_code >= 400:
                     logger.warning(log_data)
                 elif duration >= WARN_REQUEST_THRESHOLD:
