@@ -110,7 +110,7 @@ class _EditPostViewState extends State<EditPostView> {
 
   bool get _hasPdf => _existingAttachment != null || _newPdfFile != null;
 
-  static const int _kMaxFileSizeMB = 10;
+  static const int _kMaxFileSizeMB = 20;
 
   Future<void> _pickPdf() async {
     try {

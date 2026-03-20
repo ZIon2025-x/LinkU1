@@ -269,7 +269,7 @@ async def upload_images_batch(
 
 
 ALLOWED_FORUM_FILE_EXTENSIONS = {".pdf"}
-MAX_FORUM_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+MAX_FORUM_FILE_SIZE = 20 * 1024 * 1024  # 20MB
 
 
 @router.post("/upload/forum-file")

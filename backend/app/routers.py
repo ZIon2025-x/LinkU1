@@ -6906,10 +6906,9 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                                 except ValueError as e:
                                     logger.warning(f"⚠️ [WEBHOOK] 状态转换被拒绝: {e}")
                                 payment_history.escrow_amount = task.escrow_amount
-                                # 增强 metadata
-                                if not payment_history.extra_metadata:
-                                    payment_history.extra_metadata = {}
-                                payment_history.extra_metadata.update({
+                                # 增强 metadata（用新 dict 赋值，确保 SQLAlchemy 检测 JSONB 变更）
+                                payment_history.extra_metadata = {
+                                    **(payment_history.extra_metadata or {}),
                                     "application_id": str(application_id),
                                     "taker_id": str(application.applicant_id),
                                     "taker_name": application.applicant.name if hasattr(application, 'applicant') and application.applicant else None,
@@ -6917,7 +6916,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                                     "approved_via_webhook": True,
                                     "webhook_event_id": event_id,
                                     "approved_at": get_utc_time().isoformat()
-                                })
+                                }
                                 logger.debug(f"✅ [WEBHOOK] 已更新支付历史记录: payment_history_id={payment_history.id}")
                             else:
                                 # 创建新的支付历史记录（用于审计）
@@ -7056,13 +7055,13 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                             except ValueError as e:
                                 logger.warning(f"⚠️ [WEBHOOK] 状态转换被拒绝: {e}")
                             payment_history.escrow_amount = task.escrow_amount
-                            if not payment_history.extra_metadata:
-                                payment_history.extra_metadata = {}
-                            payment_history.extra_metadata.update({
+                            # 用新 dict 赋值，确保 SQLAlchemy 检测 JSONB 变更
+                            payment_history.extra_metadata = {
+                                **(payment_history.extra_metadata or {}),
                                 "approved_via_webhook": True,
                                 "webhook_event_id": event_id,
                                 "approved_at": get_utc_time().isoformat()
-                            })
+                            }
                             logger.debug(f"✅ [WEBHOOK] 已更新支付历史记录（非 pending_approval）: order_no={payment_history.order_no}")
                     except Exception as e:
                         logger.error(f"❌ [WEBHOOK] 创建/更新支付历史记录失败（非 pending_approval）: {e}", exc_info=True)
@@ -7239,14 +7238,14 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                         payment_history.transition_status("failed")
                     except ValueError as e:
                         logger.warning(f"⚠️ [WEBHOOK] 状态转换被拒绝: {e}")
-                    if not payment_history.extra_metadata:
-                        payment_history.extra_metadata = {}
-                    payment_history.extra_metadata.update({
+                    # 用新 dict 赋值，确保 SQLAlchemy 检测 JSONB 变更
+                    payment_history.extra_metadata = {
+                        **(payment_history.extra_metadata or {}),
                         "payment_failed": True,
                         "error_message": error_message,
                         "webhook_event_id": event_id,
                         "failed_at": get_utc_time().isoformat()
-                    })
+                    }
                     db.commit()
                     logger.info(f"✅ [WEBHOOK] 已更新支付历史记录状态为失败: order_no={payment_history.order_no}")
             except Exception as e:

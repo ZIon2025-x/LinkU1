@@ -176,7 +176,7 @@ class _CreatePostViewState extends State<CreatePostView> {
   }
 
   // ── 文件选择 ──
-  static const int _kMaxFileSizeMB = 10;
+  static const int _kMaxFileSizeMB = 20;
 
   Future<void> _pickFiles() async {
     try {
