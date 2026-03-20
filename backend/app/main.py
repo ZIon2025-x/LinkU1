@@ -470,6 +470,9 @@ app.include_router(newbie_tasks_router, tags=["新手任务"])
 from app.routes.user_skills import router as user_skills_router
 app.include_router(user_skills_router, tags=["用户技能"])
 
+from app.routes.user_profile import router as user_profile_router
+app.include_router(user_profile_router)
+
 from app.routes.official_tasks import router as official_tasks_router
 app.include_router(official_tasks_router, tags=["官方任务"])
 

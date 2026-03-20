@@ -6,7 +6,7 @@
 import logging
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 
 from app import models, schemas
@@ -19,10 +19,14 @@ router = APIRouter(prefix="/api/skills", tags=["用户技能"])
 
 @router.get("/my")
 def get_my_skills(
+    response: Response,
     current_user=Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db),
 ):
     """获取当前用户的技能列表"""
+    response.headers["Deprecation"] = "true"
+    response.headers["Sunset"] = "2026-04-20"
+    response.headers["Link"] = '</api/profile/capabilities>; rel="successor-version"'
     skills = (
         db.query(models.UserSkill)
         .filter(models.UserSkill.user_id == current_user.id)
@@ -37,10 +41,14 @@ def get_my_skills(
 @router.post("/my", response_model=schemas.UserSkillOut, status_code=201)
 def add_my_skill(
     data: schemas.UserSkillCreate,
+    response: Response,
     current_user=Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db),
 ):
     """添加一项技能（用户维度去重：同一用户不能重复添加相同 skill_name）"""
+    response.headers["Deprecation"] = "true"
+    response.headers["Sunset"] = "2026-04-20"
+    response.headers["Link"] = '</api/profile/capabilities>; rel="successor-version"'
     # 检查重复
     existing = (
         db.query(models.UserSkill)
@@ -71,10 +79,14 @@ def add_my_skill(
 @router.delete("/my/{skill_id}")
 def delete_my_skill(
     skill_id: int,
+    response: Response,
     current_user=Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db),
 ):
     """删除一项技能（只能删除自己的）"""
+    response.headers["Deprecation"] = "true"
+    response.headers["Sunset"] = "2026-04-20"
+    response.headers["Link"] = '</api/profile/capabilities>; rel="successor-version"'
     skill = (
         db.query(models.UserSkill)
         .filter(
@@ -93,9 +105,13 @@ def delete_my_skill(
 
 @router.get("/categories")
 def get_skill_categories(
+    response: Response,
     db: Session = Depends(get_db),
 ):
     """获取所有激活的技能分类"""
+    response.headers["Deprecation"] = "true"
+    response.headers["Sunset"] = "2026-04-20"
+    response.headers["Link"] = '</api/profile/capabilities>; rel="successor-version"'
     categories = (
         db.query(models.SkillCategory)
         .filter(models.SkillCategory.is_active == True)
