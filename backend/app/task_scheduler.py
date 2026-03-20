@@ -1104,5 +1104,49 @@ def init_scheduler():
         priority='normal',
     )
 
+    # ========== 用户画像系统 ==========
+
+    # 需求画像夜间推断 - 每天凌晨3:30
+    def nightly_demand_inference():
+        try:
+            from app.services.demand_inference import batch_infer_demands
+            db = SessionLocal()
+            try:
+                results = batch_infer_demands(db, limit=500)
+                db.commit()
+                logger.info(f"需求画像推断完成: 更新了 {len(results)} 个用户")
+            finally:
+                db.close()
+        except Exception as e:
+            logger.error(f"需求画像推断失败: {e}")
+
+    scheduler.register_task(
+        'nightly_demand_inference',
+        nightly_demand_inference,
+        interval_seconds=86400,  # 每24小时
+        description="需求画像夜间推断"
+    )
+
+    # 可靠度分数周校准 - 每周一次
+    def weekly_reliability_calibration():
+        try:
+            from app.services.reliability_calculator import recalculate_all_reliability
+            db = SessionLocal()
+            try:
+                recalculate_all_reliability(db, limit=500)
+                db.commit()
+                logger.info("可靠度校准完成")
+            finally:
+                db.close()
+        except Exception as e:
+            logger.error(f"可靠度校准失败: {e}")
+
+    scheduler.register_task(
+        'weekly_reliability_calibration',
+        weekly_reliability_calibration,
+        interval_seconds=604800,  # 每7天
+        description="可靠度分数周校准"
+    )
+
     logger.info(f"已注册 {len(scheduler.tasks)} 个定时任务")
     return scheduler

@@ -279,6 +279,20 @@ celery_app.conf.beat_schedule = {
         'task': 'app.celery_tasks.update_featured_task_experts_response_time_task',
         'schedule': crontab(hour=3, minute=0),  # 每天凌晨3点
     },
+
+    # ========== 用户画像系统 ==========
+
+    # 需求画像夜间推断 - 每天凌晨3点执行
+    'nightly-demand-inference': {
+        'task': 'app.celery_tasks.nightly_demand_inference_task',
+        'schedule': crontab(hour=3, minute=30),  # 每天凌晨3:30
+    },
+
+    # 可靠度分数周校准 - 每周一凌晨4点执行
+    'weekly-reliability-calibration': {
+        'task': 'app.celery_tasks.weekly_reliability_calibration_task',
+        'schedule': crontab(hour=4, minute=0, day_of_week=1),  # 周一凌晨4点
+    },
 }
 
 # 如果使用内存后端，禁用结果存储
