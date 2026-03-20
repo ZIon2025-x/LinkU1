@@ -40,7 +40,7 @@ List<RouteBase> get authRoutes => [
         pageBuilder: (context, state) => FadeScaleTransitionPage(
           key: state.pageKey,
           child: OnboardingView(
-            onComplete: () => Navigator.of(context).pop(),
+            onComplete: () => context.go('/profile-setup'),
           ),
         ),
       ),
