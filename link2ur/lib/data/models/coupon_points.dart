@@ -10,14 +10,18 @@ class PointsAccount extends Equatable {
     this.currency = 'GBP',
     this.totalEarned = 0,
     this.totalSpent = 0,
+    this.totalPaymentIncome = 0,
+    this.totalPaymentSpent = 0,
     this.usageRestrictions,
   });
 
   final int balance;
   final String balanceDisplay;
   final String currency;
-  final int totalEarned;
-  final int totalSpent;
+  final int totalEarned;       // 积分累计获得
+  final int totalSpent;        // 积分累计消费
+  final double totalPaymentIncome;  // 实际收入金额（英镑）
+  final double totalPaymentSpent;   // 实际消费金额（英镑）
   final Map<String, dynamic>? usageRestrictions;
 
   factory PointsAccount.fromJson(Map<String, dynamic> json) {
@@ -27,6 +31,8 @@ class PointsAccount extends Equatable {
       currency: json['currency'] as String? ?? 'GBP',
       totalEarned: json['total_earned'] as int? ?? 0,
       totalSpent: json['total_spent'] as int? ?? 0,
+      totalPaymentIncome: (json['total_payment_income'] as num?)?.toDouble() ?? 0,
+      totalPaymentSpent: (json['total_payment_spent'] as num?)?.toDouble() ?? 0,
       usageRestrictions:
           json['usage_restrictions'] as Map<String, dynamic>?,
     );
@@ -39,13 +45,18 @@ class PointsAccount extends Equatable {
       'currency': currency,
       'total_earned': totalEarned,
       'total_spent': totalSpent,
+      'total_payment_income': totalPaymentIncome,
+      'total_payment_spent': totalPaymentSpent,
       'usage_restrictions': usageRestrictions,
     };
   }
 
   @override
-  List<Object?> get props =>
-      [balance, balanceDisplay, currency, totalEarned, totalSpent];
+  List<Object?> get props => [
+        balance, balanceDisplay, currency,
+        totalEarned, totalSpent,
+        totalPaymentIncome, totalPaymentSpent,
+      ];
 
   static const empty = PointsAccount();
 }

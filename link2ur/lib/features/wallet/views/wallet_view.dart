@@ -209,13 +209,13 @@ class _PointsCardState extends State<_PointsCard> {
               ),
             ),
             AppSpacing.vLg,
-            // 累计收入 / 累计消费 — 积分值（便士等价）转英镑，对标 iOS formatCurrency
+            // 累计收入 / 累计消费 — 实际支付金额（英镑），来自 PaymentTransfer / PaymentHistory
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _BalanceStatItem(
                   label: context.l10n.walletTotalEarned,
-                  value: Helpers.formatPrice(widget.account.totalEarned / 100),
+                  value: Helpers.formatPrice(widget.account.totalPaymentIncome),
                 ),
                 Container(
                   width: 1,
@@ -224,7 +224,7 @@ class _PointsCardState extends State<_PointsCard> {
                 ),
                 _BalanceStatItem(
                   label: context.l10n.walletTotalSpent,
-                  value: Helpers.formatPrice(widget.account.totalSpent / 100),
+                  value: Helpers.formatPrice(widget.account.totalPaymentSpent),
                 ),
               ],
             ),

@@ -1355,6 +1355,8 @@ class PointsAccountOut(BaseModel):
     currency: str
     total_earned: int
     total_spent: int
+    total_payment_income: float = 0.0  # 实际收入金额（英镑），来自 PaymentTransfer
+    total_payment_spent: float = 0.0   # 实际消费金额（英镑），来自 PaymentHistory
     usage_restrictions: Dict[str, Any]
 
     class Config:

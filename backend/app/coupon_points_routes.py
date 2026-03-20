@@ -56,12 +56,31 @@ def get_account_info(
     # 积分页面：直接显示积分数量（非英镑），balance_display 为整数字符串
     balance_display = str(account.balance)
 
+    # 查询实际支付金额汇总（用于钱包页面的 累计收入 / 累计消费）
+    # 累计收入：PaymentTransfer 中 taker_id=当前用户 且 status=succeeded 的金额总和
+    # PaymentTransfer.amount 是 DECIMAL(12,2)，单位为英镑
+    total_payment_income_raw = db.query(func.coalesce(func.sum(models.PaymentTransfer.amount), 0)).filter(
+        models.PaymentTransfer.taker_id == current_user.id,
+        models.PaymentTransfer.status == "succeeded"
+    ).scalar()
+    total_payment_income = float(total_payment_income_raw) if total_payment_income_raw else 0.0
+
+    # 累计消费：PaymentHistory 中 user_id=当前用户 且 status=succeeded 的 total_amount 总和
+    # PaymentHistory.total_amount 是 BigInteger，单位为便士，需要 / 100 转英镑
+    total_payment_spent_raw = db.query(func.coalesce(func.sum(models.PaymentHistory.total_amount), 0)).filter(
+        models.PaymentHistory.user_id == current_user.id,
+        models.PaymentHistory.status == "succeeded"
+    ).scalar()
+    total_payment_spent = float(total_payment_spent_raw) / 100.0 if total_payment_spent_raw else 0.0
+
     return {
         "balance": account.balance,
         "balance_display": balance_display,
         "currency": account.currency,
         "total_earned": account.total_earned,
         "total_spent": account.total_spent,
+        "total_payment_income": total_payment_income,
+        "total_payment_spent": total_payment_spent,
         "usage_restrictions": {
             "allowed": [
                 "抵扣申请费（任务发布费）",
