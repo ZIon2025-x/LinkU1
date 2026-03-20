@@ -3473,3 +3473,134 @@ class AdminRewardLog(Base):
     coupon_id = Column(Integer, ForeignKey("coupons.id"), nullable=True)
     reason = Column(Text, default="")
     created_at = Column(DateTime(timezone=True), default=get_utc_time)
+
+
+# =============================================================================
+# User Profile System — Phase 1: Capability, Preference, Reliability, Demand
+# =============================================================================
+
+import enum as _profile_enum
+
+
+class ProficiencyLevel(str, _profile_enum.Enum):
+    beginner = "beginner"
+    intermediate = "intermediate"
+    expert = "expert"
+
+
+class VerificationSource(str, _profile_enum.Enum):
+    self_declared = "self_declared"
+    task_verified = "task_verified"
+    platform_verified = "platform_verified"
+
+
+class TaskMode(str, _profile_enum.Enum):
+    online = "online"
+    offline = "offline"
+    both = "both"
+
+
+class DurationType(str, _profile_enum.Enum):
+    one_time = "one_time"
+    long_term = "long_term"
+    both = "both"
+
+
+class RewardPreference(str, _profile_enum.Enum):
+    frequent_low = "frequent_low"
+    rare_high = "rare_high"
+    no_preference = "no_preference"
+
+
+class UserStage(str, _profile_enum.Enum):
+    new_arrival = "new_arrival"
+    settling = "settling"
+    established = "established"
+    experienced = "experienced"
+
+
+class UserCapability(Base):
+    __tablename__ = "user_capabilities"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    category_id = Column(Integer, ForeignKey("skill_categories.id"), nullable=False)
+    skill_name = Column(String(100), nullable=False)
+    proficiency = Column(Enum(ProficiencyLevel), default=ProficiencyLevel.beginner, nullable=False)
+    verification_source = Column(Enum(VerificationSource), default=VerificationSource.self_declared, nullable=False)
+    verified_task_count = Column(Integer, default=0)
+    last_used_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
+
+    user = relationship("User", backref="capabilities")
+    category = relationship("SkillCategory")
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "skill_name", name="uq_user_capability"),
+        Index("ix_user_capabilities_user_id", "user_id"),
+        Index("ix_user_capabilities_category_id", "category_id"),
+    )
+
+
+class UserProfilePreference(Base):
+    __tablename__ = "user_profile_preferences"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True)
+    mode = Column(Enum(TaskMode), default=TaskMode.both, nullable=False)
+    duration_type = Column(Enum(DurationType), default=DurationType.both, nullable=False)
+    reward_preference = Column(Enum(RewardPreference), default=RewardPreference.no_preference, nullable=False)
+    preferred_time_slots = Column(JSON, default=list)
+    preferred_categories = Column(JSON, default=list)
+    preferred_helper_types = Column(JSON, default=list)
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
+
+    user = relationship("User", backref="profile_preference")
+
+    __table_args__ = (
+        Index("ix_user_profile_preferences_user_id", "user_id"),
+    )
+
+
+class UserReliability(Base):
+    __tablename__ = "user_reliability"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True)
+    response_speed_avg = Column(Float, default=0.0)
+    completion_rate = Column(Float, default=0.0)
+    on_time_rate = Column(Float, default=0.0)
+    complaint_rate = Column(Float, default=0.0)
+    communication_score = Column(Float, default=0.0)
+    repeat_rate = Column(Float, default=0.0)
+    cancellation_rate = Column(Float, default=0.0)
+    reliability_score = Column(Float, nullable=True)  # null when total_tasks_taken < 3
+    total_tasks_taken = Column(Integer, default=0)
+    last_calculated_at = Column(DateTime(timezone=True), default=get_utc_time)
+
+    user = relationship("User", backref="reliability")
+
+    __table_args__ = (
+        Index("ix_user_reliability_user_id", "user_id"),
+        Index("ix_user_reliability_reliability_score", "reliability_score"),
+    )
+
+
+class UserDemand(Base):
+    __tablename__ = "user_demand"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True)
+    user_stage = Column(Enum(UserStage), default=UserStage.new_arrival, nullable=False)
+    predicted_needs = Column(JSON, default=list)
+    recent_interests = Column(JSON, default=dict)
+    last_inferred_at = Column(DateTime(timezone=True), default=get_utc_time)
+    inference_version = Column(String(20), default="v1.0")
+
+    user = relationship("User", backref="demand")
+
+    __table_args__ = (
+        Index("ix_user_demand_user_id", "user_id"),
+        Index("ix_user_demand_user_stage", "user_stage"),
+    )
