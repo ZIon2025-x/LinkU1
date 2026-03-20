@@ -482,44 +482,69 @@ def cancel_task(
         if task.poster_id != user_id and task.taker_id != user_id:
             return "not_participant"
 
-    task.status = "cancelled"
+    # 保存原 taker_id（用于通知，因为可能会被清除）
+    original_taker_id = task.taker_id
+    reverted_to_open = False
 
-    # Auto-refund for paid tasks cancelled via admin/CS review
-    # Full refund (including platform fee) — omit amount param to refund entire charge
-    if is_admin_review and getattr(task, 'is_paid', 0) == 1 and task.payment_intent_id:
-        try:
-            import stripe
-            import hashlib
+    # 已付款的 in_progress 任务：取消后回到 open（不退款），允许发布者选择新申请人
+    if is_admin_review and task.status == "in_progress" and getattr(task, 'is_paid', 0) == 1:
+        reverted_to_open = True
+        task.status = "open"
+        task.taker_id = None
+        # 保留 is_paid、payment_intent_id、escrow_amount — 下次批准时免支付
+        logger.info(f"Task {task.id} reverted to open (paid, no refund), old taker={original_taker_id}")
 
-            if stripe.api_key:
-                charges = stripe.Charge.list(payment_intent=task.payment_intent_id, limit=1)
-                if charges.data:
-                    charge_id = charges.data[0].id
-                    idempotency_key = hashlib.sha256(
-                        f"cancel_refund_{task.id}_{charge_id}".encode()
-                    ).hexdigest()
+        # 将原接取人的申请状态设为 rejected
+        if original_taker_id:
+            from app.models import TaskApplication
+            old_apps = db.execute(
+                select(TaskApplication).where(
+                    TaskApplication.task_id == task_id,
+                    TaskApplication.applicant_id == original_taker_id,
+                    TaskApplication.status == "approved"
+                )
+            ).scalars().all()
+            for app in old_apps:
+                app.status = "rejected"
+    else:
+        task.status = "cancelled"
 
-                    refund = stripe.Refund.create(
-                        charge=charge_id,
-                        reason="requested_by_customer",
-                        idempotency_key=idempotency_key,
-                        metadata={
-                            "task_id": str(task.id),
-                            "cancel_refund": "true",
-                            "poster_id": str(task.poster_id),
-                        }
-                    )
-                    task.is_paid = 0
-                    task.payment_intent_id = None
-                    task.escrow_amount = 0.0
-                    logger.info(f"Auto-refund on cancel: task={task.id}, refund={refund.id}, amount={refund.amount}p")
+        # Auto-refund for paid tasks cancelled via admin/CS review
+        # Full refund (including platform fee) — omit amount param to refund entire charge
+        if is_admin_review and getattr(task, 'is_paid', 0) == 1 and task.payment_intent_id:
+            try:
+                import stripe
+                import hashlib
+
+                if stripe.api_key:
+                    charges = stripe.Charge.list(payment_intent=task.payment_intent_id, limit=1)
+                    if charges.data:
+                        charge_id = charges.data[0].id
+                        idempotency_key = hashlib.sha256(
+                            f"cancel_refund_{task.id}_{charge_id}".encode()
+                        ).hexdigest()
+
+                        refund = stripe.Refund.create(
+                            charge=charge_id,
+                            reason="requested_by_customer",
+                            idempotency_key=idempotency_key,
+                            metadata={
+                                "task_id": str(task.id),
+                                "cancel_refund": "true",
+                                "poster_id": str(task.poster_id),
+                            }
+                        )
+                        task.is_paid = 0
+                        task.payment_intent_id = None
+                        task.escrow_amount = 0.0
+                        logger.info(f"Auto-refund on cancel: task={task.id}, refund={refund.id}, amount={refund.amount}p")
+                    else:
+                        logger.warning(f"No charges found for PaymentIntent {task.payment_intent_id}, cannot refund")
                 else:
-                    logger.warning(f"No charges found for PaymentIntent {task.payment_intent_id}, cannot refund")
-            else:
-                logger.warning(f"Stripe API key not configured, cannot auto-refund task {task.id}")
-        except Exception as e:
-            logger.error(f"Auto-refund failed for task {task.id}: {e}", exc_info=True)
-            # Do NOT block cancellation — admin can handle refund manually
+                    logger.warning(f"Stripe API key not configured, cannot auto-refund task {task.id}")
+            except Exception as e:
+                logger.error(f"Auto-refund failed for task {task.id}: {e}", exc_info=True)
+                # Do NOT block cancellation — admin can handle refund manually
 
     task_time_slot_relation = (
         db.query(TaskTimeSlotRelation)
@@ -570,53 +595,101 @@ def cancel_task(
                         time_slot.is_available = True
                     db.add(time_slot)
 
-    if is_admin_review:
-        add_task_history(db, task.id, user_id, "cancelled", "管理员审核通过后取消")
-    else:
-        add_task_history(db, task.id, task.poster_id, "cancelled", "任务发布者手动取消")
+    if reverted_to_open:
+        # 任务回到 open 状态（已付款，不退款）
+        add_task_history(db, task.id, user_id, "reverted_to_open", "取消申请通过，任务回到 open 状态（已付款，不退款）")
 
-    create_notification(
-        db,
-        task.poster_id,
-        "task_cancelled",
-        "任务已取消",
-        f'您的任务"{task.title}"已被取消',
-        related_id=str(task.id),
-        title_en="Task Cancelled",
-        content_en=f'Your task"{task.title}"has been cancelled',
-    )
-    try:
-        send_push_notification(
-            db=db,
-            user_id=task.poster_id,
-            notification_type="task_cancelled",
-            data={"task_id": task.id},
-            template_vars={"task_title": task.title, "task_id": task.id},
-        )
-    except Exception as e:
-        logger.warning(f"发送任务取消推送通知失败（发布者）: {e}")
-
-    if task.taker_id and task.taker_id != task.poster_id:
         create_notification(
             db,
-            task.taker_id,
-            "task_cancelled",
-            "任务已取消",
-            f'您接受的任务"{task.title}"已被取消',
+            task.poster_id,
+            "cancel_request_approved",
+            "取消申请已通过",
+            f'您的任务"{task.title}"已回到开放状态，可以选择新的申请人',
             related_id=str(task.id),
-            title_en="Task Cancelled",
-            content_en=f'The task you accepted"{task.title}"has been cancelled',
+            title_en="Cancel Request Approved",
+            content_en=f'Your task "{task.title}" is now open again. You can select a new applicant.',
         )
         try:
             send_push_notification(
                 db=db,
-                user_id=task.taker_id,
+                user_id=task.poster_id,
+                notification_type="cancel_request_approved",
+                data={"task_id": task.id},
+                template_vars={"task_title": task.title, "task_id": task.id},
+            )
+        except Exception as e:
+            logger.warning(f"发送取消通过推送通知失败（发布者）: {e}")
+
+        if original_taker_id and original_taker_id != task.poster_id:
+            create_notification(
+                db,
+                original_taker_id,
+                "task_cancelled",
+                "任务已取消",
+                f'您接受的任务"{task.title}"已被取消',
+                related_id=str(task.id),
+                title_en="Task Cancelled",
+                content_en=f'The task you accepted "{task.title}" has been cancelled',
+            )
+            try:
+                send_push_notification(
+                    db=db,
+                    user_id=original_taker_id,
+                    notification_type="task_cancelled",
+                    data={"task_id": task.id},
+                    template_vars={"task_title": task.title, "task_id": task.id},
+                )
+            except Exception as e:
+                logger.warning(f"发送任务取消推送通知失败（原接受者）: {e}")
+    else:
+        # 任务彻底取消
+        if is_admin_review:
+            add_task_history(db, task.id, user_id, "cancelled", "管理员审核通过后取消")
+        else:
+            add_task_history(db, task.id, task.poster_id, "cancelled", "任务发布者手动取消")
+
+        create_notification(
+            db,
+            task.poster_id,
+            "task_cancelled",
+            "任务已取消",
+            f'您的任务"{task.title}"已被取消',
+            related_id=str(task.id),
+            title_en="Task Cancelled",
+            content_en=f'Your task "{task.title}" has been cancelled',
+        )
+        try:
+            send_push_notification(
+                db=db,
+                user_id=task.poster_id,
                 notification_type="task_cancelled",
                 data={"task_id": task.id},
                 template_vars={"task_title": task.title, "task_id": task.id},
             )
         except Exception as e:
-            logger.warning(f"发送任务取消推送通知失败（接受者）: {e}")
+            logger.warning(f"发送任务取消推送通知失败（发布者）: {e}")
+
+        if original_taker_id and original_taker_id != task.poster_id:
+            create_notification(
+                db,
+                original_taker_id,
+                "task_cancelled",
+                "任务已取消",
+                f'您接受的任务"{task.title}"已被取消',
+                related_id=str(task.id),
+                title_en="Task Cancelled",
+                content_en=f'The task you accepted "{task.title}" has been cancelled',
+            )
+            try:
+                send_push_notification(
+                    db=db,
+                    user_id=original_taker_id,
+                    notification_type="task_cancelled",
+                    data={"task_id": task.id},
+                    template_vars={"task_title": task.title, "task_id": task.id},
+                )
+            except Exception as e:
+                logger.warning(f"发送任务取消推送通知失败（接受者）: {e}")
 
     try:
         db.commit()

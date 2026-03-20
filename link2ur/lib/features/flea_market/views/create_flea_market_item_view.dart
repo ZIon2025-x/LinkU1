@@ -276,6 +276,7 @@ class _CreateFleaMarketItemContentState
                 // 商品标题
                 TextFormField(
                   controller: _titleController,
+                  maxLength: 100,
                   decoration: InputDecoration(
                     labelText: context.l10n.fleaMarketProductTitle,
                     hintText: context.l10n.fleaMarketProductTitlePlaceholder,

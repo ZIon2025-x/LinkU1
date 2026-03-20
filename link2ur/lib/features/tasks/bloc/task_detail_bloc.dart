@@ -32,6 +32,9 @@ class TaskDetailLoadRequested extends TaskDetailEvent {
 class TaskDetailLoadApplications extends TaskDetailEvent {
   const TaskDetailLoadApplications({this.currentUserId});
   final String? currentUserId;
+
+  @override
+  List<Object?> get props => [currentUserId];
 }
 
 /// 加载退款状态
@@ -590,7 +593,6 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
         isSubmitting: false,
         applications: updatedApps,
         actionMessage: 'public_reply_submitted',
-        errorMessage: '',
       ));
     } on TaskException catch (e) {
       final errorCode = e.message == 'public_reply_already_replied'
@@ -1379,16 +1381,16 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
     TaskDetailToggleProfileVisibility event,
     Emitter<TaskDetailState> emit,
   ) async {
-    if (state.isSubmitting || state.task == null) return;
+    if (_taskId == null || state.isSubmitting) return;
     emit(state.copyWith(isSubmitting: true));
 
     try {
       await _taskRepository.updateTaskVisibility(
-        state.task!.id,
+        _taskId!,
         isPublic: event.isPublic,
       );
       // Reload task to get updated is_public/taker_public from server
-      add(TaskDetailLoadRequested(state.task!.id));
+      add(TaskDetailLoadRequested(_taskId!));
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'visibility_updated',

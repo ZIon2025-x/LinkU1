@@ -8,6 +8,7 @@ import '../../../core/utils/task_status_helper.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/haptic_feedback.dart';
@@ -177,10 +178,11 @@ class _MyTasksViewState extends State<MyTasksView>
     try {
       final repo = context.read<TaskRepository>();
       final allApplications = await repo.getMyApplications();
-      // 只保留任务状态为 open 且申请状态为 pending 的申请
-      // 任务不再 open 时（如已接取/完成/取消），申请已无意义
+      // 保留仍在处理中的申请：pending（等待回复）或 chatting（聊天中）
+      // 同意聊天不改变任务状态，任务始终保持 open
       final pending = allApplications
-          .where((app) => app.isPending && app.isTaskOpen)
+          .where((app) =>
+              (app.isPending || app.isChatting) && app.isTaskOpen)
           .toList();
       if (mounted) {
         setState(() {
@@ -574,6 +576,12 @@ class _TaskCard extends StatelessWidget {
 }
 
 /// 待处理申请卡片 - 对齐iOS MyTasksApplicationCard
+String _formatApplicationTime(String timeStr) {
+  final dt = DateTime.tryParse(timeStr);
+  if (dt == null) return timeStr;
+  return DateFormatter.formatRelative(dt.toLocal());
+}
+
 class _ApplicationCard extends StatelessWidget {
   const _ApplicationCard({required this.application, required this.onReturn});
 
@@ -593,45 +601,54 @@ class _ApplicationCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 头部：申请人信息和状态
+          // 头部：任务标题和状态
           Row(
             children: [
-              AvatarView(
-                imageUrl: application.applicantAvatar,
-                name: application.applicantName,
-                size: 36,
-              ),
-              AppSpacing.hSm,
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      application.applicantName ?? l10n.profileAnonymousUser,
-                      style: const TextStyle(fontWeight: FontWeight.w500),
-                    ),
-                    Text(
-                      l10n.myTasksPending,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isDark
-                            ? AppColors.textTertiaryDark
-                            : AppColors.textTertiaryLight,
+                      application.taskTitle ?? l10n.myTasksViewDetails,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
+                    if (application.createdAt != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          _formatApplicationTime(application.createdAt!),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDark
+                                ? AppColors.textTertiaryDark
+                                : AppColors.textTertiaryLight,
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.orange.withValues(alpha: 0.1),
+                  color: application.isChatting
+                      ? AppColors.primary.withValues(alpha: 0.1)
+                      : Colors.orange.withValues(alpha: 0.1),
                   borderRadius: AppRadius.allTiny,
                 ),
                 child: Text(
-                  l10n.myTasksPending,
-                  style: const TextStyle(
-                    color: Colors.orange,
+                  application.isChatting
+                      ? l10n.applicationChatting
+                      : l10n.myTasksPending,
+                  style: TextStyle(
+                    color: application.isChatting
+                        ? AppColors.primary
+                        : Colors.orange,
                     fontSize: 12,
                   ),
                 ),
@@ -677,14 +694,18 @@ class _ApplicationCard extends StatelessWidget {
           ],
 
           // 报价
-          if (application.proposedPrice != null) ...[
+          if (application.proposedPrice != null &&
+              application.proposedPrice! > 0) ...[
             AppSpacing.vMd,
             Row(
               children: [
+                const Icon(Icons.price_change_outlined,
+                    size: 16, color: AppColors.primary),
+                const SizedBox(width: 4),
                 Text(
-                  '\$${application.proposedPrice!.toStringAsFixed(0)}',
+                  '£${application.proposedPrice!.toStringAsFixed(2)}',
                   style: const TextStyle(
-                    fontSize: 20,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: AppColors.primary,
                   ),

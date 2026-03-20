@@ -327,7 +327,9 @@ class FleaMarketListResponse {
   final int page;
   final int pageSize;
 
-  bool get hasMore => items.length >= pageSize;
+  /// 后端返回 total 时用分页计算，否则用本页条数推断
+  bool get hasMore =>
+      total > 0 ? (page * pageSize < total) : (items.length >= pageSize);
 
   factory FleaMarketListResponse.fromJson(Map<String, dynamic> json) {
     final rawItems = json['items'] as List<dynamic>? ?? [];

@@ -87,6 +87,11 @@ class CreateTaskBloc extends Bloc<CreateTaskEvent, CreateTaskState> {
         status: CreateTaskStatus.success,
         createdTask: task,
       ));
+    } on TaskException catch (e) {
+      emit(state.copyWith(
+        status: CreateTaskStatus.error,
+        errorMessage: e.message,
+      ));
     } catch (e) {
       AppLogger.error('Failed to create task', e);
       emit(state.copyWith(

@@ -1067,7 +1067,11 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     try {
       final requestId = int.tryParse(event.requestId);
       if (requestId == null) {
-        emit(state.copyWith(isSubmitting: false, actionMessage: 'Invalid request ID'));
+        emit(state.copyWith(
+          isSubmitting: false,
+          actionMessage: 'reject_failed',
+          errorMessage: 'flea_market_error_invalid_request_id',
+        ));
         return;
       }
       await _fleaMarketRepository.rejectPurchase(
@@ -1135,6 +1139,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
             : 'counter_offer_rejected',
       ));
       add(FleaMarketLoadDetailRequested(event.itemId));
+      add(FleaMarketLoadPurchaseRequests(event.itemId));
     } catch (e) {
       AppLogger.error('Failed to respond to counter offer', e);
       emit(state.copyWith(
@@ -1163,7 +1168,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
       AppLogger.error('Failed to delete flea market item', e);
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: e.toString(),
+        actionMessage: 'delete_failed',
         errorMessage: e.toString(),
       ));
     }

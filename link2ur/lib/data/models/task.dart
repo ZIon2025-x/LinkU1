@@ -471,6 +471,11 @@ class Task extends Equatable {
       'reward_to_be_quoted': rewardToBeQuoted,
       'is_public': isPublic,
       'taker_public': takerPublic,
+      'platform_fee_rate': platformFeeRate,
+      'platform_fee_amount': platformFeeAmount,
+      'counter_offer_price': counterOfferPrice,
+      'counter_offer_status': counterOfferStatus,
+      'counter_offer_user_id': counterOfferUserId,
     };
   }
 

@@ -7072,6 +7072,92 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                     task.status = "in_progress"
                 else:
                     logger.info(f"⚠️ 任务状态不是 pending_payment，当前状态: {task.status}，跳过状态更新")
+
+            elif task and task.is_paid == 1:
+                # ====== 补差价支付（top_up）：任务已付款，此次为追加支付 ======
+                metadata = payment_intent.get("metadata", {})
+                if metadata.get("payment_type") == "top_up" and metadata.get("pending_approval") == "true":
+                    top_up_pence = payment_intent.get("amount", 0)
+                    logger.info(f"✅ [WEBHOOK] 补差价支付成功: task_id={task_id}, top_up={top_up_pence}p")
+
+                    # 更新 escrow：累加补差价金额（扣除补差价部分的服务费）
+                    from app.utils.fee_calculator import calculate_application_fee_pence
+                    task_source = getattr(task, "task_source", None)
+                    task_type_val = getattr(task, "task_type", None)
+                    top_up_fee = calculate_application_fee_pence(top_up_pence, task_source, task_type_val)
+                    top_up_net = (top_up_pence - top_up_fee) / 100.0
+                    task.escrow_amount = float(task.escrow_amount or 0) + max(0.0, top_up_net)
+
+                    # 更新 agreed_reward 为新总价
+                    if metadata.get("negotiated_price"):
+                        try:
+                            from decimal import Decimal
+                            task.agreed_reward = Decimal(metadata["negotiated_price"])
+                        except Exception:
+                            pass
+
+                    # 保存最新的 payment_intent_id
+                    task.payment_intent_id = payment_intent_id
+
+                    # 批准申请（复用与上面相同的逻辑）
+                    application_id_str = metadata.get("application_id")
+                    if application_id_str:
+                        application_id = int(application_id_str)
+                        application = db.execute(
+                            select(models.TaskApplication).where(
+                                and_(
+                                    models.TaskApplication.id == application_id,
+                                    models.TaskApplication.task_id == task_id,
+                                    models.TaskApplication.status.in_(["pending", "chatting"])
+                                )
+                            ).with_for_update()
+                        ).scalar_one_or_none()
+
+                        if application:
+                            application.status = "approved"
+                            task.taker_id = application.applicant_id
+                            task.status = "in_progress"
+                            logger.info(f"✅ [WEBHOOK] 补差价后批准申请 {application_id}")
+
+                            # 自动拒绝其他申请
+                            other_apps = db.execute(
+                                select(models.TaskApplication).where(
+                                    and_(
+                                        models.TaskApplication.task_id == task_id,
+                                        models.TaskApplication.id != application_id,
+                                        models.TaskApplication.status.in_(["chatting", "pending"])
+                                    )
+                                )
+                            ).scalars().all()
+                            for other_app in other_apps:
+                                was_chatting = other_app.status == "chatting"
+                                other_app.status = "rejected"
+                                if was_chatting:
+                                    reject_msg = models.Message(
+                                        task_id=task_id, application_id=other_app.id,
+                                        sender_id=None, receiver_id=None,
+                                        content="发布者已选择了其他申请者完成此任务。",
+                                        message_type="system", conversation_type="task",
+                                        meta=json.dumps({"system_action": "auto_rejected",
+                                                         "content_en": "The poster has selected another applicant for this task."}),
+                                        created_at=get_utc_time(),
+                                    )
+                                    db.add(reject_msg)
+
+                            # 通知申请人
+                            try:
+                                crud.create_notification(
+                                    db, application.applicant_id,
+                                    "application_accepted", "申请已通过",
+                                    f"您的任务申请已被接受：{task.title}",
+                                    related_id=str(task_id), auto_commit=False,
+                                )
+                            except Exception as e:
+                                logger.warning(f"⚠️ [WEBHOOK] 通知失败: {e}")
+                        else:
+                            logger.warning(f"⚠️ [WEBHOOK] 补差价支付成功但未找到申请 {application_id_str}")
+                else:
+                    logger.info(f"ℹ️ [WEBHOOK] 已付款任务收到支付，非 top_up 类型，跳过")
                 
                 # 支付历史记录已在上面更新（如果存在待确认的批准支付）
                 

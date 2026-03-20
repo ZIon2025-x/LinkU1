@@ -127,6 +127,7 @@ class _FleaMarketDetailContent extends StatelessWidget {
             'counter_offer_respond_failed' => l10n.fleaMarketCounterOfferFailed,
             'counter_offer_success' => l10n.expertApplicationCounterOfferSent,
             'item_deleted' => l10n.fleaMarketItemDeleted,
+            'delete_failed' => l10n.fleaMarketErrorDeleteFailed,
             _ => state.actionMessage ?? '',
           };
           final displayMessage = state.errorMessage != null

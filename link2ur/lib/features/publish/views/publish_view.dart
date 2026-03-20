@@ -334,7 +334,7 @@ class _PublishContentState extends State<_PublishContent>
       } catch (e) {
         if (mounted) {
           setState(() => _isUploading = false);
-          AppFeedback.showError(context, context.l10n.commonImageUploadFailed(e.toString()));
+          AppFeedback.showError(context, context.localizeError(e.toString()));
         }
         return;
       }
@@ -609,15 +609,15 @@ class _PublishContentState extends State<_PublishContent>
         // 帖子发布成功监听
         BlocListener<ForumBloc, ForumState>(
           listenWhen: (prev, curr) =>
+              // 只关注 createPost 的结果，忽略 loadCategories 等其他操作的 errorMessage
               prev.isCreatingPost != curr.isCreatingPost ||
-              prev.createPostSuccess != curr.createPostSuccess ||
-              prev.errorMessage != curr.errorMessage,
+              prev.createPostSuccess != curr.createPostSuccess,
           listener: (context, state) {
-            if (!state.isCreatingPost && state.errorMessage != null) {
-              AppFeedback.showError(context, context.localizeError(state.errorMessage));
-            } else if (state.createPostSuccess) {
+            if (state.createPostSuccess) {
               AppFeedback.showSuccess(context, context.l10n.feedbackPostPublishSuccess);
               context.pop();
+            } else if (!state.isCreatingPost && state.errorMessage != null) {
+              AppFeedback.showError(context, context.localizeError(state.errorMessage));
             }
           },
         ),
@@ -1360,6 +1360,7 @@ class _PublishContentState extends State<_PublishContent>
           _sectionTitle(context.l10n.fleaMarketProductTitle, isDark: isDark),
           TextFormField(
             controller: _fleaTitleCtrl,
+            maxLength: 100,
             decoration: _inputDecoration(
               hint: context.l10n.fleaMarketProductTitlePlaceholder,
               icon: Icons.title_rounded,

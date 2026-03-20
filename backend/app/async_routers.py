@@ -1032,10 +1032,11 @@ async def get_user_applications(
                     "task_location": task.location,
                     "status": app.status,
                     "message": app.message,
+                    "negotiated_price": float(app.negotiated_price) if app.negotiated_price is not None else None,
                     "created_at": format_iso_utc(app.created_at),
                     "task_poster_id": task.poster_id,
-                    "task_status": task.status,  # 添加任务状态，用于前端过滤已取消的任务
-                    "task_deadline": format_iso_utc(task.deadline) if task.deadline else None  # 添加任务截止日期
+                    "task_status": task.status,
+                    "task_deadline": format_iso_utc(task.deadline) if task.deadline else None
                 })
         
         return result

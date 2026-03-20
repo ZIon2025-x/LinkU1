@@ -1584,17 +1584,21 @@ async def accept_application(
 
             return customer_id, ephemeral_key_secret
 
+        # 补差价变量（在 is_paid==1 且 new_price > original_paid 时设置）
+        top_up_pence = 0
+        top_up_original_paid = 0.0
+
         # 检查任务是否存在
         task_query = select(models.Task).where(models.Task.id == task_id)
         task_result = await db.execute(task_query)
         task = task_result.scalar_one_or_none()
-        
+
         if not task:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="任务不存在"
             )
-        
+
         # 权限检查：必须是发布者
         if task.poster_id != current_user.id:
             raise HTTPException(
@@ -1733,14 +1737,121 @@ async def accept_application(
                 "task_id": task_id
             }
         
-        # 检查任务是否已支付（防止重复支付）
+        # 已付款任务（如取消后重新开放的）
         if locked_task.is_paid == 1:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="任务已支付，无法重复支付。如果支付未完成，请联系客服。"
-            )
-        
-        # 检查任务是否还有名额
+            original_paid = float(locked_task.agreed_reward or locked_task.base_reward or 0)
+            new_price = float(application.negotiated_price) if application.negotiated_price is not None else original_paid
+
+            if new_price <= original_paid:
+                # ---- 新价 ≤ 已付：跳过支付，直接批准 ----
+                logger.info(f"✅ 任务 {task_id} 已付款(£{original_paid:.2f})，新价 £{new_price:.2f} ≤ 已付，直接批准")
+
+                await db.execute(
+                    update(models.TaskApplication)
+                    .where(models.TaskApplication.id == application_id)
+                    .values(status="approved")
+                )
+                locked_task.taker_id = application.applicant_id
+                locked_task.status = "in_progress"
+                if application.negotiated_price is not None:
+                    locked_task.agreed_reward = application.negotiated_price
+
+                # 重新计算 escrow（按新价格），多余的钱退给发布者
+                from app.utils.fee_calculator import calculate_application_fee_pence
+                import hashlib
+                new_price_pence = round(new_price * 100)
+                ts = getattr(locked_task, "task_source", None)
+                tt = getattr(locked_task, "task_type", None)
+                new_fee_pence = calculate_application_fee_pence(new_price_pence, ts, tt)
+                locked_task.escrow_amount = max(0.0, (new_price_pence - new_fee_pence) / 100.0)
+
+                # 自动退还差额（original_paid - new_price）
+                original_paid_pence = round(original_paid * 100)
+                refund_pence = original_paid_pence - new_price_pence
+                if refund_pence > 0 and locked_task.payment_intent_id:
+                    try:
+                        import stripe
+                        if stripe.api_key:
+                            charges = stripe.Charge.list(
+                                payment_intent=locked_task.payment_intent_id, limit=1
+                            )
+                            if charges.data:
+                                idempotency_key = hashlib.sha256(
+                                    f"price_diff_refund_{locked_task.id}_{charges.data[0].id}_{refund_pence}".encode()
+                                ).hexdigest()
+                                stripe.Refund.create(
+                                    charge=charges.data[0].id,
+                                    amount=refund_pence,
+                                    reason="requested_by_customer",
+                                    idempotency_key=idempotency_key,
+                                    metadata={
+                                        "task_id": str(task_id),
+                                        "refund_type": "price_difference",
+                                        "original_paid_pence": str(original_paid_pence),
+                                        "new_price_pence": str(new_price_pence),
+                                    }
+                                )
+                                logger.info(f"✅ 差价退款成功: task_id={task_id}, amount={refund_pence}p")
+                    except Exception as e:
+                        logger.error(f"差价退款失败(需人工处理): task_id={task_id}, amount={refund_pence}p, error={e}")
+
+                # 自动拒绝其他 pending/chatting 申请
+                other_apps_query = select(models.TaskApplication).where(
+                    and_(
+                        models.TaskApplication.task_id == task_id,
+                        models.TaskApplication.id != application_id,
+                        models.TaskApplication.status.in_(["chatting", "pending"])
+                    )
+                )
+                other_apps_result = await db.execute(other_apps_query)
+                for other_app in other_apps_result.scalars().all():
+                    was_chatting = other_app.status == "chatting"
+                    other_app.status = "rejected"
+                    if was_chatting:
+                        reject_msg = models.Message(
+                            task_id=task_id, application_id=other_app.id,
+                            sender_id=None, receiver_id=None,
+                            content="发布者已选择了其他申请者完成此任务。",
+                            message_type="system", conversation_type="task",
+                            meta=json.dumps({"system_action": "auto_rejected",
+                                             "content_en": "The poster has selected another applicant for this task."}),
+                            created_at=get_utc_time(),
+                        )
+                        db.add(reject_msg)
+
+                await db.commit()
+
+                try:
+                    from app import async_crud
+                    await async_crud.async_notification_crud.create_notification(
+                        db, application.applicant_id, "application_accepted",
+                        "申请已通过", f'您的任务申请已被接受：{locked_task.title}',
+                        related_id=str(application_id), title_en="Application Accepted",
+                        content_en=f'Your application has been accepted: {locked_task.title}',
+                        related_type="application_id",
+                    )
+                except Exception as e:
+                    logger.warning(f"发送申请通过通知失败: {e}")
+
+                return {
+                    "message": "任务已付款，申请已直接通过",
+                    "application_id": application_id,
+                    "task_id": task_id,
+                    "is_paid": True,
+                    "already_paid": True,
+                }
+            else:
+                # ---- 新价 > 已付：需要补差价，走支付流程 ----
+                difference = new_price - original_paid
+                top_up_pence = round(difference * 100)
+                top_up_original_paid = original_paid
+                logger.info(
+                    f"✅ 任务 {task_id} 需补差价: 已付 £{original_paid:.2f}, "
+                    f"新价 £{new_price:.2f}, 差额 £{difference:.2f}"
+                )
+                # 落入下方的支付创建流程，使用 top_up_pence 作为支付金额
+
+        # 检查任务是否还有名额（已付款 top-up 路径 taker_id 已被清除，为 None）
         if locked_task.taker_id is not None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -1798,66 +1909,72 @@ async def accept_application(
         # 申请状态保持为 pending，等待支付成功后才批准
         
         # 计算任务金额
+        # 判断是否为补差价模式（top_up_pence 在上方 is_paid==1 分支中设置）
+        is_top_up = top_up_pence > 0
+
         task_amount = float(application.negotiated_price) if application.negotiated_price is not None else float(locked_task.base_reward) if locked_task.base_reward is not None else 0.0
-        
+
         if task_amount <= 0:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="任务金额必须大于0，无法进行支付"
             )
-        
-        task_amount_pence = round(task_amount * 100)
 
-        # 计算平台服务费（按任务来源/类型取费率）
+        # 补差价时只收差额；普通支付收全额
+        if is_top_up:
+            charge_pence = top_up_pence
+        else:
+            charge_pence = round(task_amount * 100)
+
+        # 计算平台服务费（按 *本次收款金额* 计算）
         from app.utils.fee_calculator import calculate_application_fee_pence
         task_source = getattr(locked_task, "task_source", None)
         task_type = getattr(locked_task, "task_type", None)
-        application_fee_pence = calculate_application_fee_pence(task_amount_pence, task_source, task_type)
-        
+        application_fee_pence = calculate_application_fee_pence(charge_pence, task_source, task_type)
+
         # 创建 Stripe Payment Intent
         import stripe
         import os
 
         # 获取接受者的 Stripe Connect 账户ID
         taker_stripe_account_id = applicant.stripe_account_id
-        
-        # 创建 Payment Intent（参考 Stripe Payment Intents API sample code）
-        # Create a PaymentIntent with the order amount and currency
-        # 使用 automatic_payment_methods（与官方 sample code 一致）
-        # 
-        # 交易市场托管模式：
-        # - 支付时：资金先到平台账户（不立即转账给任务接受人）
-        # - 任务完成后：使用 Transfer.create 将资金转给任务接受人
-        # - 平台服务费在转账时扣除（不在这里设置 application_fee_amount）
-        
+
         # 构建支付描述（方便在 Stripe Dashboard 中查看）
         task_title_short = locked_task.title[:50] if locked_task.title else f"Task #{task_id}"
-        payment_description = f"任务 #{task_id}: {task_title_short} - 批准申请 #{application_id}"
-        
+        if is_top_up:
+            payment_description = f"任务 #{task_id}: {task_title_short} - 补差价 #{application_id}"
+        else:
+            payment_description = f"任务 #{task_id}: {task_title_short} - 批准申请 #{application_id}"
+
         from app.secure_auth import get_wechat_pay_payment_method_options
         payment_method_options = get_wechat_pay_payment_method_options(request)
+        payment_type = "top_up" if is_top_up else "application_approval"
+        task_amount_pence = round(task_amount * 100)
+        pi_metadata = {
+            "task_id": str(task_id),
+            "task_title": locked_task.title[:200] if locked_task.title else "",
+            "application_id": str(application_id),
+            "poster_id": str(current_user.id),
+            "poster_name": current_user.name or f"User {current_user.id}",
+            "taker_id": str(application.applicant_id),
+            "taker_name": applicant.name or f"User {application.applicant_id}",
+            "taker_stripe_account_id": taker_stripe_account_id,
+            "application_fee": str(application_fee_pence),
+            "task_amount": str(task_amount_pence),
+            "task_amount_display": f"{task_amount:.2f}",
+            "negotiated_price": str(application.negotiated_price) if application.negotiated_price else "",
+            "pending_approval": "true",
+            "platform": "Link²Ur",
+            "payment_type": payment_type,
+        }
+        if is_top_up:
+            pi_metadata["original_paid_pence"] = str(round(top_up_original_paid * 100))
         create_pi_kw = {
-            "amount": task_amount_pence,
+            "amount": charge_pence,
             "currency": "gbp",
             "payment_method_types": ["card", "wechat_pay", "alipay"],
             "description": payment_description,
-            "metadata": {
-                "task_id": str(task_id),
-                "task_title": locked_task.title[:200] if locked_task.title else "",
-                "application_id": str(application_id),
-                "poster_id": str(current_user.id),
-                "poster_name": current_user.name or f"User {current_user.id}",
-                "taker_id": str(application.applicant_id),
-                "taker_name": applicant.name or f"User {application.applicant_id}",
-                "taker_stripe_account_id": taker_stripe_account_id,
-                "application_fee": str(application_fee_pence),
-                "task_amount": str(task_amount_pence),
-                "task_amount_display": f"{task_amount:.2f}",
-                "negotiated_price": str(application.negotiated_price) if application.negotiated_price else "",
-                "pending_approval": "true",
-                "platform": "Link²Ur",
-                "payment_type": "application_approval",
-            },
+            "metadata": pi_metadata,
         }
         if payment_method_options:
             create_pi_kw["payment_method_options"] = payment_method_options
@@ -1889,33 +2006,21 @@ async def accept_application(
         await db.commit()
         
         # 记录关键信息（INFO级别）
-        logger.info(f"✅ 批准申请成功: task_id={task_id}, application_id={application_id}, payment_intent_id={payment_intent.id}, amount={task_amount_pence/100:.2f} GBP")
-        
+        logger.info(f"✅ {'补差价' if is_top_up else '批准申请'}成功: task_id={task_id}, application_id={application_id}, payment_intent_id={payment_intent.id}, amount={charge_pence/100:.2f} GBP")
+
+        msg = "请完成补差价支付" if is_top_up else "请完成支付以确认批准申请"
         response_data = {
-            "message": "请完成支付以确认批准申请",
+            "message": msg,
             "application_id": application_id,
             "task_id": task_id,
             "payment_intent_id": payment_intent.id,
             "client_secret": payment_intent.client_secret,
-            "amount": task_amount_pence,
-            "amount_display": f"{task_amount_pence / 100:.2f}",
+            "amount": charge_pence,
+            "amount_display": f"{charge_pence / 100:.2f}",
             "currency": "GBP",
             "customer_id": customer_id,
             "ephemeral_key_secret": ephemeral_key_secret,
         }
-        
-        # 详细的字段检查日志降级为DEBUG（仅在调试时可见）
-        logger.debug(f"✅ 创建 PaymentIntent: payment_intent_id={payment_intent.id}, amount={task_amount_pence}, currency=GBP")
-        logger.debug(f"✅ PaymentIntent client_secret 存在: {bool(payment_intent.client_secret)}, 长度: {len(payment_intent.client_secret) if payment_intent.client_secret else 0}")
-        logger.debug(f"✅ 返回响应数据字段检查:")
-        logger.debug(f"  - message: {response_data.get('message')}")
-        logger.debug(f"  - application_id: {response_data.get('application_id')} (类型: {type(response_data.get('application_id'))})")
-        logger.debug(f"  - task_id: {response_data.get('task_id')} (类型: {type(response_data.get('task_id'))})")
-        logger.debug(f"  - payment_intent_id: {response_data.get('payment_intent_id')} (类型: {type(response_data.get('payment_intent_id'))})")
-        logger.debug(f"  - client_secret 存在: {bool(response_data.get('client_secret'))}, 类型: {type(response_data.get('client_secret'))}, 长度: {len(response_data.get('client_secret')) if response_data.get('client_secret') else 0}")
-        logger.debug(f"  - amount: {response_data.get('amount')} (类型: {type(response_data.get('amount'))})")
-        logger.debug(f"  - amount_display: {response_data.get('amount_display')} (类型: {type(response_data.get('amount_display'))})")
-        logger.debug(f"  - currency: {response_data.get('currency')} (类型: {type(response_data.get('currency'))})")
         
         return response_data
     
@@ -1941,7 +2046,7 @@ async def start_application_chat(
 ):
     """
     开始与申请者的聊天（单人任务专用）
-    发布者点击"聊一聊"后，将申请状态改为 chatting，任务状态改为 chatting，
+    发布者点击"聊一聊"后，将申请状态改为 chatting（任务保持 open），
     并创建系统消息通知申请者。
     """
     try:
@@ -1972,7 +2077,7 @@ async def start_application_chat(
                 detail="多人任务不支持此操作，请使用原有流程"
             )
 
-        # 检查任务状态
+        # 检查任务状态：open 或 chatting（chatting 兼容旧数据）
         if task.status not in ("open", "chatting"):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -2019,13 +2124,7 @@ async def start_application_chat(
             .values(status="chatting")
         )
 
-        # 如果任务状态为 open，更新为 chatting
-        if task.status == "open":
-            await db.execute(
-                update(models.Task)
-                .where(models.Task.id == task_id)
-                .values(status="chatting")
-            )
+        # 任务保持 open 状态，不改变（允许其他人继续申请和发布者同时聊多个申请人）
 
         # 创建系统消息通知申请者
         current_time = get_utc_time()
@@ -2409,11 +2508,11 @@ async def confirm_and_pay(
                 detail="只有发布者可以确认并支付"
             )
 
-        # 检查任务状态：必须是 chatting
-        if locked_task.status != "chatting":
+        # 检查任务状态：open 或 chatting 均可（chatting 兼容旧数据）
+        if locked_task.status not in ("open", "chatting"):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"任务当前状态为 {locked_task.status}，只有 chatting 状态才能确认支付"
+                detail=f"任务当前状态为 {locked_task.status}，无法确认支付"
             )
 
         # 检查任务是否已支付（防止重复支付）
@@ -2666,16 +2765,7 @@ async def reject_application(
         # Flush so the status change is visible in the count query
         await db.flush()
 
-        # Check if any chatting or pending applications remain; revert task to open if none
-        remaining_count = await db.execute(
-            select(func.count()).select_from(models.TaskApplication).where(
-                models.TaskApplication.task_id == task_id,
-                models.TaskApplication.status.in_(["chatting", "pending"])
-            )
-        )
-        remaining = remaining_count.scalar()
-        if remaining == 0 and task.status == "chatting":
-            task.status = "open"
+        # 任务保持 open 状态，无需回退
 
         await db.commit()
 
@@ -2812,16 +2902,7 @@ async def withdraw_application(
         # Flush so the status change is visible in the count query
         await db.flush()
 
-        # Check if any chatting or pending applications remain; revert task to open if none
-        remaining_count = await db.execute(
-            select(func.count()).select_from(models.TaskApplication).where(
-                models.TaskApplication.task_id == task_id,
-                models.TaskApplication.status.in_(["chatting", "pending"])
-            )
-        )
-        remaining = remaining_count.scalar()
-        if remaining == 0 and task.status == "chatting":
-            task.status = "open"
+        # 任务保持 open 状态，无需回退
 
         await db.commit()
 

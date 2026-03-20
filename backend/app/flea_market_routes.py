@@ -2723,6 +2723,7 @@ async def get_purchase_requests(
                 "item_id": format_flea_market_id(req.item_id),
                 "buyer_id": req.buyer_id,
                 "buyer_name": buyer.name if buyer else f"用户{req.buyer_id}",
+                "buyer_avatar": buyer.avatar if buyer else None,
                 "proposed_price": float(req.proposed_price) if req.proposed_price else None,
                 "seller_counter_price": float(req.seller_counter_price) if req.seller_counter_price else None,
                 "message": req.message,

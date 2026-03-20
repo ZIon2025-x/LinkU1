@@ -291,6 +291,7 @@ class _NotificationListViewContentState
         if (nId != null) context.safePush('/tasks/$nId', extra: notification.id);
         break;
       // 申请状态类：related_id 是 application_id，必须用 taskId 跳任务详情
+      case 'application_chat_started':
       case 'application_accepted':
       case 'application_rejected':
       case 'application_withdrawn':
