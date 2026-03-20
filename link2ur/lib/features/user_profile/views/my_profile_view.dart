@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/error_localizer.dart';
 import '../../../data/models/user_profile.dart';
 import '../../../data/repositories/user_profile_repository.dart';
 import '../bloc/user_profile_bloc.dart';
@@ -63,7 +64,7 @@ class _MyProfileContentState extends State<_MyProfileContent> {
                   const Icon(Icons.error_outline, size: 48, color: AppColors.error),
                   AppSpacing.vMd,
                   Text(
-                    state.errorMessage ?? '加载失败',
+                    context.localizeError(state.errorMessage),
                     style: const TextStyle(color: AppColors.textSecondary),
                     textAlign: TextAlign.center,
                   ),
@@ -449,12 +450,10 @@ class _DemandCard extends StatelessWidget {
     switch (stage) {
       case 'new_arrival':
         return '初来乍到';
-      case 'settling_in':
+      case 'settling':
         return '安顿中';
-      case 'campus_active':
-        return '校园活跃';
-      case 'skill_building':
-        return '技能成长';
+      case 'established':
+        return '融入校园';
       case 'experienced':
         return '经验丰富';
       default:
@@ -466,12 +465,10 @@ class _DemandCard extends StatelessWidget {
     switch (stage) {
       case 'new_arrival':
         return AppColors.accent;
-      case 'settling_in':
+      case 'settling':
         return AppColors.primary;
-      case 'campus_active':
+      case 'established':
         return AppColors.success;
-      case 'skill_building':
-        return AppColors.purple;
       case 'experienced':
         return AppColors.gold;
       default:

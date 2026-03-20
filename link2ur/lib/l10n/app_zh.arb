@@ -4671,5 +4671,8 @@
   "proficiencyBeginner": "入门",
   "proficiencyIntermediate": "熟练",
   "proficiencyExpert": "精通",
-  "youMightNeed": "你可能需要"
+  "youMightNeed": "你可能需要",
+  "userProfileLoadFailed": "加载画像失败，请重试",
+  "userProfileUpdateFailed": "更新画像失败，请重试",
+  "userProfileDeleteFailed": "删除失败，请重试"
 }

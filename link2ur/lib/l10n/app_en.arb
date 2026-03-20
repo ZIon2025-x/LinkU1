@@ -4763,5 +4763,8 @@
   "proficiencyBeginner": "Beginner",
   "proficiencyIntermediate": "Intermediate",
   "proficiencyExpert": "Expert",
-  "youMightNeed": "You might need"
+  "youMightNeed": "You might need",
+  "userProfileLoadFailed": "Failed to load profile, please try again",
+  "userProfileUpdateFailed": "Failed to update profile, please try again",
+  "userProfileDeleteFailed": "Failed to delete, please try again"
 }

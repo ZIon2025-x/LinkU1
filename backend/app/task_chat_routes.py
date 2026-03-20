@@ -64,6 +64,37 @@ async def get_current_user_secure_async_csrf(
     )
 
 
+async def _create_customer_and_ephemeral_key(stripe_module, user_obj, db_session):
+    """
+    为支付方创建/获取 Stripe Customer，并生成 Ephemeral Key（用于客户端保存/复用支付方式）。
+    优先使用数据库缓存的 stripe_customer_id，避免 Stripe Search API 索引延迟导致重复创建。
+    失败时返回 (None, None)，不阻塞支付流程。
+    """
+    customer_id = None
+    ephemeral_key_secret = None
+    try:
+        from app.utils.stripe_utils import get_or_create_stripe_customer
+        customer_id = get_or_create_stripe_customer(user_obj)
+        if customer_id and user_obj and (not user_obj.stripe_customer_id or user_obj.stripe_customer_id != customer_id):
+            await db_session.execute(
+                update(models.User)
+                .where(models.User.id == user_obj.id)
+                .values(stripe_customer_id=customer_id)
+            )
+
+        ephemeral_key = stripe_module.EphemeralKey.create(
+            customer=customer_id,
+            stripe_version="2025-01-27.acacia",
+        )
+        ephemeral_key_secret = ephemeral_key.secret
+    except Exception as e:
+        logger.warning(f"无法创建 Stripe Customer 或 Ephemeral Key: {e}")
+        customer_id = None
+        ephemeral_key_secret = None
+
+    return customer_id, ephemeral_key_secret
+
+
 def _build_participants(
     task, task_participants_dict: dict, users_dict: dict, current_user_id: str
 ) -> list:
@@ -1553,37 +1584,6 @@ async def accept_application(
     使用事务锁防止并发，支持幂等性
     """
     try:
-        async def _create_customer_and_ephemeral_key(stripe_module, user_obj, db_session):
-            """
-            为支付方创建/获取 Stripe Customer，并生成 Ephemeral Key（用于客户端保存/复用支付方式）。
-            优先使用数据库缓存的 stripe_customer_id，避免 Stripe Search API 索引延迟导致重复创建。
-            失败时返回 (None, None)，不阻塞支付流程。
-            """
-            customer_id = None
-            ephemeral_key_secret = None
-            try:
-                from app.utils.stripe_utils import get_or_create_stripe_customer
-                customer_id = get_or_create_stripe_customer(user_obj)
-                # 保存 customer_id 到用户记录
-                if customer_id and user_obj and (not user_obj.stripe_customer_id or user_obj.stripe_customer_id != customer_id):
-                    await db_session.execute(
-                        update(models.User)
-                        .where(models.User.id == user_obj.id)
-                        .values(stripe_customer_id=customer_id)
-                    )
-
-                ephemeral_key = stripe_module.EphemeralKey.create(
-                    customer=customer_id,
-                    stripe_version="2025-01-27.acacia",
-                )
-                ephemeral_key_secret = ephemeral_key.secret
-            except Exception as e:
-                logger.warning(f"无法创建 Stripe Customer 或 Ephemeral Key: {e}")
-                customer_id = None
-                ephemeral_key_secret = None
-
-            return customer_id, ephemeral_key_secret
-
         # 补差价变量（在 is_paid==1 且 new_price > original_paid 时设置）
         top_up_pence = 0
         top_up_original_paid = 0.0
@@ -2460,34 +2460,6 @@ async def confirm_and_pay(
     使用 negotiated_price（如果有）或 task.reward 作为最终价格。
     """
     try:
-        async def _create_customer_and_ephemeral_key(stripe_module, user_obj, db_session):
-            """
-            为支付方创建/获取 Stripe Customer，并生成 Ephemeral Key。
-            """
-            customer_id = None
-            ephemeral_key_secret = None
-            try:
-                from app.utils.stripe_utils import get_or_create_stripe_customer
-                customer_id = get_or_create_stripe_customer(user_obj)
-                if customer_id and user_obj and (not user_obj.stripe_customer_id or user_obj.stripe_customer_id != customer_id):
-                    await db_session.execute(
-                        update(models.User)
-                        .where(models.User.id == user_obj.id)
-                        .values(stripe_customer_id=customer_id)
-                    )
-
-                ephemeral_key = stripe_module.EphemeralKey.create(
-                    customer=customer_id,
-                    stripe_version="2025-01-27.acacia",
-                )
-                ephemeral_key_secret = ephemeral_key.secret
-            except Exception as e:
-                logger.warning(f"无法创建 Stripe Customer 或 Ephemeral Key: {e}")
-                customer_id = None
-                ephemeral_key_secret = None
-
-            return customer_id, ephemeral_key_secret
-
         # 使用 SELECT FOR UPDATE 锁定任务行（防止并发）
         locked_task_query = select(models.Task).where(
             models.Task.id == task_id

@@ -3568,13 +3568,13 @@ class UserReliability(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True)
-    response_speed_avg = Column(Float, default=0.0)
-    completion_rate = Column(Float, default=0.0)
-    on_time_rate = Column(Float, default=0.0)
-    complaint_rate = Column(Float, default=0.0)
-    communication_score = Column(Float, default=0.0)
-    repeat_rate = Column(Float, default=0.0)
-    cancellation_rate = Column(Float, default=0.0)
+    response_speed_avg = Column(Float, default=0.0, server_default="0.0")
+    completion_rate = Column(Float, default=0.0, server_default="0.0")
+    on_time_rate = Column(Float, default=0.0, server_default="0.0")
+    complaint_rate = Column(Float, default=0.0, server_default="0.0")
+    communication_score = Column(Float, default=0.0, server_default="0.0")
+    repeat_rate = Column(Float, default=0.0, server_default="0.0")
+    cancellation_rate = Column(Float, default=0.0, server_default="0.0")
     reliability_score = Column(Float, nullable=True)  # null when total_tasks_taken < 3
     total_tasks_taken = Column(Integer, default=0)
     last_calculated_at = Column(DateTime(timezone=True), default=get_utc_time)
@@ -3583,7 +3583,7 @@ class UserReliability(Base):
 
     __table_args__ = (
         Index("ix_user_reliability_user_id", "user_id"),
-        Index("ix_user_reliability_reliability_score", "reliability_score"),
+        Index("ix_user_reliability_score", "reliability_score"),
     )
 
 

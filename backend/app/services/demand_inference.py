@@ -85,6 +85,8 @@ def batch_infer_demands(db: Session, limit: int = 500):
         try:
             demand = infer_demand(db, user_id)
             results.append(demand)
-        except Exception:
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Failed to infer demand for user {user_id}: {e}")
             continue
     return results

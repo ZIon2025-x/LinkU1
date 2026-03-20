@@ -19117,6 +19117,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'You might need'**
   String get youMightNeed;
+
+  /// No description provided for @userProfileLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load profile, please try again'**
+  String get userProfileLoadFailed;
+
+  /// No description provided for @userProfileUpdateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to update profile, please try again'**
+  String get userProfileUpdateFailed;
+
+  /// No description provided for @userProfileDeleteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to delete, please try again'**
+  String get userProfileDeleteFailed;
 }
 
 class _AppLocalizationsDelegate

@@ -153,7 +153,7 @@ class UserReliability extends Equatable {
 
   @override
   List<Object?> get props => [responseSpeedAvg, completionRate, onTimeRate, complaintRate,
-    communicationScore, repeatRate, cancellationRate, reliabilityScore, totalTasksTaken];
+    communicationScore, repeatRate, cancellationRate, reliabilityScore, totalTasksTaken, insufficientData];
 }
 
 /// 需求画像

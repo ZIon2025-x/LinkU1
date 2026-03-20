@@ -9,14 +9,14 @@ MINIMUM_TASKS_THRESHOLD = 3
 
 def calculate_reliability_score(reliability: UserReliability) -> float | None:
     """Calculate composite reliability score (0-100). Returns None if insufficient data."""
-    if reliability.total_tasks_taken < MINIMUM_TASKS_THRESHOLD:
+    if (reliability.total_tasks_taken or 0) < MINIMUM_TASKS_THRESHOLD:
         return None
     return (
-        reliability.completion_rate * 30 +
-        reliability.on_time_rate * 25 +
-        (1 - reliability.cancellation_rate) * 20 +
-        (reliability.communication_score / 5.0) * 15 +
-        (1 - reliability.complaint_rate) * 10
+        (reliability.completion_rate or 0) * 30 +
+        (reliability.on_time_rate or 0) * 25 +
+        (1 - (reliability.cancellation_rate or 0)) * 20 +
+        ((reliability.communication_score or 0) / 5.0) * 15 +
+        (1 - (reliability.complaint_rate or 0)) * 10
     )
 
 
@@ -142,5 +142,14 @@ def recalculate_all_reliability(db: Session, limit: int = 500):
         reliability.completion_rate = completed / total
         reliability.cancellation_rate = cancelled / total
         reliability.on_time_rate = on_time / max(completed, 1)
+        # Ensure fields that might be NULL (from migration) have a valid value
+        if reliability.complaint_rate is None:
+            reliability.complaint_rate = 0.0
+        if reliability.communication_score is None:
+            reliability.communication_score = 0.0
+        if reliability.repeat_rate is None:
+            reliability.repeat_rate = 0.0
+        if reliability.response_speed_avg is None:
+            reliability.response_speed_avg = 0.0
         reliability.reliability_score = calculate_reliability_score(reliability)
         reliability.last_calculated_at = datetime.now(timezone.utc)

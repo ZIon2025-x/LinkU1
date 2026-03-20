@@ -9970,6 +9970,15 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get youMightNeed => '你可能需要';
+
+  @override
+  String get userProfileLoadFailed => '加载画像失败，请重试';
+
+  @override
+  String get userProfileUpdateFailed => '更新画像失败，请重试';
+
+  @override
+  String get userProfileDeleteFailed => '删除失败，请重试';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -19894,4 +19903,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get youMightNeed => '你可能需要';
+
+  @override
+  String get userProfileLoadFailed => '載入畫像失敗，請重試';
+
+  @override
+  String get userProfileUpdateFailed => '更新畫像失敗，請重試';
+
+  @override
+  String get userProfileDeleteFailed => '刪除失敗，請重試';
 }

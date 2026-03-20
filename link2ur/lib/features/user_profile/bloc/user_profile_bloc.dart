@@ -41,7 +41,7 @@ class UserProfileBloc extends Bloc<UserProfileEvent, UserProfileState> {
       final summary = await repository.getSummary();
       emit(state.copyWith(status: UserProfileStatus.loaded, summary: summary));
     } on UserProfileException catch (_) {
-      emit(state.copyWith(status: UserProfileStatus.error, errorMessage: 'user_profile_load_failed'));
+      emit(state.copyWith(status: UserProfileStatus.error, errorMessage: 'user_profile_update_failed'));
     } catch (e) {
       emit(state.copyWith(status: UserProfileStatus.error, errorMessage: e.toString()));
     }
@@ -57,7 +57,7 @@ class UserProfileBloc extends Bloc<UserProfileEvent, UserProfileState> {
       final summary = await repository.getSummary();
       emit(state.copyWith(status: UserProfileStatus.loaded, summary: summary));
     } on UserProfileException catch (_) {
-      emit(state.copyWith(status: UserProfileStatus.error, errorMessage: 'user_profile_load_failed'));
+      emit(state.copyWith(status: UserProfileStatus.error, errorMessage: 'user_profile_delete_failed'));
     } catch (e) {
       emit(state.copyWith(status: UserProfileStatus.error, errorMessage: e.toString()));
     }
@@ -73,7 +73,7 @@ class UserProfileBloc extends Bloc<UserProfileEvent, UserProfileState> {
       final summary = await repository.getSummary();
       emit(state.copyWith(status: UserProfileStatus.loaded, summary: summary));
     } on UserProfileException catch (_) {
-      emit(state.copyWith(status: UserProfileStatus.error, errorMessage: 'user_profile_load_failed'));
+      emit(state.copyWith(status: UserProfileStatus.error, errorMessage: 'user_profile_update_failed'));
     } catch (e) {
       emit(state.copyWith(status: UserProfileStatus.error, errorMessage: e.toString()));
     }

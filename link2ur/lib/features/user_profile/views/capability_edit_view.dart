@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/error_localizer.dart';
 import '../bloc/user_profile_bloc.dart';
 
 class CapabilityEditView extends StatelessWidget {
@@ -81,7 +82,7 @@ class _CapabilityEditContentState extends State<_CapabilityEditContent> {
           if (state.status == UserProfileStatus.error) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(state.errorMessage ?? '操作失败，请重试'),
+                content: Text(context.localizeError(state.errorMessage)),
                 backgroundColor: AppColors.error,
               ),
             );

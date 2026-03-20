@@ -319,6 +319,12 @@ class ErrorLocalizer {
         return context.l10n.expertScheduleClosedRemoved;
       case 'expertProfileUpdateSubmitted':
         return context.l10n.expertProfileEditSubmitted;
+      case 'user_profile_load_failed':
+        return context.l10n.userProfileLoadFailed;
+      case 'user_profile_update_failed':
+        return context.l10n.userProfileUpdateFailed;
+      case 'user_profile_delete_failed':
+        return context.l10n.userProfileDeleteFailed;
       default:
         // 服务端返回的已翻译消息，直接使用
         return errorMessage;

@@ -4,20 +4,23 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/error_localizer.dart';
 import '../../../data/models/user_profile.dart';
 import '../bloc/user_profile_bloc.dart';
 
 class PreferenceEditView extends StatelessWidget {
   const PreferenceEditView({
     super.key,
-    required this.currentPreference,
+    this.currentPreference,
   });
 
-  final UserProfilePreference currentPreference;
+  final UserProfilePreference? currentPreference;
 
   @override
   Widget build(BuildContext context) {
-    return _PreferenceEditContent(currentPreference: currentPreference);
+    return _PreferenceEditContent(
+      currentPreference: currentPreference ?? const UserProfilePreference(),
+    );
   }
 }
 
@@ -114,7 +117,7 @@ class _PreferenceEditContentState extends State<_PreferenceEditContent> {
           } else if (state.status == UserProfileStatus.error) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(state.errorMessage ?? '保存失败，请重试'),
+                content: Text(context.localizeError(state.errorMessage)),
                 backgroundColor: AppColors.error,
               ),
             );

@@ -10385,4 +10385,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get youMightNeed => 'You might need';
+
+  @override
+  String get userProfileLoadFailed =>
+      'Failed to load profile, please try again';
+
+  @override
+  String get userProfileUpdateFailed =>
+      'Failed to update profile, please try again';
+
+  @override
+  String get userProfileDeleteFailed => 'Failed to delete, please try again';
 }
