@@ -9,20 +9,23 @@
 ```
 用户打开 App
   → 检查"附近任务提醒"开关是否开启
-  → 检查距上次上传是否 ≥ 6 小时
+  → 检查距上次上传是否 ≥ 6 小时（客户端冷却）
   → 获取 GPS 坐标
   → POST /api/profile/location {latitude, longitude}
   → 后端存储位置
+  → 后端检查推送冷却（≥ 6 小时）
   → 后端查 1km 内最新未推送任务
   → 推送一条通知
   → 用户点击通知 → 跳转任务详情
 ```
 
+**双重冷却机制**：客户端和后端各自检查 6 小时冷却。客户端检查避免无意义 API 调用；后端检查是权威校验，防止客户端绕过。两者独立计时，可能有微小偏差，但行为一致：确保同一用户不会在 6 小时内收到多条附近任务推送。
+
 ## 数据模型
 
 ### 新增表：user_locations
 
-存储用户最近一次上报的位置。
+存储用户最近一次上报的位置。独立建表（不合并到 user_profile_preferences），因为位置数据可复用于未来的附近推荐、地图展示等功能。
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
@@ -34,7 +37,6 @@
 
 索引：
 - `UNIQUE (user_id)`
-- `GIST (point(longitude, latitude))` — 空间查询
 
 ### 新增表：nearby_task_pushes
 
@@ -55,11 +57,17 @@
 
 ### 修改表：user_profile_preferences
 
-新增字段：
+新增字段（需新 migration + 更新 SQLAlchemy model）：
 
 | 字段 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
 | nearby_push_enabled | BOOLEAN | FALSE | 附近任务提醒开关 |
+
+### 修改涉及的现有代码
+
+- `backend/app/models.py`：`UserProfilePreference` 模型新增 `nearby_push_enabled` 列
+- `backend/app/routes/user_profile.py`：`PreferenceUpdate` schema 新增该字段；GET/PUT/summary 响应包含该字段
+- Flutter `UserProfilePreference` model：新增 `nearbyPushEnabled` 字段
 
 ## 后端 API
 
@@ -75,65 +83,63 @@
 }
 ```
 
+**输入验证**：
+- 使用已有的 `validate_coordinates()` 函数校验范围（latitude -90~90，longitude -180~180）
+- 无效坐标返回 422
+
+**限流**：复用已有的 `rate_limiting.py`，限制每用户 5 分钟 1 次。
+
 **处理逻辑**：
 1. 验证用户已认证
-2. Upsert `user_locations` 记录
-3. 检查 `nearby_push_enabled` 是否开启，未开启则直接返回
-4. 检查冷却时间：查 `nearby_task_pushes` 该用户最近一条记录，如果 `pushed_at` 距现在 < 6 小时，跳过
-5. 查询 1km 内符合条件的最新任务（见下方查询逻辑）
-6. 如果找到，异步推送 + 写入 `nearby_task_pushes`
-7. 返回 `{"message": "ok"}`
+2. 验证坐标合法性
+3. Upsert `user_locations` 记录
+4. 检查 `nearby_push_enabled` 是否开启，未开启则直接返回
+5. 检查冷却时间：查 `nearby_task_pushes` 该用户最近一条记录，如果 `pushed_at` 距现在 < 6 小时，跳过
+6. 查询 1km 内符合条件的最新任务（见下方查询逻辑）
+7. 如果找到，异步推送 + 写入 `nearby_task_pushes`
+8. 返回 `{"message": "ok"}`
 
 **响应**：始终返回 200，推送是异步的，不影响 App 启动速度。
 
 ### 附近任务查询逻辑
 
-使用 Haversine 公式 + 已有的 GiST 索引：
+**策略**：使用 Python Haversine 计算距离。先用 SQL 矩形边界框粗筛（利用 B-tree 索引），再在 Python 中精确计算。
+
+复用已有的 `backend/app/utils/location_utils.py` 中的距离计算函数（返回 km），避免重复实现。
+
+**SQL 粗筛**（矩形边界框，约 ±0.009 纬度 ≈ 1km）：
 
 ```sql
-SELECT t.id, t.title_zh, t.title_en, t.location,
-       earth_distance(
-         ll_to_earth(user_lat, user_lon),
-         ll_to_earth(t.latitude, t.longitude)
-       ) AS distance_m
+SELECT t.id, t.title_zh, t.title_en, t.location, t.latitude, t.longitude, t.created_at
 FROM tasks t
 WHERE t.latitude IS NOT NULL
   AND t.longitude IS NOT NULL
   AND t.status = 'open'
+  AND t.created_at >= NOW() - INTERVAL '7 days'
   AND t.poster_id != :user_id
-  AND t.id NOT IN (
-    SELECT task_id FROM nearby_task_pushes WHERE user_id = :user_id
+  AND t.latitude BETWEEN :lat - 0.009 AND :lat + 0.009
+  AND t.longitude BETWEEN :lon - 0.013 AND :lon + 0.013
+  AND NOT EXISTS (
+    SELECT 1 FROM nearby_task_pushes ntp
+    WHERE ntp.task_id = t.id AND ntp.user_id = :user_id
   )
-  AND t.id NOT IN (
-    SELECT task_id FROM task_applications WHERE applicant_id = :user_id
+  AND NOT EXISTS (
+    SELECT 1 FROM task_applications ta
+    WHERE ta.task_id = t.id AND ta.applicant_id = :user_id
   )
-  AND earth_distance(
-    ll_to_earth(:user_lat, :user_lon),
-    ll_to_earth(t.latitude, t.longitude)
-  ) <= 1000
 ORDER BY t.created_at DESC
-LIMIT 1
+LIMIT 10
 ```
 
-**注意**：如果 PostgreSQL 没有 `earthdistance` 扩展，使用 Haversine 公式的 Python 实现作为 fallback：
-
-```python
-from math import radians, sin, cos, sqrt, atan2
-
-def haversine_m(lat1, lon1, lat2, lon2):
-    R = 6371000  # 地球半径（米）
-    dlat = radians(lat2 - lat1)
-    dlon = radians(lon2 - lon1)
-    a = sin(dlat/2)**2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon/2)**2
-    return R * 2 * atan2(sqrt(a), sqrt(1-a))
-```
+**Python 精筛**：对粗筛结果逐条计算 Haversine 距离，取 ≤ 1km 中最新的一条。
 
 **过滤规则汇总**：
 - 排除用户自己发布的任务
-- 排除用户已申请过的任务
-- 排除已完成/已取消/已过期的（只要 status='open'）
+- 排除用户已申请过的任务（`NOT EXISTS`）
+- 排除已完成/已取消/已过期的（只要 `status='open'`）
+- 排除 7 天前的旧任务（保证推送内容新鲜）
 - 排除无坐标的任务（线上任务）
-- 排除已推送过的任务（nearby_task_pushes）
+- 排除已推送过的任务（`NOT EXISTS nearby_task_pushes`）
 - 1km 半径内
 - 按发布时间降序，取最新一条
 
@@ -141,7 +147,9 @@ def haversine_m(lat1, lon1, lat2, lon2):
 
 ### 新增通知类型：nearby_task
 
-**模板**：
+在已有的 `push_notification_templates.py` 中注册 `nearby_task` 模板，复用现有模板系统：
+
+**模板变量**：`task_title`（自动根据 device_language 选择 title_zh / title_en）
 
 | 语言 | 标题 | 内容 |
 |------|------|------|
@@ -152,15 +160,11 @@ def haversine_m(lat1, lon1, lat2, lon2):
 ```json
 {
   "type": "nearby_task",
-  "task_id": "123",
-  "localized": {
-    "zh": {"title": "附近有新任务", "body": "帮我搬家，就在你附近"},
-    "en": {"title": "New task nearby", "body": "Help me move, near you"}
-  }
+  "task_id": "123"
 }
 ```
 
-**点击行为**：跳转到 `/tasks/{task_id}` 任务详情页。
+**点击行为**：跳转到 `/tasks/{task_id}` 任务详情页。如果任务已被接/取消/完成，用户会看到当前状态，无需额外处理。
 
 ## Flutter 端
 
@@ -171,10 +175,12 @@ def haversine_m(lat1, lon1, lat2, lon2):
 - 开启时请求定位权限（"使用 App 时允许"即可，不需要"始终允许"）
 - 如果用户拒绝定位权限，开关自动关闭并提示
 - 开关状态通过 `PUT /api/profile/preferences` 同步到后端 `nearby_push_enabled`
+- Flutter `UserProfilePreference` model 和 `PreferenceEditView` 需要新增该字段
+- 本地也缓存开关状态到 `StorageService`，App 启动时读取无需额外 API 调用
 
 ### App 启动位置上传
 
-在 `app.dart` 的初始化流程中（用户已认证后）：
+在 `app.dart` 的初始化流程中（用户已认证后），异步执行：
 
 ```
 if (已登录 && nearby_push_enabled) {
@@ -204,7 +210,7 @@ case 'nearby_task':
 ## 数据清理
 
 `nearby_task_pushes` 表会持续增长。添加定时清理任务：
-- 每天凌晨清理 30 天前的记录
+- 每天凌晨清理 30 天前的记录（基于 `pushed_at` 字段）
 - 注册到 Celery beat + TaskScheduler（双调度器模式，与子项目 1 一致）
 
 ## 不做的事
