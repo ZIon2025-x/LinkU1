@@ -207,7 +207,19 @@ class _ForumViewState extends State<ForumView> {
       decoration: const BoxDecoration(color: Colors.transparent),
       child: Row(
         children: [
-          const SizedBox(width: 44),
+          if (!widget.showLeaderboardTab)
+            IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+              onPressed: () {
+                if (Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                } else {
+                  context.go('/');
+                }
+              },
+            )
+          else
+            const SizedBox(width: 44),
           const Spacer(),
           if (widget.showLeaderboardTab)
             Row(

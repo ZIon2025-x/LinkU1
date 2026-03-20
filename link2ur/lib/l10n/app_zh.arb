@@ -2286,6 +2286,7 @@
   "paymentRefreshAccountInfo": "刷新账户信息",
   "paymentSelectCountryTitle": "选择您的国家",
   "paymentSelectCountryHint": "选择您接收付款的国家。这将决定您账户的货币和合规要求。",
+  "paymentCurrencyConversionWarning": "本平台交易以英镑 (GBP) 结算。如果您的账户使用其他货币，Stripe 会在提现时自动转换，转换费约为 1%。",
   "paymentTransactionDetails": "交易详情",
   "paymentComplete": "完成",
   "paymentCountdownExpired": "已过期",

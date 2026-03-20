@@ -5481,6 +5481,12 @@ abstract class AppLocalizations {
   /// **'Choose the country where you will receive payments. This determines your account\'s currency and compliance requirements.'**
   String get paymentSelectCountryHint;
 
+  /// No description provided for @paymentCurrencyConversionWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Payments on this platform are in GBP. If your account uses a different currency, Stripe will automatically convert at withdrawal, with a conversion fee of approximately 1%.'**
+  String get paymentCurrencyConversionWarning;
+
   /// No description provided for @paymentComplete.
   ///
   /// In en, this message translates to:

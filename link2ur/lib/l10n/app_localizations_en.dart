@@ -2959,6 +2959,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Choose the country where you will receive payments. This determines your account\'s currency and compliance requirements.';
 
   @override
+  String get paymentCurrencyConversionWarning =>
+      'Payments on this platform are in GBP. If your account uses a different currency, Stripe will automatically convert at withdrawal, with a conversion fee of approximately 1%.';
+
+  @override
   String get paymentComplete => 'Complete';
 
   @override

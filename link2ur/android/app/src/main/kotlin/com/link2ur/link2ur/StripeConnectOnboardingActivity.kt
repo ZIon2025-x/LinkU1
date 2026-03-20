@@ -1,8 +1,18 @@
 package com.link2ur.link2ur
 
 import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
+import android.util.TypedValue
+import android.view.Gravity
+import android.widget.FrameLayout
+import android.widget.ImageButton
+import android.widget.LinearLayout
+import android.widget.TextView
+import androidx.activity.addCallback
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -37,6 +47,12 @@ class StripeConnectOnboardingActivity : FragmentActivity() {
 
         // 必须在 onCreate 中调用，用于 Stripe SDK 生命周期管理
         EmbeddedComponentManager.onActivityCreate(this)
+
+        // 系统返回键处理
+        onBackPressedDispatcher.addCallback(this) {
+            setResult(RESULT_CANCELED)
+            finish()
+        }
 
         val publishableKey = intent.getStringExtra("publishableKey")
         val clientSecret = intent.getStringExtra("clientSecret")
@@ -98,6 +114,9 @@ class StripeConnectOnboardingActivity : FragmentActivity() {
             // 展示入驻 UI
             accountOnboardingController!!.show()
 
+            // 在 Stripe 内容上方叠加关闭按钮栏
+            addCloseBar()
+
         } catch (e: Exception) {
             Log.e(TAG, "Onboarding: initialization error - ${e.message}", e)
             val resultIntent = Intent().apply {
@@ -106,6 +125,77 @@ class StripeConnectOnboardingActivity : FragmentActivity() {
             setResult(RESULT_CANCELED, resultIntent)
             finish()
         }
+    }
+
+    /**
+     * 在页面顶部叠加一个半透明关闭按钮栏，
+     * 使用 addContentView 覆盖在 Stripe 嵌入式组件之上。
+     */
+    private fun addCloseBar() {
+        val dp = { value: Int ->
+            TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_DIP,
+                value.toFloat(),
+                resources.displayMetrics
+            ).toInt()
+        }
+
+        // 顶部栏容器
+        val topBar = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setBackgroundColor(Color.WHITE)
+            elevation = 4f
+            setPadding(dp(4), 0, dp(16), 0)
+        }
+
+        // 关闭按钮（←）
+        val closeButton = ImageButton(this).apply {
+            setImageResource(android.R.drawable.ic_menu_close_clear_cancel)
+            setBackgroundResource(android.R.attr.selectableItemBackgroundBorderless.let { attr ->
+                val outValue = TypedValue()
+                theme.resolveAttribute(attr, outValue, true)
+                outValue.resourceId
+            })
+            contentDescription = "Close"
+            val pad = dp(12)
+            setPadding(pad, pad, pad, pad)
+            setOnClickListener {
+                setResult(RESULT_CANCELED)
+                finish()
+            }
+        }
+        topBar.addView(closeButton, LinearLayout.LayoutParams(dp(48), dp(48)))
+
+        // 标题
+        val title = TextView(this).apply {
+            text = "Stripe Connect"
+            setTextColor(Color.BLACK)
+            textSize = 18f
+            setPadding(dp(8), 0, 0, 0)
+        }
+        topBar.addView(title, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+
+        // 用 FrameLayout 包裹，处理状态栏 insets
+        val wrapper = FrameLayout(this)
+        wrapper.addView(topBar, FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.WRAP_CONTENT
+        ).apply {
+            gravity = Gravity.TOP
+        })
+
+        // 处理状态栏高度，避免被遮挡
+        ViewCompat.setOnApplyWindowInsetsListener(wrapper) { v, insets ->
+            val statusBarHeight = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
+            topBar.setPadding(topBar.paddingLeft, statusBarHeight, topBar.paddingRight, 0)
+            insets
+        }
+
+        addContentView(wrapper, FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.WRAP_CONTENT
+        ))
     }
 }
 

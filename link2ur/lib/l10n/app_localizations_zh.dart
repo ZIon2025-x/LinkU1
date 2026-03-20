@@ -2828,6 +2828,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get paymentSelectCountryHint => '选择您接收付款的国家。这将决定您账户的货币和合规要求。';
 
   @override
+  String get paymentCurrencyConversionWarning =>
+      '本平台交易以英镑 (GBP) 结算。如果您的账户使用其他货币，Stripe 会在提现时自动转换，转换费约为 1%。';
+
+  @override
   String get paymentComplete => '完成';
 
   @override
@@ -12809,6 +12813,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get paymentSelectCountryHint => '選擇您接收付款的國家。這將決定您賬戶的貨幣和合規要求。';
+
+  @override
+  String get paymentCurrencyConversionWarning =>
+      '本平台交易以英鎊 (GBP) 結算。如果您的賬戶使用其他貨幣，Stripe 會在提現時自動轉換，轉換費約為 1%。';
 
   @override
   String get paymentComplete => '完成';
