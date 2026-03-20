@@ -19003,6 +19003,120 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Not applicable to this task'**
   String get couponNotApplicable;
+
+  /// No description provided for @myProfileTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'My Profile'**
+  String get myProfileTitle;
+
+  /// No description provided for @capabilityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Skills'**
+  String get capabilityTitle;
+
+  /// No description provided for @preferenceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferences'**
+  String get preferenceTitle;
+
+  /// No description provided for @reliabilityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reliability'**
+  String get reliabilityTitle;
+
+  /// No description provided for @demandTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Predicted Needs'**
+  String get demandTitle;
+
+  /// No description provided for @insufficientData.
+  ///
+  /// In en, this message translates to:
+  /// **'Insufficient data'**
+  String get insufficientData;
+
+  /// No description provided for @manageSkills.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage Skills'**
+  String get manageSkills;
+
+  /// No description provided for @preferenceSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Preference Settings'**
+  String get preferenceSettings;
+
+  /// No description provided for @profileSetupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Set Up Profile'**
+  String get profileSetupTitle;
+
+  /// No description provided for @profileSetupSkillQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'What are you good at?'**
+  String get profileSetupSkillQuestion;
+
+  /// No description provided for @profileSetupModeQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'What do you prefer?'**
+  String get profileSetupModeQuestion;
+
+  /// No description provided for @modeOnline.
+  ///
+  /// In en, this message translates to:
+  /// **'Online'**
+  String get modeOnline;
+
+  /// No description provided for @modeOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline'**
+  String get modeOffline;
+
+  /// No description provided for @modeBoth.
+  ///
+  /// In en, this message translates to:
+  /// **'Both'**
+  String get modeBoth;
+
+  /// No description provided for @skip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get skip;
+
+  /// No description provided for @proficiencyBeginner.
+  ///
+  /// In en, this message translates to:
+  /// **'Beginner'**
+  String get proficiencyBeginner;
+
+  /// No description provided for @proficiencyIntermediate.
+  ///
+  /// In en, this message translates to:
+  /// **'Intermediate'**
+  String get proficiencyIntermediate;
+
+  /// No description provided for @proficiencyExpert.
+  ///
+  /// In en, this message translates to:
+  /// **'Expert'**
+  String get proficiencyExpert;
+
+  /// No description provided for @youMightNeed.
+  ///
+  /// In en, this message translates to:
+  /// **'You might need'**
+  String get youMightNeed;
 }
 
 class _AppLocalizationsDelegate

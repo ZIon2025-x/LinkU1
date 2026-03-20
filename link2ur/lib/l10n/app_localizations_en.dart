@@ -10328,4 +10328,61 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get couponNotApplicable => 'Not applicable to this task';
+
+  @override
+  String get myProfileTitle => 'My Profile';
+
+  @override
+  String get capabilityTitle => 'Skills';
+
+  @override
+  String get preferenceTitle => 'Preferences';
+
+  @override
+  String get reliabilityTitle => 'Reliability';
+
+  @override
+  String get demandTitle => 'Predicted Needs';
+
+  @override
+  String get insufficientData => 'Insufficient data';
+
+  @override
+  String get manageSkills => 'Manage Skills';
+
+  @override
+  String get preferenceSettings => 'Preference Settings';
+
+  @override
+  String get profileSetupTitle => 'Set Up Profile';
+
+  @override
+  String get profileSetupSkillQuestion => 'What are you good at?';
+
+  @override
+  String get profileSetupModeQuestion => 'What do you prefer?';
+
+  @override
+  String get modeOnline => 'Online';
+
+  @override
+  String get modeOffline => 'Offline';
+
+  @override
+  String get modeBoth => 'Both';
+
+  @override
+  String get skip => 'Skip';
+
+  @override
+  String get proficiencyBeginner => 'Beginner';
+
+  @override
+  String get proficiencyIntermediate => 'Intermediate';
+
+  @override
+  String get proficiencyExpert => 'Expert';
+
+  @override
+  String get youMightNeed => 'You might need';
 }

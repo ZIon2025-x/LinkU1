@@ -9,6 +9,7 @@ import '../../../features/student_verification/views/student_verification_view.d
 import '../../../features/forum/views/forum_post_list_view.dart';
 import '../../../features/newbie_tasks/views/newbie_tasks_center_view.dart';
 import '../../../features/skill_leaderboard/views/skill_leaderboard_view.dart';
+import '../../../features/profile_setup/views/profile_setup_view.dart';
 
 /// 杂项路由：发布、钱包、设置、学生认证、论坛分类列表
 List<RouteBase> get miscRoutes => [
@@ -52,5 +53,10 @@ List<RouteBase> get miscRoutes => [
         path: AppRoutes.skillLeaderboard,
         name: 'skillLeaderboard',
         builder: (context, state) => const SkillLeaderboardView(),
+      ),
+      GoRoute(
+        path: AppRoutes.profileSetup,
+        name: 'profileSetup',
+        builder: (context, state) => const ProfileSetupView(),
       ),
     ];

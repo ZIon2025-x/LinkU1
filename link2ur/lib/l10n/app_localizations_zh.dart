@@ -9913,6 +9913,63 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get couponNotApplicable => '不适用于此任务';
+
+  @override
+  String get myProfileTitle => '我的画像';
+
+  @override
+  String get capabilityTitle => '能力';
+
+  @override
+  String get preferenceTitle => '偏好';
+
+  @override
+  String get reliabilityTitle => '可靠度';
+
+  @override
+  String get demandTitle => '需求预测';
+
+  @override
+  String get insufficientData => '数据不足';
+
+  @override
+  String get manageSkills => '管理技能';
+
+  @override
+  String get preferenceSettings => '偏好设置';
+
+  @override
+  String get profileSetupTitle => '设置画像';
+
+  @override
+  String get profileSetupSkillQuestion => '你擅长什么？';
+
+  @override
+  String get profileSetupModeQuestion => '你更喜欢？';
+
+  @override
+  String get modeOnline => '线上';
+
+  @override
+  String get modeOffline => '线下';
+
+  @override
+  String get modeBoth => '都可以';
+
+  @override
+  String get skip => '跳过';
+
+  @override
+  String get proficiencyBeginner => '入门';
+
+  @override
+  String get proficiencyIntermediate => '熟练';
+
+  @override
+  String get proficiencyExpert => '精通';
+
+  @override
+  String get youMightNeed => '你可能需要';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -19780,4 +19837,61 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get couponNotApplicable => '不適用於此任務';
+
+  @override
+  String get myProfileTitle => '我的畫像';
+
+  @override
+  String get capabilityTitle => '能力';
+
+  @override
+  String get preferenceTitle => '偏好';
+
+  @override
+  String get reliabilityTitle => '可靠度';
+
+  @override
+  String get demandTitle => '需求預測';
+
+  @override
+  String get insufficientData => '數據不足';
+
+  @override
+  String get manageSkills => '管理技能';
+
+  @override
+  String get preferenceSettings => '偏好設定';
+
+  @override
+  String get profileSetupTitle => '設置畫像';
+
+  @override
+  String get profileSetupSkillQuestion => '你擅長什麼？';
+
+  @override
+  String get profileSetupModeQuestion => '你更喜歡？';
+
+  @override
+  String get modeOnline => '線上';
+
+  @override
+  String get modeOffline => '線下';
+
+  @override
+  String get modeBoth => '都可以';
+
+  @override
+  String get skip => '跳過';
+
+  @override
+  String get proficiencyBeginner => '入門';
+
+  @override
+  String get proficiencyIntermediate => '熟練';
+
+  @override
+  String get proficiencyExpert => '精通';
+
+  @override
+  String get youMightNeed => '你可能需要';
 }

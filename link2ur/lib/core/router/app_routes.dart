@@ -71,6 +71,10 @@ class AppRoutes {
   static const String myPosts = '/profile/my-posts';
   static const String userProfile = '/user/:id';
   static const String taskPreferences = '/profile/task-preferences';
+  static const String myProfilePage = '/my-profile';
+  static const String capabilityEdit = '/my-profile/capabilities';
+  static const String preferenceEdit = '/my-profile/preferences';
+  static const String profileSetup = '/profile-setup';
 
   // 钱包
   static const String wallet = '/wallet';
@@ -155,4 +159,7 @@ const authRequiredRoutes = <String>{
   AppRoutes.notifications,
   AppRoutes.notificationList,
   AppRoutes.settings,
+  AppRoutes.myProfilePage,
+  AppRoutes.capabilityEdit,
+  AppRoutes.preferenceEdit,
 };

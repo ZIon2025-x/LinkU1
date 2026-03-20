@@ -9,6 +9,9 @@ import '../../../features/profile/views/my_tasks_view.dart';
 import '../../../features/profile/views/my_posts_view.dart';
 import '../../../features/profile/views/user_profile_view.dart';
 import '../../../features/profile/views/task_preferences_view.dart';
+import '../../../features/user_profile/views/my_profile_view.dart';
+import '../../../features/user_profile/views/capability_edit_view.dart';
+import '../../../features/user_profile/views/preference_edit_view.dart';
 
 /// 个人与资料相关路由
 List<RouteBase> get profileRoutes => [
@@ -52,5 +55,22 @@ List<RouteBase> get profileRoutes => [
         path: AppRoutes.taskPreferences,
         name: 'taskPreferences',
         builder: (context, state) => const TaskPreferencesView(),
+      ),
+      GoRoute(
+        path: AppRoutes.myProfilePage,
+        name: 'myProfilePage',
+        builder: (context, state) => const MyProfileView(),
+        routes: [
+          GoRoute(
+            path: 'capabilities',
+            name: 'capabilityEdit',
+            builder: (context, state) => const CapabilityEditView(),
+          ),
+          GoRoute(
+            path: 'preferences',
+            name: 'preferenceEdit',
+            builder: (context, state) => const PreferenceEditView(),
+          ),
+        ],
       ),
     ];
