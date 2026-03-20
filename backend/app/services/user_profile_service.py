@@ -23,7 +23,8 @@ def upsert_capabilities(db: Session, user_id: str, capabilities: list[dict]) -> 
     for cap_data in capabilities:
         existing = db.query(UserCapability).filter(
             UserCapability.user_id == user_id,
-            UserCapability.skill_name == cap_data["skill_name"]
+            UserCapability.skill_name == cap_data["skill_name"],
+            UserCapability.category_id == cap_data["category_id"]
         ).first()
         if existing:
             existing.category_id = cap_data["category_id"]

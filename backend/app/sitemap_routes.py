@@ -84,17 +84,36 @@ def generate_sitemap(db: Session = Depends(get_db)):
         today = get_utc_time().strftime("%Y-%m-%d")
         
         main_pages = [
-            ("/", "1.0", "daily"),
+            # 注意：根路径 "/" 永久重定向到 "/en"，不应出现在 sitemap 中（避免重复信号）
             ("/en", "0.9", "daily"),
             ("/zh", "0.9", "daily"),
             ("/en/tasks", "0.8", "daily"),
             ("/zh/tasks", "0.8", "daily"),
-            ("/en/flea-market", "0.8", "daily"),  # 新增
-            ("/zh/flea-market", "0.8", "daily"),  # 新增
-            ("/en/forum", "0.8", "daily"),        # 新增
-            ("/zh/forum", "0.8", "daily"),        # 新增
-            ("/en/forum/leaderboard", "0.8", "daily"),  # 榜单列表页
-            ("/zh/forum/leaderboard", "0.8", "daily"),  # 榜单列表页
+            ("/en/flea-market", "0.8", "daily"),
+            ("/zh/flea-market", "0.8", "daily"),
+            ("/en/forum", "0.8", "daily"),
+            ("/zh/forum", "0.8", "daily"),
+            ("/en/forum/leaderboard", "0.8", "daily"),
+            ("/zh/forum/leaderboard", "0.8", "daily"),
+            # 静态信息页面
+            ("/en/about", "0.5", "monthly"),
+            ("/zh/about", "0.5", "monthly"),
+            ("/en/faq", "0.5", "monthly"),
+            ("/zh/faq", "0.5", "monthly"),
+            ("/en/terms", "0.5", "monthly"),
+            ("/zh/terms", "0.5", "monthly"),
+            ("/en/privacy", "0.5", "monthly"),
+            ("/zh/privacy", "0.5", "monthly"),
+            ("/en/partners", "0.5", "monthly"),
+            ("/zh/partners", "0.5", "monthly"),
+            ("/en/join-us", "0.5", "monthly"),
+            ("/zh/join-us", "0.5", "monthly"),
+            ("/en/cookie-policy", "0.5", "monthly"),
+            ("/zh/cookie-policy", "0.5", "monthly"),
+            ("/en/community-guidelines", "0.5", "monthly"),
+            ("/zh/community-guidelines", "0.5", "monthly"),
+            ("/en/merchant-cooperation", "0.5", "monthly"),
+            ("/zh/merchant-cooperation", "0.5", "monthly"),
         ]
         
         for path, priority, changefreq in main_pages:

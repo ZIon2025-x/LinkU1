@@ -6,6 +6,7 @@ import LoginModal from '../components/LoginModal';
 import LocalizedLink from '../components/LocalizedLink';
 import { useLanguage } from '../contexts/LanguageContext';
 import { fetchCurrentUser, logout } from '../api';
+import SEOHead from '../components/SEOHead';
 
 const Support: React.FC = () => {
   const navigate = useNavigate();
@@ -28,6 +29,10 @@ const Support: React.FC = () => {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
+      <SEOHead
+        title="Support | Link²Ur"
+        description="Get help and support from Link²Ur - contact us for assistance with your account or tasks."
+      />
       {/* 顶部导航栏 */}
       <header style={{
         position: 'fixed',

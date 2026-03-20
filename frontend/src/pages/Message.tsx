@@ -37,6 +37,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTranslation } from '../hooks/useTranslation';
 import { useUnreadMessages } from '../contexts/UnreadMessageContext';
 import TaskTitle from '../components/TaskTitle';
+import SEOHead from '../components/SEOHead';
 import styles from './Message.module.css';
 
 // 私密图片显示组件
@@ -3695,6 +3696,7 @@ const MessagePage: React.FC = () => {
 
   return (
     <div className={styles.pageContainer}>
+      <SEOHead noindex={true} />
       {/* SEO优化：H1标签，几乎不可见但SEO可检测 */}
       <h1 className={styles.seoH1}>
         {t('messages.messageCenter')}

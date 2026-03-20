@@ -9,6 +9,7 @@ import HamburgerMenu from '../components/HamburgerMenu';
 import NotificationButton from '../components/NotificationButton';
 import NotificationPanel from '../components/NotificationPanel';
 import LanguageSwitcher from '../components/LanguageSwitcher';
+import SEOHead from '../components/SEOHead';
 
 const Wrapper = styled.div`
   min-height: 80vh;
@@ -277,12 +278,13 @@ const VerifyEmail: React.FC = () => {
 
   return (
     <>
+      <SEOHead noindex={true} />
       {/* 顶部导航栏 */}
       <header style={{position: 'fixed', top: 0, left: 0, width: '100%', background: '#fff', zIndex: 100, boxShadow: '0 2px 8px #e6f7ff'}}>
         <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60, maxWidth: 1200, margin: '0 auto', padding: '0 24px'}}>
           {/* Logo */}
           <div style={{fontWeight: 'bold', fontSize: 24, background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'}}>Link²Ur</div>
-          
+
           {/* 语言切换器、通知按钮和汉堡菜单 */}
           <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
             <LanguageSwitcher />
@@ -306,7 +308,7 @@ const VerifyEmail: React.FC = () => {
           </div>
         </div>
       </header>
-      
+
       {/* 通知弹窗 */}
       <NotificationPanel
         isOpen={showNotifications && !!user}
@@ -316,10 +318,10 @@ const VerifyEmail: React.FC = () => {
         onMarkAsRead={handleMarkAsRead}
         onMarkAllRead={handleMarkAllRead}
       />
-      
+
       <Wrapper>
       {/* SEO优化：可见的H1标签 */}
-      <h1 style={{ 
+      <h1 style={{
         position: 'absolute',
         top: '-100px',
         left: '-100px',

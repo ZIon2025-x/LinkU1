@@ -11,6 +11,7 @@ import LazyImage from '../components/LazyImage';
 import { obfuscateLocation } from '../utils/formatUtils';
 import { logger } from '../utils/logger';
 import { ensureAbsoluteImageUrl } from '../utils/imageUtils';
+import SEOHead from '../components/SEOHead';
 
 interface PaymentData {
   payment_id: number | null;
@@ -509,13 +510,14 @@ const TaskPayment: React.FC = () => {
   const taskRewardDisplay = taskReward.toFixed(2);
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
+    <div style={{
+      minHeight: '100vh',
       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
       padding: '40px 20px'
     }}>
-      <div style={{ 
-        maxWidth: '900px', 
+      <SEOHead noindex={true} />
+      <div style={{
+        maxWidth: '900px',
         margin: '0 auto',
         background: '#fff',
         borderRadius: '16px',

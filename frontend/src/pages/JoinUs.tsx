@@ -38,6 +38,7 @@ import LanguageSwitcher from '../components/LanguageSwitcher';
 import LoginModal from '../components/LoginModal';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useUnreadMessages } from '../contexts/UnreadMessageContext';
+import SEOHead from '../components/SEOHead';
 import './JoinUs.css';
 
 const { Title, Paragraph, Text } = Typography;
@@ -240,6 +241,10 @@ const JoinUs: React.FC = () => {
 
   return (
     <div className="join-us-page">
+      <SEOHead
+        title="Join Us | Link²Ur"
+        description="Join the Link²Ur team - explore career opportunities and help build the future of skill exchange."
+      />
       {/* 顶部导航栏 */}
       <header style={{position: 'fixed', top: 0, left: 0, width: '100%', background: '#fff', zIndex: 100, boxShadow: '0 2px 8px #e6f7ff'}}>
         <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60, maxWidth: 1200, margin: '0 auto', padding: '0 24px'}}>

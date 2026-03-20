@@ -5,6 +5,7 @@ import LanguageSwitcher from '../components/LanguageSwitcher';
 import LoginModal from '../components/LoginModal';
 import { useLanguage } from '../contexts/LanguageContext';
 import { fetchCurrentUser, logout, getLegalDocument } from '../api';
+import SEOHead from '../components/SEOHead';
 
 const CommunityGuidelines: React.FC = () => {
   const navigate = useNavigate();
@@ -68,6 +69,10 @@ const CommunityGuidelines: React.FC = () => {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
+      <SEOHead
+        title="Community Guidelines | Link²Ur"
+        description="Link²Ur community guidelines - standards for a safe and respectful platform experience."
+      />
       <header style={{
         position: 'fixed',
         top: 0,

@@ -20,6 +20,7 @@ import LoginModal from '../components/LoginModal';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useUnreadMessages } from '../contexts/UnreadMessageContext';
 import LazyImage from '../components/LazyImage';
+import SEOHead from '../components/SEOHead';
 import './About.css';
 
 const { Title, Paragraph, Text } = Typography;
@@ -159,6 +160,10 @@ const About: React.FC = () => {
 
   return (
     <div className="about-page">
+      <SEOHead
+        title="About Us | Link²Ur"
+        description="Learn about Link²Ur - a skill exchange and task assistance platform connecting students and professionals in the UK."
+      />
       {/* 顶部导航栏 */}
       <header style={{position: 'fixed', top: 0, left: 0, width: '100%', background: '#fff', zIndex: 100, boxShadow: '0 2px 8px #e6f7ff'}}>
         <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60, maxWidth: 1200, margin: '0 auto', padding: '0 24px'}}>

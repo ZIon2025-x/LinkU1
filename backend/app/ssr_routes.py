@@ -164,7 +164,8 @@ def generate_html(
     page_url: str,
     site_name: str = "Link²Ur",
     body_content: str = "",
-    structured_data: Optional[dict] = None
+    structured_data: Optional[dict] = None,
+    noindex: bool = False
 ) -> str:
     """
     生成包含完整内容的 HTML（供AI爬虫和搜索引擎使用）
@@ -239,7 +240,7 @@ def generate_html(
     
     <!-- 基本 Meta -->
     <meta name="description" content="{meta_description}">
-    <meta name="robots" content="index, follow">
+    <meta name="robots" content="{'noindex, nofollow' if noindex else 'index, follow'}">
     
     <!-- AI友好的meta标签 -->
     <meta name="summary" content="{meta_description}">
@@ -521,7 +522,8 @@ async def ssr_task_detail(
                     title="任务不存在 - Link²Ur",
                     description="该任务可能已被删除或不存在",
                     image_url="",
-                    page_url=f"https://www.link2ur.com/zh/tasks/{task_id}"
+                    page_url=f"https://www.link2ur.com/zh/tasks/{task_id}",
+                    noindex=True
                 ),
                 status_code=404
             )
@@ -533,7 +535,8 @@ async def ssr_task_detail(
                     title="任务已取消 - Link²Ur",
                     description="该任务已被取消",
                     image_url="",
-                    page_url=f"https://www.link2ur.com/zh/tasks/{task_id}"
+                    page_url=f"https://www.link2ur.com/zh/tasks/{task_id}",
+                    noindex=True
                 ),
                 status_code=410
             )
@@ -750,7 +753,8 @@ async def ssr_leaderboard_detail(
                     title="排行榜不存在 - Link²Ur",
                     description="该排行榜可能已被删除或不存在",
                     image_url="",
-                    page_url=f"https://www.link2ur.com/zh/leaderboard/custom/{leaderboard_id}"
+                    page_url=f"https://www.link2ur.com/zh/leaderboard/custom/{leaderboard_id}",
+                    noindex=True
                 ),
                 status_code=404
             )
@@ -762,7 +766,8 @@ async def ssr_leaderboard_detail(
                     title="排行榜不存在 - Link²Ur",
                     description="该排行榜不存在",
                     image_url="",
-                    page_url=f"https://www.link2ur.com/zh/leaderboard/custom/{leaderboard_id}"
+                    page_url=f"https://www.link2ur.com/zh/leaderboard/custom/{leaderboard_id}",
+                    noindex=True
                 ),
                 status_code=404
             )
@@ -874,7 +879,8 @@ async def ssr_forum_post_detail(
                     title="帖子不存在 - Link²Ur",
                     description="该帖子可能已被删除或不存在",
                     image_url="",
-                    page_url=f"https://www.link2ur.com/zh/forum/post/{post_id}"
+                    page_url=f"https://www.link2ur.com/zh/forum/post/{post_id}",
+                    noindex=True
                 ),
                 status_code=404
             )
@@ -886,7 +892,8 @@ async def ssr_forum_post_detail(
                     title="帖子已删除 - Link²Ur",
                     description="该帖子已被删除",
                     image_url="",
-                    page_url=f"https://www.link2ur.com/zh/forum/post/{post_id}"
+                    page_url=f"https://www.link2ur.com/zh/forum/post/{post_id}",
+                    noindex=True
                 ),
                 status_code=410
             )
@@ -898,7 +905,8 @@ async def ssr_forum_post_detail(
                     title="帖子不存在 - Link²Ur",
                     description="该帖子不存在",
                     image_url="",
-                    page_url=f"https://www.link2ur.com/zh/forum/post/{post_id}"
+                    page_url=f"https://www.link2ur.com/zh/forum/post/{post_id}",
+                    noindex=True
                 ),
                 status_code=404
             )
@@ -1017,7 +1025,8 @@ async def ssr_activity_detail(
                     title="活动不存在 - Link²Ur",
                     description="该活动可能已被删除或不存在",
                     image_url="",
-                    page_url=f"https://www.link2ur.com/zh/activities/{activity_id}"
+                    page_url=f"https://www.link2ur.com/zh/activities/{activity_id}",
+                    noindex=True
                 ),
                 status_code=404
             )
@@ -1029,7 +1038,8 @@ async def ssr_activity_detail(
                     title="活动已取消 - Link²Ur",
                     description="该活动已被取消",
                     image_url="",
-                    page_url=f"https://www.link2ur.com/zh/activities/{activity_id}"
+                    page_url=f"https://www.link2ur.com/zh/activities/{activity_id}",
+                    noindex=True
                 ),
                 status_code=410
             )

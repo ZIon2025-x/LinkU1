@@ -19,6 +19,7 @@ import NotificationPanel from '../components/NotificationPanel';
 import LazyImage from '../components/LazyImage';
 import { getErrorMessage } from '../utils/errorHandler';
 import { obfuscateLocation } from '../utils/formatUtils';
+import SEOHead from '../components/SEOHead';
 import styles from './MyTasks.module.css';
 
 // 配置dayjs插件
@@ -883,6 +884,7 @@ const MyTasks: React.FC = () => {
 
   return (
     <div className={styles.pageContainer}>
+      <SEOHead noindex={true} />
       {/* 顶部导航栏 */}
       <header className={styles.header}>
         <div className={styles.headerContainer}>

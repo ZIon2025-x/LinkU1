@@ -7,6 +7,7 @@ import { formatViewCount } from '../utils/formatUtils';
 import ServiceDetailModal from '../components/ServiceDetailModal';
 import LazyImage from '../components/LazyImage';
 import MemberBadge from '../components/MemberBadge';
+import SEOHead from '../components/SEOHead';
 
 interface UserProfileType {
   user: {
@@ -289,11 +290,12 @@ const UserProfile: React.FC = () => {
   const _isOwnProfile = currentUser && currentUser.id === userId; void _isOwnProfile;
 
   return (
-    <div style={{ 
+    <div style={{
       minHeight: '100vh',
       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
       padding: '20px 0'
     }}>
+      <SEOHead noindex={true} />
       <div style={{
         maxWidth: 1200,
         margin: '0 auto',

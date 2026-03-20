@@ -1035,6 +1035,8 @@ const ForumPostDetail: React.FC = () => {
   if (!post) {
     return (
       <div className={styles.container}>
+        {/* 告知搜索引擎不索引此页面（内容不存在） */}
+        <SEOHead noindex={true} title="Post Not Found - Link²Ur" />
         <header className={styles.header}>
           <div className={styles.headerContainer}>
             <div className={styles.logo} onClick={() => navigate(`/${lang}/forum`)} style={{ cursor: 'pointer' }}>
@@ -1042,12 +1044,12 @@ const ForumPostDetail: React.FC = () => {
             </div>
             <div className={styles.headerActions}>
               <LanguageSwitcher />
-              <NotificationButton 
+              <NotificationButton
                 user={user}
                 unreadCount={unreadCount}
                 onNotificationClick={() => navigate(`/${lang}/forum/notifications`)}
               />
-              <HamburgerMenu 
+              <HamburgerMenu
                 user={user}
                 onLogout={async () => {
                   try {

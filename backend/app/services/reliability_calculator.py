@@ -35,15 +35,13 @@ def get_or_create_reliability(db: Session, user_id: str) -> UserReliability:
 def on_task_completed(db: Session, user_id: str, was_on_time: bool):
     """Update reliability when a task is completed."""
     reliability = get_or_create_reliability(db, user_id)
-    reliability.total_tasks_taken += 1
+    reliability.total_tasks_taken = (reliability.total_tasks_taken or 0) + 1
     old_count = reliability.total_tasks_taken - 1
-    reliability.completion_rate = (
-        (reliability.completion_rate * old_count + 1.0) / reliability.total_tasks_taken
-    )
+    completion_rate = reliability.completion_rate or 0
+    on_time_rate = reliability.on_time_rate or 0
+    reliability.completion_rate = (completion_rate * old_count + 1.0) / reliability.total_tasks_taken
     on_time_val = 1.0 if was_on_time else 0.0
-    reliability.on_time_rate = (
-        (reliability.on_time_rate * old_count + on_time_val) / reliability.total_tasks_taken
-    )
+    reliability.on_time_rate = (on_time_rate * old_count + on_time_val) / reliability.total_tasks_taken
     reliability.reliability_score = calculate_reliability_score(reliability)
     reliability.last_calculated_at = datetime.now(timezone.utc)
 
@@ -51,14 +49,12 @@ def on_task_completed(db: Session, user_id: str, was_on_time: bool):
 def on_task_cancelled(db: Session, user_id: str):
     """Update reliability when a task is cancelled by the taker."""
     reliability = get_or_create_reliability(db, user_id)
-    reliability.total_tasks_taken += 1
+    reliability.total_tasks_taken = (reliability.total_tasks_taken or 0) + 1
     old_count = reliability.total_tasks_taken - 1
-    reliability.completion_rate = (
-        (reliability.completion_rate * old_count) / reliability.total_tasks_taken
-    )
-    reliability.cancellation_rate = (
-        (reliability.cancellation_rate * old_count + 1.0) / reliability.total_tasks_taken
-    )
+    completion_rate = reliability.completion_rate or 0
+    cancellation_rate = reliability.cancellation_rate or 0
+    reliability.completion_rate = (completion_rate * old_count) / reliability.total_tasks_taken
+    reliability.cancellation_rate = (cancellation_rate * old_count + 1.0) / reliability.total_tasks_taken
     reliability.reliability_score = calculate_reliability_score(reliability)
     reliability.last_calculated_at = datetime.now(timezone.utc)
 
@@ -66,7 +62,7 @@ def on_task_cancelled(db: Session, user_id: str):
 def on_review_created(db: Session, user_id: str, communication_rating: float):
     """Update communication score when a review is received."""
     reliability = get_or_create_reliability(db, user_id)
-    if reliability.communication_score == 0.0:
+    if not reliability.communication_score:
         reliability.communication_score = communication_rating
     else:
         reliability.communication_score = (
@@ -79,9 +75,10 @@ def on_review_created(db: Session, user_id: str, communication_rating: float):
 def on_complaint_created(db: Session, user_id: str):
     """Update complaint rate when a complaint is filed."""
     reliability = get_or_create_reliability(db, user_id)
-    if reliability.total_tasks_taken > 0:
-        current_complaints = reliability.complaint_rate * reliability.total_tasks_taken
-        reliability.complaint_rate = (current_complaints + 1) / reliability.total_tasks_taken
+    total = reliability.total_tasks_taken or 0
+    if total > 0:
+        current_complaints = (reliability.complaint_rate or 0) * total
+        reliability.complaint_rate = (current_complaints + 1) / total
     reliability.reliability_score = calculate_reliability_score(reliability)
     reliability.last_calculated_at = datetime.now(timezone.utc)
 
@@ -89,7 +86,7 @@ def on_complaint_created(db: Session, user_id: str):
 def on_application_responded(db: Session, user_id: str, response_seconds: float):
     """Update average response speed when a helper responds to an application."""
     reliability = get_or_create_reliability(db, user_id)
-    if reliability.response_speed_avg == 0.0:
+    if not reliability.response_speed_avg:
         reliability.response_speed_avg = response_seconds
     else:
         reliability.response_speed_avg = (
@@ -102,23 +99,26 @@ def on_task_assigned(db: Session, helper_user_id: str, poster_user_id: str):
     """Update repeat_rate when a task is assigned."""
     from app.models import Task
     reliability = get_or_create_reliability(db, helper_user_id)
+    active_statuses = ["completed", "confirmed", "in_progress"]
     times_selected = db.query(func.count(Task.id)).filter(
         Task.poster_id == poster_user_id,
         Task.taker_id == helper_user_id,
-        Task.status.in_(["completed", "confirmed", "in_progress"])
+        Task.status.in_(active_statuses)
     ).scalar() or 0
     if times_selected > 1:
         total_assignments = db.query(func.count(Task.id)).filter(
             Task.taker_id == helper_user_id,
-            Task.status.in_(["completed", "confirmed", "in_progress"])
+            Task.status.in_(active_statuses)
         ).scalar() or 1
+        # Count tasks from posters who assigned this helper more than once
+        repeat_poster_ids = db.query(Task.poster_id).filter(
+            Task.taker_id == helper_user_id,
+            Task.status.in_(active_statuses)
+        ).group_by(Task.poster_id).having(func.count(Task.id) > 1).subquery()
         repeat_assignments = db.query(func.count(Task.id)).filter(
             Task.taker_id == helper_user_id,
-            Task.poster_id.in_(
-                db.query(Task.poster_id).filter(
-                    Task.taker_id == helper_user_id
-                ).group_by(Task.poster_id).having(func.count(Task.id) > 1)
-            )
+            Task.status.in_(active_statuses),
+            Task.poster_id.in_(repeat_poster_ids)
         ).scalar() or 0
         reliability.repeat_rate = repeat_assignments / total_assignments
     reliability.last_calculated_at = datetime.now(timezone.utc)

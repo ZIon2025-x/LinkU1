@@ -86,6 +86,18 @@ class UserProfileRepository {
     return UserProfileSummary.fromJson(response.data as Map<String, dynamic>);
   }
 
+  /// Fetch active skill categories from backend.
+  /// Returns list of {id, name_zh, name_en, icon}.
+  Future<List<Map<String, dynamic>>> getSkillCategories() async {
+    final response = await _apiService.get(ApiEndpoints.skillCategories);
+    if (!response.isSuccess) {
+      throw UserProfileException(response.message ?? 'Failed to load categories');
+    }
+    final data = response.data;
+    final list = data is Map ? (data['data'] as List?) : (data as List?);
+    return list?.cast<Map<String, dynamic>>() ?? [];
+  }
+
   Future<void> submitOnboarding({
     required List<Map<String, dynamic>> capabilities,
     String? mode,

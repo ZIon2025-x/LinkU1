@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAvailableCoupons, getMyCoupons, redeemCouponWithPoints, claimCoupon, getPointsAccount } from '../api';
 import { useLanguage } from '../contexts/LanguageContext';
+import SEOHead from '../components/SEOHead';
 
 interface Coupon {
   id: number;
@@ -198,6 +199,7 @@ const Coupons: React.FC = () => {
       padding: isMobile ? '16px' : '32px 24px',
       paddingTop: isMobile ? '20px' : '40px'
     }}>
+      <SEOHead noindex={true} />
       <div style={{
         maxWidth: '1000px',
         margin: '0 auto',

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../core/utils/logger.dart';
 import '../../../data/models/user_profile.dart';
 import '../../../data/repositories/user_profile_repository.dart';
+import '../../auth/bloc/auth_bloc.dart';
 
 class DemandRecommendationCard extends StatefulWidget {
   const DemandRecommendationCard({super.key});
@@ -21,11 +23,18 @@ class _DemandRecommendationCardState extends State<DemandRecommendationCard> {
   }
 
   Future<void> _loadDemand() async {
+    // Skip if user is not authenticated
+    final authState = context.read<AuthBloc>().state;
+    if (authState.status != AuthStatus.authenticated) {
+      if (mounted) setState(() => _loading = false);
+      return;
+    }
     try {
       final repo = context.read<UserProfileRepository>();
       final demand = await repo.getDemand();
       if (mounted) setState(() { _demand = demand; _loading = false; });
-    } catch (_) {
+    } catch (e) {
+      AppLogger.warning('Failed to load demand recommendations: $e');
       if (mounted) setState(() => _loading = false);
     }
   }

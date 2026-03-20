@@ -45,6 +45,7 @@ import LoginModal from '../components/LoginModal';
 import TabButton from '../components/taskExpertDashboard/TabButton';
 import StatCard from '../components/taskExpertDashboard/StatCard';
 import { compressImage } from '../utils/imageCompression';
+import SEOHead from '../components/SEOHead';
 import api from '../api';
 import styles from './TaskExpertDashboard.module.css';
 
@@ -931,6 +932,7 @@ const TaskExpertDashboard: React.FC = () => {
 
   return (
     <div className={styles.container}>
+      <SEOHead noindex={true} />
       <div className={styles.contentWrapper}>
         {/* 头部 */}
         <div className={styles.headerCard}>

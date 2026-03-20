@@ -7,6 +7,7 @@ import Footer from '../components/Footer';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import LoginModal from '../components/LoginModal';
+import SEOHead from '../components/SEOHead';
 
 const MerchantCooperation: React.FC = () => {
   const { t } = useLanguage();
@@ -19,14 +20,18 @@ const MerchantCooperation: React.FC = () => {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <SEOHead
+        title="Merchant Cooperation | Link²Ur"
+        description="Cooperate with Link²Ur as a merchant - grow your business with our platform."
+      />
       <header style={{position: 'fixed', top: 0, left: 0, width: '100%', background: '#fff', zIndex: 100, boxShadow: '0 2px 8px #e6f7ff'}}>
         <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60, maxWidth: 1200, margin: '0 auto', padding: '0 24px'}}>
-          <div 
+          <div
             style={{
-              fontWeight: 'bold', 
-              fontSize: 24, 
-              background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', 
-              WebkitBackgroundClip: 'text', 
+              fontWeight: 'bold',
+              fontSize: 24,
+              background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+              WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               cursor: 'pointer',
               transition: 'all 0.3s ease',

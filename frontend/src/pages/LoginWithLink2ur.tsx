@@ -9,6 +9,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import LoginModal from '../components/LoginModal';
 import { API_BASE_URL } from '../config';
+import SEOHead from '../components/SEOHead';
 
 const LoginWithLink2ur: React.FC = () => {
   const { t } = useLanguage();
@@ -29,6 +30,7 @@ const LoginWithLink2ur: React.FC = () => {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <SEOHead noindex={true} />
       <header style={{ position: 'fixed', top: 0, left: 0, width: '100%', background: '#fff', zIndex: 100, boxShadow: '0 2px 8px #e6f7ff' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60, maxWidth: 1200, margin: '0 auto', padding: '0 24px' }}>
           <div

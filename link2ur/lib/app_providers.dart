@@ -119,7 +119,7 @@ class AppProviders extends StatelessWidget {
           create: (_) => BadgesRepository(apiService: apiService),
         ),
         RepositoryProvider<UserProfileRepository>(
-          create: (_) => UserProfileRepository(),
+          create: (_) => UserProfileRepository(apiService: apiService),
         ),
       ],
       child: MultiBlocProvider(

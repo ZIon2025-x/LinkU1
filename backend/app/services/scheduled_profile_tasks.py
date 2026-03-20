@@ -18,7 +18,7 @@ def nightly_demand_inference():
     try:
         results = batch_infer_demands(db, limit=500)
         db.commit()
-        logger.info(f"Nightly demand inference: updated {len(results)} users")
+        logger.info(f"Nightly demand inference: succeeded {results['succeeded']}/{results['total']}, failed {results['failed']}")
     except Exception as e:
         db.rollback()
         logger.error(f"Nightly demand inference failed: {e}")

@@ -4,6 +4,7 @@ import { message } from 'antd';
 import { verifyStudentEmail } from '../api';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
+import SEOHead from '../components/SEOHead';
 
 const VerifyStudentEmail: React.FC = () => {
   const { token } = useParams<{ token: string }>();
@@ -63,6 +64,7 @@ const VerifyStudentEmail: React.FC = () => {
       background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
       padding: '20px'
     }}>
+      <SEOHead noindex={true} />
       <div style={{
         background: '#fff',
         borderRadius: '16px',

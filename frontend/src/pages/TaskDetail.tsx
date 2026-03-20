@@ -1732,15 +1732,17 @@ const TaskDetail: React.FC = () => {
   if (error || !task) {
     return (
       <div>
+        {/* 告知搜索引擎不索引此页面（内容不存在） */}
+        <SEOHead noindex={true} title="Task Not Found - Link²Ur" />
         {/* 导航栏 */}
         <header style={{position: 'fixed', top: 0, left: 0, width: '100%', background: '#fff', zIndex: 100, boxShadow: '0 2px 8px #e6f7ff'}}>
           <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60, maxWidth: 1200, margin: '0 auto', padding: '0 24px'}}>
-            <div 
+            <div
               style={{
-                fontWeight: 'bold', 
-                fontSize: 24, 
-                background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', 
-                WebkitBackgroundClip: 'text', 
+                fontWeight: 'bold',
+                fontSize: 24,
+                background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 cursor: 'pointer',
                 transition: 'all 0.3s ease',

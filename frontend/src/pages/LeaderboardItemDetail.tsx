@@ -22,6 +22,7 @@ import {
 import { fetchCurrentUser } from '../api';
 import { formatImageUrl } from '../utils/imageUtils';
 import LoginModal from '../components/LoginModal';
+import SEOHead from '../components/SEOHead';
 import { getErrorMessage } from '../utils/errorHandler';
 
 const { Title, Text, Paragraph } = Typography;
@@ -243,7 +244,13 @@ const LeaderboardItemDetail: React.FC = () => {
   }
 
   if (!item) {
-    return <Empty description={t('forum.itemNotExist')} />;
+    return (
+      <>
+        {/* 告知搜索引擎不索引此页面（内容不存在） */}
+        <SEOHead noindex={true} title="Item Not Found - Link²Ur" />
+        <Empty description={t('forum.itemNotExist')} />
+      </>
+    );
   }
 
   const lang = language || 'zh';

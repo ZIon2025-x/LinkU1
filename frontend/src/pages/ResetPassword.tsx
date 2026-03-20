@@ -7,6 +7,7 @@ import LoginModal from '../components/LoginModal';
 import api from '../api';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getErrorMessage } from '../utils/errorHandler';
+import SEOHead from '../components/SEOHead';
 
 const Wrapper = styled.div`
   min-height: 80vh;
@@ -240,8 +241,9 @@ const ResetPassword: React.FC = () => {
 
   return (
     <Wrapper>
+      <SEOHead noindex={true} />
       {/* SEO优化：可见的H1标签 */}
-      <h1 style={{ 
+      <h1 style={{
         position: 'absolute',
         top: '-100px',
         left: '-100px',

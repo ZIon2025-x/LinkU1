@@ -32,6 +32,10 @@ class ProfileSetupBloc extends Bloc<ProfileSetupEvent, ProfileSetupState> {
 
   void _onAddSkill(ProfileSetupAddSkill event, Emitter<ProfileSetupState> emit) {
     final skills = List<Map<String, dynamic>>.from(state.selectedSkills);
+    // Prevent duplicate skills
+    final alreadyExists = skills.any((s) =>
+        s['skill_name'] == event.skillName && s['category_id'] == event.categoryId);
+    if (alreadyExists) return;
     skills.add({'category_id': event.categoryId, 'skill_name': event.skillName});
     emit(state.copyWith(selectedSkills: skills));
   }
@@ -43,6 +47,8 @@ class ProfileSetupBloc extends Bloc<ProfileSetupEvent, ProfileSetupState> {
   }
 
   Future<void> _onSubmit(ProfileSetupSubmit event, Emitter<ProfileSetupState> emit) async {
+    // Prevent duplicate submissions
+    if (state.status == ProfileSetupStatus.submitting) return;
     emit(state.copyWith(status: ProfileSetupStatus.submitting));
     try {
       await repository.submitOnboarding(

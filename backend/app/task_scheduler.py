@@ -1114,7 +1114,7 @@ def init_scheduler():
             try:
                 results = batch_infer_demands(db, limit=500)
                 db.commit()
-                logger.info(f"需求画像推断完成: 更新了 {len(results)} 个用户")
+                logger.info(f"需求画像推断完成: 成功 {results['succeeded']}/{results['total']}, 失败 {results['failed']}")
             finally:
                 db.close()
         except Exception as e:

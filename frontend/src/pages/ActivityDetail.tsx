@@ -271,6 +271,8 @@ const ActivityDetail: React.FC = () => {
   if (error || !activity) {
     return (
       <div className={styles.container}>
+        {/* 告知搜索引擎不索引此页面（内容不存在） */}
+        <SEOHead noindex={true} title="Activity Not Found - Link²Ur" />
         <div className={styles.error}>
           <div>❌</div>
           <div>{error || '活动不存在'}</div>

@@ -6,6 +6,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import LoginModal from '../components/LoginModal';
 import dayjs from 'dayjs';
+import SEOHead from '../components/SEOHead';
 
 const { Option } = Select;
 
@@ -208,6 +209,7 @@ const PaymentHistory: React.FC = () => {
 
   return (
     <div style={{ maxWidth: '1200px', margin: '40px auto', padding: '0 20px' }}>
+      <SEOHead noindex={true} />
       <Card
         title="支付历史记录"
         extra={

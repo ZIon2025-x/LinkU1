@@ -7,6 +7,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import LazyImage from '../components/LazyImage';
 import MemberBadge from '../components/MemberBadge';
 import SkeletonLoader from '../components/SkeletonLoader';
+import SEOHead from '../components/SEOHead';
 
 const AVATARS = [
   '/static/avatar1.png',
@@ -166,13 +167,14 @@ const Profile: React.FC = () => {
   }
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
+    <div style={{
+      minHeight: '100vh',
       background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
       padding: '20px'
     }}>
-      <div style={{ 
-        maxWidth: '1000px', 
+      <SEOHead noindex={true} />
+      <div style={{
+        maxWidth: '1000px',
         margin: '0 auto',
         background: '#fff',
         borderRadius: '20px',

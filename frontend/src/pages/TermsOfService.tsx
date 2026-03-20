@@ -5,6 +5,7 @@ import LanguageSwitcher from '../components/LanguageSwitcher';
 import LoginModal from '../components/LoginModal';
 import { useLanguage } from '../contexts/LanguageContext';
 import { fetchCurrentUser, logout, getLegalDocument } from '../api';
+import SEOHead from '../components/SEOHead';
 
 const TermsOfService: React.FC = () => {
   const navigate = useNavigate();
@@ -41,6 +42,10 @@ const TermsOfService: React.FC = () => {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
+      <SEOHead
+        title="Terms of Service | Link²Ur"
+        description="Link²Ur terms of service - read our platform rules and policies."
+      />
       {/* 顶部导航栏 */}
       <header style={{
         position: 'fixed',
@@ -62,7 +67,7 @@ const TermsOfService: React.FC = () => {
           padding: '0 24px'
         }}>
           {/* Logo */}
-          <div 
+          <div
             style={{
               fontWeight: 'bold',
               fontSize: 24,

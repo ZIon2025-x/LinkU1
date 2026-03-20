@@ -5,6 +5,7 @@ import LanguageSwitcher from '../components/LanguageSwitcher';
 import LoginModal from '../components/LoginModal';
 import { useLanguage } from '../contexts/LanguageContext';
 import { fetchCurrentUser, logout, getLegalDocument } from '../api';
+import SEOHead from '../components/SEOHead';
 
 const PrivacyPolicy: React.FC = () => {
   const navigate = useNavigate();
@@ -41,6 +42,10 @@ const PrivacyPolicy: React.FC = () => {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
+      <SEOHead
+        title="Privacy Policy | Link²Ur"
+        description="Link²Ur privacy policy - how we collect, use and protect your personal data."
+      />
       {/* 顶部导航栏 */}
       <header style={{
         position: 'fixed',
@@ -62,7 +67,7 @@ const PrivacyPolicy: React.FC = () => {
           padding: '0 24px'
         }}>
           {/* Logo */}
-          <div 
+          <div
             style={{
               fontWeight: 'bold',
               fontSize: 24,

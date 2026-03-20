@@ -280,6 +280,7 @@ class _NotificationListViewContentState
       case 'payment':
       case 'payment_success':
       case 'payment_failed':
+      case 'refund_request':
         context.push('/wallet');
         break;
       case 'activity':
@@ -299,6 +300,11 @@ class _NotificationListViewContentState
       case 'application_message_reply':
         if (taskId != null) context.safePush('/tasks/$taskId');
         break;
+      // 评价通知：related_id 是 task_id
+      case 'review_created':
+      // 纠纷通知：related_id 是 task_id
+      case 'dispute_resolved':
+      case 'dispute_dismissed':
       // 服务 / 支付 / 提醒类任务跳转
       case 'service_application_approved':
       case 'payment_reminder':
@@ -313,6 +319,16 @@ class _NotificationListViewContentState
           final id = taskId ?? relatedId;
           if (id != null) context.safePush('/tasks/$id');
         }
+        break;
+      // 达人资料更新审核 → 跳服务申请列表
+      case 'expert_profile_update_approved':
+      case 'expert_profile_update_rejected':
+        context.push('/my-service-applications');
+        break;
+      // VIP / 新手任务等纯信息通知，无需跳转
+      case 'vip_activated':
+      case 'newbie_task_completed':
+      case 'info':
         break;
       default:
         break;

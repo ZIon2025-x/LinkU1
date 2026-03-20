@@ -1,9 +1,12 @@
 """Demand inference engine: predicts user needs based on stage and behavior."""
+import logging
 from datetime import datetime, timezone, timedelta
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.models import UserDemand, UserStage
 from app.models import User, UserTaskInteraction
+
+logger = logging.getLogger(__name__)
 
 INFERENCE_VERSION = "v1.0"
 
@@ -26,12 +29,18 @@ STAGE_PREDICTIONS = {
 def determine_user_stage(db: Session, user: User) -> UserStage:
     """Determine user's current stage based on registration time and activity."""
     now = datetime.now(timezone.utc)
-    days_since_registration = (now - user.created_at).days if user.created_at else 0
+    if not user.created_at:
+        return UserStage.new_arrival
+    created_at = user.created_at
+    # Handle timezone-naive datetimes from old data
+    if created_at.tzinfo is None:
+        created_at = created_at.replace(tzinfo=timezone.utc)
+    days_since_registration = (now - created_at).days
     if days_since_registration <= 7:
         return UserStage.new_arrival
     elif days_since_registration <= 30:
         return UserStage.settling
-    elif user.completed_task_count and user.completed_task_count > 10 and days_since_registration > 90:
+    elif (user.completed_task_count or 0) > 10 and days_since_registration > 90:
         return UserStage.experienced
     elif days_since_registration > 30:
         return UserStage.established
@@ -72,21 +81,25 @@ def infer_demand(db: Session, user_id: str) -> UserDemand:
     return demand
 
 
-def batch_infer_demands(db: Session, limit: int = 500):
-    """Nightly batch: infer demands for all active users (7-day activity window)."""
+def batch_infer_demands(db: Session, limit: int = 500) -> dict:
+    """Nightly batch: infer demands for all active users (7-day activity window).
+    Returns dict with 'succeeded' count and 'failed' list of user_ids."""
     seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
     active_user_ids = db.query(
         UserTaskInteraction.user_id.distinct()
     ).filter(
         UserTaskInteraction.interaction_time >= seven_days_ago
     ).limit(limit).all()
-    results = []
+    succeeded = 0
+    failed_ids = []
     for (user_id,) in active_user_ids:
         try:
-            demand = infer_demand(db, user_id)
-            results.append(demand)
+            infer_demand(db, user_id)
+            succeeded += 1
         except Exception as e:
-            import logging
-            logging.getLogger(__name__).warning(f"Failed to infer demand for user {user_id}: {e}")
+            logger.warning(f"Failed to infer demand for user {user_id}: {e}")
+            failed_ids.append(user_id)
             continue
-    return results
+    if failed_ids:
+        logger.warning(f"Batch inference: {len(failed_ids)} users failed: {failed_ids[:10]}")
+    return {"succeeded": succeeded, "failed": len(failed_ids), "total": len(active_user_ids)}

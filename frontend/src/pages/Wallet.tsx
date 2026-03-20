@@ -9,6 +9,7 @@ import {
   ConnectPayouts,
   ConnectPayments,
 } from '@stripe/react-connect-js';
+import SEOHead from '../components/SEOHead';
 
 interface PointsAccount {
   balance: number;  // 积分数量（整数，100积分 = £1.00）
@@ -281,14 +282,15 @@ const Wallet: React.FC = () => {
   }
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
+    <div style={{
+      minHeight: '100vh',
       background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
       padding: isMobile ? '16px' : '32px 24px',
       paddingTop: isMobile ? '20px' : '40px'
     }}>
-      <div style={{ 
-        maxWidth: '1000px', 
+      <SEOHead noindex={true} />
+      <div style={{
+        maxWidth: '1000px',
         margin: '0 auto',
         background: '#fff',
         borderRadius: '24px',

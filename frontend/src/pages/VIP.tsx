@@ -4,6 +4,7 @@ import { message } from 'antd';
 import api from '../api';
 import { getPublicSystemSettings } from '../api';
 import { useLanguage } from '../contexts/LanguageContext';
+import SEOHead from '../components/SEOHead';
 
 const VIP: React.FC = () => {
   const [user, setUser] = useState<any>(null);
@@ -153,6 +154,7 @@ const VIP: React.FC = () => {
 
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', paddingTop: '80px' }}>
+      <SEOHead noindex={true} />
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 20px' }}>
         {/* 页面标题 */}
         <div style={{ textAlign: 'center', marginBottom: '60px' }}>

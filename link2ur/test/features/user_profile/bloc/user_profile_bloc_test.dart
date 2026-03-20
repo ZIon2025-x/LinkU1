@@ -100,5 +100,97 @@ void main() {
         UserProfileState(status: UserProfileStatus.loaded, summary: testSummary),
       ],
     );
+
+    // --- Error code differentiation tests ---
+
+    blocTest<UserProfileBloc, UserProfileState>(
+      'emits user_profile_update_failed when UpdateCapabilities fails',
+      build: () {
+        when(() => mockRepo.updateCapabilities(any())).thenThrow(
+          const UserProfileException('Server error'),
+        );
+        return UserProfileBloc(repository: mockRepo);
+      },
+      act: (bloc) => bloc.add(const UserProfileUpdateCapabilities(
+        capabilities: [{'category_id': 1, 'skill_name': 'test'}],
+      )),
+      expect: () => [
+        const UserProfileState(status: UserProfileStatus.loading),
+        const UserProfileState(status: UserProfileStatus.error, errorMessage: 'user_profile_update_failed'),
+      ],
+    );
+
+    blocTest<UserProfileBloc, UserProfileState>(
+      'emits user_profile_delete_failed when DeleteCapability fails',
+      build: () {
+        when(() => mockRepo.deleteCapability(any())).thenThrow(
+          const UserProfileException('Not found'),
+        );
+        return UserProfileBloc(repository: mockRepo);
+      },
+      act: (bloc) => bloc.add(const UserProfileDeleteCapability(capabilityId: 99)),
+      expect: () => [
+        const UserProfileState(status: UserProfileStatus.loading),
+        const UserProfileState(status: UserProfileStatus.error, errorMessage: 'user_profile_delete_failed'),
+      ],
+    );
+
+    blocTest<UserProfileBloc, UserProfileState>(
+      'emits user_profile_update_failed when UpdatePreferences fails',
+      build: () {
+        when(() => mockRepo.updatePreferences(any())).thenThrow(
+          const UserProfileException('Validation error'),
+        );
+        return UserProfileBloc(repository: mockRepo);
+      },
+      act: (bloc) => bloc.add(const UserProfileUpdatePreferences(
+        preferences: {'mode': 'invalid'},
+      )),
+      expect: () => [
+        const UserProfileState(status: UserProfileStatus.loading),
+        const UserProfileState(status: UserProfileStatus.error, errorMessage: 'user_profile_update_failed'),
+      ],
+    );
+
+    // --- Error recovery test ---
+
+    blocTest<UserProfileBloc, UserProfileState>(
+      'recovers from error state when LoadSummary is retried',
+      build: () {
+        var callCount = 0;
+        when(() => mockRepo.getSummary()).thenAnswer((_) async {
+          callCount++;
+          if (callCount == 1) throw const UserProfileException('Temporary error');
+          return testSummary;
+        });
+        return UserProfileBloc(repository: mockRepo);
+      },
+      act: (bloc) async {
+        bloc.add(const UserProfileLoadSummary());
+        await Future.delayed(const Duration(milliseconds: 100));
+        bloc.add(const UserProfileLoadSummary());
+      },
+      expect: () => [
+        const UserProfileState(status: UserProfileStatus.loading),
+        const UserProfileState(status: UserProfileStatus.error, errorMessage: 'user_profile_load_failed'),
+        const UserProfileState(status: UserProfileStatus.loading),
+        UserProfileState(status: UserProfileStatus.loaded, summary: testSummary),
+      ],
+    );
+
+    // --- Generic exception test ---
+
+    blocTest<UserProfileBloc, UserProfileState>(
+      'passes raw error message for non-UserProfileException errors',
+      build: () {
+        when(() => mockRepo.getSummary()).thenThrow(Exception('Unknown error'));
+        return UserProfileBloc(repository: mockRepo);
+      },
+      act: (bloc) => bloc.add(const UserProfileLoadSummary()),
+      expect: () => [
+        const UserProfileState(status: UserProfileStatus.loading),
+        const UserProfileState(status: UserProfileStatus.error, errorMessage: 'Exception: Unknown error'),
+      ],
+    );
   });
 }

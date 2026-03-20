@@ -5,6 +5,7 @@ import LanguageSwitcher from '../components/LanguageSwitcher';
 import LoginModal from '../components/LoginModal';
 import { useLanguage } from '../contexts/LanguageContext';
 import { fetchCurrentUser, logout, getLegalDocument } from '../api';
+import SEOHead from '../components/SEOHead';
 
 const CookiePolicy: React.FC = () => {
   const navigate = useNavigate();
@@ -64,6 +65,10 @@ const CookiePolicy: React.FC = () => {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
+      <SEOHead
+        title="Cookie Policy | Link²Ur"
+        description="Link²Ur cookie policy - how we use cookies and similar technologies."
+      />
       <header style={{
         position: 'fixed',
         top: 0,

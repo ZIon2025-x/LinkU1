@@ -940,9 +940,9 @@ def nightly_demand_inference_task(self):
         results = batch_infer_demands(db, limit=500)
         db.commit()
         duration = time.time() - start_time
-        logger.info(f"需求画像推断完成: 更新了 {len(results)} 个用户 (耗时: {duration:.2f}秒)")
+        logger.info(f"需求画像推断完成: 成功 {results['succeeded']}/{results['total']} 个用户, 失败 {results['failed']} (耗时: {duration:.2f}秒)")
         _record_task_metrics(task_name, "success", duration)
-        return {"status": "success", "updated_count": len(results)}
+        return {"status": "success", **results}
     except Exception as e:
         duration = time.time() - start_time
         logger.error(f"需求画像推断失败: {e}", exc_info=True)

@@ -264,6 +264,8 @@ const FleaMarketItemDetail: React.FC = () => {
   if (!item) {
     return (
       <div className={styles.container}>
+        {/* 告知搜索引擎不索引此页面（内容不存在） */}
+        <SEOHead noindex={true} title="Item Not Found - Link²Ur" />
         <Empty description="商品不存在" />
       </div>
     );

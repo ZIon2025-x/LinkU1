@@ -105,18 +105,21 @@ async def update_preferences(
 async def get_reliability(current_user=Depends(get_current_user_secure_sync_csrf), db: Session = Depends(get_db)):
     rel = svc.get_reliability(db, current_user.id)
     if not rel:
-        return {"reliability_score": None, "total_tasks_taken": 0, "insufficient_data": True}
+        return {"reliability_score": None, "total_tasks_taken": 0, "insufficient_data": True,
+                "response_speed_avg": 0, "completion_rate": 0, "on_time_rate": 0,
+                "complaint_rate": 0, "communication_score": 0, "repeat_rate": 0,
+                "cancellation_rate": 0}
     return {
-        "response_speed_avg": rel.response_speed_avg,
-        "completion_rate": rel.completion_rate,
-        "on_time_rate": rel.on_time_rate,
-        "complaint_rate": rel.complaint_rate,
-        "communication_score": rel.communication_score,
-        "repeat_rate": rel.repeat_rate,
-        "cancellation_rate": rel.cancellation_rate,
+        "response_speed_avg": rel.response_speed_avg or 0,
+        "completion_rate": rel.completion_rate or 0,
+        "on_time_rate": rel.on_time_rate or 0,
+        "complaint_rate": rel.complaint_rate or 0,
+        "communication_score": rel.communication_score or 0,
+        "repeat_rate": rel.repeat_rate or 0,
+        "cancellation_rate": rel.cancellation_rate or 0,
         "reliability_score": rel.reliability_score,
-        "total_tasks_taken": rel.total_tasks_taken,
-        "insufficient_data": rel.total_tasks_taken < 3,
+        "total_tasks_taken": rel.total_tasks_taken or 0,
+        "insufficient_data": (rel.total_tasks_taken or 0) < 3,
     }
 
 
@@ -124,8 +127,13 @@ async def get_reliability(current_user=Depends(get_current_user_secure_sync_csrf
 async def get_demand(current_user=Depends(get_current_user_secure_sync_csrf), db: Session = Depends(get_db)):
     demand = svc.get_demand(db, current_user.id)
     if not demand:
-        demand = infer_demand(db, current_user.id)
-        db.commit()
+        try:
+            demand = infer_demand(db, current_user.id)
+            db.commit()
+        except (ValueError, Exception):
+            # Inference failed, return defaults
+            return {"user_stage": "new_arrival", "predicted_needs": [],
+                    "recent_interests": {}, "last_inferred_at": None}
     return {
         "user_stage": demand.user_stage.value,
         "predicted_needs": demand.predicted_needs or [],
@@ -138,8 +146,12 @@ async def get_demand(current_user=Depends(get_current_user_secure_sync_csrf), db
 async def get_summary(current_user=Depends(get_current_user_secure_sync_csrf), db: Session = Depends(get_db)):
     summary = svc.get_profile_summary(db, current_user.id)
     caps = [{
-        "id": c.id, "category_id": c.category_id, "skill_name": c.skill_name,
+        "id": c.id, "category_id": c.category_id,
+        "category_name_zh": c.category.name_zh if c.category else None,
+        "category_name_en": c.category.name_en if c.category else None,
+        "skill_name": c.skill_name,
         "proficiency": c.proficiency.value, "verification_source": c.verification_source.value,
+        "verified_task_count": c.verified_task_count,
     } for c in summary["capabilities"]]
 
     pref = summary["preference"]
@@ -153,10 +165,20 @@ async def get_summary(current_user=Depends(get_current_user_secure_sync_csrf), d
     }
 
     rel = summary["reliability"]
-    rel_data = {"reliability_score": None, "insufficient_data": True} if not rel else {
+    rel_data = {"reliability_score": None, "total_tasks_taken": 0, "insufficient_data": True,
+                "response_speed_avg": 0, "completion_rate": 0, "on_time_rate": 0,
+                "complaint_rate": 0, "communication_score": 0, "repeat_rate": 0,
+                "cancellation_rate": 0} if not rel else {
+        "response_speed_avg": rel.response_speed_avg or 0,
+        "completion_rate": rel.completion_rate or 0,
+        "on_time_rate": rel.on_time_rate or 0,
+        "complaint_rate": rel.complaint_rate or 0,
+        "communication_score": rel.communication_score or 0,
+        "repeat_rate": rel.repeat_rate or 0,
+        "cancellation_rate": rel.cancellation_rate or 0,
         "reliability_score": rel.reliability_score,
-        "total_tasks_taken": rel.total_tasks_taken,
-        "insufficient_data": rel.total_tasks_taken < 3,
+        "total_tasks_taken": rel.total_tasks_taken or 0,
+        "insufficient_data": (rel.total_tasks_taken or 0) < 3,
     }
 
     demand = summary["demand"]

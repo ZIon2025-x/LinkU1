@@ -1218,7 +1218,13 @@ const CustomLeaderboardDetail: React.FC = () => {
   }
 
   if (!leaderboard) {
-    return <Empty description={t('forum.leaderboardNotExist')} />;
+    return (
+      <>
+        {/* 告知搜索引擎不索引此页面（内容不存在） */}
+        <SEOHead noindex={true} title="Leaderboard Not Found - Link²Ur" />
+        <Empty description={t('forum.leaderboardNotExist')} />
+      </>
+    );
   }
 
   return (

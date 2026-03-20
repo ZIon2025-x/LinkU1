@@ -7,6 +7,7 @@ import NotificationPanel from '../components/NotificationPanel';
 import Footer from '../components/Footer';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import { getFaq, type FaqSectionOut } from '../api';
+import SEOHead from '../components/SEOHead';
 
 const sectionStyle: React.CSSProperties = {
   background: '#fff',
@@ -57,6 +58,10 @@ const FAQ: React.FC = () => {
 
   return (
     <div>
+      <SEOHead
+        title="FAQ | Link²Ur"
+        description="Frequently asked questions about Link²Ur platform - how to post tasks, find experts, make payments, and more."
+      />
       <header style={{ position: 'fixed', top: 0, left: 0, width: '100%', background: '#fff', zIndex: 100, boxShadow: '0 2px 8px #e6f7ff' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60, maxWidth: 1200, margin: '0 auto', padding: '0 24px' }}>
           <div

@@ -8,6 +8,7 @@ import { getErrorMessage } from '../utils/errorHandler';
 import { validateEmail, validateName } from '../utils/inputValidators';
 import LazyImage from '../components/LazyImage';
 import { useStripeConnect } from '../hooks/useStripeConnect';
+import SEOHead from '../components/SEOHead';
 import {
   ConnectComponentsProvider,
   ConnectAccountManagement,
@@ -550,13 +551,14 @@ const Settings: React.FC = () => {
   ];
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
+    <div style={{
+      minHeight: '100vh',
       background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
       padding: isMobile ? '0' : '20px'
     }}>
-      <div style={{ 
-        maxWidth: isMobile ? '100%' : '900px', 
+      <SEOHead noindex={true} />
+      <div style={{
+        maxWidth: isMobile ? '100%' : '900px',
         margin: '0 auto',
         background: '#fff',
         borderRadius: isMobile ? '0' : '16px',

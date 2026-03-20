@@ -47,7 +47,7 @@ class UserCapability extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, categoryId, skillName, proficiency, verificationSource, verifiedTaskCount];
+  List<Object?> get props => [id, categoryId, categoryNameZh, categoryNameEn, skillName, proficiency, verificationSource, verifiedTaskCount];
 }
 
 /// 偏好画像

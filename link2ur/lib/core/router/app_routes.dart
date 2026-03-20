@@ -162,4 +162,5 @@ const authRequiredRoutes = <String>{
   AppRoutes.myProfilePage,
   AppRoutes.capabilityEdit,
   AppRoutes.preferenceEdit,
+  AppRoutes.profileSetup,
 };

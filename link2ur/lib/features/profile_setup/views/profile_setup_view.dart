@@ -9,7 +9,7 @@ import '../../../data/repositories/user_profile_repository.dart';
 import '../bloc/profile_setup_bloc.dart';
 
 // ---------------------------------------------------------------------------
-// Hardcoded skill data
+// Skill data — fetched from backend, with hardcoded fallback
 // ---------------------------------------------------------------------------
 
 class _Category {
@@ -19,7 +19,8 @@ class _Category {
   final List<String> skills;
 }
 
-const List<_Category> _categories = [
+/// Fallback categories if backend fetch fails
+const List<_Category> _fallbackCategories = [
   _Category(id: 1, label: '语言', skills: ['英语沟通', '中文翻译', '粤语']),
   _Category(id: 2, label: '出行', skills: ['开车', '接机', '陪同出行']),
   _Category(id: 3, label: '生活服务', skills: ['搬家', '组装家具', '代买代取']),
@@ -92,8 +93,33 @@ class _ProfileSetupScaffold extends StatefulWidget {
 class _ProfileSetupScaffoldState extends State<_ProfileSetupScaffold> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
+  List<_Category> _categories = _fallbackCategories;
 
   static const int _totalPages = 2;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCategories();
+  }
+
+  Future<void> _loadCategories() async {
+    try {
+      final repo = context.read<UserProfileRepository>();
+      final data = await repo.getSkillCategories();
+      if (mounted && data.isNotEmpty) {
+        setState(() {
+          _categories = data.map((c) => _Category(
+            id: c['id'] as int,
+            label: c['name_zh'] as String? ?? c['name_en'] as String? ?? '',
+            skills: const [], // No sub-skill suggestions from backend
+          )).toList();
+        });
+      }
+    } catch (_) {
+      // Keep fallback categories
+    }
+  }
 
   @override
   void dispose() {
@@ -125,6 +151,13 @@ class _ProfileSetupScaffoldState extends State<_ProfileSetupScaffold> {
       listener: (context, state) {
         if (state.status == ProfileSetupStatus.success) {
           context.go('/');
+        } else if (state.status == ProfileSetupStatus.error) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.errorMessage ?? '提交失败，请重试'),
+              backgroundColor: AppColors.error,
+            ),
+          );
         }
       },
       child: Scaffold(
@@ -193,9 +226,9 @@ class _ProfileSetupScaffoldState extends State<_ProfileSetupScaffold> {
                     physics: const NeverScrollableScrollPhysics(),
                     onPageChanged: (index) =>
                         setState(() => _currentPage = index),
-                    children: const [
-                      _SkillsPage(),
-                      _ModePage(),
+                    children: [
+                      _SkillsPage(categories: _categories),
+                      const _ModePage(),
                     ],
                   ),
                 ),
@@ -267,7 +300,8 @@ class _ProfileSetupScaffoldState extends State<_ProfileSetupScaffold> {
 // ---------------------------------------------------------------------------
 
 class _SkillsPage extends StatelessWidget {
-  const _SkillsPage();
+  const _SkillsPage({required this.categories});
+  final List<_Category> categories;
 
   @override
   Widget build(BuildContext context) {
@@ -305,7 +339,7 @@ class _SkillsPage extends StatelessWidget {
             builder: (context, state) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: _categories.map((cat) {
+                children: categories.map((cat) {
                   final isSelected =
                       state.selectedCategories.contains(cat.id);
                   return _CategorySection(

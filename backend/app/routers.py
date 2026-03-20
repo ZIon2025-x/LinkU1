@@ -2183,7 +2183,10 @@ def create_review(
                         "review_created",
                         "收到新评价",
                         f"任务 '{task.title}' 收到了新评价",
-                        current_user.id,
+                        related_id=str(task_id),
+                        related_type="task_id",
+                        title_en="New Review Received",
+                        content_en=f"New review received for task '{task.title}'",
                     )
             except Exception as e:
                 logger.warning(f"发送评价通知失败: {e}")

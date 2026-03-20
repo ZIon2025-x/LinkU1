@@ -10,6 +10,7 @@ import {
 } from '../api';
 import { useLanguage } from '../contexts/LanguageContext';
 import { formatUtcToLocal } from '../utils/timeUtils';
+import SEOHead from '../components/SEOHead';
 
 // 移动端检测函数
 const isMobileDevice = () => {
@@ -275,6 +276,7 @@ const StudentVerification: React.FC = () => {
       background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
       padding: isMobile ? '0' : '20px'
     }}>
+      <SEOHead noindex={true} />
       <div style={{
         maxWidth: isMobile ? '100%' : '900px',
         margin: '0 auto',

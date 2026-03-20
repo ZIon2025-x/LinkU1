@@ -30,6 +30,7 @@ import {
   deleteJobPosition,
   toggleJobPositionStatus
 } from '../api';
+import SEOHead from '../components/SEOHead';
 
 const { Title } = Typography;
 const { Option } = Select;
@@ -273,6 +274,7 @@ const JobPositionManagement: React.FC = () => {
 
   return (
     <div style={{ padding: '24px' }}>
+      <SEOHead noindex={true} />
       {/* SEO优化：H1标签，几乎不可见但SEO可检测 */}
       <h1 style={{
         position: 'absolute',
