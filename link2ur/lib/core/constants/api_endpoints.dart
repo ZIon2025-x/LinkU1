@@ -508,6 +508,14 @@ class ApiEndpoints {
   static const String badgesMy = '/api/badges/my';
   static const String badgesUser = '/api/badges/user'; // /{user_id}
 
+  // ==================== User Profile ====================
+  static const String profileCapabilities = '/api/profile/capabilities';
+  static const String profilePreferences = '/api/profile/preferences';
+  static const String profileReliability = '/api/profile/reliability';
+  static const String profileDemand = '/api/profile/demand';
+  static const String profileSummary = '/api/profile/summary';
+  static const String profileOnboarding = '/api/profile/onboarding';
+
   // ==================== AI Agent ====================
   // 后端: ai_agent_routes.py (prefix: /api/ai)
   static const String aiConversations = '/api/ai/conversations';
