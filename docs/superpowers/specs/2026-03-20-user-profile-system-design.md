@@ -31,6 +31,7 @@
 | `verified_task_count` | Integer | 通过该技能完成的任务数（自动统计） |
 | `last_used_at` | DateTime | 最近一次使用该技能的时间 |
 | `created_at` | DateTime | 创建时间 |
+| `updated_at` | DateTime | 更新时间（onupdate） |
 
 **唯一约束：** `(user_id, skill_name)`
 
@@ -48,7 +49,11 @@
 
 **与现有技能体系的关系：** 现有 `UserSkill` 和 `SkillCategory` 表基本未被使用（仅排行榜引用）。新表 `UserCapability` 替代 `UserSkill`，新增 proficiency、verification_source 等字段。`SkillCategory` 表保留并扩展，作为大类定义。排行榜逻辑需迁移到新表。
 
-### 维度B：偏好画像 — `UserPreference`
+**旧端点废弃计划：** 现有 `/api/skills/my`、`/api/skills/categories` 端点在新系统上线后标记为 deprecated（返回 `Deprecation` header），保留30天兼容期后移除。新端点为 `/api/profile/capabilities`。
+
+**SkillCategory 迁移：** 现有 `UserSkill.skill_category` 是 String(50) 自由文本，不是 FK。迁移脚本需：(1) 将现有 `skill_category` 字符串匹配到 `SkillCategory.name_zh` 或 `name_en` 获取 ID；(2) 无法匹配的记录创建新 SkillCategory 或标记为"其他"类。
+
+### 维度B：偏好画像 — `UserProfilePreference`
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
@@ -69,7 +74,7 @@
 - 行为推断：根据接单历史自动更新 reward_preference、preferred_time_slots 等
 - 偶尔弹窗：在关键交互后轻量询问补充
 
-**与现有 `UserPreferences` 表的关系：** 现有 `UserPreferences` 表存储 task_types、locations、task_levels、keywords 用于推荐过滤。新表侧重用户偏好画像（线上/线下、时段等），两者互补，不冲突。推荐引擎同时使用两个表的数据。
+**与现有 `UserPreferences` 表的关系：** 现有 `UserPreferences` 表存储 task_types、locations、task_levels、keywords 用于推荐过滤。新表 `UserProfilePreference` 侧重用户偏好画像（线上/线下、时段等），命名明确区分以避免混淆。两者互补，不冲突。推荐引擎同时使用两个表的数据。
 
 ### 维度C：可靠度画像 — `UserReliability`
 
@@ -101,12 +106,17 @@ reliability_score = (
 )
 ```
 
+**注：** `response_speed_avg` 和 `repeat_rate` 在 v1 中仅用于展示和数据积累，不纳入综合分数计算。待数据量足够后在 v2 中加入权重。
+
+**最低数据阈值：** 当 `total_tasks_taken < 3` 时，`reliability_score` 为 null，前端显示"数据不足"而非低分数值。
+
 **更新触发事件：**
 - 任务完成（`task_completed`）→ 更新 completion_rate、on_time_rate
 - 任务取消（`task_cancelled`）→ 更新 cancellation_rate
 - 收到评价（`review_created`）→ 更新 communication_score
 - 收到投诉（`complaint_created`）→ 更新 complaint_rate
-- 被同一用户再次选择（`repeat_selection`）→ 更新 repeat_rate
+- 帮手响应申请（`application_responded`）→ 更新 response_speed_avg（从申请创建到帮手回应的时间差）
+- 任务分配时检测（`task_assigned`）→ 更新 repeat_rate（查询发布者是否曾选择过同一帮手）
 
 ### 维度D：需求画像 — `UserDemand`
 
@@ -150,8 +160,8 @@ reliability_score = (
 
 **推断触发时机：**
 - 注册时立即推断（基于填写的城市、技能、偏好）
-- 关键行为触发：浏览某类目 > 5次、发布任务、收藏任务
-- 每天凌晨定时兜底更新全量活跃用户
+- 关键行为触发：7天内浏览某类目 > 5次、发布任务、收藏任务
+- 每天凌晨定时兜底更新全量活跃用户（活跃定义：7天内有任意 API 请求）
 
 **推荐触达规则：**
 | 置信度 | 触达方式 | 频控 |
@@ -176,7 +186,7 @@ reliability_score = (
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | GET | `/api/profile/capabilities` | 获取当前用户能力画像 |
-| PUT | `/api/profile/capabilities` | 更新能力画像（添加/修改技能） |
+| PUT | `/api/profile/capabilities` | 更新能力画像（接受数组，支持批量添加/修改） |
 | DELETE | `/api/profile/capabilities/{id}` | 删除某个技能 |
 | GET | `/api/profile/preferences` | 获取偏好画像 |
 | PUT | `/api/profile/preferences` | 更新偏好画像 |
@@ -196,7 +206,7 @@ reliability_score = (
 
 ### 新增页面
 
-1. **注册引导页（Onboarding）** — 注册完成后展示，选择2-3个技能大类 + 线上/线下偏好，可跳过
+1. **画像引导页（ProfileSetupView）** — 注册完成后、在现有 OnboardingView 之后展示，选择2-3个技能大类 + 线上/线下偏好，可跳过。与现有 OnboardingView（城市选择 + 通知偏好）分离，作为独立步骤。
 2. **我的画像页** — 个人中心入口，展示四个维度的可视化摘要
 3. **能力管理页** — 添加/编辑/删除技能，设置熟练度
 4. **偏好设置页** — 编辑线上/线下、时段、任务类型等偏好
@@ -207,7 +217,7 @@ reliability_score = (
 | BLoC | 级别 | 说明 |
 |------|------|------|
 | `UserProfileBloc` | 页面级 | 管理画像查看和编辑 |
-| `OnboardingBloc` | 页面级 | 管理注册引导流程 |
+| `ProfileSetupBloc` | 页面级 | 管理画像引导流程 |
 
 ### 新增 Repository
 
@@ -220,7 +230,7 @@ reliability_score = (
 1. 现有 `UserSkill` 数据迁移到 `UserCapability`（proficiency 默认 beginner，verification_source 默认 self_declared）
 2. 现有 `SkillCategory` 表保留，扩展字段
 3. 排行榜查询从 `UserSkill` 迁移到 `UserCapability`
-4. 现有 `UserPreferences` 表保留，与新 `UserPreference` 表并存（前者用于推荐过滤，后者用于画像）
+4. 现有 `UserPreferences` 表保留，与新 `UserProfilePreference` 表并存（前者用于推荐过滤，后者用于画像）
 5. 用户现有的 `completed_task_count`、`avg_rating` 等数据用于初始化 `UserReliability`
 
 ## 不在范围内
