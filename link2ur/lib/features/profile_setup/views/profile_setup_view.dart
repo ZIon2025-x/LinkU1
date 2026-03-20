@@ -103,17 +103,29 @@ class _ProfileSetupScaffoldState extends State<_ProfileSetupScaffold> {
     _loadCategories();
   }
 
+  // Map from category id to suggested sub-skills (used as hints)
+  static const _skillSuggestions = <int, List<String>>{
+    1: ['英语沟通', '中文翻译', '粤语'],
+    2: ['开车', '接机', '陪同出行'],
+    3: ['搬家', '组装家具', '代买代取'],
+    4: ['写简历', '改论文', '拍照剪视频'],
+    5: ['银行开户', '租房流程', '签证办理', '学校注册'],
+  };
+
   Future<void> _loadCategories() async {
     try {
       final repo = context.read<UserProfileRepository>();
       final data = await repo.getSkillCategories();
       if (mounted && data.isNotEmpty) {
         setState(() {
-          _categories = data.map((c) => _Category(
-            id: c['id'] as int,
-            label: c['name_zh'] as String? ?? c['name_en'] as String? ?? '',
-            skills: const [], // No sub-skill suggestions from backend
-          )).toList();
+          _categories = data.map((c) {
+            final id = c['id'] as int;
+            return _Category(
+              id: id,
+              label: c['name_zh'] as String? ?? c['name_en'] as String? ?? '',
+              skills: _skillSuggestions[id] ?? const [],
+            );
+          }).toList();
         });
       }
     } catch (_) {

@@ -134,8 +134,12 @@ async def get_demand(current_user=Depends(get_current_user_secure_sync_csrf), db
             # Inference failed, return defaults
             return {"user_stage": "new_arrival", "predicted_needs": [],
                     "recent_interests": {}, "last_inferred_at": None}
+    try:
+        stage_value = demand.user_stage.value if hasattr(demand.user_stage, 'value') else str(demand.user_stage)
+    except (ValueError, AttributeError):
+        stage_value = "new_arrival"
     return {
-        "user_stage": demand.user_stage.value,
+        "user_stage": stage_value,
         "predicted_needs": demand.predicted_needs or [],
         "recent_interests": demand.recent_interests or {},
         "last_inferred_at": demand.last_inferred_at.isoformat() if demand.last_inferred_at else None,

@@ -130,6 +130,15 @@ def recalculate_all_reliability(db: Session, limit: int = 500):
     users = db.query(User).filter(User.task_count > 0).limit(limit).all()
     for user in users:
         reliability = get_or_create_reliability(db, user.id)
+        # Initialize NULL fields BEFORE any calculation
+        if reliability.complaint_rate is None:
+            reliability.complaint_rate = 0.0
+        if reliability.communication_score is None:
+            reliability.communication_score = 0.0
+        if reliability.repeat_rate is None:
+            reliability.repeat_rate = 0.0
+        if reliability.response_speed_avg is None:
+            reliability.response_speed_avg = 0.0
         taken_tasks = db.query(Task).filter(Task.taker_id == user.id).all()
         total = len(taken_tasks)
         if total == 0:
@@ -142,14 +151,5 @@ def recalculate_all_reliability(db: Session, limit: int = 500):
         reliability.completion_rate = completed / total
         reliability.cancellation_rate = cancelled / total
         reliability.on_time_rate = on_time / max(completed, 1)
-        # Ensure fields that might be NULL (from migration) have a valid value
-        if reliability.complaint_rate is None:
-            reliability.complaint_rate = 0.0
-        if reliability.communication_score is None:
-            reliability.communication_score = 0.0
-        if reliability.repeat_rate is None:
-            reliability.repeat_rate = 0.0
-        if reliability.response_speed_avg is None:
-            reliability.response_speed_avg = 0.0
         reliability.reliability_score = calculate_reliability_score(reliability)
         reliability.last_calculated_at = datetime.now(timezone.utc)

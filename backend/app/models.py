@@ -3507,8 +3507,8 @@ class DurationType(str, _profile_enum.Enum):
 
 
 class RewardPreference(str, _profile_enum.Enum):
-    frequent_low = "frequent_low"
-    rare_high = "rare_high"
+    high_freq_low_amount = "high_freq_low_amount"
+    low_freq_high_amount = "low_freq_high_amount"
     no_preference = "no_preference"
 
 
