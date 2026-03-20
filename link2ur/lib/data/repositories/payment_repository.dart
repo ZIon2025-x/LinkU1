@@ -204,10 +204,26 @@ class PaymentRepository {
 
   // ==================== Stripe Connect ====================
 
+  /// 获取 Stripe Connect 支持的国家列表
+  Future<List<String>> getStripeSupportedCountries() async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.stripeConnectSupportedCountries,
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw PaymentException(response.message ?? '获取支持国家列表失败');
+    }
+
+    final countries = response.data!['countries'] as List<dynamic>;
+    return countries.cast<String>();
+  }
+
   /// 创建Stripe Connect账户
-  Future<Map<String, dynamic>> createStripeConnectAccount() async {
+  Future<Map<String, dynamic>> createStripeConnectAccount({
+    String country = 'GB',
+  }) async {
     final response = await _apiService.post<Map<String, dynamic>>(
-      ApiEndpoints.stripeConnectAccountCreate,
+      '${ApiEndpoints.stripeConnectAccountCreate}?country=$country',
     );
 
     if (!response.isSuccess || response.data == null) {
@@ -219,9 +235,11 @@ class PaymentRepository {
 
   /// 创建Stripe Connect嵌入式账户（对标iOS create-embedded）
   /// 返回 account_id, client_secret 等
-  Future<Map<String, dynamic>> createStripeConnectAccountEmbedded() async {
+  Future<Map<String, dynamic>> createStripeConnectAccountEmbedded({
+    String country = 'GB',
+  }) async {
     final response = await _apiService.post<Map<String, dynamic>>(
-      ApiEndpoints.stripeConnectAccountCreateEmbedded,
+      '${ApiEndpoints.stripeConnectAccountCreateEmbedded}?country=$country',
     );
 
     if (!response.isSuccess || response.data == null) {

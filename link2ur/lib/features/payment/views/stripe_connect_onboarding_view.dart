@@ -32,12 +32,16 @@ class StripeConnectOnboardingView extends StatefulWidget {
       _StripeConnectOnboardingViewState();
 }
 
-enum _ViewState { loading, ready, completed, error }
+enum _ViewState { loading, selectCountry, ready, completed, error }
 
 class _StripeConnectOnboardingViewState
     extends State<StripeConnectOnboardingView> {
   _ViewState _viewState = _ViewState.loading;
   String? _error;
+
+  // 国家选择
+  List<String> _supportedCountries = [];
+  String _selectedCountry = 'GB';
 
   // 账户详情（完成后展示）
   StripeConnectAccountDetails? _accountDetails;
@@ -73,8 +77,8 @@ class _StripeConnectOnboardingViewState
         // 账户已存在但需要继续 onboarding：每次打开都请求新的 AccountSession，避免 "already been claimed"
         await _requestFreshOnboardingSessionAndOpen();
       } else {
-        // 账户不存在，需要创建（create-embedded 会返回新的 client_secret）
-        await _createOnboardingSession();
+        // 账户不存在 → 先让用户选择国家
+        await _showCountrySelection();
       }
     } catch (e) {
       if (!mounted) return;
@@ -106,11 +110,33 @@ class _StripeConnectOnboardingViewState
     }
   }
 
+  /// 加载支持的国家列表并显示选择界面
+  Future<void> _showCountrySelection() async {
+    try {
+      final countries = await _paymentRepository.getStripeSupportedCountries();
+      if (!mounted) return;
+      setState(() {
+        _supportedCountries = countries;
+        _viewState = _ViewState.selectCountry;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      // 获取国家列表失败时使用默认 GB 直接创建
+      await _createOnboardingSession();
+    }
+  }
+
   /// 对标 iOS createOnboardingSession()
   Future<void> _createOnboardingSession() async {
+    setState(() {
+      _viewState = _ViewState.loading;
+      _error = null;
+    });
     try {
       final result =
-          await _paymentRepository.createStripeConnectAccountEmbedded();
+          await _paymentRepository.createStripeConnectAccountEmbedded(
+        country: _selectedCountry,
+      );
 
       if (!mounted) return;
 
@@ -296,10 +322,135 @@ class _StripeConnectOnboardingViewState
       ),
       body: switch (_viewState) {
         _ViewState.loading => const Center(child: LoadingView()),
+        _ViewState.selectCountry => _buildCountrySelectionView(isDark),
         _ViewState.error => _buildErrorView(isDark),
         _ViewState.completed => _buildCompletedView(isDark),
         _ViewState.ready => const Center(child: LoadingView()), // Native UI 覆盖
       },
+    );
+  }
+
+  // 国家代码 → 显示名称（含 emoji flag）
+  static String _countryDisplayName(String code) {
+    const names = {
+      'AE': '🇦🇪 United Arab Emirates',
+      'AT': '🇦🇹 Austria',
+      'AU': '🇦🇺 Australia',
+      'BE': '🇧🇪 Belgium',
+      'BG': '🇧🇬 Bulgaria',
+      'BR': '🇧🇷 Brazil',
+      'CA': '🇨🇦 Canada',
+      'CH': '🇨🇭 Switzerland',
+      'CY': '🇨🇾 Cyprus',
+      'CZ': '🇨🇿 Czech Republic',
+      'DE': '🇩🇪 Germany',
+      'DK': '🇩🇰 Denmark',
+      'EE': '🇪🇪 Estonia',
+      'ES': '🇪🇸 Spain',
+      'FI': '🇫🇮 Finland',
+      'FR': '🇫🇷 France',
+      'GB': '🇬🇧 United Kingdom',
+      'GR': '🇬🇷 Greece',
+      'HK': '🇭🇰 Hong Kong',
+      'HR': '🇭🇷 Croatia',
+      'HU': '🇭🇺 Hungary',
+      'IE': '🇮🇪 Ireland',
+      'IT': '🇮🇹 Italy',
+      'JP': '🇯🇵 Japan',
+      'LT': '🇱🇹 Lithuania',
+      'LU': '🇱🇺 Luxembourg',
+      'LV': '🇱🇻 Latvia',
+      'MT': '🇲🇹 Malta',
+      'MX': '🇲🇽 Mexico',
+      'MY': '🇲🇾 Malaysia',
+      'NL': '🇳🇱 Netherlands',
+      'NO': '🇳🇴 Norway',
+      'NZ': '🇳🇿 New Zealand',
+      'PL': '🇵🇱 Poland',
+      'PT': '🇵🇹 Portugal',
+      'RO': '🇷🇴 Romania',
+      'SE': '🇸🇪 Sweden',
+      'SG': '🇸🇬 Singapore',
+      'SI': '🇸🇮 Slovenia',
+      'SK': '🇸🇰 Slovakia',
+      'TH': '🇹🇭 Thailand',
+      'US': '🇺🇸 United States',
+    };
+    return names[code] ?? code;
+  }
+
+  Widget _buildCountrySelectionView(bool isDark) {
+    final l10n = context.l10n;
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AppSpacing.vLg,
+          Icon(
+            Icons.public,
+            size: 56,
+            color: AppColors.primary.withValues(alpha: 0.8),
+          ),
+          AppSpacing.vMd,
+          Text(
+            l10n.paymentSelectCountryTitle,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: isDark
+                  ? AppColors.textPrimaryDark
+                  : AppColors.textPrimaryLight,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            l10n.paymentSelectCountryHint,
+            style: TextStyle(
+              fontSize: 14,
+              color: isDark
+                  ? AppColors.textSecondaryDark
+                  : AppColors.textSecondaryLight,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          AppSpacing.vXl,
+          Expanded(
+            child: ListView.builder(
+              itemCount: _supportedCountries.length,
+              itemBuilder: (context, index) {
+                final code = _supportedCountries[index];
+                final isSelected = code == _selectedCountry;
+                return ListTile(
+                  title: Text(
+                    _countryDisplayName(code),
+                    style: TextStyle(
+                      fontWeight:
+                          isSelected ? FontWeight.w600 : FontWeight.normal,
+                    ),
+                  ),
+                  trailing: isSelected
+                      ? const Icon(Icons.check_circle, color: AppColors.primary)
+                      : null,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.small),
+                  ),
+                  selected: isSelected,
+                  selectedTileColor: AppColors.primary.withValues(alpha: 0.08),
+                  onTap: () => setState(() => _selectedCountry = code),
+                );
+              },
+            ),
+          ),
+          AppSpacing.vMd,
+          PrimaryButton(
+            text: l10n.commonNext,
+            onPressed: _createOnboardingSession,
+          ),
+          AppSpacing.vLg,
+        ],
+      ),
     );
   }
 

@@ -2822,6 +2822,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get paymentRefreshAccountInfo => '刷新账户信息';
 
   @override
+  String get paymentSelectCountryTitle => '选择您的国家';
+
+  @override
+  String get paymentSelectCountryHint => '选择您接收付款的国家。这将决定您账户的货币和合规要求。';
+
+  @override
   String get paymentComplete => '完成';
 
   @override
@@ -12797,6 +12803,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get paymentRefreshAccountInfo => '刷新賬戶信息';
+
+  @override
+  String get paymentSelectCountryTitle => '選擇您的國家';
+
+  @override
+  String get paymentSelectCountryHint => '選擇您接收付款的國家。這將決定您賬戶的貨幣和合規要求。';
 
   @override
   String get paymentComplete => '完成';

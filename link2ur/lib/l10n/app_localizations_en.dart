@@ -2952,6 +2952,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paymentRefreshAccountInfo => 'Refresh Account Info';
 
   @override
+  String get paymentSelectCountryTitle => 'Select Your Country';
+
+  @override
+  String get paymentSelectCountryHint =>
+      'Choose the country where you will receive payments. This determines your account\'s currency and compliance requirements.';
+
+  @override
   String get paymentComplete => 'Complete';
 
   @override

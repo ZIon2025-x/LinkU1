@@ -5,6 +5,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/error_localizer.dart';
+import '../../../data/repositories/user_profile_repository.dart';
 import '../bloc/user_profile_bloc.dart';
 
 class CapabilityEditView extends StatelessWidget {
@@ -24,10 +25,36 @@ class _CapabilityEditContent extends StatefulWidget {
 }
 
 class _CapabilityEditContentState extends State<_CapabilityEditContent> {
+  List<(int, String)> _categories = _AddSkillDialog._fallbackCategories;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCategories();
+  }
+
+  Future<void> _loadCategories() async {
+    try {
+      final repo = context.read<UserProfileRepository>();
+      final data = await repo.getSkillCategories();
+      if (mounted && data.isNotEmpty) {
+        setState(() {
+          _categories = data.map((c) => (
+            c['id'] as int,
+            (c['name_zh'] as String?) ?? (c['name_en'] as String?) ?? '',
+          )).toList();
+        });
+      }
+    } catch (_) {
+      // Keep fallback
+    }
+  }
+
   void _showAddSkillDialog() {
     showDialog<void>(
       context: context,
       builder: (dialogContext) => _AddSkillDialog(
+        categories: _categories,
         onSave: (skillData) {
           context.read<UserProfileBloc>().add(
                 UserProfileUpdateCapabilities(capabilities: [skillData]),
@@ -256,23 +283,13 @@ class _ProficiencyBadge extends StatelessWidget {
 // ======================== 添加技能对话框 ========================
 
 class _AddSkillDialog extends StatefulWidget {
-  const _AddSkillDialog({required this.onSave});
+  const _AddSkillDialog({required this.onSave, required this.categories});
 
   final void Function(Map<String, dynamic> skillData) onSave;
+  final List<(int, String)> categories;
 
-  @override
-  State<_AddSkillDialog> createState() => _AddSkillDialogState();
-}
-
-class _AddSkillDialogState extends State<_AddSkillDialog> {
-  final _skillNameController = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
-
-  int _selectedCategoryId = 1;
-  String _selectedProficiency = 'beginner';
-
-  // 常见技能分类（category_id 与后端对应，这里使用示例分类）
-  static const _categories = [
+  /// Fallback categories when backend fetch fails
+  static const _fallbackCategories = [
     (1, '学业辅导'),
     (2, '技术开发'),
     (3, '设计创意'),
@@ -282,6 +299,23 @@ class _AddSkillDialogState extends State<_AddSkillDialog> {
     (7, '运动健身'),
     (8, '其他'),
   ];
+
+  @override
+  State<_AddSkillDialog> createState() => _AddSkillDialogState();
+}
+
+class _AddSkillDialogState extends State<_AddSkillDialog> {
+  final _skillNameController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+
+  late int _selectedCategoryId;
+  String _selectedProficiency = 'beginner';
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedCategoryId = widget.categories.isNotEmpty ? widget.categories.first.$1 : 1;
+  }
 
   static const _proficiencies = [
     ('beginner', '入门'),
@@ -336,7 +370,7 @@ class _AddSkillDialogState extends State<_AddSkillDialog> {
                     vertical: AppSpacing.sm,
                   ),
                 ),
-                items: _categories
+                items: widget.categories
                     .map(
                       (cat) => DropdownMenuItem<int>(
                         value: cat.$1,

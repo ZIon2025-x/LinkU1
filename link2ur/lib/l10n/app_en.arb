@@ -1334,6 +1334,8 @@
   "paymentCanReceiveRewards": "You can now receive task rewards",
   "paymentAccountInfoBelow": "Your account information is as follows",
   "paymentRefreshAccountInfo": "Refresh Account Info",
+  "paymentSelectCountryTitle": "Select Your Country",
+  "paymentSelectCountryHint": "Choose the country where you will receive payments. This determines your account's currency and compliance requirements.",
   "paymentComplete": "Complete",
   "paymentCountdownExpired": "Expired",
   "paymentCountdownRemaining": "{param1} left",

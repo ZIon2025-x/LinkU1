@@ -1,4 +1,5 @@
 """User profile API routes for four-dimension profiling system."""
+from enum import Enum as PyEnum
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -9,24 +10,44 @@ from app.services.demand_inference import infer_demand
 router = APIRouter(prefix="/api/profile", tags=["用户画像"])
 
 
-# --- Schemas ---
+# --- Schemas with enum validation ---
+
+class ProficiencyStr(str, PyEnum):
+    beginner = "beginner"
+    intermediate = "intermediate"
+    expert = "expert"
+
+class TaskModeStr(str, PyEnum):
+    online = "online"
+    offline = "offline"
+    both = "both"
+
+class DurationTypeStr(str, PyEnum):
+    one_time = "one_time"
+    long_term = "long_term"
+    both = "both"
+
+class RewardPreferenceStr(str, PyEnum):
+    high_freq_low_amount = "high_freq_low_amount"
+    low_freq_high_amount = "low_freq_high_amount"
+    no_preference = "no_preference"
 
 class CapabilityItem(BaseModel):
     category_id: int
     skill_name: str
-    proficiency: str = "beginner"
+    proficiency: ProficiencyStr = ProficiencyStr.beginner
 
 class PreferenceUpdate(BaseModel):
-    mode: str | None = None
-    duration_type: str | None = None
-    reward_preference: str | None = None
+    mode: TaskModeStr | None = None
+    duration_type: DurationTypeStr | None = None
+    reward_preference: RewardPreferenceStr | None = None
     preferred_time_slots: list[str] | None = None
     preferred_categories: list[int] | None = None
     preferred_helper_types: list[str] | None = None
 
 class OnboardingSubmit(BaseModel):
     capabilities: list[CapabilityItem] = []
-    mode: str | None = None
+    mode: TaskModeStr | None = None
     preferred_categories: list[int] = []
 
 
@@ -186,10 +207,14 @@ async def get_summary(current_user=Depends(get_current_user_secure_sync_csrf), d
     }
 
     demand = summary["demand"]
-    demand_data = {"user_stage": "new_arrival", "predicted_needs": []} if not demand else {
-        "user_stage": demand.user_stage.value,
-        "predicted_needs": demand.predicted_needs or [],
-    }
+    if not demand:
+        demand_data = {"user_stage": "new_arrival", "predicted_needs": []}
+    else:
+        try:
+            stage_val = demand.user_stage.value if hasattr(demand.user_stage, 'value') else str(demand.user_stage)
+        except (ValueError, AttributeError):
+            stage_val = "new_arrival"
+        demand_data = {"user_stage": stage_val, "predicted_needs": demand.predicted_needs or []}
 
     return {
         "capabilities": caps,

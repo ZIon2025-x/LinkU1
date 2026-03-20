@@ -5469,6 +5469,18 @@ abstract class AppLocalizations {
   /// **'Refresh Account Info'**
   String get paymentRefreshAccountInfo;
 
+  /// No description provided for @paymentSelectCountryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Your Country'**
+  String get paymentSelectCountryTitle;
+
+  /// No description provided for @paymentSelectCountryHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the country where you will receive payments. This determines your account\'s currency and compliance requirements.'**
+  String get paymentSelectCountryHint;
+
   /// No description provided for @paymentComplete.
   ///
   /// In en, this message translates to:

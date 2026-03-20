@@ -40,6 +40,67 @@ router = APIRouter(prefix="/api/stripe/connect", tags=["Stripe Connect"])
 
 # 注意：Stripe API配置在应用启动时通过stripe_config模块统一配置（带超时）
 
+# Stripe Connect 支持的国家 → 默认货币 / locale 映射
+# 参考: https://docs.stripe.com/connect/cross-border-payouts
+STRIPE_COUNTRY_CONFIG: Dict[str, Dict[str, Any]] = {
+    "AU": {"currency": "aud", "locales": ["en-AU"]},
+    "AT": {"currency": "eur", "locales": ["de-AT"]},
+    "BE": {"currency": "eur", "locales": ["fr-BE"]},
+    "BG": {"currency": "bgn", "locales": ["bg"]},
+    "BR": {"currency": "brl", "locales": ["pt-BR"]},
+    "CA": {"currency": "cad", "locales": ["en-CA"]},
+    "HR": {"currency": "eur", "locales": ["hr"]},
+    "CY": {"currency": "eur", "locales": ["el"]},
+    "CZ": {"currency": "czk", "locales": ["cs"]},
+    "DK": {"currency": "dkk", "locales": ["da"]},
+    "EE": {"currency": "eur", "locales": ["et"]},
+    "FI": {"currency": "eur", "locales": ["fi"]},
+    "FR": {"currency": "eur", "locales": ["fr-FR"]},
+    "DE": {"currency": "eur", "locales": ["de-DE"]},
+    "GR": {"currency": "eur", "locales": ["el"]},
+    "HK": {"currency": "hkd", "locales": ["en-HK"]},
+    "HU": {"currency": "huf", "locales": ["hu"]},
+    "IE": {"currency": "eur", "locales": ["en-IE"]},
+    "IT": {"currency": "eur", "locales": ["it-IT"]},
+    "JP": {"currency": "jpy", "locales": ["ja"]},
+    "LV": {"currency": "eur", "locales": ["lv"]},
+    "LT": {"currency": "eur", "locales": ["lt"]},
+    "LU": {"currency": "eur", "locales": ["fr-LU"]},
+    "MY": {"currency": "myr", "locales": ["en-MY"]},
+    "MT": {"currency": "eur", "locales": ["en-MT"]},
+    "MX": {"currency": "mxn", "locales": ["es-MX"]},
+    "NL": {"currency": "eur", "locales": ["nl-NL"]},
+    "NZ": {"currency": "nzd", "locales": ["en-NZ"]},
+    "NO": {"currency": "nok", "locales": ["nb"]},
+    "PL": {"currency": "pln", "locales": ["pl"]},
+    "PT": {"currency": "eur", "locales": ["pt-PT"]},
+    "RO": {"currency": "ron", "locales": ["ro"]},
+    "SG": {"currency": "sgd", "locales": ["en-SG"]},
+    "SK": {"currency": "eur", "locales": ["sk"]},
+    "SI": {"currency": "eur", "locales": ["sl"]},
+    "ES": {"currency": "eur", "locales": ["es-ES"]},
+    "SE": {"currency": "sek", "locales": ["sv"]},
+    "CH": {"currency": "chf", "locales": ["de-CH"]},
+    "TH": {"currency": "thb", "locales": ["th"]},
+    "AE": {"currency": "aed", "locales": ["en-AE"]},
+    "GB": {"currency": "gbp", "locales": ["en-GB"]},
+    "US": {"currency": "usd", "locales": ["en-US"]},
+}
+
+SUPPORTED_COUNTRIES = sorted(STRIPE_COUNTRY_CONFIG.keys())
+
+
+def _get_country_config(country: str) -> Dict[str, Any]:
+    """获取国家对应的货币和 locale 配置，不支持的国家返回 400"""
+    country = country.upper()
+    config = STRIPE_COUNTRY_CONFIG.get(country)
+    if not config:
+        raise HTTPException(
+            status_code=400,
+            detail=f"不支持的国家: {country}。支持的国家: {', '.join(SUPPORTED_COUNTRIES)}"
+        )
+    return {"country": country, **config}
+
 # V2 API 辅助函数：由于 Python SDK 可能不支持 v2.core.accounts，
 # 我们使用 HTTP 请求直接调用 V2 API
 import requests
@@ -619,8 +680,15 @@ StripeConnect.onLoad = function() {{
     return HTMLResponse(content=html)
 
 
+@router.get("/account/supported-countries")
+def get_supported_countries():
+    """返回 Stripe Connect 支持的国家列表"""
+    return {"countries": SUPPORTED_COUNTRIES}
+
+
 @router.post("/account/create", response_model=schemas.StripeConnectAccountEmbeddedResponse)
 def create_connect_account(
+    country: str = Query("GB", description="账户所在国家（ISO 3166-1 alpha-2）"),
     current_user: models.User = Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db)
 ):
@@ -698,6 +766,7 @@ def create_connect_account(
                 }
             # 创建 Express Account (使用 V2 API)
             # 参考: 官方文档 https://docs.stripe.com/connect/embedded-onboarding?accounts-namespace=v2
+            country_cfg = _get_country_config(country)
             try:
                 # 使用 V2 API 创建账户（通过 HTTP 请求）
                 # 根据官方文档，使用 merchant 配置用于接收支付
@@ -709,8 +778,8 @@ def create_connect_account(
                         "display_name": current_user.name or f"User {current_user.id}",
                         "dashboard": "express",  # Express Dashboard — 用户可自行管理个人信息、查看收款
                         "identity": {
-                            "country": "GB",  # 默认使用 GB（与 sample code 一致），用户可以在 onboarding 时更改
-                            "entity_type": "individual"  # 默认为个人，用户可以在 onboarding 时更改（sample code 使用 company，但我们使用 individual 更符合任务接受人的场景）
+                            "country": country_cfg["country"],
+                            "entity_type": "individual"  # 默认为个人，用户可以在 onboarding 时更改
                         },
                         "configuration": {
                             # 使用 recipient 配置用于接收支付（与 sample code 一致）
@@ -725,12 +794,12 @@ def create_connect_account(
                             }
                         },
                         "defaults": {
-                            "currency": "gbp",
+                            "currency": country_cfg["currency"],
                             "responsibilities": {
                                 "fees_collector": "application",  # 平台收取费用
                                 "losses_collector": "application"  # 平台承担损失
                             },
-                            "locales": ["en-GB"]
+                            "locales": country_cfg["locales"]
                         },
                         "metadata": {
                             "user_id": str(current_user.id),
@@ -745,14 +814,16 @@ def create_connect_account(
                     }
                 )
                 account = StripeV2Account(account_data)
-                logger.info(f"Created Stripe Connect account {account.id} using V2 API for user {current_user.id}")
+                logger.info(f"Created Stripe Connect account {account.id} (country={country_cfg['country']}) using V2 API for user {current_user.id}")
+            except HTTPException:
+                raise
             except Exception as e:
                 logger.error(f"Error creating Stripe Connect account: {e}")
                 raise HTTPException(
                     status_code=400,
                     detail=f"创建 Stripe 账户失败: {str(e)}"
                 )
-        
+
             # 再次检查用户是否已有账户（防止并发创建）
             # 重新查询用户以确保对象在当前会话中
             db_user_check = db.query(models.User).filter(models.User.id == current_user.id).first()
@@ -973,6 +1044,7 @@ def create_connect_account(
 
 @router.post("/account/create-embedded", response_model=schemas.StripeConnectAccountEmbeddedResponse)
 def create_connect_account_embedded(
+    country: str = Query("GB", description="账户所在国家（ISO 3166-1 alpha-2）"),
     current_user: models.User = Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db)
 ):
@@ -1055,9 +1127,10 @@ def create_connect_account_embedded(
             # 创建 Express Account (使用 V2 API)
             # 参考: Stripe Connect Embedded Onboarding 官方文档
             # 注意：使用 V2 API 创建账户，但 AccountSession API 是 V1 API（可以与 V2 账户一起使用）
+            country_cfg = _get_country_config(country)
             account = None
             try:
-                logger.info(f"使用 V2 API 创建 Stripe Connect 账户 for user {current_user.id}")
+                logger.info(f"使用 V2 API 创建 Stripe Connect 账户 (country={country_cfg['country']}) for user {current_user.id}")
                 # 使用 V2 API 创建账户（根据官方文档）
                 account_data = stripe_v2_api_request(
                     "POST",
@@ -1067,8 +1140,8 @@ def create_connect_account_embedded(
                         "display_name": current_user.name or f"User {current_user.id}",
                         "dashboard": "express",  # Express Dashboard — 用户可自行管理个人信息、查看收款
                         "identity": {
-                            "country": "GB",  # 默认使用 GB（与 sample code 一致），用户可以在 onboarding 时更改
-                            "entity_type": "individual"  # 默认为个人，用户可以在 onboarding 时更改（sample code 使用 company，但我们使用 individual 更符合任务接受人的场景）
+                            "country": country_cfg["country"],
+                            "entity_type": "individual"  # 默认为个人，用户可以在 onboarding 时更改
                         },
                         "configuration": {
                             # 使用 recipient 配置用于接收支付（与 sample code 一致）
@@ -1083,12 +1156,12 @@ def create_connect_account_embedded(
                             }
                         },
                         "defaults": {
-                            "currency": "gbp",
+                            "currency": country_cfg["currency"],
                             "responsibilities": {
                                 "fees_collector": "application",  # 平台收取费用
                                 "losses_collector": "application"  # 平台承担损失
                             },
-                            "locales": ["en-GB"]
+                            "locales": country_cfg["locales"]
                         },
                         "metadata": {
                             "user_id": str(current_user.id),
@@ -1103,7 +1176,7 @@ def create_connect_account_embedded(
                     }
                 )
                 account = StripeV2Account(account_data)
-                logger.info(f"Created Stripe Connect account {account.id} using V2 API for user {current_user.id}")
+                logger.info(f"Created Stripe Connect account {account.id} (country={country_cfg['country']}) using V2 API for user {current_user.id}")
             except stripe.error.StripeError as e:
                 logger.error(f"Stripe error creating account: {e}")
                 raise HTTPException(

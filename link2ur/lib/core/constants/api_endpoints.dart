@@ -389,6 +389,8 @@ class ApiEndpoints {
 
   // ==================== Stripe Connect ====================
   // 后端: stripe_connect_routes.py (prefix: /api/stripe/connect)
+  static const String stripeConnectSupportedCountries =
+      '/api/stripe/connect/account/supported-countries';
   static const String stripeConnectAccountCreate =
       '/api/stripe/connect/account/create';
   static const String stripeConnectAccountCreateEmbedded =

@@ -2617,7 +2617,7 @@ class _RefundHistoryItem extends StatelessWidget {
           // 时间
           const SizedBox(height: 6),
           Text(
-            context.l10n.refundApplyTimeLabel(refund.createdAt),
+            context.l10n.refundApplyTimeLabel(_formatTimeString(refund.createdAt)),
             style: AppTypography.caption.copyWith(
               color: isDark
                   ? AppColors.textTertiaryDark

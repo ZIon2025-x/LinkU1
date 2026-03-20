@@ -2284,6 +2284,8 @@
   "paymentCanReceiveRewards": "可以接收獎勵",
   "paymentAccountInfoBelow": "您的賬戶信息如下",
   "paymentRefreshAccountInfo": "刷新賬戶信息",
+  "paymentSelectCountryTitle": "選擇您的國家",
+  "paymentSelectCountryHint": "選擇您接收付款的國家。這將決定您賬戶的貨幣和合規要求。",
   "paymentTransactionDetails": "交易詳情",
   "paymentComplete": "完成",
   "paymentCountdownExpired": "已過期",
