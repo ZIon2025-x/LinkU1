@@ -4213,6 +4213,13 @@
     }
   },
   "forumFileAddFile": "新增檔案（PDF）",
+  "forumFileTooBig": "檔案過大，最大 {maxMB}MB",
+  "@forumFileTooBig": {
+    "placeholders": {
+      "maxMB": { "type": "String" }
+    }
+  },
+  "forumFileReadFailed": "檔案讀取失敗，請重試",
   "forumInvalidPostId": "無效的文章 ID",
   "forumInvalidPostOrData": "文章無效或缺少資料",
   "forumPdfAttachmentOptional": "PDF 附件（選填，最多 1 個）",

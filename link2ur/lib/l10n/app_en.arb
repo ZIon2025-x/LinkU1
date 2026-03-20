@@ -4367,6 +4367,13 @@
     }
   },
   "forumFileAddFile": "Add File (PDF)",
+  "forumFileTooBig": "File too large, maximum {maxMB}MB",
+  "@forumFileTooBig": {
+    "placeholders": {
+      "maxMB": { "type": "String" }
+    }
+  },
+  "forumFileReadFailed": "Failed to read file, please try again",
   "forumInvalidPostId": "Invalid post ID",
   "forumInvalidPostOrData": "Invalid post or missing data",
   "forumPdfAttachmentOptional": "PDF Attachment (optional, max 1)",

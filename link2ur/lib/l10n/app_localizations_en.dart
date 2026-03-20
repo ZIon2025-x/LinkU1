@@ -9479,6 +9479,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get forumFileAddFile => 'Add File (PDF)';
 
   @override
+  String forumFileTooBig(String maxMB) {
+    return 'File too large, maximum ${maxMB}MB';
+  }
+
+  @override
+  String get forumFileReadFailed => 'Failed to read file, please try again';
+
+  @override
   String get forumInvalidPostId => 'Invalid post ID';
 
   @override

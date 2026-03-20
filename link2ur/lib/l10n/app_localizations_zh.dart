@@ -9097,6 +9097,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get forumFileAddFile => '添加文件（PDF）';
 
   @override
+  String forumFileTooBig(String maxMB) {
+    return '文件过大，最大 ${maxMB}MB';
+  }
+
+  @override
+  String get forumFileReadFailed => '文件读取失败，请重试';
+
+  @override
   String get forumInvalidPostId => '无效的帖子 ID';
 
   @override
@@ -19082,6 +19090,14 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get forumFileAddFile => '新增檔案（PDF）';
+
+  @override
+  String forumFileTooBig(String maxMB) {
+    return '檔案過大，最大 ${maxMB}MB';
+  }
+
+  @override
+  String get forumFileReadFailed => '檔案讀取失敗，請重試';
 
   @override
   String get forumInvalidPostId => '無效的文章 ID';

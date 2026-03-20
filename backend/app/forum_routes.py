@@ -3074,10 +3074,14 @@ async def create_post(
                 )
                 if moved_att_urls:
                     url_map = dict(zip(att_urls, moved_att_urls))
+                    updated_atts = []
                     for att in post_attachments:
-                        if att.get("url") in url_map:
-                            att["url"] = url_map[att["url"]]
-                    db_post.attachments = post_attachments
+                        new_att = dict(att)
+                        if new_att.get("url") in url_map:
+                            new_att["url"] = url_map[new_att["url"]]
+                        updated_atts.append(new_att)
+                    # 必须用新列表赋值，否则 SQLAlchemy 不检测 JSONB 变更（同引用）
+                    db_post.attachments = updated_atts
                     await db.flush()
         except Exception as e:
             logger.warning(f"Failed to move forum post files: {e}")
@@ -3405,10 +3409,15 @@ async def update_post(
                 )
                 if moved_att_urls:
                     url_map = dict(zip(att_urls, moved_att_urls))
+                    updated_atts = []
                     for att in update_data["attachments"]:
-                        if isinstance(att, dict) and att.get("url") in url_map:
-                            att["url"] = url_map[att["url"]]
-                    db_post.attachments = update_data["attachments"]
+                        if isinstance(att, dict):
+                            new_att = dict(att)
+                            if new_att.get("url") in url_map:
+                                new_att["url"] = url_map[new_att["url"]]
+                            updated_atts.append(new_att)
+                    # 用新列表赋值，确保 SQLAlchemy 检测到 JSONB 变更
+                    db_post.attachments = updated_atts
                     await db.flush()
         except Exception as e:
             logger.warning(f"Failed to move updated forum post files: {e}")

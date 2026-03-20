@@ -4274,6 +4274,13 @@
     }
   },
   "forumFileAddFile": "添加文件（PDF）",
+  "forumFileTooBig": "文件过大，最大 {maxMB}MB",
+  "@forumFileTooBig": {
+    "placeholders": {
+      "maxMB": { "type": "String" }
+    }
+  },
+  "forumFileReadFailed": "文件读取失败，请重试",
   "forumInvalidPostId": "无效的帖子 ID",
   "forumInvalidPostOrData": "帖子无效或缺少数据",
   "forumPdfAttachmentOptional": "PDF 附件（选填，最多 1 个）",

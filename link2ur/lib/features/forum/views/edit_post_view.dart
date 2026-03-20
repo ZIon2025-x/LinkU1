@@ -110,6 +110,8 @@ class _EditPostViewState extends State<EditPostView> {
 
   bool get _hasPdf => _existingAttachment != null || _newPdfFile != null;
 
+  static const int _kMaxFileSizeMB = 10;
+
   Future<void> _pickPdf() async {
     try {
       final result = await FilePicker.platform.pickFiles(
@@ -119,6 +121,21 @@ class _EditPostViewState extends State<EditPostView> {
       );
       if (result != null && result.files.isNotEmpty && mounted) {
         final f = result.files.first;
+        if (f.size > _kMaxFileSizeMB * 1024 * 1024) {
+          if (mounted) {
+            AppFeedback.showError(
+              context,
+              context.l10n.forumFileTooBig('$_kMaxFileSizeMB'),
+            );
+          }
+          return;
+        }
+        if (f.bytes == null) {
+          if (mounted) {
+            AppFeedback.showError(context, context.l10n.forumFileReadFailed);
+          }
+          return;
+        }
         setState(() {
           _existingAttachment = null;
           _newPdfFile = f;
@@ -182,7 +199,11 @@ class _EditPostViewState extends State<EditPostView> {
       List<ForumPostAttachment>? attachments;
       if (pdfChanged) {
         if (pdfReplaced) {
-          final att = await repo.uploadPostFile(_newPdfFile!.bytes!, _newPdfFile!.name);
+          final bytes = _newPdfFile?.bytes;
+          if (bytes == null) {
+            throw Exception('forum_file_read_failed');
+          }
+          final att = await repo.uploadPostFile(bytes, _newPdfFile!.name);
           attachments = [att];
         } else if (pdfRemoved) {
           attachments = [];
@@ -224,7 +245,8 @@ class _EditPostViewState extends State<EditPostView> {
               curr.selectedPost?.id == widget.postId &&
               (prev.selectedPost?.content != curr.selectedPost?.content ||
                   prev.selectedPost?.title != curr.selectedPost?.title ||
-                  !listEquals(prev.selectedPost?.images, curr.selectedPost?.images))) ||
+                  !listEquals(prev.selectedPost?.images, curr.selectedPost?.images) ||
+                  !listEquals(prev.selectedPost?.attachments, curr.selectedPost?.attachments))) ||
           (curr.errorMessage != null && prev.errorMessage != curr.errorMessage),
       listener: (context, state) {
         if (state.errorMessage != null) {

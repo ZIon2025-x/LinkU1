@@ -17426,6 +17426,18 @@ abstract class AppLocalizations {
   /// **'Add File (PDF)'**
   String get forumFileAddFile;
 
+  /// No description provided for @forumFileTooBig.
+  ///
+  /// In en, this message translates to:
+  /// **'File too large, maximum {maxMB}MB'**
+  String forumFileTooBig(String maxMB);
+
+  /// No description provided for @forumFileReadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to read file, please try again'**
+  String get forumFileReadFailed;
+
   /// No description provided for @forumInvalidPostId.
   ///
   /// In en, this message translates to:

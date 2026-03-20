@@ -176,6 +176,8 @@ class _CreatePostViewState extends State<CreatePostView> {
   }
 
   // ── 文件选择 ──
+  static const int _kMaxFileSizeMB = 10;
+
   Future<void> _pickFiles() async {
     try {
       final result = await FilePicker.platform.pickFiles(
@@ -184,6 +186,25 @@ class _CreatePostViewState extends State<CreatePostView> {
         withData: true,
       );
       if (result != null && result.files.isNotEmpty && mounted) {
+        for (final f in result.files) {
+          // 校验文件大小（后端限制 10MB）
+          if (f.size > _kMaxFileSizeMB * 1024 * 1024) {
+            if (mounted) {
+              AppFeedback.showError(
+                context,
+                context.l10n.forumFileTooBig('$_kMaxFileSizeMB'),
+              );
+            }
+            return;
+          }
+          // 校验 bytes 已加载
+          if (f.bytes == null) {
+            if (mounted) {
+              AppFeedback.showError(context, context.l10n.forumFileReadFailed);
+            }
+            return;
+          }
+        }
         setState(() {
           for (final f in result.files) {
             if (_selectedFiles.length < _kMaxFiles) {
@@ -277,7 +298,11 @@ class _CreatePostViewState extends State<CreatePostView> {
       }
       if (_selectedFiles.isNotEmpty) {
         for (final file in _selectedFiles) {
-          final att = await repo.uploadPostFile(file.bytes!, file.name);
+          final bytes = file.bytes;
+          if (bytes == null) {
+            throw Exception(errorLocalizer('forum_file_read_failed'));
+          }
+          final att = await repo.uploadPostFile(bytes, file.name);
           if (!mounted) return;
           uploadedAttachments.add(att);
         }
