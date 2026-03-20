@@ -54,6 +54,12 @@ class _SettingsViewState extends State<SettingsView> {
   }
 
   void _showDeleteAccountDialog(BuildContext context) {
+    final settingsBloc = context.read<SettingsBloc>();
+    final authBloc = context.read<AuthBloc>();
+    final router = GoRouter.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final failedText = context.l10n.settingsDeleteAccountFailed;
+
     AdaptiveDialogs.showConfirmDialog(
       context: context,
       title: context.l10n.settingsDeleteAccount,
@@ -61,9 +67,22 @@ class _SettingsViewState extends State<SettingsView> {
       confirmText: context.l10n.settingsDeleteAccount,
       cancelText: context.l10n.commonCancel,
       isDestructive: true,
-      onConfirm: () {
-        // 发送删除账户事件，BlocListener 监听结果后再登出
-        context.read<SettingsBloc>().add(const SettingsDeleteAccount());
+      onConfirm: () async {
+        try {
+          settingsBloc.add(const SettingsDeleteAccount());
+          // 等待删除完成
+          final result = await settingsBloc.stream
+              .firstWhere((s) => !s.isDeletingAccount)
+              .timeout(const Duration(seconds: 15));
+          if (result.deleteAccountError != null) {
+            messenger.showSnackBar(SnackBar(content: Text(failedText)));
+          } else {
+            authBloc.add(AuthLogoutRequested());
+            router.go('/login');
+          }
+        } catch (_) {
+          messenger.showSnackBar(SnackBar(content: Text(failedText)));
+        }
       },
     );
   }
@@ -72,21 +91,7 @@ class _SettingsViewState extends State<SettingsView> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return BlocListener<SettingsBloc, SettingsState>(
-      listenWhen: (prev, curr) =>
-          prev.isDeletingAccount && !curr.isDeletingAccount,
-      listener: (context, state) {
-        if (state.deleteAccountError != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(context.l10n.settingsDeleteAccountFailed)),
-          );
-        } else {
-          // 删除成功，登出并跳转
-          context.read<AuthBloc>().add(AuthLogoutRequested());
-          context.go('/login');
-        }
-      },
-      child: Scaffold(
+    return Scaffold(
       appBar: AppBar(
         title: Text(context.l10n.profileSettings),
       ),
@@ -450,7 +455,6 @@ class _SettingsViewState extends State<SettingsView> {
           );
         },
       ),
-    ),
     );
   }
 

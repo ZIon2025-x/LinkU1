@@ -94,6 +94,8 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
 
   void _showDeletePostDialog(BuildContext context) {
     final bloc = context.read<ForumBloc>();
+    final messenger = ScaffoldMessenger.of(context);
+    final deletedText = context.l10n.forumPostDeleted;
     AdaptiveDialogs.showConfirmDialog(
       context: context,
       title: context.l10n.commonDelete,
@@ -103,7 +105,9 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
       isDestructive: true,
       onConfirm: () {
         bloc.add(ForumDeletePost(widget.postId));
-        // 删除成功后再 pop 详情页、显示 SnackBar，由 BlocListener 监听 selectedPost 置空
+        // 确认弹窗由 AdaptiveDialogs 自动关闭，这里直接 pop 详情页
+        if (mounted) context.pop();
+        messenger.showSnackBar(SnackBar(content: Text(deletedText)));
       },
     );
   }
@@ -143,21 +147,12 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
               BlocListener<ForumBloc, ForumState>(
                 listenWhen: (prev, curr) =>
                     !prev.reportSuccess && curr.reportSuccess ||
-                    prev.errorMessage != curr.errorMessage && curr.errorMessage != null ||
-                    (prev.selectedPost?.id == widget.postId && curr.selectedPost == null),
+                    prev.errorMessage != curr.errorMessage && curr.errorMessage != null,
                 listener: (context, state) {
                   if (state.reportSuccess) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text(context.l10n.commonReportSubmitted)),
                     );
-                  } else if (state.selectedPost == null && state.errorMessage == null) {
-                    // 当前帖子已删除成功（listenWhen 已保证是本页帖子被删），返回上一页并提示
-                    if (context.mounted) Navigator.of(context).pop();
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(context.l10n.forumPostDeleted)),
-                      );
-                    }
                   } else if (state.errorMessage != null) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text(context.localizeError(state.errorMessage))),
