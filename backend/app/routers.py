@@ -2519,7 +2519,14 @@ def create_task_dispute(
     )
     db.add(dispute)
     db.flush()
-    
+
+    # 更新可靠度画像（taker 被投诉）
+    try:
+        from app.services.reliability_calculator import on_complaint_created
+        on_complaint_created(db, task.taker_id)
+    except Exception as e:
+        logger.warning(f"更新可靠度失败(complaint_created): {e}")
+
     # 发送系统消息到任务聊天框
     try:
         from app.models import Message
@@ -3879,6 +3886,13 @@ def confirm_task_completion(
     task.confirmed_at = get_utc_time()  # 记录确认时间
     task.auto_confirmed = 0  # 手动确认
     task.is_confirmed = 1  # 标记为已确认（付费任务在转账成功后由转账逻辑再次确认，此处先统一设置）
+    # 更新可靠度画像
+    try:
+        from app.services.reliability_calculator import on_task_completed
+        was_on_time = bool(task.deadline and task.completed_at and task.completed_at <= task.deadline)
+        on_task_completed(db, task.taker_id, was_on_time)
+    except Exception as e:
+        logger.warning(f"更新可靠度失败(task_completed): {e}")
     try:
         db.commit()
     except Exception as e:

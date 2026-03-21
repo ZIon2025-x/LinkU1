@@ -489,6 +489,14 @@ def cancel_task(
     # 已付款的 in_progress 任务：取消后回到 open（不退款），允许发布者选择新申请人
     if is_admin_review and task.status == "in_progress" and getattr(task, 'is_paid', 0) == 1:
         reverted_to_open = True
+        # 更新可靠度画像（taker 被取消）
+        if original_taker_id:
+            try:
+                from app.services.reliability_calculator import on_task_cancelled
+                on_task_cancelled(db, original_taker_id)
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f"更新可靠度失败(task_cancelled): {e}")
         task.status = "open"
         task.taker_id = None
         # 保留 is_paid、payment_intent_id、escrow_amount — 下次批准时免支付
@@ -508,6 +516,14 @@ def cancel_task(
                 app.status = "rejected"
     else:
         task.status = "cancelled"
+        # 更新可靠度画像（taker 取消）
+        if original_taker_id:
+            try:
+                from app.services.reliability_calculator import on_task_cancelled
+                on_task_cancelled(db, original_taker_id)
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f"更新可靠度失败(task_cancelled): {e}")
 
         # Auto-refund for paid tasks cancelled via admin/CS review
         # Full refund (including platform fee) — omit amount param to refund entire charge

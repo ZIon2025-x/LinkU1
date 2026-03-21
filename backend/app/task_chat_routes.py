@@ -1756,6 +1756,20 @@ async def accept_application(
                 if application.negotiated_price is not None:
                     locked_task.agreed_reward = application.negotiated_price
 
+                # 更新可靠度画像（任务分配）
+                try:
+                    from app.services.reliability_calculator import on_task_assigned
+                    from app.database import SessionLocal
+                    sync_db = SessionLocal()
+                    try:
+                        on_task_assigned(sync_db, application.applicant_id, locked_task.poster_id)
+                        sync_db.commit()
+                    finally:
+                        sync_db.close()
+                except Exception as e:
+                    import logging
+                    logging.getLogger(__name__).warning(f"更新可靠度失败(task_assigned): {e}")
+
                 # 重新计算 escrow（按新价格），多余的钱退给发布者
                 from app.utils.fee_calculator import calculate_application_fee_pence
                 import hashlib
@@ -3726,6 +3740,20 @@ async def respond_negotiation(
             locked_task.status = "pending_payment"
             locked_task.is_paid = 0  # 明确标记为未支付
             locked_task.payment_expires_at = get_utc_time() + timedelta(hours=24)  # 支付过期时间（24小时）
+
+            # 更新可靠度画像（任务分配）
+            try:
+                from app.services.reliability_calculator import on_task_assigned
+                from app.database import SessionLocal
+                sync_db = SessionLocal()
+                try:
+                    on_task_assigned(sync_db, application.applicant_id, locked_task.poster_id)
+                    sync_db.commit()
+                finally:
+                    sync_db.close()
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f"更新可靠度失败(task_assigned): {e}")
 
             # 从 token 数据中读取提议价格，写入 application.negotiated_price
             # （negotiate_application 不再提前覆写，只有接受时才写入）

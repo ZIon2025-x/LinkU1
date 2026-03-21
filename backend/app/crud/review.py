@@ -158,6 +158,14 @@ def create_review(
 
     if reviewed_user_id:
         update_user_statistics(db, reviewed_user_id)
+        # 更新可靠度画像（被评价方）
+        try:
+            from app.services.reliability_calculator import on_review_created
+            on_review_created(db, reviewed_user_id, float(review.rating))
+            db.commit()
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"更新可靠度失败(review_created): {e}")
 
     return db_review
 

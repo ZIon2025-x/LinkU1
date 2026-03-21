@@ -1670,6 +1670,20 @@ async def confirm_task_completion_async(
         
         # 更新任务状态为已完成
         task.status = "completed"
+        # 更新可靠度画像（同步调用，在 async 上下文中安全因为是纯计算）
+        try:
+            from app.services.reliability_calculator import on_task_completed
+            from app.database import SessionLocal
+            sync_db = SessionLocal()
+            try:
+                was_on_time = bool(task.deadline and task.completed_at and task.completed_at <= task.deadline)
+                on_task_completed(sync_db, task.taker_id, was_on_time)
+                sync_db.commit()
+            finally:
+                sync_db.close()
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"更新可靠度失败(async task_completed): {e}")
         await db.commit()
         
         # 添加任务历史记录
