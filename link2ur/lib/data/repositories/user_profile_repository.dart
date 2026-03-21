@@ -88,6 +88,16 @@ class UserProfileRepository {
 
   /// Fetch active skill categories from backend.
   /// Returns list of {id, name_zh, name_en, icon}.
+  Future<void> uploadLocation(double latitude, double longitude) async {
+    final response = await _apiService.post(
+      ApiEndpoints.profileLocation,
+      data: {'latitude': latitude, 'longitude': longitude},
+    );
+    if (!response.isSuccess) {
+      throw UserProfileException(response.message ?? 'Failed to upload location');
+    }
+  }
+
   Future<List<Map<String, dynamic>>> getSkillCategories() async {
     final response = await _apiService.get(ApiEndpoints.skillCategories);
     if (!response.isSuccess) {

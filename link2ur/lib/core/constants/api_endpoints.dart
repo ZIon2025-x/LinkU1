@@ -517,6 +517,7 @@ class ApiEndpoints {
   static const String profileDemand = '/api/profile/demand';
   static const String profileSummary = '/api/profile/summary';
   static const String profileOnboarding = '/api/profile/onboarding';
+  static const String profileLocation = '/api/profile/location';
 
   // ==================== AI Agent ====================
   // 后端: ai_agent_routes.py (prefix: /api/ai)

@@ -58,6 +58,7 @@ class UserProfilePreference extends Equatable {
   final List<String> preferredTimeSlots;
   final List<int> preferredCategories;
   final List<String> preferredHelperTypes;
+  final bool nearbyPushEnabled;
 
   const UserProfilePreference({
     this.mode = 'both',
@@ -66,6 +67,7 @@ class UserProfilePreference extends Equatable {
     this.preferredTimeSlots = const [],
     this.preferredCategories = const [],
     this.preferredHelperTypes = const [],
+    this.nearbyPushEnabled = false,
   });
 
   factory UserProfilePreference.fromJson(Map<String, dynamic> json) {
@@ -76,6 +78,7 @@ class UserProfilePreference extends Equatable {
       preferredTimeSlots: (json['preferred_time_slots'] as List?)?.cast<String>() ?? [],
       preferredCategories: (json['preferred_categories'] as List?)?.cast<int>() ?? [],
       preferredHelperTypes: (json['preferred_helper_types'] as List?)?.cast<String>() ?? [],
+      nearbyPushEnabled: json['nearby_push_enabled'] as bool? ?? false,
     );
   }
 
@@ -86,6 +89,7 @@ class UserProfilePreference extends Equatable {
     'preferred_time_slots': preferredTimeSlots,
     'preferred_categories': preferredCategories,
     'preferred_helper_types': preferredHelperTypes,
+    'nearby_push_enabled': nearbyPushEnabled,
   };
 
   UserProfilePreference copyWith({
@@ -95,6 +99,7 @@ class UserProfilePreference extends Equatable {
     List<String>? preferredTimeSlots,
     List<int>? preferredCategories,
     List<String>? preferredHelperTypes,
+    bool? nearbyPushEnabled,
   }) {
     return UserProfilePreference(
       mode: mode ?? this.mode,
@@ -103,11 +108,12 @@ class UserProfilePreference extends Equatable {
       preferredTimeSlots: preferredTimeSlots ?? this.preferredTimeSlots,
       preferredCategories: preferredCategories ?? this.preferredCategories,
       preferredHelperTypes: preferredHelperTypes ?? this.preferredHelperTypes,
+      nearbyPushEnabled: nearbyPushEnabled ?? this.nearbyPushEnabled,
     );
   }
 
   @override
-  List<Object?> get props => [mode, durationType, rewardPreference, preferredTimeSlots, preferredCategories, preferredHelperTypes];
+  List<Object?> get props => [mode, durationType, rewardPreference, preferredTimeSlots, preferredCategories, preferredHelperTypes, nearbyPushEnabled];
 }
 
 /// 可靠度画像
