@@ -57,6 +57,13 @@ class StorageKeys {
   /// 隐藏的任务聊天 (JSON map: {taskId: isoTimestamp})
   static const String hiddenTaskChats = 'hidden_task_chats';
 
+  // ==================== 附近任务推送 ====================
+  /// 附近任务推送开关
+  static const String nearbyPushEnabled = 'nearby_push_enabled';
+
+  /// 最后一次位置上传时间 (ISO8601)
+  static const String lastLocationUpload = 'last_location_upload';
+
   // ==================== Hive Box名称 ====================
   /// 缓存Box
   static const String cacheBox = 'cache_box';

@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -85,6 +88,9 @@ class PushNotificationService with WidgetsBindingObserver {
 
     _initialized = true;
     AppLogger.info('PushNotificationService initialized');
+
+    // Check nearby task location upload (non-blocking)
+    unawaited(checkAndUploadLocation());
   }
 
   /// 上传本地缓存的推送 Token 到服务器
@@ -219,6 +225,55 @@ class PushNotificationService with WidgetsBindingObserver {
       AppLogger.info('Push token unregistered from server');
     } catch (e) {
       AppLogger.error('Failed to unregister push token', e);
+    }
+  }
+
+  /// Upload location for nearby task push (called on app start).
+  /// Checks local cooldown (6h) and nearby_push_enabled before uploading.
+  Future<void> checkAndUploadLocation() async {
+    try {
+      // Check if feature is enabled (read from local cache)
+      final enabled = StorageService.instance.isNearbyPushEnabled();
+      if (!enabled) return;
+
+      // Check 6h cooldown
+      final lastUpload = StorageService.instance.getLastLocationUpload();
+      if (lastUpload != null) {
+        final lastTime = DateTime.tryParse(lastUpload);
+        if (lastTime != null &&
+            DateTime.now().difference(lastTime).inHours < 6) {
+          return;
+        }
+      }
+
+      // Check location permission (don't request, just check)
+      final permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        return;
+      }
+
+      // Get position
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.low,
+          timeLimit: Duration(seconds: 10),
+        ),
+      );
+
+      // Upload to backend
+      await _apiService?.post('/api/profile/location', data: {
+        'latitude': position.latitude,
+        'longitude': position.longitude,
+      });
+
+      // Save timestamp
+      await StorageService.instance.setLastLocationUpload(
+        DateTime.now().toIso8601String(),
+      );
+    } catch (e) {
+      // Silent failure — never block app startup
+      AppLogger.warning('Location upload failed: $e');
     }
   }
 
@@ -536,6 +591,14 @@ class PushNotificationService with WidgetsBindingObserver {
         final leaderboardId = data['leaderboard_id'] ?? data['related_id'];
         if (leaderboardId != null) {
           _router!.push('/leaderboard/$leaderboardId');
+        } else {
+          _router!.push('/notifications');
+        }
+        break;
+      case 'nearby_task':
+        final taskId = data['task_id'] ?? data['related_id'];
+        if (taskId != null) {
+          _router!.push('/tasks/$taskId');
         } else {
           _router!.push('/notifications');
         }

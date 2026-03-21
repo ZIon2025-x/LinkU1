@@ -287,6 +287,28 @@ class StorageService {
     return _prefs.getString(StorageKeys.pushToken);
   }
 
+  // ==================== 附近任务推送 ====================
+
+  /// 获取附近任务推送开关
+  bool isNearbyPushEnabled() {
+    return _prefs.getBool(StorageKeys.nearbyPushEnabled) ?? false;
+  }
+
+  /// 设置附近任务推送开关
+  Future<void> setNearbyPushEnabled(bool enabled) async {
+    await _prefs.setBool(StorageKeys.nearbyPushEnabled, enabled);
+  }
+
+  /// 获取最后一次位置上传时间
+  String? getLastLocationUpload() {
+    return _prefs.getString(StorageKeys.lastLocationUpload);
+  }
+
+  /// 保存最后一次位置上传时间
+  Future<void> setLastLocationUpload(String isoTimestamp) async {
+    await _prefs.setString(StorageKeys.lastLocationUpload, isoTimestamp);
+  }
+
   // ==================== 搜索历史 ====================
 
   /// 获取搜索历史
