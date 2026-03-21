@@ -255,10 +255,7 @@ class PushNotificationService with WidgetsBindingObserver {
 
       // Get position
       final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.low,
-          timeLimit: Duration(seconds: 10),
-        ),
+        desiredAccuracy: LocationAccuracy.low,
       );
 
       // Upload to backend
