@@ -3554,6 +3554,7 @@ class UserProfilePreference(Base):
     preferred_time_slots = Column(JSON, default=list)
     preferred_categories = Column(JSON, default=list)
     preferred_helper_types = Column(JSON, default=list)
+    nearby_push_enabled = Column(Boolean, default=False, server_default="false", nullable=False)
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
 
     user = relationship("User", backref="profile_preference")
@@ -3603,4 +3604,34 @@ class UserDemand(Base):
     __table_args__ = (
         Index("ix_user_demand_user_id", "user_id"),
         Index("ix_user_demand_user_stage", "user_stage"),
+    )
+
+
+class UserLocation(Base):
+    __tablename__ = "user_locations"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True)
+    latitude = Column(DECIMAL(10, 8), nullable=False)
+    longitude = Column(DECIMAL(11, 8), nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
+
+    user = relationship("User", backref="location")
+
+    __table_args__ = (
+        Index("ix_user_locations_user_id", "user_id"),
+    )
+
+
+class NearbyTaskPush(Base):
+    __tablename__ = "nearby_task_pushes"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
+    pushed_at = Column(DateTime(timezone=True), default=get_utc_time)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "task_id", name="uq_nearby_push_user_task"),
+        Index("ix_nearby_task_pushes_user_pushed", "user_id", "pushed_at"),
     )
