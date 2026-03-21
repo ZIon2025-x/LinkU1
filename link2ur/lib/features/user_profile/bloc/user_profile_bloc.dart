@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../data/models/user_profile.dart';
 import '../../../data/repositories/user_profile_repository.dart';
+import '../../../data/services/storage_service.dart';
 
 part 'user_profile_event.dart';
 part 'user_profile_state.dart';
@@ -24,6 +25,8 @@ class UserProfileBloc extends Bloc<UserProfileEvent, UserProfileState> {
     try {
       final summary = await repository.getSummary();
       emit(state.copyWith(status: UserProfileStatus.loaded, summary: summary));
+      // Cache nearby push setting for app startup check
+      StorageService.instance.setNearbyPushEnabled(summary.preference.nearbyPushEnabled);
     } on UserProfileException catch (_) {
       emit(state.copyWith(status: UserProfileStatus.error, errorMessage: 'user_profile_load_failed'));
     } catch (e) {
@@ -72,6 +75,8 @@ class UserProfileBloc extends Bloc<UserProfileEvent, UserProfileState> {
       await repository.updatePreferences(event.preferences);
       final summary = await repository.getSummary();
       emit(state.copyWith(status: UserProfileStatus.loaded, summary: summary));
+      // Cache nearby push setting for app startup check
+      StorageService.instance.setNearbyPushEnabled(summary.preference.nearbyPushEnabled);
     } on UserProfileException catch (_) {
       emit(state.copyWith(status: UserProfileStatus.error, errorMessage: 'user_profile_update_failed'));
     } catch (e) {
