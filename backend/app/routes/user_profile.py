@@ -2,7 +2,7 @@
 from enum import Enum as PyEnum
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from app.deps import get_db, get_current_user_secure_sync_csrf
 from app.services import user_profile_service as svc
 from app.services.demand_inference import infer_demand
@@ -44,6 +44,25 @@ class PreferenceUpdate(BaseModel):
     preferred_time_slots: list[str] | None = None
     preferred_categories: list[int] | None = None
     preferred_helper_types: list[str] | None = None
+    nearby_push_enabled: bool | None = None
+
+class LocationUpdate(BaseModel):
+    latitude: float
+    longitude: float
+
+    @field_validator('latitude')
+    @classmethod
+    def validate_lat(cls, v):
+        if not -90 <= v <= 90:
+            raise ValueError('Latitude must be between -90 and 90')
+        return v
+
+    @field_validator('longitude')
+    @classmethod
+    def validate_lon(cls, v):
+        if not -180 <= v <= 180:
+            raise ValueError('Longitude must be between -180 and 180')
+        return v
 
 class OnboardingSubmit(BaseModel):
     capabilities: list[CapabilityItem] = []
@@ -98,7 +117,8 @@ async def get_preferences(current_user=Depends(get_current_user_secure_sync_csrf
     pref = svc.get_preference(db, current_user.id)
     if not pref:
         return {"mode": "both", "duration_type": "both", "reward_preference": "no_preference",
-                "preferred_time_slots": [], "preferred_categories": [], "preferred_helper_types": []}
+                "preferred_time_slots": [], "preferred_categories": [], "preferred_helper_types": [],
+                "nearby_push_enabled": False}
     return {
         "mode": pref.mode.value,
         "duration_type": pref.duration_type.value,
@@ -106,6 +126,7 @@ async def get_preferences(current_user=Depends(get_current_user_secure_sync_csrf
         "preferred_time_slots": pref.preferred_time_slots or [],
         "preferred_categories": pref.preferred_categories or [],
         "preferred_helper_types": pref.preferred_helper_types or [],
+        "nearby_push_enabled": pref.nearby_push_enabled or False,
     }
 
 
@@ -181,12 +202,14 @@ async def get_summary(current_user=Depends(get_current_user_secure_sync_csrf), d
 
     pref = summary["preference"]
     pref_data = {"mode": "both", "duration_type": "both", "reward_preference": "no_preference",
-                 "preferred_time_slots": [], "preferred_categories": [], "preferred_helper_types": []} if not pref else {
+                 "preferred_time_slots": [], "preferred_categories": [], "preferred_helper_types": [],
+                 "nearby_push_enabled": False} if not pref else {
         "mode": pref.mode.value, "duration_type": pref.duration_type.value,
         "reward_preference": pref.reward_preference.value,
         "preferred_time_slots": pref.preferred_time_slots or [],
         "preferred_categories": pref.preferred_categories or [],
         "preferred_helper_types": pref.preferred_helper_types or [],
+        "nearby_push_enabled": pref.nearby_push_enabled or False,
     }
 
     rel = summary["reliability"]
@@ -222,6 +245,26 @@ async def get_summary(current_user=Depends(get_current_user_secure_sync_csrf), d
         "reliability": rel_data,
         "demand": demand_data,
     }
+
+
+# --- Location ---
+
+@router.post("/location")
+async def upload_location(
+    data: LocationUpdate,
+    current_user=Depends(get_current_user_secure_sync_csrf),
+    db: Session = Depends(get_db)
+):
+    from app.services.nearby_task_service import upsert_user_location, process_nearby_push
+    upsert_user_location(db, current_user.id, data.latitude, data.longitude)
+    db.commit()
+    # Push runs in same request but failure won't affect response
+    try:
+        process_nearby_push(db, current_user.id, data.latitude, data.longitude)
+        db.commit()
+    except Exception:
+        db.rollback()
+    return {"message": "ok"}
 
 
 # --- Onboarding ---

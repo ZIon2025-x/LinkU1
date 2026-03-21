@@ -71,7 +71,8 @@ def upsert_preference(db: Session, user_id: str, data: dict) -> UserProfilePrefe
         pref = UserProfilePreference(user_id=user_id)
         db.add(pref)
     for key in ["mode", "duration_type", "reward_preference",
-                "preferred_time_slots", "preferred_categories", "preferred_helper_types"]:
+                "preferred_time_slots", "preferred_categories", "preferred_helper_types",
+                "nearby_push_enabled"]:
         if key in data:
             setattr(pref, key, data[key])
     db.flush()
