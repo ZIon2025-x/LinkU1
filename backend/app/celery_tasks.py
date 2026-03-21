@@ -922,6 +922,37 @@ if CELERY_AVAILABLE:
             db.close()
 
 
+@celery_app.task(name='app.celery_tasks.cleanup_nearby_task_pushes_task', bind=True, max_retries=2)
+def cleanup_nearby_task_pushes_task(self):
+    """清理30天前的附近任务推送记录"""
+    task_name = "cleanup_nearby_task_pushes"
+    lock_key = f"celery_lock:{task_name}"
+    lock_value = get_redis_distributed_lock(lock_key, expire_seconds=300)
+    if not lock_value:
+        return {"status": "skipped", "reason": "lock_held"}
+
+    import time
+    start_time = time.time()
+    db = SessionLocal()
+    try:
+        from app.services.nearby_task_service import cleanup_old_pushes
+        deleted = cleanup_old_pushes(db, days=30)
+        db.commit()
+        duration = time.time() - start_time
+        logger.info(f"附近推送记录清理完成: 删除 {deleted} 条 (耗时: {duration:.2f}秒)")
+        _record_task_metrics(task_name, "success", duration)
+        return {"status": "success", "deleted": deleted}
+    except Exception as e:
+        db.rollback()
+        duration = time.time() - start_time
+        logger.error(f"附近推送记录清理失败: {e}", exc_info=True)
+        _record_task_metrics(task_name, "error", duration)
+        raise self.retry(exc=e, countdown=120)
+    finally:
+        db.close()
+        release_redis_distributed_lock(lock_key, lock_value)
+
+
 # ========== 用户画像系统任务 ==========
 
 @celery_app.task(bind=True, max_retries=2, default_retry_delay=120)

@@ -1104,6 +1104,29 @@ def init_scheduler():
         priority='normal',
     )
 
+    # ========== 附近任务推送 ==========
+
+    # 清理附近任务推送记录 - 每天执行
+    def cleanup_nearby_pushes():
+        try:
+            from app.services.nearby_task_service import cleanup_old_pushes
+            db = SessionLocal()
+            try:
+                cleanup_old_pushes(db, days=30)
+                db.commit()
+                logger.info("附近推送记录清理完成")
+            finally:
+                db.close()
+        except Exception as e:
+            logger.error(f"附近推送记录清理失败: {e}")
+
+    scheduler.register_task(
+        'cleanup_nearby_pushes',
+        cleanup_nearby_pushes,
+        interval_seconds=86400,
+        description="清理过期附近任务推送记录"
+    )
+
     # ========== 用户画像系统 ==========
 
     # 需求画像夜间推断 - 每天凌晨3:30

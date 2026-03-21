@@ -293,6 +293,12 @@ celery_app.conf.beat_schedule = {
         'task': 'app.celery_tasks.weekly_reliability_calibration_task',
         'schedule': crontab(hour=4, minute=0, day_of_week=1),  # 周一凌晨4点
     },
+
+    # 清理过期附近任务推送记录 - 每天凌晨2:30执行
+    'cleanup-nearby-task-pushes': {
+        'task': 'app.celery_tasks.cleanup_nearby_task_pushes_task',
+        'schedule': crontab(hour=2, minute=30),
+    },
 }
 
 # 如果使用内存后端，禁用结果存储
