@@ -4296,6 +4296,11 @@
   "aiChatLoadHistoryFailed": "加载消息历史失败",
   "aiChatCreateConversationRetry": "创建对话失败，请重试",
   "chatLoadMoreFailed": "加载更多消息失败",
+  "chatNetworkOffline": "当前无网络连接，无法发送",
+  "chatSendMessageFailed": "消息发送失败",
+  "chatSendImageFailed": "图片发送失败",
+  "taskRefundAmountInvalid": "退款金额必须大于0且不超过任务报酬",
+  "paymentSessionExpired": "支付会话已过期，请返回重新进入",
   "commonUnknownError": "未知错误",
   "locationInputHint": "输入地址或选择当前位置",
   "locationPermissionName": "位置",
@@ -4684,5 +4689,7 @@
   "youMightNeed": "你可能需要",
   "userProfileLoadFailed": "加载画像失败，请重试",
   "userProfileUpdateFailed": "更新画像失败，请重试",
-  "userProfileDeleteFailed": "删除失败，请重试"
+  "userProfileDeleteFailed": "删除失败，请重试",
+  "nearbyPushEnabled": "附近任务提醒",
+  "nearbyPushDescription": "有新任务在附近时通知你"
 }

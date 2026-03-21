@@ -4235,6 +4235,11 @@
   "aiChatLoadHistoryFailed": "載入訊息紀錄失敗",
   "aiChatCreateConversationRetry": "建立對話失敗，請重試",
   "chatLoadMoreFailed": "載入更多訊息失敗",
+  "chatNetworkOffline": "目前無網路連線，無法傳送",
+  "chatSendMessageFailed": "訊息傳送失敗",
+  "chatSendImageFailed": "圖片傳送失敗",
+  "taskRefundAmountInvalid": "退款金額必須大於0且不超過任務報酬",
+  "paymentSessionExpired": "支付階段已過期，請返回重新進入",
   "commonUnknownError": "未知錯誤",
   "locationInputHint": "輸入地址或選擇目前位置",
   "locationPermissionName": "位置",
@@ -4599,5 +4604,7 @@
   "youMightNeed": "你可能需要",
   "userProfileLoadFailed": "載入畫像失敗，請重試",
   "userProfileUpdateFailed": "更新畫像失敗，請重試",
-  "userProfileDeleteFailed": "刪除失敗，請重試"
+  "userProfileDeleteFailed": "刪除失敗，請重試",
+  "nearbyPushEnabled": "附近任務提醒",
+  "nearbyPushDescription": "有新任務在附近時通知你"
 }

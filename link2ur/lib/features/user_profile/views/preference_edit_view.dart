@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/error_localizer.dart';
+import '../../../core/utils/l10n_extension.dart';
 import '../../../data/models/user_profile.dart';
 import '../bloc/user_profile_bloc.dart';
 
@@ -38,6 +40,7 @@ class _PreferenceEditContentState extends State<_PreferenceEditContent> {
   late String _durationType;
   late String _rewardPreference;
   late Set<String> _preferredTimeSlots;
+  late bool _nearbyPushEnabled;
 
   static const _modes = [
     ('online', '线上'),
@@ -72,6 +75,7 @@ class _PreferenceEditContentState extends State<_PreferenceEditContent> {
     _rewardPreference = widget.currentPreference.rewardPreference;
     _preferredTimeSlots =
         Set.from(widget.currentPreference.preferredTimeSlots);
+    _nearbyPushEnabled = widget.currentPreference.nearbyPushEnabled;
   }
 
   void _toggleTimeSlot(String slot) {
@@ -96,6 +100,7 @@ class _PreferenceEditContentState extends State<_PreferenceEditContent> {
                   widget.currentPreference.preferredCategories,
               'preferred_helper_types':
                   widget.currentPreference.preferredHelperTypes,
+              'nearby_push_enabled': _nearbyPushEnabled,
             },
           ),
         );
@@ -184,6 +189,42 @@ class _PreferenceEditContentState extends State<_PreferenceEditContent> {
                         onTap: () => _toggleTimeSlot(slot.$1),
                       );
                     }).toList(),
+                  ),
+                ),
+                AppSpacing.vMd,
+
+                // 附近任务提醒
+                _PreferenceSection(
+                  title: context.l10n.nearbyPushEnabled,
+                  description: context.l10n.nearbyPushDescription,
+                  child: Switch.adaptive(
+                    value: _nearbyPushEnabled,
+                    activeColor: AppColors.primary,
+                    onChanged: (val) async {
+                      if (val) {
+                        final permission = await Geolocator.checkPermission();
+                        if (permission == LocationPermission.denied) {
+                          final result = await Geolocator.requestPermission();
+                          if (result == LocationPermission.denied ||
+                              result == LocationPermission.deniedForever) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('需要定位权限才能开启附近任务提醒')),
+                              );
+                            }
+                            return;
+                          }
+                        } else if (permission == LocationPermission.deniedForever) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('请在系统设置中开启定位权限')),
+                            );
+                          }
+                          return;
+                        }
+                      }
+                      setState(() => _nearbyPushEnabled = val);
+                    },
                   ),
                 ),
                 AppSpacing.vXl,

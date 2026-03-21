@@ -4389,6 +4389,11 @@
   "aiChatLoadHistoryFailed": "Failed to load message history",
   "aiChatCreateConversationRetry": "Failed to create conversation, please retry",
   "chatLoadMoreFailed": "Failed to load more messages",
+  "chatNetworkOffline": "No network connection, unable to send",
+  "chatSendMessageFailed": "Failed to send message",
+  "chatSendImageFailed": "Failed to send image",
+  "taskRefundAmountInvalid": "Refund amount must be greater than 0 and not exceed the task reward",
+  "paymentSessionExpired": "Payment session expired, please go back and try again",
   "commonUnknownError": "Unknown error",
   "locationInputHint": "Enter address or pick current location",
   "locationPermissionName": "Location",
@@ -4776,5 +4781,7 @@
   "youMightNeed": "You might need",
   "userProfileLoadFailed": "Failed to load profile, please try again",
   "userProfileUpdateFailed": "Failed to update profile, please try again",
-  "userProfileDeleteFailed": "Failed to delete, please try again"
+  "userProfileDeleteFailed": "Failed to delete, please try again",
+  "nearbyPushEnabled": "Nearby Task Alerts",
+  "nearbyPushDescription": "Get notified when new tasks are posted nearby"
 }

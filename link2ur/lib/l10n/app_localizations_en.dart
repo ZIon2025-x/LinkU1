@@ -9521,6 +9521,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatLoadMoreFailed => 'Failed to load more messages';
 
   @override
+  String get chatNetworkOffline => 'No network connection, unable to send';
+
+  @override
+  String get chatSendMessageFailed => 'Failed to send message';
+
+  @override
+  String get chatSendImageFailed => 'Failed to send image';
+
+  @override
+  String get taskRefundAmountInvalid =>
+      'Refund amount must be greater than 0 and not exceed the task reward';
+
+  @override
+  String get paymentSessionExpired =>
+      'Payment session expired, please go back and try again';
+
+  @override
   String get commonUnknownError => 'Unknown error';
 
   @override
@@ -10415,4 +10432,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get userProfileDeleteFailed => 'Failed to delete, please try again';
+
+  @override
+  String get nearbyPushEnabled => 'Nearby Task Alerts';
+
+  @override
+  String get nearbyPushDescription =>
+      'Get notified when new tasks are posted nearby';
 }

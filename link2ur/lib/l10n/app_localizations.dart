@@ -17498,6 +17498,36 @@ abstract class AppLocalizations {
   /// **'Failed to load more messages'**
   String get chatLoadMoreFailed;
 
+  /// No description provided for @chatNetworkOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'No network connection, unable to send'**
+  String get chatNetworkOffline;
+
+  /// No description provided for @chatSendMessageFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to send message'**
+  String get chatSendMessageFailed;
+
+  /// No description provided for @chatSendImageFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to send image'**
+  String get chatSendImageFailed;
+
+  /// No description provided for @taskRefundAmountInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Refund amount must be greater than 0 and not exceed the task reward'**
+  String get taskRefundAmountInvalid;
+
+  /// No description provided for @paymentSessionExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment session expired, please go back and try again'**
+  String get paymentSessionExpired;
+
   /// No description provided for @commonUnknownError.
   ///
   /// In en, this message translates to:
@@ -19165,6 +19195,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed to delete, please try again'**
   String get userProfileDeleteFailed;
+
+  /// No description provided for @nearbyPushEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Nearby Task Alerts'**
+  String get nearbyPushEnabled;
+
+  /// No description provided for @nearbyPushDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Get notified when new tasks are posted nearby'**
+  String get nearbyPushDescription;
 }
 
 class _AppLocalizationsDelegate

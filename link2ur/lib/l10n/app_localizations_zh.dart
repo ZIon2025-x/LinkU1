@@ -9137,6 +9137,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatLoadMoreFailed => '加载更多消息失败';
 
   @override
+  String get chatNetworkOffline => '当前无网络连接，无法发送';
+
+  @override
+  String get chatSendMessageFailed => '消息发送失败';
+
+  @override
+  String get chatSendImageFailed => '图片发送失败';
+
+  @override
+  String get taskRefundAmountInvalid => '退款金额必须大于0且不超过任务报酬';
+
+  @override
+  String get paymentSessionExpired => '支付会话已过期，请返回重新进入';
+
+  @override
   String get commonUnknownError => '未知错误';
 
   @override
@@ -9997,6 +10012,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get userProfileDeleteFailed => '删除失败，请重试';
+
+  @override
+  String get nearbyPushEnabled => '附近任务提醒';
+
+  @override
+  String get nearbyPushDescription => '有新任务在附近时通知你';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -19132,6 +19153,21 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get chatLoadMoreFailed => '載入更多訊息失敗';
 
   @override
+  String get chatNetworkOffline => '目前無網路連線，無法傳送';
+
+  @override
+  String get chatSendMessageFailed => '訊息傳送失敗';
+
+  @override
+  String get chatSendImageFailed => '圖片傳送失敗';
+
+  @override
+  String get taskRefundAmountInvalid => '退款金額必須大於0且不超過任務報酬';
+
+  @override
+  String get paymentSessionExpired => '支付階段已過期，請返回重新進入';
+
+  @override
   String get commonUnknownError => '未知錯誤';
 
   @override
@@ -19948,4 +19984,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get userProfileDeleteFailed => '刪除失敗，請重試';
+
+  @override
+  String get nearbyPushEnabled => '附近任務提醒';
+
+  @override
+  String get nearbyPushDescription => '有新任務在附近時通知你';
 }
