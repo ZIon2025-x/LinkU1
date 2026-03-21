@@ -585,7 +585,19 @@ PUSH_NOTIFICATION_TEMPLATES = {
             "title": "📢 通知",
             "body_template": "{message}"
         }
-    }
+    },
+
+    # 附近新任务推送
+    "nearby_task": {
+        "en": {
+            "title": "New task nearby",
+            "body_template": "{task_title}, near you"
+        },
+        "zh": {
+            "title": "附近有新任务",
+            "body_template": "{task_title}，就在你附近"
+        }
+    },
 }
 
 
