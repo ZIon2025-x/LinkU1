@@ -199,27 +199,26 @@ class _PreferenceEditContentState extends State<_PreferenceEditContent> {
                   description: context.l10n.nearbyPushDescription,
                   child: Switch.adaptive(
                     value: _nearbyPushEnabled,
-                    activeColor: AppColors.primary,
+                    activeThumbColor: AppColors.primary,
                     onChanged: (val) async {
                       if (val) {
+                        final messenger = ScaffoldMessenger.of(context);
                         final permission = await Geolocator.checkPermission();
                         if (permission == LocationPermission.denied) {
                           final result = await Geolocator.requestPermission();
                           if (result == LocationPermission.denied ||
                               result == LocationPermission.deniedForever) {
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('需要定位权限才能开启附近任务提醒')),
-                              );
-                            }
+                            if (!mounted) return;
+                            messenger.showSnackBar(
+                              const SnackBar(content: Text('需要定位权限才能开启附近任务提醒')),
+                            );
                             return;
                           }
                         } else if (permission == LocationPermission.deniedForever) {
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('请在系统设置中开启定位权限')),
-                            );
-                          }
+                          if (!mounted) return;
+                          messenger.showSnackBar(
+                            const SnackBar(content: Text('请在系统设置中开启定位权限')),
+                          );
                           return;
                         }
                       }

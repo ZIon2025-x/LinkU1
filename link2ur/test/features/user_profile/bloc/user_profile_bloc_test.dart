@@ -15,16 +15,16 @@ void main() {
   });
 
   group('UserProfileBloc', () {
-    final testSummary = UserProfileSummary(
+    const testSummary = UserProfileSummary(
       capabilities: [
-        const UserCapability(
+        UserCapability(
           id: 1, categoryId: 1, skillName: '英语沟通',
           proficiency: 'intermediate', verificationSource: 'self_declared',
         ),
       ],
-      preference: const UserProfilePreference(mode: 'online'),
-      reliability: const UserReliability(reliabilityScore: 85, totalTasksTaken: 10, insufficientData: false),
-      demand: const UserDemand(userStage: 'settling'),
+      preference: UserProfilePreference(mode: 'online'),
+      reliability: UserReliability(reliabilityScore: 85, totalTasksTaken: 10, insufficientData: false),
+      demand: UserDemand(userStage: 'settling'),
     );
 
     blocTest<UserProfileBloc, UserProfileState>(
@@ -36,7 +36,7 @@ void main() {
       act: (bloc) => bloc.add(const UserProfileLoadSummary()),
       expect: () => [
         const UserProfileState(status: UserProfileStatus.loading),
-        UserProfileState(status: UserProfileStatus.loaded, summary: testSummary),
+        const UserProfileState(status: UserProfileStatus.loaded, summary: testSummary),
       ],
     );
 
@@ -67,7 +67,7 @@ void main() {
       )),
       expect: () => [
         const UserProfileState(status: UserProfileStatus.loading),
-        UserProfileState(status: UserProfileStatus.loaded, summary: testSummary),
+        const UserProfileState(status: UserProfileStatus.loaded, summary: testSummary),
       ],
     );
 
@@ -83,7 +83,7 @@ void main() {
       )),
       expect: () => [
         const UserProfileState(status: UserProfileStatus.loading),
-        UserProfileState(status: UserProfileStatus.loaded, summary: testSummary),
+        const UserProfileState(status: UserProfileStatus.loaded, summary: testSummary),
       ],
     );
 
@@ -97,7 +97,7 @@ void main() {
       act: (bloc) => bloc.add(const UserProfileDeleteCapability(capabilityId: 1)),
       expect: () => [
         const UserProfileState(status: UserProfileStatus.loading),
-        UserProfileState(status: UserProfileStatus.loaded, summary: testSummary),
+        const UserProfileState(status: UserProfileStatus.loaded, summary: testSummary),
       ],
     );
 
@@ -174,7 +174,7 @@ void main() {
         const UserProfileState(status: UserProfileStatus.loading),
         const UserProfileState(status: UserProfileStatus.error, errorMessage: 'user_profile_load_failed'),
         const UserProfileState(status: UserProfileStatus.loading),
-        UserProfileState(status: UserProfileStatus.loaded, summary: testSummary),
+        const UserProfileState(status: UserProfileStatus.loaded, summary: testSummary),
       ],
     );
 
