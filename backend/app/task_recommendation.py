@@ -5,6 +5,7 @@
 
 import json
 import logging
+import os
 from typing import List, Dict, Optional, Tuple
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -12,11 +13,25 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_, desc
 import math
 
-from app.models import Task, User, UserPreferences, TaskHistory, Review
+from app.models import Task, User, UserProfilePreference, TaskHistory, Review
 from app.crud import get_utc_time
 from app.redis_cache import redis_cache
 
 logger = logging.getLogger(__name__)
+
+# Feature flag: set USE_NEW_RECOMMENDATION_ENGINE=true to use the new pluggable scorer engine
+USE_NEW_ENGINE = os.environ.get("USE_NEW_RECOMMENDATION_ENGINE", "false").lower() == "true"
+
+# Singleton engine instance
+_engine_instance = None
+
+
+def _get_engine():
+    global _engine_instance
+    if _engine_instance is None:
+        from app.recommendation import create_engine
+        _engine_instance = create_engine()
+    return _engine_instance
 
 
 class TaskRecommendationEngine:
@@ -1062,7 +1077,7 @@ class TaskRecommendationEngine:
         preferences = self._get_user_preferences(user.id)
         if preferences and preferences.locations:
             try:
-                preferred_locations = json.loads(preferences.locations)
+                preferred_locations = preferences.locations if isinstance(preferences.locations, list) else json.loads(preferences.locations)
                 for loc in preferred_locations:
                     # 提取城市名
                     city = loc.split(',')[-1].strip() if ',' in loc else loc
@@ -1497,10 +1512,10 @@ class TaskRecommendationEngine:
         result.sort(key=lambda x: x["score"], reverse=True)
         return result[:limit]
     
-    def _get_user_preferences(self, user_id: str) -> Optional[UserPreferences]:
+    def _get_user_preferences(self, user_id: str) -> Optional[UserProfilePreference]:
         """获取用户偏好"""
-        return self.db.query(UserPreferences).filter(
-            UserPreferences.user_id == user_id
+        return self.db.query(UserProfilePreference).filter(
+            UserProfilePreference.user_id == user_id
         ).first()
     
     def _get_user_task_history(self, user_id: str) -> List[TaskHistory]:
@@ -1662,7 +1677,7 @@ class TaskRecommendationEngine:
     def _build_user_preference_vector(
         self, 
         user: User, 
-        preferences: Optional[UserPreferences],
+        preferences: Optional[UserProfilePreference],
         history: List[TaskHistory],
         view_history: Optional[List[Dict]] = None,
         search_keywords: Optional[List[str]] = None,
@@ -1681,17 +1696,27 @@ class TaskRecommendationEngine:
         }
         
         # 从用户偏好设置中获取
+        def _parse_json_field(val):
+            if not val:
+                return []
+            if isinstance(val, list):
+                return val
+            try:
+                return json.loads(val)
+            except (json.JSONDecodeError, TypeError):
+                return []
+
         if preferences:
             if preferences.task_types:
-                vector["task_types"] = json.loads(preferences.task_types)
+                vector["task_types"] = _parse_json_field(preferences.task_types)
                 vector["task_types_from_preference"] = True
             if preferences.locations:
-                vector["locations"] = json.loads(preferences.locations)
+                vector["locations"] = _parse_json_field(preferences.locations)
                 vector["locations_from_preference"] = True
             if preferences.task_levels:
-                vector["task_levels"] = json.loads(preferences.task_levels)
+                vector["task_levels"] = _parse_json_field(preferences.task_levels)
             if preferences.keywords:
-                vector["keywords"] = json.loads(preferences.keywords)
+                vector["keywords"] = _parse_json_field(preferences.keywords)
         
         # 增强：从浏览行为中学习偏好（新增）
         if view_history:
@@ -2086,9 +2111,26 @@ def get_task_recommendations(
     latitude: Optional[float] = None,
     longitude: Optional[float] = None
 ) -> List[Dict]:
+    """Top-level entry point. Delegates to new or old engine based on feature flag."""
+    if USE_NEW_ENGINE:
+        return _new_engine_recommend(db, user_id, limit, algorithm, task_type, location, keyword, latitude, longitude)
+    return _old_engine_recommend(db, user_id, limit, algorithm, task_type, location, keyword, latitude, longitude)
+
+
+def _old_engine_recommend(
+    db: Session,
+    user_id: str,
+    limit: int = 20,
+    algorithm: str = "hybrid",
+    task_type: Optional[str] = None,
+    location: Optional[str] = None,
+    keyword: Optional[str] = None,
+    latitude: Optional[float] = None,
+    longitude: Optional[float] = None
+) -> List[Dict]:
     """
-    获取任务推荐的便捷函数（支持筛选和GPS位置）
-    
+    获取任务推荐的便捷函数（支持筛选和GPS位置）— 原有引擎实现
+
     Args:
         db: 数据库会话
         user_id: 用户ID
@@ -2099,7 +2141,7 @@ def get_task_recommendations(
         keyword: 关键词筛选
         latitude: 用户当前纬度（用于基于位置的推荐）
         longitude: 用户当前经度（用于基于位置的推荐）
-    
+
     Returns:
         推荐任务列表
     """
@@ -2108,6 +2150,58 @@ def get_task_recommendations(
         user_id, limit, algorithm, task_type, location, keyword,
         latitude=latitude, longitude=longitude
     )
+
+
+def _new_engine_recommend(db, user_id, limit, algorithm, task_type, location, keyword, latitude, longitude):
+    """Delegate to the new pluggable scorer engine."""
+    from app.models import User as UserModel
+
+    user = db.query(UserModel).filter_by(id=user_id).first()
+    if not user:
+        return []
+
+    engine = _get_engine()
+    context = {"db": db, "latitude": latitude, "longitude": longitude}
+    filters = {}
+    if task_type:
+        filters["task_type"] = task_type
+    if location:
+        filters["location"] = location
+    if keyword:
+        filters["keyword"] = keyword
+
+    results = engine.recommend(user=user, limit=limit, context=context, filters=filters)
+
+    # Convert to existing API response format
+    from app.recommendation.utils import get_excluded_task_ids
+    excluded = get_excluded_task_ids(db, user_id)
+
+    recommendations = []
+    for r in results:
+        task = r["task"]
+        if not task or task.id in excluded:
+            continue
+        recommendations.append({
+            "id": task.id,
+            "task_id": task.id,
+            "title": task.title,
+            "title_en": getattr(task, "title_en", None),
+            "title_zh": getattr(task, "title_zh", None),
+            "description": task.description,
+            "task_type": task.task_type,
+            "location": task.location,
+            "reward": float(task.reward) if task.reward else None,
+            "base_reward": float(task.base_reward) if getattr(task, "base_reward", None) else None,
+            "agreed_reward": float(task.agreed_reward) if getattr(task, "agreed_reward", None) else None,
+            "reward_to_be_quoted": getattr(task, "reward_to_be_quoted", False),
+            "deadline": task.deadline.isoformat() if task.deadline else None,
+            "task_level": task.task_level,
+            "match_score": r["score"],
+            "recommendation_reason": "；".join(r["reasons"]) if r["reasons"] else "",
+            "created_at": task.created_at.isoformat() if task.created_at else None,
+            "images": task.images if hasattr(task, "images") else [],
+        })
+    return recommendations
 
 
 def calculate_task_match_score(

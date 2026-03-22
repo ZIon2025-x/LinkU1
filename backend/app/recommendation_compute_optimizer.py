@@ -9,7 +9,7 @@ from functools import lru_cache
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 
-from app.models import Task, User, UserPreferences, TaskHistory
+from app.models import Task, User, UserProfilePreference, TaskHistory
 from app.crud import get_utc_time
 from app.redis_cache import redis_cache
 
@@ -23,7 +23,7 @@ class RecommendationComputeCache:
         self.db = db
         self.user = user
         self._excluded_task_ids: Optional[Set[int]] = None
-        self._user_preferences: Optional[UserPreferences] = None
+        self._user_preferences: Optional[UserProfilePreference] = None
         self._user_history: Optional[List[TaskHistory]] = None
         self._is_new_user: Optional[bool] = None
         self._user_interactions: Optional[Set[int]] = None
@@ -37,11 +37,11 @@ class RecommendationComputeCache:
             self._excluded_task_ids = get_excluded_task_ids(self.db, self.user.id)
         return self._excluded_task_ids
     
-    def get_user_preferences(self) -> Optional[UserPreferences]:
+    def get_user_preferences(self) -> Optional[UserProfilePreference]:
         """获取用户偏好（只查询一次）"""
         if self._user_preferences is None:
-            self._user_preferences = self.db.query(UserPreferences).filter(
-                UserPreferences.user_id == self.user.id
+            self._user_preferences = self.db.query(UserProfilePreference).filter(
+                UserProfilePreference.user_id == self.user.id
             ).first()
         return self._user_preferences
     

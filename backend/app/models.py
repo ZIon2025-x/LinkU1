@@ -3557,6 +3557,12 @@ class UserProfilePreference(Base):
     preferred_helper_types = Column(JSON, default=list)
     nearby_push_enabled = Column(Boolean, default=False, server_default="false", nullable=False)
     city = Column(String(64))
+    # Migrated from UserPreferences
+    task_types = Column(JSON, nullable=True)
+    locations = Column(JSON, nullable=True)
+    task_levels = Column(JSON, nullable=True)
+    keywords = Column(JSON, nullable=True)
+    min_deadline_days = Column(Integer, default=1, nullable=True)
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
 
     user = relationship("User", backref="profile_preference")
