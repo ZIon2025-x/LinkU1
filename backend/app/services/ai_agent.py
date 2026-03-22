@@ -878,8 +878,11 @@ async def _step_llm(ctx: _PipelineContext) -> AsyncIterator[ServerSentEvent]:
                         except Exception:
                             pass
                 else:
-                    # No complete tag — just send it
-                    yield _make_text_sse(_token_buffer)
+                    # Strip incomplete insights tag before sending
+                    if "<user_insights>" in _token_buffer:
+                        _token_buffer = _token_buffer.split("<user_insights>", 1)[0]
+                    if _token_buffer:
+                        yield _make_text_sse(_token_buffer)
 
             if response is None:
                 break

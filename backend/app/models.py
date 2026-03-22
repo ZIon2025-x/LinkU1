@@ -3595,14 +3595,14 @@ class UserDemand(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True)
-    user_stage = Column(JSON, default=list)
-    predicted_needs = Column(JSON, default=list)
-    recent_interests = Column(JSON, default=dict)
+    user_stage = Column(JSONB, default=list)
+    predicted_needs = Column(JSONB, default=list)
+    recent_interests = Column(JSONB, default=dict)
     last_inferred_at = Column(DateTime(timezone=True), default=get_utc_time)
     inference_version = Column(String(20), default="v1.0")
     identity = Column(String(16))  # "pre_arrival" or "in_uk"
-    inferred_skills = Column(JSON, default=list)
-    inferred_preferences = Column(JSON, default=dict)
+    inferred_skills = Column(JSONB, default=list)
+    inferred_preferences = Column(JSONB, default=dict)
 
     user = relationship("User", backref="demand")
 
@@ -3648,7 +3648,7 @@ class UserBehaviorEvent(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     event_type = Column(String(32), nullable=False)
-    event_data = Column(JSON, nullable=False, default=dict)
+    event_data = Column(JSONB, nullable=False, default=dict)
     created_at = Column(DateTime(timezone=True), default=get_utc_time)
 
     __table_args__ = (

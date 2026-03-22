@@ -291,9 +291,9 @@ class _CityStepState extends State<_CityStep> {
               ),
             ),
             onChanged: (_) {
-              if (_selectedCity != null) {
-                setState(() => _selectedCity = null);
-              }
+              setState(() {
+                _selectedCity = null;
+              });
             },
           ),
           AppSpacing.vMd,

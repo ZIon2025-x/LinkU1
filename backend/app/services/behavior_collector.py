@@ -208,7 +208,8 @@ class BehaviorCollector:
                             month_stages = set()
                     else:
                         month_stages = set()
-                    demand.user_stage = list(ai_stages | month_stages)
+                    existing_stages = set(demand.user_stage) if isinstance(demand.user_stage, list) else set()
+                    demand.user_stage = list(ai_stages | month_stages | existing_stages)
 
             demand.last_inferred_at = now
             demand.inference_version = "v2.0-realtime"
