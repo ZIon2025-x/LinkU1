@@ -4820,6 +4820,7 @@
   "onboardingNext": "Next",
   "onboardingComplete": "Done",
   "onboardingProfileUpdateInSettings": "Can be updated in profile settings",
+  "onboardingSubmitFailed": "Submit failed, please try again",
   "onboardingInterestsTitle": "What are you interested in?",
   "onboardingInterestsSubtitle": "Choose your interests so we can recommend better for you"
 }

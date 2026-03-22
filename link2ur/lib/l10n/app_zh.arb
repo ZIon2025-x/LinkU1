@@ -4728,6 +4728,7 @@
   "onboardingNext": "下一步",
   "onboardingComplete": "完成",
   "onboardingProfileUpdateInSettings": "可在个人设置中更新",
+  "onboardingSubmitFailed": "提交失败，请重试",
   "onboardingInterestsTitle": "你对什么感兴趣",
   "onboardingInterestsSubtitle": "选择你感兴趣的领域，帮助我们更好地为你推荐"
 }

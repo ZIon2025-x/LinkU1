@@ -19424,6 +19424,12 @@ abstract class AppLocalizations {
   /// **'Can be updated in profile settings'**
   String get onboardingProfileUpdateInSettings;
 
+  /// No description provided for @onboardingSubmitFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit failed, please try again'**
+  String get onboardingSubmitFailed;
+
   /// No description provided for @onboardingInterestsTitle.
   ///
   /// In en, this message translates to:

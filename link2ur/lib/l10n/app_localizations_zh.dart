@@ -10128,6 +10128,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get onboardingProfileUpdateInSettings => '可在个人设置中更新';
 
   @override
+  String get onboardingSubmitFailed => '提交失败，请重试';
+
+  @override
   String get onboardingInterestsTitle => '你对什么感兴趣';
 
   @override
@@ -20212,6 +20215,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get onboardingProfileUpdateInSettings => '可在個人設置中更新';
+
+  @override
+  String get onboardingSubmitFailed => '提交失敗，請重試';
 
   @override
   String get onboardingInterestsTitle => '你對什麼感興趣';

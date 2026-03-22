@@ -6,6 +6,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_typography.dart';
+import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../data/repositories/user_profile_repository.dart';
 import '../bloc/identity_onboarding_bloc.dart';
@@ -53,8 +54,8 @@ class _OnboardingContentState extends State<_OnboardingContent> {
     return BlocConsumer<IdentityOnboardingBloc, IdentityOnboardingState>(
       listenWhen: (prev, curr) =>
           prev.currentStep != curr.currentStep ||
-          curr.isComplete ||
-          (prev.errorMessage == null && curr.errorMessage != null),
+          (prev.isComplete != curr.isComplete && curr.isComplete) ||
+          (prev.errorMessage != curr.errorMessage && curr.errorMessage != null),
       listener: (context, state) {
         if (state.isComplete) {
           // Refresh auth state — GoRouterBlocRefreshStream will re-evaluate
@@ -65,7 +66,7 @@ class _OnboardingContentState extends State<_OnboardingContent> {
         }
         if (state.errorMessage != null) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.errorMessage!)),
+            SnackBar(content: Text(context.localizeError(state.errorMessage))),
           );
           return;
         }

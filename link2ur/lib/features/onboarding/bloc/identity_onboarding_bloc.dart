@@ -180,7 +180,7 @@ class IdentityOnboardingBloc
     } catch (e) {
       emit(state.copyWith(
         isSubmitting: false,
-        errorMessage: e.toString(),
+        errorMessage: 'onboarding_submit_failed',
       ));
     }
   }

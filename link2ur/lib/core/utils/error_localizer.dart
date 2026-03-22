@@ -337,6 +337,8 @@ class ErrorLocalizer {
         return context.l10n.userProfileUpdateFailed;
       case 'user_profile_delete_failed':
         return context.l10n.userProfileDeleteFailed;
+      case 'onboarding_submit_failed':
+        return context.l10n.onboardingSubmitFailed;
       default:
         // 服务端返回的已翻译消息，直接使用
         return errorMessage;

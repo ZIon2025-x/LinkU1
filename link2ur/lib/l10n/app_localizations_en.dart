@@ -10550,6 +10550,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Can be updated in profile settings';
 
   @override
+  String get onboardingSubmitFailed => 'Submit failed, please try again';
+
+  @override
   String get onboardingInterestsTitle => 'What are you interested in?';
 
   @override
