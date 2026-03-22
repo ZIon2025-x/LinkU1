@@ -3,48 +3,71 @@ import logging
 from datetime import datetime, timezone, timedelta
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from app.models import UserDemand, UserStage
+from app.models import UserDemand
 from app.models import User, UserTaskInteraction
 
 logger = logging.getLogger(__name__)
 
-INFERENCE_VERSION = "v1.0"
+# Lifecycle stage definitions by month and identity
+STAGE_MAP_PRE_ARRIVAL = {
+    5: ["pre_arrival"], 6: ["pre_arrival"], 7: ["pre_arrival"],
+    8: ["pre_arrival", "new_arrival"], 9: ["new_arrival"],
+}
+STAGE_MAP_IN_UK = {
+    1: ["settled"], 2: ["settled"],
+    3: ["settled", "easter_break"], 4: ["settled", "easter_break"],
+    5: ["exam_season"], 6: ["exam_season", "graduation", "house_hunting", "moving"],
+    7: ["graduation", "house_hunting", "moving", "returning"],
+    8: ["house_hunting", "moving", "returning"],
+    9: ["settled", "returning"],
+    10: ["settled"], 11: ["settled"],
+    12: ["settled", "christmas_break"],
+}
 
 STAGE_PREDICTIONS = {
-    UserStage.new_arrival: [
-        {"category": "settling", "confidence": 0.85, "items": ["接机", "搬家", "银行开户", "电话卡办理"], "reason": "new_arrival_pattern"},
-        {"category": "orientation", "confidence": 0.7, "items": ["校园导览", "超市指引", "交通卡办理"], "reason": "new_arrival_pattern"},
+    "pre_arrival": [
+        {"category": "arrival_prep", "confidence": 0.9, "items": ["接机", "住宿", "行李"], "reason": "行前准备阶段"},
     ],
-    UserStage.settling: [
-        {"category": "housing", "confidence": 0.7, "items": ["租房看房", "搬家", "家具组装"], "reason": "settling_pattern"},
-        {"category": "daily_life", "confidence": 0.6, "items": ["代买代取", "取快递", "陪同办事"], "reason": "settling_pattern"},
+    "new_arrival": [
+        {"category": "settling", "confidence": 0.85, "items": ["银行卡", "电话卡", "注册"], "reason": "新生入学阶段"},
+        {"category": "orientation", "confidence": 0.7, "items": ["校园", "超市", "交通"], "reason": "熟悉环境"},
     ],
-    UserStage.established: [
-        {"category": "daily_life", "confidence": 0.5, "items": ["代买代取", "取快递"], "reason": "general_needs"},
+    "exam_season": [
+        {"category": "academic", "confidence": 0.8, "items": ["论文", "打印", "复习"], "reason": "期末阶段"},
     ],
-    UserStage.experienced: [],
+    "graduation": [
+        {"category": "graduation", "confidence": 0.85, "items": ["毕业照", "签证", "PSW"], "reason": "毕业阶段"},
+    ],
+    "house_hunting": [
+        {"category": "housing", "confidence": 0.9, "items": ["租房", "合同", "看房"], "reason": "找房阶段"},
+    ],
+    "moving": [
+        {"category": "moving", "confidence": 0.9, "items": ["搬家", "家具", "清洁"], "reason": "搬家阶段"},
+    ],
+    "returning": [
+        {"category": "returning", "confidence": 0.85, "items": ["退租", "行李海运", "闲置转让"], "reason": "回国阶段"},
+    ],
+    "settled": [
+        {"category": "daily", "confidence": 0.6, "items": ["代购", "代取", "日常"], "reason": "日常生活"},
+    ],
+    "christmas_break": [
+        {"category": "travel", "confidence": 0.7, "items": ["旅游搭子", "短租", "寄存"], "reason": "圣诞假期"},
+    ],
+    "easter_break": [
+        {"category": "travel", "confidence": 0.7, "items": ["旅游搭子", "短途出行"], "reason": "复活节假期"},
+    ],
 }
 
 
-def determine_user_stage(db: Session, user: User) -> UserStage:
-    """Determine user's current stage based on registration time and activity."""
-    now = datetime.now(timezone.utc)
-    if not user.created_at:
-        return UserStage.new_arrival
-    created_at = user.created_at
-    # Handle timezone-naive datetimes from old data
-    if created_at.tzinfo is None:
-        created_at = created_at.replace(tzinfo=timezone.utc)
-    days_since_registration = (now - created_at).days
-    if days_since_registration <= 7:
-        return UserStage.new_arrival
-    elif days_since_registration <= 30:
-        return UserStage.settling
-    elif (user.completed_task_count or 0) > 10 and days_since_registration > 90:
-        return UserStage.experienced
-    elif days_since_registration > 30:
-        return UserStage.established
-    return UserStage.new_arrival
+def determine_user_stages(identity: str | None) -> list[str]:
+    """Determine lifecycle stages based on identity and current month."""
+    month = datetime.now(timezone.utc).month
+    if identity == "pre_arrival":
+        return STAGE_MAP_PRE_ARRIVAL.get(month, ["pre_arrival"])
+    elif identity == "in_uk":
+        return STAGE_MAP_IN_UK.get(month, ["settled"])
+    else:
+        return ["settled"]
 
 
 def analyze_recent_interests(db: Session, user_id: str) -> dict:
@@ -60,23 +83,47 @@ def analyze_recent_interests(db: Session, user_id: str) -> dict:
     return {row.interaction_type: row.count for row in interactions}
 
 
-def infer_demand(db: Session, user_id: str) -> UserDemand:
-    """Run demand inference for a user. Creates or updates UserDemand record."""
+def infer_demand(db: Session, user_id: str):
+    """Infer or update user demand. Merges with existing data."""
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
-        raise ValueError(f"User {user_id} not found")
-    stage = determine_user_stage(db, user)
-    recent_interests = analyze_recent_interests(db, user_id)
-    predicted_needs = list(STAGE_PREDICTIONS.get(stage, []))
+        return None
+
     demand = db.query(UserDemand).filter(UserDemand.user_id == user_id).first()
     if not demand:
         demand = UserDemand(user_id=user_id)
         db.add(demand)
-    demand.user_stage = stage
-    demand.predicted_needs = predicted_needs
-    demand.recent_interests = recent_interests
+
+    # Compute stages from month + identity
+    stages = determine_user_stages(demand.identity)
+
+    # Merge with existing stages (may include AI-inferred stages)
+    existing_stages = demand.user_stage if isinstance(demand.user_stage, list) else []
+    merged_stages = list(set(stages) | set(existing_stages))
+    demand.user_stage = merged_stages
+
+    # Build predicted_needs from all active stages
+    needs = []
+    seen_categories = set()
+    for stage in merged_stages:
+        for need in STAGE_PREDICTIONS.get(stage, []):
+            if need["category"] not in seen_categories:
+                needs.append(need)
+                seen_categories.add(need["category"])
+    demand.predicted_needs = needs
+
+    # Merge recent interests from task behavior (don't overwrite AI interests)
+    task_interests = analyze_recent_interests(db, user_id)
+    existing_interests = demand.recent_interests or {}
+    for topic, data in task_interests.items():
+        if topic not in existing_interests:
+            existing_interests[topic] = data
+        elif isinstance(data, dict) and data.get("confidence", 0) > existing_interests.get(topic, {}).get("confidence", 0):
+            existing_interests[topic] = data
+    demand.recent_interests = existing_interests
+
     demand.last_inferred_at = datetime.now(timezone.utc)
-    demand.inference_version = INFERENCE_VERSION
+    demand.inference_version = "v2.0"
     db.flush()
     return demand
 
