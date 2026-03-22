@@ -236,8 +236,9 @@ class UserDemand(Base):
     inference_version # String
 
     # 新增字段
-    identity          # String: "pre_arrival" / "in_uk"（引导页设置）
-    inferred_skills   # JSONB: [{"skill": "英语沟通", "confidence": 0.8, "source": "chat"}, ...]
+    identity              # String: "pre_arrival" / "in_uk"（引导页设置）
+    inferred_skills       # JSONB: [{"skill": "英语沟通", "confidence": 0.8}, ...]
+    inferred_preferences  # JSONB: {"mode": "offline", "price_sensitive": true, ...}（AI 推断的偏好，与用户手动设置的 UserProfilePreference 分开）
 ```
 
 ---
