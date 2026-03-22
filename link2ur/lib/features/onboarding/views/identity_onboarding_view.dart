@@ -77,6 +77,25 @@ class _OnboardingContentState extends State<_OnboardingContent> {
           body: SafeArea(
             child: Column(
               children: [
+                // Skip button at top-right
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: state.isSubmitting
+                        ? null
+                        : () {
+                            context
+                                .read<IdentityOnboardingBloc>()
+                                .add(const OnboardingSubmit());
+                          },
+                    child: Text(
+                      context.l10n.onboardingSkillsSkip,
+                      style: AppTypography.callout.copyWith(
+                        color: AppColors.textSecondaryLight,
+                      ),
+                    ),
+                  ),
+                ),
                 Expanded(
                   child: PageView(
                     controller: _pageController,
