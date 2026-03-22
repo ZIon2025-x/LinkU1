@@ -4696,7 +4696,8 @@ def get_my_profile(
             "residence_city": residence_city,
             "language_preference": language_preference,
             "name_updated_at": getattr(current_user, 'name_updated_at', None),
-            "flea_market_notice_agreed_at": getattr(current_user, 'flea_market_notice_agreed_at', None)  # 跳蚤市场须知同意时间
+            "flea_market_notice_agreed_at": getattr(current_user, 'flea_market_notice_agreed_at', None),  # 跳蚤市场须知同意时间
+            "onboarding_completed": getattr(current_user, 'onboarding_completed', False)
         }
         
         # ⚠️ 处理datetime对象，使其可JSON序列化（用于ETag生成和响应）

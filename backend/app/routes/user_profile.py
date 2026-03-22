@@ -68,6 +68,8 @@ class OnboardingSubmit(BaseModel):
     capabilities: list[CapabilityItem] = []
     mode: TaskModeStr | None = None
     preferred_categories: list[int] = []
+    identity: str | None = None  # "pre_arrival" or "in_uk"
+    city: str | None = None
 
 
 # --- Capability endpoints ---
@@ -118,7 +120,7 @@ async def get_preferences(current_user=Depends(get_current_user_secure_sync_csrf
     if not pref:
         return {"mode": "both", "duration_type": "both", "reward_preference": "no_preference",
                 "preferred_time_slots": [], "preferred_categories": [], "preferred_helper_types": [],
-                "nearby_push_enabled": False}
+                "nearby_push_enabled": False, "city": None}
     return {
         "mode": pref.mode.value,
         "duration_type": pref.duration_type.value,
@@ -127,6 +129,7 @@ async def get_preferences(current_user=Depends(get_current_user_secure_sync_csrf
         "preferred_categories": pref.preferred_categories or [],
         "preferred_helper_types": pref.preferred_helper_types or [],
         "nearby_push_enabled": pref.nearby_push_enabled or False,
+        "city": pref.city,
     }
 
 
@@ -203,13 +206,14 @@ async def get_summary(current_user=Depends(get_current_user_secure_sync_csrf), d
     pref = summary["preference"]
     pref_data = {"mode": "both", "duration_type": "both", "reward_preference": "no_preference",
                  "preferred_time_slots": [], "preferred_categories": [], "preferred_helper_types": [],
-                 "nearby_push_enabled": False} if not pref else {
+                 "nearby_push_enabled": False, "city": None} if not pref else {
         "mode": pref.mode.value, "duration_type": pref.duration_type.value,
         "reward_preference": pref.reward_preference.value,
         "preferred_time_slots": pref.preferred_time_slots or [],
         "preferred_categories": pref.preferred_categories or [],
         "preferred_helper_types": pref.preferred_helper_types or [],
         "nearby_push_enabled": pref.nearby_push_enabled or False,
+        "city": pref.city,
     }
 
     rel = summary["reliability"]
@@ -275,7 +279,36 @@ async def submit_onboarding(
     current_user=Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db)
 ):
-    result = svc.submit_onboarding(db, current_user.id, data.model_dump())
+    svc.submit_onboarding(db, current_user.id, data.model_dump())
+
+    # Save identity to UserDemand
+    if data.identity:
+        from app.models import UserDemand
+        from app.services.demand_inference import determine_user_stages
+        demand = db.query(UserDemand).filter(UserDemand.user_id == current_user.id).first()
+        if not demand:
+            demand = UserDemand(user_id=current_user.id)
+            db.add(demand)
+        demand.identity = data.identity
+        demand.user_stage = determine_user_stages(data.identity)
+        db.flush()
+
+    # Save city to preferences
+    if data.city:
+        from app.models import UserProfilePreference
+        pref = db.query(UserProfilePreference).filter(
+            UserProfilePreference.user_id == current_user.id
+        ).first()
+        if pref:
+            pref.city = data.city
+        else:
+            pref = UserProfilePreference(user_id=current_user.id, city=data.city)
+            db.add(pref)
+
+    # Mark onboarding complete
+    current_user.onboarding_completed = True
+
+    # Run demand inference
     infer_demand(db, current_user.id)
     db.commit()
     return {"message": "ok"}
