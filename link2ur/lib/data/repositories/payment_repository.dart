@@ -1,3 +1,6 @@
+import 'package:dio/dio.dart';
+import 'package:uuid/uuid.dart';
+
 import '../models/payment.dart';
 import '../services/api_service.dart';
 import '../../core/constants/api_endpoints.dart';
@@ -13,6 +16,7 @@ class PaymentRepository {
 
   final ApiService _apiService;
   final CacheManager _cache = CacheManager.shared;
+  static const _uuid = Uuid();
 
   /// 创建任务支付（对应后端 /api/coupon-points/tasks/{taskId}/payment）
   /// [userCouponId] 用户优惠券 ID（后端字段 user_coupon_id），选券后传入以抵扣
@@ -26,6 +30,7 @@ class PaymentRepository {
     String? taskSource,
     String? fleaMarketItemId,
   }) async {
+    final idempotencyKey = _uuid.v4();
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.createTaskPayment(taskId),
       data: {
@@ -36,6 +41,7 @@ class PaymentRepository {
         if (taskSource != null) 'task_source': taskSource,
         if (fleaMarketItemId != null) 'flea_market_item_id': fleaMarketItemId,
       },
+      options: Options(headers: {'Idempotency-Key': idempotencyKey}),
     );
 
     if (!response.isSuccess || response.data == null) {
@@ -103,6 +109,7 @@ class PaymentRepository {
     String? taskSource,
     String? fleaMarketItemId,
   }) async {
+    final idempotencyKey = _uuid.v4();
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.createWeChatCheckout(taskId),
       data: {
@@ -110,6 +117,7 @@ class PaymentRepository {
         if (taskSource != null) 'task_source': taskSource,
         if (fleaMarketItemId != null) 'flea_market_item_id': fleaMarketItemId,
       },
+      options: Options(headers: {'Idempotency-Key': idempotencyKey}),
     );
 
     if (!response.isSuccess || response.data == null) {

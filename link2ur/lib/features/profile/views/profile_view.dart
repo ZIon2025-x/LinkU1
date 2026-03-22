@@ -12,6 +12,7 @@ import '../../../core/utils/responsive.dart';
 import '../../../core/utils/adaptive_dialogs.dart';
 import '../../../core/widgets/user_identity_badges.dart';
 import '../../../core/widgets/async_image_view.dart';
+import '../../../core/router/app_routes.dart';
 import '../../../core/router/page_transitions.dart';
 import '../../../core/widgets/content_constraint.dart';
 import '../../../core/widgets/decorative_background.dart';

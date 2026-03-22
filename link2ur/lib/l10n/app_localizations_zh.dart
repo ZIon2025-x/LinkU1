@@ -9134,6 +9134,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aiChatCreateConversationRetry => '创建对话失败，请重试';
 
   @override
+  String get chatLoadFailed => '加载消息失败';
+
+  @override
   String get chatLoadMoreFailed => '加载更多消息失败';
 
   @override
@@ -9147,6 +9150,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get taskRefundAmountInvalid => '退款金额必须大于0且不超过任务报酬';
+
+  @override
+  String get taskNegotiationInvalidAction => '无效的协商操作';
 
   @override
   String get paymentSessionExpired => '支付会话已过期，请返回重新进入';
@@ -10018,6 +10024,63 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get nearbyPushDescription => '有新任务在附近时通知你';
+
+  @override
+  String get taskStatisticsTitle => '任务统计';
+
+  @override
+  String get taskStatisticsPosted => '发布';
+
+  @override
+  String get taskStatisticsAccepted => '接单';
+
+  @override
+  String get taskStatisticsCompleted => '完成';
+
+  @override
+  String get taskStatisticsTotal => '总计';
+
+  @override
+  String get taskStatisticsCompletionRate => '完成率';
+
+  @override
+  String get taskStatisticsUpgradeProgress => '晋升进度';
+
+  @override
+  String get taskStatisticsCurrentLevel => '当前等级';
+
+  @override
+  String get taskStatisticsUpgradeDisabled => '暂未开放晋升';
+
+  @override
+  String get taskStatisticsViewDetails => '查看统计';
+
+  @override
+  String get taskStatisticsLevelNormal => '普通';
+
+  @override
+  String get taskStatisticsLevelVip => 'VIP';
+
+  @override
+  String get taskStatisticsLevelSuper => '超级VIP';
+
+  @override
+  String get taskStatisticsTaskCount => '任务数';
+
+  @override
+  String get taskStatisticsRating => '评分';
+
+  @override
+  String get sharedTasksTitle => '合作记录';
+
+  @override
+  String get sharedTasksRolePoster => '你发布的';
+
+  @override
+  String get sharedTasksRoleTaker => '你接单的';
+
+  @override
+  String get sharedTasksEmpty => '暂无合作记录';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -19150,6 +19213,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get aiChatCreateConversationRetry => '建立對話失敗，請重試';
 
   @override
+  String get chatLoadFailed => '載入訊息失敗';
+
+  @override
   String get chatLoadMoreFailed => '載入更多訊息失敗';
 
   @override
@@ -19163,6 +19229,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get taskRefundAmountInvalid => '退款金額必須大於0且不超過任務報酬';
+
+  @override
+  String get taskNegotiationInvalidAction => '無效的協商操作';
 
   @override
   String get paymentSessionExpired => '支付階段已過期，請返回重新進入';
@@ -19990,4 +20059,61 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get nearbyPushDescription => '有新任務在附近時通知你';
+
+  @override
+  String get taskStatisticsTitle => '任務統計';
+
+  @override
+  String get taskStatisticsPosted => '發佈';
+
+  @override
+  String get taskStatisticsAccepted => '接單';
+
+  @override
+  String get taskStatisticsCompleted => '完成';
+
+  @override
+  String get taskStatisticsTotal => '總計';
+
+  @override
+  String get taskStatisticsCompletionRate => '完成率';
+
+  @override
+  String get taskStatisticsUpgradeProgress => '晉升進度';
+
+  @override
+  String get taskStatisticsCurrentLevel => '當前等級';
+
+  @override
+  String get taskStatisticsUpgradeDisabled => '暫未開放晉升';
+
+  @override
+  String get taskStatisticsViewDetails => '查看統計';
+
+  @override
+  String get taskStatisticsLevelNormal => '普通';
+
+  @override
+  String get taskStatisticsLevelVip => 'VIP';
+
+  @override
+  String get taskStatisticsLevelSuper => '超級VIP';
+
+  @override
+  String get taskStatisticsTaskCount => '任務數';
+
+  @override
+  String get taskStatisticsRating => '評分';
+
+  @override
+  String get sharedTasksTitle => '合作記錄';
+
+  @override
+  String get sharedTasksRolePoster => '你發佈的';
+
+  @override
+  String get sharedTasksRoleTaker => '你接單的';
+
+  @override
+  String get sharedTasksEmpty => '暫無合作記錄';
 }

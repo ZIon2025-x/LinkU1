@@ -17492,6 +17492,12 @@ abstract class AppLocalizations {
   /// **'Failed to create conversation, please retry'**
   String get aiChatCreateConversationRetry;
 
+  /// No description provided for @chatLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load messages'**
+  String get chatLoadFailed;
+
   /// No description provided for @chatLoadMoreFailed.
   ///
   /// In en, this message translates to:
@@ -17521,6 +17527,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Refund amount must be greater than 0 and not exceed the task reward'**
   String get taskRefundAmountInvalid;
+
+  /// No description provided for @taskNegotiationInvalidAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid negotiation action'**
+  String get taskNegotiationInvalidAction;
 
   /// No description provided for @paymentSessionExpired.
   ///
@@ -19207,6 +19219,120 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Get notified when new tasks are posted nearby'**
   String get nearbyPushDescription;
+
+  /// No description provided for @taskStatisticsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Task Statistics'**
+  String get taskStatisticsTitle;
+
+  /// No description provided for @taskStatisticsPosted.
+  ///
+  /// In en, this message translates to:
+  /// **'Posted'**
+  String get taskStatisticsPosted;
+
+  /// No description provided for @taskStatisticsAccepted.
+  ///
+  /// In en, this message translates to:
+  /// **'Accepted'**
+  String get taskStatisticsAccepted;
+
+  /// No description provided for @taskStatisticsCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get taskStatisticsCompleted;
+
+  /// No description provided for @taskStatisticsTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Total'**
+  String get taskStatisticsTotal;
+
+  /// No description provided for @taskStatisticsCompletionRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Completion Rate'**
+  String get taskStatisticsCompletionRate;
+
+  /// No description provided for @taskStatisticsUpgradeProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Upgrade Progress'**
+  String get taskStatisticsUpgradeProgress;
+
+  /// No description provided for @taskStatisticsCurrentLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'Current Level'**
+  String get taskStatisticsCurrentLevel;
+
+  /// No description provided for @taskStatisticsUpgradeDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Upgrade not available yet'**
+  String get taskStatisticsUpgradeDisabled;
+
+  /// No description provided for @taskStatisticsViewDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'View Statistics'**
+  String get taskStatisticsViewDetails;
+
+  /// No description provided for @taskStatisticsLevelNormal.
+  ///
+  /// In en, this message translates to:
+  /// **'Normal'**
+  String get taskStatisticsLevelNormal;
+
+  /// No description provided for @taskStatisticsLevelVip.
+  ///
+  /// In en, this message translates to:
+  /// **'VIP'**
+  String get taskStatisticsLevelVip;
+
+  /// No description provided for @taskStatisticsLevelSuper.
+  ///
+  /// In en, this message translates to:
+  /// **'Super VIP'**
+  String get taskStatisticsLevelSuper;
+
+  /// No description provided for @taskStatisticsTaskCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Task Count'**
+  String get taskStatisticsTaskCount;
+
+  /// No description provided for @taskStatisticsRating.
+  ///
+  /// In en, this message translates to:
+  /// **'Rating'**
+  String get taskStatisticsRating;
+
+  /// No description provided for @sharedTasksTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Collaboration History'**
+  String get sharedTasksTitle;
+
+  /// No description provided for @sharedTasksRolePoster.
+  ///
+  /// In en, this message translates to:
+  /// **'Posted by you'**
+  String get sharedTasksRolePoster;
+
+  /// No description provided for @sharedTasksRoleTaker.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed by you'**
+  String get sharedTasksRoleTaker;
+
+  /// No description provided for @sharedTasksEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No collaboration history yet'**
+  String get sharedTasksEmpty;
 }
 
 class _AppLocalizationsDelegate

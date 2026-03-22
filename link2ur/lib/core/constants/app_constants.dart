@@ -36,6 +36,8 @@ class AppConstants {
   static const String taskStatusDisputed = 'disputed';
   static const String taskStatusPendingAcceptance = 'pending_acceptance';
   static const String taskStatusChatting = 'chatting';
+  static const String taskStatusExpired = 'expired';
+  static const String taskStatusClosed = 'closed';
 
   // Application statuses
   static const String applicationStatusPending = 'pending';

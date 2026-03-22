@@ -9,6 +9,7 @@ import '../../../features/profile/views/my_tasks_view.dart';
 import '../../../features/profile/views/my_posts_view.dart';
 import '../../../features/profile/views/user_profile_view.dart';
 import '../../../features/profile/views/task_preferences_view.dart';
+import '../../../features/profile/views/task_statistics_view.dart';
 import '../../../features/user_profile/views/my_profile_view.dart';
 import '../../../features/user_profile/views/capability_edit_view.dart';
 import '../../../features/user_profile/views/preference_edit_view.dart';
@@ -55,6 +56,11 @@ List<RouteBase> get profileRoutes => [
         path: AppRoutes.taskPreferences,
         name: 'taskPreferences',
         builder: (context, state) => const TaskPreferencesView(),
+      ),
+      GoRoute(
+        path: AppRoutes.taskStatistics,
+        name: 'taskStatistics',
+        builder: (context, state) => const TaskStatisticsView(),
       ),
       GoRoute(
         path: AppRoutes.myProfilePage,

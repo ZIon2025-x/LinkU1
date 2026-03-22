@@ -385,8 +385,8 @@ class _TaskChatContentState extends State<_TaskChatContent> {
         return l10n.taskStatusPendingPayment;
       case AppConstants.taskStatusDisputed:
         return l10n.taskStatusDisputed;
-      case 'expired':
-      case 'closed':
+      case AppConstants.taskStatusExpired:
+      case AppConstants.taskStatusClosed:
         return l10n.chatTaskClosed;
       default:
         return isTaskClosed ? l10n.chatTaskClosed : l10n.chatInProgress;

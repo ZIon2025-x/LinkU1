@@ -142,6 +142,20 @@ class ProfileUpdatePreferences extends ProfileEvent {
   List<Object?> get props => [preferences];
 }
 
+class ProfileLoadTaskStatistics extends ProfileEvent {
+  const ProfileLoadTaskStatistics(this.userId);
+  final String userId;
+  @override
+  List<Object?> get props => [userId];
+}
+
+class ProfileLoadSharedTasks extends ProfileEvent {
+  const ProfileLoadSharedTasks(this.otherUserId);
+  final String otherUserId;
+  @override
+  List<Object?> get props => [otherUserId];
+}
+
 // ==================== State ====================
 
 enum ProfileStatus { initial, loading, loaded, error }
@@ -177,6 +191,10 @@ class ProfileState extends Equatable {
     this.isSendingPhoneCode = false,
     this.showEmailCodeField = false,
     this.showPhoneCodeField = false,
+    this.taskStatistics,
+    this.sharedTasks = const [],
+    this.isLoadingStatistics = false,
+    this.isLoadingSharedTasks = false,
   });
 
   final ProfileStatus status;
@@ -208,6 +226,10 @@ class ProfileState extends Equatable {
   final bool isSendingPhoneCode;
   final bool showEmailCodeField;
   final bool showPhoneCodeField;
+  final Map<String, dynamic>? taskStatistics;
+  final List<Map<String, dynamic>> sharedTasks;
+  final bool isLoadingStatistics;
+  final bool isLoadingSharedTasks;
 
   bool get isLoading => status == ProfileStatus.loading;
 
@@ -241,6 +263,10 @@ class ProfileState extends Equatable {
     bool? isSendingPhoneCode,
     bool? showEmailCodeField,
     bool? showPhoneCodeField,
+    Map<String, dynamic>? taskStatistics,
+    List<Map<String, dynamic>>? sharedTasks,
+    bool? isLoadingStatistics,
+    bool? isLoadingSharedTasks,
   }) {
     return ProfileState(
       status: status ?? this.status,
@@ -272,6 +298,10 @@ class ProfileState extends Equatable {
       isSendingPhoneCode: isSendingPhoneCode ?? this.isSendingPhoneCode,
       showEmailCodeField: showEmailCodeField ?? this.showEmailCodeField,
       showPhoneCodeField: showPhoneCodeField ?? this.showPhoneCodeField,
+      taskStatistics: taskStatistics ?? this.taskStatistics,
+      sharedTasks: sharedTasks ?? this.sharedTasks,
+      isLoadingStatistics: isLoadingStatistics ?? this.isLoadingStatistics,
+      isLoadingSharedTasks: isLoadingSharedTasks ?? this.isLoadingSharedTasks,
     );
   }
 
@@ -306,6 +336,10 @@ class ProfileState extends Equatable {
         isSendingPhoneCode,
         showEmailCodeField,
         showPhoneCodeField,
+        taskStatistics,
+        sharedTasks,
+        isLoadingStatistics,
+        isLoadingSharedTasks,
       ];
 }
 
@@ -334,6 +368,8 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     on<ProfileSendPhoneCode>(_onSendPhoneCode);
     on<ProfileEmailCountdownTick>(_onEmailCountdownTick);
     on<ProfilePhoneCountdownTick>(_onPhoneCountdownTick);
+    on<ProfileLoadTaskStatistics>(_onLoadTaskStatistics);
+    on<ProfileLoadSharedTasks>(_onLoadSharedTasks);
   }
 
   final UserRepository _userRepository;
@@ -758,6 +794,46 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       emit(state.copyWith(phoneCountdown: 0));
     } else {
       emit(state.copyWith(phoneCountdown: newCount));
+    }
+  }
+
+  Future<void> _onLoadTaskStatistics(
+    ProfileLoadTaskStatistics event,
+    Emitter<ProfileState> emit,
+  ) async {
+    emit(state.copyWith(isLoadingStatistics: true));
+    try {
+      final data = await _userRepository.getTaskStatistics(event.userId);
+      emit(state.copyWith(
+        taskStatistics: data,
+        isLoadingStatistics: false,
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to load task statistics', e);
+      emit(state.copyWith(
+        isLoadingStatistics: false,
+        errorMessage: 'task_statistics_load_failed',
+      ));
+    }
+  }
+
+  Future<void> _onLoadSharedTasks(
+    ProfileLoadSharedTasks event,
+    Emitter<ProfileState> emit,
+  ) async {
+    emit(state.copyWith(isLoadingSharedTasks: true));
+    try {
+      final tasks = await _userRepository.getSharedTasks(event.otherUserId);
+      emit(state.copyWith(
+        sharedTasks: tasks,
+        isLoadingSharedTasks: false,
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to load shared tasks', e);
+      emit(state.copyWith(
+        sharedTasks: const [],
+        isLoadingSharedTasks: false,
+      ));
     }
   }
 }

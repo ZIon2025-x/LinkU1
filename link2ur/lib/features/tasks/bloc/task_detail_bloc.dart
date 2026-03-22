@@ -965,6 +965,21 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
     Emitter<TaskDetailState> emit,
   ) async {
     if (_taskId == null || state.isSubmitting) return;
+
+    // 部分退款金额校验：不得超过任务实际支付金额
+    if (event.refundType == 'partial' && event.refundAmount != null) {
+      final task = state.task;
+      if (task == null) return;
+      final taskReward = task.displayReward;
+      if (event.refundAmount! > taskReward || event.refundAmount! <= 0) {
+        emit(state.copyWith(
+          actionMessage: 'refund_failed',
+          errorMessage: 'task_refund_amount_invalid',
+        ));
+        return;
+      }
+    }
+
     emit(state.copyWith(isSubmitting: true));
 
     try {
@@ -1224,7 +1239,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
     if (event.action != 'accept' && event.action != 'reject') {
       emit(state.copyWith(
         isSubmitting: false,
-        errorMessage: 'Invalid negotiation action: ${event.action}',
+        errorMessage: 'task_negotiation_invalid_action',
       ));
       return;
     }

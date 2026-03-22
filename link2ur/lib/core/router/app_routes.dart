@@ -71,6 +71,7 @@ class AppRoutes {
   static const String myPosts = '/profile/my-posts';
   static const String userProfile = '/user/:id';
   static const String taskPreferences = '/profile/task-preferences';
+  static const String taskStatistics = '/profile/task-statistics';
   static const String myProfilePage = '/my-profile';
   static const String capabilityEdit = '/my-profile/capabilities';
   static const String preferenceEdit = '/my-profile/preferences';
@@ -151,6 +152,7 @@ const authRequiredRoutes = <String>{
   AppRoutes.couponPoints,
   AppRoutes.studentVerification,
   AppRoutes.taskPreferences,
+  AppRoutes.taskStatistics,
   AppRoutes.newbieTasks,
   AppRoutes.chat,
   AppRoutes.taskChat,

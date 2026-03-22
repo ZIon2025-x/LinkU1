@@ -9518,6 +9518,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Failed to create conversation, please retry';
 
   @override
+  String get chatLoadFailed => 'Failed to load messages';
+
+  @override
   String get chatLoadMoreFailed => 'Failed to load more messages';
 
   @override
@@ -9532,6 +9535,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get taskRefundAmountInvalid =>
       'Refund amount must be greater than 0 and not exceed the task reward';
+
+  @override
+  String get taskNegotiationInvalidAction => 'Invalid negotiation action';
 
   @override
   String get paymentSessionExpired =>
@@ -10439,4 +10445,61 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get nearbyPushDescription =>
       'Get notified when new tasks are posted nearby';
+
+  @override
+  String get taskStatisticsTitle => 'Task Statistics';
+
+  @override
+  String get taskStatisticsPosted => 'Posted';
+
+  @override
+  String get taskStatisticsAccepted => 'Accepted';
+
+  @override
+  String get taskStatisticsCompleted => 'Completed';
+
+  @override
+  String get taskStatisticsTotal => 'Total';
+
+  @override
+  String get taskStatisticsCompletionRate => 'Completion Rate';
+
+  @override
+  String get taskStatisticsUpgradeProgress => 'Upgrade Progress';
+
+  @override
+  String get taskStatisticsCurrentLevel => 'Current Level';
+
+  @override
+  String get taskStatisticsUpgradeDisabled => 'Upgrade not available yet';
+
+  @override
+  String get taskStatisticsViewDetails => 'View Statistics';
+
+  @override
+  String get taskStatisticsLevelNormal => 'Normal';
+
+  @override
+  String get taskStatisticsLevelVip => 'VIP';
+
+  @override
+  String get taskStatisticsLevelSuper => 'Super VIP';
+
+  @override
+  String get taskStatisticsTaskCount => 'Task Count';
+
+  @override
+  String get taskStatisticsRating => 'Rating';
+
+  @override
+  String get sharedTasksTitle => 'Collaboration History';
+
+  @override
+  String get sharedTasksRolePoster => 'Posted by you';
+
+  @override
+  String get sharedTasksRoleTaker => 'Completed by you';
+
+  @override
+  String get sharedTasksEmpty => 'No collaboration history yet';
 }

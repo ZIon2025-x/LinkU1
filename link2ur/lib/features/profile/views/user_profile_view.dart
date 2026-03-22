@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/design/app_typography.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
@@ -43,7 +44,8 @@ class UserProfileView extends StatelessWidget {
         userRepository: context.read<UserRepository>(),
         taskRepository: context.read<TaskRepository>(),
         forumRepository: context.read<ForumRepository>(),
-      )..add(ProfileLoadPublicProfile(userId)),
+      )..add(ProfileLoadPublicProfile(userId))
+        ..add(ProfileLoadSharedTasks(userId)),
       child: BlocBuilder<ProfileBloc, ProfileState>(
         buildWhen: (prev, curr) =>
             prev.isLoading != curr.isLoading ||
@@ -75,9 +77,9 @@ class UserProfileView extends StatelessWidget {
                               Expanded(
                                 child: RefreshIndicator(
                                   onRefresh: () async {
-                                    context.read<ProfileBloc>().add(
-                                          ProfileLoadPublicProfile(userId),
-                                        );
+                                    context.read<ProfileBloc>()
+                                      ..add(ProfileLoadPublicProfile(userId))
+                                      ..add(ProfileLoadSharedTasks(userId));
                                   },
                                   child: SingleChildScrollView(
                                     physics: const AlwaysScrollableScrollPhysics(),
@@ -89,6 +91,18 @@ class UserProfileView extends StatelessWidget {
                                         // 技能雷达图
                                         _buildSkillRadar(context, state.publicUser!),
                                         const SizedBox(height: AppSpacing.section),
+                                        // 合作记录
+                                        BlocBuilder<ProfileBloc, ProfileState>(
+                                          buildWhen: (prev, curr) =>
+                                              prev.sharedTasks != curr.sharedTasks ||
+                                              prev.isLoadingSharedTasks != curr.isLoadingSharedTasks,
+                                          builder: (context, state) {
+                                            if (state.sharedTasks.isEmpty && !state.isLoadingSharedTasks) {
+                                              return const SizedBox.shrink();
+                                            }
+                                            return _buildSharedTasksSection(context, state.sharedTasks);
+                                          },
+                                        ),
                                         // 收到的评价
                                         if (state.publicProfileDetail?.reviews.isNotEmpty == true)
                                           _buildReviewsSection(context, state.publicProfileDetail!.reviews),
@@ -951,6 +965,108 @@ class UserProfileView extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSharedTasksSection(
+      BuildContext context, List<Map<String, dynamic>> tasks) {
+    final l10n = context.l10n;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.handshake_outlined, size: 20, color: AppColors.primary),
+              const SizedBox(width: 8),
+              Text(l10n.sharedTasksTitle, style: AppTypography.title3),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          ...tasks.map((task) => _buildSharedTaskItem(context, task, isDark)),
+          const SizedBox(height: AppSpacing.section),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSharedTaskItem(
+      BuildContext context, Map<String, dynamic> task, bool isDark) {
+    final l10n = context.l10n;
+    final title = task['title'] as String? ?? '';
+    final status = task['status'] as String? ?? '';
+    final reward = task['reward'] as num? ?? 0;
+    final isPoster = task['is_poster'] as bool? ?? false;
+    final taskId = task['id'];
+
+    return GestureDetector(
+      onTap: () {
+        if (taskId != null) {
+          final id = taskId is int ? taskId : int.tryParse(taskId.toString());
+          if (id != null) context.goToTaskDetail(id);
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: AppSpacing.xs),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight,
+          borderRadius: AppRadius.allMedium,
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: AppTypography.body.copyWith(fontWeight: FontWeight.w500),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: isPoster
+                              ? AppColors.primary.withValues(alpha: 0.1)
+                              : AppColors.success.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          isPoster ? l10n.sharedTasksRolePoster : l10n.sharedTasksRoleTaker,
+                          style: AppTypography.caption2.copyWith(
+                            color: isPoster ? AppColors.primary : AppColors.success,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        status,
+                        style: AppTypography.caption.copyWith(color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            if (reward > 0)
+              Text(
+                '£${(reward / 100).toStringAsFixed(2)}',
+                style: AppTypography.body.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

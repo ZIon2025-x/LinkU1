@@ -178,86 +178,134 @@ Widget _buildStatsSection(
         ),
       ],
     ),
-    child: Row(
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Expanded(
-          child: Semantics(
-            button: true,
-            label: 'View in progress',
-            child: GestureDetector(
-              onTap: () {
-                AppHaptics.selection();
-                context.push('/profile/my-tasks?tab=3'); // inProgress tab
-              },
-              behavior: HitTestBehavior.opaque,
-              child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AnimatedCounter(
-                  value: inProgress,
-                  style: AppTypography.title2.copyWith(
+        Row(
+          children: [
+            Expanded(
+              child: Semantics(
+                button: true,
+                label: 'View in progress',
+                child: GestureDetector(
+                  onTap: () {
+                    AppHaptics.selection();
+                    context.push('/profile/my-tasks?tab=3'); // inProgress tab
+                  },
+                  behavior: HitTestBehavior.opaque,
+                  child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AnimatedCounter(
+                      value: inProgress,
+                      style: AppTypography.title2.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    AppSpacing.vXs,
+                    Text(
+                      context.l10n.profileInProgress,
+                      style: AppTypography.caption.copyWith(
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
+                      ),
+                    ),
+                  ],
+                ),
+                ),
+              ),
+            ),
+            Container(width: 1, height: 30, color: isDark ? AppColors.dividerDark : AppColors.dividerLight),
+            Expanded(
+              child: Semantics(
+                button: true,
+                label: 'View completed',
+                child: GestureDetector(
+                  onTap: () {
+                    AppHaptics.selection();
+                    context.push('/profile/my-tasks?tab=5'); // completed tab
+                  },
+                  behavior: HitTestBehavior.opaque,
+                  child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AnimatedCounter(
+                      value: completed,
+                      style: AppTypography.title2.copyWith(
+                        color: AppColors.success,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    AppSpacing.vXs,
+                    Text(
+                      context.l10n.profileCompleted,
+                      style: AppTypography.caption.copyWith(
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
+                      ),
+                    ),
+                  ],
+                ),
+                ),
+              ),
+            ),
+            Container(width: 1, height: 30, color: isDark ? AppColors.dividerDark : AppColors.dividerLight),
+            Expanded(
+              child: CreditScoreGauge(
+                score: (user.avgRating ?? 0) * 20, // 0-5 → 0-100
+                size: 72,
+                strokeWidth: 7,
+                label: context.l10n.profileCreditScore,
+              ),
+            ),
+          ],
+        ),
+        if (user.userLevel == 'vip' || user.userLevel == 'super') ...[
+          Divider(
+            height: 1,
+            color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
+          ),
+          GestureDetector(
+            onTap: () {
+              AppHaptics.selection();
+              context.push(AppRoutes.taskStatistics);
+            },
+            behavior: HitTestBehavior.opaque,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: 12,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.bar_chart_rounded,
+                    size: 16,
                     color: AppColors.primary,
-                    fontWeight: FontWeight.w700,
                   ),
-                ),
-                AppSpacing.vXs,
-                Text(
-                  context.l10n.profileInProgress,
-                  style: AppTypography.caption.copyWith(
-                    color: isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondaryLight,
+                  const SizedBox(width: 6),
+                  Text(
+                    context.l10n.taskStatisticsViewDetails,
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                ),
-              ],
-            ),
-            ),
-          ),
-        ),
-        Container(width: 1, height: 30, color: isDark ? AppColors.dividerDark : AppColors.dividerLight),
-        Expanded(
-          child: Semantics(
-            button: true,
-            label: 'View completed',
-            child: GestureDetector(
-              onTap: () {
-                AppHaptics.selection();
-                context.push('/profile/my-tasks?tab=5'); // completed tab
-              },
-              behavior: HitTestBehavior.opaque,
-              child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AnimatedCounter(
-                  value: completed,
-                  style: AppTypography.title2.copyWith(
-                    color: AppColors.success,
-                    fontWeight: FontWeight.w700,
+                  const SizedBox(width: 4),
+                  const Icon(
+                    Icons.chevron_right,
+                    size: 16,
+                    color: AppColors.primary,
                   ),
-                ),
-                AppSpacing.vXs,
-                Text(
-                  context.l10n.profileCompleted,
-                  style: AppTypography.caption.copyWith(
-                    color: isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondaryLight,
-                  ),
-                ),
-              ],
-            ),
+                ],
+              ),
             ),
           ),
-        ),
-        Container(width: 1, height: 30, color: isDark ? AppColors.dividerDark : AppColors.dividerLight),
-        Expanded(
-          child: CreditScoreGauge(
-            score: (user.avgRating ?? 0) * 20, // 0-5 → 0-100
-            size: 72,
-            strokeWidth: 7,
-            label: context.l10n.profileCreditScore,
-          ),
-        ),
+        ],
       ],
     ),
   );

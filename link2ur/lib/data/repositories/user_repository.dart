@@ -332,6 +332,23 @@ class UserRepository {
 
     return response.data!;
   }
+
+  /// 获取用户任务统计（VIP功能）
+  Future<Map<String, dynamic>> getTaskStatistics(String userId) async {
+    final response = await _apiService.get(
+      ApiEndpoints.userTaskStatistics(userId),
+    );
+    return Map<String, dynamic>.from(response.data as Map);
+  }
+
+  /// 获取与指定用户的共同任务
+  Future<List<Map<String, dynamic>>> getSharedTasks(String otherUserId) async {
+    final response = await _apiService.get(
+      ApiEndpoints.sharedTasks(otherUserId),
+    );
+    final list = response.data as List;
+    return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
 }
 
 /// 用户异常

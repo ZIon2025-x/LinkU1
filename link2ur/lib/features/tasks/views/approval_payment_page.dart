@@ -46,6 +46,9 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
   Timer? _countdownTimer;
   int _secondsRemaining = 0;
 
+  /// 页面打开时间，用于检测 Ephemeral Key 是否已过期（Stripe 限制约 60 分钟）
+  late final DateTime _pageOpenedAt;
+
   // 优惠券：仅任务支付（taskId != null）时加载与展示
   List<UserCoupon>? _availableCoupons;
   bool _loadingCoupons = false;
@@ -68,6 +71,8 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
   Timer? _paymentPollTimer;
   /// 轮询次数，用于前 30 次 1s 后改为 2s（支付宝等延迟方式需更早发现成功）
   int _paymentPollCount = 0;
+  /// 轮询总次数上限（前30次×1s + 后续×2s ≈ 5分钟），超时后停止轮询并提示用户
+  static const int _maxPollCount = 180;
   /// 已由轮询检测到支付成功并 pop，避免 presentPaymentSheet 晚回调时重复 pop
   bool _paymentSuccessFromPolling = false;
   /// 支付成功：显示成功 overlay，延迟后 pop（对齐 iOS paymentSuccessView）
@@ -78,6 +83,7 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
   @override
   void initState() {
     super.initState();
+    _pageOpenedAt = DateTime.now();
     _effectiveClientSecret = widget.paymentData.clientSecret;
     _effectiveCustomerId = widget.paymentData.customerId;
     _effectiveEphemeralKeySecret = widget.paymentData.ephemeralKeySecret;
@@ -377,6 +383,16 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
 
   Future<void> _pay() async {
     if (_isProcessing || _alreadyPaid) return;
+
+    // Ephemeral Key 约 60 分钟过期，超时则提示用户重新进入支付页
+    final elapsed = DateTime.now().difference(_pageOpenedAt);
+    if (elapsed.inMinutes >= 55) {
+      setState(() {
+        _errorMessage = context.l10n.paymentSessionExpired;
+      });
+      return;
+    }
+
     final taskId = widget.paymentData.taskId;
 
     // 微信支付：Checkout Session + WebView
@@ -468,6 +484,18 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
       Future<void> doPoll() async {
         if (!mounted) return;
         if (!_isProcessing) return;
+        // 超过最大轮询次数，停止轮询并提示用户
+        if (_paymentPollCount >= _maxPollCount) {
+          _paymentPollTimer?.cancel();
+          _paymentPollTimer = null;
+          if (mounted) {
+            setState(() {
+              _isProcessing = false;
+              _errorMessage = context.l10n.paymentLoadFailed;
+            });
+          }
+          return;
+        }
         try {
           final statusData = await repo.getTaskPaymentStatus(taskId);
           final isPaid = statusData['is_paid'] == true;
@@ -481,21 +509,23 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
         }
       }
       // 首次 0.5 秒后轮询，之后前 30 秒每 1 秒、再后每 2 秒（尽快发现支付宝/卡支付成功，减少用户误以为未成功而重复支付）
+      // 总计约 30×1s + 150×2s ≈ 5.5 分钟后超时
       Timer(const Duration(milliseconds: 500), doPoll);
       _paymentPollTimer = Timer.periodic(const Duration(seconds: 1), (_) {
         if (!mounted) {
           _paymentPollTimer?.cancel();
           return;
         }
-        doPoll();
         _paymentPollCount++;
-        if (_paymentPollCount == 30) {
+        doPoll();
+        if (_paymentPollCount >= 30) {
           _paymentPollTimer?.cancel();
           _paymentPollTimer = Timer.periodic(const Duration(seconds: 2), (_) {
             if (!mounted) {
               _paymentPollTimer?.cancel();
               return;
             }
+            _paymentPollCount++;
             doPoll();
           });
         }

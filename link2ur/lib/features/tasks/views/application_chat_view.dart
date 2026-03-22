@@ -347,7 +347,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
   }
 
   Widget _buildPriceBar(TaskDetailState state, TaskApplication? application) {
-    final price = application?.proposedPrice ?? state.task?.reward;
+    final price = application?.proposedPrice ?? state.task?.displayReward;
     final priceDisplay = price != null ? price.toStringAsFixed(2) : '--';
     final isChatActive = application?.isChatting ?? false;
     final isDark = Theme.of(context).brightness == Brightness.dark;

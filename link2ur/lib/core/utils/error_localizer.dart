@@ -156,8 +156,20 @@ class ErrorLocalizer {
         return context.l10n.aiChatLoadHistoryFailed;
       case 'ai_chat_create_conversation_retry':
         return context.l10n.aiChatCreateConversationRetry;
+      case 'chat_load_failed':
+        return context.l10n.chatLoadFailed;
       case 'chat_load_more_failed':
         return context.l10n.chatLoadMoreFailed;
+      case 'chat_network_offline':
+        return context.l10n.chatNetworkOffline;
+      case 'chat_send_message_failed':
+        return context.l10n.chatSendMessageFailed;
+      case 'chat_send_image_failed':
+        return context.l10n.chatSendImageFailed;
+      case 'task_refund_amount_invalid':
+        return context.l10n.taskRefundAmountInvalid;
+      case 'task_negotiation_invalid_action':
+        return context.l10n.taskNegotiationInvalidAction;
       case 'unknown_error':
         return context.l10n.commonUnknownError;
       case 'submit_failed':

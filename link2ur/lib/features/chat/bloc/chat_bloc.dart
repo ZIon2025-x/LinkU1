@@ -4,6 +4,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/utils/network_monitor.dart';
 import '../../../data/models/message.dart';
 import '../../../data/repositories/message_repository.dart';
 import '../../../data/services/websocket_service.dart';
@@ -104,6 +105,14 @@ class _ChatPeerTypingTimeout extends ChatEvent {
   const _ChatPeerTypingTimeout();
 }
 
+class _ChatRefreshTaskStatus extends ChatEvent {
+  const _ChatRefreshTaskStatus();
+}
+
+class _ChatDoMarkAsRead extends ChatEvent {
+  const _ChatDoMarkAsRead();
+}
+
 // ==================== State ====================
 
 enum ChatStatus { initial, loading, loaded, error }
@@ -145,8 +154,8 @@ class ChatState extends Equatable {
     if (taskStatus == null) return false;
     return taskStatus == AppConstants.taskStatusCompleted ||
         taskStatus == AppConstants.taskStatusCancelled ||
-        taskStatus == 'expired' ||
-        taskStatus == 'closed';
+        taskStatus == AppConstants.taskStatusExpired ||
+        taskStatus == AppConstants.taskStatusClosed;
   }
 
   ChatState copyWith({
@@ -216,6 +225,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     on<_ChatPeerTypingTimeout>((event, emit) {
       emit(state.copyWith(peerIsTyping: false));
     });
+    on<_ChatRefreshTaskStatus>(_onRefreshTaskStatus);
+    on<_ChatDoMarkAsRead>(_onDoMarkAsRead);
 
     _wsSubscription = WebSocketService.instance.messageStream.listen(
       (wsMessage) {
@@ -262,6 +273,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
   final MessageRepository _messageRepository;
   StreamSubscription? _wsSubscription;
+  Timer? _taskStatusTimer;
+  Timer? _markAsReadDebounce;
 
   Future<void> _onLoadMessages(
     ChatLoadMessages event,
@@ -287,6 +300,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           nextCursor: result.nextCursor,
           taskStatus: result.taskStatus,
         ));
+        // 任务聊天：定期刷新任务状态，防止对方完成/取消任务后聊天页不更新
+        _startTaskStatusRefresh();
       } else {
         // 私聊
         final messages = await _messageRepository.getMessagesWith(
@@ -306,7 +321,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       AppLogger.error('Failed to load messages', e);
       emit(state.copyWith(
         status: ChatStatus.error,
-        errorMessage: e.toString(),
+        errorMessage: 'chat_load_failed',
       ));
     }
   }
@@ -361,13 +376,19 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     }
   }
 
-  /// 生成乐观更新用的临时消息 id（负数，避免与后端 id 冲突）
-  static int _nextPendingId() => -DateTime.now().microsecondsSinceEpoch;
+  /// 生成乐观更新用的临时消息 id（负数递减，避免与后端 id 冲突）
+  static int _pendingCounter = 0;
+  static int _nextPendingId() => -(++_pendingCounter);
 
   Future<void> _onSendMessage(
     ChatSendMessage event,
     Emitter<ChatState> emit,
   ) async {
+    if (!NetworkMonitor.instance.isConnected) {
+      emit(state.copyWith(errorMessage: 'chat_network_offline'));
+      return;
+    }
+
     final senderId = event.senderId?.trim();
     final canOptimistic = senderId != null && senderId.isNotEmpty;
 
@@ -434,12 +455,12 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         emit(state.copyWith(
           messages: list,
           isSending: false,
-          errorMessage: e.toString(),
+          errorMessage: 'chat_send_message_failed',
         ));
       } else {
         emit(state.copyWith(
           isSending: false,
-          errorMessage: e.toString(),
+          errorMessage: 'chat_send_message_failed',
         ));
       }
     }
@@ -449,6 +470,11 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     ChatSendImage event,
     Emitter<ChatState> emit,
   ) async {
+    if (!NetworkMonitor.instance.isConnected) {
+      emit(state.copyWith(errorMessage: 'chat_network_offline'));
+      return;
+    }
+
     emit(state.copyWith(isSending: true));
     int? pendingId;
 
@@ -524,12 +550,12 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         emit(state.copyWith(
           messages: list,
           isSending: false,
-          errorMessage: e.toString(),
+          errorMessage: 'chat_send_image_failed',
         ));
       } else {
         emit(state.copyWith(
           isSending: false,
-          errorMessage: e.toString(),
+          errorMessage: 'chat_send_image_failed',
         ));
       }
     }
@@ -562,6 +588,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         emit(state.copyWith(
           messages: [...state.messages, message],
         ));
+        // 自动标记已读
+        add(const ChatMarkAsRead());
       }
     }
   }
@@ -570,10 +598,19 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     ChatMarkAsRead event,
     Emitter<ChatState> emit,
   ) async {
+    // 防抖：快速连续收到多条消息时，合并为一次 markAsRead 请求
+    _markAsReadDebounce?.cancel();
+    _markAsReadDebounce = Timer(const Duration(milliseconds: 500), () {
+      if (!isClosed) add(const _ChatDoMarkAsRead());
+    });
+  }
+
+  Future<void> _onDoMarkAsRead(
+    _ChatDoMarkAsRead event,
+    Emitter<ChatState> emit,
+  ) async {
     try {
       if (state.isTaskChat) {
-        // 任务聊天：使用任务聊天标记已读API，传入最新消息ID
-        // 后端返回消息按 created_at DESC 排序，messages[0] 是最新的
         final latestId = state.messages.isNotEmpty ? state.messages.first.id : null;
         if (latestId != null) {
           await _messageRepository.markTaskChatRead(
@@ -582,7 +619,6 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           );
         }
       } else {
-        // 私聊
         await _messageRepository.markMessagesRead(state.userId);
       }
     } catch (e) {
@@ -630,10 +666,42 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     }
   }
 
+  /// 任务聊天：每 30 秒刷新一次任务状态
+  void _startTaskStatusRefresh() {
+    _taskStatusTimer?.cancel();
+    _taskStatusTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (!isClosed) add(const _ChatRefreshTaskStatus());
+    });
+  }
+
+  Future<void> _onRefreshTaskStatus(
+    _ChatRefreshTaskStatus event,
+    Emitter<ChatState> emit,
+  ) async {
+    if (state.taskId == null) return;
+    try {
+      final result = await _messageRepository.getTaskChatMessages(
+        state.taskId!,
+        limit: 1, // 仅需 taskStatus，最小化请求负载
+      );
+      if (result.taskStatus != null && result.taskStatus != state.taskStatus) {
+        emit(state.copyWith(taskStatus: result.taskStatus));
+        // 终态任务不再轮询
+        if (state.isTaskClosed) {
+          _taskStatusTimer?.cancel();
+        }
+      }
+    } catch (_) {
+      // 静默失败，不影响聊天
+    }
+  }
+
   @override
   Future<void> close() {
     _wsSubscription?.cancel();
     _typingTimer?.cancel();
+    _taskStatusTimer?.cancel();
+    _markAsReadDebounce?.cancel();
     return super.close();
   }
 }

@@ -45,16 +45,12 @@ class TaskRepository {
       if (sortBy != null) 'sort_by': sortBy,
       if (location != null) 'location': location,
     };
-    final cacheKey = keyword == null
-        ? CacheManager.buildKey(CacheManager.prefixTasks, params)
-        : null;
+    final cacheKey = CacheManager.buildKey(CacheManager.prefixTasks, params);
 
     // 1. 检查未过期缓存
-    if (cacheKey != null) {
-      final cached = _cache.get<Map<String, dynamic>>(cacheKey);
-      if (cached != null) {
-        return compute(_parseTaskListResponse, cached);
-      }
+    final cached = _cache.get<Map<String, dynamic>>(cacheKey);
+    if (cached != null) {
+      return compute(_parseTaskListResponse, cached);
     }
 
     // 2. 请求网络
@@ -69,19 +65,18 @@ class TaskRepository {
         throw TaskException(response.message ?? '获取任务列表失败');
       }
 
-      // 写入缓存
-      if (cacheKey != null) {
-        await _cache.set(cacheKey, response.data!, ttl: CacheManager.shortTTL);
-      }
+      // 写入缓存（搜索结果使用更短的 TTL）
+      final ttl = keyword != null
+          ? const Duration(seconds: 30)
+          : CacheManager.shortTTL;
+      await _cache.set(cacheKey, response.data!, ttl: ttl);
 
       return compute(_parseTaskListResponse, response.data!);
     } catch (e) {
       // 3. 网络失败 → 回退到过期缓存
-      if (cacheKey != null) {
-        final stale = _cache.getStale<Map<String, dynamic>>(cacheKey);
-        if (stale != null) {
-          return compute(_parseTaskListResponse, stale);
-        }
+      final stale = _cache.getStale<Map<String, dynamic>>(cacheKey);
+      if (stale != null) {
+        return compute(_parseTaskListResponse, stale);
       }
       rethrow;
     }
