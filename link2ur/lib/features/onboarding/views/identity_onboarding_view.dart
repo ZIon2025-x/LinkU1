@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import '../../auth/bloc/auth_bloc.dart';
 
 import '../../../core/design/app_colors.dart';
@@ -60,15 +61,17 @@ class _OnboardingContentState extends State<_OnboardingContent> {
           (prev.errorMessage != curr.errorMessage && curr.errorMessage != null),
       listener: (context, state) {
         if (state.isComplete) {
-          // Update auth user with onboardingCompleted=true directly.
-          // AuthCheckRequested would return stale cached user (fire-and-forget refresh),
-          // so we use AuthUserUpdated to set the flag immediately.
-          // GoRouterBlocRefreshStream then re-evaluates redirect and navigates to home.
+          // Update auth user with onboardingCompleted=true so redirect
+          // won't loop back to onboarding.
           final currentUser = context.read<AuthBloc>().state.user;
           if (currentUser != null) {
             context.read<AuthBloc>().add(
               AuthUserUpdated(user: currentUser.copyWith(onboardingCompleted: true)),
             );
+          }
+          // Navigate to home directly.
+          if (context.mounted) {
+            context.go('/');
           }
           return;
         }
