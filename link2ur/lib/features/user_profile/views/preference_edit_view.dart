@@ -14,22 +14,26 @@ class PreferenceEditView extends StatelessWidget {
   const PreferenceEditView({
     super.key,
     this.currentPreference,
+    this.currentDemand,
   });
 
   final UserProfilePreference? currentPreference;
+  final UserDemand? currentDemand;
 
   @override
   Widget build(BuildContext context) {
     return _PreferenceEditContent(
       currentPreference: currentPreference ?? const UserProfilePreference(),
+      currentDemand: currentDemand,
     );
   }
 }
 
 class _PreferenceEditContent extends StatefulWidget {
-  const _PreferenceEditContent({required this.currentPreference});
+  const _PreferenceEditContent({required this.currentPreference, this.currentDemand});
 
   final UserProfilePreference currentPreference;
+  final UserDemand? currentDemand;
 
   @override
   State<_PreferenceEditContent> createState() => _PreferenceEditContentState();
@@ -41,6 +45,9 @@ class _PreferenceEditContentState extends State<_PreferenceEditContent> {
   late String _rewardPreference;
   late Set<String> _preferredTimeSlots;
   late bool _nearbyPushEnabled;
+  late String? _identity;
+  late String? _city;
+  late Set<String> _selectedInterests;
 
   static const _modes = [
     ('online', '线上'),
@@ -76,7 +83,34 @@ class _PreferenceEditContentState extends State<_PreferenceEditContent> {
     _preferredTimeSlots =
         Set.from(widget.currentPreference.preferredTimeSlots);
     _nearbyPushEnabled = widget.currentPreference.nearbyPushEnabled;
+    _identity = widget.currentDemand?.identity;
+    _city = widget.currentPreference.city;
+    _selectedInterests = Set.from(
+      (widget.currentDemand?.recentInterests ?? {}).keys,
+    );
   }
+
+  static const _identityOptions = [
+    ('pre_arrival', Icons.luggage_rounded),
+    ('in_uk', Icons.location_on_rounded),
+  ];
+
+  static const List<(String key, IconData icon, String zh, String en)> _interestOptions = [
+    ('moving_home', Icons.home_rounded, '搬家/家居', 'Moving & Home'),
+    ('housing', Icons.vpn_key_rounded, '租房/住宿', 'Housing'),
+    ('food_cooking', Icons.restaurant_rounded, '美食/烹饪', 'Food & Cooking'),
+    ('transport', Icons.directions_car_rounded, '出行/驾驶', 'Transport & Driving'),
+    ('study_tutoring', Icons.menu_book_rounded, '学习/辅导', 'Study & Tutoring'),
+    ('photo_video', Icons.camera_alt_rounded, '摄影/视频', 'Photo & Video'),
+    ('sports_fitness', Icons.fitness_center_rounded, '运动/健身', 'Sports & Fitness'),
+    ('travel', Icons.flight_rounded, '旅行/探索', 'Travel & Explore'),
+    ('shopping', Icons.shopping_bag_rounded, '代购/购物', 'Shopping'),
+    ('social', Icons.people_rounded, '社交/陪同', 'Social & Companion'),
+    ('pets', Icons.pets_rounded, '宠物', 'Pets'),
+    ('tech_it', Icons.computer_rounded, '技术/IT', 'Tech & IT'),
+    ('art_design', Icons.palette_rounded, '艺术/设计', 'Art & Design'),
+    ('gaming', Icons.sports_esports_rounded, '游戏/陪玩', 'Gaming'),
+  ];
 
   void _toggleTimeSlot(String slot) {
     setState(() {
@@ -101,6 +135,10 @@ class _PreferenceEditContentState extends State<_PreferenceEditContent> {
               'preferred_helper_types':
                   widget.currentPreference.preferredHelperTypes,
               'nearby_push_enabled': _nearbyPushEnabled,
+              if (_city != null) 'city': _city,
+              if (_identity != null) 'identity': _identity,
+              if (_selectedInterests.isNotEmpty)
+                'interests': _selectedInterests.toList(),
             },
           ),
         );
@@ -187,6 +225,87 @@ class _PreferenceEditContentState extends State<_PreferenceEditContent> {
                         label: slot.$2,
                         isSelected: isSelected,
                         onTap: () => _toggleTimeSlot(slot.$1),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                AppSpacing.vMd,
+
+                // 身份状态
+                _PreferenceSection(
+                  title: context.l10n.onboardingProfileIdentityLabel,
+                  description: '',
+                  child: Row(
+                    children: _identityOptions.map((opt) {
+                      final isSelected = _identity == opt.$1;
+                      final label = opt.$1 == 'pre_arrival'
+                          ? context.l10n.onboardingIdentityPreArrival
+                          : context.l10n.onboardingIdentityInUk;
+                      return Expanded(
+                        child: Padding(
+                          padding: EdgeInsets.only(
+                            right: opt.$1 == 'pre_arrival' ? AppSpacing.sm : 0,
+                            left: opt.$1 == 'in_uk' ? AppSpacing.sm : 0,
+                          ),
+                          child: ChoiceChip(
+                            avatar: Icon(opt.$2, size: 18,
+                              color: isSelected ? AppColors.primary : null),
+                            label: Text(label),
+                            selected: isSelected,
+                            selectedColor: AppColors.primary.withAlpha(30),
+                            onSelected: (_) =>
+                                setState(() => _identity = opt.$1),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                AppSpacing.vMd,
+
+                // 所在城市
+                _PreferenceSection(
+                  title: context.l10n.onboardingCityTitle,
+                  description: '',
+                  child: TextField(
+                    controller: TextEditingController(text: _city ?? ''),
+                    decoration: InputDecoration(
+                      hintText: context.l10n.onboardingCityHint,
+                      prefixIcon: const Icon(Icons.location_on_outlined),
+                      border: OutlineInputBorder(
+                        borderRadius: AppRadius.allMedium,
+                      ),
+                    ),
+                    onChanged: (val) => _city = val.trim(),
+                  ),
+                ),
+                AppSpacing.vMd,
+
+                // 兴趣标签
+                _PreferenceSection(
+                  title: context.l10n.onboardingInterestsTitle,
+                  description: context.l10n.onboardingInterestsSubtitle,
+                  child: Wrap(
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.sm,
+                    children: _interestOptions.map((item) {
+                      final isZh = Localizations.localeOf(context).languageCode == 'zh';
+                      final isSelected = _selectedInterests.contains(item.$1);
+                      return FilterChip(
+                        avatar: Icon(item.$2, size: 16,
+                          color: isSelected ? AppColors.primary : null),
+                        label: Text(isZh ? item.$3 : item.$4),
+                        selected: isSelected,
+                        selectedColor: AppColors.primary.withAlpha(30),
+                        onSelected: (selected) {
+                          setState(() {
+                            if (selected) {
+                              _selectedInterests.add(item.$1);
+                            } else {
+                              _selectedInterests.remove(item.$1);
+                            }
+                          });
+                        },
                       );
                     }).toList(),
                   ),

@@ -99,7 +99,7 @@ class _MyProfileContentState extends State<_MyProfileContent> {
                 children: [
                   _CapabilityCard(capabilities: summary.capabilities),
                   AppSpacing.vMd,
-                  _PreferenceCard(preference: summary.preference),
+                  _PreferenceCard(preference: summary.preference, demand: summary.demand),
                   AppSpacing.vMd,
                   _ReliabilityCard(reliability: summary.reliability),
                   AppSpacing.vMd,
@@ -233,9 +233,10 @@ class _SkillChip extends StatelessWidget {
 // ======================== 偏好画像 ========================
 
 class _PreferenceCard extends StatelessWidget {
-  const _PreferenceCard({required this.preference});
+  const _PreferenceCard({required this.preference, this.demand});
 
   final UserProfilePreference preference;
+  final UserDemand? demand;
 
   String _modeLabel(String mode) {
     switch (mode) {
@@ -285,7 +286,7 @@ class _PreferenceCard extends StatelessWidget {
             MaterialPageRoute(
               builder: (_) => BlocProvider.value(
                 value: context.read<UserProfileBloc>(),
-                child: PreferenceEditView(currentPreference: preference),
+                child: PreferenceEditView(currentPreference: preference, currentDemand: demand),
               ),
             ),
           ).then((_) {

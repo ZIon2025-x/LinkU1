@@ -45,6 +45,9 @@ class PreferenceUpdate(BaseModel):
     preferred_categories: list[int] | None = None
     preferred_helper_types: list[str] | None = None
     nearby_push_enabled: bool | None = None
+    city: str | None = None
+    identity: str | None = None  # "pre_arrival" or "in_uk"
+    interests: list[str] | None = None
 
 class LocationUpdate(BaseModel):
     latitude: float

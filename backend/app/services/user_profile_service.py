@@ -72,9 +72,34 @@ def upsert_preference(db: Session, user_id: str, data: dict) -> UserProfilePrefe
         db.add(pref)
     for key in ["mode", "duration_type", "reward_preference",
                 "preferred_time_slots", "preferred_categories", "preferred_helper_types",
-                "nearby_push_enabled"]:
+                "nearby_push_enabled", "city"]:
         if key in data:
             setattr(pref, key, data[key])
+
+    # Handle identity and interests — stored on UserDemand, not UserProfilePreference
+    if "identity" in data or "interests" in data:
+        from app.models import UserDemand
+        demand = db.query(UserDemand).filter(UserDemand.user_id == user_id).first()
+        if not demand:
+            demand = UserDemand(user_id=user_id)
+            db.add(demand)
+        if "identity" in data and data["identity"]:
+            demand.identity = data["identity"]
+            try:
+                from app.services.demand_inference import determine_user_stages
+                demand.user_stage = determine_user_stages(data["identity"])
+            except Exception:
+                pass
+        if "interests" in data and data["interests"]:
+            existing = demand.recent_interests or {}
+            for key in data["interests"]:
+                existing[key] = {
+                    "confidence": 0.8,
+                    "urgency": "medium",
+                    "source": "profile_edit",
+                }
+            demand.recent_interests = existing
+
     db.flush()
     return pref
 
