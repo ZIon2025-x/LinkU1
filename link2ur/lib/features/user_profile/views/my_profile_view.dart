@@ -478,7 +478,8 @@ class _DemandCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final stageColor = _stageColor(demand.userStage);
+    final primaryStage = demand.userStages.isNotEmpty ? demand.userStages.first : '';
+    final stageColor = _stageColor(primaryStage);
     return _SectionCard(
       title: '需求预测',
       icon: Icons.lightbulb_outlined,
@@ -501,7 +502,7 @@ class _DemandCard extends StatelessWidget {
                   border: Border.all(color: stageColor.withValues(alpha: 0.3)),
                 ),
                 child: Text(
-                  _stageLabel(demand.userStage),
+                  _stageLabel(primaryStage),
                   style: TextStyle(
                     fontSize: 12,
                     color: stageColor,

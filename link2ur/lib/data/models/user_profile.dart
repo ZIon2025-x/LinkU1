@@ -59,6 +59,7 @@ class UserProfilePreference extends Equatable {
   final List<int> preferredCategories;
   final List<String> preferredHelperTypes;
   final bool nearbyPushEnabled;
+  final String? city;
 
   const UserProfilePreference({
     this.mode = 'both',
@@ -68,6 +69,7 @@ class UserProfilePreference extends Equatable {
     this.preferredCategories = const [],
     this.preferredHelperTypes = const [],
     this.nearbyPushEnabled = false,
+    this.city,
   });
 
   factory UserProfilePreference.fromJson(Map<String, dynamic> json) {
@@ -79,6 +81,7 @@ class UserProfilePreference extends Equatable {
       preferredCategories: (json['preferred_categories'] as List?)?.cast<int>() ?? [],
       preferredHelperTypes: (json['preferred_helper_types'] as List?)?.cast<String>() ?? [],
       nearbyPushEnabled: json['nearby_push_enabled'] as bool? ?? false,
+      city: json['city'] as String?,
     );
   }
 
@@ -90,6 +93,7 @@ class UserProfilePreference extends Equatable {
     'preferred_categories': preferredCategories,
     'preferred_helper_types': preferredHelperTypes,
     'nearby_push_enabled': nearbyPushEnabled,
+    'city': city,
   };
 
   UserProfilePreference copyWith({
@@ -100,6 +104,7 @@ class UserProfilePreference extends Equatable {
     List<int>? preferredCategories,
     List<String>? preferredHelperTypes,
     bool? nearbyPushEnabled,
+    String? city,
   }) {
     return UserProfilePreference(
       mode: mode ?? this.mode,
@@ -109,11 +114,12 @@ class UserProfilePreference extends Equatable {
       preferredCategories: preferredCategories ?? this.preferredCategories,
       preferredHelperTypes: preferredHelperTypes ?? this.preferredHelperTypes,
       nearbyPushEnabled: nearbyPushEnabled ?? this.nearbyPushEnabled,
+      city: city ?? this.city,
     );
   }
 
   @override
-  List<Object?> get props => [mode, durationType, rewardPreference, preferredTimeSlots, preferredCategories, preferredHelperTypes, nearbyPushEnabled];
+  List<Object?> get props => [mode, durationType, rewardPreference, preferredTimeSlots, preferredCategories, preferredHelperTypes, nearbyPushEnabled, city];
 }
 
 /// 可靠度画像
@@ -164,31 +170,57 @@ class UserReliability extends Equatable {
 
 /// 需求画像
 class UserDemand extends Equatable {
-  final String userStage;
+  final List<String> userStages;
   final List<PredictedNeed> predictedNeeds;
   final Map<String, dynamic> recentInterests;
   final String? lastInferredAt;
+  final String? identity;
+  final List<Map<String, dynamic>> inferredSkills;
+  final Map<String, dynamic> inferredPreferences;
 
   const UserDemand({
-    this.userStage = 'new_arrival',
+    this.userStages = const [],
     this.predictedNeeds = const [],
     this.recentInterests = const {},
     this.lastInferredAt,
+    this.identity,
+    this.inferredSkills = const [],
+    this.inferredPreferences = const {},
   });
 
   factory UserDemand.fromJson(Map<String, dynamic> json) {
+    // Handle user_stage being either a list (new) or a string (old)
+    final stageRaw = json['user_stage'];
+    final stages = stageRaw is List
+        ? stageRaw.map((e) => e.toString()).toList()
+        : stageRaw is String
+            ? [stageRaw]
+            : <String>[];
+
     return UserDemand(
-      userStage: json['user_stage'] as String? ?? 'new_arrival',
+      userStages: stages,
       predictedNeeds: (json['predicted_needs'] as List?)
-          ?.map((e) => PredictedNeed.fromJson(e as Map<String, dynamic>))
-          .toList() ?? [],
-      recentInterests: json['recent_interests'] as Map<String, dynamic>? ?? {},
+              ?.map((e) => PredictedNeed.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+      recentInterests:
+          Map<String, dynamic>.from(json['recent_interests'] as Map? ?? {}),
       lastInferredAt: json['last_inferred_at'] as String?,
+      identity: json['identity'] as String?,
+      inferredSkills: (json['inferred_skills'] as List?)
+              ?.map((e) => Map<String, dynamic>.from(e as Map))
+              .toList() ??
+          [],
+      inferredPreferences:
+          Map<String, dynamic>.from(json['inferred_preferences'] as Map? ?? {}),
     );
   }
 
   @override
-  List<Object?> get props => [userStage, predictedNeeds, recentInterests, lastInferredAt];
+  List<Object?> get props => [
+        userStages, predictedNeeds, recentInterests, lastInferredAt,
+        identity, inferredSkills, inferredPreferences,
+      ];
 }
 
 class PredictedNeed extends Equatable {
