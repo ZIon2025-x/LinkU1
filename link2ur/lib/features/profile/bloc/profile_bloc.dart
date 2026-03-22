@@ -299,7 +299,7 @@ class ProfileState extends Equatable {
       showEmailCodeField: showEmailCodeField ?? this.showEmailCodeField,
       showPhoneCodeField: showPhoneCodeField ?? this.showPhoneCodeField,
       taskStatistics: taskStatistics,
-      sharedTasks: sharedTasks,
+      sharedTasks: sharedTasks ?? this.sharedTasks,
       isLoadingStatistics: isLoadingStatistics ?? this.isLoadingStatistics,
       isLoadingSharedTasks: isLoadingSharedTasks ?? this.isLoadingSharedTasks,
     );

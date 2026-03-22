@@ -1,4 +1,5 @@
 """User profile API routes for four-dimension profiling system."""
+import logging
 from enum import Enum as PyEnum
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -6,6 +7,8 @@ from pydantic import BaseModel, field_validator
 from app.deps import get_db, get_current_user_secure_sync_csrf
 from app.services import user_profile_service as svc
 from app.services.demand_inference import infer_demand
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/profile", tags=["用户画像"])
 
@@ -180,11 +183,17 @@ async def get_demand(current_user=Depends(get_current_user_secure_sync_csrf), db
         try:
             demand = infer_demand(db, current_user.id)
             db.commit()
-        except (ValueError, Exception):
+        except Exception:
+            logger.exception("Demand inference failed for user %s", current_user.id)
+            db.rollback()
             # Inference failed, return defaults
             return {"user_stage": ["new_arrival"], "predicted_needs": [],
                     "recent_interests": {}, "last_inferred_at": None,
                     "identity": None, "inferred_skills": [], "inferred_preferences": {}}
+    if not demand:
+        return {"user_stage": ["new_arrival"], "predicted_needs": [],
+                "recent_interests": {}, "last_inferred_at": None,
+                "identity": None, "inferred_skills": [], "inferred_preferences": {}}
     return {
         "user_stage": demand.user_stage if isinstance(demand.user_stage, list) else [demand.user_stage] if demand.user_stage else ["new_arrival"],
         "predicted_needs": demand.predicted_needs or [],

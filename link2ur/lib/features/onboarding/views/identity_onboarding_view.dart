@@ -200,10 +200,13 @@ class _ProfileStepState extends State<_ProfileStep> {
                           radius: 40,
                           backgroundColor: AppColors.primary.withAlpha(30),
                           backgroundImage: user?.avatar != null &&
-                                  user!.avatar!.isNotEmpty
+                                  user!.avatar!.isNotEmpty &&
+                                  Uri.tryParse(user.avatar!)?.hasScheme == true
                               ? NetworkImage(user.avatar!)
                               : null,
-                          child: user?.avatar == null || user!.avatar!.isEmpty
+                          child: user?.avatar == null ||
+                                  user!.avatar!.isEmpty ||
+                                  Uri.tryParse(user.avatar!)?.hasScheme != true
                               ? const Icon(Icons.person_rounded,
                                   size: 40, color: AppColors.primary)
                               : null,
