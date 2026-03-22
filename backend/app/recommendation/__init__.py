@@ -13,6 +13,8 @@ def create_engine() -> HybridEngine:
     from .scorers.time_scorer import TimeScorer
     from .scorers.popularity_scorer import PopularityScorer
     from .scorers.newness_scorer import NewnessScorer
+    from .scorers.profile_scorer import ProfileScorer
+    from .scorers.demand_scorer import DemandScorer
 
     registry = ScorerRegistry()
     registry.register(ContentScorer())
@@ -22,5 +24,7 @@ def create_engine() -> HybridEngine:
     registry.register(TimeScorer())
     registry.register(PopularityScorer())
     registry.register(NewnessScorer())
+    registry.register(ProfileScorer())
+    registry.register(DemandScorer())
 
     return HybridEngine(registry=registry)
