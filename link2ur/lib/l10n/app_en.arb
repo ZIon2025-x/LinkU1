@@ -4822,5 +4822,6 @@
   "onboardingProfileUpdateInSettings": "Can be updated in profile settings",
   "onboardingSubmitFailed": "Submit failed, please try again",
   "onboardingInterestsTitle": "What are you interested in?",
-  "onboardingInterestsSubtitle": "Choose your interests so we can recommend better for you"
+  "onboardingInterestsSubtitle": "Choose your interests so we can recommend better for you",
+  "errorTaskStatisticsLoadFailed": "Failed to load task statistics, please retry"
 }

@@ -1512,7 +1512,15 @@ async def shutdown_event():
     
     # 给正在处理的请求一点时间
     await asyncio.sleep(0.3)
-    
+
+    # 0. 停止行为采集器（先于DB清理，确保最终flush完成）
+    try:
+        from app.services.behavior_collector import BehaviorCollector
+        BehaviorCollector.get_instance().stop()
+        logger.info("已停止 BehaviorCollector")
+    except Exception as e:
+        logger.warning(f"停止 BehaviorCollector 时出错: {e}")
+
     # 1. 停止连接池监控任务
     try:
         from app.database import stop_pool_monitor

@@ -335,10 +335,15 @@ class UserRepository {
 
   /// 获取用户任务统计（VIP功能）
   Future<Map<String, dynamic>> getTaskStatistics(String userId) async {
-    final response = await _apiService.get(
+    final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.userTaskStatistics(userId),
     );
-    return Map<String, dynamic>.from(response.data as Map);
+
+    if (!response.isSuccess || response.data == null) {
+      throw UserException(response.message ?? '获取任务统计失败');
+    }
+
+    return response.data!;
   }
 
   /// 获取与指定用户的共同任务
@@ -346,6 +351,11 @@ class UserRepository {
     final response = await _apiService.get(
       ApiEndpoints.sharedTasks(otherUserId),
     );
+
+    if (!response.isSuccess || response.data == null) {
+      throw UserException(response.message ?? '获取共同任务失败');
+    }
+
     final list = response.data as List;
     return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
   }

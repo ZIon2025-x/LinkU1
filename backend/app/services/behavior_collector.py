@@ -39,10 +39,11 @@ class BehaviorCollector:
 
     def start(self):
         """Start the background daemon thread for periodic flushing."""
-        if self._running:
-            logger.warning("BehaviorCollector is already running")
-            return
-        self._running = True
+        with self._lock:
+            if self._running:
+                logger.warning("BehaviorCollector is already running")
+                return
+            self._running = True
         self._stop_event.clear()
         self._thread = threading.Thread(target=self._flush_loop, daemon=True)
         self._thread.start()
@@ -155,7 +156,7 @@ class BehaviorCollector:
             for data in data_list:
                 # Merge interests: list of {"topic": ..., "urgency": ..., "confidence": ...}
                 if "interests" in data and isinstance(data["interests"], list):
-                    current = demand.recent_interests or {}
+                    current = dict(demand.recent_interests or {})
                     for item in data["interests"]:
                         if not isinstance(item, dict):
                             continue
@@ -173,7 +174,7 @@ class BehaviorCollector:
 
                 # Merge skills: list of {"skill": ..., "confidence": ...}
                 if "skills" in data and isinstance(data["skills"], list):
-                    current = demand.inferred_skills or []
+                    current = list(demand.inferred_skills or [])
                     skill_map: dict[str, dict] = {}
                     for s in current:
                         if isinstance(s, dict) and "skill" in s:
@@ -187,7 +188,7 @@ class BehaviorCollector:
 
                 # Merge preferences: dict, update
                 if "preferences" in data and isinstance(data["preferences"], dict):
-                    current = demand.inferred_preferences or {}
+                    current = dict(demand.inferred_preferences or {})
                     current.update(data["preferences"])
                     demand.inferred_preferences = current
 

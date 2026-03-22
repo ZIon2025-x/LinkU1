@@ -19441,6 +19441,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Choose your interests so we can recommend better for you'**
   String get onboardingInterestsSubtitle;
+
+  /// No description provided for @errorTaskStatisticsLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load task statistics, please retry'**
+  String get errorTaskStatisticsLoadFailed;
 }
 
 class _AppLocalizationsDelegate

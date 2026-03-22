@@ -114,7 +114,7 @@ def infer_demand(db: Session, user_id: str):
 
     # Merge recent interests from task behavior (don't overwrite AI interests)
     task_interests = analyze_recent_interests(db, user_id)
-    existing_interests = demand.recent_interests or {}
+    existing_interests = dict(demand.recent_interests or {})
     for topic, count in task_interests.items():
         # Convert raw count to dict format for consistency
         task_data = {"confidence": min(count / 10, 1.0), "urgency": "medium", "source": "task_behavior"}
@@ -151,6 +151,7 @@ def batch_infer_demands(db: Session, limit: int = 500) -> dict:
             succeeded += 1
         except Exception as e:
             logger.warning(f"Failed to infer demand for user {user_id}: {e}")
+            db.rollback()
             failed_ids.append(user_id)
             continue
     if failed_ids:

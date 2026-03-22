@@ -10135,6 +10135,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get onboardingInterestsSubtitle => '选择你感兴趣的领域，帮助我们更好地为你推荐';
+
+  @override
+  String get errorTaskStatisticsLoadFailed => '加载任务统计失败，请重试';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -20224,4 +20227,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get onboardingInterestsSubtitle => '選擇你感興趣的領域，幫助我們更好地為你推薦';
+
+  @override
+  String get errorTaskStatisticsLoadFailed => '載入任務統計失敗，請重試';
 }

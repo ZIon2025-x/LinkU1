@@ -10558,4 +10558,8 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get onboardingInterestsSubtitle =>
       'Choose your interests so we can recommend better for you';
+
+  @override
+  String get errorTaskStatisticsLoadFailed =>
+      'Failed to load task statistics, please retry';
 }

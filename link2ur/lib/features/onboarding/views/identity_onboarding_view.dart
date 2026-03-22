@@ -59,10 +59,16 @@ class _OnboardingContentState extends State<_OnboardingContent> {
           (prev.errorMessage != curr.errorMessage && curr.errorMessage != null),
       listener: (context, state) {
         if (state.isComplete) {
-          // Refresh auth state — GoRouterBlocRefreshStream will re-evaluate
-          // redirect once AuthBloc emits new state with onboardingCompleted=true,
-          // automatically navigating away from onboarding. No context.go() needed.
-          context.read<AuthBloc>().add(AuthCheckRequested());
+          // Update auth user with onboardingCompleted=true directly.
+          // AuthCheckRequested would return stale cached user (fire-and-forget refresh),
+          // so we use AuthUserUpdated to set the flag immediately.
+          // GoRouterBlocRefreshStream then re-evaluates redirect and navigates to home.
+          final currentUser = context.read<AuthBloc>().state.user;
+          if (currentUser != null) {
+            context.read<AuthBloc>().add(
+              AuthUserUpdated(user: currentUser.copyWith(onboardingCompleted: true)),
+            );
+          }
           return;
         }
         if (state.errorMessage != null) {

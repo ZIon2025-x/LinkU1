@@ -93,7 +93,7 @@ def upsert_preference(db: Session, user_id: str, data: dict) -> UserProfilePrefe
         if "interests" in data and data["interests"] is not None:
             # Replace interests from profile edit (user explicitly chose these)
             # Keep non-profile-edit interests (from AI chat, task behavior, etc.)
-            existing = demand.recent_interests or {}
+            existing = dict(demand.recent_interests or {})
             # Remove old profile_edit/onboarding interests
             existing = {k: v for k, v in existing.items()
                         if isinstance(v, dict) and v.get("source") not in ("profile_edit", "onboarding")}
@@ -150,5 +150,11 @@ def submit_onboarding(db: Session, user_id: str, data: dict) -> dict:
         pref_data["mode"] = data["mode"]
     if "preferred_categories" in data:
         pref_data["preferred_categories"] = data["preferred_categories"]
+    if "city" in data and data["city"]:
+        pref_data["city"] = data["city"]
+    if "identity" in data and data["identity"]:
+        pref_data["identity"] = data["identity"]
+    if "interests" in data and data["interests"]:
+        pref_data["interests"] = data["interests"]
     pref = upsert_preference(db, user_id, pref_data) if pref_data else get_preference(db, user_id)
     return {"capabilities": caps, "preference": pref}

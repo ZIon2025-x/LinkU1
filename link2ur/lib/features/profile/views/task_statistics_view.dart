@@ -5,6 +5,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_typography.dart';
+import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../data/repositories/user_repository.dart';
@@ -71,7 +72,7 @@ class _TaskStatisticsContent extends StatelessWidget {
                     ),
                     AppSpacing.vMd,
                     Text(
-                      state.errorMessage!,
+                      context.localizeError(state.errorMessage),
                       style: AppTypography.subheadline.copyWith(
                         color: AppColors.textSecondary,
                       ),
@@ -85,7 +86,7 @@ class _TaskStatisticsContent extends StatelessWidget {
                             );
                       },
                       icon: const Icon(Icons.refresh),
-                      label: Text(l10n.taskStatisticsTitle),
+                      label: Text(l10n.commonRetry),
                     ),
                   ],
                 ),
@@ -106,8 +107,14 @@ class _TaskStatisticsContent extends StatelessWidget {
 
           return RefreshIndicator(
             onRefresh: () async {
-              context.read<ProfileBloc>().add(
-                    ProfileLoadTaskStatistics(userId),
+              final bloc = context.read<ProfileBloc>();
+              bloc.add(ProfileLoadTaskStatistics(userId));
+              await bloc.stream
+                  .where((s) => !s.isLoadingStatistics)
+                  .first
+                  .timeout(
+                    const Duration(seconds: 10),
+                    onTimeout: () => bloc.state,
                   );
             },
             child: SingleChildScrollView(
@@ -426,10 +433,11 @@ class _StatColumn extends StatelessWidget {
 class _VerticalDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       width: 1,
       height: 40,
-      color: AppColors.dividerLight,
+      color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
       margin: const EdgeInsets.symmetric(horizontal: 4),
     );
   }

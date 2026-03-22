@@ -4645,5 +4645,6 @@
   "onboardingProfileUpdateInSettings": "可在個人設置中更新",
   "onboardingSubmitFailed": "提交失敗，請重試",
   "onboardingInterestsTitle": "你對什麼感興趣",
-  "onboardingInterestsSubtitle": "選擇你感興趣的領域，幫助我們更好地為你推薦"
+  "onboardingInterestsSubtitle": "選擇你感興趣的領域，幫助我們更好地為你推薦",
+  "errorTaskStatisticsLoadFailed": "載入任務統計失敗，請重試"
 }

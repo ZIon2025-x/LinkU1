@@ -337,6 +337,8 @@ class ErrorLocalizer {
         return context.l10n.userProfileUpdateFailed;
       case 'user_profile_delete_failed':
         return context.l10n.userProfileDeleteFailed;
+      case 'task_statistics_load_failed':
+        return context.l10n.errorTaskStatisticsLoadFailed;
       case 'onboarding_submit_failed':
         return context.l10n.onboardingSubmitFailed;
       default:
