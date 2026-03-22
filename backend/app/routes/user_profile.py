@@ -130,9 +130,9 @@ async def get_preferences(current_user=Depends(get_current_user_secure_sync_csrf
                 "preferred_time_slots": [], "preferred_categories": [], "preferred_helper_types": [],
                 "nearby_push_enabled": False, "city": None}
     return {
-        "mode": pref.mode.value,
-        "duration_type": pref.duration_type.value,
-        "reward_preference": pref.reward_preference.value,
+        "mode": pref.mode.value if pref.mode else "both",
+        "duration_type": pref.duration_type.value if pref.duration_type else "both",
+        "reward_preference": pref.reward_preference.value if pref.reward_preference else "no_preference",
         "preferred_time_slots": pref.preferred_time_slots or [],
         "preferred_categories": pref.preferred_categories or [],
         "preferred_helper_types": pref.preferred_helper_types or [],
@@ -221,8 +221,9 @@ async def get_summary(current_user=Depends(get_current_user_secure_sync_csrf), d
     pref_data = {"mode": "both", "duration_type": "both", "reward_preference": "no_preference",
                  "preferred_time_slots": [], "preferred_categories": [], "preferred_helper_types": [],
                  "nearby_push_enabled": False, "city": None} if not pref else {
-        "mode": pref.mode.value, "duration_type": pref.duration_type.value,
-        "reward_preference": pref.reward_preference.value,
+        "mode": pref.mode.value if pref.mode else "both",
+        "duration_type": pref.duration_type.value if pref.duration_type else "both",
+        "reward_preference": pref.reward_preference.value if pref.reward_preference else "no_preference",
         "preferred_time_slots": pref.preferred_time_slots or [],
         "preferred_categories": pref.preferred_categories or [],
         "preferred_helper_types": pref.preferred_helper_types or [],
