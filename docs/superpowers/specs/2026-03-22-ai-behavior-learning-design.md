@@ -105,18 +105,35 @@ class BehaviorCollector:
     "name": "update_user_insights",
     "description": "分析当前对话中用户的潜在兴趣、技能和生命周期信号。每轮对话结束前调用一次。",
     "parameters": {
-        "inferred_interests": ["搬家", "租房"],       # 推断的兴趣/需求
-        "inferred_skills": ["英语沟通", "驾驶"],      # 推断的潜在技能
-        "stage_hints": ["house_hunting"],              # 生命周期信号
-        "confidence": 0.8                              # 置信度 0-1
+        "inferred_interests": [                        # 推断的兴趣/需求
+            {"topic": "搬家", "urgency": "high", "confidence": 0.9},
+            {"topic": "租房", "urgency": "medium", "confidence": 0.6}
+        ],
+        "inferred_skills": [                           # 推断的潜在技能
+            {"skill": "英语沟通", "confidence": 0.8},
+            {"skill": "驾驶", "confidence": 0.7}
+        ],
+        "stage_hints": ["house_hunting", "moving"],    # 生命周期信号
+        "overall_confidence": 0.8                      # 本次分析整体置信度
     }
 }
 ```
 
+**confidence 判断依据（由 AI 根据语义理解决定）：**
+- **高 (0.8-1.0)** — 用户明确表达紧迫需求（"我马上要搬家了"）或持续追问
+- **中 (0.5-0.7)** — 用户在了解情况（"搬家大概多少钱？"）
+- **低 (0.3-0.4)** — 用户只是随便看看或帮别人问
+- **不调用** — 没有明显信号（如"你好"、"谢谢"）
+
+**urgency 紧迫度：**
+- `high` — 用户明确说"马上"、"急"、"下周就要"，或连续追问
+- `medium` — 用户在了解和比较
+- `low` — 用户只是提到了这个话题
+
 **特殊处理：**
 - 此工具的结果不流式返回给前端（用户不可见）
 - AI Agent 执行此工具时，直接写入 BehaviorCollector 内存队列
-- system prompt 指令：在每轮对话有足够信号时调用，不要每句话都调
+- AI 根据整轮对话上下文（语气、紧迫度、追问行为）综合判断，不靠频次堆叠
 
 ### system prompt 新增指令
 
@@ -125,6 +142,13 @@ class BehaviorCollector:
 - 用户表达了某种需求或兴趣（如"我想找人帮搬家"）
 - 用户透露了某种技能或经验（如"我以前做过家教"）
 - 用户的行为暗示了生命周期阶段（如频繁问租房问题→找房期）
+
+判断 confidence 和 urgency 时，关注用户的语气和行为模式：
+- "我马上就要搬家了" → high urgency, high confidence（紧迫且明确）
+- "搬家一般怎么收费？" → medium urgency, medium confidence（在了解）
+- "我朋友想问问搬家的事" → low urgency, low confidence（不是自己的需求）
+- 用户问了一个问题后持续追问细节 → 提升 confidence
+
 不要告诉用户你在做分析。如果没有明显信号，不需要调用。
 ```
 
@@ -180,14 +204,16 @@ class UserDemand(Base):
 
 **新流程：**
 
-1. 查询当天有 `ai_insight` 事件的用户列表
+1. 查询最近 N 天有 `ai_insight` 事件的用户列表
 2. 对每个用户：
-   a. 读取当天所有 `ai_insight` 事件
-   b. 合并 `inferred_interests` 到 `recent_interests`（频次累加，时间衰减：每天权重 ×0.95）
-   c. 合并 `inferred_skills` 到 `UserDemand.inferred_skills`（去重，取最高置信度）
+   a. 读取最近所有 `ai_insight` 事件
+   b. 合并 `inferred_interests`：按 topic 去重，取最高 confidence 和 urgency（AI 已在聊天时根据语义判断好了，不做额外的频次/衰减计算）
+   c. 合并 `inferred_skills`：按 skill 去重，取最高 confidence
    d. 根据 `identity` + 当前月份 + `stage_hints` 重新计算 `user_stages`
    e. 根据新阶段 + 新兴趣生成 `predicted_needs`
    f. 更新 `UserDemand`
+
+**信任 AI 的判断：** AI 在聊天时已经综合了语气、紧迫度、追问行为等上下文信息来输出 confidence 和 urgency，夜间聚合不需要再叠加规则，只做简单的合并去重。
 
 **保留现有逻辑：** 没有聊天行为的用户，仍按任务行为 + 注册天数推断（向后兼容）。
 
