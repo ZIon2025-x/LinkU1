@@ -4634,7 +4634,7 @@
   "onboardingProfileName": "你的名字",
   "onboardingProfileEmail": "郵箱",
   "onboardingProfilePhone": "手機號",
-  "onboardingProfileAvatar": "點擊更換頭像",
+  "onboardingProfileAvatar": "頭像可在個人設置中更換",
   "onboardingProfileIdentityLabel": "你目前的狀態",
   "onboardingCityTitle": "你在哪個城市",
   "onboardingCityHint": "選擇或輸入城市",
@@ -4642,6 +4642,7 @@
   "onboardingSkillsSkip": "跳過",
   "onboardingNext": "下一步",
   "onboardingComplete": "完成",
+  "onboardingProfileUpdateInSettings": "可在個人設置中更新",
   "onboardingInterestsTitle": "你對什麼感興趣",
   "onboardingInterestsSubtitle": "選擇你感興趣的領域，幫助我們更好地為你推薦"
 }

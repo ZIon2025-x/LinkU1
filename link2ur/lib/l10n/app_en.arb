@@ -4811,7 +4811,7 @@
   "onboardingProfileName": "Your Name",
   "onboardingProfileEmail": "Email",
   "onboardingProfilePhone": "Phone Number",
-  "onboardingProfileAvatar": "Tap to change avatar",
+  "onboardingProfileAvatar": "Avatar can be changed in settings",
   "onboardingProfileIdentityLabel": "Your current status",
   "onboardingCityTitle": "Your City",
   "onboardingCityHint": "Select or type a city",
@@ -4819,6 +4819,7 @@
   "onboardingSkillsSkip": "Skip",
   "onboardingNext": "Next",
   "onboardingComplete": "Done",
+  "onboardingProfileUpdateInSettings": "Can be updated in profile settings",
   "onboardingInterestsTitle": "What are you interested in?",
   "onboardingInterestsSubtitle": "Choose your interests so we can recommend better for you"
 }

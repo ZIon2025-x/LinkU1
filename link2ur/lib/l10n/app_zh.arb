@@ -4719,7 +4719,7 @@
   "onboardingProfileName": "你的名字",
   "onboardingProfileEmail": "邮箱",
   "onboardingProfilePhone": "手机号",
-  "onboardingProfileAvatar": "点击更换头像",
+  "onboardingProfileAvatar": "头像可在个人设置中更换",
   "onboardingProfileIdentityLabel": "你目前的状态",
   "onboardingCityTitle": "你在哪个城市",
   "onboardingCityHint": "选择或输入城市",
@@ -4727,6 +4727,7 @@
   "onboardingSkillsSkip": "跳过",
   "onboardingNext": "下一步",
   "onboardingComplete": "完成",
+  "onboardingProfileUpdateInSettings": "可在个人设置中更新",
   "onboardingInterestsTitle": "你对什么感兴趣",
   "onboardingInterestsSubtitle": "选择你感兴趣的领域，帮助我们更好地为你推荐"
 }

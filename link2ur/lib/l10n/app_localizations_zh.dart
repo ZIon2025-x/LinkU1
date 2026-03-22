@@ -10101,7 +10101,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get onboardingProfilePhone => '手机号';
 
   @override
-  String get onboardingProfileAvatar => '点击更换头像';
+  String get onboardingProfileAvatar => '头像可在个人设置中更换';
 
   @override
   String get onboardingProfileIdentityLabel => '你目前的状态';
@@ -10123,6 +10123,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get onboardingComplete => '完成';
+
+  @override
+  String get onboardingProfileUpdateInSettings => '可在个人设置中更新';
 
   @override
   String get onboardingInterestsTitle => '你对什么感兴趣';
@@ -20184,7 +20187,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get onboardingProfilePhone => '手機號';
 
   @override
-  String get onboardingProfileAvatar => '點擊更換頭像';
+  String get onboardingProfileAvatar => '頭像可在個人設置中更換';
 
   @override
   String get onboardingProfileIdentityLabel => '你目前的狀態';
@@ -20206,6 +20209,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get onboardingComplete => '完成';
+
+  @override
+  String get onboardingProfileUpdateInSettings => '可在個人設置中更新';
 
   @override
   String get onboardingInterestsTitle => '你對什麼感興趣';

@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
-
 import '../../auth/bloc/auth_bloc.dart';
 
 import '../../../core/design/app_colors.dart';
@@ -59,9 +57,10 @@ class _OnboardingContentState extends State<_OnboardingContent> {
           (prev.errorMessage == null && curr.errorMessage != null),
       listener: (context, state) {
         if (state.isComplete) {
-          // Refresh auth state so router redirect knows onboarding is done
+          // Refresh auth state — GoRouterBlocRefreshStream will re-evaluate
+          // redirect once AuthBloc emits new state with onboardingCompleted=true,
+          // automatically navigating away from onboarding. No context.go() needed.
           context.read<AuthBloc>().add(AuthCheckRequested());
-          context.go('/');
           return;
         }
         if (state.errorMessage != null) {
@@ -254,9 +253,9 @@ class _ProfileStepState extends State<_ProfileStep> {
                         border: OutlineInputBorder(
                           borderRadius: AppRadius.allMedium,
                         ),
-                        suffixIcon: const Tooltip(
-                          message: 'Can be updated in profile settings',
-                          child: Icon(Icons.info_outline_rounded,
+                        suffixIcon: Tooltip(
+                          message: l10n.onboardingProfileUpdateInSettings,
+                          child: const Icon(Icons.info_outline_rounded,
                               size: 20,
                               color: AppColors.textSecondaryLight),
                         ),
@@ -283,9 +282,9 @@ class _ProfileStepState extends State<_ProfileStep> {
                         border: OutlineInputBorder(
                           borderRadius: AppRadius.allMedium,
                         ),
-                        suffixIcon: const Tooltip(
-                          message: 'Can be updated in profile settings',
-                          child: Icon(Icons.info_outline_rounded,
+                        suffixIcon: Tooltip(
+                          message: l10n.onboardingProfileUpdateInSettings,
+                          child: const Icon(Icons.info_outline_rounded,
                               size: 20,
                               color: AppColors.textSecondaryLight),
                         ),

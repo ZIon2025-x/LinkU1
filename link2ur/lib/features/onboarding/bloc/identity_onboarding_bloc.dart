@@ -163,6 +163,7 @@ class IdentityOnboardingBloc
     OnboardingSubmit event,
     Emitter<IdentityOnboardingState> emit,
   ) async {
+    if (state.isSubmitting || state.isComplete) return;
     emit(state.copyWith(isSubmitting: true));
     try {
       await _repository.submitOnboarding(

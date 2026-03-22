@@ -283,17 +283,20 @@ async def submit_onboarding(
 ):
     svc.submit_onboarding(db, current_user.id, data.model_dump())
 
-    # Save identity to UserDemand
-    if data.identity:
-        from app.models import UserDemand
-        from app.services.demand_inference import determine_user_stages
+    # Get or create UserDemand (used for identity + interests)
+    from app.models import UserDemand
+    demand = None
+    if data.identity or data.interests:
         demand = db.query(UserDemand).filter(UserDemand.user_id == current_user.id).first()
         if not demand:
             demand = UserDemand(user_id=current_user.id)
             db.add(demand)
+
+    # Save identity
+    if data.identity and demand:
+        from app.services.demand_inference import determine_user_stages
         demand.identity = data.identity
         demand.user_stage = determine_user_stages(data.identity)
-        db.flush()
 
     # Save city to preferences
     if data.city:
@@ -308,12 +311,7 @@ async def submit_onboarding(
             db.add(pref)
 
     # Save interests to UserDemand.recent_interests
-    if data.interests:
-        from app.models import UserDemand
-        demand = db.query(UserDemand).filter(UserDemand.user_id == current_user.id).first()
-        if not demand:
-            demand = UserDemand(user_id=current_user.id)
-            db.add(demand)
+    if data.interests and demand:
         existing = demand.recent_interests or {}
         for interest_key in data.interests:
             existing[interest_key] = {

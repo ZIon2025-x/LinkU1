@@ -10522,7 +10522,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingProfilePhone => 'Phone Number';
 
   @override
-  String get onboardingProfileAvatar => 'Tap to change avatar';
+  String get onboardingProfileAvatar => 'Avatar can be changed in settings';
 
   @override
   String get onboardingProfileIdentityLabel => 'Your current status';
@@ -10544,6 +10544,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboardingComplete => 'Done';
+
+  @override
+  String get onboardingProfileUpdateInSettings =>
+      'Can be updated in profile settings';
 
   @override
   String get onboardingInterestsTitle => 'What are you interested in?';

@@ -19373,7 +19373,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingProfileAvatar.
   ///
   /// In en, this message translates to:
-  /// **'Tap to change avatar'**
+  /// **'Avatar can be changed in settings'**
   String get onboardingProfileAvatar;
 
   /// No description provided for @onboardingProfileIdentityLabel.
@@ -19417,6 +19417,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Done'**
   String get onboardingComplete;
+
+  /// No description provided for @onboardingProfileUpdateInSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Can be updated in profile settings'**
+  String get onboardingProfileUpdateInSettings;
 
   /// No description provided for @onboardingInterestsTitle.
   ///
