@@ -343,7 +343,6 @@ class _UpgradeCard extends StatelessWidget {
             threshold: completionRateThreshold * 100,
             unit: '%',
             color: AppColors.success,
-            decimals: 0,
           ),
         ],
       ),

@@ -200,7 +200,7 @@ class _IdentityCard extends StatelessWidget {
                 ),
               ),
             ),
-            Icon(
+            const Icon(
               Icons.arrow_forward_ios_rounded,
               size: 16,
               color: AppColors.primary,
