@@ -24,7 +24,7 @@ void main() {
       ],
       preference: UserProfilePreference(mode: 'online'),
       reliability: UserReliability(reliabilityScore: 85, totalTasksTaken: 10, insufficientData: false),
-      demand: UserDemand(userStage: 'settling'),
+      demand: UserDemand(userStages: ['settling']),
     );
 
     blocTest<UserProfileBloc, UserProfileState>(
