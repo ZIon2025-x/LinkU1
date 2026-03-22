@@ -101,7 +101,7 @@ class _OnboardingContentState extends State<_OnboardingContent> {
                     controller: _pageController,
                     physics: const NeverScrollableScrollPhysics(),
                     children: const [
-                      _IdentityStep(),
+                      _ProfileStep(),
                       _CityStep(),
                       _SkillsStep(),
                     ],
@@ -118,122 +118,294 @@ class _OnboardingContentState extends State<_OnboardingContent> {
   }
 }
 
-// ==================== Step 1: Identity Selection ====================
+// ==================== Step 1: Profile Setup ====================
 
-class _IdentityStep extends StatelessWidget {
-  const _IdentityStep();
+class _ProfileStep extends StatefulWidget {
+  const _ProfileStep();
+
+  @override
+  State<_ProfileStep> createState() => _ProfileStepState();
+}
+
+class _ProfileStepState extends State<_ProfileStep> {
+  late final TextEditingController _nameController;
+  String? _selectedIdentity;
+
+  @override
+  void initState() {
+    super.initState();
+    final authState = context.read<AuthBloc>().state;
+    final user = authState.user;
+    _nameController = TextEditingController(text: user?.name ?? '');
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  bool _isRandomEmail(String? email) {
+    if (email == null || email.isEmpty) return true;
+    return email.contains('@link2ur.com') && email.startsWith('phone_');
+  }
+
+  void _onNext() {
+    final name = _nameController.text.trim();
+    final bloc = context.read<IdentityOnboardingBloc>();
+    if (name.isNotEmpty) {
+      bloc.add(OnboardingSetProfile(name: name));
+    }
+    bloc.add(OnboardingSetIdentity(_selectedIdentity!));
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final authState = context.read<AuthBloc>().state;
+    final user = authState.user;
 
     return Padding(
       padding: AppSpacing.horizontalLg,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AppSpacing.vXl,
-          Text(
-            l10n.onboardingIdentityTitle,
-            style: AppTypography.title.copyWith(
-              color: theme.colorScheme.onSurface,
-            ),
-          ),
-          AppSpacing.vXl,
           Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _IdentityCard(
-                  icon: Icons.flight_takeoff_rounded,
-                  label: l10n.onboardingIdentityPreArrival,
-                  value: 'pre_arrival',
-                  isDark: isDark,
-                ),
-                AppSpacing.vMd,
-                _IdentityCard(
-                  icon: Icons.school_rounded,
-                  label: l10n.onboardingIdentityInUk,
-                  value: 'in_uk',
-                  isDark: isDark,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AppSpacing.vXl,
+                  Text(
+                    l10n.onboardingIdentityTitle,
+                    style: AppTypography.title.copyWith(
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                  AppSpacing.vXl,
 
-class _IdentityCard extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-  final bool isDark;
+                  // Avatar section
+                  Center(
+                    child: Column(
+                      children: [
+                        CircleAvatar(
+                          radius: 40,
+                          backgroundColor: AppColors.primary.withAlpha(30),
+                          backgroundImage: user?.avatar != null &&
+                                  user!.avatar!.isNotEmpty
+                              ? NetworkImage(user.avatar!)
+                              : null,
+                          child: user?.avatar == null || user!.avatar!.isEmpty
+                              ? const Icon(Icons.person_rounded,
+                                  size: 40, color: AppColors.primary)
+                              : null,
+                        ),
+                        AppSpacing.vSm,
+                        Text(
+                          l10n.onboardingProfileAvatar,
+                          style: AppTypography.caption.copyWith(
+                            color: AppColors.textSecondaryLight,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  AppSpacing.vLg,
 
-  const _IdentityCard({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.isDark,
-  });
+                  // Name field
+                  Text(
+                    l10n.onboardingProfileName,
+                    style: AppTypography.callout.copyWith(
+                      color: theme.colorScheme.onSurface,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  AppSpacing.vSm,
+                  TextField(
+                    controller: _nameController,
+                    decoration: InputDecoration(
+                      hintText: l10n.onboardingProfileName,
+                      prefixIcon: const Icon(Icons.person_outline_rounded),
+                      border: OutlineInputBorder(
+                        borderRadius: AppRadius.allMedium,
+                      ),
+                    ),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  AppSpacing.vMd,
 
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        context
-            .read<IdentityOnboardingBloc>()
-            .add(OnboardingSetIdentity(value));
-      },
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(
-          vertical: AppSpacing.xl,
-          horizontal: AppSpacing.lg,
-        ),
-        decoration: BoxDecoration(
-          color: isDark
-              ? Colors.white.withAlpha(15)
-              : AppColors.primary.withAlpha(15),
-          borderRadius: AppRadius.allLarge,
-          border: Border.all(
-            color: AppColors.primary.withAlpha(60),
-            width: 1.5,
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: AppColors.gradientPrimary,
-                ),
-                borderRadius: AppRadius.allMedium,
+                  // Email field (only if random/invalid)
+                  if (_isRandomEmail(user?.email)) ...[
+                    Text(
+                      l10n.onboardingProfileEmail,
+                      style: AppTypography.callout.copyWith(
+                        color: theme.colorScheme.onSurface,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    AppSpacing.vSm,
+                    TextField(
+                      enabled: false,
+                      decoration: InputDecoration(
+                        hintText: l10n.onboardingProfileEmail,
+                        prefixIcon:
+                            const Icon(Icons.email_outlined),
+                        border: OutlineInputBorder(
+                          borderRadius: AppRadius.allMedium,
+                        ),
+                        suffixIcon: const Tooltip(
+                          message: 'Can be updated in profile settings',
+                          child: Icon(Icons.info_outline_rounded,
+                              size: 20,
+                              color: AppColors.textSecondaryLight),
+                        ),
+                      ),
+                    ),
+                    AppSpacing.vMd,
+                  ],
+
+                  // Phone field (only if empty)
+                  if (user?.phone == null || user!.phone!.isEmpty) ...[
+                    Text(
+                      l10n.onboardingProfilePhone,
+                      style: AppTypography.callout.copyWith(
+                        color: theme.colorScheme.onSurface,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    AppSpacing.vSm,
+                    TextField(
+                      enabled: false,
+                      decoration: InputDecoration(
+                        hintText: l10n.onboardingProfilePhone,
+                        prefixIcon: const Icon(Icons.phone_outlined),
+                        border: OutlineInputBorder(
+                          borderRadius: AppRadius.allMedium,
+                        ),
+                        suffixIcon: const Tooltip(
+                          message: 'Can be updated in profile settings',
+                          child: Icon(Icons.info_outline_rounded,
+                              size: 20,
+                              color: AppColors.textSecondaryLight),
+                        ),
+                      ),
+                    ),
+                    AppSpacing.vMd,
+                  ],
+
+                  AppSpacing.vSm,
+
+                  // Identity selection
+                  Text(
+                    l10n.onboardingProfileIdentityLabel,
+                    style: AppTypography.callout.copyWith(
+                      color: theme.colorScheme.onSurface,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  AppSpacing.vSm,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ChoiceChip(
+                          avatar: Icon(
+                            Icons.luggage_rounded,
+                            size: 18,
+                            color: _selectedIdentity == 'pre_arrival'
+                                ? AppColors.primary
+                                : theme.colorScheme.onSurface,
+                          ),
+                          label: Text(l10n.onboardingIdentityPreArrival),
+                          selected: _selectedIdentity == 'pre_arrival',
+                          selectedColor: AppColors.primary.withAlpha(30),
+                          labelStyle: AppTypography.callout.copyWith(
+                            color: _selectedIdentity == 'pre_arrival'
+                                ? AppColors.primary
+                                : theme.colorScheme.onSurface,
+                            fontWeight: _selectedIdentity == 'pre_arrival'
+                                ? FontWeight.w600
+                                : FontWeight.normal,
+                          ),
+                          side: BorderSide(
+                            color: _selectedIdentity == 'pre_arrival'
+                                ? AppColors.primary
+                                : (isDark
+                                    ? Colors.white.withAlpha(30)
+                                    : Colors.black.withAlpha(20)),
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: AppRadius.allSmall,
+                          ),
+                          onSelected: (_) {
+                            setState(() => _selectedIdentity = 'pre_arrival');
+                          },
+                        ),
+                      ),
+                      AppSpacing.hSm,
+                      Expanded(
+                        child: ChoiceChip(
+                          avatar: Icon(
+                            Icons.location_on_rounded,
+                            size: 18,
+                            color: _selectedIdentity == 'in_uk'
+                                ? AppColors.primary
+                                : theme.colorScheme.onSurface,
+                          ),
+                          label: Text(l10n.onboardingIdentityInUk),
+                          selected: _selectedIdentity == 'in_uk',
+                          selectedColor: AppColors.primary.withAlpha(30),
+                          labelStyle: AppTypography.callout.copyWith(
+                            color: _selectedIdentity == 'in_uk'
+                                ? AppColors.primary
+                                : theme.colorScheme.onSurface,
+                            fontWeight: _selectedIdentity == 'in_uk'
+                                ? FontWeight.w600
+                                : FontWeight.normal,
+                          ),
+                          side: BorderSide(
+                            color: _selectedIdentity == 'in_uk'
+                                ? AppColors.primary
+                                : (isDark
+                                    ? Colors.white.withAlpha(30)
+                                    : Colors.black.withAlpha(20)),
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: AppRadius.allSmall,
+                          ),
+                          onSelected: (_) {
+                            setState(() => _selectedIdentity = 'in_uk');
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  AppSpacing.vLg,
+                ],
               ),
-              child: Icon(icon, color: Colors.white, size: 28),
             ),
-            AppSpacing.hMd,
-            Expanded(
+          ),
+
+          // Next button
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: _selectedIdentity != null ? _onNext : null,
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                padding: AppSpacing.button,
+                shape: RoundedRectangleBorder(
+                  borderRadius: AppRadius.allMedium,
+                ),
+              ),
               child: Text(
-                label,
-                style: AppTypography.bodyBold.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
+                l10n.onboardingNext,
+                style: AppTypography.bodyBold.copyWith(color: Colors.white),
               ),
             ),
-            const Icon(
-              Icons.arrow_forward_ios_rounded,
-              size: 16,
-              color: AppColors.primary,
-            ),
-          ],
-        ),
+          ),
+          AppSpacing.vMd,
+        ],
       ),
     );
   }

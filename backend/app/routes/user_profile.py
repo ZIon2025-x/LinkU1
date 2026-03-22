@@ -70,6 +70,7 @@ class OnboardingSubmit(BaseModel):
     preferred_categories: list[int] = []
     identity: str | None = None  # "pre_arrival" or "in_uk"
     city: str | None = None
+    name: str | None = None
 
 
 # --- Capability endpoints ---
@@ -304,6 +305,10 @@ async def submit_onboarding(
         else:
             pref = UserProfilePreference(user_id=current_user.id, city=data.city)
             db.add(pref)
+
+    # Update name if provided
+    if data.name and data.name.strip():
+        current_user.name = data.name.strip()
 
     # Mark onboarding complete
     current_user.onboarding_completed = True

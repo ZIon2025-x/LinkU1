@@ -10504,13 +10504,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sharedTasksEmpty => 'No collaboration history yet';
 
   @override
-  String get onboardingIdentityTitle => 'About You';
+  String get onboardingIdentityTitle => 'Set Up Your Profile';
 
   @override
-  String get onboardingIdentityPreArrival => 'Planning to come to the UK';
+  String get onboardingIdentityPreArrival => 'Coming to the UK';
 
   @override
-  String get onboardingIdentityInUk => 'Already studying in the UK';
+  String get onboardingIdentityInUk => 'Already in the UK';
+
+  @override
+  String get onboardingProfileName => 'Your Name';
+
+  @override
+  String get onboardingProfileEmail => 'Email';
+
+  @override
+  String get onboardingProfilePhone => 'Phone Number';
+
+  @override
+  String get onboardingProfileAvatar => 'Tap to change avatar';
+
+  @override
+  String get onboardingProfileIdentityLabel => 'Your current status';
 
   @override
   String get onboardingCityTitle => 'Your City';

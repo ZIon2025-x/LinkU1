@@ -19337,20 +19337,50 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingIdentityTitle.
   ///
   /// In en, this message translates to:
-  /// **'About You'**
+  /// **'Set Up Your Profile'**
   String get onboardingIdentityTitle;
 
   /// No description provided for @onboardingIdentityPreArrival.
   ///
   /// In en, this message translates to:
-  /// **'Planning to come to the UK'**
+  /// **'Coming to the UK'**
   String get onboardingIdentityPreArrival;
 
   /// No description provided for @onboardingIdentityInUk.
   ///
   /// In en, this message translates to:
-  /// **'Already studying in the UK'**
+  /// **'Already in the UK'**
   String get onboardingIdentityInUk;
+
+  /// No description provided for @onboardingProfileName.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Name'**
+  String get onboardingProfileName;
+
+  /// No description provided for @onboardingProfileEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Email'**
+  String get onboardingProfileEmail;
+
+  /// No description provided for @onboardingProfilePhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone Number'**
+  String get onboardingProfilePhone;
+
+  /// No description provided for @onboardingProfileAvatar.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to change avatar'**
+  String get onboardingProfileAvatar;
+
+  /// No description provided for @onboardingProfileIdentityLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Your current status'**
+  String get onboardingProfileIdentityLabel;
 
   /// No description provided for @onboardingCityTitle.
   ///

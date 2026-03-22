@@ -114,6 +114,7 @@ class UserProfileRepository {
     List<int> preferredCategories = const [],
     String? identity,
     String? city,
+    String? name,
   }) async {
     final response = await _apiService.post(
       ApiEndpoints.profileOnboarding,
@@ -123,6 +124,7 @@ class UserProfileRepository {
         'preferred_categories': preferredCategories,
         if (identity != null) 'identity': identity,
         if (city != null) 'city': city,
+        if (name != null) 'name': name,
       },
     );
     if (!response.isSuccess) {

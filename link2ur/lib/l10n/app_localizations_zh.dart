@@ -10083,13 +10083,28 @@ class AppLocalizationsZh extends AppLocalizations {
   String get sharedTasksEmpty => '暂无合作记录';
 
   @override
-  String get onboardingIdentityTitle => '你的身份';
+  String get onboardingIdentityTitle => '完善你的资料';
 
   @override
-  String get onboardingIdentityPreArrival => '准备来英国的留学生';
+  String get onboardingIdentityPreArrival => '准备来英国';
 
   @override
-  String get onboardingIdentityInUk => '已经在英国读书';
+  String get onboardingIdentityInUk => '已经在英国';
+
+  @override
+  String get onboardingProfileName => '你的名字';
+
+  @override
+  String get onboardingProfileEmail => '邮箱';
+
+  @override
+  String get onboardingProfilePhone => '手机号';
+
+  @override
+  String get onboardingProfileAvatar => '点击更换头像';
+
+  @override
+  String get onboardingProfileIdentityLabel => '你目前的状态';
 
   @override
   String get onboardingCityTitle => '你在哪个城市';
@@ -20145,13 +20160,28 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get sharedTasksEmpty => '暫無合作記錄';
 
   @override
-  String get onboardingIdentityTitle => '你的身份';
+  String get onboardingIdentityTitle => '完善你的資料';
 
   @override
-  String get onboardingIdentityPreArrival => '準備來英國的留學生';
+  String get onboardingIdentityPreArrival => '準備來英國';
 
   @override
-  String get onboardingIdentityInUk => '已經在英國讀書';
+  String get onboardingIdentityInUk => '已經在英國';
+
+  @override
+  String get onboardingProfileName => '你的名字';
+
+  @override
+  String get onboardingProfileEmail => '郵箱';
+
+  @override
+  String get onboardingProfilePhone => '手機號';
+
+  @override
+  String get onboardingProfileAvatar => '點擊更換頭像';
+
+  @override
+  String get onboardingProfileIdentityLabel => '你目前的狀態';
 
   @override
   String get onboardingCityTitle => '你在哪個城市';

@@ -36,6 +36,15 @@ class OnboardingSetSkills extends IdentityOnboardingEvent {
   List<Object?> get props => [skills];
 }
 
+class OnboardingSetProfile extends IdentityOnboardingEvent {
+  const OnboardingSetProfile({this.name, this.email, this.phone});
+  final String? name;
+  final String? email;
+  final String? phone;
+  @override
+  List<Object?> get props => [name, email, phone];
+}
+
 class OnboardingSubmit extends IdentityOnboardingEvent {
   const OnboardingSubmit();
 }
@@ -45,6 +54,7 @@ class OnboardingSubmit extends IdentityOnboardingEvent {
 class IdentityOnboardingState extends Equatable {
   final String? identity;
   final String? city;
+  final String? name;
   final List<Map<String, dynamic>> skills;
   final int currentStep;
   final bool isSubmitting;
@@ -54,6 +64,7 @@ class IdentityOnboardingState extends Equatable {
   const IdentityOnboardingState({
     this.identity,
     this.city,
+    this.name,
     this.skills = const [],
     this.currentStep = 0,
     this.isSubmitting = false,
@@ -64,6 +75,7 @@ class IdentityOnboardingState extends Equatable {
   IdentityOnboardingState copyWith({
     String? identity,
     String? city,
+    String? name,
     List<Map<String, dynamic>>? skills,
     int? currentStep,
     bool? isSubmitting,
@@ -73,6 +85,7 @@ class IdentityOnboardingState extends Equatable {
     return IdentityOnboardingState(
       identity: identity ?? this.identity,
       city: city ?? this.city,
+      name: name ?? this.name,
       skills: skills ?? this.skills,
       currentStep: currentStep ?? this.currentStep,
       isSubmitting: isSubmitting ?? this.isSubmitting,
@@ -85,6 +98,7 @@ class IdentityOnboardingState extends Equatable {
   List<Object?> get props => [
         identity,
         city,
+        name,
         skills,
         currentStep,
         isSubmitting,
@@ -105,6 +119,7 @@ class IdentityOnboardingBloc
     on<OnboardingSetIdentity>(_onSetIdentity);
     on<OnboardingSetCity>(_onSetCity);
     on<OnboardingSetSkills>(_onSetSkills);
+    on<OnboardingSetProfile>(_onSetProfile);
     on<OnboardingSubmit>(_onSubmit);
   }
 
@@ -135,6 +150,15 @@ class IdentityOnboardingBloc
     emit(state.copyWith(skills: event.skills));
   }
 
+  void _onSetProfile(
+    OnboardingSetProfile event,
+    Emitter<IdentityOnboardingState> emit,
+  ) {
+    emit(state.copyWith(
+      name: event.name,
+    ));
+  }
+
   Future<void> _onSubmit(
     OnboardingSubmit event,
     Emitter<IdentityOnboardingState> emit,
@@ -145,6 +169,7 @@ class IdentityOnboardingBloc
         capabilities: state.skills,
         identity: state.identity,
         city: state.city,
+        name: state.name,
       );
       emit(state.copyWith(
         isSubmitting: false,
