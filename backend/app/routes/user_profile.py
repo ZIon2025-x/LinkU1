@@ -182,17 +182,17 @@ async def get_demand(current_user=Depends(get_current_user_secure_sync_csrf), db
             db.commit()
         except (ValueError, Exception):
             # Inference failed, return defaults
-            return {"user_stage": "new_arrival", "predicted_needs": [],
-                    "recent_interests": {}, "last_inferred_at": None}
-    try:
-        stage_value = demand.user_stage.value if hasattr(demand.user_stage, 'value') else str(demand.user_stage)
-    except (ValueError, AttributeError):
-        stage_value = "new_arrival"
+            return {"user_stage": ["new_arrival"], "predicted_needs": [],
+                    "recent_interests": {}, "last_inferred_at": None,
+                    "identity": None, "inferred_skills": [], "inferred_preferences": {}}
     return {
-        "user_stage": stage_value,
+        "user_stage": demand.user_stage if isinstance(demand.user_stage, list) else [demand.user_stage] if demand.user_stage else ["new_arrival"],
         "predicted_needs": demand.predicted_needs or [],
         "recent_interests": demand.recent_interests or {},
         "last_inferred_at": demand.last_inferred_at.isoformat() if demand.last_inferred_at else None,
+        "identity": demand.identity,
+        "inferred_skills": demand.inferred_skills or [],
+        "inferred_preferences": demand.inferred_preferences or {},
     }
 
 
@@ -240,13 +240,18 @@ async def get_summary(current_user=Depends(get_current_user_secure_sync_csrf), d
 
     demand = summary["demand"]
     if not demand:
-        demand_data = {"user_stage": "new_arrival", "predicted_needs": []}
+        demand_data = {"user_stage": ["new_arrival"], "predicted_needs": [],
+                       "identity": None, "inferred_skills": [], "inferred_preferences": {},
+                       "recent_interests": {}}
     else:
-        try:
-            stage_val = demand.user_stage.value if hasattr(demand.user_stage, 'value') else str(demand.user_stage)
-        except (ValueError, AttributeError):
-            stage_val = "new_arrival"
-        demand_data = {"user_stage": stage_val, "predicted_needs": demand.predicted_needs or []}
+        demand_data = {
+            "user_stage": demand.user_stage if isinstance(demand.user_stage, list) else [demand.user_stage] if demand.user_stage else ["new_arrival"],
+            "predicted_needs": demand.predicted_needs or [],
+            "identity": demand.identity,
+            "inferred_skills": demand.inferred_skills or [],
+            "inferred_preferences": demand.inferred_preferences or {},
+            "recent_interests": demand.recent_interests or {},
+        }
 
     return {
         "capabilities": caps,

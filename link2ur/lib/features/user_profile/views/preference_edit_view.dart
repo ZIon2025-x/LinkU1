@@ -4,6 +4,7 @@ import 'package:geolocator/geolocator.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
+import '../../../core/constants/interest_categories.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
@@ -48,6 +49,7 @@ class _PreferenceEditContentState extends State<_PreferenceEditContent> {
   late String? _identity;
   late String? _city;
   late Set<String> _selectedInterests;
+  late TextEditingController _cityController;
 
   static const _modes = [
     ('online', '线上'),
@@ -85,6 +87,7 @@ class _PreferenceEditContentState extends State<_PreferenceEditContent> {
     _nearbyPushEnabled = widget.currentPreference.nearbyPushEnabled;
     _identity = widget.currentDemand?.identity;
     _city = widget.currentPreference.city;
+    _cityController = TextEditingController(text: _city ?? '');
     _selectedInterests = Set.from(
       (widget.currentDemand?.recentInterests ?? {}).keys,
     );
@@ -95,22 +98,13 @@ class _PreferenceEditContentState extends State<_PreferenceEditContent> {
     ('in_uk', Icons.location_on_rounded),
   ];
 
-  static const List<(String key, IconData icon, String zh, String en)> _interestOptions = [
-    ('moving_home', Icons.home_rounded, '搬家/家居', 'Moving & Home'),
-    ('housing', Icons.vpn_key_rounded, '租房/住宿', 'Housing'),
-    ('food_cooking', Icons.restaurant_rounded, '美食/烹饪', 'Food & Cooking'),
-    ('transport', Icons.directions_car_rounded, '出行/驾驶', 'Transport & Driving'),
-    ('study_tutoring', Icons.menu_book_rounded, '学习/辅导', 'Study & Tutoring'),
-    ('photo_video', Icons.camera_alt_rounded, '摄影/视频', 'Photo & Video'),
-    ('sports_fitness', Icons.fitness_center_rounded, '运动/健身', 'Sports & Fitness'),
-    ('travel', Icons.flight_rounded, '旅行/探索', 'Travel & Explore'),
-    ('shopping', Icons.shopping_bag_rounded, '代购/购物', 'Shopping'),
-    ('social', Icons.people_rounded, '社交/陪同', 'Social & Companion'),
-    ('pets', Icons.pets_rounded, '宠物', 'Pets'),
-    ('tech_it', Icons.computer_rounded, '技术/IT', 'Tech & IT'),
-    ('art_design', Icons.palette_rounded, '艺术/设计', 'Art & Design'),
-    ('gaming', Icons.sports_esports_rounded, '游戏/陪玩', 'Gaming'),
-  ];
+  static const List<InterestCategory> _interestOptions = InterestCategories.all;
+
+  @override
+  void dispose() {
+    _cityController.dispose();
+    super.dispose();
+  }
 
   void _toggleTimeSlot(String slot) {
     setState(() {
@@ -268,7 +262,7 @@ class _PreferenceEditContentState extends State<_PreferenceEditContent> {
                   title: context.l10n.onboardingCityTitle,
                   description: '',
                   child: TextField(
-                    controller: TextEditingController(text: _city ?? ''),
+                    controller: _cityController,
                     decoration: InputDecoration(
                       hintText: context.l10n.onboardingCityHint,
                       prefixIcon: const Icon(Icons.location_on_outlined),
@@ -290,19 +284,19 @@ class _PreferenceEditContentState extends State<_PreferenceEditContent> {
                     runSpacing: AppSpacing.sm,
                     children: _interestOptions.map((item) {
                       final isZh = Localizations.localeOf(context).languageCode == 'zh';
-                      final isSelected = _selectedInterests.contains(item.$1);
+                      final isSelected = _selectedInterests.contains(item.key);
                       return FilterChip(
-                        avatar: Icon(item.$2, size: 16,
+                        avatar: Icon(item.icon, size: 16,
                           color: isSelected ? AppColors.primary : null),
-                        label: Text(isZh ? item.$3 : item.$4),
+                        label: Text(isZh ? item.zh : item.en),
                         selected: isSelected,
                         selectedColor: AppColors.primary.withAlpha(30),
                         onSelected: (selected) {
                           setState(() {
                             if (selected) {
-                              _selectedInterests.add(item.$1);
+                              _selectedInterests.add(item.key);
                             } else {
-                              _selectedInterests.remove(item.$1);
+                              _selectedInterests.remove(item.key);
                             }
                           });
                         },

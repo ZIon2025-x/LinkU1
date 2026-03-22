@@ -90,8 +90,14 @@ def upsert_preference(db: Session, user_id: str, data: dict) -> UserProfilePrefe
                 demand.user_stage = determine_user_stages(data["identity"])
             except Exception:
                 pass
-        if "interests" in data and data["interests"]:
+        if "interests" in data and data["interests"] is not None:
+            # Replace interests from profile edit (user explicitly chose these)
+            # Keep non-profile-edit interests (from AI chat, task behavior, etc.)
             existing = demand.recent_interests or {}
+            # Remove old profile_edit/onboarding interests
+            existing = {k: v for k, v in existing.items()
+                        if isinstance(v, dict) and v.get("source") not in ("profile_edit", "onboarding")}
+            # Add currently selected interests
             for key in data["interests"]:
                 existing[key] = {
                     "confidence": 0.8,
