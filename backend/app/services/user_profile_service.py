@@ -146,15 +146,15 @@ def submit_onboarding(db: Session, user_id: str, data: dict) -> dict:
     if "capabilities" in data:
         caps = upsert_capabilities(db, user_id, data["capabilities"])
     pref_data = {}
-    if "mode" in data:
+    if data.get("mode"):
         pref_data["mode"] = data["mode"]
-    if "preferred_categories" in data:
+    if data.get("preferred_categories"):
         pref_data["preferred_categories"] = data["preferred_categories"]
-    if "city" in data and data["city"]:
+    if data.get("city"):
         pref_data["city"] = data["city"]
-    if "identity" in data and data["identity"]:
+    if data.get("identity"):
         pref_data["identity"] = data["identity"]
-    if "interests" in data and data["interests"]:
+    if data.get("interests"):
         pref_data["interests"] = data["interests"]
     pref = upsert_preference(db, user_id, pref_data) if pref_data else get_preference(db, user_id)
     return {"capabilities": caps, "preference": pref}
