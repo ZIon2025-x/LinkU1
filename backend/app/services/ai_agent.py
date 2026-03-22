@@ -848,8 +848,10 @@ async def _step_llm(ctx: _PipelineContext) -> AsyncIterator[ServerSentEvent]:
                                 yield _make_text_sse(pre)
                             _token_buffer = "<user_insights>" + _token_buffer.split("<user_insights>", 1)[1]
                         elif _token_buffer.endswith(("<", "<u", "<us", "<use", "<user", "<user_", "<user_i", "<user_in", "<user_ins", "<user_insi", "<user_insig", "<user_insigh", "<user_insight", "<user_insights")):
-                            # Partial tag match — keep buffering
-                            pass
+                            # Partial tag match — keep buffering, but cap at 64KB
+                            if len(_token_buffer) > 65536:
+                                yield _make_text_sse(_token_buffer)
+                                _token_buffer = ""
                         else:
                             # False alarm — flush buffer
                             yield _make_text_sse(_token_buffer)
