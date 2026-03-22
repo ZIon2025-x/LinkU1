@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>方案A - 发现页</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'PingFang SC', 'Helvetica Neue', sans-serif;
+    background: #f5f5f5;
+    max-width: 430px;
+    margin: 0 auto;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Header */
+  .header {
+    background: #fff;
+    padding: 44px 16px 0;
+    position: sticky;
+    top: 0;
+    z-index: 200;
+  }
+  .header-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 10px;
+  }
+  .search-box {
+    flex: 1;
+    background: #f2f2f2;
+    border-radius: 20px;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: #999;
+  }
+  .header-icon {
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+
+  /* Filter Tabs */
+  .filter-tabs {
+    display: flex;
+    gap: 6px;
+    padding: 8px 16px 12px;
+    background: #fff;
+    overflow-x: auto;
+    scrollbar-width: none;
+    border-bottom: 0.5px solid rgba(0,0,0,0.05);
+  }
+  .filter-tabs::-webkit-scrollbar { display: none; }
+  .ftab {
+    flex-shrink: 0;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    background: #f5f5f5;
+    color: #666;
+  }
+  .ftab.active {
+    background: #333;
+    color: #fff;
+    font-weight: 600;
+  }
+
+  /* Trending Section */
+  .trending {
+    background: #fff;
+    margin-top: 8px;
+    padding: 16px;
+  }
+  .sec-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .trending-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .trending-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .trending-rank {
+    width: 24px;
+    font-size: 16px;
+    font-weight: 800;
+    text-align: center;
+  }
+  .trending-rank.top { color: #ff6b6b; }
+  .trending-rank.normal { color: #ccc; }
+  .trending-text {
+    flex: 1;
+    font-size: 14px;
+    color: #333;
+    font-weight: 500;
+  }
+  .trending-hot {
+    font-size: 11px;
+    color: #999;
+  }
+  .trending-tag {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+  }
+  .trending-tag.hot { background: #fff0f0; color: #ff4757; }
+  .trending-tag.new { background: #f0f0ff; color: #667eea; }
+  .trending-tag.up { background: #f0fff4; color: #00b894; }
+
+  /* Topic Cards */
+  .topics {
+    background: #fff;
+    margin-top: 8px;
+    padding: 16px;
+  }
+  .topic-scroll {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin: 0 -16px;
+    padding: 0 16px;
+  }
+  .topic-scroll::-webkit-scrollbar { display: none; }
+  .topic-card {
+    flex-shrink: 0;
+    width: 140px;
+    border-radius: 14px;
+    overflow: hidden;
+    position: relative;
+  }
+  .topic-bg {
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+  }
+  .topic-overlay {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: linear-gradient(transparent, rgba(0,0,0,0.6));
+    padding: 24px 10px 10px;
+  }
+  .topic-name {
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .topic-count {
+    color: rgba(255,255,255,0.7);
+    font-size: 11px;
+  }
+
+  /* Category Grid */
+  .cat-grid {
+    background: #fff;
+    margin-top: 8px;
+    padding: 16px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  .grid-card {
+    border-radius: 14px;
+    padding: 18px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: relative;
+    overflow: hidden;
+  }
+  .grid-card::after {
+    content: '';
+    position: absolute;
+    right: -20px; bottom: -20px;
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+  }
+  .gc-icon {
+    font-size: 28px;
+    position: relative;
+    z-index: 1;
+  }
+  .gc-info {
+    position: relative;
+    z-index: 1;
+  }
+  .gc-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 1px;
+  }
+  .gc-count {
+    font-size: 11px;
+    color: rgba(255,255,255,0.7);
+  }
+
+  /* Recommended Experts */
+  .expert-section {
+    background: #fff;
+    margin-top: 8px;
+    padding: 16px;
+  }
+  .expert-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .expert-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .er-avatar {
+    width: 50px; height: 50px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+  }
+  .er-info {
+    flex: 1;
+  }
+  .er-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .er-verified {
+    background: #667eea;
+    color: #fff;
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-weight: 600;
+  }
+  .er-desc {
+    font-size: 12px;
+    color: #999;
+    margin-top: 2px;
+  }
+  .er-tags {
+    display: flex;
+    gap: 4px;
+    margin-top: 4px;
+  }
+  .er-tag {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 6px;
+    background: #f5f5f5;
+    color: #666;
+  }
+  .er-follow {
+    padding: 6px 18px;
+    border-radius: 18px;
+    border: 1.5px solid #ff6b6b;
+    color: #ff6b6b;
+    font-size: 13px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  /* Activity Feed */
+  .activity-section {
+    background: #fff;
+    margin-top: 8px;
+    padding: 16px 16px 100px;
+  }
+  .act-scroll {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin: 0 -16px;
+    padding: 0 16px;
+  }
+  .act-scroll::-webkit-scrollbar { display: none; }
+  .act-card {
+    flex-shrink: 0;
+    width: 220px;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid #f0f0f0;
+  }
+  .act-img {
+    height: 110px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    position: relative;
+  }
+  .act-img .live-badge {
+    position: absolute;
+    top: 8px; left: 8px;
+    background: rgba(255,71,87,0.9);
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 8px;
+    font-size: 10px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .live-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: #fff;
+    animation: blink 1s ease-in-out infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .act-body {
+    padding: 10px 12px;
+  }
+  .act-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 4px;
+  }
+  .act-meta {
+    font-size: 11px;
+    color: #999;
+    display: flex;
+    gap: 8px;
+  }
+  .act-join {
+    display: inline-block;
+    margin-top: 8px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff;
+    padding: 5px 14px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  /* Bottom Nav */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 430px;
+    background: #fff;
+    border-top: 0.5px solid rgba(0,0,0,0.08);
+    display: flex;
+    padding: 6px 0 24px;
+    z-index: 300;
+  }
+  .nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    font-size: 10px;
+    color: #999;
+  }
+  .nav-item.active { color: #333; font-weight: 600; }
+  .nav-item .icon { font-size: 22px; height: 24px; display: flex; align-items: center; justify-content: center; }
+  .nav-center {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .nav-center-btn {
+    width: 44px; height: 32px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 22px; font-weight: 300;
+    box-shadow: 0 2px 10px rgba(102,126,234,0.3);
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-row">
+    <div class="search-box">
+      🔍 搜索技能、达人、话题...
+    </div>
+    <div class="header-icon">📷</div>
+  </div>
+  <div class="filter-tabs">
+    <div class="ftab active">推荐</div>
+    <div class="ftab">设计</div>
+    <div class="ftab">编程</div>
+    <div class="ftab">摄影</div>
+    <div class="ftab">文案</div>
+    <div class="ftab">音乐</div>
+    <div class="ftab">生活</div>
+    <div class="ftab">辅导</div>
+    <div class="ftab">求职</div>
+  </div>
+</div>
+
+<!-- Trending -->
+<div class="trending">
+  <div class="sec-title">🔥 热搜榜</div>
+  <div class="trending-list">
+    <div class="trending-item">
+      <span class="trending-rank top">1</span>
+      <span class="trending-text">毕业照跟拍 伦敦</span>
+      <span class="trending-tag hot">🔥 热</span>
+      <span class="trending-hot">2.3w浏览</span>
+    </div>
+    <div class="trending-item">
+      <span class="trending-rank top">2</span>
+      <span class="trending-text">Python 数据分析辅导</span>
+      <span class="trending-tag up">↑ 升</span>
+      <span class="trending-hot">1.8w浏览</span>
+    </div>
+    <div class="trending-item">
+      <span class="trending-rank top">3</span>
+      <span class="trending-text">留学生求职简历优化</span>
+      <span class="trending-tag new">NEW</span>
+      <span class="trending-hot">1.2w浏览</span>
+    </div>
+    <div class="trending-item">
+      <span class="trending-rank normal">4</span>
+      <span class="trending-text">Logo/品牌设计</span>
+      <span class="trending-hot">8.6k浏览</span>
+    </div>
+    <div class="trending-item">
+      <span class="trending-rank normal">5</span>
+      <span class="trending-text">英文Essay润色</span>
+      <span class="trending-hot">7.2k浏览</span>
+    </div>
+  </div>
+</div>
+
+<!-- Topics -->
+<div class="topics">
+  <div class="sec-title">🏷️ 热门话题</div>
+  <div class="topic-scroll">
+    <div class="topic-card">
+      <div class="topic-bg" style="background: linear-gradient(135deg, #667eea, #764ba2);">🎓</div>
+      <div class="topic-overlay">
+        <div class="topic-name">#留学生互助</div>
+        <div class="topic-count">3.2k 讨论</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-bg" style="background: linear-gradient(135deg, #f093fb, #f5576c);">💼</div>
+      <div class="topic-overlay">
+        <div class="topic-name">#求职季</div>
+        <div class="topic-count">2.8k 讨论</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-bg" style="background: linear-gradient(135deg, #a8edea, #fed6e3);">📷</div>
+      <div class="topic-overlay">
+        <div class="topic-name">#毕业季</div>
+        <div class="topic-count">5.1k 讨论</div>
+      </div>
+    </div>
+    <div class="topic-card">
+      <div class="topic-bg" style="background: linear-gradient(135deg, #ffecd2, #fcb69f);">🏠</div>
+      <div class="topic-overlay">
+        <div class="topic-name">#英国生活</div>
+        <div class="topic-count">4.5k 讨论</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Category Grid -->
+<div class="cat-grid">
+  <div class="sec-title">📂 技能分类</div>
+  <div class="grid">
+    <div class="grid-card" style="background: linear-gradient(135deg, #667eea, #764ba2);">
+      <span class="gc-icon">🎨</span>
+      <div class="gc-info">
+        <div class="gc-name">设计创意</div>
+        <div class="gc-count">326 达人</div>
+      </div>
+    </div>
+    <div class="grid-card" style="background: linear-gradient(135deg, #f093fb, #f5576c);">
+      <span class="gc-icon">💻</span>
+      <div class="gc-info">
+        <div class="gc-name">编程开发</div>
+        <div class="gc-count">218 达人</div>
+      </div>
+    </div>
+    <div class="grid-card" style="background: linear-gradient(135deg, #11998e, #38ef7d);">
+      <span class="gc-icon">📷</span>
+      <div class="gc-info">
+        <div class="gc-name">摄影摄像</div>
+        <div class="gc-count">186 达人</div>
+      </div>
+    </div>
+    <div class="grid-card" style="background: linear-gradient(135deg, #fc5c7d, #6a82fb);">
+      <span class="gc-icon">📝</span>
+      <div class="gc-info">
+        <div class="gc-name">文案翻译</div>
+        <div class="gc-count">432 达人</div>
+      </div>
+    </div>
+    <div class="grid-card" style="background: linear-gradient(135deg, #fda085, #f6d365);">
+      <span class="gc-icon">🎵</span>
+      <div class="gc-info">
+        <div class="gc-name">音乐教学</div>
+        <div class="gc-count">95 达人</div>
+      </div>
+    </div>
+    <div class="grid-card" style="background: linear-gradient(135deg, #0f0c29, #302b63);">
+      <span class="gc-icon">📚</span>
+      <div class="gc-info">
+        <div class="gc-name">学业辅导</div>
+        <div class="gc-count">567 达人</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Recommended Experts -->
+<div class="expert-section">
+  <div class="sec-title">✨ 推荐关注</div>
+  <div class="expert-list">
+    <div class="expert-row">
+      <div class="er-avatar" style="background: linear-gradient(135deg, #ffecd2, #fcb69f);">👩‍🎨</div>
+      <div class="er-info">
+        <div class="er-name">Lisa Chen <span class="er-verified">认证</span></div>
+        <div class="er-desc">UI/UX设计师 · ⭐ 5.0 · 78单</div>
+        <div class="er-tags">
+          <span class="er-tag">UI设计</span>
+          <span class="er-tag">品牌</span>
+          <span class="er-tag">Figma</span>
+        </div>
+      </div>
+      <div class="er-follow">+ 关注</div>
+    </div>
+    <div class="expert-row">
+      <div class="er-avatar" style="background: linear-gradient(135deg, #a8edea, #fed6e3);">👨‍💻</div>
+      <div class="er-info">
+        <div class="er-name">David Wu <span class="er-verified">认证</span></div>
+        <div class="er-desc">全栈工程师 · ⭐ 5.0 · 156单</div>
+        <div class="er-tags">
+          <span class="er-tag">Python</span>
+          <span class="er-tag">React</span>
+          <span class="er-tag">数据分析</span>
+        </div>
+      </div>
+      <div class="er-follow">+ 关注</div>
+    </div>
+    <div class="expert-row">
+      <div class="er-avatar" style="background: linear-gradient(135deg, #e0c3fc, #8ec5fc);">📸</div>
+      <div class="er-info">
+        <div class="er-name">Emma Liu <span class="er-verified">认证</span></div>
+        <div class="er-desc">专业摄影师 · ⭐ 4.8 · 92单</div>
+        <div class="er-tags">
+          <span class="er-tag">人像</span>
+          <span class="er-tag">毕业照</span>
+          <span class="er-tag">产品</span>
+        </div>
+      </div>
+      <div class="er-follow">+ 关注</div>
+    </div>
+  </div>
+</div>
+
+<!-- Activities -->
+<div class="activity-section">
+  <div class="sec-title">🎪 热门活动</div>
+  <div class="act-scroll">
+    <div class="act-card">
+      <div class="act-img" style="background: linear-gradient(135deg, #667eea, #764ba2); color: #fff;">
+        🎓
+        <div class="live-badge"><span class="live-dot"></span> 热门</div>
+      </div>
+      <div class="act-body">
+        <div class="act-title">留学生求职分享会</div>
+        <div class="act-meta">
+          <span>📅 本周六</span>
+          <span>👥 32人</span>
+        </div>
+        <div class="act-join">免费参加 →</div>
+      </div>
+    </div>
+    <div class="act-card">
+      <div class="act-img" style="background: linear-gradient(135deg, #f093fb, #f5576c); color: #fff;">
+        📷
+      </div>
+      <div class="act-body">
+        <div class="act-title">周末摄影工作坊</div>
+        <div class="act-meta">
+          <span>📅 下周日</span>
+          <span>👥 32/50</span>
+        </div>
+        <div class="act-join">£15 报名 →</div>
+      </div>
+    </div>
+    <div class="act-card">
+      <div class="act-img" style="background: linear-gradient(135deg, #11998e, #38ef7d); color: #fff;">
+        💻
+      </div>
+      <div class="act-body">
+        <div class="act-title">Python 入门训练营</div>
+        <div class="act-meta">
+          <span>📅 每周三</span>
+          <span>👥 120人</span>
+        </div>
+        <div class="act-join">免费参加 →</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom Nav -->
+<div class="bottom-nav">
+  <div class="nav-item">
+    <span class="icon">🏠</span>
+    <span>首页</span>
+  </div>
+  <div class="nav-item active">
+    <span class="icon">🔍</span>
+    <span>发现</span>
+  </div>
+  <div class="nav-center">
+    <div class="nav-center-btn">+</div>
+  </div>
+  <div class="nav-item">
+    <span class="icon">💬</span>
+    <span>消息</span>
+  </div>
+  <div class="nav-item">
+    <span class="icon">👤</span>
+    <span>我的</span>
+  </div>
+</div>
+
+</body>
+</html>

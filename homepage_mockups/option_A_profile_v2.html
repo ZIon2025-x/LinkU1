@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>我的页面 - 优化版（基于现有功能）</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'PingFang SC', 'Helvetica Neue', sans-serif;
+    background: #f5f5f5;
+    max-width: 430px;
+    margin: 0 auto;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ===== Profile Header ===== */
+  .profile-header {
+    background: linear-gradient(160deg, #2d1b69 0%, #4834d4 40%, #6c5ce7 100%);
+    padding: 44px 0 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .profile-header::before {
+    content: '';
+    position: absolute;
+    top: -50px; right: -50px;
+    width: 200px; height: 200px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.04);
+  }
+  .profile-header::after {
+    content: '';
+    position: absolute;
+    bottom: 20px; left: -40px;
+    width: 140px; height: 140px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.03);
+  }
+
+  /* Top Bar */
+  .ph-topbar {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 0 16px 12px;
+    position: relative;
+    z-index: 2;
+  }
+  .ph-topbar-icons {
+    display: flex;
+    gap: 8px;
+  }
+  .ph-btn {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.12);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    backdrop-filter: blur(4px);
+  }
+
+  /* User Card */
+  .user-card {
+    padding: 0 20px 20px;
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .avatar-wrap {
+    position: relative;
+    flex-shrink: 0;
+  }
+  .avatar-ring {
+    width: 78px; height: 78px;
+    border-radius: 50%;
+    padding: 3px;
+    background: linear-gradient(135deg, #ffd700, #ff6348, #ff4757, #ffd700);
+    background-size: 300% 300%;
+    animation: gradShift 4s ease infinite;
+  }
+  @keyframes gradShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  .avatar-img {
+    width: 100%; height: 100%;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ffecd2, #fcb69f);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px;
+    border: 3px solid #2d1b69;
+  }
+  .avatar-badge {
+    position: absolute;
+    bottom: 0; right: 0;
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ffd700, #ff9100);
+    border: 2.5px solid #2d1b69;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+  }
+  .user-info {
+    flex: 1;
+    color: #fff;
+    min-width: 0;
+  }
+  .user-name-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+  .user-name {
+    font-size: 20px;
+    font-weight: 800;
+  }
+  .verified-icon {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: #4cd964;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px;
+    color: #fff;
+  }
+  .user-badges {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+  }
+  .u-badge {
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 600;
+    backdrop-filter: blur(4px);
+  }
+  .u-badge.vip {
+    background: linear-gradient(90deg, rgba(255,215,0,0.25), rgba(255,145,0,0.25));
+    color: #ffd700;
+    border: 1px solid rgba(255,215,0,0.3);
+  }
+  .u-badge.expert {
+    background: rgba(0,206,201,0.2);
+    color: #00cec9;
+    border: 1px solid rgba(0,206,201,0.3);
+  }
+  .u-badge.student {
+    background: rgba(108,92,231,0.3);
+    color: #ddd;
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+  .user-email {
+    font-size: 12px;
+    color: rgba(255,255,255,0.5);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .edit-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(255,255,255,0.12);
+    padding: 5px 12px;
+    border-radius: 14px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.8);
+    margin-top: 6px;
+    backdrop-filter: blur(4px);
+  }
+
+  /* ===== Stats Card (Floating) ===== */
+  .stats-card {
+    margin: -14px 16px 0;
+    background: #fff;
+    border-radius: 18px;
+    padding: 18px 0;
+    display: flex;
+    position: relative;
+    z-index: 10;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  }
+  .stat-item {
+    flex: 1;
+    text-align: center;
+    position: relative;
+  }
+  .stat-item:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    right: 0; top: 6px; bottom: 6px;
+    width: 0.5px;
+    background: #eee;
+  }
+  .stat-num {
+    font-size: 22px;
+    font-weight: 800;
+    color: #333;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .stat-label {
+    font-size: 11px;
+    color: #999;
+  }
+
+  /* Credit Score — Special */
+  .stat-item.credit .stat-num {
+    position: relative;
+    display: inline-block;
+  }
+  .credit-ring {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 4px;
+    position: relative;
+  }
+  .credit-ring svg {
+    position: absolute;
+    inset: 0;
+    transform: rotate(-90deg);
+  }
+  .credit-ring .score {
+    font-size: 16px;
+    font-weight: 800;
+    color: #4cd964;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ===== Badge Showcase ===== */
+  .badge-section {
+    margin: 12px 16px 0;
+    background: #fff;
+    border-radius: 16px;
+    padding: 14px 16px;
+  }
+  .badge-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .badge-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .badge-more {
+    font-size: 12px;
+    color: #999;
+  }
+  .badge-scroll {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin: 0 -16px;
+    padding: 0 16px;
+  }
+  .badge-scroll::-webkit-scrollbar { display: none; }
+  .badge-item {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    width: 64px;
+  }
+  .badge-icon {
+    width: 48px; height: 48px;
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+    position: relative;
+  }
+  .badge-icon.locked {
+    filter: grayscale(1);
+    opacity: 0.35;
+  }
+  .badge-icon .b-check {
+    position: absolute;
+    bottom: -2px; right: -2px;
+    width: 16px; height: 16px;
+    background: #4cd964;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 8px;
+    color: #fff;
+  }
+  .badge-name {
+    font-size: 10px;
+    color: #666;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  /* ===== Quick Menu Grid ===== */
+  .quick-menu {
+    margin: 12px 16px 0;
+    background: #fff;
+    border-radius: 16px;
+    padding: 16px 8px 10px;
+  }
+  .qm-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #333;
+    padding: 0 8px 12px;
+  }
+  .qm-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+  }
+  .qm-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 0;
+  }
+  .qm-icon {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    position: relative;
+  }
+  .qm-icon .qm-badge {
+    position: absolute;
+    top: -4px; right: -4px;
+    background: #ff4757;
+    color: #fff;
+    font-size: 9px;
+    min-width: 16px; height: 16px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700;
+    border: 1.5px solid #fff;
+    padding: 0 3px;
+  }
+  .qm-label {
+    font-size: 11px;
+    color: #333;
+    font-weight: 500;
+  }
+  .qm-sub {
+    font-size: 9px;
+    color: #bbb;
+    margin-top: -3px;
+  }
+
+  /* ===== My Tasks Section ===== */
+  .tasks-section {
+    margin: 12px 16px 0;
+    background: #fff;
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .ts-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 16px 0;
+  }
+  .ts-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .ts-more {
+    font-size: 12px;
+    color: #6c5ce7;
+    font-weight: 600;
+  }
+
+  /* Task tabs */
+  .task-tabs {
+    display: flex;
+    gap: 0;
+    padding: 10px 16px 0;
+  }
+  .tt {
+    flex: 1;
+    text-align: center;
+    padding: 8px 0;
+    font-size: 12px;
+    color: #999;
+    font-weight: 500;
+    position: relative;
+  }
+  .tt.active {
+    color: #6c5ce7;
+    font-weight: 700;
+  }
+  .tt.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 20px; height: 2.5px;
+    background: #6c5ce7;
+    border-radius: 2px;
+  }
+  .tt .tt-count {
+    display: inline-block;
+    background: #f0eeff;
+    color: #6c5ce7;
+    font-size: 10px;
+    padding: 0 5px;
+    border-radius: 6px;
+    font-weight: 700;
+    margin-left: 2px;
+  }
+
+  /* Task items */
+  .task-list {
+    padding: 8px 0;
+  }
+  .task-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+  }
+  .task-item:not(:last-child) {
+    border-bottom: 0.5px solid #f8f8f8;
+  }
+  .ti-icon {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+  .ti-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .ti-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 3px;
+  }
+  .ti-status {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+  }
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .status-pill.progress {
+    background: #f0eeff;
+    color: #6c5ce7;
+  }
+  .status-pill.pending {
+    background: #fff8e1;
+    color: #f39c12;
+  }
+  .status-pill.done {
+    background: #e8f5e9;
+    color: #27ae60;
+  }
+  .ti-right {
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .ti-price {
+    font-size: 16px;
+    font-weight: 800;
+    color: #333;
+  }
+  .ti-time {
+    font-size: 10px;
+    color: #ccc;
+    margin-top: 2px;
+  }
+
+  /* ===== Wallet Card ===== */
+  .wallet-section {
+    margin: 12px 16px 0;
+  }
+  .wallet-card {
+    border-radius: 16px;
+    padding: 18px;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+  }
+  .wallet-card::before {
+    content: '';
+    position: absolute;
+    top: -30px; right: -30px;
+    width: 120px; height: 120px;
+    border-radius: 50%;
+    background: rgba(108,92,231,0.15);
+  }
+  .wallet-card::after {
+    content: '';
+    position: absolute;
+    bottom: -50px; left: 20px;
+    width: 100px; height: 100px;
+    border-radius: 50%;
+    background: rgba(108,92,231,0.08);
+  }
+  .wc-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    position: relative;
+    z-index: 1;
+  }
+  .wc-label {
+    font-size: 13px;
+    color: rgba(255,255,255,0.5);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .wc-label .eye-btn {
+    font-size: 14px;
+    opacity: 0.5;
+  }
+  .wc-more {
+    font-size: 12px;
+    color: rgba(255,255,255,0.4);
+  }
+  .wc-amount {
+    font-size: 32px;
+    font-weight: 800;
+    position: relative;
+    z-index: 1;
+    margin-bottom: 14px;
+  }
+  .wc-amount small {
+    font-size: 18px;
+    font-weight: 500;
+    opacity: 0.7;
+  }
+  .wc-actions {
+    display: flex;
+    gap: 10px;
+    position: relative;
+    z-index: 1;
+  }
+  .wc-btn {
+    flex: 1;
+    text-align: center;
+    padding: 10px 0;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .wc-btn.primary {
+    background: #6c5ce7;
+    color: #fff;
+  }
+  .wc-btn.secondary {
+    background: rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.8);
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .wc-btn.tertiary {
+    background: rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.8);
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+
+  /* Points & Coupons mini row */
+  .points-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .points-mini {
+    flex: 1;
+    background: #fff;
+    border-radius: 12px;
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .pm-icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .pm-info {
+    flex: 1;
+  }
+  .pm-num {
+    font-size: 16px;
+    font-weight: 800;
+    color: #333;
+  }
+  .pm-label {
+    font-size: 10px;
+    color: #999;
+  }
+
+  /* ===== System Menu ===== */
+  .menu-section {
+    margin: 12px 16px 0;
+    background: #fff;
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .menu-group-title {
+    padding: 14px 16px 6px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #999;
+    letter-spacing: 0.5px;
+  }
+  .menu-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 16px;
+  }
+  .menu-item:not(:last-child) {
+    border-bottom: 0.5px solid #f8f8f8;
+  }
+  .mi-icon {
+    width: 34px; height: 34px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px;
+    flex-shrink: 0;
+  }
+  .mi-label {
+    flex: 1;
+    font-size: 15px;
+    color: #333;
+    font-weight: 500;
+  }
+  .mi-extra {
+    font-size: 12px;
+    color: #bbb;
+  }
+  .mi-extra.highlight {
+    color: #6c5ce7;
+    font-weight: 600;
+  }
+  .mi-extra.warning {
+    color: #ff9100;
+    font-weight: 600;
+  }
+  .mi-arrow {
+    color: #ddd;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  /* ===== Logout ===== */
+  .logout-section {
+    margin: 16px 16px 110px;
+  }
+  .logout-btn {
+    width: 100%;
+    padding: 14px;
+    border-radius: 14px;
+    text-align: center;
+    font-size: 15px;
+    font-weight: 600;
+    color: #ff4757;
+    background: #fff;
+    border: 1px solid #ffecee;
+  }
+
+  /* ===== Bottom Nav ===== */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 430px;
+    background: #fff;
+    border-top: 0.5px solid rgba(0,0,0,0.08);
+    display: flex;
+    padding: 6px 0 24px;
+    z-index: 300;
+  }
+  .nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    font-size: 10px;
+    color: #999;
+  }
+  .nav-item.active { color: #6c5ce7; font-weight: 600; }
+  .nav-item .icon { font-size: 22px; height: 24px; display: flex; align-items: center; justify-content: center; }
+  .nav-center {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .nav-center-btn {
+    width: 44px; height: 32px;
+    background: linear-gradient(135deg, #6c5ce7, #4834d4);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 22px; font-weight: 300;
+    box-shadow: 0 2px 10px rgba(108,92,231,0.3);
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== Profile Header ===== -->
+<div class="profile-header">
+  <div class="ph-topbar">
+    <div class="ph-topbar-icons">
+      <div class="ph-btn">🔗</div>
+      <div class="ph-btn">⚙️</div>
+    </div>
+  </div>
+
+  <div class="user-card">
+    <div class="avatar-wrap">
+      <div class="avatar-ring">
+        <div class="avatar-img">👨</div>
+      </div>
+      <div class="avatar-badge">👑</div>
+    </div>
+    <div class="user-info">
+      <div class="user-name-row">
+        <span class="user-name">Ryan</span>
+        <span class="verified-icon">✓</span>
+      </div>
+      <div class="user-badges">
+        <span class="u-badge vip">👑 VIP</span>
+        <span class="u-badge expert">🎯 达人</span>
+        <span class="u-badge student">🎓 学生认证</span>
+      </div>
+      <div class="user-email">ryan@example.com · 伦敦</div>
+      <div class="edit-btn">✏️ 编辑资料</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Stats Card ===== -->
+<div class="stats-card">
+  <div class="stat-item" style="cursor:pointer;">
+    <div class="stat-num">5</div>
+    <div class="stat-label">进行中</div>
+  </div>
+  <div class="stat-item" style="cursor:pointer;">
+    <div class="stat-num">28</div>
+    <div class="stat-label">已完成</div>
+  </div>
+  <div class="stat-item credit">
+    <div class="credit-ring">
+      <svg width="48" height="48" viewBox="0 0 48 48">
+        <circle cx="24" cy="24" r="20" fill="none" stroke="#f0f0f0" stroke-width="4"/>
+        <circle cx="24" cy="24" r="20" fill="none" stroke="#4cd964" stroke-width="4"
+          stroke-dasharray="113" stroke-dashoffset="11" stroke-linecap="round"/>
+      </svg>
+      <span class="score">90</span>
+    </div>
+    <div class="stat-label">信用分</div>
+  </div>
+  <div class="stat-item" style="cursor:pointer;">
+    <div class="stat-num">⭐ 4.9</div>
+    <div class="stat-label">评分</div>
+  </div>
+</div>
+
+<!-- ===== Badge Showcase ===== -->
+<div class="badge-section">
+  <div class="badge-header">
+    <span class="badge-title">🏅 我的徽章</span>
+    <span class="badge-more">全部 ›</span>
+  </div>
+  <div class="badge-scroll">
+    <div class="badge-item">
+      <div class="badge-icon" style="background: linear-gradient(135deg, #fff8e1, #ffecb3);">
+        🌟
+        <span class="b-check">✓</span>
+      </div>
+      <span class="badge-name">活跃用户</span>
+    </div>
+    <div class="badge-item">
+      <div class="badge-icon" style="background: linear-gradient(135deg, #e8eaf6, #c5cae9);">
+        🏆
+        <span class="b-check">✓</span>
+      </div>
+      <span class="badge-name">任务达人</span>
+    </div>
+    <div class="badge-item">
+      <div class="badge-icon" style="background: linear-gradient(135deg, #fce4ec, #f8bbd0);">
+        💯
+        <span class="b-check">✓</span>
+      </div>
+      <span class="badge-name">好评之王</span>
+    </div>
+    <div class="badge-item">
+      <div class="badge-icon" style="background: linear-gradient(135deg, #e0f7fa, #b2ebf2);">
+        🤝
+        <span class="b-check">✓</span>
+      </div>
+      <span class="badge-name">信任伙伴</span>
+    </div>
+    <div class="badge-item">
+      <div class="badge-icon locked" style="background: #f5f5f5;">
+        🔥
+      </div>
+      <span class="badge-name" style="color:#ccc;">连续达人</span>
+    </div>
+    <div class="badge-item">
+      <div class="badge-icon locked" style="background: #f5f5f5;">
+        💎
+      </div>
+      <span class="badge-name" style="color:#ccc;">超级会员</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Quick Menu: 我的内容 ===== -->
+<div class="quick-menu">
+  <div class="qm-title">📂 我的内容</div>
+  <div class="qm-grid">
+    <div class="qm-item">
+      <div class="qm-icon" style="background: #f0eeff;">
+        📋
+        <span class="qm-badge">5</span>
+      </div>
+      <span class="qm-label">我的任务</span>
+    </div>
+    <div class="qm-item">
+      <div class="qm-icon" style="background: #fff0f0;">
+        🎯
+        <span class="qm-badge">3</span>
+      </div>
+      <span class="qm-label">我的接单</span>
+    </div>
+    <div class="qm-item">
+      <div class="qm-icon" style="background: #e8f5e9;">
+        🛒
+      </div>
+      <span class="qm-label">我的商品</span>
+    </div>
+    <div class="qm-item">
+      <div class="qm-icon" style="background: #fff8e1;">
+        💬
+      </div>
+      <span class="qm-label">我的帖子</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== My Tasks (inline preview) ===== -->
+<div class="tasks-section">
+  <div class="ts-header">
+    <span class="ts-title">📋 任务动态</span>
+    <span class="ts-more">全部 ›</span>
+  </div>
+  <div class="task-tabs">
+    <div class="tt active">进行中 <span class="tt-count">3</span></div>
+    <div class="tt">待确认 <span class="tt-count">2</span></div>
+    <div class="tt">已完成</div>
+    <div class="tt">已取消</div>
+  </div>
+  <div class="task-list">
+    <div class="task-item">
+      <div class="ti-icon" style="background: linear-gradient(135deg, #ffecd2, #fcb69f);">🎨</div>
+      <div class="ti-info">
+        <div class="ti-title">App UI 设计 — 电商类 10+ 页面</div>
+        <div class="ti-status">
+          <span class="status-pill progress">● 设计中</span>
+          <span style="color:#ccc; font-size:11px;">Lisa 已提交初稿</span>
+        </div>
+      </div>
+      <div class="ti-right">
+        <div class="ti-price">£200</div>
+        <div class="ti-time">2小时前</div>
+      </div>
+    </div>
+    <div class="task-item">
+      <div class="ti-icon" style="background: linear-gradient(135deg, #e0c3fc, #8ec5fc);">💻</div>
+      <div class="ti-info">
+        <div class="ti-title">Python 数据分析辅导 1v1</div>
+        <div class="ti-status">
+          <span class="status-pill progress">● 进行中</span>
+          <span style="color:#ccc; font-size:11px;">下次: 周三 19:00</span>
+        </div>
+      </div>
+      <div class="ti-right">
+        <div class="ti-price">£50/h</div>
+        <div class="ti-time">昨天</div>
+      </div>
+    </div>
+    <div class="task-item">
+      <div class="ti-icon" style="background: linear-gradient(135deg, #fddb92, #d1fdff);">📝</div>
+      <div class="ti-info">
+        <div class="ti-title">英文论文 Proofreading 5000词</div>
+        <div class="ti-status">
+          <span class="status-pill pending">● 待接单</span>
+          <span style="color:#ccc; font-size:11px;">3人报价</span>
+        </div>
+      </div>
+      <div class="ti-right">
+        <div class="ti-price">£40</div>
+        <div class="ti-time">昨天</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Wallet ===== -->
+<div class="wallet-section">
+  <div class="wallet-card">
+    <div class="wc-top">
+      <span class="wc-label">账户余额 <span class="eye-btn">👁</span></span>
+      <span class="wc-more">明细 ›</span>
+    </div>
+    <div class="wc-amount"><small>£ </small>328.50</div>
+    <div class="wc-actions">
+      <div class="wc-btn primary">充值</div>
+      <div class="wc-btn secondary">提现</div>
+      <div class="wc-btn tertiary">转账</div>
+    </div>
+  </div>
+  <div class="points-row">
+    <div class="points-mini">
+      <div class="pm-icon" style="background: #fff8e1;">🎫</div>
+      <div class="pm-info">
+        <div class="pm-num">3 张</div>
+        <div class="pm-label">优惠券</div>
+      </div>
+    </div>
+    <div class="points-mini">
+      <div class="pm-icon" style="background: #f0eeff;">⭐</div>
+      <div class="pm-info">
+        <div class="pm-num">1,280</div>
+        <div class="pm-label">积分</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== System & Account Menu ===== -->
+<div class="menu-section">
+  <div class="menu-group-title">账户与认证</div>
+  <div class="menu-item">
+    <div class="mi-icon" style="background: #f0eeff;">🎓</div>
+    <span class="mi-label">学生认证</span>
+    <span class="mi-extra highlight">已认证</span>
+    <span class="mi-arrow">›</span>
+  </div>
+  <div class="menu-item">
+    <div class="mi-icon" style="background: #e8f5e9;">💳</div>
+    <span class="mi-label">收款账户</span>
+    <span class="mi-extra warning">未绑定</span>
+    <span class="mi-arrow">›</span>
+  </div>
+  <div class="menu-item">
+    <div class="mi-icon" style="background: #fff8e1;">🎯</div>
+    <span class="mi-label">达人管理</span>
+    <span class="mi-extra">活跃中</span>
+    <span class="mi-arrow">›</span>
+  </div>
+  <div class="menu-item">
+    <div class="mi-icon" style="background: #fce4ec;">📊</div>
+    <span class="mi-label">VIP 数据统计</span>
+    <span class="mi-arrow">›</span>
+  </div>
+</div>
+
+<div class="menu-section">
+  <div class="menu-group-title">系统与设置</div>
+  <div class="menu-item">
+    <div class="mi-icon" style="background: #f0f0f0;">📜</div>
+    <span class="mi-label">动态</span>
+    <span class="mi-arrow">›</span>
+  </div>
+  <div class="menu-item">
+    <div class="mi-icon" style="background: #fff0f0;">👤</div>
+    <span class="mi-label">我的资料</span>
+    <span class="mi-extra">编辑技能偏好</span>
+    <span class="mi-arrow">›</span>
+  </div>
+  <div class="menu-item">
+    <div class="mi-icon" style="background: #f0faff;">🌐</div>
+    <span class="mi-label">语言</span>
+    <span class="mi-extra">简体中文</span>
+    <span class="mi-arrow">›</span>
+  </div>
+  <div class="menu-item">
+    <div class="mi-icon" style="background: #f5f5f5;">🔔</div>
+    <span class="mi-label">通知设置</span>
+    <span class="mi-arrow">›</span>
+  </div>
+  <div class="menu-item">
+    <div class="mi-icon" style="background: #fff8e1;">🔒</div>
+    <span class="mi-label">隐私与安全</span>
+    <span class="mi-arrow">›</span>
+  </div>
+  <div class="menu-item">
+    <div class="mi-icon" style="background: #f0f0f0;">❓</div>
+    <span class="mi-label">帮助中心</span>
+    <span class="mi-arrow">›</span>
+  </div>
+  <div class="menu-item">
+    <div class="mi-icon" style="background: #fce4ec;">💡</div>
+    <span class="mi-label">意见反馈</span>
+    <span class="mi-arrow">›</span>
+  </div>
+</div>
+
+<!-- Logout -->
+<div class="logout-section">
+  <div class="logout-btn">⏻ 退出登录</div>
+</div>
+
+<!-- Bottom Nav -->
+<div class="bottom-nav">
+  <div class="nav-item">
+    <span class="icon">🏠</span>
+    <span>首页</span>
+  </div>
+  <div class="nav-item">
+    <span class="icon">🔍</span>
+    <span>发现</span>
+  </div>
+  <div class="nav-center">
+    <div class="nav-center-btn">+</div>
+  </div>
+  <div class="nav-item">
+    <span class="icon">💬</span>
+    <span>消息</span>
+  </div>
+  <div class="nav-item active">
+    <span class="icon">👤</span>
+    <span>我的</span>
+  </div>
+</div>
+
+</body>
+</html>

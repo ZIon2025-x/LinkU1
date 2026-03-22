@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>方案D - 闲鱼风格</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'PingFang SC', 'Helvetica Neue', sans-serif;
+    background: #f5f5f5;
+    max-width: 430px;
+    margin: 0 auto;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ===== Top Header ===== */
+  .top-header {
+    background: #fff;
+    padding: 44px 16px 0;
+    position: sticky;
+    top: 0;
+    z-index: 200;
+  }
+  .header-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 10px;
+  }
+  .header-location {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    flex-shrink: 0;
+  }
+  .header-location svg {
+    width: 14px; height: 14px;
+  }
+  .search-box {
+    flex: 1;
+    background: #f5f5f5;
+    border-radius: 20px;
+    padding: 8px 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #bbb;
+  }
+  .header-icons {
+    display: flex;
+    gap: 6px;
+  }
+  .h-icon {
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    position: relative;
+  }
+  .h-icon .dot {
+    position: absolute;
+    top: 2px; right: 2px;
+    width: 8px; height: 8px;
+    background: #ff2442;
+    border-radius: 50%;
+    border: 1.5px solid #fff;
+  }
+
+  /* ===== Tabs ===== */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    padding: 0 12px 0;
+    background: #fff;
+    border-bottom: 0.5px solid rgba(0,0,0,0.05);
+  }
+  .tab {
+    padding: 8px 12px 10px;
+    font-size: 14px;
+    color: #999;
+    font-weight: 500;
+    position: relative;
+  }
+  .tab.active {
+    color: #333;
+    font-weight: 700;
+    font-size: 16px;
+  }
+  .tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 22px; height: 3px;
+    background: #ffc600;
+    border-radius: 2px;
+  }
+
+  /* ===== Yellow Banner (闲鱼标志性黄色) ===== */
+  .yellow-banner {
+    margin: 10px 12px 0;
+    border-radius: 14px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 50%, #ffe082 100%);
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+  }
+  .yellow-banner::after {
+    content: '';
+    position: absolute;
+    right: -20px; top: -20px;
+    width: 100px; height: 100px;
+    border-radius: 50%;
+    background: rgba(255,193,7,0.15);
+  }
+  .yb-left h3 {
+    font-size: 17px;
+    font-weight: 800;
+    color: #333;
+    margin-bottom: 4px;
+  }
+  .yb-left p {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 10px;
+  }
+  .yb-btn {
+    display: inline-block;
+    background: #333;
+    color: #ffc600;
+    padding: 6px 18px;
+    border-radius: 18px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .yb-mascot {
+    font-size: 56px;
+    position: relative;
+    z-index: 1;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));
+  }
+
+  /* ===== Quick Entry Grid ===== */
+  .quick-grid {
+    background: #fff;
+    margin: 10px 12px 0;
+    border-radius: 14px;
+    padding: 16px 8px 12px;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 4px;
+  }
+  .qg-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 0;
+  }
+  .qg-icon {
+    width: 46px; height: 46px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    position: relative;
+  }
+  .qg-icon .new-dot {
+    position: absolute;
+    top: -1px; right: -1px;
+    background: #ff2442;
+    color: #fff;
+    font-size: 8px;
+    padding: 1px 4px;
+    border-radius: 6px;
+    font-weight: 700;
+  }
+  .qg-label {
+    font-size: 11px;
+    color: #333;
+    font-weight: 500;
+  }
+
+  /* ===== AI Assistant Card ===== */
+  .ai-card {
+    margin: 10px 12px 0;
+    border-radius: 14px;
+    background: #fff;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: relative;
+    overflow: hidden;
+  }
+  .ai-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #ffc600, #ff9100, #ff6d00);
+  }
+  .ai-avatar {
+    width: 48px; height: 48px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #ffc600, #ffab00);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(255,198,0,0.3);
+  }
+  .ai-info {
+    flex: 1;
+  }
+  .ai-info h4 {
+    font-size: 15px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 2px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .ai-info h4 .ai-tag {
+    background: linear-gradient(90deg, #ffc600, #ff9100);
+    color: #fff;
+    font-size: 9px;
+    padding: 1px 6px;
+    border-radius: 6px;
+    font-weight: 700;
+  }
+  .ai-info p {
+    font-size: 12px;
+    color: #999;
+  }
+  .ai-go {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: #ffc600;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    font-weight: 700;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  /* ===== Scrolling Announcement ===== */
+  .announcement-bar {
+    margin: 10px 12px 0;
+    background: #fff;
+    border-radius: 12px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    overflow: hidden;
+  }
+  .ann-badge {
+    background: #ff2442;
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .ann-scroll {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+    height: 20px;
+  }
+  .ann-track {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    animation: scrollUp 6s ease-in-out infinite;
+  }
+  @keyframes scrollUp {
+    0%, 25% { transform: translateY(0); }
+    33%, 58% { transform: translateY(-24px); }
+    66%, 91% { transform: translateY(-48px); }
+    100% { transform: translateY(0); }
+  }
+  .ann-line {
+    height: 20px;
+    line-height: 20px;
+    font-size: 13px;
+    color: #666;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ann-line strong {
+    color: #ff2442;
+  }
+
+  /* ===== Section Title ===== */
+  .section-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 16px 8px;
+  }
+  .section-title h3 {
+    font-size: 17px;
+    font-weight: 800;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .section-title .more {
+    font-size: 13px;
+    color: #999;
+    display: flex;
+    align-items: center;
+  }
+
+  /* ===== Horizontal Expert Cards (闲鱼"鱼塘"风) ===== */
+  .expert-scroll {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 0 12px 4px;
+  }
+  .expert-scroll::-webkit-scrollbar { display: none; }
+  .expert-bubble {
+    flex-shrink: 0;
+    width: 100px;
+    background: #fff;
+    border-radius: 14px;
+    padding: 14px 8px 12px;
+    text-align: center;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  }
+  .eb-avatar {
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    margin: 0 auto 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px;
+    position: relative;
+  }
+  .eb-avatar .online {
+    position: absolute;
+    bottom: 1px; right: 1px;
+    width: 12px; height: 12px;
+    background: #4cd964;
+    border-radius: 50%;
+    border: 2px solid #fff;
+  }
+  .eb-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .eb-skill {
+    font-size: 10px;
+    color: #ff9100;
+    background: #fff8e1;
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 6px;
+    margin-bottom: 4px;
+  }
+  .eb-stat {
+    font-size: 10px;
+    color: #999;
+  }
+
+  /* ===== Waterfall Feed (闲鱼经典双列) ===== */
+  .feed-waterfall {
+    padding: 0 8px 100px;
+    column-count: 2;
+    column-gap: 8px;
+  }
+  .feed-card {
+    break-inside: avoid;
+    margin-bottom: 8px;
+    background: #fff;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .fc-img {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+    position: relative;
+  }
+  .fc-img .fc-badge {
+    position: absolute;
+    top: 8px; left: 8px;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    background: rgba(0,0,0,0.55);
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 8px;
+    font-size: 10px;
+    backdrop-filter: blur(4px);
+  }
+  .fc-img .fc-badge-right {
+    position: absolute;
+    top: 8px; right: 8px;
+    background: #ffc600;
+    color: #333;
+    padding: 2px 8px;
+    border-radius: 8px;
+    font-size: 10px;
+    font-weight: 700;
+  }
+  .fc-body {
+    padding: 10px;
+  }
+  .fc-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .fc-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 8px;
+  }
+  .fc-tag {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #f5f5f5;
+    color: #666;
+  }
+  .fc-tag.urgent {
+    background: #fff0f0;
+    color: #ff2442;
+  }
+  .fc-tag.online {
+    background: #e8f5e9;
+    color: #4caf50;
+  }
+  .fc-price-row {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    margin-bottom: 10px;
+  }
+  .fc-price {
+    font-size: 18px;
+    font-weight: 800;
+    color: #ff2442;
+  }
+  .fc-price-unit {
+    font-size: 11px;
+    color: #ff2442;
+    font-weight: 600;
+  }
+  .fc-price-old {
+    font-size: 11px;
+    color: #ccc;
+    text-decoration: line-through;
+  }
+  .fc-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .fc-user {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .fc-user-dot {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px;
+  }
+  .fc-user-name {
+    font-size: 11px;
+    color: #999;
+  }
+  .fc-want {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 11px;
+    color: #999;
+  }
+
+  /* ===== Floating Publish Button (闲鱼标志性) ===== */
+  .float-publish {
+    position: fixed;
+    bottom: 84px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 250;
+  }
+  .float-publish-btn {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ffc600, #ffab00);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 20px rgba(255,198,0,0.45);
+    position: relative;
+  }
+  .float-publish-btn .plus {
+    font-size: 28px;
+    font-weight: 300;
+    color: #fff;
+  }
+  .float-publish-label {
+    text-align: center;
+    font-size: 10px;
+    color: #999;
+    margin-top: 3px;
+    font-weight: 500;
+  }
+  .float-pulse {
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,198,0,0.3);
+    animation: ringPulse 2s ease-out infinite;
+  }
+  @keyframes ringPulse {
+    0% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(1.4); opacity: 0; }
+  }
+
+  /* ===== Hot Activity Horizontal ===== */
+  .activity-scroll {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 0 12px 8px;
+  }
+  .activity-scroll::-webkit-scrollbar { display: none; }
+  .act-card {
+    flex-shrink: 0;
+    width: 240px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  }
+  .act-img {
+    height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+    position: relative;
+  }
+  .act-img .act-live {
+    position: absolute;
+    top: 8px; left: 8px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(255,36,66,0.85);
+    color: #fff;
+    padding: 3px 10px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .act-live-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #fff;
+    animation: blink 1s ease-in-out infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .act-img .act-count {
+    position: absolute;
+    bottom: 8px; right: 8px;
+    background: rgba(0,0,0,0.5);
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 8px;
+    font-size: 11px;
+    backdrop-filter: blur(4px);
+  }
+  .act-body {
+    padding: 10px 12px 12px;
+  }
+  .act-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 4px;
+  }
+  .act-meta {
+    font-size: 12px;
+    color: #999;
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .act-btn {
+    background: #ffc600;
+    color: #333;
+    padding: 5px 16px;
+    border-radius: 14px;
+    font-size: 12px;
+    font-weight: 700;
+    display: inline-block;
+  }
+
+  /* ===== Bottom Nav ===== */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 430px;
+    background: #fff;
+    border-top: 0.5px solid rgba(0,0,0,0.08);
+    display: flex;
+    padding: 6px 0 26px;
+    z-index: 300;
+  }
+  .nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+  .nav-icon {
+    font-size: 22px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .nav-label {
+    font-size: 10px;
+    color: #999;
+  }
+  .nav-item.active .nav-label {
+    color: #333;
+    font-weight: 600;
+  }
+  .nav-placeholder {
+    flex: 1;
+  }
+
+  /* ===== "鱼塘" Group Cards ===== */
+  .group-scroll {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 0 12px 4px;
+  }
+  .group-scroll::-webkit-scrollbar { display: none; }
+  .group-card {
+    flex-shrink: 0;
+    width: 150px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  }
+  .gc-banner {
+    height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    position: relative;
+  }
+  .gc-banner .gc-members {
+    position: absolute;
+    bottom: 6px; right: 6px;
+    background: rgba(0,0,0,0.5);
+    color: #fff;
+    padding: 1px 6px;
+    border-radius: 6px;
+    font-size: 10px;
+    backdrop-filter: blur(4px);
+  }
+  .gc-body {
+    padding: 8px 10px 10px;
+  }
+  .gc-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .gc-desc {
+    font-size: 11px;
+    color: #999;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+</style>
+</head>
+<body>
+
+<!-- Top Header -->
+<div class="top-header">
+  <div class="header-row">
+    <div class="header-location">
+      <svg viewBox="0 0 24 24" fill="#333"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+      伦敦
+    </div>
+    <div class="search-box">
+      🔍 搜索技能、达人、任务...
+    </div>
+    <div class="header-icons">
+      <div class="h-icon">📷</div>
+      <div class="h-icon">
+        🔔
+        <span class="dot"></span>
+      </div>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab active">推荐</div>
+    <div class="tab">关注</div>
+    <div class="tab">附近</div>
+    <div class="tab">达人</div>
+    <div class="tab">鱼塘</div>
+  </div>
+</div>
+
+<!-- Content (scroll area) -->
+<div style="padding-top: 108px;">
+
+  <!-- Yellow Banner -->
+  <div class="yellow-banner">
+    <div class="yb-left">
+      <h3>发布技能，赚零花钱 💰</h3>
+      <p>已有 2,847 位达人在这里接单</p>
+      <div class="yb-btn">✨ 立即发布</div>
+    </div>
+    <div class="yb-mascot">🐟</div>
+  </div>
+
+  <!-- Quick Grid -->
+  <div class="quick-grid">
+    <div class="qg-item">
+      <div class="qg-icon" style="background: linear-gradient(135deg, #fff8e1, #ffecb3);">
+        📋
+        <span class="new-dot">HOT</span>
+      </div>
+      <span class="qg-label">发任务</span>
+    </div>
+    <div class="qg-item">
+      <div class="qg-icon" style="background: linear-gradient(135deg, #e8eaf6, #c5cae9);">🎯</div>
+      <span class="qg-label">技能匹配</span>
+    </div>
+    <div class="qg-item">
+      <div class="qg-icon" style="background: linear-gradient(135deg, #e0f7fa, #b2ebf2);">🏆</div>
+      <span class="qg-label">达人榜</span>
+    </div>
+    <div class="qg-item">
+      <div class="qg-icon" style="background: linear-gradient(135deg, #fce4ec, #f8bbd0);">🎪</div>
+      <span class="qg-label">活动</span>
+    </div>
+    <div class="qg-item">
+      <div class="qg-icon" style="background: linear-gradient(135deg, #e8f5e9, #c8e6c9);">🛒</div>
+      <span class="qg-label">跳蚤市场</span>
+    </div>
+    <div class="qg-item">
+      <div class="qg-icon" style="background: linear-gradient(135deg, #fff3e0, #ffe0b2);">📸</div>
+      <span class="qg-label">约拍</span>
+    </div>
+    <div class="qg-item">
+      <div class="qg-icon" style="background: linear-gradient(135deg, #f3e5f5, #e1bee7);">📚</div>
+      <span class="qg-label">学业辅导</span>
+    </div>
+    <div class="qg-item">
+      <div class="qg-icon" style="background: linear-gradient(135deg, #e0f2f1, #b2dfdb);">💼</div>
+      <span class="qg-label">求职</span>
+    </div>
+    <div class="qg-item">
+      <div class="qg-icon" style="background: linear-gradient(135deg, #fafafa, #eeeeee);">🏠</div>
+      <span class="qg-label">搬家</span>
+    </div>
+    <div class="qg-item">
+      <div class="qg-icon" style="background: linear-gradient(135deg, #efebe9, #d7ccc8);">···</div>
+      <span class="qg-label">全部</span>
+    </div>
+  </div>
+
+  <!-- AI Card -->
+  <div class="ai-card">
+    <div class="ai-avatar">🤖</div>
+    <div class="ai-info">
+      <h4>Linker AI 智能匹配 <span class="ai-tag">AI</span></h4>
+      <p>告诉我你需要什么，帮你秒配最佳达人</p>
+    </div>
+    <div class="ai-go">›</div>
+  </div>
+
+  <!-- Announcement -->
+  <div class="announcement-bar">
+    <span class="ann-badge">动态</span>
+    <div class="ann-scroll">
+      <div class="ann-track">
+        <div class="ann-line">👩‍🎨 Lisa 刚完成了一个 <strong>Logo设计</strong> 订单，获得5星好评</div>
+        <div class="ann-line">🎉 <strong>David</strong> 今日已接 3 单，累计完成 156 单</div>
+        <div class="ann-line">📷 伦敦摄影工作坊 <strong>还剩18个名额</strong>，快来报名</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 推荐达人 (鱼塘风) -->
+  <div class="section-title">
+    <h3>⭐ 在线达人</h3>
+    <span class="more">更多 ›</span>
+  </div>
+  <div class="expert-scroll">
+    <div class="expert-bubble">
+      <div class="eb-avatar" style="background: linear-gradient(135deg, #ffecd2, #fcb69f);">
+        👩‍🎨
+        <span class="online"></span>
+      </div>
+      <div class="eb-name">Lisa</div>
+      <div class="eb-skill">UI设计</div>
+      <div class="eb-stat">⭐5.0 · 78单</div>
+    </div>
+    <div class="expert-bubble">
+      <div class="eb-avatar" style="background: linear-gradient(135deg, #a8edea, #fed6e3);">
+        👨‍💻
+        <span class="online"></span>
+      </div>
+      <div class="eb-name">David</div>
+      <div class="eb-skill">全栈开发</div>
+      <div class="eb-stat">⭐5.0 · 156单</div>
+    </div>
+    <div class="expert-bubble">
+      <div class="eb-avatar" style="background: linear-gradient(135deg, #e0c3fc, #8ec5fc);">
+        📸
+        <span class="online"></span>
+      </div>
+      <div class="eb-name">Emma</div>
+      <div class="eb-skill">摄影</div>
+      <div class="eb-stat">⭐4.8 · 92单</div>
+    </div>
+    <div class="expert-bubble">
+      <div class="eb-avatar" style="background: linear-gradient(135deg, #f5f7fa, #c3cfe2);">
+        ✍️
+        <span class="online"></span>
+      </div>
+      <div class="eb-name">Alex</div>
+      <div class="eb-skill">论文辅导</div>
+      <div class="eb-stat">⭐4.9 · 203单</div>
+    </div>
+    <div class="expert-bubble">
+      <div class="eb-avatar" style="background: linear-gradient(135deg, #fbc2eb, #a6c1ee);">
+        🎵
+      </div>
+      <div class="eb-name">小美</div>
+      <div class="eb-skill">音乐教学</div>
+      <div class="eb-stat">⭐4.7 · 45单</div>
+    </div>
+  </div>
+
+  <!-- 热门活动 -->
+  <div class="section-title">
+    <h3>🎪 热门活动</h3>
+    <span class="more">更多 ›</span>
+  </div>
+  <div class="activity-scroll">
+    <div class="act-card">
+      <div class="act-img" style="background: linear-gradient(135deg, #667eea, #764ba2); color: #fff;">
+        🎓
+        <div class="act-live"><span class="act-live-dot"></span> 热门</div>
+        <div class="act-count">👥 32人</div>
+      </div>
+      <div class="act-body">
+        <div class="act-title">留学生求职分享会</div>
+        <div class="act-meta">
+          <span>📅 本周六</span>
+          <span>📍 线上</span>
+        </div>
+        <div class="act-btn">免费报名</div>
+      </div>
+    </div>
+    <div class="act-card">
+      <div class="act-img" style="background: linear-gradient(135deg, #f093fb, #f5576c); color: #fff;">
+        📷
+        <div class="act-count">👥 32/50</div>
+      </div>
+      <div class="act-body">
+        <div class="act-title">周末摄影工作坊</div>
+        <div class="act-meta">
+          <span>📅 下周日</span>
+          <span>📍 伦敦</span>
+        </div>
+        <div class="act-btn">£15 报名</div>
+      </div>
+    </div>
+    <div class="act-card">
+      <div class="act-img" style="background: linear-gradient(135deg, #11998e, #38ef7d); color: #fff;">
+        💻
+      </div>
+      <div class="act-body">
+        <div class="act-title">Python入门训练营</div>
+        <div class="act-meta">
+          <span>📅 每周三</span>
+          <span>📍 线上</span>
+        </div>
+        <div class="act-btn">免费报名</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 鱼塘 (Groups) -->
+  <div class="section-title">
+    <h3>🐟 技能鱼塘</h3>
+    <span class="more">更多 ›</span>
+  </div>
+  <div class="group-scroll">
+    <div class="group-card">
+      <div class="gc-banner" style="background: linear-gradient(135deg, #ffecd2, #fcb69f);">
+        🎨
+        <span class="gc-members">👥 328</span>
+      </div>
+      <div class="gc-body">
+        <div class="gc-name">设计互助圈</div>
+        <div class="gc-desc">UI/UX/平面设计交流</div>
+      </div>
+    </div>
+    <div class="group-card">
+      <div class="gc-banner" style="background: linear-gradient(135deg, #a8edea, #fed6e3);">
+        💻
+        <span class="gc-members">👥 512</span>
+      </div>
+      <div class="gc-body">
+        <div class="gc-name">编程互助圈</div>
+        <div class="gc-desc">代码交流·技术答疑</div>
+      </div>
+    </div>
+    <div class="group-card">
+      <div class="gc-banner" style="background: linear-gradient(135deg, #e0c3fc, #8ec5fc);">
+        📷
+        <span class="gc-members">👥 186</span>
+      </div>
+      <div class="gc-body">
+        <div class="gc-name">摄影约拍圈</div>
+        <div class="gc-desc">约拍·作品分享·器材</div>
+      </div>
+    </div>
+    <div class="group-card">
+      <div class="gc-banner" style="background: linear-gradient(135deg, #f5f7fa, #c3cfe2);">
+        📚
+        <span class="gc-members">👥 423</span>
+      </div>
+      <div class="gc-body">
+        <div class="gc-name">学业互助圈</div>
+        <div class="gc-desc">论文·考试·选课交流</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Waterfall Feed -->
+  <div class="section-title">
+    <h3>🔥 为你推荐</h3>
+    <span class="more">筛选 ▾</span>
+  </div>
+  <div class="feed-waterfall">
+    <!-- Card 1 -->
+    <div class="feed-card">
+      <div class="fc-img" style="height: 180px; background: linear-gradient(135deg, #a8edea, #fed6e3);">
+        🎨
+        <span class="fc-badge">🔥 326人想要</span>
+        <span class="fc-badge-right">可议价</span>
+      </div>
+      <div class="fc-body">
+        <div class="fc-title">专业UI设计 App界面/网页/小程序</div>
+        <div class="fc-tags">
+          <span class="fc-tag">UI设计</span>
+          <span class="fc-tag">3天交付</span>
+        </div>
+        <div class="fc-price-row">
+          <span class="fc-price">£60</span>
+          <span class="fc-price-unit">起</span>
+          <span class="fc-price-old">£80</span>
+        </div>
+        <div class="fc-footer">
+          <div class="fc-user">
+            <div class="fc-user-dot" style="background: linear-gradient(135deg, #ffecd2, #fcb69f);">👩</div>
+            <span class="fc-user-name">设计小王</span>
+          </div>
+          <span class="fc-want">❤️ 326</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 2 -->
+    <div class="feed-card">
+      <div class="fc-img" style="height: 140px; background: linear-gradient(135deg, #ffecd2, #fcb69f);">
+        📷
+        <span class="fc-badge">📍 伦敦</span>
+      </div>
+      <div class="fc-body">
+        <div class="fc-title">毕业照跟拍 含精修</div>
+        <div class="fc-tags">
+          <span class="fc-tag">摄影</span>
+          <span class="fc-tag online">🟢 在线</span>
+        </div>
+        <div class="fc-price-row">
+          <span class="fc-price">£120</span>
+          <span class="fc-price-unit">/次</span>
+        </div>
+        <div class="fc-footer">
+          <div class="fc-user">
+            <div class="fc-user-dot" style="background: linear-gradient(135deg, #ffd89b, #19547b);">👩</div>
+            <span class="fc-user-name">Emma</span>
+          </div>
+          <span class="fc-want">❤️ 89</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 3 -->
+    <div class="feed-card">
+      <div class="fc-img" style="height: 160px; background: linear-gradient(135deg, #e0c3fc, #8ec5fc);">
+        💻
+        <span class="fc-badge-right">接单中</span>
+      </div>
+      <div class="fc-body">
+        <div class="fc-title">Python数据分析 论文数据处理可视化</div>
+        <div class="fc-tags">
+          <span class="fc-tag">编程</span>
+          <span class="fc-tag">数据分析</span>
+          <span class="fc-tag urgent">⚡急</span>
+        </div>
+        <div class="fc-price-row">
+          <span class="fc-price">£50</span>
+          <span class="fc-price-unit">/小时</span>
+        </div>
+        <div class="fc-footer">
+          <div class="fc-user">
+            <div class="fc-user-dot" style="background: linear-gradient(135deg, #c3cfe2, #f5f7fa);">👨</div>
+            <span class="fc-user-name">CodeMaster</span>
+          </div>
+          <span class="fc-want">❤️ 456</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 4 -->
+    <div class="feed-card">
+      <div class="fc-img" style="height: 150px; background: linear-gradient(135deg, #fddb92, #d1fdff);">
+        📝
+        <span class="fc-badge">⚡ 24h交付</span>
+      </div>
+      <div class="fc-body">
+        <div class="fc-title">英文论文润色 Proofreading</div>
+        <div class="fc-tags">
+          <span class="fc-tag">文案</span>
+          <span class="fc-tag urgent">⚡急单</span>
+        </div>
+        <div class="fc-price-row">
+          <span class="fc-price">£40</span>
+        </div>
+        <div class="fc-footer">
+          <div class="fc-user">
+            <div class="fc-user-dot" style="background: linear-gradient(135deg, #a1c4fd, #c2e9fb);">👩</div>
+            <span class="fc-user-name">Jenny</span>
+          </div>
+          <span class="fc-want">❤️ 128</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 5 -->
+    <div class="feed-card">
+      <div class="fc-img" style="height: 170px; background: linear-gradient(135deg, #667eea, #764ba2);">
+        🏠
+        <span class="fc-badge">📍 曼城</span>
+      </div>
+      <div class="fc-body">
+        <div class="fc-title">搬家帮手 有车可搬大件家具</div>
+        <div class="fc-tags">
+          <span class="fc-tag">生活服务</span>
+          <span class="fc-tag online">🟢 在线</span>
+        </div>
+        <div class="fc-price-row">
+          <span class="fc-price">£25</span>
+          <span class="fc-price-unit">/小时</span>
+        </div>
+        <div class="fc-footer">
+          <div class="fc-user">
+            <div class="fc-user-dot" style="background: linear-gradient(135deg, #ffecd2, #fcb69f);">👨</div>
+            <span class="fc-user-name">搬家达人</span>
+          </div>
+          <span class="fc-want">❤️ 312</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 6 -->
+    <div class="feed-card">
+      <div class="fc-img" style="height: 145px; background: linear-gradient(135deg, #fbc2eb, #a6c1ee);">
+        🎵
+      </div>
+      <div class="fc-body">
+        <div class="fc-title">吉他入门 1v1教学 零基础可</div>
+        <div class="fc-tags">
+          <span class="fc-tag">音乐</span>
+        </div>
+        <div class="fc-price-row">
+          <span class="fc-price">£30</span>
+          <span class="fc-price-unit">/课</span>
+        </div>
+        <div class="fc-footer">
+          <div class="fc-user">
+            <div class="fc-user-dot" style="background: linear-gradient(135deg, #fbc2eb, #a6c1ee);">🎵</div>
+            <span class="fc-user-name">MusicLin</span>
+          </div>
+          <span class="fc-want">❤️ 67</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Floating Publish -->
+<div class="float-publish">
+  <div class="float-publish-btn">
+    <span class="plus">+</span>
+    <div class="float-pulse"></div>
+  </div>
+  <div class="float-publish-label">发布</div>
+</div>
+
+<!-- Bottom Nav -->
+<div class="bottom-nav">
+  <div class="nav-item active">
+    <div class="nav-icon">🏠</div>
+    <span class="nav-label">首页</span>
+  </div>
+  <div class="nav-item">
+    <div class="nav-icon">🐟</div>
+    <span class="nav-label">鱼塘</span>
+  </div>
+  <div class="nav-placeholder"></div>
+  <div class="nav-item">
+    <div class="nav-icon">💬</div>
+    <span class="nav-label">消息</span>
+  </div>
+  <div class="nav-item">
+    <div class="nav-icon">👤</div>
+    <span class="nav-label">我的</span>
+  </div>
+</div>
+
+</body>
+</html>

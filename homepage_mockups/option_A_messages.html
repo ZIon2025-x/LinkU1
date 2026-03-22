@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>方案A - 消息页</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'PingFang SC', 'Helvetica Neue', sans-serif;
+    background: #f5f5f5;
+    max-width: 430px;
+    margin: 0 auto;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Header */
+  .header {
+    background: #fff;
+    padding: 44px 16px 12px;
+    position: sticky;
+    top: 0;
+    z-index: 200;
+    border-bottom: 0.5px solid rgba(0,0,0,0.06);
+  }
+  .header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .header-title {
+    font-size: 22px;
+    font-weight: 800;
+    color: #333;
+  }
+  .header-actions {
+    display: flex;
+    gap: 8px;
+  }
+  .h-btn {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: #f2f2f2;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+
+  /* Message Tabs */
+  .msg-tabs {
+    display: flex;
+    gap: 0;
+    background: #fff;
+  }
+  .msg-tab {
+    flex: 1;
+    text-align: center;
+    padding: 10px 0;
+    font-size: 14px;
+    color: #999;
+    font-weight: 500;
+    position: relative;
+  }
+  .msg-tab.active {
+    color: #333;
+    font-weight: 700;
+  }
+  .msg-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 24px;
+    height: 3px;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    border-radius: 2px;
+  }
+  .msg-tab .tab-badge {
+    background: #ff4757;
+    color: #fff;
+    font-size: 10px;
+    padding: 0px 5px;
+    border-radius: 8px;
+    font-weight: 700;
+    margin-left: 4px;
+    vertical-align: super;
+  }
+
+  /* System Messages */
+  .system-msgs {
+    display: flex;
+    gap: 0;
+    background: #fff;
+    margin-top: 8px;
+    padding: 16px;
+  }
+  .sys-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .sys-icon {
+    width: 48px; height: 48px;
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    position: relative;
+  }
+  .sys-icon .dot {
+    position: absolute;
+    top: -2px; right: -2px;
+    width: 18px; height: 18px;
+    background: #ff4757;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px;
+    color: #fff;
+    font-weight: 700;
+  }
+  .sys-label {
+    font-size: 12px;
+    color: #333;
+    font-weight: 500;
+  }
+
+  /* AI Assistant Chat */
+  .ai-chat-entry {
+    margin: 8px 12px 0;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border-radius: 16px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #fff;
+  }
+  .ai-avatar {
+    width: 44px; height: 44px;
+    border-radius: 14px;
+    background: rgba(255,255,255,0.2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+  }
+  .ai-text {
+    flex: 1;
+  }
+  .ai-text h4 {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 2px;
+  }
+  .ai-text p {
+    font-size: 12px;
+    opacity: 0.8;
+  }
+  .ai-arrow {
+    font-size: 18px;
+    opacity: 0.6;
+  }
+
+  /* Chat List */
+  .chat-list {
+    background: #fff;
+    margin-top: 8px;
+    padding-bottom: 100px;
+  }
+  .chat-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    position: relative;
+  }
+  .chat-item:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 76px;
+    right: 16px;
+    height: 0.5px;
+    background: #f0f0f0;
+  }
+  .chat-avatar {
+    width: 50px; height: 50px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .chat-avatar .online-dot {
+    position: absolute;
+    bottom: 1px; right: 1px;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: #4cd964;
+    border: 2.5px solid #fff;
+  }
+  .chat-avatar .unread-badge {
+    position: absolute;
+    top: -3px; right: -3px;
+    min-width: 18px; height: 18px;
+    background: #ff4757;
+    border-radius: 10px;
+    border: 2px solid #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px;
+    color: #fff;
+    font-weight: 700;
+    padding: 0 4px;
+  }
+  .chat-content {
+    flex: 1;
+    min-width: 0;
+  }
+  .chat-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+  }
+  .chat-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .chat-name .task-tag {
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: #f0f0ff;
+    color: #667eea;
+    font-weight: 600;
+  }
+  .chat-time {
+    font-size: 11px;
+    color: #ccc;
+    flex-shrink: 0;
+  }
+  .chat-preview {
+    font-size: 13px;
+    color: #999;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .chat-preview.unread {
+    color: #666;
+    font-weight: 500;
+  }
+  .chat-item.pinned {
+    background: #fafafa;
+  }
+  .pin-icon {
+    font-size: 11px;
+    color: #ccc;
+    margin-left: 4px;
+  }
+
+  /* Bottom Nav */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 430px;
+    background: #fff;
+    border-top: 0.5px solid rgba(0,0,0,0.08);
+    display: flex;
+    padding: 6px 0 24px;
+    z-index: 300;
+  }
+  .nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    font-size: 10px;
+    color: #999;
+  }
+  .nav-item.active { color: #333; font-weight: 600; }
+  .nav-item .icon { font-size: 22px; height: 24px; display: flex; align-items: center; justify-content: center; }
+  .nav-center {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .nav-center-btn {
+    width: 44px; height: 32px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 22px; font-weight: 300;
+    box-shadow: 0 2px 10px rgba(102,126,234,0.3);
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-row">
+    <div class="header-title">消息</div>
+    <div class="header-actions">
+      <div class="h-btn">🔍</div>
+      <div class="h-btn">➕</div>
+    </div>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="msg-tabs">
+  <div class="msg-tab active">聊天 <span class="tab-badge">3</span></div>
+  <div class="msg-tab">任务通知</div>
+  <div class="msg-tab">互动</div>
+</div>
+
+<!-- System Messages -->
+<div class="system-msgs">
+  <div class="sys-item">
+    <div class="sys-icon" style="background: #fff0f0;">
+      📢
+      <span class="dot">2</span>
+    </div>
+    <span class="sys-label">系统通知</span>
+  </div>
+  <div class="sys-item">
+    <div class="sys-icon" style="background: #f0f0ff;">
+      📋
+      <span class="dot">5</span>
+    </div>
+    <span class="sys-label">任务更新</span>
+  </div>
+  <div class="sys-item">
+    <div class="sys-icon" style="background: #f0fff4;">
+      💰
+    </div>
+    <span class="sys-label">交易通知</span>
+  </div>
+  <div class="sys-item">
+    <div class="sys-icon" style="background: #fff8f0;">
+      ❤️
+      <span class="dot">8</span>
+    </div>
+    <span class="sys-label">点赞收藏</span>
+  </div>
+</div>
+
+<!-- AI Chat -->
+<div class="ai-chat-entry">
+  <div class="ai-avatar">🤖</div>
+  <div class="ai-text">
+    <h4>Linker AI 助手</h4>
+    <p>有什么可以帮你的吗？</p>
+  </div>
+  <span class="ai-arrow">›</span>
+</div>
+
+<!-- Chat List -->
+<div class="chat-list">
+  <!-- Pinned -->
+  <div class="chat-item pinned">
+    <div class="chat-avatar" style="background: linear-gradient(135deg, #ffecd2, #fcb69f);">
+      👩‍🎨
+      <span class="online-dot"></span>
+      <span class="unread-badge">3</span>
+    </div>
+    <div class="chat-content">
+      <div class="chat-top">
+        <span class="chat-name">Lisa Chen <span class="task-tag">UI设计</span> <span class="pin-icon">📌</span></span>
+        <span class="chat-time">2分钟前</span>
+      </div>
+      <div class="chat-preview unread">设计稿已经修改好了，你看一下~</div>
+    </div>
+  </div>
+
+  <div class="chat-item">
+    <div class="chat-avatar" style="background: linear-gradient(135deg, #a8edea, #fed6e3);">
+      👨‍💻
+      <span class="online-dot"></span>
+      <span class="unread-badge">1</span>
+    </div>
+    <div class="chat-content">
+      <div class="chat-top">
+        <span class="chat-name">David Wu <span class="task-tag">编程辅导</span></span>
+        <span class="chat-time">15分钟前</span>
+      </div>
+      <div class="chat-preview unread">代码已经改好了，你 pull 一下看看效果</div>
+    </div>
+  </div>
+
+  <div class="chat-item">
+    <div class="chat-avatar" style="background: linear-gradient(135deg, #e0c3fc, #8ec5fc);">
+      📸
+      <span class="online-dot"></span>
+    </div>
+    <div class="chat-content">
+      <div class="chat-top">
+        <span class="chat-name">Emma Liu <span class="task-tag">摄影</span></span>
+        <span class="chat-time">1小时前</span>
+      </div>
+      <div class="chat-preview">好的，那我们周六下午 2 点见~</div>
+    </div>
+  </div>
+
+  <div class="chat-item">
+    <div class="chat-avatar" style="background: linear-gradient(135deg, #f5f7fa, #c3cfe2);">
+      ✍️
+    </div>
+    <div class="chat-content">
+      <div class="chat-top">
+        <span class="chat-name">Alex Zhang</span>
+        <span class="chat-time">3小时前</span>
+      </div>
+      <div class="chat-preview">论文润色完成了，请查看附件</div>
+    </div>
+  </div>
+
+  <div class="chat-item">
+    <div class="chat-avatar" style="background: linear-gradient(135deg, #fbc2eb, #a6c1ee);">
+      🎵
+    </div>
+    <div class="chat-content">
+      <div class="chat-top">
+        <span class="chat-name">MusicLin</span>
+        <span class="chat-time">昨天</span>
+      </div>
+      <div class="chat-preview">下节课我们学习和弦转换，提前练习一下C和弦 🎸</div>
+    </div>
+  </div>
+
+  <div class="chat-item">
+    <div class="chat-avatar" style="background: linear-gradient(135deg, #fddb92, #d1fdff);">
+      👨
+    </div>
+    <div class="chat-content">
+      <div class="chat-top">
+        <span class="chat-name">搬家达人</span>
+        <span class="chat-time">昨天</span>
+      </div>
+      <div class="chat-preview">好的老板，周一早上 9 点到 👍</div>
+    </div>
+  </div>
+
+  <div class="chat-item">
+    <div class="chat-avatar" style="background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; font-size: 16px;">
+      客服
+    </div>
+    <div class="chat-content">
+      <div class="chat-top">
+        <span class="chat-name">Link2Ur 客服</span>
+        <span class="chat-time">3天前</span>
+      </div>
+      <div class="chat-preview">您的钱包充值已到账，如有问题请随时联系我们</div>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom Nav -->
+<div class="bottom-nav">
+  <div class="nav-item">
+    <span class="icon">🏠</span>
+    <span>首页</span>
+  </div>
+  <div class="nav-item">
+    <span class="icon">🔍</span>
+    <span>发现</span>
+  </div>
+  <div class="nav-center">
+    <div class="nav-center-btn">+</div>
+  </div>
+  <div class="nav-item active">
+    <span class="icon">💬</span>
+    <span>消息</span>
+  </div>
+  <div class="nav-item">
+    <span class="icon">👤</span>
+    <span>我的</span>
+  </div>
+</div>
+
+</body>
+</html>

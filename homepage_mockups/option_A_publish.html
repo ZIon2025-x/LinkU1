@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>方案A - 发布页</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'PingFang SC', 'Helvetica Neue', sans-serif;
+    background: #f5f5f5;
+    max-width: 430px;
+    margin: 0 auto;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Overlay background */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 400;
+    max-width: 430px;
+    margin: 0 auto;
+    backdrop-filter: blur(4px);
+  }
+
+  /* Bottom Sheet */
+  .publish-sheet {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 430px;
+    background: #fff;
+    border-radius: 24px 24px 0 0;
+    z-index: 500;
+    padding: 12px 0 34px;
+    animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes slideUp {
+    0% { transform: translateX(-50%) translateY(100%); }
+    100% { transform: translateX(-50%) translateY(0); }
+  }
+  .sheet-handle {
+    width: 40px;
+    height: 4px;
+    border-radius: 2px;
+    background: #ddd;
+    margin: 0 auto 16px;
+  }
+  .sheet-title {
+    text-align: center;
+    font-size: 18px;
+    font-weight: 800;
+    color: #333;
+    margin-bottom: 6px;
+  }
+  .sheet-sub {
+    text-align: center;
+    font-size: 13px;
+    color: #999;
+    margin-bottom: 24px;
+  }
+
+  /* Publish Options */
+  .publish-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    padding: 0 24px;
+    margin-bottom: 20px;
+  }
+  .pub-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 18px 8px;
+    border-radius: 18px;
+    background: #f8f8f8;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .pub-option.featured {
+    background: linear-gradient(135deg, #667eea10, #764ba210);
+    border: 1.5px solid #667eea30;
+  }
+  .pub-option.featured::before {
+    content: '推荐';
+    position: absolute;
+    top: 6px; right: -14px;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 18px;
+    transform: rotate(35deg);
+  }
+  .pub-icon {
+    width: 52px; height: 52px;
+    border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px;
+  }
+  .pub-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: #333;
+  }
+  .pub-desc {
+    font-size: 10px;
+    color: #999;
+    text-align: center;
+    line-height: 1.3;
+  }
+
+  /* AI Suggestion */
+  .ai-suggest {
+    margin: 0 24px 20px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border-radius: 16px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #fff;
+  }
+  .ai-icon {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+  }
+  .ai-text h4 {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 2px;
+  }
+  .ai-text p {
+    font-size: 11px;
+    opacity: 0.8;
+  }
+  .ai-go {
+    font-size: 18px;
+    opacity: 0.6;
+    margin-left: auto;
+  }
+
+  /* Cancel Button */
+  .cancel-btn {
+    margin: 0 24px;
+    padding: 14px;
+    text-align: center;
+    font-size: 15px;
+    font-weight: 600;
+    color: #999;
+    background: #f8f8f8;
+    border-radius: 14px;
+  }
+
+  /* ===== Full Publish Form (second page) ===== */
+  .form-page {
+    background: #fff;
+    min-height: 100vh;
+    padding-bottom: 100px;
+  }
+  .form-header {
+    background: #fff;
+    padding: 44px 16px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 0.5px solid #f0f0f0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .form-back {
+    font-size: 20px;
+    width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .form-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: #333;
+  }
+  .form-submit {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff;
+    padding: 7px 20px;
+    border-radius: 18px;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  /* Form Fields */
+  .form-body {
+    padding: 16px;
+  }
+  .form-group {
+    margin-bottom: 20px;
+  }
+  .form-label {
+    font-size: 14px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .form-label .required {
+    color: #ff4757;
+    font-size: 16px;
+  }
+  .form-input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1.5px solid #eee;
+    border-radius: 12px;
+    font-size: 15px;
+    color: #333;
+    background: #fafafa;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .form-input:focus {
+    border-color: #667eea;
+    background: #fff;
+  }
+  .form-input.textarea {
+    min-height: 120px;
+    resize: none;
+    font-family: inherit;
+    line-height: 1.5;
+  }
+  .form-hint {
+    font-size: 12px;
+    color: #bbb;
+    margin-top: 6px;
+  }
+
+  /* Image Upload */
+  .img-upload-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .img-upload-box {
+    width: 80px; height: 80px;
+    border: 2px dashed #ddd;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    font-size: 24px;
+    color: #ccc;
+  }
+  .img-upload-box span {
+    font-size: 10px;
+  }
+  .img-preview {
+    width: 80px; height: 80px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 30px;
+    position: relative;
+  }
+  .img-preview .remove {
+    position: absolute;
+    top: -4px; right: -4px;
+    width: 18px; height: 18px;
+    background: rgba(0,0,0,0.5);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    font-size: 10px;
+  }
+
+  /* Category Select */
+  .cat-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .cat-chip {
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    border: 1.5px solid #eee;
+    color: #666;
+    background: #fafafa;
+  }
+  .cat-chip.selected {
+    border-color: #667eea;
+    color: #667eea;
+    background: #f0f0ff;
+    font-weight: 600;
+  }
+
+  /* Price Input */
+  .price-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .price-symbol {
+    font-size: 20px;
+    font-weight: 800;
+    color: #333;
+  }
+  .price-input {
+    flex: 1;
+    padding: 12px 14px;
+    border: 1.5px solid #eee;
+    border-radius: 12px;
+    font-size: 20px;
+    font-weight: 700;
+    color: #333;
+    background: #fafafa;
+    outline: none;
+  }
+  .price-input:focus {
+    border-color: #667eea;
+    background: #fff;
+  }
+  .price-type {
+    display: flex;
+    gap: 6px;
+  }
+  .pt-btn {
+    padding: 8px 14px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    background: #f5f5f5;
+    color: #666;
+  }
+  .pt-btn.active {
+    background: #667eea;
+    color: #fff;
+  }
+
+  /* Location */
+  .loc-row {
+    display: flex;
+    gap: 8px;
+  }
+  .loc-btn {
+    flex: 1;
+    padding: 12px;
+    border-radius: 12px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 600;
+    border: 1.5px solid #eee;
+    color: #666;
+    background: #fafafa;
+  }
+  .loc-btn.selected {
+    border-color: #667eea;
+    color: #667eea;
+    background: #f0f0ff;
+  }
+  .loc-btn .loc-icon {
+    font-size: 20px;
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  /* Deadline */
+  .deadline-chips {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .dl-chip {
+    padding: 8px 16px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 500;
+    border: 1.5px solid #eee;
+    color: #666;
+    background: #fafafa;
+  }
+  .dl-chip.selected {
+    border-color: #667eea;
+    color: #667eea;
+    background: #f0f0ff;
+    font-weight: 600;
+  }
+
+  /* AI Tip */
+  .ai-tip {
+    background: #f8f7ff;
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-top: 10px;
+    border: 1px solid #e8e6ff;
+  }
+  .ai-tip-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .ai-tip-text {
+    font-size: 12px;
+    color: #666;
+    line-height: 1.5;
+  }
+  .ai-tip-text strong {
+    color: #667eea;
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== Part 1: Bottom Sheet Selector ===== -->
+<div class="overlay"></div>
+<div class="publish-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">发布什么？</div>
+  <div class="sheet-sub">选择你想发布的类型</div>
+
+  <div class="publish-grid">
+    <div class="pub-option featured">
+      <div class="pub-icon" style="background: linear-gradient(135deg, #667eea20, #764ba220);">📋</div>
+      <div class="pub-name">发布任务</div>
+      <div class="pub-desc">找人帮忙<br>达人来接单</div>
+    </div>
+    <div class="pub-option">
+      <div class="pub-icon" style="background: #f0fff4;">🎯</div>
+      <div class="pub-name">展示技能</div>
+      <div class="pub-desc">展示你的能力<br>等人来找你</div>
+    </div>
+    <div class="pub-option">
+      <div class="pub-icon" style="background: #fff8f0;">📸</div>
+      <div class="pub-name">发帖分享</div>
+      <div class="pub-desc">分享经验<br>记录生活</div>
+    </div>
+    <div class="pub-option">
+      <div class="pub-icon" style="background: #fef3f2;">🛒</div>
+      <div class="pub-name">闲置出售</div>
+      <div class="pub-desc">二手物品<br>跳蚤市场</div>
+    </div>
+    <div class="pub-option">
+      <div class="pub-icon" style="background: #f0faff;">🎪</div>
+      <div class="pub-name">创建活动</div>
+      <div class="pub-desc">组织活动<br>召集参与</div>
+    </div>
+    <div class="pub-option">
+      <div class="pub-icon" style="background: #f5f3ff;">❓</div>
+      <div class="pub-name">发起提问</div>
+      <div class="pub-desc">社区提问<br>寻求建议</div>
+    </div>
+  </div>
+
+  <div class="ai-suggest">
+    <div class="ai-icon">🤖</div>
+    <div class="ai-text">
+      <h4>不知道怎么写？问 AI</h4>
+      <p>描述你的需求，AI 帮你生成任务描述</p>
+    </div>
+    <span class="ai-go">›</span>
+  </div>
+
+  <div class="cancel-btn">取消</div>
+</div>
+
+<!-- ===== Part 2: Task Publish Form (scroll down to see) ===== -->
+<div class="form-page" style="margin-top: 40px;">
+  <div style="text-align:center; padding: 20px; color: #999; font-size: 13px; background: #f0f0ff;">
+    ↓ 以下是选择「发布任务」后的完整表单 ↓
+  </div>
+
+  <div class="form-header">
+    <div class="form-back">←</div>
+    <div class="form-title">发布任务</div>
+    <div class="form-submit">发布</div>
+  </div>
+
+  <div class="form-body">
+    <!-- Title -->
+    <div class="form-group">
+      <div class="form-label"><span class="required">*</span> 任务标题</div>
+      <div class="form-input" style="color: #333;">App UI 设计 — 电商类 10+ 页面</div>
+      <div class="form-hint">简洁描述你需要的帮助，20字以内</div>
+    </div>
+
+    <!-- Images -->
+    <div class="form-group">
+      <div class="form-label">添加图片</div>
+      <div class="img-upload-row">
+        <div class="img-preview" style="background: linear-gradient(135deg, #ffecd2, #fcb69f);">
+          📱
+          <span class="remove">✕</span>
+        </div>
+        <div class="img-preview" style="background: linear-gradient(135deg, #a8edea, #fed6e3);">
+          🎨
+          <span class="remove">✕</span>
+        </div>
+        <div class="img-upload-box">
+          📷
+          <span>添加</span>
+        </div>
+      </div>
+      <div class="form-hint">最多上传 9 张图片，展示参考案例或需求说明</div>
+    </div>
+
+    <!-- Description -->
+    <div class="form-group">
+      <div class="form-label"><span class="required">*</span> 详细描述</div>
+      <div class="form-input textarea" style="color: #333; min-height: 100px;">
+        需要设计一款电商类App的UI界面，包含首页、商品列表、商品详情、购物车、个人中心等核心页面。希望风格简约现代，参考 Shopify 的设计语言...
+      </div>
+      <div class="ai-tip">
+        <span class="ai-tip-icon">💡</span>
+        <div class="ai-tip-text">
+          <strong>AI 建议：</strong>可以补充以下信息让达人更好理解需求：
+          1. 目标用户群体 2. 竞品参考链接 3. 品牌色或风格偏好
+        </div>
+      </div>
+    </div>
+
+    <!-- Category -->
+    <div class="form-group">
+      <div class="form-label"><span class="required">*</span> 任务分类</div>
+      <div class="cat-chips">
+        <div class="cat-chip selected">🎨 设计</div>
+        <div class="cat-chip">💻 编程</div>
+        <div class="cat-chip">📷 摄影</div>
+        <div class="cat-chip">📝 文案</div>
+        <div class="cat-chip">🎵 音乐</div>
+        <div class="cat-chip">🏠 生活</div>
+        <div class="cat-chip">📚 辅导</div>
+      </div>
+    </div>
+
+    <!-- Price -->
+    <div class="form-group">
+      <div class="form-label"><span class="required">*</span> 预算</div>
+      <div class="price-row">
+        <span class="price-symbol">£</span>
+        <div class="price-input" style="max-width: 140px;">200</div>
+        <div class="price-type">
+          <div class="pt-btn active">固定价</div>
+          <div class="pt-btn">时薪</div>
+          <div class="pt-btn">面议</div>
+        </div>
+      </div>
+      <div class="form-hint">设置合理预算可以更快匹配到达人</div>
+    </div>
+
+    <!-- Location -->
+    <div class="form-group">
+      <div class="form-label">任务方式</div>
+      <div class="loc-row">
+        <div class="loc-btn selected">
+          <span class="loc-icon">🌐</span>
+          线上/远程
+        </div>
+        <div class="loc-btn">
+          <span class="loc-icon">📍</span>
+          线下见面
+        </div>
+        <div class="loc-btn">
+          <span class="loc-icon">🤷</span>
+          都可以
+        </div>
+      </div>
+    </div>
+
+    <!-- Deadline -->
+    <div class="form-group">
+      <div class="form-label">截止时间</div>
+      <div class="deadline-chips">
+        <div class="dl-chip">24小时内</div>
+        <div class="dl-chip selected">3天内</div>
+        <div class="dl-chip">1周内</div>
+        <div class="dl-chip">2周内</div>
+        <div class="dl-chip">不急</div>
+        <div class="dl-chip">📅 自定义</div>
+      </div>
+    </div>
+
+    <!-- Skills Required -->
+    <div class="form-group">
+      <div class="form-label">需要的技能</div>
+      <div class="cat-chips">
+        <div class="cat-chip selected">Figma</div>
+        <div class="cat-chip selected">UI设计</div>
+        <div class="cat-chip">Sketch</div>
+        <div class="cat-chip">原型设计</div>
+        <div class="cat-chip" style="border-style:dashed;">+ 自定义</div>
+      </div>
+    </div>
+
+    <!-- AI Boost -->
+    <div class="form-group">
+      <div class="ai-suggest" style="margin: 0;">
+        <div class="ai-icon">✨</div>
+        <div class="ai-text">
+          <h4>AI 智能优化</h4>
+          <p>让 AI 帮你优化任务描述，提升 3 倍匹配率</p>
+        </div>
+        <span class="ai-go">优化 ›</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

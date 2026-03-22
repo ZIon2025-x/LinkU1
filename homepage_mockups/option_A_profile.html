@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>方案A - 我的页面</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'PingFang SC', 'Helvetica Neue', sans-serif;
+    background: #f5f5f5;
+    max-width: 430px;
+    margin: 0 auto;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Profile Header */
+  .profile-header {
+    background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+    padding: 44px 20px 28px;
+    position: relative;
+    overflow: hidden;
+  }
+  .profile-header::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 180px; height: 180px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.06);
+  }
+  .profile-header::after {
+    content: '';
+    position: absolute;
+    bottom: -60px; left: -20px;
+    width: 140px; height: 140px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.04);
+  }
+  .ph-top {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-bottom: 20px;
+    position: relative;
+    z-index: 1;
+  }
+  .ph-icon {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    color: #fff;
+  }
+  .ph-user {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: relative;
+    z-index: 1;
+  }
+  .ph-avatar {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ffecd2, #fcb69f);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px;
+    border: 3px solid rgba(255,255,255,0.3);
+    flex-shrink: 0;
+  }
+  .ph-info {
+    color: #fff;
+  }
+  .ph-name {
+    font-size: 22px;
+    font-weight: 800;
+    margin-bottom: 2px;
+  }
+  .ph-bio {
+    font-size: 13px;
+    opacity: 0.75;
+    margin-bottom: 6px;
+  }
+  .ph-badges {
+    display: flex;
+    gap: 6px;
+  }
+  .ph-badge {
+    padding: 2px 8px;
+    border-radius: 8px;
+    font-size: 10px;
+    font-weight: 600;
+    background: rgba(255,255,255,0.2);
+    color: #fff;
+    backdrop-filter: blur(4px);
+  }
+
+  /* Stats Row */
+  .stats-row {
+    display: flex;
+    background: #fff;
+    margin: -16px 16px 0;
+    border-radius: 16px;
+    padding: 18px 0;
+    position: relative;
+    z-index: 10;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+  }
+  .stat-item {
+    flex: 1;
+    text-align: center;
+    position: relative;
+  }
+  .stat-item:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 4px;
+    bottom: 4px;
+    width: 0.5px;
+    background: #eee;
+  }
+  .stat-num {
+    font-size: 20px;
+    font-weight: 800;
+    color: #333;
+  }
+  .stat-label {
+    font-size: 11px;
+    color: #999;
+    margin-top: 2px;
+  }
+
+  /* Quick Menu */
+  .quick-menu {
+    background: #fff;
+    margin: 12px 16px 0;
+    border-radius: 16px;
+    padding: 4px 0;
+  }
+  .qm-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    padding: 12px 8px;
+  }
+  .qm-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 0;
+  }
+  .qm-icon {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    position: relative;
+  }
+  .qm-icon .qm-badge {
+    position: absolute;
+    top: -3px; right: -3px;
+    background: #ff4757;
+    color: #fff;
+    font-size: 9px;
+    min-width: 16px; height: 16px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700;
+    border: 1.5px solid #fff;
+    padding: 0 3px;
+  }
+  .qm-label {
+    font-size: 11px;
+    color: #333;
+    font-weight: 500;
+  }
+
+  /* Section */
+  .section {
+    background: #fff;
+    margin: 12px 16px 0;
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .section-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 16px 10px;
+  }
+  .section-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .section-more {
+    font-size: 13px;
+    color: #999;
+  }
+
+  /* My Tasks */
+  .task-tabs {
+    display: flex;
+    gap: 0;
+    padding: 0 16px 8px;
+  }
+  .task-tab {
+    flex: 1;
+    text-align: center;
+    padding: 8px 0;
+    font-size: 13px;
+    color: #999;
+    font-weight: 500;
+    border-bottom: 2px solid transparent;
+  }
+  .task-tab.active {
+    color: #667eea;
+    font-weight: 700;
+    border-bottom-color: #667eea;
+  }
+  .task-tab .count {
+    font-size: 11px;
+    background: #f0f0ff;
+    color: #667eea;
+    padding: 0 6px;
+    border-radius: 8px;
+    margin-left: 3px;
+    font-weight: 700;
+  }
+
+  .task-mini {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+  }
+  .task-mini:not(:last-child) {
+    border-bottom: 0.5px solid #f5f5f5;
+  }
+  .tm-icon {
+    width: 44px; height: 44px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+  .tm-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .tm-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .tm-status {
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+  }
+  .status-dot.progress { background: #667eea; }
+  .status-dot.pending { background: #ffa502; }
+  .status-dot.done { background: #4cd964; }
+  .tm-price {
+    font-size: 15px;
+    font-weight: 700;
+    color: #667eea;
+    flex-shrink: 0;
+  }
+
+  /* Wallet Card */
+  .wallet-card {
+    margin: 0 16px;
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    border-radius: 14px;
+    padding: 18px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    overflow: hidden;
+  }
+  .wallet-card::after {
+    content: '';
+    position: absolute;
+    top: -30px; right: -30px;
+    width: 100px; height: 100px;
+    border-radius: 50%;
+    background: rgba(102,126,234,0.15);
+  }
+  .wc-left {
+    position: relative;
+    z-index: 1;
+  }
+  .wc-label {
+    font-size: 12px;
+    opacity: 0.6;
+    margin-bottom: 4px;
+  }
+  .wc-amount {
+    font-size: 28px;
+    font-weight: 800;
+  }
+  .wc-amount small {
+    font-size: 16px;
+    font-weight: 500;
+  }
+  .wc-actions {
+    display: flex;
+    gap: 8px;
+    position: relative;
+    z-index: 1;
+  }
+  .wc-btn {
+    padding: 7px 16px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .wc-btn.primary {
+    background: #667eea;
+    color: #fff;
+  }
+  .wc-btn.secondary {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+  }
+
+  /* Menu List */
+  .menu-list {
+    background: #fff;
+    margin: 12px 16px;
+    border-radius: 16px;
+    overflow: hidden;
+    margin-bottom: 110px;
+  }
+  .menu-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 15px 16px;
+  }
+  .menu-item:not(:last-child) {
+    border-bottom: 0.5px solid #f5f5f5;
+  }
+  .mi-icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .mi-label {
+    flex: 1;
+    font-size: 15px;
+    color: #333;
+    font-weight: 500;
+  }
+  .mi-arrow {
+    color: #ccc;
+    font-size: 16px;
+  }
+  .mi-extra {
+    font-size: 12px;
+    color: #999;
+  }
+
+  /* Bottom Nav */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 430px;
+    background: #fff;
+    border-top: 0.5px solid rgba(0,0,0,0.08);
+    display: flex;
+    padding: 6px 0 24px;
+    z-index: 300;
+  }
+  .nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    font-size: 10px;
+    color: #999;
+  }
+  .nav-item.active { color: #333; font-weight: 600; }
+  .nav-item .icon { font-size: 22px; height: 24px; display: flex; align-items: center; justify-content: center; }
+  .nav-center {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .nav-center-btn {
+    width: 44px; height: 32px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 22px; font-weight: 300;
+    box-shadow: 0 2px 10px rgba(102,126,234,0.3);
+  }
+</style>
+</head>
+<body>
+
+<!-- Profile Header -->
+<div class="profile-header">
+  <div class="ph-top">
+    <div class="ph-icon">⚙️</div>
+    <div class="ph-icon">🔗</div>
+  </div>
+  <div class="ph-user">
+    <div class="ph-avatar">👨</div>
+    <div class="ph-info">
+      <div class="ph-name">Ryan</div>
+      <div class="ph-bio">留学生 · 全栈开发者 · 伦敦</div>
+      <div class="ph-badges">
+        <span class="ph-badge">⭐ 4.9</span>
+        <span class="ph-badge">🔒 已认证</span>
+        <span class="ph-badge">🏅 活跃用户</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+  <div class="stat-item">
+    <div class="stat-num">12</div>
+    <div class="stat-label">发布</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-num">5</div>
+    <div class="stat-label">进行中</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-num">28</div>
+    <div class="stat-label">已完成</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-num">156</div>
+    <div class="stat-label">关注</div>
+  </div>
+</div>
+
+<!-- Quick Menu -->
+<div class="quick-menu">
+  <div class="qm-row">
+    <div class="qm-item">
+      <div class="qm-icon" style="background: #fff0f0;">
+        📋
+        <span class="qm-badge">2</span>
+      </div>
+      <span class="qm-label">我的任务</span>
+    </div>
+    <div class="qm-item">
+      <div class="qm-icon" style="background: #f0f0ff;">
+        🎯
+        <span class="qm-badge">3</span>
+      </div>
+      <span class="qm-label">我的接单</span>
+    </div>
+    <div class="qm-item">
+      <div class="qm-icon" style="background: #f0fff4;">💰</div>
+      <span class="qm-label">钱包</span>
+    </div>
+    <div class="qm-item">
+      <div class="qm-icon" style="background: #fff8f0;">⭐</div>
+      <span class="qm-label">收藏</span>
+    </div>
+  </div>
+  <div class="qm-row">
+    <div class="qm-item">
+      <div class="qm-icon" style="background: #fef3f2;">🏪</div>
+      <span class="qm-label">我的商品</span>
+    </div>
+    <div class="qm-item">
+      <div class="qm-icon" style="background: #f5f3ff;">🎫</div>
+      <span class="qm-label">优惠券</span>
+    </div>
+    <div class="qm-item">
+      <div class="qm-icon" style="background: #ecfdf5;">🏆</div>
+      <span class="qm-label">积分</span>
+    </div>
+    <div class="qm-item">
+      <div class="qm-icon" style="background: #fdf2f8;">📊</div>
+      <span class="qm-label">数据中心</span>
+    </div>
+  </div>
+</div>
+
+<!-- Wallet -->
+<div class="section" style="margin-bottom:0; background:transparent; box-shadow:none;">
+  <div class="section-head" style="padding: 16px 0 10px;">
+    <span class="section-title">💰 我的钱包</span>
+  </div>
+</div>
+<div class="wallet-card">
+  <div class="wc-left">
+    <div class="wc-label">账户余额</div>
+    <div class="wc-amount"><small>£</small>328.50</div>
+  </div>
+  <div class="wc-actions">
+    <div class="wc-btn primary">充值</div>
+    <div class="wc-btn secondary">提现</div>
+  </div>
+</div>
+
+<!-- My Tasks -->
+<div class="section" style="margin-top: 12px;">
+  <div class="section-head">
+    <span class="section-title">📋 我的任务</span>
+    <span class="section-more">查看全部 ›</span>
+  </div>
+  <div class="task-tabs">
+    <div class="task-tab active">进行中 <span class="count">3</span></div>
+    <div class="task-tab">待确认 <span class="count">2</span></div>
+    <div class="task-tab">已完成</div>
+  </div>
+  <div class="task-mini">
+    <div class="tm-icon" style="background: linear-gradient(135deg, #ffecd2, #fcb69f);">🎨</div>
+    <div class="tm-info">
+      <div class="tm-title">App UI 设计 — 电商类</div>
+      <div class="tm-status">
+        <span class="status-dot progress"></span>
+        <span style="color:#667eea; font-weight:600;">进行中</span>
+        <span style="color:#ccc;">· Lisa 设计中</span>
+      </div>
+    </div>
+    <div class="tm-price">£200</div>
+  </div>
+  <div class="task-mini">
+    <div class="tm-icon" style="background: linear-gradient(135deg, #e0c3fc, #8ec5fc);">💻</div>
+    <div class="tm-info">
+      <div class="tm-title">Python 数据分析辅导</div>
+      <div class="tm-status">
+        <span class="status-dot progress"></span>
+        <span style="color:#667eea; font-weight:600;">进行中</span>
+        <span style="color:#ccc;">· 下次 周三 19:00</span>
+      </div>
+    </div>
+    <div class="tm-price">£50/h</div>
+  </div>
+  <div class="task-mini">
+    <div class="tm-icon" style="background: linear-gradient(135deg, #fddb92, #d1fdff);">📝</div>
+    <div class="tm-info">
+      <div class="tm-title">英文论文 Proofreading</div>
+      <div class="tm-status">
+        <span class="status-dot pending"></span>
+        <span style="color:#ffa502; font-weight:600;">待确认</span>
+        <span style="color:#ccc;">· 等待达人接单</span>
+      </div>
+    </div>
+    <div class="tm-price">£40</div>
+  </div>
+</div>
+
+<!-- Settings Menu -->
+<div class="menu-list">
+  <div class="menu-item">
+    <div class="mi-icon" style="background: #f0f0ff;">👤</div>
+    <span class="mi-label">编辑资料</span>
+    <span class="mi-arrow">›</span>
+  </div>
+  <div class="menu-item">
+    <div class="mi-icon" style="background: #f0fff4;">🔔</div>
+    <span class="mi-label">通知设置</span>
+    <span class="mi-arrow">›</span>
+  </div>
+  <div class="menu-item">
+    <div class="mi-icon" style="background: #fff8f0;">🌐</div>
+    <span class="mi-label">语言</span>
+    <span class="mi-extra">简体中文</span>
+    <span class="mi-arrow">›</span>
+  </div>
+  <div class="menu-item">
+    <div class="mi-icon" style="background: #fff0f0;">🔒</div>
+    <span class="mi-label">隐私与安全</span>
+    <span class="mi-arrow">›</span>
+  </div>
+  <div class="menu-item">
+    <div class="mi-icon" style="background: #f5f5f5;">❓</div>
+    <span class="mi-label">帮助中心</span>
+    <span class="mi-arrow">›</span>
+  </div>
+  <div class="menu-item">
+    <div class="mi-icon" style="background: #fef3f2;">💡</div>
+    <span class="mi-label">意见反馈</span>
+    <span class="mi-arrow">›</span>
+  </div>
+</div>
+
+<!-- Bottom Nav -->
+<div class="bottom-nav">
+  <div class="nav-item">
+    <span class="icon">🏠</span>
+    <span>首页</span>
+  </div>
+  <div class="nav-item">
+    <span class="icon">🔍</span>
+    <span>发现</span>
+  </div>
+  <div class="nav-center">
+    <div class="nav-center-btn">+</div>
+  </div>
+  <div class="nav-item">
+    <span class="icon">💬</span>
+    <span>消息</span>
+  </div>
+  <div class="nav-item active">
+    <span class="icon">👤</span>
+    <span>我的</span>
+  </div>
+</div>
+
+</body>
+</html>

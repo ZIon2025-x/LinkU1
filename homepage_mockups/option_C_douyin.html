@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>方案C - 抖音/TikTok风格</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'PingFang SC', 'Helvetica Neue', sans-serif;
+    background: #000;
+    max-width: 430px;
+    margin: 0 auto;
+    min-height: 100vh;
+    overflow-x: hidden;
+    color: #fff;
+  }
+
+  /* Header */
+  .header {
+    position: fixed;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 430px;
+    z-index: 200;
+    padding: 44px 16px 0;
+    background: linear-gradient(180deg, rgba(0,0,0,0.6) 0%, transparent 100%);
+  }
+  .header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .header-avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    border: 2px solid rgba(255,255,255,0.3);
+  }
+  .header-search {
+    background: rgba(255,255,255,0.12);
+    border-radius: 20px;
+    padding: 7px 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: rgba(255,255,255,0.6);
+    flex: 1;
+    margin: 0 12px;
+    backdrop-filter: blur(10px);
+  }
+
+  /* Tab navigation */
+  .tabs {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    padding: 8px 0 12px;
+  }
+  .tab {
+    font-size: 15px;
+    color: rgba(255,255,255,0.5);
+    font-weight: 500;
+    position: relative;
+    padding-bottom: 6px;
+  }
+  .tab.active {
+    color: #fff;
+    font-weight: 700;
+  }
+  .tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 24px;
+    height: 3px;
+    background: #fff;
+    border-radius: 2px;
+  }
+
+  /* Full-screen cards */
+  .card-stack {
+    padding-top: 110px;
+    padding-bottom: 90px;
+  }
+
+  .full-card {
+    width: 100%;
+    height: calc(100vh - 200px);
+    min-height: 500px;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 4px;
+  }
+  .full-card-bg {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 80px;
+  }
+  .full-card-gradient {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(0deg, rgba(0,0,0,0.8) 0%, transparent 40%, transparent 60%, rgba(0,0,0,0.3) 100%);
+  }
+  .full-card-content {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 60px;
+    padding: 20px 16px;
+  }
+  .card-user-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .card-avatar {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    border: 2px solid #fff;
+  }
+  .card-username {
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .card-follow-btn {
+    background: #fe2c55;
+    color: #fff;
+    border: none;
+    padding: 4px 14px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .card-desc {
+    font-size: 14px;
+    line-height: 1.5;
+    margin-bottom: 8px;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  }
+  .card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .card-tag {
+    background: rgba(255,255,255,0.15);
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    backdrop-filter: blur(4px);
+  }
+  .card-tag.price {
+    background: rgba(254, 44, 85, 0.8);
+    font-weight: 700;
+  }
+  .card-price-big {
+    font-size: 28px;
+    font-weight: 800;
+    margin-bottom: 6px;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+  .card-price-big small {
+    font-size: 14px;
+    font-weight: 400;
+    opacity: 0.7;
+  }
+  .card-location {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    opacity: 0.7;
+    margin-bottom: 8px;
+  }
+
+  /* Side Actions */
+  .side-actions {
+    position: absolute;
+    right: 10px;
+    bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+  .side-action {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+  }
+  .side-icon {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.1);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    backdrop-filter: blur(4px);
+  }
+  .side-icon.active { background: rgba(254,44,85,0.3); }
+  .side-count {
+    font-size: 11px;
+    color: rgba(255,255,255,0.8);
+  }
+  .side-avatar-action {
+    position: relative;
+  }
+  .side-avatar-action .side-icon {
+    border: 2px solid #fff;
+  }
+  .side-avatar-plus {
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: #fe2c55;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  /* CTA Button */
+  .card-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #fe2c55;
+    padding: 10px 24px;
+    border-radius: 25px;
+    font-size: 15px;
+    font-weight: 700;
+    margin-top: 4px;
+    box-shadow: 0 4px 20px rgba(254, 44, 85, 0.4);
+  }
+
+  /* Swipe hint */
+  .swipe-hint {
+    text-align: center;
+    padding: 20px;
+    font-size: 13px;
+    color: rgba(255,255,255,0.3);
+    animation: bounce 2s ease-in-out infinite;
+  }
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+
+  /* Quick filter chips */
+  .filter-chips {
+    display: flex;
+    gap: 8px;
+    padding: 0 16px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin-bottom: 12px;
+  }
+  .filter-chips::-webkit-scrollbar { display: none; }
+  .chip {
+    flex-shrink: 0;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    background: rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.7);
+    backdrop-filter: blur(4px);
+  }
+  .chip.active {
+    background: #fff;
+    color: #000;
+    font-weight: 600;
+  }
+
+  /* Bottom Nav */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 430px;
+    background: rgba(0,0,0,0.95);
+    border-top: 0.5px solid rgba(255,255,255,0.1);
+    display: flex;
+    padding: 8px 0 28px;
+    z-index: 300;
+    backdrop-filter: blur(20px);
+  }
+  .nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    font-size: 10px;
+    color: rgba(255,255,255,0.5);
+  }
+  .nav-item.active { color: #fff; }
+  .nav-item .icon { font-size: 22px; }
+  .nav-center {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .nav-center-btn {
+    width: 48px; height: 30px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .nav-center-btn::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: #25f4ee;
+    border-radius: 8px;
+    transform: translateX(-3px);
+  }
+  .nav-center-btn::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: #fe2c55;
+    border-radius: 8px;
+    transform: translateX(3px);
+  }
+  .nav-center-inner {
+    width: 42px; height: 28px;
+    background: #fff;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 1;
+    color: #000;
+    font-size: 22px;
+    font-weight: 300;
+  }
+
+  /* Marquee / announcement */
+  .announcement {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    right: 60px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0,0,0,0.4);
+    border-radius: 20px;
+    padding: 6px 12px;
+    backdrop-filter: blur(10px);
+    z-index: 5;
+  }
+  .ann-icon {
+    background: #fe2c55;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .ann-text {
+    font-size: 12px;
+    color: rgba(255,255,255,0.8);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Progress bar */
+  .progress-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: rgba(255,255,255,0.1);
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: #fff;
+  }
+
+  /* Music-like rotating disc */
+  .music-disc {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #333, #111);
+    border: 2px solid #444;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    animation: spin 4s linear infinite;
+  }
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+</style>
+</head>
+<body>
+
+<!-- Fixed Header -->
+<div class="header">
+  <div class="header-top">
+    <div class="header-left">
+      <div class="header-avatar">R</div>
+    </div>
+    <div class="header-search">
+      🔍 搜索技能或达人
+    </div>
+    <div style="font-size: 18px;">📍</div>
+  </div>
+  <div class="tabs">
+    <span class="tab">关注</span>
+    <span class="tab active">推荐</span>
+    <span class="tab">附近</span>
+    <span class="tab">达人</span>
+  </div>
+  <div class="filter-chips">
+    <span class="chip active">全部</span>
+    <span class="chip">📐 设计</span>
+    <span class="chip">💻 编程</span>
+    <span class="chip">📷 摄影</span>
+    <span class="chip">📝 文案</span>
+    <span class="chip">🎵 音乐</span>
+    <span class="chip">🏠 生活</span>
+    <span class="chip">📚 辅导</span>
+  </div>
+</div>
+
+<!-- Card Stack -->
+<div class="card-stack">
+
+  <!-- Card 1 -->
+  <div class="full-card">
+    <div class="full-card-bg" style="background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);">
+      🎨
+    </div>
+    <div class="full-card-gradient"></div>
+
+    <div class="announcement">
+      <span class="ann-icon">HOT</span>
+      <span class="ann-text">Lisa Chen 刚完成一个品牌设计项目，获得5星好评 ⭐</span>
+    </div>
+
+    <div class="full-card-content">
+      <div class="card-user-row">
+        <div class="card-avatar" style="background: linear-gradient(135deg, #ffecd2, #fcb69f);">👩‍🎨</div>
+        <div>
+          <div class="card-username">Lisa Chen · UI设计师</div>
+          <div class="card-location">📍 伦敦 · ⭐ 4.9 · 完成78单</div>
+        </div>
+      </div>
+      <div class="card-price-big">£60 <small>起</small></div>
+      <div class="card-desc">
+        专业UI/UX设计 · App界面 · 网页设计 · 品牌VI<br>
+        3年设计经验，作品曾获 Dribbble Popular 🏆
+      </div>
+      <div class="card-tags">
+        <span class="card-tag">UI设计</span>
+        <span class="card-tag">品牌设计</span>
+        <span class="card-tag">3天交付</span>
+      </div>
+      <div class="card-cta">💬 立即咨询</div>
+    </div>
+
+    <div class="side-actions">
+      <div class="side-avatar-action">
+        <div class="side-icon" style="background: linear-gradient(135deg, #ffecd2, #fcb69f); font-size: 18px;">👩‍🎨</div>
+        <div class="side-avatar-plus">+</div>
+      </div>
+      <div class="side-action">
+        <div class="side-icon active">❤️</div>
+        <span class="side-count">2.3k</span>
+      </div>
+      <div class="side-action">
+        <div class="side-icon">💬</div>
+        <span class="side-count">89</span>
+      </div>
+      <div class="side-action">
+        <div class="side-icon">⭐</div>
+        <span class="side-count">收藏</span>
+      </div>
+      <div class="side-action">
+        <div class="side-icon">↗️</div>
+        <span class="side-count">分享</span>
+      </div>
+      <div class="side-action">
+        <div class="music-disc">🎨</div>
+      </div>
+    </div>
+
+    <div class="progress-bar">
+      <div class="progress-fill" style="width: 75%; background: linear-gradient(90deg, #25f4ee, #fe2c55);"></div>
+    </div>
+  </div>
+
+  <!-- Card 2 -->
+  <div class="full-card">
+    <div class="full-card-bg" style="background: linear-gradient(135deg, #2d1b69, #11998e, #38ef7d);">
+      💻
+    </div>
+    <div class="full-card-gradient"></div>
+
+    <div class="announcement">
+      <span class="ann-icon">🔥</span>
+      <span class="ann-text">本周最受欢迎技能：Python数据分析</span>
+    </div>
+
+    <div class="full-card-content">
+      <div class="card-user-row">
+        <div class="card-avatar" style="background: linear-gradient(135deg, #a8edea, #fed6e3);">👨‍💻</div>
+        <div>
+          <div class="card-username">CodeMaster · 全栈工程师</div>
+          <div class="card-location">📍 曼城 · ⭐ 5.0 · 完成156单</div>
+        </div>
+      </div>
+      <div class="card-price-big">£50 <small>/小时</small></div>
+      <div class="card-desc">
+        Python/JS全栈 · 数据分析 · 论文数据可视化<br>
+        Google前工程师，帮你搞定一切coding难题 💪
+      </div>
+      <div class="card-tags">
+        <span class="card-tag">Python</span>
+        <span class="card-tag">数据分析</span>
+        <span class="card-tag">全栈开发</span>
+        <span class="card-tag price">🔥 热门</span>
+      </div>
+      <div class="card-cta">⚡ 立即预约</div>
+    </div>
+
+    <div class="side-actions">
+      <div class="side-avatar-action">
+        <div class="side-icon" style="background: linear-gradient(135deg, #a8edea, #fed6e3); font-size: 18px;">👨‍💻</div>
+        <div class="side-avatar-plus">+</div>
+      </div>
+      <div class="side-action">
+        <div class="side-icon">❤️</div>
+        <span class="side-count">4.5k</span>
+      </div>
+      <div class="side-action">
+        <div class="side-icon">💬</div>
+        <span class="side-count">234</span>
+      </div>
+      <div class="side-action">
+        <div class="side-icon">⭐</div>
+        <span class="side-count">收藏</span>
+      </div>
+      <div class="side-action">
+        <div class="side-icon">↗️</div>
+        <span class="side-count">分享</span>
+      </div>
+      <div class="side-action">
+        <div class="music-disc">💻</div>
+      </div>
+    </div>
+
+    <div class="progress-bar">
+      <div class="progress-fill" style="width: 45%; background: linear-gradient(90deg, #25f4ee, #fe2c55);"></div>
+    </div>
+  </div>
+
+  <!-- Card 3 - Activity -->
+  <div class="full-card">
+    <div class="full-card-bg" style="background: linear-gradient(135deg, #0c0c0c, #1a1a2e, #e94560);">
+      📷
+    </div>
+    <div class="full-card-gradient"></div>
+
+    <div class="announcement">
+      <span class="ann-icon">LIVE</span>
+      <span class="ann-text">32人正在参与 · 周末摄影工作坊</span>
+    </div>
+
+    <div class="full-card-content">
+      <div class="card-user-row">
+        <div class="card-avatar" style="background: linear-gradient(135deg, #e0c3fc, #8ec5fc);">📸</div>
+        <div>
+          <div class="card-username">摄影工作坊 · 活动</div>
+          <div class="card-location">📍 伦敦 Kings Cross · 📅 本周六 14:00</div>
+        </div>
+      </div>
+      <div class="card-price-big">FREE</div>
+      <div class="card-desc">
+        专业摄影师带你掌握街拍技巧 📸<br>
+        自带相机/手机均可，初学者友好！名额有限先到先得
+      </div>
+      <div class="card-tags">
+        <span class="card-tag">📷 摄影</span>
+        <span class="card-tag">🎓 教学</span>
+        <span class="card-tag">👥 32/50人</span>
+        <span class="card-tag price">免费</span>
+      </div>
+      <div class="card-cta">🎫 立即报名</div>
+    </div>
+
+    <div class="side-actions">
+      <div class="side-avatar-action">
+        <div class="side-icon" style="background: linear-gradient(135deg, #e0c3fc, #8ec5fc); font-size: 18px;">📸</div>
+        <div class="side-avatar-plus">+</div>
+      </div>
+      <div class="side-action">
+        <div class="side-icon active">❤️</div>
+        <span class="side-count">1.8k</span>
+      </div>
+      <div class="side-action">
+        <div class="side-icon">💬</div>
+        <span class="side-count">56</span>
+      </div>
+      <div class="side-action">
+        <div class="side-icon">⭐</div>
+        <span class="side-count">收藏</span>
+      </div>
+      <div class="side-action">
+        <div class="side-icon">↗️</div>
+        <span class="side-count">分享</span>
+      </div>
+      <div class="side-action">
+        <div class="music-disc">📷</div>
+      </div>
+    </div>
+
+    <div class="progress-bar">
+      <div class="progress-fill" style="width: 60%; background: linear-gradient(90deg, #25f4ee, #fe2c55);"></div>
+    </div>
+  </div>
+
+  <div class="swipe-hint">↑ 上滑查看更多技能 ↑</div>
+</div>
+
+<!-- Bottom Nav -->
+<div class="bottom-nav">
+  <div class="nav-item active">
+    <span class="icon">🏠</span>
+    <span>首页</span>
+  </div>
+  <div class="nav-item">
+    <span class="icon">🔍</span>
+    <span>发现</span>
+  </div>
+  <div class="nav-center">
+    <div class="nav-center-btn">
+      <div class="nav-center-inner">+</div>
+    </div>
+  </div>
+  <div class="nav-item">
+    <span class="icon">💬</span>
+    <span>消息</span>
+  </div>
+  <div class="nav-item">
+    <span class="icon">👤</span>
+    <span>我的</span>
+  </div>
+</div>
+
+</body>
+</html>

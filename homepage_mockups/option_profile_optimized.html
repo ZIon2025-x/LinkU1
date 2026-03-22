@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>我的页面 — 基于现有设计系统优化版</title>
+<style>
+  /* ===== 完全对齐 Flutter 项目的设计 Token ===== */
+  :root {
+    /* AppColors */
+    --primary: #007AFF;          /* Apple System Blue */
+    --primary-light: #409CFF;
+    --accent: #FF8033;
+    --gold: #FFD700;
+    --accent-pink: #FF4D80;
+    --teal: #5AC8FA;
+    --purple: #7359F2;
+    --indigo: #5A67D8;
+    --success: #26BF73;
+    --warning: #FFA600;
+    --error: #F24D4D;
+    --bg: #F5F5F5;
+    --card: #FFFFFF;
+    --text-primary: #000000;
+    --text-secondary: #8E8E93;
+    --text-tertiary: #C7C7CC;
+    --divider: #E5E5EA;
+    --badge-red: #EB5757;
+
+    /* AppSpacing (8pt grid) */
+    --xs: 4px;
+    --sm: 8px;
+    --md: 16px;
+    --lg: 24px;
+    --xl: 32px;
+
+    /* AppRadius (mobile) */
+    --r-small: 10px;
+    --r-medium: 16px;
+    --r-large: 24px;
+    --r-pill: 999px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'PingFang SC', sans-serif;
+    background: var(--bg);
+    max-width: 430px;
+    margin: 0 auto;
+    min-height: 100vh;
+    overflow-x: hidden;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+  }
+
+  /* ===== DecorativeBackground (首页同款装饰背景) ===== */
+  .decorative-bg {
+    position: fixed;
+    top: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 430px;
+    height: 320px;
+    background: linear-gradient(180deg,
+      rgba(0,122,255,0.06) 0%,
+      rgba(64,156,255,0.03) 50%,
+      transparent 100%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .decorative-bg::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -40px;
+    width: 200px; height: 200px;
+    border-radius: 50%;
+    background: rgba(0,122,255,0.04);
+  }
+
+  /* ===== Top AppBar (对齐 _buildProfileMobileAppBar) ===== */
+  .appbar {
+    position: relative;
+    z-index: 10;
+    padding: 48px var(--md) var(--sm);
+    display: flex;
+    align-items: center;
+    background: transparent;
+  }
+  .appbar-spacer { width: 44px; height: 44px; }
+  .appbar-title {
+    flex: 1;
+    text-align: center;
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.41px;
+  }
+  .appbar-edit {
+    width: 44px; height: 44px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .appbar-edit svg {
+    width: 22px; height: 22px;
+    color: var(--text-primary);
+  }
+
+  /* ===== Scroll Content ===== */
+  .content {
+    position: relative;
+    z-index: 5;
+    padding-bottom: 100px;
+  }
+
+  /* ===== User Info Section (对齐 _buildUserInfoSection) ===== */
+  .user-section {
+    padding: var(--sm) var(--md) 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* 头像: 110px 渐变环 + 3px padding + 2px inner padding */
+  .avatar-stack {
+    position: relative;
+    width: 110px; height: 110px;
+    margin-bottom: var(--md);
+  }
+  .avatar-ring {
+    width: 110px; height: 110px;
+    border-radius: 50%;
+    padding: 3px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  }
+  .avatar-inner {
+    width: 100%; height: 100%;
+    border-radius: 50%;
+    background: var(--card);
+    padding: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .avatar-img {
+    width: 96px; height: 96px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #E8EAF0, #D0D4E0);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 42px;
+    overflow: hidden;
+  }
+  /* MemberBadgeAvatarOverlay — 底部右侧 VIP 角标 */
+  .member-badge {
+    position: absolute;
+    bottom: 2px; right: 2px;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--gold), #FF8C00);
+    border: 2.5px solid var(--card);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+  }
+
+  /* 用户名 + verified checkmark */
+  .username-row {
+    display: flex;
+    align-items: center;
+    gap: var(--sm);
+    margin-bottom: 6px;
+  }
+  .username {
+    font-size: 24px;
+    font-weight: 700;
+  }
+  .verified-icon {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--primary);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    font-size: 10px;
+  }
+
+  /* UserIdentityBadges */
+  .identity-badges {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+  .id-badge {
+    padding: 3px 10px;
+    border-radius: var(--r-pill);
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .id-badge.vip {
+    background: linear-gradient(90deg, rgba(255,215,0,0.15), rgba(255,140,0,0.15));
+    color: #D4A000;
+  }
+  .id-badge.expert {
+    background: rgba(0,122,255,0.08);
+    color: var(--primary);
+  }
+  .id-badge.student {
+    background: rgba(115,89,242,0.08);
+    color: var(--purple);
+  }
+
+  /* 邮箱 pill */
+  .email-pill {
+    padding: 4px 12px;
+    border-radius: 20px;
+    background: rgba(0,122,255,0.05);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+
+  /* ===== Stats Section (对齐 _buildStatsSection) ===== */
+  .stats-card {
+    margin: var(--lg) var(--md) 0;
+    background: var(--card);
+    border-radius: var(--r-large);
+    padding: var(--md) 0;
+    box-shadow: 0 5px 10px rgba(0,0,0,0.03);
+  }
+  .stats-row {
+    display: flex;
+    align-items: center;
+  }
+  .stat {
+    flex: 1;
+    text-align: center;
+    position: relative;
+    cursor: pointer;
+  }
+  .stat:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    right: 0; top: 6px; bottom: 6px;
+    width: 1px;
+    background: var(--divider);
+  }
+  .stat-value {
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: var(--xs);
+  }
+  .stat-value.primary { color: var(--primary); }
+  .stat-value.success { color: var(--success); }
+  .stat-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  /* CreditScoreGauge — 72px SVG ring */
+  .credit-gauge {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .gauge-ring {
+    width: 72px; height: 72px;
+    position: relative;
+    margin-bottom: 2px;
+  }
+  .gauge-ring svg {
+    transform: rotate(-90deg);
+  }
+  .gauge-score {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--success);
+  }
+
+  /* VIP 查看详情 */
+  .vip-detail {
+    border-top: 1px solid var(--divider);
+    margin-top: var(--md);
+    padding: 12px var(--md) 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--primary);
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .vip-detail svg { width: 16px; height: 16px; color: var(--primary); }
+
+  /* ===== Badges Display (对齐 BadgesDisplayView) ===== */
+  .badges-section {
+    margin: var(--lg) var(--md) 0;
+  }
+  .badges-card {
+    background: var(--card);
+    border-radius: var(--r-large);
+    padding: var(--md);
+    box-shadow: 0 5px 10px rgba(0,0,0,0.03);
+  }
+  .badges-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .badges-title {
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .badges-more {
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+  .badges-scroll {
+    display: flex;
+    gap: 14px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .badges-scroll::-webkit-scrollbar { display: none; }
+  .badge-item {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--xs);
+    width: 56px;
+  }
+  .badge-icon {
+    width: 44px; height: 44px;
+    border-radius: var(--r-small);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+  }
+  .badge-icon.locked { opacity: 0.25; filter: grayscale(1); }
+  .badge-name {
+    font-size: 10px;
+    color: var(--text-secondary);
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  /* ===== Menu Section (对齐 _buildMyContentSection / _buildSystemSection) ===== */
+  .menu-section {
+    margin: var(--lg) var(--md) 0;
+  }
+  .menu-title {
+    font-size: 16px;
+    font-weight: 700;
+    padding: 0 var(--sm) 12px;
+  }
+  .menu-card {
+    background: var(--card);
+    border-radius: var(--r-large);
+    box-shadow: 0 5px 10px rgba(0,0,0,0.03);
+    overflow: hidden;
+  }
+
+  /* _ProfileRow */
+  .profile-row {
+    display: flex;
+    align-items: center;
+    padding: 14px var(--md);
+    cursor: pointer;
+  }
+  .profile-row:active {
+    background: rgba(0,0,0,0.02);
+  }
+  .pr-icon {
+    width: 38px; height: 38px;
+    border-radius: var(--r-small);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    margin-right: var(--md);
+  }
+  .pr-icon svg, .pr-icon span {
+    font-size: 18px;
+  }
+  .pr-text {
+    flex: 1;
+    min-width: 0;
+  }
+  .pr-title {
+    font-size: 16px;
+    font-weight: 600;
+  }
+  .pr-subtitle {
+    font-size: 13px;
+    color: var(--text-tertiary);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .pr-chevron {
+    color: var(--text-tertiary);
+    font-size: 14px;
+    flex-shrink: 0;
+    margin-left: var(--sm);
+  }
+  .pr-extra {
+    font-size: 13px;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+    margin-left: var(--sm);
+  }
+  .pr-extra.highlight { color: var(--primary); font-weight: 500; }
+  .pr-extra.warning { color: var(--warning); font-weight: 500; }
+
+  /* Divider: indent 56px (38 icon + 16 gap + 2 offset) */
+  .row-divider {
+    height: 0.5px;
+    background: var(--divider);
+    margin-left: 70px;
+  }
+
+  /* ===== Logout Button (对齐 _buildLogoutButton) ===== */
+  .logout-btn {
+    margin: var(--lg) var(--md) 40px;
+    padding: var(--md);
+    text-align: center;
+    border-radius: var(--r-large);
+    background: rgba(242,77,77,0.08);
+    border: 1px solid rgba(242,77,77,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sm);
+    cursor: pointer;
+  }
+  .logout-btn:active {
+    background: rgba(242,77,77,0.14);
+  }
+  .logout-icon { font-size: 18px; color: var(--error); }
+  .logout-text {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--error);
+  }
+
+  /* ===== Bottom Nav (对齐 MainTabView) ===== */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 430px;
+    background: var(--card);
+    border-top: 0.5px solid var(--divider);
+    display: flex;
+    padding: 6px 0 26px;
+    z-index: 300;
+  }
+  .nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+  .nav-icon {
+    width: 24px; height: 24px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    color: var(--text-secondary);
+  }
+  .nav-label {
+    font-size: 10px;
+    color: var(--text-secondary);
+  }
+  .nav-item.active .nav-icon { color: var(--primary); }
+  .nav-item.active .nav-label { color: var(--primary); font-weight: 600; }
+  /* 中间发布按钮 */
+  .nav-center {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .nav-post-btn {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    font-size: 26px;
+    font-weight: 300;
+    margin-top: -16px;
+    box-shadow: 0 4px 12px rgba(0,122,255,0.3);
+  }
+
+  /* ===== NEW: 任务概览快捷入口 ===== */
+  .task-glance {
+    margin: var(--lg) var(--md) 0;
+  }
+  .tg-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 var(--sm) 10px;
+  }
+  .tg-title {
+    font-size: 16px;
+    font-weight: 700;
+  }
+  .tg-more {
+    font-size: 13px;
+    color: var(--primary);
+    font-weight: 500;
+  }
+  .tg-scroll {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .tg-scroll::-webkit-scrollbar { display: none; }
+  .tg-card {
+    flex-shrink: 0;
+    width: 200px;
+    background: var(--card);
+    border-radius: var(--r-medium);
+    padding: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    border: 0.5px solid rgba(0,0,0,0.04);
+  }
+  .tg-card-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .tg-card-icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .tg-card-title {
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+  }
+  .tg-card-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .tg-card-status.progress {
+    background: rgba(0,122,255,0.08);
+    color: var(--primary);
+  }
+  .tg-card-status.pending {
+    background: rgba(255,166,0,0.08);
+    color: var(--warning);
+  }
+  .tg-card-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+  }
+  .tg-card-person {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .tg-card-price {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  /* ===== NEW: 钱包快捷预览 ===== */
+  .wallet-preview {
+    margin: 0 var(--md);
+    margin-top: 12px;
+    background: var(--card);
+    border-radius: var(--r-medium);
+    padding: 14px var(--md);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border: 0.5px solid rgba(0,0,0,0.04);
+  }
+  .wp-icon {
+    width: 38px; height: 38px;
+    border-radius: var(--r-small);
+    background: linear-gradient(135deg, rgba(38,191,115,0.18), rgba(38,191,115,0.12));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .wp-info { flex: 1; }
+  .wp-label { font-size: 13px; color: var(--text-secondary); }
+  .wp-amount { font-size: 20px; font-weight: 800; }
+  .wp-actions { display: flex; gap: 6px; }
+  .wp-btn {
+    padding: 6px 14px;
+    border-radius: var(--r-small);
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .wp-btn.primary { background: var(--primary); color: #fff; }
+  .wp-btn.outline { background: transparent; color: var(--primary); border: 1.5px solid var(--primary); }
+
+  /* ===== Label ===== */
+  .section-label {
+    display: block;
+    padding: 0 var(--sm);
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+  }
+</style>
+</head>
+<body>
+
+<!-- DecorativeBackground -->
+<div class="decorative-bg"></div>
+
+<!-- AppBar -->
+<div class="appbar">
+  <div class="appbar-spacer"></div>
+  <div class="appbar-title">我的</div>
+  <div class="appbar-edit">
+    <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+    </svg>
+  </div>
+</div>
+
+<!-- Scroll Content -->
+<div class="content">
+
+  <!-- ① User Info Section -->
+  <div class="user-section">
+    <div class="avatar-stack">
+      <div class="avatar-ring">
+        <div class="avatar-inner">
+          <div class="avatar-img">👨</div>
+        </div>
+      </div>
+      <div class="member-badge">👑</div>
+    </div>
+    <div class="username-row">
+      <span class="username">Ryan</span>
+      <span class="verified-icon">✓</span>
+    </div>
+    <div class="identity-badges">
+      <span class="id-badge vip">👑 VIP</span>
+      <span class="id-badge expert">🎯 达人</span>
+      <span class="id-badge student">🎓 学生认证</span>
+    </div>
+    <div class="email-pill">ryan@example.com</div>
+  </div>
+
+  <!-- ② Stats Section -->
+  <div class="stats-card">
+    <div class="stats-row">
+      <div class="stat">
+        <div class="stat-value primary">5</div>
+        <div class="stat-label">进行中</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value success">28</div>
+        <div class="stat-label">已完成</div>
+      </div>
+      <div class="stat">
+        <div class="credit-gauge">
+          <div class="gauge-ring">
+            <svg width="72" height="72" viewBox="0 0 72 72">
+              <circle cx="36" cy="36" r="28" fill="none" stroke="#F0F0F0" stroke-width="7"/>
+              <circle cx="36" cy="36" r="28" fill="none" stroke="#26BF73" stroke-width="7"
+                stroke-dasharray="175.9" stroke-dashoffset="17.6" stroke-linecap="round"/>
+            </svg>
+            <div class="gauge-score">90</div>
+          </div>
+          <div class="stat-label">信用分</div>
+        </div>
+      </div>
+    </div>
+    <!-- VIP: 查看详情 -->
+    <div class="vip-detail">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
+      查看详细统计
+      <svg viewBox="0 0 24 24" fill="currentColor" style="width:16px;height:16px;"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+    </div>
+  </div>
+
+  <!-- ③ Badges Display -->
+  <div class="badges-section">
+    <div class="badges-card">
+      <div class="badges-header">
+        <span class="badges-title">我的徽章</span>
+        <span class="badges-more">全部 ›</span>
+      </div>
+      <div class="badges-scroll">
+        <div class="badge-item">
+          <div class="badge-icon" style="background: rgba(0,122,255,0.08);">🌟</div>
+          <span class="badge-name">活跃用户</span>
+        </div>
+        <div class="badge-item">
+          <div class="badge-icon" style="background: rgba(255,215,0,0.1);">🏆</div>
+          <span class="badge-name">任务达人</span>
+        </div>
+        <div class="badge-item">
+          <div class="badge-icon" style="background: rgba(38,191,115,0.08);">💯</div>
+          <span class="badge-name">好评之王</span>
+        </div>
+        <div class="badge-item">
+          <div class="badge-icon" style="background: rgba(115,89,242,0.08);">🤝</div>
+          <span class="badge-name">信任伙伴</span>
+        </div>
+        <div class="badge-item">
+          <div class="badge-icon locked" style="background: #F0F0F0;">🔥</div>
+          <span class="badge-name">连续达人</span>
+        </div>
+        <div class="badge-item">
+          <div class="badge-icon locked" style="background: #F0F0F0;">💎</div>
+          <span class="badge-name">超级会员</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ④ NEW: 任务概览（横滑卡片）—— 现有页面没有，但用户反馈"太干净" -->
+  <div class="task-glance">
+    <div class="tg-title-row">
+      <span class="tg-title">任务概览</span>
+      <span class="tg-more">全部任务 ›</span>
+    </div>
+    <div class="tg-scroll">
+      <div class="tg-card">
+        <div class="tg-card-top">
+          <div class="tg-card-icon" style="background: linear-gradient(135deg, rgba(0,122,255,0.18), rgba(0,122,255,0.12));">🎨</div>
+          <div class="tg-card-title">App UI 设计</div>
+        </div>
+        <div class="tg-card-status progress">● 设计中</div>
+        <div class="tg-card-meta">
+          <span class="tg-card-person">Lisa · 初稿已交</span>
+          <span class="tg-card-price">£200</span>
+        </div>
+      </div>
+      <div class="tg-card">
+        <div class="tg-card-top">
+          <div class="tg-card-icon" style="background: linear-gradient(135deg, rgba(115,89,242,0.18), rgba(115,89,242,0.12));">💻</div>
+          <div class="tg-card-title">Python 辅导 1v1</div>
+        </div>
+        <div class="tg-card-status progress">● 进行中</div>
+        <div class="tg-card-meta">
+          <span class="tg-card-person">David · 周三 19:00</span>
+          <span class="tg-card-price">£50/h</span>
+        </div>
+      </div>
+      <div class="tg-card">
+        <div class="tg-card-top">
+          <div class="tg-card-icon" style="background: linear-gradient(135deg, rgba(255,166,0,0.18), rgba(255,166,0,0.12));">📝</div>
+          <div class="tg-card-title">论文 Proofreading</div>
+        </div>
+        <div class="tg-card-status pending">● 待接单</div>
+        <div class="tg-card-meta">
+          <span class="tg-card-person">3人报价中</span>
+          <span class="tg-card-price">£40</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑤ NEW: 钱包快捷预览 —— 原版要进二级页面才能看余额 -->
+  <div class="wallet-preview">
+    <div class="wp-icon">💳</div>
+    <div class="wp-info">
+      <div class="wp-label">钱包余额</div>
+      <div class="wp-amount">£328.50</div>
+    </div>
+    <div class="wp-actions">
+      <div class="wp-btn primary">充值</div>
+      <div class="wp-btn outline">提现</div>
+    </div>
+  </div>
+
+  <!-- ⑥ My Content Section (对齐 _buildMyContentSection) -->
+  <div class="menu-section">
+    <div class="menu-title">我的内容</div>
+    <div class="menu-card">
+      <div class="profile-row">
+        <div class="pr-icon" style="background: linear-gradient(135deg, rgba(0,122,255,0.18), rgba(0,122,255,0.12));">
+          <span style="color: var(--primary);">📋</span>
+        </div>
+        <div class="pr-text">
+          <div class="pr-title">我的任务</div>
+          <div class="pr-subtitle">查看所有任务动态</div>
+        </div>
+        <span class="pr-chevron">›</span>
+      </div>
+      <div class="row-divider"></div>
+      <div class="profile-row">
+        <div class="pr-icon" style="background: linear-gradient(135deg, rgba(255,166,0,0.18), rgba(255,166,0,0.12));">
+          <span style="color: var(--warning);">📦</span>
+        </div>
+        <div class="pr-text">
+          <div class="pr-title">我的商品</div>
+          <div class="pr-subtitle">管理闲置/二手物品</div>
+        </div>
+        <span class="pr-chevron">›</span>
+      </div>
+      <div class="row-divider"></div>
+      <div class="profile-row">
+        <div class="pr-icon" style="background: linear-gradient(135deg, rgba(0,122,255,0.18), rgba(0,122,255,0.12));">
+          <span style="color: var(--primary);">📝</span>
+        </div>
+        <div class="pr-text">
+          <div class="pr-title">我的帖子</div>
+          <div class="pr-subtitle">查看社区讨论内容</div>
+        </div>
+        <span class="pr-chevron">›</span>
+      </div>
+      <div class="row-divider"></div>
+      <div class="profile-row">
+        <div class="pr-icon" style="background: linear-gradient(135deg, rgba(38,191,115,0.18), rgba(38,191,115,0.12));">
+          <span style="color: var(--success);">💳</span>
+        </div>
+        <div class="pr-text">
+          <div class="pr-title">我的钱包</div>
+          <div class="pr-subtitle">余额、交易记录</div>
+        </div>
+        <span class="pr-chevron">›</span>
+      </div>
+      <div class="row-divider"></div>
+      <div class="profile-row">
+        <div class="pr-icon" style="background: linear-gradient(135deg, rgba(115,89,242,0.18), rgba(115,89,242,0.12));">
+          <span style="color: var(--purple);">🛡️</span>
+        </div>
+        <div class="pr-text">
+          <div class="pr-title">服务申请</div>
+          <div class="pr-subtitle">服务申请状态</div>
+        </div>
+        <span class="pr-chevron">›</span>
+      </div>
+      <div class="row-divider"></div>
+      <!-- Expert only -->
+      <div class="profile-row">
+        <div class="pr-icon" style="background: linear-gradient(135deg, rgba(90,103,216,0.18), rgba(90,103,216,0.12));">
+          <span style="color: var(--indigo);">👨‍💼</span>
+        </div>
+        <div class="pr-text">
+          <div class="pr-title">达人管理</div>
+          <div class="pr-subtitle">管理接单和技能展示</div>
+        </div>
+        <span class="pr-chevron">›</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑦ System & Verification Section (对齐 _buildSystemSection) -->
+  <div class="menu-section">
+    <div class="menu-title">系统与认证</div>
+    <div class="menu-card">
+      <div class="profile-row">
+        <div class="pr-icon" style="background: linear-gradient(135deg, rgba(90,103,216,0.18), rgba(90,103,216,0.12));">
+          <span style="color: var(--indigo);">🎓</span>
+        </div>
+        <div class="pr-text">
+          <div class="pr-title">学生认证</div>
+        </div>
+        <span class="pr-extra highlight">已认证</span>
+        <span class="pr-chevron">›</span>
+      </div>
+      <div class="row-divider"></div>
+      <div class="profile-row">
+        <div class="pr-icon" style="background: linear-gradient(135deg, rgba(0,122,255,0.18), rgba(0,122,255,0.12));">
+          <span style="color: var(--primary);">💳</span>
+        </div>
+        <div class="pr-text">
+          <div class="pr-title">收款账户</div>
+        </div>
+        <span class="pr-extra warning">未绑定</span>
+        <span class="pr-chevron">›</span>
+      </div>
+      <div class="row-divider"></div>
+      <div class="profile-row">
+        <div class="pr-icon" style="background: linear-gradient(135deg, rgba(255,166,0,0.18), rgba(255,166,0,0.12));">
+          <span style="color: var(--warning);">📅</span>
+        </div>
+        <div class="pr-text">
+          <div class="pr-title">动态</div>
+        </div>
+        <span class="pr-chevron">›</span>
+      </div>
+      <div class="row-divider"></div>
+      <div class="profile-row">
+        <div class="pr-icon" style="background: linear-gradient(135deg, rgba(0,122,255,0.18), rgba(0,122,255,0.12));">
+          <span style="color: var(--primary);">⚙️</span>
+        </div>
+        <div class="pr-text">
+          <div class="pr-title">我的资料</div>
+        </div>
+        <span class="pr-chevron">›</span>
+      </div>
+      <div class="row-divider"></div>
+      <div class="profile-row">
+        <div class="pr-icon" style="background: linear-gradient(135deg, rgba(255,77,128,0.18), rgba(255,77,128,0.12));">
+          <span style="color: var(--accent-pink);">🎫</span>
+        </div>
+        <div class="pr-text">
+          <div class="pr-title">积分与优惠券</div>
+        </div>
+        <span class="pr-extra">1,280积分 · 3张券</span>
+        <span class="pr-chevron">›</span>
+      </div>
+      <div class="row-divider"></div>
+      <div class="profile-row">
+        <div class="pr-icon" style="background: linear-gradient(135deg, rgba(142,142,147,0.18), rgba(142,142,147,0.12));">
+          <span style="color: var(--text-secondary);">⚙️</span>
+        </div>
+        <div class="pr-text">
+          <div class="pr-title">设置</div>
+        </div>
+        <span class="pr-chevron">›</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑧ Logout -->
+  <div class="logout-btn">
+    <span class="logout-icon">⏻</span>
+    <span class="logout-text">退出登录</span>
+  </div>
+
+</div>
+
+<!-- Bottom Nav -->
+<div class="bottom-nav">
+  <div class="nav-item">
+    <div class="nav-icon">🏠</div>
+    <span class="nav-label">首页</span>
+  </div>
+  <div class="nav-item">
+    <div class="nav-icon">💬</div>
+    <span class="nav-label">社区</span>
+  </div>
+  <div class="nav-center">
+    <div class="nav-post-btn">+</div>
+  </div>
+  <div class="nav-item">
+    <div class="nav-icon">📨</div>
+    <span class="nav-label">消息</span>
+  </div>
+  <div class="nav-item active">
+    <div class="nav-icon">👤</div>
+    <span class="nav-label">我的</span>
+  </div>
+</div>
+
+</body>
+</html>
