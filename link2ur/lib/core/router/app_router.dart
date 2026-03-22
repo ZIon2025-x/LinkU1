@@ -91,6 +91,14 @@ class AppRouter {
         return AppRoutes.main;
       }
 
+      // 已登录 + 未完成身份引导 → 跳转到引导页
+      if (isAuthenticated && !location.startsWith('/onboarding')) {
+        final user = authState.user;
+        if (user != null && !user.onboardingCompleted) {
+          return AppRoutes.identityOnboarding;
+        }
+      }
+
       // 达人专属路由：非达人用户重定向到达人介绍页
       if (location.startsWith(AppRoutes.expertDashboard) ||
           location.startsWith(AppRoutes.expertProfileEdit)) {

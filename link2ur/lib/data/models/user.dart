@@ -29,6 +29,7 @@ class User extends Equatable {
     this.createdAt,
     this.profileViews,
     this.displayedBadge,
+    this.onboardingCompleted = false,
   });
 
   final String id;
@@ -50,6 +51,7 @@ class User extends Equatable {
   final DateTime? createdAt;
   final int? profileViews;
   final UserBadge? displayedBadge;
+  final bool onboardingCompleted;
 
   /// 头像URL
   String? get avatarUrl => avatar;
@@ -98,6 +100,7 @@ class User extends Equatable {
           ? UserBadge.fromJson(
               json['displayed_badge'] as Map<String, dynamic>)
           : null,
+      onboardingCompleted: _parseBool(json['onboarding_completed']),
     );
   }
 
@@ -130,6 +133,7 @@ class User extends Equatable {
       'created_at': createdAt?.toIso8601String(),
       'profile_views': profileViews,
       'displayed_badge': displayedBadge?.toJson(),
+      'onboarding_completed': onboardingCompleted,
     };
   }
 
@@ -153,6 +157,7 @@ class User extends Equatable {
     DateTime? createdAt,
     int? profileViews,
     UserBadge? displayedBadge,
+    bool? onboardingCompleted,
   }) {
     return User(
       id: id ?? this.id,
@@ -174,6 +179,7 @@ class User extends Equatable {
       createdAt: createdAt ?? this.createdAt,
       profileViews: profileViews ?? this.profileViews,
       displayedBadge: displayedBadge ?? this.displayedBadge,
+      onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
     );
   }
 
@@ -198,6 +204,7 @@ class User extends Equatable {
         createdAt,
         profileViews,
         displayedBadge,
+        onboardingCompleted,
       ];
 
   /// 信用分（百分制，由avgRating转换）

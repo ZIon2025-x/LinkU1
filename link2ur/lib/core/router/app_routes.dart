@@ -92,6 +92,7 @@ class AppRoutes {
 
   // 引导
   static const String onboarding = '/onboarding';
+  static const String identityOnboarding = '/onboarding/identity';
 
   // 支付
   static const String payment = '/payment';
