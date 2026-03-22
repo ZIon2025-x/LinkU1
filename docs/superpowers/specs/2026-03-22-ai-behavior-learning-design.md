@@ -210,12 +210,19 @@ class BehaviorCollector:
 | 圣诞假期 | `christmas_break` | 12月 | 已在英国 |
 | 复活节假期 | `easter_break` | 3-4月 | 已在英国 |
 
-### 判断逻辑（夜间聚合时执行）
+### 判断逻辑
 
+阶段判断在两个地方执行：
+
+**1. BehaviorCollector（实时，有聊天行为的用户）：**
 1. 读取用户身份（`identity`: `pre_arrival` / `in_uk`）
 2. 取当前月份，匹配所有符合的候选阶段
-3. 用当天 AI insights 中的 `stage_hints` 微调（如果 AI 从对话中识别到特定阶段信号，增加该阶段权重）
-4. 输出多阶段数组
+3. 用 AI insights 中的 `stages` 补充（如果 AI 从对话中识别到月份规则之外的阶段信号）
+4. 输出多阶段数组，写入 UserDemand
+
+**2. 夜间任务（兜底，无聊天行为的用户）：**
+1. 同样基于 `identity` + 月份计算
+2. 无 AI 信号补充
 
 ### UserDemand 模型改动
 
