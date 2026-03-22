@@ -1,6 +1,6 @@
 """User preference vector construction.
 
-Extracts user preferences from UserPreferences model, task history,
+Extracts user preferences from UserProfilePreference model, task history,
 view history, search keywords, and skipped tasks (negative feedback).
 """
 
@@ -16,9 +16,9 @@ logger = logging.getLogger(__name__)
 
 def get_user_preferences(db: Session, user_id: str):
     """Load user's explicit preference settings from DB."""
-    from app.models import UserPreferences
-    return db.query(UserPreferences).filter(
-        UserPreferences.user_id == user_id
+    from app.models import UserProfilePreference
+    return db.query(UserProfilePreference).filter(
+        UserProfilePreference.user_id == user_id
     ).first()
 
 
@@ -122,7 +122,7 @@ def build_user_preference_vector(
     Args:
         db: SQLAlchemy session
         user: User model instance
-        preferences: UserPreferences instance (or None)
+        preferences: UserProfilePreference instance (or None)
         history: List of TaskHistory records
         view_history: List of view interaction dicts
         search_keywords: List of extracted search keywords
@@ -148,16 +148,27 @@ def build_user_preference_vector(
 
     # --- Explicit preferences ---
     if preferences:
+        def _parse_json_field(val):
+            """Parse a JSON field that may be a string (Text) or already parsed (JSON column)."""
+            if not val:
+                return []
+            if isinstance(val, list):
+                return val
+            try:
+                return json.loads(val)
+            except (json.JSONDecodeError, TypeError):
+                return []
+
         if preferences.task_types:
-            vector["task_types"] = json.loads(preferences.task_types)
+            vector["task_types"] = _parse_json_field(preferences.task_types)
             vector["task_types_from_preference"] = True
         if preferences.locations:
-            vector["locations"] = json.loads(preferences.locations)
+            vector["locations"] = _parse_json_field(preferences.locations)
             vector["locations_from_preference"] = True
         if preferences.task_levels:
-            vector["task_levels"] = json.loads(preferences.task_levels)
+            vector["task_levels"] = _parse_json_field(preferences.task_levels)
         if preferences.keywords:
-            vector["keywords"] = json.loads(preferences.keywords)
+            vector["keywords"] = _parse_json_field(preferences.keywords)
 
     # --- Learn from view history (long views > 30s indicate interest) ---
     if view_history:

@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_, desc
 import math
 
-from app.models import Task, User, UserPreferences, TaskHistory, Review
+from app.models import Task, User, UserProfilePreference, TaskHistory, Review
 from app.crud import get_utc_time
 from app.redis_cache import redis_cache
 
@@ -1062,7 +1062,7 @@ class TaskRecommendationEngine:
         preferences = self._get_user_preferences(user.id)
         if preferences and preferences.locations:
             try:
-                preferred_locations = json.loads(preferences.locations)
+                preferred_locations = preferences.locations if isinstance(preferences.locations, list) else json.loads(preferences.locations)
                 for loc in preferred_locations:
                     # 提取城市名
                     city = loc.split(',')[-1].strip() if ',' in loc else loc
@@ -1497,10 +1497,10 @@ class TaskRecommendationEngine:
         result.sort(key=lambda x: x["score"], reverse=True)
         return result[:limit]
     
-    def _get_user_preferences(self, user_id: str) -> Optional[UserPreferences]:
+    def _get_user_preferences(self, user_id: str) -> Optional[UserProfilePreference]:
         """获取用户偏好"""
-        return self.db.query(UserPreferences).filter(
-            UserPreferences.user_id == user_id
+        return self.db.query(UserProfilePreference).filter(
+            UserProfilePreference.user_id == user_id
         ).first()
     
     def _get_user_task_history(self, user_id: str) -> List[TaskHistory]:
@@ -1662,7 +1662,7 @@ class TaskRecommendationEngine:
     def _build_user_preference_vector(
         self, 
         user: User, 
-        preferences: Optional[UserPreferences],
+        preferences: Optional[UserProfilePreference],
         history: List[TaskHistory],
         view_history: Optional[List[Dict]] = None,
         search_keywords: Optional[List[str]] = None,
@@ -1681,17 +1681,27 @@ class TaskRecommendationEngine:
         }
         
         # 从用户偏好设置中获取
+        def _parse_json_field(val):
+            if not val:
+                return []
+            if isinstance(val, list):
+                return val
+            try:
+                return json.loads(val)
+            except (json.JSONDecodeError, TypeError):
+                return []
+
         if preferences:
             if preferences.task_types:
-                vector["task_types"] = json.loads(preferences.task_types)
+                vector["task_types"] = _parse_json_field(preferences.task_types)
                 vector["task_types_from_preference"] = True
             if preferences.locations:
-                vector["locations"] = json.loads(preferences.locations)
+                vector["locations"] = _parse_json_field(preferences.locations)
                 vector["locations_from_preference"] = True
             if preferences.task_levels:
-                vector["task_levels"] = json.loads(preferences.task_levels)
+                vector["task_levels"] = _parse_json_field(preferences.task_levels)
             if preferences.keywords:
-                vector["keywords"] = json.loads(preferences.keywords)
+                vector["keywords"] = _parse_json_field(preferences.keywords)
         
         # 增强：从浏览行为中学习偏好（新增）
         if view_history:

@@ -6327,8 +6327,8 @@ def delete_user_account(
             pass  # 如果模型不存在，跳过
         
         # 7. 删除用户偏好设置
-        from app.models import UserPreferences
-        db.query(UserPreferences).filter(UserPreferences.user_id == user_id).delete()
+        from app.models import UserProfilePreference
+        db.query(UserProfilePreference).filter(UserProfilePreference.user_id == user_id).delete()
         
         # 8. 删除Stripe Connect账户关联（不删除Stripe账户本身）
         user = db.query(models.User).filter(models.User.id == user_id).first()
@@ -10373,11 +10373,10 @@ def get_user_preferences(
     db: Session = Depends(get_db)
 ):
     """获取用户任务偏好"""
-    from app.models import UserPreferences
-    import json
-    
-    preferences = db.query(UserPreferences).filter(UserPreferences.user_id == current_user.id).first()
-    
+    from app.models import UserProfilePreference
+
+    preferences = db.query(UserProfilePreference).filter(UserProfilePreference.user_id == current_user.id).first()
+
     if not preferences:
         # 返回默认偏好
         return {
@@ -10387,12 +10386,12 @@ def get_user_preferences(
             "keywords": [],
             "min_deadline_days": 1
         }
-    
+
     return {
-        "task_types": json.loads(preferences.task_types) if preferences.task_types else [],
-        "locations": json.loads(preferences.locations) if preferences.locations else [],
-        "task_levels": json.loads(preferences.task_levels) if preferences.task_levels else [],
-        "keywords": json.loads(preferences.keywords) if preferences.keywords else [],
+        "task_types": preferences.task_types or [],
+        "locations": preferences.locations or [],
+        "task_levels": preferences.task_levels or [],
+        "keywords": preferences.keywords or [],
         "min_deadline_days": preferences.min_deadline_days
     }
 
@@ -10404,38 +10403,37 @@ def update_user_preferences(
     db: Session = Depends(get_db)
 ):
     """更新用户任务偏好"""
-    from app.models import UserPreferences
-    import json
-    
+    from app.models import UserProfilePreference
+
     # 验证数据
     task_types = preferences_data.get("task_types", [])
     locations = preferences_data.get("locations", [])
     task_levels = preferences_data.get("task_levels", [])
     keywords = preferences_data.get("keywords", [])
     min_deadline_days = preferences_data.get("min_deadline_days", 1)
-    
+
     # 验证关键词数量限制
     if len(keywords) > 20:
         raise HTTPException(status_code=400, detail="关键词数量不能超过20个")
-    
+
     # 验证最少截止时间
     if not isinstance(min_deadline_days, int) or min_deadline_days < 1 or min_deadline_days > 30:
         raise HTTPException(status_code=400, detail="最少截止时间必须在1-30天之间")
-    
+
     # 查找或创建偏好记录
-    preferences = db.query(UserPreferences).filter(UserPreferences.user_id == current_user.id).first()
-    
+    preferences = db.query(UserProfilePreference).filter(UserProfilePreference.user_id == current_user.id).first()
+
     if not preferences:
-        preferences = UserPreferences(user_id=current_user.id)
+        preferences = UserProfilePreference(user_id=current_user.id)
         db.add(preferences)
-    
-    # 更新偏好数据
-    preferences.task_types = json.dumps(task_types) if task_types else None
-    preferences.locations = json.dumps(locations) if locations else None
-    preferences.task_levels = json.dumps(task_levels) if task_levels else None
-    preferences.keywords = json.dumps(keywords) if keywords else None
+
+    # 更新偏好数据 (JSON columns, store as native lists)
+    preferences.task_types = task_types if task_types else None
+    preferences.locations = locations if locations else None
+    preferences.task_levels = task_levels if task_levels else None
+    preferences.keywords = keywords if keywords else None
     preferences.min_deadline_days = min_deadline_days
-    
+
     try:
         db.commit()
         db.refresh(preferences)

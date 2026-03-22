@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_
 
-from app.models import User, UserTaskInteraction, TaskHistory, UserPreferences
+from app.models import User, UserTaskInteraction, TaskHistory, UserProfilePreference
 from app.crud import get_utc_time
 from app.redis_cache import redis_cache
 
@@ -110,8 +110,8 @@ class UserClusteringManager:
             interaction_tasks = {row[0] for row in interactions}
             
             # 2. 获取用户偏好
-            preferences = self.db.query(UserPreferences).filter(
-                UserPreferences.user_id == user_id
+            preferences = self.db.query(UserProfilePreference).filter(
+                UserProfilePreference.user_id == user_id
             ).first()
             
             task_types = []
@@ -121,9 +121,9 @@ class UserClusteringManager:
             if preferences:
                 try:
                     if preferences.task_types:
-                        task_types = json.loads(preferences.task_types)
+                        task_types = preferences.task_types if isinstance(preferences.task_types, list) else json.loads(preferences.task_types)
                     if preferences.locations:
-                        locations = json.loads(preferences.locations)
+                        locations = preferences.locations if isinstance(preferences.locations, list) else json.loads(preferences.locations)
                 except (json.JSONDecodeError, TypeError):
                     pass
             
@@ -271,8 +271,8 @@ class UserClusteringManager:
             interaction_similarity = intersection / union if union > 0 else 0.0
             
             # 2. 偏好相似度
-            other_preferences = self.db.query(UserPreferences).filter(
-                UserPreferences.user_id == other_user_id
+            other_preferences = self.db.query(UserProfilePreference).filter(
+                UserProfilePreference.user_id == other_user_id
             ).first()
             
             preference_similarity = 0.0
@@ -282,7 +282,7 @@ class UserClusteringManager:
                 other_task_types = []
                 if other_preferences and other_preferences.task_types:
                     try:
-                        other_task_types = json.loads(other_preferences.task_types)
+                        other_task_types = other_preferences.task_types if isinstance(other_preferences.task_types, list) else json.loads(other_preferences.task_types)
                     except (json.JSONDecodeError, TypeError):
                         pass
                 

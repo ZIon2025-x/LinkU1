@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_, desc
 from sqlalchemy.orm import selectinload
 
-from app.models import Task, User, UserPreferences, TaskHistory, UserTaskInteraction
+from app.models import Task, User, UserProfilePreference, TaskHistory, UserTaskInteraction
 from app.crud import get_utc_time
 
 logger = logging.getLogger(__name__)

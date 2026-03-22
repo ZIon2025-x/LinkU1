@@ -186,14 +186,14 @@ class LocationScorer(BaseScorer):
         if user.residence_city:
             cities.append(user.residence_city)
 
-        from app.models import UserPreferences
-        preferences = db.query(UserPreferences).filter(
-            UserPreferences.user_id == user.id
+        from app.models import UserProfilePreference
+        preferences = db.query(UserProfilePreference).filter(
+            UserProfilePreference.user_id == user.id
         ).first()
 
         if preferences and preferences.locations:
             try:
-                preferred_locations = json.loads(preferences.locations)
+                preferred_locations = preferences.locations if isinstance(preferences.locations, list) else json.loads(preferences.locations)
                 for loc in preferred_locations:
                     city = loc.split(',')[-1].strip() if ',' in loc else loc
                     if city not in cities:

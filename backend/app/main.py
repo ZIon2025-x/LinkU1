@@ -1224,6 +1224,18 @@ async def startup_event():
         else:
             logger.info("自动迁移已禁用（AUTO_MIGRATE=false）")
 
+        # Migrate user preferences into user_profile_preferences (safe to run multiple times)
+        try:
+            from app.migrations.merge_preferences import migrate_user_preferences
+            from app.database import SessionLocal as MigrationSessionLocal
+            migration_db = MigrationSessionLocal()
+            try:
+                migrate_user_preferences(migration_db, sync_engine)
+            finally:
+                migration_db.close()
+        except Exception as e:
+            logger.warning(f"User preferences migration skipped: {e}")
+
         # 在迁移完成后启动 TaskScheduler，确保所有列已存在
         if celery_available:
             pass  # Celery 可用，不启动 TaskScheduler
