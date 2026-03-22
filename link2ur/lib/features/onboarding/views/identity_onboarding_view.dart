@@ -421,42 +421,46 @@ class _CityStep extends StatefulWidget {
 }
 
 class _CityStepState extends State<_CityStep> {
-  final TextEditingController _customCityController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
   String? _selectedCity;
+  String _searchQuery = '';
 
-  static const List<String> _cities = [
-    'London',
-    'Manchester',
-    'Birmingham',
-    'Edinburgh',
-    'Glasgow',
-    'Leeds',
-    'Bristol',
-    'Sheffield',
-    'Liverpool',
-    'Nottingham',
-    'Cambridge',
-    'Oxford',
+  static const List<String> _allCities = [
+    'London', 'Manchester', 'Birmingham', 'Edinburgh', 'Glasgow',
+    'Leeds', 'Bristol', 'Sheffield', 'Liverpool', 'Nottingham',
+    'Cambridge', 'Oxford', 'Cardiff', 'Belfast', 'Southampton',
+    'Newcastle', 'Leicester', 'Coventry', 'Reading', 'Aberdeen',
+    'Dundee', 'Bath', 'York', 'Brighton', 'Exeter',
+    'Norwich', 'Plymouth', 'Swansea', 'Derby', 'Wolverhampton',
+    'Bournemouth', 'Warwick', 'Lancaster', 'Canterbury', 'Chester',
+    'Durham', 'St Andrews', 'Loughborough', 'Surrey', 'Hatfield',
   ];
+
+  List<String> get _filteredCities {
+    if (_searchQuery.isEmpty) return _allCities;
+    final query = _searchQuery.toLowerCase();
+    return _allCities
+        .where((c) => c.toLowerCase().contains(query))
+        .toList();
+  }
 
   @override
   void dispose() {
-    _customCityController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
   void _onCitySelected(String city) {
     setState(() {
       _selectedCity = city;
-      _customCityController.clear();
+      _searchController.text = city;
+      _searchQuery = city;
     });
   }
 
   void _onNext() {
-    final city = _customCityController.text.trim().isNotEmpty
-        ? _customCityController.text.trim()
-        : _selectedCity;
-    if (city != null && city.isNotEmpty) {
+    final city = _selectedCity ?? _searchController.text.trim();
+    if (city.isNotEmpty) {
       context.read<IdentityOnboardingBloc>().add(OnboardingSetCity(city));
     }
   }
@@ -466,6 +470,7 @@ class _CityStepState extends State<_CityStep> {
     final l10n = context.l10n;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final cities = _filteredCities;
 
     return Padding(
       padding: AppSpacing.horizontalLg,
@@ -481,7 +486,7 @@ class _CityStepState extends State<_CityStep> {
           ),
           AppSpacing.vLg,
           TextField(
-            controller: _customCityController,
+            controller: _searchController,
             decoration: InputDecoration(
               hintText: l10n.onboardingCityHint,
               prefixIcon: const Icon(Icons.search_rounded),
@@ -489,9 +494,14 @@ class _CityStepState extends State<_CityStep> {
                 borderRadius: AppRadius.allMedium,
               ),
             ),
-            onChanged: (_) {
+            onChanged: (value) {
               setState(() {
-                _selectedCity = null;
+                _searchQuery = value.trim();
+                // If typed text doesn't match selected city, clear selection
+                if (_selectedCity != null &&
+                    _selectedCity!.toLowerCase() != value.trim().toLowerCase()) {
+                  _selectedCity = null;
+                }
               });
             },
           ),
@@ -501,7 +511,7 @@ class _CityStepState extends State<_CityStep> {
               child: Wrap(
                 spacing: AppSpacing.sm,
                 runSpacing: AppSpacing.sm,
-                children: _cities.map((city) {
+                children: cities.map((city) {
                   final isSelected = _selectedCity == city;
                   return ChoiceChip(
                     label: Text(city),
@@ -535,7 +545,7 @@ class _CityStepState extends State<_CityStep> {
             width: double.infinity,
             child: FilledButton(
               onPressed: (_selectedCity != null ||
-                      _customCityController.text.trim().isNotEmpty)
+                      _searchController.text.trim().isNotEmpty)
                   ? _onNext
                   : null,
               style: FilledButton.styleFrom(
