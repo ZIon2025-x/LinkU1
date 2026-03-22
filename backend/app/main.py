@@ -320,6 +320,10 @@ app.include_router(admin_notification_router, tags=["管理员-通知管理"])
 from app.admin_content_moderation_routes import router as admin_content_moderation_router
 app.include_router(admin_content_moderation_router, tags=["管理员-内容审核"])
 
+# ==================== 画像路由（必须在 main_router 之前，否则 /profile/{user_id} 通配符会拦截 /profile/summary 等） ====================
+from app.routes.user_profile import router as user_profile_router
+app.include_router(user_profile_router)
+
 # ==================== 主路由（包含所有未迁移的路由） ====================
 app.include_router(main_router, prefix="/api", tags=["main"])  # 添加主路由，包含图片上传API
 # auth_router 已移除，使用 secure_auth_router 替代
@@ -469,9 +473,6 @@ app.include_router(newbie_tasks_router, tags=["新手任务"])
 
 from app.routes.user_skills import router as user_skills_router
 app.include_router(user_skills_router, tags=["用户技能"])
-
-from app.routes.user_profile import router as user_profile_router
-app.include_router(user_profile_router)
 
 from app.routes.official_tasks import router as official_tasks_router
 app.include_router(official_tasks_router, tags=["官方任务"])

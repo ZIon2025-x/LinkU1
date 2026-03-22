@@ -301,12 +301,14 @@ async def submit_onboarding(
 ):
     svc.submit_onboarding(db, current_user.id, data.model_dump())
 
-    # Update name if provided
-    if data.name and data.name.strip():
-        current_user.name = data.name.strip()
-
-    # Mark onboarding complete
-    current_user.onboarding_completed = True
+    # current_user comes from a different DB session (get_sync_db via auth dep),
+    # so we must query the user from `db` session to persist changes.
+    from app.models import User
+    user = db.query(User).filter(User.id == current_user.id).first()
+    if user:
+        if data.name and data.name.strip():
+            user.name = data.name.strip()
+        user.onboarding_completed = True
 
     # Run demand inference
     infer_demand(db, current_user.id)
