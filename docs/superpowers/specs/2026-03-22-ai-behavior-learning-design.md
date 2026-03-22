@@ -92,56 +92,84 @@ class BehaviorCollector:
 
 ---
 
-## 三、AI Tool — `update_user_insights`
+## 三、AI 回复内嵌分析（隐藏 JSON）
 
-### 新增 AI 工具
+### 方案
 
-在 `ai_tools.py` 注册一个内部工具 `update_user_insights`，AI 在正常回复用户的同时调用此工具输出分析结果。
+不使用 tool call，而是在 AI 每条回复末尾附带一段隐藏的分析 JSON。后端解析提取后删掉，只把正常回复返回给前端。用户完全无感知。
 
-**工具定义：**
+### AI 回复格式
 
-```python
+**有信号时：**
+
+```
+当然可以帮你找搬家服务！你在哪个城市？大概什么时候需要搬？
+
+<user_insights>
+{"interests": [{"topic": "搬家", "urgency": "high", "confidence": 0.9}], "skills": [], "stages": ["moving"], "preferences": {"mode": "offline"}}
+</user_insights>
+```
+
+**没有信号时：**
+
+```
+不客气，还有什么可以帮你的吗？
+
+<user_insights>
+{}
+</user_insights>
+```
+
+### 数据结构
+
+```json
 {
-    "name": "update_user_insights",
-    "description": "分析当前对话中用户的潜在兴趣、技能和生命周期信号。每轮对话结束前调用一次。",
-    "parameters": {
-        "inferred_interests": [                        # 推断的兴趣/需求
-            {"topic": "搬家", "urgency": "high", "confidence": 0.9},
-            {"topic": "租房", "urgency": "medium", "confidence": 0.6}
-        ],
-        "inferred_skills": [                           # 推断的潜在技能
-            {"skill": "英语沟通", "confidence": 0.8},
-            {"skill": "驾驶", "confidence": 0.7}
-        ],
-        "stage_hints": ["house_hunting", "moving"],    # 生命周期信号
-        "overall_confidence": 0.8                      # 本次分析整体置信度
+    "interests": [                                    // 推断的兴趣/需求
+        {"topic": "搬家", "urgency": "high", "confidence": 0.9},
+        {"topic": "租房", "urgency": "medium", "confidence": 0.6}
+    ],
+    "skills": [                                       // 推断的潜在技能
+        {"skill": "英语沟通", "confidence": 0.8},
+        {"skill": "驾驶", "confidence": 0.7}
+    ],
+    "stages": ["house_hunting", "moving"],            // 生命周期信号
+    "preferences": {                                  // 偏好信号
+        "mode": "offline",                            // 线上/线下
+        "price_sensitive": true                       // 价格敏感
     }
 }
 ```
 
-**confidence 判断依据（由 AI 根据语义理解决定）：**
+### 字段说明
+
+**confidence（置信度）— AI 根据语义理解判断：**
 - **高 (0.8-1.0)** — 用户明确表达紧迫需求（"我马上要搬家了"）或持续追问
 - **中 (0.5-0.7)** — 用户在了解情况（"搬家大概多少钱？"）
 - **低 (0.3-0.4)** — 用户只是随便看看或帮别人问
-- **不调用** — 没有明显信号（如"你好"、"谢谢"）
 
-**urgency 紧迫度：**
+**urgency（紧迫度）：**
 - `high` — 用户明确说"马上"、"急"、"下周就要"，或连续追问
 - `medium` — 用户在了解和比较
 - `low` — 用户只是提到了这个话题
 
-**特殊处理：**
-- 此工具的结果不流式返回给前端（用户不可见）
-- AI Agent 执行此工具时，直接写入 BehaviorCollector 内存队列
-- AI 根据整轮对话上下文（语气、紧迫度、追问行为）综合判断，不靠频次堆叠
+### 后端处理
+
+在 `ai_agent.py` 中，AI 回复完成后：
+1. 用正则 `<user_insights>(.*?)</user_insights>` 提取分析 JSON
+2. 从回复文本中删掉 `<user_insights>...</user_insights>` 部分
+3. 只把正常回复通过 SSE 返回给前端
+4. 如果 JSON 非空，写入 BehaviorCollector 内存队列
 
 ### system prompt 新增指令
 
 ```
-你在回复用户的同时，需要分析对话中的行为信号。当你识别到以下任何信号时，调用 update_user_insights 工具：
-- 用户表达了某种需求或兴趣（如"我想找人帮搬家"）
-- 用户透露了某种技能或经验（如"我以前做过家教"）
-- 用户的行为暗示了生命周期阶段（如频繁问租房问题→找房期）
+在你的每条回复末尾，添加一段 <user_insights> 标签，用 JSON 格式分析用户的行为信号。
+
+分析维度：
+- interests: 用户表达的需求或兴趣（如"我想找人帮搬家"→ topic: 搬家）
+- skills: 用户透露的技能或经验（如"我以前做过家教"→ skill: 教学）
+- stages: 用户当前的生命周期阶段信号（如频繁问租房→ house_hunting）
+- preferences: 用户的偏好（线上/线下、价格敏感等）
 
 判断 confidence 和 urgency 时，关注用户的语气和行为模式：
 - "我马上就要搬家了" → high urgency, high confidence（紧迫且明确）
@@ -149,7 +177,9 @@ class BehaviorCollector:
 - "我朋友想问问搬家的事" → low urgency, low confidence（不是自己的需求）
 - 用户问了一个问题后持续追问细节 → 提升 confidence
 
-不要告诉用户你在做分析。如果没有明显信号，不需要调用。
+如果这条消息没有任何有价值的信号，输出空 JSON: <user_insights>{}</user_insights>
+
+不要告诉用户你在做分析。<user_insights> 标签对用户不可见。
 ```
 
 ---
@@ -261,8 +291,7 @@ class UserDemand(Base):
 | 新建 | `backend/app/services/behavior_collector.py` | 内存队列 + 后台线程 |
 | 新建 | `backend/migrations/xxx_add_behavior_events.sql` | 新表 + 字段迁移 |
 | 修改 | `backend/app/models.py` | 新增 `UserBehaviorEvent` 模型；`UserDemand` 加字段；`UserProfilePreference` 加 `city`；`User` 加 `onboarding_completed` |
-| 修改 | `backend/app/services/ai_tools.py` | 新增 `update_user_insights` 工具 |
-| 修改 | `backend/app/services/ai_agent.py` | system prompt 加分析指令；insights tool 执行时写队列 |
+| 修改 | `backend/app/services/ai_agent.py` | system prompt 加分析指令；回复后提取 `<user_insights>` JSON 写队列 |
 | 修改 | `backend/app/services/demand_inference.py` | 升级聚合逻辑（月份 + 身份 + insights） |
 | 修改 | `backend/app/main.py` | 初始化 BehaviorCollector |
 | 修改 | `backend/app/routes/user_profile.py` | 引导页 onboarding 端点更新（加 identity、city） |
@@ -286,4 +315,5 @@ class UserDemand(Base):
 - 推荐引擎 — 已经读 `UserDemand`，画像更新后自动生效
 - 首页 — 已经用推荐引擎的结果
 - 附近推送 — 已经读 `UserDemand`
-- AI 聊天前端 — `update_user_insights` 的结果不返回前端，无需改动
+- AI 聊天前端 — `<user_insights>` 在后端就被剥离，前端收不到，无需改动
+- `ai_tools.py` — 不需要新增工具，分析通过 system prompt + 隐藏 JSON 实现
