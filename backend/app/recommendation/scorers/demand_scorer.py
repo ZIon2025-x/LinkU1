@@ -22,15 +22,12 @@ class DemandScorer(BaseScorer):
 
     def score(self, user, tasks: List, context: Dict[str, Any]) -> Dict[int, ScoredTask]:
         db = context["db"]
-        from app.models import UserDemand, UserTaskInteraction
+        from app.models import UserDemand
         demand = db.query(UserDemand).filter_by(user_id=user.id).first()
         if not demand:
             return {}
-        try:
-            count = db.query(UserTaskInteraction).filter(UserTaskInteraction.user_id == user.id).count()
-            user._interaction_count = count
-        except Exception:
-            pass
+        # Note: _interaction_count is pre-computed by HybridEngine._enrich_user_context()
+        # before normalize_weights() is called, so get_weight() has the correct value.
         results = {}
         for task in tasks:
             score, reasons = self._score_task(demand, task)

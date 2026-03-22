@@ -16,9 +16,12 @@ class HybridEngine:
         context = context or {}
         filters = filters or {}
 
-        candidate_tasks = self._get_candidates(filters, context)
+        candidate_tasks = self._get_candidates(user, filters, context)
         if not candidate_tasks:
             return []
+
+        # Pre-compute interaction count for dynamic weight scorers (e.g. DemandScorer)
+        self._enrich_user_context(user, context)
 
         weights = self.registry.normalize_weights(user)
         aggregated: Dict[int, Dict] = {}
@@ -48,7 +51,23 @@ class HybridEngine:
             if task_map.get(task_id) is not None
         ]
 
-    def _get_candidates(self, filters: Dict, context: Dict) -> List:
+    def _enrich_user_context(self, user, context: Dict) -> None:
+        """Pre-compute data needed by scorers for dynamic weight calculation."""
+        if not user:
+            return
+        db = context.get("db")
+        if not db:
+            return
+        try:
+            from app.models import UserTaskInteraction
+            count = db.query(UserTaskInteraction).filter(
+                UserTaskInteraction.user_id == user.id
+            ).count()
+            user._interaction_count = count
+        except Exception:
+            pass
+
+    def _get_candidates(self, user, filters: Dict, context: Dict) -> List:
         db = context.get("db")
         if not db:
             return []
@@ -57,6 +76,12 @@ class HybridEngine:
         query = db.query(Task).filter(
             Task.status == "open", Task.is_visible == True, Task.deadline > get_utc_time()
         )
+        # Exclude user's own tasks
+        if user:
+            from .utils import get_excluded_task_ids
+            excluded = get_excluded_task_ids(db, user.id)
+            if excluded:
+                query = query.filter(~Task.id.in_(excluded))
         if filters.get("task_type"):
             query = query.filter(Task.task_type == filters["task_type"])
         if filters.get("location"):
