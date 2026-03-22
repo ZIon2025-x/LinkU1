@@ -7,7 +7,7 @@
 ## 核心原则
 
 - **简单** — 聊天时 AI 顺带分析，不额外调用 LLM
-- **不阻塞** — 内存队列采集，后台批量写库
+- **不阻塞** — 内存队列采集，后台线程写库+更新画像
 - **静默** — 用户无感知，不弹确认
 - **全平台联动** — 画像更新后，推荐引擎、首页、附近推送都跟着变
 
@@ -16,14 +16,14 @@
 ```
 用户聊天 → AI Agent
     ↓ system prompt 加分析指令
-    ↓ AI 通过 update_user_insights tool 输出分析（用户不可见）
+    ↓ AI 回复末尾附带 <user_insights> 隐藏 JSON
     ↓
-内存队列（BehaviorCollector）→ 30秒批量写入 user_behavior_events 表
+后端提取 JSON → 剥离后正常回复返回前端
     ↓
-夜间定时任务（纯规则，不调 LLM）
-    ↓ 聚合当天 insights + 月份 + 身份
-    ↓
-更新 UserDemand（stages、interests、inferred_skills）
+内存队列（BehaviorCollector）
+    ↓ 后台线程每30秒
+    ↓ 批量写入 user_behavior_events 表（保留记录）
+    ↓ 同时合并更新 UserDemand（实时生效）
     ↓
 推荐引擎 / 首页 / 附近推送 读取新画像
 ```
@@ -79,16 +79,25 @@ class BehaviorCollector:
         """聊天时调用，只做 list.append()，零阻塞"""
 
     def _flush_loop(self):
-        """后台守护线程，每30秒批量 INSERT"""
+        """后台守护线程，每30秒执行"""
 
     def _flush(self):
-        """取出队列所有事件，一次批量写入 user_behavior_events 表"""
+        """取出队列所有事件：
+        1. 批量写入 user_behavior_events 表（保留原始记录）
+        2. 对 ai_insight 类型的事件，合并更新 UserDemand（实时生效）
+           - 读取用户当前 UserDemand
+           - 合并 interests（按 topic 去重，取最高 confidence）
+           - 合并 skills（按 skill 去重，取最高 confidence）
+           - 根据 identity + 当前月份 + stages 重新计算 user_stages
+           - 写回 UserDemand
+        """
 ```
 
 - 单例模式，App 启动时初始化（`main.py`）
 - 守护线程（daemon=True），进程退出自动停止
 - 进程重启最多丢30秒数据，对画像分析无影响
 - 写入失败静默记日志，不影响业务
+- 不需要夜间聚合任务，画像在后台线程中实时更新
 
 ---
 
@@ -226,26 +235,17 @@ class UserDemand(Base):
 
 ---
 
-## 五、夜间聚合任务
+## 五、现有夜间任务的改动
 
-### 升级 `demand_inference.py`
+### `demand_inference.py` — 保留但升级
 
-将现有的 `nightly_demand_inference` 升级，不是新建。纯规则，不调 LLM。
+现有的 `nightly_demand_inference` 继续保留，用于处理**没有和 AI 聊过天的用户**（仍按任务行为 + 注册天数推断，向后兼容）。
 
-**新流程：**
+**升级内容：**
+- `determine_user_stage()` 改为基于 `identity` + 月份计算多阶段数组（替代原来的注册天数逻辑）
+- 有 AI insight 的用户跳过（已经由 BehaviorCollector 实时更新了）
 
-1. 查询最近 N 天有 `ai_insight` 事件的用户列表
-2. 对每个用户：
-   a. 读取最近所有 `ai_insight` 事件
-   b. 合并 `inferred_interests`：按 topic 去重，取最高 confidence 和 urgency（AI 已在聊天时根据语义判断好了，不做额外的频次/衰减计算）
-   c. 合并 `inferred_skills`：按 skill 去重，取最高 confidence
-   d. 根据 `identity` + 当前月份 + `stage_hints` 重新计算 `user_stages`
-   e. 根据新阶段 + 新兴趣生成 `predicted_needs`
-   f. 更新 `UserDemand`
-
-**信任 AI 的判断：** AI 在聊天时已经综合了语气、紧迫度、追问行为等上下文信息来输出 confidence 和 urgency，夜间聚合不需要再叠加规则，只做简单的合并去重。
-
-**保留现有逻辑：** 没有聊天行为的用户，仍按任务行为 + 注册天数推断（向后兼容）。
+**不新增夜间任务。** 有聊天行为的用户画像由 BehaviorCollector 后台线程实时更新。
 
 ---
 
@@ -292,7 +292,7 @@ class UserDemand(Base):
 | 新建 | `backend/migrations/xxx_add_behavior_events.sql` | 新表 + 字段迁移 |
 | 修改 | `backend/app/models.py` | 新增 `UserBehaviorEvent` 模型；`UserDemand` 加字段；`UserProfilePreference` 加 `city`；`User` 加 `onboarding_completed` |
 | 修改 | `backend/app/services/ai_agent.py` | system prompt 加分析指令；回复后提取 `<user_insights>` JSON 写队列 |
-| 修改 | `backend/app/services/demand_inference.py` | 升级聚合逻辑（月份 + 身份 + insights） |
+| 修改 | `backend/app/services/demand_inference.py` | `determine_user_stage()` 改为月份+身份逻辑；有 AI insight 的用户跳过 |
 | 修改 | `backend/app/main.py` | 初始化 BehaviorCollector |
 | 修改 | `backend/app/routes/user_profile.py` | 引导页 onboarding 端点更新（加 identity、city） |
 | 修改 | `backend/app/services/user_profile_service.py` | onboarding 逻辑更新 |
