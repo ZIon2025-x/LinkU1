@@ -926,6 +926,15 @@ async def startup_event():
     except Exception as e:
         logger.warning(f"初始化 Prometheus 指标失败: {e}")
     
+    # 启动行为采集器
+    try:
+        from app.services.behavior_collector import BehaviorCollector
+        behavior_collector = BehaviorCollector.get_instance()
+        behavior_collector.start()
+        logger.info("✅ BehaviorCollector 已启动")
+    except Exception as e:
+        logger.warning(f"⚠️  BehaviorCollector 启动失败: {e}")
+
     # 启动定时任务调度器 - 优先使用 Celery，备用 TaskScheduler
     import threading
     import time
