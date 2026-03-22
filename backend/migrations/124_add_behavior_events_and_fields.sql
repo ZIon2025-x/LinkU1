@@ -11,10 +11,10 @@ CREATE INDEX IF NOT EXISTS ix_behavior_events_user_created
     ON user_behavior_events(user_id, created_at);
 
 -- UserDemand 表改动
-ALTER TABLE user_demands ALTER COLUMN user_stage TYPE JSONB USING to_jsonb(user_stage);
-ALTER TABLE user_demands ADD COLUMN IF NOT EXISTS identity VARCHAR(16);
-ALTER TABLE user_demands ADD COLUMN IF NOT EXISTS inferred_skills JSONB DEFAULT '[]';
-ALTER TABLE user_demands ADD COLUMN IF NOT EXISTS inferred_preferences JSONB DEFAULT '{}';
+ALTER TABLE user_demand ALTER COLUMN user_stage TYPE JSONB USING to_jsonb(user_stage);
+ALTER TABLE user_demand ADD COLUMN IF NOT EXISTS identity VARCHAR(16);
+ALTER TABLE user_demand ADD COLUMN IF NOT EXISTS inferred_skills JSONB DEFAULT '[]';
+ALTER TABLE user_demand ADD COLUMN IF NOT EXISTS inferred_preferences JSONB DEFAULT '{}';
 
 -- UserProfilePreference 新增 city
 ALTER TABLE user_profile_preferences ADD COLUMN IF NOT EXISTS city VARCHAR(64);

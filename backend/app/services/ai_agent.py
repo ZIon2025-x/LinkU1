@@ -967,14 +967,9 @@ async def _step_llm(ctx: _PipelineContext) -> AsyncIterator[ServerSentEvent]:
             event="error",
         )
 
-    # Extract insights from full response and clean it
-    ctx.full_response, _final_insights = _extract_user_insights(ctx.full_response)
-    if _final_insights:
-        try:
-            from app.services.behavior_collector import BehaviorCollector
-            BehaviorCollector.get_instance().record(ctx.user.id, "ai_insight", _final_insights)
-        except Exception:
-            pass
+    # Clean insights tag from full response before saving
+    # (insights are already recorded during streaming — don't record again)
+    ctx.full_response, _ = _extract_user_insights(ctx.full_response)
 
     # 保存 & 记录用量
     total_tokens = ctx.total_input_tokens + ctx.total_output_tokens

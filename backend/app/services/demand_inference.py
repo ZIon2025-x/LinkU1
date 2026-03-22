@@ -115,11 +115,17 @@ def infer_demand(db: Session, user_id: str):
     # Merge recent interests from task behavior (don't overwrite AI interests)
     task_interests = analyze_recent_interests(db, user_id)
     existing_interests = demand.recent_interests or {}
-    for topic, data in task_interests.items():
+    for topic, count in task_interests.items():
+        # Convert raw count to dict format for consistency
+        task_data = {"confidence": min(count / 10, 1.0), "urgency": "medium", "source": "task_behavior"}
         if topic not in existing_interests:
-            existing_interests[topic] = data
-        elif isinstance(data, dict) and data.get("confidence", 0) > existing_interests.get(topic, {}).get("confidence", 0):
-            existing_interests[topic] = data
+            existing_interests[topic] = task_data
+        else:
+            existing = existing_interests[topic]
+            # Don't overwrite higher-confidence AI interests
+            if isinstance(existing, dict) and existing.get("confidence", 0) >= task_data["confidence"]:
+                continue
+            existing_interests[topic] = task_data
     demand.recent_interests = existing_interests
 
     demand.last_inferred_at = datetime.now(timezone.utc)

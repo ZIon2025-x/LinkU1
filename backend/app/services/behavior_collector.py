@@ -65,13 +65,15 @@ class BehaviorCollector:
         logger.info("BehaviorCollector stopped")
 
     def record(self, user_id: str, event_type: str, event_data: dict):
-        """Append an event to the queue. Non-blocking, thread-safe."""
-        self._queue.append({
+        """Append an event to the queue. Thread-safe."""
+        event = {
             "user_id": user_id,
             "event_type": event_type,
             "event_data": event_data,
             "created_at": datetime.now(timezone.utc),
-        })
+        }
+        with self._lock:
+            self._queue.append(event)
 
     def _flush_loop(self):
         """Background loop: sleep then flush, repeat until stopped."""
@@ -151,26 +153,36 @@ class BehaviorCollector:
                 db.add(demand)
 
             for data in data_list:
-                # Merge interests: dict keyed by topic, keep highest confidence
-                if "interests" in data and isinstance(data["interests"], dict):
+                # Merge interests: list of {"topic": ..., "urgency": ..., "confidence": ...}
+                if "interests" in data and isinstance(data["interests"], list):
                     current = demand.recent_interests or {}
-                    for topic, confidence in data["interests"].items():
-                        if topic not in current or confidence > current.get(topic, 0):
-                            current[topic] = confidence
+                    for item in data["interests"]:
+                        if not isinstance(item, dict):
+                            continue
+                        topic = item.get("topic")
+                        if not topic:
+                            continue
+                        existing = current.get(topic, {})
+                        if item.get("confidence", 0) >= existing.get("confidence", 0):
+                            current[topic] = {
+                                "confidence": item.get("confidence", 0),
+                                "urgency": item.get("urgency", "low"),
+                                "updated_at": now.isoformat(),
+                            }
                     demand.recent_interests = current
 
-                # Merge skills: list of dicts, dedup by skill name, keep highest confidence
+                # Merge skills: list of {"skill": ..., "confidence": ...}
                 if "skills" in data and isinstance(data["skills"], list):
                     current = demand.inferred_skills or []
                     skill_map: dict[str, dict] = {}
                     for s in current:
-                        if isinstance(s, dict) and "name" in s:
-                            skill_map[s["name"]] = s
+                        if isinstance(s, dict) and "skill" in s:
+                            skill_map[s["skill"]] = s
                     for s in data["skills"]:
-                        if isinstance(s, dict) and "name" in s:
-                            existing = skill_map.get(s["name"])
+                        if isinstance(s, dict) and "skill" in s:
+                            existing = skill_map.get(s["skill"])
                             if existing is None or s.get("confidence", 0) > existing.get("confidence", 0):
-                                skill_map[s["name"]] = s
+                                skill_map[s["skill"]] = s
                     demand.inferred_skills = list(skill_map.values())
 
                 # Merge preferences: dict, update
@@ -186,8 +198,7 @@ class BehaviorCollector:
                     if determine_user_stages is not None:
                         try:
                             month_stages = set(determine_user_stages(
-                                identity=demand.identity,
-                                month=now.month,
+                                demand.identity,
                             ))
                         except Exception:
                             logger.debug(

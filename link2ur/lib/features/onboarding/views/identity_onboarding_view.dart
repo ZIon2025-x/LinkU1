@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../auth/bloc/auth_bloc.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
@@ -54,7 +57,9 @@ class _OnboardingContentState extends State<_OnboardingContent> {
           prev.currentStep != curr.currentStep || curr.isComplete,
       listener: (context, state) {
         if (state.isComplete) {
-          Navigator.of(context).pop(true);
+          // Refresh auth state so router redirect knows onboarding is done
+          context.read<AuthBloc>().add(AuthCheckRequested());
+          context.go('/');
           return;
         }
         _goToPage(state.currentStep);
