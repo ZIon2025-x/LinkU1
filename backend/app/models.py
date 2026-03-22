@@ -167,6 +167,7 @@ class User(Base):
     bio = Column(Text, default="")
     profile_views = Column(Integer, default=0)
     displayed_badge_id = Column(Integer, ForeignKey("user_badges.id", ondelete="SET NULL"), nullable=True)
+    onboarding_completed = Column(Boolean, default=False, server_default="false", nullable=False)
     # 关系
     tasks_posted = relationship(
         "Task", back_populates="poster", foreign_keys="Task.poster_id"
@@ -3555,6 +3556,7 @@ class UserProfilePreference(Base):
     preferred_categories = Column(JSON, default=list)
     preferred_helper_types = Column(JSON, default=list)
     nearby_push_enabled = Column(Boolean, default=False, server_default="false", nullable=False)
+    city = Column(String(64))
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
 
     user = relationship("User", backref="profile_preference")
@@ -3593,11 +3595,14 @@ class UserDemand(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True)
-    user_stage = Column(Enum(UserStage), default=UserStage.new_arrival, nullable=False)
+    user_stage = Column(JSON, default=list)
     predicted_needs = Column(JSON, default=list)
     recent_interests = Column(JSON, default=dict)
     last_inferred_at = Column(DateTime(timezone=True), default=get_utc_time)
     inference_version = Column(String(20), default="v1.0")
+    identity = Column(String(16))  # "pre_arrival" or "in_uk"
+    inferred_skills = Column(JSON, default=list)
+    inferred_preferences = Column(JSON, default=dict)
 
     user = relationship("User", backref="demand")
 
@@ -3634,4 +3639,18 @@ class NearbyTaskPush(Base):
     __table_args__ = (
         UniqueConstraint("user_id", "task_id", name="uq_nearby_push_user_task"),
         Index("ix_nearby_task_pushes_user_pushed", "user_id", "pushed_at"),
+    )
+
+
+class UserBehaviorEvent(Base):
+    __tablename__ = "user_behavior_events"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    event_type = Column(String(32), nullable=False)
+    event_data = Column(JSON, nullable=False, default=dict)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+
+    __table_args__ = (
+        Index("ix_behavior_events_user_created", "user_id", "created_at"),
     )
