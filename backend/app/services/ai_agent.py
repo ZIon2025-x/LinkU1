@@ -551,6 +551,104 @@ def _build_system_prompt(template: str, user: models.User, resolved_lang: str | 
     )
 
 
+# ==================== User Profile Context & Proactive Suggestions ====================
+
+
+async def build_user_profile_context(user_id: str, db) -> str:
+    """Build user profile summary for AI system prompt injection. Uses async DB."""
+    try:
+        pref_result = await db.execute(
+            select(models.UserProfilePreference).where(models.UserProfilePreference.user_id == user_id)
+        )
+        pref = pref_result.scalars().first()
+        demand_result = await db.execute(
+            select(models.UserDemand).where(models.UserDemand.user_id == user_id)
+        )
+        demand = demand_result.scalars().first()
+        reliability_result = await db.execute(
+            select(models.UserReliability).where(models.UserReliability.user_id == user_id)
+        )
+        reliability = reliability_result.scalars().first()
+    except Exception as e:
+        logger.warning(f"Failed to load user profile for AI context: {e}")
+        return ""
+
+    sections = []
+    if pref:
+        mode_val = pref.mode.value if pref.mode else "不限"
+        sections.append(f"- 偏好模式: {mode_val}")
+        if pref.preferred_time_slots:
+            sections.append(f"- 可用时段: {', '.join(pref.preferred_time_slots)}")
+        if pref.city:
+            sections.append(f"- 所在城市: {pref.city}")
+    if demand:
+        if demand.recent_interests:
+            interests = demand.recent_interests
+            if isinstance(interests, dict):
+                interests = list(interests.keys())
+            sections.append(f"- 兴趣领域: {', '.join(str(i) for i in interests[:5])}")
+        if demand.inferred_skills:
+            skills = demand.inferred_skills
+            if isinstance(skills, dict):
+                skills = list(skills.keys())
+            sections.append(f"- 推断技能: {', '.join(str(s) for s in skills[:5])}")
+        if demand.predicted_needs:
+            needs = demand.predicted_needs
+            if isinstance(needs, dict):
+                needs = list(needs.keys())
+            sections.append(f"- 预测需求: {', '.join(str(n) for n in needs[:5])}")
+    if reliability:
+        sections.append(f"- 可靠度评分: {reliability.reliability_score}")
+
+    if sections:
+        return "用户画像:\n" + "\n".join(sections)
+    return ""
+
+
+async def get_proactive_suggestions(user_id: str, db) -> str:
+    """Check for high-match tasks (>0.8 score, last 24h). Uses asyncio.to_thread for sync engine."""
+    import asyncio
+    from datetime import datetime, timedelta
+    try:
+        from app.task_recommendation import get_task_recommendations
+        from app.deps import get_sync_db
+
+        def _get_recs():
+            sync_db = next(get_sync_db())
+            try:
+                return get_task_recommendations(db=sync_db, user_id=user_id, limit=5, algorithm="hybrid")
+            finally:
+                sync_db.close()
+
+        recs = await asyncio.to_thread(_get_recs)
+        cutoff = get_utc_time() - timedelta(hours=24)
+        high_matches = []
+        for rec in recs:
+            score = rec.get("match_score", 0)
+            created = rec.get("created_at")
+            if score >= 0.8 and created:
+                if isinstance(created, str):
+                    try:
+                        created = datetime.fromisoformat(created.replace("Z", "+00:00"))
+                    except ValueError:
+                        continue
+                if created >= cutoff:
+                    high_matches.append({
+                        "title": rec.get("title_zh") or rec.get("title") or "",
+                        "reason": rec.get("recommendation_reason", ""),
+                        "score": score,
+                    })
+        if high_matches:
+            lines = ["最近有以下高匹配任务值得推荐给用户："]
+            for i, m in enumerate(high_matches[:3], 1):
+                lines.append(f"{i}. {m['title']} - {m['reason']} (匹配度: {m['score']:.2f})")
+            lines.append("请在回复中自然地向用户推荐这些任务。")
+            return "\n".join(lines)
+    except Exception as e:
+        logger.warning(f"Failed to get proactive suggestions: {e}")
+    return ""
+
+
 # ==================== 离题拒绝消息 & 语言推断 ====================
 
 _OFF_TOPIC_RESPONSES = {
@@ -798,6 +896,17 @@ async def _step_llm(ctx: _PipelineContext) -> AsyncIterator[ServerSentEvent]:
 
     prompt_template = await _get_system_prompt_template(ctx.db)
     system_prompt = _build_system_prompt(prompt_template, ctx.user, ctx.reply_lang)
+
+    # Inject user profile context
+    profile_context = await build_user_profile_context(ctx.user.id, ctx.db)
+    if profile_context:
+        system_prompt += f"\n\n{profile_context}\n请根据以上用户画像信息提供个性化的回答和推荐。"
+
+    # Proactive suggestions on first message only (no prior history)
+    if not history:
+        suggestions = await get_proactive_suggestions(ctx.user.id, ctx.db)
+        if suggestions:
+            system_prompt += f"\n\n{suggestions}"
 
     # 按意图选择工具子集
     intent_for_tools = ctx.intent
