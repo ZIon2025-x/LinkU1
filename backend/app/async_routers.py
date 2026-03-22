@@ -122,6 +122,7 @@ async def get_tasks(
     user_latitude: Optional[float] = Query(None, ge=-90, le=90, description="用户纬度（用于距离排序）"),
     user_longitude: Optional[float] = Query(None, ge=-180, le=180, description="用户经度（用于距离排序）"),
     db: AsyncSession = Depends(get_async_db_dependency),
+    current_user: Optional[models.User] = Depends(get_current_user_optional),
 ):
     """
     获取任务列表（异步版本）
@@ -232,11 +233,23 @@ async def get_tasks(
             
             formatted_tasks.append(task_data)
         
+        # Record search behavior
+        if keyword and current_user:
+            try:
+                from app.services.behavior_collector import BehaviorCollector
+                BehaviorCollector.get_instance().record(current_user.id, "search", {
+                    "keyword": keyword,
+                    "source": "tasks",
+                    "result_count": len(formatted_tasks),
+                })
+            except Exception:
+                pass
+
         return {
             "tasks": formatted_tasks,
             "next_cursor": next_cursor,
         }
-    
+
     # 其他排序或初次加载：用 offset/limit + total
     # 支持page/page_size参数，向后兼容skip/limit
     if page > 1 or page_size != 20:
@@ -347,6 +360,18 @@ async def get_tasks(
         
         formatted_tasks.append(task_data)
     
+    # Record search behavior
+    if keyword and current_user:
+        try:
+            from app.services.behavior_collector import BehaviorCollector
+            BehaviorCollector.get_instance().record(current_user.id, "search", {
+                "keyword": keyword,
+                "source": "tasks",
+                "result_count": total,
+            })
+        except Exception:
+            pass
+
     # 返回与前端期望的数据结构兼容的格式
     return {
         "tasks": formatted_tasks,
@@ -552,6 +577,18 @@ async def get_task_by_id(
                 except (ValueError, KeyError):
                     pass
     setattr(task, "completion_evidence", completion_evidence if completion_evidence else None)
+
+    # Record browse behavior
+    if current_user and task:
+        try:
+            from app.services.behavior_collector import BehaviorCollector
+            BehaviorCollector.get_instance().record(current_user.id, "browse", {
+                "target": "task",
+                "target_id": task_id,
+                "category": getattr(task, 'task_type', None),
+            })
+        except Exception:
+            pass
 
     # 使用 TaskOut.from_orm 确保所有字段（包括 platform_fee_rate/amount、task_source）都被正确序列化
     task_dict = schemas.TaskOut.from_orm(task, full_location_access=True).model_dump()

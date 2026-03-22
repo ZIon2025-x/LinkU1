@@ -491,6 +491,18 @@ async def get_flea_market_items(
             hasMore=skip + len(processed_items) < total
         )
 
+        # Record search behavior
+        if keyword and current_user:
+            try:
+                from app.services.behavior_collector import BehaviorCollector
+                BehaviorCollector.get_instance().record(current_user.id, "search", {
+                    "keyword": keyword,
+                    "source": "flea_market",
+                    "result_count": total,
+                })
+            except Exception:
+                pass
+
         # 缓存结果（5分钟）：仅在不按卖家筛选且未登录时缓存；is_favorited 是用户维度数据，不能缓存
         if not seller_id and not current_user:
             try:
@@ -675,6 +687,17 @@ async def get_flea_market_item(
                 seller_avatar = seller_row[1]
                 seller_user_level = seller_row[2]
         
+        # Record browse behavior
+        if current_user:
+            try:
+                from app.services.behavior_collector import BehaviorCollector
+                BehaviorCollector.get_instance().record(current_user.id, "browse", {
+                    "target": "flea_market",
+                    "target_id": item_id,
+                })
+            except Exception:
+                pass
+
         return schemas.FleaMarketItemResponse(
             id=format_flea_market_id(item.id),
             title=item.title,
