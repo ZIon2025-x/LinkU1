@@ -10123,6 +10123,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get onboardingComplete => '完成';
+
+  @override
+  String get onboardingInterestsTitle => '你对什么感兴趣';
+
+  @override
+  String get onboardingInterestsSubtitle => '选择你感兴趣的领域，帮助我们更好地为你推荐';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -20200,4 +20206,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get onboardingComplete => '完成';
+
+  @override
+  String get onboardingInterestsTitle => '你對什麼感興趣';
+
+  @override
+  String get onboardingInterestsSubtitle => '選擇你感興趣的領域，幫助我們更好地為你推薦';
 }

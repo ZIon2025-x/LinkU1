@@ -4818,5 +4818,7 @@
   "onboardingSkillsTitle": "Your Skills",
   "onboardingSkillsSkip": "Skip",
   "onboardingNext": "Next",
-  "onboardingComplete": "Done"
+  "onboardingComplete": "Done",
+  "onboardingInterestsTitle": "What are you interested in?",
+  "onboardingInterestsSubtitle": "Choose your interests so we can recommend better for you"
 }

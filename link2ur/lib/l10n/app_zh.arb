@@ -4726,5 +4726,7 @@
   "onboardingSkillsTitle": "你擅长什么",
   "onboardingSkillsSkip": "跳过",
   "onboardingNext": "下一步",
-  "onboardingComplete": "完成"
+  "onboardingComplete": "完成",
+  "onboardingInterestsTitle": "你对什么感兴趣",
+  "onboardingInterestsSubtitle": "选择你感兴趣的领域，帮助我们更好地为你推荐"
 }

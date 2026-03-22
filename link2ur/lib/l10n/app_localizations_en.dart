@@ -10544,4 +10544,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboardingComplete => 'Done';
+
+  @override
+  String get onboardingInterestsTitle => 'What are you interested in?';
+
+  @override
+  String get onboardingInterestsSubtitle =>
+      'Choose your interests so we can recommend better for you';
 }

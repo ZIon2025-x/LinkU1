@@ -28,12 +28,12 @@ class OnboardingSetCity extends IdentityOnboardingEvent {
   List<Object?> get props => [city];
 }
 
-class OnboardingSetSkills extends IdentityOnboardingEvent {
-  final List<Map<String, dynamic>> skills;
-  const OnboardingSetSkills(this.skills);
+class OnboardingSetInterests extends IdentityOnboardingEvent {
+  final List<String> interests;
+  const OnboardingSetInterests(this.interests);
 
   @override
-  List<Object?> get props => [skills];
+  List<Object?> get props => [interests];
 }
 
 class OnboardingSetProfile extends IdentityOnboardingEvent {
@@ -55,7 +55,7 @@ class IdentityOnboardingState extends Equatable {
   final String? identity;
   final String? city;
   final String? name;
-  final List<Map<String, dynamic>> skills;
+  final List<String> interests;
   final int currentStep;
   final bool isSubmitting;
   final bool isComplete;
@@ -65,7 +65,7 @@ class IdentityOnboardingState extends Equatable {
     this.identity,
     this.city,
     this.name,
-    this.skills = const [],
+    this.interests = const [],
     this.currentStep = 0,
     this.isSubmitting = false,
     this.isComplete = false,
@@ -76,7 +76,7 @@ class IdentityOnboardingState extends Equatable {
     String? identity,
     String? city,
     String? name,
-    List<Map<String, dynamic>>? skills,
+    List<String>? interests,
     int? currentStep,
     bool? isSubmitting,
     bool? isComplete,
@@ -86,7 +86,7 @@ class IdentityOnboardingState extends Equatable {
       identity: identity ?? this.identity,
       city: city ?? this.city,
       name: name ?? this.name,
-      skills: skills ?? this.skills,
+      interests: interests ?? this.interests,
       currentStep: currentStep ?? this.currentStep,
       isSubmitting: isSubmitting ?? this.isSubmitting,
       isComplete: isComplete ?? this.isComplete,
@@ -99,7 +99,7 @@ class IdentityOnboardingState extends Equatable {
         identity,
         city,
         name,
-        skills,
+        interests,
         currentStep,
         isSubmitting,
         isComplete,
@@ -118,7 +118,7 @@ class IdentityOnboardingBloc
         super(const IdentityOnboardingState()) {
     on<OnboardingSetIdentity>(_onSetIdentity);
     on<OnboardingSetCity>(_onSetCity);
-    on<OnboardingSetSkills>(_onSetSkills);
+    on<OnboardingSetInterests>(_onSetInterests);
     on<OnboardingSetProfile>(_onSetProfile);
     on<OnboardingSubmit>(_onSubmit);
   }
@@ -143,11 +143,11 @@ class IdentityOnboardingBloc
     ));
   }
 
-  void _onSetSkills(
-    OnboardingSetSkills event,
+  void _onSetInterests(
+    OnboardingSetInterests event,
     Emitter<IdentityOnboardingState> emit,
   ) {
-    emit(state.copyWith(skills: event.skills));
+    emit(state.copyWith(interests: event.interests));
   }
 
   void _onSetProfile(
@@ -166,10 +166,11 @@ class IdentityOnboardingBloc
     emit(state.copyWith(isSubmitting: true));
     try {
       await _repository.submitOnboarding(
-        capabilities: state.skills,
+        capabilities: const [],
         identity: state.identity,
         city: state.city,
         name: state.name,
+        interests: state.interests,
       );
       emit(state.copyWith(
         isSubmitting: false,

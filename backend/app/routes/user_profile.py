@@ -71,6 +71,7 @@ class OnboardingSubmit(BaseModel):
     identity: str | None = None  # "pre_arrival" or "in_uk"
     city: str | None = None
     name: str | None = None
+    interests: list[str] | None = None  # e.g. ["moving_home", "food_cooking", "gaming"]
 
 
 # --- Capability endpoints ---
@@ -305,6 +306,23 @@ async def submit_onboarding(
         else:
             pref = UserProfilePreference(user_id=current_user.id, city=data.city)
             db.add(pref)
+
+    # Save interests to UserDemand.recent_interests
+    if data.interests:
+        from app.models import UserDemand
+        demand = db.query(UserDemand).filter(UserDemand.user_id == current_user.id).first()
+        if not demand:
+            demand = UserDemand(user_id=current_user.id)
+            db.add(demand)
+        existing = demand.recent_interests or {}
+        for interest_key in data.interests:
+            existing[interest_key] = {
+                "confidence": 0.8,
+                "urgency": "medium",
+                "source": "onboarding",
+            }
+        demand.recent_interests = existing
+        db.flush()
 
     # Update name if provided
     if data.name and data.name.strip():

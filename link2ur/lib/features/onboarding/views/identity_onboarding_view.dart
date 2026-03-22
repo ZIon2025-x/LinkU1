@@ -103,7 +103,7 @@ class _OnboardingContentState extends State<_OnboardingContent> {
                     children: const [
                       _ProfileStep(),
                       _CityStep(),
-                      _SkillsStep(),
+                      _InterestsStep(),
                     ],
                   ),
                 ),
@@ -568,58 +568,39 @@ class _CityStepState extends State<_CityStep> {
   }
 }
 
-// ==================== Step 3: Skills Selection ====================
+// ==================== Step 3: Interests Selection ====================
 
-class _SkillsStep extends StatefulWidget {
-  const _SkillsStep();
+class _InterestsStep extends StatefulWidget {
+  const _InterestsStep();
 
   @override
-  State<_SkillsStep> createState() => _SkillsStepState();
+  State<_InterestsStep> createState() => _InterestsStepState();
 }
 
-class _SkillsStepState extends State<_SkillsStep> {
-  List<Map<String, dynamic>> _categories = [];
-  final Set<int> _selectedIds = {};
-  bool _isLoading = true;
+class _InterestsStepState extends State<_InterestsStep> {
+  final Set<String> _selectedKeys = {};
 
-  @override
-  void initState() {
-    super.initState();
-    _loadCategories();
-  }
-
-  Future<void> _loadCategories() async {
-    try {
-      final repo = context.read<UserProfileRepository>();
-      final data = await repo.getSkillCategories();
-      if (mounted) {
-        setState(() {
-          _categories = data;
-          _isLoading = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
+  static const List<_InterestItem> _interests = [
+    _InterestItem(key: 'moving_home', icon: Icons.home_rounded, zh: '搬家/家居', en: 'Moving & Home'),
+    _InterestItem(key: 'housing', icon: Icons.vpn_key_rounded, zh: '租房/住宿', en: 'Housing'),
+    _InterestItem(key: 'food_cooking', icon: Icons.restaurant_rounded, zh: '美食/烹饪', en: 'Food & Cooking'),
+    _InterestItem(key: 'transport', icon: Icons.directions_car_rounded, zh: '出行/驾驶', en: 'Transport & Driving'),
+    _InterestItem(key: 'study_tutoring', icon: Icons.menu_book_rounded, zh: '学习/辅导', en: 'Study & Tutoring'),
+    _InterestItem(key: 'photo_video', icon: Icons.camera_alt_rounded, zh: '摄影/视频', en: 'Photo & Video'),
+    _InterestItem(key: 'sports_fitness', icon: Icons.fitness_center_rounded, zh: '运动/健身', en: 'Sports & Fitness'),
+    _InterestItem(key: 'travel', icon: Icons.flight_rounded, zh: '旅行/探索', en: 'Travel & Explore'),
+    _InterestItem(key: 'shopping', icon: Icons.shopping_bag_rounded, zh: '代购/购物', en: 'Shopping'),
+    _InterestItem(key: 'social', icon: Icons.people_rounded, zh: '社交/陪同', en: 'Social & Companion'),
+    _InterestItem(key: 'pets', icon: Icons.pets_rounded, zh: '宠物', en: 'Pets'),
+    _InterestItem(key: 'tech_it', icon: Icons.computer_rounded, zh: '技术/IT', en: 'Tech & IT'),
+    _InterestItem(key: 'art_design', icon: Icons.palette_rounded, zh: '艺术/设计', en: 'Art & Design'),
+    _InterestItem(key: 'gaming', icon: Icons.sports_esports_rounded, zh: '游戏/陪玩', en: 'Gaming'),
+  ];
 
   void _onSubmit({bool skip = false}) {
     final bloc = context.read<IdentityOnboardingBloc>();
-    if (!skip && _selectedIds.isNotEmpty) {
-      final locale = Localizations.localeOf(context).languageCode;
-      final selectedSkills = _categories
-          .where((c) => _selectedIds.contains(c['id']))
-          .map((c) => {
-                'category_id': c['id'],
-                'skill_name': locale == 'zh'
-                    ? (c['name_zh'] ?? c['name_en'] ?? '')
-                    : (c['name_en'] ?? c['name_zh'] ?? ''),
-                'proficiency': 'beginner',
-              })
-          .toList();
-      bloc.add(OnboardingSetSkills(selectedSkills));
+    if (!skip && _selectedKeys.isNotEmpty) {
+      bloc.add(OnboardingSetInterests(_selectedKeys.toList()));
     }
     bloc.add(const OnboardingSubmit());
   }
@@ -629,6 +610,7 @@ class _SkillsStepState extends State<_SkillsStep> {
     final l10n = context.l10n;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final isZh = Localizations.localeOf(context).languageCode == 'zh';
 
     return BlocBuilder<IdentityOnboardingBloc, IdentityOnboardingState>(
       buildWhen: (prev, curr) => prev.isSubmitting != curr.isSubmitting,
@@ -640,62 +622,69 @@ class _SkillsStepState extends State<_SkillsStep> {
             children: [
               AppSpacing.vXl,
               Text(
-                l10n.onboardingSkillsTitle,
+                l10n.onboardingInterestsTitle,
                 style: AppTypography.title.copyWith(
                   color: theme.colorScheme.onSurface,
                 ),
               ),
+              const SizedBox(height: 4),
+              Text(
+                l10n.onboardingInterestsSubtitle,
+                style: AppTypography.callout.copyWith(
+                  color: AppColors.textSecondaryLight,
+                ),
+              ),
               AppSpacing.vLg,
               Expanded(
-                child: _isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : SingleChildScrollView(
-                        child: Wrap(
-                          spacing: AppSpacing.sm,
-                          runSpacing: AppSpacing.sm,
-                          children: _categories.map((cat) {
-                            final id = cat['id'] as int;
-                            // Backend returns name_zh and name_en
-                            final locale = Localizations.localeOf(context).languageCode;
-                            final name = locale == 'zh'
-                                ? (cat['name_zh'] as String? ?? cat['name_en'] as String? ?? '')
-                                : (cat['name_en'] as String? ?? cat['name_zh'] as String? ?? '');
-                            final isSelected = _selectedIds.contains(id);
-                            return FilterChip(
-                              label: Text(name),
-                              selected: isSelected,
-                              selectedColor: AppColors.primary.withAlpha(30),
-                              labelStyle: AppTypography.callout.copyWith(
-                                color: isSelected
-                                    ? AppColors.primary
-                                    : theme.colorScheme.onSurface,
-                                fontWeight: isSelected
-                                    ? FontWeight.w600
-                                    : FontWeight.normal,
-                              ),
-                              side: BorderSide(
-                                color: isSelected
-                                    ? AppColors.primary
-                                    : (isDark
-                                        ? Colors.white.withAlpha(30)
-                                        : Colors.black.withAlpha(20)),
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: AppRadius.allSmall,
-                              ),
-                              onSelected: (selected) {
-                                setState(() {
-                                  if (selected) {
-                                    _selectedIds.add(id);
-                                  } else {
-                                    _selectedIds.remove(id);
-                                  }
-                                });
-                              },
-                            );
-                          }).toList(),
+                child: SingleChildScrollView(
+                  child: Wrap(
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.sm,
+                    children: _interests.map((item) {
+                      final isSelected = _selectedKeys.contains(item.key);
+                      final label = isZh ? item.zh : item.en;
+                      return FilterChip(
+                        avatar: Icon(
+                          item.icon,
+                          size: 18,
+                          color: isSelected
+                              ? AppColors.primary
+                              : theme.colorScheme.onSurface,
                         ),
-                      ),
+                        label: Text(label),
+                        selected: isSelected,
+                        selectedColor: AppColors.primary.withAlpha(30),
+                        labelStyle: AppTypography.callout.copyWith(
+                          color: isSelected
+                              ? AppColors.primary
+                              : theme.colorScheme.onSurface,
+                          fontWeight: isSelected
+                              ? FontWeight.w600
+                              : FontWeight.normal,
+                        ),
+                        side: BorderSide(
+                          color: isSelected
+                              ? AppColors.primary
+                              : (isDark
+                                  ? Colors.white.withAlpha(30)
+                                  : Colors.black.withAlpha(20)),
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: AppRadius.allSmall,
+                        ),
+                        onSelected: (selected) {
+                          setState(() {
+                            if (selected) {
+                              _selectedKeys.add(item.key);
+                            } else {
+                              _selectedKeys.remove(item.key);
+                            }
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ),
               ),
               AppSpacing.vMd,
               Row(
@@ -759,6 +748,20 @@ class _SkillsStepState extends State<_SkillsStep> {
       },
     );
   }
+}
+
+class _InterestItem {
+  final String key;
+  final IconData icon;
+  final String zh;
+  final String en;
+
+  const _InterestItem({
+    required this.key,
+    required this.icon,
+    required this.zh,
+    required this.en,
+  });
 }
 
 // ==================== Page Indicator ====================

@@ -19417,6 +19417,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Done'**
   String get onboardingComplete;
+
+  /// No description provided for @onboardingInterestsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What are you interested in?'**
+  String get onboardingInterestsTitle;
+
+  /// No description provided for @onboardingInterestsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose your interests so we can recommend better for you'**
+  String get onboardingInterestsSubtitle;
 }
 
 class _AppLocalizationsDelegate

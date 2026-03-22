@@ -115,6 +115,7 @@ class UserProfileRepository {
     String? identity,
     String? city,
     String? name,
+    List<String>? interests,
   }) async {
     final response = await _apiService.post(
       ApiEndpoints.profileOnboarding,
@@ -125,6 +126,7 @@ class UserProfileRepository {
         if (identity != null) 'identity': identity,
         if (city != null) 'city': city,
         if (name != null) 'name': name,
+        if (interests != null && interests.isNotEmpty) 'interests': interests,
       },
     );
     if (!response.isSuccess) {
