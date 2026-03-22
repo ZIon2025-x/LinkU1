@@ -19333,6 +19333,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No collaboration history yet'**
   String get sharedTasksEmpty;
+
+  /// No description provided for @onboardingIdentityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'About You'**
+  String get onboardingIdentityTitle;
+
+  /// No description provided for @onboardingIdentityPreArrival.
+  ///
+  /// In en, this message translates to:
+  /// **'Planning to come to the UK'**
+  String get onboardingIdentityPreArrival;
+
+  /// No description provided for @onboardingIdentityInUk.
+  ///
+  /// In en, this message translates to:
+  /// **'Already studying in the UK'**
+  String get onboardingIdentityInUk;
+
+  /// No description provided for @onboardingCityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your City'**
+  String get onboardingCityTitle;
+
+  /// No description provided for @onboardingCityHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Select or type a city'**
+  String get onboardingCityHint;
+
+  /// No description provided for @onboardingSkillsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Skills'**
+  String get onboardingSkillsTitle;
+
+  /// No description provided for @onboardingSkillsSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get onboardingSkillsSkip;
+
+  /// No description provided for @onboardingNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get onboardingNext;
+
+  /// No description provided for @onboardingComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get onboardingComplete;
 }
 
 class _AppLocalizationsDelegate

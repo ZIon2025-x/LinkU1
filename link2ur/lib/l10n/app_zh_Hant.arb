@@ -4627,5 +4627,14 @@
   "sharedTasksTitle": "合作記錄",
   "sharedTasksRolePoster": "你發佈的",
   "sharedTasksRoleTaker": "你接單的",
-  "sharedTasksEmpty": "暫無合作記錄"
+  "sharedTasksEmpty": "暫無合作記錄",
+  "onboardingIdentityTitle": "你的身份",
+  "onboardingIdentityPreArrival": "準備來英國的留學生",
+  "onboardingIdentityInUk": "已經在英國讀書",
+  "onboardingCityTitle": "你在哪個城市",
+  "onboardingCityHint": "選擇或輸入城市",
+  "onboardingSkillsTitle": "你擅長什麼",
+  "onboardingSkillsSkip": "跳過",
+  "onboardingNext": "下一步",
+  "onboardingComplete": "完成"
 }

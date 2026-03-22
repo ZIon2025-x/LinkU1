@@ -4804,5 +4804,14 @@
   "sharedTasksTitle": "Collaboration History",
   "sharedTasksRolePoster": "Posted by you",
   "sharedTasksRoleTaker": "Completed by you",
-  "sharedTasksEmpty": "No collaboration history yet"
+  "sharedTasksEmpty": "No collaboration history yet",
+  "onboardingIdentityTitle": "About You",
+  "onboardingIdentityPreArrival": "Planning to come to the UK",
+  "onboardingIdentityInUk": "Already studying in the UK",
+  "onboardingCityTitle": "Your City",
+  "onboardingCityHint": "Select or type a city",
+  "onboardingSkillsTitle": "Your Skills",
+  "onboardingSkillsSkip": "Skip",
+  "onboardingNext": "Next",
+  "onboardingComplete": "Done"
 }

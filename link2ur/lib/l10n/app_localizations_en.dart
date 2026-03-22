@@ -10502,4 +10502,31 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sharedTasksEmpty => 'No collaboration history yet';
+
+  @override
+  String get onboardingIdentityTitle => 'About You';
+
+  @override
+  String get onboardingIdentityPreArrival => 'Planning to come to the UK';
+
+  @override
+  String get onboardingIdentityInUk => 'Already studying in the UK';
+
+  @override
+  String get onboardingCityTitle => 'Your City';
+
+  @override
+  String get onboardingCityHint => 'Select or type a city';
+
+  @override
+  String get onboardingSkillsTitle => 'Your Skills';
+
+  @override
+  String get onboardingSkillsSkip => 'Skip';
+
+  @override
+  String get onboardingNext => 'Next';
+
+  @override
+  String get onboardingComplete => 'Done';
 }

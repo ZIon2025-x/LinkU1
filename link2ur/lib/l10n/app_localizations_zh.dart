@@ -10081,6 +10081,33 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get sharedTasksEmpty => '暂无合作记录';
+
+  @override
+  String get onboardingIdentityTitle => '你的身份';
+
+  @override
+  String get onboardingIdentityPreArrival => '准备来英国的留学生';
+
+  @override
+  String get onboardingIdentityInUk => '已经在英国读书';
+
+  @override
+  String get onboardingCityTitle => '你在哪个城市';
+
+  @override
+  String get onboardingCityHint => '选择或输入城市';
+
+  @override
+  String get onboardingSkillsTitle => '你擅长什么';
+
+  @override
+  String get onboardingSkillsSkip => '跳过';
+
+  @override
+  String get onboardingNext => '下一步';
+
+  @override
+  String get onboardingComplete => '完成';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -20116,4 +20143,31 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get sharedTasksEmpty => '暫無合作記錄';
+
+  @override
+  String get onboardingIdentityTitle => '你的身份';
+
+  @override
+  String get onboardingIdentityPreArrival => '準備來英國的留學生';
+
+  @override
+  String get onboardingIdentityInUk => '已經在英國讀書';
+
+  @override
+  String get onboardingCityTitle => '你在哪個城市';
+
+  @override
+  String get onboardingCityHint => '選擇或輸入城市';
+
+  @override
+  String get onboardingSkillsTitle => '你擅長什麼';
+
+  @override
+  String get onboardingSkillsSkip => '跳過';
+
+  @override
+  String get onboardingNext => '下一步';
+
+  @override
+  String get onboardingComplete => '完成';
 }
