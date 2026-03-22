@@ -111,7 +111,7 @@ class ContentScorer(BaseScorer):
 
         # 5. Keyword match (0.10)
         if user_vector["keywords"]:
-            task_text = f"{task.title} {task.description}".lower()
+            task_text = f"{task.title or ''} {task.description or ''}".lower()
             matched_keywords = sum(
                 1 for keyword in user_vector["keywords"]
                 if keyword.lower() in task_text

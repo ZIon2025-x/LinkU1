@@ -2154,6 +2154,15 @@ def _old_engine_recommend(
 
 def _new_engine_recommend(db, user_id, limit, algorithm, task_type, location, keyword, latitude, longitude):
     """Delegate to the new pluggable scorer engine."""
+    # Guard: new engine only supports sync sessions
+    try:
+        from sqlalchemy.ext.asyncio import AsyncSession
+        if isinstance(db, AsyncSession):
+            logger.warning("New engine does not support AsyncSession, falling back to old engine")
+            return _old_engine_recommend(db, user_id, limit, algorithm, task_type, location, keyword, latitude, longitude)
+    except ImportError:
+        pass
+
     from app.models import User as UserModel
 
     user = db.query(UserModel).filter_by(id=user_id).first()
