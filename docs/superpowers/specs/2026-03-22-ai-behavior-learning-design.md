@@ -48,17 +48,24 @@
 
 ### event_type 枚举
 
+**AI 聊天行为（在 `ai_agent.py` 中采集）：**
+
 | event_type | 触发时机 | event_data 示例 |
 |------------|----------|-----------------|
-| `intent` | 意图识别后 | `{"intent": "TASK_QUERY", "message_preview": "我想找人帮搬家"}` |
-| `tool_call` | 工具调用后 | `{"tool": "search_tasks", "params": {"keyword": "搬家"}}` |
-| `task_draft` | 生成任务草稿 | `{"type": "moving", "reward": 5000, "location": "London"}` |
-| `draft_confirmed` | 用户确认草稿 | `{"task_id": 123}` |
-| `draft_abandoned` | 用户放弃草稿 | `{"type": "moving"}` |
-| `search_keyword` | 搜索任务/市场 | `{"keyword": "翻译", "tool": "search_tasks", "result_count": 5}` |
-| `browse_detail` | 查看详情 | `{"target": "task", "target_id": 456}` |
-| `cs_transfer` | 转人工 | `{"topic": "payment_issue"}` |
-| `ai_insight` | AI 实时分析结果 | `{"interests": [...], "skills": [...], "stage_hints": [...]}` |
+| `ai_insight` | AI 每条回复中提取 | `{"interests": [...], "skills": [...], "stages": [...], "preferences": {...}}` |
+| `ai_intent` | 意图识别后 | `{"intent": "TASK_QUERY", "message_preview": "我想找人帮搬家"}` |
+| `ai_tool_call` | AI 工具调用后 | `{"tool": "search_tasks", "params": {"keyword": "搬家"}}` |
+| `ai_task_draft` | 生成任务草稿 | `{"type": "moving", "reward": 5000, "location": "London"}` |
+| `ai_draft_confirmed` | 用户确认草稿 | `{"task_id": 123}` |
+| `ai_draft_abandoned` | 用户放弃草稿 | `{"type": "moving"}` |
+| `ai_cs_transfer` | 转人工 | `{"topic": "payment_issue"}` |
+
+**平台行为（在现有 API 接口中搭车采集）：**
+
+| event_type | 触发时机 | event_data 示例 | 采集位置 |
+|------------|----------|-----------------|----------|
+| `search` | 用户搜索 | `{"keyword": "搬家", "source": "tasks", "result_count": 12}` | 任务搜索/跳蚤市场搜索/论坛搜索 API |
+| `browse` | 查看详情 | `{"target": "task", "target_id": 456, "category": "moving"}` | 任务详情/活动详情/专家详情 API |
 
 ---
 
@@ -308,6 +315,8 @@ class UserDemand(Base):
 | 修改 | `backend/app/main.py` | 初始化 BehaviorCollector |
 | 修改 | `backend/app/routes/user_profile.py` | 引导页 onboarding 端点更新（加 identity、city） |
 | 修改 | `backend/app/services/user_profile_service.py` | onboarding 逻辑更新 |
+| 修改 | `backend/app/routers.py`（任务搜索/详情接口） | 搭车埋点：搜索时记录 `search`，查看详情时记录 `browse` |
+| 修改 | `backend/app/routes/flea_market.py`（跳蚤市场搜索/详情） | 搭车埋点：同上 |
 
 ### Flutter
 
