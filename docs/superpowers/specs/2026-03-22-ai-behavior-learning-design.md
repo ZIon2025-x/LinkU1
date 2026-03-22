@@ -246,13 +246,17 @@ class UserDemand(Base):
 
 ### `demand_inference.py` — 保留但升级
 
-现有的 `nightly_demand_inference` 继续保留，用于处理**没有和 AI 聊过天的用户**（仍按任务行为 + 注册天数推断，向后兼容）。
+现有的 `nightly_demand_inference` 继续保留，处理所有用户。
 
 **升级内容：**
 - `determine_user_stage()` 改为基于 `identity` + 月份计算多阶段数组（替代原来的注册天数逻辑）
-- 有 AI insight 的用户跳过（已经由 BehaviorCollector 实时更新了）
+- 从任务行为（发布/接单/申请）分析出的 interests 和 stages，与 UserDemand 中已有的数据（可能来自 AI 实时分析）**合并而非覆盖**
+- 合并规则：按 topic/skill 去重，两边都有的取最高 confidence；stages 取并集
 
-**不新增夜间任务。** 有聊天行为的用户画像由 BehaviorCollector 后台线程实时更新。
+**两条路径互补，不冲突：**
+- AI 实时分析 → 从聊天语义中捕捉需求（如用户说"我马上要搬家"）
+- 夜间任务 → 从任务行为中捕捉需求（如用户发布了搬家任务但没和 AI 聊过）
+- 两者的结果合并到同一个 UserDemand，用户画像越来越完整
 
 ---
 
@@ -299,7 +303,7 @@ class UserDemand(Base):
 | 新建 | `backend/migrations/xxx_add_behavior_events.sql` | 新表 + 字段迁移 |
 | 修改 | `backend/app/models.py` | 新增 `UserBehaviorEvent` 模型；`UserDemand` 加字段；`UserProfilePreference` 加 `city`；`User` 加 `onboarding_completed` |
 | 修改 | `backend/app/services/ai_agent.py` | system prompt 加分析指令；回复后提取 `<user_insights>` JSON 写队列 |
-| 修改 | `backend/app/services/demand_inference.py` | `determine_user_stage()` 改为月份+身份逻辑；有 AI insight 的用户跳过 |
+| 修改 | `backend/app/services/demand_inference.py` | `determine_user_stage()` 改为月份+身份逻辑；结果与现有 UserDemand 合并而非覆盖 |
 | 修改 | `backend/app/main.py` | 初始化 BehaviorCollector |
 | 修改 | `backend/app/routes/user_profile.py` | 引导页 onboarding 端点更新（加 identity、city） |
 | 修改 | `backend/app/services/user_profile_service.py` | onboarding 逻辑更新 |
