@@ -34,6 +34,27 @@ from app.utils.time_utils import get_utc_time
 logger = logging.getLogger(__name__)
 
 
+# ==================== User Insights Extraction ====================
+
+_USER_INSIGHTS_RE = re.compile(r"\s*<user_insights>\s*(.*?)\s*</user_insights>\s*", re.DOTALL)
+
+
+def _extract_user_insights(text: str) -> tuple[str, dict | None]:
+    """Extract and remove <user_insights> JSON from AI reply."""
+    match = _USER_INSIGHTS_RE.search(text)
+    if not match:
+        return text, None
+    raw = match.group(1).strip()
+    cleaned = _USER_INSIGHTS_RE.sub("", text).rstrip()
+    if not raw or raw == "{}":
+        return cleaned, None
+    try:
+        data = json.loads(raw)
+        return (cleaned, data) if isinstance(data, dict) and data else (cleaned, None)
+    except (json.JSONDecodeError, ValueError):
+        return cleaned, None
+
+
 # ==================== LLM 客户端（带健康检查 & 自动重建） ====================
 
 _llm_client: LLMClient | None = None
@@ -463,7 +484,25 @@ _DEFAULT_SYSTEM_PROMPT = """你是 Link2Ur 技能互助平台的官方 AI 客服
 - 语言：{lang_instruction}
 - 长度：**每次回复控制在 3-5 句话以内**，不要长篇大论
 - 格式：不要用 markdown 标题（#），适当用列表和加粗
-- 风格：简洁专业，直接解决问题，不要寒暄"""
+- 风格：简洁专业，直接解决问题，不要寒暄
+
+【用户行为分析 — 内部使用，用户不可见】
+在你的每条回复末尾，添加一段 <user_insights> 标签，用 JSON 格式分析用户的行为信号。
+
+分析维度：
+- interests: 用户表达的需求或兴趣（如"我想找人帮搬家"→ topic: 搬家）
+- skills: 用户透露的技能或经验（如"我以前做过家教"→ skill: 教学）
+- stages: 用户当前的生命周期阶段信号（如频繁问租房→ house_hunting）
+- preferences: 用户的偏好（线上/线下、价格敏感等）
+
+判断 confidence 和 urgency 时，关注用户的语气和行为模式：
+- "我马上就要搬家了" → high urgency, high confidence
+- "搬家一般怎么收费？" → medium urgency, medium confidence
+- "我朋友想问问搬家的事" → low urgency, low confidence
+- 用户持续追问细节 → 提升 confidence
+
+如果这条消息没有有价值的信号，输出空: <user_insights>{}</user_insights>
+不要告诉用户你在做分析。"""
 
 _db_prompt_cache: tuple[str | None, float] = (None, 0.0)
 _DB_PROMPT_CACHE_TTL = 300  # 5 分钟
@@ -617,6 +656,15 @@ async def _step_transfer_cs(ctx: _PipelineContext) -> AsyncIterator[ServerSentEv
     if ctx.intent != IntentType.TRANSFER_TO_CS:
         return
 
+    # Record CS transfer event
+    try:
+        from app.services.behavior_collector import BehaviorCollector
+        BehaviorCollector.get_instance().record(ctx.user.id, "ai_cs_transfer", {
+            "message_preview": (ctx.user_message or "")[:100],
+        })
+    except Exception:
+        pass
+
     executor = ToolExecutor(ctx.db, ctx.user)
     cs_result = await executor.execute("check_cs_availability", {}, request_lang=ctx.lang)
     available = cs_result.get("available", False)
@@ -735,6 +783,16 @@ async def _step_llm(ctx: _PipelineContext) -> AsyncIterator[ServerSentEvent]:
     """核心 LLM 调用 + 工具循环（带 token 上限保护）"""
     model_tier = "large" if ctx.intent == IntentType.COMPLEX else "small"
 
+    # Record intent event
+    try:
+        from app.services.behavior_collector import BehaviorCollector
+        BehaviorCollector.get_instance().record(ctx.user.id, "ai_intent", {
+            "intent": ctx.intent.value if ctx.intent else "unknown",
+            "message_preview": (ctx.user_message or "")[:100],
+        })
+    except Exception:
+        pass
+
     history = await _load_history(ctx.db, ctx.conversation_id)
     messages = history + [{"role": "user", "content": ctx.user_message}]
 
@@ -772,16 +830,54 @@ async def _step_llm(ctx: _PipelineContext) -> AsyncIterator[ServerSentEvent]:
                 break
 
             response: LLMResponse | None = None
+            _token_buffer = ""
             async for kind, data in llm.chat_stream(
                 messages=messages, system=system_prompt,
                 tools=tools, model_tier=model_tier,
             ):
                 if kind == "text_delta":
                     ctx.full_response += data
-                    yield _make_text_sse(data)
+                    _token_buffer += data
+                    # Check if we might be entering the insights tag
+                    if "<" in _token_buffer:
+                        # Could be start of <user_insights>, hold the buffer
+                        if "<user_insights>" in _token_buffer:
+                            # Definitely in the tag — send text before it, hold the rest
+                            pre, _ = _token_buffer.split("<user_insights>", 1)
+                            if pre:
+                                yield _make_text_sse(pre)
+                            _token_buffer = "<user_insights>" + _token_buffer.split("<user_insights>", 1)[1]
+                        elif _token_buffer.endswith(("<", "<u", "<us", "<use", "<user", "<user_", "<user_i", "<user_in", "<user_ins", "<user_insi", "<user_insig", "<user_insigh", "<user_insight", "<user_insights")):
+                            # Partial tag match — keep buffering
+                            pass
+                        else:
+                            # False alarm — flush buffer
+                            yield _make_text_sse(_token_buffer)
+                            _token_buffer = ""
+                    else:
+                        # No < at all — safe to flush
+                        yield _make_text_sse(_token_buffer)
+                        _token_buffer = ""
                 elif kind == "done":
                     response = data
                     break
+
+            # After streaming completes, handle remaining buffer
+            if _token_buffer:
+                if "<user_insights>" in _token_buffer and "</user_insights>" in _token_buffer:
+                    # Complete insights tag in buffer — extract and discard
+                    cleaned, insights = _extract_user_insights(_token_buffer)
+                    if cleaned:
+                        yield _make_text_sse(cleaned)
+                    if insights:
+                        try:
+                            from app.services.behavior_collector import BehaviorCollector
+                            BehaviorCollector.get_instance().record(ctx.user.id, "ai_insight", insights)
+                        except Exception:
+                            pass
+                else:
+                    # No complete tag — just send it
+                    yield _make_text_sse(_token_buffer)
 
             if response is None:
                 break
@@ -814,6 +910,19 @@ async def _step_llm(ctx: _PipelineContext) -> AsyncIterator[ServerSentEvent]:
                 result = await executor.execute(block.name, block.input, request_lang=ctx.reply_lang)
                 ctx.all_tool_calls.append({"id": block.id, "name": block.name, "input": block.input})
                 ctx.all_tool_results.append({"tool_use_id": block.id, "result": result})
+
+                # Record tool call behavior
+                try:
+                    from app.services.behavior_collector import BehaviorCollector
+                    _collector = BehaviorCollector.get_instance()
+                    _collector.record(ctx.user.id, "ai_tool_call", {
+                        "tool": block.name,
+                        "params": block.input,
+                    })
+                    if block.name == "prepare_task_draft":
+                        _collector.record(ctx.user.id, "ai_task_draft", block.input)
+                except Exception:
+                    pass
 
                 yield ServerSentEvent(
                     data=json.dumps({"tool": block.name, "result": result}, ensure_ascii=False),
@@ -857,6 +966,15 @@ async def _step_llm(ctx: _PipelineContext) -> AsyncIterator[ServerSentEvent]:
             data=json.dumps({"error": error_reply}, ensure_ascii=False),
             event="error",
         )
+
+    # Extract insights from full response and clean it
+    ctx.full_response, _final_insights = _extract_user_insights(ctx.full_response)
+    if _final_insights:
+        try:
+            from app.services.behavior_collector import BehaviorCollector
+            BehaviorCollector.get_instance().record(ctx.user.id, "ai_insight", _final_insights)
+        except Exception:
+            pass
 
     # 保存 & 记录用量
     total_tokens = ctx.total_input_tokens + ctx.total_output_tokens
