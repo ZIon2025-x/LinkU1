@@ -145,6 +145,10 @@ class _PreferenceEditContentState extends State<_PreferenceEditContent> {
         title: const Text('偏好设置'),
       ),
       body: BlocConsumer<UserProfileBloc, UserProfileState>(
+        listenWhen: (prev, curr) =>
+            prev.status == UserProfileStatus.loading &&
+            (curr.status == UserProfileStatus.loaded ||
+             curr.status == UserProfileStatus.error),
         listener: (context, state) {
           if (state.status == UserProfileStatus.loaded) {
             ScaffoldMessenger.of(context).showSnackBar(

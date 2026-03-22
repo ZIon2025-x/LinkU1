@@ -10372,7 +10372,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get couponNotApplicable => 'Not applicable to this task';
 
   @override
-  String get myProfileTitle => 'My Profile';
+  String get myProfileTitle => 'Interests & Preferences';
 
   @override
   String get capabilityTitle => 'Skills';

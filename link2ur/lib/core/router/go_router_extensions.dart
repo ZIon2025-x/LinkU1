@@ -125,12 +125,6 @@ extension GoRouterExtension on BuildContext {
     push('/vip/purchase');
   }
 
-  /// 跳转到任务偏好
-  void goToTaskPreferences() {
-    if (!_NavigationThrottle.acquire()) return;
-    push('/profile/task-preferences');
-  }
-
   /// 跳转到我的论坛帖子
   void goToMyForumPosts() {
     if (!_NavigationThrottle.acquire()) return;

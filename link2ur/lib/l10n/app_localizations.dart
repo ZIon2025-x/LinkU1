@@ -19079,7 +19079,7 @@ abstract class AppLocalizations {
   /// No description provided for @myProfileTitle.
   ///
   /// In en, this message translates to:
-  /// **'My Profile'**
+  /// **'Interests & Preferences'**
   String get myProfileTitle;
 
   /// No description provided for @capabilityTitle.

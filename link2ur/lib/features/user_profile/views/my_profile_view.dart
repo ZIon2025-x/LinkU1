@@ -5,6 +5,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/error_localizer.dart';
+import '../../../core/utils/l10n_extension.dart';
 import '../../../data/models/user_profile.dart';
 import '../../../data/repositories/user_profile_repository.dart';
 import '../bloc/user_profile_bloc.dart';
@@ -47,7 +48,7 @@ class _MyProfileContentState extends State<_MyProfileContent> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('我的画像'),
+        title: Text(context.l10n.myProfileTitle),
       ),
       body: BlocBuilder<UserProfileBloc, UserProfileState>(
         builder: (context, state) {

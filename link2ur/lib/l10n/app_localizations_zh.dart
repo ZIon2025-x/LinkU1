@@ -9954,7 +9954,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get couponNotApplicable => '不适用于此任务';
 
   @override
-  String get myProfileTitle => '我的画像';
+  String get myProfileTitle => '兴趣偏好';
 
   @override
   String get capabilityTitle => '能力';
@@ -20046,7 +20046,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get couponNotApplicable => '不適用於此任務';
 
   @override
-  String get myProfileTitle => '我的畫像';
+  String get myProfileTitle => '興趣偏好';
 
   @override
   String get capabilityTitle => '能力';

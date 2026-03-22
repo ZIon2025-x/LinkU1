@@ -156,17 +156,10 @@ Widget _buildSystemSection(BuildContext context, bool isDark) {
               ),
               _profileDivider(isDark),
               _ProfileRow(
-                icon: Icons.person_outline,
-                title: '我的画像',
+                icon: Icons.tune_rounded,
+                title: context.l10n.myProfileTitle,
                 color: AppColors.primary,
                 onTap: () => context.push('/my-profile'),
-              ),
-              _profileDivider(isDark),
-              _ProfileRow(
-                icon: Icons.favorite,              // heart.text.square.fill
-                title: context.l10n.profileTaskPreferences,
-                color: AppColors.error,
-                onTap: () => context.push('/profile/task-preferences'),
               ),
               _profileDivider(isDark),
               _ProfileRow(
