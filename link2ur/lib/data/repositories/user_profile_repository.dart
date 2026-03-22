@@ -112,6 +112,8 @@ class UserProfileRepository {
     required List<Map<String, dynamic>> capabilities,
     String? mode,
     List<int> preferredCategories = const [],
+    String? identity,
+    String? city,
   }) async {
     final response = await _apiService.post(
       ApiEndpoints.profileOnboarding,
@@ -119,6 +121,8 @@ class UserProfileRepository {
         'capabilities': capabilities,
         if (mode != null) 'mode': mode,
         'preferred_categories': preferredCategories,
+        if (identity != null) 'identity': identity,
+        if (city != null) 'city': city,
       },
     );
     if (!response.isSuccess) {

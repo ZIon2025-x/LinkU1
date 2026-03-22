@@ -143,7 +143,8 @@ class IdentityOnboardingBloc
     try {
       await _repository.submitOnboarding(
         capabilities: state.skills,
-        mode: state.identity,
+        identity: state.identity,
+        city: state.city,
       );
       emit(state.copyWith(
         isSubmitting: false,
