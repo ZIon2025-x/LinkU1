@@ -10,6 +10,7 @@ import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/constants/interest_categories.dart';
 import '../../../data/repositories/user_profile_repository.dart';
+import '../../profile/views/avatar_picker_view.dart';
 import '../bloc/identity_onboarding_bloc.dart';
 
 class IdentityOnboardingView extends StatelessWidget {
@@ -152,9 +153,20 @@ class _ProfileStepState extends State<_ProfileStep> {
     super.dispose();
   }
 
-  bool _isRandomEmail(String? email) {
-    if (email == null || email.isEmpty) return true;
-    return email.contains('@link2ur.com') && email.startsWith('phone_');
+  void _openAvatarPicker(String? currentAvatar) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => AvatarPickerView(
+          currentAvatar: currentAvatar,
+          onSelected: (newAvatar) {
+            // Avatar updated by AvatarPickerView's internal ProfileBloc.
+            // Refresh auth state to get latest avatar.
+            context.read<AuthBloc>().add(AuthCheckRequested());
+            setState(() {});
+          },
+        ),
+      ),
+    );
   }
 
   void _onNext() {
@@ -192,33 +204,60 @@ class _ProfileStepState extends State<_ProfileStep> {
                   ),
                   AppSpacing.vXl,
 
-                  // Avatar section
+                  // Avatar section (tappable to open avatar picker)
                   Center(
-                    child: Column(
-                      children: [
-                        CircleAvatar(
-                          radius: 40,
-                          backgroundColor: AppColors.primary.withAlpha(30),
-                          backgroundImage: user?.avatar != null &&
-                                  user!.avatar!.isNotEmpty &&
-                                  Uri.tryParse(user.avatar!)?.hasScheme == true
-                              ? NetworkImage(user.avatar!)
-                              : null,
-                          child: user?.avatar == null ||
-                                  user!.avatar!.isEmpty ||
-                                  Uri.tryParse(user.avatar!)?.hasScheme != true
-                              ? const Icon(Icons.person_rounded,
-                                  size: 40, color: AppColors.primary)
-                              : null,
-                        ),
-                        AppSpacing.vSm,
-                        Text(
-                          l10n.onboardingProfileAvatar,
-                          style: AppTypography.caption.copyWith(
-                            color: AppColors.textSecondaryLight,
+                    child: GestureDetector(
+                      onTap: () => _openAvatarPicker(user?.avatar),
+                      child: Column(
+                        children: [
+                          Stack(
+                            children: [
+                              CircleAvatar(
+                                radius: 40,
+                                backgroundColor: AppColors.primary.withAlpha(30),
+                                backgroundImage: user?.avatar != null &&
+                                        user!.avatar!.isNotEmpty &&
+                                        Uri.tryParse(user.avatar!)?.hasScheme == true
+                                    ? NetworkImage(user.avatar!)
+                                    : null,
+                                child: user?.avatar == null ||
+                                        user!.avatar!.isEmpty ||
+                                        Uri.tryParse(user.avatar!)?.hasScheme != true
+                                    ? const Icon(Icons.person_rounded,
+                                        size: 40, color: AppColors.primary)
+                                    : null,
+                              ),
+                              Positioned(
+                                right: 0,
+                                bottom: 0,
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: theme.scaffoldBackgroundColor,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: const Icon(
+                                    Icons.camera_alt_rounded,
+                                    size: 14,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
+                          AppSpacing.vSm,
+                          Text(
+                            l10n.onboardingProfileAvatar,
+                            style: AppTypography.caption.copyWith(
+                              color: AppColors.textSecondaryLight,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   AppSpacing.vLg,
@@ -244,65 +283,6 @@ class _ProfileStepState extends State<_ProfileStep> {
                     onChanged: (_) => setState(() {}),
                   ),
                   AppSpacing.vMd,
-
-                  // Email field (only if random/invalid)
-                  if (_isRandomEmail(user?.email)) ...[
-                    Text(
-                      l10n.onboardingProfileEmail,
-                      style: AppTypography.callout.copyWith(
-                        color: theme.colorScheme.onSurface,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    AppSpacing.vSm,
-                    TextField(
-                      enabled: false,
-                      decoration: InputDecoration(
-                        hintText: l10n.onboardingProfileEmail,
-                        prefixIcon:
-                            const Icon(Icons.email_outlined),
-                        border: OutlineInputBorder(
-                          borderRadius: AppRadius.allMedium,
-                        ),
-                        suffixIcon: Tooltip(
-                          message: l10n.onboardingProfileUpdateInSettings,
-                          child: const Icon(Icons.info_outline_rounded,
-                              size: 20,
-                              color: AppColors.textSecondaryLight),
-                        ),
-                      ),
-                    ),
-                    AppSpacing.vMd,
-                  ],
-
-                  // Phone field (only if empty)
-                  if (user?.phone == null || user!.phone!.isEmpty) ...[
-                    Text(
-                      l10n.onboardingProfilePhone,
-                      style: AppTypography.callout.copyWith(
-                        color: theme.colorScheme.onSurface,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    AppSpacing.vSm,
-                    TextField(
-                      enabled: false,
-                      decoration: InputDecoration(
-                        hintText: l10n.onboardingProfilePhone,
-                        prefixIcon: const Icon(Icons.phone_outlined),
-                        border: OutlineInputBorder(
-                          borderRadius: AppRadius.allMedium,
-                        ),
-                        suffixIcon: Tooltip(
-                          message: l10n.onboardingProfileUpdateInSettings,
-                          child: const Icon(Icons.info_outline_rounded,
-                              size: 20,
-                              color: AppColors.textSecondaryLight),
-                        ),
-                      ),
-                    ),
-                    AppSpacing.vMd,
-                  ],
 
                   AppSpacing.vSm,
 
