@@ -54,12 +54,20 @@ class _OnboardingContentState extends State<_OnboardingContent> {
   Widget build(BuildContext context) {
     return BlocConsumer<IdentityOnboardingBloc, IdentityOnboardingState>(
       listenWhen: (prev, curr) =>
-          prev.currentStep != curr.currentStep || curr.isComplete,
+          prev.currentStep != curr.currentStep ||
+          curr.isComplete ||
+          (prev.errorMessage == null && curr.errorMessage != null),
       listener: (context, state) {
         if (state.isComplete) {
           // Refresh auth state so router redirect knows onboarding is done
           context.read<AuthBloc>().add(AuthCheckRequested());
           context.go('/');
+          return;
+        }
+        if (state.errorMessage != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(state.errorMessage!)),
+          );
           return;
         }
         _goToPage(state.currentStep);
@@ -399,8 +407,16 @@ class _SkillsStepState extends State<_SkillsStep> {
   void _onSubmit({bool skip = false}) {
     final bloc = context.read<IdentityOnboardingBloc>();
     if (!skip && _selectedIds.isNotEmpty) {
+      final locale = Localizations.localeOf(context).languageCode;
       final selectedSkills = _categories
           .where((c) => _selectedIds.contains(c['id']))
+          .map((c) => {
+                'category_id': c['id'],
+                'skill_name': locale == 'zh'
+                    ? (c['name_zh'] ?? c['name_en'] ?? '')
+                    : (c['name_en'] ?? c['name_zh'] ?? ''),
+                'proficiency': 'beginner',
+              })
           .toList();
       bloc.add(OnboardingSetSkills(selectedSkills));
     }
@@ -438,7 +454,11 @@ class _SkillsStepState extends State<_SkillsStep> {
                           runSpacing: AppSpacing.sm,
                           children: _categories.map((cat) {
                             final id = cat['id'] as int;
-                            final name = cat['name'] as String? ?? '';
+                            // Backend returns name_zh and name_en
+                            final locale = Localizations.localeOf(context).languageCode;
+                            final name = locale == 'zh'
+                                ? (cat['name_zh'] as String? ?? cat['name_en'] as String? ?? '')
+                                : (cat['name_en'] as String? ?? cat['name_zh'] as String? ?? '');
                             final isSelected = _selectedIds.contains(id);
                             return FilterChip(
                               label: Text(name),
