@@ -1891,6 +1891,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get tabsCommunity => '社区';
 
   @override
+  String get navDiscover => '发现';
+
+  @override
   String get tabsCreate => '发布';
 
   @override
@@ -12103,6 +12106,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get tabsCommunity => '社區';
+
+  @override
+  String get navDiscover => '發現';
 
   @override
   String get tabsCreate => '發布';

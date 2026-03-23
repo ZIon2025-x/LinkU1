@@ -1991,6 +1991,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tabsCommunity => 'Community';
 
   @override
+  String get navDiscover => 'Discover';
+
+  @override
   String get tabsCreate => 'Create';
 
   @override

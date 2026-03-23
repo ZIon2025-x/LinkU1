@@ -3651,6 +3651,12 @@ abstract class AppLocalizations {
   /// **'Community'**
   String get tabsCommunity;
 
+  /// No description provided for @navDiscover.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover'**
+  String get navDiscover;
+
   /// No description provided for @tabsCreate.
   ///
   /// In en, this message translates to:
