@@ -3,7 +3,7 @@ from typing import List, Literal, Optional, Dict, Any
 from decimal import Decimal
 
 from pydantic import BaseModel, Field, validator, field_validator, model_validator
-from pydantic import condecimal
+from pydantic import condecimal, conlist
 
 
 class UserBrief(BaseModel):
@@ -2266,6 +2266,45 @@ class TaskExpertServiceUpdate(BaseModel):
     time_slot_end_time: Optional[str] = None
     participants_per_slot: Optional[int] = None
     weekly_time_slot_config: Optional[dict] = None  # 按周几设置时间段配置
+
+
+class PersonalServiceCreate(BaseModel):
+    service_name: str = Field(..., max_length=100)
+    description: str = Field(..., max_length=2000)
+    base_price: condecimal(gt=0, max_digits=12, decimal_places=2)
+    currency: str = Field(default="GBP", max_length=10)
+    pricing_type: str = Field(default="fixed", pattern="^(fixed|hourly|negotiable)$")
+    images: Optional[conlist(str, max_length=6)] = None
+
+
+class PersonalServiceUpdate(BaseModel):
+    service_name: Optional[str] = Field(None, max_length=100)
+    description: Optional[str] = Field(None, max_length=2000)
+    base_price: Optional[condecimal(gt=0, max_digits=12, decimal_places=2)] = None
+    currency: Optional[str] = Field(None, max_length=10)
+    pricing_type: Optional[str] = Field(None, pattern="^(fixed|hourly|negotiable)$")
+    images: Optional[conlist(str, max_length=6)] = None
+
+
+class ServiceBrowseItem(BaseModel):
+    id: int
+    service_name: str
+    description: str
+    base_price: float
+    currency: str
+    pricing_type: str
+    service_type: str
+    is_expert_verified: bool
+    status: str
+    images: Optional[List[str]] = None
+    owner_id: str
+    owner_name: str
+    owner_avatar: Optional[str] = None
+    owner_rating: Optional[float] = None
+    created_at: Optional[str] = None
+
+    class Config:
+        from_attributes = True
 
 
 class TaskExpertServiceOut(BaseModel):
