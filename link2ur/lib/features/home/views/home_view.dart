@@ -267,28 +267,27 @@ class _HomeViewContentState extends State<_HomeViewContent> {
             ),
           ),
           Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _TabButton(
-                    title: context.l10n.homeFollow,
-                    isSelected: _selectedTab == 0,
-                    onTap: () => _onTabChanged(0),
-                  ),
-                  _TabButton(
-                    title: context.l10n.homeRecommended,
-                    isSelected: _selectedTab == 1,
-                    onTap: () => _onTabChanged(1),
-                  ),
-                  _TabButton(
-                    title: context.l10n.homeNearby,
-                    isSelected: _selectedTab == 2,
-                    onTap: () => _onTabChanged(2),
-                  ),
-                ],
-              ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _TabButton(
+                  title: context.l10n.homeFollow,
+                  isSelected: _selectedTab == 0,
+                  onTap: () => _onTabChanged(0),
+                ),
+                const SizedBox(width: 24),
+                _TabButton(
+                  title: context.l10n.homeRecommended,
+                  isSelected: _selectedTab == 1,
+                  onTap: () => _onTabChanged(1),
+                ),
+                const SizedBox(width: 24),
+                _TabButton(
+                  title: context.l10n.homeNearby,
+                  isSelected: _selectedTab == 2,
+                  onTap: () => _onTabChanged(2),
+                ),
+              ],
             ),
           ),
           Semantics(
