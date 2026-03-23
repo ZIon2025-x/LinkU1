@@ -103,6 +103,8 @@ class _RecommendedTab extends StatelessWidget {
                                     : AppColors.desktopTextLight,
                               ),
                             ),
+                            const Spacer(),
+                            const _OnlineIndicator(),
                           ],
                         ),
                       ),
@@ -348,6 +350,49 @@ class _TickerBannerState extends State<_TickerBanner> {
 }
 
 /// 静态促销卡片 — 当没有后端 banner 时显示
+/// 在线人数指示器 — 显示模拟的在线人数
+class _OnlineIndicator extends StatelessWidget {
+  const _OnlineIndicator();
+
+  @override
+  Widget build(BuildContext context) {
+    // 基于当前小时生成一个看起来合理的在线人数
+    final hour = DateTime.now().hour;
+    final baseCount = hour >= 8 && hour <= 23 ? 80 + (hour * 7) % 120 : 30 + (hour * 3) % 40;
+    final count = baseCount + DateTime.now().minute % 20;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFF4757).withAlpha(25),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: Color(0xFFFF4757),
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            '$count${Localizations.localeOf(context).languageCode.startsWith('en') ? ' online' : '人在线'}',
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFFFF4757),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _StaticPromoBanner extends StatelessWidget {
   const _StaticPromoBanner({required this.hasTicker});
   final bool hasTicker;

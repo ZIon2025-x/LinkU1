@@ -248,22 +248,39 @@ class _HomeViewContentState extends State<_HomeViewContent> {
       ),
       child: Row(
         children: [
-          Semantics(
-            button: true,
-            label: 'Open menu',
-            child: GestureDetector(
-              onTap: () {
-                AppHaptics.selection();
-                _showMenuSheet(context);
-              },
-              child: SizedBox(
-                width: 44, height: 44,
-                child: Center(
-                  child: Icon(Icons.menu,
-                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                      size: 24),
+          // 左上角：定位城市
+          GestureDetector(
+            onTap: () {
+              // TODO: 切换城市
+            },
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(width: 4),
+                Icon(Icons.location_on,
+                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                    size: 16),
+                const SizedBox(width: 2),
+                BlocBuilder<HomeBloc, HomeState>(
+                  buildWhen: (p, c) => false, // city doesn't change often
+                  builder: (context, state) {
+                    // 优先用用户 residenceCity，否则显示默认
+                    final user = context.read<HomeBloc>().currentUser;
+                    final city = user?.residenceCity ?? 'London';
+                    return Text(
+                      city,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                      ),
+                    );
+                  },
                 ),
-              ),
+                Icon(Icons.keyboard_arrow_down,
+                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                    size: 16),
+              ],
             ),
           ),
           Expanded(
@@ -309,21 +326,6 @@ class _HomeViewContentState extends State<_HomeViewContent> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  void _showMenuSheet(BuildContext context) {
-    SheetAdaptation.showAdaptiveModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      showDragHandle: false,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.85,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        builder: (context, scrollController) => const _MenuView(),
       ),
     );
   }
