@@ -145,8 +145,9 @@ class _RecommendedTab extends StatelessWidget {
 // =============================================================================
 
 class _StoryEntry {
-  const _StoryEntry({required this.emoji, required this.label, this.route});
-  final String emoji;
+  const _StoryEntry({this.emoji, this.assetImage, required this.label, this.route});
+  final String? emoji;
+  final String? assetImage; // local asset path (e.g. AppAssets.appIcon)
   final String label;
   final String? route;
 }
@@ -158,7 +159,7 @@ class _StoryRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final entries = [
-      const _StoryEntry(emoji: '\u{1F916}', label: 'Linker AI', route: '/ai-chat'),
+      const _StoryEntry(assetImage: AppAssets.appIcon, label: 'Linker AI', route: '/ai-chat'),
       _StoryEntry(emoji: '\u{1F4D0}', label: l10n.homeExperts, route: '/task-experts'),
       _StoryEntry(emoji: '\u{1F6D2}', label: l10n.homeSecondHandMarket, route: '/flea-market'),
       _StoryEntry(emoji: '\u{1F4F7}', label: l10n.homeStoryPhotography),
@@ -202,7 +203,10 @@ class _StoryRow extends StatelessWidget {
                       color: Colors.white,
                     ),
                     alignment: Alignment.center,
-                    child: Text(e.emoji, style: const TextStyle(fontSize: 24)),
+                    clipBehavior: Clip.antiAlias,
+                    child: e.assetImage != null
+                        ? Image.asset(e.assetImage!, width: 36, height: 36, fit: BoxFit.cover)
+                        : Text(e.emoji ?? '', style: const TextStyle(fontSize: 24)),
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -288,7 +292,7 @@ class _TickerBannerState extends State<_TickerBanner> {
               padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                    colors: [Color(0xFF5A52D5), Color(0xFF8B7DE8)]),
+                    colors: AppColors.gradientPrimary),
                 borderRadius:
                     BorderRadius.vertical(top: Radius.circular(12)),
               ),
