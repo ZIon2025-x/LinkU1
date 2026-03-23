@@ -307,17 +307,31 @@ class _TickerBannerState extends State<_TickerBanner> {
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 500),
-                      child: Text(
-                        widget.tickerItems[_tickerIndex]
-                            .displayText(locale),
-                        key: ValueKey(_tickerIndex),
-                        style: TextStyle(
-                            color: Colors.white.withAlpha(230),
-                            fontSize: 12),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                    child: SizedBox(
+                      height: 22,
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 500),
+                        transitionBuilder: (child, animation) {
+                          // 垂直滚动：新文字从下方滑入，旧文字往上滑出
+                          return SlideTransition(
+                            position: Tween<Offset>(
+                              begin: const Offset(0, 1),
+                              end: Offset.zero,
+                            ).animate(animation),
+                            child: child,
+                          );
+                        },
+                        child: Text(
+                          widget.tickerItems[_tickerIndex]
+                              .displayText(locale),
+                          key: ValueKey(_tickerIndex),
+                          style: TextStyle(
+                              color: Colors.white.withAlpha(230),
+                              fontSize: 12,
+                              height: 1.4),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ),
                   ),
