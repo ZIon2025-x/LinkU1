@@ -342,6 +342,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeHotSearches => 'Hot Searches';
 
   @override
+  String get homeTrending => 'Trending';
+
+  @override
   String get homeNoNearbyTasks => 'No nearby tasks';
 
   @override

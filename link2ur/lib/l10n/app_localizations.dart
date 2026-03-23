@@ -735,6 +735,12 @@ abstract class AppLocalizations {
   /// **'Hot Searches'**
   String get homeHotSearches;
 
+  /// No description provided for @homeTrending.
+  ///
+  /// In en, this message translates to:
+  /// **'Trending'**
+  String get homeTrending;
+
   /// No description provided for @homeNoNearbyTasks.
   ///
   /// In en, this message translates to:

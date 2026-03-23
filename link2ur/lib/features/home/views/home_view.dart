@@ -469,7 +469,7 @@ class _FollowTab extends StatelessWidget {
       buildWhen: (p, c) =>
           p.followFeedItems != c.followFeedItems ||
           p.isLoadingFollowFeed != c.isLoadingFollowFeed ||
-          p.discoveryItems != c.discoveryItems,
+          (c.followFeedItems.isEmpty && p.discoveryItems != c.discoveryItems),
       builder: (context, state) {
         if (state.isLoadingFollowFeed && state.followFeedItems.isEmpty) {
           return const Center(child: CircularProgressIndicator());
@@ -503,9 +503,7 @@ class _FollowTab extends StatelessWidget {
                             size: 18, color: Colors.orange[600]),
                         const SizedBox(width: 6),
                         Text(
-                          Localizations.localeOf(context).languageCode.startsWith('en')
-                              ? 'Trending'
-                              : '热门动态',
+                          context.l10n.homeTrending,
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,

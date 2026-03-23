@@ -335,6 +335,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homeHotSearches => '热门搜索';
 
   @override
+  String get homeTrending => '热门动态';
+
+  @override
   String get homeNoNearbyTasks => '附近暂无任务';
 
   @override
@@ -10586,6 +10589,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get homeHotSearches => '熱門搜尋';
+
+  @override
+  String get homeTrending => '熱門動態';
 
   @override
   String get homeNoNearbyTasks => '附近暫無任務';
