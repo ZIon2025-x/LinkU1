@@ -833,24 +833,24 @@ class _FollowFeedCard extends StatelessWidget {
               ),
             ],
 
-            // 底部互动栏
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                if (item.likeCount != null) ...[
-                  Text('❤️ ${item.likeCount}',
-                      style: TextStyle(fontSize: 13, color: isDark ? Colors.grey[400] : const Color(0xFF999999))),
-                  const SizedBox(width: 20),
+            // 底部互动栏（仅帖子/商品等有互动数据时显示）
+            if ((item.likeCount != null && item.likeCount! > 0) ||
+                (item.commentCount != null && item.commentCount! > 0)) ...[
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  if (item.likeCount != null && item.likeCount! > 0) ...[
+                    Text('❤️ ${item.likeCount}',
+                        style: TextStyle(fontSize: 13, color: isDark ? Colors.grey[400] : const Color(0xFF999999))),
+                    const SizedBox(width: 20),
+                  ],
+                  if (item.commentCount != null && item.commentCount! > 0) ...[
+                    Text('💬 ${item.commentCount}',
+                        style: TextStyle(fontSize: 13, color: isDark ? Colors.grey[400] : const Color(0xFF999999))),
+                  ],
                 ],
-                if (item.commentCount != null) ...[
-                  Text('💬 ${item.commentCount}',
-                      style: TextStyle(fontSize: 13, color: isDark ? Colors.grey[400] : const Color(0xFF999999))),
-                  const SizedBox(width: 20),
-                ],
-                Text('↗️ ${locale.languageCode.startsWith("en") ? "Share" : "分享"}',
-                    style: TextStyle(fontSize: 13, color: isDark ? Colors.grey[400] : const Color(0xFF999999))),
-              ],
-            ),
+              ),
+            ],
           ],
         ),
       ),
