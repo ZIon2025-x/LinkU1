@@ -10194,7 +10194,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get personalServicePricingHourly => '时薪';
 
   @override
-  String get personalServicePricingNegotiable => '面议';
+  String get personalServicePricingNegotiable => '协商定价';
 
   @override
   String get personalServiceCreated => '服务发布成功！';
@@ -20403,7 +20403,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get personalServicePricingHourly => '時薪';
 
   @override
-  String get personalServicePricingNegotiable => '面議';
+  String get personalServicePricingNegotiable => '協商定價';
 
   @override
   String get personalServiceCreated => '服務發佈成功！';

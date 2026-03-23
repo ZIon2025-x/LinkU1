@@ -10619,7 +10619,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get personalServicePricingHourly => 'Hourly';
 
   @override
-  String get personalServicePricingNegotiable => 'Negotiable';
+  String get personalServicePricingNegotiable => 'Negotiate';
 
   @override
   String get personalServiceCreated => 'Service published!';

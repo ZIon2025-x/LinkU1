@@ -19559,7 +19559,7 @@ abstract class AppLocalizations {
   /// No description provided for @personalServicePricingNegotiable.
   ///
   /// In en, this message translates to:
-  /// **'Negotiable'**
+  /// **'Negotiate'**
   String get personalServicePricingNegotiable;
 
   /// No description provided for @personalServiceCreated.
