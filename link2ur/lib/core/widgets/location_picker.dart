@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
@@ -44,6 +46,9 @@ class _LocationInputFieldState extends State<LocationInputField> {
   bool _isLoadingLocation = false;
   double? _latitude;
   double? _longitude;
+  Timer? _debounceTimer;
+  String? _resolvedAddress;
+  bool _isGeocoding = false;
 
   @override
   void initState() {
@@ -55,6 +60,7 @@ class _LocationInputFieldState extends State<LocationInputField> {
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _controller.dispose();
     super.dispose();
   }
@@ -181,6 +187,36 @@ class _LocationInputFieldState extends State<LocationInputField> {
     widget.onLocationPicked?.call(onlineText, null, null);
   }
 
+  Future<void> _geocodeManualInput(String text) async {
+    if (text.trim().length < 2) {
+      setState(() => _resolvedAddress = null);
+      return;
+    }
+    setState(() => _isGeocoding = true);
+    try {
+      final locations = await locationFromAddress(text);
+      if (locations.isNotEmpty && mounted) {
+        final loc = locations.first;
+        _latitude = loc.latitude;
+        _longitude = loc.longitude;
+        // Reverse geocode to get formatted address
+        try {
+          final placemarks = await placemarkFromCoordinates(loc.latitude, loc.longitude);
+          if (placemarks.isNotEmpty) {
+            _resolvedAddress = _formatPlacemarkAddress(placemarks.first);
+          }
+        } catch (_) {
+          _resolvedAddress = '${loc.latitude.toStringAsFixed(4)}, ${loc.longitude.toStringAsFixed(4)}';
+        }
+        widget.onLocationPicked?.call(_controller.text, _latitude, _longitude);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _resolvedAddress = null);
+    } finally {
+      if (mounted) setState(() => _isGeocoding = false);
+    }
+  }
+
   /// 打开原生地图选点页面
   Future<void> _openMapPicker() async {
     final result = await LocationPickerService.instance.openLocationPicker(
@@ -250,12 +286,54 @@ class _LocationInputFieldState extends State<LocationInputField> {
             ),
           ),
           onChanged: (value) {
-            // 手动输入时清除坐标
             _latitude = null;
             _longitude = null;
+            _resolvedAddress = null;
             widget.onChanged?.call(value);
+            // Debounce geocode
+            _debounceTimer?.cancel();
+            _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+              _geocodeManualInput(value);
+            });
           },
         ),
+
+        // Geocode status
+        if (_isGeocoding)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 14, height: 14,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 1.5,
+                    color: AppColors.textSecondaryLight,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text('解析中...', style: TextStyle(fontSize: 12, color: AppColors.textSecondaryLight)),
+              ],
+            ),
+          )
+        else if (_resolvedAddress != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Row(
+              children: [
+                const Icon(Icons.check_circle, size: 14, color: AppColors.success),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    '\u{1F4CD} $_resolvedAddress',
+                    style: const TextStyle(fontSize: 12, color: AppColors.success),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
 
         // 快捷选项
         AppSpacing.vSm,
