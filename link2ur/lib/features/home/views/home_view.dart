@@ -248,39 +248,49 @@ class _HomeViewContentState extends State<_HomeViewContent> {
       ),
       child: Row(
         children: [
-          // 左上角：GPS 定位城市
-          GestureDetector(
-            onTap: () {
-              // TODO: 切换城市
-            },
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(width: 4),
-                Icon(Icons.location_on,
-                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                    size: 16),
-                const SizedBox(width: 2),
-                BlocBuilder<HomeBloc, HomeState>(
-                  buildWhen: (p, c) => p.locationCity != c.locationCity,
-                  builder: (context, state) {
-                    final city = state.locationCity ?? 'London';
-                    return Text(
-                      city,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                      ),
-                    );
-                  },
-                ),
-                Icon(Icons.keyboard_arrow_down,
-                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                    size: 16),
-              ],
+          // 左上角：GPS 定位城市（固定宽度，与右侧搜索按钮对称）
+          SizedBox(
+            width: 72,
+            height: 44,
+            child: GestureDetector(
+              onTap: () {
+                AppHaptics.selection();
+                _onTabChanged(2); // 跳到附近 tab
+              },
+              behavior: HitTestBehavior.opaque,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.location_on,
+                      color: AppColors.primary,
+                      size: 16),
+                  const SizedBox(width: 2),
+                  Flexible(
+                    child: BlocBuilder<HomeBloc, HomeState>(
+                      buildWhen: (p, c) => p.locationCity != c.locationCity,
+                      builder: (context, state) {
+                        final city = state.locationCity ?? 'London';
+                        return Text(
+                          city,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        );
+                      },
+                    ),
+                  ),
+                  Icon(Icons.keyboard_arrow_down,
+                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                      size: 14),
+                ],
+              ),
             ),
           ),
+          // 中间：3 个 Tab 居中
           Expanded(
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -305,6 +315,7 @@ class _HomeViewContentState extends State<_HomeViewContent> {
               ],
             ),
           ),
+          // 右侧：搜索按钮（与左侧等宽保证 tab 居中）
           Semantics(
             button: true,
             label: 'Search',
@@ -314,7 +325,7 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                 context.push('/search');
               },
               child: SizedBox(
-                width: 44, height: 44,
+                width: 72, height: 44,
                 child: Center(
                   child: Icon(Icons.search,
                       color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
