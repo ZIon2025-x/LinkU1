@@ -10,6 +10,8 @@ import '../../../data/repositories/task_repository.dart';
 import '../../../data/repositories/activity_repository.dart';
 import '../../../data/repositories/common_repository.dart';
 import '../../../data/repositories/discovery_repository.dart';
+import '../../../data/repositories/follow_repository.dart';
+import '../../../data/repositories/ticker_repository.dart';
 import '../../../core/utils/cache_manager.dart';
 import '../../../core/utils/logger.dart';
 import 'home_event.dart';
@@ -22,10 +24,14 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     required ActivityRepository activityRepository,
     CommonRepository? commonRepository,
     DiscoveryRepository? discoveryRepository,
+    FollowRepository? followRepository,
+    TickerRepository? tickerRepository,
   })  : _taskRepository = taskRepository,
         _activityRepository = activityRepository,
         _commonRepository = commonRepository,
         _discoveryRepository = discoveryRepository,
+        _followRepository = followRepository,
+        _tickerRepository = tickerRepository,
         super(const HomeState()) {
     on<HomeLoadRequested>(_onLoadRequested);
     on<HomeRefreshRequested>(_onRefreshRequested);
@@ -35,12 +41,17 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     on<HomeLoadDiscoveryFeed>(_onLoadDiscoveryFeed);
     on<HomeLoadMoreDiscovery>(_onLoadMoreDiscovery);
     on<HomeRecommendedFilterChanged>(_onRecommendedFilterChanged);
+    on<HomeLoadFollowFeed>(_onLoadFollowFeed);
+    on<HomeLoadTicker>(_onLoadTicker);
+    on<HomeLoadActivitiesList>(_onLoadActivitiesList);
   }
 
   final TaskRepository _taskRepository;
   final ActivityRepository _activityRepository;
   final CommonRepository? _commonRepository;
   final DiscoveryRepository? _discoveryRepository;
+  final FollowRepository? _followRepository;
+  final TickerRepository? _tickerRepository;
 
   /// 当前用户（由外部设置，用于权限过滤）
   User? currentUser;
@@ -408,5 +419,71 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     ));
     // Reload data from page 1 with updated filters
     add(const HomeLoadRecommended());
+  }
+
+  // ==================== Follow Feed ====================
+
+  Future<void> _onLoadFollowFeed(
+    HomeLoadFollowFeed event,
+    Emitter<HomeState> emit,
+  ) async {
+    if (_followRepository == null) return;
+    if (state.isLoadingFollowFeed) return;
+    final page = event.loadMore ? state.followFeedPage + 1 : 1;
+    emit(state.copyWith(isLoadingFollowFeed: true));
+    try {
+      final response = await _followRepository.getFollowFeed(page: page);
+      final items = event.loadMore
+          ? [...state.followFeedItems, ...response.items]
+          : response.items;
+      emit(state.copyWith(
+        followFeedItems: items,
+        followFeedPage: page,
+        hasMoreFollowFeed: response.hasMore,
+        isLoadingFollowFeed: false,
+      ));
+    } catch (e) {
+      emit(state.copyWith(isLoadingFollowFeed: false, errorMessage: e.toString()));
+    }
+  }
+
+  // ==================== Ticker ====================
+
+  Future<void> _onLoadTicker(
+    HomeLoadTicker event,
+    Emitter<HomeState> emit,
+  ) async {
+    if (_tickerRepository == null) return;
+    try {
+      final items = await _tickerRepository.getTicker();
+      emit(state.copyWith(tickerItems: items));
+    } catch (e) {
+      // Ticker is non-critical, silently ignore
+    }
+  }
+
+  // ==================== Activities List Tab ====================
+
+  Future<void> _onLoadActivitiesList(
+    HomeLoadActivitiesList event,
+    Emitter<HomeState> emit,
+  ) async {
+    if (state.isLoadingActivitiesList) return;
+    final page = event.loadMore ? state.activitiesListPage + 1 : 1;
+    emit(state.copyWith(isLoadingActivitiesList: true));
+    try {
+      final response = await _activityRepository.getActivities(status: 'open', page: page);
+      final items = event.loadMore
+          ? [...state.activitiesListItems, ...response.activities]
+          : response.activities;
+      emit(state.copyWith(
+        activitiesListItems: items,
+        activitiesListPage: page,
+        hasMoreActivitiesList: response.activities.length >= 20,
+        isLoadingActivitiesList: false,
+      ));
+    } catch (e) {
+      emit(state.copyWith(isLoadingActivitiesList: false, errorMessage: e.toString()));
+    }
   }
 }

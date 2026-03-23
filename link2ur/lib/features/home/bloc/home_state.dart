@@ -4,6 +4,7 @@ import '../../../data/models/banner.dart' as app;
 import '../../../data/models/task.dart';
 import '../../../data/models/activity.dart';
 import '../../../data/models/discovery_feed.dart';
+import '../../../data/repositories/ticker_repository.dart';
 
 /// 首页状态
 enum HomeStatus { initial, loading, loaded, error }
@@ -31,6 +32,15 @@ class HomeState extends Equatable {
     this.banners = const [],
     this.recommendedFilterCategory,
     this.recommendedSortBy = 'latest',
+    this.followFeedItems = const [],
+    this.isLoadingFollowFeed = false,
+    this.hasMoreFollowFeed = true,
+    this.followFeedPage = 0,
+    this.tickerItems = const [],
+    this.activitiesListItems = const [],
+    this.isLoadingActivitiesList = false,
+    this.hasMoreActivitiesList = true,
+    this.activitiesListPage = 0,
   });
 
   final HomeStatus status;
@@ -66,6 +76,21 @@ class HomeState extends Equatable {
   /// 推荐任务客户端排序：latest / highest_pay / near_deadline
   final String recommendedSortBy;
 
+  // Follow feed
+  final List<DiscoveryFeedItem> followFeedItems;
+  final bool isLoadingFollowFeed;
+  final bool hasMoreFollowFeed;
+  final int followFeedPage;
+
+  // Ticker
+  final List<TickerItem> tickerItems;
+
+  // Activities list tab
+  final List<Activity> activitiesListItems;
+  final bool isLoadingActivitiesList;
+  final bool hasMoreActivitiesList;
+  final int activitiesListPage;
+
   bool get isLoading => status == HomeStatus.loading;
   bool get isLoaded => status == HomeStatus.loaded;
   bool get hasError => status == HomeStatus.error;
@@ -94,6 +119,15 @@ class HomeState extends Equatable {
     String? recommendedFilterCategory,
     bool clearRecommendedFilterCategory = false,
     String? recommendedSortBy,
+    List<DiscoveryFeedItem>? followFeedItems,
+    bool? isLoadingFollowFeed,
+    bool? hasMoreFollowFeed,
+    int? followFeedPage,
+    List<TickerItem>? tickerItems,
+    List<Activity>? activitiesListItems,
+    bool? isLoadingActivitiesList,
+    bool? hasMoreActivitiesList,
+    int? activitiesListPage,
   }) {
     return HomeState(
       status: status ?? this.status,
@@ -119,6 +153,15 @@ class HomeState extends Equatable {
           ? null
           : (recommendedFilterCategory ?? this.recommendedFilterCategory),
       recommendedSortBy: recommendedSortBy ?? this.recommendedSortBy,
+      followFeedItems: followFeedItems ?? this.followFeedItems,
+      isLoadingFollowFeed: isLoadingFollowFeed ?? this.isLoadingFollowFeed,
+      hasMoreFollowFeed: hasMoreFollowFeed ?? this.hasMoreFollowFeed,
+      followFeedPage: followFeedPage ?? this.followFeedPage,
+      tickerItems: tickerItems ?? this.tickerItems,
+      activitiesListItems: activitiesListItems ?? this.activitiesListItems,
+      isLoadingActivitiesList: isLoadingActivitiesList ?? this.isLoadingActivitiesList,
+      hasMoreActivitiesList: hasMoreActivitiesList ?? this.hasMoreActivitiesList,
+      activitiesListPage: activitiesListPage ?? this.activitiesListPage,
     );
   }
 
@@ -145,5 +188,14 @@ class HomeState extends Equatable {
         banners,
         recommendedFilterCategory,
         recommendedSortBy,
+        followFeedItems,
+        isLoadingFollowFeed,
+        hasMoreFollowFeed,
+        followFeedPage,
+        tickerItems,
+        activitiesListItems,
+        isLoadingActivitiesList,
+        hasMoreActivitiesList,
+        activitiesListPage,
       ];
 }
