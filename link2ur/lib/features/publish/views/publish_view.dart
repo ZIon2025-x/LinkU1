@@ -690,9 +690,7 @@ class _PublishContentState extends State<_PublishContent>
                         subtitle: context.l10n.publishServiceDesc,
                         onTap: () {
                           AppHaptics.selection();
-                          final router = GoRouter.of(context);
-                          Navigator.of(context).pop();
-                          router.push('/services/create');
+                          context.push('/services/create');
                         },
                       ),
                       _PublishOptionTile(
