@@ -274,13 +274,13 @@ class _TickerBannerState extends State<_TickerBanner> {
     final locale = Localizations.localeOf(context).languageCode;
     final hasTicker = widget.tickerItems.isNotEmpty;
 
-    return Column(
-      children: [
-        // Ticker bar
-        if (hasTicker)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Container(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        children: [
+          // Ticker bar
+          if (hasTicker)
+            Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
@@ -320,17 +320,11 @@ class _TickerBannerState extends State<_TickerBanner> {
                 ],
               ),
             ),
-          ),
 
-        // Banner area — _BannerCarousel has its own padding, no extra wrapping needed
-        if (widget.banners.isNotEmpty)
-          _BannerCarousel(serverBanners: widget.banners)
-        else
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: _StaticPromoBanner(hasTicker: hasTicker),
-          ),
-      ],
+          // Banner — static promo card
+          _StaticPromoBanner(hasTicker: hasTicker),
+        ],
+      ),
     );
   }
 }
