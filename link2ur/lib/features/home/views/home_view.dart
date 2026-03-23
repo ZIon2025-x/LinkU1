@@ -255,7 +255,7 @@ class _HomeViewContentState extends State<_HomeViewContent> {
             child: GestureDetector(
               onTap: () {
                 AppHaptics.selection();
-                _onTabChanged(2); // 跳到附近 tab
+                _showLocationPicker(context);
               },
               behavior: HitTestBehavior.opaque,
               child: Row(
@@ -339,6 +339,140 @@ class _HomeViewContentState extends State<_HomeViewContent> {
     );
   }
 
+  void _showLocationPicker(BuildContext context) {
+    final controller = TextEditingController();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final currentCity = context.read<HomeBloc>().state.locationCity;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetContext) {
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+            20, 16, 20,
+            MediaQuery.of(sheetContext).viewInsets.bottom + 20,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 拖拽条
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white24 : Colors.black12,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              // 标题
+              Text(
+                Localizations.localeOf(context).languageCode.startsWith('en')
+                    ? 'Set Location'
+                    : '设置位置',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                Localizations.localeOf(context).languageCode.startsWith('en')
+                    ? 'Enter city name to filter nearby content'
+                    : '输入城市名称以筛选附近内容',
+                style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+              ),
+              const SizedBox(height: 16),
+              // 当前定位
+              if (currentCity != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: GestureDetector(
+                    onTap: () => Navigator.pop(sheetContext),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withAlpha(15),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppColors.primary.withAlpha(40)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.my_location, size: 18, color: AppColors.primary),
+                          const SizedBox(width: 8),
+                          Text(
+                            Localizations.localeOf(context).languageCode.startsWith('en')
+                                ? 'Current: $currentCity'
+                                : '当前定位：$currentCity',
+                            style: const TextStyle(fontSize: 14, color: AppColors.primary, fontWeight: FontWeight.w500),
+                          ),
+                          const Spacer(),
+                          const Icon(Icons.check_circle, size: 18, color: AppColors.primary),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              // 输入框
+              TextField(
+                controller: controller,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: Localizations.localeOf(context).languageCode.startsWith('en')
+                      ? 'Enter city name...'
+                      : '输入城市名称...',
+                  prefixIcon: const Icon(Icons.search, size: 20),
+                  filled: true,
+                  fillColor: isDark ? Colors.white.withAlpha(15) : const Color(0xFFF5F5F5),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
+                onSubmitted: (value) {
+                  if (value.trim().isNotEmpty) {
+                    context.read<HomeBloc>().add(HomeLocationCityUpdated(value.trim()));
+                  }
+                  Navigator.pop(sheetContext);
+                },
+              ),
+              const SizedBox(height: 12),
+              // 确认按钮
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    final value = controller.text.trim();
+                    if (value.isNotEmpty) {
+                      context.read<HomeBloc>().add(HomeLocationCityUpdated(value));
+                    }
+                    Navigator.pop(sheetContext);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: Text(
+                    Localizations.localeOf(context).languageCode.startsWith('en')
+                        ? 'Confirm'
+                        : '确认',
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    ).then((_) => controller.dispose());
+  }
 }
 
 /// 桌面端分段按钮（Notion 风格）
