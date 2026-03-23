@@ -19568,6 +19568,30 @@ abstract class AppLocalizations {
   /// **'Negotiate'**
   String get personalServicePricingNegotiable;
 
+  /// No description provided for @personalServiceLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Service Location'**
+  String get personalServiceLocation;
+
+  /// No description provided for @personalServiceLocationOnline.
+  ///
+  /// In en, this message translates to:
+  /// **'Online'**
+  String get personalServiceLocationOnline;
+
+  /// No description provided for @personalServiceLocationInPerson.
+  ///
+  /// In en, this message translates to:
+  /// **'In Person'**
+  String get personalServiceLocationInPerson;
+
+  /// No description provided for @personalServiceLocationBoth.
+  ///
+  /// In en, this message translates to:
+  /// **'Both'**
+  String get personalServiceLocationBoth;
+
   /// No description provided for @personalServiceCreated.
   ///
   /// In en, this message translates to:

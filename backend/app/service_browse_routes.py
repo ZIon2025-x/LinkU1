@@ -89,6 +89,7 @@ async def browse_services(
             "base_price": float(s.base_price) if s.base_price else 0,
             "currency": s.currency or "GBP",
             "pricing_type": s.pricing_type or "fixed",
+            "location_type": s.location_type or "online",
             "service_type": s.service_type or "expert",
             "is_expert_verified": s.service_type == "expert",
             "status": s.status,

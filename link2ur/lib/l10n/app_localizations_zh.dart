@@ -10200,6 +10200,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get personalServicePricingNegotiable => '协商定价';
 
   @override
+  String get personalServiceLocation => '服务方式';
+
+  @override
+  String get personalServiceLocationOnline => '线上/远程';
+
+  @override
+  String get personalServiceLocationInPerson => '线下见面';
+
+  @override
+  String get personalServiceLocationBoth => '都可以';
+
+  @override
   String get personalServiceCreated => '服务发布成功！';
 
   @override
@@ -20410,6 +20422,18 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get personalServicePricingNegotiable => '協商定價';
+
+  @override
+  String get personalServiceLocation => '服務方式';
+
+  @override
+  String get personalServiceLocationOnline => '線上/遠程';
+
+  @override
+  String get personalServiceLocationInPerson => '線下見面';
+
+  @override
+  String get personalServiceLocationBoth => '都可以';
 
   @override
   String get personalServiceCreated => '服務發佈成功！';

@@ -1591,6 +1591,7 @@ class TaskExpertService(Base):
     service_type = Column(String(20), nullable=False, default="expert", server_default="expert")  # 'personal' | 'expert'
     user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=True)  # owner for personal services
     pricing_type = Column(String(20), nullable=False, default="fixed", server_default="fixed")  # 'fixed' | 'hourly' | 'negotiable'
+    location_type = Column(String(20), nullable=False, default="online", server_default="online")  # 'online' | 'in_person' | 'both'
     service_name = Column(String(200), nullable=False)
     description = Column(Text, nullable=False)
     images = Column(JSONB, nullable=True)  # JSON数组（使用PostgreSQL JSONB类型）

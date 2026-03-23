@@ -46,6 +46,7 @@ class _FormContentState extends State<_FormContent> {
   final _priceController = TextEditingController();
 
   String _pricingType = 'fixed';
+  String _locationType = 'online';
 
   bool get _isEditMode => widget.serviceData != null;
 
@@ -61,6 +62,7 @@ class _FormContentState extends State<_FormContent> {
         _priceController.text = price.toStringAsFixed(2);
       }
       _pricingType = (data['pricing_type'] as String?) ?? 'fixed';
+      _locationType = (data['location_type'] as String?) ?? 'online';
     }
   }
 
@@ -79,6 +81,7 @@ class _FormContentState extends State<_FormContent> {
       'service_name': _nameController.text.trim(),
       'description': _descriptionController.text.trim(),
       'pricing_type': _pricingType,
+      'location_type': _locationType,
     };
 
     // Only include price for non-negotiable types
@@ -280,6 +283,38 @@ class _FormContentState extends State<_FormContent> {
                   ),
                   const SizedBox(height: AppSpacing.md),
                 ],
+
+                // ── Location Type ──
+                _SectionLabel(label: context.l10n.personalServiceLocation),
+                const SizedBox(height: AppSpacing.sm),
+                SizedBox(
+                  width: double.infinity,
+                  child: SegmentedButton<String>(
+                    segments: [
+                      ButtonSegment<String>(
+                        value: 'online',
+                        label: Text(context.l10n.personalServiceLocationOnline),
+                        icon: const Icon(Icons.language, size: 18),
+                      ),
+                      ButtonSegment<String>(
+                        value: 'in_person',
+                        label: Text(context.l10n.personalServiceLocationInPerson),
+                        icon: const Icon(Icons.location_on_outlined, size: 18),
+                      ),
+                      ButtonSegment<String>(
+                        value: 'both',
+                        label: Text(context.l10n.personalServiceLocationBoth),
+                        icon: const Icon(Icons.swap_horiz, size: 18),
+                      ),
+                    ],
+                    selected: {_locationType},
+                    onSelectionChanged: (selected) {
+                      setState(() => _locationType = selected.first);
+                    },
+                    showSelectedIcon: false,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
 
                 // ── Images placeholder ──
                 _SectionLabel(label: context.l10n.personalServiceImages),

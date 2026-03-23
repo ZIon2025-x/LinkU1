@@ -45,6 +45,7 @@ async def create_personal_service(
         base_price=data.base_price or 0,
         currency=data.currency,
         pricing_type=data.pricing_type,
+        location_type=data.location_type,
         images=data.images or [],
         status="active",
     )
@@ -76,6 +77,7 @@ async def list_my_personal_services(
             "base_price": float(s.base_price) if s.base_price else 0,
             "currency": s.currency,
             "pricing_type": s.pricing_type or "fixed",
+            "location_type": s.location_type or "online",
             "images": s.images or [],
             "status": s.status,
             "created_at": s.created_at.isoformat() if s.created_at else None,

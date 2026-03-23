@@ -5,7 +5,8 @@ ALTER TABLE task_expert_services
 ALTER TABLE task_expert_services
   ADD COLUMN IF NOT EXISTS service_type VARCHAR(20) NOT NULL DEFAULT 'expert',
   ADD COLUMN IF NOT EXISTS user_id VARCHAR(8) REFERENCES users(id) ON DELETE CASCADE,
-  ADD COLUMN IF NOT EXISTS pricing_type VARCHAR(20) NOT NULL DEFAULT 'fixed';
+  ADD COLUMN IF NOT EXISTS pricing_type VARCHAR(20) NOT NULL DEFAULT 'fixed',
+  ADD COLUMN IF NOT EXISTS location_type VARCHAR(20) NOT NULL DEFAULT 'online';
 
 CREATE INDEX IF NOT EXISTS idx_task_expert_services_type_status
   ON task_expert_services(service_type, status);

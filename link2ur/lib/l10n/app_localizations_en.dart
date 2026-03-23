@@ -10625,6 +10625,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get personalServicePricingNegotiable => 'Negotiate';
 
   @override
+  String get personalServiceLocation => 'Service Location';
+
+  @override
+  String get personalServiceLocationOnline => 'Online';
+
+  @override
+  String get personalServiceLocationInPerson => 'In Person';
+
+  @override
+  String get personalServiceLocationBoth => 'Both';
+
+  @override
   String get personalServiceCreated => 'Service published!';
 
   @override

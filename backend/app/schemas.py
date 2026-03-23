@@ -2274,6 +2274,7 @@ class PersonalServiceCreate(BaseModel):
     base_price: Optional[condecimal(ge=0, max_digits=12, decimal_places=2)] = None
     currency: str = Field(default="GBP", max_length=10)
     pricing_type: str = Field(default="fixed", pattern="^(fixed|hourly|negotiable)$")
+    location_type: str = Field(default="online", pattern="^(online|in_person|both)$")
     images: Optional[conlist(str, max_length=6)] = None
 
     @model_validator(mode='after')
@@ -2289,6 +2290,7 @@ class PersonalServiceUpdate(BaseModel):
     base_price: Optional[condecimal(ge=0, max_digits=12, decimal_places=2)] = None
     currency: Optional[str] = Field(None, max_length=10)
     pricing_type: Optional[str] = Field(None, pattern="^(fixed|hourly|negotiable)$")
+    location_type: Optional[str] = Field(None, pattern="^(online|in_person|both)$")
     images: Optional[conlist(str, max_length=6)] = None
 
     @model_validator(mode='after')

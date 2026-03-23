@@ -313,6 +313,7 @@ class TaskExpertService extends Equatable {
     this.images,
     required this.basePrice,
     this.pricingType = 'fixed',
+    this.locationType = 'online',
     this.currency = 'GBP',
     this.status = 'active',
     this.isExpertVerified = false,
@@ -345,6 +346,7 @@ class TaskExpertService extends Equatable {
   final List<String>? images;
   final double basePrice;
   final String pricingType; // 'fixed' | 'hourly' | 'negotiable'
+  final String locationType; // 'online' | 'in_person' | 'both'
   final String currency;
   final String status;
   final bool isExpertVerified;
@@ -408,6 +410,7 @@ class TaskExpertService extends Equatable {
           .toList(),
       basePrice: (json['base_price'] as num?)?.toDouble() ?? 0,
       pricingType: json['pricing_type']?.toString() ?? 'fixed',
+      locationType: json['location_type']?.toString() ?? 'online',
       currency: json['currency'] as String? ?? 'GBP',
       status: json['status'] as String? ?? 'active',
       isExpertVerified: json['is_expert_verified'] == true,
@@ -446,6 +449,7 @@ class TaskExpertService extends Equatable {
       'images': images,
       'base_price': basePrice,
       'pricing_type': pricingType,
+      'location_type': locationType,
       'currency': currency,
       'status': status,
       'is_expert_verified': isExpertVerified,
@@ -465,7 +469,7 @@ class TaskExpertService extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, expertId, serviceType, userId, serviceName, basePrice, pricingType, status, isExpertVerified, ownerName, ownerAvatar, ownerRating];
+  List<Object?> get props => [id, expertId, serviceType, userId, serviceName, basePrice, pricingType, locationType, status, isExpertVerified, ownerName, ownerAvatar, ownerRating];
 }
 
 /// 任务达人列表响应
