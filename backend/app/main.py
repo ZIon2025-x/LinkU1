@@ -453,6 +453,10 @@ app.include_router(discovery_router)
 from app.follow_routes import router as follow_router
 app.include_router(follow_router)
 
+# Follow Feed 路由
+from app.follow_feed_routes import router as follow_feed_router
+app.include_router(follow_feed_router)
+
 # 学生认证路由
 from app.student_verification_routes import router as student_verification_router
 app.include_router(student_verification_router, prefix="/api/student-verification", tags=["学生认证"])
