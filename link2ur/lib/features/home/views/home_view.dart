@@ -45,6 +45,7 @@ import '../../task_expert/bloc/task_expert_bloc.dart';
 import '../bloc/home_bloc.dart';
 import '../bloc/home_event.dart';
 import '../bloc/home_state.dart';
+import '../../../data/repositories/ticker_repository.dart';
 import '../linker_quotes.dart';
 
 part 'home_recommended_section.dart';
