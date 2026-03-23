@@ -386,16 +386,24 @@ class _NearbyServiceCard extends StatelessWidget {
     final isEn = locale.languageCode == 'en';
 
     final name = (isEn
-            ? (service['name_en'] ?? service['name'])
-            : service['name']) as String? ??
+            ? (service['service_name_en'] ?? service['service_name'])
+            : service['service_name']) as String? ??
         '';
-    final price = service['price'];
+    final price = service['base_price'];
     final pricingType = service['pricing_type'] as String? ?? '';
-    final locationText = service['location_text'] as String? ?? '';
+    final locationText = service['location'] as String? ?? '';
     final distanceKm = service['distance_km'];
     final ownerName = service['owner_name'] as String? ?? '';
 
-    return Container(
+    return InkWell(
+      onTap: () {
+        final id = service['id'];
+        if (id != null) {
+          context.push('/task-experts/services/$id');
+        }
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
@@ -513,6 +521,7 @@ class _NearbyServiceCard extends StatelessWidget {
               ),
             ),
         ],
+      ),
       ),
     );
   }

@@ -43,13 +43,29 @@ async def browse_services(
             )
         )
 
-    # Count total before pagination
-    count_query = select(func.count()).select_from(base_filter.subquery())
+    # Apply filters (including nearby) before counting
+    query = base_filter
+    if sort == "nearby":
+        if lat is None or lng is None:
+            raise HTTPException(status_code=400, detail="lat and lng required for nearby sort")
+        query = query.where(
+            models.TaskExpertService.location_type.in_(["in_person", "both"]),
+            models.TaskExpertService.latitude.isnot(None),
+            models.TaskExpertService.longitude.isnot(None),
+        )
+        from sqlalchemy import func as sa_func
+        radius_deg = radius / 111.0
+        lat_diff = models.TaskExpertService.latitude - lat
+        lng_diff = (models.TaskExpertService.longitude - lng) * sa_func.cos(sa_func.radians(lat))
+        distance_sq = lat_diff * lat_diff + lng_diff * lng_diff
+        query = query.where(distance_sq <= radius_deg * radius_deg)
+
+    # Count total after all filters (including nearby) but before pagination
+    count_query = select(func.count()).select_from(query.subquery())
     total_result = await db.execute(count_query)
     total = total_result.scalar() or 0
 
-    # Sort
-    query = base_filter
+    # Sort / Order
     if sort == "recommended":
         query = query.order_by(
             case(
@@ -65,19 +81,6 @@ async def browse_services(
     elif sort == "price_desc":
         query = query.order_by(models.TaskExpertService.base_price.desc())
     elif sort == "nearby":
-        if lat is None or lng is None:
-            raise HTTPException(status_code=400, detail="lat and lng required for nearby sort")
-        query = query.where(
-            models.TaskExpertService.location_type.in_(["in_person", "both"]),
-            models.TaskExpertService.latitude.isnot(None),
-            models.TaskExpertService.longitude.isnot(None),
-        )
-        from sqlalchemy import func as sa_func
-        radius_deg = radius / 111.0
-        lat_diff = models.TaskExpertService.latitude - lat
-        lng_diff = (models.TaskExpertService.longitude - lng) * sa_func.cos(sa_func.radians(lat))
-        distance_sq = lat_diff * lat_diff + lng_diff * lng_diff
-        query = query.where(distance_sq <= radius_deg * radius_deg)
         query = query.order_by(distance_sq.asc())
 
     # Pagination
