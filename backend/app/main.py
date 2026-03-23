@@ -449,6 +449,10 @@ app.include_router(forum_router)
 from app.discovery_routes import router as discovery_router
 app.include_router(discovery_router)
 
+# Follow 系统路由
+from app.follow_routes import router as follow_router
+app.include_router(follow_router)
+
 # 学生认证路由
 from app.student_verification_routes import router as student_verification_router
 app.include_router(student_verification_router, prefix="/api/student-verification", tags=["学生认证"])
