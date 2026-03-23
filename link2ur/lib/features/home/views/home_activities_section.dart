@@ -158,11 +158,11 @@ class _SliverDiscoveryFeed extends StatelessWidget {
         return SliverMainAxisGroup(
           slivers: [
             SliverPadding(
-              padding: EdgeInsets.symmetric(horizontal: horizontalPadding == 0 ? 10 : horizontalPadding),
+              padding: EdgeInsets.symmetric(horizontal: horizontalPadding == 0 ? 4 : horizontalPadding),
               sliver: SliverMasonryGrid.count(
                 crossAxisCount: ResponsiveUtils.gridColumnCount(context),
-                mainAxisSpacing: 10,
-                crossAxisSpacing: 10,
+                mainAxisSpacing: 8,
+                crossAxisSpacing: 8,
                 childCount: state.discoveryItems.length,
                 itemBuilder: (context, index) {
                   final item = state.discoveryItems[index];

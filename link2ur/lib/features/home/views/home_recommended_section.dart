@@ -119,7 +119,7 @@ class _RecommendedTab extends StatelessWidget {
                         .clamp(0.0, double.infinity);
                     innerPad = 24;
                   } else {
-                    outerPad = w > 520 ? (w - 520) / 2 : 10;
+                    outerPad = w > 520 ? (w - 520) / 2 : 4;
                     innerPad = 0;
                   }
                   return SliverPadding(
