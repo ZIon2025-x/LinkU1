@@ -65,6 +65,18 @@ async def get_discovery_feed(
     
     all_items = []
 
+    # Optionally get recommendation scores for logged-in users
+    recommendation_scores = None
+    if current_user:
+        try:
+            import asyncio
+            recommendation_scores = await asyncio.wait_for(
+                db.run_sync(lambda session: _get_recommendation_scores_sync(session, current_user)),
+                timeout=0.5,  # 500ms timeout
+            )
+        except Exception as e:
+            logger.debug(f"Recommendation engine unavailable: {e}")
+
     # 每个 fetch 用 SAVEPOINT 隔离，单个类型失败不影响其他类型
     fetch_tasks = [
         ("forum posts", lambda: _fetch_forum_posts(db, fetch_limit, visible_category_ids, current_user=current_user)),
@@ -73,6 +85,7 @@ async def get_discovery_feed(
         ("service reviews", lambda: _fetch_service_reviews(db, fetch_limit, current_user=current_user)),
         ("rankings", lambda: _fetch_rankings(db, fetch_limit)),
         ("expert services", lambda: _fetch_expert_services(db, fetch_limit)),
+        ("tasks", lambda: _fetch_tasks(db, fetch_limit, current_user, recommendation_scores)),
     ]
 
     for name, fetch_fn in fetch_tasks:
@@ -728,6 +741,164 @@ async def _fetch_expert_services(db: AsyncSession, limit: int) -> list:
     return items
 
 
+def _get_recommendation_scores_sync(session, user) -> dict:
+    """Get recommendation scores (SYNC — called via db.run_sync).
+    Returns {task_id: (score, reason)} or empty dict.
+    """
+    try:
+        from app.task_recommendation import get_task_recommendations
+        recs = get_task_recommendations(user, db=session, limit=50)
+        return {
+            r["task_id"]: (r.get("score", 0), "；".join(r.get("reasons", [])))
+            for r in recs
+            if "task_id" in r
+        }
+    except Exception as e:
+        logger.debug(f"Failed to get recommendation scores: {e}")
+        return {}
+
+
+async def _fetch_tasks(
+    db: AsyncSession, limit: int, current_user=None, recommendation_scores: dict = None
+) -> list:
+    """获取开放任务 for discovery feed."""
+    from app.utils.time_utils import get_utc_time
+
+    now = get_utc_time()
+
+    # Subquery for application count (TaskApplication has no counter on Task)
+    app_count = (
+        select(func.count(models.TaskApplication.id))
+        .where(models.TaskApplication.task_id == models.Task.id)
+        .correlate(models.Task)
+        .scalar_subquery()
+        .label("app_count")
+    )
+
+    query = (
+        select(
+            models.Task.id,
+            models.Task.title,
+            models.Task.title_zh,
+            models.Task.title_en,
+            models.Task.description,
+            models.Task.description_zh,
+            models.Task.description_en,
+            models.Task.images,
+            models.Task.task_type,
+            models.Task.reward,
+            models.Task.base_reward,
+            models.Task.agreed_reward,
+            models.Task.reward_to_be_quoted,
+            models.Task.location,
+            models.Task.deadline,
+            models.Task.task_level,
+            models.Task.view_count,
+            models.Task.poster_id,
+            models.Task.created_at,
+            app_count,
+        )
+        .where(
+            models.Task.status == "open",
+            models.Task.is_visible == True,
+            models.Task.deadline > now,
+        )
+        .order_by(desc(models.Task.created_at))
+        .limit(limit)
+    )
+
+    # Exclude user's own/applied/completed tasks using sync function via run_sync
+    if current_user:
+        try:
+            from app.recommendation.utils import get_excluded_task_ids
+            def _get_excluded(session):
+                return get_excluded_task_ids(session, current_user.id)
+            excluded = await db.run_sync(_get_excluded)
+            if excluded:
+                query = query.where(~models.Task.id.in_(excluded))
+        except Exception as e:
+            logger.debug(f"Failed to get excluded task ids: {e}")
+            query = query.where(models.Task.poster_id != current_user.id)
+
+    result = await db.execute(query)
+    rows = result.all()
+
+    # Batch-fetch poster user info
+    poster_ids = {r.poster_id for r in rows if r.poster_id}
+    poster_map = {}
+    if poster_ids:
+        poster_result = await db.execute(
+            select(models.User.id, models.User.name, models.User.avatar)
+            .where(models.User.id.in_(list(poster_ids)))
+        )
+        poster_map = {r.id: r for r in poster_result.all()}
+
+    items = []
+    for row in rows:
+        poster = poster_map.get(row.poster_id)
+        first_img = _first_image(row.images)
+
+        rec_score = None
+        rec_reason = None
+        if recommendation_scores and row.id in recommendation_scores:
+            rec_score, rec_reason = recommendation_scores[row.id]
+
+        # Location obfuscation
+        location = row.location
+        if location:
+            try:
+                from app.utils.location_utils import obfuscate_location
+                location = obfuscate_location(location)
+            except Exception:
+                pass
+
+        items.append({
+            "feed_type": "task",
+            "id": f"task_{row.id}",
+            "title": row.title,
+            "title_zh": row.title_zh,
+            "title_en": row.title_en,
+            "description": (row.description or "")[:100],
+            "description_zh": (row.description_zh or "")[:100],
+            "description_en": (row.description_en or "")[:100],
+            "images": [first_img] if first_img else None,
+            "user_id": str(row.poster_id) if row.poster_id else None,
+            "user_name": poster.name if poster else None,
+            "user_avatar": poster.avatar if poster else None,
+            "price": float(row.reward) if row.reward else None,
+            "original_price": float(row.base_reward) if row.base_reward else None,
+            "discount_percentage": None,
+            "currency": "GBP",
+            "rating": None,
+            "like_count": None,
+            "comment_count": None,
+            "view_count": row.view_count or 0,
+            "upvote_count": None,
+            "downvote_count": None,
+            "linked_item": None,
+            "target_item": None,
+            "activity_info": None,
+            "is_experienced": None,
+            "is_favorited": None,
+            "user_vote_type": None,
+            "extra_data": {
+                "task_type": row.task_type,
+                "reward": float(row.reward) if row.reward else None,
+                "base_reward": float(row.base_reward) if row.base_reward else None,
+                "agreed_reward": float(row.agreed_reward) if row.agreed_reward else None,
+                "reward_to_be_quoted": row.reward_to_be_quoted,
+                "location": location,
+                "deadline": row.deadline.isoformat() if row.deadline else None,
+                "task_level": row.task_level,
+                "application_count": row.app_count or 0,
+                "match_score": rec_score,
+                "recommendation_reason": rec_reason,
+            },
+            "created_at": row.created_at.isoformat() if row.created_at else None,
+        })
+    return items
+
+
 # ==================== 辅助函数 ====================
 
 async def _batch_resolve_linked_items(db: AsyncSession, pairs: list) -> dict:
@@ -889,6 +1060,7 @@ def _weighted_shuffle(items: list, limit: int, page: int, seed: int = None) -> l
         "service_review": 3.0,
         "ranking": 2.5,
         "service": 1.5,
+        "task": 1.5,       # Tasks: medium frequency
     }
 
     by_type = {}
