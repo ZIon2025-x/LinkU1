@@ -162,11 +162,6 @@ class _StoryRow extends StatelessWidget {
       const _StoryEntry(assetImage: AppAssets.any, label: 'Linker AI', route: '/ai-chat'),
       _StoryEntry(emoji: '\u{1F4D0}', label: l10n.homeExperts, route: '/task-experts'),
       _StoryEntry(emoji: '\u{1F6D2}', label: l10n.homeSecondHandMarket, route: '/flea-market'),
-      _StoryEntry(emoji: '\u{1F4F7}', label: l10n.homeStoryPhotography),
-      _StoryEntry(emoji: '\u{1F4BB}', label: l10n.homeStoryCoding),
-      _StoryEntry(emoji: '\u{1F3B5}', label: l10n.homeStoryMusic),
-      _StoryEntry(emoji: '\u{1F4DD}', label: l10n.homeStoryWriting),
-      _StoryEntry(emoji: '\u{1F3AA}', label: l10n.homeActivities),
     ];
 
     return SizedBox(
