@@ -115,3 +115,25 @@ class HomeLocationCityUpdated extends HomeEvent {
   @override
   List<Object?> get props => [city];
 }
+
+/// 加载附近个人服务
+class HomeLoadNearbyServices extends HomeEvent {
+  const HomeLoadNearbyServices({
+    required this.latitude,
+    required this.longitude,
+    this.radius = 25,
+  });
+  final double latitude;
+  final double longitude;
+  final int radius;
+  @override
+  List<Object?> get props => [latitude, longitude, radius];
+}
+
+/// 切换附近服务搜索半径
+class HomeChangeNearbyRadius extends HomeEvent {
+  const HomeChangeNearbyRadius(this.radius);
+  final int radius;
+  @override
+  List<Object?> get props => [radius];
+}

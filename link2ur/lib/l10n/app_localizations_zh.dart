@@ -10270,6 +10270,24 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get homeExploreNow => '立即体验 →';
+
+  @override
+  String get nearbyRadius => '搜索范围';
+
+  @override
+  String get nearbyNoServices => '附近暂无服务';
+
+  @override
+  String get nearbyServiceDistance => '距离';
+
+  @override
+  String get locationResolving => '解析中...';
+
+  @override
+  String get locationResolved => '已定位';
+
+  @override
+  String get nearbyServicesSection => '附近的服务';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -20494,4 +20512,22 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get homeExploreNow => '立即體驗 →';
+
+  @override
+  String get nearbyRadius => '搜索範圍';
+
+  @override
+  String get nearbyNoServices => '附近暫無服務';
+
+  @override
+  String get nearbyServiceDistance => '距離';
+
+  @override
+  String get locationResolving => '解析中...';
+
+  @override
+  String get locationResolved => '已定位';
+
+  @override
+  String get nearbyServicesSection => '附近的服務';
 }

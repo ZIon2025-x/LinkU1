@@ -10696,4 +10696,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homeExploreNow => 'Explore Now →';
+
+  @override
+  String get nearbyRadius => 'Search Radius';
+
+  @override
+  String get nearbyNoServices => 'No nearby services';
+
+  @override
+  String get nearbyServiceDistance => 'away';
+
+  @override
+  String get locationResolving => 'Resolving...';
+
+  @override
+  String get locationResolved => 'Located';
+
+  @override
+  String get nearbyServicesSection => 'Nearby Services';
 }

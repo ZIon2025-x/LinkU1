@@ -12,6 +12,7 @@ import '../../../data/repositories/common_repository.dart';
 import '../../../data/repositories/discovery_repository.dart';
 import '../../../data/repositories/follow_repository.dart';
 import '../../../data/repositories/ticker_repository.dart';
+import '../../../data/repositories/personal_service_repository.dart';
 import '../../../core/utils/cache_manager.dart';
 import '../../../core/utils/logger.dart';
 import 'home_event.dart';
@@ -26,12 +27,14 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     DiscoveryRepository? discoveryRepository,
     FollowRepository? followRepository,
     TickerRepository? tickerRepository,
+    PersonalServiceRepository? personalServiceRepository,
   })  : _taskRepository = taskRepository,
         _activityRepository = activityRepository,
         _commonRepository = commonRepository,
         _discoveryRepository = discoveryRepository,
         _followRepository = followRepository,
         _tickerRepository = tickerRepository,
+        _personalServiceRepository = personalServiceRepository,
         super(const HomeState()) {
     on<HomeLoadRequested>(_onLoadRequested);
     on<HomeRefreshRequested>(_onRefreshRequested);
@@ -45,6 +48,8 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     on<HomeLoadTicker>(_onLoadTicker);
     on<HomeLoadActivitiesList>(_onLoadActivitiesList);
     on<HomeLocationCityUpdated>(_onLocationCityUpdated);
+    on<HomeLoadNearbyServices>(_onLoadNearbyServices);
+    on<HomeChangeNearbyRadius>(_onChangeNearbyRadius);
   }
 
   final TaskRepository _taskRepository;
@@ -53,6 +58,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   final DiscoveryRepository? _discoveryRepository;
   final FollowRepository? _followRepository;
   final TickerRepository? _tickerRepository;
+  final PersonalServiceRepository? _personalServiceRepository;
 
   /// 当前用户（由外部设置，用于权限过滤）
   User? currentUser;
@@ -500,5 +506,33 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     Emitter<HomeState> emit,
   ) {
     emit(state.copyWith(locationCity: event.city));
+  }
+
+  // ==================== Nearby Services ====================
+
+  Future<void> _onLoadNearbyServices(
+    HomeLoadNearbyServices event,
+    Emitter<HomeState> emit,
+  ) async {
+    if (_personalServiceRepository == null) return;
+    try {
+      final result = await _personalServiceRepository.browseServices(
+        sort: 'nearby',
+        lat: event.latitude,
+        lng: event.longitude,
+        radius: event.radius,
+      );
+      final items = List<Map<String, dynamic>>.from(result['items'] ?? []);
+      emit(state.copyWith(nearbyServices: items, nearbyRadius: event.radius));
+    } catch (_) {
+      // Silent fail — nearby services are supplementary data
+    }
+  }
+
+  void _onChangeNearbyRadius(
+    HomeChangeNearbyRadius event,
+    Emitter<HomeState> emit,
+  ) {
+    emit(state.copyWith(nearbyRadius: event.radius));
   }
 }

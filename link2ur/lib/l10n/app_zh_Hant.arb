@@ -4690,5 +4690,11 @@
   "homeStoryCoding": "編程",
   "homeStoryMusic": "音樂",
   "homeStoryWriting": "文案",
-  "homeExploreNow": "立即體驗 →"
+  "homeExploreNow": "立即體驗 →",
+  "nearbyRadius": "搜索範圍",
+  "nearbyNoServices": "附近暫無服務",
+  "nearbyServiceDistance": "距離",
+  "locationResolving": "解析中...",
+  "locationResolved": "已定位",
+  "nearbyServicesSection": "附近的服務"
 }
