@@ -23,6 +23,8 @@ import 'data/repositories/skill_leaderboard_repository.dart';
 import 'data/repositories/badges_repository.dart';
 import 'data/repositories/user_profile_repository.dart';
 import 'data/repositories/personal_service_repository.dart';
+import 'data/repositories/follow_repository.dart';
+import 'data/repositories/ticker_repository.dart';
 import 'data/services/ai_chat_service.dart';
 import 'data/services/api_service.dart';
 import 'features/auth/bloc/auth_bloc.dart';
@@ -124,6 +126,12 @@ class AppProviders extends StatelessWidget {
         ),
         RepositoryProvider<PersonalServiceRepository>(
           create: (_) => PersonalServiceRepository(apiService: apiService),
+        ),
+        RepositoryProvider<FollowRepository>(
+          create: (_) => FollowRepository(apiService: apiService),
+        ),
+        RepositoryProvider<TickerRepository>(
+          create: (_) => TickerRepository(apiService: apiService),
         ),
       ],
       child: MultiBlocProvider(

@@ -13,10 +13,12 @@ import '../../core/widgets/desktop_sidebar.dart';
 import '../../data/repositories/activity_repository.dart';
 import '../../data/repositories/common_repository.dart';
 import '../../data/repositories/discovery_repository.dart';
+import '../../data/repositories/follow_repository.dart';
 import '../../data/repositories/forum_repository.dart';
 import '../../data/repositories/leaderboard_repository.dart';
 import '../../data/repositories/message_repository.dart';
 import '../../data/repositories/task_repository.dart';
+import '../../data/repositories/ticker_repository.dart';
 import '../auth/bloc/auth_bloc.dart';
 import '../forum/bloc/forum_bloc.dart';
 import '../home/bloc/home_bloc.dart';
@@ -50,8 +52,8 @@ class _MainTabViewState extends State<MainTabView>
   bool _showDesktopMenu = false;
 
   // StatefulShellRoute branch index ↔ 移动端 Tab index 映射
-  // Branch: [0=home, 1=community, 2=messages, 3=profile]
-  // Mobile: [0=home, 1=community, 2=create, 3=messages, 4=profile]
+  // Branch: [0=home, 1=discover, 2=messages, 3=profile]
+  // Mobile: [0=home, 1=discover, 2=create, 3=messages, 4=profile]
   static const _branchToMobileTab = [0, 1, 3, 4];
   static const _mobileTabToBranch = {0: 0, 1: 1, 3: 2, 4: 3};
 
@@ -82,7 +84,7 @@ class _MainTabViewState extends State<MainTabView>
     _TabItem(
       icon: Icons.groups_outlined,
       activeIcon: Icons.groups,
-      label: 'community',
+      label: 'discover',
       route: '/community',
     ),
     _TabItem(
@@ -117,10 +119,13 @@ class _MainTabViewState extends State<MainTabView>
         activityRepository: context.read<ActivityRepository>(),
         commonRepository: context.read<CommonRepository>(),
         discoveryRepository: context.read<DiscoveryRepository>(),
+        followRepository: context.read<FollowRepository>(),
+        tickerRepository: context.read<TickerRepository>(),
       )
         ..currentUser = authState.isAuthenticated ? authState.user : null
         ..add(const HomeLoadRequested())
-        ..add(const HomeLoadDiscoveryFeed());
+        ..add(const HomeLoadDiscoveryFeed())
+        ..add(const HomeLoadTicker());
       // 其他 Tab BLoC 也在此创建，通过字段引用访问，避免 context.read 找不到 Provider
       _forumBloc = ForumBloc(
         forumRepository: context.read<ForumRepository>(),
@@ -228,9 +233,10 @@ class _MainTabViewState extends State<MainTabView>
         if (!wasAlreadyLoaded) {
           _homeBloc.add(const HomeLoadRequested());
           _homeBloc.add(const HomeLoadDiscoveryFeed());
+          _homeBloc.add(const HomeLoadTicker());
         }
         break;
-      case 1: // Community (Forum) — 首次切到社区 Tab 时触发加载
+      case 1: // Discover (Forum) — 首次切到发现 Tab 时触发加载
         if (!wasAlreadyLoaded) {
           _forumBloc.add(const ForumLoadCategories());
           _leaderboardBloc.add(const LeaderboardLoadRequested());
@@ -568,8 +574,8 @@ class _MainTabViewState extends State<MainTabView>
     switch (key) {
       case 'home':
         return l10n.tabsHome;
-      case 'community':
-        return l10n.tabsCommunity;
+      case 'discover':
+        return l10n.navDiscover;
       case 'messages':
         return l10n.tabsMessages;
       case 'profile':

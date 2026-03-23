@@ -45,6 +45,7 @@ import '../../task_expert/bloc/task_expert_bloc.dart';
 import '../bloc/home_bloc.dart';
 import '../bloc/home_event.dart';
 import '../bloc/home_state.dart';
+import '../../../data/repositories/ticker_repository.dart';
 import '../linker_quotes.dart';
 
 part 'home_recommended_section.dart';
@@ -73,7 +74,7 @@ class _HomeViewContent extends StatefulWidget {
 }
 
 class _HomeViewContentState extends State<_HomeViewContent> {
-  int _selectedTab = 1; // 0: 达人, 1: 推荐, 2: 附近
+  int _selectedTab = 1; // 0: 关注, 1: 推荐, 2: 附近, 3: 达人, 4: 活动
   PageController? _pageController;
 
   /// 已访问过的 Tab 集合（懒加载：未访问过的 Tab 不构建内容，避免首帧多余 build 开销）
@@ -106,6 +107,14 @@ class _HomeViewContentState extends State<_HomeViewContent> {
         curve: Curves.easeInOut,
       );
       context.read<HomeBloc>().add(HomeTabChanged(index));
+      // 懒加载数据触发
+      final homeBloc = context.read<HomeBloc>();
+      if (index == 0 && homeBloc.state.followFeedItems.isEmpty) {
+        homeBloc.add(const HomeLoadFollowFeed());
+      }
+      if (index == 4 && homeBloc.state.activitiesListItems.isEmpty) {
+        homeBloc.add(const HomeLoadActivitiesList());
+      }
     }
   }
 
@@ -134,9 +143,11 @@ class _HomeViewContentState extends State<_HomeViewContent> {
             child: IndexedStack(
               index: _selectedTab,
               children: [
-                _visitedTabs.contains(0) ? const _ExpertsTab() : const SizedBox.shrink(),
+                _visitedTabs.contains(0) ? const _FollowTab() : const SizedBox.shrink(),
                 const _RecommendedTab(), // 默认 Tab，始终构建
                 _visitedTabs.contains(2) ? const _NearbyTab() : const SizedBox.shrink(),
+                _visitedTabs.contains(3) ? const _ExpertsTab() : const SizedBox.shrink(),
+                _visitedTabs.contains(4) ? const _ActivitiesTab() : const SizedBox.shrink(),
               ],
             ),
           ),
@@ -169,7 +180,7 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _DesktopSegmentButton(
-                    label: context.l10n.homeExperts,
+                    label: context.l10n.homeFollow,
                     isSelected: _selectedTab == 0,
                     onTap: () => _onTabChanged(0),
                     isDark: isDark,
@@ -184,6 +195,18 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                     label: context.l10n.homeNearby,
                     isSelected: _selectedTab == 2,
                     onTap: () => _onTabChanged(2),
+                    isDark: isDark,
+                  ),
+                  _DesktopSegmentButton(
+                    label: context.l10n.homeExperts,
+                    isSelected: _selectedTab == 3,
+                    onTap: () => _onTabChanged(3),
+                    isDark: isDark,
+                  ),
+                  _DesktopSegmentButton(
+                    label: context.l10n.homeActivities,
+                    isSelected: _selectedTab == 4,
+                    onTap: () => _onTabChanged(4),
                     isDark: isDark,
                   ),
                 ],
@@ -219,9 +242,11 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                       context.read<HomeBloc>().add(HomeTabChanged(index));
                     },
                     children: [
-                      _visitedTabs.contains(0) ? const _ExpertsTab() : const SizedBox.shrink(),
+                      _visitedTabs.contains(0) ? const _FollowTab() : const SizedBox.shrink(),
                       const _RecommendedTab(),
                       _visitedTabs.contains(2) ? const _NearbyTab() : const SizedBox.shrink(),
+                      _visitedTabs.contains(3) ? const _ExpertsTab() : const SizedBox.shrink(),
+                      _visitedTabs.contains(4) ? const _ActivitiesTab() : const SizedBox.shrink(),
                     ],
                   ),
                 ),
@@ -261,31 +286,41 @@ class _HomeViewContentState extends State<_HomeViewContent> {
               ),
             ),
           ),
-          const Spacer(),
-          SizedBox(
-            width: 240,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _TabButton(
-                  title: context.l10n.homeExperts,
-                  isSelected: _selectedTab == 0,
-                  onTap: () => _onTabChanged(0),
-                ),
-                _TabButton(
-                  title: context.l10n.homeRecommended,
-                  isSelected: _selectedTab == 1,
-                  onTap: () => _onTabChanged(1),
-                ),
-                _TabButton(
-                  title: context.l10n.homeNearby,
-                  isSelected: _selectedTab == 2,
-                  onTap: () => _onTabChanged(2),
-                ),
-              ],
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _TabButton(
+                    title: context.l10n.homeFollow,
+                    isSelected: _selectedTab == 0,
+                    onTap: () => _onTabChanged(0),
+                  ),
+                  _TabButton(
+                    title: context.l10n.homeRecommended,
+                    isSelected: _selectedTab == 1,
+                    onTap: () => _onTabChanged(1),
+                  ),
+                  _TabButton(
+                    title: context.l10n.homeNearby,
+                    isSelected: _selectedTab == 2,
+                    onTap: () => _onTabChanged(2),
+                  ),
+                  _TabButton(
+                    title: context.l10n.homeExperts,
+                    isSelected: _selectedTab == 3,
+                    onTap: () => _onTabChanged(3),
+                  ),
+                  _TabButton(
+                    title: context.l10n.homeActivities,
+                    isSelected: _selectedTab == 4,
+                    onTap: () => _onTabChanged(4),
+                  ),
+                ],
+              ),
             ),
           ),
-          const Spacer(),
           Semantics(
             button: true,
             label: 'Search',
@@ -451,6 +486,217 @@ class _TabButton extends StatelessWidget {
         ),
       ),
       ),
+    );
+  }
+}
+
+// ==================== 关注 Tab ====================
+class _FollowTab extends StatelessWidget {
+  const _FollowTab();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<HomeBloc, HomeState>(
+      buildWhen: (p, c) =>
+          p.followFeedItems != c.followFeedItems ||
+          p.isLoadingFollowFeed != c.isLoadingFollowFeed,
+      builder: (context, state) {
+        if (state.isLoadingFollowFeed && state.followFeedItems.isEmpty) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (state.followFeedItems.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.people_outline,
+                      size: 64,
+                      color: Theme.of(context).colorScheme.outline),
+                  const SizedBox(height: 16),
+                  Text(
+                    '关注用户后这里将显示他们的动态',
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurfaceVariant,
+                        ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+        return RefreshIndicator(
+          onRefresh: () async {
+            context.read<HomeBloc>().add(const HomeLoadFollowFeed());
+          },
+          child: ListView.builder(
+            padding: const EdgeInsets.all(8),
+            itemCount: state.followFeedItems.length +
+                (state.hasMoreFollowFeed ? 1 : 0),
+            itemBuilder: (context, index) {
+              if (index == state.followFeedItems.length) {
+                context
+                    .read<HomeBloc>()
+                    .add(const HomeLoadFollowFeed(loadMore: true));
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: CircularProgressIndicator(),
+                  ),
+                );
+              }
+              final item = state.followFeedItems[index];
+              final locale = Localizations.localeOf(context);
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Card(
+                  child: ListTile(
+                    leading: item.userAvatar != null
+                        ? CircleAvatar(
+                            backgroundImage:
+                                NetworkImage(item.userAvatar!))
+                        : const CircleAvatar(child: Icon(Icons.person)),
+                    title: Text(item.displayTitle(locale)),
+                    subtitle: Text(item.userName ?? '',
+                        style: const TextStyle(fontSize: 12)),
+                    trailing: Text(item.feedType,
+                        style: const TextStyle(
+                            fontSize: 10, color: Colors.grey)),
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ==================== 活动 Tab ====================
+class _ActivitiesTab extends StatelessWidget {
+  const _ActivitiesTab();
+
+  String _formatDate(DateTime date) {
+    return '${date.month}/${date.day} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<HomeBloc, HomeState>(
+      buildWhen: (p, c) =>
+          p.activitiesListItems != c.activitiesListItems ||
+          p.isLoadingActivitiesList != c.isLoadingActivitiesList,
+      builder: (context, state) {
+        if (state.isLoadingActivitiesList &&
+            state.activitiesListItems.isEmpty) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (state.activitiesListItems.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.event_outlined,
+                      size: 64,
+                      color: Theme.of(context).colorScheme.outline),
+                  const SizedBox(height: 16),
+                  Text('暂无活动',
+                      style: Theme.of(context).textTheme.bodyLarge),
+                ],
+              ),
+            ),
+          );
+        }
+        return RefreshIndicator(
+          onRefresh: () async {
+            context
+                .read<HomeBloc>()
+                .add(const HomeLoadActivitiesList());
+          },
+          child: ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: state.activitiesListItems.length +
+                (state.hasMoreActivitiesList ? 1 : 0),
+            itemBuilder: (context, index) {
+              if (index == state.activitiesListItems.length) {
+                context
+                    .read<HomeBloc>()
+                    .add(const HomeLoadActivitiesList(loadMore: true));
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: CircularProgressIndicator(),
+                  ),
+                );
+              }
+              final activity = state.activitiesListItems[index];
+              final locale = Localizations.localeOf(context);
+              final description = activity.displayDescription(locale);
+              return Card(
+                margin: const EdgeInsets.only(bottom: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(14),
+                  onTap: () =>
+                      context.push('/activities/${activity.id}'),
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          activity.displayTitle(locale),
+                          style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 4),
+                        if (description.isNotEmpty)
+                          Text(
+                            description,
+                            style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey[600]),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 12,
+                          children: [
+                            if (activity.deadline != null)
+                              Text(
+                                '📅 ${_formatDate(activity.deadline!)}',
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[500]),
+                              ),
+                            if (activity.location.isNotEmpty)
+                              Text(
+                                '📍 ${activity.location}',
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[500]),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }

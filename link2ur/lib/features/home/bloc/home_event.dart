@@ -86,3 +86,24 @@ class HomeRecommendedFilterChanged extends HomeEvent {
   @override
   List<Object?> get props => [category, sortBy, clearCategory];
 }
+
+/// 加载关注 Feed
+class HomeLoadFollowFeed extends HomeEvent {
+  const HomeLoadFollowFeed({this.loadMore = false});
+  final bool loadMore;
+  @override
+  List<Object?> get props => [loadMore];
+}
+
+/// 加载动态 Ticker
+class HomeLoadTicker extends HomeEvent {
+  const HomeLoadTicker();
+}
+
+/// 加载活动列表（活动 Tab）
+class HomeLoadActivitiesList extends HomeEvent {
+  const HomeLoadActivitiesList({this.loadMore = false});
+  final bool loadMore;
+  @override
+  List<Object?> get props => [loadMore];
+}

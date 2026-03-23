@@ -96,6 +96,25 @@ class DiscoveryFeedItem extends Equatable {
   /// 是否是达人服务
   bool get isService => feedType == 'service';
 
+  /// 是否是任务
+  bool get isTask => feedType == 'task';
+
+  /// 是否是活动
+  bool get isActivity => feedType == 'activity';
+
+  /// 是否是完成记录（仅关注 Feed）
+  bool get isCompletion => feedType == 'completion';
+
+  // Task-specific getters (from extra_data)
+  String? get taskType => extraData?['task_type'];
+  double? get reward => extraData?['reward'] != null ? (extraData!['reward'] as num).toDouble() : null;
+  String? get taskLocation => extraData?['location'];
+  String? get taskDeadline => extraData?['deadline'];
+  int? get applicationCount => extraData?['application_count'] as int?;
+  double? get matchScore => extraData?['match_score'] != null ? (extraData!['match_score'] as num).toDouble() : null;
+  String? get recommendationReason => extraData?['recommendation_reason'];
+  bool? get rewardToBeQuoted => extraData?['reward_to_be_quoted'] as bool?;
+
   /// 是否有图片
   bool get hasImages => images != null && images!.isNotEmpty;
 
@@ -249,6 +268,8 @@ class ActivityBrief extends Equatable {
     this.discountedPrice,
     this.discountPercentage,
     this.currency = 'GBP',
+    this.maxParticipants,
+    this.currentParticipants,
   });
 
   final int activityId;
@@ -259,6 +280,8 @@ class ActivityBrief extends Equatable {
   final double? discountedPrice;
   final double? discountPercentage;
   final String currency;
+  final int? maxParticipants;
+  final int? currentParticipants;
 
   /// 按语言展示活动标题
   String displayActivityTitle(Locale locale) =>
@@ -288,6 +311,8 @@ class ActivityBrief extends Equatable {
       discountedPrice: (json['discounted_price'] as num?)?.toDouble(),
       discountPercentage: (json['discount_percentage'] as num?)?.toDouble(),
       currency: json['currency'] as String? ?? 'GBP',
+      maxParticipants: json['max_participants'] as int?,
+      currentParticipants: json['current_participants'] as int?,
     );
   }
 

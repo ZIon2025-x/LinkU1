@@ -298,6 +298,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authPrivacyPolicy => 'Privacy Policy';
 
   @override
+  String get homeFollow => 'Following';
+
+  @override
+  String get homeActivities => 'Events';
+
+  @override
   String get homeExperts => 'Experts';
 
   @override
@@ -1983,6 +1989,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tabsCommunity => 'Community';
+
+  @override
+  String get navDiscover => 'Discover';
 
   @override
   String get tabsCreate => 'Create';

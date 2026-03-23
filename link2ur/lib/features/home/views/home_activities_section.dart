@@ -551,6 +551,12 @@ class _DiscoveryFeedCard extends StatelessWidget {
         return _RankingCard(item: item);
       case 'service':
         return _ServiceCard(item: item);
+      case 'task':
+        return _DiscoveryTaskCard(item: item);
+      case 'activity':
+        return _DiscoveryActivityCard(item: item);
+      case 'completion':
+        return _DiscoveryCompletionCard(item: item);
       default:
         return const SizedBox.shrink();
     }
@@ -604,6 +610,12 @@ class _FeedTypeBadge extends StatelessWidget {
         return (_label(context, type), const Color(0xFFDBEAFE), const Color(0xFF2563EB));
       case 'service':
         return (_label(context, type), const Color(0xFFFFF7ED), const Color(0xFFEA580C));
+      case 'task':
+        return (_label(context, type), const Color(0xFFEFF6FF), const Color(0xFF3B82F6));
+      case 'activity':
+        return (_label(context, type), const Color(0xFFF0FDF4), const Color(0xFF16A34A));
+      case 'completion':
+        return (_label(context, type), const Color(0xFFF0FDF4), const Color(0xFF15803D));
       default:
         return (_label(context, type), const Color(0xFFE5E7EB), const Color(0xFF6B7280));
     }
@@ -624,6 +636,12 @@ class _FeedTypeBadge extends StatelessWidget {
         return '🏆 ${l10n.discoveryFeedTypeRanking}';
       case 'service':
         return '🔧 ${l10n.discoveryFeedTypeService}';
+      case 'task':
+        return '📋 任务';
+      case 'activity':
+        return '🎪 活动';
+      case 'completion':
+        return '✅ 完成';
       default:
         return l10n.sidebarDiscover;
     }
