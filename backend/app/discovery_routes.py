@@ -1155,6 +1155,40 @@ def _compute_score(item: dict) -> float:
     return score
 
 
+def _compute_task_score(item: dict) -> float:
+    """计算任务的个性化排序分数
+
+    综合分 = 推荐分 * 0.6 + 时效分 * 0.2 + 热度分 * 0.2
+    - 推荐分: 来自推荐引擎的 match_score (0-1)，未登录或无数据时为 0
+    - 时效分: 时间衰减，越新越高
+    - 热度分: 申请数 + 浏览数（归一化）
+    """
+    extra = item.get("extra_data") or {}
+    match_score = extra.get("match_score") or 0.0
+
+    # 时效分（0-1，24小时内为1，逐渐衰减）
+    created_str = item.get("created_at")
+    if created_str:
+        try:
+            created = datetime.fromisoformat(created_str)
+            if created.tzinfo is None:
+                created = created.replace(tzinfo=timezone.utc)
+            age_hours = (datetime.now(timezone.utc) - created).total_seconds() / 3600
+            recency_score = 1.0 / (1.0 + age_hours / 24.0)
+        except (ValueError, TypeError):
+            recency_score = 0.0
+    else:
+        recency_score = 0.0
+
+    # 热度分（归一化，申请数权重更高）
+    app_count = extra.get("application_count") or 0
+    views = item.get("view_count") or 0
+    popularity_score = min(1.0, (app_count * 0.15 + views * 0.005))
+
+    # 综合分
+    return match_score * 0.6 + recency_score * 0.2 + popularity_score * 0.2
+
+
 def _weighted_shuffle(items: list, limit: int, page: int, seed: int = None) -> list:
     """加权随机混排
 
@@ -1188,9 +1222,10 @@ def _weighted_shuffle(items: list, limit: int, page: int, seed: int = None) -> l
             by_type[ft] = []
         by_type[ft].append(item)
 
-    # 按热度分数排序（替代纯 created_at）
+    # 按分数排序：task 用个性化排序（推荐分+时效+热度），其他用通用热度
     for ft in by_type:
-        by_type[ft].sort(key=_compute_score, reverse=True)
+        sort_fn = _compute_task_score if ft == "task" else _compute_score
+        by_type[ft].sort(key=sort_fn, reverse=True)
 
     result = []
     consecutive_count = {}
