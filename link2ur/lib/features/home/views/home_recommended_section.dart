@@ -313,13 +313,20 @@ class _TickerBannerState extends State<_TickerBanner> {
                       child: AnimatedSwitcher(
                         duration: const Duration(milliseconds: 500),
                         transitionBuilder: (child, animation) {
-                          // 垂直滚动：新文字从下方滑入，旧文字往上滑出
-                          return SlideTransition(
-                            position: Tween<Offset>(
-                              begin: const Offset(0, 1),
-                              end: Offset.zero,
-                            ).animate(animation),
-                            child: child,
+                          // 判断是新 widget（entering）还是旧 widget（exiting）
+                          // animation.status 为 forward 时是新 widget
+                          final isEntering = child.key == ValueKey(_tickerIndex);
+                          final begin = isEntering
+                              ? const Offset(0, 1)   // 新：从下方滑入
+                              : const Offset(0, -1); // 旧：往上方滑出
+                          return ClipRect(
+                            child: SlideTransition(
+                              position: Tween<Offset>(
+                                begin: begin,
+                                end: Offset.zero,
+                              ).animate(animation),
+                              child: child,
+                            ),
                           );
                         },
                         child: Text(
