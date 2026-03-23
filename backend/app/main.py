@@ -426,6 +426,10 @@ app.include_router(user_service_application_router)
 from app.personal_service_routes import personal_service_router
 app.include_router(personal_service_router)
 
+# 服务浏览（公开）路由
+from app.service_browse_routes import service_browse_router
+app.include_router(service_browse_router)
+
 from app.admin_task_expert_routes import admin_task_expert_router
 app.include_router(admin_task_expert_router)
 
