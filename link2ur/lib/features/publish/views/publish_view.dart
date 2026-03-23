@@ -646,7 +646,7 @@ class _PublishContentState extends State<_PublishContent>
     );
   }
 
-  // ==================== 类型选择页（样式 B：大卡片网格）====================
+  // ==================== 类型选择页（option_A_publish 风格：2x2 精致卡片 + AI 入口）====================
   Widget _buildTypePicker(bool isDark, double bottomPadding) {
     return Column(
       children: [
@@ -654,99 +654,153 @@ class _PublishContentState extends State<_PublishContent>
         Expanded(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                const gap = 12.0;
-                final width = (constraints.maxWidth - gap) / 2;
-                return SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  AppSpacing.vSm,
+                  // 2x2 Grid
+                  GridView.count(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 10,
+                    crossAxisSpacing: 10,
+                    childAspectRatio: 1.15,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
                     children: [
-                      AppSpacing.vSm,
-                      Row(
-                        children: [
-                          SizedBox(
-                            width: width,
-                            height: width,
-                            child: _PublishTypeCard(
-                              isDark: isDark,
-                              type: _PublishType.task,
-                              label: context.l10n.publishTaskCardLabel,
-                              icon: Icons.task_alt_rounded,
-                              gradient: AppColors.gradientPrimary,
-                              onTap: () {
-                                AppHaptics.selection();
-                                setState(() => _selectedType = _PublishType.task);
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: gap),
-                          SizedBox(
-                            width: width,
-                            height: width,
-                            child: _PublishTypeCard(
-                              isDark: isDark,
-                              type: _PublishType.fleaMarket,
-                              label: context.l10n.publishFleaCardLabel,
-                              icon: Icons.storefront_rounded,
-                              gradient: AppColors.gradientGreen,
-                              onTap: () {
-                                AppHaptics.selection();
-                                setState(() => _selectedType = _PublishType.fleaMarket);
-                              },
-                            ),
-                          ),
-                        ],
+                      _PublishOptionTile(
+                        isDark: isDark,
+                        icon: Icons.task_alt_rounded,
+                        iconBgColor: AppColors.primary.withValues(alpha: 0.1),
+                        iconColor: AppColors.primary,
+                        title: context.l10n.publishTaskCardLabel,
+                        subtitle: context.l10n.publishTaskCardDescription,
+                        onTap: () {
+                          AppHaptics.selection();
+                          setState(() => _selectedType = _PublishType.task);
+                        },
                       ),
-                      const SizedBox(height: gap),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _PublishTypeCard(
-                              isDark: isDark,
-                              type: _PublishType.post,
-                              label: context.l10n.publishPostCardLabel,
-                              icon: Icons.article_rounded,
-                              gradient: AppColors.gradientPurple,
-                              fullWidth: true,
-                              onTap: () {
-                                AppHaptics.selection();
-                                setState(() => _selectedType = _PublishType.post);
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: gap),
-                          Expanded(
-                            child: _PublishTypeCard(
-                              isDark: isDark,
-                              type: _PublishType.service,
-                              label: context.l10n.publishService,
-                              icon: Icons.home_repair_service_rounded,
-                              gradient: AppColors.gradientOrange,
-                              fullWidth: true,
-                              onTap: () {
-                                AppHaptics.selection();
-                                Navigator.of(context).pop();
-                                context.push('/services/create');
-                              },
-                            ),
-                          ),
-                        ],
+                      _PublishOptionTile(
+                        isDark: isDark,
+                        icon: Icons.home_repair_service_rounded,
+                        iconBgColor: AppColors.accent.withValues(alpha: 0.1),
+                        iconColor: AppColors.accent,
+                        title: context.l10n.publishService,
+                        subtitle: context.l10n.publishServiceDesc,
+                        onTap: () {
+                          AppHaptics.selection();
+                          Navigator.of(context).pop();
+                          context.push('/services/create');
+                        },
                       ),
-                      const SizedBox(height: 12),
-                      _buildRecentSection(isDark),
-                      AppSpacing.vSm,
-                      _buildTipsSection(isDark),
-                      SizedBox(height: bottomPadding + 24),
+                      _PublishOptionTile(
+                        isDark: isDark,
+                        icon: Icons.storefront_rounded,
+                        iconBgColor: AppColors.success.withValues(alpha: 0.1),
+                        iconColor: AppColors.success,
+                        title: context.l10n.publishFleaCardLabel,
+                        subtitle: context.l10n.publishFleaCardDescription,
+                        onTap: () {
+                          AppHaptics.selection();
+                          setState(() => _selectedType = _PublishType.fleaMarket);
+                        },
+                      ),
+                      _PublishOptionTile(
+                        isDark: isDark,
+                        icon: Icons.article_rounded,
+                        iconBgColor: AppColors.purple.withValues(alpha: 0.1),
+                        iconColor: AppColors.purple,
+                        title: context.l10n.publishPostCardLabel,
+                        subtitle: context.l10n.publishPostCardDescription,
+                        onTap: () {
+                          AppHaptics.selection();
+                          setState(() => _selectedType = _PublishType.post);
+                        },
+                      ),
                     ],
                   ),
-                );
-              },
+                  const SizedBox(height: 14),
+                  // AI 辅助入口
+                  _buildAiAssistEntry(isDark),
+                  const SizedBox(height: 14),
+                  _buildRecentSection(isDark),
+                  AppSpacing.vSm,
+                  _buildTipsSection(isDark),
+                  SizedBox(height: bottomPadding + 24),
+                ],
+              ),
             ),
           ),
         ),
         _buildCloseButton(isDark, bottomPadding),
       ],
+    );
+  }
+
+  /// AI 辅助入口 — "不知道怎么写？问 AI"
+  Widget _buildAiAssistEntry(bool isDark) {
+    return GestureDetector(
+      onTap: () {
+        AppHaptics.selection();
+        Navigator.of(context).pop();
+        // 跳转到 AI 聊天
+        context.push('/ai-chat');
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: AppColors.gradientPrimary,
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
+          borderRadius: AppRadius.allMedium,
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Center(
+                child: Icon(Icons.auto_awesome, size: 22, color: Colors.white),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    context.l10n.publishAiAssistTitle,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    context.l10n.publishAiAssistSubtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.white.withValues(alpha: 0.8),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: Colors.white.withValues(alpha: 0.6),
+              size: 20,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -2208,24 +2262,24 @@ class _RecentPublishListItem extends StatelessWidget {
 }
 
 // ==================== 发布类型卡片（样式 B）====================
-class _PublishTypeCard extends StatelessWidget {
-  const _PublishTypeCard({
+class _PublishOptionTile extends StatelessWidget {
+  const _PublishOptionTile({
     required this.isDark,
-    required this.type,
-    required this.label,
     required this.icon,
-    required this.gradient,
+    required this.iconBgColor,
+    required this.iconColor,
+    required this.title,
+    required this.subtitle,
     required this.onTap,
-    this.fullWidth = false,
   });
 
   final bool isDark;
-  final _PublishType type;
-  final String label;
   final IconData icon;
-  final List<Color> gradient;
+  final Color iconBgColor;
+  final Color iconColor;
+  final String title;
+  final String subtitle;
   final VoidCallback onTap;
-  final bool fullWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -2233,58 +2287,52 @@ class _PublishTypeCard extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: AppRadius.allLarge,
+        borderRadius: AppRadius.allMedium,
         child: Container(
-          padding: fullWidth
-              ? const EdgeInsets.symmetric(horizontal: 20, vertical: 20)
-              : const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: gradient,
+            color: isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight,
+            borderRadius: AppRadius.allMedium,
+            border: Border.all(
+              color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
+              width: 0.5,
             ),
-            borderRadius: AppRadius.allLarge,
-            boxShadow: [
-              BoxShadow(
-                color: gradient.first.withValues(alpha: 0.35),
-                blurRadius: 14,
-                offset: const Offset(0, 4),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: iconBgColor,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(icon, size: 24, color: iconColor),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+                ),
               ),
             ],
           ),
-          child: fullWidth
-              ? Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(icon, size: 32, color: Colors.white),
-                    AppSpacing.hMd,
-                    Text(
-                      label,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                )
-              : Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(icon, size: 32, color: Colors.white),
-                    AppSpacing.vSm,
-                    Text(
-                      label,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
         ),
       ),
     );
