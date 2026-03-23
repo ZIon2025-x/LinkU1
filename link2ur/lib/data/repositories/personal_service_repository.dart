@@ -37,6 +37,9 @@ class PersonalServiceRepository {
     String sort = 'recommended',
     int page = 1,
     int pageSize = 20,
+    double? lat,
+    double? lng,
+    int? radius,
   }) async {
     final params = <String, dynamic>{
       'type': type,
@@ -45,6 +48,9 @@ class PersonalServiceRepository {
       'page_size': pageSize,
     };
     if (query != null && query.isNotEmpty) params['q'] = query;
+    if (lat != null) params['lat'] = lat;
+    if (lng != null) params['lng'] = lng;
+    if (radius != null) params['radius'] = radius;
 
     final response = await _apiService.get(
       ApiEndpoints.browseServices,

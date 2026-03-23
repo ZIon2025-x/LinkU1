@@ -314,6 +314,9 @@ class TaskExpertService extends Equatable {
     required this.basePrice,
     this.pricingType = 'fixed',
     this.locationType = 'online',
+    this.location,
+    this.latitude,
+    this.longitude,
     this.currency = 'GBP',
     this.status = 'active',
     this.isExpertVerified = false,
@@ -347,6 +350,9 @@ class TaskExpertService extends Equatable {
   final double basePrice;
   final String pricingType; // 'fixed' | 'hourly' | 'negotiable'
   final String locationType; // 'online' | 'in_person' | 'both'
+  final String? location;
+  final double? latitude;
+  final double? longitude;
   final String currency;
   final String status;
   final bool isExpertVerified;
@@ -411,6 +417,9 @@ class TaskExpertService extends Equatable {
       basePrice: (json['base_price'] as num?)?.toDouble() ?? 0,
       pricingType: json['pricing_type']?.toString() ?? 'fixed',
       locationType: json['location_type']?.toString() ?? 'online',
+      location: json['location']?.toString(),
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
       currency: json['currency'] as String? ?? 'GBP',
       status: json['status'] as String? ?? 'active',
       isExpertVerified: json['is_expert_verified'] == true,
@@ -450,6 +459,9 @@ class TaskExpertService extends Equatable {
       'base_price': basePrice,
       'pricing_type': pricingType,
       'location_type': locationType,
+      'location': location,
+      'latitude': latitude,
+      'longitude': longitude,
       'currency': currency,
       'status': status,
       'is_expert_verified': isExpertVerified,
@@ -469,7 +481,7 @@ class TaskExpertService extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, expertId, serviceType, userId, serviceName, basePrice, pricingType, locationType, status, isExpertVerified, ownerName, ownerAvatar, ownerRating];
+  List<Object?> get props => [id, expertId, serviceType, userId, serviceName, basePrice, pricingType, locationType, location, latitude, longitude, status, isExpertVerified, ownerName, ownerAvatar, ownerRating];
 }
 
 /// 任务达人列表响应

@@ -19711,6 +19711,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Explore Now →'**
   String get homeExploreNow;
+
+  /// No description provided for @nearbyRadius.
+  ///
+  /// In en, this message translates to:
+  /// **'Search Radius'**
+  String get nearbyRadius;
+
+  /// No description provided for @nearbyNoServices.
+  ///
+  /// In en, this message translates to:
+  /// **'No nearby services'**
+  String get nearbyNoServices;
+
+  /// No description provided for @nearbyServiceDistance.
+  ///
+  /// In en, this message translates to:
+  /// **'away'**
+  String get nearbyServiceDistance;
+
+  /// No description provided for @locationResolving.
+  ///
+  /// In en, this message translates to:
+  /// **'Resolving...'**
+  String get locationResolving;
+
+  /// No description provided for @locationResolved.
+  ///
+  /// In en, this message translates to:
+  /// **'Located'**
+  String get locationResolved;
+
+  /// No description provided for @nearbyServicesSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Nearby Services'**
+  String get nearbyServicesSection;
 }
 
 class _AppLocalizationsDelegate

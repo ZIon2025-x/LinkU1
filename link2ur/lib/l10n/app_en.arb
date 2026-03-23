@@ -4867,5 +4867,11 @@
   "homeStoryCoding": "Coding",
   "homeStoryMusic": "Music",
   "homeStoryWriting": "Writing",
-  "homeExploreNow": "Explore Now →"
+  "homeExploreNow": "Explore Now →",
+  "nearbyRadius": "Search Radius",
+  "nearbyNoServices": "No nearby services",
+  "nearbyServiceDistance": "away",
+  "locationResolving": "Resolving...",
+  "locationResolved": "Located",
+  "nearbyServicesSection": "Nearby Services"
 }

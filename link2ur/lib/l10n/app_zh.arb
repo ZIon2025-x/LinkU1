@@ -4775,5 +4775,11 @@
   "homeStoryCoding": "编程",
   "homeStoryMusic": "音乐",
   "homeStoryWriting": "文案",
-  "homeExploreNow": "立即体验 →"
+  "homeExploreNow": "立即体验 →",
+  "nearbyRadius": "搜索范围",
+  "nearbyNoServices": "附近暂无服务",
+  "nearbyServiceDistance": "距离",
+  "locationResolving": "解析中...",
+  "locationResolved": "已定位",
+  "nearbyServicesSection": "附近的服务"
 }

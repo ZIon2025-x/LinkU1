@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/widgets/location_picker.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_spacing.dart';
@@ -47,6 +48,9 @@ class _FormContentState extends State<_FormContent> {
 
   String _pricingType = 'fixed';
   String _locationType = 'online';
+  String? _location;
+  double? _latitude;
+  double? _longitude;
 
   bool get _isEditMode => widget.serviceData != null;
 
@@ -63,6 +67,9 @@ class _FormContentState extends State<_FormContent> {
       }
       _pricingType = (data['pricing_type'] as String?) ?? 'fixed';
       _locationType = (data['location_type'] as String?) ?? 'online';
+      _location = (data['location'] as String?);
+      _latitude = (data['latitude'] as num?)?.toDouble();
+      _longitude = (data['longitude'] as num?)?.toDouble();
     }
   }
 
@@ -83,6 +90,14 @@ class _FormContentState extends State<_FormContent> {
       'pricing_type': _pricingType,
       'location_type': _locationType,
     };
+
+    if (_locationType != 'online') {
+      if (_location != null && _location!.isNotEmpty) {
+        data['location'] = _location;
+      }
+      if (_latitude != null) data['latitude'] = _latitude;
+      if (_longitude != null) data['longitude'] = _longitude;
+    }
 
     // Only include price for non-negotiable types
     if (_pricingType != 'negotiable') {
@@ -309,12 +324,40 @@ class _FormContentState extends State<_FormContent> {
                     ],
                     selected: {_locationType},
                     onSelectionChanged: (selected) {
-                      setState(() => _locationType = selected.first);
+                      setState(() {
+                        _locationType = selected.first;
+                        if (_locationType == 'online') {
+                          _location = null;
+                          _latitude = null;
+                          _longitude = null;
+                        }
+                      });
                     },
                     showSelectedIcon: false,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.md),
+
+                // ── Location (when in_person or both) ──
+                if (_locationType == 'in_person' || _locationType == 'both') ...[
+                  _SectionLabel(label: context.l10n.personalServiceLocation),
+                  const SizedBox(height: AppSpacing.sm),
+                  LocationInputField(
+                    initialValue: _location,
+                    initialLatitude: _latitude,
+                    initialLongitude: _longitude,
+                    showOnlineOption: false,
+                    onChanged: (value) {
+                      _location = value;
+                    },
+                    onLocationPicked: (address, lat, lng) {
+                      _location = address;
+                      _latitude = lat;
+                      _longitude = lng;
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                ],
 
                 // ── Images placeholder ──
                 _SectionLabel(label: context.l10n.personalServiceImages),
