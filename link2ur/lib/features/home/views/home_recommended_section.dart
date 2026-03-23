@@ -167,7 +167,7 @@ class _StoryRow extends StatelessWidget {
     ];
 
     return SizedBox(
-      height: 92,
+      height: 100,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
