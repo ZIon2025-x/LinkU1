@@ -3679,3 +3679,22 @@ class UserBehaviorEvent(Base):
     __table_args__ = (
         Index("ix_behavior_events_user_created", "user_id", "created_at"),
     )
+
+
+class UserFollow(Base):
+    """用户关注关系"""
+    __tablename__ = "user_follows"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    follower_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    following_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    follower = relationship("User", foreign_keys=[follower_id], backref="following_relations")
+    following = relationship("User", foreign_keys=[following_id], backref="follower_relations")
+
+    __table_args__ = (
+        UniqueConstraint("follower_id", "following_id", name="uq_user_follow"),
+        Index("ix_user_follows_follower", "follower_id"),
+        Index("ix_user_follows_following", "following_id"),
+    )
