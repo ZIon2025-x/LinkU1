@@ -1102,6 +1102,418 @@ class _TargetItemTag extends StatelessWidget {
   }
 }
 
+// =============================================================================
+// 卡片类型 7: 任务卡片
+// =============================================================================
+
+class _DiscoveryTaskCard extends StatelessWidget {
+  const _DiscoveryTaskCard({required this.item});
+  final DiscoveryFeedItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final locale = Localizations.localeOf(context);
+    final displayTitle = Helpers.normalizeContentNewlines(item.displayTitle(locale));
+
+    return Semantics(
+      button: true,
+      label: 'View task',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: () {
+          final taskId = item.id.replaceFirst('task_', '');
+          if (taskId.isNotEmpty) context.push('/tasks/$taskId');
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.cardBackgroundDark : Colors.white,
+            borderRadius: BorderRadius.circular(_kDiscoveryCardRadius),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 3,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          clipBehavior: Clip.hardEdge,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Image or gradient placeholder
+              _buildImage(isDark),
+              // Body
+              Padding(
+                padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const _FeedTypeBadge(feedType: 'task'),
+                    const SizedBox(height: 6),
+                    if (displayTitle.isNotEmpty)
+                      Text(
+                        displayTitle,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                          height: 1.4,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    const SizedBox(height: 8),
+                    // Tags: task type + price
+                    Wrap(
+                      spacing: 4,
+                      runSpacing: 4,
+                      children: [
+                        if (item.taskType != null)
+                          _buildTag(
+                            item.taskType!,
+                            isDark
+                                ? Colors.white.withValues(alpha: 0.12)
+                                : const Color(0xFFF0F0FF),
+                            isDark ? Colors.white70 : const Color(0xFF667EEA),
+                          ),
+                        if (item.price != null)
+                          _buildTag(
+                            item.rewardToBeQuoted == true
+                                ? '待报价'
+                                : '£${item.price!.toStringAsFixed(0)}',
+                            isDark
+                                ? Colors.white.withValues(alpha: 0.12)
+                                : const Color(0xFFFFF0F0),
+                            isDark ? const Color(0xFFFF8A65) : const Color(0xFFEE5A24),
+                            isBold: true,
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    // Footer: avatar + name
+                    _DiscoveryUserRow(
+                      userId: item.userId,
+                      userName: item.userName,
+                      userAvatar: item.userAvatar,
+                      expertId: item.expertId,
+                      isDark: isDark,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImage(bool isDark) {
+    if (item.hasImages) {
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final w = constraints.maxWidth;
+          final h = w * 3 / 4;
+          return ClipRect(
+            child: AsyncImageView(
+              imageUrl: item.firstImage!,
+              width: w,
+              height: h,
+              memCacheWidth: (w * MediaQuery.devicePixelRatioOf(context)).round(),
+            ),
+          );
+        },
+      );
+    }
+    return _buildPlaceholder();
+  }
+
+  Widget _buildPlaceholder() {
+    const gradients = {
+      'design': [Color(0xFFA8EDEA), Color(0xFFFED6E3)],
+      'photography': [Color(0xFFFFECD2), Color(0xFFFCB69F)],
+      'coding': [Color(0xFFE0C3FC), Color(0xFF8EC5FC)],
+      'music': [Color(0xFFF5F7FA), Color(0xFFC3CFE2)],
+      'writing': [Color(0xFFFDDB92), Color(0xFFD1FDFF)],
+    };
+    const emojis = {
+      'design': '🎨',
+      'photography': '📷',
+      'coding': '💻',
+      'music': '🎵',
+      'writing': '📝',
+      'tutoring': '📚',
+    };
+    final colors = gradients[item.taskType] ?? const [Color(0xFFE8E8E8), Color(0xFFD0D0D0)];
+    final emoji = emojis[item.taskType] ?? '📋';
+    return AspectRatio(
+      aspectRatio: 4 / 3,
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: colors,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        alignment: Alignment.center,
+        child: Text(emoji, style: const TextStyle(fontSize: 36)),
+      ),
+    );
+  }
+
+  Widget _buildTag(String text, Color bg, Color fg, {bool isBold = false}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(10)),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 11,
+          color: fg,
+          fontWeight: isBold ? FontWeight.w600 : FontWeight.normal,
+        ),
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// 卡片类型 8: 活动卡片（瀑布流）
+// =============================================================================
+
+class _DiscoveryActivityCard extends StatelessWidget {
+  const _DiscoveryActivityCard({required this.item});
+  final DiscoveryFeedItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final locale = Localizations.localeOf(context);
+    final displayTitle = Helpers.normalizeContentNewlines(item.displayTitle(locale));
+    final displayDesc = item.displayDescription(locale) != null
+        ? Helpers.normalizeContentNewlines(item.displayDescription(locale)!)
+        : null;
+
+    return Semantics(
+      button: true,
+      label: 'View activity',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: () {
+          final activityId = item.id.replaceFirst('activity_', '');
+          if (activityId.isNotEmpty) context.push('/activities/$activityId');
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.cardBackgroundDark : Colors.white,
+            borderRadius: BorderRadius.circular(_kDiscoveryCardRadius),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 3,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          clipBehavior: Clip.hardEdge,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Image or gradient
+              _buildImage(),
+              // Body
+              Padding(
+                padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const _FeedTypeBadge(feedType: 'activity'),
+                    const SizedBox(height: 6),
+                    if (displayTitle.isNotEmpty)
+                      Text(
+                        displayTitle,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                          height: 1.4,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    if (displayDesc != null && displayDesc.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        displayDesc,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                    const SizedBox(height: 8),
+                    // Participants + price row
+                    Wrap(
+                      spacing: 8,
+                      children: [
+                        if (item.activityInfo?.currentParticipants != null)
+                          Text(
+                            '👥 ${item.activityInfo!.currentParticipants}/${item.activityInfo?.maxParticipants ?? '∞'}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+                            ),
+                          ),
+                        if (item.price != null && item.price! > 0)
+                          Text(
+                            '${_currencySymbol(item.currency)}${item.price!.toStringAsFixed(0)}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFFEE5A24),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          )
+                        else
+                          Text(
+                            '免费',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDark ? const Color(0xFF66BB6A) : const Color(0xFF4CAF50),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImage() {
+    if (item.hasImages) {
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final w = constraints.maxWidth;
+          final h = w * 9 / 16;
+          return ClipRect(
+            child: AsyncImageView(
+              imageUrl: item.firstImage!,
+              width: w,
+              height: h,
+              memCacheWidth: (w * MediaQuery.devicePixelRatioOf(context)).round(),
+            ),
+          );
+        },
+      );
+    }
+    return AspectRatio(
+      aspectRatio: 16 / 9,
+      child: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        alignment: Alignment.center,
+        child: const Text('🎪', style: TextStyle(fontSize: 36)),
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// 卡片类型 9: 完成记录卡片（关注 Feed）
+// =============================================================================
+
+class _DiscoveryCompletionCard extends StatelessWidget {
+  const _DiscoveryCompletionCard({required this.item});
+  final DiscoveryFeedItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final locale = Localizations.localeOf(context);
+    final displayTitle = Helpers.normalizeContentNewlines(item.displayTitle(locale));
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.cardBackgroundDark : Colors.white,
+        borderRadius: BorderRadius.circular(_kDiscoveryCardRadius),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 3,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        children: [
+          if (item.userAvatar != null)
+            CircleAvatar(
+              radius: 20,
+              backgroundImage: NetworkImage(item.userAvatar!),
+            )
+          else
+            CircleAvatar(
+              radius: 20,
+              backgroundColor: isDark
+                  ? Colors.white.withValues(alpha: 0.15)
+                  : const Color(0xFFE8E8E8),
+              child: Icon(
+                Icons.person,
+                size: 20,
+                color: isDark ? Colors.white54 : const Color(0xFF999999),
+              ),
+            ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (item.userName != null && item.userName!.isNotEmpty)
+                  Text(
+                    item.userName!,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                    ),
+                  ),
+                const SizedBox(height: 2),
+                if (displayTitle.isNotEmpty)
+                  Text(
+                    displayTitle,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          const Text('✅', style: TextStyle(fontSize: 20)),
+        ],
+      ),
+    );
+  }
+}
+
 class _ActivityPriceRow extends StatelessWidget {
   const _ActivityPriceRow({required this.activityInfo});
   final ActivityBrief activityInfo;
