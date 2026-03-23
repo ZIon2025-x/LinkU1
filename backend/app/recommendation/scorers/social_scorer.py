@@ -11,8 +11,6 @@ Sub-strategy scores are additively combined (one task may match multiple).
 import logging
 from typing import Dict, List, Any
 
-from sqlalchemy import desc
-
 from ..base_scorer import BaseScorer, ScoredTask
 
 logger = logging.getLogger(__name__)
@@ -110,23 +108,17 @@ class SocialScorer(BaseScorer):
     def _get_high_rated_user_tasks(
         db, user, candidate_ids: set
     ) -> List[Dict[str, Any]]:
-        """Find candidate tasks posted by high-rated users."""
+        """Find candidate tasks posted by high-rated users via JOIN on candidates."""
         from app.models import User as UserModel, Task
 
-        high_rated_user_ids = [
-            u.id
-            for u in db.query(UserModel).filter(
-                UserModel.avg_rating >= 4.5,
-                UserModel.completed_task_count >= 5,
-                UserModel.id != user.id,
-            ).order_by(desc(UserModel.avg_rating)).limit(30).all()
-        ]
-        if not high_rated_user_ids:
-            return []
-
-        tasks = db.query(Task).filter(
+        # JOIN directly on candidate tasks instead of fetching global high-rated users
+        tasks = db.query(Task).join(
+            UserModel, Task.poster_id == UserModel.id
+        ).filter(
             Task.id.in_(candidate_ids),
-            Task.poster_id.in_(high_rated_user_ids),
+            UserModel.avg_rating >= 4.5,
+            UserModel.completed_task_count >= 5,
+            UserModel.id != user.id,
         ).all()
 
         return [
@@ -138,27 +130,21 @@ class SocialScorer(BaseScorer):
     def _get_local_high_rated_user_tasks(
         db, user, candidate_ids: set
     ) -> List[Dict[str, Any]]:
-        """Find candidate tasks posted by same-city high-rated users."""
+        """Find candidate tasks posted by same-city high-rated users via JOIN."""
         from app.models import User as UserModel, Task
 
         if not user.residence_city:
             return []
 
-        local_user_ids = [
-            u.id
-            for u in db.query(UserModel).filter(
-                UserModel.residence_city == user.residence_city,
-                UserModel.avg_rating >= 4.0,
-                UserModel.completed_task_count >= 3,
-                UserModel.id != user.id,
-            ).order_by(desc(UserModel.avg_rating)).limit(20).all()
-        ]
-        if not local_user_ids:
-            return []
-
-        tasks = db.query(Task).filter(
+        # JOIN directly on candidate tasks instead of fetching global local users
+        tasks = db.query(Task).join(
+            UserModel, Task.poster_id == UserModel.id
+        ).filter(
             Task.id.in_(candidate_ids),
-            Task.poster_id.in_(local_user_ids),
+            UserModel.residence_city == user.residence_city,
+            UserModel.avg_rating >= 4.0,
+            UserModel.completed_task_count >= 3,
+            UserModel.id != user.id,
             Task.location.ilike(f"%{user.residence_city}%"),
         ).all()
 

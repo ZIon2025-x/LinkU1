@@ -598,7 +598,15 @@ async def build_user_profile_context(user_id: str, db) -> str:
                 needs = list(needs.keys())
             sections.append(f"- 预测需求: {', '.join(str(n) for n in needs[:5])}")
     if reliability:
-        sections.append(f"- 可靠度评分: {reliability.reliability_score}")
+        # Map reliability score to qualitative level (do not expose raw score to user)
+        score = reliability.reliability_score or 0
+        if score >= 0.8:
+            level = "高"
+        elif score >= 0.5:
+            level = "中"
+        else:
+            level = "待提升"
+        sections.append(f"- 用户信誉等级: {level}")
 
     if sections:
         return "用户画像:\n" + "\n".join(sections)
@@ -624,20 +632,19 @@ async def get_proactive_suggestions(user_id: str, db) -> str:
         cutoff = get_utc_time() - timedelta(hours=24)
         high_matches = []
         for rec in recs:
-            score = rec.get("match_score", 0)
-            created = rec.get("created_at")
-            if score >= 0.8 and created:
-                if isinstance(created, str):
-                    try:
-                        created = datetime.fromisoformat(created.replace("Z", "+00:00"))
-                    except ValueError:
-                        continue
-                if created >= cutoff:
-                    high_matches.append({
-                        "title": rec.get("title_zh") or rec.get("title") or "",
-                        "reason": rec.get("recommendation_reason", ""),
-                        "score": score,
-                    })
+            # Return format: {"task": <ORM Task>, "score": float, "reason": str}
+            score = rec.get("score", 0)
+            task = rec.get("task")
+            if not task or score < 0.8:
+                continue
+            created = getattr(task, "created_at", None)
+            if created and created >= cutoff:
+                title = getattr(task, "title_zh", None) or getattr(task, "title", "") or ""
+                high_matches.append({
+                    "title": title,
+                    "reason": rec.get("reason", ""),
+                    "score": score,
+                })
         if high_matches:
             lines = ["最近有以下高匹配任务值得推荐给用户："]
             for i, m in enumerate(high_matches[:3], 1):

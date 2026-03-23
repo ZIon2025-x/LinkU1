@@ -31,20 +31,21 @@
   /* Search Header */
   .search-header {
     background: #fff;
-    padding: 8px 16px 12px;
+    padding: 48px 16px 8px;
     display: flex;
     align-items: center;
     gap: 12px;
     position: sticky;
     top: 0;
     z-index: 100;
-    border-bottom: 0.5px solid rgba(0,0,0,0.06);
   }
-  .avatar-small {
-    width: 32px; height: 32px; border-radius: 50%;
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    display: flex; align-items: center; justify-content: center;
-    color: #fff; font-size: 14px; font-weight: 600;
+  .header-location {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
     flex-shrink: 0;
   }
   .search-bar {
@@ -71,7 +72,6 @@
     display: flex;
     padding: 0 20px;
     gap: 24px;
-    border-bottom: 0.5px solid rgba(0,0,0,0.06);
   }
   .tab-item {
     padding: 10px 0;
@@ -98,8 +98,8 @@
 
   /* Story Row */
   .story-row {
-    background: #fff;
-    padding: 16px 16px 12px;
+    background: transparent;
+    padding: 12px 16px 8px;
     display: flex;
     gap: 16px;
     overflow-x: auto;
@@ -120,19 +120,32 @@
     background: linear-gradient(135deg, #f093fb, #f5576c, #fda085);
   }
   .story-ring.ai {
-    background: linear-gradient(135deg, #667eea, #764ba2, #f093fb);
-    animation: rotate 3s linear infinite;
+    background: none;
+    position: relative;
+    overflow: hidden;
   }
-  @keyframes rotate {
-    0% { background: linear-gradient(0deg, #667eea, #764ba2, #f093fb); }
-    50% { background: linear-gradient(180deg, #667eea, #764ba2, #f093fb); }
-    100% { background: linear-gradient(360deg, #667eea, #764ba2, #f093fb); }
+  .story-ring.ai::before {
+    content: '';
+    position: absolute;
+    inset: -50%;
+    background: conic-gradient(
+      #667eea, #764ba2, #f093fb, #fda085, #f5576c, #667eea
+    );
+    animation: ai-spin 3s linear infinite;
+  }
+  @keyframes ai-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  .story-ring.ai .story-img {
+    position: relative;
+    z-index: 1;
   }
   .story-img {
     width: 100%; height: 100%;
     border-radius: 50%;
     border: 2.5px solid #fff;
-    background: #e0e0e0;
+    background: #fff;
     display: flex; align-items: center; justify-content: center;
     font-size: 24px;
   }
@@ -149,8 +162,10 @@
   /* Quick Actions */
   .quick-actions {
     background: #fff;
-    margin-top: 8px;
-    padding: 16px;
+    margin: 8px 16px 0;
+    padding: 14px 12px;
+    border-radius: 14px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
   }
   .actions-grid {
     display: grid;
@@ -373,9 +388,11 @@
 
   /* Banner */
   .banner-section {
-    padding: 12px 16px 4px;
-    background: #fff;
-    margin-top: 8px;
+    padding: 0;
+    background: transparent;
+    position: relative;
+    z-index: 2; /* 前层，遮住公告条下半部 */
+    margin-top: 0;
   }
   .banner-card {
     border-radius: 16px;
@@ -384,6 +401,7 @@
     color: #fff;
     position: relative;
     overflow: hidden;
+    box-shadow: 0 4px 16px rgba(102, 126, 234, 0.25);
   }
   .banner-card::after {
     content: '';
@@ -408,12 +426,17 @@
   .banner-title {
     font-size: 18px;
     font-weight: 700;
+    color: #fff;
     margin-bottom: 6px;
+    position: relative;
+    z-index: 1;
   }
   .banner-desc {
     font-size: 13px;
-    opacity: 0.85;
+    color: rgba(255,255,255,0.85);
     margin-bottom: 14px;
+    position: relative;
+    z-index: 1;
   }
   .banner-btn {
     display: inline-block;
@@ -423,7 +446,67 @@
     border-radius: 20px;
     font-size: 13px;
     font-weight: 600;
+    position: relative;
+    z-index: 1;
   }
+
+  /* Banner + Announcement — 重叠层 */
+  .banner-stack {
+    margin: 8px 16px 0;
+    position: relative;
+    padding-top: 28px; /* 露出公告条的空间 */
+  }
+  /* 公告条 — 后层，被banner遮住下半部分 */
+  .ann-ticker {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(90deg, #5a52d5, #8b7de8);
+    border-radius: 12px 12px 0 0;
+    padding: 8px 14px 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 1;
+  }
+  .ann-badge {
+    background: rgba(255,255,255,0.22);
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 8px;
+    font-size: 10px;
+    font-weight: 700;
+    flex-shrink: 0;
+    backdrop-filter: blur(4px);
+  }
+  .ann-scroll {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+    height: 22px;
+  }
+  .ann-track {
+    position: absolute;
+    width: 100%;
+    animation: scrollUp 9s ease-in-out infinite;
+  }
+  @keyframes scrollUp {
+    0%, 20%   { transform: translateY(0); }
+    33%, 53%  { transform: translateY(-22px); }
+    66%, 86%  { transform: translateY(-44px); }
+    100%      { transform: translateY(-66px); }
+  }
+  .ann-line {
+    height: 22px;
+    line-height: 22px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.9);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ann-line strong { color: #fff; }
 
   .live-indicator {
     display: inline-flex;
@@ -452,241 +535,210 @@
 
 <!-- Search Header -->
 <div class="search-header">
-  <div class="avatar-small">R</div>
+  <div class="header-location">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="#333"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+    伦敦
+  </div>
   <div class="search-bar">
     <svg width="16" height="16" fill="none" stroke="#999" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
     搜索技能、任务、达人...
   </div>
   <div class="header-icon">
-    <svg width="22" height="22" fill="none" stroke="#333" stroke-width="1.8" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+    <svg width="20" height="20" fill="none" stroke="#333" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
   </div>
 </div>
 
 <!-- Tabs -->
 <div class="tab-bar">
-  <div class="tab-item">关注</div>
-  <div class="tab-item active">推荐</div>
-  <div class="tab-item">附近</div>
-  <div class="tab-item">达人</div>
-  <div class="tab-item">活动</div>
+  <div class="tab-item" onclick="switchTab('follow')">关注</div>
+  <div class="tab-item active" onclick="switchTab('recommend')">推荐</div>
+  <div class="tab-item" onclick="switchTab('nearby')">附近</div>
+  <div class="tab-item" onclick="switchTab('experts')">达人</div>
+  <div class="tab-item" onclick="switchTab('activities')">活动</div>
 </div>
 
-<!-- Story Row -->
-<div class="story-row">
-  <div class="story-item">
-    <div class="story-ring ai">
-      <div class="story-img">🤖</div>
-    </div>
-    <span class="story-label">Linker AI</span>
+<!-- ==================== 推荐 TAB ==================== -->
+<div class="tab-page active" id="tab-recommend">
+  <!-- Story Row -->
+  <div class="story-row">
+    <div class="story-item"><div class="story-ring ai"><div class="story-img">🤖</div></div><span class="story-label">Linker AI</span></div>
+    <div class="story-item"><div class="story-ring"><div class="story-img">📐</div></div><span class="story-label">设计达人</span></div>
+    <div class="story-item"><div class="story-ring"><div class="story-img">💻</div></div><span class="story-label">编程高手</span></div>
+    <div class="story-item"><div class="story-ring"><div class="story-img">📷</div></div><span class="story-label">摄影师</span></div>
+    <div class="story-item"><div class="story-ring"><div class="story-img">🎵</div></div><span class="story-label">音乐教学</span></div>
+    <div class="story-item"><div class="story-ring"><div class="story-img">📝</div></div><span class="story-label">文案写作</span></div>
+    <div class="story-item"><div class="story-ring"><div class="story-img">🎨</div></div><span class="story-label">插画师</span></div>
+    <div class="story-item"><div class="story-ring"><div class="story-img">🎪</div></div><span class="story-label">热门活动</span></div>
+    <div class="story-item"><div class="story-ring"><div class="story-img">🛒</div></div><span class="story-label">跳蚤市场</span></div>
   </div>
-  <div class="story-item">
-    <div class="story-ring">
-      <div class="story-img">📐</div>
-    </div>
-    <span class="story-label">设计达人</span>
-  </div>
-  <div class="story-item">
-    <div class="story-ring">
-      <div class="story-img">💻</div>
-    </div>
-    <span class="story-label">编程高手</span>
-  </div>
-  <div class="story-item">
-    <div class="story-ring">
-      <div class="story-img">📷</div>
-    </div>
-    <span class="story-label">摄影师</span>
-  </div>
-  <div class="story-item">
-    <div class="story-ring">
-      <div class="story-img">🎵</div>
-    </div>
-    <span class="story-label">音乐教学</span>
-  </div>
-  <div class="story-item">
-    <div class="story-ring">
-      <div class="story-img">📝</div>
-    </div>
-    <span class="story-label">文案写作</span>
-  </div>
-  <div class="story-item">
-    <div class="story-ring">
-      <div class="story-img">🎨</div>
-    </div>
-    <span class="story-label">插画师</span>
-  </div>
-</div>
 
-<!-- Banner -->
-<div class="banner-section">
-  <div class="banner-card">
-    <div class="banner-title">🎉 新用户专享</div>
-    <div class="banner-desc">首次发布任务立减 £5，技能达人等你来匹配</div>
-    <div class="banner-btn">立即体验 →</div>
+  <!-- Banner + Announcement -->
+  <div class="banner-stack">
+    <div class="ann-ticker">
+      <span class="ann-badge">动态</span>
+      <div class="ann-scroll"><div class="ann-track">
+        <div class="ann-line">👩‍🎨 Lisa 刚完成了一个 <strong>Logo设计</strong> 订单，获得5星好评</div>
+        <div class="ann-line">🎉 <strong>David</strong> 今日已接 3 单，累计完成 156 单</div>
+        <div class="ann-line">📷 伦敦摄影工作坊 <strong>还剩18个名额</strong>，快来报名</div>
+        <div class="ann-line">👩‍🎨 Lisa 刚完成了一个 <strong>Logo设计</strong> 订单，获得5星好评</div>
+      </div></div>
+    </div>
+    <div class="banner-section"><div class="banner-card">
+      <div class="banner-title">🎉 新用户专享</div>
+      <div class="banner-desc">首次发布任务立减 £5，技能达人等你来匹配</div>
+      <div class="banner-btn">立即体验 →</div>
+    </div></div>
   </div>
-</div>
 
-<!-- Quick Actions -->
-<div class="quick-actions">
-  <div class="actions-grid">
-    <div class="action-item">
-      <div class="action-icon" style="background: linear-gradient(135deg, #fff3e0, #ffe0b2);">📋</div>
-      <span class="action-label">发布任务</span>
+  <!-- Waterfall -->
+  <div class="waterfall-section">
+    <div class="section-header">
+      <span class="section-title">为你推荐</span>
+      <span class="section-more"><span class="live-indicator"><span class="live-dot"></span>126人在线</span></span>
     </div>
-    <div class="action-item">
-      <div class="action-icon" style="background: linear-gradient(135deg, #e8eaf6, #c5cae9);">🎯</div>
-      <span class="action-label">技能匹配</span>
-    </div>
-    <div class="action-item">
-      <div class="action-icon" style="background: linear-gradient(135deg, #e0f7fa, #b2ebf2);">🏆</div>
-      <span class="action-label">达人榜</span>
-    </div>
-    <div class="action-item">
-      <div class="action-icon" style="background: linear-gradient(135deg, #fce4ec, #f8bbd0);">🎪</div>
-      <span class="action-label">热门活动</span>
-    </div>
-    <div class="action-item">
-      <div class="action-icon" style="background: linear-gradient(135deg, #e8f5e9, #c8e6c9);">🛒</div>
-      <span class="action-label">跳蚤市场</span>
+    <div class="waterfall">
+      <div class="waterfall-card"><div class="card-img-placeholder" style="height:200px;background:linear-gradient(135deg,#a8edea,#fed6e3);">🎨<span class="overlay-text">🔥 热门</span></div><div class="card-body"><div class="card-title">专业UI设计，App界面/网页设计，3天交付</div><div class="card-tags"><span class="tag">UI设计</span><span class="tag price">£80</span></div><div class="card-footer"><div class="card-user"><div class="card-user-avatar"></div><span class="card-user-name">设计小王</span></div><span class="card-likes">❤️ 234</span></div></div></div>
+      <div class="waterfall-card"><div class="card-img-placeholder" style="height:140px;background:linear-gradient(135deg,#ffecd2,#fcb69f);">📷</div><div class="card-body"><div class="card-title">伦敦毕业照跟拍</div><div class="card-tags"><span class="tag">摄影</span><span class="tag price">£120</span></div><div class="card-footer"><div class="card-user"><div class="card-user-avatar" style="background:linear-gradient(135deg,#ffd89b,#19547b);"></div><span class="card-user-name">Emma</span></div><span class="card-likes">❤️ 89</span></div></div></div>
+      <div class="waterfall-card"><div class="card-img-placeholder" style="height:160px;background:linear-gradient(135deg,#e0c3fc,#8ec5fc);">💻</div><div class="card-body"><div class="card-title">Python数据分析&可视化，论文数据处理专家</div><div class="card-tags"><span class="tag">编程</span><span class="tag">数据分析</span><span class="tag price">£50/h</span></div><div class="card-footer"><div class="card-user"><div class="card-user-avatar" style="background:linear-gradient(135deg,#c3cfe2,#f5f7fa);"></div><span class="card-user-name">CodeMaster</span></div><span class="card-likes">❤️ 456</span></div></div></div>
+      <div class="waterfall-card"><div class="card-img-placeholder" style="height:180px;background:linear-gradient(135deg,#f5f7fa,#c3cfe2);">🎵</div><div class="card-body"><div class="card-title">吉他入门教学 1v1</div><div class="card-tags"><span class="tag">音乐</span><span class="tag price">£30/课</span></div><div class="card-footer"><div class="card-user"><div class="card-user-avatar" style="background:linear-gradient(135deg,#fbc2eb,#a6c1ee);"></div><span class="card-user-name">MusicLin</span></div><span class="card-likes">❤️ 67</span></div></div></div>
+      <div class="waterfall-card"><div class="card-img-placeholder" style="height:150px;background:linear-gradient(135deg,#fddb92,#d1fdff);">📝<span class="overlay-text">⚡ 急需</span></div><div class="card-body"><div class="card-title">英文论文润色 Proofreading，24h内完成</div><div class="card-tags"><span class="tag">文案</span><span class="tag price">£40</span></div><div class="card-footer"><div class="card-user"><div class="card-user-avatar" style="background:linear-gradient(135deg,#a1c4fd,#c2e9fb);"></div><span class="card-user-name">Jenny</span></div><span class="card-likes">❤️ 128</span></div></div></div>
+      <div class="waterfall-card"><div class="card-img-placeholder" style="height:190px;background:linear-gradient(135deg,#667eea,#764ba2);">🏠</div><div class="card-body"><div class="card-title">搬家帮手 曼城区域，有车可搬大件</div><div class="card-tags"><span class="tag">生活</span><span class="tag price">£25/h</span></div><div class="card-footer"><div class="card-user"><div class="card-user-avatar" style="background:linear-gradient(135deg,#ffecd2,#fcb69f);"></div><span class="card-user-name">搬家达人</span></div><span class="card-likes">❤️ 312</span></div></div></div>
     </div>
   </div>
 </div>
 
-<!-- Waterfall Content -->
-<div class="waterfall-section">
-  <div class="section-header">
-    <span class="section-title">为你推荐</span>
-    <span class="section-more">
-      <span class="live-indicator"><span class="live-dot"></span>126人在线</span>
-    </span>
+<!-- ==================== 关注 TAB ==================== -->
+<div class="tab-page" id="tab-follow">
+  <div style="padding:16px;">
+    <!-- Follow feed -->
+    <div class="follow-card" style="background:#fff;border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#ffecd2,#fcb69f);display:flex;align-items:center;justify-content:center;font-size:20px;">👩‍🎨</div>
+        <div style="flex:1;"><div style="font-size:14px;font-weight:600;">Lisa Chen</div><div style="font-size:11px;color:#999;">发布了新技能 · 2小时前</div></div>
+      </div>
+      <div style="font-size:14px;color:#333;line-height:1.5;margin-bottom:10px;">新增服务：品牌全案设计 🎨 包含 Logo + VI + 名片 + 社交媒体模板，限时优惠 £150</div>
+      <div class="card-img-placeholder" style="height:160px;background:linear-gradient(135deg,#a8edea,#fed6e3);border-radius:10px;margin-bottom:10px;">🎨</div>
+      <div style="display:flex;gap:20px;font-size:13px;color:#999;"><span>❤️ 45</span><span>💬 12</span><span>↗️ 分享</span></div>
+    </div>
+    <div class="follow-card" style="background:#fff;border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#a8edea,#fed6e3);display:flex;align-items:center;justify-content:center;font-size:20px;">👨‍💻</div>
+        <div style="flex:1;"><div style="font-size:14px;font-weight:600;">David Wu</div><div style="font-size:11px;color:#999;">完成了一个任务 · 5小时前</div></div>
+      </div>
+      <div style="font-size:14px;color:#333;line-height:1.5;margin-bottom:10px;">刚帮客户完成了一个 React Native 电商 App 🚀 从0到上架只用了2周，又是充实的一单！</div>
+      <div style="display:flex;gap:20px;font-size:13px;color:#999;"><span>❤️ 89</span><span>💬 23</span><span>↗️ 分享</span></div>
+    </div>
+    <div class="follow-card" style="background:#fff;border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#e0c3fc,#8ec5fc);display:flex;align-items:center;justify-content:center;font-size:20px;">📸</div>
+        <div style="flex:1;"><div style="font-size:14px;font-weight:600;">Emma Liu</div><div style="font-size:11px;color:#999;">分享了作品 · 昨天</div></div>
+      </div>
+      <div style="font-size:14px;color:#333;line-height:1.5;margin-bottom:10px;">上周在 Kings Cross 拍的一组毕业照终于修好了！客户超满意 📷✨</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:3px;margin-bottom:10px;">
+        <div style="aspect-ratio:1;border-radius:6px;background:linear-gradient(135deg,#ffecd2,#fcb69f);display:flex;align-items:center;justify-content:center;font-size:20px;">📷</div>
+        <div style="aspect-ratio:1;border-radius:6px;background:linear-gradient(135deg,#a8edea,#fed6e3);display:flex;align-items:center;justify-content:center;font-size:20px;">📷</div>
+        <div style="aspect-ratio:1;border-radius:6px;background:linear-gradient(135deg,#e0c3fc,#8ec5fc);display:flex;align-items:center;justify-content:center;font-size:20px;">📷</div>
+      </div>
+      <div style="display:flex;gap:20px;font-size:13px;color:#999;"><span>❤️ 234</span><span>💬 56</span><span>↗️ 分享</span></div>
+    </div>
   </div>
-  <div class="waterfall">
-    <!-- Card 1 - Tall -->
-    <div class="waterfall-card">
-      <div class="card-img-placeholder" style="height: 200px; background: linear-gradient(135deg, #a8edea, #fed6e3);">
-        🎨
-        <span class="overlay-text">🔥 热门</span>
+</div>
+
+<!-- ==================== 附近 TAB ==================== -->
+<div class="tab-page" id="tab-nearby">
+  <div style="padding:12px 16px 4px;display:flex;align-items:center;gap:6px;font-size:13px;color:#999;">📍 当前定位：伦敦 · <span style="color:#667eea;font-weight:600;">切换</span></div>
+  <div class="waterfall-section">
+    <div class="section-header"><span class="section-title">附近的任务</span></div>
+    <div class="waterfall">
+      <div class="waterfall-card"><div class="card-img-placeholder" style="height:160px;background:linear-gradient(135deg,#ffecd2,#fcb69f);">📷<span class="overlay-text">📍 0.8km</span></div><div class="card-body"><div class="card-title">毕业照跟拍 UCL校区 2小时</div><div class="card-tags"><span class="tag">摄影</span><span class="tag price">£120</span></div><div class="card-footer"><div class="card-user"><div class="card-user-avatar" style="background:linear-gradient(135deg,#ffd89b,#19547b);"></div><span class="card-user-name">Emma</span></div><span class="card-likes">❤️ 89</span></div></div></div>
+      <div class="waterfall-card"><div class="card-img-placeholder" style="height:140px;background:linear-gradient(135deg,#e8f5e9,#c8e6c9);">🏠<span class="overlay-text">📍 1.2km</span></div><div class="card-body"><div class="card-title">搬家帮手 Islington 有车</div><div class="card-tags"><span class="tag">生活</span><span class="tag price">£25/h</span></div><div class="card-footer"><div class="card-user"><div class="card-user-avatar" style="background:linear-gradient(135deg,#ffecd2,#fcb69f);"></div><span class="card-user-name">搬家达人</span></div><span class="card-likes">❤️ 56</span></div></div></div>
+      <div class="waterfall-card"><div class="card-img-placeholder" style="height:180px;background:linear-gradient(135deg,#e0c3fc,#8ec5fc);">🎵<span class="overlay-text">📍 2.5km</span></div><div class="card-body"><div class="card-title">吉他入门1v1 Camden面授</div><div class="card-tags"><span class="tag">音乐</span><span class="tag price">£30/课</span></div><div class="card-footer"><div class="card-user"><div class="card-user-avatar" style="background:linear-gradient(135deg,#fbc2eb,#a6c1ee);"></div><span class="card-user-name">MusicLin</span></div><span class="card-likes">❤️ 34</span></div></div></div>
+      <div class="waterfall-card"><div class="card-img-placeholder" style="height:150px;background:linear-gradient(135deg,#fddb92,#d1fdff);">📝<span class="overlay-text">📍 3.1km</span></div><div class="card-body"><div class="card-title">论文辅导 KCL附近 可面谈</div><div class="card-tags"><span class="tag">辅导</span><span class="tag price">£40/h</span></div><div class="card-footer"><div class="card-user"><div class="card-user-avatar" style="background:linear-gradient(135deg,#f5f7fa,#c3cfe2);"></div><span class="card-user-name">Alex</span></div><span class="card-likes">❤️ 78</span></div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 达人 TAB ==================== -->
+<div class="tab-page" id="tab-experts">
+  <div style="display:flex;gap:8px;padding:12px 16px;overflow-x:auto;scrollbar-width:none;">
+    <span style="flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;background:#667eea;color:#fff;">全部</span>
+    <span style="flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:13px;background:#f5f5f5;color:#666;">设计</span>
+    <span style="flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:13px;background:#f5f5f5;color:#666;">编程</span>
+    <span style="flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:13px;background:#f5f5f5;color:#666;">摄影</span>
+    <span style="flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:13px;background:#f5f5f5;color:#666;">文案</span>
+    <span style="flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:13px;background:#f5f5f5;color:#666;">音乐</span>
+  </div>
+  <div style="padding:0 16px 100px;display:flex;flex-direction:column;gap:10px;">
+    <!-- Expert 1 -->
+    <div style="background:#fff;border-radius:14px;padding:14px;display:flex;align-items:center;gap:14px;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+      <div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#ffecd2,#fcb69f);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;position:relative;">👩‍🎨<div style="position:absolute;bottom:0;right:0;width:18px;height:18px;background:#667eea;border-radius:50%;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;">✓</div></div>
+      <div style="flex:1;min-width:0;"><div style="font-size:15px;font-weight:700;margin-bottom:2px;">Lisa Chen</div><div style="font-size:12px;color:#667eea;background:rgba(102,126,234,0.08);display:inline-block;padding:2px 8px;border-radius:8px;margin-bottom:4px;">UI/UX设计</div><div style="font-size:12px;color:#999;">⭐ 5.0 · 完成78单 · £60起</div></div>
+      <div style="padding:6px 16px;border-radius:18px;border:1.5px solid #667eea;color:#667eea;font-size:13px;font-weight:600;flex-shrink:0;">关注</div>
+    </div>
+    <!-- Expert 2 -->
+    <div style="background:#fff;border-radius:14px;padding:14px;display:flex;align-items:center;gap:14px;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+      <div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#a8edea,#fed6e3);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;position:relative;">👨‍💻<div style="position:absolute;bottom:0;right:0;width:18px;height:18px;background:#667eea;border-radius:50%;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;">✓</div></div>
+      <div style="flex:1;min-width:0;"><div style="font-size:15px;font-weight:700;margin-bottom:2px;">David Wu</div><div style="font-size:12px;color:#667eea;background:rgba(102,126,234,0.08);display:inline-block;padding:2px 8px;border-radius:8px;margin-bottom:4px;">全栈开发</div><div style="font-size:12px;color:#999;">⭐ 5.0 · 完成156单 · £50/h</div></div>
+      <div style="padding:6px 16px;border-radius:18px;border:1.5px solid #667eea;color:#667eea;font-size:13px;font-weight:600;flex-shrink:0;">关注</div>
+    </div>
+    <!-- Expert 3 -->
+    <div style="background:#fff;border-radius:14px;padding:14px;display:flex;align-items:center;gap:14px;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+      <div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#e0c3fc,#8ec5fc);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;position:relative;">📸<div style="position:absolute;bottom:0;right:0;width:18px;height:18px;background:#667eea;border-radius:50%;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;">✓</div></div>
+      <div style="flex:1;min-width:0;"><div style="font-size:15px;font-weight:700;margin-bottom:2px;">Emma Liu</div><div style="font-size:12px;color:#667eea;background:rgba(102,126,234,0.08);display:inline-block;padding:2px 8px;border-radius:8px;margin-bottom:4px;">摄影摄像</div><div style="font-size:12px;color:#999;">⭐ 4.8 · 完成92单 · £35/h</div></div>
+      <div style="padding:6px 16px;border-radius:18px;border:1.5px solid #667eea;color:#667eea;font-size:13px;font-weight:600;flex-shrink:0;">关注</div>
+    </div>
+    <!-- Expert 4 -->
+    <div style="background:#fff;border-radius:14px;padding:14px;display:flex;align-items:center;gap:14px;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+      <div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#f5f7fa,#c3cfe2);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;position:relative;">✍️<div style="position:absolute;bottom:0;right:0;width:18px;height:18px;background:#667eea;border-radius:50%;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;">✓</div></div>
+      <div style="flex:1;min-width:0;"><div style="font-size:15px;font-weight:700;margin-bottom:2px;">Alex Zhang</div><div style="font-size:12px;color:#667eea;background:rgba(102,126,234,0.08);display:inline-block;padding:2px 8px;border-radius:8px;margin-bottom:4px;">论文辅导</div><div style="font-size:12px;color:#999;">⭐ 4.9 · 完成203单 · £30/h</div></div>
+      <div style="padding:6px 16px;border-radius:18px;background:#667eea;color:#fff;font-size:13px;font-weight:600;flex-shrink:0;">已关注</div>
+    </div>
+    <!-- Expert 5 -->
+    <div style="background:#fff;border-radius:14px;padding:14px;display:flex;align-items:center;gap:14px;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+      <div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#fbc2eb,#a6c1ee);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;">🎵</div>
+      <div style="flex:1;min-width:0;"><div style="font-size:15px;font-weight:700;margin-bottom:2px;">MusicLin</div><div style="font-size:12px;color:#667eea;background:rgba(102,126,234,0.08);display:inline-block;padding:2px 8px;border-radius:8px;margin-bottom:4px;">音乐教学</div><div style="font-size:12px;color:#999;">⭐ 4.7 · 完成45单 · £30/课</div></div>
+      <div style="padding:6px 16px;border-radius:18px;border:1.5px solid #667eea;color:#667eea;font-size:13px;font-weight:600;flex-shrink:0;">关注</div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 活动 TAB ==================== -->
+<div class="tab-page" id="tab-activities">
+  <div style="padding:0 16px 100px;">
+    <div class="section-header"><span class="section-title">🎪 热门活动</span></div>
+    <!-- Activity 1 -->
+    <div style="background:#fff;border-radius:14px;overflow:hidden;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+      <div style="height:140px;background:linear-gradient(135deg,#667eea,#764ba2);display:flex;align-items:center;justify-content:center;font-size:48px;position:relative;color:#fff;">🎓
+        <div style="position:absolute;top:10px;left:10px;background:rgba(255,71,87,0.85);color:#fff;padding:3px 10px;border-radius:8px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:4px;"><span style="width:6px;height:6px;border-radius:50%;background:#fff;animation:pulse 1.5s ease-in-out infinite;"></span> 热门</div>
+        <div style="position:absolute;bottom:10px;right:10px;background:rgba(0,0,0,0.5);color:#fff;padding:2px 8px;border-radius:8px;font-size:11px;backdrop-filter:blur(4px);">👥 32人参与</div>
       </div>
-      <div class="card-body">
-        <div class="card-title">专业UI设计，App界面/网页设计，3天交付</div>
-        <div class="card-tags">
-          <span class="tag">UI设计</span>
-          <span class="tag price">£80</span>
-        </div>
-        <div class="card-footer">
-          <div class="card-user">
-            <div class="card-user-avatar"></div>
-            <span class="card-user-name">设计小王</span>
-          </div>
-          <span class="card-likes">❤️ 234</span>
-        </div>
+      <div style="padding:14px;">
+        <div style="font-size:16px;font-weight:700;color:#333;margin-bottom:4px;">留学生求职分享会</div>
+        <div style="font-size:13px;color:#666;margin-bottom:8px;">前 Google/Amazon 工程师分享留学生求职经验，简历优化技巧，模拟面试环节</div>
+        <div style="display:flex;gap:12px;font-size:12px;color:#999;margin-bottom:10px;"><span>📅 本周六 14:00</span><span>📍 线上 Zoom</span><span>💰 免费</span></div>
+        <div style="display:inline-block;background:#667eea;color:#fff;padding:8px 24px;border-radius:20px;font-size:13px;font-weight:600;">立即报名 →</div>
       </div>
     </div>
-
-    <!-- Card 2 - Short -->
-    <div class="waterfall-card">
-      <div class="card-img-placeholder" style="height: 140px; background: linear-gradient(135deg, #ffecd2, #fcb69f);">
-        📷
+    <!-- Activity 2 -->
+    <div style="background:#fff;border-radius:14px;overflow:hidden;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+      <div style="height:140px;background:linear-gradient(135deg,#f093fb,#f5576c);display:flex;align-items:center;justify-content:center;font-size:48px;position:relative;color:#fff;">📷
+        <div style="position:absolute;bottom:10px;right:10px;background:rgba(0,0,0,0.5);color:#fff;padding:2px 8px;border-radius:8px;font-size:11px;">👥 32/50 名额</div>
       </div>
-      <div class="card-body">
-        <div class="card-title">伦敦毕业照跟拍</div>
-        <div class="card-tags">
-          <span class="tag">摄影</span>
-          <span class="tag price">£120</span>
-        </div>
-        <div class="card-footer">
-          <div class="card-user">
-            <div class="card-user-avatar" style="background: linear-gradient(135deg, #ffd89b, #19547b);"></div>
-            <span class="card-user-name">Emma</span>
-          </div>
-          <span class="card-likes">❤️ 89</span>
-        </div>
+      <div style="padding:14px;">
+        <div style="font-size:16px;font-weight:700;color:#333;margin-bottom:4px;">周末摄影工作坊</div>
+        <div style="font-size:13px;color:#666;margin-bottom:8px;">专业摄影师带你掌握街拍构图技巧，自带相机/手机均可，初学者友好</div>
+        <div style="display:flex;gap:12px;font-size:12px;color:#999;margin-bottom:10px;"><span>📅 下周日 10:00</span><span>📍 伦敦 Kings Cross</span><span>💰 £15</span></div>
+        <div style="display:inline-block;background:#667eea;color:#fff;padding:8px 24px;border-radius:20px;font-size:13px;font-weight:600;">£15 报名 →</div>
       </div>
     </div>
-
-    <!-- Card 3 -->
-    <div class="waterfall-card">
-      <div class="card-img-placeholder" style="height: 160px; background: linear-gradient(135deg, #e0c3fc, #8ec5fc);">
-        💻
-      </div>
-      <div class="card-body">
-        <div class="card-title">Python数据分析&可视化，论文数据处理专家</div>
-        <div class="card-tags">
-          <span class="tag">编程</span>
-          <span class="tag">数据分析</span>
-          <span class="tag price">£50/h</span>
-        </div>
-        <div class="card-footer">
-          <div class="card-user">
-            <div class="card-user-avatar" style="background: linear-gradient(135deg, #c3cfe2, #f5f7fa);"></div>
-            <span class="card-user-name">CodeMaster</span>
-          </div>
-          <span class="card-likes">❤️ 456</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Card 4 -->
-    <div class="waterfall-card">
-      <div class="card-img-placeholder" style="height: 180px; background: linear-gradient(135deg, #f5f7fa, #c3cfe2);">
-        🎵
-      </div>
-      <div class="card-body">
-        <div class="card-title">吉他入门教学 1v1</div>
-        <div class="card-tags">
-          <span class="tag">音乐</span>
-          <span class="tag price">£30/课</span>
-        </div>
-        <div class="card-footer">
-          <div class="card-user">
-            <div class="card-user-avatar" style="background: linear-gradient(135deg, #fbc2eb, #a6c1ee);"></div>
-            <span class="card-user-name">MusicLin</span>
-          </div>
-          <span class="card-likes">❤️ 67</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Card 5 -->
-    <div class="waterfall-card">
-      <div class="card-img-placeholder" style="height: 150px; background: linear-gradient(135deg, #fddb92, #d1fdff);">
-        📝
-        <span class="overlay-text">⚡ 急需</span>
-      </div>
-      <div class="card-body">
-        <div class="card-title">英文论文润色 Proofreading，24h内完成</div>
-        <div class="card-tags">
-          <span class="tag">文案</span>
-          <span class="tag price">£40</span>
-        </div>
-        <div class="card-footer">
-          <div class="card-user">
-            <div class="card-user-avatar" style="background: linear-gradient(135deg, #a1c4fd, #c2e9fb);"></div>
-            <span class="card-user-name">Jenny</span>
-          </div>
-          <span class="card-likes">❤️ 128</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Card 6 -->
-    <div class="waterfall-card">
-      <div class="card-img-placeholder" style="height: 190px; background: linear-gradient(135deg, #667eea, #764ba2);">
-        🏠
-      </div>
-      <div class="card-body">
-        <div class="card-title">搬家帮手 曼城区域，有车可搬大件</div>
-        <div class="card-tags">
-          <span class="tag">生活</span>
-          <span class="tag price">£25/h</span>
-        </div>
-        <div class="card-footer">
-          <div class="card-user">
-            <div class="card-user-avatar" style="background: linear-gradient(135deg, #ffecd2, #fcb69f);"></div>
-            <span class="card-user-name">搬家达人</span>
-          </div>
-          <span class="card-likes">❤️ 312</span>
-        </div>
+    <!-- Activity 3 -->
+    <div style="background:#fff;border-radius:14px;overflow:hidden;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+      <div style="height:140px;background:linear-gradient(135deg,#11998e,#38ef7d);display:flex;align-items:center;justify-content:center;font-size:48px;position:relative;color:#fff;">💻</div>
+      <div style="padding:14px;">
+        <div style="font-size:16px;font-weight:700;color:#333;margin-bottom:4px;">Python 入门训练营</div>
+        <div style="font-size:13px;color:#666;margin-bottom:8px;">零基础友好，8周系统学习 Python 基础+数据分析，每周三晚线上授课</div>
+        <div style="display:flex;gap:12px;font-size:12px;color:#999;margin-bottom:10px;"><span>📅 每周三 20:00</span><span>📍 线上</span><span>💰 免费</span></div>
+        <div style="display:inline-block;background:#667eea;color:#fff;padding:8px 24px;border-radius:20px;font-size:13px;font-weight:600;">免费报名 →</div>
       </div>
     </div>
   </div>
@@ -720,6 +772,20 @@
     <span>我的</span>
   </div>
 </div>
+
+<script>
+function switchTab(name) {
+  document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+}
+</script>
+<style>
+  .tab-page { display: none; }
+  .tab-page.active { display: block; }
+  .tab-item { cursor: pointer; }
+</style>
 
 </body>
 </html>

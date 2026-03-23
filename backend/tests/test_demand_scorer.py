@@ -40,10 +40,10 @@ def test_no_demand_returns_empty():
 
 def test_smart_weight_new_user():
     scorer = DemandScorer()
-    # Use a plain object without _interaction_count set so getattr returns None
     class _User:
         id = "u1"
-    weight = scorer.get_weight(_User())
+    # No _interaction_count in context → returns default weight
+    weight = scorer.get_weight(_User(), context={})
     assert weight == scorer.default_weight
 
 def test_inferred_skills_match():

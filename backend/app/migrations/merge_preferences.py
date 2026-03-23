@@ -98,11 +98,14 @@ def migrate_user_preferences(db: Session, engine) -> None:
                     "min_deadline_days": min_deadline_days,
                 })
             else:
-                # Insert new row
+                # Insert new row (mode/duration_type/reward_preference are NOT NULL
+                # with Python-side defaults only, so we must supply them explicitly)
                 db.execute(text("""
                     INSERT INTO user_profile_preferences
-                    (user_id, task_types, locations, task_levels, keywords, min_deadline_days)
-                    VALUES (:user_id, :task_types, :locations, :task_levels, :keywords, :min_deadline_days)
+                    (user_id, task_types, locations, task_levels, keywords, min_deadline_days,
+                     mode, duration_type, reward_preference)
+                    VALUES (:user_id, :task_types, :locations, :task_levels, :keywords, :min_deadline_days,
+                            :mode, :duration_type, :reward_preference)
                 """), {
                     "user_id": user_id,
                     "task_types": json.dumps(task_types) if task_types else None,
@@ -110,6 +113,9 @@ def migrate_user_preferences(db: Session, engine) -> None:
                     "task_levels": json.dumps(task_levels) if task_levels else None,
                     "keywords": json.dumps(keywords) if keywords else None,
                     "min_deadline_days": min_deadline_days,
+                    "mode": "both",
+                    "duration_type": "both",
+                    "reward_preference": "no_preference",
                 })
             migrated += 1
 

@@ -20,7 +20,7 @@ class MockScorerB(BaseScorer):
 class DynamicScorer(BaseScorer):
     name = "dynamic"
     default_weight = 0.2
-    def get_weight(self, user):
+    def get_weight(self, user, context=None):
         if user and getattr(user, "interaction_count", 0) > 50:
             return 0.05
         return 0.20

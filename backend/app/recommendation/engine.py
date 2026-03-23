@@ -23,7 +23,7 @@ class HybridEngine:
         # Pre-compute interaction count for dynamic weight scorers (e.g. DemandScorer)
         self._enrich_user_context(user, context)
 
-        weights = self.registry.normalize_weights(user)
+        weights = self.registry.normalize_weights(user, context=context)
         aggregated: Dict[int, Dict] = {}
         task_map = {t.id: t for t in candidate_tasks}
 
@@ -63,7 +63,7 @@ class HybridEngine:
             count = db.query(UserTaskInteraction).filter(
                 UserTaskInteraction.user_id == user.id
             ).count()
-            user._interaction_count = count
+            context["_interaction_count"] = count
         except Exception:
             pass
 

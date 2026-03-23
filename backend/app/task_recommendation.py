@@ -22,15 +22,19 @@ logger = logging.getLogger(__name__)
 # Feature flag: set USE_NEW_RECOMMENDATION_ENGINE=true to use the new pluggable scorer engine
 USE_NEW_ENGINE = os.environ.get("USE_NEW_RECOMMENDATION_ENGINE", "false").lower() == "true"
 
-# Singleton engine instance
+# Singleton engine instance (thread-safe)
+import threading
 _engine_instance = None
+_engine_lock = threading.Lock()
 
 
 def _get_engine():
     global _engine_instance
     if _engine_instance is None:
-        from app.recommendation import create_engine
-        _engine_instance = create_engine()
+        with _engine_lock:
+            if _engine_instance is None:  # double-check locking
+                from app.recommendation import create_engine
+                _engine_instance = create_engine()
     return _engine_instance
 
 
@@ -2158,8 +2162,9 @@ def _new_engine_recommend(db, user_id, limit, algorithm, task_type, location, ke
     try:
         from sqlalchemy.ext.asyncio import AsyncSession
         if isinstance(db, AsyncSession):
-            logger.warning("New engine does not support AsyncSession, falling back to old engine")
-            return _old_engine_recommend(db, user_id, limit, algorithm, task_type, location, keyword, latitude, longitude)
+            logger.warning("Recommendation engine requires sync session, got AsyncSession. "
+                           "Use get_sync_db() or asyncio.to_thread() to call recommendations.")
+            return []
     except ImportError:
         pass
 
@@ -2181,35 +2186,20 @@ def _new_engine_recommend(db, user_id, limit, algorithm, task_type, location, ke
 
     results = engine.recommend(user=user, limit=limit, context=context, filters=filters)
 
-    # Convert to existing API response format
-    from app.recommendation.utils import get_excluded_task_ids
-    excluded = get_excluded_task_ids(db, user_id)
-
+    # Return format MUST match old engine: {"task": <ORM Task>, "score": float, "reason": str}
+    # The router (routers.py) accesses item["task"], item["score"], item["reason"] directly.
     recommendations = []
     for r in results:
         task = r["task"]
-        if not task or task.id in excluded:
+        if not task:
             continue
+        reason = "；".join(r["reasons"]) if r["reasons"] else "为您推荐"
         recommendations.append({
-            "id": task.id,
-            "task_id": task.id,
-            "title": task.title,
-            "title_en": getattr(task, "title_en", None),
-            "title_zh": getattr(task, "title_zh", None),
-            "description": task.description,
-            "task_type": task.task_type,
-            "location": task.location,
-            "reward": float(task.reward) if task.reward else None,
-            "base_reward": float(task.base_reward) if getattr(task, "base_reward", None) else None,
-            "agreed_reward": float(task.agreed_reward) if getattr(task, "agreed_reward", None) else None,
-            "reward_to_be_quoted": getattr(task, "reward_to_be_quoted", False),
-            "deadline": task.deadline.isoformat() if task.deadline else None,
-            "task_level": task.task_level,
-            "match_score": r["score"],
-            "recommendation_reason": "；".join(r["reasons"]) if r["reasons"] else "",
-            "created_at": task.created_at.isoformat() if task.created_at else None,
-            "images": task.images if hasattr(task, "images") else [],
+            "task": task,
+            "score": r["score"],
+            "reason": reason,
         })
+
     return recommendations
 
 
@@ -2220,24 +2210,41 @@ def calculate_task_match_score(
 ) -> float:
     """
     计算任务对用户的匹配分数
-    
+
     Args:
         db: 数据库会话
         user_id: 用户ID
         task_id: 任务ID
-    
+
     Returns:
         匹配分数 (0-1)
     """
     user = db.query(User).filter(User.id == user_id).first()
     task = db.query(Task).filter(Task.id == task_id).first()
-    
+
     if not user or not task:
         return 0.0
-    
+
+    if USE_NEW_ENGINE:
+        try:
+            # Score a single task directly using content scorer (lightweight)
+            from app.recommendation.scorers.content_scorer import ContentScorer
+            from app.recommendation.user_vector import (
+                build_user_preference_vector, get_user_preferences,
+                get_user_task_history, get_default_preference_vector,
+            )
+            preferences = get_user_preferences(db, user_id)
+            history = get_user_task_history(db, user_id)
+            user_vector = build_user_preference_vector(db, user, preferences, history)
+            if not history and not preferences:
+                user_vector = get_default_preference_vector(user)
+            return ContentScorer._calculate_content_match(user_vector, task)
+        except Exception as e:
+            logger.warning(f"New engine match score failed, falling back: {e}")
+
     engine = TaskRecommendationEngine(db)
     user_preferences = engine._get_user_preferences(user_id)
     user_history = engine._get_user_task_history(user_id)
     user_vector = engine._build_user_preference_vector(user, user_preferences, user_history)
-    
+
     return engine._calculate_content_match_score(user_vector, task, user)

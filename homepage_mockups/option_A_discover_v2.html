@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>发现页 V2 — 论坛 + 排行榜</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'PingFang SC', 'Helvetica Neue', sans-serif;
+    background: #f5f5f5;
+    max-width: 430px;
+    margin: 0 auto;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ===== Header ===== */
+  .header {
+    background: #fff;
+    padding: 44px 16px 0;
+    position: sticky;
+    top: 0;
+    z-index: 200;
+  }
+  .header-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 10px;
+  }
+  .search-box {
+    flex: 1;
+    background: #f2f2f2;
+    border-radius: 20px;
+    padding: 9px 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: #999;
+  }
+  .h-btn {
+    width: 34px; height: 34px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+
+  /* Main Tabs — 论坛 / 排行榜 */
+  .main-tabs {
+    display: flex;
+    background: #fff;
+    padding: 0 16px;
+    gap: 0;
+    border-bottom: 0.5px solid rgba(0,0,0,0.06);
+  }
+  .main-tab {
+    flex: 1;
+    text-align: center;
+    padding: 10px 0;
+    font-size: 15px;
+    color: #999;
+    font-weight: 500;
+    position: relative;
+  }
+  .main-tab.active {
+    color: #333;
+    font-weight: 700;
+  }
+  .main-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 24px; height: 3px;
+    background: linear-gradient(90deg, #4834d4, #6c5ce7);
+    border-radius: 2px;
+  }
+
+  /* ===== Tab Content ===== */
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* ===== FORUM TAB ===== */
+
+  /* Sub-category Filter */
+  .sub-tabs {
+    display: flex;
+    gap: 8px;
+    padding: 10px 16px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    background: #fff;
+  }
+  .sub-tabs::-webkit-scrollbar { display: none; }
+  .sub-tab {
+    flex-shrink: 0;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    background: #f5f5f5;
+    color: #666;
+  }
+  .sub-tab.active {
+    background: #4834d4;
+    color: #fff;
+    font-weight: 600;
+  }
+
+  /* Section Head */
+  .sec-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 16px 10px;
+  }
+  .sec-title { font-size: 17px; font-weight: 800; color: #333; }
+  .sec-more { font-size: 13px; color: #6c5ce7; font-weight: 600; }
+
+  /* Hot Topics (横滑) */
+  .hot-scroll {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 0 16px 4px;
+  }
+  .hot-scroll::-webkit-scrollbar { display: none; }
+  .hot-card {
+    flex-shrink: 0;
+    width: 140px;
+    border-radius: 14px;
+    overflow: hidden;
+    position: relative;
+  }
+  .hot-bg {
+    height: 90px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 32px;
+  }
+  .hot-overlay {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: linear-gradient(transparent, rgba(0,0,0,0.55));
+    padding: 20px 10px 8px;
+  }
+  .hot-name { color: #fff; font-size: 12px; font-weight: 700; }
+  .hot-count { color: rgba(255,255,255,0.7); font-size: 10px; }
+
+  /* Forum Category Cards */
+  .forum-list {
+    padding: 0 16px;
+  }
+  .forum-card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 14px;
+    margin-bottom: 10px;
+    display: flex;
+    gap: 14px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+    position: relative;
+  }
+  .fc-icon {
+    width: 56px; height: 56px;
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px;
+    flex-shrink: 0;
+  }
+  .fc-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .fc-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 2px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .fc-name .fc-count-badge {
+    font-size: 10px;
+    background: rgba(108,92,231,0.08);
+    color: #6c5ce7;
+    padding: 1px 6px;
+    border-radius: 6px;
+    font-weight: 600;
+  }
+  .fc-desc {
+    font-size: 13px;
+    color: #999;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-bottom: 6px;
+  }
+  .fc-latest {
+    font-size: 12px;
+    color: #666;
+    background: #f8f8f8;
+    padding: 6px 10px;
+    border-radius: 8px;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .fc-latest strong {
+    color: #4834d4;
+    font-weight: 600;
+  }
+  .fc-fav {
+    position: absolute;
+    top: 12px; right: 12px;
+    font-size: 16px;
+    color: #ddd;
+  }
+  .fc-fav.active { color: #ff4757; }
+  .fc-chevron {
+    position: absolute;
+    right: 12px; bottom: 14px;
+    font-size: 14px;
+    color: #ddd;
+  }
+
+  /* Forum Posts (inline preview for top category) */
+  .post-list {
+    padding: 0 16px;
+  }
+  .post-card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 14px;
+    margin-bottom: 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+  }
+  .pc-pinned {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: rgba(255,71,87,0.08);
+    color: #ff4757;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 6px;
+    margin-bottom: 6px;
+  }
+  .pc-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #333;
+    line-height: 1.35;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-bottom: 4px;
+  }
+  .pc-preview {
+    font-size: 13px;
+    color: #999;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-bottom: 10px;
+  }
+  .pc-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .pc-author {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .pc-avatar {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+  }
+  .pc-name { font-size: 12px; color: #666; }
+  .pc-stats {
+    display: flex;
+    gap: 12px;
+    font-size: 12px;
+    color: #bbb;
+  }
+  .pc-stat { display: flex; align-items: center; gap: 3px; }
+
+  /* ===== LEADERBOARD TAB ===== */
+  .lb-list {
+    padding: 0 16px;
+  }
+  .lb-card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 14px;
+    margin-bottom: 10px;
+    display: flex;
+    gap: 14px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+    position: relative;
+  }
+  .lb-cover {
+    width: 90px; height: 90px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .lb-cover .lb-trophy {
+    position: absolute;
+    top: 4px; left: 4px;
+    font-size: 16px;
+  }
+  .lb-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .lb-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 2px;
+  }
+  .lb-desc {
+    font-size: 13px;
+    color: #999;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-bottom: 6px;
+  }
+  .lb-location {
+    font-size: 12px;
+    color: #bbb;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+  .lb-divider {
+    height: 0.5px;
+    background: #f0f0f0;
+    margin-bottom: 8px;
+  }
+  .lb-stats {
+    display: flex;
+    gap: 14px;
+    font-size: 12px;
+    color: #999;
+  }
+  .lb-stat { display: flex; align-items: center; gap: 3px; }
+  .lb-fav {
+    position: absolute;
+    top: 12px; right: 12px;
+    font-size: 16px;
+    color: #ddd;
+  }
+
+  /* Skill Leaderboard (嵌入预览) */
+  .skill-lb {
+    margin: 0 16px 10px;
+    background: #fff;
+    border-radius: 14px;
+    padding: 14px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+  }
+  .slb-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .slb-title { font-size: 15px; font-weight: 700; color: #333; }
+  .slb-more { font-size: 13px; color: #6c5ce7; font-weight: 600; }
+  .slb-cats {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .slb-cats::-webkit-scrollbar { display: none; }
+  .slb-cat {
+    flex-shrink: 0;
+    padding: 4px 12px;
+    border-radius: 14px;
+    font-size: 12px;
+    font-weight: 500;
+    background: #f5f5f5;
+    color: #666;
+  }
+  .slb-cat.active {
+    background: #4834d4;
+    color: #fff;
+    font-weight: 600;
+  }
+  /* Table Header */
+  .slb-thead {
+    display: flex;
+    align-items: center;
+    padding: 0 4px 8px;
+    font-size: 11px;
+    color: #bbb;
+    font-weight: 600;
+  }
+  .slb-thead .col-rank { width: 28px; text-align: center; }
+  .slb-thead .col-user { flex: 1; }
+  .slb-thead .col-rating { width: 56px; text-align: center; }
+  .slb-thead .col-score { width: 50px; text-align: right; }
+  /* Table Row */
+  .slb-row {
+    display: flex;
+    align-items: center;
+    padding: 8px 4px;
+    border-radius: 10px;
+  }
+  .slb-row:nth-child(even) { background: #fafafa; }
+  .slb-row.me {
+    background: rgba(108,92,231,0.05);
+    border: 1.5px solid rgba(108,92,231,0.15);
+  }
+  .slb-rank {
+    width: 28px;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 800;
+    color: #ccc;
+  }
+  .slb-rank.gold { color: #FFD700; }
+  .slb-rank.silver { color: #C0C0C0; }
+  .slb-rank.bronze { color: #CD7F32; }
+  .slb-user {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+  .slb-avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  .slb-name-col {
+    min-width: 0;
+  }
+  .slb-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .slb-tasks {
+    font-size: 10px;
+    color: #bbb;
+  }
+  .slb-rating {
+    width: 56px;
+    text-align: center;
+    font-size: 13px;
+    color: #FFB800;
+    font-weight: 600;
+  }
+  .slb-score {
+    width: 50px;
+    text-align: right;
+  }
+  .slb-score-pill {
+    display: inline-block;
+    background: #4834d4;
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  /* ===== Create Post FAB ===== */
+  .fab {
+    position: fixed;
+    bottom: 96px;
+    right: 18px;
+    background: linear-gradient(135deg, #4834d4, #6c5ce7);
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 24px;
+    font-size: 14px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 4px 16px rgba(72,52,212,0.35);
+    z-index: 200;
+  }
+
+  /* Bottom Nav */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 430px;
+    background: #fff;
+    border-top: 0.5px solid rgba(0,0,0,0.08);
+    display: flex;
+    padding: 6px 0 26px;
+    z-index: 300;
+  }
+  .nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    font-size: 10px;
+    color: #999;
+  }
+  .nav-item.active { color: #4834d4; font-weight: 600; }
+  .nav-item .icon { font-size: 20px; height: 24px; display: flex; align-items: center; justify-content: center; }
+  .nav-center { flex: 1; display: flex; align-items: center; justify-content: center; }
+  .nav-post-btn {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #4834d4, #6c5ce7);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 26px; font-weight: 300;
+    margin-top: -16px;
+    box-shadow: 0 4px 12px rgba(72,52,212,0.3);
+  }
+
+  /* Tab switcher JS helper */
+  .tab-switch { cursor: pointer; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-row">
+    <div class="search-box">🔍 搜索帖子、话题、排行榜...</div>
+    <div class="h-btn">📷</div>
+  </div>
+</div>
+
+<!-- Main Tabs -->
+<div class="main-tabs">
+  <div class="main-tab active tab-switch" onclick="switchTab('forum')">论坛</div>
+  <div class="main-tab tab-switch" onclick="switchTab('leaderboard')">排行榜</div>
+</div>
+
+<!-- ==================== FORUM TAB ==================== -->
+<div class="tab-content active" id="tab-forum">
+
+  <!-- Sub Filters -->
+  <div class="sub-tabs">
+    <div class="sub-tab active">推荐</div>
+    <div class="sub-tab">留学生活</div>
+    <div class="sub-tab">技能交流</div>
+    <div class="sub-tab">求职招聘</div>
+    <div class="sub-tab">摄影</div>
+    <div class="sub-tab">吐槽</div>
+  </div>
+
+  <!-- Hot Topics -->
+  <div class="sec-head">
+    <span class="sec-title">🔥 热门话题</span>
+    <span class="sec-more">更多 ›</span>
+  </div>
+  <div class="hot-scroll">
+    <div class="hot-card">
+      <div class="hot-bg" style="background: linear-gradient(135deg, #4834d4, #6c5ce7);">🎓</div>
+      <div class="hot-overlay">
+        <div class="hot-name">#留学生互助</div>
+        <div class="hot-count">3.2k 讨论</div>
+      </div>
+    </div>
+    <div class="hot-card">
+      <div class="hot-bg" style="background: linear-gradient(135deg, #f093fb, #f5576c);">💼</div>
+      <div class="hot-overlay">
+        <div class="hot-name">#求职季</div>
+        <div class="hot-count">2.8k 讨论</div>
+      </div>
+    </div>
+    <div class="hot-card">
+      <div class="hot-bg" style="background: linear-gradient(135deg, #a8edea, #fed6e3);">📷</div>
+      <div class="hot-overlay">
+        <div class="hot-name">#毕业季</div>
+        <div class="hot-count">5.1k 讨论</div>
+      </div>
+    </div>
+    <div class="hot-card">
+      <div class="hot-bg" style="background: linear-gradient(135deg, #ffecd2, #fcb69f);">🏠</div>
+      <div class="hot-overlay">
+        <div class="hot-name">#英国生活</div>
+        <div class="hot-count">4.5k 讨论</div>
+      </div>
+    </div>
+    <div class="hot-card">
+      <div class="hot-bg" style="background: linear-gradient(135deg, #667eea, #764ba2);">💻</div>
+      <div class="hot-overlay">
+        <div class="hot-name">#编程学习</div>
+        <div class="hot-count">1.9k 讨论</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Forum Categories -->
+  <div class="sec-head">
+    <span class="sec-title">📂 论坛分区</span>
+  </div>
+  <div class="forum-list">
+    <div class="forum-card">
+      <div class="fc-icon" style="background: linear-gradient(135deg, rgba(108,92,231,0.15), rgba(72,52,212,0.1));">🎓</div>
+      <div class="fc-info">
+        <div class="fc-name">留学生活 <span class="fc-count-badge">128帖</span></div>
+        <div class="fc-desc">分享留学日常、租房、签证、生活经验</div>
+        <div class="fc-latest"><strong>最新:</strong> 伦敦租房避坑指南 2026 版，亲身经历...</div>
+      </div>
+      <span class="fc-fav active">❤️</span>
+      <span class="fc-chevron">›</span>
+    </div>
+    <div class="forum-card">
+      <div class="fc-icon" style="background: linear-gradient(135deg, rgba(255,166,0,0.15), rgba(255,107,0,0.1));">💻</div>
+      <div class="fc-info">
+        <div class="fc-name">技能交流 <span class="fc-count-badge">96帖</span></div>
+        <div class="fc-desc">编程、设计、摄影等技能讨论与学习</div>
+        <div class="fc-latest"><strong>最新:</strong> React vs Flutter 2026，选哪个好？</div>
+      </div>
+      <span class="fc-fav">🤍</span>
+      <span class="fc-chevron">›</span>
+    </div>
+    <div class="forum-card">
+      <div class="fc-icon" style="background: linear-gradient(135deg, rgba(38,191,115,0.15), rgba(0,184,148,0.1));">💼</div>
+      <div class="fc-info">
+        <div class="fc-name">求职招聘 <span class="fc-count-badge">67帖</span></div>
+        <div class="fc-desc">实习、全职、内推、简历优化</div>
+        <div class="fc-latest"><strong>最新:</strong> Google 2026 秋招时间线和面经整理</div>
+      </div>
+      <span class="fc-fav">🤍</span>
+      <span class="fc-chevron">›</span>
+    </div>
+    <div class="forum-card">
+      <div class="fc-icon" style="background: linear-gradient(135deg, rgba(255,77,128,0.15), rgba(255,45,85,0.1));">📷</div>
+      <div class="fc-info">
+        <div class="fc-name">摄影约拍 <span class="fc-count-badge">45帖</span></div>
+        <div class="fc-desc">作品分享、约拍、器材交流</div>
+        <div class="fc-latest"><strong>最新:</strong> 分享几个伦敦小众拍照地点 📸</div>
+      </div>
+      <span class="fc-fav active">❤️</span>
+      <span class="fc-chevron">›</span>
+    </div>
+  </div>
+
+  <!-- Latest Posts Preview -->
+  <div class="sec-head">
+    <span class="sec-title">📝 最新帖子</span>
+    <span class="sec-more">更多 ›</span>
+  </div>
+  <div class="post-list" style="padding-bottom: 100px;">
+    <div class="post-card">
+      <div class="pc-pinned">📌 置顶</div>
+      <div class="pc-title">Link2Ur 社区公约 — 请大家文明发言，互助共赢</div>
+      <div class="pc-preview">为了维护良好的社区环境，请大家遵守以下规则：1. 尊重他人，禁止人身攻击...</div>
+      <div class="pc-footer">
+        <div class="pc-author">
+          <div class="pc-avatar" style="background: linear-gradient(135deg, #4834d4, #6c5ce7); color: #fff; font-size: 10px;">官</div>
+          <span class="pc-name">Link2Ur 官方</span>
+        </div>
+        <div class="pc-stats">
+          <span class="pc-stat">👁 3.2k</span>
+          <span class="pc-stat">💬 56</span>
+          <span class="pc-stat">❤️ 234</span>
+        </div>
+      </div>
+    </div>
+    <div class="post-card">
+      <div class="pc-title">伦敦租房避坑指南 2026 版，血泪经验分享！</div>
+      <div class="pc-preview">在伦敦租了三年房，踩过无数坑。今天整理出来给大家参考，特别是刚来的同学一定要看...</div>
+      <div class="pc-footer">
+        <div class="pc-author">
+          <div class="pc-avatar" style="background: linear-gradient(135deg, #ffecd2, #fcb69f);">👩</div>
+          <span class="pc-name">小红 · 3小时前</span>
+        </div>
+        <div class="pc-stats">
+          <span class="pc-stat">👁 1.8k</span>
+          <span class="pc-stat">💬 34</span>
+          <span class="pc-stat">❤️ 156</span>
+        </div>
+      </div>
+    </div>
+    <div class="post-card">
+      <div class="pc-title">React vs Flutter 2026，到底选哪个好？个人体验分享</div>
+      <div class="pc-preview">两个框架都写了一年多，从性能、生态、就业市场等角度聊聊我的真实感受...</div>
+      <div class="pc-footer">
+        <div class="pc-author">
+          <div class="pc-avatar" style="background: linear-gradient(135deg, #a8edea, #fed6e3);">👨</div>
+          <span class="pc-name">David · 5小时前</span>
+        </div>
+        <div class="pc-stats">
+          <span class="pc-stat">👁 2.3k</span>
+          <span class="pc-stat">💬 67</span>
+          <span class="pc-stat">❤️ 312</span>
+        </div>
+      </div>
+    </div>
+    <div class="post-card">
+      <div class="pc-title">Google 2026 秋招时间线和面经整理（持续更新）</div>
+      <div class="pc-preview">面了 Google London office 的 SWE 岗位，分享一下完整的面试流程和每一轮的问题...</div>
+      <div class="pc-footer">
+        <div class="pc-author">
+          <div class="pc-avatar" style="background: linear-gradient(135deg, #e0c3fc, #8ec5fc);">👨‍💻</div>
+          <span class="pc-name">CodeMaster · 昨天</span>
+        </div>
+        <div class="pc-stats">
+          <span class="pc-stat">👁 4.5k</span>
+          <span class="pc-stat">💬 89</span>
+          <span class="pc-stat">❤️ 567</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== LEADERBOARD TAB ==================== -->
+<div class="tab-content" id="tab-leaderboard">
+
+  <!-- Skill Leaderboard (inline) -->
+  <div style="padding-top: 10px;">
+    <div class="skill-lb">
+      <div class="slb-header">
+        <span class="slb-title">🏆 技能达人榜</span>
+        <span class="slb-more">完整榜单 ›</span>
+      </div>
+      <div class="slb-cats">
+        <div class="slb-cat active">全部</div>
+        <div class="slb-cat">设计</div>
+        <div class="slb-cat">编程</div>
+        <div class="slb-cat">摄影</div>
+        <div class="slb-cat">文案</div>
+        <div class="slb-cat">音乐</div>
+        <div class="slb-cat">辅导</div>
+      </div>
+      <div class="slb-thead">
+        <span class="col-rank">#</span>
+        <span class="col-user">达人</span>
+        <span class="col-rating">评分</span>
+        <span class="col-score">积分</span>
+      </div>
+      <div class="slb-row">
+        <span class="slb-rank gold">🥇</span>
+        <div class="slb-user">
+          <div class="slb-avatar" style="background: linear-gradient(135deg, #a8edea, #fed6e3);">👨‍💻</div>
+          <div class="slb-name-col">
+            <div class="slb-name">David Wu</div>
+            <div class="slb-tasks">完成 156 单</div>
+          </div>
+        </div>
+        <span class="slb-rating">⭐ 5.0</span>
+        <span class="slb-score"><span class="slb-score-pill">980</span></span>
+      </div>
+      <div class="slb-row">
+        <span class="slb-rank silver">🥈</span>
+        <div class="slb-user">
+          <div class="slb-avatar" style="background: linear-gradient(135deg, #f5f7fa, #c3cfe2);">✍️</div>
+          <div class="slb-name-col">
+            <div class="slb-name">Alex Zhang</div>
+            <div class="slb-tasks">完成 203 单</div>
+          </div>
+        </div>
+        <span class="slb-rating">⭐ 4.9</span>
+        <span class="slb-score"><span class="slb-score-pill">925</span></span>
+      </div>
+      <div class="slb-row">
+        <span class="slb-rank bronze">🥉</span>
+        <div class="slb-user">
+          <div class="slb-avatar" style="background: linear-gradient(135deg, #e0c3fc, #8ec5fc);">📸</div>
+          <div class="slb-name-col">
+            <div class="slb-name">Emma Liu</div>
+            <div class="slb-tasks">完成 92 单</div>
+          </div>
+        </div>
+        <span class="slb-rating">⭐ 4.8</span>
+        <span class="slb-score"><span class="slb-score-pill">870</span></span>
+      </div>
+      <div class="slb-row">
+        <span class="slb-rank">4</span>
+        <div class="slb-user">
+          <div class="slb-avatar" style="background: linear-gradient(135deg, #ffecd2, #fcb69f);">👩‍🎨</div>
+          <div class="slb-name-col">
+            <div class="slb-name">Lisa Chen</div>
+            <div class="slb-tasks">完成 78 单</div>
+          </div>
+        </div>
+        <span class="slb-rating">⭐ 5.0</span>
+        <span class="slb-score"><span class="slb-score-pill">845</span></span>
+      </div>
+      <div class="slb-row">
+        <span class="slb-rank">5</span>
+        <div class="slb-user">
+          <div class="slb-avatar" style="background: linear-gradient(135deg, #fbc2eb, #a6c1ee);">🎵</div>
+          <div class="slb-name-col">
+            <div class="slb-name">MusicLin</div>
+            <div class="slb-tasks">完成 45 单</div>
+          </div>
+        </div>
+        <span class="slb-rating">⭐ 4.7</span>
+        <span class="slb-score"><span class="slb-score-pill">720</span></span>
+      </div>
+      <!-- My rank -->
+      <div class="slb-row me" style="margin-top: 8px; border-top: 1px dashed #e0e0e0; padding-top: 10px;">
+        <span class="slb-rank">18</span>
+        <div class="slb-user">
+          <div class="slb-avatar" style="background: linear-gradient(135deg, #ffecd2, #fcb69f);">👨</div>
+          <div class="slb-name-col">
+            <div class="slb-name" style="color: #4834d4;">Ryan（我）</div>
+            <div class="slb-tasks">完成 28 单</div>
+          </div>
+        </div>
+        <span class="slb-rating">⭐ 4.9</span>
+        <span class="slb-score"><span class="slb-score-pill">520</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Community Leaderboards -->
+  <div class="sec-head">
+    <span class="sec-title">📊 社区排行榜</span>
+    <span class="sec-more">更多 ›</span>
+  </div>
+  <div class="lb-list" style="padding-bottom: 100px;">
+    <div class="lb-card">
+      <div class="lb-cover" style="background: linear-gradient(135deg, #4834d4, #6c5ce7);">
+        🎨
+        <span class="lb-trophy">🏆</span>
+      </div>
+      <div class="lb-info">
+        <div class="lb-name">最佳设计师 2026</div>
+        <div class="lb-desc">投票选出你心目中最优秀的设计达人</div>
+        <div class="lb-location">📍 全球</div>
+        <div class="lb-divider"></div>
+        <div class="lb-stats">
+          <span class="lb-stat">📊 48项</span>
+          <span class="lb-stat">👍 1.2k票</span>
+          <span class="lb-stat">👁 5.6k</span>
+        </div>
+      </div>
+      <span class="lb-fav">🤍</span>
+    </div>
+    <div class="lb-card">
+      <div class="lb-cover" style="background: linear-gradient(135deg, #11998e, #38ef7d);">
+        💻
+        <span class="lb-trophy">🏆</span>
+      </div>
+      <div class="lb-info">
+        <div class="lb-name">编程之星 · 春季赛</div>
+        <div class="lb-desc">展示你的项目，让社区为你投票</div>
+        <div class="lb-location">📍 全球</div>
+        <div class="lb-divider"></div>
+        <div class="lb-stats">
+          <span class="lb-stat">📊 32项</span>
+          <span class="lb-stat">👍 890票</span>
+          <span class="lb-stat">👁 3.4k</span>
+        </div>
+      </div>
+      <span class="lb-fav active" style="color: #ff4757;">❤️</span>
+    </div>
+    <div class="lb-card">
+      <div class="lb-cover" style="background: linear-gradient(135deg, #f093fb, #f5576c);">
+        📷
+        <span class="lb-trophy">🏆</span>
+      </div>
+      <div class="lb-info">
+        <div class="lb-name">最佳毕业照摄影师</div>
+        <div class="lb-desc">毕业季特别评选，记录最美瞬间的人</div>
+        <div class="lb-location">📍 英国</div>
+        <div class="lb-divider"></div>
+        <div class="lb-stats">
+          <span class="lb-stat">📊 21项</span>
+          <span class="lb-stat">👍 2.3k票</span>
+          <span class="lb-stat">👁 8.9k</span>
+        </div>
+      </div>
+      <span class="lb-fav">🤍</span>
+    </div>
+    <div class="lb-card">
+      <div class="lb-cover" style="background: linear-gradient(135deg, #fda085, #f6d365);">
+        📝
+        <span class="lb-trophy">🏆</span>
+      </div>
+      <div class="lb-info">
+        <div class="lb-name">最靠谱论文润色达人</div>
+        <div class="lb-desc">社区投票选出的高质量论文润色服务</div>
+        <div class="lb-location">📍 英国</div>
+        <div class="lb-divider"></div>
+        <div class="lb-stats">
+          <span class="lb-stat">📊 15项</span>
+          <span class="lb-stat">👍 678票</span>
+          <span class="lb-stat">👁 2.1k</span>
+        </div>
+      </div>
+      <span class="lb-fav">🤍</span>
+    </div>
+  </div>
+</div>
+
+<!-- FAB -->
+<div class="fab">✏️ 发帖</div>
+
+<!-- Bottom Nav -->
+<div class="bottom-nav">
+  <div class="nav-item">
+    <span class="icon">🏠</span>
+    <span>首页</span>
+  </div>
+  <div class="nav-item active">
+    <span class="icon">🔍</span>
+    <span>发现</span>
+  </div>
+  <div class="nav-center">
+    <div class="nav-post-btn">+</div>
+  </div>
+  <div class="nav-item">
+    <span class="icon">💬</span>
+    <span>消息</span>
+  </div>
+  <div class="nav-item">
+    <span class="icon">👤</span>
+    <span>我的</span>
+  </div>
+</div>
+
+<script>
+function switchTab(tab) {
+  document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  if (tab === 'forum') {
+    document.querySelectorAll('.main-tab')[0].classList.add('active');
+    document.getElementById('tab-forum').classList.add('active');
+  } else {
+    document.querySelectorAll('.main-tab')[1].classList.add('active');
+    document.getElementById('tab-leaderboard').classList.add('active');
+  }
+}
+</script>
+
+</body>
+</html>

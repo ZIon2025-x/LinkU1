@@ -66,7 +66,6 @@ class CollaborativeScorer(BaseScorer):
                         recommended_scores[task_id] = recommended_scores.get(task_id, 0.0) + similarity
 
         # 4. Build results — only for tasks in the candidate list
-        candidate_ids = {t.id for t in tasks}
         results: Dict[int, ScoredTask] = {}
 
         for task in tasks:
@@ -95,27 +94,55 @@ class CollaborativeScorer(BaseScorer):
     def _find_similar_users(
         db, user_id: str, user_interactions: Set[int], k: int = 10
     ) -> List[Tuple[str, float]]:
-        """Find top-k similar users by Jaccard similarity on interactions."""
+        """Find top-k similar users by Jaccard similarity on interactions.
+
+        Uses a single batch query to load all candidate users' interactions
+        instead of N+1 per-user queries.
+        """
         if not user_interactions or len(user_interactions) < 2:
             return []
 
-        from app.models import UserTaskInteraction
+        from app.models import TaskHistory
 
-        # Only consider users who interacted with the same tasks (max 100)
+        # Find candidate user IDs who interacted with the same tasks (max 100)
+        # Uses TaskHistory (same source as _get_user_interactions) for consistency
         active_user_ids = db.query(
-            func.distinct(UserTaskInteraction.user_id)
+            func.distinct(TaskHistory.user_id)
         ).filter(
-            UserTaskInteraction.user_id != user_id,
-            UserTaskInteraction.task_id.in_(list(user_interactions))
+            TaskHistory.user_id != user_id,
+            TaskHistory.task_id.in_(list(user_interactions))
         ).limit(100).all()
 
         if not active_user_ids:
             return []
 
+        candidate_ids = [uid for (uid,) in active_user_ids]
+
+        # Batch-load all interactions for candidate users in ONE query
+        all_history = db.query(
+            TaskHistory.user_id, TaskHistory.task_id
+        ).filter(
+            TaskHistory.user_id.in_(candidate_ids)
+        ).order_by(desc(TaskHistory.timestamp)).all()
+
+        # Group by user_id (limit to 50 per user, matching _get_user_interactions)
+        user_interaction_map: Dict[str, Set[int]] = {}
+        user_count: Dict[str, int] = {}
+        for uid, tid in all_history:
+            count = user_count.get(uid, 0)
+            if count >= 50:
+                continue
+            user_count[uid] = count + 1
+            if uid not in user_interaction_map:
+                user_interaction_map[uid] = set()
+            user_interaction_map[uid].add(tid)
+
         similar_users: List[Tuple[str, float]] = []
-        for (other_user_id,) in active_user_ids:
-            other_interactions = CollaborativeScorer._get_user_interactions(db, other_user_id)
-            if not other_interactions or len(other_interactions) < 2:
+        min_similarity = 0.1 if len(user_interactions) >= 5 else 0.05
+
+        for other_user_id in candidate_ids:
+            other_interactions = user_interaction_map.get(other_user_id, set())
+            if len(other_interactions) < 2:
                 continue
 
             # Jaccard similarity
@@ -124,8 +151,6 @@ class CollaborativeScorer(BaseScorer):
 
             if union > 0:
                 similarity = intersection / union
-                # Dynamic threshold based on interaction count
-                min_similarity = 0.1 if len(user_interactions) >= 5 else 0.05
                 if similarity > min_similarity:
                     similar_users.append((other_user_id, similarity))
 
@@ -139,5 +164,5 @@ class CollaborativeScorer(BaseScorer):
         history = db.query(TaskHistory).filter(
             TaskHistory.user_id == user_id,
             TaskHistory.action.in_(["accepted", "completed"])
-        ).order_by(desc(TaskHistory.timestamp)).limit(1000).all()
+        ).order_by(desc(TaskHistory.timestamp)).limit(100).all()
         return {h.task_id for h in history}

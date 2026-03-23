@@ -34,24 +34,24 @@ def get_cached_recommendations(user_id: str, algorithm: str, limit: int) -> Opti
             cached = _smart_cache.get(cache_key)
             if cached:
                 return cached
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"SmartCache get failed: {e}")
 
     if _opt_cache:
         try:
             cached = _opt_cache.get(cache_key)
             if cached:
                 return cached
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"OptCache get failed: {e}")
 
     if _redis:
         try:
             cached = _redis.get(cache_key)
             if cached:
                 return json.loads(cached) if isinstance(cached, str) else cached
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Redis get failed: {e}")
 
     return None
 
@@ -65,11 +65,18 @@ def set_cached_recommendations(user_id: str, algorithm: str, limit: int,
         try:
             _smart_cache.set(cache_key, recommendations, ttl=ttl)
             return
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"SmartCache set failed: {e}")
+
+    if _opt_cache:
+        try:
+            _opt_cache.set(cache_key, recommendations, ttl=ttl)
+            return
+        except Exception as e:
+            logger.debug(f"OptCache set failed: {e}")
 
     if _redis:
         try:
             _redis.setex(cache_key, ttl, json.dumps(recommendations, default=str))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Redis set failed: {e}")

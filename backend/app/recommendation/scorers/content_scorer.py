@@ -81,11 +81,12 @@ class ContentScorer(BaseScorer):
             keywords   : 0.10
         """
         score = 0.0
+        is_negative = False
 
         # Negative feedback: penalise disliked task types
         if "negative_task_types" in user_vector:
             if task.task_type in user_vector["negative_task_types"]:
-                score = 0.1  # low but not zero
+                is_negative = True
 
         # 1. Task type match (0.30)
         if user_vector["task_types"] and task.task_type in user_vector["task_types"]:
@@ -118,6 +119,10 @@ class ContentScorer(BaseScorer):
             )
             if matched_keywords > 0:
                 score += 0.1 * min(matched_keywords / len(user_vector["keywords"]), 1.0)
+
+        # Apply negative feedback damper: strongly reduce score for disliked types
+        if is_negative:
+            score *= 0.15
 
         return min(score, 1.0)
 

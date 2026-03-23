@@ -27,15 +27,15 @@ class ScorerRegistry:
         """Get a scorer by name."""
         return self._scorers.get(name)
 
-    def normalize_weights(self, user) -> Dict[str, float]:
+    def normalize_weights(self, user, context=None) -> Dict[str, float]:
         """Get weights for all scorers, normalized to sum to 1.0.
 
-        Calls each scorer's get_weight(user) for dynamic adjustment,
+        Calls each scorer's get_weight(user, context) for dynamic adjustment,
         then scales proportionally.
         """
         raw_weights = {}
         for name, scorer in self._scorers.items():
-            raw_weights[name] = scorer.get_weight(user)
+            raw_weights[name] = scorer.get_weight(user, context=context)
 
         total = sum(raw_weights.values())
         if total <= 0:

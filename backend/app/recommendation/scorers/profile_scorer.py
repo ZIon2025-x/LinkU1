@@ -26,7 +26,7 @@ class ProfileScorer(BaseScorer):
         score = 0.0
         reasons = []
         # 1. Mode matching (0.10)
-        mode = pref.mode.value if pref.mode else "both"
+        mode = getattr(pref.mode, 'value', pref.mode) if pref.mode else "both"
         if mode == "both":
             score += 0.10
         else:
@@ -35,11 +35,12 @@ class ProfileScorer(BaseScorer):
                 score += 0.10
                 reasons.append("匹配您的协作方式偏好")
         # 2. Duration type (0.10)
-        dur = pref.duration_type.value if pref.duration_type else "both"
+        dur = getattr(pref.duration_type, 'value', pref.duration_type) if pref.duration_type else "both"
         if dur == "both":
             score += 0.10
         else:
-            task_is_long = getattr(task, 'is_flexible', False)
+            is_flexible = getattr(task, 'is_flexible', None)
+            task_is_long = bool(is_flexible) if is_flexible is not None else False
             if (dur == "long_term" and task_is_long) or (dur == "one_time" and not task_is_long):
                 score += 0.10
         # 3. Time slots (0.20)
@@ -67,13 +68,14 @@ class ProfileScorer(BaseScorer):
             score += 0.30
             reasons.append("匹配您偏好的任务类型")
         # 5. Reward (0.15)
-        rew = pref.reward_preference.value if pref.reward_preference else "no_preference"
+        rew = getattr(pref.reward_preference, 'value', pref.reward_preference) if pref.reward_preference else "no_preference"
         if rew == "no_preference":
             score += 0.15
         else:
             reward = float(task.reward or 0)
             if rew == "high_freq_low_amount" and reward <= 3000:
                 score += 0.15
+                reasons.append("匹配您的报酬偏好")
             elif rew == "low_freq_high_amount" and reward > 3000:
                 score += 0.15
                 reasons.append("匹配您的报酬偏好")

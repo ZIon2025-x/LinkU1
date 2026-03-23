@@ -9,8 +9,8 @@ class DemandScorer(BaseScorer):
     name = "demand"
     default_weight = 0.12
 
-    def get_weight(self, user) -> float:
-        count = getattr(user, '_interaction_count', None)
+    def get_weight(self, user, context=None) -> float:
+        count = context.get("_interaction_count") if context else None
         if count is None:
             return self.default_weight
         if count < 10:

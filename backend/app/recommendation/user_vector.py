@@ -140,7 +140,7 @@ def build_user_preference_vector(
         "task_types_from_preference": False,
         "locations": [],
         "locations_from_preference": False,
-        "price_range": {"min": 0, "max": float('inf')},
+        "price_range": {"min": 0, "max": 999999},
         "price_range_from_history": False,
         "task_levels": [],
         "keywords": [],
@@ -237,18 +237,22 @@ def build_user_preference_vector(
                     prices.append(float(reward))
 
             if type_counts:
-                vector["task_types"].extend([
-                    task_type for task_type, count in sorted(
-                        type_counts.items(), key=lambda x: x[1], reverse=True
-                    )[:5]
-                ])
+                existing_types = set(vector["task_types"])
+                for task_type, count in sorted(
+                    type_counts.items(), key=lambda x: x[1], reverse=True
+                )[:5]:
+                    if task_type not in existing_types:
+                        vector["task_types"].append(task_type)
+                        existing_types.add(task_type)
 
             if location_counts:
-                vector["locations"].extend([
-                    loc for loc, count in sorted(
-                        location_counts.items(), key=lambda x: x[1], reverse=True
-                    )[:3]
-                ])
+                existing_locs = set(vector["locations"])
+                for loc, count in sorted(
+                    location_counts.items(), key=lambda x: x[1], reverse=True
+                )[:3]:
+                    if loc not in existing_locs:
+                        vector["locations"].append(loc)
+                        existing_locs.add(loc)
 
             if prices:
                 vector["price_range"]["min"] = min(prices) * 0.8
@@ -265,7 +269,7 @@ def get_default_preference_vector(user) -> Dict:
         "task_types_from_preference": False,
         "locations": [user.residence_city] if user.residence_city else [],
         "locations_from_preference": False,
-        "price_range": {"min": 0, "max": float('inf')},
+        "price_range": {"min": 0, "max": 999999},
         "price_range_from_history": False,
         "task_levels": [user.user_level] if user.user_level else ["normal"],
         "keywords": [],

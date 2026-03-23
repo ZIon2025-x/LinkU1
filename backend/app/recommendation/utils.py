@@ -33,28 +33,27 @@ def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
 def get_excluded_task_ids(db: Session, user_id: str) -> Set[int]:
     """Get task IDs that should be excluded from recommendations.
 
-    Excludes: user's own tasks, tasks user already applied to,
-    tasks user completed, tasks user was assigned to.
+    Delegates to the comprehensive recommendation_utils implementation which
+    excludes: own tasks, applied tasks, taken tasks, completed tasks (TaskHistory),
+    multi-person tasks (TaskParticipant), with caching support.
     """
-    from app.models import Task, TaskApplication
+    try:
+        from app.recommendation_utils import get_excluded_task_ids as _full_exclude
+        return _full_exclude(db, user_id)
+    except ImportError:
+        # Fallback: minimal exclusion if recommendation_utils is unavailable
+        from app.models import Task, TaskApplication
 
-    excluded = set()
-
-    # User's own tasks
-    own_tasks = db.query(Task.id).filter(Task.poster_id == user_id).all()
-    excluded.update(t.id for t in own_tasks)
-
-    # Tasks user applied to
-    applied = db.query(TaskApplication.task_id).filter(
-        TaskApplication.applicant_id == user_id
-    ).all()
-    excluded.update(t.task_id for t in applied)
-
-    # Tasks user is taker of
-    taken = db.query(Task.id).filter(Task.taker_id == user_id).all()
-    excluded.update(t.id for t in taken)
-
-    return excluded
+        excluded = set()
+        own_tasks = db.query(Task.id).filter(Task.poster_id == user_id).all()
+        excluded.update(t.id for t in own_tasks)
+        applied = db.query(TaskApplication.task_id).filter(
+            TaskApplication.applicant_id == user_id
+        ).all()
+        excluded.update(t.task_id for t in applied)
+        taken = db.query(Task.id).filter(Task.taker_id == user_id).all()
+        excluded.update(t.id for t in taken)
+        return excluded
 
 
 def is_new_user(user, days: int = 7) -> bool:
@@ -62,4 +61,9 @@ def is_new_user(user, days: int = 7) -> bool:
     if not user or not user.created_at:
         return True
     from app.crud import get_utc_time
-    return (get_utc_time() - user.created_at).days <= days
+    created = user.created_at
+    # Handle timezone-naive created_at (safe subtraction with timezone-aware now)
+    if created.tzinfo is None:
+        from datetime import timezone
+        created = created.replace(tzinfo=timezone.utc)
+    return (get_utc_time() - created).days <= days

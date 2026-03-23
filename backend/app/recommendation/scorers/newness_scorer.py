@@ -25,7 +25,7 @@ class NewnessScorer(BaseScorer):
     name = "newness"
     default_weight = 0.10
 
-    def get_weight(self, user) -> float:
+    def get_weight(self, user, context=None) -> float:
         """New users get higher newness weight (0.15 vs 0.10)."""
         return 0.15 if is_new_user(user) else self.default_weight
 
@@ -81,16 +81,12 @@ class NewnessScorer(BaseScorer):
         """Check if a task was posted by a new user (registered <= 7 days)
         and the task itself was created within 24 hours."""
         from app.models import User as UserModel
-        from app.crud import get_utc_time
 
         if not task.poster_id or not task.created_at:
             return False
 
-        # Task must be new (within 24 h)
-        now = get_utc_time()
-        hours_since = (now - task.created_at).total_seconds() / 3600
-        if hours_since > 24:
-            return False
+        # Note: 24h recency check already done by caller (score() filters
+        # tasks with created_at < recent_cutoff before calling this method)
 
         poster_id = task.poster_id
         if poster_id in cache:

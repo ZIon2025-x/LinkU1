@@ -51,7 +51,7 @@ class LocationScorer(BaseScorer):
             if city not in city_keywords:
                 city_keywords.append(city)
 
-        if not city_keywords and not (user_lat and user_lon):
+        if not city_keywords and (user_lat is None or user_lon is None):
             # No location signals at all — cannot score
             return {}
 
@@ -86,10 +86,10 @@ class LocationScorer(BaseScorer):
                     break
 
         # GPS distance scoring
-        if user_lat and user_lon:
+        if user_lat is not None and user_lon is not None:
             try:
-                task_lat = float(task.latitude) if task.latitude else None
-                task_lon = float(task.longitude) if task.longitude else None
+                task_lat = float(task.latitude) if task.latitude is not None else None
+                task_lon = float(task.longitude) if task.longitude is not None else None
 
                 if task_lat is not None and task_lon is not None:
                     distance = haversine_distance(user_lat, user_lon, task_lat, task_lon)

@@ -123,9 +123,13 @@ class TimeScorer(BaseScorer):
 
             hour_counts: Dict[int, int] = {}
             day_counts: Dict[int, int] = {}
-            for hour, day in interactions:
+            for hour, dow in interactions:
                 hour_counts[int(hour)] = hour_counts.get(int(hour), 0) + 1
-                day_counts[int(day)] = day_counts.get(int(day), 0) + 1
+                # PostgreSQL extract("dow"): 0=Sunday..6=Saturday
+                # Python weekday(): 0=Monday..6=Sunday
+                # Convert: (dow - 1) % 7 maps PG dow to Python weekday
+                py_weekday = (int(dow) - 1) % 7
+                day_counts[py_weekday] = day_counts.get(py_weekday, 0) + 1
 
             active_hours = sorted(hour_counts.items(), key=lambda x: x[1], reverse=True)[:3]
             active_days = sorted(day_counts.items(), key=lambda x: x[1], reverse=True)[:3]

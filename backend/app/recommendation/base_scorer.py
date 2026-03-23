@@ -34,7 +34,7 @@ class BaseScorer(ABC):
             Tasks not in the dict receive score 0.
         """
 
-    def get_weight(self, user) -> float:
+    def get_weight(self, user, context=None) -> float:
         """Return this scorer's weight for the given user.
 
         Override in subclasses for dynamic weight adjustment (e.g., demand_scorer).
