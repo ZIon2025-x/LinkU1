@@ -23,6 +23,7 @@ import '../../../core/utils/helpers.dart';
 import '../../../core/utils/task_type_helper.dart';
 import '../../../core/utils/task_status_helper.dart';
 import '../../../core/utils/city_display_helper.dart';
+import '../../../core/widgets/location_picker.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/animated_list_item.dart';
 import '../../../core/widgets/glass_container.dart';
@@ -340,9 +341,9 @@ class _HomeViewContentState extends State<_HomeViewContent> {
   }
 
   void _showLocationPicker(BuildContext context) {
-    final controller = TextEditingController();
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final currentCity = context.read<HomeBloc>().state.locationCity;
+    final homeBloc = context.read<HomeBloc>();
+    final currentCity = homeBloc.state.locationCity;
 
     showModalBottomSheet(
       context: context,
@@ -375,103 +376,30 @@ class _HomeViewContentState extends State<_HomeViewContent> {
               const SizedBox(height: 16),
               // 标题
               Text(
-                Localizations.localeOf(context).languageCode.startsWith('en')
-                    ? 'Set Location'
-                    : '设置位置',
+                context.l10n.locationSetLocation,
                 style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 4),
               Text(
-                Localizations.localeOf(context).languageCode.startsWith('en')
-                    ? 'Enter city name to filter nearby content'
-                    : '输入城市名称以筛选附近内容',
+                context.l10n.locationSetLocationHint,
                 style: TextStyle(fontSize: 13, color: Colors.grey[500]),
               ),
               const SizedBox(height: 16),
-              // 当前定位
-              if (currentCity != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: GestureDetector(
-                    onTap: () => Navigator.pop(sheetContext),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withAlpha(15),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: AppColors.primary.withAlpha(40)),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.my_location, size: 18, color: AppColors.primary),
-                          const SizedBox(width: 8),
-                          Text(
-                            Localizations.localeOf(context).languageCode.startsWith('en')
-                                ? 'Current: $currentCity'
-                                : '当前定位：$currentCity',
-                            style: const TextStyle(fontSize: 14, color: AppColors.primary, fontWeight: FontWeight.w500),
-                          ),
-                          const Spacer(),
-                          const Icon(Icons.check_circle, size: 18, color: AppColors.primary),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              // 输入框
-              TextField(
-                controller: controller,
-                autofocus: true,
-                decoration: InputDecoration(
-                  hintText: Localizations.localeOf(context).languageCode.startsWith('en')
-                      ? 'Enter city name...'
-                      : '输入城市名称...',
-                  prefixIcon: const Icon(Icons.search, size: 20),
-                  filled: true,
-                  fillColor: isDark ? Colors.white.withAlpha(15) : const Color(0xFFF5F5F5),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                ),
-                onSubmitted: (value) {
-                  if (value.trim().isNotEmpty) {
-                    context.read<HomeBloc>().add(HomeLocationCityUpdated(value.trim()));
-                  }
+              // LocationInputField (支持 GPS + 手动输入自动解析 + 地图选点)
+              LocationInputField(
+                initialValue: currentCity,
+                showOnlineOption: false,
+                onLocationPicked: (address, lat, lng) {
+                  homeBloc.add(HomeLocationCityUpdated(address));
                   Navigator.pop(sheetContext);
                 },
               ),
-              const SizedBox(height: 12),
-              // 确认按钮
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    final value = controller.text.trim();
-                    if (value.isNotEmpty) {
-                      context.read<HomeBloc>().add(HomeLocationCityUpdated(value));
-                    }
-                    Navigator.pop(sheetContext);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: Text(
-                    Localizations.localeOf(context).languageCode.startsWith('en')
-                        ? 'Confirm'
-                        : '确认',
-                  ),
-                ),
-              ),
+              const SizedBox(height: 16),
             ],
           ),
         );
       },
-    ).then((_) => controller.dispose());
+    );
   }
 }
 

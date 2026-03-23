@@ -4253,6 +4253,8 @@
   "paymentSessionExpired": "支付階段已過期，請返回重新進入",
   "commonUnknownError": "未知錯誤",
   "locationInputHint": "輸入地址或選擇目前位置",
+  "locationSetLocation": "設置位置",
+  "locationSetLocationHint": "搜索城市、GPS定位或地圖選點",
   "locationPermissionName": "位置",
   "locationFallbackCoordinates": "已取得座標 ({lat}, {lng})",
   "@locationFallbackCoordinates": {

@@ -9191,6 +9191,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get locationInputHint => '输入地址或选择当前位置';
 
   @override
+  String get locationSetLocation => '设置位置';
+
+  @override
+  String get locationSetLocationHint => '搜索城市、GPS定位或地图选点';
+
+  @override
   String get locationPermissionName => '位置';
 
   @override
@@ -19475,6 +19481,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get locationInputHint => '輸入地址或選擇目前位置';
+
+  @override
+  String get locationSetLocation => '設置位置';
+
+  @override
+  String get locationSetLocationHint => '搜索城市、GPS定位或地圖選點';
 
   @override
   String get locationPermissionName => '位置';

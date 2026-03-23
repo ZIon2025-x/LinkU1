@@ -9578,6 +9578,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get locationInputHint => 'Enter address or pick current location';
 
   @override
+  String get locationSetLocation => 'Set Location';
+
+  @override
+  String get locationSetLocationHint => 'Search, use GPS, or pick on map';
+
+  @override
   String get locationPermissionName => 'Location';
 
   @override

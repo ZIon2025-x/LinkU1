@@ -4407,6 +4407,8 @@
   "paymentSessionExpired": "Payment session expired, please go back and try again",
   "commonUnknownError": "Unknown error",
   "locationInputHint": "Enter address or pick current location",
+  "locationSetLocation": "Set Location",
+  "locationSetLocationHint": "Search, use GPS, or pick on map",
   "locationPermissionName": "Location",
   "locationFallbackCoordinates": "Coordinates obtained ({lat}, {lng})",
   "@locationFallbackCoordinates": {

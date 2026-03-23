@@ -4314,6 +4314,8 @@
   "paymentSessionExpired": "支付会话已过期，请返回重新进入",
   "commonUnknownError": "未知错误",
   "locationInputHint": "输入地址或选择当前位置",
+  "locationSetLocation": "设置位置",
+  "locationSetLocationHint": "搜索城市、GPS定位或地图选点",
   "locationPermissionName": "位置",
   "locationFallbackCoordinates": "已获取坐标 ({lat}, {lng})",
   "@locationFallbackCoordinates": {

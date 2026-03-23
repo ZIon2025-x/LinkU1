@@ -17606,6 +17606,18 @@ abstract class AppLocalizations {
   /// **'Enter address or pick current location'**
   String get locationInputHint;
 
+  /// No description provided for @locationSetLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Set Location'**
+  String get locationSetLocation;
+
+  /// No description provided for @locationSetLocationHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search, use GPS, or pick on map'**
+  String get locationSetLocationHint;
+
   /// No description provided for @locationPermissionName.
   ///
   /// In en, this message translates to:
