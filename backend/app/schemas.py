@@ -2286,10 +2286,17 @@ class PersonalServiceCreate(BaseModel):
 class PersonalServiceUpdate(BaseModel):
     service_name: Optional[str] = Field(None, max_length=100)
     description: Optional[str] = Field(None, max_length=2000)
-    base_price: Optional[condecimal(gt=0, max_digits=12, decimal_places=2)] = None
+    base_price: Optional[condecimal(ge=0, max_digits=12, decimal_places=2)] = None
     currency: Optional[str] = Field(None, max_length=10)
     pricing_type: Optional[str] = Field(None, pattern="^(fixed|hourly|negotiable)$")
     images: Optional[conlist(str, max_length=6)] = None
+
+    @model_validator(mode='after')
+    def validate_price_on_update(self):
+        # If changing to non-negotiable pricing, base_price must be provided
+        if self.pricing_type and self.pricing_type != 'negotiable' and self.base_price is not None and self.base_price <= 0:
+            raise ValueError('base_price must be greater than 0 for non-negotiable pricing')
+        return self
 
 
 class ServiceBrowseItem(BaseModel):
