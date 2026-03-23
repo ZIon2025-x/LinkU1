@@ -159,7 +159,7 @@ class _StoryRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final entries = [
-      const _StoryEntry(assetImage: AppAssets.appIcon, label: 'Linker AI', route: '/ai-chat'),
+      const _StoryEntry(assetImage: AppAssets.any, label: 'Linker AI', route: '/ai-chat'),
       _StoryEntry(emoji: '\u{1F4D0}', label: l10n.homeExperts, route: '/task-experts'),
       _StoryEntry(emoji: '\u{1F6D2}', label: l10n.homeSecondHandMarket, route: '/flea-market'),
       _StoryEntry(emoji: '\u{1F4F7}', label: l10n.homeStoryPhotography),
