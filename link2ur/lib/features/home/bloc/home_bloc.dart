@@ -455,10 +455,15 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   ) async {
     if (_tickerRepository == null) return;
     try {
-      final items = await _tickerRepository.getTicker();
+      var items = await _tickerRepository.getTicker();
+      // Fallback: if backend returns empty, show default platform messages
+      if (items.isEmpty) {
+        items = TickerItem.defaults;
+      }
       emit(state.copyWith(tickerItems: items));
     } catch (e) {
-      // Ticker is non-critical, silently ignore
+      // Ticker is non-critical — use defaults on failure
+      emit(state.copyWith(tickerItems: TickerItem.defaults));
     }
   }
 

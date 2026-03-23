@@ -16,6 +16,22 @@ class TickerItem {
   );
 
   String displayText(String locale) => locale.startsWith('en') ? textEn : textZh;
+
+  /// Default ticker items when backend has no data
+  static List<TickerItem> get defaults => [
+    TickerItem(
+      textZh: '👋 欢迎来到 Link²Ur，发布任务或提供技能，开始互助之旅',
+      textEn: '👋 Welcome to Link²Ur — post tasks or offer skills to get started',
+    ),
+    TickerItem(
+      textZh: '🎯 发现身边的技能达人，找到最适合你的帮手',
+      textEn: '🎯 Discover skilled helpers nearby — find the perfect match',
+    ),
+    TickerItem(
+      textZh: '💡 新用户首次发布任务享专属优惠，快来体验',
+      textEn: '💡 New users get exclusive deals on first task — try it now',
+    ),
+  ];
 }
 
 class TickerRepository {

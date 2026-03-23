@@ -274,14 +274,16 @@ class _TickerBannerState extends State<_TickerBanner> {
     final locale = Localizations.localeOf(context).languageCode;
     final hasTicker = widget.tickerItems.isNotEmpty;
 
+    // Mockup 风格：ticker 条露出上半部分，banner 紧跟其后盖住 ticker 底部
+    // ticker 有额外 bottom padding 被 banner 的负 margin 遮挡
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
         children: [
-          // Ticker bar
           if (hasTicker)
+            // Ticker — 底部被 banner 盖住，用额外 padding 补偿
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                     colors: [Color(0xFF5A52D5), Color(0xFF8B7DE8)]),
@@ -291,8 +293,8 @@ class _TickerBannerState extends State<_TickerBanner> {
               child: Row(
                 children: [
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: Colors.white.withAlpha(56),
                       borderRadius: BorderRadius.circular(8),
@@ -308,10 +310,12 @@ class _TickerBannerState extends State<_TickerBanner> {
                     child: AnimatedSwitcher(
                       duration: const Duration(milliseconds: 500),
                       child: Text(
-                        widget.tickerItems[_tickerIndex].displayText(locale),
+                        widget.tickerItems[_tickerIndex]
+                            .displayText(locale),
                         key: ValueKey(_tickerIndex),
                         style: TextStyle(
-                            color: Colors.white.withAlpha(230), fontSize: 12),
+                            color: Colors.white.withAlpha(230),
+                            fontSize: 12),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -321,7 +325,7 @@ class _TickerBannerState extends State<_TickerBanner> {
               ),
             ),
 
-          // Banner — static promo card
+          // Banner
           _StaticPromoBanner(hasTicker: hasTicker),
         ],
       ),
