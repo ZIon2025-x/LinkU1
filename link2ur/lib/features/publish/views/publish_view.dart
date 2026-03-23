@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/router/app_routes.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
@@ -689,8 +690,9 @@ class _PublishContentState extends State<_PublishContent>
                         subtitle: context.l10n.publishServiceDesc,
                         onTap: () {
                           AppHaptics.selection();
+                          final router = GoRouter.of(context);
                           Navigator.of(context).pop();
-                          context.push('/services/create');
+                          router.push('/services/create');
                         },
                       ),
                       _PublishOptionTile(
@@ -742,9 +744,9 @@ class _PublishContentState extends State<_PublishContent>
     return GestureDetector(
       onTap: () {
         AppHaptics.selection();
+        final router = GoRouter.of(context);
         Navigator.of(context).pop();
-        // 跳转到 AI 聊天
-        context.push('/ai-chat');
+        router.push(AppRoutes.aiChatList);
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
