@@ -298,6 +298,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authPrivacyPolicy => 'Privacy Policy';
 
   @override
+  String get homeFollow => 'Following';
+
+  @override
+  String get homeActivities => 'Events';
+
+  @override
   String get homeExperts => 'Experts';
 
   @override

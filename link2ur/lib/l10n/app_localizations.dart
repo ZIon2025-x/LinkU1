@@ -651,6 +651,18 @@ abstract class AppLocalizations {
   /// **'Privacy Policy'**
   String get authPrivacyPolicy;
 
+  /// No description provided for @homeFollow.
+  ///
+  /// In en, this message translates to:
+  /// **'Following'**
+  String get homeFollow;
+
+  /// No description provided for @homeActivities.
+  ///
+  /// In en, this message translates to:
+  /// **'Events'**
+  String get homeActivities;
+
   /// No description provided for @homeExperts.
   ///
   /// In en, this message translates to:

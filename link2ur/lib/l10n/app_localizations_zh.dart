@@ -291,6 +291,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get authPrivacyPolicy => '《隐私政策》';
 
   @override
+  String get homeFollow => '关注';
+
+  @override
+  String get homeActivities => '活动';
+
+  @override
   String get homeExperts => '达人';
 
   @override
@@ -10497,6 +10503,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get authPrivacyPolicy => '《隱私政策》';
+
+  @override
+  String get homeFollow => '關注';
+
+  @override
+  String get homeActivities => '活動';
 
   @override
   String get homeExperts => '達人';
