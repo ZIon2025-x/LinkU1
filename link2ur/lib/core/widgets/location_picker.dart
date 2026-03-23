@@ -300,8 +300,8 @@ class _LocationInputFieldState extends State<LocationInputField> {
 
         // Geocode status
         if (_isGeocoding)
-          Padding(
-            padding: const EdgeInsets.only(top: 6),
+          const Padding(
+            padding: EdgeInsets.only(top: 6),
             child: Row(
               children: [
                 SizedBox(
@@ -311,7 +311,7 @@ class _LocationInputFieldState extends State<LocationInputField> {
                     color: AppColors.textSecondaryLight,
                   ),
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 Text('解析中...', style: TextStyle(fontSize: 12, color: AppColors.textSecondaryLight)),
               ],
             ),
