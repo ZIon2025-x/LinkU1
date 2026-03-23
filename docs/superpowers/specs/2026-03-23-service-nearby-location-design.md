@@ -1,19 +1,38 @@
-# Service Nearby Location — Design Spec
+# Service & Task Nearby Location — Design Spec
 
 ## Overview
 
-Add geographic location to personal services so they appear in the "附近" (nearby) tab. Users can find in-person/both services near them, mixed with nearby tasks.
+1. Enhance `LocationInputField` with auto-geocoding on manual text input — benefits both task and service publishing
+2. Add geographic location fields to personal services
+3. Add nearby sort to service browse API
+4. Mix nearby services into the "附近" tab alongside tasks
 
 ## Key Decisions
 
 | Decision | Choice |
 |---|---|
-| Location input | GPS + manual input with auto-geocode (native `geocoding` package, free) |
-| Geocode accuracy | Limit to UK results to reduce mismatches; show resolved result for user confirmation |
+| Location input | GPS + manual input with debounced auto-geocode (native `geocoding` package, free on mobile) |
+| Geocode accuracy | Show resolved result for user confirmation; no country restriction (geocoding package uses device locale) |
 | Search radius | User-adjustable: 5/10/25/50/100 km, default 25km |
 | Nearby display | Mixed — tasks and services together, sorted by distance |
 
-## Data Model
+## 1. LocationInputField Enhancement (shared widget)
+
+**File:** `link2ur/lib/core/widgets/location_picker.dart`
+
+Current behavior: manual text input → only updates `location` text, no coordinates. GPS and map picker produce coordinates, but typing does not.
+
+**New behavior:** After user stops typing for 500ms, auto-call `locationFromAddress(text)` → if successful, update `latitude`/`longitude` and show a confirmation chip below the input:
+
+```
+📍 已定位到: Birmingham, West Midlands, UK
+```
+
+If geocode returns no result or fails, show subtle hint: "未能解析地址，建议使用定位按钮" — but don't block submission. The text is still saved as `location`, just without coordinates (service won't appear in nearby search, but can still be found by text search).
+
+This change improves **both task and service publishing** — any screen using `LocationInputField` gets auto-geocode for free.
+
+## 2. Data Model — Service Location
 
 Add 3 columns to `TaskExpertService`:
 
@@ -23,11 +42,9 @@ latitude      DECIMAL(10,8)  NULLABLE   -- lat for distance calc
 longitude     DECIMAL(11,8)  NULLABLE   -- lng for distance calc
 ```
 
-Only required when `location_type` is `in_person` or `both`. `online` services have no location.
+Only meaningful when `location_type` is `in_person` or `both`. `online` services have no location.
 
-Migration: append to existing `125_add_personal_services.sql` or create `126_add_service_location.sql`.
-
-## Backend API Changes
+## 3. Backend API Changes
 
 ### PersonalServiceCreate / Update schemas
 
@@ -39,9 +56,10 @@ latitude: Optional[condecimal(ge=-90, le=90, max_digits=10, decimal_places=8)] =
 longitude: Optional[condecimal(ge=-180, le=180, max_digits=11, decimal_places=8)] = None
 ```
 
-### personal_service_routes.py — create endpoint
+### personal_service_routes.py
 
-Set `location`, `latitude`, `longitude` from request data. Validate: if `location_type` in (`in_person`, `both`), `location` should be provided (warning, not error — GPS may fail).
+- Create: set `location`, `latitude`, `longitude` from request data
+- List response: include `location`, `latitude`, `longitude`
 
 ### service_browse_routes.py — add nearby sort
 
@@ -52,49 +70,47 @@ New query params:
 
 When `sort=nearby`:
 1. Filter: `location_type IN ('in_person', 'both')` AND `latitude IS NOT NULL` AND `longitude IS NOT NULL`
-2. Calculate approximate distance: `(latitude - :lat)^2 + (longitude - :lng * cos(radians(:lat)))^2`
+2. Approximate distance: `(latitude - :lat)^2 + (longitude - :lng * cos(radians(:lat)))^2`
 3. Filter by radius (convert km to approximate degree delta)
 4. Order by distance ascending
 
 ### Browse response
 
-Add `location`, `latitude`, `longitude`, `distance_km` (calculated, rounded to 1 decimal) to response items.
+Add `location`, `distance_km` (calculated, rounded to 1 decimal) to response items when `sort=nearby`.
 
-## Frontend Changes
+## 4. Frontend Changes
 
-### 1. Service form — location input
+### Service form — conditional location input
 
-In `personal_service_form_view.dart`, when `location_type` is `in_person` or `both`, show location section:
+In `personal_service_form_view.dart`, when `_locationType` is `in_person` or `both`:
+- Show `LocationInputField` widget (already supports GPS + manual + map)
+- Now with auto-geocode on manual input (from enhancement in section 1)
+- Store `location`, `latitude`, `longitude` in form state, include in submit data
+- When `_locationType` changes to `online`, clear location data
 
-- Reuse existing `LocationInputField` widget (supports GPS + manual input + map picker)
-- After manual text input: debounce 500ms → call `locationFromAddress(text)` with locale hint for UK → show resolved address below input for confirmation
-- If geocode fails or returns unexpected country, show warning but don't block
-- Store `location` (text), `latitude`, `longitude` in form state
-- Include in submit data
+### TaskExpertService model
 
-### 2. TaskExpertService model
+Add `location` (String?), `latitude` (double?), `longitude` (double?) to Dart model, `fromJson`, `toJson`, `props`.
 
-Add `location`, `latitude`, `longitude` fields to Dart model, `fromJson`, `toJson`, `props`.
+### Home "附近" tab — mixed content
 
-### 3. Home "附近" tab — mixed content
+**HomeBloc:**
+- When loading nearby tab, also call `PersonalServiceRepository.browseServices(sort: 'nearby', lat, lng, radius)`
+- Merge nearby tasks + nearby services into a unified list sorted by distance
+- Add `nearbyRadius` to state, default 25
 
-In `HomeBloc`:
-- When loading nearby tab, also call `PersonalServiceRepository.browseServices(sort: 'nearby', lat: ..., lng: ..., radius: ...)`
-- Merge nearby tasks + nearby services into a unified list, sorted by distance
-- Each item needs a `type` discriminator ('task' vs 'service') for the UI to render the right card
+**Nearby tab view:**
+- Radius selector chips at top (5/10/25/50/100 km)
+- Mixed list: task cards and service cards, distinguished by type
+- Service cards show: name, price, location, distance badge (📍 0.8km), owner avatar
 
-In the nearby tab view:
-- Render task cards and service cards differently based on type
-- Service cards show: service name, price, location, distance badge, owner avatar
-- Add radius selector (horizontal chips: 5/10/25/50/100 km)
+### l10n
 
-### 4. l10n
-
-Add keys for radius labels and nearby service display.
+Add keys for: radius labels, resolved location confirmation text, geocode failure hint, nearby service card elements.
 
 ## File Changes
 
-### Backend (~3 files + migration)
+### Backend (~4 files + migration)
 
 | File | Change |
 |---|---|
@@ -104,19 +120,21 @@ Add keys for radius labels and nearby service display.
 | `backend/app/service_browse_routes.py` | Add `nearby` sort with lat/lng/radius params + distance calc |
 | `backend/migrations/126_add_service_location.sql` | Add 3 columns |
 
-### Frontend (~5 files)
+### Frontend (~6 files)
 
 | File | Change |
 |---|---|
+| `link2ur/lib/core/widgets/location_picker.dart` | Add debounced auto-geocode on manual text input + confirmation chip |
 | `link2ur/lib/data/models/task_expert.dart` | Add location/lat/lng fields |
-| `link2ur/lib/features/personal_service/views/personal_service_form_view.dart` | Conditional location input using LocationInputField |
-| `link2ur/lib/features/home/bloc/home_bloc.dart` | Fetch nearby services, merge with tasks |
-| `link2ur/lib/features/home/views/home_view.dart` (nearby tab) | Render mixed list + radius selector |
-| `link2ur/lib/l10n/*.arb` | Radius and nearby service l10n keys |
+| `link2ur/lib/features/personal_service/views/personal_service_form_view.dart` | Conditional LocationInputField when in_person/both |
+| `link2ur/lib/features/home/bloc/home_bloc.dart` | Fetch nearby services, merge with tasks, radius state |
+| `link2ur/lib/features/home/views/home_view.dart` (nearby tab) | Render mixed list + radius selector chips |
+| `link2ur/lib/l10n/*.arb` | New l10n keys |
 
 ## Not In Scope
 
-- Google Places Autocomplete (using native geocoding instead)
+- Google Places Autocomplete
 - Map view for browsing nearby services
 - Push notifications for new nearby services
 - Location-based service recommendations
+- Modifying existing task location fields (tasks already have lat/lng)
