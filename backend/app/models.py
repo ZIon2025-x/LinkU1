@@ -1587,7 +1587,10 @@ class TaskExpertService(Base):
     __tablename__ = "task_expert_services"
     
     id = Column(Integer, primary_key=True, index=True)
-    expert_id = Column(String(8), ForeignKey("task_experts.id", ondelete="CASCADE"), nullable=False)
+    expert_id = Column(String(8), ForeignKey("task_experts.id", ondelete="CASCADE"), nullable=True)
+    service_type = Column(String(20), nullable=False, default="expert", server_default="expert")  # 'personal' | 'expert'
+    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=True)  # owner for personal services
+    pricing_type = Column(String(20), nullable=False, default="fixed", server_default="fixed")  # 'fixed' | 'hourly' | 'negotiable'
     service_name = Column(String(200), nullable=False)
     description = Column(Text, nullable=False)
     images = Column(JSONB, nullable=True)  # JSON数组（使用PostgreSQL JSONB类型）
@@ -1613,7 +1616,22 @@ class TaskExpertService(Base):
     applications = relationship("ServiceApplication", back_populates="service", cascade="all, delete-orphan")
     time_slots = relationship("ServiceTimeSlot", back_populates="service", cascade="all, delete-orphan")
     activities = relationship("Activity", back_populates="service", cascade="all, delete-orphan")
-    
+
+    # Relationship for personal service owner
+    owner = relationship("User", foreign_keys=[user_id])
+
+    @property
+    def owner_user_id(self):
+        """Resolve owner user ID regardless of service type.
+
+        For expert services: expert_id is used, which equals users.id because
+        TaskExpert.id is set to user.id on expert approval (see admin_task_expert_routes.py).
+        For personal services: user_id is the direct FK to users.id.
+        """
+        if self.service_type == "personal":
+            return self.user_id
+        return self.expert_id
+
     __table_args__ = (
         Index("ix_task_expert_services_expert_id", expert_id),
         Index("ix_task_expert_services_status", status),
@@ -1699,7 +1717,8 @@ class ServiceApplication(Base):
     id = Column(Integer, primary_key=True, index=True)
     service_id = Column(Integer, ForeignKey("task_expert_services.id", ondelete="CASCADE"), nullable=False)
     applicant_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    expert_id = Column(String(8), ForeignKey("task_experts.id", ondelete="CASCADE"), nullable=False)
+    expert_id = Column(String(8), ForeignKey("task_experts.id", ondelete="CASCADE"), nullable=True)
+    service_owner_id = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     time_slot_id = Column(Integer, ForeignKey("service_time_slots.id", ondelete="SET NULL"), nullable=True)  # 选择的时间段ID
     application_message = Column(Text, nullable=True)
     negotiated_price = Column(DECIMAL(12, 2), nullable=True)  # 用户提出的议价价格
