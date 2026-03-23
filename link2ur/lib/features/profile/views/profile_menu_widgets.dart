@@ -48,6 +48,14 @@ Widget _buildMyContentSection(BuildContext context, bool isDark) {
               ),
               _profileDivider(isDark),
               _ProfileRow(
+                icon: Icons.home_repair_service,
+                title: context.l10n.profileMyServices,
+                subtitle: context.l10n.profileMyServicesSubtitle,
+                color: AppColors.accent,
+                onTap: () => context.push('/services/my'),
+              ),
+              _profileDivider(isDark),
+              _ProfileRow(
                 icon: Icons.inventory_2,           // shippingbox.fill
                 title: context.l10n.profileMyPosts,
                 subtitle: context.l10n.profileMyPostsSubtitle,

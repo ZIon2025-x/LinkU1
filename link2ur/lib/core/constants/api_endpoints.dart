@@ -218,6 +218,12 @@ class ApiEndpoints {
   static String cancelServiceApplication(int applicationId) =>
       '/api/users/me/service-applications/$applicationId/cancel';
 
+  // ==================== 个人服务 ====================
+  // Personal Services (non-expert users publishing their own services)
+  static const String myPersonalServices = '/api/services/me';
+  static String myPersonalServiceById(String id) => '/api/services/me/$id';
+  static const String browseServices = '/api/services/browse';
+
   // ==================== 论坛相关 ====================
   // 后端: forum_routes.py (prefix: /api/forum)
   static const String forumVisibleCategories = '/api/forum/forums/visible';

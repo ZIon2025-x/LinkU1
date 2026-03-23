@@ -19447,6 +19447,120 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed to load task statistics, please retry'**
   String get errorTaskStatisticsLoadFailed;
+
+  /// No description provided for @profileMyServices.
+  ///
+  /// In en, this message translates to:
+  /// **'My Services'**
+  String get profileMyServices;
+
+  /// No description provided for @profileMyServicesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage your published services'**
+  String get profileMyServicesSubtitle;
+
+  /// No description provided for @personalServiceCreate.
+  ///
+  /// In en, this message translates to:
+  /// **'Publish Service'**
+  String get personalServiceCreate;
+
+  /// No description provided for @personalServiceEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Service'**
+  String get personalServiceEdit;
+
+  /// No description provided for @personalServiceName.
+  ///
+  /// In en, this message translates to:
+  /// **'Service Name'**
+  String get personalServiceName;
+
+  /// No description provided for @personalServiceDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Service Description'**
+  String get personalServiceDescription;
+
+  /// No description provided for @personalServicePrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Price'**
+  String get personalServicePrice;
+
+  /// No description provided for @personalServiceImages.
+  ///
+  /// In en, this message translates to:
+  /// **'Images'**
+  String get personalServiceImages;
+
+  /// No description provided for @personalServicePricingFixed.
+  ///
+  /// In en, this message translates to:
+  /// **'Fixed'**
+  String get personalServicePricingFixed;
+
+  /// No description provided for @personalServicePricingHourly.
+  ///
+  /// In en, this message translates to:
+  /// **'Hourly'**
+  String get personalServicePricingHourly;
+
+  /// No description provided for @personalServicePricingNegotiable.
+  ///
+  /// In en, this message translates to:
+  /// **'Negotiable'**
+  String get personalServicePricingNegotiable;
+
+  /// No description provided for @personalServiceCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Service published!'**
+  String get personalServiceCreated;
+
+  /// No description provided for @personalServiceUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Service updated'**
+  String get personalServiceUpdated;
+
+  /// No description provided for @personalServiceDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Service deleted'**
+  String get personalServiceDeleted;
+
+  /// No description provided for @personalServiceLimitReached.
+  ///
+  /// In en, this message translates to:
+  /// **'Maximum 10 services reached'**
+  String get personalServiceLimitReached;
+
+  /// No description provided for @personalServiceEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No services yet'**
+  String get personalServiceEmpty;
+
+  /// No description provided for @personalServiceEmptyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Publish your first service to get started'**
+  String get personalServiceEmptyHint;
+
+  /// No description provided for @publishService.
+  ///
+  /// In en, this message translates to:
+  /// **'Publish Service'**
+  String get publishService;
+
+  /// No description provided for @publishServiceDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Offer your skills'**
+  String get publishServiceDesc;
 }
 
 class _AppLocalizationsDelegate

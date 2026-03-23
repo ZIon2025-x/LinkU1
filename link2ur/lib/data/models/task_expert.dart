@@ -306,12 +306,16 @@ class TaskExpertService extends Equatable {
   const TaskExpertService({
     required this.id,
     required this.expertId,
+    this.serviceType = 'expert',
+    this.userId,
     required this.serviceName,
     this.description = '',
     this.images,
     required this.basePrice,
+    this.pricingType = 'fixed',
     this.currency = 'GBP',
     this.status = 'active',
+    this.isExpertVerified = false,
     this.displayOrder = 0,
     this.viewCount = 0,
     this.applicationCount = 0,
@@ -327,16 +331,23 @@ class TaskExpertService extends Equatable {
     this.userTaskStatus,
     this.userTaskIsPaid,
     this.userApplicationHasNegotiation,
+    this.ownerName,
+    this.ownerAvatar,
+    this.ownerRating,
   });
 
   final int id;
   final String expertId;
+  final String serviceType; // 'personal' | 'expert'
+  final String? userId;
   final String serviceName;
   final String description;
   final List<String>? images;
   final double basePrice;
+  final String pricingType; // 'fixed' | 'hourly' | 'negotiable'
   final String currency;
   final String status;
+  final bool isExpertVerified;
   final int displayOrder;
   final int viewCount;
   final int applicationCount;
@@ -356,6 +367,14 @@ class TaskExpertService extends Equatable {
   final String? userTaskStatus;
   final bool? userTaskIsPaid;
   final bool? userApplicationHasNegotiation;
+
+  // 服务所有者信息 (personal services)
+  final String? ownerName;
+  final String? ownerAvatar;
+  final double? ownerRating;
+
+  /// 是否为个人服务
+  bool get isPersonalService => serviceType == 'personal';
 
   /// 价格显示
   String get priceDisplay => '£${basePrice.toStringAsFixed(2)}';
@@ -380,14 +399,18 @@ class TaskExpertService extends Equatable {
     return TaskExpertService(
       id: json['id'] as int,
       expertId: json['expert_id']?.toString() ?? '',
+      serviceType: json['service_type']?.toString() ?? 'expert',
+      userId: json['user_id']?.toString(),
       serviceName: json['service_name'] as String? ?? '',
       description: json['description'] as String? ?? '',
       images: (json['images'] as List<dynamic>?)
           ?.map((e) => e.toString())
           .toList(),
       basePrice: (json['base_price'] as num?)?.toDouble() ?? 0,
+      pricingType: json['pricing_type']?.toString() ?? 'fixed',
       currency: json['currency'] as String? ?? 'GBP',
       status: json['status'] as String? ?? 'active',
+      isExpertVerified: json['is_expert_verified'] == true,
       displayOrder: json['display_order'] as int? ?? 0,
       viewCount: json['view_count'] as int? ?? 0,
       applicationCount: json['application_count'] as int? ?? 0,
@@ -406,6 +429,9 @@ class TaskExpertService extends Equatable {
       userTaskIsPaid: parseBoolNullable(json['user_task_is_paid']),
       userApplicationHasNegotiation:
           parseBoolNullable(json['user_application_has_negotiation']),
+      ownerName: json['owner_name']?.toString(),
+      ownerAvatar: json['owner_avatar']?.toString(),
+      ownerRating: (json['owner_rating'] as num?)?.toDouble(),
     );
   }
 
@@ -413,12 +439,16 @@ class TaskExpertService extends Equatable {
     return {
       'id': id,
       'expert_id': expertId,
+      'service_type': serviceType,
+      'user_id': userId,
       'service_name': serviceName,
       'description': description,
       'images': images,
       'base_price': basePrice,
+      'pricing_type': pricingType,
       'currency': currency,
       'status': status,
+      'is_expert_verified': isExpertVerified,
       'display_order': displayOrder,
       'view_count': viewCount,
       'application_count': applicationCount,
@@ -428,11 +458,14 @@ class TaskExpertService extends Equatable {
       'time_slot_end_time': timeSlotEndTime,
       'participants_per_slot': participantsPerSlot,
       'created_at': createdAt?.toIso8601String(),
+      'owner_name': ownerName,
+      'owner_avatar': ownerAvatar,
+      'owner_rating': ownerRating,
     };
   }
 
   @override
-  List<Object?> get props => [id, expertId, serviceName, basePrice, status];
+  List<Object?> get props => [id, expertId, serviceType, userId, serviceName, basePrice, pricingType, status, isExpertVerified, ownerName, ownerAvatar, ownerRating];
 }
 
 /// 任务达人列表响应

@@ -2610,7 +2610,7 @@ async def apply_for_service(
         raise HTTPException(status_code=400, detail="服务未上架，无法申请")
     
     # 3. 校验用户不能申请自己的服务
-    if service.expert_id == current_user.id:
+    if service.owner_user_id == current_user.id:
         logger.warning(f"用户 {current_user.id} 尝试申请自己的服务 {service_id}")
         raise HTTPException(status_code=400, detail="不能申请自己的服务")
     
@@ -2688,7 +2688,8 @@ async def apply_for_service(
     new_application = models.ServiceApplication(
         service_id=service_id,
         applicant_id=current_user.id,
-        expert_id=service.expert_id,
+        expert_id=service.expert_id,  # None for personal services
+        service_owner_id=service.owner_user_id,
         time_slot_id=application_data.time_slot_id,
         application_message=application_data.application_message,
         negotiated_price=application_data.negotiated_price,
