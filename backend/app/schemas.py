@@ -2275,6 +2275,9 @@ class PersonalServiceCreate(BaseModel):
     currency: str = Field(default="GBP", max_length=10)
     pricing_type: str = Field(default="fixed", pattern="^(fixed|hourly|negotiable)$")
     location_type: str = Field(default="online", pattern="^(online|in_person|both)$")
+    location: Optional[str] = Field(None, max_length=100)
+    latitude: Optional[condecimal(ge=-90, le=90, max_digits=10, decimal_places=8)] = None
+    longitude: Optional[condecimal(ge=-180, le=180, max_digits=11, decimal_places=8)] = None
     images: Optional[conlist(str, max_length=6)] = None
 
     @model_validator(mode='after')
@@ -2291,6 +2294,9 @@ class PersonalServiceUpdate(BaseModel):
     currency: Optional[str] = Field(None, max_length=10)
     pricing_type: Optional[str] = Field(None, pattern="^(fixed|hourly|negotiable)$")
     location_type: Optional[str] = Field(None, pattern="^(online|in_person|both)$")
+    location: Optional[str] = Field(None, max_length=100)
+    latitude: Optional[condecimal(ge=-90, le=90, max_digits=10, decimal_places=8)] = None
+    longitude: Optional[condecimal(ge=-180, le=180, max_digits=11, decimal_places=8)] = None
     images: Optional[conlist(str, max_length=6)] = None
 
     @model_validator(mode='after')

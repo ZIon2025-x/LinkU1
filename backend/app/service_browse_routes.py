@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, case, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,7 +15,10 @@ service_browse_router = APIRouter(
 async def browse_services(
     type: str = Query("all", pattern="^(all|expert|personal)$"),
     q: str = Query(None, max_length=100),
-    sort: str = Query("recommended", pattern="^(recommended|newest|price_asc|price_desc)$"),
+    sort: str = Query("recommended", pattern="^(recommended|newest|price_asc|price_desc|nearby)$"),
+    lat: float = Query(None),
+    lng: float = Query(None),
+    radius: int = Query(25, ge=5, le=100),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=50),
     db: AsyncSession = Depends(get_async_db_dependency),
@@ -61,6 +64,21 @@ async def browse_services(
         query = query.order_by(models.TaskExpertService.base_price.asc())
     elif sort == "price_desc":
         query = query.order_by(models.TaskExpertService.base_price.desc())
+    elif sort == "nearby":
+        if lat is None or lng is None:
+            raise HTTPException(status_code=400, detail="lat and lng required for nearby sort")
+        query = query.where(
+            models.TaskExpertService.location_type.in_(["in_person", "both"]),
+            models.TaskExpertService.latitude.isnot(None),
+            models.TaskExpertService.longitude.isnot(None),
+        )
+        from sqlalchemy import func as sa_func
+        radius_deg = radius / 111.0
+        lat_diff = models.TaskExpertService.latitude - lat
+        lng_diff = (models.TaskExpertService.longitude - lng) * sa_func.cos(sa_func.radians(lat))
+        distance_sq = lat_diff * lat_diff + lng_diff * lng_diff
+        query = query.where(distance_sq <= radius_deg * radius_deg)
+        query = query.order_by(distance_sq.asc())
 
     # Pagination
     offset = (page - 1) * page_size
@@ -82,7 +100,7 @@ async def browse_services(
     items = []
     for s in services:
         owner = owners_map.get(s.owner_user_id)
-        items.append({
+        item = {
             "id": s.id,
             "service_name": s.service_name,
             "description": s.description,
@@ -90,6 +108,7 @@ async def browse_services(
             "currency": s.currency or "GBP",
             "pricing_type": s.pricing_type or "fixed",
             "location_type": s.location_type or "online",
+            "location": s.location,
             "service_type": s.service_type or "expert",
             "is_expert_verified": s.service_type == "expert",
             "status": s.status,
@@ -99,6 +118,13 @@ async def browse_services(
             "owner_avatar": owner.avatar if owner else None,
             "owner_rating": float(owner.avg_rating) if owner and owner.avg_rating else None,
             "created_at": s.created_at.isoformat() if s.created_at else None,
-        })
+        }
+        if sort == "nearby" and lat is not None and lng is not None and s.latitude and s.longitude:
+            from math import radians, cos, sqrt
+            lat_d = float(s.latitude) - lat
+            lng_d = (float(s.longitude) - lng) * cos(radians(lat))
+            dist_km = sqrt(lat_d * lat_d + lng_d * lng_d) * 111.0
+            item["distance_km"] = round(dist_km, 1)
+        items.append(item)
 
     return {"items": items, "total": total, "page": page, "page_size": page_size}
