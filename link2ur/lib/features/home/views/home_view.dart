@@ -680,22 +680,7 @@ class _FollowTab extends StatelessWidget {
                       }
                       final item = displayItems[index];
                       final locale = Localizations.localeOf(context);
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Card(
-                          child: ListTile(
-                            leading: item.userAvatar != null
-                                ? CircleAvatar(
-                                    backgroundImage:
-                                        NetworkImage(item.userAvatar!))
-                                : const CircleAvatar(
-                                    child: Icon(Icons.person)),
-                            title: Text(item.displayTitle(locale)),
-                            subtitle: Text(item.userName ?? '',
-                                style: const TextStyle(fontSize: 12)),
-                          ),
-                        ),
-                      );
+                      return _FollowFeedCard(item: item, locale: locale);
                     },
                     childCount: displayItems.length + (hasMore ? 1 : 0),
                   ),
@@ -710,4 +695,193 @@ class _FollowTab extends StatelessWidget {
 }
 
 // _ActivitiesTab removed — activities accessible via Story row entry or dedicated page
+
+/// 关注 Feed 卡片 — 社交动态风格（参考小红书关注 Tab）
+class _FollowFeedCard extends StatelessWidget {
+  const _FollowFeedCard({required this.item, required this.locale});
+  final DiscoveryFeedItem item;
+  final Locale locale;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final title = item.displayTitle(locale);
+    final description = item.displayDescription(locale);
+    final timeAgo = item.createdAt != null ? _formatTimeAgo(item.createdAt!) : '';
+    final feedLabel = _feedTypeLabel(item.feedType, locale.languageCode);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: isDark
+              ? null
+              : [BoxShadow(color: Colors.black.withAlpha(10), blurRadius: 3, offset: const Offset(0, 1))],
+        ),
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 头部：头像 + 名字 + 动态类型 + 时间
+            Row(
+              children: [
+                // 头像
+                CircleAvatar(
+                  radius: 20,
+                  backgroundImage: item.userAvatar != null
+                      ? NetworkImage(item.userAvatar!)
+                      : null,
+                  backgroundColor: isDark ? Colors.grey[800] : const Color(0xFFE8E8E8),
+                  child: item.userAvatar == null
+                      ? Icon(Icons.person, size: 20, color: isDark ? Colors.grey[400] : Colors.grey[600])
+                      : null,
+                ),
+                const SizedBox(width: 10),
+                // 名字 + 描述
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.userName ?? '',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                        ),
+                      ),
+                      Text(
+                        '$feedLabel · $timeAgo',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDark ? AppColors.textSecondaryDark : const Color(0xFF999999),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+
+            // 内容文字
+            if (title.isNotEmpty || (description != null && description.isNotEmpty)) ...[
+              const SizedBox(height: 10),
+              Text(
+                title.isNotEmpty ? title : description ?? '',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: isDark ? AppColors.textPrimaryDark : const Color(0xFF333333),
+                  height: 1.5,
+                ),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+
+            // 图片
+            if (item.hasImages) ...[
+              const SizedBox(height: 10),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: item.images!.length == 1
+                    // 单图
+                    ? AspectRatio(
+                        aspectRatio: 16 / 9,
+                        child: Image.network(
+                          item.images!.first,
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                          errorBuilder: (_, __, ___) => Container(
+                            color: isDark ? Colors.grey[800] : const Color(0xFFF0F0F0),
+                            child: const Center(child: Icon(Icons.image, color: Colors.grey)),
+                          ),
+                        ),
+                      )
+                    // 多图网格（最多3张）
+                    : Row(
+                        children: item.images!.take(3).map((url) {
+                          return Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(right: 3),
+                              child: AspectRatio(
+                                aspectRatio: 1,
+                                child: Image.network(url, fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Container(
+                                    color: isDark ? Colors.grey[800] : const Color(0xFFF0F0F0),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+              ),
+            ],
+
+            // 价格（如果有）
+            if (item.price != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                '£${item.price!.toStringAsFixed(0)}',
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFFEE5A24),
+                ),
+              ),
+            ],
+
+            // 底部互动栏
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                if (item.likeCount != null) ...[
+                  Text('❤️ ${item.likeCount}',
+                      style: TextStyle(fontSize: 13, color: isDark ? Colors.grey[400] : const Color(0xFF999999))),
+                  const SizedBox(width: 20),
+                ],
+                if (item.commentCount != null) ...[
+                  Text('💬 ${item.commentCount}',
+                      style: TextStyle(fontSize: 13, color: isDark ? Colors.grey[400] : const Color(0xFF999999))),
+                  const SizedBox(width: 20),
+                ],
+                Text('↗️ ${locale.languageCode.startsWith("en") ? "Share" : "分享"}',
+                    style: TextStyle(fontSize: 13, color: isDark ? Colors.grey[400] : const Color(0xFF999999))),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _feedTypeLabel(String feedType, String lang) {
+    final isEn = lang.startsWith('en');
+    switch (feedType) {
+      case 'task':
+        return isEn ? 'Published a task' : '发布了新任务';
+      case 'forum_post':
+        return isEn ? 'Posted' : '发布了帖子';
+      case 'product':
+        return isEn ? 'Listed an item' : '上架了商品';
+      case 'service':
+        return isEn ? 'New service' : '发布了新服务';
+      case 'completion':
+        return isEn ? 'Completed a task' : '完成了一个任务';
+      default:
+        return isEn ? 'Updated' : '更新了动态';
+    }
+  }
+
+  String _formatTimeAgo(DateTime time) {
+    final diff = DateTime.now().difference(time);
+    if (diff.inMinutes < 1) return '刚刚';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}分钟前';
+    if (diff.inHours < 24) return '${diff.inHours}小时前';
+    if (diff.inDays < 7) return '${diff.inDays}天前';
+    return '${time.month}/${time.day}';
+  }
+}
 
