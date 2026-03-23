@@ -77,7 +77,12 @@ class _MyServicesBody extends StatelessWidget {
             // Empty state
             if (state.services.isEmpty) {
               return _EmptyServicesView(
-                onCreateTap: () => context.push('/services/create'),
+                onCreateTap: () async {
+                  final result = await context.push('/services/create');
+                  if (result == true && context.mounted) {
+                    context.read<PersonalServiceBloc>().add(const PersonalServiceLoadRequested());
+                  }
+                },
               );
             }
 
@@ -109,10 +114,15 @@ class _MyServicesBody extends StatelessWidget {
                     padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                     child: _ServiceCard(
                       service: service,
-                      onEdit: () => context.push(
-                        '/services/edit/${service['id']}',
-                        extra: service,
-                      ),
+                      onEdit: () async {
+                        final result = await context.push(
+                          '/services/edit/${service['id']}',
+                          extra: service,
+                        );
+                        if (result == true && context.mounted) {
+                          context.read<PersonalServiceBloc>().add(const PersonalServiceLoadRequested());
+                        }
+                      },
                       onDelete: () => _confirmDelete(context, service),
                     ),
                   );
@@ -122,7 +132,12 @@ class _MyServicesBody extends StatelessWidget {
           },
         ),
         floatingActionButton: FloatingActionButton(
-          onPressed: () => context.push('/services/create'),
+          onPressed: () async {
+            final result = await context.push('/services/create');
+            if (result == true && context.mounted) {
+              context.read<PersonalServiceBloc>().add(const PersonalServiceLoadRequested());
+            }
+          },
           tooltip: context.l10n.expertServiceCreate,
           child: const Icon(Icons.add),
         ),

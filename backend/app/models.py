@@ -1589,7 +1589,7 @@ class TaskExpertService(Base):
     id = Column(Integer, primary_key=True, index=True)
     expert_id = Column(String(8), ForeignKey("task_experts.id", ondelete="CASCADE"), nullable=True)
     service_type = Column(String(20), nullable=False, default="expert", server_default="expert")  # 'personal' | 'expert'
-    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=True)  # owner for personal services
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=True)  # owner for personal services
     pricing_type = Column(String(20), nullable=False, default="fixed", server_default="fixed")  # 'fixed' | 'hourly' | 'negotiable'
     service_name = Column(String(200), nullable=False)
     description = Column(Text, nullable=False)
@@ -1718,7 +1718,7 @@ class ServiceApplication(Base):
     service_id = Column(Integer, ForeignKey("task_expert_services.id", ondelete="CASCADE"), nullable=False)
     applicant_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     expert_id = Column(String(8), ForeignKey("task_experts.id", ondelete="CASCADE"), nullable=True)
-    service_owner_id = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    service_owner_id = Column(String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     time_slot_id = Column(Integer, ForeignKey("service_time_slots.id", ondelete="SET NULL"), nullable=True)  # 选择的时间段ID
     application_message = Column(Text, nullable=True)
     negotiated_price = Column(DECIMAL(12, 2), nullable=True)  # 用户提出的议价价格

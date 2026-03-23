@@ -341,6 +341,12 @@ class ErrorLocalizer {
         return context.l10n.errorTaskStatisticsLoadFailed;
       case 'onboarding_submit_failed':
         return context.l10n.onboardingSubmitFailed;
+      case 'service_created':
+        return context.l10n.personalServiceCreated;
+      case 'service_updated':
+        return context.l10n.personalServiceUpdated;
+      case 'service_deleted':
+        return context.l10n.personalServiceDeleted;
       default:
         // 服务端返回的已翻译消息，直接使用
         return errorMessage;

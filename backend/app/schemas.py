@@ -2271,7 +2271,7 @@ class TaskExpertServiceUpdate(BaseModel):
 class PersonalServiceCreate(BaseModel):
     service_name: str = Field(..., max_length=100)
     description: str = Field(..., max_length=2000)
-    base_price: Optional[condecimal(gt=0, max_digits=12, decimal_places=2)] = None
+    base_price: Optional[condecimal(ge=0, max_digits=12, decimal_places=2)] = None
     currency: str = Field(default="GBP", max_length=10)
     pricing_type: str = Field(default="fixed", pattern="^(fixed|hourly|negotiable)$")
     images: Optional[conlist(str, max_length=6)] = None

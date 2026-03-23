@@ -4,7 +4,7 @@ ALTER TABLE task_expert_services
 
 ALTER TABLE task_expert_services
   ADD COLUMN IF NOT EXISTS service_type VARCHAR(20) NOT NULL DEFAULT 'expert',
-  ADD COLUMN IF NOT EXISTS user_id VARCHAR(36) REFERENCES users(id) ON DELETE CASCADE,
+  ADD COLUMN IF NOT EXISTS user_id VARCHAR(8) REFERENCES users(id) ON DELETE CASCADE,
   ADD COLUMN IF NOT EXISTS pricing_type VARCHAR(20) NOT NULL DEFAULT 'fixed';
 
 CREATE INDEX IF NOT EXISTS idx_task_expert_services_type_status
@@ -18,7 +18,7 @@ ALTER TABLE service_applications
   ALTER COLUMN expert_id DROP NOT NULL;
 
 ALTER TABLE service_applications
-  ADD COLUMN IF NOT EXISTS service_owner_id VARCHAR(36) REFERENCES users(id) ON DELETE SET NULL;
+  ADD COLUMN IF NOT EXISTS service_owner_id VARCHAR(8) REFERENCES users(id) ON DELETE SET NULL;
 
 -- Backfill service_owner_id for existing applications
 UPDATE service_applications sa

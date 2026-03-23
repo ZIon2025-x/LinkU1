@@ -14,7 +14,6 @@ service_browse_router = APIRouter(
 @service_browse_router.get("/browse")
 async def browse_services(
     type: str = Query("all", pattern="^(all|expert|personal)$"),
-    category: str = Query(None, max_length=50),
     q: str = Query(None, max_length=100),
     sort: str = Query("recommended", pattern="^(recommended|newest|price_asc|price_desc)$"),
     page: int = Query(1, ge=1),
