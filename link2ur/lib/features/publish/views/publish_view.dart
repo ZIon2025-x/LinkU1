@@ -65,7 +65,7 @@ class PublishView extends StatelessWidget {
 }
 
 // ── 发布类型 ──
-enum _PublishType { task, fleaMarket, post }
+enum _PublishType { task, fleaMarket, post, service }
 
 class _PublishContent extends StatefulWidget {
   const _PublishContent();
@@ -430,6 +430,9 @@ class _PublishContentState extends State<_PublishContent>
       case _PublishType.post:
         _submitPost();
         break;
+      case _PublishType.service:
+        // Service uses external form — should not reach here
+        break;
     }
   }
 
@@ -556,6 +559,8 @@ class _PublishContentState extends State<_PublishContent>
         return context.l10n.fleaMarketPublishItem;
       case _PublishType.post:
         return context.l10n.forumPublish;
+      case _PublishType.service:
+        return context.l10n.publishService;
     }
   }
 
@@ -694,17 +699,39 @@ class _PublishContentState extends State<_PublishContent>
                         ],
                       ),
                       const SizedBox(height: gap),
-                      _PublishTypeCard(
-                        isDark: isDark,
-                        type: _PublishType.post,
-                        label: context.l10n.publishPostCardLabel,
-                        icon: Icons.article_rounded,
-                        gradient: AppColors.gradientPurple,
-                        fullWidth: true,
-                        onTap: () {
-                          AppHaptics.selection();
-                          setState(() => _selectedType = _PublishType.post);
-                        },
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _PublishTypeCard(
+                              isDark: isDark,
+                              type: _PublishType.post,
+                              label: context.l10n.publishPostCardLabel,
+                              icon: Icons.article_rounded,
+                              gradient: AppColors.gradientPurple,
+                              fullWidth: true,
+                              onTap: () {
+                                AppHaptics.selection();
+                                setState(() => _selectedType = _PublishType.post);
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: gap),
+                          Expanded(
+                            child: _PublishTypeCard(
+                              isDark: isDark,
+                              type: _PublishType.service,
+                              label: context.l10n.publishService,
+                              icon: Icons.home_repair_service_rounded,
+                              gradient: AppColors.gradientOrange,
+                              fullWidth: true,
+                              onTap: () {
+                                AppHaptics.selection();
+                                Navigator.of(context).pop();
+                                context.push('/services/create');
+                              },
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 12),
                       _buildRecentSection(isDark),
@@ -953,6 +980,7 @@ class _PublishContentState extends State<_PublishContent>
                 _PublishType.task => _buildTaskForm(isDark),
                 _PublishType.fleaMarket => _buildFleaMarketForm(isDark),
                 _PublishType.post => _buildPostForm(isDark, postCategories, postCurrentUser),
+                _PublishType.service => const SizedBox.shrink(),
               },
             ),
           ),
@@ -973,6 +1001,9 @@ class _PublishContentState extends State<_PublishContent>
         break;
       case _PublishType.post:
         title = context.l10n.publishPostTab;
+        break;
+      case _PublishType.service:
+        title = context.l10n.publishService;
         break;
     }
     return Padding(

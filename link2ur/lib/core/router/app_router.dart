@@ -19,6 +19,7 @@ import 'routes/info_routes.dart';
 import 'routes/payment_routes.dart';
 import 'routes/misc_routes.dart';
 import 'routes/ai_chat_routes.dart';
+import 'routes/personal_service_routes.dart';
 import '../../features/auth/bloc/auth_bloc.dart';
 
 import '../../features/main/main_tab_view.dart';
@@ -177,6 +178,8 @@ class AppRouter {
       ...fleaMarketRoutes,
 
       ...taskExpertRoutes,
+
+      ...personalServiceRoutes,
 
       ...forumRoutes,
 

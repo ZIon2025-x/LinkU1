@@ -10562,4 +10562,62 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get errorTaskStatisticsLoadFailed =>
       'Failed to load task statistics, please retry';
+
+  @override
+  String get profileMyServices => 'My Services';
+
+  @override
+  String get profileMyServicesSubtitle => 'Manage your published services';
+
+  @override
+  String get personalServiceCreate => 'Publish Service';
+
+  @override
+  String get personalServiceEdit => 'Edit Service';
+
+  @override
+  String get personalServiceName => 'Service Name';
+
+  @override
+  String get personalServiceDescription => 'Service Description';
+
+  @override
+  String get personalServicePrice => 'Price';
+
+  @override
+  String get personalServiceImages => 'Images';
+
+  @override
+  String get personalServicePricingFixed => 'Fixed';
+
+  @override
+  String get personalServicePricingHourly => 'Hourly';
+
+  @override
+  String get personalServicePricingNegotiable => 'Negotiable';
+
+  @override
+  String get personalServiceCreated => 'Service published!';
+
+  @override
+  String get personalServiceUpdated => 'Service updated';
+
+  @override
+  String get personalServiceDeleted => 'Service deleted';
+
+  @override
+  String get personalServiceLimitReached => 'Maximum 10 services reached';
+
+  @override
+  String get personalServiceEmpty => 'No services yet';
+
+  @override
+  String get personalServiceEmptyHint =>
+      'Publish your first service to get started';
+
+  @override
+  String get publishService => 'Publish Service';
+
+  @override
+  String get publishServiceDesc => 'Offer your skills';
 }

@@ -10138,6 +10138,63 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get errorTaskStatisticsLoadFailed => '加载任务统计失败，请重试';
+
+  @override
+  String get profileMyServices => '我的服务';
+
+  @override
+  String get profileMyServicesSubtitle => '管理已发布的服务';
+
+  @override
+  String get personalServiceCreate => '发布服务';
+
+  @override
+  String get personalServiceEdit => '编辑服务';
+
+  @override
+  String get personalServiceName => '服务名称';
+
+  @override
+  String get personalServiceDescription => '服务描述';
+
+  @override
+  String get personalServicePrice => '价格';
+
+  @override
+  String get personalServiceImages => '图片';
+
+  @override
+  String get personalServicePricingFixed => '固定价';
+
+  @override
+  String get personalServicePricingHourly => '时薪';
+
+  @override
+  String get personalServicePricingNegotiable => '面议';
+
+  @override
+  String get personalServiceCreated => '服务发布成功！';
+
+  @override
+  String get personalServiceUpdated => '服务已更新';
+
+  @override
+  String get personalServiceDeleted => '服务已删除';
+
+  @override
+  String get personalServiceLimitReached => '最多发布10个服务';
+
+  @override
+  String get personalServiceEmpty => '还没有服务';
+
+  @override
+  String get personalServiceEmptyHint => '发布你的第一个服务吧';
+
+  @override
+  String get publishService => '发布服务';
+
+  @override
+  String get publishServiceDesc => '展示你的技能';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -20230,4 +20287,61 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get errorTaskStatisticsLoadFailed => '載入任務統計失敗，請重試';
+
+  @override
+  String get profileMyServices => '我的服務';
+
+  @override
+  String get profileMyServicesSubtitle => '管理已發佈的服務';
+
+  @override
+  String get personalServiceCreate => '發佈服務';
+
+  @override
+  String get personalServiceEdit => '編輯服務';
+
+  @override
+  String get personalServiceName => '服務名稱';
+
+  @override
+  String get personalServiceDescription => '服務描述';
+
+  @override
+  String get personalServicePrice => '價格';
+
+  @override
+  String get personalServiceImages => '圖片';
+
+  @override
+  String get personalServicePricingFixed => '固定價';
+
+  @override
+  String get personalServicePricingHourly => '時薪';
+
+  @override
+  String get personalServicePricingNegotiable => '面議';
+
+  @override
+  String get personalServiceCreated => '服務發佈成功！';
+
+  @override
+  String get personalServiceUpdated => '服務已更新';
+
+  @override
+  String get personalServiceDeleted => '服務已刪除';
+
+  @override
+  String get personalServiceLimitReached => '最多發佈10個服務';
+
+  @override
+  String get personalServiceEmpty => '還沒有服務';
+
+  @override
+  String get personalServiceEmptyHint => '發佈你的第一個服務吧';
+
+  @override
+  String get publishService => '發佈服務';
+
+  @override
+  String get publishServiceDesc => '展示你的技能';
 }
