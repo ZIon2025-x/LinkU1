@@ -751,8 +751,6 @@ class _PublishContentState extends State<_PublishContent>
         decoration: BoxDecoration(
           gradient: const LinearGradient(
             colors: AppColors.gradientPrimary,
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
           ),
           borderRadius: AppRadius.allMedium,
         ),

@@ -8509,6 +8509,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get publishPostCardLabel => 'Forum Post';
 
   @override
+  String get publishTaskCardDescription => 'Find help for your tasks';
+
+  @override
+  String get publishFleaCardDescription => 'Sell secondhand items';
+
+  @override
+  String get publishPostCardDescription => 'Share with the community';
+
+  @override
+  String get publishAiAssistTitle => 'Not sure what to write? Ask AI';
+
+  @override
+  String get publishAiAssistSubtitle =>
+      'Describe your needs, AI helps you draft';
+
+  @override
   String get publishRelatedContent => 'Related Content';
 
   @override

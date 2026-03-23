@@ -15632,6 +15632,36 @@ abstract class AppLocalizations {
   /// **'Forum Post'**
   String get publishPostCardLabel;
 
+  /// No description provided for @publishTaskCardDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Find help for your tasks'**
+  String get publishTaskCardDescription;
+
+  /// No description provided for @publishFleaCardDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Sell secondhand items'**
+  String get publishFleaCardDescription;
+
+  /// No description provided for @publishPostCardDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Share with the community'**
+  String get publishPostCardDescription;
+
+  /// No description provided for @publishAiAssistTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Not sure what to write? Ask AI'**
+  String get publishAiAssistTitle;
+
+  /// No description provided for @publishAiAssistSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe your needs, AI helps you draft'**
+  String get publishAiAssistSubtitle;
+
   /// No description provided for @publishRelatedContent.
   ///
   /// In en, this message translates to:

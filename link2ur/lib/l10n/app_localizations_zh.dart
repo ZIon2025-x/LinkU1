@@ -8158,6 +8158,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get publishPostCardLabel => '发帖子';
 
   @override
+  String get publishTaskCardDescription => '找人帮忙完成任务';
+
+  @override
+  String get publishFleaCardDescription => '出售闲置物品';
+
+  @override
+  String get publishPostCardDescription => '分享到社区论坛';
+
+  @override
+  String get publishAiAssistTitle => '不知道怎么写？问 AI';
+
+  @override
+  String get publishAiAssistSubtitle => '描述你的需求，AI 帮你生成描述';
+
+  @override
   String get publishRelatedContent => '关联内容';
 
   @override
@@ -18349,6 +18364,21 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get publishPostCardLabel => '發帖子';
+
+  @override
+  String get publishTaskCardDescription => '找人幫忙完成任務';
+
+  @override
+  String get publishFleaCardDescription => '出售閒置物品';
+
+  @override
+  String get publishPostCardDescription => '分享到社區論壇';
+
+  @override
+  String get publishAiAssistTitle => '不知道怎麼寫？問 AI';
+
+  @override
+  String get publishAiAssistSubtitle => '描述你的需求，AI 幫你產生描述';
 
   @override
   String get publishRelatedContent => '關聯內容';
