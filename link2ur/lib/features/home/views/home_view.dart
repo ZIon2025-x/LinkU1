@@ -468,77 +468,97 @@ class _FollowTab extends StatelessWidget {
     return BlocBuilder<HomeBloc, HomeState>(
       buildWhen: (p, c) =>
           p.followFeedItems != c.followFeedItems ||
-          p.isLoadingFollowFeed != c.isLoadingFollowFeed,
+          p.isLoadingFollowFeed != c.isLoadingFollowFeed ||
+          p.discoveryItems != c.discoveryItems,
       builder: (context, state) {
         if (state.isLoadingFollowFeed && state.followFeedItems.isEmpty) {
           return const Center(child: CircularProgressIndicator());
         }
-        if (state.followFeedItems.isEmpty) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.people_outline,
-                      size: 64,
-                      color: Theme.of(context).colorScheme.outline),
-                  const SizedBox(height: 16),
-                  Text(
-                    context.l10n.homeFollowEmpty,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurfaceVariant,
-                        ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-          );
+
+        // 有关注内容时显示关注 feed，否则显示热门动态（复用 discovery feed）
+        final hasFollowContent = state.followFeedItems.isNotEmpty;
+        final displayItems = hasFollowContent
+            ? state.followFeedItems
+            : state.discoveryItems;
+        final hasMore = hasFollowContent ? state.hasMoreFollowFeed : false;
+
+        if (displayItems.isEmpty) {
+          return const Center(child: CircularProgressIndicator());
         }
+
         return RefreshIndicator(
           onRefresh: () async {
             context.read<HomeBloc>().add(const HomeLoadFollowFeed());
           },
-          child: ListView.builder(
-            padding: const EdgeInsets.all(8),
-            itemCount: state.followFeedItems.length +
-                (state.hasMoreFollowFeed ? 1 : 0),
-            itemBuilder: (context, index) {
-              if (index == state.followFeedItems.length) {
-                context
-                    .read<HomeBloc>()
-                    .add(const HomeLoadFollowFeed(loadMore: true));
-                return const Center(
+          child: CustomScrollView(
+            slivers: [
+              // 提示标题
+              if (!hasFollowContent)
+                SliverToBoxAdapter(
                   child: Padding(
-                    padding: EdgeInsets.all(16),
-                    child: CircularProgressIndicator(),
-                  ),
-                );
-              }
-              final item = state.followFeedItems[index];
-              final locale = Localizations.localeOf(context);
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Card(
-                  child: ListTile(
-                    leading: item.userAvatar != null
-                        ? CircleAvatar(
-                            backgroundImage:
-                                NetworkImage(item.userAvatar!))
-                        : const CircleAvatar(child: Icon(Icons.person)),
-                    title: Text(item.displayTitle(locale)),
-                    subtitle: Text(item.userName ?? '',
-                        style: const TextStyle(fontSize: 12)),
-                    trailing: Text(item.feedType,
-                        style: const TextStyle(
-                            fontSize: 10, color: Colors.grey)),
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                    child: Row(
+                      children: [
+                        Icon(Icons.local_fire_department,
+                            size: 18, color: Colors.orange[600]),
+                        const SizedBox(width: 6),
+                        Text(
+                          Localizations.localeOf(context).languageCode.startsWith('en')
+                              ? 'Trending'
+                              : '热门动态',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              );
-            },
+
+              // Feed 列表
+              SliverPadding(
+                padding: const EdgeInsets.all(8),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      if (index == displayItems.length) {
+                        if (hasFollowContent) {
+                          context.read<HomeBloc>().add(
+                              const HomeLoadFollowFeed(loadMore: true));
+                        }
+                        return const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(16),
+                            child: CircularProgressIndicator(),
+                          ),
+                        );
+                      }
+                      final item = displayItems[index];
+                      final locale = Localizations.localeOf(context);
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Card(
+                          child: ListTile(
+                            leading: item.userAvatar != null
+                                ? CircleAvatar(
+                                    backgroundImage:
+                                        NetworkImage(item.userAvatar!))
+                                : const CircleAvatar(
+                                    child: Icon(Icons.person)),
+                            title: Text(item.displayTitle(locale)),
+                            subtitle: Text(item.userName ?? '',
+                                style: const TextStyle(fontSize: 12)),
+                          ),
+                        ),
+                      );
+                    },
+                    childCount: displayItems.length + (hasMore ? 1 : 0),
+                  ),
+                ),
+              ),
+            ],
           ),
         );
       },
