@@ -399,7 +399,7 @@ class _NearbyServiceCard extends StatelessWidget {
       onTap: () {
         final id = service['id'];
         if (id != null) {
-          context.push('/task-experts/services/$id');
+          context.push('/service/$id');
         }
       },
       borderRadius: BorderRadius.circular(12),
