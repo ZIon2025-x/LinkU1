@@ -86,6 +86,7 @@ async def get_discovery_feed(
         ("rankings", lambda: _fetch_rankings(db, fetch_limit)),
         ("expert services", lambda: _fetch_expert_services(db, fetch_limit)),
         ("tasks", lambda: _fetch_tasks(db, fetch_limit, current_user, recommendation_scores)),
+        ("activities", lambda: _fetch_activities(db, fetch_limit, current_user)),
     ]
 
     for name, fetch_fn in fetch_tasks:
@@ -899,6 +900,122 @@ async def _fetch_tasks(
     return items
 
 
+async def _fetch_activities(db: AsyncSession, limit: int, current_user=None) -> list:
+    """获取开放活动 for discovery feed."""
+    from app.utils.time_utils import get_utc_time
+
+    now = get_utc_time()
+
+    participant_count = (
+        select(func.count(models.OfficialActivityApplication.id))
+        .where(
+            models.OfficialActivityApplication.activity_id == models.Activity.id,
+            models.OfficialActivityApplication.status.in_(["pending", "won", "attending"]),
+        )
+        .correlate(models.Activity)
+        .scalar_subquery()
+        .label("participant_count")
+    )
+
+    query = (
+        select(
+            models.Activity.id,
+            models.Activity.title,
+            models.Activity.title_zh,
+            models.Activity.title_en,
+            models.Activity.description,
+            models.Activity.description_zh,
+            models.Activity.description_en,
+            models.Activity.images,
+            models.Activity.activity_type,
+            models.Activity.location,
+            models.Activity.deadline,
+            models.Activity.reward_type,
+            models.Activity.original_price_per_participant,
+            models.Activity.discounted_price_per_participant,
+            models.Activity.currency,
+            models.Activity.max_participants,
+            models.Activity.expert_id,
+            models.Activity.created_at,
+            participant_count,
+        )
+        .where(
+            models.Activity.status == "open",
+            models.Activity.visibility == "public",
+            or_(
+                models.Activity.deadline > now,
+                models.Activity.deadline.is_(None),
+            ),
+        )
+        .order_by(desc(models.Activity.created_at))
+        .limit(limit)
+    )
+    result = await db.execute(query)
+    rows = result.all()
+
+    # Batch-fetch organizer info
+    organizer_ids = {r.expert_id for r in rows if r.expert_id}
+    organizer_map = {}
+    if organizer_ids:
+        org_result = await db.execute(
+            select(models.User.id, models.User.name, models.User.avatar)
+            .where(models.User.id.in_(list(organizer_ids)))
+        )
+        organizer_map = {r.id: r for r in org_result.all()}
+
+    items = []
+    for row in rows:
+        organizer = organizer_map.get(row.expert_id)
+        first_img = _first_image(row.images)
+
+        price = float(row.discounted_price_per_participant) if row.discounted_price_per_participant is not None else None
+        original_price = float(row.original_price_per_participant) if row.original_price_per_participant is not None else None
+        discount_pct = None
+        if original_price and price and original_price > 0 and price < original_price:
+            discount_pct = round((1 - price / original_price) * 100)
+
+        items.append({
+            "feed_type": "activity",
+            "id": f"activity_{row.id}",
+            "title": row.title,
+            "title_zh": row.title_zh,
+            "title_en": row.title_en,
+            "description": (row.description or "")[:100],
+            "description_zh": (row.description_zh or "")[:100],
+            "description_en": (row.description_en or "")[:100],
+            "images": [first_img] if first_img else None,
+            "user_id": str(row.expert_id) if row.expert_id else None,
+            "user_name": organizer.name if organizer else "Link²Ur",
+            "user_avatar": organizer.avatar if organizer else None,
+            "price": price,
+            "original_price": original_price,
+            "discount_percentage": discount_pct,
+            "currency": row.currency or "GBP",
+            "rating": None,
+            "like_count": None,
+            "comment_count": None,
+            "view_count": None,
+            "upvote_count": None,
+            "downvote_count": None,
+            "linked_item": None,
+            "target_item": None,
+            "activity_info": {
+                "activity_type": row.activity_type,
+                "max_participants": row.max_participants,
+                "current_participants": row.participant_count or 0,
+                "reward_type": row.reward_type,
+                "location": row.location,
+                "deadline": row.deadline.isoformat() if row.deadline else None,
+            },
+            "is_experienced": None,
+            "is_favorited": None,
+            "user_vote_type": None,
+            "extra_data": None,
+            "created_at": row.created_at.isoformat() if row.created_at else None,
+        })
+    return items
+
+
 # ==================== 辅助函数 ====================
 
 async def _batch_resolve_linked_items(db: AsyncSession, pairs: list) -> dict:
@@ -1061,6 +1178,7 @@ def _weighted_shuffle(items: list, limit: int, page: int, seed: int = None) -> l
         "ranking": 2.5,
         "service": 1.5,
         "task": 1.5,       # Tasks: medium frequency
+        "activity": 2.0,    # Activities: low frequency, higher weight
     }
 
     by_type = {}

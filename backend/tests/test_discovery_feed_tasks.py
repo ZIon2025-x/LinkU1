@@ -50,3 +50,21 @@ def test_weighted_shuffle_handles_task_type():
     assert len(result) == 4
     feed_types = {r["feed_type"] for r in result}
     assert "task" in feed_types
+
+
+def test_activity_feed_item_uses_activity_info():
+    item = {
+        "feed_type": "activity",
+        "id": "activity_456",
+        "title": "Workshop",
+        "activity_info": {
+            "activity_type": "standard",
+            "max_participants": 50,
+            "current_participants": 32,
+        },
+        "extra_data": None,
+    }
+    assert item["feed_type"] == "activity"
+    assert item["id"].startswith("activity_")
+    assert item["activity_info"]["max_participants"] == 50
+    assert item["extra_data"] is None
