@@ -12,7 +12,7 @@ from sqlalchemy import select, desc, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models
-from app.deps import get_current_user_secure_async_csrf, get_async_db_dependency
+from app.deps import get_current_user_secure, get_async_db_dependency
 from app.discovery_routes import _first_image
 
 logger = logging.getLogger(__name__)
@@ -25,10 +25,10 @@ router = APIRouter(prefix="/api/follow", tags=["关注"])
 
 @router.get("/feed")
 async def get_follow_feed(
-    page: int = Query(1, ge=1, description="页码"),
+    page: int = Query(1, ge=1, le=50, description="页码"),
     page_size: int = Query(20, ge=1, le=50, description="每页数量"),
     request: Request = None,
-    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    current_user: models.User = Depends(get_current_user_secure),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """获取关注用户的内容时间线
@@ -319,9 +319,16 @@ async def _fetch_followed_flea_market(db: AsyncSession, following_ids: List[str]
 
 async def _fetch_followed_services(db: AsyncSession, following_ids: List[str], limit: int) -> list:
     """获取关注用户发布的达人服务（30天内）"""
+    from sqlalchemy import func as sa_func
     from app.utils.time_utils import get_utc_time
 
     cutoff = get_utc_time() - timedelta(days=30)
+
+    # Resolve owner: expert_id takes priority over user_id (avoids duplicate joins)
+    owner_col = sa_func.coalesce(
+        models.TaskExpertService.expert_id,
+        models.TaskExpertService.user_id,
+    ).label("owner_id")
 
     query = (
         select(
@@ -334,21 +341,22 @@ async def _fetch_followed_services(db: AsyncSession, following_ids: List[str], l
             models.TaskExpertService.expert_id,
             models.TaskExpertService.user_id,
             models.TaskExpertService.created_at,
+            owner_col,
             models.User.name.label("user_name"),
             models.User.avatar.label("user_avatar"),
         )
         .join(
             models.User,
-            or_(
-                models.TaskExpertService.expert_id == models.User.id,
-                models.TaskExpertService.user_id == models.User.id,
-            ),
+            sa_func.coalesce(
+                models.TaskExpertService.expert_id,
+                models.TaskExpertService.user_id,
+            ) == models.User.id,
         )
         .where(
-            or_(
-                models.TaskExpertService.expert_id.in_(following_ids),
-                models.TaskExpertService.user_id.in_(following_ids),
-            ),
+            sa_func.coalesce(
+                models.TaskExpertService.expert_id,
+                models.TaskExpertService.user_id,
+            ).in_(following_ids),
             models.TaskExpertService.status == "active",
             models.TaskExpertService.created_at >= cutoff,
         )
