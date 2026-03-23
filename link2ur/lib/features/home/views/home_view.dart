@@ -73,7 +73,7 @@ class _HomeViewContent extends StatefulWidget {
 }
 
 class _HomeViewContentState extends State<_HomeViewContent> {
-  int _selectedTab = 1; // 0: 关注, 1: 推荐, 2: 附近, 3: 达人, 4: 活动
+  int _selectedTab = 1; // 0: 关注, 1: 推荐, 2: 附近
   PageController? _pageController;
 
   /// 已访问过的 Tab 集合（懒加载：未访问过的 Tab 不构建内容，避免首帧多余 build 开销）
@@ -111,9 +111,6 @@ class _HomeViewContentState extends State<_HomeViewContent> {
       if (index == 0 && homeBloc.state.followFeedItems.isEmpty) {
         homeBloc.add(const HomeLoadFollowFeed());
       }
-      if (index == 4 && homeBloc.state.activitiesListItems.isEmpty) {
-        homeBloc.add(const HomeLoadActivitiesList());
-      }
     }
   }
 
@@ -145,8 +142,6 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                 _visitedTabs.contains(0) ? const _FollowTab() : const SizedBox.shrink(),
                 const _RecommendedTab(), // 默认 Tab，始终构建
                 _visitedTabs.contains(2) ? const _NearbyTab() : const SizedBox.shrink(),
-                _visitedTabs.contains(3) ? const _ExpertsTab() : const SizedBox.shrink(),
-                _visitedTabs.contains(4) ? const _ActivitiesTab() : const SizedBox.shrink(),
               ],
             ),
           ),
@@ -196,18 +191,6 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                     onTap: () => _onTabChanged(2),
                     isDark: isDark,
                   ),
-                  _DesktopSegmentButton(
-                    label: context.l10n.homeExperts,
-                    isSelected: _selectedTab == 3,
-                    onTap: () => _onTabChanged(3),
-                    isDark: isDark,
-                  ),
-                  _DesktopSegmentButton(
-                    label: context.l10n.homeActivities,
-                    isSelected: _selectedTab == 4,
-                    onTap: () => _onTabChanged(4),
-                    isDark: isDark,
-                  ),
                 ],
               ),
             ),
@@ -244,8 +227,6 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                       _visitedTabs.contains(0) ? const _FollowTab() : const SizedBox.shrink(),
                       const _RecommendedTab(),
                       _visitedTabs.contains(2) ? const _NearbyTab() : const SizedBox.shrink(),
-                      _visitedTabs.contains(3) ? const _ExpertsTab() : const SizedBox.shrink(),
-                      _visitedTabs.contains(4) ? const _ActivitiesTab() : const SizedBox.shrink(),
                     ],
                   ),
                 ),
@@ -305,16 +286,6 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                     title: context.l10n.homeNearby,
                     isSelected: _selectedTab == 2,
                     onTap: () => _onTabChanged(2),
-                  ),
-                  _TabButton(
-                    title: context.l10n.homeExperts,
-                    isSelected: _selectedTab == 3,
-                    onTap: () => _onTabChanged(3),
-                  ),
-                  _TabButton(
-                    title: context.l10n.homeActivities,
-                    isSelected: _selectedTab == 4,
-                    onTap: () => _onTabChanged(4),
                   ),
                 ],
               ),
@@ -576,127 +547,5 @@ class _FollowTab extends StatelessWidget {
   }
 }
 
-// ==================== 活动 Tab ====================
-class _ActivitiesTab extends StatelessWidget {
-  const _ActivitiesTab();
-
-  String _formatDate(DateTime date) {
-    return '${date.month}/${date.day} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<HomeBloc, HomeState>(
-      buildWhen: (p, c) =>
-          p.activitiesListItems != c.activitiesListItems ||
-          p.isLoadingActivitiesList != c.isLoadingActivitiesList,
-      builder: (context, state) {
-        if (state.isLoadingActivitiesList &&
-            state.activitiesListItems.isEmpty) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (state.activitiesListItems.isEmpty) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.event_outlined,
-                      size: 64,
-                      color: Theme.of(context).colorScheme.outline),
-                  const SizedBox(height: 16),
-                  Text(context.l10n.homeActivitiesEmpty,
-                      style: Theme.of(context).textTheme.bodyLarge),
-                ],
-              ),
-            ),
-          );
-        }
-        return RefreshIndicator(
-          onRefresh: () async {
-            context
-                .read<HomeBloc>()
-                .add(const HomeLoadActivitiesList());
-          },
-          child: ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: state.activitiesListItems.length +
-                (state.hasMoreActivitiesList ? 1 : 0),
-            itemBuilder: (context, index) {
-              if (index == state.activitiesListItems.length) {
-                context
-                    .read<HomeBloc>()
-                    .add(const HomeLoadActivitiesList(loadMore: true));
-                return const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(16),
-                    child: CircularProgressIndicator(),
-                  ),
-                );
-              }
-              final activity = state.activitiesListItems[index];
-              final locale = Localizations.localeOf(context);
-              final description = activity.displayDescription(locale);
-              return Card(
-                margin: const EdgeInsets.only(bottom: 12),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14)),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(14),
-                  onTap: () =>
-                      context.push('/activities/${activity.id}'),
-                  child: Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          activity.displayTitle(locale),
-                          style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700),
-                        ),
-                        const SizedBox(height: 4),
-                        if (description.isNotEmpty)
-                          Text(
-                            description,
-                            style: TextStyle(
-                                fontSize: 13,
-                                color: Colors.grey[600]),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 12,
-                          children: [
-                            if (activity.deadline != null)
-                              Text(
-                                '📅 ${_formatDate(activity.deadline!)}',
-                                style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey[500]),
-                              ),
-                            if (activity.location.isNotEmpty)
-                              Text(
-                                '📍 ${activity.location}',
-                                style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey[500]),
-                              ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        );
-      },
-    );
-  }
-}
+// _ActivitiesTab removed — activities accessible via Story row entry or dedicated page
 
