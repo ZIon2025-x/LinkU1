@@ -77,13 +77,17 @@ class _NearbyTabState extends State<_NearbyTab> {
     }
   }
 
-  /// 反向地理编码获取城市名，用于同城过滤
+  /// 反向地理编码获取城市名，用于同城过滤 + 左上角定位显示
   Future<void> _resolveCity(double lat, double lng) async {
     try {
       final placemarks = await placemarkFromCoordinates(lat, lng);
       if (placemarks.isNotEmpty) {
         // locality 通常是城市名（如 "Birmingham"、"London"）
         _city = placemarks.first.locality;
+        // 同步到 HomeBloc 供左上角定位显示
+        if (_city != null && mounted) {
+          context.read<HomeBloc>().add(HomeLocationCityUpdated(_city!));
+        }
       }
     } catch (_) {
       // 反向编码失败不影响加载，只是不做同城过滤

@@ -248,7 +248,7 @@ class _HomeViewContentState extends State<_HomeViewContent> {
       ),
       child: Row(
         children: [
-          // 左上角：定位城市
+          // 左上角：GPS 定位城市
           GestureDetector(
             onTap: () {
               // TODO: 切换城市
@@ -262,11 +262,9 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                     size: 16),
                 const SizedBox(width: 2),
                 BlocBuilder<HomeBloc, HomeState>(
-                  buildWhen: (p, c) => false, // city doesn't change often
+                  buildWhen: (p, c) => p.locationCity != c.locationCity,
                   builder: (context, state) {
-                    // 优先用用户 residenceCity，否则显示默认
-                    final user = context.read<HomeBloc>().currentUser;
-                    final city = user?.residenceCity ?? 'London';
+                    final city = state.locationCity ?? 'London';
                     return Text(
                       city,
                       style: TextStyle(

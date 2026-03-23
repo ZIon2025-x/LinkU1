@@ -107,3 +107,11 @@ class HomeLoadActivitiesList extends HomeEvent {
   @override
   List<Object?> get props => [loadMore];
 }
+
+/// GPS 反向地理编码得到的城市名
+class HomeLocationCityUpdated extends HomeEvent {
+  const HomeLocationCityUpdated(this.city);
+  final String city;
+  @override
+  List<Object?> get props => [city];
+}

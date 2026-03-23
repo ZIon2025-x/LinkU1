@@ -44,6 +44,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     on<HomeLoadFollowFeed>(_onLoadFollowFeed);
     on<HomeLoadTicker>(_onLoadTicker);
     on<HomeLoadActivitiesList>(_onLoadActivitiesList);
+    on<HomeLocationCityUpdated>(_onLocationCityUpdated);
   }
 
   final TaskRepository _taskRepository;
@@ -490,5 +491,14 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     } catch (e) {
       emit(state.copyWith(isLoadingActivitiesList: false, errorMessage: e.toString()));
     }
+  }
+
+  // ==================== Location City ====================
+
+  void _onLocationCityUpdated(
+    HomeLocationCityUpdated event,
+    Emitter<HomeState> emit,
+  ) {
+    emit(state.copyWith(locationCity: event.city));
   }
 }

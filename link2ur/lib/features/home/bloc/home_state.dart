@@ -41,6 +41,7 @@ class HomeState extends Equatable {
     this.isLoadingActivitiesList = false,
     this.hasMoreActivitiesList = true,
     this.activitiesListPage = 0,
+    this.locationCity,
   });
 
   final HomeStatus status;
@@ -91,6 +92,9 @@ class HomeState extends Equatable {
   final bool hasMoreActivitiesList;
   final int activitiesListPage;
 
+  /// GPS 反向地理编码得到的城市名（左上角显示）
+  final String? locationCity;
+
   bool get isLoading => status == HomeStatus.loading;
   bool get isLoaded => status == HomeStatus.loaded;
   bool get hasError => status == HomeStatus.error;
@@ -128,6 +132,7 @@ class HomeState extends Equatable {
     bool? isLoadingActivitiesList,
     bool? hasMoreActivitiesList,
     int? activitiesListPage,
+    String? locationCity,
   }) {
     return HomeState(
       status: status ?? this.status,
@@ -162,6 +167,7 @@ class HomeState extends Equatable {
       isLoadingActivitiesList: isLoadingActivitiesList ?? this.isLoadingActivitiesList,
       hasMoreActivitiesList: hasMoreActivitiesList ?? this.hasMoreActivitiesList,
       activitiesListPage: activitiesListPage ?? this.activitiesListPage,
+      locationCity: locationCity ?? this.locationCity,
     );
   }
 
@@ -197,5 +203,6 @@ class HomeState extends Equatable {
         isLoadingActivitiesList,
         hasMoreActivitiesList,
         activitiesListPage,
+        locationCity,
       ];
 }
