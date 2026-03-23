@@ -48,7 +48,7 @@ class _MyServicesBody extends StatelessWidget {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('我的服务'),
+          title: Text(context.l10n.profileMyServices),
         ),
         body: BlocBuilder<PersonalServiceBloc, PersonalServiceState>(
           buildWhen: (prev, curr) =>
@@ -492,9 +492,9 @@ class _PricingTypeBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final label = switch (pricingType) {
-      'fixed' => 'Fixed',
-      'hourly' => 'Hourly',
-      'negotiable' => 'Negotiable',
+      'fixed' => context.l10n.personalServicePricingFixed,
+      'hourly' => context.l10n.personalServicePricingHourly,
+      'negotiable' => context.l10n.personalServicePricingNegotiable,
       _ => pricingType,
     };
 

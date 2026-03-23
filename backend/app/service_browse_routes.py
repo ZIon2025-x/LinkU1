@@ -31,10 +31,6 @@ async def browse_services(
     elif type == "personal":
         base_filter = base_filter.where(models.TaskExpertService.service_type == "personal")
 
-    # Category filter
-    if category:
-        base_filter = base_filter.where(models.TaskExpertService.category == category)
-
     # Text search
     if q:
         search = f"%{q}%"

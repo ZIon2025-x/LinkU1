@@ -42,7 +42,7 @@ async def create_personal_service(
         expert_id=None,
         service_name=data.service_name,
         description=data.description,
-        base_price=data.base_price,
+        base_price=data.base_price or 0,
         currency=data.currency,
         pricing_type=data.pricing_type,
         images=data.images or [],

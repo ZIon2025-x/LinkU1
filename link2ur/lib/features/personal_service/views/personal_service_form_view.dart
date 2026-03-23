@@ -135,7 +135,7 @@ class _FormContentState extends State<_FormContent> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: Text(_isEditMode ? '编辑服务' : '发布服务'),
+          title: Text(_isEditMode ? context.l10n.personalServiceEdit : context.l10n.personalServiceCreate),
           actions: [
             BlocBuilder<PersonalServiceBloc, PersonalServiceState>(
               buildWhen: (prev, curr) =>
@@ -168,7 +168,7 @@ class _FormContentState extends State<_FormContent> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // ── Service Name ──
-                _SectionLabel(label: '服务名称'),
+                _SectionLabel(label: context.l10n.personalServiceName),
                 const SizedBox(height: AppSpacing.sm),
                 TextFormField(
                   controller: _nameController,
@@ -189,7 +189,7 @@ class _FormContentState extends State<_FormContent> {
                 const SizedBox(height: AppSpacing.md),
 
                 // ── Description ──
-                _SectionLabel(label: '服务描述'),
+                _SectionLabel(label: context.l10n.personalServiceDescription),
                 const SizedBox(height: AppSpacing.sm),
                 TextFormField(
                   controller: _descriptionController,
@@ -212,26 +212,26 @@ class _FormContentState extends State<_FormContent> {
                 const SizedBox(height: AppSpacing.md),
 
                 // ── Pricing Type ──
-                _SectionLabel(label: '计价方式'),
+                _SectionLabel(label: context.l10n.personalServicePrice),
                 const SizedBox(height: AppSpacing.sm),
                 SizedBox(
                   width: double.infinity,
                   child: SegmentedButton<String>(
-                    segments: const [
+                    segments: [
                       ButtonSegment<String>(
                         value: 'fixed',
-                        label: Text('固定价'),
-                        icon: Icon(Icons.attach_money, size: 18),
+                        label: Text(context.l10n.personalServicePricingFixed),
+                        icon: const Icon(Icons.attach_money, size: 18),
                       ),
                       ButtonSegment<String>(
                         value: 'hourly',
-                        label: Text('时薪'),
-                        icon: Icon(Icons.schedule, size: 18),
+                        label: Text(context.l10n.personalServicePricingHourly),
+                        icon: const Icon(Icons.schedule, size: 18),
                       ),
                       ButtonSegment<String>(
                         value: 'negotiable',
-                        label: Text('面议'),
-                        icon: Icon(Icons.handshake_outlined, size: 18),
+                        label: Text(context.l10n.personalServicePricingNegotiable),
+                        icon: const Icon(Icons.handshake_outlined, size: 18),
                       ),
                     ],
                     selected: {_pricingType},
@@ -246,7 +246,7 @@ class _FormContentState extends State<_FormContent> {
                 // ── Price (hidden when negotiable) ──
                 if (_pricingType != 'negotiable') ...[
                   _SectionLabel(
-                    label: _pricingType == 'hourly' ? '时薪价格' : '服务价格',
+                    label: context.l10n.personalServicePrice,
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   TextFormField(
@@ -282,7 +282,7 @@ class _FormContentState extends State<_FormContent> {
                 ],
 
                 // ── Images placeholder ──
-                _SectionLabel(label: '服务图片'),
+                _SectionLabel(label: context.l10n.personalServiceImages),
                 const SizedBox(height: AppSpacing.sm),
                 _ImagePlaceholder(isDark: isDark),
 
@@ -308,7 +308,7 @@ class _FormContentState extends State<_FormContent> {
                                 ),
                               )
                             : Text(
-                                _isEditMode ? '保存修改' : '发布服务',
+                                _isEditMode ? context.l10n.commonSave : context.l10n.publishService,
                                 style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
