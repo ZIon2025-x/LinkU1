@@ -11,8 +11,12 @@ class ProfileScorer(BaseScorer):
 
     def score(self, user, tasks: List, context: Dict[str, Any]) -> Dict[int, ScoredTask]:
         db = context["db"]
-        from app.models import UserProfilePreference
-        pref = db.query(UserProfilePreference).filter_by(user_id=user.id).first()
+        # Prefer engine-preloaded preferences from context
+        if "user_preferences" in context:
+            pref = context["user_preferences"]
+        else:
+            from app.models import UserProfilePreference
+            pref = db.query(UserProfilePreference).filter_by(user_id=user.id).first()
         if not pref:
             return {}
         results = {}

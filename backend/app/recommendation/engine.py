@@ -52,20 +52,47 @@ class HybridEngine:
         ]
 
     def _enrich_user_context(self, user, context: Dict) -> None:
-        """Pre-compute data needed by scorers for dynamic weight calculation."""
+        """Pre-compute shared data to avoid duplicate queries across scorers.
+
+        Loads into context:
+            _interaction_count: int — for DemandScorer dynamic weight
+            user_preferences: UserProfilePreference — shared by Content/Location/Profile scorers
+            user_task_history: List[TaskHistory] — shared by Content/Collab scorers
+        """
         if not user:
             return
         db = context.get("db")
         if not db:
             return
+
+        # 1. Interaction count (for DemandScorer dynamic weight)
         try:
             from app.models import UserTaskInteraction
             count = db.query(UserTaskInteraction).filter(
                 UserTaskInteraction.user_id == user.id
             ).count()
             context["_interaction_count"] = count
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Failed to load interaction count: {e}")
+
+        # 2. UserProfilePreference (shared by Content, Location, Profile scorers)
+        try:
+            from app.models import UserProfilePreference
+            context["user_preferences"] = db.query(UserProfilePreference).filter(
+                UserProfilePreference.user_id == user.id
+            ).first()
+        except Exception as e:
+            logger.debug(f"Failed to load user preferences: {e}")
+
+        # 3. TaskHistory (shared by Content, Collaborative scorers)
+        try:
+            from app.models import TaskHistory
+            from sqlalchemy import desc
+            context["user_task_history"] = db.query(TaskHistory).filter(
+                TaskHistory.user_id == user.id
+            ).order_by(desc(TaskHistory.timestamp)).limit(50).all()
+        except Exception as e:
+            logger.debug(f"Failed to load task history: {e}")
 
     def _get_candidates(self, user, filters: Dict, context: Dict) -> List:
         db = context.get("db")
@@ -73,7 +100,18 @@ class HybridEngine:
             return []
         from app.models import Task
         from app.crud import get_utc_time
-        query = db.query(Task).filter(
+        from sqlalchemy.orm import load_only
+        query = db.query(Task).options(
+            load_only(
+                Task.id, Task.task_type, Task.status, Task.is_visible,
+                Task.location, Task.reward, Task.base_reward, Task.agreed_reward,
+                Task.reward_to_be_quoted, Task.deadline, Task.created_at,
+                Task.poster_id, Task.taker_id, Task.title, Task.title_en, Task.title_zh,
+                Task.description, Task.description_en, Task.description_zh,
+                Task.latitude, Task.longitude, Task.is_flexible,
+                Task.task_level, Task.images,
+            )
+        ).filter(
             Task.status == "open", Task.is_visible == True, Task.deadline > get_utc_time()
         )
         # Exclude user's own tasks

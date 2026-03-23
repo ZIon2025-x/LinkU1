@@ -11,7 +11,7 @@ Dynamic weight: 0.15 for new users, 0.10 for established users.
 
 import logging
 from datetime import timedelta
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Set
 
 from ..base_scorer import BaseScorer, ScoredTask
 from ..utils import is_new_user
@@ -42,22 +42,28 @@ class NewnessScorer(BaseScorer):
         now = get_utc_time()
         recent_cutoff = now - timedelta(hours=24)
 
-        # Cache poster new-user status to avoid N+1 queries
-        poster_new_cache: Dict[str, bool] = {}
+        # Filter to recent tasks first
+        recent_tasks = [t for t in tasks if t.created_at and t.created_at >= recent_cutoff]
+        if not recent_tasks:
+            return {}
+
+        # Batch-load all unique poster Users in ONE query (eliminates N+1)
+        poster_ids: Set[str] = {t.poster_id for t in recent_tasks if t.poster_id}
+        if poster_ids:
+            posters = db.query(UserModel).filter(UserModel.id.in_(list(poster_ids))).all()
+            poster_map = {p.id: p for p in posters}
+        else:
+            poster_map = {}
 
         results: Dict[int, ScoredTask] = {}
 
-        for task in tasks:
-            if not task.created_at or task.created_at < recent_cutoff:
-                continue
-
+        for task in recent_tasks:
             hours_old = (now - task.created_at).total_seconds() / 3600
             time_score = max(0.0, 1.0 - (hours_old / 24))
 
-            # Check if poster is a new user
-            is_poster_new = self._is_new_user_task(
-                db, task, poster_new_cache
-            )
+            # Check if poster is a new user (from pre-loaded map)
+            poster = poster_map.get(task.poster_id)
+            is_poster_new = is_new_user(poster) if poster else False
 
             if is_poster_new:
                 final_score = min(1.0, time_score + 0.3)
@@ -69,34 +75,3 @@ class NewnessScorer(BaseScorer):
             results[task.id] = ScoredTask(score=final_score, reason=reason)
 
         return results
-
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def _is_new_user_task(
-        db, task, cache: Dict[str, bool]
-    ) -> bool:
-        """Check if a task was posted by a new user (registered <= 7 days)
-        and the task itself was created within 24 hours."""
-        from app.models import User as UserModel
-
-        if not task.poster_id or not task.created_at:
-            return False
-
-        # Note: 24h recency check already done by caller (score() filters
-        # tasks with created_at < recent_cutoff before calling this method)
-
-        poster_id = task.poster_id
-        if poster_id in cache:
-            return cache[poster_id]
-
-        poster = db.query(UserModel).filter(UserModel.id == poster_id).first()
-        if not poster:
-            cache[poster_id] = False
-            return False
-
-        result = is_new_user(poster)
-        cache[poster_id] = result
-        return result

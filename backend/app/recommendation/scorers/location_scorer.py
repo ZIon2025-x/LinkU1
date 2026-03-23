@@ -40,7 +40,7 @@ class LocationScorer(BaseScorer):
 
         # Gather the user's preferred locations for city-level matching
         frequent_locations = self._get_user_frequent_locations(db, user.id)
-        preferred_cities = self._get_user_preferred_cities(db, user)
+        preferred_cities = self._get_user_preferred_cities(db, user, context.get("user_preferences"))
 
         # Build a set of all location keywords for quick city matching
         city_keywords: List[str] = []
@@ -179,17 +179,20 @@ class LocationScorer(BaseScorer):
             return []
 
     @staticmethod
-    def _get_user_preferred_cities(db, user) -> List[str]:
+    def _get_user_preferred_cities(db, user, preloaded_preferences=None) -> List[str]:
         """Get user's preferred cities from residence + explicit preferences."""
         cities: List[str] = []
 
         if user.residence_city:
             cities.append(user.residence_city)
 
-        from app.models import UserProfilePreference
-        preferences = db.query(UserProfilePreference).filter(
-            UserProfilePreference.user_id == user.id
-        ).first()
+        # Use preloaded preferences if available, otherwise query
+        preferences = preloaded_preferences
+        if preferences is None:
+            from app.models import UserProfilePreference
+            preferences = db.query(UserProfilePreference).filter(
+                UserProfilePreference.user_id == user.id
+            ).first()
 
         if preferences and preferences.locations:
             try:

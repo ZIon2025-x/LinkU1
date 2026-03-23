@@ -1,10 +1,15 @@
 """Collaborative filtering recommendation scorer.
 
-Finds similar users via Jaccard similarity on task interaction overlap,
+Finds similar users via weighted cosine similarity on task interactions,
 then recommends tasks those similar users liked (accepted/completed).
+
+Weights: completed=1.0, accepted=0.8, view(>30s)=0.4, view=0.2, click=0.3.
+Time decay: interactions older than 30 days are halved.
 """
 
 import logging
+import math
+from datetime import timedelta
 from typing import Dict, List, Any, Tuple, Set
 
 from sqlalchemy import desc, func
@@ -12,6 +17,20 @@ from sqlalchemy import desc, func
 from ..base_scorer import BaseScorer, ScoredTask
 
 logger = logging.getLogger(__name__)
+
+# Action weights for interaction strength (0.0 = ignore, negative actions excluded)
+_ACTION_WEIGHTS = {
+    "completed": 1.0,
+    "auto_confirmed_3days": 0.9,
+    "accepted": 0.8,
+    "applied": 0.6,
+    "click": 0.3,
+    "view": 0.2,
+    "cancelled": 0.0,
+    "rejected": 0.0,
+    "expired": 0.0,
+}
+_DEFAULT_ACTION_WEIGHT = 0.1
 
 
 class CollaborativeScorer(BaseScorer):
@@ -33,8 +52,12 @@ class CollaborativeScorer(BaseScorer):
         """
         db = context["db"]
 
-        # 1. Get user's interaction set
-        user_interactions = self._get_user_interactions(db, user.id)
+        # 1. Get user's interaction set (prefer preloaded from context)
+        preloaded_history = context.get("user_task_history")
+        if preloaded_history is not None:
+            user_interactions = {h.task_id for h in preloaded_history}
+        else:
+            user_interactions = self._get_user_interactions(db, user.id)
 
         if len(user_interactions) < self.MIN_INTERACTIONS:
             return {}
@@ -65,7 +88,12 @@ class CollaborativeScorer(BaseScorer):
                     if task_id not in user_interactions:
                         recommended_scores[task_id] = recommended_scores.get(task_id, 0.0) + similarity
 
-        # 4. Build results — only for tasks in the candidate list
+        # 4. Normalize scores to [0, 1] by dividing by sum of similarities
+        total_similarity = sum(sim for _, sim in similar_users) or 1.0
+        for task_id in recommended_scores:
+            recommended_scores[task_id] /= total_similarity
+
+        # 5. Build results — only for tasks in the candidate list
         results: Dict[int, ScoredTask] = {}
 
         for task in tasks:
@@ -94,18 +122,21 @@ class CollaborativeScorer(BaseScorer):
     def _find_similar_users(
         db, user_id: str, user_interactions: Set[int], k: int = 10
     ) -> List[Tuple[str, float]]:
-        """Find top-k similar users by Jaccard similarity on interactions.
+        """Find top-k similar users by weighted cosine similarity.
 
-        Uses a single batch query to load all candidate users' interactions
-        instead of N+1 per-user queries.
+        Uses action weights (completed > accepted > click > view) and time
+        decay (>30 days halved). Single batch query for all candidates.
         """
         if not user_interactions or len(user_interactions) < 2:
             return []
 
         from app.models import TaskHistory
+        from app.crud import get_utc_time
+
+        now = get_utc_time()
+        decay_cutoff = now - timedelta(days=30)
 
         # Find candidate user IDs who interacted with the same tasks (max 100)
-        # Uses TaskHistory (same source as _get_user_interactions) for consistency
         active_user_ids = db.query(
             func.distinct(TaskHistory.user_id)
         ).filter(
@@ -118,39 +149,57 @@ class CollaborativeScorer(BaseScorer):
 
         candidate_ids = [uid for (uid,) in active_user_ids]
 
-        # Batch-load all interactions for candidate users in ONE query
+        # Batch-load interactions with action and timestamp for weighting
         all_history = db.query(
-            TaskHistory.user_id, TaskHistory.task_id
+            TaskHistory.user_id, TaskHistory.task_id,
+            TaskHistory.action, TaskHistory.timestamp
         ).filter(
             TaskHistory.user_id.in_(candidate_ids)
         ).order_by(desc(TaskHistory.timestamp)).all()
 
-        # Group by user_id (limit to 50 per user, matching _get_user_interactions)
-        user_interaction_map: Dict[str, Set[int]] = {}
+        # Build weighted interaction vectors: {user_id: {task_id: weight}}
+        user_vectors: Dict[str, Dict[int, float]] = {}
         user_count: Dict[str, int] = {}
-        for uid, tid in all_history:
+        for uid, tid, action, ts in all_history:
             count = user_count.get(uid, 0)
             if count >= 50:
                 continue
             user_count[uid] = count + 1
-            if uid not in user_interaction_map:
-                user_interaction_map[uid] = set()
-            user_interaction_map[uid].add(tid)
+
+            action_weight = _ACTION_WEIGHTS.get(action, _DEFAULT_ACTION_WEIGHT)
+            if action_weight <= 0:
+                continue  # Skip negative signals
+            # Time decay: halve weight for interactions older than 30 days
+            if ts and hasattr(ts, 'tzinfo') and ts < decay_cutoff:
+                action_weight *= 0.5
+
+            if uid not in user_vectors:
+                user_vectors[uid] = {}
+            # Keep max weight per task (e.g., completed > viewed)
+            user_vectors[uid][tid] = max(user_vectors[uid].get(tid, 0), action_weight)
+
+        # Build user's own weighted vector (uniform weight for simplicity)
+        user_vec = {tid: 1.0 for tid in user_interactions}
 
         similar_users: List[Tuple[str, float]] = []
         min_similarity = 0.1 if len(user_interactions) >= 5 else 0.05
 
         for other_user_id in candidate_ids:
-            other_interactions = user_interaction_map.get(other_user_id, set())
-            if len(other_interactions) < 2:
+            other_vec = user_vectors.get(other_user_id, {})
+            if len(other_vec) < 2:
                 continue
 
-            # Jaccard similarity
-            intersection = len(user_interactions & other_interactions)
-            union = len(user_interactions | other_interactions)
+            # Cosine similarity on shared task dimensions
+            shared_tasks = user_interactions & set(other_vec.keys())
+            if not shared_tasks:
+                continue
 
-            if union > 0:
-                similarity = intersection / union
+            dot_product = sum(user_vec.get(t, 0) * other_vec.get(t, 0) for t in shared_tasks)
+            norm_a = math.sqrt(sum(v ** 2 for v in user_vec.values()))
+            norm_b = math.sqrt(sum(v ** 2 for v in other_vec.values()))
+
+            if norm_a > 0 and norm_b > 0:
+                similarity = dot_product / (norm_a * norm_b)
                 if similarity > min_similarity:
                     similar_users.append((other_user_id, similarity))
 

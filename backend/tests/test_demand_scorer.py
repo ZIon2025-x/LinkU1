@@ -38,13 +38,29 @@ def test_no_demand_returns_empty():
     results = scorer.score(MagicMock(id="u1"), [_make_task(1)], {"db": db})
     assert len(results) == 0
 
-def test_smart_weight_new_user():
+def test_smart_weight_no_interaction_data():
     scorer = DemandScorer()
     class _User:
         id = "u1"
     # No _interaction_count in context → returns default weight
     weight = scorer.get_weight(_User(), context={})
     assert weight == scorer.default_weight
+
+def test_smart_weight_new_user():
+    scorer = DemandScorer()
+    class _User:
+        id = "u1"
+    # New user with < 10 interactions → higher weight (0.20)
+    weight = scorer.get_weight(_User(), context={"_interaction_count": 5})
+    assert weight == 0.20
+
+def test_smart_weight_experienced_user():
+    scorer = DemandScorer()
+    class _User:
+        id = "u1"
+    # Experienced user with 50+ interactions → lower weight (0.05)
+    weight = scorer.get_weight(_User(), context={"_interaction_count": 100})
+    assert weight == 0.05
 
 def test_inferred_skills_match():
     scorer = DemandScorer()

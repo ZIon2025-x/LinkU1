@@ -39,8 +39,10 @@ class ContentScorer(BaseScorer):
         # Use pre-built vector if available, otherwise build one
         user_vector = context.get("user_vector")
         if user_vector is None:
-            preferences = get_user_preferences(db, user.id)
-            history = get_user_task_history(db, user.id)
+            # Prefer engine-preloaded data from context, fall back to own queries
+            # Use `in` check (not truthiness) — None/[] are valid preloaded results
+            preferences = context["user_preferences"] if "user_preferences" in context else get_user_preferences(db, user.id)
+            history = context["user_task_history"] if "user_task_history" in context else get_user_task_history(db, user.id)
             view_history = get_user_view_history(db, user.id)
             search_keywords = get_user_search_keywords(db, user.id)
             skipped_tasks = get_user_skipped_tasks(db, user.id)

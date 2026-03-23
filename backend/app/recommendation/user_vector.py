@@ -30,15 +30,15 @@ def get_user_task_history(db: Session, user_id: str) -> List:
     ).order_by(desc(TaskHistory.timestamp)).limit(50).all()
 
 
-def get_user_view_history(db: Session, user_id: str) -> List[Dict]:
-    """Load user's view interaction history with caching.
+def _load_all_interactions(db: Session, user_id: str) -> Dict[str, List]:
+    """Load ALL user interactions in ONE query and split by type.
 
-    Returns list of dicts with keys: task_id, duration_seconds, interaction_time.
-    Results are cached in Redis for 5 minutes.
+    Returns dict with keys: "view", "click", "skip", each a list of ORM objects.
+    Cached in Redis for 5 minutes.
     """
     from app.redis_cache import redis_cache
 
-    cache_key = f"user_view_history:{user_id}"
+    cache_key = f"user_interactions_all:{user_id}"
     try:
         cached = redis_cache.get(cache_key)
         if cached:
@@ -46,66 +46,58 @@ def get_user_view_history(db: Session, user_id: str) -> List[Dict]:
                 cached = cached.decode('utf-8')
             return json.loads(cached)
     except Exception as e:
-        logger.debug(f"读取浏览历史缓存失败: {e}")
+        logger.debug(f"读取交互缓存失败: {e}")
 
     try:
         from app.models import UserTaskInteraction
         interactions = db.query(UserTaskInteraction).filter(
             UserTaskInteraction.user_id == user_id,
-            UserTaskInteraction.interaction_type == "view"
-        ).order_by(desc(UserTaskInteraction.interaction_time)).limit(100).all()
+            UserTaskInteraction.interaction_type.in_(["view", "click", "skip"])
+        ).order_by(desc(UserTaskInteraction.interaction_time)).limit(200).all()
 
-        result = [
-            {
-                "task_id": i.task_id,
-                "duration_seconds": i.duration_seconds or 0,
-                "interaction_time": i.interaction_time.isoformat() if i.interaction_time else None
-            }
-            for i in interactions
-        ]
+        grouped: Dict[str, List] = {"view": [], "click": [], "skip": []}
+        for i in interactions:
+            itype = i.interaction_type
+            if itype in grouped:
+                grouped[itype].append({
+                    "task_id": i.task_id,
+                    "duration_seconds": i.duration_seconds or 0,
+                    "interaction_time": i.interaction_time.isoformat() if i.interaction_time else None,
+                    "metadata": i.interaction_metadata if isinstance(i.interaction_metadata, dict) else {},
+                })
 
-        # Cache for 5 minutes
         try:
-            redis_cache.setex(cache_key, 300, json.dumps(result, default=str))
+            redis_cache.setex(cache_key, 300, json.dumps(grouped, default=str))
         except Exception as e:
-            logger.debug(f"缓存浏览历史失败: {e}")
+            logger.debug(f"缓存交互数据失败: {e}")
 
-        return result
+        return grouped
     except Exception as e:
-        logger.error(f"获取用户浏览历史失败: {e}")
-        return []
+        logger.error(f"获取用户交互数据失败: {e}")
+        return {"view": [], "click": [], "skip": []}
+
+
+def get_user_view_history(db: Session, user_id: str) -> List[Dict]:
+    """Load user's view interaction history (from batch-loaded interactions)."""
+    grouped = _load_all_interactions(db, user_id)
+    return grouped.get("view", [])[:100]
 
 
 def get_user_search_keywords(db: Session, user_id: str) -> List[str]:
-    """Extract search keywords from user's view/click interactions.
-
-    Looks for 'search_keyword' in interaction metadata.
-    Returns deduplicated list, max 10 keywords.
-    """
-    from app.models import UserTaskInteraction
-    interactions = db.query(UserTaskInteraction).filter(
-        UserTaskInteraction.user_id == user_id,
-        UserTaskInteraction.interaction_type.in_(["view", "click"])
-    ).order_by(desc(UserTaskInteraction.interaction_time)).limit(50).all()
-
+    """Extract search keywords from user's view/click interactions."""
+    grouped = _load_all_interactions(db, user_id)
     keywords = []
-    for i in interactions:
-        if i.interaction_metadata and isinstance(i.interaction_metadata, dict):
-            if "search_keyword" in i.interaction_metadata:
-                keywords.append(i.interaction_metadata["search_keyword"])
-
+    for i in (grouped.get("view", []) + grouped.get("click", []))[:50]:
+        meta = i.get("metadata", {})
+        if isinstance(meta, dict) and "search_keyword" in meta:
+            keywords.append(meta["search_keyword"])
     return list(set(keywords))[:10]
 
 
 def get_user_skipped_tasks(db: Session, user_id: str) -> List[int]:
     """Get task IDs the user has skipped (negative feedback)."""
-    from app.models import UserTaskInteraction
-    skipped = db.query(UserTaskInteraction).filter(
-        UserTaskInteraction.user_id == user_id,
-        UserTaskInteraction.interaction_type == "skip"
-    ).limit(50).all()
-
-    return [s.task_id for s in skipped]
+    grouped = _load_all_interactions(db, user_id)
+    return [s["task_id"] for s in grouped.get("skip", [])][:50]
 
 
 def build_user_preference_vector(
