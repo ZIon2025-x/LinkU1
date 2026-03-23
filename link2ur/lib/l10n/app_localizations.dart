@@ -19609,6 +19609,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Offer your skills'**
   String get publishServiceDesc;
+
+  /// No description provided for @homeFollowEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow users to see their updates here'**
+  String get homeFollowEmpty;
+
+  /// No description provided for @homeActivitiesEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No events'**
+  String get homeActivitiesEmpty;
+
+  /// No description provided for @homeTickerLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Updates'**
+  String get homeTickerLabel;
+
+  /// No description provided for @homeActivityFree.
+  ///
+  /// In en, this message translates to:
+  /// **'Free'**
+  String get homeActivityFree;
+
+  /// No description provided for @discoveryFeedTypeTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Task'**
+  String get discoveryFeedTypeTask;
+
+  /// No description provided for @discoveryFeedTypeActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity'**
+  String get discoveryFeedTypeActivity;
+
+  /// No description provided for @discoveryFeedTypeCompletion.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get discoveryFeedTypeCompletion;
+
+  /// No description provided for @homeStoryPhotography.
+  ///
+  /// In en, this message translates to:
+  /// **'Photography'**
+  String get homeStoryPhotography;
+
+  /// No description provided for @homeStoryCoding.
+  ///
+  /// In en, this message translates to:
+  /// **'Coding'**
+  String get homeStoryCoding;
+
+  /// No description provided for @homeStoryMusic.
+  ///
+  /// In en, this message translates to:
+  /// **'Music'**
+  String get homeStoryMusic;
+
+  /// No description provided for @homeStoryWriting.
+  ///
+  /// In en, this message translates to:
+  /// **'Writing'**
+  String get homeStoryWriting;
+
+  /// No description provided for @homeExploreNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Explore Now →'**
+  String get homeExploreNow;
 }
 
 class _AppLocalizationsDelegate

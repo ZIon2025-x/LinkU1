@@ -10645,4 +10645,40 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get publishServiceDesc => 'Offer your skills';
+
+  @override
+  String get homeFollowEmpty => 'Follow users to see their updates here';
+
+  @override
+  String get homeActivitiesEmpty => 'No events';
+
+  @override
+  String get homeTickerLabel => 'Updates';
+
+  @override
+  String get homeActivityFree => 'Free';
+
+  @override
+  String get discoveryFeedTypeTask => 'Task';
+
+  @override
+  String get discoveryFeedTypeActivity => 'Activity';
+
+  @override
+  String get discoveryFeedTypeCompletion => 'Completed';
+
+  @override
+  String get homeStoryPhotography => 'Photography';
+
+  @override
+  String get homeStoryCoding => 'Coding';
+
+  @override
+  String get homeStoryMusic => 'Music';
+
+  @override
+  String get homeStoryWriting => 'Writing';
+
+  @override
+  String get homeExploreNow => 'Explore Now →';
 }

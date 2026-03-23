@@ -4673,5 +4673,17 @@
   "personalServiceEmpty": "還沒有服務",
   "personalServiceEmptyHint": "發佈你的第一個服務吧",
   "publishService": "發佈服務",
-  "publishServiceDesc": "展示你的技能"
+  "publishServiceDesc": "展示你的技能",
+  "homeFollowEmpty": "關注用戶後這裡將顯示他們的動態",
+  "homeActivitiesEmpty": "暫無活動",
+  "homeTickerLabel": "動態",
+  "homeActivityFree": "免費",
+  "discoveryFeedTypeTask": "任務",
+  "discoveryFeedTypeActivity": "活動",
+  "discoveryFeedTypeCompletion": "完成",
+  "homeStoryPhotography": "攝影",
+  "homeStoryCoding": "編程",
+  "homeStoryMusic": "音樂",
+  "homeStoryWriting": "文案",
+  "homeExploreNow": "立即體驗 →"
 }

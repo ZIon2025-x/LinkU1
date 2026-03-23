@@ -10219,6 +10219,42 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get publishServiceDesc => '展示你的技能';
+
+  @override
+  String get homeFollowEmpty => '关注用户后这里将显示他们的动态';
+
+  @override
+  String get homeActivitiesEmpty => '暂无活动';
+
+  @override
+  String get homeTickerLabel => '动态';
+
+  @override
+  String get homeActivityFree => '免费';
+
+  @override
+  String get discoveryFeedTypeTask => '任务';
+
+  @override
+  String get discoveryFeedTypeActivity => '活动';
+
+  @override
+  String get discoveryFeedTypeCompletion => '完成';
+
+  @override
+  String get homeStoryPhotography => '摄影';
+
+  @override
+  String get homeStoryCoding => '编程';
+
+  @override
+  String get homeStoryMusic => '音乐';
+
+  @override
+  String get homeStoryWriting => '文案';
+
+  @override
+  String get homeExploreNow => '立即体验 →';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -20392,4 +20428,40 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get publishServiceDesc => '展示你的技能';
+
+  @override
+  String get homeFollowEmpty => '關注用戶後這裡將顯示他們的動態';
+
+  @override
+  String get homeActivitiesEmpty => '暫無活動';
+
+  @override
+  String get homeTickerLabel => '動態';
+
+  @override
+  String get homeActivityFree => '免費';
+
+  @override
+  String get discoveryFeedTypeTask => '任務';
+
+  @override
+  String get discoveryFeedTypeActivity => '活動';
+
+  @override
+  String get discoveryFeedTypeCompletion => '完成';
+
+  @override
+  String get homeStoryPhotography => '攝影';
+
+  @override
+  String get homeStoryCoding => '編程';
+
+  @override
+  String get homeStoryMusic => '音樂';
+
+  @override
+  String get homeStoryWriting => '文案';
+
+  @override
+  String get homeExploreNow => '立即體驗 →';
 }

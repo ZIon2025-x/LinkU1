@@ -4850,5 +4850,17 @@
   "personalServiceEmpty": "No services yet",
   "personalServiceEmptyHint": "Publish your first service to get started",
   "publishService": "Publish Service",
-  "publishServiceDesc": "Offer your skills"
+  "publishServiceDesc": "Offer your skills",
+  "homeFollowEmpty": "Follow users to see their updates here",
+  "homeActivitiesEmpty": "No events",
+  "homeTickerLabel": "Updates",
+  "homeActivityFree": "Free",
+  "discoveryFeedTypeTask": "Task",
+  "discoveryFeedTypeActivity": "Activity",
+  "discoveryFeedTypeCompletion": "Completed",
+  "homeStoryPhotography": "Photography",
+  "homeStoryCoding": "Coding",
+  "homeStoryMusic": "Music",
+  "homeStoryWriting": "Writing",
+  "homeExploreNow": "Explore Now →"
 }

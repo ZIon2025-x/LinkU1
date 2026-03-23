@@ -1180,7 +1180,7 @@ class _DiscoveryTaskCard extends StatelessWidget {
                         if (item.price != null)
                           _buildTag(
                             item.rewardToBeQuoted == true
-                                ? '待报价'
+                                ? context.l10n.taskRewardToBeQuoted
                                 : '£${item.price!.toStringAsFixed(0)}',
                             isDark
                                 ? Colors.white.withValues(alpha: 0.12)
@@ -1379,7 +1379,7 @@ class _DiscoveryActivityCard extends StatelessWidget {
                           )
                         else
                           Text(
-                            '免费',
+                            context.l10n.homeActivityFree,
                             style: TextStyle(
                               fontSize: 12,
                               color: isDark ? const Color(0xFF66BB6A) : const Color(0xFF4CAF50),

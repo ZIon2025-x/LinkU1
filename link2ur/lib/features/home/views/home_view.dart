@@ -36,7 +36,6 @@ import 'package:geolocator/geolocator.dart';
 import '../../../core/widgets/content_constraint.dart';
 import '../../../core/widgets/decorative_background.dart';
 import '../../../core/router/app_router.dart';
-import '../../../data/models/activity.dart';
 import '../../../data/models/task.dart';
 import '../../../data/models/task_expert.dart';
 import '../../../data/repositories/task_expert_repository.dart';
@@ -516,7 +515,7 @@ class _FollowTab extends StatelessWidget {
                       color: Theme.of(context).colorScheme.outline),
                   const SizedBox(height: 16),
                   Text(
-                    '关注用户后这里将显示他们的动态',
+                    context.l10n.homeFollowEmpty,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           color: Theme.of(context)
                               .colorScheme
@@ -607,7 +606,7 @@ class _ActivitiesTab extends StatelessWidget {
                       size: 64,
                       color: Theme.of(context).colorScheme.outline),
                   const SizedBox(height: 16),
-                  Text('暂无活动',
+                  Text(context.l10n.homeActivitiesEmpty,
                       style: Theme.of(context).textTheme.bodyLarge),
                 ],
               ),
