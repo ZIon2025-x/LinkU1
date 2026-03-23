@@ -473,6 +473,10 @@ class ApiEndpoints {
   // 后端: discovery_routes.py (prefix: /api/discovery)
   static const String discoveryFeed = '/api/discovery/feed';
 
+  // ==================== Follow system ====================
+  static const String followFeed = '/api/follow/feed';
+  static const String feedTicker = '/api/feed/ticker';
+
   // ==================== 论坛关联搜索 ====================
   static const String forumSearchLinkable = '/api/forum/search-linkable';
   static const String forumLinkableForUser = '/api/forum/linkable-for-user';
