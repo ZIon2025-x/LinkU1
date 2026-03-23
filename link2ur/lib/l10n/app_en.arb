@@ -4842,7 +4842,7 @@
   "personalServiceImages": "Images",
   "personalServicePricingFixed": "Fixed",
   "personalServicePricingHourly": "Hourly",
-  "personalServicePricingNegotiable": "Negotiable",
+  "personalServicePricingNegotiable": "Negotiate",
   "personalServiceCreated": "Service published!",
   "personalServiceUpdated": "Service updated",
   "personalServiceDeleted": "Service deleted",

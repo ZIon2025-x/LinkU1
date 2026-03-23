@@ -4750,7 +4750,7 @@
   "personalServiceImages": "图片",
   "personalServicePricingFixed": "固定价",
   "personalServicePricingHourly": "时薪",
-  "personalServicePricingNegotiable": "面议",
+  "personalServicePricingNegotiable": "协商定价",
   "personalServiceCreated": "服务发布成功！",
   "personalServiceUpdated": "服务已更新",
   "personalServiceDeleted": "服务已删除",
