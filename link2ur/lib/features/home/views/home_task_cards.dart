@@ -223,15 +223,16 @@ class _NearbyTabState extends State<_NearbyTab> {
                 child: ElevatedButton(
                   onPressed: () {
                     final address = pickedAddress;
+                    final lat = pickedLat;
+                    final lng = pickedLng;
+                    Navigator.pop(sheetContext);
                     if (address != null && address.isNotEmpty) {
                       setState(() => _city = address);
                       context.read<HomeBloc>().add(HomeLocationCityUpdated(address));
-                      // Reload nearby data with new coordinates
-                      if (pickedLat != null && pickedLng != null) {
-                        _loadWithCoordinates(pickedLat!, pickedLng!);
+                      if (lat != null && lng != null) {
+                        _loadWithCoordinates(lat, lng);
                       }
                     }
-                    Navigator.pop(sheetContext);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
@@ -648,26 +649,63 @@ class _NearbyWaterfallCard extends StatelessWidget {
     return tiers[title.hashCode.abs() % tiers.length];
   }
 
-  // Type-specific gradients (aligned with discovery_cards)
+  // Type-specific gradients — covers new format (lowercase) + old format (display name)
   static const _typeGradients = {
+    // New format (AppConstants.taskTypes)
+    'delivery': [Color(0xFFFCB69F), Color(0xFFFFECD2)],
+    'shopping': [Color(0xFFA8EDEA), Color(0xFFFED6E3)],
+    'tutoring': [Color(0xFFE0C3FC), Color(0xFF8EC5FC)],
+    'translation': [Color(0xFFFDDB92), Color(0xFFD1FDFF)],
     'design': [Color(0xFFA8EDEA), Color(0xFFFED6E3)],
-    'photography': [Color(0xFFFFECD2), Color(0xFFFCB69F)],
-    'coding': [Color(0xFFE0C3FC), Color(0xFF8EC5FC)],
-    'music': [Color(0xFFF5F7FA), Color(0xFFC3CFE2)],
+    'programming': [Color(0xFFE0C3FC), Color(0xFF8EC5FC)],
     'writing': [Color(0xFFFDDB92), Color(0xFFD1FDFF)],
-    'tutoring': [Color(0xFFF5F7FA), Color(0xFFC3CFE2)],
-    'life': [Color(0xFF667EEA), Color(0xFF764BA2)],
+    'photography': [Color(0xFFFFECD2), Color(0xFFFCB69F)],
+    'moving': [Color(0xFF667EEA), Color(0xFF764BA2)],
+    'cleaning': [Color(0xFF11998E), Color(0xFF38EF7D)],
+    'repair': [Color(0xFFF5F7FA), Color(0xFFC3CFE2)],
+    'pet_care': [Color(0xFFFBC2EB), Color(0xFFA6C1EE)],
+    'errand': [Color(0xFFFCB69F), Color(0xFFFFECD2)],
+    'other': [Color(0xFFE8E8E8), Color(0xFFD0D0D0)],
+    // Old format (backend display names)
+    'Housekeeping': [Color(0xFF11998E), Color(0xFF38EF7D)],
+    'Campus Life': [Color(0xFFE0C3FC), Color(0xFF8EC5FC)],
+    'Second-hand & Rental': [Color(0xFFA8EDEA), Color(0xFFFED6E3)],
+    'Errand Running': [Color(0xFFFCB69F), Color(0xFFFFECD2)],
+    'Skill Service': [Color(0xFFFDDB92), Color(0xFFD1FDFF)],
+    'Social Help': [Color(0xFFFBC2EB), Color(0xFFA6C1EE)],
+    'Transportation': [Color(0xFF667EEA), Color(0xFF764BA2)],
+    'Pet Care': [Color(0xFFFBC2EB), Color(0xFFA6C1EE)],
+    'Life Convenience': [Color(0xFF11998E), Color(0xFF38EF7D)],
+    'Other': [Color(0xFFE8E8E8), Color(0xFFD0D0D0)],
+    // Nearby services
     'service': [Color(0xFF11998E), Color(0xFF38EF7D)],
   };
 
   static const _typeEmojis = {
-    'design': '🎨',
-    'photography': '📷',
-    'coding': '💻',
-    'music': '🎵',
-    'writing': '📝',
+    'delivery': '🏃',
+    'shopping': '🛍️',
     'tutoring': '📚',
-    'life': '🏠',
+    'translation': '🌐',
+    'design': '🎨',
+    'programming': '💻',
+    'writing': '📝',
+    'photography': '📷',
+    'moving': '🚛',
+    'cleaning': '🧹',
+    'repair': '🔧',
+    'pet_care': '🐾',
+    'errand': '🏃',
+    'other': '📋',
+    'Housekeeping': '🏠',
+    'Campus Life': '🎓',
+    'Second-hand & Rental': '🛍️',
+    'Errand Running': '🏃',
+    'Skill Service': '🛠️',
+    'Social Help': '🤝',
+    'Transportation': '🚗',
+    'Pet Care': '🐾',
+    'Life Convenience': '🛒',
+    'Other': '📋',
     'service': '🔧',
   };
 
