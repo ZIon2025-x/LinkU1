@@ -137,6 +137,9 @@ class DiscoveryFeedItem extends Equatable {
   String? displayDescription(Locale locale) =>
       localizedStringOrNull(descriptionZh, descriptionEn, description, locale);
 
+  /// 板块图标（仅帖子有 extra_data.category_icon，emoji 字符串）
+  String? get categoryIcon => extraData?['category_icon'] as String?;
+
   /// 板块名称（仅帖子有 extra_data.category_name_zh / _en / category_name）
   String? displayCategoryName(Locale locale) {
     final extra = extraData;

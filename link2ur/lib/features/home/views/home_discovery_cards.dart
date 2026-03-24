@@ -46,20 +46,22 @@ class _PostCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (item.hasImages)
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final w = constraints.maxWidth;
-                  final h = w * 4 / 3;
-                  return ClipRect(
-                    child: AsyncImageView(
-                      imageUrl: item.firstImage!,
-                      width: w,
-                      height: h,
-                      memCacheWidth: (w * MediaQuery.devicePixelRatioOf(context)).round(),
-                    ),
-                  );
-                },
-              ),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final w = constraints.maxWidth;
+                    final h = w * 4 / 3;
+                    return ClipRect(
+                      child: AsyncImageView(
+                        imageUrl: item.firstImage!,
+                        width: w,
+                        height: h,
+                        memCacheWidth: (w * MediaQuery.devicePixelRatioOf(context)).round(),
+                      ),
+                    );
+                  },
+                )
+              else
+                _PostCategoryPlaceholder(icon: item.categoryIcon),
             Padding(
               padding: const EdgeInsets.all(10),
               child: Column(
@@ -157,6 +159,38 @@ class _PostCard extends StatelessWidget {
           ],
         ),
       ),
+      ),
+    );
+  }
+}
+
+/// 帖子无图时的板块 icon 占位
+class _PostCategoryPlaceholder extends StatelessWidget {
+  const _PostCategoryPlaceholder({this.icon});
+
+  final String? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      width: double.infinity,
+      height: 100,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isDark
+              ? [const Color(0xFF2C2C3E), const Color(0xFF1C1C2E)]
+              : [const Color(0xFFF0F0FF), const Color(0xFFE8E0F0)],
+        ),
+      ),
+      child: Center(
+        child: Text(
+          icon ?? '💬',
+          style: const TextStyle(fontSize: 36),
+        ),
       ),
     );
   }
@@ -505,7 +539,7 @@ class _ServiceReviewCard extends StatelessWidget {
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
-                        '来自 ${item.activityInfo!.displayActivityTitle(locale)}',
+                        context.l10n.serviceReviewFrom(item.activityInfo!.displayActivityTitle(locale)),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -836,7 +870,7 @@ class _ServiceCard extends StatelessWidget {
                         children: [
                           if (item.price != null)
                             Text(
-                              '${_currencySymbol(item.currency)}${item.price!.toStringAsFixed(0)}起',
+                              context.l10n.servicePriceFrom('${_currencySymbol(item.currency)}${item.price!.toStringAsFixed(0)}'),
                               style: const TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w700,

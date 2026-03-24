@@ -181,6 +181,7 @@ async def _fetch_forum_posts(db: AsyncSession, limit: int, visible_category_ids:
             models.ForumCategory.name.label("category_name"),
             getattr(models.ForumCategory, "name_zh", None).label("category_name_zh"),
             getattr(models.ForumCategory, "name_en", None).label("category_name_en"),
+            models.ForumCategory.icon.label("category_icon"),
         )
         .join(models.ForumCategory, models.ForumPost.category_id == models.ForumCategory.id)
         .outerjoin(models.User, models.ForumPost.author_id == models.User.id)
@@ -244,6 +245,8 @@ async def _fetch_forum_posts(db: AsyncSession, limit: int, visible_category_ids:
             extra["category_name_zh"] = row.category_name_zh
         if getattr(row, "category_name_en", None):
             extra["category_name_en"] = row.category_name_en
+        if getattr(row, "category_icon", None):
+            extra["category_icon"] = row.category_icon
 
         # 管理员发帖：统一显示为官方账号
         if row.admin_author_id:
