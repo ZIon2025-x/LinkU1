@@ -346,7 +346,7 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                   onTap: isLoggedIn
                       ? () {
                           Navigator.of(context).pop();
-                          context.push('/profile');
+                          context.go('/profile-tab');
                         }
                       : () {
                           Navigator.of(context).pop();
@@ -403,7 +403,7 @@ class _HomeViewContentState extends State<_HomeViewContent> {
               label: context.l10n.drawerMyTasks,
               onTap: () {
                 Navigator.of(context).pop();
-                context.push('/my-tasks');
+                context.push('/profile/my-tasks');
               },
             ),
             _DrawerMenuItem(
@@ -427,7 +427,7 @@ class _HomeViewContentState extends State<_HomeViewContent> {
               label: context.l10n.drawerHelpFeedback,
               onTap: () {
                 Navigator.of(context).pop();
-                context.push('/feedback');
+                context.push('/support-chat');
               },
             ),
 

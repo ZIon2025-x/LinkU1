@@ -55,7 +55,8 @@
       "Bash(unzip -l connect_extract/classes.jar)",
       "WebFetch(domain:docs.stripe.com)",
       "Bash(__NEW_LINE_be811fb36abccfff__ echo:*)",
-      "Bash(ls -la /f/python_work/LinkU/link2ur/lib/l10n/app_localizations*.dart)"
+      "Bash(ls -la /f/python_work/LinkU/link2ur/lib/l10n/app_localizations*.dart)",
+      "Bash(2)"
     ]
   }
 }

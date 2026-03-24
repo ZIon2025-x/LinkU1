@@ -12,16 +12,29 @@ class PersonalServiceRepository {
       ApiEndpoints.myPersonalServices,
       data: data,
     );
-    return response.data;
+    if (!response.isSuccess || response.data == null) {
+      throw Exception(response.message ?? 'create_service_failed');
+    }
+    return Map<String, dynamic>.from(response.data);
   }
 
   Future<List<Map<String, dynamic>>> getMyServices() async {
     final response = await _apiService.get(ApiEndpoints.myPersonalServices);
-    return List<Map<String, dynamic>>.from(response.data);
+    if (!response.isSuccess) {
+      throw Exception(response.message ?? 'load_services_failed');
+    }
+    final data = response.data;
+    if (data is List) {
+      return List<Map<String, dynamic>>.from(data);
+    }
+    return [];
   }
 
   Future<Map<String, dynamic>> getServiceById(String id) async {
     final response = await _apiService.get(ApiEndpoints.myPersonalServiceById(id));
+    if (!response.isSuccess || response.data == null) {
+      throw Exception(response.message ?? 'load_service_failed');
+    }
     return Map<String, dynamic>.from(response.data);
   }
 
@@ -61,6 +74,9 @@ class PersonalServiceRepository {
       ApiEndpoints.browseServices,
       queryParameters: params,
     );
+    if (!response.isSuccess || response.data == null) {
+      throw Exception(response.message ?? 'browse_services_failed');
+    }
     return Map<String, dynamic>.from(response.data);
   }
 
@@ -83,6 +99,9 @@ class PersonalServiceRepository {
       ApiEndpoints.myReceivedApplications,
       queryParameters: params,
     );
+    if (!response.isSuccess || response.data == null) {
+      throw Exception(response.message ?? 'load_applications_failed');
+    }
     return Map<String, dynamic>.from(response.data);
   }
 
@@ -90,7 +109,7 @@ class PersonalServiceRepository {
     final response = await _apiService.post(
       ApiEndpoints.ownerApproveApplication(applicationId),
     );
-    if (!response.isSuccess) {
+    if (!response.isSuccess || response.data == null) {
       throw Exception(response.message ?? 'approve_failed');
     }
     return Map<String, dynamic>.from(response.data);

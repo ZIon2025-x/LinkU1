@@ -621,8 +621,8 @@ def check_expired_payment_tasks(db: Session):
                 task.status = "cancelled"
                 cancelled_count += 1
                 
-                # 如果是服务申请创建的任务，更新申请状态
-                if task.expert_service_id:
+                # 如果是服务申请创建的任务，更新申请状态（兼容达人服务和个人服务）
+                if task.expert_service_id or getattr(task, 'task_source', None) == 'personal_service':
                     from sqlalchemy import select
                     application = db.execute(
                         select(models.ServiceApplication).where(

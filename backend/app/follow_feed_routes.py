@@ -619,7 +619,6 @@ async def _fetch_followed_competitor_reviews(
             models.LeaderboardVote.comment,
             models.LeaderboardVote.like_count,
             models.LeaderboardVote.created_at,
-            models.LeaderboardVote.is_anonymous,
             models.LeaderboardVote.item_id.label("vote_item_id"),
             models.User.name.label("reviewer_name"),
             models.User.avatar.label("reviewer_avatar"),
@@ -634,6 +633,7 @@ async def _fetch_followed_competitor_reviews(
         .join(models.CustomLeaderboard, models.LeaderboardItem.leaderboard_id == models.CustomLeaderboard.id)
         .where(
             models.LeaderboardVote.user_id.in_(following_ids),
+            models.LeaderboardVote.is_anonymous == False,
             models.LeaderboardVote.comment.isnot(None),
             models.LeaderboardVote.comment != "",
             models.LeaderboardItem.status == "approved",
@@ -664,8 +664,8 @@ async def _fetch_followed_competitor_reviews(
 
     items = []
     for row in rows:
-        reviewer_name = "匿名用户" if row.is_anonymous else (row.reviewer_name or "匿名用户")
-        reviewer_avatar = None if row.is_anonymous else row.reviewer_avatar
+        reviewer_name = row.reviewer_name or "匿名用户"
+        reviewer_avatar = row.reviewer_avatar
         item_thumb = _first_image(row.item_images)
 
         items.append({
@@ -678,7 +678,7 @@ async def _fetch_followed_competitor_reviews(
             "description_zh": None,
             "description_en": None,
             "images": None,
-            "user_id": None if row.is_anonymous else str(row.user_id),
+            "user_id": str(row.user_id),
             "user_name": reviewer_name,
             "user_avatar": reviewer_avatar,
             "price": None,
@@ -723,7 +723,6 @@ async def _fetch_followed_service_reviews(
             models.Review.id,
             models.Review.rating,
             models.Review.comment,
-            models.Review.is_anonymous,
             models.Review.created_at,
             models.Review.user_id,
             models.User.name.label("reviewer_name"),
@@ -747,6 +746,7 @@ async def _fetch_followed_service_reviews(
         .outerjoin(models.Activity, models.Task.parent_activity_id == models.Activity.id)
         .where(
             models.Review.user_id.in_(following_ids),
+            models.Review.is_anonymous != 1,
             models.Task.created_by_expert == True,
             models.Task.status == "completed",
             models.Task.is_visible == True,
@@ -761,9 +761,8 @@ async def _fetch_followed_service_reviews(
     rows = result.all()
     items = []
     for row in rows:
-        is_anon = row.is_anonymous == 1
-        reviewer_name = "匿名用户" if is_anon else (row.reviewer_name or "匿名用户")
-        reviewer_avatar = None if is_anon else row.reviewer_avatar
+        reviewer_name = row.reviewer_name or "匿名用户"
+        reviewer_avatar = row.reviewer_avatar
 
         activity_info = None
         if row.parent_activity_id and row.task_source == "expert_activity":
@@ -790,7 +789,7 @@ async def _fetch_followed_service_reviews(
             "description_zh": None,
             "description_en": None,
             "images": None,
-            "user_id": None if is_anon else str(row.user_id),
+            "user_id": str(row.user_id),
             "user_name": reviewer_name,
             "user_avatar": reviewer_avatar,
             "price": None,

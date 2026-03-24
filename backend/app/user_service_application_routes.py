@@ -260,14 +260,23 @@ async def cancel_service_application(
             detail=f"当前状态（{application.status}）不允许取消，只能取消以下状态的申请：{', '.join(allowed_statuses)}"
         )
     
-    # 5. 更新状态
+    # 5. 回退时间段参与者数量
+    if application.time_slot_id:
+        await db.execute(
+            update(models.ServiceTimeSlot)
+            .where(models.ServiceTimeSlot.id == application.time_slot_id)
+            .where(models.ServiceTimeSlot.current_participants > 0)
+            .values(current_participants=models.ServiceTimeSlot.current_participants - 1)
+        )
+
+    # 6. 更新状态
     application.status = "cancelled"
     application.updated_at = get_utc_time()
-    
+
     await db.commit()
     await db.refresh(application)
-    
-    # 6. 发送通知给服务所有者
+
+    # 7. 发送通知给服务所有者
     cancel_owner_id = application.service_owner_id or application.expert_id
     from app.task_notifications import send_service_application_cancelled_notification
     try:
@@ -309,7 +318,7 @@ async def _get_application_as_owner(
     if not application:
         raise HTTPException(status_code=404, detail="申请不存在")
 
-    if application.service_owner_id != current_user.id:
+    if not application.service_owner_id or application.service_owner_id != current_user.id:
         raise HTTPException(status_code=403, detail="只能处理自己服务的申请")
 
     return application
@@ -500,6 +509,7 @@ async def owner_approve_application(
         task_level="personal_service",
         poster_id=application.applicant_id,
         taker_id=current_user.id,  # 服务所有者是接收方
+        expert_service_id=service.id,  # 关联服务，支付过期时能找到对应申请
         status="pending_payment",
         is_paid=0,
         payment_expires_at=get_utc_time() + timedelta(minutes=30),

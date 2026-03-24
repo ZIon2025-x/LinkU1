@@ -265,7 +265,7 @@ class _BannerCarouselState extends State<_BannerCarousel> {
   @override
   void initState() {
     super.initState();
-    _controller = PageController(viewportFraction: 0.88);
+    _controller = PageController();
     _buildBannerList();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && _allBanners.length > 1) _startAutoPlay();

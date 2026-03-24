@@ -172,7 +172,7 @@ class _StoryRow extends StatelessWidget {
     final l10n = context.l10n;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final entries = [
-      const _StoryEntry(assetImage: AppAssets.any, label: 'Linker AI', route: '/ai-chat'),
+      const _StoryEntry(assetImage: AppAssets.any, label: 'Linker AI', route: '/support-chat'),
       _StoryEntry(emoji: '\u{1F31F}', label: l10n.homeExperts, route: '/task-experts'),
       _StoryEntry(emoji: '\u{1F6D2}', label: l10n.homeSecondHandMarket, route: '/flea-market'),
     ];
@@ -311,7 +311,7 @@ class _TickerBannerState extends State<_TickerBanner> {
                     padding: const EdgeInsets.fromLTRB(14, 6, 14, 18),
                     decoration: const BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [Color(0xFF5A52D5), Color(0xFF8B7DE8)],
+                        colors: AppColors.gradientPrimary,
                       ),
                       borderRadius:
                           BorderRadius.vertical(top: Radius.circular(12)),
