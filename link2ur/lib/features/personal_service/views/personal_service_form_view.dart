@@ -195,8 +195,8 @@ class _FormContentState extends State<_FormContent> {
       if (_location != null && _location!.isNotEmpty) {
         data['location'] = _location;
       }
-      if (_latitude != null) data['latitude'] = _latitude;
-      if (_longitude != null) data['longitude'] = _longitude;
+      if (_latitude != null) data['latitude'] = double.parse(_latitude!.toStringAsFixed(8));
+      if (_longitude != null) data['longitude'] = double.parse(_longitude!.toStringAsFixed(8));
     } else if (_isEditMode) {
       // 从线下改为线上时，清除旧地址
       data['location'] = null;
