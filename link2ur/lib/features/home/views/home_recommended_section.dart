@@ -173,6 +173,8 @@ class _StoryRow extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final entries = [
       const _StoryEntry(assetImage: AppAssets.any, label: 'Linker AI', route: '/support-chat'),
+      _StoryEntry(emoji: '\u{1F4CB}', label: l10n.menuTaskHall, route: '/tasks'),
+      _StoryEntry(emoji: '\u{1F389}', label: l10n.homeActivities, route: '/activities'),
       _StoryEntry(emoji: '\u{1F31F}', label: l10n.homeExperts, route: '/task-experts'),
       _StoryEntry(emoji: '\u{1F6D2}', label: l10n.homeSecondHandMarket, route: '/flea-market'),
     ];
