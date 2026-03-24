@@ -25,6 +25,8 @@ class ToolCallCard extends StatelessWidget {
         return l10n.toolCallGetTaskDetail;
       case 'search_tasks':
         return l10n.toolCallSearchTasks;
+      case 'recommend_tasks':
+        return l10n.toolCallRecommendTasks;
       case 'get_my_profile':
         return l10n.toolCallGetMyProfile;
       case 'get_platform_faq':
@@ -76,6 +78,8 @@ class ToolCallCard extends StatelessWidget {
         return l10n.toolCallLoadingGetTaskDetail;
       case 'search_tasks':
         return l10n.toolCallLoadingSearchTasks;
+      case 'recommend_tasks':
+        return l10n.toolCallLoadingRecommendTasks;
       case 'get_my_profile':
         return l10n.toolCallLoadingGetMyProfile;
       case 'get_platform_faq':
@@ -125,6 +129,8 @@ class ToolCallCard extends StatelessWidget {
         return Icons.description;
       case 'search_tasks':
         return Icons.search;
+      case 'recommend_tasks':
+        return Icons.recommend;
       case 'get_my_profile':
         return Icons.person;
       case 'get_platform_faq':

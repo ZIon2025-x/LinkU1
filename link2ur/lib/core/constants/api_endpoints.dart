@@ -217,6 +217,11 @@ class ApiEndpoints {
       '/api/users/me/service-applications/$applicationId/respond-counter-offer';
   static String cancelServiceApplication(int applicationId) =>
       '/api/users/me/service-applications/$applicationId/cancel';
+  // --- 服务公开申请（留言墙） ---
+  static String serviceApplications(int serviceId) =>
+      '/api/task-experts/services/$serviceId/applications';
+  static String replyServiceApplication(int serviceId, int applicationId) =>
+      '/api/task-experts/services/$serviceId/applications/$applicationId/reply';
 
   // ==================== 个人服务 ====================
   // Personal Services (non-expert users publishing their own services)

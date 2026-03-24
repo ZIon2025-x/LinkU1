@@ -267,7 +267,8 @@ class _NotificationListViewContentState
         type == 'counter_offer' ||
         type == 'counter_offer_accepted' ||
         type == 'counter_offer_accepted_to_applicant' ||
-        type == 'counter_offer_rejected') {
+        type == 'counter_offer_rejected' ||
+        type == 'service_owner_reply') {
       if (relatedId != null) context.safePush('/service/$relatedId');
       return;
     }

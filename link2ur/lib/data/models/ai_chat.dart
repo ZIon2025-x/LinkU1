@@ -48,6 +48,7 @@ class AIMessage extends Equatable {
     this.createdAt,
     this.isStreaming = false,
     this.toolName,
+    this.toolResultData,
   });
 
   final int? id;
@@ -58,6 +59,7 @@ class AIMessage extends Equatable {
   final DateTime? createdAt;
   final bool isStreaming; // 正在流式接收中
   final String? toolName;  // last tool called (client-side only, not persisted)
+  final Map<String, dynamic>? toolResultData; // raw tool result for card rendering
 
   bool get isUser => role == 'user';
   bool get isAssistant => role == 'assistant';
@@ -72,6 +74,7 @@ class AIMessage extends Equatable {
     DateTime? createdAt,
     bool? isStreaming,
     String? toolName,
+    Map<String, dynamic>? toolResultData,
   }) {
     return AIMessage(
       id: id ?? this.id,
@@ -82,6 +85,7 @@ class AIMessage extends Equatable {
       createdAt: createdAt ?? this.createdAt,
       isStreaming: isStreaming ?? this.isStreaming,
       toolName: toolName ?? this.toolName,
+      toolResultData: toolResultData ?? this.toolResultData,
     );
   }
 
@@ -107,7 +111,7 @@ class AIMessage extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, role, content, isStreaming, toolName];
+  List<Object?> get props => [id, role, content, isStreaming, toolName, toolResultData];
 }
 
 /// AI 工具调用

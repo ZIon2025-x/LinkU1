@@ -2372,6 +2372,165 @@ async def get_service_detail(
     return service_out
 
 
+@task_expert_router.get("/services/{service_id}/applications")
+async def get_service_applications(
+    service_id: int,
+    current_user: Optional[models.User] = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_async_db_dependency),
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+):
+    """获取服务的申请列表（公开留言）
+
+    三种调用者：
+    1. 服务所有者 → 完整数据（含 applicant_id）
+    2. 已登录非所有者 → 公开列表 + 自己的完整申请
+    3. 未登录 → 公开列表
+    """
+    service_result = await db.execute(
+        select(models.TaskExpertService).where(
+            models.TaskExpertService.id == service_id
+        )
+    )
+    service = service_result.scalar_one_or_none()
+    if not service:
+        raise HTTPException(status_code=404, detail="服务不存在")
+
+    user_id = str(current_user.id) if current_user else None
+    is_owner = False
+    if user_id:
+        if service.service_type == "personal" and service.user_id == user_id:
+            is_owner = True
+        elif service.service_type == "expert" and service.expert_id == user_id:
+            is_owner = True
+
+    query = (
+        select(models.ServiceApplication)
+        .where(models.ServiceApplication.service_id == service_id)
+        .where(models.ServiceApplication.status.in_(
+            ["pending", "negotiating", "price_agreed", "approved"]
+        ))
+        .order_by(models.ServiceApplication.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+    result = await db.execute(query)
+    applications = result.scalars().all()
+
+    applicant_ids = list({app.applicant_id for app in applications})
+    applicants_map = {}
+    if applicant_ids:
+        applicants_result = await db.execute(
+            select(models.User).where(models.User.id.in_(applicant_ids))
+        )
+        for u in applicants_result.scalars().all():
+            applicants_map[u.id] = u
+
+    items = []
+    for app in applications:
+        applicant = applicants_map.get(app.applicant_id)
+        item = {
+            "id": app.id,
+            "applicant_name": applicant.name if applicant else "Unknown",
+            "applicant_avatar": applicant.avatar if applicant else None,
+            "applicant_user_level": applicant.user_level if applicant and hasattr(applicant, "user_level") else None,
+            "application_message": app.application_message,
+            "negotiated_price": float(app.negotiated_price) if app.negotiated_price else None,
+            "currency": app.currency or "GBP",
+            "status": app.status,
+            "created_at": app.created_at.isoformat() if app.created_at else None,
+            "owner_reply": app.owner_reply,
+            "owner_reply_at": app.owner_reply_at.isoformat() if app.owner_reply_at else None,
+        }
+        if is_owner:
+            item["applicant_id"] = app.applicant_id
+        elif user_id and app.applicant_id == user_id:
+            item["applicant_id"] = app.applicant_id
+
+        items.append(item)
+
+    return items
+
+
+@task_expert_router.post("/services/{service_id}/applications/{application_id}/reply")
+async def reply_to_service_application(
+    service_id: int,
+    application_id: int,
+    request: Request,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """服务所有者对申请的公开回复（每个申请只能回复一次）"""
+    body = await request.json()
+    message = body.get("message", "").strip()
+    if not message:
+        raise HTTPException(status_code=400, detail="回复内容不能为空")
+    if len(message) > 500:
+        raise HTTPException(status_code=400, detail="回复内容不能超过500字")
+
+    service_result = await db.execute(
+        select(models.TaskExpertService).where(
+            models.TaskExpertService.id == service_id
+        )
+    )
+    service = service_result.scalar_one_or_none()
+    if not service:
+        raise HTTPException(status_code=404, detail="服务不存在")
+
+    user_id = str(current_user.id)
+    is_owner = (
+        (service.service_type == "personal" and service.user_id == user_id) or
+        (service.service_type == "expert" and service.expert_id == user_id)
+    )
+    if not is_owner:
+        raise HTTPException(status_code=403, detail="只有服务所有者可以回复")
+
+    app_result = await db.execute(
+        select(models.ServiceApplication).where(
+            models.ServiceApplication.id == application_id,
+            models.ServiceApplication.service_id == service_id,
+        )
+    )
+    application = app_result.scalar_one_or_none()
+    if not application:
+        raise HTTPException(status_code=404, detail="申请不存在")
+
+    if application.owner_reply is not None:
+        raise HTTPException(status_code=409, detail="已回复过该申请")
+
+    application.owner_reply = message
+    application.owner_reply_at = get_utc_time()
+    await db.commit()
+
+    try:
+        import json as json_lib
+        notification_content = json_lib.dumps({
+            "service_id": service_id,
+            "service_name": service.service_name,
+            "reply_message": message[:200],
+            "owner_name": current_user.name if current_user.name else None,
+        })
+        notification = models.Notification(
+            user_id=str(application.applicant_id),
+            type="service_owner_reply",
+            title="服务所有者回复了你的申请",
+            title_en="The service owner replied to your application",
+            content=notification_content,
+            related_id=service_id,
+            related_type="service_id",
+        )
+        db.add(notification)
+        await db.commit()
+    except Exception as e:
+        logger.warning(f"Failed to create notification for service reply: {e}")
+
+    return {
+        "id": application.id,
+        "owner_reply": application.owner_reply,
+        "owner_reply_at": application.owner_reply_at.isoformat() if application.owner_reply_at else None,
+    }
+
+
 # 获取任务达人的公开服务列表（放在 /services/{service_id} 之后，避免路由冲突）
 @task_expert_router.get("/{expert_id}/reviews")
 async def get_expert_reviews(

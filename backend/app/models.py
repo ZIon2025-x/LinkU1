@@ -1741,7 +1741,9 @@ class ServiceApplication(Base):
     approved_at = Column(DateTime(timezone=True), nullable=True)
     rejected_at = Column(DateTime(timezone=True), nullable=True)
     price_agreed_at = Column(DateTime(timezone=True), nullable=True)  # 价格达成一致的时间
-    
+    owner_reply = Column(Text, nullable=True)  # 服务所有者公开回复
+    owner_reply_at = Column(DateTime(timezone=True), nullable=True)  # 回复时间
+
     # 关系
     service = relationship("TaskExpertService", back_populates="applications")
     applicant = relationship("User", foreign_keys=[applicant_id], backref="service_applications")

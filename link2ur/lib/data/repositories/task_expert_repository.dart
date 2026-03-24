@@ -757,6 +757,42 @@ class TaskExpertRepository {
       throw TaskExpertException(response.message ?? '取消申请失败');
     }
   }
+
+  /// 获取服务的公开申请列表
+  Future<List<Map<String, dynamic>>> getServiceApplications(
+    int serviceId, {
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    final response = await _apiService.get(
+      ApiEndpoints.serviceApplications(serviceId),
+      queryParameters: {'limit': limit, 'offset': offset},
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw Exception(response.message ?? 'load_service_applications_failed');
+    }
+    final data = response.data;
+    if (data is List) {
+      return List<Map<String, dynamic>>.from(data);
+    }
+    return [];
+  }
+
+  /// 服务所有者回复申请
+  Future<Map<String, dynamic>> replyServiceApplication(
+    int serviceId,
+    int applicationId,
+    String message,
+  ) async {
+    final response = await _apiService.post(
+      ApiEndpoints.replyServiceApplication(serviceId, applicationId),
+      data: {'message': message},
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw Exception(response.message ?? 'reply_failed');
+    }
+    return Map<String, dynamic>.from(response.data);
+  }
 }
 
 /// 任务达人异常

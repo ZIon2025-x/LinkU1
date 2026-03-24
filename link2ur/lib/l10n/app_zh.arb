@@ -4130,6 +4130,7 @@
   "toolCallQueryMyTasks": "查询我的任务",
   "toolCallGetTaskDetail": "获取任务详情",
   "toolCallSearchTasks": "搜索任务",
+  "toolCallRecommendTasks": "推荐任务",
   "toolCallGetMyProfile": "获取个人资料",
   "toolCallGetPlatformFaq": "查询常见问题",
   "toolCallCheckCsAvailability": "检查客服在线",
@@ -4144,6 +4145,7 @@
   "toolCallLoadingQueryMyTasks": "正在查询你的任务…",
   "toolCallLoadingGetTaskDetail": "正在获取任务详情…",
   "toolCallLoadingSearchTasks": "正在搜索任务…",
+  "toolCallLoadingRecommendTasks": "正在为你推荐任务…",
   "toolCallLoadingGetMyProfile": "正在加载个人资料…",
   "toolCallLoadingGetPlatformFaq": "正在查询常见问题…",
   "toolCallLoadingCheckCsAvailability": "正在检查客服是否在线…",
@@ -4176,6 +4178,7 @@
 
   "aiTaskDraftTitle": "任务草稿",
   "aiTaskDraftConfirmButton": "确认并去发布",
+  "aiTaskCardViewDetail": "查看详情 →",
 
   "expertApplicationsTitle": "服务申请管理",
   "expertApplicationsEmpty": "暂无申请",

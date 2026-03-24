@@ -201,6 +201,26 @@ class TaskExpertApplyToBeExpert extends TaskExpertEvent {
   List<Object?> get props => [message];
 }
 
+class TaskExpertLoadServiceApplications extends TaskExpertEvent {
+  const TaskExpertLoadServiceApplications(this.serviceId);
+  final int serviceId;
+  @override
+  List<Object?> get props => [serviceId];
+}
+
+class TaskExpertReplyServiceApplication extends TaskExpertEvent {
+  const TaskExpertReplyServiceApplication(
+    this.serviceId,
+    this.applicationId,
+    this.message,
+  );
+  final int serviceId;
+  final int applicationId;
+  final String message;
+  @override
+  List<Object?> get props => [serviceId, applicationId, message];
+}
+
 // ==================== State ====================
 
 enum TaskExpertStatus { initial, loading, loaded, error }
@@ -235,6 +255,8 @@ class TaskExpertState extends Equatable {
     this.selectedSort = 'rating_desc',
     this.searchKeyword,
     this.myExpertApplicationStatus,
+    this.serviceApplications = const [],
+    this.isLoadingServiceApplications = false,
   });
 
   final TaskExpertStatus status;
@@ -278,6 +300,10 @@ class TaskExpertState extends Equatable {
   /// 我的达人申请状态 (pending/approved/rejected/null=未申请)
   final Map<String, dynamic>? myExpertApplicationStatus;
 
+  /// 服务的公开申请列表（留言墙）
+  final List<Map<String, dynamic>> serviceApplications;
+  final bool isLoadingServiceApplications;
+
   bool get isLoading => status == TaskExpertStatus.loading;
 
   /// 当前是否有激活的筛选条件（类型非全部 或 城市非全部）
@@ -313,6 +339,8 @@ class TaskExpertState extends Equatable {
     String? searchKeyword,
     Map<String, dynamic>? myExpertApplicationStatus,
     bool clearMyExpertApplicationStatus = false,
+    List<Map<String, dynamic>>? serviceApplications,
+    bool? isLoadingServiceApplications,
   }) {
     return TaskExpertState(
       status: status ?? this.status,
@@ -345,6 +373,8 @@ class TaskExpertState extends Equatable {
       myExpertApplicationStatus: clearMyExpertApplicationStatus
           ? null
           : (myExpertApplicationStatus ?? this.myExpertApplicationStatus),
+      serviceApplications: serviceApplications ?? this.serviceApplications,
+      isLoadingServiceApplications: isLoadingServiceApplications ?? this.isLoadingServiceApplications,
     );
   }
 
@@ -378,6 +408,8 @@ class TaskExpertState extends Equatable {
         selectedSort,
         searchKeyword,
         myExpertApplicationStatus,
+        serviceApplications,
+        isLoadingServiceApplications,
       ];
 }
 
@@ -409,6 +441,8 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     on<TaskExpertCounterOffer>(_onCounterOffer);
     on<TaskExpertLoadMyExpertApplicationStatus>(_onLoadMyExpertApplicationStatus);
     on<TaskExpertApplyToBeExpert>(_onApplyToBeExpert);
+    on<TaskExpertLoadServiceApplications>(_onLoadServiceApplications);
+    on<TaskExpertReplyServiceApplication>(_onReplyServiceApplication);
   }
 
   final TaskExpertRepository _taskExpertRepository;
@@ -972,6 +1006,59 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'expert_application_failed',
+        errorMessage: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onLoadServiceApplications(
+    TaskExpertLoadServiceApplications event,
+    Emitter<TaskExpertState> emit,
+  ) async {
+    emit(state.copyWith(isLoadingServiceApplications: true));
+    try {
+      final apps = await _taskExpertRepository.getServiceApplications(event.serviceId);
+      emit(state.copyWith(
+        isLoadingServiceApplications: false,
+        serviceApplications: apps,
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to load service applications', e);
+      emit(state.copyWith(isLoadingServiceApplications: false));
+    }
+  }
+
+  Future<void> _onReplyServiceApplication(
+    TaskExpertReplyServiceApplication event,
+    Emitter<TaskExpertState> emit,
+  ) async {
+    if (state.isSubmitting) return;
+    emit(state.copyWith(isSubmitting: true));
+    try {
+      final result = await _taskExpertRepository.replyServiceApplication(
+        event.serviceId,
+        event.applicationId,
+        event.message,
+      );
+      final updated = state.serviceApplications.map((app) {
+        if (app['id'] == event.applicationId) {
+          return {
+            ...app,
+            'owner_reply': result['owner_reply'],
+            'owner_reply_at': result['owner_reply_at'],
+          };
+        }
+        return app;
+      }).toList();
+      emit(state.copyWith(
+        isSubmitting: false,
+        serviceApplications: updated,
+        actionMessage: 'service_reply_submitted',
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to reply service application', e);
+      emit(state.copyWith(
+        isSubmitting: false,
         errorMessage: e.toString(),
       ));
     }

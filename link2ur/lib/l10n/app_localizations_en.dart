@@ -9143,6 +9143,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get toolCallSearchTasks => 'Search tasks';
 
   @override
+  String get toolCallRecommendTasks => 'Recommend tasks';
+
+  @override
   String get toolCallGetMyProfile => 'Get my profile';
 
   @override
@@ -9180,6 +9183,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get toolCallLoadingSearchTasks => 'Searching tasks…';
+
+  @override
+  String get toolCallLoadingRecommendTasks => 'Finding tasks for you…';
 
   @override
   String get toolCallLoadingGetMyProfile => 'Loading your profile…';
@@ -9268,6 +9274,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aiTaskDraftConfirmButton => 'Review & Publish';
+
+  @override
+  String get aiTaskCardViewDetail => 'View details →';
 
   @override
   String get expertApplicationsTitle => 'Service Applications';

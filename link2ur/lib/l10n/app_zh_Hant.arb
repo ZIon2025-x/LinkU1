@@ -4069,6 +4069,7 @@
   "toolCallQueryMyTasks": "查詢我的任務",
   "toolCallGetTaskDetail": "取得任務詳情",
   "toolCallSearchTasks": "搜尋任務",
+  "toolCallRecommendTasks": "推薦任務",
   "toolCallGetMyProfile": "取得個人資料",
   "toolCallGetPlatformFaq": "查詢常見問題",
   "toolCallCheckCsAvailability": "檢查客服在線",
@@ -4083,6 +4084,7 @@
   "toolCallLoadingQueryMyTasks": "正在查詢你的任務…",
   "toolCallLoadingGetTaskDetail": "正在取得任務詳情…",
   "toolCallLoadingSearchTasks": "正在搜尋任務…",
+  "toolCallLoadingRecommendTasks": "正在為你推薦任務…",
   "toolCallLoadingGetMyProfile": "正在載入個人資料…",
   "toolCallLoadingGetPlatformFaq": "正在查詢常見問題…",
   "toolCallLoadingCheckCsAvailability": "正在檢查客服是否在線…",
@@ -4115,6 +4117,7 @@
 
   "aiTaskDraftTitle": "任務草稿",
   "aiTaskDraftConfirmButton": "確認並去發佈",
+  "aiTaskCardViewDetail": "查看詳情 →",
 
   "expertApplicationsTitle": "服務申請管理",
   "expertApplicationsEmpty": "暫無申請",

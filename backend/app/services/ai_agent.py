@@ -291,7 +291,7 @@ _FAQ_KEYWORDS = {
     "faq_wallet": ["钱包", "提现", "withdraw", "到账", "收款账户", "payout", "怎么提现", "绑定收款", "stripe connect"],
     "faq_cancel": ["取消任务", "cancel task", "取消已发布", "取消已接", "取消审核", "客服审核取消"],
     "faq_report": ["举报", "report", "不实信息", "违法", "诈骗", "fraud", "安全", "safety", "保护自己"],
-    "faq_privacy": ["隐私", "privacy", "数据", "data", "账户安全", "account security", "封禁", "ban", "暂停", "suspend", "申诉"],
+    "faq_privacy": ["隐私", "privacy", "数据安全", "数据保护", "我的数据", "data protection", "data security", "my data", "账户安全", "account security", "封禁", "ban", "暂停", "suspend", "申诉"],
     "faq_flea": ["跳蚤", "二手", "flea", "闲置", "求购", "卖东西", "买二手", "议价", "make an offer", "flea market"],
     "faq_forum": ["论坛", "forum", "发帖", "社区", "community", "板块", "帖子被删"],
     "faq_application": ["申请任务", "apply for task", "task application", "议价", "negotiate", "申请被拒"],
@@ -1295,7 +1295,17 @@ async def _load_history(db: AsyncSession, conversation_id: str) -> list[dict]:
                 except (json.JSONDecodeError, KeyError):
                     pass
         else:
-            messages.append({"role": msg.role, "content": msg.content})
+            content = msg.content
+            # 快捷回复（FAQ/活动/积分等）在历史中标记为自动回复并截短，
+            # 避免大段模板内容干扰 LLM 的后续回复风格
+            if (msg.role == "assistant"
+                    and msg.model_used
+                    and msg.model_used.startswith("local_")):
+                summary = (content or "")[:80]
+                if len(content or "") > 80:
+                    summary += "..."
+                content = f"[自动回复] {summary}"
+            messages.append({"role": msg.role, "content": content})
     return messages
 
 

@@ -16820,6 +16820,12 @@ abstract class AppLocalizations {
   /// **'Search tasks'**
   String get toolCallSearchTasks;
 
+  /// No description provided for @toolCallRecommendTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'Recommend tasks'**
+  String get toolCallRecommendTasks;
+
   /// No description provided for @toolCallGetMyProfile.
   ///
   /// In en, this message translates to:
@@ -16897,6 +16903,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Searching tasks…'**
   String get toolCallLoadingSearchTasks;
+
+  /// No description provided for @toolCallLoadingRecommendTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'Finding tasks for you…'**
+  String get toolCallLoadingRecommendTasks;
 
   /// No description provided for @toolCallLoadingGetMyProfile.
   ///
@@ -17065,6 +17077,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Review & Publish'**
   String get aiTaskDraftConfirmButton;
+
+  /// No description provided for @aiTaskCardViewDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'View details →'**
+  String get aiTaskCardViewDetail;
 
   /// No description provided for @expertApplicationsTitle.
   ///

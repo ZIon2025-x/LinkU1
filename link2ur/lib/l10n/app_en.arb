@@ -4212,6 +4212,7 @@
   "toolCallQueryMyTasks": "Query my tasks",
   "toolCallGetTaskDetail": "Get task details",
   "toolCallSearchTasks": "Search tasks",
+  "toolCallRecommendTasks": "Recommend tasks",
   "toolCallGetMyProfile": "Get my profile",
   "toolCallGetPlatformFaq": "Query FAQ",
   "toolCallCheckCsAvailability": "Check support online",
@@ -4226,6 +4227,7 @@
   "toolCallLoadingQueryMyTasks": "Checking your tasks…",
   "toolCallLoadingGetTaskDetail": "Fetching task details…",
   "toolCallLoadingSearchTasks": "Searching tasks…",
+  "toolCallLoadingRecommendTasks": "Finding tasks for you…",
   "toolCallLoadingGetMyProfile": "Loading your profile…",
   "toolCallLoadingGetPlatformFaq": "Looking up FAQ…",
   "toolCallLoadingCheckCsAvailability": "Checking if support is online…",
@@ -4258,6 +4260,7 @@
 
   "aiTaskDraftTitle": "Task Draft",
   "aiTaskDraftConfirmButton": "Review & Publish",
+  "aiTaskCardViewDetail": "View details →",
 
   "expertApplicationsTitle": "Service Applications",
   "expertApplicationsEmpty": "No Applications",

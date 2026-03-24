@@ -8780,6 +8780,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get toolCallSearchTasks => '搜索任务';
 
   @override
+  String get toolCallRecommendTasks => '推荐任务';
+
+  @override
   String get toolCallGetMyProfile => '获取个人资料';
 
   @override
@@ -8817,6 +8820,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get toolCallLoadingSearchTasks => '正在搜索任务…';
+
+  @override
+  String get toolCallLoadingRecommendTasks => '正在为你推荐任务…';
 
   @override
   String get toolCallLoadingGetMyProfile => '正在加载个人资料…';
@@ -8901,6 +8907,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get aiTaskDraftConfirmButton => '确认并去发布';
+
+  @override
+  String get aiTaskCardViewDetail => '查看详情 →';
 
   @override
   String get expertApplicationsTitle => '服务申请管理';
@@ -19209,6 +19218,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get toolCallSearchTasks => '搜尋任務';
 
   @override
+  String get toolCallRecommendTasks => '推薦任務';
+
+  @override
   String get toolCallGetMyProfile => '取得個人資料';
 
   @override
@@ -19246,6 +19258,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get toolCallLoadingSearchTasks => '正在搜尋任務…';
+
+  @override
+  String get toolCallLoadingRecommendTasks => '正在為你推薦任務…';
 
   @override
   String get toolCallLoadingGetMyProfile => '正在載入個人資料…';
@@ -19330,6 +19345,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get aiTaskDraftConfirmButton => '確認並去發佈';
+
+  @override
+  String get aiTaskCardViewDetail => '查看詳情 →';
 
   @override
   String get expertApplicationsTitle => '服務申請管理';
