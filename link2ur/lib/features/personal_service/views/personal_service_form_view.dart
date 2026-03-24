@@ -197,6 +197,11 @@ class _FormContentState extends State<_FormContent> {
       }
       if (_latitude != null) data['latitude'] = _latitude;
       if (_longitude != null) data['longitude'] = _longitude;
+    } else if (_isEditMode) {
+      // 从线下改为线上时，清除旧地址
+      data['location'] = null;
+      data['latitude'] = null;
+      data['longitude'] = null;
     }
 
     // Only include price for non-negotiable types

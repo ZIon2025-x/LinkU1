@@ -347,11 +347,9 @@ class _BannerCarouselState extends State<_BannerCarousel> {
 
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-          child: SizedBox(
-            height: 162,
-            child: GestureDetector(
+        SizedBox(
+          height: 162,
+          child: GestureDetector(
               onPanDown: (_) => _stopAutoPlay(),
               onPanEnd: (_) => _startAutoPlay(),
               onPanCancel: () => _startAutoPlay(),
@@ -404,7 +402,6 @@ class _BannerCarouselState extends State<_BannerCarousel> {
               ),
             ),
           ),
-        ),
         const SizedBox(height: 8),
         ValueListenableBuilder<int>(
           valueListenable: _currentPage,
