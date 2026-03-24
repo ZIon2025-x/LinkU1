@@ -17,6 +17,7 @@ import '../../../core/design/app_typography.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/utils/sheet_adaptation.dart';
 import '../../../core/utils/helpers.dart';
@@ -36,6 +37,7 @@ import 'package:geolocator/geolocator.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/widgets/content_constraint.dart';
 import '../../../core/widgets/decorative_background.dart';
+import '../../../core/widgets/location_picker.dart';
 import '../../../core/router/app_router.dart';
 import '../../../data/models/task.dart';
 import '../../../data/models/task_expert.dart';
@@ -624,7 +626,12 @@ class _FollowTab extends StatelessWidget {
 
         return RefreshIndicator(
           onRefresh: () async {
-            context.read<HomeBloc>().add(const HomeLoadFollowFeed());
+            final bloc = context.read<HomeBloc>();
+            bloc.add(const HomeLoadFollowFeed());
+            await bloc.stream.firstWhere(
+              (s) => !s.isLoadingFollowFeed,
+              orElse: () => state,
+            );
           },
           child: CustomScrollView(
             slivers: [
@@ -685,7 +692,7 @@ class _FollowTab extends StatelessWidget {
                       }
                       final item = displayItems[index];
                       final locale = Localizations.localeOf(context);
-                      return _FollowFeedCard(item: item, locale: locale);
+                      return _FollowFeedCard(key: ValueKey(item.id), item: item, locale: locale);
                     },
                     childCount: displayItems.length + (hasMore ? 1 : 0),
                   ),
@@ -703,167 +710,204 @@ class _FollowTab extends StatelessWidget {
 
 /// 关注 Feed 卡片 — 社交动态风格（参考小红书关注 Tab）
 class _FollowFeedCard extends StatelessWidget {
-  const _FollowFeedCard({required this.item, required this.locale});
+  const _FollowFeedCard({super.key, required this.item, required this.locale});
   final DiscoveryFeedItem item;
   final Locale locale;
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = context.l10n;
     final title = item.displayTitle(locale);
     final description = item.displayDescription(locale);
-    final timeAgo = item.createdAt != null ? _formatTimeAgo(item.createdAt!) : '';
-    final feedLabel = _feedTypeLabel(item.feedType, locale.languageCode);
+    final timeAgo = item.createdAt != null
+        ? DateFormatter.formatRelative(item.createdAt!, l10n: l10n)
+        : '';
+    final feedLabel = _feedTypeLabel(item.feedType, l10n);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: Container(
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: isDark
-              ? null
-              : [BoxShadow(color: Colors.black.withAlpha(10), blurRadius: 3, offset: const Offset(0, 1))],
-        ),
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 头部：头像 + 名字 + 动态类型 + 时间
-            Row(
-              children: [
-                // 头像
-                CircleAvatar(
-                  radius: 20,
-                  backgroundImage: item.userAvatar != null
-                      ? NetworkImage(item.userAvatar!)
-                      : null,
-                  backgroundColor: isDark ? Colors.grey[800] : const Color(0xFFE8E8E8),
-                  child: item.userAvatar == null
-                      ? Icon(Icons.person, size: 20, color: isDark ? Colors.grey[400] : Colors.grey[600])
-                      : null,
+      child: GestureDetector(
+        onTap: () => _onCardTap(context),
+        child: Container(
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: isDark
+                ? null
+                : [BoxShadow(color: Colors.black.withAlpha(10), blurRadius: 3, offset: const Offset(0, 1))],
+          ),
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 头部：头像 + 名字 + 动态类型 + 时间
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 20,
+                    backgroundImage: item.userAvatar != null
+                        ? NetworkImage(item.userAvatar!)
+                        : null,
+                    backgroundColor: isDark ? Colors.grey[800] : const Color(0xFFE8E8E8),
+                    child: item.userAvatar == null
+                        ? Icon(Icons.person, size: 20, color: isDark ? Colors.grey[400] : Colors.grey[600])
+                        : null,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.userName ?? '',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                          ),
+                        ),
+                        Text(
+                          '$feedLabel · $timeAgo',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isDark ? AppColors.textSecondaryDark : const Color(0xFF999999),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+
+              // 内容文字
+              if (title.isNotEmpty || (description != null && description.isNotEmpty)) ...[
+                const SizedBox(height: 10),
+                Text(
+                  title.isNotEmpty ? title : description ?? '',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: isDark ? AppColors.textPrimaryDark : const Color(0xFF333333),
+                    height: 1.5,
+                  ),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(width: 10),
-                // 名字 + 描述
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item.userName ?? '',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                        ),
-                      ),
-                      Text(
-                        '$feedLabel · $timeAgo',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: isDark ? AppColors.textSecondaryDark : const Color(0xFF999999),
-                        ),
-                      ),
-                    ],
+              ],
+
+              // 图片
+              if (item.hasImages) ...[
+                const SizedBox(height: 10),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: _buildImages(item.images!, isDark),
+                ),
+              ],
+
+              // 价格（如果有）
+              if (item.price != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  '£${item.price!.toStringAsFixed(0)}',
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFFEE5A24),
                   ),
                 ),
               ],
-            ),
 
-            // 内容文字
-            if (title.isNotEmpty || (description != null && description.isNotEmpty)) ...[
-              const SizedBox(height: 10),
-              Text(
-                title.isNotEmpty ? title : description ?? '',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: isDark ? AppColors.textPrimaryDark : const Color(0xFF333333),
-                  height: 1.5,
-                ),
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-
-            // 图片
-            if (item.hasImages) ...[
-              const SizedBox(height: 10),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: item.images!.length == 1
-                    // 单图
-                    ? AspectRatio(
-                        aspectRatio: 16 / 9,
-                        child: Image.network(
-                          item.images!.first,
-                          fit: BoxFit.cover,
-                          width: double.infinity,
-                          errorBuilder: (_, __, ___) => Container(
-                            color: isDark ? Colors.grey[800] : const Color(0xFFF0F0F0),
-                            child: const Center(child: Icon(Icons.image, color: Colors.grey)),
-                          ),
-                        ),
-                      )
-                    // 多图网格（最多3张）
-                    : Row(
-                        children: item.images!.take(3).map((url) {
-                          return Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.only(right: 3),
-                              child: AspectRatio(
-                                aspectRatio: 1,
-                                child: Image.network(url, fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => Container(
-                                    color: isDark ? Colors.grey[800] : const Color(0xFFF0F0F0),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-              ),
-            ],
-
-            // 价格（如果有）
-            if (item.price != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                '£${item.price!.toStringAsFixed(0)}',
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFFEE5A24),
-                ),
-              ),
-            ],
-
-            // 底部互动栏（仅帖子/商品等有互动数据时显示）
-            if ((item.likeCount != null && item.likeCount! > 0) ||
-                (item.commentCount != null && item.commentCount! > 0)) ...[
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  if (item.likeCount != null && item.likeCount! > 0) ...[
-                    Text('❤️ ${item.likeCount}',
-                        style: TextStyle(fontSize: 13, color: isDark ? Colors.grey[400] : const Color(0xFF999999))),
-                    const SizedBox(width: 20),
+              // 底部互动栏
+              if ((item.likeCount != null && item.likeCount! > 0) ||
+                  (item.commentCount != null && item.commentCount! > 0)) ...[
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    if (item.likeCount != null && item.likeCount! > 0) ...[
+                      Text('❤️ ${item.likeCount}',
+                          style: TextStyle(fontSize: 13, color: isDark ? Colors.grey[400] : const Color(0xFF999999))),
+                      const SizedBox(width: 20),
+                    ],
+                    if (item.commentCount != null && item.commentCount! > 0) ...[
+                      Text('💬 ${item.commentCount}',
+                          style: TextStyle(fontSize: 13, color: isDark ? Colors.grey[400] : const Color(0xFF999999))),
+                    ],
                   ],
-                  if (item.commentCount != null && item.commentCount! > 0) ...[
-                    Text('💬 ${item.commentCount}',
-                        style: TextStyle(fontSize: 13, color: isDark ? Colors.grey[400] : const Color(0xFF999999))),
-                  ],
-                ],
-              ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
   }
 
-  String _feedTypeLabel(String feedType, String lang) {
-    final isEn = lang.startsWith('en');
+  Widget _buildImages(List<String> images, bool isDark) {
+    final validImages = images.where((url) => url.isNotEmpty).toList();
+    if (validImages.isEmpty) return const SizedBox.shrink();
+
+    if (validImages.length == 1) {
+      return AspectRatio(
+        aspectRatio: 16 / 9,
+        child: Image.network(
+          validImages.first,
+          fit: BoxFit.cover,
+          width: double.infinity,
+          cacheWidth: 600,
+          errorBuilder: (_, __, ___) => Container(
+            color: isDark ? Colors.grey[800] : const Color(0xFFF0F0F0),
+            child: const Center(child: Icon(Icons.image, color: Colors.grey)),
+          ),
+        ),
+      );
+    }
+
+    return Row(
+      children: validImages.take(3).map((url) {
+        return Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(right: 3),
+            child: AspectRatio(
+              aspectRatio: 1,
+              child: Image.network(
+                url,
+                fit: BoxFit.cover,
+                cacheWidth: 300,
+                errorBuilder: (_, __, ___) => Container(
+                  color: isDark ? Colors.grey[800] : const Color(0xFFF0F0F0),
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  void _onCardTap(BuildContext context) {
+    switch (item.feedType) {
+      case 'task':
+        final taskId = item.id.replaceFirst('task_', '');
+        if (taskId.isNotEmpty) context.push('/tasks/$taskId');
+      case 'forum_post':
+        final postId = item.id.replaceFirst('post_', '');
+        if (postId.isNotEmpty) context.push('/forum/posts/$postId');
+      case 'product':
+        final productId = item.id.replaceFirst('product_', '');
+        if (productId.isNotEmpty) context.push('/flea-market/$productId');
+      case 'service':
+        final serviceId = item.id.replaceFirst('service_', '');
+        if (serviceId.isNotEmpty) context.push('/service/$serviceId');
+      case 'completion':
+        final taskId = item.extraData?['task_id']?.toString();
+        if (taskId != null && taskId.isNotEmpty) context.push('/tasks/$taskId');
+      default:
+        break;
+    }
+  }
+
+  String _feedTypeLabel(String feedType, AppLocalizations l10n) {
+    final isEn = l10n.localeName.startsWith('en');
     switch (feedType) {
       case 'task':
         return isEn ? 'Published a task' : '发布了新任务';
@@ -878,15 +922,6 @@ class _FollowFeedCard extends StatelessWidget {
       default:
         return isEn ? 'Updated' : '更新了动态';
     }
-  }
-
-  String _formatTimeAgo(DateTime time) {
-    final diff = DateTime.now().difference(time);
-    if (diff.inMinutes < 1) return '刚刚';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}分钟前';
-    if (diff.inHours < 24) return '${diff.inHours}小时前';
-    if (diff.inDays < 7) return '${diff.inDays}天前';
-    return '${time.month}/${time.day}';
   }
 }
 

@@ -163,6 +163,144 @@ class _NearbyTabState extends State<_NearbyTab> {
     ));
   }
 
+  void _showNearbyLocationPicker() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    String? pickedAddress;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: false,
+      backgroundColor: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetContext) {
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+            20, 16, 20,
+            MediaQuery.of(sheetContext).viewInsets.bottom + 20,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 36, height: 4,
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white24 : Colors.black12,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                context.l10n.locationSetLocation,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                context.l10n.locationSetLocationHint,
+                style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+              ),
+              const SizedBox(height: 16),
+              LocationInputField(
+                initialValue: _city,
+                showOnlineOption: false,
+                onChanged: (value) => pickedAddress = value,
+                onLocationPicked: (address, lat, lng) {
+                  pickedAddress = address;
+                },
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    final address = pickedAddress;
+                    if (address != null && address.isNotEmpty) {
+                      setState(() => _city = address);
+                      context.read<HomeBloc>().add(HomeLocationCityUpdated(address));
+                    }
+                    Navigator.pop(sheetContext);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: Text(context.l10n.commonConfirm),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  List<Widget> _buildWaterfallItems(HomeState state) {
+    final locale = Localizations.localeOf(context);
+    final isEn = locale.languageCode == 'en';
+    final items = <Widget>[];
+
+    // Tasks
+    for (final task in state.nearbyTasks) {
+      final title = isEn
+          ? (task.titleEn ?? task.title)
+          : (task.titleZh ?? task.title);
+      items.add(_NearbyWaterfallCard(
+        title: title,
+        imageUrl: task.firstImage,
+        distance: task.distance,
+        tags: [task.taskType],
+        price: '\u00A3${task.reward == task.reward.truncateToDouble() ? task.reward.toInt().toString() : task.reward.toStringAsFixed(2)}',
+        applicantCount: task.currentParticipants,
+        onTap: () => context.push('/tasks/${task.id}'),
+      ));
+    }
+
+    // Services
+    for (final service in state.nearbyServices) {
+      final name = (isEn
+              ? (service['service_name_en'] ?? service['service_name'])
+              : service['service_name']) as String? ?? '';
+      final price = service['base_price'];
+      final pricingType = service['pricing_type'] as String? ?? '';
+      final priceStr = price != null
+          ? '\u00A3${_formatServicePrice(price)}${pricingType.isNotEmpty ? '/$pricingType' : ''}'
+          : null;
+      final distKm = service['distance_km'] as num?;
+      final imageUrl = service['cover_image'] as String?;
+
+      items.add(_NearbyWaterfallCard(
+        title: name,
+        imageUrl: imageUrl,
+        distance: distKm != null ? distKm.toDouble() * 1000 : null,
+        price: priceStr,
+        onTap: () {
+          final id = service['id'];
+          if (id != null) context.push('/service/$id');
+        },
+      ));
+    }
+
+    return items;
+  }
+
+  static String _formatServicePrice(dynamic price) {
+    if (price is int) return price.toString();
+    if (price is double) {
+      return price == price.truncateToDouble()
+          ? price.toInt().toString()
+          : price.toStringAsFixed(2);
+    }
+    return price.toString();
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDesktop = ResponsiveUtils.isDesktop(context);
@@ -172,7 +310,6 @@ class _NearbyTabState extends State<_NearbyTab> {
     }
 
     return BlocBuilder<HomeBloc, HomeState>(
-      // 附近任务 + 附近服务 + 半径变化时重建
       buildWhen: (prev, curr) =>
           prev.nearbyTasks != curr.nearbyTasks ||
           prev.nearbyServices != curr.nearbyServices ||
@@ -189,16 +326,11 @@ class _NearbyTabState extends State<_NearbyTab> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(
-                  Icons.location_off_outlined,
-                  size: 64,
-                  color: AppColors.textTertiaryLight,
-                ),
+                const Icon(Icons.location_off_outlined,
+                    size: 64, color: AppColors.textTertiaryLight),
                 AppSpacing.vMd,
-                Text(
-                  context.l10n.homeNoNearbyTasks,
-                  style: const TextStyle(color: AppColors.textSecondaryLight),
-                ),
+                Text(context.l10n.homeNoNearbyTasks,
+                    style: const TextStyle(color: AppColors.textSecondaryLight)),
                 AppSpacing.vMd,
                 TextButton.icon(
                   onPressed: _loadLocation,
@@ -211,90 +343,43 @@ class _NearbyTabState extends State<_NearbyTab> {
           return isDesktop ? ContentConstraint(child: center) : center;
         }
 
+        // Build mixed list of tasks + services for waterfall
+        final waterfallItems = _buildWaterfallItems(state);
+
         final content = RefreshIndicator(
           onRefresh: () async {
             final homeBloc = context.read<HomeBloc>();
             await _loadLocation();
-            await homeBloc.stream.firstWhere(
-              (s) => !s.isLoading,
-              orElse: () => state,
-            );
+            await homeBloc.stream
+                .firstWhere((s) => !s.isLoading, orElse: () => state);
           },
           child: CustomScrollView(
             slivers: [
-              // 半径选择器
+              // Location bar
+              SliverToBoxAdapter(
+                child: _NearbyLocationBar(
+                  city: _city,
+                  onSwitchTap: _showNearbyLocationPicker,
+                ),
+              ),
+              // Radius selector
               SliverToBoxAdapter(
                 child: _NearbyRadiusSelector(
                   selectedRadius: state.nearbyRadius,
                   onChanged: _onRadiusChanged,
                 ),
               ),
-
-              // 附近任务列表
-              if (state.nearbyTasks.isNotEmpty)
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                  sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                          child: AnimatedListItem(
-                            index: index,
-                            maxAnimatedIndex: 11,
-                            child: _TaskCard(task: state.nearbyTasks[index]),
-                          ),
-                        );
-                      },
-                      childCount: state.nearbyTasks.length,
-                    ),
-                  ),
+              // Waterfall grid
+              SliverPadding(
+                padding: const EdgeInsets.all(8),
+                sliver: SliverMasonryGrid.count(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 8,
+                  crossAxisSpacing: 8,
+                  childCount: waterfallItems.length,
+                  itemBuilder: (context, index) => waterfallItems[index],
                 ),
-
-              // 附近服务区段标题
-              if (state.nearbyServices.isNotEmpty)
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.sm,
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.home_repair_service_outlined,
-                            size: 18, color: AppColors.primary),
-                        const SizedBox(width: 6),
-                        Text(
-                          context.l10n.nearbyServicesSection,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-              // 附近服务卡片列表
-              if (state.nearbyServices.isNotEmpty)
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                  sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                          child: _NearbyServiceCard(
-                            service: state.nearbyServices[index],
-                          ),
-                        );
-                      },
-                      childCount: state.nearbyServices.length,
-                    ),
-                  ),
-                ),
-
-              // 底部安全区
+              ),
               const SliverPadding(padding: EdgeInsets.only(bottom: AppSpacing.lg)),
             ],
           ),
@@ -368,6 +453,246 @@ class _NearbyRadiusSelector extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// 附近 tab 顶部定位条
+class _NearbyLocationBar extends StatelessWidget {
+  const _NearbyLocationBar({
+    required this.city,
+    required this.onSwitchTap,
+  });
+
+  final String? city;
+  final VoidCallback onSwitchTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = context.l10n;
+    final displayCity = city ?? 'London';
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0,
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.location_on, size: 14, color: AppColors.primary),
+          const SizedBox(width: 4),
+          Text(
+            l10n.nearbyCurrentLocation(displayCity),
+            style: TextStyle(
+              fontSize: 13,
+              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+            ),
+          ),
+          const SizedBox(width: 6),
+          GestureDetector(
+            onTap: onSwitchTap,
+            child: Text(
+              l10n.nearbySwitch,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.primary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 附近瀑布流卡片 — 小红书风格
+class _NearbyWaterfallCard extends StatelessWidget {
+  const _NearbyWaterfallCard({
+    required this.title,
+    this.imageUrl,
+    this.distance,
+    this.tags = const [],
+    this.price,
+    this.applicantCount = 0,
+    this.onTap,
+  });
+
+  final String title;
+  final String? imageUrl;
+  final double? distance;
+  final List<String> tags;
+  final String? price;
+  final int applicantCount;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: isDark
+              ? null
+              : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Image area with distance badge
+            _buildImageArea(isDark),
+            // Card body
+            Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                      height: 1.4,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (tags.isNotEmpty || price != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Wrap(
+                        spacing: 4,
+                        runSpacing: 4,
+                        children: [
+                          ...tags.map((tag) => _NearbyTagChip(label: tag)),
+                          if (price != null) _NearbyTagChip(label: price!, isPrice: true),
+                        ],
+                      ),
+                    ),
+                  if (applicantCount > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        context.l10n.nearbyApplicants(applicantCount),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImageArea(bool isDark) {
+    final hasImage = imageUrl != null && imageUrl!.isNotEmpty;
+
+    return Stack(
+      children: [
+        if (hasImage)
+          AsyncImageView(
+            imageUrl: imageUrl!,
+            width: double.infinity,
+            height: 140,
+          )
+        else
+          Container(
+            width: double.infinity,
+            height: 120,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppColors.primary.withValues(alpha: 0.15),
+                  AppColors.primary.withValues(alpha: 0.05),
+                ],
+              ),
+            ),
+            child: Center(
+              child: Icon(
+                Icons.task_outlined,
+                size: 36,
+                color: AppColors.primary.withValues(alpha: 0.4),
+              ),
+            ),
+          ),
+        if (distance != null)
+          Positioned(
+            bottom: 8,
+            left: 8,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: GlassContainer(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.location_on, size: 11, color: Colors.white),
+                    const SizedBox(width: 2),
+                    Text(
+                      _formatDistance(distance!),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  static String _formatDistance(double meters) {
+    if (meters < 1000) return '${meters.round()}m';
+    return '${(meters / 1000).toStringAsFixed(1)}km';
+  }
+}
+
+/// Tag chip for waterfall card
+class _NearbyTagChip extends StatelessWidget {
+  const _NearbyTagChip({required this.label, this.isPrice = false});
+
+  final String label;
+  final bool isPrice;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: isPrice ? const Color(0xFFFFF0F0) : const Color(0xFFF0F0FF),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11,
+          color: isPrice ? const Color(0xFFEE5A24) : AppColors.primary,
+          fontWeight: isPrice ? FontWeight.w600 : FontWeight.w400,
+        ),
       ),
     );
   }
