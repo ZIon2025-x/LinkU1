@@ -4875,5 +4875,15 @@
   "nearbyServiceDistance": "away",
   "locationResolving": "Resolving...",
   "locationResolved": "Located",
-  "nearbyServicesSection": "Nearby Services"
+  "nearbyServicesSection": "Nearby Services",
+  "drawerMyTasks": "My Tasks",
+  "drawerMyWallet": "My Wallet",
+  "drawerSettings": "Settings",
+  "drawerHelpFeedback": "Help & Feedback",
+  "drawerLogin": "Log in",
+  "nearbyCurrentLocation": "Current location: {city}",
+  "@nearbyCurrentLocation": { "placeholders": { "city": { "type": "String" } } },
+  "nearbySwitch": "Switch",
+  "nearbyApplicants": "{count} applicants",
+  "@nearbyApplicants": { "placeholders": { "count": { "type": "int" } } }
 }

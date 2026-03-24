@@ -10294,6 +10294,34 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get nearbyServicesSection => '附近的服务';
+
+  @override
+  String get drawerMyTasks => '我的任务';
+
+  @override
+  String get drawerMyWallet => '我的钱包';
+
+  @override
+  String get drawerSettings => '设置';
+
+  @override
+  String get drawerHelpFeedback => '帮助与反馈';
+
+  @override
+  String get drawerLogin => '登录';
+
+  @override
+  String nearbyCurrentLocation(String city) {
+    return '当前定位：$city';
+  }
+
+  @override
+  String get nearbySwitch => '切换';
+
+  @override
+  String nearbyApplicants(int count) {
+    return '$count人申请';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -20542,4 +20570,32 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get nearbyServicesSection => '附近的服務';
+
+  @override
+  String get drawerMyTasks => '我的任務';
+
+  @override
+  String get drawerMyWallet => '我的錢包';
+
+  @override
+  String get drawerSettings => '設定';
+
+  @override
+  String get drawerHelpFeedback => '幫助與回饋';
+
+  @override
+  String get drawerLogin => '登入';
+
+  @override
+  String nearbyCurrentLocation(String city) {
+    return '當前定位：$city';
+  }
+
+  @override
+  String get nearbySwitch => '切換';
+
+  @override
+  String nearbyApplicants(int count) {
+    return '$count人申請';
+  }
 }

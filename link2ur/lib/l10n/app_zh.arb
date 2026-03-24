@@ -4783,5 +4783,15 @@
   "nearbyServiceDistance": "距离",
   "locationResolving": "解析中...",
   "locationResolved": "已定位",
-  "nearbyServicesSection": "附近的服务"
+  "nearbyServicesSection": "附近的服务",
+  "drawerMyTasks": "我的任务",
+  "drawerMyWallet": "我的钱包",
+  "drawerSettings": "设置",
+  "drawerHelpFeedback": "帮助与反馈",
+  "drawerLogin": "登录",
+  "nearbyCurrentLocation": "当前定位：{city}",
+  "@nearbyCurrentLocation": { "placeholders": { "city": { "type": "String" } } },
+  "nearbySwitch": "切换",
+  "nearbyApplicants": "{count}人申请",
+  "@nearbyApplicants": { "placeholders": { "count": { "type": "int" } } }
 }

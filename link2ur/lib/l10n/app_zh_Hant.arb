@@ -4698,5 +4698,15 @@
   "nearbyServiceDistance": "距離",
   "locationResolving": "解析中...",
   "locationResolved": "已定位",
-  "nearbyServicesSection": "附近的服務"
+  "nearbyServicesSection": "附近的服務",
+  "drawerMyTasks": "我的任務",
+  "drawerMyWallet": "我的錢包",
+  "drawerSettings": "設定",
+  "drawerHelpFeedback": "幫助與回饋",
+  "drawerLogin": "登入",
+  "nearbyCurrentLocation": "當前定位：{city}",
+  "@nearbyCurrentLocation": { "placeholders": { "city": { "type": "String" } } },
+  "nearbySwitch": "切換",
+  "nearbyApplicants": "{count}人申請",
+  "@nearbyApplicants": { "placeholders": { "count": { "type": "int" } } }
 }

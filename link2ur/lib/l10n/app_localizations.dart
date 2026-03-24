@@ -19759,6 +19759,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Nearby Services'**
   String get nearbyServicesSection;
+
+  /// No description provided for @drawerMyTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'My Tasks'**
+  String get drawerMyTasks;
+
+  /// No description provided for @drawerMyWallet.
+  ///
+  /// In en, this message translates to:
+  /// **'My Wallet'**
+  String get drawerMyWallet;
+
+  /// No description provided for @drawerSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get drawerSettings;
+
+  /// No description provided for @drawerHelpFeedback.
+  ///
+  /// In en, this message translates to:
+  /// **'Help & Feedback'**
+  String get drawerHelpFeedback;
+
+  /// No description provided for @drawerLogin.
+  ///
+  /// In en, this message translates to:
+  /// **'Log in'**
+  String get drawerLogin;
+
+  /// No description provided for @nearbyCurrentLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Current location: {city}'**
+  String nearbyCurrentLocation(String city);
+
+  /// No description provided for @nearbySwitch.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch'**
+  String get nearbySwitch;
+
+  /// No description provided for @nearbyApplicants.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} applicants'**
+  String nearbyApplicants(int count);
 }
 
 class _AppLocalizationsDelegate

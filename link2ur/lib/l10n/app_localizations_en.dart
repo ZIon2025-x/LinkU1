@@ -10720,4 +10720,32 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get nearbyServicesSection => 'Nearby Services';
+
+  @override
+  String get drawerMyTasks => 'My Tasks';
+
+  @override
+  String get drawerMyWallet => 'My Wallet';
+
+  @override
+  String get drawerSettings => 'Settings';
+
+  @override
+  String get drawerHelpFeedback => 'Help & Feedback';
+
+  @override
+  String get drawerLogin => 'Log in';
+
+  @override
+  String nearbyCurrentLocation(String city) {
+    return 'Current location: $city';
+  }
+
+  @override
+  String get nearbySwitch => 'Switch';
+
+  @override
+  String nearbyApplicants(int count) {
+    return '$count applicants';
+  }
 }
