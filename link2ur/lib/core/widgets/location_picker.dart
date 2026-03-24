@@ -188,7 +188,7 @@ class _LocationInputFieldState extends State<LocationInputField> {
   }
 
   Future<void> _geocodeManualInput(String text) async {
-    if (text.trim().length < 2) {
+    if (text.trim().length < 3) {
       setState(() => _resolvedAddress = null);
       return;
     }
@@ -292,7 +292,7 @@ class _LocationInputFieldState extends State<LocationInputField> {
             widget.onChanged?.call(value);
             // Debounce geocode
             _debounceTimer?.cancel();
-            _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+            _debounceTimer = Timer(const Duration(milliseconds: 1500), () {
               _geocodeManualInput(value);
             });
           },

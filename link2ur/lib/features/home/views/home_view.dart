@@ -344,10 +344,12 @@ class _HomeViewContentState extends State<_HomeViewContent> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final homeBloc = context.read<HomeBloc>();
     final currentCity = homeBloc.state.locationCity;
+    String? pickedAddress;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      showDragHandle: false, // 手动画拖拽条，避免重复
       backgroundColor: isDark ? const Color(0xFF1C1C1E) : Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
@@ -385,16 +387,39 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                 style: TextStyle(fontSize: 13, color: Colors.grey[500]),
               ),
               const SizedBox(height: 16),
-              // LocationInputField (支持 GPS + 手动输入自动解析 + 地图选点)
+              // LocationInputField — 不自动关闭 sheet，让用户手动确认
               LocationInputField(
                 initialValue: currentCity,
                 showOnlineOption: false,
+                onChanged: (value) {
+                  pickedAddress = value;
+                },
                 onLocationPicked: (address, lat, lng) {
-                  homeBloc.add(HomeLocationCityUpdated(address));
-                  Navigator.pop(sheetContext);
+                  pickedAddress = address;
                 },
               ),
               const SizedBox(height: 16),
+              // 确认按钮
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    final address = pickedAddress;
+                    if (address != null && address.isNotEmpty) {
+                      homeBloc.add(HomeLocationCityUpdated(address));
+                    }
+                    Navigator.pop(sheetContext);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: Text(context.l10n.commonConfirm),
+                ),
+              ),
+              const SizedBox(height: 8),
             ],
           ),
         );
