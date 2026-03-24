@@ -17600,6 +17600,12 @@ abstract class AppLocalizations {
   /// **'Failed to create conversation, please retry'**
   String get aiChatCreateConversationRetry;
 
+  /// No description provided for @aiChatResponseTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'AI response timeout, please try again'**
+  String get aiChatResponseTimeout;
+
   /// No description provided for @chatLoadFailed.
   ///
   /// In en, this message translates to:

@@ -4313,6 +4313,7 @@
   "aiChatCreateConversationFailed": "创建对话失败",
   "aiChatLoadHistoryFailed": "加载消息历史失败",
   "aiChatCreateConversationRetry": "创建对话失败，请重试",
+  "aiChatResponseTimeout": "AI 回复超时，请重试",
   "chatLoadFailed": "加载消息失败",
   "chatLoadMoreFailed": "加载更多消息失败",
   "chatNetworkOffline": "当前无网络连接，无法发送",

@@ -4406,6 +4406,7 @@
   "aiChatCreateConversationFailed": "Failed to create conversation",
   "aiChatLoadHistoryFailed": "Failed to load message history",
   "aiChatCreateConversationRetry": "Failed to create conversation, please retry",
+  "aiChatResponseTimeout": "AI response timeout, please try again",
   "chatLoadFailed": "Failed to load messages",
   "chatLoadMoreFailed": "Failed to load more messages",
   "chatNetworkOffline": "No network connection, unable to send",

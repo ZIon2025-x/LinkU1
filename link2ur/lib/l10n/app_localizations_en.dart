@@ -9573,6 +9573,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Failed to create conversation, please retry';
 
   @override
+  String get aiChatResponseTimeout => 'AI response timeout, please try again';
+
+  @override
   String get chatLoadFailed => 'Failed to load messages';
 
   @override

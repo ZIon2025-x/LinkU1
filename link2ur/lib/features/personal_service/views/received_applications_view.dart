@@ -1,7 +1,4 @@
-import 'dart:io' show Platform;
-
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -111,9 +108,11 @@ class _ReceivedApplicationsContent extends StatelessWidget {
 
           return RefreshIndicator(
             onRefresh: () async {
-              context
-                  .read<PersonalServiceBloc>()
-                  .add(const PersonalServiceLoadReceivedApplications());
+              final bloc = context.read<PersonalServiceBloc>();
+              bloc.add(const PersonalServiceLoadReceivedApplications());
+              await bloc.stream.firstWhere(
+                (s) => s.status != PersonalServiceStatus.loading,
+              );
             },
             child: ListView.separated(
               clipBehavior: Clip.none,
@@ -489,7 +488,7 @@ class _ApplicationCard extends StatelessWidget {
     final appId = application['id'] as int;
     final priceController = TextEditingController();
     final messageController = TextEditingController();
-    final isIOS = !kIsWeb && Platform.isIOS;
+    final isIOS = Theme.of(context).platform == TargetPlatform.iOS;
     AppHaptics.light();
 
     showDialog(

@@ -4252,6 +4252,7 @@
   "aiChatCreateConversationFailed": "建立對話失敗",
   "aiChatLoadHistoryFailed": "載入訊息紀錄失敗",
   "aiChatCreateConversationRetry": "建立對話失敗，請重試",
+  "aiChatResponseTimeout": "AI 回覆逾時，請重試",
   "chatLoadFailed": "載入訊息失敗",
   "chatLoadMoreFailed": "載入更多訊息失敗",
   "chatNetworkOffline": "目前無網路連線，無法傳送",

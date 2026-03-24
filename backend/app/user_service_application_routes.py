@@ -296,7 +296,7 @@ async def cancel_service_application(
     }
 
 
-# ==================== 服务所有者管理收到的申请（个人服务 + 达人服务） ====================
+# ==================== 服务所有者管理收到的申请（个人服务；达人服务使用 task_expert_routes） ====================
 
 
 async def _get_application_as_owner(
@@ -305,7 +305,7 @@ async def _get_application_as_owner(
     db: AsyncSession,
     lock: bool = True,
 ) -> models.ServiceApplication:
-    """获取申请记录并验证当前用户是服务所有者"""
+    """获取申请记录并验证当前用户是服务所有者（仅限个人服务，达人服务走 task_expert_routes）"""
     query = (
         select(models.ServiceApplication)
         .where(models.ServiceApplication.id == application_id)

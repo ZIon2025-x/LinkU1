@@ -10,6 +10,9 @@ import '../../../data/services/ai_chat_service.dart';
 import '../../customer_service/bloc/customer_service_bloc.dart';
 import 'ai_chat_bloc.dart';
 
+/// Private sentinel for copyWith — distinguishes "not provided" from "explicitly null".
+const _sentinel = Object();
+
 // ==================== Chat Mode ====================
 
 enum ChatMode { ai, transferring, csConnected, csEnded }
@@ -148,20 +151,22 @@ class UnifiedChatState extends Equatable {
   final String? actionMessage;
   final bool isRating;
 
+  /// Sentinel-based copyWith: omitting a nullable field preserves its current
+  /// value; passing `null` explicitly clears it.
   UnifiedChatState copyWith({
     ChatMode? mode,
     List<AIMessage>? aiMessages,
     List<CustomerServiceMessage>? csMessages,
     bool? isTyping,
     String? streamingContent,
-    String? activeToolCall,
-    Map<String, dynamic>? taskDraft,
+    Object? activeToolCall = _sentinel,
+    Object? taskDraft = _sentinel,
     bool? csOnlineStatus,
     String? csContactEmail,
     String? csServiceName,
     String? csChatId,
-    String? errorMessage,
-    String? actionMessage,
+    Object? errorMessage = _sentinel,
+    Object? actionMessage = _sentinel,
     bool? isRating,
   }) {
     return UnifiedChatState(
@@ -170,14 +175,22 @@ class UnifiedChatState extends Equatable {
       csMessages: csMessages ?? this.csMessages,
       isTyping: isTyping ?? this.isTyping,
       streamingContent: streamingContent ?? this.streamingContent,
-      activeToolCall: activeToolCall,
-      taskDraft: taskDraft,
+      activeToolCall: identical(activeToolCall, _sentinel)
+          ? this.activeToolCall
+          : activeToolCall as String?,
+      taskDraft: identical(taskDraft, _sentinel)
+          ? this.taskDraft
+          : taskDraft as Map<String, dynamic>?,
       csOnlineStatus: csOnlineStatus ?? this.csOnlineStatus,
       csContactEmail: csContactEmail ?? this.csContactEmail,
       csServiceName: csServiceName ?? this.csServiceName,
       csChatId: csChatId ?? this.csChatId,
-      errorMessage: errorMessage,
-      actionMessage: actionMessage,
+      errorMessage: identical(errorMessage, _sentinel)
+          ? this.errorMessage
+          : errorMessage as String?,
+      actionMessage: identical(actionMessage, _sentinel)
+          ? this.actionMessage
+          : actionMessage as String?,
       isRating: isRating ?? this.isRating,
     );
   }
@@ -322,7 +335,7 @@ class UnifiedChatBloc extends Bloc<UnifiedChatEvent, UnifiedChatState> {
     Emitter<UnifiedChatState> emit,
   ) {
     _aiBloc.add(const AIChatClearTaskDraft());
-    emit(state.copyWith(taskDraft: null)); // ignore: avoid_redundant_argument_values
+    emit(state.copyWith(taskDraft: null));
   }
 
   /// 加载客服聊天历史

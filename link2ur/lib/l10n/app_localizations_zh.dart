@@ -9188,6 +9188,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aiChatCreateConversationRetry => '创建对话失败，请重试';
 
   @override
+  String get aiChatResponseTimeout => 'AI 回复超时，请重试';
+
+  @override
   String get chatLoadFailed => '加载消息失败';
 
   @override
@@ -19612,6 +19615,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get aiChatCreateConversationRetry => '建立對話失敗，請重試';
+
+  @override
+  String get aiChatResponseTimeout => 'AI 回覆逾時，請重試';
 
   @override
   String get chatLoadFailed => '載入訊息失敗';

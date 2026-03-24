@@ -491,7 +491,7 @@ class _BannerItem extends StatelessWidget {
       child: GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.fromLTRB(4, 4, 4, 10),
+        margin: const EdgeInsets.only(top: 4, bottom: 10),
         clipBehavior: Clip.hardEdge,
         decoration: BoxDecoration(
           gradient: !_hasImage

@@ -156,6 +156,8 @@ class ErrorLocalizer {
         return context.l10n.aiChatLoadHistoryFailed;
       case 'ai_chat_create_conversation_retry':
         return context.l10n.aiChatCreateConversationRetry;
+      case 'ai_chat_response_timeout':
+        return context.l10n.aiChatResponseTimeout;
       case 'chat_load_failed':
         return context.l10n.chatLoadFailed;
       case 'chat_load_more_failed':

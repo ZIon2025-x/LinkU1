@@ -8,7 +8,7 @@ import '../../core/utils/logger.dart';
 import '../models/ai_chat.dart';
 import 'api_service.dart';
 
-/// AI 聊天服务 — 处理 SSE 流式响应
+/// AI 聊天服务 — 处理 SSE 流式响应，含 Railway 非流式回退
 class AIChatService {
   AIChatService({required ApiService apiService}) : _apiService = apiService;
 
@@ -62,7 +62,9 @@ class AIChatService {
     return response.isSuccess;
   }
 
-  /// 发送消息并接收 SSE 流
+  /// 发送消息并接收 SSE 流。
+  /// 如果 SSE 流失败或 Railway 代理缓冲导致无事件到达，
+  /// 自动回退到轮询历史记录获取 AI 回复。
   Stream<AIChatEvent> sendMessage(String conversationId, String content) {
     final controller = StreamController<AIChatEvent>();
 
@@ -86,6 +88,9 @@ class AIChatService {
     String content,
     StreamController<AIChatEvent> controller,
   ) async {
+    bool receivedDone = false;
+    bool receivedAnyEvent = false;
+
     try {
       // 使用 Dio 与 createConversation 同 baseUrl、同拦截器（token/签名），后端才能收到请求
       final response = await _apiService.dio.post<ResponseBody>(
@@ -93,7 +98,13 @@ class AIChatService {
         data: {'content': content},
         options: Options(
           responseType: ResponseType.stream,
-          headers: {'Accept': 'text/event-stream'},
+          headers: {
+            'Accept': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            // 防止代理层压缩导致缓冲（Railway/Nginx/Cloudflare）
+            'Accept-Encoding': 'identity',
+          },
           receiveTimeout: const Duration(seconds: 120),
         ),
       );
@@ -131,7 +142,9 @@ class AIChatService {
       String buffer = '';
       await for (final chunk in stream) {
         if (controller.isClosed) return;
-        final String s = chunk is String ? chunk as String : utf8.decode(chunk as List<int>);
+        final String s = chunk is String
+            ? chunk as String
+            : utf8.decode(chunk as List<int>);
         buffer += s;
         buffer = buffer.replaceAll('\r\n', '\n');
         while (buffer.contains('\n\n')) {
@@ -141,13 +154,20 @@ class AIChatService {
           if (eventBlock.isEmpty) continue;
           final event = _parseSSEEvent(eventBlock);
           if (event != null && !controller.isClosed) {
+            receivedAnyEvent = true;
+            if (event.type == AIChatEventType.done) receivedDone = true;
             controller.add(event);
           }
         }
       }
+      // 处理最后一个不完整的事件块
       if (buffer.trim().isNotEmpty && !controller.isClosed) {
         final event = _parseSSEEvent(buffer.trim());
-        if (event != null) controller.add(event);
+        if (event != null) {
+          receivedAnyEvent = true;
+          if (event.type == AIChatEventType.done) receivedDone = true;
+          controller.add(event);
+        }
       }
     } on DioException catch (e) {
       AppLogger.error('AI chat SSE DioException', e);
@@ -155,35 +175,112 @@ class AIChatService {
         final message = e.response?.statusCode == 401
             ? '登录已过期，请重新登录'
             : (e.message ?? '网络错误，请重试');
-        controller.add(AIChatEvent(type: AIChatEventType.error, error: message));
+        controller.add(
+            AIChatEvent(type: AIChatEventType.error, error: message));
         controller.close();
+        return;
       }
     } catch (e) {
       AppLogger.error('AI chat SSE error', e);
-      if (!controller.isClosed) {
-        controller.add(const AIChatEvent(
-          type: AIChatEventType.error,
-          error: '网络错误，请重试',
-        ));
-        controller.close();
-      }
+      // 不立即返回错误 — 走下方 fallback 逻辑
+    }
+
+    // ── Railway 非流式回退 ──
+    // SSE 流结束但未收到 done 事件（Railway 代理可能把整个响应缓冲后一次性返回，
+    // 或者完全吞掉了流式响应）。轮询历史记录获取 AI 回复。
+    if (!receivedDone && !controller.isClosed) {
+      AppLogger.warning(
+        'SSE stream ended without done event '
+        '(receivedAny=$receivedAnyEvent). Falling back to history poll.',
+      );
+      await _fallbackPollHistory(conversationId, controller);
     }
   }
 
-  AIChatEvent? _parseSSEEvent(String block) {
-    String? eventType;
-    String? data;
+  /// 非流式回退：轮询对话历史获取最新 assistant 消息
+  Future<void> _fallbackPollHistory(
+    String conversationId,
+    StreamController<AIChatEvent> controller,
+  ) async {
+    // 最多等 60 秒，每 2 秒查一次
+    const maxAttempts = 30;
+    const pollInterval = Duration(seconds: 2);
 
-    for (final line in block.split('\n')) {
-      final trimmed = line.trim();
-      if (trimmed.startsWith('event: ')) {
-        eventType = trimmed.substring(7).trim();
-      } else if (trimmed.startsWith('data: ')) {
-        data = trimmed.substring(6).trim();
+    for (var i = 0; i < maxAttempts; i++) {
+      if (controller.isClosed) return;
+      await Future.delayed(pollInterval);
+      if (controller.isClosed) return;
+
+      try {
+        final messages = await getHistory(conversationId);
+        if (messages.isEmpty) continue;
+
+        // 找到最后一条 assistant 消息
+        final lastAssistant = messages.lastWhere(
+          (m) => m.isAssistant,
+          orElse: () => const AIMessage(role: '', content: ''),
+        );
+        if (lastAssistant.content.isEmpty) continue;
+
+        // 成功获取到 AI 回复
+        // 先以 token 事件发送完整内容（UI 会显示流式气泡），再发 done
+        if (!controller.isClosed) {
+          controller.add(AIChatEvent(
+            type: AIChatEventType.token,
+            content: lastAssistant.content,
+          ));
+        }
+        // 检查是否有 tool 信息（从历史消息中提取）
+        if (lastAssistant.toolCalls != null &&
+            lastAssistant.toolCalls!.isNotEmpty) {
+          for (final tc in lastAssistant.toolCalls!) {
+            if (!controller.isClosed) {
+              controller.add(AIChatEvent(
+                type: AIChatEventType.toolResult,
+                toolName: tc.name,
+              ));
+            }
+          }
+        }
+        if (!controller.isClosed) {
+          controller.add(AIChatEvent(
+            type: AIChatEventType.done,
+            messageId: lastAssistant.id,
+          ));
+        }
+        return;
+      } catch (e) {
+        AppLogger.warning('Fallback poll attempt $i failed: $e');
       }
     }
 
-    if (eventType == null || data == null) return null;
+    // 超时仍未获取到回复
+    if (!controller.isClosed) {
+      controller.add(const AIChatEvent(
+        type: AIChatEventType.error,
+        error: 'ai_chat_response_timeout',
+      ));
+    }
+  }
+
+  /// 解析 SSE 事件块。支持多行 data: 字段（按 SSE 规范拼接）。
+  AIChatEvent? _parseSSEEvent(String block) {
+    String? eventType;
+    final dataLines = <String>[];
+
+    for (final line in block.split('\n')) {
+      final trimmed = line.trim();
+      if (trimmed.startsWith('event:')) {
+        eventType = trimmed.substring(6).trim();
+      } else if (trimmed.startsWith('data:')) {
+        dataLines.add(trimmed.substring(5).trim());
+      }
+      // 忽略 id:, retry:, 注释(:) 等
+    }
+
+    if (eventType == null || dataLines.isEmpty) return null;
+    // SSE 规范：多个 data: 行用 \n 拼接
+    final data = dataLines.join('\n');
 
     try {
       final json = jsonDecode(data) as Map<String, dynamic>;

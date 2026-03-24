@@ -91,18 +91,25 @@ async def browse_services(
     services = result.scalars().all()
 
     # Batch-load owner user info (avoid N+1)
-    owner_ids = list({s.owner_user_id for s in services if s.owner_user_id})
+    # personal services: owner is user_id; expert services: owner is expert_id (same as user id)
+    owner_ids = set()
+    for s in services:
+        if s.owner_user_id:
+            owner_ids.add(s.owner_user_id)
+        elif s.expert_id:
+            owner_ids.add(s.expert_id)
     owners_map = {}
     if owner_ids:
         owners_result = await db.execute(
-            select(models.User).where(models.User.id.in_(owner_ids))
+            select(models.User).where(models.User.id.in_(list(owner_ids)))
         )
         for u in owners_result.scalars().all():
             owners_map[u.id] = u
 
     items = []
     for s in services:
-        owner = owners_map.get(s.owner_user_id)
+        effective_owner_id = s.owner_user_id or s.expert_id or ""
+        owner = owners_map.get(effective_owner_id)
         item = {
             "id": s.id,
             "service_name": s.service_name,
@@ -116,7 +123,7 @@ async def browse_services(
             "is_expert_verified": s.service_type == "expert",
             "status": s.status,
             "images": s.images or [],
-            "owner_id": s.owner_user_id or "",
+            "owner_id": effective_owner_id,
             "owner_name": owner.name if owner else "Unknown",
             "owner_avatar": owner.avatar if owner else None,
             "owner_rating": float(owner.avg_rating) if owner and owner.avg_rating else None,

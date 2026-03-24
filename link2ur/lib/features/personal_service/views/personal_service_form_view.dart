@@ -509,7 +509,7 @@ class _FormContentState extends State<_FormContent> {
                         return context.l10n.personalServicePriceRequired;
                       }
                       final price = double.tryParse(value.trim());
-                      if (price == null || price < 0) {
+                      if (price == null || price <= 0) {
                         return context.l10n.personalServicePriceInvalid;
                       }
                       return null;

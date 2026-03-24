@@ -7,6 +7,9 @@ import '../../../core/utils/logger.dart';
 import '../../../data/models/ai_chat.dart';
 import '../../../data/services/ai_chat_service.dart';
 
+/// Private sentinel for copyWith — distinguishes "not provided" from "explicitly null".
+const _sentinel = Object();
+
 // ==================== Events ====================
 
 abstract class AIChatEvent extends Equatable {
@@ -167,6 +170,9 @@ class AIChatState extends Equatable {
   final Map<String, dynamic>? taskDraft;
   final String? lastToolName;
 
+  /// Sentinel-based copyWith: omitting a nullable field preserves its current
+  /// value; passing `null` explicitly clears it. This eliminates the fragile
+  /// "must manually forward every nullable field" pattern.
   AIChatState copyWith({
     AIChatStatus? status,
     List<AIConversation>? conversations,
@@ -174,12 +180,12 @@ class AIChatState extends Equatable {
     List<AIMessage>? messages,
     bool? isReplying,
     String? streamingContent,
-    String? activeToolCall,
-    String? errorMessage,
-    bool? csAvailableSignal,
-    String? csContactEmail,
-    Map<String, dynamic>? taskDraft,
-    String? lastToolName,
+    Object? activeToolCall = _sentinel,
+    Object? errorMessage = _sentinel,
+    Object? csAvailableSignal = _sentinel,
+    Object? csContactEmail = _sentinel,
+    Object? taskDraft = _sentinel,
+    Object? lastToolName = _sentinel,
   }) {
     return AIChatState(
       status: status ?? this.status,
@@ -189,12 +195,24 @@ class AIChatState extends Equatable {
       messages: messages ?? this.messages,
       isReplying: isReplying ?? this.isReplying,
       streamingContent: streamingContent ?? this.streamingContent,
-      activeToolCall: activeToolCall,
-      errorMessage: errorMessage,
-      csAvailableSignal: csAvailableSignal,
-      csContactEmail: csContactEmail,
-      taskDraft: taskDraft,
-      lastToolName: lastToolName,
+      activeToolCall: identical(activeToolCall, _sentinel)
+          ? this.activeToolCall
+          : activeToolCall as String?,
+      errorMessage: identical(errorMessage, _sentinel)
+          ? this.errorMessage
+          : errorMessage as String?,
+      csAvailableSignal: identical(csAvailableSignal, _sentinel)
+          ? this.csAvailableSignal
+          : csAvailableSignal as bool?,
+      csContactEmail: identical(csContactEmail, _sentinel)
+          ? this.csContactEmail
+          : csContactEmail as String?,
+      taskDraft: identical(taskDraft, _sentinel)
+          ? this.taskDraft
+          : taskDraft as Map<String, dynamic>?,
+      lastToolName: identical(lastToolName, _sentinel)
+          ? this.lastToolName
+          : lastToolName as String?,
     );
   }
 
@@ -340,12 +358,13 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
       content: event.content,
       createdAt: DateTime.now(),
     );
-    // taskDraft persists until user explicitly confirms (AIChatClearTaskDraft)
     emit(state.copyWith(
       messages: [...state.messages, userMessage],
       isReplying: true,
       streamingContent: '',
-      taskDraft: state.taskDraft,
+      activeToolCall: null,
+      errorMessage: null,
+      lastToolName: null,
     ));
 
     // 取消之前的 SSE 订阅
@@ -384,11 +403,8 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
     _AIChatTokenReceived event,
     Emitter<AIChatState> emit,
   ) {
-    // taskDraft and lastToolName must be preserved — copyWith direct-assigns null if omitted
     emit(state.copyWith(
       streamingContent: state.streamingContent + event.content,
-      lastToolName: state.lastToolName,
-      taskDraft: state.taskDraft,
     ));
   }
 
@@ -398,7 +414,6 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
   ) {
     emit(state.copyWith(
       activeToolCall: event.toolName,
-      taskDraft: state.taskDraft, // preserve draft across tool calls
     ));
   }
 
@@ -415,6 +430,7 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
             ? event.toolResult!['draft'] as Map<String, dynamic>
             : null;
     emit(state.copyWith(
+      activeToolCall: null, // clear tool indicator
       lastToolName: event.toolName,
       taskDraft: draftFromResult ?? state.taskDraft,
     ));
@@ -433,17 +449,16 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
         createdAt: DateTime.now(),
         toolName: state.lastToolName,
       );
-      // taskDraft must be preserved — only AIChatClearTaskDraft should clear it
       emit(state.copyWith(
         messages: [...state.messages, assistantMessage],
         isReplying: false,
         streamingContent: '',
-        taskDraft: state.taskDraft,
+        activeToolCall: null,
       ));
     } else {
       emit(state.copyWith(
         isReplying: false,
-        taskDraft: state.taskDraft,
+        activeToolCall: null,
       ));
     }
   }
@@ -455,8 +470,6 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
     emit(state.copyWith(
       csAvailableSignal: event.available,
       csContactEmail: event.contactEmail,
-      lastToolName: state.lastToolName,
-      taskDraft: state.taskDraft,
     ));
   }
 
@@ -466,7 +479,6 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
   ) {
     emit(state.copyWith(
       taskDraft: event.draft,
-      lastToolName: state.lastToolName, // preserve: task_draft fires before done
     ));
   }
 
@@ -474,14 +486,9 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
     AIChatClearTaskDraft event,
     Emitter<AIChatState> emit,
   ) {
-    // Only clear taskDraft — other nullable fields (csAvailableSignal, csContactEmail,
-    // lastToolName) must be preserved. copyWith direct-assigns null for omitted fields.
-    emit(state.copyWith(
-      csAvailableSignal: state.csAvailableSignal,
-      csContactEmail: state.csContactEmail,
-      lastToolName: state.lastToolName,
-    ));
-    // taskDraft omitted → set to null (intentional clear)
+    // With sentinel copyWith, pass null to explicitly clear taskDraft;
+    // all other fields are automatically preserved when omitted.
+    emit(state.copyWith(taskDraft: null));
   }
 
   void _onError(
@@ -500,13 +507,13 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
         isReplying: false,
         streamingContent: '',
         errorMessage: event.error,
-        taskDraft: state.taskDraft,
+        activeToolCall: null,
       ));
     } else {
       emit(state.copyWith(
         isReplying: false,
         errorMessage: event.error,
-        taskDraft: state.taskDraft,
+        activeToolCall: null,
       ));
     }
   }
