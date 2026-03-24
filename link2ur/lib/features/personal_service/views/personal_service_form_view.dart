@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:image_picker/image_picker.dart';
 
+import '../../../core/constants/api_endpoints.dart';
 import '../../../core/constants/expert_constants.dart';
 import '../../../core/utils/service_category_helper.dart';
+import '../../../core/widgets/cross_platform_image.dart';
 import '../../../core/widgets/location_picker.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_radius.dart';
@@ -11,6 +14,7 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../data/repositories/personal_service_repository.dart';
+import '../../../data/services/api_service.dart';
 import '../bloc/personal_service_bloc.dart';
 
 /// Create / edit form for a personal service.
@@ -45,7 +49,9 @@ class _FormContent extends StatefulWidget {
 class _FormContentState extends State<_FormContent> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  final _nameEnController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final _descriptionEnController = TextEditingController();
   final _priceController = TextEditingController();
 
   String? _category;
@@ -55,6 +61,12 @@ class _FormContentState extends State<_FormContent> {
   double? _latitude;
   double? _longitude;
 
+  final List<XFile> _newImages = [];
+  final List<String> _existingImageUrls = [];
+  final _imagePicker = ImagePicker();
+  bool _isUploadingImages = false;
+  static const _maxImages = 6;
+
   bool get _isEditMode => widget.serviceData != null;
 
   @override
@@ -63,7 +75,9 @@ class _FormContentState extends State<_FormContent> {
     if (_isEditMode) {
       final data = widget.serviceData!;
       _nameController.text = (data['service_name'] as String?) ?? '';
+      _nameEnController.text = (data['service_name_en'] as String?) ?? '';
       _descriptionController.text = (data['description'] as String?) ?? '';
+      _descriptionEnController.text = (data['description_en'] as String?) ?? '';
       final price = (data['base_price'] as num?)?.toDouble();
       if (price != null) {
         _priceController.text = price.toStringAsFixed(2);
@@ -74,19 +88,92 @@ class _FormContentState extends State<_FormContent> {
       _location = (data['location'] as String?);
       _latitude = (data['latitude'] as num?)?.toDouble();
       _longitude = (data['longitude'] as num?)?.toDouble();
+      final images = data['images'] as List<dynamic>?;
+      if (images != null) {
+        _existingImageUrls.addAll(images.map((e) => e.toString()));
+      }
     }
   }
 
   @override
   void dispose() {
     _nameController.dispose();
+    _nameEnController.dispose();
     _descriptionController.dispose();
+    _descriptionEnController.dispose();
     _priceController.dispose();
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _pickImages() async {
+    final remaining = _maxImages - _existingImageUrls.length - _newImages.length;
+    if (remaining <= 0) return;
+    try {
+      final picked = await _imagePicker.pickMultiImage(
+        maxWidth: 1024,
+        imageQuality: 85,
+      );
+      if (!mounted || picked.isEmpty) return;
+      setState(() {
+        for (final file in picked) {
+          if (_existingImageUrls.length + _newImages.length < _maxImages) {
+            _newImages.add(file);
+          }
+        }
+      });
+    } on PlatformException catch (_) {
+      // Permission denied or picker error — silently ignore
+    }
+  }
+
+  void _removeNewImage(int index) {
+    setState(() => _newImages.removeAt(index));
+  }
+
+  void _removeExistingImage(int index) {
+    setState(() => _existingImageUrls.removeAt(index));
+  }
+
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+
+    // Upload new images first
+    final List<String> uploadedUrls = [];
+    if (_newImages.isNotEmpty) {
+      setState(() => _isUploadingImages = true);
+      try {
+        final apiService = context.read<ApiService>();
+        for (int i = 0; i < _newImages.length; i++) {
+          if (!mounted) return;
+          final file = _newImages[i];
+          final bytes = await file.readAsBytes();
+          final name = file.name.isNotEmpty ? file.name : 'service_${i + 1}.jpg';
+          final response = await apiService.uploadFileBytes<Map<String, dynamic>>(
+            '${ApiEndpoints.uploadPublicImage}?category=service_image',
+            bytes: bytes,
+            filename: name,
+            fieldName: 'image',
+          );
+          final url = response.data?['url'] as String?;
+          if (url != null && url.isNotEmpty) uploadedUrls.add(url);
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() => _isUploadingImages = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(context.l10n.commonImageUploadFailed(e.toString())),
+              backgroundColor: Theme.of(context).colorScheme.error,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        return;
+      }
+      if (mounted) setState(() => _isUploadingImages = false);
+    }
+
+    final allImages = [..._existingImageUrls, ...uploadedUrls];
 
     final data = <String, dynamic>{
       'service_name': _nameController.text.trim(),
@@ -94,6 +181,11 @@ class _FormContentState extends State<_FormContent> {
       'pricing_type': _pricingType,
       'location_type': _locationType,
     };
+
+    final nameEn = _nameEnController.text.trim();
+    if (nameEn.isNotEmpty) data['service_name_en'] = nameEn;
+    final descEn = _descriptionEnController.text.trim();
+    if (descEn.isNotEmpty) data['description_en'] = descEn;
 
     if (_category != null) {
       data['category'] = _category;
@@ -115,6 +207,10 @@ class _FormContentState extends State<_FormContent> {
       }
     }
 
+    // Always send images array — empty list clears existing images on update
+    data['images'] = allImages;
+
+    if (!mounted) return;
     final bloc = context.read<PersonalServiceBloc>();
     if (_isEditMode) {
       final id = widget.serviceData!['id']?.toString() ?? '';
@@ -124,10 +220,59 @@ class _FormContentState extends State<_FormContent> {
     }
   }
 
+  Widget _buildImagePicker() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final totalCount = _existingImageUrls.length + _newImages.length;
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        // Existing images (already uploaded)
+        ..._existingImageUrls.asMap().entries.map((entry) {
+          return _ImageTile(
+            child: Image.network(entry.value, width: 80, height: 80, fit: BoxFit.cover),
+            onRemove: () => _removeExistingImage(entry.key),
+          );
+        }),
+        // Newly picked images (not yet uploaded)
+        ..._newImages.asMap().entries.map((entry) {
+          return _ImageTile(
+            child: CrossPlatformImage(xFile: entry.value, width: 80, height: 80),
+            onRemove: () => _removeNewImage(entry.key),
+          );
+        }),
+        // Add button
+        if (totalCount < _maxImages)
+          GestureDetector(
+            onTap: _pickImages,
+            child: Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white.withValues(alpha: 0.08) : AppColors.skeletonBase,
+                borderRadius: AppRadius.allSmall,
+                border: Border.all(color: AppColors.textTertiaryLight.withValues(alpha: 0.5)),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.add_photo_alternate_outlined, size: 28, color: AppColors.textTertiaryLight),
+                  const SizedBox(height: 2),
+                  Text(
+                    context.l10n.commonImageCount(totalCount, _maxImages),
+                    style: const TextStyle(fontSize: 10, color: AppColors.textTertiaryLight),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return BlocListener<PersonalServiceBloc, PersonalServiceState>(
       listenWhen: (prev, curr) =>
           (prev.actionMessage != curr.actionMessage &&
@@ -168,7 +313,7 @@ class _FormContentState extends State<_FormContent> {
                   prev.isSubmitting != curr.isSubmitting,
               builder: (context, state) {
                 return TextButton(
-                  onPressed: state.isSubmitting ? null : _submit,
+                  onPressed: (state.isSubmitting || _isUploadingImages) ? null : _submit,
                   child: state.isSubmitting
                       ? const SizedBox(
                           width: 20,
@@ -234,6 +379,38 @@ class _FormContentState extends State<_FormContent> {
                     }
                     return null;
                   },
+                ),
+                const SizedBox(height: AppSpacing.md),
+
+                // ── Service Name (English) ──
+                _SectionLabel(label: context.l10n.personalServiceNameEn),
+                const SizedBox(height: AppSpacing.sm),
+                TextFormField(
+                  controller: _nameEnController,
+                  maxLength: 100,
+                  decoration: InputDecoration(
+                    hintText: context.l10n.personalServiceNameEnHint,
+                    border: OutlineInputBorder(
+                      borderRadius: AppRadius.input,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+
+                // ── Description (English) ──
+                _SectionLabel(label: context.l10n.personalServiceDescriptionEn),
+                const SizedBox(height: AppSpacing.sm),
+                TextFormField(
+                  controller: _descriptionEnController,
+                  maxLines: 3,
+                  maxLength: 2000,
+                  decoration: InputDecoration(
+                    hintText: context.l10n.personalServiceDescriptionEnHint,
+                    alignLabelWithHint: true,
+                    border: OutlineInputBorder(
+                      borderRadius: AppRadius.input,
+                    ),
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.md),
 
@@ -396,10 +573,14 @@ class _FormContentState extends State<_FormContent> {
                   const SizedBox(height: AppSpacing.md),
                 ],
 
-                // ── Images placeholder ──
+                // ── Images ──
                 _SectionLabel(label: context.l10n.personalServiceImages),
                 const SizedBox(height: AppSpacing.sm),
-                _ImagePlaceholder(isDark: isDark),
+                _buildImagePicker(),
+                if (_isUploadingImages) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  const LinearProgressIndicator(),
+                ],
 
                 const SizedBox(height: AppSpacing.xl),
 
@@ -412,7 +593,7 @@ class _FormContentState extends State<_FormContent> {
                       width: double.infinity,
                       height: 48,
                       child: FilledButton(
-                        onPressed: state.isSubmitting ? null : _submit,
+                        onPressed: (state.isSubmitting || _isUploadingImages) ? null : _submit,
                         child: state.isSubmitting
                             ? const SizedBox(
                                 width: 20,
@@ -465,63 +646,41 @@ class _SectionLabel extends StatelessWidget {
 }
 
 // =============================================================================
-// Image upload placeholder
+// Image tile with remove button
 // =============================================================================
 
-class _ImagePlaceholder extends StatelessWidget {
-  const _ImagePlaceholder({required this.isDark});
+class _ImageTile extends StatelessWidget {
+  const _ImageTile({required this.child, required this.onRemove});
 
-  final bool isDark;
+  final Widget child;
+  final VoidCallback onRemove;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: AppRadius.allMedium,
-      onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('图片上传功能即将推出'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      },
-      child: Container(
-        width: double.infinity,
-        height: 120,
-        decoration: BoxDecoration(
-          borderRadius: AppRadius.allMedium,
-          border: Border.all(
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.15)
-                : Colors.black.withValues(alpha: 0.12),
-            width: 1.5,
-          ),
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.04)
-              : Colors.black.withValues(alpha: 0.02),
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        ClipRRect(
+          borderRadius: AppRadius.allSmall,
+          child: SizedBox(width: 80, height: 80, child: child),
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.add_photo_alternate_outlined,
-              size: 36,
-              color: isDark
-                  ? AppColors.textSecondaryDark
-                  : AppColors.textSecondaryLight,
+        Positioned(
+          top: -4,
+          right: -4,
+          child: GestureDetector(
+            onTap: onRemove,
+            child: Container(
+              width: 22,
+              height: 22,
+              decoration: const BoxDecoration(
+                color: AppColors.error,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.close, size: 14, color: Colors.white),
             ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              '添加服务图片',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondaryLight,
-                  ),
-            ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 }

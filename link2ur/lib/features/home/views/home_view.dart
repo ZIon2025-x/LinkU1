@@ -258,21 +258,23 @@ class _HomeViewContentState extends State<_HomeViewContent> {
       child: Row(
         children: [
           // 左上角：菜单按钮（与右侧搜索按钮对称）
-          SizedBox(
-            width: 72,
-            height: 44,
-            child: GestureDetector(
-              onTap: () {
-                AppHaptics.selection();
-                Scaffold.of(context).openDrawer();
-              },
-              behavior: HitTestBehavior.opaque,
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Icon(
-                  Icons.menu,
-                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                  size: 24,
+          Builder(
+            builder: (scaffoldContext) => SizedBox(
+              width: 72,
+              height: 44,
+              child: GestureDetector(
+                onTap: () {
+                  AppHaptics.selection();
+                  Scaffold.of(scaffoldContext).openDrawer();
+                },
+                behavior: HitTestBehavior.opaque,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Icon(
+                    Icons.menu,
+                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                    size: 24,
+                  ),
                 ),
               ),
             ),

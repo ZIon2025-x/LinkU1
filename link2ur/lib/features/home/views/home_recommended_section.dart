@@ -173,7 +173,7 @@ class _StoryRow extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final entries = [
       const _StoryEntry(assetImage: AppAssets.any, label: 'Linker AI', route: '/ai-chat'),
-      _StoryEntry(emoji: '\u{1F4D0}', label: l10n.homeExperts, route: '/task-experts'),
+      _StoryEntry(emoji: '\u{1F31F}', label: l10n.homeExperts, route: '/task-experts'),
       _StoryEntry(emoji: '\u{1F6D2}', label: l10n.homeSecondHandMarket, route: '/flea-market'),
     ];
 
@@ -291,144 +291,99 @@ class _TickerBannerState extends State<_TickerBanner> {
     final locale = Localizations.localeOf(context).languageCode;
     final hasTicker = widget.tickerItems.isNotEmpty;
 
-    // Mockup 风格：ticker 条露出上半部分，banner 紧跟其后盖住 ticker 底部
-    // ticker 有额外 bottom padding 被 banner 的负 margin 遮挡
+    // Mockup 风格（option_A_xiaohongshu）：
+    // Stack 布局 — ticker 在后层只露出顶部，banner 在前层有完整圆角
+    const tickerHeight = 28.0; // ticker 露出的高度
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
         children: [
           if (hasTicker)
-            // Ticker — 底部被 banner 盖住，用额外 padding 补偿
-            Container(
-              padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                    colors: AppColors.gradientPrimary),
-                borderRadius:
-                    BorderRadius.vertical(top: Radius.circular(12)),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withAlpha(56),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(context.l10n.homeTickerLabel,
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700)),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: SizedBox(
-                      height: 22,
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 500),
-                        transitionBuilder: (child, animation) {
-                          // 判断是新 widget（entering）还是旧 widget（exiting）
-                          // animation.status 为 forward 时是新 widget
-                          final isEntering = child.key == ValueKey(_tickerIndex);
-                          final begin = isEntering
-                              ? const Offset(0, 1)   // 新：从下方滑入
-                              : const Offset(0, -1); // 旧：往上方滑出
-                          return ClipRect(
-                            child: SlideTransition(
-                              position: Tween<Offset>(
-                                begin: begin,
-                                end: Offset.zero,
-                              ).animate(animation),
-                              child: child,
-                            ),
-                          );
-                        },
-                        child: Text(
-                          widget.tickerItems[_tickerIndex]
-                              .displayText(locale),
-                          key: ValueKey(_tickerIndex),
-                          style: TextStyle(
-                              color: Colors.white.withAlpha(230),
-                              fontSize: 12,
-                              height: 1.4),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+            Stack(
+              children: [
+                // 后层：ticker 公告条
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  top: 0,
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(14, 6, 14, 18),
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Color(0xFF5A52D5), Color(0xFF8B7DE8)],
                       ),
+                      borderRadius:
+                          BorderRadius.vertical(top: Radius.circular(12)),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withAlpha(56),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(context.l10n.homeTickerLabel,
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700)),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: SizedBox(
+                            height: 22,
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 500),
+                              transitionBuilder: (child, animation) {
+                                final isEntering =
+                                    child.key == ValueKey(_tickerIndex);
+                                final begin = isEntering
+                                    ? const Offset(0, 1)
+                                    : const Offset(0, -1);
+                                return ClipRect(
+                                  child: SlideTransition(
+                                    position: Tween<Offset>(
+                                      begin: begin,
+                                      end: Offset.zero,
+                                    ).animate(animation),
+                                    child: child,
+                                  ),
+                                );
+                              },
+                              child: Text(
+                                widget.tickerItems[_tickerIndex]
+                                    .displayText(locale),
+                                key: ValueKey(_tickerIndex),
+                                style: TextStyle(
+                                    color: Colors.white.withAlpha(230),
+                                    fontSize: 12,
+                                    height: 1.4),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
-            ),
-
-          // Banner
-          _StaticPromoBanner(hasTicker: hasTicker),
+                ),
+                // 前层：banner 轮播，向下偏移露出 ticker
+                Padding(
+                  padding: const EdgeInsets.only(top: tickerHeight),
+                  child: _BannerCarousel(serverBanners: widget.banners),
+                ),
+              ],
+            )
+          else
+            _BannerCarousel(serverBanners: widget.banners),
         ],
       ),
     );
   }
 }
 
-/// 静态促销卡片 — 当没有后端 banner 时显示
-class _StaticPromoBanner extends StatelessWidget {
-  const _StaticPromoBanner({required this.hasTicker});
-  final bool hasTicker;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.vertical(
-          top: hasTicker ? Radius.zero : const Radius.circular(16),
-          bottom: const Radius.circular(16),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('\u{1F389} ${l10n.homeSecondHandMarket}',
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700)),
-          const SizedBox(height: 6),
-          Text(
-            l10n.homeSecondHandSubtitle,
-            style: TextStyle(
-                color: Colors.white.withAlpha(217), fontSize: 13),
-          ),
-          const SizedBox(height: 14),
-          GestureDetector(
-            onTap: () => context.push('/flea-market'),
-            child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 7),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                context.l10n.homeExploreNow,
-                style: const TextStyle(
-                    color: Color(0xFF667EEA),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 

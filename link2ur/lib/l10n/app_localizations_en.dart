@@ -10652,6 +10652,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get personalServicePrice => 'Price';
 
   @override
+  String get personalServiceNameEn => 'Service Name (English)';
+
+  @override
+  String get personalServiceNameEnHint =>
+      'English name for international users';
+
+  @override
+  String get personalServiceDescriptionEn => 'Service Description (English)';
+
+  @override
+  String get personalServiceDescriptionEnHint =>
+      'English description (optional)';
+
+  @override
   String get personalServiceImages => 'Images';
 
   @override

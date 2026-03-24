@@ -283,13 +283,6 @@ class _BannerCarouselState extends State<_BannerCarousel> {
   void _buildBannerList() {
     _allBanners = [
       const _BannerData(
-        localImage: AppAssets.fleaMarketBanner,
-        imageAlignment: Alignment(0.0, 0.4),
-        gradient: AppColors.gradientGreen,
-        icon: Icons.storefront,
-        linkUrl: '/flea-market',
-      ),
-      const _BannerData(
         localImage: AppAssets.studentVerificationBanner,
         gradient: AppColors.gradientIndigo,
         icon: Icons.school,

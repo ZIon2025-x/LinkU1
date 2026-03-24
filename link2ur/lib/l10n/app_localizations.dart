@@ -19622,6 +19622,30 @@ abstract class AppLocalizations {
   /// **'Price'**
   String get personalServicePrice;
 
+  /// No description provided for @personalServiceNameEn.
+  ///
+  /// In en, this message translates to:
+  /// **'Service Name (English)'**
+  String get personalServiceNameEn;
+
+  /// No description provided for @personalServiceNameEnHint.
+  ///
+  /// In en, this message translates to:
+  /// **'English name for international users'**
+  String get personalServiceNameEnHint;
+
+  /// No description provided for @personalServiceDescriptionEn.
+  ///
+  /// In en, this message translates to:
+  /// **'Service Description (English)'**
+  String get personalServiceDescriptionEn;
+
+  /// No description provided for @personalServiceDescriptionEnHint.
+  ///
+  /// In en, this message translates to:
+  /// **'English description (optional)'**
+  String get personalServiceDescriptionEnHint;
+
   /// No description provided for @personalServiceImages.
   ///
   /// In en, this message translates to:

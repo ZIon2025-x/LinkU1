@@ -10227,6 +10227,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get personalServicePrice => '价格';
 
   @override
+  String get personalServiceNameEn => '服务名称（英文）';
+
+  @override
+  String get personalServiceNameEnHint => '方便国际用户了解你的服务';
+
+  @override
+  String get personalServiceDescriptionEn => '服务描述（英文）';
+
+  @override
+  String get personalServiceDescriptionEnHint => '英文描述（选填）';
+
+  @override
   String get personalServiceImages => '图片';
 
   @override
@@ -20565,6 +20577,18 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get personalServicePrice => '價格';
+
+  @override
+  String get personalServiceNameEn => '服務名稱（英文）';
+
+  @override
+  String get personalServiceNameEnHint => '方便國際用戶了解你的服務';
+
+  @override
+  String get personalServiceDescriptionEn => '服務描述（英文）';
+
+  @override
+  String get personalServiceDescriptionEnHint => '英文描述（選填）';
 
   @override
   String get personalServiceImages => '圖片';

@@ -20,6 +20,11 @@ class PersonalServiceRepository {
     return List<Map<String, dynamic>>.from(response.data);
   }
 
+  Future<Map<String, dynamic>> getServiceById(String id) async {
+    final response = await _apiService.get(ApiEndpoints.myPersonalServiceById(id));
+    return Map<String, dynamic>.from(response.data);
+  }
+
   Future<void> updateService(String id, Map<String, dynamic> data) async {
     await _apiService.put(
       ApiEndpoints.myPersonalServiceById(id),

@@ -1597,7 +1597,9 @@ class TaskExpertService(Base):
     longitude = Column(DECIMAL(11, 8), nullable=True)  # for distance calc
     category = Column(String(50), nullable=True)  # service category: programming, translation, tutoring, etc.
     service_name = Column(String(200), nullable=False)
+    service_name_en = Column(String(200), nullable=True)  # English name
     description = Column(Text, nullable=False)
+    description_en = Column(Text, nullable=True)  # English description
     images = Column(JSONB, nullable=True)  # JSON数组（使用PostgreSQL JSONB类型）
     base_price = Column(DECIMAL(12, 2), nullable=False)
     currency = Column(String(3), default="GBP")

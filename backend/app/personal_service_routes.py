@@ -14,6 +14,30 @@ personal_service_router = APIRouter(
 MAX_PERSONAL_SERVICES_PER_USER = 10
 
 
+def _serialize_service(s: models.TaskExpertService) -> dict:
+    return {
+        "id": s.id,
+        "service_name": s.service_name,
+        "service_name_en": s.service_name_en,
+        "description": s.description,
+        "description_en": s.description_en,
+        "category": s.category,
+        "base_price": float(s.base_price) if s.base_price else 0,
+        "currency": s.currency,
+        "pricing_type": s.pricing_type or "fixed",
+        "location_type": s.location_type or "online",
+        "location": s.location,
+        "latitude": float(s.latitude) if s.latitude else None,
+        "longitude": float(s.longitude) if s.longitude else None,
+        "images": s.images or [],
+        "status": s.status,
+        "view_count": s.view_count or 0,
+        "application_count": s.application_count or 0,
+        "created_at": s.created_at.isoformat() if s.created_at else None,
+        "updated_at": s.updated_at.isoformat() if s.updated_at else None,
+    }
+
+
 @personal_service_router.post("/me", status_code=status.HTTP_201_CREATED)
 async def create_personal_service(
     data: schemas.PersonalServiceCreate,
@@ -41,7 +65,10 @@ async def create_personal_service(
         user_id=current_user.id,
         expert_id=None,
         service_name=data.service_name,
+        service_name_en=data.service_name_en,
         description=data.description,
+        description_en=data.description_en,
+        category=data.category,
         base_price=data.base_price or 0,
         currency=data.currency,
         pricing_type=data.pricing_type,
@@ -72,24 +99,26 @@ async def list_my_personal_services(
         .order_by(models.TaskExpertService.created_at.desc())
     )
     services = result.scalars().all()
-    return [
-        {
-            "id": s.id,
-            "service_name": s.service_name,
-            "description": s.description,
-            "base_price": float(s.base_price) if s.base_price else 0,
-            "currency": s.currency,
-            "pricing_type": s.pricing_type or "fixed",
-            "location_type": s.location_type or "online",
-            "location": s.location,
-            "latitude": float(s.latitude) if s.latitude else None,
-            "longitude": float(s.longitude) if s.longitude else None,
-            "images": s.images or [],
-            "status": s.status,
-            "created_at": s.created_at.isoformat() if s.created_at else None,
-        }
-        for s in services
-    ]
+    return [_serialize_service(s) for s in services]
+
+
+@personal_service_router.get("/me/{service_id}")
+async def get_personal_service(
+    service_id: int,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    result = await db.execute(
+        select(models.TaskExpertService).where(
+            models.TaskExpertService.id == service_id,
+            models.TaskExpertService.user_id == current_user.id,
+            models.TaskExpertService.service_type == "personal",
+        )
+    )
+    service = result.scalar_one_or_none()
+    if not service:
+        raise HTTPException(status_code=404, detail="服务不存在")
+    return _serialize_service(service)
 
 
 @personal_service_router.put("/me/{service_id}")
