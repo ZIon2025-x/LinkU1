@@ -350,14 +350,14 @@ class _FormContentState extends State<_FormContent> {
                   controller: _nameController,
                   maxLength: 100,
                   decoration: InputDecoration(
-                    hintText: '输入服务名称',
+                    hintText: context.l10n.personalServiceNameHint,
                     border: OutlineInputBorder(
                       borderRadius: AppRadius.input,
                     ),
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return '请输入服务名称';
+                      return context.l10n.personalServiceNameRequired;
                     }
                     return null;
                   },
@@ -372,7 +372,7 @@ class _FormContentState extends State<_FormContent> {
                   maxLines: 5,
                   maxLength: 2000,
                   decoration: InputDecoration(
-                    hintText: '详细描述你提供的服务内容',
+                    hintText: context.l10n.personalServiceDescriptionHint,
                     alignLabelWithHint: true,
                     border: OutlineInputBorder(
                       borderRadius: AppRadius.input,
@@ -380,7 +380,7 @@ class _FormContentState extends State<_FormContent> {
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return '请输入服务描述';
+                      return context.l10n.personalServiceDescriptionRequired;
                     }
                     return null;
                   },
@@ -499,18 +499,18 @@ class _FormContentState extends State<_FormContent> {
                       prefixText: '\u00A3 ', // £ symbol
                       hintText: '0.00',
                       suffixText:
-                          _pricingType == 'hourly' ? '/小时' : null,
+                          _pricingType == 'hourly' ? context.l10n.personalServicePerHour : null,
                       border: OutlineInputBorder(
                         borderRadius: AppRadius.input,
                       ),
                     ),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
-                        return '请输入价格';
+                        return context.l10n.personalServicePriceRequired;
                       }
                       final price = double.tryParse(value.trim());
                       if (price == null || price < 0) {
-                        return '请输入有效价格';
+                        return context.l10n.personalServicePriceInvalid;
                       }
                       return null;
                     },

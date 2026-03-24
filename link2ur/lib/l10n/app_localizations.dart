@@ -19730,6 +19730,48 @@ abstract class AppLocalizations {
   /// **'Publish your first service to get started'**
   String get personalServiceEmptyHint;
 
+  /// No description provided for @personalServiceNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter service name'**
+  String get personalServiceNameHint;
+
+  /// No description provided for @personalServiceNameRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a service name'**
+  String get personalServiceNameRequired;
+
+  /// No description provided for @personalServiceDescriptionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe your service in detail'**
+  String get personalServiceDescriptionHint;
+
+  /// No description provided for @personalServiceDescriptionRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a service description'**
+  String get personalServiceDescriptionRequired;
+
+  /// No description provided for @personalServicePriceRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a price'**
+  String get personalServicePriceRequired;
+
+  /// No description provided for @personalServicePriceInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid price'**
+  String get personalServicePriceInvalid;
+
+  /// No description provided for @personalServicePerHour.
+  ///
+  /// In en, this message translates to:
+  /// **'/hour'**
+  String get personalServicePerHour;
+
   /// No description provided for @publishService.
   ///
   /// In en, this message translates to:

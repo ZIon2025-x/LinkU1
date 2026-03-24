@@ -750,333 +750,450 @@ class _FollowFeedCard extends StatelessWidget {
       excludeSemantics: true,
       child: Padding(
         padding: const EdgeInsets.only(bottom: 10),
-      child: GestureDetector(
-        onTap: () => _onCardTap(context),
-        child: Container(
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: isDark
-                ? null
-                : [BoxShadow(color: Colors.black.withAlpha(10), blurRadius: 3, offset: const Offset(0, 1))],
-          ),
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 头部：头像 + 名字 + 动态类型 + 时间
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 20,
-                    backgroundImage: item.userAvatar != null && item.userAvatar!.isNotEmpty
-                        ? NetworkImage(item.userAvatar!)
-                        : null,
-                    backgroundColor: isDark ? Colors.grey[800] : const Color(0xFFE8E8E8),
-                    onBackgroundImageError: item.userAvatar != null && item.userAvatar!.isNotEmpty
-                        ? (_, __) {}  // silently ignore broken avatar URLs
-                        : null,
-                    child: item.userAvatar == null || item.userAvatar!.isEmpty
-                        ? Icon(Icons.person, size: 20, color: isDark ? Colors.grey[400] : Colors.grey[600])
-                        : null,
+        child: GestureDetector(
+          onTap: () => _onCardTap(context),
+          child: Container(
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: isDark
+                  ? null
+                  : [BoxShadow(color: Colors.black.withAlpha(10), blurRadius: 3, offset: const Offset(0, 1))],
+            ),
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── 头部：头像 + 名字 + 时间 + 类型标签 ──
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 18,
+                      backgroundImage: item.userAvatar != null && item.userAvatar!.isNotEmpty
+                          ? NetworkImage(item.userAvatar!)
+                          : null,
+                      backgroundColor: isDark ? Colors.grey[800] : const Color(0xFFE8E8E8),
+                      onBackgroundImageError: item.userAvatar != null && item.userAvatar!.isNotEmpty
+                          ? (_, __) {}
+                          : null,
+                      child: item.userAvatar == null || item.userAvatar!.isEmpty
+                          ? Icon(Icons.person, size: 18, color: isDark ? Colors.grey[400] : Colors.grey[600])
+                          : null,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  item.userName ?? '',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                feedLabel,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isDark ? AppColors.textSecondaryDark : const Color(0xFF999999),
+                                ),
+                              ),
+                            ],
+                          ),
+                          Text(
+                            timeAgo,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isDark ? AppColors.textTertiaryDark : const Color(0xFFBBBBBB),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    _FeedTypeBadge(feedType: item.feedType),
+                  ],
+                ),
+
+                const SizedBox(height: 10),
+
+                // ── 内容区 ──
+                if (title.isNotEmpty)
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? AppColors.textPrimaryDark : const Color(0xFF222222),
+                      height: 1.4,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item.userName ?? '',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                          ),
-                        ),
-                        Text(
-                          '$feedLabel · $timeAgo',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: isDark ? AppColors.textSecondaryDark : const Color(0xFF999999),
-                          ),
-                        ),
-                      ],
+                if (description != null && description.isNotEmpty && description != title) ...[
+                  SizedBox(height: title.isNotEmpty ? 4 : 0),
+                  Text(
+                    description,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isDark ? AppColors.textSecondaryDark : const Color(0xFF666666),
+                      height: 1.5,
+                    ),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+
+                // ── 任务信息条：类型 + 赏金 + 申请人数 ──
+                if (item.feedType == 'task') ...[
+                  const SizedBox(height: 8),
+                  _buildTaskInfoRow(l10n, isDark),
+                ],
+
+                // ── 服务信息条：分类 + 价格 ──
+                if (item.feedType == 'service') ...[
+                  const SizedBox(height: 8),
+                  _buildServiceInfoRow(l10n, isDark),
+                ],
+
+                // ── 活动信息条：参与人数 + 价格 ──
+                if (item.feedType == 'activity' && item.activityInfo != null) ...[
+                  const SizedBox(height: 8),
+                  _buildActivityInfoRow(l10n, isDark),
+                ],
+
+                // ── 商品价格 ──
+                if (item.feedType == 'product' && item.price != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    '£${item.price!.toStringAsFixed(item.price! == item.price!.roundToDouble() ? 0 : 2)}',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFFEE5A24)),
+                  ),
+                ],
+
+                // ── 评价目标（竞品评价/服务评价）──
+                if (item.targetItem != null &&
+                    (item.feedType == 'competitor_review' || item.feedType == 'service_review')) ...[
+                  const SizedBox(height: 8),
+                  _buildTargetItemRow(isDark),
+                ],
+
+                // ── 服务评价：评分星级 ──
+                if (item.feedType == 'service_review' && item.rating != null) ...[
+                  const SizedBox(height: 6),
+                  Row(
+                    children: List.generate(5, (i) => Icon(
+                      i < item.rating!.round() ? Icons.star_rounded : Icons.star_border_rounded,
+                      size: 16,
+                      color: const Color(0xFFFFB300),
+                    )),
+                  ),
+                ],
+
+                // ── 排行榜 TOP 3 ──
+                if (item.feedType == 'ranking' && item.top3 != null && item.top3!.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  _buildTop3List(l10n, isDark),
+                ],
+
+                // ── 图片 ──
+                if (item.hasImages) ...[
+                  const SizedBox(height: 10),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: _buildImages(item.images!, isDark),
+                  ),
+                ],
+
+                // ── 底部互动数据 ──
+                if (_hasBottomMetrics) ...[
+                  const SizedBox(height: 10),
+                  _buildBottomMetrics(isDark),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── 任务信息行 ──
+  Widget _buildTaskInfoRow(AppLocalizations l10n, bool isDark) {
+    final taskType = item.taskType;
+    final appCount = item.applicationCount ?? 0;
+    final reward = item.price;
+    final quoted = item.rewardToBeQuoted == true;
+    return Wrap(
+      spacing: 8,
+      runSpacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        if (taskType != null && taskType.isNotEmpty)
+          _InfoChip(
+            icon: Icons.category_outlined,
+            label: TaskTypeHelper.getLocalizedLabel(taskType, l10n),
+            isDark: isDark,
+          ),
+        if (reward != null && reward > 0)
+          _InfoChip(
+            icon: Icons.paid_outlined,
+            label: '£${reward.toStringAsFixed(0)}',
+            isDark: isDark,
+            highlight: true,
+          )
+        else if (quoted)
+          _InfoChip(icon: Icons.paid_outlined, label: l10n.taskRewardToBeQuoted, isDark: isDark),
+        if (appCount > 0)
+          _InfoChip(
+            icon: Icons.people_outline,
+            label: l10n.nearbyApplicants(appCount),
+            isDark: isDark,
+          ),
+      ],
+    );
+  }
+
+  // ── 服务信息行 ──
+  Widget _buildServiceInfoRow(AppLocalizations l10n, bool isDark) {
+    final category = item.extraData?['category'] as String?;
+    final price = item.price;
+    return Wrap(
+      spacing: 8,
+      runSpacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        if (category != null && category.isNotEmpty)
+          _InfoChip(
+            icon: ServiceCategoryHelper.getIcon(category),
+            label: ServiceCategoryHelper.getLocalizedLabel(category, l10n),
+            isDark: isDark,
+          ),
+        if (price != null && price > 0)
+          _InfoChip(
+            icon: Icons.paid_outlined,
+            label: '£${price.toStringAsFixed(0)}',
+            isDark: isDark,
+            highlight: true,
+          ),
+      ],
+    );
+  }
+
+  // ── 活动信息行 ──
+  Widget _buildActivityInfoRow(AppLocalizations l10n, bool isDark) {
+    final info = item.activityInfo!;
+    final price = item.price;
+    return Wrap(
+      spacing: 8,
+      runSpacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        if (info.currentParticipants != null)
+          _InfoChip(
+            icon: Icons.people_outline,
+            label: '${info.currentParticipants}/${info.maxParticipants ?? '∞'}',
+            isDark: isDark,
+          ),
+        if (price != null && price > 0)
+          _InfoChip(
+            icon: Icons.paid_outlined,
+            label: '£${price.toStringAsFixed(0)}',
+            isDark: isDark,
+            highlight: true,
+          )
+        else
+          _InfoChip(
+            icon: Icons.volunteer_activism_outlined,
+            label: l10n.homeActivityFree,
+            isDark: isDark,
+            color: const Color(0xFF4CAF50),
+          ),
+      ],
+    );
+  }
+
+  // ── 评价目标 ──
+  Widget _buildTargetItemRow(bool isDark) {
+    final target = item.targetItem!;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withAlpha(10) : const Color(0xFFF7F7F8),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          if (target.thumbnail != null)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: Image.network(
+                target.thumbnail!,
+                width: 36, height: 36, fit: BoxFit.cover, cacheWidth: 72,
+                errorBuilder: (_, __, ___) => const SizedBox(width: 36, height: 36),
+              ),
+            ),
+          if (target.thumbnail != null) const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  target.name ?? '',
+                  style: TextStyle(
+                    fontSize: 13, fontWeight: FontWeight.w500,
+                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                  ),
+                  maxLines: 1, overflow: TextOverflow.ellipsis,
+                ),
+                if (target.subtitle != null)
+                  Text(
+                    target.subtitle!,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isDark ? AppColors.textTertiaryDark : const Color(0xFF999999),
+                    ),
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                  ),
+              ],
+            ),
+          ),
+          if (item.feedType == 'competitor_review' && item.voteType != null)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: item.voteType == 'upvote'
+                    ? const Color(0xFF4CAF50).withAlpha(25)
+                    : const Color(0xFFE53935).withAlpha(25),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    item.voteType == 'upvote' ? Icons.thumb_up_alt_rounded : Icons.thumb_down_alt_rounded,
+                    size: 12,
+                    color: item.voteType == 'upvote' ? const Color(0xFF4CAF50) : const Color(0xFFE53935),
+                  ),
+                  const SizedBox(width: 3),
+                  Text(
+                    item.voteType == 'upvote' ? 'UP' : 'DOWN',
+                    style: TextStyle(
+                      fontSize: 10, fontWeight: FontWeight.w700,
+                      color: item.voteType == 'upvote' ? const Color(0xFF4CAF50) : const Color(0xFFE53935),
                     ),
                   ),
                 ],
               ),
+            ),
+        ],
+      ),
+    );
+  }
 
-              // 内容文字：标题 + 描述（如帖子有标题和内容预览）
-              if (title.isNotEmpty) ...[
-                const SizedBox(height: 10),
+  // ── 排行榜 TOP 3 ──
+  Widget _buildTop3List(AppLocalizations l10n, bool isDark) {
+    final top3 = item.top3!.take(3).toList();
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withAlpha(8) : const Color(0xFFFAF9FF),
+        borderRadius: BorderRadius.circular(8),
+        border: isDark ? null : Border.all(color: const Color(0xFFEEECF9), width: 0.5),
+      ),
+      child: Column(
+        children: top3.asMap().entries.map((entry) {
+          final rank = entry.key + 1;
+          final data = entry.value;
+          final name = data['name']?.toString() ?? '';
+          final votes = (data['rating'] as num?)?.toInt() ?? 0;
+          final image = data['image'] as String?;
+          return Padding(
+            padding: EdgeInsets.only(top: entry.key > 0 ? 6 : 0),
+            child: Row(
+              children: [
                 Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: isDark ? AppColors.textPrimaryDark : const Color(0xFF333333),
-                    height: 1.4,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                  rank == 1 ? '🥇' : rank == 2 ? '🥈' : '🥉',
+                  style: const TextStyle(fontSize: 14),
                 ),
-              ],
-              if (description != null && description.isNotEmpty && description != title) ...[
-                SizedBox(height: title.isNotEmpty ? 4 : 10),
-                Text(
-                  description,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: isDark ? AppColors.textSecondaryDark : const Color(0xFF666666),
-                    height: 1.5,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-
-              // 评价目标（竞品评价/服务评价）
-              if (item.targetItem != null &&
-                  (item.feedType == 'competitor_review' || item.feedType == 'service_review')) ...[
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: isDark ? Colors.white.withAlpha(10) : const Color(0xFFF5F5F5),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      if (item.targetItem!.thumbnail != null)
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(6),
-                          child: Image.network(
-                            item.targetItem!.thumbnail!,
-                            width: 36, height: 36, fit: BoxFit.cover,
-                            cacheWidth: 72,
-                            errorBuilder: (_, __, ___) => const SizedBox(width: 36, height: 36),
-                          ),
-                        ),
-                      if (item.targetItem!.thumbnail != null) const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              item.targetItem!.name ?? '',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                                color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            if (item.targetItem!.subtitle != null)
-                              Text(
-                                item.targetItem!.subtitle!,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: isDark ? AppColors.textTertiaryDark : const Color(0xFF999999),
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                          ],
-                        ),
-                      ),
-                      if (item.feedType == 'competitor_review' && item.voteType != null)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: item.voteType == 'upvote'
-                                ? const Color(0xFF4CAF50).withAlpha(30)
-                                : const Color(0xFFE53935).withAlpha(30),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            item.voteType == 'upvote' ? '👍' : '👎',
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-
-              // 排行榜 TOP 3
-              if (item.feedType == 'ranking' && item.top3 != null && item.top3!.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                ...item.top3!.take(3).toList().asMap().entries.map((entry) {
-                  final rank = entry.key + 1;
-                  final data = entry.value;
-                  final name = data['name']?.toString() ?? '';
-                  final votes = (data['rating'] as num?)?.toInt() ?? 0;
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          width: 22,
-                          child: Text(
-                            rank == 1 ? '🥇' : rank == 2 ? '🥈' : '🥉',
-                            style: const TextStyle(fontSize: 14),
-                          ),
-                        ),
-                        Expanded(
-                          child: Text(
-                            name,
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        Text(
-                          l10n.leaderboardNetVotesCount(votes),
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: isDark ? AppColors.textTertiaryDark : const Color(0xFF999999),
-                          ),
-                        ),
-                      ],
+                const SizedBox(width: 6),
+                if (image != null && image.isNotEmpty)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: Image.network(
+                      image, width: 24, height: 24, fit: BoxFit.cover, cacheWidth: 48,
+                      errorBuilder: (_, __, ___) => const SizedBox(width: 24, height: 24),
                     ),
-                  );
-                }),
-              ],
-
-              // 图片
-              if (item.hasImages) ...[
-                const SizedBox(height: 10),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: _buildImages(item.images!, isDark),
+                  ),
+                if (image != null && image.isNotEmpty) const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    name,
+                    style: TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.w500,
+                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                    ),
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Text(
+                  l10n.leaderboardNetVotesCount(votes),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isDark ? AppColors.textTertiaryDark : const Color(0xFF999999),
+                  ),
                 ),
               ],
-
-              // 竞品评价：投票计数
-              if (item.feedType == 'competitor_review' &&
-                  ((item.upvoteCount != null && item.upvoteCount! > 0) ||
-                   (item.downvoteCount != null && item.downvoteCount! > 0))) ...[
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    if (item.upvoteCount != null && item.upvoteCount! > 0)
-                      Text('👍 ${item.upvoteCount}',
-                          style: TextStyle(fontSize: 12, color: isDark ? Colors.grey[400] : const Color(0xFF999999))),
-                    if (item.upvoteCount != null && item.upvoteCount! > 0 &&
-                        item.downvoteCount != null && item.downvoteCount! > 0)
-                      const SizedBox(width: 12),
-                    if (item.downvoteCount != null && item.downvoteCount! > 0)
-                      Text('👎 ${item.downvoteCount}',
-                          style: TextStyle(fontSize: 12, color: isDark ? Colors.grey[400] : const Color(0xFF999999))),
-                  ],
-                ),
-              ],
-
-              // 服务评价：评分
-              if (item.feedType == 'service_review' && item.rating != null) ...[
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    ...List.generate(5, (i) => Icon(
-                      i < item.rating!.round() ? Icons.star : Icons.star_border,
-                      size: 16,
-                      color: const Color(0xFFFFB300),
-                    )),
-                  ],
-                ),
-              ],
-
-              // 活动卡片：参与人数 + 价格/免费
-              if (item.feedType == 'activity' && item.activityInfo != null) ...[
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    if (item.activityInfo!.currentParticipants != null)
-                      Text(
-                        '👥 ${item.activityInfo!.currentParticipants}/${item.activityInfo!.maxParticipants ?? '∞'}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
-                        ),
-                      ),
-                    const SizedBox(width: 12),
-                    if (item.price != null && item.price! > 0)
-                      Text(
-                        '£${item.price!.toStringAsFixed(0)}',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: Color(0xFFEE5A24),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      )
-                    else
-                      Text(
-                        l10n.homeActivityFree,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: isDark ? const Color(0xFF66BB6A) : const Color(0xFF4CAF50),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                  ],
-                ),
-              ],
-
-              // 任务卡片：价格 + 申请人数
-              if (item.feedType != 'activity' && (item.price != null || (item.applicationCount != null && item.applicationCount! > 0))) ...[
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    if (item.price != null)
-                      Text(
-                        '£${item.price!.toStringAsFixed(0)}',
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFFEE5A24),
-                        ),
-                      ),
-                    if (item.applicationCount != null && item.applicationCount! > 0) ...[
-                      if (item.price != null) const SizedBox(width: 12),
-                      Text(
-                        l10n.nearbyApplicants(item.applicationCount!),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ],
-
-              // 底部互动栏（帖子/商品等）
-              if ((item.likeCount != null && item.likeCount! > 0) ||
-                  (item.commentCount != null && item.commentCount! > 0)) ...[
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    if (item.likeCount != null && item.likeCount! > 0) ...[
-                      Text('❤️ ${item.likeCount}',
-                          style: TextStyle(fontSize: 13, color: isDark ? Colors.grey[400] : const Color(0xFF999999))),
-                      const SizedBox(width: 20),
-                    ],
-                    if (item.commentCount != null && item.commentCount! > 0) ...[
-                      Text('💬 ${item.commentCount}',
-                          style: TextStyle(fontSize: 13, color: isDark ? Colors.grey[400] : const Color(0xFF999999))),
-                    ],
-                  ],
-                ),
-              ],
-            ],
-          ),
-        ),
+            ),
+          );
+        }).toList(),
       ),
-      ),
+    );
+  }
+
+  // ── 底部指标 ──
+  bool get _hasBottomMetrics {
+    if (item.feedType == 'competitor_review') {
+      return (item.upvoteCount ?? 0) > 0 || (item.downvoteCount ?? 0) > 0 || (item.likeCount ?? 0) > 0;
+    }
+    return (item.likeCount ?? 0) > 0 || (item.commentCount ?? 0) > 0;
+  }
+
+  Widget _buildBottomMetrics(bool isDark) {
+    final metricStyle = TextStyle(fontSize: 12, color: isDark ? Colors.grey[400] : const Color(0xFF999999));
+    if (item.feedType == 'competitor_review') {
+      return Row(
+        children: [
+          if ((item.upvoteCount ?? 0) > 0)
+            Text('👍 ${item.upvoteCount}', style: metricStyle),
+          if ((item.upvoteCount ?? 0) > 0 && (item.downvoteCount ?? 0) > 0)
+            const SizedBox(width: 12),
+          if ((item.downvoteCount ?? 0) > 0)
+            Text('👎 ${item.downvoteCount}', style: metricStyle),
+          if ((item.likeCount ?? 0) > 0) ...[
+            const SizedBox(width: 12),
+            Text('❤️ ${item.likeCount}', style: metricStyle),
+          ],
+        ],
+      );
+    }
+    return Row(
+      children: [
+        if ((item.likeCount ?? 0) > 0) ...[
+          Text('❤️ ${item.likeCount}', style: metricStyle),
+          const SizedBox(width: 16),
+        ],
+        if ((item.commentCount ?? 0) > 0)
+          Text('💬 ${item.commentCount}', style: metricStyle),
+      ],
     );
   }
 
@@ -1160,27 +1277,55 @@ class _FollowFeedCard extends StatelessWidget {
 
   String _feedTypeLabel(String feedType, AppLocalizations l10n) {
     switch (feedType) {
-      case 'task':
-        return l10n.feedLabelPublishedTask;
-      case 'forum_post':
-        return l10n.feedLabelPosted;
-      case 'product':
-        return l10n.feedLabelListedItem;
-      case 'service':
-        return l10n.feedLabelNewService;
-      case 'activity':
-        return l10n.feedLabelCreatedActivity;
-      case 'completion':
-        return l10n.feedLabelCompletedTask;
-      case 'competitor_review':
-        return l10n.feedLabelReviewedCompetitor;
-      case 'service_review':
-        return l10n.feedLabelReviewedService;
-      case 'ranking':
-        return l10n.feedLabelCreatedRanking;
-      default:
-        return l10n.feedLabelUpdated;
+      case 'task': return l10n.feedLabelPublishedTask;
+      case 'forum_post': return l10n.feedLabelPosted;
+      case 'product': return l10n.feedLabelListedItem;
+      case 'service': return l10n.feedLabelNewService;
+      case 'activity': return l10n.feedLabelCreatedActivity;
+      case 'completion': return l10n.feedLabelCompletedTask;
+      case 'competitor_review': return l10n.feedLabelReviewedCompetitor;
+      case 'service_review': return l10n.feedLabelReviewedService;
+      case 'ranking': return l10n.feedLabelCreatedRanking;
+      default: return l10n.feedLabelUpdated;
     }
+  }
+}
+
+/// 信息标签（任务类型、价格、分类等）
+class _InfoChip extends StatelessWidget {
+  const _InfoChip({
+    required this.icon,
+    required this.label,
+    required this.isDark,
+    this.highlight = false,
+    this.color,
+  });
+  final IconData icon;
+  final String label;
+  final bool isDark;
+  final bool highlight;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = color ?? (highlight
+        ? const Color(0xFFEE5A24)
+        : isDark ? AppColors.textSecondaryDark : const Color(0xFF666666));
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withAlpha(10) : fg.withAlpha(12),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: fg),
+          const SizedBox(width: 3),
+          Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: fg)),
+        ],
+      ),
+    );
   }
 }
 

@@ -10709,6 +10709,29 @@ class AppLocalizationsEn extends AppLocalizations {
       'Publish your first service to get started';
 
   @override
+  String get personalServiceNameHint => 'Enter service name';
+
+  @override
+  String get personalServiceNameRequired => 'Please enter a service name';
+
+  @override
+  String get personalServiceDescriptionHint =>
+      'Describe your service in detail';
+
+  @override
+  String get personalServiceDescriptionRequired =>
+      'Please enter a service description';
+
+  @override
+  String get personalServicePriceRequired => 'Please enter a price';
+
+  @override
+  String get personalServicePriceInvalid => 'Please enter a valid price';
+
+  @override
+  String get personalServicePerHour => '/hour';
+
+  @override
   String get publishService => 'Publish Service';
 
   @override

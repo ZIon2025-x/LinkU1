@@ -21,6 +21,7 @@ import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/scroll_safe_tap.dart';
 import '../../../data/models/activity.dart';
 import '../../../data/models/task_expert.dart';
+import '../../../data/services/storage_service.dart';
 import '../../../data/repositories/activity_repository.dart';
 import '../../../data/repositories/task_expert_repository.dart';
 import 'activity_price_widget.dart';
@@ -1245,6 +1246,16 @@ class _BottomApplyBar extends StatelessWidget {
     }
     if (service.isRejected) {
       return _buildDisabledButton(context, context.l10n.serviceRejected);
+    }
+
+    // 服务所有者不能申请自己的服务
+    final currentUserId = StorageService.instance.getUserId();
+    if (currentUserId != null) {
+      final isOwner = (service.isPersonalService && currentUserId == service.userId) ||
+          (!service.isPersonalService && currentUserId == service.expertId);
+      if (isOwner) {
+        return const SizedBox.shrink();
+      }
     }
 
     if (service.userApplicationId != null) {

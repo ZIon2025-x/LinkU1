@@ -10281,6 +10281,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get personalServiceEmptyHint => '发布你的第一个服务吧';
 
   @override
+  String get personalServiceNameHint => '输入服务名称';
+
+  @override
+  String get personalServiceNameRequired => '请输入服务名称';
+
+  @override
+  String get personalServiceDescriptionHint => '详细描述你提供的服务内容';
+
+  @override
+  String get personalServiceDescriptionRequired => '请输入服务描述';
+
+  @override
+  String get personalServicePriceRequired => '请输入价格';
+
+  @override
+  String get personalServicePriceInvalid => '请输入有效价格';
+
+  @override
+  String get personalServicePerHour => '/小时';
+
+  @override
   String get publishService => '发布服务';
 
   @override
@@ -20640,6 +20661,27 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get personalServiceEmptyHint => '發佈你的第一個服務吧';
+
+  @override
+  String get personalServiceNameHint => '輸入服務名稱';
+
+  @override
+  String get personalServiceNameRequired => '請輸入服務名稱';
+
+  @override
+  String get personalServiceDescriptionHint => '詳細描述你提供的服務內容';
+
+  @override
+  String get personalServiceDescriptionRequired => '請輸入服務描述';
+
+  @override
+  String get personalServicePriceRequired => '請輸入價格';
+
+  @override
+  String get personalServicePriceInvalid => '請輸入有效價格';
+
+  @override
+  String get personalServicePerHour => '/小時';
 
   @override
   String get publishService => '發佈服務';

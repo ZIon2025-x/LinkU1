@@ -26,7 +26,7 @@ List<RouteBase> get personalServiceRoutes => [
       ),
       GoRoute(
         path: '/services/my/applications',
-        name: 'myServiceApplications',
+        name: 'myReceivedServiceApplications',
         builder: (context, state) => const ReceivedApplicationsView(),
       ),
     ];
