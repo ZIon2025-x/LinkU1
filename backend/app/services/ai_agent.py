@@ -1295,17 +1295,7 @@ async def _load_history(db: AsyncSession, conversation_id: str) -> list[dict]:
                 except (json.JSONDecodeError, KeyError):
                     pass
         else:
-            content = msg.content
-            # 快捷回复（FAQ/活动/积分等）在历史中标记为自动回复并截短，
-            # 避免大段模板内容干扰 LLM 的后续回复风格
-            if (msg.role == "assistant"
-                    and msg.model_used
-                    and msg.model_used.startswith("local_")):
-                summary = (content or "")[:80]
-                if len(content or "") > 80:
-                    summary += "..."
-                content = f"[自动回复] {summary}"
-            messages.append({"role": msg.role, "content": content})
+            messages.append({"role": msg.role, "content": msg.content})
     return messages
 
 
