@@ -835,12 +835,158 @@ class _FollowFeedCard extends StatelessWidget {
                 ),
               ],
 
+              // 评价目标（竞品评价/服务评价）
+              if (item.targetItem != null &&
+                  (item.feedType == 'competitor_review' || item.feedType == 'service_review')) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white.withAlpha(10) : const Color(0xFFF5F5F5),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      if (item.targetItem!.thumbnail != null)
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: Image.network(
+                            item.targetItem!.thumbnail!,
+                            width: 36, height: 36, fit: BoxFit.cover,
+                            cacheWidth: 72,
+                            errorBuilder: (_, __, ___) => const SizedBox(width: 36, height: 36),
+                          ),
+                        ),
+                      if (item.targetItem!.thumbnail != null) const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item.targetItem!.name ?? '',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            if (item.targetItem!.subtitle != null)
+                              Text(
+                                item.targetItem!.subtitle!,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: isDark ? AppColors.textTertiaryDark : const Color(0xFF999999),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                          ],
+                        ),
+                      ),
+                      if (item.feedType == 'competitor_review' && item.voteType != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: item.voteType == 'upvote'
+                                ? const Color(0xFF4CAF50).withAlpha(30)
+                                : const Color(0xFFE53935).withAlpha(30),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            item.voteType == 'upvote' ? '👍' : '👎',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+
+              // 排行榜 TOP 3
+              if (item.feedType == 'ranking' && item.top3 != null && item.top3!.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                ...item.top3!.take(3).toList().asMap().entries.map((entry) {
+                  final rank = entry.key + 1;
+                  final data = entry.value;
+                  final name = data['name']?.toString() ?? '';
+                  final votes = (data['rating'] as num?)?.toInt() ?? 0;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 22,
+                          child: Text(
+                            rank == 1 ? '🥇' : rank == 2 ? '🥈' : '🥉',
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            name,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Text(
+                          l10n.leaderboardNetVotesCount(votes),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isDark ? AppColors.textTertiaryDark : const Color(0xFF999999),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ],
+
               // 图片
               if (item.hasImages) ...[
                 const SizedBox(height: 10),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(10),
                   child: _buildImages(item.images!, isDark),
+                ),
+              ],
+
+              // 竞品评价：投票计数
+              if (item.feedType == 'competitor_review' &&
+                  ((item.upvoteCount != null && item.upvoteCount! > 0) ||
+                   (item.downvoteCount != null && item.downvoteCount! > 0))) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    if (item.upvoteCount != null && item.upvoteCount! > 0)
+                      Text('👍 ${item.upvoteCount}',
+                          style: TextStyle(fontSize: 12, color: isDark ? Colors.grey[400] : const Color(0xFF999999))),
+                    if (item.upvoteCount != null && item.upvoteCount! > 0 &&
+                        item.downvoteCount != null && item.downvoteCount! > 0)
+                      const SizedBox(width: 12),
+                    if (item.downvoteCount != null && item.downvoteCount! > 0)
+                      Text('👎 ${item.downvoteCount}',
+                          style: TextStyle(fontSize: 12, color: isDark ? Colors.grey[400] : const Color(0xFF999999))),
+                  ],
+                ),
+              ],
+
+              // 服务评价：评分
+              if (item.feedType == 'service_review' && item.rating != null) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    ...List.generate(5, (i) => Icon(
+                      i < item.rating!.round() ? Icons.star : Icons.star_border,
+                      size: 16,
+                      color: const Color(0xFFFFB300),
+                    )),
+                  ],
                 ),
               ],
 
@@ -996,6 +1142,17 @@ class _FollowFeedCard extends StatelessWidget {
       case 'completion':
         final taskId = item.extraData?['task_id']?.toString();
         if (taskId != null && taskId.isNotEmpty) context.push('/tasks/$taskId');
+      case 'competitor_review':
+        if (item.targetItem != null) {
+          context.push('/leaderboard/item/${item.targetItem!.itemId}');
+        }
+      case 'service_review':
+        if (item.targetItem != null) {
+          context.push('/service/${item.targetItem!.itemId}');
+        }
+      case 'ranking':
+        final id = item.id.replaceFirst('ranking_', '');
+        if (id.isNotEmpty) context.push('/leaderboard/$id');
       default:
         break;
     }
@@ -1015,6 +1172,12 @@ class _FollowFeedCard extends StatelessWidget {
         return l10n.feedLabelCreatedActivity;
       case 'completion':
         return l10n.feedLabelCompletedTask;
+      case 'competitor_review':
+        return l10n.feedLabelReviewedCompetitor;
+      case 'service_review':
+        return l10n.feedLabelReviewedService;
+      case 'ranking':
+        return l10n.feedLabelCreatedRanking;
       default:
         return l10n.feedLabelUpdated;
     }

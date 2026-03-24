@@ -223,6 +223,15 @@ class ApiEndpoints {
   static const String myPersonalServices = '/api/services/me';
   static String myPersonalServiceById(String id) => '/api/services/me/$id';
   static const String browseServices = '/api/services/browse';
+  // --- 服务所有者管理收到的申请（个人服务 + 达人服务通用） ---
+  static const String myReceivedApplications =
+      '/api/users/me/service-applications/received';
+  static String ownerApproveApplication(int applicationId) =>
+      '/api/users/me/service-applications/$applicationId/owner-approve';
+  static String ownerRejectApplication(int applicationId) =>
+      '/api/users/me/service-applications/$applicationId/owner-reject';
+  static String ownerCounterOffer(int applicationId) =>
+      '/api/users/me/service-applications/$applicationId/owner-counter-offer';
 
   // ==================== 论坛相关 ====================
   // 后端: forum_routes.py (prefix: /api/forum)

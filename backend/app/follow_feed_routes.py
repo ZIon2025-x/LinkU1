@@ -8,7 +8,7 @@ from datetime import timedelta
 from typing import List
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select, desc
+from sqlalchemy import select, desc, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models
@@ -33,7 +33,7 @@ async def get_follow_feed(
     """获取关注用户的内容时间线
 
     按发布时间倒序排列，展示所有已关注用户的最新内容。
-    包含：任务、论坛帖子、跳蚤市场商品、达人/个人服务、活动、任务完成记录。
+    包含：任务、论坛帖子、跳蚤市场商品、达人/个人服务、活动、任务完成记录、竞品评价、服务评价、排行榜。
     """
     # 1. 获取关注的用户 ID（最近关注的 200 个）
     following_result = await db.execute(
@@ -60,6 +60,9 @@ async def get_follow_feed(
         ("services", _fetch_followed_services(db, following_ids, fetch_limit)),
         ("activities", _fetch_followed_activities(db, following_ids, fetch_limit)),
         ("completions", _fetch_followed_completions(db, following_ids, fetch_limit)),
+        ("competitor_reviews", _fetch_followed_competitor_reviews(db, following_ids, fetch_limit, current_user)),
+        ("service_reviews", _fetch_followed_service_reviews(db, following_ids, fetch_limit)),
+        ("rankings", _fetch_followed_rankings(db, following_ids, fetch_limit)),
     ]
 
     for name, coro in fetch_tasks:
@@ -596,5 +599,340 @@ async def _fetch_followed_completions(db: AsyncSession, following_ids: List[str]
             "user_vote_type": None,
             "extra_data": {"task_type": row.task_type, "task_id": row.task_id},
             "created_at": row.timestamp.isoformat() if row.timestamp else None,
+        })
+    return items
+
+
+async def _fetch_followed_competitor_reviews(
+    db: AsyncSession, following_ids: List[str], limit: int, current_user=None
+) -> list:
+    """获取关注用户的竞品评价（30天内有留言的排行榜投票）"""
+    from app.utils.time_utils import get_utc_time
+
+    cutoff = get_utc_time() - timedelta(days=30)
+
+    query = (
+        select(
+            models.LeaderboardVote.id.label("vote_id"),
+            models.LeaderboardVote.user_id,
+            models.LeaderboardVote.vote_type,
+            models.LeaderboardVote.comment,
+            models.LeaderboardVote.like_count,
+            models.LeaderboardVote.created_at,
+            models.LeaderboardVote.is_anonymous,
+            models.LeaderboardVote.item_id.label("vote_item_id"),
+            models.User.name.label("reviewer_name"),
+            models.User.avatar.label("reviewer_avatar"),
+            models.LeaderboardItem.name.label("item_name"),
+            models.LeaderboardItem.images.label("item_images"),
+            models.LeaderboardItem.upvotes.label("item_upvotes"),
+            models.LeaderboardItem.downvotes.label("item_downvotes"),
+            models.CustomLeaderboard.name.label("leaderboard_name"),
+        )
+        .join(models.User, models.LeaderboardVote.user_id == models.User.id)
+        .join(models.LeaderboardItem, models.LeaderboardVote.item_id == models.LeaderboardItem.id)
+        .join(models.CustomLeaderboard, models.LeaderboardItem.leaderboard_id == models.CustomLeaderboard.id)
+        .where(
+            models.LeaderboardVote.user_id.in_(following_ids),
+            models.LeaderboardVote.comment.isnot(None),
+            models.LeaderboardVote.comment != "",
+            models.LeaderboardItem.status == "approved",
+            models.CustomLeaderboard.status == "active",
+            models.LeaderboardVote.created_at >= cutoff,
+        )
+        .order_by(desc(models.LeaderboardVote.created_at))
+        .limit(limit)
+    )
+    result = await db.execute(query)
+    rows = result.all()
+
+    # 批量查询当前用户对这些条目的投票状态
+    user_vote_map = {}
+    if current_user and rows:
+        item_ids = list({row.vote_item_id for row in rows})
+        user_vote_result = await db.execute(
+            select(
+                models.LeaderboardVote.item_id,
+                models.LeaderboardVote.vote_type,
+            ).where(
+                models.LeaderboardVote.user_id == current_user.id,
+                models.LeaderboardVote.item_id.in_(item_ids),
+            )
+        )
+        for vrow in user_vote_result.all():
+            user_vote_map[vrow[0]] = vrow[1]
+
+    items = []
+    for row in rows:
+        reviewer_name = "匿名用户" if row.is_anonymous else (row.reviewer_name or "匿名用户")
+        reviewer_avatar = None if row.is_anonymous else row.reviewer_avatar
+        item_thumb = _first_image(row.item_images)
+
+        items.append({
+            "feed_type": "competitor_review",
+            "id": f"creview_{row.vote_id}",
+            "title": None,
+            "title_zh": None,
+            "title_en": None,
+            "description": row.comment,
+            "description_zh": None,
+            "description_en": None,
+            "images": None,
+            "user_id": None if row.is_anonymous else str(row.user_id),
+            "user_name": reviewer_name,
+            "user_avatar": reviewer_avatar,
+            "price": None,
+            "original_price": None,
+            "discount_percentage": None,
+            "currency": None,
+            "rating": None,
+            "like_count": row.like_count or 0,
+            "comment_count": None,
+            "view_count": None,
+            "upvote_count": row.item_upvotes or 0,
+            "downvote_count": row.item_downvotes or 0,
+            "vote_type": row.vote_type,
+            "linked_item": None,
+            "target_item": {
+                "item_type": "competitor",
+                "item_id": str(row.vote_item_id),
+                "name": row.item_name,
+                "subtitle": row.leaderboard_name,
+                "thumbnail": item_thumb,
+            },
+            "activity_info": None,
+            "is_experienced": None,
+            "is_favorited": None,
+            "user_vote_type": user_vote_map.get(row.vote_item_id) if current_user else None,
+            "extra_data": None,
+            "created_at": row.created_at.isoformat() if row.created_at else None,
+        })
+    return items
+
+
+async def _fetch_followed_service_reviews(
+    db: AsyncSession, following_ids: List[str], limit: int
+) -> list:
+    """获取关注用户的达人服务评价（30天内）"""
+    from app.utils.time_utils import get_utc_time
+
+    cutoff = get_utc_time() - timedelta(days=30)
+
+    query = (
+        select(
+            models.Review.id,
+            models.Review.rating,
+            models.Review.comment,
+            models.Review.is_anonymous,
+            models.Review.created_at,
+            models.Review.user_id,
+            models.User.name.label("reviewer_name"),
+            models.User.avatar.label("reviewer_avatar"),
+            models.Task.expert_service_id,
+            models.Task.parent_activity_id,
+            models.Task.task_source,
+            models.TaskExpertService.service_name,
+            models.TaskExpertService.images.label("service_images"),
+            models.Activity.title.label("activity_title"),
+            getattr(models.Activity, "title_zh", None).label("activity_title_zh"),
+            getattr(models.Activity, "title_en", None).label("activity_title_en"),
+            models.Activity.original_price_per_participant,
+            models.Activity.discounted_price_per_participant,
+            models.Activity.discount_percentage,
+            models.Activity.currency.label("activity_currency"),
+        )
+        .join(models.Task, models.Review.task_id == models.Task.id)
+        .join(models.User, models.Review.user_id == models.User.id)
+        .join(models.TaskExpertService, models.Task.expert_service_id == models.TaskExpertService.id)
+        .outerjoin(models.Activity, models.Task.parent_activity_id == models.Activity.id)
+        .where(
+            models.Review.user_id.in_(following_ids),
+            models.Task.created_by_expert == True,
+            models.Task.status == "completed",
+            models.Task.is_visible == True,
+            models.Review.comment.isnot(None),
+            models.Review.comment != "",
+            models.Review.created_at >= cutoff,
+        )
+        .order_by(desc(models.Review.created_at))
+        .limit(limit)
+    )
+    result = await db.execute(query)
+    rows = result.all()
+    items = []
+    for row in rows:
+        is_anon = row.is_anonymous == 1
+        reviewer_name = "匿名用户" if is_anon else (row.reviewer_name or "匿名用户")
+        reviewer_avatar = None if is_anon else row.reviewer_avatar
+
+        activity_info = None
+        if row.parent_activity_id and row.task_source == "expert_activity":
+            activity_info = {
+                "activity_id": row.parent_activity_id,
+                "activity_title": row.activity_title,
+                "activity_title_zh": getattr(row, "activity_title_zh", None),
+                "activity_title_en": getattr(row, "activity_title_en", None),
+                "original_price": float(row.original_price_per_participant) if row.original_price_per_participant else None,
+                "discounted_price": float(row.discounted_price_per_participant) if row.discounted_price_per_participant else None,
+                "discount_percentage": float(row.discount_percentage) if row.discount_percentage else None,
+                "currency": row.activity_currency or "GBP",
+            }
+
+        service_thumb = _first_image(row.service_images)
+
+        items.append({
+            "feed_type": "service_review",
+            "id": f"sreview_{row.id}",
+            "title": None,
+            "title_zh": None,
+            "title_en": None,
+            "description": row.comment,
+            "description_zh": None,
+            "description_en": None,
+            "images": None,
+            "user_id": None if is_anon else str(row.user_id),
+            "user_name": reviewer_name,
+            "user_avatar": reviewer_avatar,
+            "price": None,
+            "original_price": None,
+            "discount_percentage": None,
+            "currency": None,
+            "rating": float(row.rating) if row.rating else None,
+            "like_count": None,
+            "comment_count": None,
+            "view_count": None,
+            "upvote_count": None,
+            "downvote_count": None,
+            "linked_item": None,
+            "target_item": {
+                "item_type": "service",
+                "item_id": str(row.expert_service_id),
+                "name": row.service_name,
+                "subtitle": None,
+                "thumbnail": service_thumb,
+            },
+            "activity_info": activity_info,
+            "is_experienced": None,
+            "is_favorited": None,
+            "user_vote_type": None,
+            "extra_data": None,
+            "created_at": row.created_at.isoformat() if row.created_at else None,
+        })
+    return items
+
+
+async def _fetch_followed_rankings(
+    db: AsyncSession, following_ids: List[str], limit: int
+) -> list:
+    """获取关注用户申请的排行榜（30天内，含 TOP 3）"""
+    from app.utils.time_utils import get_utc_time
+
+    cutoff = get_utc_time() - timedelta(days=30)
+
+    query = (
+        select(
+            models.CustomLeaderboard.id,
+            models.CustomLeaderboard.name,
+            getattr(models.CustomLeaderboard, "name_zh", None).label("name_zh"),
+            getattr(models.CustomLeaderboard, "name_en", None).label("name_en"),
+            models.CustomLeaderboard.description,
+            getattr(models.CustomLeaderboard, "description_zh", None).label("description_zh"),
+            getattr(models.CustomLeaderboard, "description_en", None).label("description_en"),
+            models.CustomLeaderboard.cover_image,
+            models.CustomLeaderboard.applicant_id,
+            models.CustomLeaderboard.created_at,
+            models.User.name.label("user_name"),
+            models.User.avatar.label("user_avatar"),
+        )
+        .join(models.User, models.CustomLeaderboard.applicant_id == models.User.id)
+        .where(
+            models.CustomLeaderboard.applicant_id.in_(following_ids),
+            models.CustomLeaderboard.status == "active",
+            models.CustomLeaderboard.created_at >= cutoff,
+        )
+        .order_by(desc(models.CustomLeaderboard.created_at))
+        .limit(limit)
+    )
+    result = await db.execute(query)
+    rows = result.all()
+
+    if not rows:
+        return []
+
+    # 批量获取 TOP 3
+    leaderboard_ids = [row.id for row in rows]
+    row_num = func.row_number().over(
+        partition_by=models.LeaderboardItem.leaderboard_id,
+        order_by=desc(models.LeaderboardItem.net_votes),
+    ).label("rn")
+    sub = (
+        select(
+            models.LeaderboardItem.leaderboard_id,
+            models.LeaderboardItem.name,
+            models.LeaderboardItem.images,
+            models.LeaderboardItem.net_votes,
+            models.LeaderboardItem.upvotes,
+            row_num,
+        )
+        .where(
+            models.LeaderboardItem.leaderboard_id.in_(leaderboard_ids),
+            models.LeaderboardItem.status == "approved",
+        )
+        .subquery()
+    )
+    top3_result = await db.execute(select(sub).where(sub.c.rn <= 3))
+    top3_map: dict[int, list] = {}
+    for item in top3_result:
+        lb_id = item.leaderboard_id
+        if lb_id not in top3_map:
+            top3_map[lb_id] = []
+        top3_map[lb_id].append({
+            "name": item.name,
+            "image": _first_image(item.images),
+            "rating": float(item.net_votes) if item.net_votes else 0,
+            "review_count": item.upvotes or 0,
+        })
+
+    items = []
+    for row in rows:
+        top3 = top3_map.get(row.id, [])
+        if not top3:
+            continue
+
+        name_zh = getattr(row, "name_zh", None)
+        name_en = getattr(row, "name_en", None)
+        desc_zh = getattr(row, "description_zh", None)
+        desc_en = getattr(row, "description_en", None)
+        items.append({
+            "feed_type": "ranking",
+            "id": f"ranking_{row.id}",
+            "title": row.name,
+            "title_zh": name_zh,
+            "title_en": name_en,
+            "description": (row.description or "")[:80],
+            "description_zh": (desc_zh or "")[:80] if desc_zh else None,
+            "description_en": (desc_en or "")[:80] if desc_en else None,
+            "images": [row.cover_image] if row.cover_image else None,
+            "user_id": str(row.applicant_id) if row.applicant_id else None,
+            "user_name": row.user_name,
+            "user_avatar": row.user_avatar,
+            "price": None,
+            "original_price": None,
+            "discount_percentage": None,
+            "currency": None,
+            "rating": None,
+            "like_count": None,
+            "comment_count": None,
+            "view_count": None,
+            "upvote_count": None,
+            "downvote_count": None,
+            "linked_item": None,
+            "target_item": None,
+            "activity_info": None,
+            "is_experienced": None,
+            "is_favorited": None,
+            "user_vote_type": None,
+            "extra_data": {"top3": top3},
+            "created_at": row.created_at.isoformat() if row.created_at else None,
         })
     return items

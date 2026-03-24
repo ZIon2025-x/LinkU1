@@ -14,6 +14,7 @@ FEE_CONFIG_BY_SOURCE = {
     "normal": (0.10, 100),           # 10%，最低 1 镑
     "user_profile": (0.08, 50),      # 指定用户任务 8%，最低 50 便士
     "expert_service": (0.08, 50),   # 达人服务 8%，最低 50 便士
+    "personal_service": (0.08, 50), # 个人服务 8%，最低 50 便士
     "expert_activity": (0.05, 50),  # 达人活动 5%，最低 50 便士
     "flea_market": (0.08, 50),       # 跳蚤市场 8%，最低 50 便士
 }

@@ -2,6 +2,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../features/personal_service/views/my_services_view.dart';
 import '../../../features/personal_service/views/personal_service_form_view.dart';
+import '../../../features/personal_service/views/received_applications_view.dart';
 
 /// 个人服务相关路由
 List<RouteBase> get personalServiceRoutes => [
@@ -22,5 +23,10 @@ List<RouteBase> get personalServiceRoutes => [
           final data = state.extra as Map<String, dynamic>?;
           return PersonalServiceFormView(serviceData: data);
         },
+      ),
+      GoRoute(
+        path: '/services/my/applications',
+        name: 'myServiceApplications',
+        builder: (context, state) => const ReceivedApplicationsView(),
       ),
     ];

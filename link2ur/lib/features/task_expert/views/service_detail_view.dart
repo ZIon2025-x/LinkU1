@@ -128,6 +128,14 @@ class _ServiceDetailContent extends StatelessWidget {
                                     service: service, isDark: isDark),
                               ),
 
+                              if (service.isPersonalService &&
+                                  service.ownerName != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 16),
+                                  child: _OwnerInfoCard(
+                                      service: service, isDark: isDark),
+                                ),
+
                               _DescriptionCard(
                                   service: service, isDark: isDark),
                               const SizedBox(height: 20),
@@ -395,6 +403,89 @@ class _PriceAndTitleCard extends StatelessWidget {
               color: isDark
                   ? AppColors.textPrimaryDark
                   : AppColors.textPrimaryLight,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// =============================================================
+// 个人服务所有者信息卡片
+// =============================================================
+
+class _OwnerInfoCard extends StatelessWidget {
+  const _OwnerInfoCard({required this.service, required this.isDark});
+
+  final TaskExpertService service;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.cardBackgroundDark : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 22,
+            backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+            backgroundImage: service.ownerAvatar != null &&
+                    service.ownerAvatar!.isNotEmpty
+                ? NetworkImage(service.ownerAvatar!)
+                : null,
+            child: service.ownerAvatar == null || service.ownerAvatar!.isEmpty
+                ? const Icon(Icons.person, size: 22, color: AppColors.primary)
+                : null,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  service.ownerName ?? '',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
+                  ),
+                ),
+                if (service.ownerRating != null && service.ownerRating! > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.star_rounded,
+                            size: 16, color: Color(0xFFFFC107)),
+                        const SizedBox(width: 4),
+                        Text(
+                          service.ownerRating!.toStringAsFixed(1),
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: isDark
+                                ? AppColors.textSecondaryDark
+                                : AppColors.textSecondaryLight,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
             ),
           ),
         ],

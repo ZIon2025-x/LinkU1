@@ -63,4 +63,63 @@ class PersonalServiceRepository {
     );
     return Map<String, dynamic>.from(response.data);
   }
+
+  // ==================== 收到的申请管理 ====================
+
+  Future<Map<String, dynamic>> getReceivedApplications({
+    String? status,
+    int? serviceId,
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    final params = <String, dynamic>{
+      'limit': limit,
+      'offset': offset,
+    };
+    if (status != null) params['status'] = status;
+    if (serviceId != null) params['service_id'] = serviceId;
+
+    final response = await _apiService.get(
+      ApiEndpoints.myReceivedApplications,
+      queryParameters: params,
+    );
+    return Map<String, dynamic>.from(response.data);
+  }
+
+  Future<Map<String, dynamic>> approveApplication(int applicationId) async {
+    final response = await _apiService.post(
+      ApiEndpoints.ownerApproveApplication(applicationId),
+    );
+    if (!response.isSuccess) {
+      throw Exception(response.message ?? 'approve_failed');
+    }
+    return Map<String, dynamic>.from(response.data);
+  }
+
+  Future<void> rejectApplication(int applicationId, {String? reason}) async {
+    final response = await _apiService.post(
+      ApiEndpoints.ownerRejectApplication(applicationId),
+      data: {'reject_reason': reason},
+    );
+    if (!response.isSuccess) {
+      throw Exception(response.message ?? 'reject_failed');
+    }
+  }
+
+  Future<void> counterOffer(
+    int applicationId, {
+    required double counterPrice,
+    String? message,
+  }) async {
+    final response = await _apiService.post(
+      ApiEndpoints.ownerCounterOffer(applicationId),
+      data: {
+        'counter_price': counterPrice,
+        if (message != null) 'message': message,
+      },
+    );
+    if (!response.isSuccess) {
+      throw Exception(response.message ?? 'counter_offer_failed');
+    }
+  }
 }

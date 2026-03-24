@@ -19940,6 +19940,24 @@ abstract class AppLocalizations {
   /// **'Updated'**
   String get feedLabelUpdated;
 
+  /// No description provided for @feedLabelReviewedCompetitor.
+  ///
+  /// In en, this message translates to:
+  /// **'Reviewed a competitor'**
+  String get feedLabelReviewedCompetitor;
+
+  /// No description provided for @feedLabelReviewedService.
+  ///
+  /// In en, this message translates to:
+  /// **'Reviewed a service'**
+  String get feedLabelReviewedService;
+
+  /// No description provided for @feedLabelCreatedRanking.
+  ///
+  /// In en, this message translates to:
+  /// **'Created a ranking'**
+  String get feedLabelCreatedRanking;
+
   /// No description provided for @servicePriceFrom.
   ///
   /// In en, this message translates to:

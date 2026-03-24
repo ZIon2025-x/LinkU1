@@ -49,6 +49,13 @@ class _MyServicesBody extends StatelessWidget {
       child: Scaffold(
         appBar: AppBar(
           title: Text(context.l10n.profileMyServices),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.inbox_outlined),
+              tooltip: context.l10n.expertApplicationsTitle,
+              onPressed: () => context.push('/services/my/applications'),
+            ),
+          ],
         ),
         body: BlocBuilder<PersonalServiceBloc, PersonalServiceState>(
           buildWhen: (prev, curr) =>

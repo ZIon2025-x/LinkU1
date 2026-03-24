@@ -2359,7 +2359,16 @@ async def get_service_detail(
     service_out.user_task_status = user_task_status
     service_out.user_task_is_paid = user_task_is_paid
     service_out.user_application_has_negotiation = user_application_has_negotiation
-    
+
+    # 加载服务所有者信息（个人服务显示所有者，达人服务显示达人）
+    if service.service_type == "personal" and service.user_id:
+        from app import async_crud
+        owner = await async_crud.async_user_crud.get_user_by_id(db, service.user_id)
+        if owner:
+            service_out.owner_name = owner.name
+            service_out.owner_avatar = owner.avatar
+            service_out.owner_rating = owner.avg_rating
+
     return service_out
 
 
@@ -2736,12 +2745,12 @@ async def apply_for_service(
             detail="您已申请过此服务，请等待处理（并发冲突）"
         )
     
-    # 12. 发送通知和邮件给任务达人（需要达人审核）
+    # 12. 发送通知和邮件给服务所有者（达人或普通用户）
     from app.task_notifications import send_service_application_notification
     try:
         await send_service_application_notification(
             db=db,
-            expert_id=service.expert_id,
+            owner_user_id=service.owner_user_id,
             applicant_id=current_user.id,
             service_id=service_id,
             service_name=service.service_name,

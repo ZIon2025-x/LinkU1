@@ -924,7 +924,7 @@ async def send_expert_application_rejected_notification(
 
 async def send_service_application_notification(
     db: AsyncSession,
-    expert_id: str,
+    owner_user_id: str,
     applicant_id: str,
     service_id: int,
     service_name: str,
@@ -937,21 +937,24 @@ async def send_service_application_notification(
     is_flexible: Optional[bool] = None,
     application_time: Optional[datetime] = None,
 ):
-    """用户申请服务，发送通知和邮件给任务达人"""
+    """用户申请服务，发送通知和邮件给服务所有者（达人或普通用户）"""
+    if not owner_user_id:
+        logger.warning(f"服务 {service_id} 没有所有者，跳过通知发送")
+        return
     try:
         from app import async_crud
         from app.email_templates import get_service_application_email, get_user_language
         import asyncio
-        
+
         # 获取申请用户信息
         applicant = await async_crud.async_user_crud.get_user_by_id(db, applicant_id)
         if not applicant:
             return
-        
-        # 获取任务达人信息（用于语言偏好和邮箱）
-        expert = await async_crud.async_user_crud.get_user_by_id(db, expert_id)
-        if not expert or not expert.email:
-            logger.warning(f"任务达人 {expert_id} 不存在或没有邮箱，跳过邮件发送")
+
+        # 获取服务所有者信息（用于语言偏好和邮箱）
+        owner = await async_crud.async_user_crud.get_user_by_id(db, owner_user_id)
+        if not owner or not owner.email:
+            logger.warning(f"服务所有者 {owner_user_id} 不存在或没有邮箱，跳过邮件发送")
         
         # 获取服务信息（如果未提供）
         if not service_description or not base_price:
@@ -1015,19 +1018,19 @@ async def send_service_application_notification(
         # 创建站内通知
         await async_crud.async_notification_crud.create_notification(
             db=db,
-            user_id=expert_id,
+            user_id=owner_user_id,
             notification_type="service_application",
             title="新服务申请",
             content=content,  # 直接使用文本，不存储 JSON
             related_id=str(service_id),
         )
-        
+
         # 发送推送通知
         try:
             from app.push_notification_service import send_push_notification_async_safe
             send_push_notification_async_safe(
                 async_db=db,
-                user_id=expert_id,
+                user_id=owner_user_id,
                 title=None,  # 从模板生成（会根据用户语言偏好）
                 body=None,  # 从模板生成（会根据用户语言偏好）
                 notification_type="service_application",
@@ -1043,11 +1046,11 @@ async def send_service_application_notification(
             logger.warning(f"发送服务申请推送通知失败: {e}")
             # 推送通知失败不影响主流程
         
-        # 发送邮件（如果有任务达人邮箱）
-        if expert and expert.email:
+        # 发送邮件（如果有服务所有者邮箱）
+        if owner and owner.email:
             try:
-                # 获取任务达人语言偏好
-                language = get_user_language(expert)
+                # 获取服务所有者语言偏好
+                language = get_user_language(owner)
                 
                 # 生成邮件内容
                 email_subject, email_body = get_service_application_email(
@@ -1068,15 +1071,13 @@ async def send_service_application_notification(
                 
                 # 检查是否为临时邮箱
                 from app.email_utils import is_temp_email, notify_user_to_update_email
-                if is_temp_email(expert.email):
+                if is_temp_email(owner.email):
                     # 临时邮箱无法接收邮件，创建通知提醒用户更新邮箱
-                    # 注意：这里需要同步数据库操作，但我们在异步函数中
-                    # 使用同步数据库会话
                     from app.database import SessionLocal
                     sync_db = SessionLocal()
                     try:
-                        notify_user_to_update_email(sync_db, expert.id, language)
-                        logger.info(f"检测到任务达人使用临时邮箱，已创建邮箱更新提醒通知: user_id={expert.id}")
+                        notify_user_to_update_email(sync_db, owner.id, language)
+                        logger.info(f"检测到服务所有者使用临时邮箱，已创建邮箱更新提醒通知: user_id={owner.id}")
                     finally:
                         sync_db.close()
                 else:
@@ -1089,9 +1090,9 @@ async def send_service_application_notification(
                             loop = asyncio.get_event_loop()
                             await loop.run_in_executor(
                                 None,
-                                lambda: send_email(expert.email, email_subject, email_body)
+                                lambda: send_email(owner.email, email_subject, email_body)
                             )
-                            logger.info(f"服务申请邮件已发送给任务达人: {expert.email}, 服务: {service_name}")
+                            logger.info(f"服务申请邮件已发送给服务所有者: {owner.email}, 服务: {service_name}")
                         except Exception as e:
                             logger.error(f"发送服务申请邮件失败: {e}")
                     
@@ -1101,7 +1102,7 @@ async def send_service_application_notification(
             except Exception as e:
                 logger.error(f"准备发送服务申请邮件时出错: {e}")
         
-        logger.info(f"服务申请通知已发送给任务达人: {expert_id}, 服务: {service_name}")
+        logger.info(f"服务申请通知已发送给服务所有者: {owner_user_id}, 服务: {service_name}")
         
     except Exception as e:
         logger.error(f"发送服务申请通知失败: {e}")
@@ -1115,28 +1116,28 @@ async def send_counter_offer_notification(
     service_id: int,
     message: Optional[str] = None,
 ):
-    """任务达人再次议价，发送通知给申请用户"""
+    """服务所有者再次议价，发送通知给申请用户（兼容达人服务和个人服务）"""
     try:
         from app import async_crud
-        
-        # 查询任务达人信息和服务信息
-        expert = await db.get(models.TaskExpert, expert_id)
+
+        # 查询服务所有者信息（兼容达人和个人服务）
+        owner = await async_crud.async_user_crud.get_user_by_id(db, expert_id)
         service = await db.get(models.TaskExpertService, service_id)
-        
-        expert_name = expert.expert_name if expert and expert.expert_name else f"任务达人{expert_id}"
+
+        owner_name = owner.name if owner and owner.name else f"用户{expert_id}"
         service_name = service.service_name if service and service.service_name else f"服务#{service_id}"
-        
+
         # ⚠️ 直接使用文本内容，不存储 JSON
         if message and message.strip():
-            content = f"任务达人提出新价格。\n任务达人：{expert_name}\n服务名称：{service_name}\n新价格：£{float(counter_price):.2f}\n留言：{message}"
+            content = f"服务提供者提出新价格。\n服务提供者：{owner_name}\n服务名称：{service_name}\n新价格：£{float(counter_price):.2f}\n留言：{message}"
         else:
-            content = f"任务达人提出新价格。\n任务达人：{expert_name}\n服务名称：{service_name}\n新价格：£{float(counter_price):.2f}"
+            content = f"服务提供者提出新价格。\n服务提供者：{owner_name}\n服务名称：{service_name}\n新价格：£{float(counter_price):.2f}"
         
         await async_crud.async_notification_crud.create_notification(
             db=db,
             user_id=applicant_id,
             notification_type="counter_offer",
-            title="任务达人提出新价格",
+            title="服务提供者提出新价格",
             content=content,  # 直接使用文本，不存储 JSON
             related_id=str(service_id),
         )
@@ -1159,11 +1160,11 @@ async def send_counter_offer_notification(
                 }
             )
         except Exception as e:
-            logger.warning(f"发送任务达人议价推送通知失败: {e}")
+            logger.warning(f"发送议价推送通知失败: {e}")
             # 推送通知失败不影响主流程
-        
+
         logger.info(f"议价通知已发送给申请用户: {applicant_id}")
-        
+
     except Exception as e:
         logger.error(f"发送议价通知失败: {e}")
 
@@ -1175,7 +1176,7 @@ async def send_counter_offer_accepted_notification(
     counter_price: Decimal,
     service_id: int,
 ):
-    """用户同意任务达人的议价，发送通知给任务达人"""
+    """用户同意服务所有者的议价，发送通知给服务所有者（兼容达人和个人服务）"""
     try:
         from app import async_crud
         
@@ -1221,7 +1222,7 @@ async def send_counter_offer_accepted_notification(
             logger.warning(f"发送议价同意推送通知失败: {e}")
             # 推送通知失败不影响主流程
         
-        logger.info(f"议价同意通知已发送给任务达人: {expert_id}")
+        logger.info(f"议价同意通知已发送给服务所有者: {expert_id}")
         
     except Exception as e:
         logger.error(f"发送议价同意通知失败: {e}")
@@ -1234,7 +1235,7 @@ async def send_counter_offer_accepted_to_applicant_notification(
     counter_price: Decimal,
     service_id: int,
 ):
-    """用户同意任务达人的议价后，发送通知给用户（申请者），提醒等待支付"""
+    """用户同意服务所有者的议价后，发送通知给用户（申请者），提醒等待支付"""
     try:
         from app import async_crud
         
@@ -1242,12 +1243,12 @@ async def send_counter_offer_accepted_to_applicant_notification(
         service = await db.get(models.TaskExpertService, service_id)
         service_name = service.service_name if service and service.service_name else f"服务#{service_id}"
         
-        # 获取任务达人信息
-        expert_user = await async_crud.async_user_crud.get_user_by_id(db, expert_id)
-        expert_name = expert_user.name if expert_user and expert_user.name else f"任务达人{expert_id}"
-        
+        # 获取服务所有者信息
+        owner_user = await async_crud.async_user_crud.get_user_by_id(db, expert_id)
+        owner_name = owner_user.name if owner_user and owner_user.name else f"用户{expert_id}"
+
         # ⚠️ 直接使用文本内容，不存储 JSON
-        content = f"您已同意任务达人 {expert_name} 的议价。\n服务名称：{service_name}\n议价金额：£{float(counter_price):.2f}\n请等待任务达人创建任务，创建后需要完成支付。"
+        content = f"您已同意 {owner_name} 的议价。\n服务名称：{service_name}\n议价金额：£{float(counter_price):.2f}\n请等待对方创建任务，创建后需要完成支付。"
         
         await async_crud.async_notification_crud.create_notification(
             db=db,
@@ -1265,13 +1266,13 @@ async def send_counter_offer_accepted_to_applicant_notification(
                 async_db=db,
                 user_id=applicant_id,
                 title="已同意议价",
-                body=f"您已同意任务达人 {expert_name} 的议价，请等待任务创建并完成支付",
+                body=f"您已同意 {owner_name} 的议价，请等待任务创建并完成支付",
                 notification_type="counter_offer_accepted_to_applicant",
                 data={
                     "service_id": service_id
                 },
                 template_vars={
-                    "expert_name": expert_name,
+                    "expert_name": owner_name,
                     "service_name": service_name,
                     "counter_price": float(counter_price)
                 }
@@ -1279,7 +1280,7 @@ async def send_counter_offer_accepted_to_applicant_notification(
         except Exception as e:
             logger.warning(f"发送议价同意推送通知给用户失败: {e}")
             # 推送通知失败不影响主流程
-        
+
         logger.info(f"议价同意通知已发送给用户（申请者）: {applicant_id}")
         
     except Exception as e:
@@ -1292,7 +1293,7 @@ async def send_counter_offer_rejected_notification(
     applicant_id: str,
     service_id: int,
 ):
-    """用户拒绝任务达人的议价，发送通知给任务达人"""
+    """用户拒绝服务所有者的议价，发送通知给服务所有者（兼容达人和个人服务）"""
     try:
         from app import async_crud
         
@@ -1338,7 +1339,7 @@ async def send_counter_offer_rejected_notification(
             logger.warning(f"发送议价拒绝推送通知失败: {e}")
             # 推送通知失败不影响主流程
         
-        logger.info(f"议价拒绝通知已发送给任务达人: {expert_id}")
+        logger.info(f"议价拒绝通知已发送给服务所有者: {expert_id}")
         
     except Exception as e:
         logger.error(f"发送议价拒绝通知失败: {e}")
@@ -1351,14 +1352,14 @@ async def send_service_application_approved_notification(
     task_id: int,
     service_name: str,
 ):
-    """任务达人同意服务申请（创建任务），发送通知给申请用户"""
+    """服务所有者同意服务申请（创建任务），发送通知给申请用户（兼容达人和个人服务）"""
     try:
         from app import async_crud
-        
-        # 查询任务达人信息
-        expert = await db.get(models.TaskExpert, expert_id)
-        expert_name = expert.expert_name if expert and expert.expert_name else f"任务达人{expert_id}"
-        
+
+        # 查询服务所有者信息（兼容达人和个人服务）
+        owner = await async_crud.async_user_crud.get_user_by_id(db, expert_id)
+        owner_name = owner.name if owner and owner.name else f"用户{expert_id}"
+
         # 查询任务信息，获取支付过期时间
         task = await db.get(models.Task, task_id)
         payment_expires_info = ""
@@ -1366,9 +1367,9 @@ async def send_service_application_approved_notification(
             from app.utils.time_utils import format_iso_utc
             expires_at_str = format_iso_utc(task.payment_expires_at)
             payment_expires_info = f"\n支付过期时间：{expires_at_str}\n请在30分钟内完成支付，否则任务将自动取消。"
-        
+
         # ⚠️ 直接使用文本内容，不存储 JSON
-        notification_content = f"您的服务申请已通过，任务已创建。\n任务达人：{expert_name}\n服务名称：{service_name}\n请尽快完成支付以开始任务。{payment_expires_info}"
+        notification_content = f"您的服务申请已通过，任务已创建。\n服务提供者：{owner_name}\n服务名称：{service_name}\n请尽快完成支付以开始任务。{payment_expires_info}"
         
         await async_crud.async_notification_crud.create_notification(
             db=db,
@@ -1413,25 +1414,22 @@ async def send_service_application_rejected_notification(
     service_id: int,
     reject_reason: Optional[str] = None,
 ):
-    """任务达人拒绝服务申请，发送通知给申请用户"""
+    """服务所有者拒绝服务申请，发送通知给申请用户（兼容达人和个人服务）"""
     try:
         from app import async_crud
-        
-        # 查询任务达人信息和服务信息
-        expert = await db.get(models.TaskExpert, expert_id)
+
+        # 查询服务所有者信息（兼容达人和个人服务）
+        owner = await async_crud.async_user_crud.get_user_by_id(db, expert_id)
         service = await db.get(models.TaskExpertService, service_id)
-        
-        # 获取任务达人名字（如果没有则使用默认值）
-        expert_name = expert.expert_name if expert and expert.expert_name else f"任务达人{expert_id}"
-        
-        # 获取服务名称（如果没有则使用默认值）
+
+        owner_name = owner.name if owner and owner.name else f"用户{expert_id}"
         service_name = service.service_name if service and service.service_name else f"服务#{service_id}"
-        
-        # 构建通知内容，包含任务达人名字和服务名称
+
+        # 构建通知内容
         if reject_reason and reject_reason.strip():
-            content = f"您的服务申请已被拒绝。\n任务达人：{expert_name}\n服务名称：{service_name}\n拒绝原因：{reject_reason}"
+            content = f"您的服务申请已被拒绝。\n服务提供者：{owner_name}\n服务名称：{service_name}\n拒绝原因：{reject_reason}"
         else:
-            content = f"您的服务申请已被拒绝。\n任务达人：{expert_name}\n服务名称：{service_name}"
+            content = f"您的服务申请已被拒绝。\n服务提供者：{owner_name}\n服务名称：{service_name}"
         
         await async_crud.async_notification_crud.create_notification(
             db=db,
@@ -1474,7 +1472,7 @@ async def send_service_application_cancelled_notification(
     applicant_id: str,
     service_id: int,
 ):
-    """用户取消服务申请，发送通知给任务达人"""
+    """用户取消服务申请，发送通知给服务所有者（兼容达人和个人服务）"""
     try:
         from app import async_crud
         
@@ -1520,7 +1518,7 @@ async def send_service_application_cancelled_notification(
             logger.warning(f"发送服务申请取消推送通知失败: {e}")
             # 推送通知失败不影响主流程
         
-        logger.info(f"服务申请取消通知已发送给任务达人: {expert_id}")
+        logger.info(f"服务申请取消通知已发送给服务所有者: {expert_id}")
         
     except Exception as e:
         logger.error(f"发送服务申请取消通知失败: {e}")

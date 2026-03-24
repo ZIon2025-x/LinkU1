@@ -10818,6 +10818,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get feedLabelUpdated => 'Updated';
 
   @override
+  String get feedLabelReviewedCompetitor => 'Reviewed a competitor';
+
+  @override
+  String get feedLabelReviewedService => 'Reviewed a service';
+
+  @override
+  String get feedLabelCreatedRanking => 'Created a ranking';
+
+  @override
   String servicePriceFrom(String price) {
     return 'From $price';
   }

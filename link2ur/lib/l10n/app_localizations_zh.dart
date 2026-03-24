@@ -10390,6 +10390,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get feedLabelUpdated => '更新了动态';
 
   @override
+  String get feedLabelReviewedCompetitor => '评价了竞品';
+
+  @override
+  String get feedLabelReviewedService => '评价了服务';
+
+  @override
+  String get feedLabelCreatedRanking => '创建了排行榜';
+
+  @override
   String servicePriceFrom(String price) {
     return '$price起';
   }
@@ -20740,6 +20749,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get feedLabelUpdated => '更新了動態';
+
+  @override
+  String get feedLabelReviewedCompetitor => '評價了競品';
+
+  @override
+  String get feedLabelReviewedService => '評價了服務';
+
+  @override
+  String get feedLabelCreatedRanking => '創建了排行榜';
 
   @override
   String servicePriceFrom(String price) {

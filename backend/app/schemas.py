@@ -2342,7 +2342,9 @@ class ServiceBrowseItem(BaseModel):
 
 class TaskExpertServiceOut(BaseModel):
     id: int
-    expert_id: str
+    expert_id: Optional[str] = None  # None for personal services
+    service_type: str = "expert"  # "expert" or "personal"
+    user_id: Optional[str] = None  # personal service owner user_id
     service_name: str
     description: str
     images: Optional[List[str]]
@@ -2353,6 +2355,10 @@ class TaskExpertServiceOut(BaseModel):
     view_count: int
     application_count: int
     created_at: datetime.datetime
+    # 服务所有者信息（个人服务）
+    owner_name: Optional[str] = None
+    owner_avatar: Optional[str] = None
+    owner_rating: Optional[float] = None
     # 时间段相关字段
     has_time_slots: bool = False
     time_slot_duration_minutes: Optional[int] = None
@@ -2373,7 +2379,9 @@ class TaskExpertServiceOut(BaseModel):
         from datetime import time
         data = {
             "id": obj.id,
-            "expert_id": obj.expert_id,
+            "expert_id": obj.expert_id or None,
+            "service_type": getattr(obj, "service_type", "expert") or "expert",
+            "user_id": getattr(obj, "user_id", None),
             "service_name": obj.service_name,
             "description": obj.description,
             "images": obj.images,
@@ -2585,7 +2593,8 @@ class ServiceApplicationOut(BaseModel):
     id: int
     service_id: int
     applicant_id: str
-    expert_id: str
+    expert_id: Optional[str] = None  # None for personal services
+    service_owner_id: Optional[str] = None
     time_slot_id: Optional[int] = None  # 选择的时间段ID
     application_message: Optional[str]
     negotiated_price: Optional[float]  # 输出时保持float，输入时使用condecimal
