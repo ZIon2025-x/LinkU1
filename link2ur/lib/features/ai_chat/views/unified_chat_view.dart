@@ -24,7 +24,6 @@ import '../../../data/services/ai_chat_service.dart';
 import '../../tasks/views/create_task_view.dart' show TaskDraftData;
 import '../bloc/unified_chat_bloc.dart';
 import '../widgets/ai_message_bubble.dart';
-import '../widgets/task_draft_card.dart';
 import '../widgets/tool_call_card.dart';
 
 /// 统一 AI + 人工客服聊天页面（唯一 AI 聊天入口，替代原 AI 页）
@@ -627,10 +626,7 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
           items.add(_ChatListItem.streaming(state.streamingContent));
         }
 
-        // 任务草稿卡片（与 AI 页一致）
-        if (state.taskDraft != null) {
-          items.add(_ChatListItem.draft(state.taskDraft!));
-        }
+        // 任务草稿卡片已移除，确认按钮统一在气泡内显示
 
         // 分割线
         final showDivider = state.csMessages.isNotEmpty ||
@@ -687,16 +683,6 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
                   return StreamingBubble(
                     key: const ValueKey('ai_streaming'),
                     content: item.streamingContent!,
-                  );
-                case _ChatItemType.taskDraft:
-                  return TaskDraftCard(
-                    key: const ValueKey('task_draft'),
-                    draft: item.taskDraft!,
-                    onConfirm: () {
-                      final draftData = TaskDraftData.fromJson(state.taskDraft!);
-                      context.read<UnifiedChatBloc>().add(const UnifiedChatClearTaskDraft());
-                      context.push(AppRoutes.createTask, extra: draftData);
-                    },
                   );
                 case _ChatItemType.dividerItem:
                   return _buildDivider(isDark);
@@ -961,39 +947,11 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
     );
   }
 
-  /// 根据最后一条 AI 消息的 toolName 返回应在输入区上方显示的操作按钮（任务/活动/钱包）
-  (String label, String route)? _navActionForLastTool(
-    UnifiedChatState state,
-    BuildContext context,
-  ) {
-    if (state.mode != ChatMode.ai ||
-        state.taskDraft != null ||
-        state.aiMessages.isEmpty ||
-        state.isTyping) {
-      return null;
-    }
-    final last = state.aiMessages.last;
-    final tool = last.toolName;
-    final l10n = context.l10n;
-    switch (tool) {
-      case 'query_my_tasks':
-        return (l10n.aiChatViewMyTasks, AppRoutes.tasks);
-      case 'list_activities':
-        return (l10n.aiChatActivities, AppRoutes.activities);
-      case 'get_my_points_and_coupons':
-        return (l10n.aiChatMyPoints, AppRoutes.wallet);
-      default:
-        return null;
-    }
-  }
-
   Widget _buildInputArea(bool isDark) {
     return BlocBuilder<UnifiedChatBloc, UnifiedChatState>(
       buildWhen: (prev, curr) =>
           prev.mode != curr.mode ||
-          prev.isTyping != curr.isTyping ||
-          prev.taskDraft != curr.taskDraft ||
-          prev.aiMessages.length != curr.aiMessages.length,
+          prev.isTyping != curr.isTyping,
       builder: (context, state) {
         // CS 结束状态：显示评价和返回按钮
         if (state.mode == ChatMode.csEnded) {
@@ -1105,76 +1063,11 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
           hintText = context.l10n.customerServiceEnterMessage;
         }
 
-        // 有任务草稿时在输入区上方固定显示「确认并去发布」，确保用户一定能看到
-        final bool showConfirmPublish = state.mode == ChatMode.ai &&
-            state.taskDraft != null;
-        // 任务/活动/钱包相关回复：在输入区上方固定显示「查看任务」/「活动」/「积分」按钮
-        final navAction = _navActionForLastTool(state, context);
-
         // 与任务聊天框一致：快捷操作单独一行（无容器背景），输入区在下方
         return Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (showConfirmPublish)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.md,
-                  AppSpacing.sm,
-                  AppSpacing.md,
-                  0,
-                ),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      final draftData =
-                          TaskDraftData.fromJson(state.taskDraft!);
-                      context
-                          .read<UnifiedChatBloc>()
-                          .add(const UnifiedChatClearTaskDraft());
-                      context.push(AppRoutes.createTask, extra: draftData);
-                    },
-                    icon: const Icon(Icons.check_circle_outline, size: 20),
-                    label: Text(context.l10n.aiTaskDraftConfirmButton),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppRadius.medium),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            if (!showConfirmPublish && navAction != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.md,
-                  AppSpacing.sm,
-                  AppSpacing.md,
-                  0,
-                ),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () => context.push(navAction.$2),
-                    icon: const Icon(Icons.arrow_forward, size: 18),
-                    label: Text(navAction.$1),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.primary,
-                      side: BorderSide(color: AppColors.primary.withValues(alpha: 0.71)),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppRadius.medium),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
             if (state.mode == ChatMode.ai) _buildQuickActionsRow(context),
             Container(
               padding: const EdgeInsets.symmetric(
@@ -1282,7 +1175,7 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
 
 // ==================== ListView.builder helper ====================
 
-enum _ChatItemType { welcome, ai, tool, streaming, taskDraft, dividerItem, cs }
+enum _ChatItemType { welcome, ai, tool, streaming, dividerItem, cs }
 
 class _ChatListItem {
   const _ChatListItem._({
@@ -1291,7 +1184,6 @@ class _ChatListItem {
     this.csMessage,
     this.toolName,
     this.streamingContent,
-    this.taskDraft,
     this.index = 0,
   });
 
@@ -1300,7 +1192,6 @@ class _ChatListItem {
   final CustomerServiceMessage? csMessage;
   final String? toolName;
   final String? streamingContent;
-  final Map<String, dynamic>? taskDraft;
   final int index;
 
   factory _ChatListItem.welcome() =>
@@ -1314,9 +1205,6 @@ class _ChatListItem {
 
   factory _ChatListItem.streaming(String content) =>
       _ChatListItem._(type: _ChatItemType.streaming, streamingContent: content);
-
-  factory _ChatListItem.draft(Map<String, dynamic> draft) =>
-      _ChatListItem._(type: _ChatItemType.taskDraft, taskDraft: draft);
 
   factory _ChatListItem.divider() =>
       const _ChatListItem._(type: _ChatItemType.dividerItem);
