@@ -23,7 +23,6 @@ import '../../../core/utils/helpers.dart';
 import '../../../core/utils/task_type_helper.dart';
 import '../../../core/utils/task_status_helper.dart';
 import '../../../core/utils/city_display_helper.dart';
-import '../../../core/widgets/location_picker.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/animated_list_item.dart';
 import '../../../core/widgets/glass_container.dart';
@@ -34,6 +33,7 @@ import '../../../core/widgets/loading_view.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 
+import '../../../core/utils/date_formatter.dart';
 import '../../../core/widgets/content_constraint.dart';
 import '../../../core/widgets/decorative_background.dart';
 import '../../../core/router/app_router.dart';
@@ -207,6 +207,7 @@ class _HomeViewContentState extends State<_HomeViewContent> {
     final isDark = brightness == Brightness.dark;
 
     return Scaffold(
+      drawer: _buildDrawer(context),
       body: Stack(
         children: [
           const RepaintBoundary(child: DecorativeBackground()),
@@ -249,45 +250,23 @@ class _HomeViewContentState extends State<_HomeViewContent> {
       ),
       child: Row(
         children: [
-          // 左上角：GPS 定位城市（固定宽度，与右侧搜索按钮对称）
+          // 左上角：菜单按钮（与右侧搜索按钮对称）
           SizedBox(
             width: 72,
             height: 44,
             child: GestureDetector(
               onTap: () {
                 AppHaptics.selection();
-                _showLocationPicker(context);
+                Scaffold.of(context).openDrawer();
               },
               behavior: HitTestBehavior.opaque,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.location_on,
-                      color: AppColors.primary,
-                      size: 16),
-                  const SizedBox(width: 2),
-                  Flexible(
-                    child: BlocBuilder<HomeBloc, HomeState>(
-                      buildWhen: (p, c) => p.locationCity != c.locationCity,
-                      builder: (context, state) {
-                        final city = state.locationCity ?? 'London';
-                        return Text(
-                          city,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        );
-                      },
-                    ),
-                  ),
-                  Icon(Icons.keyboard_arrow_down,
-                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                      size: 14),
-                ],
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Icon(
+                  Icons.menu,
+                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                  size: 24,
+                ),
               ),
             ),
           ),
@@ -340,90 +319,125 @@ class _HomeViewContentState extends State<_HomeViewContent> {
     );
   }
 
-  void _showLocationPicker(BuildContext context) {
+  Widget _buildDrawer(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final homeBloc = context.read<HomeBloc>();
-    final currentCity = homeBloc.state.locationCity;
-    String? pickedAddress;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: false, // 手动画拖拽条，避免重复
+    return Drawer(
       backgroundColor: isDark ? const Color(0xFF1C1C1E) : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header: user avatar + name
+            BlocBuilder<AuthBloc, AuthState>(
+              buildWhen: (p, c) => p.status != c.status || p.user != c.user,
+              builder: (context, state) {
+                final isLoggedIn = state.status == AuthStatus.authenticated;
+                final user = state.user;
+                return InkWell(
+                  onTap: isLoggedIn
+                      ? () {
+                          Navigator.of(context).pop();
+                          context.push('/profile');
+                        }
+                      : () {
+                          Navigator.of(context).pop();
+                          context.push('/login');
+                        },
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 28,
+                          backgroundImage: (isLoggedIn && user?.avatar != null)
+                              ? NetworkImage(user!.avatar!)
+                              : null,
+                          backgroundColor: isDark ? Colors.grey[800] : const Color(0xFFE8E8E8),
+                          child: (isLoggedIn && user?.avatar != null)
+                              ? null
+                              : Icon(Icons.person,
+                                  size: 28,
+                                  color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Text(
+                            isLoggedIn
+                                ? (user?.name.isNotEmpty == true ? user!.name : 'User')
+                                : context.l10n.drawerLogin,
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                            ),
+                          ),
+                        ),
+                        Icon(Icons.chevron_right,
+                            color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+                            size: 20),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+
+            Divider(
+              height: 1,
+              color: isDark ? Colors.white12 : Colors.black12,
+            ),
+            const SizedBox(height: 8),
+
+            // Menu items
+            _DrawerMenuItem(
+              icon: Icons.assignment_outlined,
+              label: context.l10n.drawerMyTasks,
+              onTap: () {
+                Navigator.of(context).pop();
+                context.push('/my-tasks');
+              },
+            ),
+            _DrawerMenuItem(
+              icon: Icons.account_balance_wallet_outlined,
+              label: context.l10n.drawerMyWallet,
+              onTap: () {
+                Navigator.of(context).pop();
+                context.push('/wallet');
+              },
+            ),
+            _DrawerMenuItem(
+              icon: Icons.settings_outlined,
+              label: context.l10n.drawerSettings,
+              onTap: () {
+                Navigator.of(context).pop();
+                context.push('/settings');
+              },
+            ),
+            _DrawerMenuItem(
+              icon: Icons.help_outline,
+              label: context.l10n.drawerHelpFeedback,
+              onTap: () {
+                Navigator.of(context).pop();
+                context.push('/feedback');
+              },
+            ),
+
+            const Spacer(),
+
+            // Footer: app version
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+              child: Text(
+                'LinkU',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
-      builder: (sheetContext) {
-        return Padding(
-          padding: EdgeInsets.fromLTRB(
-            20, 16, 20,
-            MediaQuery.of(sheetContext).viewInsets.bottom + 20,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 拖拽条
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: isDark ? Colors.white24 : Colors.black12,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              // 标题
-              Text(
-                context.l10n.locationSetLocation,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                context.l10n.locationSetLocationHint,
-                style: TextStyle(fontSize: 13, color: Colors.grey[500]),
-              ),
-              const SizedBox(height: 16),
-              // LocationInputField — 不自动关闭 sheet，让用户手动确认
-              LocationInputField(
-                initialValue: currentCity,
-                showOnlineOption: false,
-                onChanged: (value) {
-                  pickedAddress = value;
-                },
-                onLocationPicked: (address, lat, lng) {
-                  pickedAddress = address;
-                },
-              ),
-              const SizedBox(height: 16),
-              // 确认按钮
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    final address = pickedAddress;
-                    if (address != null && address.isNotEmpty) {
-                      homeBloc.add(HomeLocationCityUpdated(address));
-                    }
-                    Navigator.pop(sheetContext);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: Text(context.l10n.commonConfirm),
-                ),
-              ),
-              const SizedBox(height: 8),
-            ],
-          ),
-        );
-      },
     );
   }
 }
@@ -573,12 +587,36 @@ class _FollowTab extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
 
-        // 有关注内容时显示关注 feed，否则显示热门动态（复用 discovery feed）
+        // 有关注内容时显示关注 feed，否则显示空状态引导 + 热门动态
         final hasFollowContent = state.followFeedItems.isNotEmpty;
         final displayItems = hasFollowContent
             ? state.followFeedItems
             : state.discoveryItems;
         final hasMore = hasFollowContent ? state.hasMoreFollowFeed : false;
+
+        if (displayItems.isEmpty && !hasFollowContent) {
+          // 纯空状态：没关注任何人 + 没有 discovery fallback
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.people_outline, size: 64, color: Colors.grey),
+                  const SizedBox(height: 16),
+                  Text(
+                    context.l10n.homeFollowEmpty,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
 
         if (displayItems.isEmpty) {
           return const Center(child: CircularProgressIndicator());
@@ -590,8 +628,21 @@ class _FollowTab extends StatelessWidget {
           },
           child: CustomScrollView(
             slivers: [
-              // 提示标题
-              if (!hasFollowContent)
+              // 未关注时的提示标题 + 热门 fallback
+              if (!hasFollowContent) ...[
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                    child: Text(
+                      context.l10n.homeFollowEmpty,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ),
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
@@ -612,6 +663,7 @@ class _FollowTab extends StatelessWidget {
                     ),
                   ),
                 ),
+              ],
 
               // Feed 列表
               SliverPadding(
@@ -835,6 +887,32 @@ class _FollowFeedCard extends StatelessWidget {
     if (diff.inHours < 24) return '${diff.inHours}小时前';
     if (diff.inDays < 7) return '${diff.inDays}天前';
     return '${time.month}/${time.day}';
+  }
+}
+
+class _DrawerMenuItem extends StatelessWidget {
+  const _DrawerMenuItem({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return ListTile(
+      leading: Icon(icon, size: 22,
+          color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+      title: Text(label,
+        style: TextStyle(fontSize: 15,
+          color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight)),
+      onTap: onTap,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+    );
   }
 }
 
