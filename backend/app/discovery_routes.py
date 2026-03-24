@@ -65,8 +65,9 @@ async def get_discovery_feed(
     
     all_items = []
 
-    # Optionally get recommendation scores for logged-in users
+    # Optionally get recommendation scores + user preferences for logged-in users
     recommendation_scores = None
+    user_preferred_categories = []
     if current_user:
         try:
             import asyncio
@@ -76,6 +77,20 @@ async def get_discovery_feed(
             )
         except Exception as e:
             logger.debug(f"Recommendation engine unavailable: {e}")
+        # Load user preferred categories for non-task content personalization
+        try:
+            pref_result = await db.execute(
+                select(models.UserProfilePreference.preferred_categories,
+                       models.UserProfilePreference.task_types)
+                .where(models.UserProfilePreference.user_id == current_user.id)
+            )
+            pref_row = pref_result.first()
+            if pref_row:
+                cats = pref_row.preferred_categories or []
+                types = pref_row.task_types or []
+                user_preferred_categories = list(set(cats + types))
+        except Exception as e:
+            logger.debug(f"Failed to load user preferences: {e}")
 
     # 每个 fetch 用 SAVEPOINT 隔离，单个类型失败不影响其他类型
     fetch_tasks = [
@@ -102,7 +117,8 @@ async def get_discovery_feed(
         seed = random.randint(0, 2**31 - 1)
 
     # 加权随机混排（确定性 seed）
-    feed_items = _weighted_shuffle(all_items, limit, page, seed=seed)
+    feed_items = _weighted_shuffle(all_items, limit, page, seed=seed,
+                                    user_preferred_categories=user_preferred_categories)
 
     # has_more: 返回的条数 == limit 说明可能还有更多；
     # 不足 limit 说明数据已经耗尽
@@ -1155,6 +1171,52 @@ def _compute_score(item: dict) -> float:
     return score
 
 
+def _compute_score_with_prefs(item: dict, user_prefs: set) -> float:
+    """热度分 + 用户偏好加分
+
+    如果内容的类别/标签匹配用户偏好的 task_type 或 preferred_categories，
+    热度分 * 1.5 提升排序优先级。
+
+    匹配逻辑：
+    - 帖子: extra_data.category_name_zh / category_name_en
+    - 服务: title 或 description 包含偏好关键词
+    - 商品: title 包含偏好关键词
+    - 排行榜/评价: 不加分（与用户偏好无直接关联）
+    """
+    base_score = _compute_score(item)
+    if not user_prefs:
+        return base_score
+
+    # 检查内容是否匹配用户偏好
+    matched = False
+    ft = item.get("feed_type", "")
+    extra = item.get("extra_data") or {}
+
+    if ft == "forum_post":
+        # 帖子的分类名
+        cat_zh = extra.get("category_name_zh", "")
+        cat_en = extra.get("category_name_en", "")
+        for pref in user_prefs:
+            pref_lower = pref.lower()
+            if pref_lower in (cat_zh or "").lower() or pref_lower in (cat_en or "").lower():
+                matched = True
+                break
+
+    elif ft in ("service", "product"):
+        # 服务/商品的标题
+        title = (item.get("title") or "").lower()
+        desc = (item.get("description") or "").lower()
+        for pref in user_prefs:
+            if pref.lower() in title or pref.lower() in desc:
+                matched = True
+                break
+
+    if matched:
+        return base_score * 1.5
+
+    return base_score
+
+
 def _compute_task_score(item: dict) -> float:
     """计算任务的个性化排序分数
 
@@ -1189,7 +1251,8 @@ def _compute_task_score(item: dict) -> float:
     return match_score * 0.6 + recency_score * 0.2 + popularity_score * 0.2
 
 
-def _weighted_shuffle(items: list, limit: int, page: int, seed: int = None) -> list:
+def _weighted_shuffle(items: list, limit: int, page: int, seed: int = None,
+                      user_preferred_categories: list = None) -> list:
     """加权随机混排
 
     - 每种类型内部按热度分数排序（时间衰减 + 互动加权），而非纯时间
@@ -1222,10 +1285,16 @@ def _weighted_shuffle(items: list, limit: int, page: int, seed: int = None) -> l
             by_type[ft] = []
         by_type[ft].append(item)
 
-    # 按分数排序：task 用个性化排序（推荐分+时效+热度），其他用通用热度
+    # 按分数排序：task 用个性化排序，其他用热度+偏好加分
+    prefs = set(user_preferred_categories or [])
     for ft in by_type:
-        sort_fn = _compute_task_score if ft == "task" else _compute_score
-        by_type[ft].sort(key=sort_fn, reverse=True)
+        if ft == "task":
+            by_type[ft].sort(key=_compute_task_score, reverse=True)
+        else:
+            by_type[ft].sort(
+                key=lambda item, _prefs=prefs: _compute_score_with_prefs(item, _prefs),
+                reverse=True,
+            )
 
     result = []
     consecutive_count = {}
