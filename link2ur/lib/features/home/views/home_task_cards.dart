@@ -166,6 +166,8 @@ class _NearbyTabState extends State<_NearbyTab> {
   void _showNearbyLocationPicker() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     String? pickedAddress;
+    double? pickedLat;
+    double? pickedLng;
 
     showModalBottomSheet(
       context: context,
@@ -211,6 +213,8 @@ class _NearbyTabState extends State<_NearbyTab> {
                 onChanged: (value) => pickedAddress = value,
                 onLocationPicked: (address, lat, lng) {
                   pickedAddress = address;
+                  pickedLat = lat;
+                  pickedLng = lng;
                 },
               ),
               const SizedBox(height: 16),
@@ -222,6 +226,10 @@ class _NearbyTabState extends State<_NearbyTab> {
                     if (address != null && address.isNotEmpty) {
                       setState(() => _city = address);
                       context.read<HomeBloc>().add(HomeLocationCityUpdated(address));
+                      // Reload nearby data with new coordinates
+                      if (pickedLat != null && pickedLng != null) {
+                        _loadWithCoordinates(pickedLat!, pickedLng!);
+                      }
                     }
                     Navigator.pop(sheetContext);
                   },
@@ -326,6 +334,7 @@ class _NearbyTabState extends State<_NearbyTab> {
           prev.nearbyTasks != curr.nearbyTasks ||
           prev.nearbyServices != curr.nearbyServices ||
           prev.nearbyRadius != curr.nearbyRadius ||
+          prev.hasMoreNearby != curr.hasMoreNearby ||
           prev.isLoading != curr.isLoading,
       builder: (context, state) {
         if (state.isLoading && state.nearbyTasks.isEmpty) {
@@ -392,6 +401,20 @@ class _NearbyTabState extends State<_NearbyTab> {
                   itemBuilder: (context, index) => waterfallItems[index],
                 ),
               ),
+              // Load more trigger
+              if (state.hasMoreNearby)
+                SliverToBoxAdapter(
+                  child: _NearbyLoadMoreTrigger(
+                    onVisible: () {
+                      context.read<HomeBloc>().add(HomeLoadNearby(
+                        latitude: _currentLat,
+                        longitude: _currentLng,
+                        loadMore: true,
+                        city: _city,
+                      ));
+                    },
+                  ),
+                ),
               const SliverPadding(padding: EdgeInsets.only(bottom: AppSpacing.lg)),
             ],
           ),
@@ -709,6 +732,42 @@ class _NearbyTagChip extends StatelessWidget {
           color: isPrice ? const Color(0xFFEE5A24) : AppColors.primary,
           fontWeight: isPrice ? FontWeight.w600 : FontWeight.w400,
         ),
+      ),
+    );
+  }
+}
+
+/// Triggers load-more when scrolled into view
+class _NearbyLoadMoreTrigger extends StatefulWidget {
+  const _NearbyLoadMoreTrigger({required this.onVisible});
+
+  final VoidCallback onVisible;
+
+  @override
+  State<_NearbyLoadMoreTrigger> createState() => _NearbyLoadMoreTriggerState();
+}
+
+class _NearbyLoadMoreTriggerState extends State<_NearbyLoadMoreTrigger> {
+  bool _triggered = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Trigger on next frame when this widget is built (meaning user scrolled to it)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_triggered && mounted) {
+        _triggered = true;
+        widget.onVisible();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: CircularProgressIndicator(),
       ),
     );
   }
