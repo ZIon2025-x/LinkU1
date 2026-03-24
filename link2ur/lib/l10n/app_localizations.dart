@@ -19807,6 +19807,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count} applicants'**
   String nearbyApplicants(int count);
+
+  /// No description provided for @feedLabelPublishedTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Published a task'**
+  String get feedLabelPublishedTask;
+
+  /// No description provided for @feedLabelPosted.
+  ///
+  /// In en, this message translates to:
+  /// **'Posted'**
+  String get feedLabelPosted;
+
+  /// No description provided for @feedLabelListedItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Listed an item'**
+  String get feedLabelListedItem;
+
+  /// No description provided for @feedLabelNewService.
+  ///
+  /// In en, this message translates to:
+  /// **'New service'**
+  String get feedLabelNewService;
+
+  /// No description provided for @feedLabelCreatedActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'Created an activity'**
+  String get feedLabelCreatedActivity;
+
+  /// No description provided for @feedLabelCompletedTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed a task'**
+  String get feedLabelCompletedTask;
+
+  /// No description provided for @feedLabelUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Updated'**
+  String get feedLabelUpdated;
+
+  /// No description provided for @servicePriceFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'From {price}'**
+  String servicePriceFrom(String price);
+
+  /// No description provided for @serviceReviewFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'From {title}'**
+  String serviceReviewFrom(String title);
 }
 
 class _AppLocalizationsDelegate

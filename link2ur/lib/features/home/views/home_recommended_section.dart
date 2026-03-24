@@ -20,47 +20,83 @@ class _RecommendedTab extends StatelessWidget {
       builder: (context, state) {
         final isDark = Theme.of(context).brightness == Brightness.dark;
 
-        return RefreshIndicator(
-          onRefresh: () async {
-            final bloc = context.read<HomeBloc>();
-            bloc.add(const HomeRefreshRequested());
-            await bloc.stream.firstWhere(
-              (s) => !s.isRefreshing,
-              orElse: () => state,
-            );
+        return NotificationListener<ScrollNotification>(
+          onNotification: (notification) {
+            if (notification is ScrollEndNotification &&
+                notification.metrics.extentAfter < 300) {
+              final bloc = context.read<HomeBloc>();
+              final s = bloc.state;
+              if (s.hasMoreDiscovery && !s.isLoadingDiscovery) {
+                bloc.add(const HomeLoadMoreDiscovery());
+              }
+            }
+            return false;
           },
-          child: CustomScrollView(
-            slivers: [
-              // 1. Story Row — 水平圆形入口
-              SliverToBoxAdapter(
-                child: isDesktop
-                    ? const ContentConstraint(child: _StoryRow())
-                    : const _StoryRow(),
-              ),
+          child: RefreshIndicator(
+            onRefresh: () async {
+              final bloc = context.read<HomeBloc>();
+              bloc.add(const HomeRefreshRequested());
+              await bloc.stream.firstWhere(
+                (s) => !s.isRefreshing,
+                orElse: () => state,
+              );
+            },
+            child: CustomScrollView(
+              slivers: [
+                // 1. Story Row — 水平圆形入口
+                SliverToBoxAdapter(
+                  child: isDesktop
+                      ? const ContentConstraint(child: _StoryRow())
+                      : const _StoryRow(),
+                ),
 
-              // 2. Ticker + Banner
-              SliverToBoxAdapter(
-                child: isDesktop
-                    ? ContentConstraint(
-                        child: _TickerBanner(
+                // 2. Ticker + Banner
+                SliverToBoxAdapter(
+                  child: isDesktop
+                      ? ContentConstraint(
+                          child: _TickerBanner(
+                            tickerItems: state.tickerItems,
+                            banners: state.banners,
+                          ),
+                        )
+                      : _TickerBanner(
                           tickerItems: state.tickerItems,
                           banners: state.banners,
                         ),
-                      )
-                    : _TickerBanner(
-                        tickerItems: state.tickerItems,
-                        banners: state.banners,
-                      ),
-              ),
+                ),
 
-              const SliverToBoxAdapter(child: SizedBox(height: 8)),
+                const SliverToBoxAdapter(child: SizedBox(height: 8)),
 
-              // 3. "为你推荐" 标题
-              SliverToBoxAdapter(
-                child: isDesktop
-                    ? ContentConstraint(
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
+                // 3. "为你推荐" 标题
+                SliverToBoxAdapter(
+                  child: isDesktop
+                      ? ContentConstraint(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.auto_awesome,
+                                  size: 22,
+                                  color: AppColors.primary,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  context.l10n.homeDiscoverMore,
+                                  style: AppTypography.title3.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 18,
+                                    color: isDark
+                                        ? AppColors.textPrimaryDark
+                                        : AppColors.desktopTextLight,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      : Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
                           child: Row(
                             children: [
                               const Icon(
@@ -79,60 +115,36 @@ class _RecommendedTab extends StatelessWidget {
                                       : AppColors.desktopTextLight,
                                 ),
                               ),
+                              const Spacer(),
                             ],
                           ),
                         ),
-                      )
-                    : Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.auto_awesome,
-                              size: 22,
-                              color: AppColors.primary,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              context.l10n.homeDiscoverMore,
-                              style: AppTypography.title3.copyWith(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 18,
-                                color: isDark
-                                    ? AppColors.textPrimaryDark
-                                    : AppColors.desktopTextLight,
-                              ),
-                            ),
-                            const Spacer(),
-                            const _OnlineIndicator(),
-                          ],
-                        ),
-                      ),
-              ),
+                ),
 
-              // 4. 瀑布流 — 复用 _SliverDiscoveryFeed
-              SliverLayoutBuilder(
-                builder: (context, constraints) {
-                  final w = constraints.crossAxisExtent;
-                  final double outerPad;
-                  final double innerPad;
-                  if (isDesktop) {
-                    outerPad = ((w - Breakpoints.maxContentWidth) / 2)
-                        .clamp(0.0, double.infinity);
-                    innerPad = 24;
-                  } else {
-                    outerPad = w > 520 ? (w - 520) / 2 : 4;
-                    innerPad = 0;
-                  }
-                  return SliverPadding(
-                    padding: EdgeInsets.symmetric(horizontal: outerPad),
-                    sliver: _SliverDiscoveryFeed(horizontalPadding: innerPad),
-                  );
-                },
-              ),
+                // 4. 瀑布流 — 复用 _SliverDiscoveryFeed
+                SliverLayoutBuilder(
+                  builder: (context, constraints) {
+                    final w = constraints.crossAxisExtent;
+                    final double outerPad;
+                    final double innerPad;
+                    if (isDesktop) {
+                      outerPad = ((w - Breakpoints.maxContentWidth) / 2)
+                          .clamp(0.0, double.infinity);
+                      innerPad = 24;
+                    } else {
+                      outerPad = w > 520 ? (w - 520) / 2 : 4;
+                      innerPad = 0;
+                    }
+                    return SliverPadding(
+                      padding: EdgeInsets.symmetric(horizontal: outerPad),
+                      sliver: _SliverDiscoveryFeed(horizontalPadding: innerPad),
+                    );
+                  },
+                ),
 
-              const SliverPadding(padding: EdgeInsets.only(bottom: 20)),
-            ],
+                const SliverPadding(padding: EdgeInsets.only(bottom: 20)),
+              ],
+            ),
           ),
         );
       },
@@ -158,6 +170,7 @@ class _StoryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final entries = [
       const _StoryEntry(assetImage: AppAssets.any, label: 'Linker AI', route: '/ai-chat'),
       _StoryEntry(emoji: '\u{1F4D0}', label: l10n.homeExperts, route: '/task-experts'),
@@ -193,9 +206,9 @@ class _StoryRow extends StatelessWidget {
                   ),
                   padding: const EdgeInsets.all(2.5),
                   child: Container(
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Colors.white,
+                      color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
                     ),
                     alignment: Alignment.center,
                     clipBehavior: Clip.antiAlias,
@@ -207,7 +220,10 @@ class _StoryRow extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   e.label,
-                  style: const TextStyle(fontSize: 11, color: Color(0xFF666666)),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isDark ? AppColors.textSecondaryDark : const Color(0xFF666666),
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -356,49 +372,6 @@ class _TickerBannerState extends State<_TickerBanner> {
 }
 
 /// 静态促销卡片 — 当没有后端 banner 时显示
-/// 在线人数指示器 — 显示模拟的在线人数
-class _OnlineIndicator extends StatelessWidget {
-  const _OnlineIndicator();
-
-  @override
-  Widget build(BuildContext context) {
-    // 基于当前小时生成一个看起来合理的在线人数
-    final hour = DateTime.now().hour;
-    final baseCount = hour >= 8 && hour <= 23 ? 80 + (hour * 7) % 120 : 30 + (hour * 3) % 40;
-    final count = baseCount + DateTime.now().minute % 20;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFF4757).withAlpha(25),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 6,
-            height: 6,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: Color(0xFFFF4757),
-            ),
-          ),
-          const SizedBox(width: 4),
-          Text(
-            '$count${Localizations.localeOf(context).languageCode.startsWith('en') ? ' online' : '人在线'}',
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFFFF4757),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _StaticPromoBanner extends StatelessWidget {
   const _StaticPromoBanner({required this.hasTicker});
   final bool hasTicker;

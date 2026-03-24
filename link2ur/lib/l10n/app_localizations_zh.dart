@@ -10322,6 +10322,37 @@ class AppLocalizationsZh extends AppLocalizations {
   String nearbyApplicants(int count) {
     return '$count人申请';
   }
+
+  @override
+  String get feedLabelPublishedTask => '发布了新任务';
+
+  @override
+  String get feedLabelPosted => '发布了帖子';
+
+  @override
+  String get feedLabelListedItem => '上架了商品';
+
+  @override
+  String get feedLabelNewService => '发布了新服务';
+
+  @override
+  String get feedLabelCreatedActivity => '发起了新活动';
+
+  @override
+  String get feedLabelCompletedTask => '完成了一个任务';
+
+  @override
+  String get feedLabelUpdated => '更新了动态';
+
+  @override
+  String servicePriceFrom(String price) {
+    return '$price起';
+  }
+
+  @override
+  String serviceReviewFrom(String title) {
+    return '来自 $title';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -20597,5 +20628,36 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String nearbyApplicants(int count) {
     return '$count人申請';
+  }
+
+  @override
+  String get feedLabelPublishedTask => '發布了新任務';
+
+  @override
+  String get feedLabelPosted => '發布了帖子';
+
+  @override
+  String get feedLabelListedItem => '上架了商品';
+
+  @override
+  String get feedLabelNewService => '發布了新服務';
+
+  @override
+  String get feedLabelCreatedActivity => '發起了新活動';
+
+  @override
+  String get feedLabelCompletedTask => '完成了一個任務';
+
+  @override
+  String get feedLabelUpdated => '更新了動態';
+
+  @override
+  String servicePriceFrom(String price) {
+    return '$price起';
+  }
+
+  @override
+  String serviceReviewFrom(String title) {
+    return '來自 $title';
   }
 }

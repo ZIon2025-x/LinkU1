@@ -10748,4 +10748,35 @@ class AppLocalizationsEn extends AppLocalizations {
   String nearbyApplicants(int count) {
     return '$count applicants';
   }
+
+  @override
+  String get feedLabelPublishedTask => 'Published a task';
+
+  @override
+  String get feedLabelPosted => 'Posted';
+
+  @override
+  String get feedLabelListedItem => 'Listed an item';
+
+  @override
+  String get feedLabelNewService => 'New service';
+
+  @override
+  String get feedLabelCreatedActivity => 'Created an activity';
+
+  @override
+  String get feedLabelCompletedTask => 'Completed a task';
+
+  @override
+  String get feedLabelUpdated => 'Updated';
+
+  @override
+  String servicePriceFrom(String price) {
+    return 'From $price';
+  }
+
+  @override
+  String serviceReviewFrom(String title) {
+    return 'From $title';
+  }
 }

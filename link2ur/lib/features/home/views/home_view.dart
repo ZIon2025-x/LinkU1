@@ -225,7 +225,11 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                         _selectedTab = index;
                         _visitedTabs.add(index);
                       });
-                      context.read<HomeBloc>().add(HomeTabChanged(index));
+                      final homeBloc = context.read<HomeBloc>();
+                      homeBloc.add(HomeTabChanged(index));
+                      if (index == 0 && homeBloc.state.followFeedItems.isEmpty) {
+                        homeBloc.add(const HomeLoadFollowFeed());
+                      }
                     },
                     children: [
                       _visitedTabs.contains(0) ? const _FollowTab() : const SizedBox.shrink(),
@@ -596,32 +600,44 @@ class _FollowTab extends StatelessWidget {
             : state.discoveryItems;
         final hasMore = hasFollowContent ? state.hasMoreFollowFeed : false;
 
-        if (displayItems.isEmpty && !hasFollowContent) {
-          // 纯空状态：没关注任何人 + 没有 discovery fallback
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.people_outline, size: 64, color: Colors.grey),
-                  const SizedBox(height: 16),
-                  Text(
-                    context.l10n.homeFollowEmpty,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+        if (displayItems.isEmpty) {
+          // 空状态：支持下拉刷新重试
+          return RefreshIndicator(
+            onRefresh: () async {
+              final bloc = context.read<HomeBloc>();
+              bloc.add(const HomeLoadFollowFeed());
+              await bloc.stream.firstWhere(
+                (s) => !s.isLoadingFollowFeed,
+                orElse: () => state,
+              );
+            },
+            child: CustomScrollView(
+              slivers: [
+                SliverFillRemaining(
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.people_outline, size: 64, color: Colors.grey),
+                          const SizedBox(height: 16),
+                          Text(
+                            context.l10n.homeFollowEmpty,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 15,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           );
-        }
-
-        if (displayItems.isEmpty) {
-          return const Center(child: CircularProgressIndicator());
         }
 
         return RefreshIndicator(
@@ -725,8 +741,12 @@ class _FollowFeedCard extends StatelessWidget {
         : '';
     final feedLabel = _feedTypeLabel(item.feedType, l10n);
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+    return Semantics(
+      button: true,
+      label: 'View $feedLabel',
+      excludeSemantics: true,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 10),
       child: GestureDetector(
         onTap: () => _onCardTap(context),
         child: Container(
@@ -746,11 +766,14 @@ class _FollowFeedCard extends StatelessWidget {
                 children: [
                   CircleAvatar(
                     radius: 20,
-                    backgroundImage: item.userAvatar != null
+                    backgroundImage: item.userAvatar != null && item.userAvatar!.isNotEmpty
                         ? NetworkImage(item.userAvatar!)
                         : null,
                     backgroundColor: isDark ? Colors.grey[800] : const Color(0xFFE8E8E8),
-                    child: item.userAvatar == null
+                    onBackgroundImageError: item.userAvatar != null
+                        ? (_, __) {}  // silently ignore broken avatar URLs
+                        : null,
+                    child: item.userAvatar == null || item.userAvatar!.isEmpty
                         ? Icon(Icons.person, size: 20, color: isDark ? Colors.grey[400] : Colors.grey[600])
                         : null,
                   ),
@@ -780,17 +803,31 @@ class _FollowFeedCard extends StatelessWidget {
                 ],
               ),
 
-              // 内容文字
-              if (title.isNotEmpty || (description != null && description.isNotEmpty)) ...[
+              // 内容文字：标题 + 描述（如帖子有标题和内容预览）
+              if (title.isNotEmpty) ...[
                 const SizedBox(height: 10),
                 Text(
-                  title.isNotEmpty ? title : description ?? '',
+                  title,
                   style: TextStyle(
                     fontSize: 14,
+                    fontWeight: FontWeight.w500,
                     color: isDark ? AppColors.textPrimaryDark : const Color(0xFF333333),
+                    height: 1.4,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+              if (description != null && description.isNotEmpty && description != title) ...[
+                SizedBox(height: title.isNotEmpty ? 4 : 10),
+                Text(
+                  description,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isDark ? AppColors.textSecondaryDark : const Color(0xFF666666),
                     height: 1.5,
                   ),
-                  maxLines: 3,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
@@ -804,20 +841,71 @@ class _FollowFeedCard extends StatelessWidget {
                 ),
               ],
 
-              // 价格（如果有）
-              if (item.price != null) ...[
+              // 活动卡片：参与人数 + 价格/免费
+              if (item.feedType == 'activity' && item.activityInfo != null) ...[
                 const SizedBox(height: 8),
-                Text(
-                  '£${item.price!.toStringAsFixed(0)}',
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFFEE5A24),
-                  ),
+                Row(
+                  children: [
+                    if (item.activityInfo!.currentParticipants != null)
+                      Text(
+                        '👥 ${item.activityInfo!.currentParticipants}/${item.activityInfo!.maxParticipants ?? '∞'}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+                        ),
+                      ),
+                    const SizedBox(width: 12),
+                    if (item.price != null && item.price! > 0)
+                      Text(
+                        '£${item.price!.toStringAsFixed(0)}',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFFEE5A24),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      )
+                    else
+                      Text(
+                        l10n.homeActivityFree,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: isDark ? const Color(0xFF66BB6A) : const Color(0xFF4CAF50),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                  ],
                 ),
               ],
 
-              // 底部互动栏
+              // 任务卡片：价格 + 申请人数
+              if (item.feedType != 'activity' && (item.price != null || (item.applicationCount != null && item.applicationCount! > 0))) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    if (item.price != null)
+                      Text(
+                        '£${item.price!.toStringAsFixed(0)}',
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFFEE5A24),
+                        ),
+                      ),
+                    if (item.applicationCount != null && item.applicationCount! > 0) ...[
+                      if (item.price != null) const SizedBox(width: 12),
+                      Text(
+                        l10n.nearbyApplicants(item.applicationCount!),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+
+              // 底部互动栏（帖子/商品等）
               if ((item.likeCount != null && item.likeCount! > 0) ||
                   (item.commentCount != null && item.commentCount! > 0)) ...[
                 const SizedBox(height: 10),
@@ -838,6 +926,7 @@ class _FollowFeedCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
       ),
     );
   }
@@ -898,6 +987,9 @@ class _FollowFeedCard extends StatelessWidget {
       case 'service':
         final serviceId = item.id.replaceFirst('service_', '');
         if (serviceId.isNotEmpty) context.push('/service/$serviceId');
+      case 'activity':
+        final activityId = item.id.replaceFirst('activity_', '');
+        if (activityId.isNotEmpty) context.push('/activities/$activityId');
       case 'completion':
         final taskId = item.extraData?['task_id']?.toString();
         if (taskId != null && taskId.isNotEmpty) context.push('/tasks/$taskId');
@@ -907,20 +999,21 @@ class _FollowFeedCard extends StatelessWidget {
   }
 
   String _feedTypeLabel(String feedType, AppLocalizations l10n) {
-    final isEn = l10n.localeName.startsWith('en');
     switch (feedType) {
       case 'task':
-        return isEn ? 'Published a task' : '发布了新任务';
+        return l10n.feedLabelPublishedTask;
       case 'forum_post':
-        return isEn ? 'Posted' : '发布了帖子';
+        return l10n.feedLabelPosted;
       case 'product':
-        return isEn ? 'Listed an item' : '上架了商品';
+        return l10n.feedLabelListedItem;
       case 'service':
-        return isEn ? 'New service' : '发布了新服务';
+        return l10n.feedLabelNewService;
+      case 'activity':
+        return l10n.feedLabelCreatedActivity;
       case 'completion':
-        return isEn ? 'Completed a task' : '完成了一个任务';
+        return l10n.feedLabelCompletedTask;
       default:
-        return isEn ? 'Updated' : '更新了动态';
+        return l10n.feedLabelUpdated;
     }
   }
 }

@@ -4885,5 +4885,17 @@
   "@nearbyCurrentLocation": { "placeholders": { "city": { "type": "String" } } },
   "nearbySwitch": "Switch",
   "nearbyApplicants": "{count} applicants",
-  "@nearbyApplicants": { "placeholders": { "count": { "type": "int" } } }
+  "@nearbyApplicants": { "placeholders": { "count": { "type": "int" } } },
+
+  "feedLabelPublishedTask": "Published a task",
+  "feedLabelPosted": "Posted",
+  "feedLabelListedItem": "Listed an item",
+  "feedLabelNewService": "New service",
+  "feedLabelCreatedActivity": "Created an activity",
+  "feedLabelCompletedTask": "Completed a task",
+  "feedLabelUpdated": "Updated",
+  "servicePriceFrom": "From {price}",
+  "@servicePriceFrom": { "placeholders": { "price": { "type": "String" } } },
+  "serviceReviewFrom": "From {title}",
+  "@serviceReviewFrom": { "placeholders": { "title": { "type": "String" } } }
 }

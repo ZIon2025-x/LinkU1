@@ -4793,5 +4793,17 @@
   "@nearbyCurrentLocation": { "placeholders": { "city": { "type": "String" } } },
   "nearbySwitch": "切换",
   "nearbyApplicants": "{count}人申请",
-  "@nearbyApplicants": { "placeholders": { "count": { "type": "int" } } }
+  "@nearbyApplicants": { "placeholders": { "count": { "type": "int" } } },
+
+  "feedLabelPublishedTask": "发布了新任务",
+  "feedLabelPosted": "发布了帖子",
+  "feedLabelListedItem": "上架了商品",
+  "feedLabelNewService": "发布了新服务",
+  "feedLabelCreatedActivity": "发起了新活动",
+  "feedLabelCompletedTask": "完成了一个任务",
+  "feedLabelUpdated": "更新了动态",
+  "servicePriceFrom": "{price}起",
+  "@servicePriceFrom": { "placeholders": { "price": { "type": "String" } } },
+  "serviceReviewFrom": "来自 {title}",
+  "@serviceReviewFrom": { "placeholders": { "title": { "type": "String" } } }
 }
