@@ -246,6 +246,8 @@ class _ThinkingIndicator extends StatefulWidget {
 (String, String)? _resolveAction(String? toolName) {
   switch (toolName) {
     case 'query_my_tasks':
+    case 'search_tasks':
+    case 'recommend_tasks':
       return ('View tasks →', AppRoutes.tasks);
     case 'list_activities':
       return ('View activities →', AppRoutes.activities);

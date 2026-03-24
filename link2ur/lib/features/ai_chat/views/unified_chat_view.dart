@@ -25,7 +25,6 @@ import '../../tasks/views/create_task_view.dart' show TaskDraftData;
 import '../bloc/unified_chat_bloc.dart';
 import '../widgets/ai_message_bubble.dart';
 import '../widgets/task_draft_card.dart';
-import '../widgets/task_result_cards.dart';
 import '../widgets/tool_call_card.dart';
 
 /// 统一 AI + 人工客服聊天页面（唯一 AI 聊天入口，替代原 AI 页）
@@ -663,15 +662,11 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
                 case _ChatItemType.welcome:
                   return _buildLinkerWelcome(isDark);
                 case _ChatItemType.ai:
-                  final msg = item.aiMessage!;
                   final isTaskDraftMessage =
-                      msg.toolName == 'prepare_task_draft';
-                  final hasTaskCards = msg.toolResultData != null &&
-                      msg.toolResultData!['tasks'] is List &&
-                      (msg.toolResultData!['tasks'] as List).isNotEmpty;
-                  final bubble = AIMessageBubble(
-                    key: ValueKey('ai_${msg.id ?? 'local_${item.index}'}'),
-                    message: msg,
+                      item.aiMessage?.toolName == 'prepare_task_draft';
+                  return AIMessageBubble(
+                    key: ValueKey('ai_${item.aiMessage!.id ?? 'local_${item.index}'}'),
+                    message: item.aiMessage!,
                     onConfirmPublish: isTaskDraftMessage && state.taskDraft != null
                         ? () {
                             final draftData =
@@ -682,15 +677,6 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
                             context.push(AppRoutes.createTask, extra: draftData);
                           }
                         : null,
-                  );
-                  if (!hasTaskCards) return bubble;
-                  return Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      bubble,
-                      TaskResultCards(toolResult: msg.toolResultData!),
-                    ],
                   );
                 case _ChatItemType.tool:
                   return ToolCallCard(

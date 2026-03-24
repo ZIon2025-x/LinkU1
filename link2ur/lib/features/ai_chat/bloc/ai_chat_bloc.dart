@@ -155,7 +155,6 @@ class AIChatState extends Equatable {
     this.csContactEmail,
     this.taskDraft,
     this.lastToolName,
-    this.lastToolResult,
   });
 
   final AIChatStatus status;
@@ -170,7 +169,6 @@ class AIChatState extends Equatable {
   final String? csContactEmail;
   final Map<String, dynamic>? taskDraft;
   final String? lastToolName;
-  final Map<String, dynamic>? lastToolResult;
 
   /// Sentinel-based copyWith: omitting a nullable field preserves its current
   /// value; passing `null` explicitly clears it. This eliminates the fragile
@@ -188,7 +186,6 @@ class AIChatState extends Equatable {
     Object? csContactEmail = _sentinel,
     Object? taskDraft = _sentinel,
     Object? lastToolName = _sentinel,
-    Object? lastToolResult = _sentinel,
   }) {
     return AIChatState(
       status: status ?? this.status,
@@ -216,9 +213,6 @@ class AIChatState extends Equatable {
       lastToolName: identical(lastToolName, _sentinel)
           ? this.lastToolName
           : lastToolName as String?,
-      lastToolResult: identical(lastToolResult, _sentinel)
-          ? this.lastToolResult
-          : lastToolResult as Map<String, dynamic>?,
     );
   }
 
@@ -236,7 +230,6 @@ class AIChatState extends Equatable {
         csContactEmail,
         taskDraft,
         lastToolName,
-        lastToolResult,
       ];
 }
 
@@ -372,7 +365,6 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
       activeToolCall: null,
       errorMessage: null,
       lastToolName: null,
-      lastToolResult: null,
     ));
 
     // 取消之前的 SSE 订阅
@@ -425,13 +417,6 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
     ));
   }
 
-  /// Tools whose results contain task lists for card rendering.
-  static const _taskListTools = {
-    'recommend_tasks',
-    'search_tasks',
-    'query_my_tasks',
-  };
-
   void _onToolResult(
     _AIChatToolResult event,
     Emitter<AIChatState> emit,
@@ -444,18 +429,10 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
                 event.toolResult!['draft'] != null
             ? event.toolResult!['draft'] as Map<String, dynamic>
             : null;
-
-    // 保存任务相关工具的结果数据，用于渲染卡片
-    final Map<String, dynamic>? toolResult =
-        _taskListTools.contains(event.toolName) && event.toolResult != null
-            ? event.toolResult
-            : null;
-
     emit(state.copyWith(
       activeToolCall: null, // clear tool indicator
       lastToolName: event.toolName,
       taskDraft: draftFromResult ?? state.taskDraft,
-      lastToolResult: toolResult,
     ));
   }
 
@@ -471,20 +448,17 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
         content: state.streamingContent,
         createdAt: DateTime.now(),
         toolName: state.lastToolName,
-        toolResultData: state.lastToolResult,
       );
       emit(state.copyWith(
         messages: [...state.messages, assistantMessage],
         isReplying: false,
         streamingContent: '',
         activeToolCall: null,
-        lastToolResult: null,
       ));
     } else {
       emit(state.copyWith(
         isReplying: false,
         activeToolCall: null,
-        lastToolResult: null,
       ));
     }
   }
