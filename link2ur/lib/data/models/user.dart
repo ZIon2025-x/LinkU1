@@ -287,6 +287,9 @@ class UserProfileDetail {
     this.reviews = const [],
     this.recentForumPosts = const [],
     this.soldFleaItems = const [],
+    this.isFollowing = false,
+    this.followersCount = 0,
+    this.followingCount = 0,
   });
 
   final User user;
@@ -295,6 +298,9 @@ class UserProfileDetail {
   final List<UserProfileReview> reviews;
   final List<UserProfileForumPost> recentForumPosts;
   final List<UserProfileFleaItem> soldFleaItems;
+  final bool isFollowing;
+  final int followersCount;
+  final int followingCount;
 
   factory UserProfileDetail.fromJson(Map<String, dynamic> json) {
     final userJson = json['user'] as Map<String, dynamic>?;
@@ -317,6 +323,9 @@ class UserProfileDetail {
       stats: UserProfileStats.fromJson(
         Map<String, dynamic>.from(statsJson),
       ),
+      isFollowing: userJson['is_following'] == true,
+      followersCount: userJson['followers_count'] as int? ?? 0,
+      followingCount: userJson['following_count'] as int? ?? 0,
       recentTasks: recentTasksRaw
           .map((e) => UserProfileTask.fromJson(
                 Map<String, dynamic>.from(e as Map),

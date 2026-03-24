@@ -6321,6 +6321,36 @@ abstract class AppLocalizations {
   /// **'Handicraft'**
   String get expertCategoryHandicraft;
 
+  /// No description provided for @expertCategoryGaming.
+  ///
+  /// In en, this message translates to:
+  /// **'Gaming'**
+  String get expertCategoryGaming;
+
+  /// No description provided for @expertCategoryPhotography.
+  ///
+  /// In en, this message translates to:
+  /// **'Photography'**
+  String get expertCategoryPhotography;
+
+  /// No description provided for @expertCategoryHousekeeping.
+  ///
+  /// In en, this message translates to:
+  /// **'Housekeeping'**
+  String get expertCategoryHousekeeping;
+
+  /// No description provided for @serviceCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Service Category'**
+  String get serviceCategory;
+
+  /// No description provided for @serviceCategoryHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a category'**
+  String get serviceCategoryHint;
+
   /// No description provided for @cityLondon.
   ///
   /// In en, this message translates to:
@@ -16460,6 +16490,30 @@ abstract class AppLocalizations {
   /// **'No sold items yet'**
   String get profileNoSoldItems;
 
+  /// No description provided for @profileFollowers.
+  ///
+  /// In en, this message translates to:
+  /// **'Followers'**
+  String get profileFollowers;
+
+  /// No description provided for @profileFollowing.
+  ///
+  /// In en, this message translates to:
+  /// **'Following'**
+  String get profileFollowing;
+
+  /// No description provided for @profileFollow.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow'**
+  String get profileFollow;
+
+  /// No description provided for @profileFollowingAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Following'**
+  String get profileFollowingAction;
+
   /// No description provided for @profileDirectRequest.
   ///
   /// In en, this message translates to:
@@ -18139,6 +18193,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed to send phone verification code'**
   String get errorProfileSendPhoneCodeFailed;
+
+  /// No description provided for @errorFollowFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to follow user'**
+  String get errorFollowFailed;
+
+  /// No description provided for @errorUnfollowFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to unfollow user'**
+  String get errorUnfollowFailed;
 
   /// No description provided for @errorIapNotAvailableWeb.
   ///

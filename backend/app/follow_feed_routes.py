@@ -347,6 +347,7 @@ async def _fetch_followed_services(db: AsyncSession, following_ids: List[str], l
             models.TaskExpertService.id,
             models.TaskExpertService.service_name,
             models.TaskExpertService.description,
+            models.TaskExpertService.category,
             models.TaskExpertService.images.label("service_images"),
             models.TaskExpertService.base_price,
             models.TaskExpertService.currency,
@@ -412,7 +413,7 @@ async def _fetch_followed_services(db: AsyncSession, following_ids: List[str], l
             "is_experienced": None,
             "is_favorited": None,
             "user_vote_type": None,
-            "extra_data": None,
+            "extra_data": {"category": row.category} if row.category else None,
             "created_at": row.created_at.isoformat() if row.created_at else None,
         })
     return items

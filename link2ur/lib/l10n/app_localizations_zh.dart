@@ -3276,6 +3276,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get expertCategoryHandicraft => '手工艺';
 
   @override
+  String get expertCategoryGaming => '游戏';
+
+  @override
+  String get expertCategoryPhotography => '摄影';
+
+  @override
+  String get expertCategoryHousekeeping => '家政';
+
+  @override
+  String get serviceCategory => '服务分类';
+
+  @override
+  String get serviceCategoryHint => '选择分类';
+
+  @override
   String get cityLondon => '伦敦';
 
   @override
@@ -8597,6 +8612,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get profileNoSoldItems => '暂无已售物品';
 
   @override
+  String get profileFollowers => '粉丝';
+
+  @override
+  String get profileFollowing => '关注';
+
+  @override
+  String get profileFollow => '关注';
+
+  @override
+  String get profileFollowingAction => '已关注';
+
+  @override
   String get profileDirectRequest => '发布任务请求';
 
   @override
@@ -9462,6 +9489,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get errorProfileSendPhoneCodeFailed => '发送手机验证码失败';
+
+  @override
+  String get errorFollowFailed => '关注失败';
+
+  @override
+  String get errorUnfollowFailed => '取消关注失败';
 
   @override
   String get errorIapNotAvailableWeb => 'Web端不支持应用内购买';
@@ -13625,6 +13658,21 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get expertCategoryHandicraft => '手工藝';
+
+  @override
+  String get expertCategoryGaming => '遊戲';
+
+  @override
+  String get expertCategoryPhotography => '攝影';
+
+  @override
+  String get expertCategoryHousekeeping => '家政';
+
+  @override
+  String get serviceCategory => '服務分類';
+
+  @override
+  String get serviceCategoryHint => '選擇分類';
 
   @override
   String get cityLondon => '倫敦';
@@ -18948,6 +18996,18 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get profileNoSoldItems => '暫無已售物品';
 
   @override
+  String get profileFollowers => '粉絲';
+
+  @override
+  String get profileFollowing => '關注';
+
+  @override
+  String get profileFollow => '關注';
+
+  @override
+  String get profileFollowingAction => '已關注';
+
+  @override
   String get profileDirectRequest => '發佈任務請求';
 
   @override
@@ -19813,6 +19873,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get errorProfileSendPhoneCodeFailed => '發送手機驗證碼失敗';
+
+  @override
+  String get errorFollowFailed => '關注失敗';
+
+  @override
+  String get errorUnfollowFailed => '取消關注失敗';
 
   @override
   String get errorIapNotAvailableWeb => 'Web端不支援應用內購買';

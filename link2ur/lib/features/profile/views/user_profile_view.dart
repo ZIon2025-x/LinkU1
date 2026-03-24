@@ -25,7 +25,9 @@ import '../../../data/models/task.dart' show CreateTaskRequest;
 import '../../../data/repositories/user_repository.dart';
 import '../../../data/repositories/task_repository.dart';
 import '../../../data/repositories/forum_repository.dart';
+import '../../../data/repositories/follow_repository.dart';
 import '../../../core/router/app_router.dart';
+import '../../auth/bloc/auth_bloc.dart';
 import '../bloc/profile_bloc.dart';
 
 /// 公开用户资料页
@@ -44,30 +46,48 @@ class UserProfileView extends StatelessWidget {
         userRepository: context.read<UserRepository>(),
         taskRepository: context.read<TaskRepository>(),
         forumRepository: context.read<ForumRepository>(),
+        followRepository: context.read<FollowRepository>(),
       )..add(ProfileLoadPublicProfile(userId))
         ..add(ProfileLoadSharedTasks(userId)),
-      child: BlocBuilder<ProfileBloc, ProfileState>(
-        buildWhen: (prev, curr) =>
-            prev.isLoading != curr.isLoading ||
-            prev.errorMessage != curr.errorMessage ||
-            prev.publicUser != curr.publicUser,
-        builder: (context, state) {
-          return Scaffold(
-            appBar: AppBar(
-              title: Text(l10n.profileUserProfile),
-            ),
-            body: state.isLoading
-                ? const LoadingView()
-                : state.errorMessage != null
-                    ? ErrorStateView(
-                        message: state.errorMessage!,
-                        onRetry: () {
-                          context.read<ProfileBloc>().add(
-                                ProfileLoadPublicProfile(userId),
-                              );
-                        },
-                      )
-                    : state.publicUser == null
+      child: BlocListener<ProfileBloc, ProfileState>(
+        listenWhen: (prev, curr) =>
+            curr.errorMessage != null && prev.errorMessage != curr.errorMessage &&
+            (curr.errorMessage == 'follow_failed' || curr.errorMessage == 'unfollow_failed'),
+        listener: (context, state) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(context.localizeError(state.errorMessage!))),
+          );
+        },
+        child: BlocBuilder<ProfileBloc, ProfileState>(
+          buildWhen: (prev, curr) =>
+              prev.isLoading != curr.isLoading ||
+              prev.errorMessage != curr.errorMessage ||
+              prev.publicUser != curr.publicUser ||
+              prev.isFollowing != curr.isFollowing ||
+              prev.isFollowLoading != curr.isFollowLoading ||
+              prev.followersCount != curr.followersCount ||
+              prev.followingCount != curr.followingCount,
+          builder: (context, state) {
+            // 关注错误不应替换整个页面，已通过 BlocListener 以 SnackBar 显示
+            final isPageError = state.errorMessage != null &&
+                state.errorMessage != 'follow_failed' &&
+                state.errorMessage != 'unfollow_failed';
+            return Scaffold(
+              appBar: AppBar(
+                title: Text(l10n.profileUserProfile),
+              ),
+              body: state.isLoading
+                  ? const LoadingView()
+                  : isPageError
+                      ? ErrorStateView(
+                          message: state.errorMessage!,
+                          onRetry: () {
+                            context.read<ProfileBloc>().add(
+                                  ProfileLoadPublicProfile(userId),
+                                );
+                          },
+                        )
+                      : state.publicUser == null
                         ? EmptyStateView.noData(
                             context,
                             title: context.l10n.userNotFound,
@@ -86,7 +106,7 @@ class UserProfileView extends StatelessWidget {
                                     child: Column(
                                       children: [
                                         // 用户信息卡片（头像、名字、徽章、简介、城市 + 三项统计）
-                                        _buildUserInfoCard(context, state.publicUser!),
+                                        _buildUserInfoCard(context, state.publicUser!, state),
                                         const SizedBox(height: AppSpacing.xl),
                                         // 技能雷达图
                                         _buildSkillRadar(context, state.publicUser!),
@@ -124,13 +144,14 @@ class UserProfileView extends StatelessWidget {
                               _buildBottomRequestButton(context, state.publicUser!),
                             ],
                           ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
 
-  Widget _buildUserInfoCard(BuildContext context, User user) {
+  Widget _buildUserInfoCard(BuildContext context, User user, ProfileState state) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.xl),
@@ -205,6 +226,10 @@ class UserProfileView extends StatelessWidget {
               ],
             ],
           ),
+          const SizedBox(height: AppSpacing.md),
+
+          // 关注按钮 + 粉丝/关注数
+          _buildFollowSection(context, user, state),
           const SizedBox(height: AppSpacing.sm),
 
           // 简介
@@ -312,6 +337,89 @@ class UserProfileView extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildFollowSection(BuildContext context, User user, ProfileState state) {
+    final l10n = context.l10n;
+
+    // 不显示关注按钮：自己 或 未登录
+    final authState = context.read<AuthBloc>().state;
+    final isAuthenticated = authState.status == AuthStatus.authenticated;
+    final currentUserId = isAuthenticated ? authState.user?.id : null;
+    final isSelf = currentUserId == user.id;
+
+    return Column(
+      children: [
+        // 粉丝 / 关注数
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              '${state.followersCount}',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              l10n.profileFollowers,
+              style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+            ),
+            const SizedBox(width: AppSpacing.lg),
+            Text(
+              '${state.followingCount}',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              l10n.profileFollowing,
+              style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+            ),
+          ],
+        ),
+        if (isAuthenticated && !isSelf) ...[
+          const SizedBox(height: AppSpacing.sm),
+          SizedBox(
+            width: 140,
+            height: 36,
+            child: state.isFollowing
+                ? OutlinedButton(
+                    onPressed: state.isFollowLoading
+                        ? null
+                        : () => context.read<ProfileBloc>().add(ProfileUnfollowUser(user.id)),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppColors.textTertiary),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.pill),
+                      ),
+                      padding: EdgeInsets.zero,
+                    ),
+                    child: state.isFollowLoading
+                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                        : Text(
+                            l10n.profileFollowingAction,
+                            style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                          ),
+                  )
+                : ElevatedButton.icon(
+                    onPressed: state.isFollowLoading
+                        ? null
+                        : () => context.read<ProfileBloc>().add(ProfileFollowUser(user.id)),
+                    icon: state.isFollowLoading
+                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Icon(Icons.add, size: 18),
+                    label: Text(l10n.profileFollow, style: const TextStyle(fontSize: 13)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.pill),
+                      ),
+                      padding: EdgeInsets.zero,
+                    ),
+                  ),
+          ),
+        ],
+      ],
     );
   }
 

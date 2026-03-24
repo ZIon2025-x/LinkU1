@@ -832,7 +832,27 @@ class _ServiceCard extends StatelessWidget {
                     ),
                   );
                 },
-              ),
+              )
+              else
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final w = constraints.maxWidth;
+                    final h = w * 3 / 4;
+                    final category = item.extraData?['category'] as String?;
+                    return Container(
+                      width: w,
+                      height: h,
+                      color: isDark ? Colors.grey[850] : const Color(0xFFF5F5F5),
+                      child: Center(
+                        child: Icon(
+                          ServiceCategoryHelper.getIcon(category),
+                          size: 48,
+                          color: isDark ? Colors.grey[500] : Colors.grey[400],
+                        ),
+                      ),
+                    );
+                  },
+                ),
             Padding(
               padding: const EdgeInsets.all(10),
               child: Column(
@@ -1265,22 +1285,35 @@ class _DiscoveryTaskCard extends StatelessWidget {
 
   Widget _buildPlaceholder() {
     const gradients = {
+      // 新格式
+      'delivery': [Color(0xFFFFE0B2), Color(0xFFFFCC80)],
+      'shopping': [Color(0xFFF8BBD0), Color(0xFFF48FB1)],
+      'tutoring': [Color(0xFFBBDEFB), Color(0xFF90CAF9)],
+      'translation': [Color(0xFFB2EBF2), Color(0xFF80DEEA)],
       'design': [Color(0xFFA8EDEA), Color(0xFFFED6E3)],
-      'photography': [Color(0xFFFFECD2), Color(0xFFFCB69F)],
-      'coding': [Color(0xFFE0C3FC), Color(0xFF8EC5FC)],
-      'music': [Color(0xFFF5F7FA), Color(0xFFC3CFE2)],
+      'programming': [Color(0xFFE0C3FC), Color(0xFF8EC5FC)],
       'writing': [Color(0xFFFDDB92), Color(0xFFD1FDFF)],
-    };
-    const emojis = {
-      'design': '🎨',
-      'photography': '📷',
-      'coding': '💻',
-      'music': '🎵',
-      'writing': '📝',
-      'tutoring': '📚',
+      'photography': [Color(0xFFFFECD2), Color(0xFFFCB69F)],
+      'moving': [Color(0xFFD7CCC8), Color(0xFFBCAAA4)],
+      'cleaning': [Color(0xFFC8E6C9), Color(0xFFA5D6A7)],
+      'repair': [Color(0xFFFFE0B2), Color(0xFFFFCC80)],
+      'pet_care': [Color(0xFFFFCDD2), Color(0xFFEF9A9A)],
+      'errand': [Color(0xFFFFE0B2), Color(0xFFFFCC80)],
+      'other': [Color(0xFFE8E8E8), Color(0xFFD0D0D0)],
+      // 旧格式
+      'Housekeeping': [Color(0xFFC8E6C9), Color(0xFFA5D6A7)],
+      'Campus Life': [Color(0xFFBBDEFB), Color(0xFF90CAF9)],
+      'Second-hand & Rental': [Color(0xFFF8BBD0), Color(0xFFF48FB1)],
+      'Errand Running': [Color(0xFFFFE0B2), Color(0xFFFFCC80)],
+      'Skill Service': [Color(0xFFE0C3FC), Color(0xFF8EC5FC)],
+      'Social Help': [Color(0xFFB2EBF2), Color(0xFF80DEEA)],
+      'Transportation': [Color(0xFFD7CCC8), Color(0xFFBCAAA4)],
+      'Pet Care': [Color(0xFFFFCDD2), Color(0xFFEF9A9A)],
+      'Life Convenience': [Color(0xFFFDDB92), Color(0xFFD1FDFF)],
+      'Other': [Color(0xFFE8E8E8), Color(0xFFD0D0D0)],
     };
     final colors = gradients[item.taskType] ?? const [Color(0xFFE8E8E8), Color(0xFFD0D0D0)];
-    final emoji = emojis[item.taskType] ?? '📋';
+    final icon = TaskTypeHelper.getIcon(item.taskType ?? 'other');
     return AspectRatio(
       aspectRatio: 4 / 3,
       child: Container(
@@ -1292,7 +1325,7 @@ class _DiscoveryTaskCard extends StatelessWidget {
           ),
         ),
         alignment: Alignment.center,
-        child: Text(emoji, style: const TextStyle(fontSize: 36)),
+        child: Icon(icon, size: 48, color: Colors.white.withValues(alpha: 0.85)),
       ),
     );
   }

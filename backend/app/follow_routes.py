@@ -4,6 +4,8 @@
 """
 
 import asyncio
+import hashlib
+import json
 import logging
 from typing import Optional
 
@@ -23,6 +25,13 @@ router = APIRouter(prefix="/api/users", tags=["关注"])
 # ==================== 缓存失效 ====================
 
 
+def _build_profile_cache_key(user_id: str, viewer_id: Optional[str]) -> str:
+    """构造与 cache_response 装饰器一致的 profile 缓存 key"""
+    cache_params = {"user_id": user_id, "_uid": viewer_id}
+    params_str = json.dumps(cache_params, sort_keys=True, default=str)
+    return f"user_profile:user_profile:{hashlib.md5(params_str.encode()).hexdigest()}"
+
+
 async def _invalidate_follow_cache(follower_id: str, following_id: str):
     """失效关注相关缓存"""
 
@@ -31,6 +40,8 @@ async def _invalidate_follow_cache(follower_id: str, following_id: str):
             redis_cache.delete(f"follow_count:{follower_id}")
             redis_cache.delete(f"follow_count:{following_id}")
             redis_cache.delete(f"is_following:{follower_id}:{following_id}")
+            # 清除 follower 查看 following 的 profile 缓存（is_following 字段已变化）
+            redis_cache.delete(_build_profile_cache_key(following_id, follower_id))
         except Exception:
             pass
 

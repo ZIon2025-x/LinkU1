@@ -10,6 +10,7 @@ import '../../../data/models/forum.dart';
 import '../../../data/repositories/user_repository.dart';
 import '../../../data/repositories/task_repository.dart';
 import '../../../data/repositories/forum_repository.dart';
+import '../../../data/repositories/follow_repository.dart';
 import '../../../core/utils/logger.dart';
 
 // ==================== Events ====================
@@ -156,6 +157,20 @@ class ProfileLoadSharedTasks extends ProfileEvent {
   List<Object?> get props => [otherUserId];
 }
 
+class ProfileFollowUser extends ProfileEvent {
+  const ProfileFollowUser(this.userId);
+  final String userId;
+  @override
+  List<Object?> get props => [userId];
+}
+
+class ProfileUnfollowUser extends ProfileEvent {
+  const ProfileUnfollowUser(this.userId);
+  final String userId;
+  @override
+  List<Object?> get props => [userId];
+}
+
 // ==================== State ====================
 
 enum ProfileStatus { initial, loading, loaded, error }
@@ -195,6 +210,10 @@ class ProfileState extends Equatable {
     this.sharedTasks = const [],
     this.isLoadingStatistics = false,
     this.isLoadingSharedTasks = false,
+    this.isFollowing = false,
+    this.followersCount = 0,
+    this.followingCount = 0,
+    this.isFollowLoading = false,
   });
 
   final ProfileStatus status;
@@ -230,6 +249,10 @@ class ProfileState extends Equatable {
   final List<Map<String, dynamic>> sharedTasks;
   final bool isLoadingStatistics;
   final bool isLoadingSharedTasks;
+  final bool isFollowing;
+  final int followersCount;
+  final int followingCount;
+  final bool isFollowLoading;
 
   bool get isLoading => status == ProfileStatus.loading;
 
@@ -267,6 +290,10 @@ class ProfileState extends Equatable {
     List<Map<String, dynamic>>? sharedTasks,
     bool? isLoadingStatistics,
     bool? isLoadingSharedTasks,
+    bool? isFollowing,
+    int? followersCount,
+    int? followingCount,
+    bool? isFollowLoading,
   }) {
     return ProfileState(
       status: status ?? this.status,
@@ -302,6 +329,10 @@ class ProfileState extends Equatable {
       sharedTasks: sharedTasks ?? this.sharedTasks,
       isLoadingStatistics: isLoadingStatistics ?? this.isLoadingStatistics,
       isLoadingSharedTasks: isLoadingSharedTasks ?? this.isLoadingSharedTasks,
+      isFollowing: isFollowing ?? this.isFollowing,
+      followersCount: followersCount ?? this.followersCount,
+      followingCount: followingCount ?? this.followingCount,
+      isFollowLoading: isFollowLoading ?? this.isFollowLoading,
     );
   }
 
@@ -340,6 +371,10 @@ class ProfileState extends Equatable {
         sharedTasks,
         isLoadingStatistics,
         isLoadingSharedTasks,
+        isFollowing,
+        followersCount,
+        followingCount,
+        isFollowLoading,
       ];
 }
 
@@ -350,9 +385,11 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     required UserRepository userRepository,
     required TaskRepository taskRepository,
     required ForumRepository forumRepository,
+    FollowRepository? followRepository,
   })  : _userRepository = userRepository,
         _taskRepository = taskRepository,
         _forumRepository = forumRepository,
+        _followRepository = followRepository,
         super(const ProfileState()) {
     on<ProfileLoadRequested>(_onLoadRequested);
     on<ProfileUpdateRequested>(_onUpdateRequested);
@@ -370,11 +407,14 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     on<ProfilePhoneCountdownTick>(_onPhoneCountdownTick);
     on<ProfileLoadTaskStatistics>(_onLoadTaskStatistics);
     on<ProfileLoadSharedTasks>(_onLoadSharedTasks);
+    on<ProfileFollowUser>(_onFollowUser);
+    on<ProfileUnfollowUser>(_onUnfollowUser);
   }
 
   final UserRepository _userRepository;
   final TaskRepository _taskRepository;
   final ForumRepository _forumRepository;
+  final FollowRepository? _followRepository;
   Timer? _emailTimer;
   Timer? _phoneTimer;
 
@@ -547,6 +587,9 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
         status: ProfileStatus.loaded,
         publicUser: detail.user,
         publicProfileDetail: detail,
+        isFollowing: detail.isFollowing,
+        followersCount: detail.followersCount,
+        followingCount: detail.followingCount,
       ));
     } catch (e) {
       AppLogger.error('Failed to load public profile', e);
@@ -833,6 +876,52 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       emit(state.copyWith(
         sharedTasks: const [],
         isLoadingSharedTasks: false,
+      ));
+    }
+  }
+
+  Future<void> _onFollowUser(
+    ProfileFollowUser event,
+    Emitter<ProfileState> emit,
+  ) async {
+    if (_followRepository == null || state.isFollowLoading) return;
+    emit(state.copyWith(isFollowLoading: true));
+    try {
+      final result = await _followRepository.followUser(event.userId);
+      final newCount = result['followers_count'] as int? ?? state.followersCount + 1;
+      emit(state.copyWith(
+        isFollowing: true,
+        followersCount: newCount,
+        isFollowLoading: false,
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to follow user', e);
+      emit(state.copyWith(
+        isFollowLoading: false,
+        errorMessage: 'follow_failed',
+      ));
+    }
+  }
+
+  Future<void> _onUnfollowUser(
+    ProfileUnfollowUser event,
+    Emitter<ProfileState> emit,
+  ) async {
+    if (_followRepository == null || state.isFollowLoading) return;
+    emit(state.copyWith(isFollowLoading: true));
+    try {
+      final result = await _followRepository.unfollowUser(event.userId);
+      final newCount = result['followers_count'] as int? ?? (state.followersCount - 1).clamp(0, 999999);
+      emit(state.copyWith(
+        isFollowing: false,
+        followersCount: newCount,
+        isFollowLoading: false,
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to unfollow user', e);
+      emit(state.copyWith(
+        isFollowLoading: false,
+        errorMessage: 'unfollow_failed',
       ));
     }
   }

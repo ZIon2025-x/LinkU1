@@ -280,6 +280,10 @@ class ErrorLocalizer {
         return context.l10n.errorProfileSendEmailCodeFailed;
       case 'profile_send_phone_code_failed':
         return context.l10n.errorProfileSendPhoneCodeFailed;
+      case 'follow_failed':
+        return context.l10n.errorFollowFailed;
+      case 'unfollow_failed':
+        return context.l10n.errorUnfollowFailed;
       case 'iap_not_available_web':
         return context.l10n.errorIapNotAvailableWeb;
       case 'iap_store_not_available':

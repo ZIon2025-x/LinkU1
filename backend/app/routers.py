@@ -4941,8 +4941,20 @@ def user_profile(
     ).order_by(StudentVerification.created_at.desc()).first()
     is_student_verified = student_verification is not None
 
+    # 关注相关统计
+    from app.models import UserFollow
+    followers_count = db.query(UserFollow).filter(UserFollow.following_id == user_id).count()
+    following_count = db.query(UserFollow).filter(UserFollow.follower_id == user_id).count()
+
+    # 当前登录用户是否已关注该用户
+    is_following = False
+    if current_user:
+        is_following = db.query(UserFollow).filter(
+            UserFollow.follower_id == current_user.id,
+            UserFollow.following_id == user_id,
+        ).first() is not None
+
     # 安全：只返回公开信息，不返回敏感信息（email, phone）
-    # 所有用户看到的用户页面内容都是一样的，包括自己查看自己的页面，避免信息泄露
     user_data = {
         "id": user.id,  # 数据库已经存储格式化ID
         "name": user.name,
@@ -4957,8 +4969,13 @@ def user_profile(
         "is_expert": is_expert,
         "is_student_verified": is_student_verified,
         "profile_views": user.profile_views or 0,
+        "bio": user.bio,
+        "residence_city": user.residence_city,
+        "followers_count": followers_count,
+        "following_count": following_count,
+        "is_following": is_following,
     }
-    
+
     # 获取用户近期论坛帖子（已发布的，最多5条）
     from app.models import ForumPost
     recent_forum_posts = (

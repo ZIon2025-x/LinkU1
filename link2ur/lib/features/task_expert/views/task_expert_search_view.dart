@@ -100,6 +100,12 @@ class _TaskExpertSearchContentState
         return l10n.expertCategoryBeautySkincare;
       case 'handicraft':
         return l10n.expertCategoryHandicraft;
+      case 'gaming':
+        return l10n.expertCategoryGaming;
+      case 'photography':
+        return l10n.expertCategoryPhotography;
+      case 'housekeeping':
+        return l10n.expertCategoryHousekeeping;
       default:
         return key;
     }

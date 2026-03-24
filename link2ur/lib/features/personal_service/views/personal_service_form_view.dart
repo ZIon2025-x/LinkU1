@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/constants/expert_constants.dart';
+import '../../../core/utils/service_category_helper.dart';
 import '../../../core/widgets/location_picker.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_radius.dart';
@@ -46,6 +48,7 @@ class _FormContentState extends State<_FormContent> {
   final _descriptionController = TextEditingController();
   final _priceController = TextEditingController();
 
+  String? _category;
   String _pricingType = 'fixed';
   String _locationType = 'online';
   String? _location;
@@ -65,6 +68,7 @@ class _FormContentState extends State<_FormContent> {
       if (price != null) {
         _priceController.text = price.toStringAsFixed(2);
       }
+      _category = data['category'] as String?;
       _pricingType = (data['pricing_type'] as String?) ?? 'fixed';
       _locationType = (data['location_type'] as String?) ?? 'online';
       _location = (data['location'] as String?);
@@ -90,6 +94,10 @@ class _FormContentState extends State<_FormContent> {
       'pricing_type': _pricingType,
       'location_type': _locationType,
     };
+
+    if (_category != null) {
+      data['category'] = _category;
+    }
 
     if (_locationType != 'online') {
       if (_location != null && _location!.isNotEmpty) {
@@ -225,6 +233,35 @@ class _FormContentState extends State<_FormContent> {
                       return '请输入服务描述';
                     }
                     return null;
+                  },
+                ),
+                const SizedBox(height: AppSpacing.md),
+
+                // ── Category ──
+                _SectionLabel(label: context.l10n.serviceCategory),
+                const SizedBox(height: AppSpacing.sm),
+                DropdownButtonFormField<String>(
+                  initialValue: _category,
+                  decoration: InputDecoration(
+                    hintText: context.l10n.serviceCategoryHint,
+                    border: OutlineInputBorder(
+                      borderRadius: AppRadius.input,
+                    ),
+                  ),
+                  items: ExpertConstants.serviceCategoryKeys
+                      .map((key) => DropdownMenuItem(
+                            value: key,
+                            child: Row(
+                              children: [
+                                Icon(ServiceCategoryHelper.getIcon(key), size: 18),
+                                const SizedBox(width: 8),
+                                Text(ServiceCategoryHelper.getLocalizedLabel(key, context.l10n)),
+                              ],
+                            ),
+                          ))
+                      .toList(),
+                  onChanged: (value) {
+                    setState(() => _category = value);
                   },
                 ),
                 const SizedBox(height: AppSpacing.md),

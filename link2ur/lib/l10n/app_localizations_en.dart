@@ -3416,6 +3416,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get expertCategoryHandicraft => 'Handicraft';
 
   @override
+  String get expertCategoryGaming => 'Gaming';
+
+  @override
+  String get expertCategoryPhotography => 'Photography';
+
+  @override
+  String get expertCategoryHousekeeping => 'Housekeeping';
+
+  @override
+  String get serviceCategory => 'Service Category';
+
+  @override
+  String get serviceCategoryHint => 'Select a category';
+
+  @override
   String get cityLondon => 'London';
 
   @override
@@ -8959,6 +8974,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileNoSoldItems => 'No sold items yet';
 
   @override
+  String get profileFollowers => 'Followers';
+
+  @override
+  String get profileFollowing => 'Following';
+
+  @override
+  String get profileFollow => 'Follow';
+
+  @override
+  String get profileFollowingAction => 'Following';
+
+  @override
   String get profileDirectRequest => 'Request Service';
 
   @override
@@ -9869,6 +9896,12 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get errorProfileSendPhoneCodeFailed =>
       'Failed to send phone verification code';
+
+  @override
+  String get errorFollowFailed => 'Failed to follow user';
+
+  @override
+  String get errorUnfollowFailed => 'Failed to unfollow user';
 
   @override
   String get errorIapNotAvailableWeb =>

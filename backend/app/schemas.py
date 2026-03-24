@@ -2238,6 +2238,7 @@ class TaskExpertOut(BaseModel):
 class TaskExpertServiceCreate(BaseModel):
     service_name: str
     description: str
+    category: Optional[str] = None
     images: Optional[List[str]] = None
     base_price: condecimal(gt=0, max_digits=12, decimal_places=2)  # 使用condecimal与DB的DECIMAL一致
     currency: Literal["GBP"] = "GBP"  # 统一为Literal类型
@@ -2254,6 +2255,7 @@ class TaskExpertServiceCreate(BaseModel):
 class TaskExpertServiceUpdate(BaseModel):
     service_name: Optional[str] = None
     description: Optional[str] = None
+    category: Optional[str] = None
     images: Optional[List[str]] = None
     base_price: Optional[condecimal(gt=0, max_digits=12, decimal_places=2)] = None  # 使用condecimal与DB的DECIMAL一致，避免精度丢失
     currency: Optional[Literal["GBP"]] = None  # 统一为Literal类型
@@ -2271,6 +2273,7 @@ class TaskExpertServiceUpdate(BaseModel):
 class PersonalServiceCreate(BaseModel):
     service_name: str = Field(..., max_length=100)
     description: str = Field(..., max_length=2000)
+    category: Optional[str] = Field(None, max_length=50)
     base_price: Optional[condecimal(ge=0, max_digits=12, decimal_places=2)] = None
     currency: str = Field(default="GBP", max_length=10)
     pricing_type: str = Field(default="fixed", pattern="^(fixed|hourly|negotiable)$")
@@ -2290,6 +2293,7 @@ class PersonalServiceCreate(BaseModel):
 class PersonalServiceUpdate(BaseModel):
     service_name: Optional[str] = Field(None, max_length=100)
     description: Optional[str] = Field(None, max_length=2000)
+    category: Optional[str] = Field(None, max_length=50)
     base_price: Optional[condecimal(ge=0, max_digits=12, decimal_places=2)] = None
     currency: Optional[str] = Field(None, max_length=10)
     pricing_type: Optional[str] = Field(None, pattern="^(fixed|hourly|negotiable)$")

@@ -21,6 +21,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/utils/sheet_adaptation.dart';
 import '../../../core/utils/helpers.dart';
+import '../../../core/utils/service_category_helper.dart';
 import '../../../core/utils/task_type_helper.dart';
 import '../../../core/utils/task_status_helper.dart';
 import '../../../core/utils/city_display_helper.dart';
@@ -770,7 +771,7 @@ class _FollowFeedCard extends StatelessWidget {
                         ? NetworkImage(item.userAvatar!)
                         : null,
                     backgroundColor: isDark ? Colors.grey[800] : const Color(0xFFE8E8E8),
-                    onBackgroundImageError: item.userAvatar != null
+                    onBackgroundImageError: item.userAvatar != null && item.userAvatar!.isNotEmpty
                         ? (_, __) {}  // silently ignore broken avatar URLs
                         : null,
                     child: item.userAvatar == null || item.userAvatar!.isEmpty

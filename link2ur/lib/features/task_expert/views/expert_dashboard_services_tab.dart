@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/constants/expert_constants.dart';
+import '../../../core/utils/service_category_helper.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_spacing.dart';
@@ -391,6 +392,7 @@ class _ServiceFormSheetState extends State<_ServiceFormSheet> {
   late final TextEditingController _descEnController;
   late final TextEditingController _priceController;
   late String _selectedCurrency;
+  String? _selectedCategory;
 
   @override
   void initState() {
@@ -410,6 +412,7 @@ class _ServiceFormSheetState extends State<_ServiceFormSheet> {
     );
     _selectedCurrency =
         (s?['currency'] as String?) ?? ExpertConstants.serviceCurrencies.first;
+    _selectedCategory = s?['category'] as String?;
   }
 
   @override
@@ -433,6 +436,10 @@ class _ServiceFormSheetState extends State<_ServiceFormSheet> {
       'base_price': double.parse(_priceController.text.trim()),
       'currency': _selectedCurrency,
     };
+
+    if (_selectedCategory != null) {
+      data['category'] = _selectedCategory;
+    }
 
     final nameEn = _nameEnController.text.trim();
     if (nameEn.isNotEmpty) data['service_name_en'] = nameEn;
@@ -527,6 +534,32 @@ class _ServiceFormSheetState extends State<_ServiceFormSheet> {
                 ),
                 maxLines: 4,
                 textInputAction: TextInputAction.newline,
+              ),
+              const SizedBox(height: AppSpacing.md),
+
+              // Category
+              DropdownButtonFormField<String>(
+                initialValue: _selectedCategory,
+                decoration: InputDecoration(
+                  labelText: context.l10n.serviceCategory,
+                  hintText: context.l10n.serviceCategoryHint,
+                  border: const OutlineInputBorder(),
+                ),
+                items: ExpertConstants.serviceCategoryKeys
+                    .map((key) => DropdownMenuItem(
+                          value: key,
+                          child: Row(
+                            children: [
+                              Icon(ServiceCategoryHelper.getIcon(key), size: 18),
+                              const SizedBox(width: 8),
+                              Text(ServiceCategoryHelper.getLocalizedLabel(key, context.l10n)),
+                            ],
+                          ),
+                        ))
+                    .toList(),
+                onChanged: (value) {
+                  setState(() => _selectedCategory = value);
+                },
               ),
               const SizedBox(height: AppSpacing.md),
 
