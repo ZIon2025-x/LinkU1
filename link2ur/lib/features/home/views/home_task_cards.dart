@@ -245,21 +245,26 @@ class _NearbyTabState extends State<_NearbyTab> {
   List<Widget> _buildWaterfallItems(HomeState state) {
     final locale = Localizations.localeOf(context);
     final isEn = locale.languageCode == 'en';
-    final items = <Widget>[];
+
+    // Collect items with distance for sorting
+    final entries = <({Widget widget, double distance})>[];
 
     // Tasks
     for (final task in state.nearbyTasks) {
       final title = isEn
           ? (task.titleEn ?? task.title)
           : (task.titleZh ?? task.title);
-      items.add(_NearbyWaterfallCard(
-        title: title,
-        imageUrl: task.firstImage,
-        distance: task.distance,
-        tags: [task.taskType],
-        price: '\u00A3${task.reward == task.reward.truncateToDouble() ? task.reward.toInt().toString() : task.reward.toStringAsFixed(2)}',
-        applicantCount: task.currentParticipants,
-        onTap: () => context.push('/tasks/${task.id}'),
+      entries.add((
+        widget: _NearbyWaterfallCard(
+          title: title,
+          imageUrl: task.firstImage,
+          distance: task.distance,
+          tags: [task.taskType],
+          price: '\u00A3${task.reward == task.reward.truncateToDouble() ? task.reward.toInt().toString() : task.reward.toStringAsFixed(2)}',
+          applicantCount: task.currentParticipants,
+          onTap: () => context.push('/tasks/${task.id}'),
+        ),
+        distance: task.distance ?? double.infinity,
       ));
     }
 
@@ -274,21 +279,28 @@ class _NearbyTabState extends State<_NearbyTab> {
           ? '\u00A3${_formatServicePrice(price)}${pricingType.isNotEmpty ? '/$pricingType' : ''}'
           : null;
       final distKm = service['distance_km'] as num?;
+      final distMeters = distKm != null ? distKm.toDouble() * 1000 : null;
       final imageUrl = service['cover_image'] as String?;
 
-      items.add(_NearbyWaterfallCard(
-        title: name,
-        imageUrl: imageUrl,
-        distance: distKm != null ? distKm.toDouble() * 1000 : null,
-        price: priceStr,
-        onTap: () {
-          final id = service['id'];
-          if (id != null) context.push('/service/$id');
-        },
+      entries.add((
+        widget: _NearbyWaterfallCard(
+          title: name,
+          imageUrl: imageUrl,
+          distance: distMeters,
+          price: priceStr,
+          onTap: () {
+            final id = service['id'];
+            if (id != null) context.push('/service/$id');
+          },
+        ),
+        distance: distMeters ?? double.infinity,
       ));
     }
 
-    return items;
+    // Sort by distance (nearest first)
+    entries.sort((a, b) => a.distance.compareTo(b.distance));
+
+    return entries.map((e) => e.widget).toList();
   }
 
   static String _formatServicePrice(dynamic price) {
@@ -680,10 +692,14 @@ class _NearbyTagChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: isPrice ? const Color(0xFFFFF0F0) : const Color(0xFFF0F0FF),
+        color: isPrice
+            ? (isDark ? const Color(0xFF2A1515) : const Color(0xFFFFF0F0))
+            : (isDark ? const Color(0xFF1A1A2E) : const Color(0xFFF0F0FF)),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text(
