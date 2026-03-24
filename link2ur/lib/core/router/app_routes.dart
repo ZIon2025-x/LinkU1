@@ -31,6 +31,10 @@ class AppRoutes {
   static const String taskExpertsIntro = '/task-experts/intro';
   static const String serviceDetail = '/service/:id';
   static const String myServiceApplications = '/my-service-applications';
+  static const String myServices = '/services/my';
+  static const String createService = '/services/create';
+  static const String editService = '/services/edit/:id';
+  static const String myReceivedServiceApplications = '/services/my/applications';
   static const String expertApplicationsManagement = '/expert-applications-management';
   static const String expertDashboard = '/expert-dashboard';
   static const String expertProfileEdit = '/expert-profile-edit';
@@ -139,6 +143,10 @@ const authRequiredRoutes = <String>{
   AppRoutes.myPosts,
   AppRoutes.myForumPosts,
   AppRoutes.myServiceApplications,
+  AppRoutes.myServices,
+  AppRoutes.createService,
+  AppRoutes.editService,
+  AppRoutes.myReceivedServiceApplications,
   AppRoutes.expertApplicationsManagement,
   AppRoutes.expertDashboard,
   AppRoutes.expertProfileEdit,

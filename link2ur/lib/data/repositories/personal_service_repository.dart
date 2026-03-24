@@ -39,14 +39,20 @@ class PersonalServiceRepository {
   }
 
   Future<void> updateService(String id, Map<String, dynamic> data) async {
-    await _apiService.put(
+    final response = await _apiService.put(
       ApiEndpoints.myPersonalServiceById(id),
       data: data,
     );
+    if (!response.isSuccess) {
+      throw Exception(response.message ?? 'update_service_failed');
+    }
   }
 
   Future<void> deleteService(String id) async {
-    await _apiService.delete(ApiEndpoints.myPersonalServiceById(id));
+    final response = await _apiService.delete(ApiEndpoints.myPersonalServiceById(id));
+    if (!response.isSuccess) {
+      throw Exception(response.message ?? 'delete_service_failed');
+    }
   }
 
   Future<Map<String, dynamic>> browseServices({
