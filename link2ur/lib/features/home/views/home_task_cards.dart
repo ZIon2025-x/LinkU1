@@ -270,6 +270,7 @@ class _NearbyTabState extends State<_NearbyTab> {
           tags: [task.taskType],
           price: '\u00A3${task.reward == task.reward.truncateToDouble() ? task.reward.toInt().toString() : task.reward.toStringAsFixed(2)}',
           applicantCount: task.currentParticipants,
+          itemType: task.taskType,
           onTap: () => context.push('/tasks/${task.id}'),
         ),
         distance: task.distance ?? double.infinity,
@@ -296,6 +297,7 @@ class _NearbyTabState extends State<_NearbyTab> {
           imageUrl: imageUrl,
           distance: distMeters,
           price: priceStr,
+          itemType: 'service',
           onTap: () {
             final id = service['id'];
             if (id != null) context.push('/service/$id');
@@ -343,15 +345,16 @@ class _NearbyTabState extends State<_NearbyTab> {
         }
 
         if (state.nearbyTasks.isEmpty && state.nearbyServices.isEmpty) {
+          final isDarkEmpty = Theme.of(context).brightness == Brightness.dark;
           final center = Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.location_off_outlined,
-                    size: 64, color: AppColors.textTertiaryLight),
+                Icon(Icons.location_off_outlined,
+                    size: 64, color: isDarkEmpty ? AppColors.textTertiaryDark : AppColors.textTertiaryLight),
                 AppSpacing.vMd,
                 Text(context.l10n.homeNoNearbyTasks,
-                    style: const TextStyle(color: AppColors.textSecondaryLight)),
+                    style: TextStyle(color: isDarkEmpty ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
                 AppSpacing.vMd,
                 TextButton.icon(
                   onPressed: _loadLocation,
@@ -552,6 +555,7 @@ class _NearbyWaterfallCard extends StatelessWidget {
     this.price,
     this.applicantCount = 0,
     this.onTap,
+    this.itemType = '',
   });
 
   final String title;
@@ -561,6 +565,7 @@ class _NearbyWaterfallCard extends StatelessWidget {
   final String? price;
   final int applicantCount;
   final VoidCallback? onTap;
+  final String itemType;
 
   @override
   Widget build(BuildContext context) {
@@ -637,8 +642,38 @@ class _NearbyWaterfallCard extends StatelessWidget {
     );
   }
 
+  // Staggered height tiers based on title hashCode for visual variety
+  double get _imageHeight {
+    const tiers = [120.0, 150.0, 180.0];
+    return tiers[title.hashCode.abs() % tiers.length];
+  }
+
+  // Type-specific gradients (aligned with discovery_cards)
+  static const _typeGradients = {
+    'design': [Color(0xFFA8EDEA), Color(0xFFFED6E3)],
+    'photography': [Color(0xFFFFECD2), Color(0xFFFCB69F)],
+    'coding': [Color(0xFFE0C3FC), Color(0xFF8EC5FC)],
+    'music': [Color(0xFFF5F7FA), Color(0xFFC3CFE2)],
+    'writing': [Color(0xFFFDDB92), Color(0xFFD1FDFF)],
+    'tutoring': [Color(0xFFF5F7FA), Color(0xFFC3CFE2)],
+    'life': [Color(0xFF667EEA), Color(0xFF764BA2)],
+    'service': [Color(0xFF11998E), Color(0xFF38EF7D)],
+  };
+
+  static const _typeEmojis = {
+    'design': '🎨',
+    'photography': '📷',
+    'coding': '💻',
+    'music': '🎵',
+    'writing': '📝',
+    'tutoring': '📚',
+    'life': '🏠',
+    'service': '🔧',
+  };
+
   Widget _buildImageArea(bool isDark) {
     final hasImage = imageUrl != null && imageUrl!.isNotEmpty;
+    final height = _imageHeight;
 
     return Stack(
       children: [
@@ -646,27 +681,24 @@ class _NearbyWaterfallCard extends StatelessWidget {
           AsyncImageView(
             imageUrl: imageUrl!,
             width: double.infinity,
-            height: 140,
+            height: height,
           )
         else
           Container(
             width: double.infinity,
-            height: 120,
+            height: height,
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [
-                  AppColors.primary.withValues(alpha: 0.15),
-                  AppColors.primary.withValues(alpha: 0.05),
-                ],
+                colors: _typeGradients[itemType] ??
+                    const [Color(0xFFE8E8E8), Color(0xFFD0D0D0)],
               ),
             ),
             child: Center(
-              child: Icon(
-                Icons.task_outlined,
-                size: 36,
-                color: AppColors.primary.withValues(alpha: 0.4),
+              child: Text(
+                _typeEmojis[itemType] ?? '📋',
+                style: const TextStyle(fontSize: 36),
               ),
             ),
           ),
