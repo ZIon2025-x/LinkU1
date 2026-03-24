@@ -542,13 +542,16 @@ def _build_system_prompt(template: str, user: models.User, resolved_lang: str | 
     lang = "en" if lang.startswith("en") else "zh"
     lang_instruction = "Reply in English" if lang == "en" else "用中文回复"
 
-    return template.format(
-        user_name=user.name,
-        user_id=user.id,
-        lang=lang,
-        user_level=user.user_level or "normal",
-        lang_instruction=lang_instruction,
-    )
+    result = template
+    for key, val in (
+        ("user_name", user.name),
+        ("user_id", user.id),
+        ("lang", lang),
+        ("user_level", user.user_level or "normal"),
+        ("lang_instruction", lang_instruction),
+    ):
+        result = result.replace("{" + key + "}", str(val))
+    return result
 
 
 # ==================== User Profile Context & Proactive Suggestions ====================
