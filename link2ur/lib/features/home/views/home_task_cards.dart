@@ -290,7 +290,13 @@ class _NearbyTabState extends State<_NearbyTab> {
           : null;
       final distKm = service['distance_km'] as num?;
       final distMeters = distKm != null ? distKm.toDouble() * 1000 : null;
-      final imageUrl = service['cover_image'] as String?;
+      final imageUrl = service['cover_image'] as String?
+          ?? ((service['images'] is List && (service['images'] as List).isNotEmpty)
+              ? (service['images'] as List).first as String?
+              : null);
+      final isExpert = service['is_expert_verified'] == true;
+      final ownerName = service['owner_name'] as String?;
+      final ownerAvatar = service['owner_avatar'] as String?;
 
       entries.add((
         widget: _NearbyWaterfallCard(
@@ -299,6 +305,9 @@ class _NearbyTabState extends State<_NearbyTab> {
           distance: distMeters,
           price: priceStr,
           itemType: 'service',
+          isExpertVerified: isExpert,
+          ownerName: ownerName,
+          ownerAvatar: ownerAvatar,
           onTap: () {
             final id = service['id'];
             if (id != null) context.push('/service/$id');
@@ -557,6 +566,9 @@ class _NearbyWaterfallCard extends StatelessWidget {
     this.applicantCount = 0,
     this.onTap,
     this.itemType = '',
+    this.isExpertVerified = false,
+    this.ownerName,
+    this.ownerAvatar,
   });
 
   final String title;
@@ -567,6 +579,9 @@ class _NearbyWaterfallCard extends StatelessWidget {
   final int applicantCount;
   final VoidCallback? onTap;
   final String itemType;
+  final bool isExpertVerified;
+  final String? ownerName;
+  final String? ownerAvatar;
 
   @override
   Widget build(BuildContext context) {
@@ -578,6 +593,12 @@ class _NearbyWaterfallCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
           borderRadius: BorderRadius.circular(12),
+          border: isExpertVerified
+              ? Border.all(
+                  color: const Color(0xFFDAA520).withValues(alpha: 0.4),
+                  width: 1.5,
+                )
+              : null,
           boxShadow: isDark
               ? null
               : [
@@ -592,7 +613,7 @@ class _NearbyWaterfallCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image area with distance badge
+            // Image area with distance badge + expert badge
             _buildImageArea(isDark),
             // Card body
             Padding(
@@ -632,6 +653,42 @@ class _NearbyWaterfallCard extends StatelessWidget {
                           fontSize: 12,
                           color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
                         ),
+                      ),
+                    ),
+                  // Expert service owner info
+                  if (ownerName != null && ownerName!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 10,
+                            backgroundImage: ownerAvatar != null && ownerAvatar!.isNotEmpty
+                                ? NetworkImage(ownerAvatar!)
+                                : null,
+                            backgroundColor: isDark ? Colors.grey[700] : const Color(0xFFE8E8E8),
+                            child: ownerAvatar == null || ownerAvatar!.isEmpty
+                                ? Icon(Icons.person, size: 10,
+                                    color: isDark ? Colors.grey[400] : Colors.grey[600])
+                                : null,
+                          ),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              ownerName!,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (isExpertVerified) ...[
+                            const SizedBox(width: 4),
+                            const Icon(Icons.verified, size: 13, color: Color(0xFFDAA520)),
+                          ],
+                        ],
                       ),
                     ),
                 ],
@@ -763,6 +820,43 @@ class _NearbyWaterfallCard extends StatelessWidget {
                     ),
                   ],
                 ),
+              ),
+            ),
+          ),
+        // Expert verified badge (top-right)
+        if (isExpertVerified)
+          Positioned(
+            top: 8,
+            right: 8,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFDAA520), Color(0xFFF0C040)],
+                ),
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFDAA520).withValues(alpha: 0.3),
+                    blurRadius: 4,
+                  ),
+                ],
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.verified, size: 11, color: Colors.white),
+                  SizedBox(width: 2),
+                  Text(
+                    'PRO',
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
