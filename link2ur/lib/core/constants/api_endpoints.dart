@@ -414,6 +414,11 @@ class ApiEndpoints {
   static String createWeChatCheckout(int taskId) =>
       '/api/coupon-points/tasks/$taskId/wechat-checkout';
 
+  // ==================== Wallet endpoints ====================
+  static const String walletBalance = '/api/wallet/balance';
+  static const String walletTransactions = '/api/wallet/transactions';
+  static const String walletWithdraw = '/api/wallet/withdraw';
+
   // ==================== Stripe Connect ====================
   // 后端: stripe_connect_routes.py (prefix: /api/stripe/connect)
   static const String stripeConnectSupportedCountries =

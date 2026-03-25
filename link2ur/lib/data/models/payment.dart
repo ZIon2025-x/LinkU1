@@ -524,3 +524,82 @@ class TaskPaymentRecord extends Equatable {
   @override
   List<Object?> get props => [id, taskId, amount, status, paymentIntentId];
 }
+
+class WalletBalance extends Equatable {
+  final double balance;
+  final double totalEarned;
+  final double totalWithdrawn;
+  final double totalSpent;
+  final String currency;
+
+  const WalletBalance({
+    this.balance = 0.0,
+    this.totalEarned = 0.0,
+    this.totalWithdrawn = 0.0,
+    this.totalSpent = 0.0,
+    this.currency = 'GBP',
+  });
+
+  factory WalletBalance.fromJson(Map<String, dynamic> json) {
+    return WalletBalance(
+      balance: (json['balance'] as num?)?.toDouble() ?? 0.0,
+      totalEarned: (json['total_earned'] as num?)?.toDouble() ?? 0.0,
+      totalWithdrawn: (json['total_withdrawn'] as num?)?.toDouble() ?? 0.0,
+      totalSpent: (json['total_spent'] as num?)?.toDouble() ?? 0.0,
+      currency: json['currency'] as String? ?? 'GBP',
+    );
+  }
+
+  @override
+  List<Object?> get props => [balance, totalEarned, totalWithdrawn, totalSpent, currency];
+}
+
+class WalletTransactionItem extends Equatable {
+  final int id;
+  final String type;
+  final double amount;
+  final double balanceAfter;
+  final String status;
+  final String source;
+  final String? relatedId;
+  final String? relatedType;
+  final String? description;
+  final double? feeAmount;
+  final double? grossAmount;
+  final String createdAt;
+
+  const WalletTransactionItem({
+    required this.id,
+    required this.type,
+    required this.amount,
+    required this.balanceAfter,
+    required this.status,
+    required this.source,
+    this.relatedId,
+    this.relatedType,
+    this.description,
+    this.feeAmount,
+    this.grossAmount,
+    required this.createdAt,
+  });
+
+  factory WalletTransactionItem.fromJson(Map<String, dynamic> json) {
+    return WalletTransactionItem(
+      id: json['id'] as int,
+      type: json['type'] as String,
+      amount: (json['amount'] as num).toDouble(),
+      balanceAfter: (json['balance_after'] as num).toDouble(),
+      status: json['status'] as String,
+      source: json['source'] as String,
+      relatedId: json['related_id'] as String?,
+      relatedType: json['related_type'] as String?,
+      description: json['description'] as String?,
+      feeAmount: (json['fee_amount'] as num?)?.toDouble(),
+      grossAmount: (json['gross_amount'] as num?)?.toDouble(),
+      createdAt: json['created_at'] as String,
+    );
+  }
+
+  @override
+  List<Object?> get props => [id, type, amount, status, source, createdAt];
+}
