@@ -639,6 +639,15 @@ class _FleaMarketDetailContent extends StatelessWidget {
   /// 买家底部栏 - 对标iOS: 聊天 + 继续支付/立即购买/回应还价/已被预留提示
   Widget _buildBuyerBottomBar(
       BuildContext context, FleaMarketState state, FleaMarketItem item) {
+    // 租赁物品：始终显示租用CTA（不受 isAvailable 限制）
+    if (item.isRental) {
+      return Row(
+        children: [
+          Expanded(child: _buildBuyerCTAButton(context, state, item)),
+        ],
+      );
+    }
+
     // 商品不可购买（被其他人预留）且自己没有待支付订单 → 显示"已被预留"提示
     final isUnavailable = item.isAvailable == false && !item.hasPendingPayment;
     final hasSellerCounterOffer =
