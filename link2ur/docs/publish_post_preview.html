@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=390, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>帖子发布页 Preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f5f5f5;
+    color: #1a1a1a;
+    max-width: 390px;
+    margin: 0 auto;
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+  }
+  body.dark { background: #000; color: #f0f0f0; }
+
+  /* ── Header ── */
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 0.5px solid rgba(0,0,0,0.08);
+  }
+  .dark .header {
+    background: rgba(28,28,30,0.92);
+    border-bottom-color: rgba(255,255,255,0.08);
+  }
+  .header-back {
+    width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 10px;
+    background: rgba(0,0,0,0.04);
+    cursor: pointer;
+    font-size: 18px; color: #333;
+  }
+  .dark .header-back { background: rgba(255,255,255,0.08); color: #eee; }
+  .header-title {
+    flex: 1;
+    text-align: center;
+    font-size: 17px;
+    font-weight: 600;
+    margin: 0 8px;
+  }
+  .header-submit {
+    font-size: 15px;
+    font-weight: 600;
+    color: #fff;
+    background: #7359F2;
+    cursor: pointer;
+    padding: 7px 16px;
+    border-radius: 20px;
+    transition: opacity 0.15s;
+  }
+  .header-submit:hover { opacity: 0.88; }
+
+  /* ── Form body ── */
+  .form-body { padding: 0; }
+
+  /* ── Draft banner ── */
+  .draft-banner {
+    margin: 12px 16px;
+    padding: 10px 14px;
+    background: rgba(0,122,255,0.06);
+    border: 1px solid rgba(0,122,255,0.15);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .dark .draft-banner { background: rgba(0,122,255,0.12); border-color: rgba(0,122,255,0.25); }
+  .draft-banner .draft-icon { font-size: 16px; }
+  .draft-banner .draft-text { flex: 1; font-size: 13px; color: #555; }
+  .dark .draft-banner .draft-text { color: #aaa; }
+  .draft-banner .draft-actions { display: flex; gap: 8px; }
+  .draft-discard {
+    font-size: 12px;
+    color: #999;
+    cursor: pointer;
+    padding: 4px 8px;
+  }
+  .draft-restore {
+    font-size: 12px;
+    color: #fff;
+    background: #007AFF;
+    border-radius: 6px;
+    padding: 4px 10px;
+    cursor: pointer;
+  }
+
+  /* ── Category pills ── */
+  .category-section {
+    padding: 0 16px 12px;
+  }
+  .category-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #999;
+    margin-bottom: 8px;
+  }
+  .category-pills {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .category-pills::-webkit-scrollbar { display: none; }
+  .cat-pill {
+    flex-shrink: 0;
+    padding: 7px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    background: #fff;
+    color: #555;
+    border: 1px solid #e8e8e8;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .dark .cat-pill { background: #1c1c1e; color: #ccc; border-color: rgba(255,255,255,0.1); }
+  .cat-pill.active {
+    background: #7359F2;
+    color: #fff;
+    border-color: #7359F2;
+    font-weight: 600;
+  }
+  .cat-pill:hover:not(.active) { border-color: #7359F2; color: #7359F2; }
+
+  /* ── Title input (borderless, big) ── */
+  .title-input {
+    width: 100%;
+    padding: 16px 20px 8px;
+    border: none;
+    outline: none;
+    font-size: 22px;
+    font-weight: 700;
+    color: #1a1a1a;
+    background: transparent;
+    font-family: inherit;
+  }
+  .dark .title-input { color: #f0f0f0; }
+  .title-input::placeholder { color: #ccc; }
+  .dark .title-input::placeholder { color: #555; }
+
+  /* ── Divider ── */
+  .divider {
+    height: 1px;
+    background: #eee;
+    margin: 0 20px;
+  }
+  .dark .divider { background: rgba(255,255,255,0.06); }
+
+  /* ── Content textarea (borderless) ── */
+  .content-input {
+    width: 100%;
+    padding: 12px 20px;
+    border: none;
+    outline: none;
+    font-size: 16px;
+    line-height: 1.7;
+    color: #333;
+    background: transparent;
+    font-family: inherit;
+    resize: none;
+    min-height: 200px;
+  }
+  .dark .content-input { color: #ddd; }
+  .content-input::placeholder { color: #bbb; }
+  .dark .content-input::placeholder { color: #555; }
+
+  /* ── Attachments area ── */
+  .attachments {
+    padding: 12px 16px;
+  }
+  .attach-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .dark .attach-label { color: #f0f0f0; }
+  .attach-count {
+    font-size: 12px;
+    font-weight: 400;
+    color: #999;
+  }
+
+  /* ── Image picker grid ── */
+  .image-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .image-tile {
+    width: 80px; height: 80px;
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+  }
+  .image-tile img { width: 100%; height: 100%; object-fit: cover; }
+  .image-tile .remove-btn {
+    position: absolute;
+    top: -2px; right: -2px;
+    width: 20px; height: 20px;
+    background: #F24D4D;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 12px; cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  .image-add {
+    width: 80px; height: 80px;
+    border-radius: 10px;
+    border: 1.5px dashed #ccc;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: rgba(0,0,0,0.02);
+  }
+  .dark .image-add { border-color: rgba(255,255,255,0.15); background: rgba(255,255,255,0.04); }
+  .image-add:hover { border-color: #7359F2; }
+  .image-add .add-icon { font-size: 26px; color: #bbb; }
+  .image-add .add-text { font-size: 10px; color: #bbb; margin-top: 2px; }
+
+  /* ── File attachment ── */
+  .file-attach {
+    margin-top: 12px;
+  }
+  .file-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 10px;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .dark .file-item { background: #1c1c1e; border-color: rgba(255,255,255,0.08); }
+  .file-icon { font-size: 24px; }
+  .file-info { flex: 1; }
+  .file-name { font-size: 14px; color: #333; }
+  .dark .file-name { color: #ddd; }
+  .file-size { font-size: 11px; color: #999; }
+  .file-remove { font-size: 16px; color: #F24D4D; cursor: pointer; padding: 4px; }
+
+  .file-add-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    padding: 12px;
+    border: 1.5px dashed #ccc;
+    border-radius: 10px;
+    color: #999;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: rgba(0,0,0,0.01);
+  }
+  .dark .file-add-btn { border-color: rgba(255,255,255,0.12); background: rgba(255,255,255,0.03); }
+  .file-add-btn:hover { border-color: #7359F2; color: #7359F2; }
+
+  /* ── Related content ── */
+  .related-section {
+    padding: 0 16px 16px;
+  }
+  .related-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin-bottom: 8px;
+  }
+  .dark .related-label { color: #f0f0f0; }
+  .related-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: rgba(115,89,242,0.08);
+    border: 1px solid rgba(115,89,242,0.2);
+    border-radius: 10px;
+    font-size: 13px;
+    color: #7359F2;
+    max-width: 100%;
+  }
+  .related-chip .chip-remove {
+    font-size: 14px;
+    cursor: pointer;
+    opacity: 0.6;
+  }
+  .related-add {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 14px;
+    border: 1.5px dashed rgba(115,89,242,0.3);
+    border-radius: 10px;
+    font-size: 13px;
+    color: #7359F2;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .related-add:hover { border-color: #7359F2; background: rgba(115,89,242,0.05); }
+
+  /* ── Toolbar (bottom) ── */
+  .toolbar {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    padding: 10px 16px;
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 0.5px solid rgba(0,0,0,0.06);
+    gap: 4px;
+  }
+  .dark .toolbar { background: rgba(28,28,30,0.95); border-top-color: rgba(255,255,255,0.06); }
+  .toolbar-btn {
+    width: 40px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 10px;
+    font-size: 20px;
+    cursor: pointer;
+    transition: background 0.15s;
+    color: #555;
+  }
+  .dark .toolbar-btn { color: #aaa; }
+  .toolbar-btn:hover { background: rgba(0,0,0,0.05); }
+  .dark .toolbar-btn:hover { background: rgba(255,255,255,0.08); }
+  .toolbar-btn.active { color: #7359F2; }
+  .toolbar-spacer { flex: 1; }
+  .toolbar-count {
+    font-size: 12px;
+    color: #bbb;
+  }
+
+  /* ── Dark mode toggle ── */
+  .mode-toggle {
+    position: fixed;
+    top: 14px;
+    right: 14px;
+    z-index: 200;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(0,0,0,0.06);
+    cursor: pointer;
+    font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .dark .mode-toggle { background: rgba(255,255,255,0.1); }
+</style>
+</head>
+<body>
+  <button class="mode-toggle" onclick="document.body.classList.toggle('dark')">🌙</button>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-back">‹</div>
+    <div class="header-title">发帖</div>
+    <div class="header-submit">发布</div>
+  </div>
+
+  <!-- Draft banner -->
+  <div class="draft-banner">
+    <span class="draft-icon">📝</span>
+    <span class="draft-text">你有一份未完成的草稿</span>
+    <div class="draft-actions">
+      <span class="draft-discard">丢弃</span>
+      <span class="draft-restore">恢复</span>
+    </div>
+  </div>
+
+  <!-- Category -->
+  <div class="category-section">
+    <div class="category-label">选择板块</div>
+    <div class="category-pills">
+      <div class="cat-pill active">💬 日常分享</div>
+      <div class="cat-pill" onclick="selectCat(this)">🎓 学习交流</div>
+      <div class="cat-pill" onclick="selectCat(this)">🛍 好物推荐</div>
+      <div class="cat-pill" onclick="selectCat(this)">🏠 租房信息</div>
+      <div class="cat-pill" onclick="selectCat(this)">🎉 活动组局</div>
+      <div class="cat-pill" onclick="selectCat(this)">❓ 问答求助</div>
+    </div>
+  </div>
+
+  <div class="form-body">
+    <!-- Title -->
+    <input class="title-input" placeholder="标题">
+
+    <div class="divider"></div>
+
+    <!-- Content -->
+    <textarea class="content-input" placeholder="分享你的想法、经历或问题…&#10;&#10;支持详细的图文内容，至少10个字"></textarea>
+
+    <!-- Images -->
+    <div class="attachments">
+      <div class="attach-label">📸 图片 <span class="attach-count">(1/5)</span></div>
+      <div class="image-grid">
+        <div class="image-tile">
+          <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Crect fill='%23f0e6d3' width='160' height='160'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' font-size='40'%3E☕%3C/text%3E%3C/svg%3E">
+          <div class="remove-btn">✕</div>
+        </div>
+        <div class="image-add">
+          <span class="add-icon">+</span>
+          <span class="add-text">添加</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- PDF -->
+    <div class="attachments">
+      <div class="attach-label">📎 文件附件 <span class="attach-count">(1/1)</span></div>
+      <div class="file-attach">
+        <div class="file-item">
+          <span class="file-icon">📄</span>
+          <div class="file-info">
+            <div class="file-name">租房合同模板.pdf</div>
+            <div class="file-size">2.3 MB</div>
+          </div>
+          <span class="file-remove">✕</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Related content -->
+    <div class="related-section">
+      <div class="related-label">🔗 关联内容</div>
+      <div class="related-chip">
+        🔗 帮忙搬家到伯明翰 <span class="chip-remove">✕</span>
+      </div>
+    </div>
+
+    <div style="height: 60px;"></div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="toolbar-btn active" title="图片">📷</div>
+    <div class="toolbar-btn" title="PDF附件">📎</div>
+    <div class="toolbar-btn" title="关联内容">🔗</div>
+    <div class="toolbar-spacer"></div>
+    <div class="toolbar-count">已输入 0 字</div>
+  </div>
+
+<script>
+function selectCat(el) {
+  document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+}
+</script>
+</body>
+</html>

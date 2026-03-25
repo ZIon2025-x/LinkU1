@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=390, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>闲置发布页 Preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f5f5f5;
+    color: #1a1a1a;
+    max-width: 390px;
+    margin: 0 auto;
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+  }
+  body.dark { background: #000; color: #f0f0f0; }
+
+  /* ── Header ── */
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 0.5px solid rgba(0,0,0,0.08);
+  }
+  .dark .header { background: rgba(28,28,30,0.92); border-bottom-color: rgba(255,255,255,0.08); }
+  .header-back {
+    width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 10px;
+    background: rgba(0,0,0,0.04);
+    cursor: pointer;
+    font-size: 18px; color: #333;
+  }
+  .dark .header-back { background: rgba(255,255,255,0.08); color: #eee; }
+  .header-title {
+    flex: 1;
+    text-align: center;
+    font-size: 17px;
+    font-weight: 600;
+    margin: 0 8px;
+  }
+  .header-submit {
+    font-size: 15px;
+    font-weight: 600;
+    color: #fff;
+    background: #26BF73;
+    cursor: pointer;
+    padding: 7px 16px;
+    border-radius: 20px;
+    transition: opacity 0.15s;
+  }
+  .header-submit:hover { opacity: 0.88; }
+
+  /* ── Form ── */
+  .form-body { padding: 16px; }
+
+  .section { margin-bottom: 20px; }
+  .section-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .dark .section-label { color: #f0f0f0; }
+  .section-label .required { color: #F24D4D; }
+  .section-hint { font-size: 12px; color: #999; margin-bottom: 8px; }
+
+  /* ── Photo area (big, prominent) ── */
+  .photo-area {
+    width: 100%;
+    border-radius: 16px;
+    overflow: hidden;
+    position: relative;
+    background: #fff;
+    border: 1.5px solid #e8e8e8;
+  }
+  .dark .photo-area { background: #1c1c1e; border-color: rgba(255,255,255,0.1); }
+
+  .photo-main {
+    width: 100%;
+    aspect-ratio: 4/3;
+    background: linear-gradient(135deg, #f0f8f0, #e0f5e8);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .dark .photo-main { background: linear-gradient(135deg, #1a2e1a, #1c3025); }
+  .photo-main:hover { background: linear-gradient(135deg, #e8f5e8, #d5f0dd); }
+  .photo-main .main-icon { font-size: 48px; opacity: 0.7; }
+  .photo-main .main-text { font-size: 15px; color: #26BF73; font-weight: 600; }
+  .photo-main .main-hint { font-size: 12px; color: #999; }
+
+  /* Cover image simulation */
+  .photo-main.has-image {
+    background: none;
+  }
+  .photo-main.has-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    position: absolute;
+    top: 0; left: 0;
+  }
+  .photo-main .cover-badge {
+    position: absolute;
+    top: 10px; left: 10px;
+    background: rgba(0,0,0,0.5);
+    color: #fff;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 500;
+    backdrop-filter: blur(4px);
+  }
+
+  .photo-thumbnails {
+    display: flex;
+    gap: 6px;
+    padding: 10px;
+    overflow-x: auto;
+  }
+  .thumb-item {
+    width: 60px; height: 60px;
+    border-radius: 10px;
+    overflow: hidden;
+    flex-shrink: 0;
+    position: relative;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .thumb-item.active { border-color: #26BF73; }
+  .thumb-item img { width: 100%; height: 100%; object-fit: cover; }
+  .thumb-item .thumb-remove {
+    position: absolute;
+    top: -2px; right: -2px;
+    width: 18px; height: 18px;
+    background: #F24D4D;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 10px; cursor: pointer;
+  }
+  .thumb-add {
+    width: 60px; height: 60px;
+    border-radius: 10px;
+    border: 1.5px dashed #ccc;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.2s;
+  }
+  .dark .thumb-add { border-color: rgba(255,255,255,0.15); }
+  .thumb-add:hover { border-color: #26BF73; }
+  .thumb-add .t-icon { font-size: 20px; color: #bbb; }
+  .thumb-add .t-text { font-size: 9px; color: #bbb; }
+
+  /* ── Input ── */
+  .input-field {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 12px;
+    font-size: 15px;
+    background: #fff;
+    color: #1a1a1a;
+    outline: none;
+    transition: border-color 0.2s;
+    font-family: inherit;
+  }
+  .input-field:focus { border-color: #26BF73; }
+  .dark .input-field { background: #1c1c1e; border-color: rgba(255,255,255,0.12); color: #f0f0f0; }
+  .dark .input-field:focus { border-color: #26BF73; }
+  textarea.input-field { resize: none; min-height: 80px; line-height: 1.5; }
+  .char-count { text-align: right; font-size: 11px; color: #bbb; margin-top: 4px; }
+
+  /* ── Price ── */
+  .price-row {
+    display: flex;
+    gap: 10px;
+    align-items: stretch;
+  }
+  .price-input-wrap {
+    flex: 1;
+    position: relative;
+  }
+  .price-input-wrap .currency {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 18px;
+    font-weight: 700;
+    color: #26BF73;
+  }
+  .price-input-wrap .input-field {
+    padding-left: 32px;
+    font-size: 20px;
+    font-weight: 600;
+  }
+  .price-condition {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .condition-tag {
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    background: #f0f0f0;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    border: 1px solid transparent;
+  }
+  .dark .condition-tag { background: #2c2c2e; color: #aaa; }
+  .condition-tag.active {
+    background: rgba(38,191,115,0.1);
+    color: #26BF73;
+    border-color: rgba(38,191,115,0.3);
+    font-weight: 600;
+  }
+
+  /* ── Category selector (compact grid) ── */
+  .category-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  .cat-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 4px;
+    border-radius: 12px;
+    background: #fff;
+    border: 1.5px solid #e8e8e8;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .dark .cat-card { background: #1c1c1e; border-color: rgba(255,255,255,0.08); }
+  .cat-card.active {
+    border-color: #26BF73;
+    background: rgba(38,191,115,0.06);
+  }
+  .cat-card:hover:not(.active) { border-color: #26BF73; }
+  .cat-card .cat-emoji { font-size: 22px; }
+  .cat-card .cat-name { font-size: 11px; color: #666; font-weight: 500; text-align: center; }
+  .dark .cat-card .cat-name { color: #aaa; }
+  .cat-card.active .cat-name { color: #26BF73; font-weight: 600; }
+
+  /* ── Location segment ── */
+  .segment-group {
+    display: flex;
+    background: #f0f0f0;
+    border-radius: 10px;
+    padding: 3px;
+    gap: 2px;
+    margin-bottom: 10px;
+  }
+  .dark .segment-group { background: #2c2c2e; }
+  .segment-item {
+    flex: 1;
+    text-align: center;
+    padding: 8px 6px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+  .segment-item.active {
+    background: #fff;
+    color: #26BF73;
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .dark .segment-item { color: #999; }
+  .dark .segment-item.active { background: #3a3a3c; color: #26BF73; }
+  .segment-item .seg-icon { font-size: 15px; }
+
+  /* ── Online tag ── */
+  .online-tag {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px;
+    background: rgba(38,191,115,0.06);
+    border: 1.5px solid rgba(38,191,115,0.2);
+    border-radius: 12px;
+    color: #26BF73;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .dark .online-tag { background: rgba(38,191,115,0.1); border-color: rgba(38,191,115,0.25); }
+  .online-tag .online-icon { font-size: 20px; }
+
+  /* ── Location ── */
+  .location-field {
+    display: flex;
+    align-items: center;
+    padding: 12px 14px;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 12px;
+    background: #fff;
+    gap: 8px;
+  }
+  .dark .location-field { background: #1c1c1e; border-color: rgba(255,255,255,0.12); }
+  .location-field .loc-icon { font-size: 18px; color: #26BF73; }
+  .location-field input {
+    flex: 1;
+    border: none; outline: none;
+    font-size: 15px; color: #1a1a1a;
+    background: transparent;
+    font-family: inherit;
+  }
+  .dark .location-field input { color: #f0f0f0; }
+  .location-field .loc-action {
+    font-size: 18px; color: #26BF73; cursor: pointer;
+  }
+  .location-chips {
+    display: flex; gap: 8px; margin-top: 8px;
+  }
+  .loc-chip {
+    display: flex; align-items: center; gap: 4px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    background: rgba(38,191,115,0.08);
+    color: #26BF73;
+    font-size: 12px; font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .loc-chip:hover { background: rgba(38,191,115,0.15); }
+
+  /* ── Submit button ── */
+  .submit-btn {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #26BF73, #38EF7D);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+    font-family: inherit;
+    margin-top: 8px;
+  }
+  .submit-btn:hover { opacity: 0.92; }
+  .submit-btn:active { transform: scale(0.98); }
+
+  /* ── Quick tips inline ── */
+  .inline-tip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 14px;
+    background: rgba(38,191,115,0.06);
+    border-radius: 10px;
+    margin-bottom: 16px;
+  }
+  .dark .inline-tip { background: rgba(38,191,115,0.1); }
+  .inline-tip .tip-icon { font-size: 16px; }
+  .inline-tip .tip-text { font-size: 12px; color: #666; flex: 1; }
+  .dark .inline-tip .tip-text { color: #aaa; }
+
+  /* ── Stripe notice ── */
+  .stripe-notice {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    background: rgba(255,166,0,0.08);
+    border: 1px solid rgba(255,166,0,0.2);
+    border-radius: 12px;
+    margin-top: 16px;
+  }
+  .dark .stripe-notice { background: rgba(255,166,0,0.12); border-color: rgba(255,166,0,0.3); }
+  .stripe-notice .notice-icon { font-size: 20px; }
+  .stripe-notice .notice-text { flex: 1; font-size: 12px; color: #666; line-height: 1.5; }
+  .dark .stripe-notice .notice-text { color: #aaa; }
+  .stripe-notice .notice-btn {
+    font-size: 12px;
+    color: #FF8033;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  /* ── Dark mode toggle ── */
+  .mode-toggle {
+    position: fixed;
+    top: 14px;
+    right: 14px;
+    z-index: 200;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(0,0,0,0.06);
+    cursor: pointer;
+    font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .dark .mode-toggle { background: rgba(255,255,255,0.1); }
+</style>
+</head>
+<body>
+  <button class="mode-toggle" onclick="document.body.classList.toggle('dark')">🌙</button>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-back">‹</div>
+    <div class="header-title">发布闲置</div>
+    <div class="header-submit">发布</div>
+  </div>
+
+  <div class="form-body">
+
+    <!-- Tip -->
+    <div class="inline-tip">
+      <span class="tip-icon">📸</span>
+      <span class="tip-text">好的封面图能让成交率提升 3 倍！建议上传实物照片</span>
+    </div>
+
+    <!-- Photo area -->
+    <div class="section">
+      <div class="section-label"><span class="required">*</span> 商品图片</div>
+      <div class="photo-area">
+        <div class="photo-main has-image">
+          <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='520' height='390'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23e8f5e9'/%3E%3Cstop offset='1' stop-color='%23c8e6c9'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect fill='url(%23g)' width='520' height='390'/%3E%3Ctext x='50%25' y='46%25' text-anchor='middle' font-size='64'%3E📱%3C/text%3E%3Ctext x='50%25' y='62%25' text-anchor='middle' font-size='18' fill='%23666'%3EiPhone 14 Pro 256GB%3C/text%3E%3C/svg%3E">
+          <div class="cover-badge">封面</div>
+        </div>
+        <div class="photo-thumbnails">
+          <div class="thumb-item active">
+            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Crect fill='%23e8f5e9' width='120' height='120'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' font-size='30'%3E📱%3C/text%3E%3C/svg%3E">
+          </div>
+          <div class="thumb-item">
+            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Crect fill='%23fff3e0' width='120' height='120'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' font-size='30'%3E📦%3C/text%3E%3C/svg%3E">
+            <div class="thumb-remove">✕</div>
+          </div>
+          <div class="thumb-item">
+            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Crect fill='%23e3f2fd' width='120' height='120'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' font-size='30'%3E🔋%3C/text%3E%3C/svg%3E">
+            <div class="thumb-remove">✕</div>
+          </div>
+          <div class="thumb-add">
+            <span class="t-icon">+</span>
+            <span class="t-text">3/5</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Title -->
+    <div class="section">
+      <div class="section-label"><span class="required">*</span> 商品标题</div>
+      <input class="input-field" placeholder="简洁描述你的闲置物品" maxlength="100" value="iPhone 14 Pro 256GB 暗紫色 95新">
+      <div class="char-count">28/100</div>
+    </div>
+
+    <!-- Description -->
+    <div class="section">
+      <div class="section-label">商品描述（选填）</div>
+      <textarea class="input-field" placeholder="使用时长、成色、是否有配件、出售原因…" maxlength="500" rows="3">22年9月购入，一直贴膜带壳使用，电池健康92%。包含原装充电线+保护壳。换了新机才出的。</textarea>
+      <div class="char-count">42/500</div>
+    </div>
+
+    <!-- Price + Condition -->
+    <div class="section">
+      <div class="section-label"><span class="required">*</span> 出售价格</div>
+      <div class="price-row">
+        <div class="price-input-wrap">
+          <span class="currency">£</span>
+          <input class="input-field" type="number" placeholder="0" value="520">
+        </div>
+        <div class="price-condition">
+          <div class="condition-tag active" onclick="selectCondition(this)">可议价</div>
+          <div class="condition-tag" onclick="selectCondition(this)">一口价</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Category -->
+    <div class="section">
+      <div class="section-label">商品分类</div>
+      <div class="category-grid">
+        <div class="cat-card active" onclick="selectCatCard(this)">
+          <span class="cat-emoji">📱</span>
+          <span class="cat-name">电子产品</span>
+        </div>
+        <div class="cat-card" onclick="selectCatCard(this)">
+          <span class="cat-emoji">📚</span>
+          <span class="cat-name">书籍教材</span>
+        </div>
+        <div class="cat-card" onclick="selectCatCard(this)">
+          <span class="cat-emoji">🏠</span>
+          <span class="cat-name">日用百货</span>
+        </div>
+        <div class="cat-card" onclick="selectCatCard(this)">
+          <span class="cat-emoji">👕</span>
+          <span class="cat-name">服饰鞋包</span>
+        </div>
+        <div class="cat-card" onclick="selectCatCard(this)">
+          <span class="cat-emoji">⚽</span>
+          <span class="cat-name">运动户外</span>
+        </div>
+        <div class="cat-card" onclick="selectCatCard(this)">
+          <span class="cat-emoji">🛋</span>
+          <span class="cat-name">家具家电</span>
+        </div>
+        <div class="cat-card" onclick="selectCatCard(this)">
+          <span class="cat-emoji">💄</span>
+          <span class="cat-name">美妆个护</span>
+        </div>
+        <div class="cat-card" onclick="selectCatCard(this)">
+          <span class="cat-emoji">📦</span>
+          <span class="cat-name">其他</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Location -->
+    <div class="section">
+      <div class="section-label">交易方式</div>
+      <div class="segment-group">
+        <div class="segment-item" onclick="switchTradeMode(this, 'online')">
+          <span class="seg-icon">🌐</span> 线上交易
+        </div>
+        <div class="segment-item active" onclick="switchTradeMode(this, 'offline')">
+          <span class="seg-icon">🤝</span> 线下面交
+        </div>
+      </div>
+      <!-- 线上提示 -->
+      <div class="online-tag" id="onlineTag" style="display: none;">
+        <span class="online-icon">🌐</span>
+        <span>线上交易 — 通过平台沟通后邮寄发货</span>
+      </div>
+      <!-- 线下地址 -->
+      <div id="offlineLocation">
+        <div class="location-field">
+          <span class="loc-icon">📍</span>
+          <input placeholder="输入面交地址" value="Birmingham, University of Birmingham">
+          <span class="loc-action">📌</span>
+        </div>
+        <div class="location-chips">
+          <div class="loc-chip"><span>🗺</span> 地图选点</div>
+          <div class="loc-chip"><span>📌</span> 当前位置</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Submit -->
+    <button class="submit-btn">发布闲置</button>
+
+    <!-- Stripe notice -->
+    <div class="stripe-notice">
+      <span class="notice-icon">💳</span>
+      <span class="notice-text">发布闲置需先设置收款账户，买家付款后将自动到账</span>
+      <span class="notice-btn">设置 ›</span>
+    </div>
+
+    <div style="height: 40px;"></div>
+  </div>
+
+<script>
+function selectCatCard(el) {
+  document.querySelectorAll('.cat-card').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+}
+function selectCondition(el) {
+  el.parentElement.querySelectorAll('.condition-tag').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+}
+function switchTradeMode(el, mode) {
+  el.parentElement.querySelectorAll('.segment-item').forEach(s => s.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('onlineTag').style.display = mode === 'online' ? 'flex' : 'none';
+  document.getElementById('offlineLocation').style.display = mode === 'offline' ? 'block' : 'none';
+}
+</script>
+</body>
+</html>

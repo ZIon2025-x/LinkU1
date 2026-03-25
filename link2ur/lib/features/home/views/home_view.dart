@@ -42,6 +42,7 @@ import '../../../core/widgets/location_picker.dart';
 import '../../../core/router/app_router.dart';
 import '../../../data/models/task.dart';
 import '../../../data/models/task_expert.dart';
+import '../../../data/repositories/question_repository.dart';
 import '../../../data/repositories/task_expert_repository.dart';
 import '../../auth/bloc/auth_bloc.dart';
 import '../../task_expert/bloc/task_expert_bloc.dart';

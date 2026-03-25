@@ -10,6 +10,7 @@ class _ExpertsTab extends StatelessWidget {
     return BlocProvider(
       create: (context) => TaskExpertBloc(
         taskExpertRepository: context.read<TaskExpertRepository>(),
+        questionRepository: context.read<QuestionRepository>(),
       )..add(const TaskExpertLoadRequested()),
       child: const _ExpertsTabContent(),
     );

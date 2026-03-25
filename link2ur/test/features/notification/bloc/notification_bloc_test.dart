@@ -1,4 +1,5 @@
 import 'package:bloc_test/bloc_test.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -8,6 +9,15 @@ import 'package:link2ur/data/models/notification.dart';
 import '../../../helpers/test_helpers.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  // Stub FlutterAppBadger platform channel to avoid MissingPluginException
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMethodCallHandler(
+    const MethodChannel('g123k/flutter_app_badger'),
+    (MethodCall methodCall) async => null,
+  );
+
   late MockNotificationRepository mockRepo;
   late NotificationBloc bloc;
 

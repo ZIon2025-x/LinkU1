@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=390, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>服务发布页 Preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f5f5f5;
+    color: #1a1a1a;
+    max-width: 390px;
+    margin: 0 auto;
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* ── Dark mode ── */
+  body.dark {
+    background: #000;
+    color: #f0f0f0;
+  }
+
+  /* ── Header ── */
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 0.5px solid rgba(0,0,0,0.08);
+  }
+  .dark .header {
+    background: rgba(28,28,30,0.92);
+    border-bottom-color: rgba(255,255,255,0.08);
+  }
+  .header-back {
+    width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 10px;
+    background: rgba(0,0,0,0.04);
+    cursor: pointer;
+    font-size: 18px; color: #333;
+  }
+  .dark .header-back { background: rgba(255,255,255,0.08); color: #eee; }
+  .header-title {
+    flex: 1;
+    text-align: center;
+    font-size: 17px;
+    font-weight: 600;
+    margin: 0 8px;
+  }
+  .header-submit {
+    font-size: 15px;
+    font-weight: 600;
+    color: #007AFF;
+    cursor: pointer;
+    padding: 6px 12px;
+    border-radius: 8px;
+    transition: background 0.15s;
+  }
+  .header-submit:hover { background: rgba(0,122,255,0.08); }
+
+  /* ── Form body ── */
+  .form-body {
+    padding: 16px;
+  }
+
+  /* ── Section ── */
+  .section {
+    margin-bottom: 20px;
+  }
+  .section-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .dark .section-label { color: #f0f0f0; }
+  .section-label .required {
+    color: #F24D4D;
+    font-size: 14px;
+  }
+  .section-hint {
+    font-size: 12px;
+    color: #999;
+    margin-bottom: 8px;
+  }
+
+  /* ── Input ── */
+  .input-field {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 12px;
+    font-size: 15px;
+    background: #fff;
+    color: #1a1a1a;
+    outline: none;
+    transition: border-color 0.2s;
+    font-family: inherit;
+  }
+  .input-field:focus { border-color: #007AFF; }
+  .dark .input-field {
+    background: #1c1c1e;
+    border-color: rgba(255,255,255,0.12);
+    color: #f0f0f0;
+  }
+  .dark .input-field:focus { border-color: #007AFF; }
+  textarea.input-field { resize: none; min-height: 100px; line-height: 1.5; }
+
+  .char-count {
+    text-align: right;
+    font-size: 11px;
+    color: #bbb;
+    margin-top: 4px;
+  }
+
+  /* ── Segment control ── */
+  .segment-group {
+    display: flex;
+    background: #f0f0f0;
+    border-radius: 10px;
+    padding: 3px;
+    gap: 2px;
+  }
+  .dark .segment-group { background: #2c2c2e; }
+  .segment-item {
+    flex: 1;
+    text-align: center;
+    padding: 8px 6px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+  .segment-item.active {
+    background: #fff;
+    color: #007AFF;
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .dark .segment-item { color: #999; }
+  .dark .segment-item.active {
+    background: #3a3a3c;
+    color: #007AFF;
+  }
+  .segment-item .seg-icon { font-size: 15px; }
+
+  /* ── Select field (tap to open sheet) ── */
+  .select-field {
+    display: flex;
+    align-items: center;
+    padding: 12px 14px;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 12px;
+    background: #fff;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .dark .select-field {
+    background: #1c1c1e;
+    border-color: rgba(255,255,255,0.12);
+  }
+  .select-field .select-icon { font-size: 18px; color: #007AFF; margin-right: 10px; }
+  .select-field .select-text { flex: 1; font-size: 15px; color: #999; }
+  .select-field .select-text.has-value { color: #1a1a1a; }
+  .dark .select-field .select-text.has-value { color: #f0f0f0; }
+  .select-field .select-arrow { font-size: 14px; color: #ccc; }
+
+  /* ── Image picker grid ── */
+  .image-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .image-tile {
+    width: 80px; height: 80px;
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+  }
+  .image-tile img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+  }
+  .image-tile .remove-btn {
+    position: absolute;
+    top: -2px; right: -2px;
+    width: 20px; height: 20px;
+    background: #F24D4D;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 12px;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  .image-add {
+    width: 80px; height: 80px;
+    border-radius: 10px;
+    border: 1.5px dashed #ccc;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    background: rgba(0,0,0,0.02);
+  }
+  .dark .image-add { border-color: rgba(255,255,255,0.15); background: rgba(255,255,255,0.04); }
+  .image-add:hover { border-color: #007AFF; background: rgba(0,122,255,0.04); }
+  .image-add .add-icon { font-size: 26px; color: #bbb; }
+  .image-add .add-text { font-size: 10px; color: #bbb; margin-top: 2px; }
+
+  /* ── Location field ── */
+  .location-field {
+    display: flex;
+    align-items: center;
+    padding: 12px 14px;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 12px;
+    background: #fff;
+    gap: 8px;
+  }
+  .dark .location-field { background: #1c1c1e; border-color: rgba(255,255,255,0.12); }
+  .location-field .loc-icon { font-size: 18px; color: #007AFF; }
+  .location-field input {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-size: 15px;
+    color: #1a1a1a;
+    background: transparent;
+    font-family: inherit;
+  }
+  .dark .location-field input { color: #f0f0f0; }
+  .location-field .loc-btn {
+    font-size: 18px;
+    color: #007AFF;
+    cursor: pointer;
+    padding: 4px;
+  }
+
+  .location-chips {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+  .loc-chip {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    background: rgba(0,122,255,0.08);
+    color: #007AFF;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .loc-chip:hover { background: rgba(0,122,255,0.15); }
+  .loc-chip .chip-icon { font-size: 14px; }
+
+  /* ── Price input with prefix ── */
+  .price-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .price-prefix {
+    position: absolute;
+    left: 14px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #007AFF;
+  }
+  .price-wrapper .input-field {
+    padding-left: 32px;
+  }
+  .price-suffix {
+    font-size: 13px;
+    color: #999;
+    margin-left: 8px;
+    white-space: nowrap;
+  }
+
+  /* ── Submit button ── */
+  .submit-btn {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #007AFF, #409CFF);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+    font-family: inherit;
+    margin-top: 8px;
+  }
+  .submit-btn:hover { opacity: 0.92; }
+  .submit-btn:active { transform: scale(0.98); }
+
+  /* ── Tips box ── */
+  .tips-box {
+    margin-top: 20px;
+    padding: 14px;
+    background: rgba(0,122,255,0.06);
+    border-radius: 12px;
+    border: 1px solid rgba(0,122,255,0.1);
+  }
+  .dark .tips-box { background: rgba(0,122,255,0.1); border-color: rgba(0,122,255,0.2); }
+  .tips-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #007AFF;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .tips-list {
+    list-style: none;
+    padding: 0;
+  }
+  .tips-list li {
+    font-size: 12px;
+    color: #666;
+    padding: 3px 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .dark .tips-list li { color: #aaa; }
+  .tips-list li::before {
+    content: "💡";
+    font-size: 11px;
+    flex-shrink: 0;
+  }
+
+  /* ── Dark mode toggle ── */
+  .mode-toggle {
+    position: fixed;
+    top: 14px;
+    right: 14px;
+    z-index: 200;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(0,0,0,0.06);
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .dark .mode-toggle { background: rgba(255,255,255,0.1); }
+
+  /* ── Bilingual toggle ── */
+  .bilingual-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #999;
+    margin-bottom: 8px;
+    cursor: pointer;
+  }
+  .bilingual-toggle .toggle-dot {
+    width: 36px; height: 20px;
+    border-radius: 10px;
+    background: #e0e0e0;
+    position: relative;
+    transition: background 0.2s;
+  }
+  .bilingual-toggle.on .toggle-dot { background: #007AFF; }
+  .bilingual-toggle .toggle-dot::after {
+    content: "";
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    position: absolute;
+    top: 2px; left: 2px;
+    transition: left 0.2s;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+  }
+  .bilingual-toggle.on .toggle-dot::after { left: 18px; }
+
+  .en-fields { display: none; }
+  .en-fields.show { display: block; }
+
+  /* ── Upload progress ── */
+  .upload-bar {
+    height: 3px;
+    background: #e0e0e0;
+    border-radius: 2px;
+    margin-top: 8px;
+    overflow: hidden;
+    display: none;
+  }
+  .upload-bar.active { display: block; }
+  .upload-bar .bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #007AFF, #409CFF);
+    border-radius: 2px;
+    width: 60%;
+    animation: progress 1.5s ease-in-out infinite;
+  }
+  @keyframes progress {
+    0% { width: 20%; }
+    50% { width: 80%; }
+    100% { width: 20%; }
+  }
+</style>
+</head>
+<body>
+  <button class="mode-toggle" onclick="document.body.classList.toggle('dark')">🌙</button>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-back">‹</div>
+    <div class="header-title">发布服务</div>
+    <div class="header-submit">发布</div>
+  </div>
+
+  <div class="form-body">
+
+    <!-- 服务名称 -->
+    <div class="section">
+      <div class="section-label"><span class="required">*</span> 服务名称</div>
+      <input class="input-field" placeholder="例如：专业PPT设计、留学文书润色…" maxlength="100">
+      <div class="char-count">0/100</div>
+    </div>
+
+    <!-- 服务描述 -->
+    <div class="section">
+      <div class="section-label"><span class="required">*</span> 服务描述</div>
+      <textarea class="input-field" placeholder="详细描述你提供的服务内容、流程、优势…" rows="5" maxlength="2000"></textarea>
+      <div class="char-count">0/2000</div>
+    </div>
+
+    <!-- 双语切换 -->
+    <div class="section">
+      <div class="bilingual-toggle" id="bilingualToggle" onclick="toggleBilingual()">
+        <div class="toggle-dot"></div>
+        <span>添加英文版本（可选）</span>
+      </div>
+      <div class="en-fields" id="enFields">
+        <div style="margin-bottom: 12px;">
+          <div class="section-hint">Service Name (English)</div>
+          <input class="input-field" placeholder="e.g. Professional PPT Design">
+        </div>
+        <div>
+          <div class="section-hint">Description (English)</div>
+          <textarea class="input-field" placeholder="Describe your service in English…" rows="3"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- 服务分类 -->
+    <div class="section">
+      <div class="section-label"><span class="required">*</span> 服务分类</div>
+      <div class="select-field" onclick="this.querySelector('.select-text').classList.add('has-value'); this.querySelector('.select-text').textContent='设计创意'">
+        <span class="select-icon">📂</span>
+        <span class="select-text">选择分类</span>
+        <span class="select-arrow">›</span>
+      </div>
+    </div>
+
+    <!-- 定价方式 -->
+    <div class="section">
+      <div class="section-label"><span class="required">*</span> 定价方式</div>
+      <div class="segment-group">
+        <div class="segment-item active" onclick="selectSegment(this, 'pricing')">
+          <span class="seg-icon">💰</span> 固定价
+        </div>
+        <div class="segment-item" onclick="selectSegment(this, 'pricing')">
+          <span class="seg-icon">⏱</span> 按时计费
+        </div>
+        <div class="segment-item" onclick="selectSegment(this, 'pricing')">
+          <span class="seg-icon">🤝</span> 面议
+        </div>
+      </div>
+    </div>
+
+    <!-- 价格 -->
+    <div class="section" id="priceSection">
+      <div class="section-label">服务价格</div>
+      <div class="price-wrapper">
+        <span class="price-prefix">£</span>
+        <input class="input-field" type="number" placeholder="0.00" step="0.01">
+      </div>
+    </div>
+
+    <!-- 服务方式 -->
+    <div class="section">
+      <div class="section-label">服务方式</div>
+      <div class="segment-group">
+        <div class="segment-item active" onclick="selectSegment(this, 'location')">
+          <span class="seg-icon">🌐</span> 线上
+        </div>
+        <div class="segment-item" onclick="selectSegment(this, 'location'); document.getElementById('locationSection').style.display='block'">
+          <span class="seg-icon">📍</span> 线下
+        </div>
+        <div class="segment-item" onclick="selectSegment(this, 'location'); document.getElementById('locationSection').style.display='block'">
+          <span class="seg-icon">🔄</span> 均可
+        </div>
+      </div>
+    </div>
+
+    <!-- 位置（线下时显示） -->
+    <div class="section" id="locationSection" style="display: none;">
+      <div class="section-label">服务地址</div>
+      <div class="location-field">
+        <span class="loc-icon">📍</span>
+        <input placeholder="输入地址或选择位置">
+        <span class="loc-btn" title="获取当前位置">📌</span>
+      </div>
+      <div class="location-chips">
+        <div class="loc-chip"><span class="chip-icon">🗺</span> 地图选点</div>
+        <div class="loc-chip"><span class="chip-icon">📌</span> 当前位置</div>
+      </div>
+    </div>
+
+    <!-- 服务图片 -->
+    <div class="section">
+      <div class="section-label">服务展示图</div>
+      <div class="section-hint">上传作品或服务相关图片，最多6张</div>
+      <div class="image-grid">
+        <div class="image-tile">
+          <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Crect fill='%23e8d5f5' width='160' height='160'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' font-size='40'%3E🎨%3C/text%3E%3C/svg%3E">
+          <div class="remove-btn">✕</div>
+        </div>
+        <div class="image-tile">
+          <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Crect fill='%23d5e8f5' width='160' height='160'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' font-size='40'%3E📐%3C/text%3E%3C/svg%3E">
+          <div class="remove-btn">✕</div>
+        </div>
+        <div class="image-add">
+          <span class="add-icon">+</span>
+          <span class="add-text">2/6</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 发布按钮 -->
+    <button class="submit-btn">发布服务</button>
+
+    <!-- Tips -->
+    <div class="tips-box">
+      <div class="tips-title">💡 服务发布小贴士</div>
+      <ul class="tips-list">
+        <li>清晰的标题和描述能吸引更多客户</li>
+        <li>上传高质量的作品展示图效果更好</li>
+        <li>合理定价，可参考平台同类服务</li>
+        <li>添加英文版本可覆盖更多用户</li>
+      </ul>
+    </div>
+
+    <div style="height: 40px;"></div>
+  </div>
+
+<script>
+function selectSegment(el, group) {
+  el.parentElement.querySelectorAll('.segment-item').forEach(s => s.classList.remove('active'));
+  el.classList.add('active');
+}
+function toggleBilingual() {
+  const toggle = document.getElementById('bilingualToggle');
+  const fields = document.getElementById('enFields');
+  toggle.classList.toggle('on');
+  fields.classList.toggle('show');
+}
+</script>
+</body>
+</html>
