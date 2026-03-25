@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
 
 // ==================== 1. SectionCard ====================
@@ -142,11 +143,13 @@ class PriceRow extends StatelessWidget {
     required this.controller,
     required this.pricingType,
     required this.onPricingTypeChanged,
+    this.currency = 'GBP',
   });
 
   final TextEditingController controller;
   final String pricingType; // 'fixed', 'hourly', 'negotiable'
   final ValueChanged<String> onPricingTypeChanged;
+  final String currency;
 
   @override
   Widget build(BuildContext context) {
@@ -155,9 +158,9 @@ class PriceRow extends StatelessWidget {
 
     return Row(
       children: [
-        // £ symbol
-        const Text('£',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+        // Currency symbol
+        Text(Helpers.currencySymbolFor(currency),
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
         const SizedBox(width: 10),
         // Price input
         SizedBox(

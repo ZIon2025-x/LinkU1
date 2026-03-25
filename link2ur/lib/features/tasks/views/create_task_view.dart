@@ -587,11 +587,26 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
                     SectionCard(
                       label: context.l10n.createTaskReward,
                       isRequired: true,
-                      child: PriceRow(
-                        controller: _rewardController,
-                        pricingType: _pricingType,
-                        onPricingTypeChanged: (type) =>
-                            setState(() => _pricingType = type),
+                      child: Column(
+                        children: [
+                          SegmentedButton<String>(
+                            segments: const [
+                              ButtonSegment(value: 'GBP', label: Text('£ GBP')),
+                              ButtonSegment(value: 'EUR', label: Text('€ EUR')),
+                            ],
+                            selected: {_selectedCurrency},
+                            onSelectionChanged: (v) =>
+                                setState(() => _selectedCurrency = v.first),
+                          ),
+                          const SizedBox(height: 12),
+                          PriceRow(
+                            controller: _rewardController,
+                            pricingType: _pricingType,
+                            onPricingTypeChanged: (type) =>
+                                setState(() => _pricingType = type),
+                            currency: _selectedCurrency,
+                          ),
+                        ],
                       ),
                     ),
 

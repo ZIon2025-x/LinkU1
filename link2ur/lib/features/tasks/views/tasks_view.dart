@@ -1015,7 +1015,7 @@ class _TaskGridCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            '£',
+            Helpers.currencySymbolFor(task.currency),
             style: AppTypography.caption2.copyWith(
               color: Colors.white,
               fontWeight: FontWeight.bold,

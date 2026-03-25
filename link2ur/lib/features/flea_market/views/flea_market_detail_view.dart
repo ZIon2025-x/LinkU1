@@ -1253,7 +1253,7 @@ class _FleaMarketPurchaseSheetState extends State<_FleaMarketPurchaseSheet> {
                                   .numberWithOptions(decimal: true),
                               decoration: InputDecoration(
                                 labelText: l10n.taskApplicationExpectedAmount,
-                                prefixText: '£ ',
+                                prefixText: '${Helpers.currencySymbolFor(widget.item.currency)} ',
                                 border: OutlineInputBorder(
                                   borderRadius:
                                       BorderRadius.circular(AppRadius.medium),
@@ -1609,9 +1609,9 @@ class _PriceTitleCard extends StatelessWidget {
                     ),
                   )
                 else ...[
-                  const Text(
-                    '£',
-                    style: TextStyle(
+                  Text(
+                    Helpers.currencySymbolFor(item.currency),
+                    style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                       color: AppColors.priceRed,

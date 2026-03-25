@@ -10,6 +10,7 @@ import '../../../core/design/app_radius.dart';
 import '../../../core/utils/adaptive_dialogs.dart';
 import '../../../core/widgets/app_select_sheet.dart';
 import '../../../core/utils/error_localizer.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/cross_platform_image.dart';
@@ -342,7 +343,7 @@ class _EditFleaMarketItemViewContentState
                     controller: _priceController,
                     label: l10n.fleaMarketPrice,
                     hint: '0.00',
-                    prefix: '£',
+                    prefix: Helpers.currencySymbolFor(widget.item.currency),
                     keyboardType: TextInputType.number,
                     isRequired: true,
                   ),

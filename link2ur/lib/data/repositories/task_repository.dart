@@ -279,9 +279,6 @@ class TaskRepository {
     );
 
     if (!response.isSuccess) {
-      if (response.statusCode == 428) {
-        throw const TaskException('stripe_setup_required');
-      }
       throw TaskException(response.message ?? '申请任务失败');
     }
 

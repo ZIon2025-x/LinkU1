@@ -8,6 +8,7 @@ import 'package:flutter_stripe/flutter_stripe.dart' show Stripe, StripeException
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/utils/haptic_feedback.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/logger.dart';
@@ -613,7 +614,7 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
     final l10n = context.l10n;
     final amountDisplay = _effectiveAmountDisplay ?? widget.paymentData.amountDisplay;
     final amountText = amountDisplay != null && amountDisplay.isNotEmpty
-        ? '£$amountDisplay'
+        ? '${Helpers.currencySymbolFor(widget.paymentData.currency ?? 'GBP')}$amountDisplay'
         : '';
     const showCouponSection = true; // taskId is always non-null (int)
     final showCountdown = widget.paymentData.paymentExpiresAt != null &&

@@ -140,21 +140,6 @@ class _TaskDetailContent extends StatelessWidget {
           return;
         }
 
-        if (state.actionMessage == 'stripe_setup_required') {
-          AdaptiveDialogs.showConfirmDialog(
-            context: context,
-            title: context.l10n.stripeSetupRequired,
-            contentWidget: const Icon(Icons.account_balance_wallet_outlined,
-                size: 40, color: AppColors.primary),
-            cancelText: context.l10n.commonCancel,
-            confirmText: context.l10n.stripeSetupAction,
-            onConfirm: () {
-              context.push(AppRoutes.stripeConnectOnboarding);
-            },
-          );
-          return;
-        }
-
         if (state.actionMessage != null) {
           final l10n = context.l10n;
           final message = switch (state.actionMessage) {
@@ -468,6 +453,7 @@ class _TaskDetailContent extends StatelessWidget {
         child: RefundRequestSheet(
           taskId: task.id,
           taskAmount: task.displayReward,
+          currency: task.currency,
         ),
       ),
     );
@@ -842,7 +828,7 @@ class _TaskDetailContent extends StatelessWidget {
                 const SizedBox(height: AppSpacing.xs),
                 Text(
                   '${context.l10n.taskDetailPosterCounterOfferPrice}: '
-                  '£${task.counterOfferPrice!.toStringAsFixed(2)}',
+                  '${Helpers.currencySymbolFor(task.currency)}${task.counterOfferPrice!.toStringAsFixed(2)}',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -1211,6 +1197,7 @@ class _TaskDetailContent extends StatelessWidget {
     showDialog<void>(
       context: context,
       builder: (dialogContext) => _CounterOfferDialog(
+        currency: task.currency,
         onSubmit: (price) {
           bloc.add(
                 TaskDetailSubmitCounterOfferRequested(price: price),
@@ -1239,9 +1226,11 @@ class _TaskDetailContent extends StatelessWidget {
 class _CounterOfferDialog extends StatefulWidget {
   const _CounterOfferDialog({
     required this.onSubmit,
+    this.currency = 'GBP',
   });
 
   final ValueChanged<double> onSubmit;
+  final String currency;
 
   @override
   State<_CounterOfferDialog> createState() => _CounterOfferDialogState();
@@ -1278,7 +1267,7 @@ class _CounterOfferDialogState extends State<_CounterOfferDialog> {
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
         decoration: InputDecoration(
           hintText: context.l10n.taskDetailCounterOfferHint,
-          prefixText: '£ ',
+          prefixText: '${Helpers.currencySymbolFor(widget.currency)} ',
         ),
         autofocus: true,
         onSubmitted: (_) => _submit(),
@@ -1758,7 +1747,7 @@ class _TaskHeaderCard extends StatelessWidget {
       textBaseline: TextBaseline.alphabetic,
       children: [
         Text(
-          '£',
+          Helpers.currencySymbolFor(task.currency),
           style: AppTypography.title3.copyWith(
             color: goldColor,
             fontWeight: FontWeight.bold,
@@ -1797,7 +1786,7 @@ class _TaskHeaderCard extends StatelessWidget {
         ),
         const SizedBox(width: AppSpacing.lg),
         Text(
-          '${l10n.taskDetailServiceFeeAmount} £$amountStr',
+          '${l10n.taskDetailServiceFeeAmount} ${Helpers.currencySymbolFor(task.currency)}$amountStr',
           style: AppTypography.caption.copyWith(color: secondaryColor),
         ),
       ],

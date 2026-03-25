@@ -9,6 +9,7 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/utils/adaptive_dialogs.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/widgets/app_select_sheet.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/cross_platform_image.dart';
@@ -52,6 +53,7 @@ class _CreateFleaMarketItemContentState
   double? _latitude;
   double? _longitude;
   String? _selectedCategory;
+  String _selectedCurrency = 'GBP';
   final List<XFile> _selectedImages = [];
   final _imagePicker = ImagePicker();
   bool _isUploadingImages = false;
@@ -187,6 +189,7 @@ class _CreateFleaMarketItemContentState
           ? null
           : _descriptionController.text.trim(),
       price: price,
+      currency: _selectedCurrency,
       category: _selectedCategory,
       location: _location,
       latitude: _latitude,
@@ -203,20 +206,6 @@ class _CreateFleaMarketItemContentState
     return BlocListener<FleaMarketBloc, FleaMarketState>(
       listenWhen: (prev, curr) => prev.actionMessage != curr.actionMessage,
       listener: (context, state) {
-        if (state.actionMessage == 'stripe_setup_required') {
-          AdaptiveDialogs.showConfirmDialog(
-            context: context,
-            title: context.l10n.stripeSetupRequired,
-            contentWidget: const Icon(Icons.account_balance_wallet_outlined,
-                size: 40, color: AppColors.primary),
-            cancelText: context.l10n.commonCancel,
-            confirmText: context.l10n.stripeSetupAction,
-            onConfirm: () {
-              context.push(AppRoutes.stripeConnectOnboarding);
-            },
-          );
-          return;
-        }
         if (state.actionMessage != null) {
           final l10n = context.l10n;
           final isSuccess = state.actionMessage == 'item_published';
@@ -315,6 +304,18 @@ class _CreateFleaMarketItemContentState
                 ),
                 AppSpacing.vMd,
 
+                // 币种选择
+                SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(value: 'GBP', label: Text('£ GBP')),
+                    ButtonSegment(value: 'EUR', label: Text('€ EUR')),
+                  ],
+                  selected: {_selectedCurrency},
+                  onSelectionChanged: (v) =>
+                      setState(() => _selectedCurrency = v.first),
+                ),
+                AppSpacing.vMd,
+
                 // 价格
                 TextFormField(
                   controller: _priceController,
@@ -322,7 +323,7 @@ class _CreateFleaMarketItemContentState
                     labelText: context.l10n.fleaMarketPrice,
                     hintText: '0.00',
                     prefixIcon: const Icon(Icons.attach_money),
-                    prefixText: '£ ',
+                    prefixText: '${Helpers.currencySymbolFor(_selectedCurrency)} ',
                     border: OutlineInputBorder(
                       borderRadius: AppRadius.allMedium,
                     ),

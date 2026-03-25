@@ -1771,8 +1771,7 @@ class _ApplyTaskSheetState extends State<ApplyTaskSheet> {
               cur.actionMessage != prev.actionMessage),
       listener: (_, state) {
         if (!mounted) return;
-        if (state.actionMessage == 'application_failed' ||
-            state.actionMessage == 'stripe_setup_required') {
+        if (state.actionMessage == 'application_failed') {
           setState(() => _isSubmitting = false);
         }
       },
@@ -1896,7 +1895,7 @@ class _ApplyTaskSheetState extends State<ApplyTaskSheet> {
                                   ? l10n.taskApplyQuoteAmountHint
                                   : null,
                               prefixText:
-                                  '£ ',
+                                  '${Helpers.currencySymbolFor(widget.task.currency)} ',
                               border: OutlineInputBorder(
                                 borderRadius:
                                     BorderRadius.circular(AppRadius.medium),
@@ -1966,10 +1965,12 @@ class RefundRequestSheet extends StatefulWidget {
     super.key,
     required this.taskId,
     required this.taskAmount,
+    this.currency = 'GBP',
   });
 
   final int taskId;
-  final double taskAmount; // 任务金额（英镑）
+  final double taskAmount;
+  final String currency;
 
   @override
   State<RefundRequestSheet> createState() => _RefundRequestSheetState();
@@ -2269,7 +2270,7 @@ class _RefundRequestSheetState extends State<RefundRequestSheet> {
                       onChanged: _onAmountChanged,
                       decoration: InputDecoration(
                         labelText: context.l10n.refundAmountPound,
-                        prefixText: '£ ',
+                        prefixText: '${Helpers.currencySymbolFor(widget.currency)} ',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -3076,8 +3077,7 @@ class _QuoteDesignatedPriceSheetState
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final currencySymbol =
-        (widget.currency ?? 'GBP') == 'GBP' ? '£' : (widget.currency ?? '');
+    final currencySymbol = Helpers.currencySymbolFor(widget.currency ?? 'GBP');
 
     return BlocListener<TaskDetailBloc, TaskDetailState>(
       listenWhen: (prev, cur) =>

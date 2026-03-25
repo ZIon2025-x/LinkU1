@@ -10,6 +10,7 @@ import '../../../data/models/task_question.dart';
 import '../../../data/repositories/task_repository.dart';
 import '../../../data/repositories/notification_repository.dart';
 import '../../../data/repositories/question_repository.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/utils/logger.dart';
 
 // ==================== Events ====================
@@ -130,6 +131,7 @@ class AcceptPaymentData extends Equatable {
     this.applicantName,
     this.taskSource,
     this.fleaMarketItemId,
+    this.currency = 'GBP',
   });
 
   final int taskId;
@@ -148,6 +150,8 @@ class AcceptPaymentData extends Equatable {
   final String? taskSource;
   /// 跳蚤市场商品 ID（如 S0123），用于 webhook 更新商品状态
   final String? fleaMarketItemId;
+  /// 货币代码，用于前端格式化金额
+  final String currency;
 
   @override
   List<Object?> get props => [
@@ -162,6 +166,7 @@ class AcceptPaymentData extends Equatable {
         applicantName,
         taskSource,
         fleaMarketItemId,
+        currency,
       ];
 }
 
@@ -749,13 +754,10 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       ));
     } catch (e) {
       AppLogger.error('Failed to apply task', e);
-      final isStripeSetup = e is TaskException &&
-          e.message == 'stripe_setup_required';
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage:
-            isStripeSetup ? 'stripe_setup_required' : 'application_failed',
-        errorMessage: isStripeSetup ? null : 'task_apply_failed',
+        actionMessage: 'application_failed',
+        errorMessage: 'task_apply_failed',
       ));
     }
   }
@@ -838,6 +840,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
             applicationId: event.applicationId,
             taskTitle: state.task?.title,
             applicantName: approvedApp?.applicantName,
+            currency: state.task?.currency ?? 'GBP',
           ),
         ));
       } else {
@@ -1424,13 +1427,14 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
           ephemeralKeySecret:
               (result['ephemeral_key_secret'] as String?) ?? '',
           amountDisplay: result['amount'] != null && result['amount'] is num
-              ? '£${((result['amount'] as num) / 100).toStringAsFixed(2)}'
+              ? '${Helpers.currencySymbolFor(state.task?.currency ?? 'GBP')}${((result['amount'] as num) / 100).toStringAsFixed(2)}'
               : result['amount_display'] as String?,
           taskId: _taskId!,
           applicationId: event.applicationId,
           taskTitle: state.task?.title,
           applicantName:
               approvedApp?.applicantName ?? result['applicant_name'] as String?,
+          currency: state.task?.currency ?? 'GBP',
         );
         emit(state.copyWith(
           isSubmitting: false,
