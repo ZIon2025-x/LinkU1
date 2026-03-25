@@ -36,6 +36,7 @@ class WalletState extends Equatable {
     this.status = WalletStatus.initial,
     this.pointsAccount,
     this.connectBalance,
+    this.walletBalance,
     this.transactions = const [],
     this.coupons = const [],
     this.stripeConnectStatus,
@@ -47,6 +48,7 @@ class WalletState extends Equatable {
   final WalletStatus status;
   final PointsAccount? pointsAccount;
   final StripeConnectBalance? connectBalance;
+  final WalletBalance? walletBalance;
   final List<PointsTransaction> transactions;
   final List<UserCoupon> coupons;
   final StripeConnectStatus? stripeConnectStatus;
@@ -60,6 +62,7 @@ class WalletState extends Equatable {
     WalletStatus? status,
     PointsAccount? pointsAccount,
     StripeConnectBalance? connectBalance,
+    WalletBalance? walletBalance,
     List<PointsTransaction>? transactions,
     List<UserCoupon>? coupons,
     StripeConnectStatus? stripeConnectStatus,
@@ -72,6 +75,7 @@ class WalletState extends Equatable {
       status: status ?? this.status,
       pointsAccount: pointsAccount ?? this.pointsAccount,
       connectBalance: connectBalance ?? this.connectBalance,
+      walletBalance: walletBalance ?? this.walletBalance,
       transactions: transactions ?? this.transactions,
       coupons: coupons ?? this.coupons,
       stripeConnectStatus: stripeConnectStatus ?? this.stripeConnectStatus,
@@ -86,6 +90,7 @@ class WalletState extends Equatable {
         status,
         pointsAccount,
         connectBalance,
+        walletBalance,
         transactions,
         coupons,
         stripeConnectStatus,
@@ -133,6 +138,14 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
         // 无 Connect 账户或 API 错误，balance 保持 null → UI 显示 £0.00
       }
 
+      // 加载本地钱包余额（API 错误时静默失败，UI 显示 0）
+      WalletBalance? walletBalance;
+      try {
+        walletBalance = await _paymentRepo.getWalletBalance();
+      } catch (_) {
+        // 无钱包账户或 API 错误，walletBalance 保持 null → UI 显示 0
+      }
+
       emit(state.copyWith(
         status: WalletStatus.loaded,
         pointsAccount: results[0] as PointsAccount,
@@ -140,6 +153,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
         coupons: results[2] as List<UserCoupon>,
         stripeConnectStatus: results[3] as StripeConnectStatus,
         connectBalance: balance,
+        walletBalance: walletBalance,
         transactionPage: 1,
         hasMoreTransactions:
             (results[1] as List<PointsTransaction>).length >= 20,
