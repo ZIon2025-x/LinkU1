@@ -497,6 +497,9 @@ class FleaMarketRepository {
     double? price,
     List<String>? images,
     String? category,
+    double? deposit,
+    double? rentalPrice,
+    String? rentalUnit,
   }) async {
     final data = <String, dynamic>{};
     if (title != null) data['title'] = title;
@@ -504,6 +507,9 @@ class FleaMarketRepository {
     if (price != null) data['price'] = price;
     if (images != null) data['images'] = images;
     if (category != null) data['category'] = category;
+    if (deposit != null) data['deposit'] = deposit;
+    if (rentalPrice != null) data['rental_price'] = rentalPrice;
+    if (rentalUnit != null) data['rental_unit'] = rentalUnit;
 
     final response = await _apiService.put<Map<String, dynamic>>(
       ApiEndpoints.fleaMarketItemById(id),

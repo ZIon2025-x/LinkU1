@@ -47,12 +47,16 @@ class _CreateFleaMarketItemContentState
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _priceController = TextEditingController();
+  final _depositController = TextEditingController();
+  final _rentalPriceController = TextEditingController();
 
   String? _location;
   double? _latitude;
   double? _longitude;
   String? _selectedCategory;
   String _selectedCurrency = 'GBP';
+  String _listingType = 'sale';
+  String _rentalUnit = 'day';
   final List<XFile> _selectedImages = [];
   final _imagePicker = ImagePicker();
   bool _isUploadingImages = false;
@@ -83,6 +87,8 @@ class _CreateFleaMarketItemContentState
     _titleController.dispose();
     _descriptionController.dispose();
     _priceController.dispose();
+    _depositController.dispose();
+    _rentalPriceController.dispose();
     super.dispose();
   }
 
@@ -140,15 +146,34 @@ class _CreateFleaMarketItemContentState
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final price = double.tryParse(_priceController.text.trim());
-    if (price == null || price < 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(context.l10n.fleaMarketInvalidPrice),
-          backgroundColor: AppColors.error,
-        ),
-      );
-      return;
+    final isRental = _listingType == 'rental';
+
+    // Parse price based on listing type
+    final double price;
+    if (isRental) {
+      final rentalPrice = double.tryParse(_rentalPriceController.text.trim());
+      if (rentalPrice == null || rentalPrice <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.l10n.fleaMarketInvalidPrice),
+            backgroundColor: AppColors.error,
+          ),
+        );
+        return;
+      }
+      price = rentalPrice;
+    } else {
+      final salePrice = double.tryParse(_priceController.text.trim());
+      if (salePrice == null || salePrice < 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.l10n.fleaMarketInvalidPrice),
+            backgroundColor: AppColors.error,
+          ),
+        );
+        return;
+      }
+      price = salePrice;
     }
 
     final repo = context.read<FleaMarketRepository>();
@@ -194,6 +219,10 @@ class _CreateFleaMarketItemContentState
       latitude: _latitude,
       longitude: _longitude,
       images: imageUrls,
+      listingType: _listingType,
+      deposit: isRental ? double.parse(_depositController.text.trim()) : null,
+      rentalPrice: isRental ? double.parse(_rentalPriceController.text.trim()) : null,
+      rentalUnit: isRental ? _rentalUnit : null,
     );
 
     if (!mounted) return;
@@ -303,6 +332,17 @@ class _CreateFleaMarketItemContentState
                 ),
                 AppSpacing.vMd,
 
+                // 出售/出租切换
+                SegmentedButton<String>(
+                  segments: [
+                    ButtonSegment(value: 'sale', label: Text(context.l10n.fleaMarketListingTypeSale)),
+                    ButtonSegment(value: 'rental', label: Text(context.l10n.fleaMarketListingTypeRental)),
+                  ],
+                  selected: {_listingType},
+                  onSelectionChanged: (s) => setState(() => _listingType = s.first),
+                ),
+                AppSpacing.vMd,
+
                 // 币种选择
                 SegmentedButton<String>(
                   segments: const [
@@ -315,31 +355,106 @@ class _CreateFleaMarketItemContentState
                 ),
                 AppSpacing.vMd,
 
-                // 价格
-                TextFormField(
-                  controller: _priceController,
-                  decoration: InputDecoration(
-                    labelText: context.l10n.fleaMarketPrice,
-                    hintText: '0.00',
-                    prefixIcon: const Icon(Icons.attach_money),
-                    prefixText: '${Helpers.currencySymbolFor(_selectedCurrency)} ',
-                    border: OutlineInputBorder(
-                      borderRadius: AppRadius.allMedium,
+                // 价格 (sale) / 押金+租金+租期单位 (rental)
+                if (_listingType == 'sale')
+                  TextFormField(
+                    controller: _priceController,
+                    decoration: InputDecoration(
+                      labelText: context.l10n.fleaMarketPrice,
+                      hintText: '0.00',
+                      prefixIcon: const Icon(Icons.attach_money),
+                      prefixText: '${Helpers.currencySymbolFor(_selectedCurrency)} ',
+                      border: OutlineInputBorder(
+                        borderRadius: AppRadius.allMedium,
+                      ),
                     ),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    validator: (value) {
+                      if (_listingType != 'sale') return null;
+                      if (value == null || value.trim().isEmpty) {
+                        return context.l10n.fleaMarketPriceRequired;
+                      }
+                      final price = double.tryParse(value.trim());
+                      if (price == null || price < 0) {
+                        return context.l10n.fleaMarketInvalidPrice;
+                      }
+                      return null;
+                    },
+                  )
+                else ...[
+                  // 押金
+                  TextFormField(
+                    controller: _depositController,
+                    decoration: InputDecoration(
+                      labelText: context.l10n.fleaMarketDeposit,
+                      hintText: '0.00',
+                      prefixIcon: const Icon(Icons.account_balance_wallet_outlined),
+                      prefixText: '${Helpers.currencySymbolFor(_selectedCurrency)} ',
+                      border: OutlineInputBorder(
+                        borderRadius: AppRadius.allMedium,
+                      ),
+                    ),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    validator: (value) {
+                      if (_listingType != 'rental') return null;
+                      if (value == null || value.trim().isEmpty) {
+                        return context.l10n.fleaMarketPriceRequired;
+                      }
+                      final deposit = double.tryParse(value.trim());
+                      if (deposit == null || deposit <= 0) {
+                        return context.l10n.fleaMarketInvalidPrice;
+                      }
+                      return null;
+                    },
                   ),
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return context.l10n.fleaMarketPriceRequired;
-                    }
-                    final price = double.tryParse(value.trim());
-                    if (price == null || price < 0) {
-                      return context.l10n.fleaMarketInvalidPrice;
-                    }
-                    return null;
-                  },
-                ),
+                  AppSpacing.vMd,
+                  // 租金
+                  TextFormField(
+                    controller: _rentalPriceController,
+                    decoration: InputDecoration(
+                      labelText: context.l10n.fleaMarketRentalPrice,
+                      hintText: '0.00',
+                      prefixIcon: const Icon(Icons.payments_outlined),
+                      prefixText: '${Helpers.currencySymbolFor(_selectedCurrency)} ',
+                      border: OutlineInputBorder(
+                        borderRadius: AppRadius.allMedium,
+                      ),
+                    ),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    validator: (value) {
+                      if (_listingType != 'rental') return null;
+                      if (value == null || value.trim().isEmpty) {
+                        return context.l10n.fleaMarketPriceRequired;
+                      }
+                      final rentalPrice = double.tryParse(value.trim());
+                      if (rentalPrice == null || rentalPrice <= 0) {
+                        return context.l10n.fleaMarketInvalidPrice;
+                      }
+                      return null;
+                    },
+                  ),
+                  AppSpacing.vMd,
+                  // 租期单位
+                  DropdownButtonFormField<String>(
+                    value: _rentalUnit,
+                    decoration: InputDecoration(
+                      labelText: context.l10n.fleaMarketRentalUnit,
+                      prefixIcon: const Icon(Icons.schedule),
+                      border: OutlineInputBorder(
+                        borderRadius: AppRadius.allMedium,
+                      ),
+                    ),
+                    items: [
+                      DropdownMenuItem(value: 'day', child: Text(context.l10n.fleaMarketRentalUnitDay)),
+                      DropdownMenuItem(value: 'week', child: Text(context.l10n.fleaMarketRentalUnitWeek)),
+                      DropdownMenuItem(value: 'month', child: Text(context.l10n.fleaMarketRentalUnitMonth)),
+                    ],
+                    onChanged: (v) => setState(() => _rentalUnit = v ?? 'day'),
+                  ),
+                ],
                 AppSpacing.vMd,
 
                 // 分类

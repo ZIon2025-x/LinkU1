@@ -239,6 +239,9 @@ class FleaMarketUploadImagesAndUpdateItem extends FleaMarketEvent {
     required this.category,
     required this.existingImageUrls,
     required this.newImagesToUpload,
+    this.deposit,
+    this.rentalPrice,
+    this.rentalUnit,
   });
 
   final String itemId;
@@ -249,10 +252,13 @@ class FleaMarketUploadImagesAndUpdateItem extends FleaMarketEvent {
   final List<String> existingImageUrls;
   /// (bytes, filename) 列表
   final List<(Uint8List, String)> newImagesToUpload;
+  final double? deposit;
+  final double? rentalPrice;
+  final String? rentalUnit;
 
   @override
   List<Object?> get props =>
-      [itemId, title, description, price, category, existingImageUrls];
+      [itemId, title, description, price, category, existingImageUrls, deposit, rentalPrice, rentalUnit];
 }
 
 class FleaMarketDeleteItem extends FleaMarketEvent {
@@ -851,6 +857,9 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
         price: event.price,
         category: event.category,
         images: allImages,
+        deposit: event.deposit,
+        rentalPrice: event.rentalPrice,
+        rentalUnit: event.rentalUnit,
       );
 
       final updatedItems = state.items.map((item) {
