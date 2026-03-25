@@ -59,6 +59,7 @@ class _WalletContent extends StatelessWidget {
         buildWhen: (previous, current) =>
             previous.isLoading != current.isLoading ||
             previous.pointsAccount != current.pointsAccount ||
+            previous.walletBalance != current.walletBalance ||
             previous.connectBalance != current.connectBalance ||
             previous.stripeConnectStatus != current.stripeConnectStatus ||
             previous.errorMessage != current.errorMessage ||
@@ -98,6 +99,7 @@ class _WalletContent extends StatelessWidget {
                                 _PointsCard(
                                   account: state.pointsAccount!,
                                   connectBalance: state.connectBalance,
+                                  walletBalance: state.walletBalance,
                                 ),
                               AppSpacing.vLg,
                               // 快捷操作卡片 - 与iOS对齐
@@ -130,9 +132,10 @@ class _WalletContent extends StatelessWidget {
 // ==================== 子组件 ====================
 
 class _PointsCard extends StatefulWidget {
-  const _PointsCard({required this.account, this.connectBalance});
+  const _PointsCard({required this.account, this.connectBalance, this.walletBalance});
   final PointsAccount account;
   final StripeConnectBalance? connectBalance;
+  final WalletBalance? walletBalance;
 
   @override
   State<_PointsCard> createState() => _PointsCardState();
@@ -197,9 +200,11 @@ class _PointsCardState extends State<_PointsCard> {
               ),
             ),
             AppSpacing.vSm,
-            // 未提现收入 — Connect available 余额（£）
+            // 未提现收入 — 本地钱包余额（£），优先使用 walletBalance，回退到 connectBalance
             Text(
-              Helpers.formatPrice(widget.connectBalance?.available ?? 0),
+              Helpers.formatPrice(
+                widget.walletBalance?.balance ?? widget.connectBalance?.available ?? 0,
+              ),
               style: const TextStyle(
                 fontSize: 48,
                 fontWeight: FontWeight.bold,
@@ -209,13 +214,15 @@ class _PointsCardState extends State<_PointsCard> {
               ),
             ),
             AppSpacing.vLg,
-            // 累计收入 / 累计消费 — 实际支付金额（英镑），来自 PaymentTransfer / PaymentHistory
+            // 累计收入 / 累计消费 — 优先使用 walletBalance 统计，回退到 pointsAccount
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _BalanceStatItem(
                   label: context.l10n.walletTotalEarned,
-                  value: Helpers.formatPrice(widget.account.totalPaymentIncome),
+                  value: Helpers.formatPrice(
+                    widget.walletBalance?.totalEarned ?? widget.account.totalPaymentIncome,
+                  ),
                 ),
                 Container(
                   width: 1,
@@ -224,7 +231,9 @@ class _PointsCardState extends State<_PointsCard> {
                 ),
                 _BalanceStatItem(
                   label: context.l10n.walletTotalSpent,
-                  value: Helpers.formatPrice(widget.account.totalPaymentSpent),
+                  value: Helpers.formatPrice(
+                    widget.walletBalance?.totalSpent ?? widget.account.totalPaymentSpent,
+                  ),
                 ),
               ],
             ),
