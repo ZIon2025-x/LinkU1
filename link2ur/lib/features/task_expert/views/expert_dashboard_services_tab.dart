@@ -8,6 +8,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/utils/adaptive_dialogs.dart';
+import '../../../core/widgets/app_select_sheet.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/sheet_adaptation.dart';
@@ -538,23 +539,16 @@ class _ServiceFormSheetState extends State<_ServiceFormSheet> {
               const SizedBox(height: AppSpacing.md),
 
               // Category
-              DropdownButtonFormField<String>(
-                initialValue: _selectedCategory,
-                decoration: InputDecoration(
-                  labelText: context.l10n.serviceCategory,
-                  hintText: context.l10n.serviceCategoryHint,
-                  border: const OutlineInputBorder(),
-                ),
-                items: ExpertConstants.serviceCategoryKeys
-                    .map((key) => DropdownMenuItem(
+              AppSelectField<String>(
+                value: _selectedCategory,
+                hint: context.l10n.serviceCategoryHint,
+                label: context.l10n.serviceCategory,
+                sheetTitle: context.l10n.serviceCategory,
+                options: ExpertConstants.serviceCategoryKeys
+                    .map((key) => SelectOption(
                           value: key,
-                          child: Row(
-                            children: [
-                              Icon(ServiceCategoryHelper.getIcon(key), size: 18),
-                              const SizedBox(width: 8),
-                              Text(ServiceCategoryHelper.getLocalizedLabel(key, context.l10n)),
-                            ],
-                          ),
+                          label: ServiceCategoryHelper.getLocalizedLabel(key, context.l10n),
+                          icon: ServiceCategoryHelper.getIcon(key),
                         ))
                     .toList(),
                 onChanged: (value) {
@@ -600,17 +594,14 @@ class _ServiceFormSheetState extends State<_ServiceFormSheet> {
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     flex: 2,
-                    child: DropdownButtonFormField<String>(
-                      initialValue: _selectedCurrency,
-                      decoration: InputDecoration(
-                        labelText: context.l10n.expertServiceCurrency,
-                        border: const OutlineInputBorder(),
-                      ),
-                      items: ExpertConstants.serviceCurrencies
-                          .map((c) => DropdownMenuItem(
-                                value: c,
-                                child: Text(c),
-                              ))
+                    child: AppSelectField<String>(
+                      value: _selectedCurrency,
+                      hint: context.l10n.expertServiceCurrency,
+                      sheetTitle: context.l10n.expertServiceCurrency,
+                      searchThreshold: 99,
+                      clearable: false,
+                      options: ExpertConstants.serviceCurrencies
+                          .map((c) => SelectOption(value: c, label: c))
                           .toList(),
                       onChanged: (value) {
                         if (value != null) {

@@ -8,6 +8,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/adaptive_dialogs.dart';
+import '../../../core/widgets/app_select_sheet.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/async_image_view.dart';
@@ -583,11 +584,11 @@ class _EditFleaMarketItemViewContentState
     final categories = _getCategories(context);
     final keys = categories.map((e) => e.$1).toList();
     final value = _selectedCategory.isEmpty ? null : _selectedCategory;
-    final menuItems = categories
-        .map((e) => DropdownMenuItem(value: e.$1, child: Text(e.$2)))
+    final options = categories
+        .map((e) => SelectOption(value: e.$1, label: e.$2))
         .toList();
     if (value != null && !keys.contains(value)) {
-      menuItems.add(DropdownMenuItem(value: value, child: Text(value)));
+      options.add(SelectOption(value: value, label: value));
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -596,16 +597,12 @@ class _EditFleaMarketItemViewContentState
             style:
                 const TextStyle(fontSize: 14, color: AppColors.textSecondary)),
         const SizedBox(height: 6),
-        DropdownButtonFormField<String>(
-          initialValue: value,
-          decoration: InputDecoration(
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.medium),
-            ),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          ),
-          items: menuItems,
+        AppSelectField<String>(
+          value: value,
+          hint: l10n.fleaMarketSelectCategory,
+          sheetTitle: l10n.fleaMarketCategory,
+          prefixIcon: Icons.category_outlined,
+          options: options,
           onChanged: (val) {
             if (val != null) setState(() => _selectedCategory = val);
           },

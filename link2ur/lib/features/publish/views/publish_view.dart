@@ -19,6 +19,7 @@ import '../../../core/utils/responsive.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/widgets/app_feedback.dart';
 import '../../../core/widgets/content_constraint.dart';
+import '../../../core/widgets/app_select_sheet.dart';
 import '../../../core/widgets/link_search_dialog.dart';
 import '../../../core/widgets/location_picker.dart';
 import '../../../data/models/flea_market.dart';
@@ -1491,13 +1492,12 @@ class _PublishContentState extends State<_PublishContent>
 
           // ── 分类（窄下拉框） ──
           _sectionTitle(context.l10n.fleaMarketCategoryLabel, isDark: isDark),
-          _buildNarrowDropdown<String>(
-            isDark: isDark,
+          _buildNarrowSelect<String>(
             value: _fleaCategory,
             hint: context.l10n.fleaMarketSelectCategory,
             icon: Icons.category_outlined,
-            items: _getFleaCategories(context)
-                .map((c) => DropdownMenuItem(value: c.$1, child: Text(c.$2)))
+            options: _getFleaCategories(context)
+                .map((c) => SelectOption(value: c.$1, label: c.$2))
                 .toList(),
             onChanged: (v) => setState(() => _fleaCategory = v),
           ),
@@ -1555,13 +1555,12 @@ class _PublishContentState extends State<_PublishContent>
           // ── 帖子分类（窄下拉框，仅可发布的板块） ──
           if (postableCategories.isNotEmpty) ...[
             _sectionTitle(context.l10n.forumSelectCategory, isDark: isDark),
-            _buildNarrowDropdown<int>(
-              isDark: isDark,
+            _buildNarrowSelect<int>(
               value: _postCategoryId,
               hint: context.l10n.forumSelectCategory,
               icon: Icons.forum_outlined,
-              items: postableCategories
-                  .map((c) => DropdownMenuItem(value: c.id, child: Text(c.displayName(Localizations.localeOf(context)))))
+              options: postableCategories
+                  .map((c) => SelectOption(value: c.id, label: c.displayName(Localizations.localeOf(context))))
                   .toList(),
               onChanged: (v) => setState(() => _postCategoryId = v),
             ),
@@ -1610,7 +1609,6 @@ class _PublishContentState extends State<_PublishContent>
     );
   }
 
-  // ==================== 窄下拉框（约 60% 宽度，左对齐） ====================
   // ==================== 任务类型下拉框（含禁用项） ====================
   Widget _buildTaskCategoryDropdown(
     bool isDark,
@@ -1623,95 +1621,26 @@ class _PublishContentState extends State<_PublishContent>
         child: ValueListenableBuilder<String?>(
           valueListenable: _taskCategoryNotifier,
           builder: (context, value, child) {
-            return DropdownButtonFormField<String>(
-              initialValue: value,
-              isExpanded: true,
-              decoration: InputDecoration(
-                hintText: context.l10n.createTaskType,
-                prefixIcon: const Icon(Icons.category_outlined, size: 20),
-                filled: true,
-                fillColor: isDark
-                    ? Colors.white.withValues(alpha: 0.06)
-                    : AppColors.backgroundLight,
-                border: OutlineInputBorder(
-                  borderRadius: AppRadius.allMedium,
-                  borderSide: BorderSide(
-                    color: isDark
-                        ? Colors.white.withValues(alpha: 0.1)
-                        : AppColors.separatorLight.withValues(alpha: 0.5),
-                  ),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: AppRadius.allMedium,
-                  borderSide: BorderSide(
-                    color: isDark
-                        ? Colors.white.withValues(alpha: 0.1)
-                        : AppColors.separatorLight.withValues(alpha: 0.5),
-                  ),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: AppRadius.allMedium,
-                  borderSide:
-                      const BorderSide(color: AppColors.primary, width: 1.5),
-                ),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                isDense: true,
-              ),
-              style: TextStyle(
-                fontSize: 14,
-                color: isDark
-                    ? AppColors.textPrimaryDark
-                    : AppColors.textPrimaryLight,
-              ),
-              // 所有选项都可选择（enabled 项和 disabled 项都用同一个 value）
-              items: categories.map((c) {
-                final enabled = c.$3;
-                return DropdownMenuItem<String>(
-                  value: c.$1,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          c.$2,
-                          style: TextStyle(
-                            color: enabled
-                                ? (isDark
-                                    ? AppColors.textPrimaryDark
-                                    : AppColors.textPrimaryLight)
-                                : (isDark
-                                    ? AppColors.textTertiaryDark
-                                    : AppColors.textTertiaryLight),
-                          ),
-                        ),
-                      ),
-                      if (!enabled)
-                        Icon(
-                          Icons.lock_outline,
-                          size: 14,
-                          color: isDark
-                              ? AppColors.textTertiaryDark
-                              : AppColors.textTertiaryLight,
-                        ),
-                    ],
-                  ),
-                );
-              }).toList(),
+            return AppSelectField<String>(
+              value: value,
+              hint: context.l10n.createTaskType,
+              sheetTitle: context.l10n.createTaskType,
+              prefixIcon: Icons.category_outlined,
+              clearable: false,
+              options: categories.map((c) => SelectOption(
+                value: c.$1,
+                label: c.$2,
+                enabled: c.$3,
+              )).toList(),
               onChanged: (v) {
                 if (v == null) return;
-                // 查找该选项是否 enabled
                 final match = categories.firstWhere((c) => c.$1 == v);
                 if (!match.$3) {
-                  // 禁用项 → 弹出提示，不更新选择
                   AppHaptics.light();
                   AppFeedback.showWarning(
                     context,
                     context.l10n.taskTypeCampusLifeNeedVerify,
                   );
-                  // 重置回之前的值（用 addPostFrameCallback 避免 build 中 setState）
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (mounted) setState(() {}); // 触发重绘恢复旧值
-                  });
                   return;
                 }
                 _taskCategoryNotifier.value = v;
@@ -1723,56 +1652,23 @@ class _PublishContentState extends State<_PublishContent>
     );
   }
 
-  Widget _buildNarrowDropdown<T>({
-    required bool isDark,
+  Widget _buildNarrowSelect<T>({
     required T? value,
     required String hint,
     required IconData icon,
-    required List<DropdownMenuItem<T>> items,
+    required List<SelectOption<T>> options,
     required ValueChanged<T?> onChanged,
   }) {
     return Align(
       alignment: Alignment.centerLeft,
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 220),
-        child: DropdownButtonFormField<T>(
-          initialValue: value,
-          isExpanded: true,
-          decoration: InputDecoration(
-            hintText: hint,
-            prefixIcon: Icon(icon, size: 20),
-            filled: true,
-            fillColor: isDark
-                ? Colors.white.withValues(alpha: 0.06)
-                : AppColors.backgroundLight,
-            border: OutlineInputBorder(
-              borderRadius: AppRadius.allMedium,
-              borderSide: BorderSide(
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.1)
-                    : AppColors.separatorLight.withValues(alpha: 0.5),
-              ),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: AppRadius.allMedium,
-              borderSide: BorderSide(
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.1)
-                    : AppColors.separatorLight.withValues(alpha: 0.5),
-              ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: AppRadius.allMedium,
-              borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-            ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-            isDense: true,
-          ),
-          style: TextStyle(
-            fontSize: 14,
-            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-          ),
-          items: items,
+        child: AppSelectField<T>(
+          value: value,
+          hint: hint,
+          sheetTitle: hint,
+          prefixIcon: icon,
+          options: options,
           onChanged: onChanged,
         ),
       ),

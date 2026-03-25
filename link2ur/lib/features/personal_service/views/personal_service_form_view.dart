@@ -8,6 +8,7 @@ import '../../../core/constants/expert_constants.dart';
 import '../../../core/utils/service_category_helper.dart';
 import '../../../core/widgets/cross_platform_image.dart';
 import '../../../core/widgets/location_picker.dart';
+import '../../../core/widgets/app_select_sheet.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_spacing.dart';
@@ -422,24 +423,16 @@ class _FormContentState extends State<_FormContent> {
                 // ── Category ──
                 _SectionLabel(label: context.l10n.serviceCategory),
                 const SizedBox(height: AppSpacing.sm),
-                DropdownButtonFormField<String>(
-                  initialValue: _category,
-                  decoration: InputDecoration(
-                    hintText: context.l10n.serviceCategoryHint,
-                    border: OutlineInputBorder(
-                      borderRadius: AppRadius.input,
-                    ),
-                  ),
-                  items: ExpertConstants.serviceCategoryKeys
-                      .map((key) => DropdownMenuItem(
+                AppSelectField<String>(
+                  value: _category,
+                  hint: context.l10n.serviceCategoryHint,
+                  sheetTitle: context.l10n.serviceCategory,
+                  prefixIcon: Icons.category_outlined,
+                  options: ExpertConstants.serviceCategoryKeys
+                      .map((key) => SelectOption(
                             value: key,
-                            child: Row(
-                              children: [
-                                Icon(ServiceCategoryHelper.getIcon(key), size: 18),
-                                const SizedBox(width: 8),
-                                Text(ServiceCategoryHelper.getLocalizedLabel(key, context.l10n)),
-                              ],
-                            ),
+                            label: ServiceCategoryHelper.getLocalizedLabel(key, context.l10n),
+                            icon: ServiceCategoryHelper.getIcon(key),
                           ))
                       .toList(),
                   onChanged: (value) {

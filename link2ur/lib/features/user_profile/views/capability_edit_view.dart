@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/widgets/app_select_sheet.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../data/repositories/user_profile_repository.dart';
 import '../bloc/user_profile_bloc.dart';
@@ -359,24 +360,12 @@ class _AddSkillDialogState extends State<_AddSkillDialog> {
                 ),
               ),
               const SizedBox(height: AppSpacing.xs),
-              DropdownButtonFormField<int>(
-                initialValue: _selectedCategoryId,
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(
-                    borderRadius: AppRadius.allMedium,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
-                    vertical: AppSpacing.sm,
-                  ),
-                ),
-                items: widget.categories
-                    .map(
-                      (cat) => DropdownMenuItem<int>(
-                        value: cat.$1,
-                        child: Text(cat.$2),
-                      ),
-                    )
+              AppSelectField<int>(
+                value: _selectedCategoryId,
+                hint: '技能分类',
+                sheetTitle: '技能分类',
+                options: widget.categories
+                    .map((cat) => SelectOption(value: cat.$1, label: cat.$2))
                     .toList(),
                 onChanged: (val) {
                   if (val != null) setState(() => _selectedCategoryId = val);

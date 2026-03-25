@@ -14,6 +14,7 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/app_feedback.dart';
+import '../../../core/widgets/app_select_sheet.dart';
 import '../../../core/widgets/cross_platform_image.dart';
 import '../../../core/widgets/link_search_dialog.dart';
 import '../../../core/utils/forum_permission_helper.dart';
@@ -494,18 +495,16 @@ class _CreatePostViewState extends State<CreatePostView> {
                         }
                       });
                     }
-                    return DropdownButtonFormField<int>(
+                    return AppSelectField<int>(
                       key: ValueKey(_selectedCategoryId),
-                      initialValue: _selectedCategoryId,
-                      decoration: InputDecoration(
-                        labelText: context.l10n.forumSelectCategory,
-                        border: const OutlineInputBorder(),
-                      ),
-                      items: postableCategories.map((category) {
-                        return DropdownMenuItem<int>(
+                      value: _selectedCategoryId,
+                      hint: context.l10n.forumSelectCategory,
+                      sheetTitle: context.l10n.forumSelectCategory,
+                      prefixIcon: Icons.forum_outlined,
+                      options: postableCategories.map((category) {
+                        return SelectOption(
                           value: category.id,
-                          child: Text(category.displayName(
-                              Localizations.localeOf(context))),
+                          label: category.displayName(Localizations.localeOf(context)),
                         );
                       }).toList(),
                       onChanged: (value) {

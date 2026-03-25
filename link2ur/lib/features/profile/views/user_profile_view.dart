@@ -11,6 +11,7 @@ import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/sheet_adaptation.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
+import '../../../core/widgets/app_select_sheet.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/stat_item.dart';
 import '../../../core/widgets/async_image_view.dart';
@@ -699,18 +700,15 @@ class UserProfileView extends StatelessWidget {
                     const SizedBox(height: AppSpacing.md),
 
                     // 任务类型
-                    DropdownButtonFormField<String>(
-                      initialValue: selectedTaskType,
-                      decoration: InputDecoration(
-                        labelText: l10n.profileDirectRequestHintTaskType,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.medium),
-                        ),
-                      ),
-                      items: _getLocalizedTaskTypes(ctx)
-                          .map((entry) => DropdownMenuItem(
-                                value: entry['key'],
-                                child: Text(entry['label']!),
+                    AppSelectField<String>(
+                      value: selectedTaskType,
+                      hint: l10n.profileDirectRequestHintTaskType,
+                      sheetTitle: l10n.profileDirectRequestHintTaskType,
+                      prefixIcon: Icons.category_outlined,
+                      options: _getLocalizedTaskTypes(ctx)
+                          .map((entry) => SelectOption(
+                                value: entry['key']!,
+                                label: entry['label']!,
                               ))
                           .toList(),
                       onChanged: (value) {

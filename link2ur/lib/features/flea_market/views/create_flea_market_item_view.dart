@@ -9,6 +9,7 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/utils/adaptive_dialogs.dart';
+import '../../../core/widgets/app_select_sheet.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/cross_platform_image.dart';
 import '../../../core/widgets/buttons.dart';
@@ -342,19 +343,15 @@ class _CreateFleaMarketItemContentState
                 AppSpacing.vMd,
 
                 // 分类
-                DropdownButtonFormField<String>(
-                  initialValue: _selectedCategory,
-                  decoration: InputDecoration(
-                    labelText: context.l10n.fleaMarketCategoryLabel,
-                    prefixIcon: const Icon(Icons.category_outlined),
-                    border: OutlineInputBorder(
-                      borderRadius: AppRadius.allMedium,
-                    ),
-                  ),
-                  items: _getCategories(context)
-                      .map((category) => DropdownMenuItem(
+                AppSelectField<String>(
+                  value: _selectedCategory,
+                  hint: context.l10n.fleaMarketSelectCategory,
+                  sheetTitle: context.l10n.fleaMarketCategoryLabel,
+                  prefixIcon: Icons.category_outlined,
+                  options: _getCategories(context)
+                      .map((category) => SelectOption(
                             value: category.$1,
-                            child: Text(category.$2),
+                            label: category.$2,
                           ))
                       .toList(),
                   onChanged: (value) {
@@ -362,7 +359,6 @@ class _CreateFleaMarketItemContentState
                       _selectedCategory = value;
                     });
                   },
-                  hint: Text(context.l10n.fleaMarketSelectCategory),
                 ),
                 AppSpacing.vMd,
 

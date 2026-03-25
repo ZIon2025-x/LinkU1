@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=390, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>AppSelectSheet Preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f5f5f7;
+    color: #1a1a1a;
+    max-width: 390px;
+    margin: 0 auto;
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* ── 顶部模拟表单 ── */
+  .form-page {
+    padding: 56px 20px 20px;
+  }
+  .form-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 24px;
+    color: #1a1a1a;
+  }
+  .form-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #666;
+    margin-bottom: 6px;
+  }
+
+  /* ── 原生 Dropdown（丑的） ── */
+  .demo-section {
+    margin-bottom: 28px;
+  }
+  .demo-section h3 {
+    font-size: 12px;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+  }
+  .native-select-wrapper {
+    position: relative;
+  }
+  .native-select {
+    width: 100%;
+    padding: 14px 40px 14px 42px;
+    font-size: 15px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    background: #fff;
+    color: #1a1a1a;
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+  }
+  .native-select:focus { outline: none; border-color: #007AFF; }
+  .native-select-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 18px;
+    color: #999;
+    pointer-events: none;
+  }
+  .native-select-arrow {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 12px;
+    color: #999;
+    pointer-events: none;
+  }
+
+  /* ── 新的 SelectField（触发器） ── */
+  .select-field {
+    width: 100%;
+    padding: 14px 40px 14px 42px;
+    font-size: 15px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    background: #fff;
+    color: #1a1a1a;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    position: relative;
+    transition: border-color 0.2s;
+    user-select: none;
+  }
+  .select-field:active { background: #f8f8f8; }
+  .select-field.has-value { border-color: #007AFF; }
+  .select-field .field-icon {
+    position: absolute;
+    left: 14px;
+    font-size: 18px;
+    color: #999;
+  }
+  .select-field.has-value .field-icon { color: #007AFF; }
+  .select-field .field-text {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .select-field .field-text.placeholder { color: #999; }
+  .select-field .field-arrow {
+    position: absolute;
+    right: 14px;
+    font-size: 12px;
+    color: #999;
+  }
+  .select-field .field-clear {
+    position: absolute;
+    right: 36px;
+    font-size: 16px;
+    color: #ccc;
+    cursor: pointer;
+    padding: 4px;
+  }
+  .select-field .field-clear:hover { color: #999; }
+
+  /* ── 遮罩 ── */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+  }
+  .overlay.show {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* ── Bottom Sheet ── */
+  .sheet {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    max-width: 390px;
+    margin: 0 auto;
+    background: #fff;
+    border-radius: 16px 16px 0 0;
+    z-index: 101;
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    max-height: 70vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .sheet.show { transform: translateY(0); }
+
+  /* Sheet 顶栏 */
+  .sheet-handle {
+    width: 36px;
+    height: 4px;
+    background: #ddd;
+    border-radius: 2px;
+    margin: 8px auto 0;
+  }
+  .sheet-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px 8px;
+  }
+  .sheet-title {
+    font-size: 16px;
+    font-weight: 600;
+  }
+  .sheet-close {
+    width: 28px;
+    height: 28px;
+    border-radius: 14px;
+    background: #f0f0f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 14px;
+    color: #666;
+  }
+  .sheet-close:active { background: #e0e0e0; }
+
+  /* Sheet 搜索框 */
+  .sheet-search {
+    padding: 0 16px 8px;
+  }
+  .sheet-search input {
+    width: 100%;
+    padding: 10px 12px 10px 36px;
+    font-size: 14px;
+    border: 1px solid #e8e8e8;
+    border-radius: 10px;
+    background: #f5f5f7;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .sheet-search input:focus {
+    border-color: #007AFF;
+    background: #fff;
+  }
+  .sheet-search-icon {
+    position: absolute;
+    left: 28px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 15px;
+    color: #999;
+    pointer-events: none;
+  }
+  .sheet-search { position: relative; }
+
+  /* Sheet 列表 */
+  .sheet-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 8px 20px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .sheet-list::-webkit-scrollbar { display: none; }
+
+  .sheet-item {
+    display: flex;
+    align-items: center;
+    padding: 13px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.15s;
+    gap: 12px;
+  }
+  .sheet-item:active { background: #f0f0f0; }
+  .sheet-item.selected { background: rgba(0,122,255,0.06); }
+
+  .sheet-item-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: #f0f0f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .sheet-item.selected .sheet-item-icon {
+    background: rgba(0,122,255,0.1);
+  }
+
+  .sheet-item-text {
+    flex: 1;
+    min-width: 0;
+  }
+  .sheet-item-label {
+    font-size: 15px;
+    font-weight: 500;
+    color: #1a1a1a;
+  }
+  .sheet-item.selected .sheet-item-label {
+    color: #007AFF;
+  }
+  .sheet-item-desc {
+    font-size: 12px;
+    color: #999;
+    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sheet-item-check {
+    font-size: 18px;
+    color: #007AFF;
+    opacity: 0;
+    flex-shrink: 0;
+    transition: opacity 0.15s;
+  }
+  .sheet-item.selected .sheet-item-check { opacity: 1; }
+
+  /* 空状态 */
+  .sheet-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: #999;
+    font-size: 14px;
+  }
+
+  /* ── 对比标签 ── */
+  .badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+  .badge-old { background: #fee; color: #c33; }
+  .badge-new { background: #e8f5e9; color: #2e7d32; }
+
+  /* safe area */
+  .sheet-safe { height: env(safe-area-inset-bottom, 16px); min-height: 16px; }
+
+  /* ── Dark mode ── */
+  @media (prefers-color-scheme: dark) {
+    body { background: #000; color: #f5f5f7; }
+    .form-title { color: #f5f5f7; }
+    .form-label { color: #999; }
+    .native-select { background: #1c1c1e; color: #f5f5f7; border-color: #333; }
+    .select-field { background: #1c1c1e; color: #f5f5f7; border-color: #333; }
+    .select-field:active { background: #2c2c2e; }
+    .sheet { background: #1c1c1e; }
+    .sheet-handle { background: #555; }
+    .sheet-title { color: #f5f5f7; }
+    .sheet-close { background: #333; color: #ccc; }
+    .sheet-search input { background: #2c2c2e; border-color: #333; color: #f5f5f7; }
+    .sheet-item:active { background: #2c2c2e; }
+    .sheet-item.selected { background: rgba(0,122,255,0.12); }
+    .sheet-item-icon { background: #2c2c2e; }
+    .sheet-item.selected .sheet-item-icon { background: rgba(0,122,255,0.15); }
+    .sheet-item-label { color: #f5f5f7; }
+    .sheet-item-desc { color: #777; }
+  }
+</style>
+</head>
+<body>
+
+<div class="form-page">
+  <div class="form-title">发布任务</div>
+
+  <!-- ── Before: 原生 Dropdown ── -->
+  <div class="demo-section">
+    <h3>Before — DropdownButtonFormField <span class="badge badge-old">当前</span></h3>
+    <div class="form-label">任务分类</div>
+    <div class="native-select-wrapper">
+      <span class="native-select-icon">📂</span>
+      <select class="native-select" id="nativeSelect">
+        <option value="" disabled selected>选择任务类型</option>
+        <option value="programming">💻 编程开发</option>
+        <option value="translation">🌐 翻译</option>
+        <option value="tutoring">📚 辅导教学</option>
+        <option value="food">🍳 美食烹饪</option>
+        <option value="beverage">🧋 饮品制作</option>
+        <option value="cake">🎂 蛋糕烘焙</option>
+        <option value="errand">🚗 跑腿代办</option>
+        <option value="social">🎉 社交娱乐</option>
+        <option value="beauty">💄 美容护肤</option>
+        <option value="handicraft">🎨 手工制作</option>
+        <option value="gaming">🎮 游戏陪玩</option>
+        <option value="photography">📷 摄影摄像</option>
+        <option value="housekeeping">🧹 家政保洁</option>
+      </select>
+      <span class="native-select-arrow">▼</span>
+    </div>
+  </div>
+
+  <!-- ── After: 新的选择器 ── -->
+  <div class="demo-section">
+    <h3>After — AppSelectSheet <span class="badge badge-new">新方案</span></h3>
+    <div class="form-label">任务分类</div>
+    <div class="select-field" id="selectField" onclick="openSheet()">
+      <span class="field-icon">📂</span>
+      <span class="field-text placeholder" id="fieldText">选择任务类型</span>
+      <span class="field-clear" id="fieldClear" style="display:none" onclick="event.stopPropagation(); clearSelection()">✕</span>
+      <span class="field-arrow">▼</span>
+    </div>
+  </div>
+
+  <div class="demo-section" style="margin-top: 12px;">
+    <h3>少选项场景（无搜索框）</h3>
+    <div class="form-label">定价方式</div>
+    <div class="select-field" id="selectField2" onclick="openSheet2()">
+      <span class="field-icon">💰</span>
+      <span class="field-text placeholder" id="fieldText2">选择定价方式</span>
+      <span class="field-arrow">▼</span>
+    </div>
+  </div>
+</div>
+
+<!-- ── 遮罩 ── -->
+<div class="overlay" id="overlay" onclick="closeSheet()"></div>
+
+<!-- ── Sheet 1: 多选项 + 搜索 ── -->
+<div class="sheet" id="sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <span class="sheet-title">选择任务类型</span>
+    <div class="sheet-close" onclick="closeSheet()">✕</div>
+  </div>
+  <div class="sheet-search">
+    <span class="sheet-search-icon">🔍</span>
+    <input type="text" placeholder="搜索分类…" id="searchInput" oninput="filterItems()">
+  </div>
+  <div class="sheet-list" id="sheetList"></div>
+  <div class="sheet-safe"></div>
+</div>
+
+<!-- ── Sheet 2: 少选项 ── -->
+<div class="sheet" id="sheet2">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <span class="sheet-title">选择定价方式</span>
+    <div class="sheet-close" onclick="closeSheet()">✕</div>
+  </div>
+  <div class="sheet-list" id="sheetList2"></div>
+  <div class="sheet-safe"></div>
+</div>
+
+<script>
+const categories = [
+  { value: 'programming', icon: '💻', label: '编程开发', desc: '网站、APP、小程序开发' },
+  { value: 'translation', icon: '🌐', label: '翻译', desc: '文档翻译、口译、字幕翻译' },
+  { value: 'tutoring', icon: '📚', label: '辅导教学', desc: '学科辅导、语言教学、乐器' },
+  { value: 'food', icon: '🍳', label: '美食烹饪', desc: '中餐、西餐、私房菜定制' },
+  { value: 'beverage', icon: '🧋', label: '饮品制作', desc: '咖啡、奶茶、果汁调制' },
+  { value: 'cake', icon: '🎂', label: '蛋糕烘焙', desc: '生日蛋糕、甜品、面包' },
+  { value: 'errand', icon: '🚗', label: '跑腿代办', desc: '取件、排队、代购、搬运' },
+  { value: 'social', icon: '🎉', label: '社交娱乐', desc: '活动策划、聚会组织' },
+  { value: 'beauty', icon: '💄', label: '美容护肤', desc: '化妆、美甲、护肤咨询' },
+  { value: 'handicraft', icon: '🎨', label: '手工制作', desc: '定制礼物、手绘、编织' },
+  { value: 'gaming', icon: '🎮', label: '游戏陪玩', desc: '游戏代练、组队、陪玩' },
+  { value: 'photography', icon: '📷', label: '摄影摄像', desc: '证件照、毕业照、活动跟拍' },
+  { value: 'housekeeping', icon: '🧹', label: '家政保洁', desc: '日常清洁、深度保洁、搬家' },
+];
+
+const pricingModes = [
+  { value: 'fixed', icon: '🏷️', label: '固定价格', desc: '明确标价，一口价' },
+  { value: 'hourly', icon: '⏱️', label: '按小时计费', desc: '按实际服务时长收费' },
+  { value: 'negotiable', icon: '🤝', label: '面议', desc: '与客户协商后定价' },
+];
+
+let selectedValue = null;
+let selectedValue2 = null;
+let activeSheet = null;
+
+function renderList(items, listEl, selected) {
+  if (items.length === 0) {
+    listEl.innerHTML = '<div class="sheet-empty">没有匹配的选项</div>';
+    return;
+  }
+  listEl.innerHTML = items.map(item => `
+    <div class="sheet-item ${item.value === selected ? 'selected' : ''}"
+         onclick="selectItem('${item.value}', '${item.icon}', '${item.label}')">
+      <div class="sheet-item-icon">${item.icon}</div>
+      <div class="sheet-item-text">
+        <div class="sheet-item-label">${item.label}</div>
+        ${item.desc ? `<div class="sheet-item-desc">${item.desc}</div>` : ''}
+      </div>
+      <div class="sheet-item-check">✓</div>
+    </div>
+  `).join('');
+}
+
+function renderList2(items, listEl, selected) {
+  listEl.innerHTML = items.map(item => `
+    <div class="sheet-item ${item.value === selected ? 'selected' : ''}"
+         onclick="selectItem2('${item.value}', '${item.icon}', '${item.label}')">
+      <div class="sheet-item-icon">${item.icon}</div>
+      <div class="sheet-item-text">
+        <div class="sheet-item-label">${item.label}</div>
+        ${item.desc ? `<div class="sheet-item-desc">${item.desc}</div>` : ''}
+      </div>
+      <div class="sheet-item-check">✓</div>
+    </div>
+  `).join('');
+}
+
+function openSheet() {
+  activeSheet = 'sheet1';
+  document.getElementById('overlay').classList.add('show');
+  document.getElementById('sheet').classList.add('show');
+  renderList(categories, document.getElementById('sheetList'), selectedValue);
+  document.getElementById('searchInput').value = '';
+  setTimeout(() => document.getElementById('searchInput').focus(), 350);
+}
+
+function openSheet2() {
+  activeSheet = 'sheet2';
+  document.getElementById('overlay').classList.add('show');
+  document.getElementById('sheet2').classList.add('show');
+  renderList2(pricingModes, document.getElementById('sheetList2'), selectedValue2);
+}
+
+function closeSheet() {
+  document.getElementById('overlay').classList.remove('show');
+  document.getElementById('sheet').classList.remove('show');
+  document.getElementById('sheet2').classList.remove('show');
+  activeSheet = null;
+}
+
+function selectItem(value, icon, label) {
+  selectedValue = value;
+  const field = document.getElementById('selectField');
+  const text = document.getElementById('fieldText');
+  text.textContent = `${icon}  ${label}`;
+  text.classList.remove('placeholder');
+  field.classList.add('has-value');
+  document.getElementById('fieldClear').style.display = 'block';
+  closeSheet();
+}
+
+function selectItem2(value, icon, label) {
+  selectedValue2 = value;
+  const text = document.getElementById('fieldText2');
+  text.textContent = `${icon}  ${label}`;
+  text.classList.remove('placeholder');
+  document.getElementById('selectField2').classList.add('has-value');
+  closeSheet();
+}
+
+function clearSelection() {
+  selectedValue = null;
+  const field = document.getElementById('selectField');
+  const text = document.getElementById('fieldText');
+  text.textContent = '选择任务类型';
+  text.classList.add('placeholder');
+  field.classList.remove('has-value');
+  document.getElementById('fieldClear').style.display = 'none';
+}
+
+function filterItems() {
+  const query = document.getElementById('searchInput').value.toLowerCase();
+  const filtered = categories.filter(c =>
+    c.label.toLowerCase().includes(query) ||
+    c.desc.toLowerCase().includes(query) ||
+    c.value.toLowerCase().includes(query)
+  );
+  renderList(filtered, document.getElementById('sheetList'), selectedValue);
+}
+</script>
+</body>
+</html>

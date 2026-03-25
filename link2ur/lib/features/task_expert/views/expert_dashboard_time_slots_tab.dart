@@ -6,6 +6,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/utils/adaptive_dialogs.dart';
+import '../../../core/widgets/app_select_sheet.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/sheet_adaptation.dart';
@@ -195,23 +196,15 @@ class _ServiceDropdown extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    return DropdownButtonFormField<String>(
-      initialValue: selectedServiceId,
-      decoration: InputDecoration(
-        labelText: context.l10n.expertDashboardTabServices,
-        border: const OutlineInputBorder(),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.sm,
-        ),
-      ),
-      items: services.map((s) {
+    return AppSelectField<String>(
+      value: selectedServiceId,
+      hint: context.l10n.expertDashboardTabServices,
+      sheetTitle: context.l10n.expertDashboardTabServices,
+      clearable: false,
+      options: services.map((s) {
         final id = s['id']?.toString() ?? '';
         final name = (s['service_name'] as String?) ?? id;
-        return DropdownMenuItem<String>(
-          value: id,
-          child: Text(name, overflow: TextOverflow.ellipsis),
-        );
+        return SelectOption(value: id, label: name);
       }).toList(),
       onChanged: onChanged,
     );
