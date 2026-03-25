@@ -138,6 +138,10 @@ When adding a new Bloc, choose the **narrowest scope** that satisfies its data s
 
 **密钥不会从文件导入**：Stripe 公钥、`MOBILE_APP_SECRET` 等均通过 **`--dart-define`** 在运行/构建时传入，不读 `.env`。未传时 Stripe 公钥为空，支付会失败。详见 `link2ur/docs/stripe-keys-setup.md`。
 
+## Full-Stack Consistency Check
+
+当任何改动涉及前后端（`backend/` + `link2ur/`），实施完成后**必须**按照 `~/.claude/skills/full-stack-consistency-check/SKILL.md` 的跨层检查清单逐项验证，确保 DB → Backend Model → Pydantic Schema → API Route → Frontend Endpoint → Repository → Model.fromJson → BLoC → UI 整条链路对齐。
+
 ### Android Build Notes
 
 - Kotlin 2.1.0 with API compatibility set to 1.9 (for fluwx 4.x plugin compatibility)
