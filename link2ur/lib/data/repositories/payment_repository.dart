@@ -581,6 +581,67 @@ class PaymentRepository {
     final items = response.data!['products'] as List<dynamic>? ?? [];
     return items.map((e) => e as Map<String, dynamic>).toList();
   }
+
+  // ==================== Local Wallet ====================
+
+  /// 获取本地钱包余额
+  Future<WalletBalance> getWalletBalance() async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.walletBalance,
+    );
+    if (response.isSuccess && response.data != null) {
+      return WalletBalance.fromJson(response.data!);
+    }
+    throw PaymentException(response.message ?? '获取钱包余额失败');
+  }
+
+  /// 获取本地钱包流水记录
+  Future<Map<String, dynamic>> getWalletTransactions({
+    int page = 1,
+    int pageSize = 20,
+    String? type,
+  }) async {
+    final params = <String, dynamic>{
+      'page': page,
+      'page_size': pageSize,
+    };
+    if (type != null) params['type'] = type;
+
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.walletTransactions,
+      queryParameters: params,
+    );
+    if (response.isSuccess && response.data != null) {
+      final items = (response.data!['items'] as List)
+          .map((e) => WalletTransactionItem.fromJson(e as Map<String, dynamic>))
+          .toList();
+      return {
+        'items': items,
+        'total': response.data!['total'],
+        'page': response.data!['page'],
+        'page_size': response.data!['page_size'],
+      };
+    }
+    throw PaymentException(response.message ?? '获取钱包流水失败');
+  }
+
+  /// 申请本地钱包提现
+  Future<Map<String, dynamic>> requestWithdrawal({
+    required double amount,
+    required String requestId,
+  }) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.walletWithdraw,
+      data: {
+        'amount': amount,
+        'request_id': requestId,
+      },
+    );
+    if (response.isSuccess && response.data != null) {
+      return response.data!;
+    }
+    throw PaymentException(response.message ?? '提现失败');
+  }
 }
 
 /// 支付异常
