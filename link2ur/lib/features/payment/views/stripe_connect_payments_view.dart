@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
-import '../../../core/utils/helpers.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/loading_view.dart';
@@ -12,9 +11,8 @@ import '../../../core/widgets/empty_state_view.dart';
 import '../../../data/models/payment.dart';
 import '../../../data/repositories/payment_repository.dart';
 
-/// Stripe Connect 收款记录页
-/// 对标 iOS StripeConnectPaymentsView.swift
-/// 合并 Stripe Connect 交易记录 + 任务支付记录，按时间倒序排列
+/// 钱包流水记录页（原 Stripe Connect 收款记录页）
+/// 使用本地钱包 API 替代 Stripe Connect API
 class StripeConnectPaymentsView extends StatefulWidget {
   const StripeConnectPaymentsView({super.key});
 
@@ -23,88 +21,59 @@ class StripeConnectPaymentsView extends StatefulWidget {
       _StripeConnectPaymentsViewState();
 }
 
-/// 统一支付记录类型（对标 iOS PaymentRecord enum）
-sealed class PaymentRecord implements Comparable<PaymentRecord> {
-  DateTime get createdAt;
-
-  @override
-  int compareTo(PaymentRecord other) =>
-      other.createdAt.compareTo(createdAt); // 倒序
-}
-
-class StripeConnectRecord extends PaymentRecord {
-  StripeConnectRecord(this.transaction);
-  final StripeConnectTransaction transaction;
-
-  @override
-  DateTime get createdAt {
-    if (transaction.createdAt.isEmpty) return DateTime(2000);
-    try {
-      return DateTime.parse(transaction.createdAt);
-    } catch (_) {
-      return DateTime(2000);
-    }
-  }
-}
-
-class TaskPaymentRecordItem extends PaymentRecord {
-  TaskPaymentRecordItem(this.payment);
-  final TaskPaymentRecord payment;
-
-  @override
-  DateTime get createdAt {
-    if (payment.createdAt == null || payment.createdAt!.isEmpty) {
-      return DateTime(2000);
-    }
-    try {
-      return DateTime.parse(payment.createdAt!);
-    } catch (_) {
-      return DateTime(2000);
-    }
-  }
-}
-
 class _StripeConnectPaymentsViewState
     extends State<StripeConnectPaymentsView> {
-  List<PaymentRecord> _records = [];
+  List<WalletTransactionItem> _items = [];
   bool _isLoading = true;
+  bool _isLoadingMore = false;
   String? _error;
+  int _page = 1;
+  int _total = 0;
+
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
-    _loadPayments();
+    _loadTransactions();
+    _scrollController.addListener(_onScroll);
   }
 
-  /// 对标 iOS loadTransactions() — 并行加载两种记录
-  Future<void> _loadPayments() async {
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      if (!_isLoadingMore && _items.length < _total) {
+        _loadMore();
+      }
+    }
+  }
+
+  Future<void> _loadTransactions() async {
     setState(() {
       _isLoading = true;
       _error = null;
+      _page = 1;
     });
 
     try {
       final repo = context.read<PaymentRepository>();
-
-      // 并行加载 Stripe Connect 交易记录和任务支付记录
-      final results = await Future.wait([
-        repo.getStripeConnectTransactions(),
-        repo.getTaskPaymentRecords(),
-      ]);
+      final result = await repo.getWalletTransactions();
 
       if (!mounted) return;
 
-      final stripeTransactions = results[0] as List<StripeConnectTransaction>;
-      final taskPayments = results[1] as List<TaskPaymentRecord>;
-
-      // 合并并排序
-      final records = <PaymentRecord>[
-        ...stripeTransactions.map((t) => StripeConnectRecord(t)),
-        ...taskPayments.map((p) => TaskPaymentRecordItem(p)),
-      ]..sort();
+      final items = result['items'] as List<WalletTransactionItem>;
+      final total = result['total'] as int;
 
       setState(() {
-        _records = records;
+        _items = items;
+        _total = total;
+        _page = 1;
         _isLoading = false;
       });
     } catch (e) {
@@ -113,6 +82,33 @@ class _StripeConnectPaymentsViewState
         _isLoading = false;
         _error = e.toString();
       });
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (_isLoadingMore) return;
+    setState(() => _isLoadingMore = true);
+
+    try {
+      final repo = context.read<PaymentRepository>();
+      final result = await repo.getWalletTransactions(
+        page: _page + 1,
+      );
+
+      if (!mounted) return;
+
+      final items = result['items'] as List<WalletTransactionItem>;
+      final total = result['total'] as int;
+
+      setState(() {
+        _items = [..._items, ...items];
+        _total = total;
+        _page = _page + 1;
+        _isLoadingMore = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isLoadingMore = false);
     }
   }
 
@@ -134,44 +130,40 @@ class _StripeConnectPaymentsViewState
                       Text(l10n.paymentRecordsLoadFailed),
                       AppSpacing.vMd,
                       TextButton(
-                        onPressed: _loadPayments,
+                        onPressed: _loadTransactions,
                         child: Text(l10n.commonRetry),
                       ),
                     ],
                   ),
                 )
-              : _records.isEmpty
+              : _items.isEmpty
                   ? EmptyStateView(
                       icon: Icons.payment,
                       title: l10n.emptyNoPaymentRecords,
                       message: l10n.emptyNoPaymentRecordsMessage,
                     )
                   : RefreshIndicator(
-                      onRefresh: _loadPayments,
+                      onRefresh: _loadTransactions,
                       child: ListView.separated(
+                        controller: _scrollController,
                         padding: const EdgeInsets.all(AppSpacing.md),
-                        itemCount: _records.length,
+                        itemCount: _items.length + (_isLoadingMore ? 1 : 0),
                         separatorBuilder: (_, __) =>
                             const SizedBox(height: AppSpacing.sm),
                         itemBuilder: (context, index) {
-                          final record = _records[index];
-                          final key = switch (record) {
-                            final StripeConnectRecord r =>
-                              ValueKey('stripe_${r.transaction.id}'),
-                            final TaskPaymentRecordItem r =>
-                              ValueKey('task_${r.payment.id}'),
-                          };
-                          return switch (record) {
-                            final StripeConnectRecord r => KeyedSubtree(
-                                key: key,
-                                child: _StripeTransactionCard(
-                                    transaction: r.transaction),
+                          if (index == _items.length) {
+                            return const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 16),
+                              child: Center(
+                                child: CircularProgressIndicator(),
                               ),
-                            final TaskPaymentRecordItem r => KeyedSubtree(
-                                key: key,
-                                child: _TaskPaymentCard(payment: r.payment),
-                              ),
-                          };
+                            );
+                          }
+                          final item = _items[index];
+                          return _WalletTransactionCard(
+                            key: ValueKey('wallet_${item.id}'),
+                            item: item,
+                          );
                         },
                       ),
                     ),
@@ -179,18 +171,21 @@ class _StripeConnectPaymentsViewState
   }
 }
 
-/// Stripe Connect 交易卡片
-class _StripeTransactionCard extends StatelessWidget {
-  const _StripeTransactionCard({required this.transaction});
+/// 钱包流水记录卡片
+class _WalletTransactionCard extends StatelessWidget {
+  const _WalletTransactionCard({super.key, required this.item});
 
-  final StripeConnectTransaction transaction;
+  final WalletTransactionItem item;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final isIncome = transaction.isIncome;
-    final statusColor = _getStatusColor(transaction.status);
-    final statusText = _getStatusText(transaction.status, l10n);
+    final isIncome = item.amount >= 0;
+    final isPending = item.status.toLowerCase() == 'pending';
+    final typeIcon = _getTypeIcon(item.type);
+    final typeColor = _getTypeColor(item.type);
+    final sourceLabel = _getSourceLabel(item.source);
+    final amountText = _formatAmount(item.amount, isIncome);
+    final dateText = _formatDate(item.createdAt);
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -200,168 +195,26 @@ class _StripeTransactionCard extends StatelessWidget {
       ),
       child: Row(
         children: [
+          // 类型图标
           Container(
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: (isIncome ? AppColors.success : AppColors.primary)
-                  .withValues(alpha: 0.1),
+              color: typeColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(
-              isIncome ? Icons.arrow_downward : Icons.arrow_upward,
-              color: isIncome ? AppColors.success : AppColors.primary,
-              size: 20,
-            ),
+            child: Icon(typeIcon, color: typeColor, size: 20),
           ),
           const SizedBox(width: AppSpacing.md),
+          // 描述 + 来源 + 时间
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  transaction.description.isNotEmpty
-                      ? transaction.description
-                      : (isIncome ? l10n.paymentIncome : l10n.paymentPayout),
-                  style: const TextStyle(
-                      fontSize: 14, fontWeight: FontWeight.w500),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _formatDate(transaction.createdAt),
-                  style: const TextStyle(
-                      fontSize: 12, color: AppColors.textTertiary),
-                ),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                transaction.amountDisplay,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: isIncome ? AppColors.success : AppColors.textPrimaryLight,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  statusText,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: statusColor,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'paid':
-      case 'succeeded':
-        return AppColors.success;
-      case 'pending':
-      case 'in_transit':
-        return AppColors.warning;
-      case 'failed':
-      case 'canceled':
-        return AppColors.error;
-      default:
-        return AppColors.textTertiary;
-    }
-  }
-
-  String _getStatusText(String status, dynamic l10n) {
-    switch (status.toLowerCase()) {
-      case 'paid':
-      case 'succeeded':
-        return l10n.paymentStatusSuccess;
-      case 'pending':
-      case 'in_transit':
-        return l10n.paymentStatusProcessing;
-      case 'failed':
-        return l10n.paymentStatusFailed;
-      case 'canceled':
-        return l10n.paymentStatusCanceled;
-      default:
-        return status;
-    }
-  }
-
-  String _formatDate(String dateStr) {
-    if (dateStr.isEmpty) return '';
-    try {
-      final date = DateTime.parse(dateStr);
-      return DateFormat('yyyy-MM-dd HH:mm').format(date.toLocal());
-    } catch (_) {
-      return dateStr;
-    }
-  }
-}
-
-/// 任务支付记录卡片（对标 iOS TaskPaymentRowView）
-class _TaskPaymentCard extends StatelessWidget {
-  const _TaskPaymentCard({required this.payment});
-
-  final TaskPaymentRecord payment;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final statusColor = _getStatusColor(payment.status);
-    final statusText = _getStatusText(payment.status, l10n);
-
-    // 对标 iOS: payment.task?.title ?? "任务 #taskId"
-    final title = payment.taskTitle ??
-        (payment.taskId != null
-            ? '${l10n.paymentStatusTaskPayment} #${payment.taskId}'
-            : l10n.paymentStatusTaskPayment);
-
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(AppRadius.medium),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppColors.error.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(
-              Icons.credit_card,
-              color: AppColors.error,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
+                  item.description?.isNotEmpty == true
+                      ? item.description!
+                      : sourceLabel,
                   style: const TextStyle(
                       fontSize: 14, fontWeight: FontWeight.w500),
                   maxLines: 1,
@@ -370,35 +223,16 @@ class _TaskPaymentCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    // 状态标签（对标 iOS）
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: statusColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        statusText,
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: statusColor,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    // 支付方式（对标 iOS paymentMethodText）
                     Text(
-                      _localizePaymentMethod(context, payment.paymentMethod),
+                      sourceLabel,
                       style: const TextStyle(
-                          fontSize: 11, color: AppColors.textTertiary),
+                          fontSize: 12, color: AppColors.textTertiary),
                     ),
-                    if (payment.createdAt != null) ...[
+                    if (dateText.isNotEmpty) ...[
                       const SizedBox(width: 8),
                       Flexible(
                         child: Text(
-                          _formatDate(payment.createdAt!),
+                          dateText,
                           style: const TextStyle(
                               fontSize: 11, color: AppColors.textTertiary),
                           overflow: TextOverflow.ellipsis,
@@ -410,25 +244,37 @@ class _TaskPaymentCard extends StatelessWidget {
               ],
             ),
           ),
+          // 金额 + 处理中标签
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '-${Helpers.formatPrice(payment.amount.abs())}',
-                style: const TextStyle(
+                amountText,
+                style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.error,
+                  color: isIncome ? AppColors.success : AppColors.error,
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                l10n.paymentStatusTaskPayment,
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: AppColors.textTertiary,
+              if (isPending) ...[
+                const SizedBox(height: 4),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppColors.warning.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text(
+                    '处理中',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: AppColors.warning,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ],
@@ -436,59 +282,56 @@ class _TaskPaymentCard extends StatelessWidget {
     );
   }
 
-  /// 对标 iOS paymentMethodText
-  String _localizePaymentMethod(BuildContext context, String? method) {
-    if (method == null) return '';
-    final l10n = context.l10n;
-    switch (method.toLowerCase()) {
-      case 'stripe':
-        return 'Stripe';
-      case 'points':
-        return l10n.pointsPoints;
-      case 'mixed':
-        return l10n.paymentMixed;
+  IconData _getTypeIcon(String type) {
+    switch (type.toLowerCase()) {
+      case 'earning':
+        return Icons.arrow_downward;
+      case 'withdrawal':
+        return Icons.arrow_upward;
+      case 'payment':
+        return Icons.shopping_cart;
       default:
-        return method;
+        return Icons.swap_horiz;
     }
   }
 
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'succeeded':
-      case 'completed':
+  Color _getTypeColor(String type) {
+    switch (type.toLowerCase()) {
+      case 'earning':
         return AppColors.success;
-      case 'pending':
-      case 'processing':
+      case 'withdrawal':
+        return AppColors.primary;
+      case 'payment':
         return AppColors.warning;
-      case 'failed':
-        return AppColors.error;
-      case 'canceled':
-      case 'cancelled':
-        return AppColors.textTertiary;
       default:
         return AppColors.textTertiary;
     }
   }
 
-  String _getStatusText(String status, dynamic l10n) {
-    switch (status.toLowerCase()) {
-      case 'succeeded':
-      case 'completed':
-        return l10n.paymentStatusSuccess;
-      case 'pending':
-      case 'processing':
-        return l10n.paymentStatusProcessing;
-      case 'failed':
-        return l10n.paymentStatusFailed;
-      case 'canceled':
-      case 'cancelled':
-        return l10n.paymentStatusCanceled;
+  String _getSourceLabel(String source) {
+    switch (source.toLowerCase()) {
+      case 'task_reward':
+        return '任务奖励';
+      case 'flea_market_sale':
+        return '二手物品售出';
+      case 'stripe_transfer':
+        return '提现';
+      case 'task_payment':
+        return '余额支付';
       default:
-        return status;
+        return source;
     }
+  }
+
+  String _formatAmount(double amount, bool isIncome) {
+    final abs = amount.abs();
+    const symbol = '£';
+    final formatted = abs.toStringAsFixed(2);
+    return isIncome ? '+$symbol$formatted' : '-$symbol$formatted';
   }
 
   String _formatDate(String dateStr) {
+    if (dateStr.isEmpty) return '';
     try {
       final date = DateTime.parse(dateStr);
       return DateFormat('yyyy-MM-dd HH:mm').format(date.toLocal());
