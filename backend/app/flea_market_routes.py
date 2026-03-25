@@ -293,6 +293,7 @@ async def get_flea_market_items(
     keyword: Optional[str] = Query(None),
     status_filter: Optional[str] = Query("active", alias="status", pattern="^(active|sold)$"),
     seller_id: Optional[str] = Query(None, description="卖家ID，用于筛选特定卖家的商品"),
+    listing_type: Optional[str] = Query(None, description="商品类型: sale, rental"),
     current_user: Optional[models.User] = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
@@ -349,7 +350,11 @@ async def get_flea_market_items(
         # 分类筛选（"all" 或空表示不过滤）
         if category and category.strip().lower() != "all":
             query = query.where(models.FleaMarketItem.category == category)
-        
+
+        # 商品类型筛选（sale / rental）
+        if listing_type and listing_type in ("sale", "rental"):
+            query = query.where(models.FleaMarketItem.listing_type == listing_type)
+
         # 关键词搜索（标题、描述、地址、分类，支持中英文）
         if keyword:
             # 安全：转义 LIKE 通配符并限制长度
@@ -481,6 +486,10 @@ async def get_flea_market_items(
                 created_at=format_iso_utc(item.created_at),
                 updated_at=format_iso_utc(item.updated_at),
                 days_until_auto_delist=days_until_auto_delist,
+                listing_type=item.listing_type or "sale",
+                deposit=float(item.deposit) if item.deposit else None,
+                rental_price=float(item.rental_price) if item.rental_price else None,
+                rental_unit=item.rental_unit,
             ))
 
         response = schemas.FleaMarketItemListResponse(
@@ -687,6 +696,52 @@ async def get_flea_market_item(
                 seller_avatar = seller_row[1]
                 seller_user_level = seller_row[2]
         
+        # ==================== 租赁相关信息 ====================
+        active_rentals = []
+        user_rental_request_id = None
+        user_rental_request_status = None
+
+        if item.listing_type == "rental":
+            # 查询活跃租赁
+            active_rental_result = await db.execute(
+                select(models.FleaMarketRental)
+                .where(
+                    models.FleaMarketRental.item_id == db_id,
+                    models.FleaMarketRental.status.in_(["active", "overdue"]),
+                )
+            )
+            active_rental_rows = active_rental_result.scalars().all()
+            if active_rental_rows:
+                renter_ids = list({r.renter_id for r in active_rental_rows})
+                renter_names_result = await db.execute(
+                    select(models.User.id, models.User.name).where(models.User.id.in_(renter_ids))
+                )
+                renter_names_map = {row[0]: row[1] for row in renter_names_result.all()}
+                for r in active_rental_rows:
+                    active_rentals.append({
+                        "id": r.id,
+                        "renter_name": renter_names_map.get(r.renter_id),
+                        "start_date": format_iso_utc(r.start_date),
+                        "end_date": format_iso_utc(r.end_date),
+                        "status": r.status,
+                    })
+
+            # 当前用户的最新租赁申请
+            if current_user:
+                rental_req_result = await db.execute(
+                    select(models.FleaMarketRentalRequest)
+                    .where(
+                        models.FleaMarketRentalRequest.item_id == db_id,
+                        models.FleaMarketRentalRequest.renter_id == current_user.id,
+                        models.FleaMarketRentalRequest.status.in_(["pending", "counter_offer", "approved"]),
+                    )
+                    .order_by(models.FleaMarketRentalRequest.created_at.desc())
+                )
+                user_rental_req = rental_req_result.scalar_one_or_none()
+                if user_rental_req:
+                    user_rental_request_id = user_rental_req.id
+                    user_rental_request_status = user_rental_req.status
+
         # Record browse behavior
         if current_user:
             try:
@@ -730,6 +785,13 @@ async def get_flea_market_item(
             user_purchase_request_id=user_purchase_request_id,  # 当前用户的购买申请ID
             user_purchase_request_status=user_purchase_request_status,  # 当前用户的购买申请状态
             user_purchase_request_proposed_price=user_purchase_request_proposed_price,  # 议价金额
+            listing_type=item.listing_type or "sale",
+            deposit=float(item.deposit) if item.deposit else None,
+            rental_price=float(item.rental_price) if item.rental_price else None,
+            rental_unit=item.rental_unit,
+            active_rentals=active_rentals,
+            user_rental_request_id=user_rental_request_id,
+            user_rental_request_status=user_rental_request_status,
         )
     except HTTPException:
         raise
@@ -884,10 +946,16 @@ async def create_flea_market_item(
             item_data.description = desc_result.cleaned_text
 
         # 创建商品
+        listing_type = getattr(item_data, "listing_type", "sale") or "sale"
+        item_price = item_data.price
+        # 租赁商品：price 存 rental_price 以兼容 isFree 检查
+        if listing_type == "rental" and getattr(item_data, "rental_price", None):
+            item_price = item_data.rental_price
+
         new_item = models.FleaMarketItem(
             title=item_data.title,
             description=item_data.description,
-            price=item_data.price,
+            price=item_price,
             currency="GBP",
             images=json.dumps(item_data.images) if item_data.images else None,
             location=item_data.location or "Online",
@@ -895,6 +963,10 @@ async def create_flea_market_item(
             longitude=getattr(item_data, "longitude", None),  # 经度（可选）
             category=item_data.category,
             contact=item_data.contact,
+            listing_type=listing_type,
+            deposit=getattr(item_data, "deposit", None),
+            rental_price=getattr(item_data, "rental_price", None),
+            rental_unit=getattr(item_data, "rental_unit", None),
             status="active",
             seller_id=current_user.id,
             view_count=0,
@@ -1021,6 +1093,9 @@ async def update_flea_market_item(
             item_data.longitude is not None,
             item_data.category is not None,
             item_data.contact is not None,
+            item_data.deposit is not None,
+            item_data.rental_price is not None,
+            item_data.rental_unit is not None,
         ])
         
         # 执行编辑操作
@@ -1119,7 +1194,13 @@ async def update_flea_market_item(
                 update_data["category"] = item_data.category
             if item_data.contact is not None:
                 update_data["contact"] = item_data.contact
-            
+            if item_data.deposit is not None:
+                update_data["deposit"] = item_data.deposit
+            if item_data.rental_price is not None:
+                update_data["rental_price"] = item_data.rental_price
+            if item_data.rental_unit is not None:
+                update_data["rental_unit"] = item_data.rental_unit
+
             await db.execute(
                 update(models.FleaMarketItem)
                 .where(models.FleaMarketItem.id == db_id)
@@ -1128,6 +1209,55 @@ async def update_flea_market_item(
         
         # 执行删除操作
         if is_delete:
+            # ⚠️ 租赁安全检查：如果商品有活跃租赁，拒绝删除
+            active_rental_count_result = await db.execute(
+                select(func.count(models.FleaMarketRental.id))
+                .where(
+                    models.FleaMarketRental.item_id == db_id,
+                    models.FleaMarketRental.status.in_(["active", "overdue"]),
+                )
+            )
+            if (active_rental_count_result.scalar() or 0) > 0:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="该商品有正在进行的租赁，无法删除"
+                )
+
+            # 自动拒绝所有 pending/approved/counter_offer 的租赁申请
+            pending_rental_requests = await db.execute(
+                select(models.FleaMarketRentalRequest)
+                .where(
+                    models.FleaMarketRentalRequest.item_id == db_id,
+                    models.FleaMarketRentalRequest.status.in_(["pending", "approved", "counter_offer"]),
+                )
+            )
+            affected_renters = []
+            for rr in pending_rental_requests.scalars().all():
+                affected_renters.append(rr.renter_id)
+            if affected_renters:
+                await db.execute(
+                    update(models.FleaMarketRentalRequest)
+                    .where(
+                        models.FleaMarketRentalRequest.item_id == db_id,
+                        models.FleaMarketRentalRequest.status.in_(["pending", "approved", "counter_offer"]),
+                    )
+                    .values(status="rejected")
+                )
+                # 通知受影响的租客
+                try:
+                    from app import async_crud
+                    for renter_id in set(affected_renters):
+                        await async_crud.async_notification_crud.create_notification(
+                            db=db,
+                            user_id=renter_id,
+                            notification_type="flea_market_rental_rejected",
+                            title="租赁申请已取消",
+                            content=f"物品「{item.title}」已被物主删除，您的租赁申请已自动取消。",
+                            related_id=str(db_id),
+                        )
+                except Exception as e:
+                    logger.warning(f"通知受影响租客失败: {e}")
+
             # 删除商品的所有图片文件
             old_images = []
             if item.images:
@@ -1135,11 +1265,11 @@ async def update_flea_market_item(
                     old_images = json.loads(item.images) if isinstance(item.images, str) else item.images
                 except:
                     old_images = []
-            
+
             if old_images:
                 logger.info(f"删除商品 {db_id}，删除 {len(old_images)} 张图片")
                 delete_flea_market_item_images(db_id, old_images)
-            
+
             await db.execute(
                 update(models.FleaMarketItem)
                 .where(models.FleaMarketItem.id == db_id)
@@ -1200,6 +1330,10 @@ async def update_flea_market_item(
             created_at=format_iso_utc(updated_item.created_at),
             updated_at=format_iso_utc(updated_item.updated_at),
             days_until_auto_delist=days_until_auto_delist,
+            listing_type=updated_item.listing_type or "sale",
+            deposit=float(updated_item.deposit) if updated_item.deposit else None,
+            rental_price=float(updated_item.rental_price) if updated_item.rental_price else None,
+            rental_unit=updated_item.rental_unit,
         )
     except HTTPException:
         raise
@@ -1331,7 +1465,7 @@ async def get_my_related_flea_items(
                         models.Task.poster_id == user_id,
                         models.Task.taker_id == user_id,
                     ),
-                    models.Task.task_source == "flea_market",
+                    models.Task.task_source.in_(["flea_market", "flea_market_rental"]),
                 )
             )
         )

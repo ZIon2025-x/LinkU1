@@ -20713,6 +20713,312 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'AI optimization failed, please try again later'**
   String get errorAiOptimizeFailed;
+
+  /// No description provided for @fleaMarketListingTypeSale.
+  ///
+  /// In en, this message translates to:
+  /// **'For Sale'**
+  String get fleaMarketListingTypeSale;
+
+  /// No description provided for @fleaMarketListingTypeRental.
+  ///
+  /// In en, this message translates to:
+  /// **'For Rent'**
+  String get fleaMarketListingTypeRental;
+
+  /// No description provided for @fleaMarketDeposit.
+  ///
+  /// In en, this message translates to:
+  /// **'Deposit'**
+  String get fleaMarketDeposit;
+
+  /// No description provided for @fleaMarketRentalPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Rental Price'**
+  String get fleaMarketRentalPrice;
+
+  /// No description provided for @fleaMarketRentalUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'Rental Unit'**
+  String get fleaMarketRentalUnit;
+
+  /// No description provided for @fleaMarketRentalUnitDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Day'**
+  String get fleaMarketRentalUnitDay;
+
+  /// No description provided for @fleaMarketRentalUnitWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Week'**
+  String get fleaMarketRentalUnitWeek;
+
+  /// No description provided for @fleaMarketRentalUnitMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Month'**
+  String get fleaMarketRentalUnitMonth;
+
+  /// No description provided for @fleaMarketPerDay.
+  ///
+  /// In en, this message translates to:
+  /// **'/day'**
+  String get fleaMarketPerDay;
+
+  /// No description provided for @fleaMarketPerWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'/week'**
+  String get fleaMarketPerWeek;
+
+  /// No description provided for @fleaMarketPerMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'/month'**
+  String get fleaMarketPerMonth;
+
+  /// No description provided for @fleaMarketApplyToRent.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply to Rent'**
+  String get fleaMarketApplyToRent;
+
+  /// No description provided for @fleaMarketRentalDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'Rental Duration'**
+  String get fleaMarketRentalDuration;
+
+  /// No description provided for @fleaMarketDesiredTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Desired Start Time'**
+  String get fleaMarketDesiredTime;
+
+  /// No description provided for @fleaMarketDesiredTimeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Please describe when you\'d like to start renting'**
+  String get fleaMarketDesiredTimeHint;
+
+  /// No description provided for @fleaMarketUsageDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Usage Description'**
+  String get fleaMarketUsageDescription;
+
+  /// No description provided for @fleaMarketUsageDescriptionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Briefly describe your intended use'**
+  String get fleaMarketUsageDescriptionHint;
+
+  /// No description provided for @fleaMarketRentalCostPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Cost Preview'**
+  String get fleaMarketRentalCostPreview;
+
+  /// No description provided for @fleaMarketRentalSubtotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Rental Subtotal'**
+  String get fleaMarketRentalSubtotal;
+
+  /// No description provided for @fleaMarketRentalTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Total'**
+  String get fleaMarketRentalTotal;
+
+  /// No description provided for @fleaMarketRentalRequestSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Rental request sent'**
+  String get fleaMarketRentalRequestSent;
+
+  /// No description provided for @fleaMarketRentalApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Rental Approved'**
+  String get fleaMarketRentalApproved;
+
+  /// No description provided for @fleaMarketRentalRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rental Rejected'**
+  String get fleaMarketRentalRejected;
+
+  /// No description provided for @fleaMarketConfirmReturn.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Return'**
+  String get fleaMarketConfirmReturn;
+
+  /// No description provided for @fleaMarketConfirmReturnMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm the item has been returned? The deposit will be refunded to the renter.'**
+  String get fleaMarketConfirmReturnMessage;
+
+  /// No description provided for @fleaMarketRentalActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Currently Rented'**
+  String get fleaMarketRentalActive;
+
+  /// No description provided for @fleaMarketRentalReturned.
+  ///
+  /// In en, this message translates to:
+  /// **'Returned'**
+  String get fleaMarketRentalReturned;
+
+  /// No description provided for @fleaMarketRentalOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue'**
+  String get fleaMarketRentalOverdue;
+
+  /// No description provided for @fleaMarketDepositHeld.
+  ///
+  /// In en, this message translates to:
+  /// **'Deposit Held'**
+  String get fleaMarketDepositHeld;
+
+  /// No description provided for @fleaMarketDepositRefunded.
+  ///
+  /// In en, this message translates to:
+  /// **'Deposit Refunded'**
+  String get fleaMarketDepositRefunded;
+
+  /// No description provided for @fleaMarketMyRentals.
+  ///
+  /// In en, this message translates to:
+  /// **'My Rentals'**
+  String get fleaMarketMyRentals;
+
+  /// No description provided for @fleaMarketRentalDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Rental Detail'**
+  String get fleaMarketRentalDetail;
+
+  /// No description provided for @fleaMarketRentalRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'Rental Requests'**
+  String get fleaMarketRentalRequests;
+
+  /// No description provided for @fleaMarketNoRentalRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'No rental requests yet'**
+  String get fleaMarketNoRentalRequests;
+
+  /// No description provided for @fleaMarketRentBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Rent'**
+  String get fleaMarketRentBadge;
+
+  /// No description provided for @fleaMarketProposedPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Proposed Price (Optional)'**
+  String get fleaMarketProposedPrice;
+
+  /// No description provided for @fleaMarketProposedPriceHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave blank to use the listed price'**
+  String get fleaMarketProposedPriceHint;
+
+  /// No description provided for @fleaMarketCounterOfferPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Counter Offer Price'**
+  String get fleaMarketCounterOfferPrice;
+
+  /// No description provided for @fleaMarketRentalPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending Approval'**
+  String get fleaMarketRentalPending;
+
+  /// No description provided for @fleaMarketRentalRequestSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Request Submitted'**
+  String get fleaMarketRentalRequestSubmitted;
+
+  /// No description provided for @fleaMarketCurrentlyRented.
+  ///
+  /// In en, this message translates to:
+  /// **'Currently rented out. You can still apply for a future time slot.'**
+  String get fleaMarketCurrentlyRented;
+
+  /// No description provided for @fleaMarketErrorRentalRequestFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to send rental request'**
+  String get fleaMarketErrorRentalRequestFailed;
+
+  /// No description provided for @fleaMarketErrorApproveRentalFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to approve rental request'**
+  String get fleaMarketErrorApproveRentalFailed;
+
+  /// No description provided for @fleaMarketErrorRejectRentalFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to reject rental request'**
+  String get fleaMarketErrorRejectRentalFailed;
+
+  /// No description provided for @fleaMarketErrorCounterOfferRentalFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to counter-offer rental request'**
+  String get fleaMarketErrorCounterOfferRentalFailed;
+
+  /// No description provided for @fleaMarketErrorConfirmReturnFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to confirm return'**
+  String get fleaMarketErrorConfirmReturnFailed;
+
+  /// No description provided for @fleaMarketErrorGetRentalDetailFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load rental details'**
+  String get fleaMarketErrorGetRentalDetailFailed;
+
+  /// No description provided for @fleaMarketErrorGetRentalRequestsFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load rental requests'**
+  String get fleaMarketErrorGetRentalRequestsFailed;
+
+  /// No description provided for @fleaMarketErrorNotRentalItem.
+  ///
+  /// In en, this message translates to:
+  /// **'This item is not available for rent'**
+  String get fleaMarketErrorNotRentalItem;
+
+  /// No description provided for @fleaMarketErrorCannotRentOwnItem.
+  ///
+  /// In en, this message translates to:
+  /// **'You cannot rent your own item'**
+  String get fleaMarketErrorCannotRentOwnItem;
+
+  /// No description provided for @fleaMarketErrorRentalPaymentExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Rental payment has expired'**
+  String get fleaMarketErrorRentalPaymentExpired;
 }
 
 class _AppLocalizationsDelegate

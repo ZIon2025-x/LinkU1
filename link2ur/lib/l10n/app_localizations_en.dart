@@ -11219,6 +11219,158 @@ class AppLocalizationsEn extends AppLocalizations {
       'Up to 9, showing reference cases or requirements';
 
   @override
-  String get errorAiOptimizeFailed =>
-      'AI optimization failed, please try again later';
+  String get errorAiOptimizeFailed => 'AI optimization failed, please try again later';
+
+  @override
+  String get fleaMarketListingTypeSale => 'For Sale';
+
+  @override
+  String get fleaMarketListingTypeRental => 'For Rent';
+
+  @override
+  String get fleaMarketDeposit => 'Deposit';
+
+  @override
+  String get fleaMarketRentalPrice => 'Rental Price';
+
+  @override
+  String get fleaMarketRentalUnit => 'Rental Unit';
+
+  @override
+  String get fleaMarketRentalUnitDay => 'Day';
+
+  @override
+  String get fleaMarketRentalUnitWeek => 'Week';
+
+  @override
+  String get fleaMarketRentalUnitMonth => 'Month';
+
+  @override
+  String get fleaMarketPerDay => '/day';
+
+  @override
+  String get fleaMarketPerWeek => '/week';
+
+  @override
+  String get fleaMarketPerMonth => '/month';
+
+  @override
+  String get fleaMarketApplyToRent => 'Apply to Rent';
+
+  @override
+  String get fleaMarketRentalDuration => 'Rental Duration';
+
+  @override
+  String get fleaMarketDesiredTime => 'Desired Start Time';
+
+  @override
+  String get fleaMarketDesiredTimeHint => 'Please describe when you\'d like to start renting';
+
+  @override
+  String get fleaMarketUsageDescription => 'Usage Description';
+
+  @override
+  String get fleaMarketUsageDescriptionHint => 'Briefly describe your intended use';
+
+  @override
+  String get fleaMarketRentalCostPreview => 'Cost Preview';
+
+  @override
+  String get fleaMarketRentalSubtotal => 'Rental Subtotal';
+
+  @override
+  String get fleaMarketRentalTotal => 'Total';
+
+  @override
+  String get fleaMarketRentalRequestSent => 'Rental request sent';
+
+  @override
+  String get fleaMarketRentalApproved => 'Rental Approved';
+
+  @override
+  String get fleaMarketRentalRejected => 'Rental Rejected';
+
+  @override
+  String get fleaMarketConfirmReturn => 'Confirm Return';
+
+  @override
+  String get fleaMarketConfirmReturnMessage => 'Confirm the item has been returned? The deposit will be refunded to the renter.';
+
+  @override
+  String get fleaMarketRentalActive => 'Currently Rented';
+
+  @override
+  String get fleaMarketRentalReturned => 'Returned';
+
+  @override
+  String get fleaMarketRentalOverdue => 'Overdue';
+
+  @override
+  String get fleaMarketDepositHeld => 'Deposit Held';
+
+  @override
+  String get fleaMarketDepositRefunded => 'Deposit Refunded';
+
+  @override
+  String get fleaMarketMyRentals => 'My Rentals';
+
+  @override
+  String get fleaMarketRentalDetail => 'Rental Detail';
+
+  @override
+  String get fleaMarketRentalRequests => 'Rental Requests';
+
+  @override
+  String get fleaMarketNoRentalRequests => 'No rental requests yet';
+
+  @override
+  String get fleaMarketRentBadge => 'Rent';
+
+  @override
+  String get fleaMarketProposedPrice => 'Proposed Price (Optional)';
+
+  @override
+  String get fleaMarketProposedPriceHint => 'Leave blank to use the listed price';
+
+  @override
+  String get fleaMarketCounterOfferPrice => 'Counter Offer Price';
+
+  @override
+  String get fleaMarketRentalPending => 'Pending Approval';
+
+  @override
+  String get fleaMarketRentalRequestSubmitted => 'Request Submitted';
+
+  @override
+  String get fleaMarketCurrentlyRented => 'Currently rented out. You can still apply for a future time slot.';
+
+  @override
+  String get fleaMarketErrorRentalRequestFailed => 'Failed to send rental request';
+
+  @override
+  String get fleaMarketErrorApproveRentalFailed => 'Failed to approve rental request';
+
+  @override
+  String get fleaMarketErrorRejectRentalFailed => 'Failed to reject rental request';
+
+  @override
+  String get fleaMarketErrorCounterOfferRentalFailed => 'Failed to counter-offer rental request';
+
+  @override
+  String get fleaMarketErrorConfirmReturnFailed => 'Failed to confirm return';
+
+  @override
+  String get fleaMarketErrorGetRentalDetailFailed => 'Failed to load rental details';
+
+  @override
+  String get fleaMarketErrorGetRentalRequestsFailed => 'Failed to load rental requests';
+
+  @override
+  String get fleaMarketErrorNotRentalItem => 'This item is not available for rent';
+
+  @override
+  String get fleaMarketErrorCannotRentOwnItem => 'You cannot rent your own item';
+
+  @override
+  String get fleaMarketErrorRentalPaymentExpired => 'Rental payment has expired';
 }

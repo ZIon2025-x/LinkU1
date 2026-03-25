@@ -8,6 +8,8 @@ import '../../../features/flea_market/views/flea_market_view.dart';
 import '../../../features/flea_market/views/flea_market_detail_view.dart';
 import '../../../features/flea_market/views/create_flea_market_item_view.dart';
 import '../../../features/flea_market/views/edit_flea_market_item_view.dart';
+import '../../../features/flea_market/views/rental_detail_view.dart';
+import '../../../features/flea_market/views/my_rentals_view.dart';
 
 /// 跳蚤市场相关路由
 List<RouteBase> get fleaMarketRoutes => [
@@ -46,6 +48,23 @@ List<RouteBase> get fleaMarketRoutes => [
           return SlideUpTransitionPage(
             key: state.pageKey,
             child: EditFleaMarketItemView(itemId: id, item: item),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.fleaMarketMyRentals,
+        name: 'fleaMarketMyRentals',
+        builder: (context, state) => const MyRentalsView(),
+      ),
+      GoRoute(
+        path: AppRoutes.fleaMarketRentalDetail,
+        name: 'fleaMarketRentalDetail',
+        pageBuilder: (context, state) {
+          final id = state.pathParameters['id'] ?? '';
+          return platformDetailPage(
+            context,
+            key: state.pageKey,
+            child: RentalDetailView(rentalId: id),
           );
         },
       ),

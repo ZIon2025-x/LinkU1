@@ -61,20 +61,30 @@ class _EditFleaMarketItemViewContentState
   late final TextEditingController _descriptionController;
   late final TextEditingController _priceController;
   late final TextEditingController _locationController;
+  late final TextEditingController _depositController;
+  late final TextEditingController _rentalPriceController;
 
   String _selectedCategory = '';
+  late String _rentalUnit;
   List<String> _existingImageUrls = [];
   final List<XFile> _newImages = [];
 
   bool get _hasUnsavedChanges {
     final item = widget.item;
-    return _titleController.text != item.title ||
+    if (_titleController.text != item.title ||
         _descriptionController.text != (item.description ?? '') ||
-        _priceController.text != item.price.toString() ||
         _locationController.text != (item.location ?? 'Online') ||
         _selectedCategory != (item.category ?? '') ||
         _existingImageUrls.length != item.images.length ||
-        _newImages.isNotEmpty;
+        _newImages.isNotEmpty) {
+      return true;
+    }
+    if (item.isRental) {
+      return _depositController.text != (item.deposit?.toString() ?? '') ||
+          _rentalPriceController.text != (item.rentalPrice?.toString() ?? '') ||
+          _rentalUnit != (item.rentalUnit ?? 'day');
+    }
+    return _priceController.text != item.price.toString();
   }
 
   /// API key 使用固定英文常量（对齐后端 FLEA_MARKET_CATEGORIES），显示名使用本地化
@@ -101,6 +111,11 @@ class _EditFleaMarketItemViewContentState
         TextEditingController(text: widget.item.price.toString());
     _locationController =
         TextEditingController(text: widget.item.location ?? 'Online');
+    _depositController = TextEditingController(
+        text: widget.item.deposit != null ? widget.item.deposit.toString() : '');
+    _rentalPriceController = TextEditingController(
+        text: widget.item.rentalPrice != null ? widget.item.rentalPrice.toString() : '');
+    _rentalUnit = widget.item.rentalUnit ?? 'day';
     _selectedCategory = widget.item.category ?? '';
     _existingImageUrls = List<String>.from(widget.item.images);
   }
@@ -111,6 +126,8 @@ class _EditFleaMarketItemViewContentState
     _descriptionController.dispose();
     _priceController.dispose();
     _locationController.dispose();
+    _depositController.dispose();
+    _rentalPriceController.dispose();
     super.dispose();
   }
 
@@ -172,9 +189,9 @@ class _EditFleaMarketItemViewContentState
 
   Future<void> _saveChanges() async {
     final title = _titleController.text.trim();
-    final priceText = _priceController.text.trim();
+    final isRental = widget.item.isRental;
 
-    if (title.isEmpty || priceText.isEmpty) {
+    if (title.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(context.l10n.fleaMarketFillRequired),
@@ -194,15 +211,41 @@ class _EditFleaMarketItemViewContentState
       return;
     }
 
-    final price = double.tryParse(priceText);
-    if (price == null || price < 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(context.l10n.fleaMarketInvalidPrice),
-          backgroundColor: AppColors.error,
-        ),
-      );
-      return;
+    // Validate price fields based on listing type
+    final double price;
+    double? deposit;
+    double? rentalPrice;
+    String? rentalUnit;
+
+    if (isRental) {
+      final depositVal = double.tryParse(_depositController.text.trim());
+      final rentalPriceVal = double.tryParse(_rentalPriceController.text.trim());
+      if (depositVal == null || depositVal <= 0 || rentalPriceVal == null || rentalPriceVal <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.l10n.fleaMarketInvalidPrice),
+            backgroundColor: AppColors.error,
+          ),
+        );
+        return;
+      }
+      price = rentalPriceVal;
+      deposit = depositVal;
+      rentalPrice = rentalPriceVal;
+      rentalUnit = _rentalUnit;
+    } else {
+      final priceText = _priceController.text.trim();
+      final priceVal = double.tryParse(priceText);
+      if (priceVal == null || priceVal < 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.l10n.fleaMarketInvalidPrice),
+            backgroundColor: AppColors.error,
+          ),
+        );
+        return;
+      }
+      price = priceVal;
     }
 
     final bloc = context.read<FleaMarketBloc>();
@@ -223,6 +266,9 @@ class _EditFleaMarketItemViewContentState
       category: _selectedCategory,
       existingImageUrls: _existingImageUrls,
       newImagesToUpload: newImagesToUpload,
+      deposit: deposit,
+      rentalPrice: rentalPrice,
+      rentalUnit: rentalUnit,
     ));
   }
 
@@ -339,14 +385,65 @@ class _EditFleaMarketItemViewContentState
                 title: l10n.fleaMarketPriceAndTrade,
                 icon: Icons.monetization_on,
                 children: [
-                  _buildTextField(
-                    controller: _priceController,
-                    label: l10n.fleaMarketPrice,
-                    hint: '0.00',
-                    prefix: Helpers.currencySymbolFor(widget.item.currency),
-                    keyboardType: TextInputType.number,
-                    isRequired: true,
-                  ),
+                  if (widget.item.isRental) ...[
+                    // 租赁模式：押金 + 租金 + 租期单位
+                    _buildTextField(
+                      controller: _depositController,
+                      label: l10n.fleaMarketDeposit,
+                      hint: '0.00',
+                      prefix: Helpers.currencySymbolFor(widget.item.currency),
+                      keyboardType: TextInputType.number,
+                      isRequired: true,
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    _buildTextField(
+                      controller: _rentalPriceController,
+                      label: l10n.fleaMarketRentalPrice,
+                      hint: '0.00',
+                      prefix: Helpers.currencySymbolFor(widget.item.currency),
+                      keyboardType: TextInputType.number,
+                      isRequired: true,
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(l10n.fleaMarketRentalUnit,
+                                style: const TextStyle(
+                                    fontSize: 14, color: AppColors.textSecondary)),
+                            const Text(' *', style: TextStyle(color: AppColors.error)),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        DropdownButtonFormField<String>(
+                          initialValue: _rentalUnit,
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppRadius.medium),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 12),
+                          ),
+                          items: [
+                            DropdownMenuItem(value: 'day', child: Text(l10n.fleaMarketRentalUnitDay)),
+                            DropdownMenuItem(value: 'week', child: Text(l10n.fleaMarketRentalUnitWeek)),
+                            DropdownMenuItem(value: 'month', child: Text(l10n.fleaMarketRentalUnitMonth)),
+                          ],
+                          onChanged: (v) => setState(() => _rentalUnit = v ?? 'day'),
+                        ),
+                      ],
+                    ),
+                  ] else
+                    _buildTextField(
+                      controller: _priceController,
+                      label: l10n.fleaMarketPrice,
+                      hint: '0.00',
+                      prefix: Helpers.currencySymbolFor(widget.item.currency),
+                      keyboardType: TextInputType.number,
+                      isRequired: true,
+                    ),
                   const SizedBox(height: AppSpacing.md),
                   _buildTextField(
                     controller: _locationController,

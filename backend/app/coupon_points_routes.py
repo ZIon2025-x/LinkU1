@@ -1434,8 +1434,8 @@ def create_task_payment(
         # 跳蚤市场：补充 webhook 需要的 payment_type 和 flea_market_item_id
         flea_market_item_id = payment_request.flea_market_item_id
         if not flea_market_item_id and (
-            payment_request.task_source == "flea_market"
-            or getattr(task, "task_source", None) == "flea_market"
+            payment_request.task_source in ("flea_market", "flea_market_rental")
+            or getattr(task, "task_source", None) in ("flea_market", "flea_market_rental")
             or task.task_type == "Second-hand & Rental"
         ):
             flea_item = db.query(models.FleaMarketItem).filter(
@@ -1599,8 +1599,8 @@ def _build_wechat_checkout_metadata(
     }
     # 跳蚤市场：补充 flea_market_item_id 供 webhook 更新商品状态
     if not flea_market_item_id and (
-        task_source == "flea_market"
-        or getattr(task, "task_source", None) == "flea_market"
+        task_source in ("flea_market", "flea_market_rental")
+        or getattr(task, "task_source", None) in ("flea_market", "flea_market_rental")
         or task.task_type == "Second-hand & Rental"
     ):
         flea_item = db.query(models.FleaMarketItem).filter(

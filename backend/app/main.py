@@ -441,6 +441,10 @@ app.include_router(admin_task_expert_router)
 from app.flea_market_routes import flea_market_router
 app.include_router(flea_market_router)
 
+# 跳蚤市场租赁路由
+from app.flea_market_rental_routes import rental_router
+app.include_router(rental_router)
+
 # 多人任务路由
 from app.multi_participant_routes import router as multi_participant_router
 app.include_router(multi_participant_router)

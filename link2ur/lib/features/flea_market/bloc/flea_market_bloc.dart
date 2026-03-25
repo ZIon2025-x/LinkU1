@@ -239,6 +239,9 @@ class FleaMarketUploadImagesAndUpdateItem extends FleaMarketEvent {
     required this.category,
     required this.existingImageUrls,
     required this.newImagesToUpload,
+    this.deposit,
+    this.rentalPrice,
+    this.rentalUnit,
   });
 
   final String itemId;
@@ -249,10 +252,13 @@ class FleaMarketUploadImagesAndUpdateItem extends FleaMarketEvent {
   final List<String> existingImageUrls;
   /// (bytes, filename) 列表
   final List<(Uint8List, String)> newImagesToUpload;
+  final double? deposit;
+  final double? rentalPrice;
+  final String? rentalUnit;
 
   @override
   List<Object?> get props =>
-      [itemId, title, description, price, category, existingImageUrls];
+      [itemId, title, description, price, category, existingImageUrls, deposit, rentalPrice, rentalUnit];
 }
 
 class FleaMarketDeleteItem extends FleaMarketEvent {
@@ -262,6 +268,16 @@ class FleaMarketDeleteItem extends FleaMarketEvent {
 
   @override
   List<Object?> get props => [itemId];
+}
+
+/// 切换列表类型筛选：'all', 'sale', 'rental'
+class FleaMarketListingTypeFilterChanged extends FleaMarketEvent {
+  const FleaMarketListingTypeFilterChanged(this.listingType);
+
+  final String listingType;
+
+  @override
+  List<Object?> get props => [listingType];
 }
 
 // ==================== State ====================
@@ -276,6 +292,7 @@ class FleaMarketState extends Equatable {
     this.page = 1,
     this.hasMore = true,
     this.selectedCategory = 'all',
+    this.listingTypeFilter = 'all',
     this.searchQuery = '',
     this.errorMessage,
     this.isRefreshing = false,
@@ -300,6 +317,8 @@ class FleaMarketState extends Equatable {
   final int page;
   final bool hasMore;
   final String selectedCategory;
+  /// 列表类型筛选：'all', 'sale', 'rental'
+  final String listingTypeFilter;
   final String searchQuery;
   final String? errorMessage;
   final bool isRefreshing;
@@ -330,6 +349,7 @@ class FleaMarketState extends Equatable {
     int? page,
     bool? hasMore,
     String? selectedCategory,
+    String? listingTypeFilter,
     String? searchQuery,
     String? errorMessage,
     bool? isRefreshing,
@@ -355,6 +375,7 @@ class FleaMarketState extends Equatable {
       page: page ?? this.page,
       hasMore: hasMore ?? this.hasMore,
       selectedCategory: selectedCategory ?? this.selectedCategory,
+      listingTypeFilter: listingTypeFilter ?? this.listingTypeFilter,
       searchQuery: searchQuery ?? this.searchQuery,
       errorMessage: errorMessage,
       isRefreshing: isRefreshing ?? this.isRefreshing,
@@ -384,6 +405,7 @@ class FleaMarketState extends Equatable {
         page,
         hasMore,
         selectedCategory,
+        listingTypeFilter,
         searchQuery,
         errorMessage,
         isRefreshing,
@@ -434,9 +456,14 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     on<FleaMarketCounterOffer>(_onCounterOffer);
     on<FleaMarketRespondCounterOffer>(_onRespondCounterOffer);
     on<FleaMarketDeleteItem>(_onDeleteItem);
+    on<FleaMarketListingTypeFilterChanged>(_onListingTypeFilterChanged);
   }
 
   final FleaMarketRepository _fleaMarketRepository;
+
+  /// 当 listingTypeFilter 不为 'all' 时返回有效值，否则返回 null
+  String? get _effectiveListingType =>
+      state.listingTypeFilter == 'all' ? null : state.listingTypeFilter;
 
   Future<void> _onLoadRequested(
     FleaMarketLoadRequested event,
@@ -448,6 +475,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
       final response = await _fleaMarketRepository.getItems(
         category: state.selectedCategory,
         keyword: state.searchQuery.isEmpty ? null : state.searchQuery,
+        listingType: _effectiveListingType,
       );
 
       emit(state.copyWith(
@@ -478,6 +506,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     try {
       final response = await _fleaMarketRepository.getItems(
         category: state.selectedCategory,
+        listingType: _effectiveListingType,
       );
 
       emit(state.copyWith(
@@ -511,6 +540,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
         page: nextPage,
         category: state.selectedCategory,
         keyword: state.searchQuery.isEmpty ? null : state.searchQuery,
+        listingType: _effectiveListingType,
       );
 
       emit(state.copyWith(
@@ -537,6 +567,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     try {
       final response = await _fleaMarketRepository.getItems(
         category: event.category,
+        listingType: _effectiveListingType,
       );
 
       emit(state.copyWith(
@@ -567,6 +598,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
       final response = await _fleaMarketRepository.getItems(
         keyword: event.query.isEmpty ? null : event.query,
         category: state.selectedCategory,
+        listingType: _effectiveListingType,
       );
 
       emit(state.copyWith(
@@ -825,6 +857,9 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
         price: event.price,
         category: event.category,
         images: allImages,
+        deposit: event.deposit,
+        rentalPrice: event.rentalPrice,
+        rentalUnit: event.rentalUnit,
       );
 
       final updatedItems = state.items.map((item) {
@@ -1166,6 +1201,38 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'delete_failed',
+        errorMessage: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onListingTypeFilterChanged(
+    FleaMarketListingTypeFilterChanged event,
+    Emitter<FleaMarketState> emit,
+  ) async {
+    emit(state.copyWith(
+      listingTypeFilter: event.listingType,
+      status: FleaMarketStatus.loading,
+    ));
+
+    try {
+      final response = await _fleaMarketRepository.getItems(
+        category: state.selectedCategory,
+        keyword: state.searchQuery.isEmpty ? null : state.searchQuery,
+        listingType: event.listingType == 'all' ? null : event.listingType,
+      );
+
+      emit(state.copyWith(
+        status: FleaMarketStatus.loaded,
+        items: response.items,
+        total: response.total,
+        page: 1,
+        hasMore: response.hasMore,
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to filter by listing type', e);
+      emit(state.copyWith(
+        status: FleaMarketStatus.error,
         errorMessage: e.toString(),
       ));
     }

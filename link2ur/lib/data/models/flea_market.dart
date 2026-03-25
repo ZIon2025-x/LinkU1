@@ -43,6 +43,13 @@ class FleaMarketItem extends Equatable {
     this.myRole,
     this.relatedTaskId,
     this.finalPrice,
+    this.listingType = 'sale',
+    this.deposit,
+    this.rentalPrice,
+    this.rentalUnit,
+    this.activeRentals = const [],
+    this.userRentalRequestId,
+    this.userRentalRequestStatus,
   });
 
   /// 与我相关接口返回：seller=我发布的/已售出, buyer=收的闲置
@@ -89,6 +96,15 @@ class FleaMarketItem extends Equatable {
   final String? userPurchaseRequestStatus; // pending, seller_negotiating
   final double? userPurchaseRequestProposedPrice;
 
+  // 租赁相关字段
+  final String listingType; // sale, rental
+  final double? deposit;
+  final double? rentalPrice;
+  final String? rentalUnit; // hour, day, week, month
+  final List<FleaMarketRentalSummary> activeRentals;
+  final int? userRentalRequestId;
+  final String? userRentalRequestStatus;
+
   /// 第一张图片
   String? get firstImage => images.isNotEmpty ? images.first : null;
 
@@ -101,8 +117,14 @@ class FleaMarketItem extends Equatable {
   /// 是否已售出
   bool get isSold => status == AppConstants.fleaMarketStatusSold;
 
-  /// 是否免费
-  bool get isFree => price == 0;
+  /// 是否免费（租赁物品不算免费）
+  bool get isFree => !isRental && price == 0;
+
+  /// 是否为租赁类型
+  bool get isRental => listingType == 'rental';
+
+  /// 是否有活跃租赁
+  bool get hasActiveRentals => activeRentals.isNotEmpty;
 
   /// 价格显示（不含免费文案，免费时由 View 层用 l10n 显示）
   String get priceDisplay => '${Helpers.currencySymbolFor(currency)}${price.toStringAsFixed(2)}';
@@ -172,6 +194,17 @@ class FleaMarketItem extends Equatable {
       myRole: _toStringNullable(json['my_role']),
       relatedTaskId: _toStringNullable(json['task_id']),
       finalPrice: _toDoubleNullable(json['final_price']),
+      listingType: _toStringNullable(json['listing_type']) ?? 'sale',
+      deposit: _toDoubleNullable(json['deposit']),
+      rentalPrice: _toDoubleNullable(json['rental_price']),
+      rentalUnit: _toStringNullable(json['rental_unit']),
+      activeRentals: (json['active_rentals'] as List<dynamic>?)
+          ?.map((e) => FleaMarketRentalSummary.fromJson(
+              Map<String, dynamic>.from(e as Map)))
+          .toList() ?? const [],
+      userRentalRequestId: _toIntNullable(json['user_rental_request_id']),
+      userRentalRequestStatus:
+          _toStringNullable(json['user_rental_request_status']),
     );
   }
 
@@ -214,6 +247,12 @@ class FleaMarketItem extends Equatable {
       'my_role': myRole,
       'task_id': relatedTaskId,
       'final_price': finalPrice,
+      'listing_type': listingType,
+      'deposit': deposit,
+      'rental_price': rentalPrice,
+      'rental_unit': rentalUnit,
+      'user_rental_request_id': userRentalRequestId,
+      'user_rental_request_status': userRentalRequestStatus,
     };
   }
 
@@ -255,6 +294,13 @@ class FleaMarketItem extends Equatable {
     String? myRole,
     String? relatedTaskId,
     double? finalPrice,
+    String? listingType,
+    double? deposit,
+    double? rentalPrice,
+    String? rentalUnit,
+    List<FleaMarketRentalSummary>? activeRentals,
+    int? userRentalRequestId,
+    String? userRentalRequestStatus,
   }) {
     return FleaMarketItem(
       id: id ?? this.id,
@@ -294,11 +340,18 @@ class FleaMarketItem extends Equatable {
       myRole: myRole ?? this.myRole,
       relatedTaskId: relatedTaskId ?? this.relatedTaskId,
       finalPrice: finalPrice ?? this.finalPrice,
+      listingType: listingType ?? this.listingType,
+      deposit: deposit ?? this.deposit,
+      rentalPrice: rentalPrice ?? this.rentalPrice,
+      rentalUnit: rentalUnit ?? this.rentalUnit,
+      activeRentals: activeRentals ?? this.activeRentals,
+      userRentalRequestId: userRentalRequestId ?? this.userRentalRequestId,
+      userRentalRequestStatus: userRentalRequestStatus ?? this.userRentalRequestStatus,
     );
   }
 
   @override
-  List<Object?> get props => [id, title, status, price, updatedAt];
+  List<Object?> get props => [id, title, status, price, listingType, updatedAt];
 }
 
 /// 我的购买列表响应（含待支付 + 已购）
@@ -417,6 +470,10 @@ class CreateFleaMarketRequest {
     this.latitude,
     this.longitude,
     this.category,
+    this.listingType = 'sale',
+    this.deposit,
+    this.rentalPrice,
+    this.rentalUnit,
   });
 
   final String title;
@@ -428,6 +485,10 @@ class CreateFleaMarketRequest {
   final double? latitude;
   final double? longitude;
   final String? category;
+  final String listingType;
+  final double? deposit;
+  final double? rentalPrice;
+  final String? rentalUnit;
 
   Map<String, dynamic> toJson() {
     return {
@@ -440,8 +501,44 @@ class CreateFleaMarketRequest {
       if (latitude != null) 'latitude': latitude,
       if (longitude != null) 'longitude': longitude,
       if (category != null) 'category': category,
+      'listing_type': listingType,
+      if (listingType == 'rental') ...{
+        'deposit': deposit,
+        'rental_price': rentalPrice,
+        'rental_unit': rentalUnit,
+      },
     };
   }
+}
+
+/// 租赁摘要（嵌入在 FleaMarketItem.activeRentals 中）
+class FleaMarketRentalSummary extends Equatable {
+  final int id;
+  final String? renterName;
+  final String startDate;
+  final String endDate;
+  final String status;
+
+  const FleaMarketRentalSummary({
+    required this.id,
+    this.renterName,
+    required this.startDate,
+    required this.endDate,
+    required this.status,
+  });
+
+  factory FleaMarketRentalSummary.fromJson(Map<String, dynamic> json) {
+    return FleaMarketRentalSummary(
+      id: _toInt(json['id']),
+      renterName: _toStringNullable(json['renter_name']),
+      startDate: _toStringNullable(json['start_date']) ?? '',
+      endDate: _toStringNullable(json['end_date']) ?? '',
+      status: _toStringNullable(json['status']) ?? 'active',
+    );
+  }
+
+  @override
+  List<Object?> get props => [id, renterName, startDate, endDate, status];
 }
 
 /// 安全地将 JSON 值转为 int（兼容 String/num/null）
