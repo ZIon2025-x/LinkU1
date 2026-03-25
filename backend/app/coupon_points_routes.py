@@ -962,9 +962,12 @@ def create_task_payment(
         from app.wallet_service import lock_wallet, debit_wallet
         from decimal import Decimal
 
+        # Use the task's currency for wallet operations
+        wallet_currency = getattr(task, "currency", None) or "GBP"
+
         try:
-            wallet_account = lock_wallet(db, str(current_user.id))
-            # 将余额转换为便士进行比较（余额存储为英镑 Decimal）
+            wallet_account = lock_wallet(db, str(current_user.id), wallet_currency)
+            # 将余额转换为最小单位进行比较（余额存储为主单位 Decimal）
             balance_pence = int(wallet_account.balance * 100)
             wallet_deduction_pence = min(balance_pence, final_amount)
 
@@ -980,6 +983,7 @@ def create_task_payment(
                     description=f"任务 #{task_id} 余额支付",
                     status="pending",  # Pending until Stripe confirms or full-wallet
                     idempotency_key=f"wallet_task_payment_{task_id}_{current_user.id}",
+                    currency=wallet_currency,
                 )
                 wallet_tx_id = wallet_tx.id
                 final_amount = final_amount - wallet_deduction_pence
@@ -1426,6 +1430,7 @@ def create_task_payment(
         if wallet_tx_id and wallet_deduction_pence > 0:
             metadata["wallet_tx_id"] = str(wallet_tx_id)
             metadata["wallet_deduction"] = str(wallet_deduction_pence)
+            metadata["wallet_currency"] = getattr(task, "currency", None) or "GBP"
         # 跳蚤市场：补充 webhook 需要的 payment_type 和 flea_market_item_id
         flea_market_item_id = payment_request.flea_market_item_id
         if not flea_market_item_id and (

@@ -13,9 +13,10 @@ import stripe
 
 from app import models
 from app.deps import get_db, get_current_user_secure_sync_csrf
-from app.wallet_models import WalletTransaction
+from app.wallet_models import WalletAccount, WalletTransaction
 from app.wallet_schemas import (
-    WalletBalanceResponse,
+    WalletBalanceOut,
+    WalletBalancesResponse,
     WalletTransactionOut,
     WalletTransactionsResponse,
     WithdrawRequest,
@@ -37,20 +38,41 @@ router = APIRouter(prefix="/api/wallet", tags=["Wallet"])
 # GET /api/wallet/balance
 # ---------------------------------------------------------------------------
 
-@router.get("/balance", response_model=WalletBalanceResponse)
+def _format_wallet(w: WalletAccount) -> WalletBalanceOut:
+    """Convert a WalletAccount ORM object to a response schema."""
+    return WalletBalanceOut(
+        # NOTE: float has ~15-digit precision; sufficient for balances < 1 trillion
+        # but may lose sub-penny precision. Acceptable for display purposes.
+        balance=float(w.balance),
+        total_earned=float(w.total_earned),
+        total_withdrawn=float(w.total_withdrawn),
+        total_spent=float(w.total_spent),
+        currency=w.currency,
+    )
+
+
+@router.get("/balance", response_model=WalletBalancesResponse)
 def get_balance(
+    currency: Optional[str] = Query(None, description="Filter by currency (e.g. GBP, EUR). Omit to get all wallets."),
     current_user: models.User = Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db),
 ):
-    """Return wallet balance for the authenticated user. Creates wallet if not exists."""
-    wallet = get_or_create_wallet(db, current_user.id)
+    """Return wallet balance(s) for the authenticated user. Creates wallet if not exists."""
+    if currency:
+        account = get_or_create_wallet(db, current_user.id, currency.upper())
+        wallets = [account]
+    else:
+        wallets = (
+            db.query(WalletAccount)
+            .filter(WalletAccount.user_id == current_user.id)
+            .all()
+        )
+        if not wallets:
+            # Create default GBP wallet
+            wallets = [get_or_create_wallet(db, current_user.id, "GBP")]
     db.commit()
-    return WalletBalanceResponse(
-        balance=float(wallet.balance),
-        total_earned=float(wallet.total_earned),
-        total_withdrawn=float(wallet.total_withdrawn),
-        total_spent=float(wallet.total_spent),
-        currency=wallet.currency,
+    return WalletBalancesResponse(
+        wallets=[_format_wallet(w) for w in wallets],
     )
 
 
@@ -63,6 +85,7 @@ def get_transactions(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     type: Optional[str] = Query(None, description="Filter by transaction type"),
+    currency: Optional[str] = Query(None, description="Filter by currency (e.g. GBP, EUR)"),
     current_user: models.User = Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db),
 ):
@@ -76,6 +99,8 @@ def get_transactions(
     )
     if type:
         query = query.filter(WalletTransaction.type == type)
+    if currency:
+        query = query.filter(WalletTransaction.currency == currency.upper())
 
     total = query.count()
     items = (
@@ -99,6 +124,7 @@ def get_transactions(
                 description=tx.description,
                 fee_amount=float(tx.fee_amount) if tx.fee_amount is not None else None,
                 gross_amount=float(tx.gross_amount) if tx.gross_amount is not None else None,
+                currency=tx.currency,
                 created_at=tx.created_at,
             )
             for tx in items
@@ -137,6 +163,8 @@ def withdraw(
     amount = Decimal(str(req.amount)).quantize(Decimal("0.01"), rounding=ROUND_DOWN)
     amount_pence = int(amount * 100)
 
+    currency = req.currency.upper()
+
     # Phase 1: DB — create pending withdrawal (commits internally via flush, we commit here)
     try:
         pending_tx = create_pending_withdrawal(
@@ -144,6 +172,7 @@ def withdraw(
             user_id=current_user.id,
             amount=amount,
             request_uuid=req.request_id,
+            currency=currency,
         )
         db.commit()
     except ValueError as e:
@@ -154,7 +183,7 @@ def withdraw(
     try:
         transfer = stripe.Transfer.create(
             amount=amount_pence,
-            currency="gbp",
+            currency=currency.lower(),
             destination=stripe_account_id,
             description=f"Wallet withdrawal for user {current_user.id}",
             metadata={
@@ -196,11 +225,12 @@ def withdraw(
         # Return success anyway — money was sent. Manual reconciliation needed.
 
     # Re-read wallet for updated balance
-    wallet = get_or_create_wallet(db, current_user.id)
+    wallet = get_or_create_wallet(db, current_user.id, currency)
 
     return WithdrawResponse(
         success=True,
         transfer_id=transfer.id,
         amount=float(amount),
         balance_after=float(wallet.balance),
+        currency=currency,
     )

@@ -4281,6 +4281,7 @@ def confirm_task_completion(
                 related_type="task",
                 description=f"任务 #{task.id} 奖励",
                 idempotency_key=idempotency_key,
+                currency=task.currency or "GBP",
             )
 
             # Clear escrow and mark as paid
@@ -6359,7 +6360,7 @@ def create_payment(
         line_items=[
             {
                 "price_data": {
-                    "currency": "gbp",
+                    "currency": (task.currency or "GBP").lower(),
                     "product_data": {"name": task.title},
                     "unit_amount": task_amount_pence,
                 },
@@ -6822,7 +6823,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                                     total_amount=int(task_amount * 100),
                                     stripe_amount=int(task_amount * 100),
                                     final_amount=int(task_amount * 100),
-                                    currency="GBP",
+                                    currency=task.currency or "GBP",
                                     status="succeeded",
                                     application_fee=application_fee_pence,
                                     escrow_amount=Decimal(str(task.escrow_amount)),
@@ -6869,7 +6870,8 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                                     _wd = metadata.get("wallet_deduction")
                                     if _wd:
                                         from decimal import Decimal
-                                        reverse_debit(db, int(_wallet_tx_id), metadata.get("user_id", ""), Decimal(_wd) / Decimal("100"))
+                                        _wcur = metadata.get("wallet_currency", "GBP")
+                                        reverse_debit(db, int(_wallet_tx_id), metadata.get("user_id", ""), Decimal(_wd) / Decimal("100"), currency=_wcur)
                                         logger.info(f"✅ [WEBHOOK] 申请撤回退款，钱包扣款已退还: wallet_tx_id={_wallet_tx_id}")
                                 except Exception as w_err:
                                     logger.error(f"❌ [WEBHOOK] 退还钱包扣款失败（撤回）: {w_err}")
@@ -6915,7 +6917,8 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                                     _wd = metadata.get("wallet_deduction")
                                     if _wd:
                                         from decimal import Decimal
-                                        reverse_debit(db, int(_wallet_tx_id), metadata.get("user_id", ""), Decimal(_wd) / Decimal("100"))
+                                        _wcur = metadata.get("wallet_currency", "GBP")
+                                        reverse_debit(db, int(_wallet_tx_id), metadata.get("user_id", ""), Decimal(_wd) / Decimal("100"), currency=_wcur)
                                         logger.info(f"✅ [WEBHOOK] 申请未找到退款，钱包扣款已退还: wallet_tx_id={_wallet_tx_id}")
                                 except Exception as w_err:
                                     logger.error(f"❌ [WEBHOOK] 退还钱包扣款失败（未找到）: {w_err}")
@@ -6950,7 +6953,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                                 total_amount=int(task_amount * 100),
                                 stripe_amount=int(task_amount * 100),
                                 final_amount=int(task_amount * 100),
-                                currency="GBP",
+                                currency=task.currency or "GBP",
                                 status="succeeded",
                                 application_fee=application_fee_pence,
                                 escrow_amount=Decimal(str(task.escrow_amount)),
@@ -7175,7 +7178,8 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 from decimal import Decimal
                 _user_id = _failed_metadata.get("user_id", "")
                 _deduction_pounds = Decimal(_failed_wallet_deduction) / Decimal("100")
-                reverse_debit(db, int(_failed_wallet_tx_id), _user_id, _deduction_pounds)
+                _wcur = _failed_metadata.get("wallet_currency", "GBP")
+                reverse_debit(db, int(_failed_wallet_tx_id), _user_id, _deduction_pounds, currency=_wcur)
                 db.commit()
                 logger.info(
                     f"✅ [WEBHOOK] 支付失败，钱包扣款已退还: "
@@ -7593,7 +7597,8 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 from decimal import Decimal
                 _user_id = _canceled_metadata.get("user_id", "")
                 _deduction_pounds = Decimal(_canceled_wallet_deduction) / Decimal("100")
-                reverse_debit(db, int(_canceled_wallet_tx_id), _user_id, _deduction_pounds)
+                _wcur = _canceled_metadata.get("wallet_currency", "GBP")
+                reverse_debit(db, int(_canceled_wallet_tx_id), _user_id, _deduction_pounds, currency=_wcur)
                 db.commit()
                 logger.info(
                     f"✅ [WEBHOOK] 支付取消，钱包扣款已退还: "
@@ -8025,7 +8030,7 @@ def confirm_task_complete(
         # 平台服务费已经在计算 escrow_amount 时扣除
         transfer = stripe.Transfer.create(
             amount=transfer_amount_pence,
-            currency="gbp",
+            currency=(task.currency or "GBP").lower(),
             destination=taker.stripe_account_id,
             metadata={
                 "task_id": str(task_id),
@@ -8057,7 +8062,7 @@ def confirm_task_complete(
                     taker_id=task.taker_id,
                     poster_id=current_user.id,
                     amount=Decimal(str(task.escrow_amount)),
-                    currency="GBP",
+                    currency=task.currency or "GBP",
                     metadata={
                         "task_title": task.title,
                         "transfer_source": "confirm_complete"
@@ -8090,7 +8095,7 @@ def confirm_task_complete(
             "message": "Payment released to taker.",
             "transfer_id": transfer.id,
             "amount": task.escrow_amount,
-            "currency": "GBP"
+            "currency": task.currency or "GBP"
         }
         
     except stripe.error.StripeError as e:

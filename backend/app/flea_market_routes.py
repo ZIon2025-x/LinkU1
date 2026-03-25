@@ -1813,15 +1813,12 @@ async def direct_purchase_item(
             # 需要支付：检查卖家 Stripe Connect 账户并创建 PaymentIntent
             seller = await db.get(models.User, item.seller_id)
             taker_stripe_account_id = seller.stripe_account_id if seller else None
-            
-            if not taker_stripe_account_id:
-                await db.rollback()
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="卖家尚未创建 Stripe Connect 收款账户，无法完成购买。请联系卖家先创建收款账户。",
-                    headers={"X-Stripe-Connect-Required": "true"}
-                )
-            
+
+            # C3 fix: seller no longer needs Connect account — payment goes to local wallet
+            # if not taker_stripe_account_id:
+            #     await db.rollback()
+            #     raise HTTPException(...)
+
             import stripe
 
             task_amount_pence = int(float(item.price) * 100)
@@ -1838,7 +1835,7 @@ async def direct_purchase_item(
                 payment_method_options = get_wechat_pay_payment_method_options(request)
                 create_pi_kw = {
                     "amount": task_amount_pence,
-                    "currency": "gbp",
+                    "currency": (item.currency or "GBP").lower(),
                     "payment_method_types": ["card", "wechat_pay", "alipay"],
                     "description": f"跳蚤市场购买 #{new_task.id}: {item.title[:50]}",
                     "metadata": {
@@ -2176,13 +2173,10 @@ async def approve_purchase_request(
         
         seller = await db.get(models.User, item.seller_id)
         taker_stripe_account_id = seller.stripe_account_id if seller else None
-        
-        if not is_free_purchase and not taker_stripe_account_id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="卖家尚未创建 Stripe Connect 收款账户，无法完成购买。请联系卖家先创建收款账户。",
-                headers={"X-Stripe-Connect-Required": "true"}
-            )
+
+        # C3 fix: seller no longer needs Connect account — payment goes to local wallet
+        # if not is_free_purchase and not taker_stripe_account_id:
+        #     raise HTTPException(...)
         
         new_task = models.Task(
             title=item.title,
@@ -2236,7 +2230,7 @@ async def approve_purchase_request(
                 payment_method_options = get_wechat_pay_payment_method_options(request)
                 create_pi_kw = {
                     "amount": task_amount_pence,
-                    "currency": "gbp",
+                    "currency": (item.currency or "GBP").lower(),
                     "payment_method_types": ["card", "wechat_pay", "alipay"],
                     "description": f"跳蚤市场购买（议价） #{new_task.id}: {item.title[:50]}",
                     "metadata": {
@@ -2493,13 +2487,10 @@ async def accept_purchase_request(
         
         seller = await db.get(models.User, item.seller_id)
         taker_stripe_account_id = seller.stripe_account_id if seller else None
-        
-        if not is_free_purchase and not taker_stripe_account_id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="卖家尚未创建 Stripe Connect 收款账户，无法完成购买。请联系卖家先创建收款账户。",
-                headers={"X-Stripe-Connect-Required": "true"}
-            )
+
+        # C3 fix: seller no longer needs Connect account — payment goes to local wallet
+        # if not is_free_purchase and not taker_stripe_account_id:
+        #     raise HTTPException(...)
         
         new_task = models.Task(
             title=item.title,
@@ -2541,7 +2532,7 @@ async def accept_purchase_request(
                 payment_method_options = get_wechat_pay_payment_method_options(request)
                 create_pi_kw = {
                     "amount": task_amount_pence,
-                    "currency": "gbp",
+                    "currency": (item.currency or "GBP").lower(),
                     "payment_method_types": ["card", "wechat_pay", "alipay"],
                     "description": f"跳蚤市场购买（议价） #{new_task.id}: {item.title[:50]}",
                     "metadata": {
