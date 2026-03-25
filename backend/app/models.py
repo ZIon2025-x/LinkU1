@@ -253,6 +253,12 @@ class Task(Base):
     originating_user_id = Column(String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     # 任务来源：normal（普通任务）、expert_service（达人服务）、expert_activity（达人活动）、flea_market（跳蚤市场）
     task_source = Column(String(20), default="normal", nullable=False)
+    # 定价类型: fixed(固定价), hourly(时薪), negotiable(协商定价)
+    pricing_type = Column(String(20), default='fixed', server_default='fixed')
+    # 任务方式: online(线上), offline(线下), both(都可以)
+    task_mode = Column(String(20), default='online', server_default='online')
+    # 所需技能标签 (JSON 数组, e.g. '["Figma","UI设计"]')
+    required_skills = Column(Text, nullable=True)
     view_count = Column(Integer, default=0, nullable=False)  # 浏览量（仅存库，不展示）
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=get_utc_time)
     # 被指定方反报价
