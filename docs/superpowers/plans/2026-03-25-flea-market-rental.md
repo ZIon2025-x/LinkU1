@@ -233,11 +233,11 @@ class FleaMarketItemCreate(FleaMarketItemBase):
 
 - [ ] **Step 2: Extend FleaMarketItemUpdate schema**
 
-Add `deposit`, `rental_price`, `rental_unit` as optional fields. Do NOT include `listing_type`.
+Add `deposit`, `rental_price`, `rental_unit` as optional fields. Do NOT include `listing_type`. Add validation: these fields are only accepted when the item's `listing_type == 'rental'` (check in route handler, not schema, since schema doesn't know existing item state).
 
 - [ ] **Step 3: Extend FleaMarketItemResponse schema**
 
-Add to response: `listing_type`, `deposit`, `rental_price`, `rental_unit`, `active_rentals` (list).
+Add to response: `listing_type`, `deposit`, `rental_price`, `rental_unit`, `active_rentals: List[FleaMarketRentalSummary]`, `user_rental_request_id: Optional[int]`, `user_rental_request_status: Optional[str]`.
 
 - [ ] **Step 4: Add rental request schemas**
 
@@ -246,6 +246,7 @@ class FleaMarketRentalRequestCreate(BaseModel):
     rental_duration: int
     desired_time: Optional[str] = None
     usage_description: Optional[str] = None
+    proposed_rental_price: Optional[Decimal] = None  # renter can propose a different price
 
     @field_validator('rental_duration')
     @classmethod
@@ -253,6 +254,14 @@ class FleaMarketRentalRequestCreate(BaseModel):
         if v < 1:
             raise ValueError('Rental duration must be at least 1')
         return v
+
+class FleaMarketRentalSummary(BaseModel):
+    """Lightweight rental info for item detail response active_rentals list"""
+    id: int
+    renter_name: Optional[str] = None
+    start_date: str
+    end_date: str
+    status: str
 
 class FleaMarketRentalRequestResponse(BaseModel):
     id: int
@@ -386,7 +395,44 @@ On payment success (webhook or polling):
 - Returns current user's rentals (as renter)
 - Paginated, sorted by `created_at DESC`
 
-- [ ] **Step 12: Extend GET /items with listing_type filter**
+- [ ] **Step 12: Add payment expiration check-on-read**
+
+In every endpoint that reads rental requests (GET rental-requests, approve, etc.), add a pre-check:
+```python
+# Expire any approved requests past their payment deadline
+expired = await db.execute(
+    select(FleaMarketRentalRequest).where(
+        FleaMarketRentalRequest.item_id == item.id,
+        FleaMarketRentalRequest.status == 'approved',
+        FleaMarketRentalRequest.payment_expires_at < get_utc_time()
+    )
+)
+for req in expired.scalars():
+    req.status = 'expired'
+await db.flush()
+```
+
+This lazy-expiration pattern avoids needing a Celery background task. Requests are expired when they are next accessed.
+
+- [ ] **Step 13: Audit task_source compatibility**
+
+In `flea_market_routes.py`, find all queries that filter by `task_source == 'flea_market'` (e.g., `get_my_related_items`, `get_my_purchases`). Update these to use:
+```python
+models.Task.task_source.in_(['flea_market', 'flea_market_rental'])
+```
+
+- [ ] **Step 14: Add item deletion guards for rental items**
+
+In the existing `DELETE /items/{item_id}` handler in `flea_market_routes.py`:
+- If item has any `FleaMarketRental` with `status='active'`, reject deletion with 400 error
+- Auto-reject all `pending`/`approved` `FleaMarketRentalRequest` records for this item
+- Send notification to affected renters
+
+- [ ] **Step 15: Ensure item_id string formatting in all rental responses**
+
+All rental route handlers must format `item_id` as the display string (e.g., `f"S{item.id:04d}"`) in responses, matching the existing pattern used in `FleaMarketItemResponse`. Similarly format `renter_id` and include `renter_name`/`renter_avatar` from the User relationship.
+
+- [ ] **Step 16: Extend GET /items with listing_type filter**
 
 In `flea_market_routes.py`, in the `get_flea_market_items` handler (line 288), add:
 
@@ -400,21 +446,25 @@ if listing_type:
     query = query.where(models.FleaMarketItem.listing_type == listing_type)
 ```
 
-- [ ] **Step 13: Extend POST /items with rental validation**
+- [ ] **Step 17: Extend POST /items with rental validation**
 
 In the `create_flea_market_item` handler (line 856), when `listing_type='rental'`:
 - Set `price = rental_price` (for backward compat with `isFree` checks)
 - Store `deposit`, `rental_price`, `rental_unit`
 
-- [ ] **Step 14: Extend GET /items/{id} response with active_rentals**
+- [ ] **Step 18: Extend GET /items/{id} response with active_rentals**
 
 In item detail response, query `FleaMarketRental` where `item_id=item.id` and `status='active'`, include as `active_rentals` list. Also include `user_rental_request_id` and `user_rental_request_status` for the current user.
 
-- [ ] **Step 15: Register rental router**
+- [ ] **Step 19: Register rental router**
 
-In `backend/app/flea_market_routes.py` or `main.py`, include the rental router.
+In `backend/app/main.py`, import and include the rental router alongside the existing flea market router:
+```python
+from app.flea_market_rental_routes import rental_router
+app.include_router(rental_router)
+```
 
-- [ ] **Step 16: Commit**
+- [ ] **Step 20: Commit**
 
 ```bash
 git add backend/app/flea_market_rental_routes.py backend/app/flea_market_routes.py
@@ -596,12 +646,15 @@ Modify `isFree` getter (line 105):
 bool get isFree => !isRental && price == 0;
 ```
 
-Add rental price display getter:
+Note: Rental price display (e.g., "£5/天") requires localized unit strings, so format in the **view layer** using `context.l10n.fleaMarketPerDay` etc., not as a model getter. Add a helper in the view:
 ```dart
-String get rentalPriceDisplay {
-  if (!isRental) return priceDisplay;
-  final unitSuffix = rentalUnit == 'day' ? '/day' : rentalUnit == 'week' ? '/week' : '/month';
-  return '${currency == 'EUR' ? '€' : '£'}${rentalPrice?.toStringAsFixed(2) ?? '0.00'}$unitSuffix';
+String rentalPriceDisplay(FleaMarketItem item, AppLocalizations l10n) {
+  final symbol = item.currency == 'EUR' ? '€' : '£';
+  final price = item.rentalPrice?.toStringAsFixed(2) ?? '0.00';
+  final unit = item.rentalUnit == 'day' ? l10n.fleaMarketPerDay
+      : item.rentalUnit == 'week' ? l10n.fleaMarketPerWeek
+      : l10n.fleaMarketPerMonth;
+  return '$symbol$price$unit';
 }
 ```
 
@@ -631,7 +684,7 @@ final double? rentalPrice;
 final String? rentalUnit;
 ```
 
-In `toJson`, conditionally include rental fields when `listingType == 'rental'`.
+In `toJson`, conditionally include rental fields when `listingType == 'rental'`. Note: the existing `CreateFleaMarketRequest` has `required this.price`. For rental items, the Flutter side should still pass `price` (set to `rentalPrice` value) for backward compatibility — the backend also sets `price = rental_price`, but having it from the client avoids issues.
 
 - [ ] **Step 4: Create flea_market_rental.dart**
 
@@ -700,9 +753,10 @@ Future<ApiResponse> submitRentalRequest(String itemId, {
   required int rentalDuration,
   String? desiredTime,
   String? usageDescription,
+  double? proposedRentalPrice,
 }) async {
   // POST to ApiEndpoints.fleaMarketRentalRequest(itemId)
-  // Body: { rental_duration, desired_time, usage_description }
+  // Body: { rental_duration, desired_time, usage_description, proposed_rental_price }
   // Invalidate cache
 }
 
@@ -764,14 +818,16 @@ Create `link2ur/lib/features/flea_market/bloc/flea_market_rental_bloc.dart` with
 
 **Events:**
 ```dart
-sealed class FleaMarketRentalEvent extends Equatable { ... }
+abstract class FleaMarketRentalEvent extends Equatable {
+  const FleaMarketRentalEvent();
+}
 
 class RentalSubmitRequest extends FleaMarketRentalEvent {
   final String itemId;
   final int rentalDuration;
   final String? desiredTime;
   final String? usageDescription;
-}
+  final double? proposedRentalPrice;  // renter can propose a different price
 
 class RentalLoadRequests extends FleaMarketRentalEvent {
   final String itemId;
@@ -832,7 +888,10 @@ class FleaMarketRentalState extends Equatable {
 }
 ```
 
-**Bloc:** Register all event handlers, inject `FleaMarketRepository`.
+**Bloc:** Register all event handlers, inject `FleaMarketRepository`. Import `AcceptPaymentData` from task detail bloc:
+```dart
+import '../../tasks/bloc/task_detail_bloc.dart' show AcceptPaymentData;
+```
 
 - [ ] **Step 2: Extend FleaMarketBloc with listingTypeFilter**
 
@@ -1022,8 +1081,9 @@ Form fields:
 - Rental duration: `TextFormField` (number) + unit label from item
 - Desired time: `TextFormField` with hint
 - Usage description: `TextFormField` (multiline) with hint
-- Cost preview: calculated rental subtotal + deposit = total
-- Submit button → dispatches `RentalSubmitRequest`
+- Proposed rental price: `TextFormField` (optional, number) — "如果你想议价，可以填写期望租金单价"
+- Cost preview: calculated rental subtotal (using item price or proposed price) + deposit = total
+- Submit button → dispatches `RentalSubmitRequest` (with optional `proposedRentalPrice`)
 
 - [ ] **Step 2: Update detail view — price area for rental items**
 
