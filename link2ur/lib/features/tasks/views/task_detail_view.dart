@@ -45,6 +45,7 @@ import '../../../data/models/user.dart';
 import '../../../data/repositories/task_repository.dart';
 import '../../../data/repositories/payment_repository.dart';
 import '../../../data/repositories/notification_repository.dart';
+import '../../../data/repositories/question_repository.dart';
 import '../../../features/auth/bloc/auth_bloc.dart';
 import '../bloc/task_detail_bloc.dart';
 import '../../../core/widgets/glass_button.dart';
@@ -67,7 +68,8 @@ class TaskDetailView extends StatelessWidget {
       create: (context) => TaskDetailBloc(
         taskRepository: context.read<TaskRepository>(),
         notificationRepository: context.read<NotificationRepository>(),
-      )..add(TaskDetailLoadRequested(taskId)),
+        questionRepository: context.read<QuestionRepository>(),
+      )..add(TaskDetailLoadRequested(taskId))..add(const TaskDetailLoadQuestions()),
       child: _TaskDetailContent(taskId: taskId, notificationId: notificationId),
     );
   }
