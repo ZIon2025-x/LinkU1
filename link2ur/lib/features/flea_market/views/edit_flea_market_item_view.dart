@@ -418,7 +418,7 @@ class _EditFleaMarketItemViewContentState
                         ),
                         const SizedBox(height: 6),
                         DropdownButtonFormField<String>(
-                          value: _rentalUnit,
+                          initialValue: _rentalUnit,
                           decoration: InputDecoration(
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(AppRadius.medium),

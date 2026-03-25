@@ -439,7 +439,7 @@ class _CreateFleaMarketItemContentState
                   AppSpacing.vMd,
                   // 租期单位
                   DropdownButtonFormField<String>(
-                    value: _rentalUnit,
+                    initialValue: _rentalUnit,
                     decoration: InputDecoration(
                       labelText: context.l10n.fleaMarketRentalUnit,
                       prefixIcon: const Icon(Icons.schedule),

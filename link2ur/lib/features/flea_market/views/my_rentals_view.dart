@@ -9,7 +9,6 @@ import '../../../core/design/app_typography.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/async_image_view.dart';
-import '../../../core/widgets/error_state_view.dart';
 import '../../../data/models/flea_market_rental.dart';
 import '../../../data/repositories/flea_market_repository.dart';
 import '../bloc/flea_market_rental_bloc.dart';
@@ -128,7 +127,7 @@ class _EmptyState extends StatelessWidget {
             Icon(
               Icons.receipt_long_outlined,
               size: 64,
-              color: theme.colorScheme.onSurfaceVariant.withOpacity(0.4),
+              color: theme.colorScheme.onSurfaceVariant.withValues(alpha:0.4),
             ),
             const SizedBox(height: AppSpacing.md),
             Text(
@@ -223,7 +222,7 @@ class _RentalCard extends StatelessWidget {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: statusColor.withOpacity(0.12),
+                            color: statusColor.withValues(alpha:0.12),
                             borderRadius: BorderRadius.circular(AppRadius.tiny),
                           ),
                           child: Text(
