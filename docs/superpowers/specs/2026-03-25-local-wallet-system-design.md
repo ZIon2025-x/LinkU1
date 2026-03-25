@@ -41,10 +41,11 @@ CREATE TABLE wallet_accounts (
 CREATE TABLE wallet_transactions (
     id BIGSERIAL PRIMARY KEY,
     user_id VARCHAR(8) NOT NULL REFERENCES users(id),
-    type VARCHAR(20) NOT NULL,          -- earning, withdrawal, payment
+    type VARCHAR(20) NOT NULL,          -- earning, withdrawal, payment, refund
     amount DECIMAL(12, 2) NOT NULL,     -- 正数=收入, 负数=支出
     balance_after DECIMAL(12, 2) NOT NULL,
-    source VARCHAR(50) NOT NULL,        -- task_reward, flea_market_sale, stripe_transfer, task_payment
+    status VARCHAR(20) NOT NULL DEFAULT 'completed',  -- completed, pending, failed, reversed
+    source VARCHAR(50) NOT NULL,        -- task_reward, flea_market_sale, stripe_transfer, task_payment, dispute_clawback
     related_id VARCHAR(255),            -- 关联对象 ID
     related_type VARCHAR(50),           -- task, flea_market_item, payout
     description TEXT,
@@ -56,12 +57,14 @@ CREATE TABLE wallet_transactions (
 
 CREATE INDEX idx_wallet_tx_user_id ON wallet_transactions(user_id);
 CREATE INDEX idx_wallet_tx_type ON wallet_transactions(type);
+CREATE INDEX idx_wallet_tx_status ON wallet_transactions(status);
 CREATE INDEX idx_wallet_tx_created_at ON wallet_transactions(created_at);
 CREATE INDEX idx_wallet_tx_related ON wallet_transactions(related_type, related_id);
 ```
 
 - `idempotency_key`: 防重复入账，格式如 `earning:task:{task_id}:user:{user_id}`
 - `balance_after`: 每笔交易后的余额快照，便于审计
+- `status`: 交易状态 — `completed`（已完成）、`pending`（进行中，用于提现和混合支付）、`failed`（失败）、`reversed`（已撤销，用于退款回滚）
 - `fee_amount` + `gross_amount`: 仅 earning 类型使用，记录毛收入和手续费
 
 ## Safety Mechanisms
@@ -76,8 +79,9 @@ CREATE INDEX idx_wallet_tx_related ON wallet_transactions(related_type, related_
 
 每笔操作生成唯一 `idempotency_key`:
 - 收入: `earning:task:{task_id}:user:{user_id}`
-- 提现: `withdrawal:{timestamp}:user:{user_id}`
+- 提现: `withdrawal:{request_uuid}:user:{user_id}`（客户端生成 UUID，服务端校验）
 - 支付: `payment:task:{task_id}:user:{user_id}`
+- 退款: `refund:task:{task_id}:user:{user_id}`
 
 插入前检查 key 是否已存在，已存在则跳过，绝不重复入账。
 
@@ -90,7 +94,15 @@ CREATE INDEX idx_wallet_tx_related ON wallet_transactions(related_type, related_
 4. 插入 WalletTransaction，`balance_after = 更新后的 balance`
 5. COMMIT
 
-可通过 `SUM(amount) WHERE user_id = ?` 与 `balance` 比对进行定期对账。
+可通过 `SUM(amount) WHERE user_id = ? AND status IN ('completed', 'pending')` 与 `balance` 比对进行定期对账。
+
+### 4. 外部 API 调用隔离
+
+涉及外部 API（如 Stripe Transfer）的操作，采用**两阶段提交**模式，不在持有行锁的事务内调用外部 API：
+
+1. **阶段一**（DB 事务）：扣减余额，写入 `status=pending` 的流水，COMMIT 释放锁
+2. **阶段二**（外部调用）：调用 Stripe API
+3. **阶段三**（DB 事务）：根据结果更新流水 status 为 `completed` 或 `failed`；失败时回滚余额
 
 ## Business Flows
 
@@ -111,7 +123,7 @@ balance += 净收入
 total_earned += 净收入
   ↓
 写入 WalletTransaction:
-  type=earning, source=task_reward
+  type=earning, source=task_reward, status=completed
   amount=净收入, gross_amount=escrow_amount, fee_amount=手续费
   related_id=task_id, related_type=task
   ↓
@@ -120,70 +132,150 @@ COMMIT
 
 不再调用 `stripe.Transfer`。二手物品售出同理，`source=flea_market_sale`。
 
-### 2. 提现流程
+支持部分入账（partial transfer）：同一任务可以多次入账，通过不同的 `idempotency_key` 区分（如 `earning:task:{task_id}:partial:{sequence}:user:{user_id}`）。
+
+### 2. 提现流程（两阶段）
 
 ```
-用户请求提现(amount)
+用户请求提现(amount, request_uuid)
   ↓
 检查 Connect 账户
   ├─ 无 → 返回 HTTP 428，引导设置
   └─ 有 → 继续
   ↓
+验证 request_uuid 格式合法
+  ↓
+--- 阶段一：DB 事务 ---
 锁定 WalletAccount (FOR UPDATE)
   ↓
 验证 balance >= amount
+验证 amount >= 1.00 GBP（最低提现金额）
   ↓
 balance -= amount
 total_withdrawn += amount
   ↓
 写入 WalletTransaction:
-  type=withdrawal, source=stripe_transfer
+  type=withdrawal, source=stripe_transfer, status=pending
   amount=-amount
+  idempotency_key=withdrawal:{request_uuid}:user:{user_id}
   ↓
+COMMIT（释放行锁）
+  ↓
+--- 阶段二：Stripe 调用 ---
 stripe.Transfer(amount_in_pence, destination=connect_account_id)
-  ├─ 成功 → COMMIT
-  └─ 失败 → ROLLBACK（余额自动恢复）
+  ↓
+--- 阶段三：更新结果 ---
+  ├─ 成功 → 更新流水 status=completed，记录 transfer_id
+  └─ 失败 → 更新流水 status=failed
+              锁定 WalletAccount (FOR UPDATE)
+              balance += amount（回滚）
+              total_withdrawn -= amount（回滚）
+              COMMIT
 ```
 
+最低提现金额: **£1.00**（Stripe Transfer 最低限额）。
+
 ### 3. 余额支付（混合支付）
+
+采用**先扣余额**策略：创建 PaymentIntent 时立即扣减钱包余额，Stripe 支付失败则退回。避免锁释放后余额变化导致的竞态条件。
 
 ```
 用户发起任务支付 (use_wallet_balance=true)
   ↓
 total_amount = 任务总价
   ↓
+--- DB 事务 ---
 锁定 WalletAccount (FOR UPDATE)
   ↓
 wallet_deduction = min(balance, total_amount)
 stripe_amount = total_amount - wallet_deduction
 
+if wallet_deduction > 0:
+  balance -= wallet_deduction
+  total_spent += wallet_deduction
+  写入 WalletTransaction:
+    type=payment, source=task_payment, status=pending
+    amount=-wallet_deduction
+    related_id=task_id, related_type=task
+
 if stripe_amount > 0:
-  创建 PaymentIntent(amount=stripe_amount_in_pence)
+  记录 stripe_amount 和 wallet_deduction 到任务 metadata
+  COMMIT
   ↓
-  Webhook 确认支付成功后:
-    锁定 WalletAccount (FOR UPDATE)
-    balance -= wallet_deduction
-    total_spent += wallet_deduction
-    写入 WalletTransaction:
-      type=payment, source=task_payment
-      amount=-wallet_deduction
-      related_id=task_id, related_type=task
+  创建 PaymentIntent(amount=stripe_amount_in_pence, metadata={wallet_deduction})
+  ↓
+  Webhook 确认支付成功:
+    更新 WalletTransaction status=completed
     标记任务已支付
+  ↓
+  Webhook 确认支付失败/过期:
+    锁定 WalletAccount (FOR UPDATE)
+    balance += wallet_deduction（退回）
+    total_spent -= wallet_deduction（退回）
+    更新 WalletTransaction status=reversed
     COMMIT
 else:
   全额余额支付:
-    balance -= total_amount
-    total_spent += total_amount
-    写入 WalletTransaction (同上)
+    更新 WalletTransaction status=completed
     直接标记任务已支付（无需 PaymentIntent）
     COMMIT
 ```
 
-### 4. 去掉的校验
+### 4. 退款/争议流程
+
+当已入账的任务发生退款或争议时，需要从卖家钱包中回收资金：
+
+```
+退款请求被批准
+  ↓
+检查 idempotency_key (refund:task:{task_id}:user:{user_id})
+  ↓
+锁定卖家 WalletAccount (FOR UPDATE)
+  ↓
+refund_amount = 原始入账的净收入（从 earning 流水查）
+  ↓
+if balance >= refund_amount:
+  --- 正常回收 ---
+  balance -= refund_amount
+  total_earned -= refund_amount
+  写入 WalletTransaction:
+    type=refund, source=dispute_clawback, status=completed
+    amount=-refund_amount
+    related_id=task_id, related_type=task
+  COMMIT
+  ↓
+  执行买家退款（Stripe Refund）
+else:
+  --- 余额不足 ---
+  available = balance
+  shortfall = refund_amount - available
+  ↓
+  扣光可用余额:
+    balance = 0
+    写入 WalletTransaction (amount=-available, status=completed)
+  COMMIT
+  ↓
+  差额 (shortfall) 由平台先行垫付退款给买家
+  记录平台应收账款（debt），待卖家后续入账时自动抵扣
+  ↓
+  卖家后续入账时:
+    新收入优先偿还 debt
+    净入账 = 新收入 - min(新收入, 剩余debt)
+```
+
+**平台应收账款 (debt)** 可通过在 WalletAccount 上增加 `debt DECIMAL(12,2) DEFAULT 0.00` 字段跟踪。入账流程在 `balance += 净收入` 前先检查 `debt > 0`，有欠款时先抵扣。
+
+### 5. 去掉的校验
 
 - **接单**: 去掉 Connect 账户 `chargesEnabled` 校验
 - **发布二手物品**: 去掉 Connect 账户校验
 - 这两个场景只需用户登录即可
+
+### 6. 过渡期处理
+
+上线后可能存在旧系统下已确认但尚未转账的任务（`PaymentTransfer status=pending/retrying`）。这些任务继续走原有 `process_pending_transfers()` 流程完成 Stripe Transfer。新确认的任务才走本地入账。
+
+区分方式：`confirm_completion` 中检查是否存在对应的 `WalletTransaction`，无则为旧任务走老流程。或通过部署时间戳/feature flag 区分。
 
 ## API Design
 
@@ -210,6 +302,7 @@ Response: {
     "type": "earning",
     "amount": 90.00,
     "balance_after": 90.00,
+    "status": "completed",
     "source": "task_reward",
     "gross_amount": 100.00,
     "fee_amount": 10.00,
@@ -227,7 +320,10 @@ Response: {
 #### POST `/api/wallet/withdraw`
 
 ```json
-Request: { "amount": 50.00 }
+Request: {
+  "amount": 50.00,
+  "request_id": "uuid-v4-string"
+}
 Response: {
   "success": true,
   "transfer_id": "tr_xxx",
@@ -235,6 +331,7 @@ Response: {
   "balance_after": 40.00
 }
 // 前提: 用户已设置 Connect 账户，否则返回 428
+// 最低提现金额: £1.00
 ```
 
 ### 修改的现有接口
@@ -259,7 +356,7 @@ Response: {
 
 - 余额从本地钱包接口读取
 - 提现按钮: 没有 Connect 账户 → 弹窗引导设置; 有 → 正常提现
-- 调用 `POST /api/wallet/withdraw`
+- 调用 `POST /api/wallet/withdraw`（客户端生成 request_id UUID）
 
 ### 3. 任务支付页面
 
@@ -272,6 +369,7 @@ Response: {
 
 - `PaymentRepository` 新增: `getWalletBalance()`, `getWalletTransactions()`, `requestWithdrawal()`
 - `WalletBloc` 修改: 加载本地钱包余额替代 Stripe Connect Balance
+- `WalletState` 新增字段: `walletBalance`, `walletTotalEarned`, `walletTotalWithdrawn`, `walletTotalSpent`
 - 新增 `WalletWithdrawRequested` 事件
 
 ### 5. 去掉 Connect 校验 UI
@@ -289,8 +387,8 @@ Response: {
 
 一次性迁移脚本:
 
-1. **收入记录**: 遍历 `PaymentTransfer WHERE status=succeeded`，为每条创建 `WalletTransaction(type=earning, source=task_reward)`
-2. **提现记录**: 查 Stripe Payout 历史，写入 `WalletTransaction(type=withdrawal, source=stripe_transfer)`
+1. **收入记录**: 遍历 `PaymentTransfer WHERE status=succeeded`，为每条创建 `WalletTransaction(type=earning, source=task_reward, status=completed)`
+2. **提现记录**: 查 Stripe Payout 历史，写入 `WalletTransaction(type=withdrawal, source=stripe_transfer, status=completed)`
 3. **余额处理**: 老用户的 `WalletAccount.balance` 设为 **0**（钱已在 Connect 账户里，不在平台）
 4. **累计字段**: `total_earned` / `total_withdrawn` 根据迁移的流水计算
 
@@ -299,7 +397,7 @@ Response: {
 保留不删，角色变更:
 - **之前**: 任务完成时创建，执行 stripe.Transfer 给用户
 - **之后**: 仅在用户主动提现时创建，记录提现的 stripe.Transfer
-- `process_pending_transfers()` 定时任务保留，处理提现失败重试
+- `process_pending_transfers()` 定时任务保留，处理提现失败重试及过渡期旧任务
 
 ## Currency
 
