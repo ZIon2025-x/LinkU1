@@ -408,7 +408,7 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
         content: TextField(
           controller: controller,
           autofocus: true,
-          decoration: const InputDecoration(hintText: '输入技能名称'),
+          decoration: InputDecoration(hintText: context.l10n.createTaskRequiredSkills),
         ),
         actions: [
           TextButton(
@@ -437,9 +437,9 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
       context: context,
       title: context.l10n.createTaskPreview,
       content: '${_titleController.text}\n\n'
-          '分类: $_selectedCategory\n'
-          '预算: ${_pricingType == "negotiable" ? "协商" : "£${_rewardController.text}"}\n'
-          '方式: $_taskMode\n\n'
+          '${context.l10n.createTaskType}: $_selectedCategory\n'
+          '${context.l10n.createTaskReward}: ${_pricingType == "negotiable" ? context.l10n.createTaskPricingNegotiable : "£${_rewardController.text}"}\n'
+          '${context.l10n.createTaskModeLabel}: $_taskMode\n\n'
           '${_descriptionController.text.length > 200 ? "${_descriptionController.text.substring(0, 200)}..." : _descriptionController.text}',
     );
   }
