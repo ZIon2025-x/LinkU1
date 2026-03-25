@@ -64,6 +64,14 @@ Widget _buildMyContentSection(BuildContext context, bool isDark) {
               ),
               _profileDivider(isDark),
               _ProfileRow(
+                icon: Icons.key,
+                title: context.l10n.fleaMarketMyRentals,
+                subtitle: context.l10n.fleaMarketRentalDetail,
+                color: AppColors.info,
+                onTap: () => context.push('/flea-market/my-rentals'),
+              ),
+              _profileDivider(isDark),
+              _ProfileRow(
                 icon: Icons.description,           // doc.text.fill
                 title: context.l10n.profileMyForumPosts,
                 subtitle: context.l10n.profileMyForumPostsSubtitle,
