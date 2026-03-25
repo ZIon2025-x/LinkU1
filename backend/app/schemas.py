@@ -372,7 +372,22 @@ class TaskCreate(TaskBase):
     images: Optional[List[str]] = None  # 图片URL列表
     task_source: Optional[str] = "normal"  # normal / user_profile
     designated_taker_id: Optional[str] = None  # 指定接单人ID（来自用户资料页请求）
-    
+    pricing_type: Optional[str] = "fixed"       # fixed / hourly / negotiable
+    task_mode: Optional[str] = "online"          # online / offline / both
+    required_skills: Optional[List[str]] = []    # 技能标签列表
+
+    @validator('pricing_type')
+    def validate_pricing_type(cls, v):
+        if v and v not in ('fixed', 'hourly', 'negotiable'):
+            raise ValueError('pricing_type must be fixed, hourly, or negotiable')
+        return v or 'fixed'
+
+    @validator('task_mode')
+    def validate_task_mode(cls, v):
+        if v and v not in ('online', 'offline', 'both'):
+            raise ValueError('task_mode must be online, offline, or both')
+        return v or 'online'
+
     @validator('reward')
     def validate_reward_minimum(cls, v):
         """创建新任务时：不填表示待报价；若填写则必须>=1.0"""
@@ -417,6 +432,9 @@ class TaskOut(TaskBase):
     is_public: Optional[int] = 1  # 1=public, 0=private (仅自己可见)
     taker_public: Optional[int] = 1  # 1=public, 0=private (接单者主页可见性)
     images: Optional[List[str]] = None  # 图片URL列表
+    pricing_type: Optional[str] = "fixed"
+    task_mode: Optional[str] = "online"
+    required_skills: Optional[List[str]] = []
     points_reward: Optional[int] = None  # 任务完成奖励积分（可选，如果设置则覆盖系统默认值）
     is_flexible: Optional[int] = 0  # 是否灵活时间（1=灵活，无截止日期；0=有截止日期）
     title_en: Optional[str] = None  # 英文标题（可选）

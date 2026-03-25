@@ -210,6 +210,9 @@ async def get_tasks(
                 "created_at": format_iso_utc(task.created_at) if task.created_at else None,
                 "is_public": int(task.is_public) if task.is_public is not None else 1,
                 "images": images_list,
+                "pricing_type": getattr(task, 'pricing_type', 'fixed') or "fixed",
+                "task_mode": getattr(task, 'task_mode', 'online') or "online",
+                "required_skills": json.loads(task.required_skills) if getattr(task, 'required_skills', None) else [],
                 "points_reward": int(task.points_reward) if task.points_reward else None,
                 # 多人任务相关字段
                 "is_multi_participant": bool(task.is_multi_participant) if hasattr(task, 'is_multi_participant') else False,
@@ -226,11 +229,11 @@ async def get_tasks(
                 "discounted_price_per_participant": float(task.discounted_price_per_participant) if hasattr(task, 'discounted_price_per_participant') and task.discounted_price_per_participant is not None else None,
                 "poster_user_level": poster_levels.get(task.poster_id) if task.poster_id else None,
             }
-            
+
             # 如果有距离信息，添加到返回数据中
             if hasattr(task, '_distance_km') and task._distance_km is not None:
                 task_data["distance_km"] = round(task._distance_km, 2)
-            
+
             formatted_tasks.append(task_data)
         
         # Record search behavior
@@ -337,6 +340,9 @@ async def get_tasks(
             "created_at": format_iso_utc(task.created_at) if task.created_at else None,
             "is_public": int(task.is_public) if task.is_public is not None else 1,
             "images": images_list,
+            "pricing_type": getattr(task, 'pricing_type', 'fixed') or "fixed",
+            "task_mode": getattr(task, 'task_mode', 'online') or "online",
+            "required_skills": json.loads(task.required_skills) if getattr(task, 'required_skills', None) else [],
             "points_reward": int(task.points_reward) if task.points_reward else None,
             # 多人任务相关字段
             "is_multi_participant": bool(task.is_multi_participant) if hasattr(task, 'is_multi_participant') else False,
@@ -353,7 +359,7 @@ async def get_tasks(
             "discounted_price_per_participant": float(task.discounted_price_per_participant) if hasattr(task, 'discounted_price_per_participant') and task.discounted_price_per_participant is not None else None,
             "poster_user_level": poster_levels.get(task.poster_id) if task.poster_id else None,
         }
-        
+
         # 如果有距离信息，添加到返回数据中
         if hasattr(task, '_distance_km') and task._distance_km is not None:
             task_data["distance_km"] = round(task._distance_km, 2)
@@ -777,6 +783,9 @@ async def create_task_async(
             "created_at": format_iso_utc(db_task.created_at) if db_task.created_at else None,
             "is_public": int(db_task.is_public) if db_task.is_public is not None else 1,
             "images": images_list,  # 返回图片列表
+            "pricing_type": getattr(db_task, 'pricing_type', 'fixed') or "fixed",
+            "task_mode": getattr(db_task, 'task_mode', 'online') or "online",
+            "required_skills": json.loads(db_task.required_skills) if getattr(db_task, 'required_skills', None) else [],
             "content_masked": content_masked,
             "under_review": under_review,
         }
