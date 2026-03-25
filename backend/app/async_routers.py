@@ -850,11 +850,10 @@ async def apply_for_task(
 ):
     """申请任务（异步版本，支持议价价格）"""
     try:
-        from app.utils.stripe_utils import validate_user_stripe_account_for_receiving
-        
-        # 0. 检查用户是否有可用的收款账户
-        validate_user_stripe_account_for_receiving(current_user, "申请任务")
-        
+        # 本地钱包模式：无需 Stripe Connect 账户即可申请任务
+        # from app.utils.stripe_utils import validate_user_stripe_account_for_receiving
+        # validate_user_stripe_account_for_receiving(current_user, "申请任务")
+
         message = request_data.get('message', None)
         negotiated_price = request_data.get('negotiated_price', None)
         currency = request_data.get('currency', None)

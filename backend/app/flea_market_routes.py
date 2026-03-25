@@ -860,10 +860,9 @@ async def create_flea_market_item(
 ):
     """上传商品"""
     try:
-        from app.utils.stripe_utils import validate_user_stripe_account_for_receiving
-        
-        # 发布商品需要收款账户（用于后续接收买家付款）
-        validate_user_stripe_account_for_receiving(current_user, "发布商品")
+        # 本地钱包模式：无需 Stripe Connect 账户即可发布商品
+        # from app.utils.stripe_utils import validate_user_stripe_account_for_receiving
+        # validate_user_stripe_account_for_receiving(current_user, "发布商品")
 
         # 验证图片数量
         if len(item_data.images) > 5:
