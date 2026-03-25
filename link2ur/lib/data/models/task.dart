@@ -65,6 +65,9 @@ class Task extends Equatable {
     this.counterOfferUserId,
     this.isPublic = 1,
     this.takerPublic = 1,
+    this.pricingType = 'fixed',
+    this.taskMode = 'online',
+    this.requiredSkills = const [],
   });
 
   final int id;
@@ -127,6 +130,9 @@ class Task extends Equatable {
   final String? counterOfferUserId;
   final int isPublic;
   final int takerPublic;
+  final String pricingType;
+  final String taskMode;
+  final List<String> requiredSkills;
 
   /// 模糊距离（500m 为一个区间）
   /// 返回区间上限值（用于排序），如 500, 1000, 1500, ...
@@ -420,6 +426,12 @@ class Task extends Equatable {
       counterOfferUserId: json['counter_offer_user_id'] as String?,
       isPublic: json['is_public'] as int? ?? 1,
       takerPublic: json['taker_public'] as int? ?? 1,
+      pricingType: json['pricing_type'] as String? ?? 'fixed',
+      taskMode: json['task_mode'] as String? ?? 'online',
+      requiredSkills: (json['required_skills'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          [],
     );
   }
 
@@ -476,6 +488,9 @@ class Task extends Equatable {
       'counter_offer_price': counterOfferPrice,
       'counter_offer_status': counterOfferStatus,
       'counter_offer_user_id': counterOfferUserId,
+      'pricing_type': pricingType,
+      'task_mode': taskMode,
+      'required_skills': requiredSkills,
     };
   }
 
@@ -534,6 +549,9 @@ class Task extends Equatable {
     String? counterOfferUserId,
     int? isPublic,
     int? takerPublic,
+    String? pricingType,
+    String? taskMode,
+    List<String>? requiredSkills,
   }) {
     return Task(
       id: id ?? this.id,
@@ -590,6 +608,9 @@ class Task extends Equatable {
       counterOfferUserId: counterOfferUserId ?? this.counterOfferUserId,
       isPublic: isPublic ?? this.isPublic,
       takerPublic: takerPublic ?? this.takerPublic,
+      pricingType: pricingType ?? this.pricingType,
+      taskMode: taskMode ?? this.taskMode,
+      requiredSkills: requiredSkills ?? this.requiredSkills,
     );
   }
 
@@ -599,6 +620,7 @@ class Task extends Equatable {
         userApplicationStatus, takerId, hasReviewed, updatedAt,
         counterOfferPrice, counterOfferStatus, counterOfferUserId,
         isPublic, takerPublic,
+        pricingType, taskMode, requiredSkills,
       ];
 }
 
@@ -656,6 +678,9 @@ class CreateTaskRequest {
     this.isPublic = 1,
     this.taskSource = 'normal',
     this.designatedTakerId,
+    this.pricingType = 'fixed',
+    this.taskMode = 'online',
+    this.requiredSkills = const [],
   });
 
   final String title;
@@ -674,6 +699,12 @@ class CreateTaskRequest {
   final int isPublic;
   final String taskSource;
   final String? designatedTakerId;
+  /// 定价类型: fixed(固定价), hourly(时薪), negotiable(协商)
+  final String pricingType;
+  /// 任务方式: online(线上), offline(线下), both(都可以)
+  final String taskMode;
+  /// 所需技能标签
+  final List<String> requiredSkills;
 
   Map<String, dynamic> toJson() {
     return {
@@ -692,6 +723,9 @@ class CreateTaskRequest {
       'is_public': isPublic,
       'task_source': taskSource,
       if (designatedTakerId != null) 'designated_taker_id': designatedTakerId,
+      'pricing_type': pricingType,
+      'task_mode': taskMode,
+      if (requiredSkills.isNotEmpty) 'required_skills': requiredSkills,
     };
   }
 }

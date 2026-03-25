@@ -70,6 +70,7 @@ class ApiEndpoints {
   static String taskHistory(int id) => '/api/tasks/$id/history';
   static String disputeTask(int id) => '/api/tasks/$id/dispute';
   static const String myTasks = '/api/users/my-tasks';
+  static const String aiOptimizeTask = '/api/tasks/ai-optimize';
 
   // --- 退款/争议 ---
   static String refundRequest(int taskId) =>
