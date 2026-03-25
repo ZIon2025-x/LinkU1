@@ -21,7 +21,7 @@
 | `backend/app/wallet_service.py` | Core wallet operations: credit, debit, withdraw (all with FOR UPDATE locking + idempotency) |
 | `backend/app/wallet_routes.py` | FastAPI router: GET /balance, GET /transactions, POST /withdraw |
 | `backend/app/wallet_schemas.py` | Pydantic schemas for wallet API request/response |
-| `backend/migrations/add_wallet_tables.py` | Alembic migration for new tables |
+| `backend/migrations/135_add_wallet_tables.sql` | SQL migration for new tables |
 
 ### Backend — Modified Files
 | File | Changes |
@@ -42,10 +42,16 @@
 | `link2ur/lib/features/wallet/bloc/wallet_bloc.dart` | Load wallet balance from local API instead of Stripe Connect |
 | `link2ur/lib/features/wallet/views/wallet_view.dart` | Display balance from local wallet data |
 | `link2ur/lib/features/payment/views/stripe_connect_payouts_view.dart` | Use wallet balance for withdrawals |
+| `link2ur/lib/features/payment/views/stripe_connect_payments_view.dart` | Switch transaction history from Stripe API to wallet API |
+| `link2ur/lib/features/payment/bloc/payment_bloc.dart` | Add wallet balance state and mixed payment events |
+| Task payment view (locate exact file in payment views) | Add "use wallet balance" toggle for mixed payment UI |
 | `link2ur/lib/features/tasks/views/task_detail_view.dart:143-156` | Remove stripe_setup_required check |
+| `link2ur/lib/features/tasks/views/task_detail_components.dart:1775` | Remove stripe_setup_required UI logic |
 | `link2ur/lib/features/tasks/bloc/task_detail_bloc.dart:753-759` | Remove stripe_setup_required error handling |
+| `link2ur/lib/data/repositories/task_repository.dart:283` | Remove stripe_setup_required exception on 428 |
 | `link2ur/lib/features/flea_market/views/create_flea_market_item_view.dart:206-219` | Remove stripe_setup_required check |
 | `link2ur/lib/features/flea_market/bloc/flea_market_bloc.dart:604-608` | Remove stripe_setup_required error handling |
+| `link2ur/lib/data/repositories/flea_market_repository.dart:165` | Remove stripe_setup_required exception on 428 |
 
 ---
 
@@ -53,7 +59,7 @@
 
 **Files:**
 - Create: `backend/app/wallet_models.py`
-- Create: `backend/migrations/add_wallet_tables.py`
+- Create: `backend/migrations/135_add_wallet_tables.sql`
 - Modify: `backend/app/models.py` (add import)
 
 - [ ] **Step 1: Create WalletAccount and WalletTransaction models**
@@ -123,17 +129,55 @@ from app.wallet_models import WalletAccount, WalletTransaction  # noqa: F401, E4
 
 This ensures Alembic discovers the new models.
 
-- [ ] **Step 3: Create migration script**
+- [ ] **Step 3: Create SQL migration file**
 
-Create `backend/migrations/add_wallet_tables.py` (or run `alembic revision --autogenerate -m "add wallet tables"`). The migration should create both tables with all indexes and the CHECK constraint.
+Create `backend/migrations/135_add_wallet_tables.sql` (follows project convention of sequential `.sql` files):
+
+```sql
+-- 135_add_wallet_tables.sql
+CREATE TABLE wallet_accounts (
+    id BIGSERIAL PRIMARY KEY,
+    user_id VARCHAR(8) NOT NULL REFERENCES users(id) UNIQUE,
+    balance DECIMAL(12, 2) NOT NULL DEFAULT 0.00 CHECK (balance >= 0),
+    total_earned DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+    total_withdrawn DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+    total_spent DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+    currency VARCHAR(3) NOT NULL DEFAULT 'GBP',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE wallet_transactions (
+    id BIGSERIAL PRIMARY KEY,
+    user_id VARCHAR(8) NOT NULL REFERENCES users(id),
+    type VARCHAR(20) NOT NULL,
+    amount DECIMAL(12, 2) NOT NULL,
+    balance_after DECIMAL(12, 2) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'completed',
+    source VARCHAR(50) NOT NULL,
+    related_id VARCHAR(255),
+    related_type VARCHAR(50),
+    description TEXT,
+    fee_amount DECIMAL(12, 2),
+    gross_amount DECIMAL(12, 2),
+    idempotency_key VARCHAR(64) NOT NULL UNIQUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX idx_wallet_tx_user_id ON wallet_transactions(user_id);
+CREATE INDEX idx_wallet_tx_type ON wallet_transactions(type);
+CREATE INDEX idx_wallet_tx_status ON wallet_transactions(status);
+CREATE INDEX idx_wallet_tx_created_at ON wallet_transactions(created_at);
+CREATE INDEX idx_wallet_tx_related ON wallet_transactions(related_type, related_id);
+```
 
 - [ ] **Step 4: Run migration**
 
-```bash
-cd backend && alembic upgrade head
+Run the SQL migration via your deployment pipeline or manually against the database. Verify tables exist:
+```sql
+SELECT * FROM wallet_accounts LIMIT 1;
+SELECT * FROM wallet_transactions LIMIT 1;
 ```
-
-Verify tables exist: `SELECT * FROM wallet_accounts LIMIT 1;` and `SELECT * FROM wallet_transactions LIMIT 1;`
 
 - [ ] **Step 5: Commit**
 
@@ -203,14 +247,18 @@ def credit_wallet(
     gross_amount: Decimal | None = None,
     idempotency_key: str | None = None,
 ) -> WalletTransaction | None:
-    """Credit user's wallet. Returns None if idempotency_key already exists."""
+    """Credit user's wallet. Returns None if idempotency_key already exists.
+    Uses lock-first pattern to prevent TOCTOU race on idempotency check."""
     if amount <= 0:
         raise ValueError("Credit amount must be positive")
 
     if idempotency_key is None:
         idempotency_key = f"earning:{related_type}:{related_id}:user:{user_id}"
 
-    # Idempotency check
+    # Lock wallet FIRST to serialize concurrent requests for same user
+    account = lock_wallet(db, user_id)
+
+    # Idempotency check (safe now — we hold the lock)
     existing = db.query(WalletTransaction).filter(
         WalletTransaction.idempotency_key == idempotency_key
     ).first()
@@ -218,7 +266,6 @@ def credit_wallet(
         logger.info(f"Idempotent skip: {idempotency_key}")
         return None
 
-    account = lock_wallet(db, user_id)
     account.balance += amount
     account.total_earned += amount
     account.updated_at = get_utc_time()
@@ -255,14 +302,18 @@ def debit_wallet(
     status: str = "completed",
     idempotency_key: str | None = None,
 ) -> WalletTransaction:
-    """Debit user's wallet. Raises ValueError if insufficient balance."""
+    """Debit user's wallet. Raises ValueError if insufficient balance.
+    Uses lock-first pattern to prevent TOCTOU race on idempotency check."""
     if amount <= 0:
         raise ValueError("Debit amount must be positive")
 
     if idempotency_key is None:
         idempotency_key = f"payment:{related_type}:{related_id}:user:{user_id}"
 
-    # Idempotency check
+    # Lock wallet FIRST to serialize concurrent requests
+    account = lock_wallet(db, user_id)
+
+    # Idempotency check (safe now — we hold the lock)
     existing = db.query(WalletTransaction).filter(
         WalletTransaction.idempotency_key == idempotency_key
     ).first()
@@ -271,8 +322,6 @@ def debit_wallet(
             raise ValueError("Duplicate debit request")
         # If previous attempt failed/reversed, allow retry with new key
         idempotency_key = f"{idempotency_key}:retry:{int(get_utc_time().timestamp())}"
-
-    account = lock_wallet(db, user_id)
     if account.balance < amount:
         raise ValueError(f"Insufficient balance: {account.balance} < {amount}")
 
@@ -305,19 +354,22 @@ def create_pending_withdrawal(
     amount: Decimal,
     request_uuid: str,
 ) -> WalletTransaction:
-    """Phase 1: Deduct balance and create pending withdrawal. Caller must COMMIT."""
+    """Phase 1: Deduct balance and create pending withdrawal. Caller must COMMIT.
+    Uses lock-first pattern to prevent TOCTOU race on idempotency check."""
     if amount < Decimal("1.00"):
         raise ValueError("Minimum withdrawal amount is £1.00")
 
     idempotency_key = f"withdrawal:{request_uuid}:user:{user_id}"
 
+    # Lock wallet FIRST to serialize concurrent requests
+    account = lock_wallet(db, user_id)
+
+    # Idempotency check (safe now — we hold the lock)
     existing = db.query(WalletTransaction).filter(
         WalletTransaction.idempotency_key == idempotency_key
     ).first()
     if existing:
         raise ValueError("Duplicate withdrawal request")
-
-    account = lock_wallet(db, user_id)
     if account.balance < amount:
         raise ValueError(f"Insufficient balance: {account.balance} < {amount}")
 
@@ -649,11 +701,14 @@ Remove or comment out the old `create_transfer_record()` / `execute_transfer()` 
 
 - [ ] **Step 3: Handle the flea market sale case**
 
-The flea market sale goes through the same `confirm_completion` logic. Ensure `source` is set based on task metadata:
+The flea market sale goes through the same `confirm_completion` logic. Determine source by checking if the task is linked to a flea market item:
 
 ```python
-source = "flea_market_sale" if task.sold_task_id else "task_reward"
+# FleaMarketItem has sold_task_id pointing to this task (via relationship on Task model)
+source = "flea_market_sale" if task.flea_market_item else "task_reward"
 ```
+
+`task.flea_market_item` is an existing relationship: `Task.flea_market_item = relationship("FleaMarketItem", primaryjoin="Task.id == FleaMarketItem.sold_task_id", uselist=False)`
 
 - [ ] **Step 4: Test manually by reading the code path**
 
@@ -709,7 +764,7 @@ Read the task payment creation code in `backend/app/coupon_points_routes.py` to 
 
 - [ ] **Step 2: Add use_wallet_balance parameter**
 
-Modify the payment request schema to accept `use_wallet_balance: bool = False`.
+Find the Pydantic schema for task payment request in `backend/app/schemas.py` (search for the class used by the payment endpoint). Add `use_wallet_balance: bool = False` field.
 
 - [ ] **Step 3: Implement mixed payment logic**
 
@@ -758,11 +813,14 @@ if use_wallet_balance:
 
 - [ ] **Step 4: Modify webhook handler for mixed payment**
 
-In the payment success webhook, if metadata contains `wallet_tx_id`:
-- Update WalletTransaction status to `completed`
+Find the Stripe webhook handler in `backend/app/routers.py` (search for `payment_intent.succeeded` or `payment.succeeded` webhook event handling).
 
-In the payment failure/expiry webhook:
-- Call `reverse_debit(db, wallet_tx_id, user_id, wallet_deduction)`
+In the payment success webhook, if PaymentIntent metadata contains `wallet_tx_id`:
+- Call `complete_debit(db, wallet_tx_id)` to update WalletTransaction status to `completed`
+
+In the payment failure/expiry webhook (`payment_intent.payment_failed`, `payment_intent.canceled`):
+- Extract `wallet_tx_id` and `wallet_deduction` from metadata
+- Call `reverse_debit(db, wallet_tx_id, user_id, Decimal(wallet_deduction))`
 
 - [ ] **Step 5: Commit**
 
@@ -1128,38 +1186,155 @@ git commit -m "feat(wallet): update payout view to withdraw from local wallet"
 
 ## Task 13: Flutter — Remove stripe_setup_required Checks
 
+All 7 files containing `stripe_setup_required` must be cleaned up:
+
 **Files:**
 - Modify: `link2ur/lib/features/tasks/views/task_detail_view.dart:143-156`
+- Modify: `link2ur/lib/features/tasks/views/task_detail_components.dart:1775`
 - Modify: `link2ur/lib/features/tasks/bloc/task_detail_bloc.dart:753-759`
+- Modify: `link2ur/lib/data/repositories/task_repository.dart:283`
 - Modify: `link2ur/lib/features/flea_market/views/create_flea_market_item_view.dart:206-219`
 - Modify: `link2ur/lib/features/flea_market/bloc/flea_market_bloc.dart:604-608`
+- Modify: `link2ur/lib/data/repositories/flea_market_repository.dart:165`
 
-- [ ] **Step 1: Remove stripe_setup_required listener in task_detail_view.dart**
+- [ ] **Step 1: Remove stripe_setup_required in task_detail_view.dart**
 
 Remove the BlocListener block (lines 143-156) that shows the "Stripe Setup Required" dialog.
 
-- [ ] **Step 2: Remove stripe_setup_required detection in task_detail_bloc.dart**
+- [ ] **Step 2: Remove stripe_setup_required in task_detail_components.dart**
+
+Remove the code (line 1775) that checks `state.actionMessage == 'stripe_setup_required'`.
+
+- [ ] **Step 3: Remove stripe_setup_required in task_detail_bloc.dart**
 
 Remove the code (lines 753-759) that checks exception message for 'stripe_setup_required' and sets actionMessage.
 
-- [ ] **Step 3: Remove stripe_setup_required listener in create_flea_market_item_view.dart**
+- [ ] **Step 4: Remove stripe_setup_required in task_repository.dart**
+
+Remove the code (line 283) that throws `TaskException('stripe_setup_required')` on HTTP 428. The backend will no longer return 428 for task acceptance.
+
+- [ ] **Step 5: Remove stripe_setup_required in create_flea_market_item_view.dart**
 
 Remove the listener block (lines 206-219) that intercepts stripe_setup_required.
 
-- [ ] **Step 4: Remove stripe_setup_required detection in flea_market_bloc.dart**
+- [ ] **Step 6: Remove stripe_setup_required in flea_market_bloc.dart**
 
 Remove the code (lines 604-608) that checks for 'stripe_setup_required' in exceptions.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 7: Remove stripe_setup_required in flea_market_repository.dart**
+
+Remove the code (line 165) that throws `FleaMarketException('stripe_setup_required')` on HTTP 428.
+
+- [ ] **Step 8: Commit**
 
 ```bash
-cd link2ur && git add lib/features/tasks/ lib/features/flea_market/
-git commit -m "feat(wallet): remove stripe_setup_required checks from task accept and flea market publish"
+cd link2ur && git add lib/features/tasks/ lib/features/flea_market/ lib/data/repositories/
+git commit -m "feat(wallet): remove stripe_setup_required checks from all 7 files"
 ```
 
 ---
 
-## Task 14: Backend — Data Migration Script
+## Task 14: Flutter — Add Mixed Payment UI to Task Payment Page
+
+**Files:**
+- Modify: Task payment view (locate in `link2ur/lib/features/payment/views/` — likely the view that creates PaymentIntent)
+- Modify: `link2ur/lib/features/payment/bloc/payment_bloc.dart`
+
+- [ ] **Step 1: Read the current task payment view and PaymentBloc**
+
+Find the view that handles task payment creation. Read `payment_bloc.dart` to understand current events and states.
+
+- [ ] **Step 2: Add wallet balance state to PaymentBloc**
+
+Add fields to PaymentState:
+```dart
+final WalletBalance? walletBalance;
+final bool useWalletBalance;
+final double walletDeduction;  // Computed: min(balance, totalAmount)
+```
+
+Add events:
+```dart
+class PaymentToggleWalletBalance extends PaymentEvent {}
+class PaymentLoadWalletBalance extends PaymentEvent {}
+```
+
+- [ ] **Step 3: Load wallet balance when payment page opens**
+
+In the PaymentBloc handler for loading payment info, also load wallet balance:
+```dart
+final walletBalance = await paymentRepo.getWalletBalance();
+```
+
+- [ ] **Step 4: Add wallet balance toggle to payment UI**
+
+In the payment view, add a toggle/switch:
+```dart
+SwitchListTile(
+  title: Text(context.l10n.useWalletBalance),  // "使用余额支付"
+  subtitle: Text('可用余额: £${walletBalance.balance.toStringAsFixed(2)}'),
+  value: state.useWalletBalance,
+  onChanged: (_) => bloc.add(PaymentToggleWalletBalance()),
+)
+```
+
+Show deduction breakdown when enabled:
+- If balance >= total: "余额支付 £X.XX"
+- If balance < total: "余额抵扣 £X.XX + 银行卡支付 £Y.YY"
+
+- [ ] **Step 5: Pass use_wallet_balance to payment API call**
+
+When creating payment, include `use_wallet_balance: true` in the request body if the toggle is on.
+
+- [ ] **Step 6: Handle full-wallet-payment response**
+
+If backend returns `payment_type: "wallet"` (full wallet payment, no Stripe needed), skip the Stripe payment sheet and show success directly.
+
+- [ ] **Step 7: Commit**
+
+```bash
+cd link2ur && git add lib/features/payment/
+git commit -m "feat(wallet): add wallet balance toggle and mixed payment UI"
+```
+
+---
+
+## Task 15: Flutter — Update Transaction History View
+
+**Files:**
+- Modify: `link2ur/lib/features/payment/views/stripe_connect_payments_view.dart`
+
+- [ ] **Step 1: Read the current payments/transaction history view**
+
+Understand how it currently loads transactions from Stripe API.
+
+- [ ] **Step 2: Replace Stripe transaction loading with wallet API**
+
+Replace calls to Stripe Connect transactions API with `paymentRepo.getWalletTransactions()`:
+
+```dart
+final result = await _paymentRepo.getWalletTransactions(page: _page, pageSize: 20);
+final items = result['items'] as List<WalletTransactionItem>;
+```
+
+- [ ] **Step 3: Update transaction list item rendering**
+
+Update the list item widget to render `WalletTransactionItem` instead of `StripeConnectTransaction`:
+- Show type icon (earning=green arrow down, withdrawal=blue arrow up, payment=orange cart)
+- Show amount with sign (+£90.00 / -£50.00)
+- Show source label (task_reward → "任务奖励", flea_market_sale → "二手物品售出", etc.)
+- Show status badge if pending
+
+- [ ] **Step 4: Commit**
+
+```bash
+cd link2ur && git add lib/features/payment/views/stripe_connect_payments_view.dart
+git commit -m "feat(wallet): switch transaction history from Stripe API to local wallet API"
+```
+
+---
+
+## Task 16: Backend — Data Migration Script
 
 **Files:**
 - Create: `backend/scripts/migrate_wallet_history.py`
@@ -1225,6 +1400,10 @@ def migrate():
                 )
                 db.add(tx)
 
+            # Note: Spec mentions migrating Stripe Payout history as withdrawal records.
+            # We simplify by setting total_withdrawn=total_earned (money is in Connect).
+            # No individual withdrawal transaction records are created for old payouts,
+            # since those happened outside the platform wallet system.
             account = WalletAccount(
                 user_id=user_id,
                 balance=Decimal("0"),  # Money is in Connect, not platform
@@ -1264,7 +1443,7 @@ git commit -m "feat(wallet): add one-time data migration script for existing use
 
 ---
 
-## Task 15: Integration Testing & Verification
+## Task 17: Integration Testing & Verification
 
 - [ ] **Step 1: Test wallet balance API**
 
