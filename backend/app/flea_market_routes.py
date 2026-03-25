@@ -1214,7 +1214,7 @@ async def update_flea_market_item(
                 select(func.count(models.FleaMarketRental.id))
                 .where(
                     models.FleaMarketRental.item_id == db_id,
-                    models.FleaMarketRental.status == "active",
+                    models.FleaMarketRental.status.in_(["active", "overdue"]),
                 )
             )
             if (active_rental_count_result.scalar() or 0) > 0:
