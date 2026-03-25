@@ -3726,3 +3726,6 @@ class UserFollow(Base):
         Index("ix_user_follows_follower", "follower_id"),
         Index("ix_user_follows_following", "following_id"),
     )
+
+
+from app.wallet_models import WalletAccount, WalletTransaction  # noqa: F401, E402
