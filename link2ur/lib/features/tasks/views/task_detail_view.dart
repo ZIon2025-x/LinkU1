@@ -53,6 +53,7 @@ import '../../../core/widgets/bouncing_widget.dart';
 import '../../../core/design/app_shadows.dart';
 import 'approval_payment_page.dart';
 import 'task_detail_components.dart';
+import '../../../core/widgets/qa_section.dart';
 
 /// 任务详情页
 /// 三维条件显示：任务状态 x 用户身份 x 任务来源
@@ -196,6 +197,9 @@ class _TaskDetailContent extends StatelessWidget {
             'visibility_update_failed' => l10n.taskDetailVisibilityUpdateFailed,
             'chat_started' => l10n.actionChatStarted,
             'price_proposed' => l10n.actionPriceProposed,
+            'qa_ask_success' => l10n.qaAskSuccess,
+            'qa_reply_success' => l10n.qaReplySuccess,
+            'qa_delete_success' => l10n.qaDeleteSuccess,
             _ => state.actionMessage ?? '',
           };
           final isError = state.actionMessage!.contains('failed') ||
@@ -621,21 +625,34 @@ class _TaskDetailContent extends StatelessWidget {
                   const SizedBox(height: AppSpacing.md),
                 ],
 
-                // 公开申请留言区 (非发布者可见, open/chatting 任务)
-                // 发布者通过下方 ApplicationsListView 管理申请，不显示此区域避免重复
-                if (!isPoster &&
-                    (task.status == AppConstants.taskStatusOpen ||
-                     task.status == AppConstants.taskStatusChatting)) ...[
-                  AnimatedListItem(
-                    index: 3,
-                    child: PublicApplicationsSection(
-                      applications: state.applications,
-                      isLoading: state.isLoadingApplications,
-                      isDark: isDark,
+                // Q&A section — visible to all users on all task statuses
+                AnimatedListItem(
+                  index: 3,
+                  child: QASection(
+                    targetType: 'task',
+                    isOwner: isPoster,
+                    isDark: isDark,
+                    questions: state.questions,
+                    isLoading: state.isLoadingQuestions,
+                    totalCount: state.questionsTotalCount,
+                    isLoggedIn: currentUserId != null,
+                    allowAsk: task.status == AppConstants.taskStatusOpen ||
+                              task.status == AppConstants.taskStatusChatting,
+                    onAsk: (content) => context.read<TaskDetailBloc>().add(
+                      TaskDetailAskQuestion(content),
+                    ),
+                    onReply: (questionId, content) => context.read<TaskDetailBloc>().add(
+                      TaskDetailReplyQuestion(questionId: questionId, content: content),
+                    ),
+                    onDelete: (questionId) => context.read<TaskDetailBloc>().add(
+                      TaskDetailDeleteQuestion(questionId),
+                    ),
+                    onLoadMore: () => context.read<TaskDetailBloc>().add(
+                      TaskDetailLoadQuestions(page: state.questionsCurrentPage + 1),
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.md),
-                ],
+                ),
+                const SizedBox(height: AppSpacing.md),
 
                 // 申请列表 (isPoster && open/chatting) — 含管理操作按钮
                 if (isPoster &&
