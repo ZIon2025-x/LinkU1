@@ -2721,6 +2721,21 @@ class FleaMarketItemBase(BaseModel):
 class FleaMarketItemCreate(FleaMarketItemBase):
     """创建商品请求"""
     currency: Literal["GBP", "EUR"] = "GBP"
+    listing_type: str = "sale"
+    deposit: Optional[Decimal] = None
+    rental_price: Optional[Decimal] = None
+    rental_unit: Optional[str] = None
+
+    @model_validator(mode='after')
+    def validate_rental_fields(self):
+        if self.listing_type == 'rental':
+            if not self.deposit or self.deposit <= 0:
+                raise ValueError('Deposit is required for rental items')
+            if not self.rental_price or self.rental_price <= 0:
+                raise ValueError('Rental price is required for rental items')
+            if self.rental_unit not in ('day', 'week', 'month'):
+                raise ValueError('Rental unit must be day, week, or month')
+        return self
 
 
 class FleaMarketItemUpdate(BaseModel):
@@ -2735,6 +2750,9 @@ class FleaMarketItemUpdate(BaseModel):
     category: Optional[str] = Field(None, max_length=100)
     contact: Optional[str] = Field(None, max_length=200)  # 联系方式
     status: Optional[Literal["deleted"]] = None  # 仅允许设置为deleted
+    deposit: Optional[Decimal] = None
+    rental_price: Optional[Decimal] = None
+    rental_unit: Optional[str] = None
 
 
 class FleaMarketItemResponse(BaseModel):
@@ -2775,6 +2793,15 @@ class FleaMarketItemResponse(BaseModel):
     user_purchase_request_id: Optional[int] = None  # 购买申请ID
     user_purchase_request_status: Optional[str] = None  # 购买申请状态：pending, seller_negotiating
     user_purchase_request_proposed_price: Optional[Decimal] = None  # 议价金额
+    # 租赁相关字段
+    listing_type: str = "sale"
+    deposit: Optional[float] = None
+    rental_price: Optional[float] = None
+    rental_unit: Optional[str] = None
+    active_rentals: List[dict] = []  # 活跃租赁摘要列表
+    # 当前用户的租赁申请信息
+    user_rental_request_id: Optional[int] = None
+    user_rental_request_status: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -2857,6 +2884,70 @@ class MyRelatedFleaItemResponse(FleaMarketItemResponse):
 class MyRelatedFleaListResponse(BaseModel):
     """与我相关的跳蚤市场商品列表（基于任务来源=跳蚤市场+用户关联）"""
     items: List[MyRelatedFleaItemResponse]
+
+
+# ==================== 跳蚤市场租赁相关 Schemas ====================
+
+class FleaMarketRentalRequestCreate(BaseModel):
+    """创建租赁申请请求"""
+    rental_duration: int
+    desired_time: Optional[str] = None
+    usage_description: Optional[str] = None
+    proposed_rental_price: Optional[Decimal] = None
+
+    @field_validator('rental_duration')
+    @classmethod
+    def validate_duration(cls, v):
+        if v < 1:
+            raise ValueError('Rental duration must be at least 1')
+        return v
+
+
+class FleaMarketRentalSummary(BaseModel):
+    """Lightweight rental info for item detail response active_rentals list"""
+    id: int
+    renter_name: Optional[str] = None
+    start_date: str
+    end_date: str
+    status: str
+
+
+class FleaMarketRentalRequestResponse(BaseModel):
+    """租赁申请响应"""
+    id: int
+    item_id: str
+    renter_id: str
+    renter_name: Optional[str] = None
+    renter_avatar: Optional[str] = None
+    rental_duration: int
+    desired_time: Optional[str] = None
+    usage_description: Optional[str] = None
+    proposed_rental_price: Optional[float] = None
+    counter_rental_price: Optional[float] = None
+    status: str
+    created_at: str
+    updated_at: str
+
+
+class FleaMarketRentalResponse(BaseModel):
+    """租赁记录响应"""
+    id: int
+    item_id: str
+    renter_id: str
+    renter_name: Optional[str] = None
+    renter_avatar: Optional[str] = None
+    rental_duration: int
+    rental_unit: str
+    total_rent: float
+    deposit_amount: float
+    total_paid: float
+    currency: str
+    start_date: str
+    end_date: str
+    status: str
+    deposit_status: str
+    returned_at: Optional[str] = None
+    created_at: str
 
 
 # ==================== 商品收藏相关Schemas ====================
