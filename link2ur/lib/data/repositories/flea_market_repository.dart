@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../models/flea_market.dart';
+import '../models/flea_market_rental.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
 import '../../core/constants/api_endpoints.dart';
@@ -631,6 +632,161 @@ class FleaMarketRepository {
     if (!response.isSuccess) {
       throw FleaMarketException(response.message ?? 'flea_market_error_operation_failed');
     }
+  }
+
+  // ─────────────────────────────────────────────
+  // 租赁相关方法
+  // ─────────────────────────────────────────────
+
+  /// 提交租赁申请
+  Future<Map<String, dynamic>> submitRentalRequest(
+    String itemId, {
+    required int rentalDuration,
+    String? desiredTime,
+    String? usageDescription,
+    double? proposedRentalPrice,
+  }) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.fleaMarketRentalRequest(itemId),
+      data: {
+        'rental_duration': rentalDuration,
+        if (desiredTime != null) 'desired_time': desiredTime,
+        if (usageDescription != null) 'usage_description': usageDescription,
+        if (proposedRentalPrice != null) 'proposed_rental_price': proposedRentalPrice,
+      },
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw FleaMarketException(response.message ?? 'flea_market_error_submit_rental_request_failed');
+    }
+
+    await _cache.invalidateMyFleaMarketCache();
+
+    return response.data!;
+  }
+
+  /// 获取商品的租赁申请列表（物主查看）
+  Future<List<FleaMarketRentalRequest>> getItemRentalRequests(String itemId) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.fleaMarketItemRentalRequests(itemId),
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw FleaMarketException(response.message ?? 'flea_market_error_get_rental_requests_failed');
+    }
+
+    final items = response.data!['items'] as List<dynamic>? ?? [];
+    return items
+        .map((e) => FleaMarketRentalRequest.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// 批准租赁申请（物主操作），返回支付信息
+  Future<Map<String, dynamic>> approveRentalRequest(String requestId) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.fleaMarketRentalRequestApprove(requestId),
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw FleaMarketException(response.message ?? 'flea_market_error_approve_rental_failed');
+    }
+
+    return response.data!;
+  }
+
+  /// 拒绝租赁申请（物主操作）
+  Future<void> rejectRentalRequest(String requestId) async {
+    final response = await _apiService.post(
+      ApiEndpoints.fleaMarketRentalRequestReject(requestId),
+    );
+
+    if (!response.isSuccess) {
+      throw FleaMarketException(response.message ?? 'flea_market_error_reject_rental_failed');
+    }
+  }
+
+  /// 租赁还价（物主操作）
+  Future<void> counterOfferRental(String requestId, double counterPrice) async {
+    final response = await _apiService.post(
+      ApiEndpoints.fleaMarketRentalRequestCounterOffer(requestId),
+      data: {
+        'counter_rental_price': counterPrice,
+      },
+    );
+
+    if (!response.isSuccess) {
+      throw FleaMarketException(response.message ?? 'flea_market_error_rental_counter_offer_failed');
+    }
+  }
+
+  /// 回应租赁还价（租客操作），accept=true 时返回支付信息
+  Future<Map<String, dynamic>?> respondRentalCounterOffer(
+    String requestId, {
+    required bool accept,
+  }) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.fleaMarketRentalRequestRespondCounterOffer(requestId),
+      data: {
+        'accept': accept,
+      },
+    );
+
+    if (!response.isSuccess) {
+      throw FleaMarketException(response.message ?? 'flea_market_error_respond_rental_counter_offer_failed');
+    }
+
+    await _cache.invalidateFleaMarketCache();
+
+    return response.data;
+  }
+
+  /// 确认归还（物主操作）
+  Future<void> confirmReturn(String rentalId) async {
+    final response = await _apiService.post(
+      ApiEndpoints.fleaMarketRentalConfirmReturn(rentalId),
+    );
+
+    if (!response.isSuccess) {
+      throw FleaMarketException(response.message ?? 'flea_market_error_confirm_return_failed');
+    }
+
+    await _cache.invalidateMyFleaMarketCache();
+  }
+
+  /// 获取租赁详情
+  Future<FleaMarketRental> getRentalDetail(String rentalId) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.fleaMarketRentalDetail(rentalId),
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw FleaMarketException(response.message ?? 'flea_market_error_get_rental_detail_failed');
+    }
+
+    return FleaMarketRental.fromJson(response.data!);
+  }
+
+  /// 获取我的租赁列表
+  Future<List<FleaMarketRental>> getMyRentals({
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.fleaMarketMyRentals,
+      queryParameters: {
+        'page': page,
+        'page_size': pageSize,
+      },
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw FleaMarketException(response.message ?? 'flea_market_error_get_my_rentals_failed');
+    }
+
+    final items = response.data!['items'] as List<dynamic>? ?? [];
+    return items
+        .map((e) => FleaMarketRental.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 }
 
