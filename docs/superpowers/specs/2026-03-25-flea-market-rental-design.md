@@ -18,6 +18,24 @@
 | 到期处理 | 仅发通知提醒，不自动扣款 |
 | 重复申请 | 被拒绝后可重新申请，无限制 |
 
+## 重要约束
+
+### 物品状态不新增 DB 枚举值
+
+出租中的物品在数据库中 `status` 仍为 `active`（不新增 `rented` 状态），「出租中」是前端根据 `active_rental_id` 是否存在推导的展示状态。现有 CheckConstraint `status IN ('active', 'sold', 'deleted')` 不需要修改。
+
+### `price` 字段处理
+
+出租物品 `price` 设为 `rental_price`（而非 0），避免触发现有 `isFree`（`price == 0`）逻辑导致出租物品显示为"免费"。列表卡片展示时根据 `listing_type` 决定显示格式：出售显示 `£50`，出租显示 `£5/天`。
+
+### `listing_type` 不可变
+
+发布后 `listing_type` 不可更改。后端 `FleaMarketItemUpdate` schema 排除此字段，API 忽略传入值，编辑页 UI 隐藏类型切换。
+
+### 不可租自己的物品
+
+后端校验：`rental_request` 接口拒绝 `renter_id == seller_id` 的请求。
+
 ## 数据模型
 
 ### FleaMarketItem 表 — 新增字段
@@ -78,9 +96,24 @@
 - `rentalUnit: String?` — `'day'` | `'week'` | `'month'`
 - `activeRentalId: int?` — 当前活跃租赁 ID（有值表示出租中）
 
+**CreateFleaMarketRequest** 新增字段：
+- `listingType: String?` — 默认 `'sale'`
+- `deposit: double?`
+- `rentalPrice: double?`
+- `rentalUnit: String?`
+
+**FleaMarketItem** 新增 getter：
+- `isRental` → `listingType == 'rental'`
+- `isRentedOut` → `activeRentalId != null`
+- 覆盖 `isFree` → `!isRental && price == 0`（出租物品不视为免费）
+
 **新增 FleaMarketRentalRequest 模型** — 对应后端表
 
 **新增 FleaMarketRental 模型** — 对应后端表
+
+**FleaMarketItem** 新增字段用于租客视角（类似出售的 `userPurchaseRequestId`）：
+- `userRentalRequestId: int?` — 当前用户的租用申请 ID
+- `userRentalRequestStatus: String?` — 申请状态
 
 ## API 设计
 
@@ -126,6 +159,15 @@ POST /api/flea-market/rental-requests/{id}/counter-offer
   "counter_rental_price": 8.00
 }
 ```
+
+**租客回应议价：**
+```json
+POST /api/flea-market/rental-requests/{id}/respond-counter-offer
+{
+  "accept": true
+}
+```
+`accept=true` → 申请状态变为 `approved`，创建支付任务。`accept=false` → 申请状态变为 `rejected`，租客可重新申请。
 
 **出租人同意后返回支付信息：**
 ```json
@@ -198,33 +240,58 @@ POST /api/flea-market/rental-requests/{id}/counter-offer
 3. 复用现有 Stripe 支付流程，一次性付清
 4. 支付成功 → 创建 FleaMarketRental（`status=active`），物品标记为出租中
 
+### 并发申请处理
+
+- 一个物品可以同时有多个 `pending` 状态的租用申请
+- 出租人同意某个申请后，该申请状态变为 `approved`，其他 `pending` 申请**不自动拒绝**（租客可能不付款）
+- 租客支付成功 → 创建 FleaMarketRental → 此时自动拒绝该物品所有其他 `pending` 和 `approved` 的申请
+- 已批准的申请有 **24 小时**支付窗口（复用现有 `pending_payment_expires_at` 机制），超时则申请状态回到 `expired`，物品可继续接受新申请
+
+### `start_date` 计算
+
+`FleaMarketRental.start_date` = 租客支付成功的时间。`end_date` = `start_date` + `rental_duration` × `rental_unit`。`desired_time` 仅作为出租人审批参考，不参与系统计算。
+
+### `task_source` 区分
+
+出租支付使用 `task_source='flea_market_rental'`。后端现有按 `task_source='flea_market'` 过滤的查询需同时兼容 `'flea_market_rental'`，使用 `task_source.startswith('flea_market')` 或 `IN ('flea_market', 'flea_market_rental')` 过滤。
+
 ### 租赁生命周期
 
 ```
 申请提交(pending)
-    → 出租人同意(approved) → 租客支付 → 租赁中(active)
+    → 出租人同意(approved) → 租客24h内支付 → 租赁中(active)
+    → 出租人同意(approved) → 租客超时未支付 → expired
     → 出租人拒绝(rejected) → 结束，租客可重新申请
     → 出租人议价(counter_offer) → 租客接受/拒绝
+    → 物品被其他人租走 → 自动拒绝(rejected)
 ```
 
 ```
 租赁中(active)
     → 到期提醒(overdue)
-    → 出租人确认归还 → returned → Stripe Refund 退押金
+    → 出租人确认归还 → returned → Stripe Partial Refund 退押金
     → 出租人发起纠纷 → disputed → 平台介入
 ```
 
 ### 押金退还
 
-- 出租人点「确认归还」→ Stripe Refund 退押金部分到租客原支付方式
+- 出租人点「确认归还」→ Stripe **Partial Refund** 退押金部分到租客原支付方式
+- 退款金额取 `FleaMarketRental.deposit_amount`（创建时快照），不重新计算
 - 租金不退
 - `deposit_status`: `held` → `refunded`
+- 需记录 Stripe refund_id 到 FleaMarketRental 以便对账
 
 ### 到期提醒
 
 - 到期前 1 天 + 到期当天：给双方发通知
 - 超期后每天提醒一次，连续 3 天
 - 不自动扣款，等出租人手动操作
+
+### 物品删除/编辑时的申请处理
+
+- 删除出租物品：自动拒绝所有 `pending` / `approved` 的租用申请，通知申请人
+- 编辑租金单价：已有的 `pending` 申请不受影响（申请时已记录当时的物品价格供参考），新申请按新价格计算
+- 有活跃租赁的物品不可删除
 
 ### 物品状态流转
 
@@ -236,7 +303,8 @@ POST /api/flea-market/rental-requests/{id}/counter-offer
 
 ### 模型层（data/models/）
 
-- `FleaMarketItem` 新增 5 个字段
+- `FleaMarketItem` 新增 7 个字段（含 `userRentalRequestId`, `userRentalRequestStatus`）
+- `CreateFleaMarketRequest` 新增 4 个字段
 - 新增 `FleaMarketRentalRequest` 模型
 - 新增 `FleaMarketRental` 模型
 
@@ -255,23 +323,32 @@ POST /api/flea-market/rental-requests/{id}/counter-offer
 
 ### BLoC 层
 
-在现有 `FleaMarketBloc` 中扩展：
+考虑到现有 `FleaMarketBloc` 已经较大，租赁管理拆为独立的 **`FleaMarketRentalBloc`**（page level），负责租用申请、审批、归还等操作。现有 `FleaMarketBloc` 只新增 `listingTypeFilter` 筛选和展示所需的最小字段。
 
-**新增 Events：**
-- `FleaMarketSubmitRentalRequest`
-- `FleaMarketApproveRentalRequest`
-- `FleaMarketRejectRentalRequest`
-- `FleaMarketCounterOfferRental`
-- `FleaMarketRespondRentalCounterOffer`
-- `FleaMarketConfirmReturn`
-- `FleaMarketLoadRentalRequests`
-- `FleaMarketLoadRentalDetail`
+**FleaMarketBloc 扩展（最小改动）：**
+- 新增 Event：`FleaMarketListingTypeFilterChanged`
+- State 新增：`listingTypeFilter: String`
 
-**State 新增字段：**
+**新增 FleaMarketRentalBloc（page level）：**
+
+**Events：**
+- `RentalSubmitRequest`
+- `RentalApproveRequest`
+- `RentalRejectRequest`
+- `RentalCounterOffer`
+- `RentalRespondCounterOffer`
+- `RentalConfirmReturn`
+- `RentalLoadRequests`
+- `RentalLoadDetail`
+
+**State：**
 - `rentalRequests: List<FleaMarketRentalRequest>`
 - `isLoadingRentalRequests: bool`
 - `currentRental: FleaMarketRental?`
-- `listingTypeFilter: String` — `'all'` / `'sale'` / `'rental'`
+- `isSubmitting: bool`
+- `actionMessage: String?`
+- `errorMessage: String?`
+- `acceptPaymentData: AcceptPaymentData?` — 审批后的支付信息
 
 ### View 层
 
