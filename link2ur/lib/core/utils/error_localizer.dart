@@ -159,18 +159,24 @@ class ErrorLocalizer {
       case 'flea_market_error_respond_counter_offer_failed':
         return context.l10n.fleaMarketErrorRespondCounterOfferFailed;
       case 'flea_market_error_rental_request_failed':
+      case 'flea_market_error_submit_rental_request_failed':
         return context.l10n.fleaMarketErrorRentalRequestFailed;
       case 'flea_market_error_approve_rental_failed':
         return context.l10n.fleaMarketErrorApproveRentalFailed;
       case 'flea_market_error_reject_rental_failed':
         return context.l10n.fleaMarketErrorRejectRentalFailed;
       case 'flea_market_error_counter_offer_rental_failed':
+      case 'flea_market_error_rental_counter_offer_failed':
         return context.l10n.fleaMarketErrorCounterOfferRentalFailed;
       case 'flea_market_error_confirm_return_failed':
         return context.l10n.fleaMarketErrorConfirmReturnFailed;
       case 'flea_market_error_get_rental_detail_failed':
         return context.l10n.fleaMarketErrorGetRentalDetailFailed;
       case 'flea_market_error_get_rental_requests_failed':
+        return context.l10n.fleaMarketErrorGetRentalRequestsFailed;
+      case 'flea_market_error_respond_rental_counter_offer_failed':
+        return context.l10n.fleaMarketErrorCounterOfferRentalFailed;
+      case 'flea_market_error_get_my_rentals_failed':
         return context.l10n.fleaMarketErrorGetRentalRequestsFailed;
       case 'flea_market_error_not_rental_item':
         return context.l10n.fleaMarketErrorNotRentalItem;

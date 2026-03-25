@@ -145,6 +145,7 @@ class FleaMarketRentalState extends Equatable {
   const FleaMarketRentalState({
     this.rentalRequests = const [],
     this.isLoadingRequests = false,
+    this.isLoadingDetail = false,
     this.currentRental,
     this.myRentals = const [],
     this.isLoadingMyRentals = false,
@@ -158,6 +159,7 @@ class FleaMarketRentalState extends Equatable {
 
   final List<FleaMarketRentalRequest> rentalRequests;
   final bool isLoadingRequests;
+  final bool isLoadingDetail;
   final FleaMarketRental? currentRental;
   final List<FleaMarketRental> myRentals;
   final bool isLoadingMyRentals;
@@ -172,6 +174,7 @@ class FleaMarketRentalState extends Equatable {
   FleaMarketRentalState copyWith({
     List<FleaMarketRentalRequest>? rentalRequests,
     bool? isLoadingRequests,
+    bool? isLoadingDetail,
     FleaMarketRental? currentRental,
     bool clearCurrentRental = false,
     List<FleaMarketRental>? myRentals,
@@ -187,6 +190,7 @@ class FleaMarketRentalState extends Equatable {
     return FleaMarketRentalState(
       rentalRequests: rentalRequests ?? this.rentalRequests,
       isLoadingRequests: isLoadingRequests ?? this.isLoadingRequests,
+      isLoadingDetail: isLoadingDetail ?? this.isLoadingDetail,
       currentRental: clearCurrentRental
           ? null
           : (currentRental ?? this.currentRental),
@@ -207,6 +211,7 @@ class FleaMarketRentalState extends Equatable {
   List<Object?> get props => [
         rentalRequests,
         isLoadingRequests,
+        isLoadingDetail,
         currentRental,
         myRentals,
         isLoadingMyRentals,
@@ -441,19 +446,19 @@ class FleaMarketRentalBloc
     RentalLoadDetail event,
     Emitter<FleaMarketRentalState> emit,
   ) async {
-    emit(state.copyWith(isLoadingRequests: true));
+    emit(state.copyWith(isLoadingDetail: true));
 
     try {
       final rental = await _repository.getRentalDetail(event.rentalId);
 
       emit(state.copyWith(
-        isLoadingRequests: false,
+        isLoadingDetail: false,
         currentRental: rental,
       ));
     } catch (e) {
       AppLogger.error('Failed to load rental detail', e);
       emit(state.copyWith(
-        isLoadingRequests: false,
+        isLoadingDetail: false,
         errorMessage: e.toString(),
       ));
     }
@@ -499,6 +504,6 @@ class FleaMarketRentalBloc
     RentalClearActionMessage event,
     Emitter<FleaMarketRentalState> emit,
   ) {
-    emit(state.copyWith());
+    emit(state.copyWith(errorMessage: state.errorMessage));
   }
 }

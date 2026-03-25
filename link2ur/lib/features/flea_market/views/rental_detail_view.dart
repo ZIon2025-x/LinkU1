@@ -74,7 +74,7 @@ class _RentalDetailContent extends StatelessWidget {
           }
         },
         builder: (context, state) {
-          if (state.isLoadingRequests && state.currentRental == null) {
+          if (state.isLoadingDetail && state.currentRental == null) {
             return const Center(child: CircularProgressIndicator());
           }
 

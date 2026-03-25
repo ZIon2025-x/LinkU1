@@ -100,7 +100,7 @@ class FleaMarketItem extends Equatable {
   final String listingType; // sale, rental
   final double? deposit;
   final double? rentalPrice;
-  final String? rentalUnit; // hour, day, week, month
+  final String? rentalUnit; // day, week, month
   final List<FleaMarketRentalSummary> activeRentals;
   final int? userRentalRequestId;
   final String? userRentalRequestStatus;
