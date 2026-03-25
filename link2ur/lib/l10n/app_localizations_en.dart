@@ -11059,4 +11059,123 @@ class AppLocalizationsEn extends AppLocalizations {
   String serviceReviewFrom(String title) {
     return 'From $title';
   }
+
+  @override
+  String get createTaskPricingFixed => 'Fixed Price';
+
+  @override
+  String get createTaskPricingHourly => 'Hourly';
+
+  @override
+  String get createTaskPricingNegotiable => 'Negotiate';
+
+  @override
+  String get createTaskModeLabel => 'Task Mode';
+
+  @override
+  String get createTaskModeOnline => 'Online/Remote';
+
+  @override
+  String get createTaskModeOffline => 'In Person';
+
+  @override
+  String get createTaskModeBoth => 'Either';
+
+  @override
+  String get createTaskDeadline24h => '24 Hours';
+
+  @override
+  String get createTaskDeadline3d => '3 Days';
+
+  @override
+  String get createTaskDeadline1w => '1 Week';
+
+  @override
+  String get createTaskDeadline2w => '2 Weeks';
+
+  @override
+  String get createTaskDeadlineNoRush => 'No Rush';
+
+  @override
+  String get createTaskDeadlineCustom => 'Custom';
+
+  @override
+  String get createTaskRequiredSkills => 'Required Skills';
+
+  @override
+  String get createTaskAddCustomSkill => '+ Custom';
+
+  @override
+  String get createTaskAiOptimize => 'AI Optimize';
+
+  @override
+  String get createTaskAiOptimizeDesc =>
+      'Let AI optimize your task description for better matches';
+
+  @override
+  String get createTaskAiOptimizeBtn => 'Optimize';
+
+  @override
+  String get createTaskAiTipPrefix => 'AI Tip: ';
+
+  @override
+  String get createTaskAiTipContent =>
+      'Add these for better quotes: 1. Target audience 2. Competitor references 3. Brand color/style preferences';
+
+  @override
+  String get createTaskSaveDraft => 'Save Draft';
+
+  @override
+  String get createTaskPreview => 'Preview';
+
+  @override
+  String get createTaskDraftSaved => 'Draft saved';
+
+  @override
+  String get createTaskDraftLoaded => 'Draft restored';
+
+  @override
+  String get createTaskDraftRestore => 'Restore';
+
+  @override
+  String get createTaskPublishBtn => 'Publish Task';
+
+  @override
+  String get createTaskTitleHintNew => 'Briefly describe what help you need';
+
+  @override
+  String get createTaskDescHintNew =>
+      'Describe your needs in detail to help experts understand...';
+
+  @override
+  String get createTaskRefImages => 'Reference Images';
+
+  @override
+  String get createTaskRefImagesHint =>
+      'Up to 9, showing reference cases or requirements';
+
+  @override
+  String get createTaskNewCatDesign => '🎨 Design';
+
+  @override
+  String get createTaskNewCatProgramming => '💻 Programming';
+
+  @override
+  String get createTaskNewCatPhotography => '📷 Photography';
+
+  @override
+  String get createTaskNewCatCopywriting => '📝 Copywriting';
+
+  @override
+  String get createTaskNewCatMusic => '🎵 Music';
+
+  @override
+  String get createTaskNewCatLifestyle => '🏠 Lifestyle';
+
+  @override
+  String get createTaskNewCatTutoring => '📚 Tutoring';
+
+  @override
+  String get errorAiOptimizeFailed =>
+      'AI optimization failed, please try again later';
 }

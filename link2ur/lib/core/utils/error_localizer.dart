@@ -367,6 +367,8 @@ class ErrorLocalizer {
         return context.l10n.personalServiceUpdated;
       case 'service_deleted':
         return context.l10n.personalServiceDeleted;
+      case 'ai_optimize_failed':
+        return context.l10n.errorAiOptimizeFailed;
       default:
         // 服务端返回的已翻译消息，直接使用
         return errorMessage;
