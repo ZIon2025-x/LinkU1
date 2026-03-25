@@ -16,7 +16,8 @@ FEE_CONFIG_BY_SOURCE = {
     "expert_service": (0.08, 50),   # 达人服务 8%，最低 50 便士
     "personal_service": (0.08, 50), # 个人服务 8%，最低 50 便士
     "expert_activity": (0.05, 50),  # 达人活动 5%，最低 50 便士
-    "flea_market": (0.08, 50),       # 跳蚤市场 8%，最低 50 便士
+    "flea_market": (0.08, 50),       # 跳蚤市场出售 8%，最低 50 便士
+    "flea_market_rental": (0.08, 50), # 跳蚤市场租赁 8%，最低 50 便士
 }
 DEFAULT_RATE, DEFAULT_MIN_PENCE = FEE_CONFIG_BY_SOURCE["normal"]
 
@@ -54,7 +55,7 @@ def calculate_application_fee_pence(
     - user_profile: 8%，最低 50 便士
     - expert_service: 8%，最低 50 便士
     - expert_activity: 5%，最低 50 便士
-    - flea_market: 10%，最低 100 便士
+    - flea_market: 8%，最低 50 便士
 
     Args:
         task_amount_pence: 任务金额（便士）

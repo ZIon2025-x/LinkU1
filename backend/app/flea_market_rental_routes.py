@@ -1050,28 +1050,39 @@ async def confirm_rental_return(
                     detail="押金退款失败，请稍后重试"
                 )
 
-        # 租金入账到物主钱包
+        # 租金入账到物主钱包（扣除平台服务费）
         wallet_credited = False
-        rent_amount = float(rental.total_rent)
-        if rent_amount > 0:
+        gross_rent = Decimal(str(rental.total_rent))
+        fee_amount = Decimal("0")
+        net_rent = Decimal("0")
+        if gross_rent > 0:
+            from app.utils.fee_calculator import calculate_application_fee_decimal
+            fee_amount = calculate_application_fee_decimal(
+                gross_rent, task_source="flea_market_rental"
+            )
+            net_rent = gross_rent - fee_amount
+
             try:
                 def _credit_rent(sync_session):
                     from app.wallet_service import credit_wallet
                     credit_wallet(
                         db=sync_session,
                         user_id=current_user.id,
-                        amount=Decimal(str(rental.total_rent)),
+                        amount=net_rent,
                         source="flea_market_rental",
                         related_id=str(rental.id),
                         related_type="rental",
                         description=f"租赁 #{rental.id} 租金收入 — {item.title}",
+                        fee_amount=fee_amount,
+                        gross_amount=gross_rent,
                         currency=rental.currency or item.currency or "GBP",
                         idempotency_key=f"earning:rental:{rental.id}:owner:{current_user.id}",
                     )
 
                 await db.run_sync(_credit_rent)
                 wallet_credited = True
-                logger.info(f"租赁 {rental_id} 租金 {rent_amount} 已入账物主钱包")
+                rent_net_float = float(net_rent)
+                logger.info(f"租赁 {rental_id} 租金入账: 总额={float(gross_rent)}, 服务费={float(fee_amount)}, 净额={rent_net_float}")
             except Exception as e:
                 logger.error(f"租赁 {rental_id} 租金入账失败: {e}", exc_info=True)
                 # 租金入账失败不阻塞归还流程，记录错误继续
@@ -1093,7 +1104,8 @@ async def confirm_rental_return(
         await db.commit()
 
         # 通知租客
-        rent_msg = f"\n租金 {'€' if (rental.currency or item.currency) == 'EUR' else '£'}{rent_amount:.2f} 已入账出租人钱包。" if wallet_credited else ""
+        currency_symbol = '€' if (rental.currency or item.currency) == 'EUR' else '£'
+        rent_msg = f"\n租金 {currency_symbol}{float(net_rent):.2f}（扣除服务费 {currency_symbol}{float(fee_amount):.2f}）已入账出租人钱包。" if wallet_credited else ""
         await _send_rental_notification(
             db=db,
             user_id=rental.renter_id,
@@ -1114,7 +1126,8 @@ async def confirm_rental_return(
                 "deposit_status": "refunded" if stripe_refund_id else "held",
                 "stripe_refund_id": stripe_refund_id,
                 "wallet_credited": wallet_credited,
-                "rent_credited": rent_amount if wallet_credited else 0,
+                "rent_credited": float(net_rent) if wallet_credited else 0,
+                "fee_amount": float(fee_amount) if wallet_credited else 0,
             },
             "message": "归还确认成功" + ("，押金已退还" if stripe_refund_id else "") + ("，租金已入账" if wallet_credited else "")
         }
