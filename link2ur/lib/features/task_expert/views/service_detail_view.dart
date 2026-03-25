@@ -26,6 +26,7 @@ import '../../../data/models/activity.dart';
 import '../../../data/models/task_expert.dart';
 import '../../../data/services/storage_service.dart';
 import '../../../data/repositories/activity_repository.dart';
+import '../../../data/repositories/question_repository.dart';
 import '../../../data/repositories/task_expert_repository.dart';
 import 'activity_price_widget.dart';
 import '../bloc/task_expert_bloc.dart';
@@ -43,11 +44,13 @@ class ServiceDetailView extends StatelessWidget {
       create: (context) => TaskExpertBloc(
         taskExpertRepository: context.read<TaskExpertRepository>(),
         activityRepository: context.read<ActivityRepository>(),
+        questionRepository: context.read<QuestionRepository>(),
       )
         ..add(TaskExpertLoadServiceDetail(serviceId))
         ..add(TaskExpertLoadServiceReviews(serviceId))
         ..add(TaskExpertLoadServiceTimeSlots(serviceId))
-        ..add(TaskExpertLoadServiceApplications(serviceId)),
+        ..add(TaskExpertLoadServiceApplications(serviceId))
+        ..add(TaskExpertLoadServiceQuestions(serviceId)),
       child: _ServiceDetailContent(serviceId: serviceId),
     );
   }
