@@ -34,7 +34,7 @@ def _find_transaction(db: Session, idempotency_key: str) -> Optional[WalletTrans
 # 1. get_or_create_wallet
 # ---------------------------------------------------------------------------
 
-def get_or_create_wallet(db: Session, user_id: str) -> WalletAccount:
+def get_or_create_wallet(db: Session, user_id: str, currency: str = "GBP") -> WalletAccount:
     """
     Return the WalletAccount for *user_id*, creating one with defaults if it
     does not yet exist.
@@ -44,7 +44,7 @@ def get_or_create_wallet(db: Session, user_id: str) -> WalletAccount:
     """
     wallet = (
         db.query(WalletAccount)
-        .filter(WalletAccount.user_id == user_id)
+        .filter(WalletAccount.user_id == user_id, WalletAccount.currency == currency)
         .first()
     )
     if wallet is None:
@@ -54,7 +54,7 @@ def get_or_create_wallet(db: Session, user_id: str) -> WalletAccount:
             total_earned=Decimal("0.00"),
             total_withdrawn=Decimal("0.00"),
             total_spent=Decimal("0.00"),
-            currency="GBP",
+            currency=currency,
         )
         db.add(wallet)
         db.flush()
@@ -65,7 +65,7 @@ def get_or_create_wallet(db: Session, user_id: str) -> WalletAccount:
 # 2. lock_wallet
 # ---------------------------------------------------------------------------
 
-def lock_wallet(db: Session, user_id: str) -> WalletAccount:
+def lock_wallet(db: Session, user_id: str, currency: str = "GBP") -> WalletAccount:
     """
     Return the WalletAccount for *user_id* with a FOR UPDATE row lock.
 
@@ -74,7 +74,7 @@ def lock_wallet(db: Session, user_id: str) -> WalletAccount:
     """
     wallet = (
         db.query(WalletAccount)
-        .filter(WalletAccount.user_id == user_id)
+        .filter(WalletAccount.user_id == user_id, WalletAccount.currency == currency)
         .with_for_update()
         .first()
     )
@@ -86,14 +86,14 @@ def lock_wallet(db: Session, user_id: str) -> WalletAccount:
             total_earned=Decimal("0.00"),
             total_withdrawn=Decimal("0.00"),
             total_spent=Decimal("0.00"),
-            currency="GBP",
+            currency=currency,
         )
         db.add(wallet)
         db.flush()
         # … then re-query with FOR UPDATE to obtain the lock.
         wallet = (
             db.query(WalletAccount)
-            .filter(WalletAccount.user_id == user_id)
+            .filter(WalletAccount.user_id == user_id, WalletAccount.currency == currency)
             .with_for_update()
             .first()
         )
@@ -115,6 +115,7 @@ def credit_wallet(
     fee_amount: Optional[Decimal] = None,
     gross_amount: Optional[Decimal] = None,
     idempotency_key: Optional[str] = None,
+    currency: str = "GBP",
 ) -> Optional[WalletTransaction]:
     """
     Credit *amount* to the wallet of *user_id*.
@@ -133,7 +134,7 @@ def credit_wallet(
         idempotency_key = f"earning:{related_type}:{related_id}:user:{user_id}"
 
     # 1. Lock first
-    wallet = lock_wallet(db, user_id)
+    wallet = lock_wallet(db, user_id, currency)
 
     # 2. Idempotency check (after lock to prevent TOCTOU)
     if _find_transaction(db, idempotency_key) is not None:
@@ -163,6 +164,7 @@ def credit_wallet(
         description=description,
         fee_amount=fee_amount,
         gross_amount=gross_amount,
+        currency=currency,
         idempotency_key=idempotency_key,
         created_at=get_utc_time(),
     )
@@ -185,6 +187,7 @@ def debit_wallet(
     description: Optional[str] = None,
     status: str = "completed",
     idempotency_key: Optional[str] = None,
+    currency: str = "GBP",
 ) -> WalletTransaction:
     """
     Debit *amount* from the wallet of *user_id*.
@@ -204,7 +207,7 @@ def debit_wallet(
         idempotency_key = f"payment:{related_type}:{related_id}:user:{user_id}"
 
     # 1. Lock first
-    wallet = lock_wallet(db, user_id)
+    wallet = lock_wallet(db, user_id, currency)
 
     # 2. Idempotency check (after lock)
     existing = _find_transaction(db, idempotency_key)
@@ -245,6 +248,7 @@ def debit_wallet(
         related_id=related_id,
         related_type=related_type,
         description=description,
+        currency=currency,
         idempotency_key=idempotency_key,
         created_at=get_utc_time(),
     )
@@ -262,6 +266,7 @@ def create_pending_withdrawal(
     user_id: str,
     amount: Decimal,
     request_uuid: str,
+    currency: str = "GBP",
 ) -> WalletTransaction:
     """
     Reserve *amount* for a pending withdrawal (Stripe payout).
@@ -279,7 +284,7 @@ def create_pending_withdrawal(
     idempotency_key = f"withdrawal:{request_uuid}:user:{user_id}"
 
     # 1. Lock first
-    wallet = lock_wallet(db, user_id)
+    wallet = lock_wallet(db, user_id, currency)
 
     # 2. Minimum withdrawal check
     amount = Decimal(str(amount))
@@ -319,6 +324,7 @@ def create_pending_withdrawal(
         related_id=None,
         related_type=None,
         description=None,
+        currency=currency,
         idempotency_key=idempotency_key,
         created_at=get_utc_time(),
     )
@@ -349,7 +355,7 @@ def complete_withdrawal(db: Session, tx_id: int, transfer_id: str) -> None:
 # 7. fail_withdrawal
 # ---------------------------------------------------------------------------
 
-def fail_withdrawal(db: Session, tx_id: int, user_id: str, amount: Decimal) -> None:
+def fail_withdrawal(db: Session, tx_id: int, user_id: str, amount: Decimal, currency: str = "GBP") -> None:
     """
     Mark a pending withdrawal as failed and refund the reserved amount back to
     the wallet.
@@ -368,7 +374,7 @@ def fail_withdrawal(db: Session, tx_id: int, user_id: str, amount: Decimal) -> N
     tx.status = "failed"
 
     # 2. Lock wallet and refund
-    wallet = lock_wallet(db, user_id)
+    wallet = lock_wallet(db, user_id, currency)
     wallet.balance = wallet.balance + amount
     wallet.total_withdrawn = wallet.total_withdrawn - amount
     wallet.updated_at = get_utc_time()
@@ -379,7 +385,7 @@ def fail_withdrawal(db: Session, tx_id: int, user_id: str, amount: Decimal) -> N
 # 8. reverse_debit
 # ---------------------------------------------------------------------------
 
-def reverse_debit(db: Session, tx_id: int, user_id: str, amount: Decimal) -> None:
+def reverse_debit(db: Session, tx_id: int, user_id: str, amount: Decimal, currency: str = "GBP") -> None:
     """
     Reverse a pending debit transaction.
 
@@ -402,7 +408,7 @@ def reverse_debit(db: Session, tx_id: int, user_id: str, amount: Decimal) -> Non
     tx.status = "reversed"
 
     # Lock wallet and refund
-    wallet = lock_wallet(db, user_id)
+    wallet = lock_wallet(db, user_id, currency)
     wallet.balance = wallet.balance + amount
     wallet.total_spent = wallet.total_spent - amount
     wallet.updated_at = get_utc_time()

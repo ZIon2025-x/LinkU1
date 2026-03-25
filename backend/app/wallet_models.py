@@ -1,6 +1,6 @@
 from sqlalchemy import (
     Column, BigInteger, String, DECIMAL, DateTime, Text, Index,
-    CheckConstraint, func
+    CheckConstraint, UniqueConstraint, func
 )
 from app.models import Base
 
@@ -9,7 +9,7 @@ class WalletAccount(Base):
     __tablename__ = "wallet_accounts"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
-    user_id = Column(String(8), nullable=False, unique=True, index=True)
+    user_id = Column(String(8), nullable=False, index=True)
     balance = Column(DECIMAL(12, 2), nullable=False, default=0.00)
     total_earned = Column(DECIMAL(12, 2), nullable=False, default=0.00)
     total_withdrawn = Column(DECIMAL(12, 2), nullable=False, default=0.00)
@@ -20,6 +20,7 @@ class WalletAccount(Base):
 
     __table_args__ = (
         CheckConstraint("balance >= 0", name="ck_wallet_balance_non_negative"),
+        UniqueConstraint("user_id", "currency", name="uq_wallet_user_currency"),
     )
 
 
@@ -38,7 +39,8 @@ class WalletTransaction(Base):
     description = Column(Text, nullable=True)
     fee_amount = Column(DECIMAL(12, 2), nullable=True)
     gross_amount = Column(DECIMAL(12, 2), nullable=True)
-    idempotency_key = Column(String(64), nullable=False, unique=True)
+    currency = Column(String(3), nullable=False, default="GBP")
+    idempotency_key = Column(String(128), nullable=False, unique=True)
     created_at = Column(DateTime, server_default=func.now())
 
     __table_args__ = (
