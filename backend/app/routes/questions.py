@@ -9,7 +9,7 @@ from sqlalchemy import select, func, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models
-from app.database import get_async_db_dependency
+from app.deps import get_async_db_dependency
 from app.deps import get_current_user_secure_async_csrf
 from app.async_routers import get_current_user_optional
 from app.async_crud import AsyncNotificationCRUD
