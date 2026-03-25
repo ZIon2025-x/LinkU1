@@ -34,6 +34,7 @@ from app.coupon_points_crud import (
 )
 from app import models
 from app.rate_limiting import rate_limit
+from app.wallet_service import get_or_create_wallet
 
 logger = logging.getLogger(__name__)
 
@@ -56,14 +57,9 @@ def get_account_info(
     # 积分页面：直接显示积分数量（非英镑），balance_display 为整数字符串
     balance_display = str(account.balance)
 
-    # 查询实际支付金额汇总（用于钱包页面的 累计收入 / 累计消费）
-    # 累计收入：PaymentTransfer 中 taker_id=当前用户 且 status=succeeded 的金额总和
-    # PaymentTransfer.amount 是 DECIMAL(12,2)，单位为英镑
-    total_payment_income_raw = db.query(func.coalesce(func.sum(models.PaymentTransfer.amount), 0)).filter(
-        models.PaymentTransfer.taker_id == current_user.id,
-        models.PaymentTransfer.status == "succeeded"
-    ).scalar()
-    total_payment_income = float(total_payment_income_raw) if total_payment_income_raw else 0.0
+    # 累计收入：从 WalletAccount.total_earned 读取（由 wallet_service 维护，单位为英镑）
+    wallet = get_or_create_wallet(db, current_user.id)
+    total_payment_income = float(wallet.total_earned)
 
     # 累计消费：PaymentHistory 中 user_id=当前用户 且 status=succeeded 的 total_amount 总和
     # PaymentHistory.total_amount 是 BigInteger，单位为便士，需要 / 100 转英镑
