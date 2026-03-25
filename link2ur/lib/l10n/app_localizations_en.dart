@@ -3185,6 +3185,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get stripeConnectSetupAccount => 'Setup Payment Account';
 
   @override
+  String get stripeConnectRequired => 'Payment Account Required';
+
+  @override
+  String get stripeConnectSetupPrompt =>
+      'You need to set up a payout account before withdrawing. Would you like to set it up now?';
+
+  @override
+  String get stripeConnectSetupNow => 'Set Up Now';
+
+  @override
   String get activityLoadFailed => 'Load Failed';
 
   @override
@@ -7173,6 +7183,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get walletTotalEarned => 'Total Earned';
+
+  @override
+  String get walletTotalWithdrawn => 'Total Withdrawn';
 
   @override
   String get walletTotalSpent => 'Total Spent';

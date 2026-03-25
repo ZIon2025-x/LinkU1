@@ -1476,6 +1476,9 @@
     }
   },
   "stripeConnectSetupAccount": "設置收款賬戶",
+  "stripeConnectRequired": "需要設置收款賬戶",
+  "stripeConnectSetupPrompt": "提現前需要先設置收款賬戶，是否現在設置？",
+  "stripeConnectSetupNow": "立即設置",
   "stripeConnectLoadFailed": "加載失敗",
   "stripeConnectOnboardingCancelled": "已取消設置收款賬戶",
   "stripeConnectOnboardingFailed": "設置收款賬戶失敗",
@@ -3301,6 +3304,7 @@
   "walletPointsBalance": "積分餘額",
   "walletUnwithdrawnIncome": "未提現收入",
   "walletTotalEarned": "累計收入",
+  "walletTotalWithdrawn": "累計提現",
   "walletTotalSpent": "累計消費",
   "walletPaymentAccount": "收款帳戶",
   "walletPaymentRecords": "收款記錄",

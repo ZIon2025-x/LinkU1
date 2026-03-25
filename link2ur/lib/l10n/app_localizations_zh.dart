@@ -3048,6 +3048,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get stripeConnectSetupAccount => '设置收款账户';
 
   @override
+  String get stripeConnectRequired => '需要设置收款账户';
+
+  @override
+  String get stripeConnectSetupPrompt => '提现前需要先设置收款账户，是否现在设置？';
+
+  @override
+  String get stripeConnectSetupNow => '立即设置';
+
+  @override
   String get activityLoadFailed => '加载失败';
 
   @override
@@ -6858,6 +6867,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get walletTotalEarned => '累计收入';
+
+  @override
+  String get walletTotalWithdrawn => '累计提现';
 
   @override
   String get walletTotalSpent => '累计消费';
@@ -13789,6 +13801,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get stripeConnectSetupAccount => '設置收款賬戶';
 
   @override
+  String get stripeConnectRequired => '需要設置收款賬戶';
+
+  @override
+  String get stripeConnectSetupPrompt => '提現前需要先設置收款賬戶，是否現在設置？';
+
+  @override
+  String get stripeConnectSetupNow => '立即設置';
+
+  @override
   String get activityLoadFailed => '加載失敗';
 
   @override
@@ -17599,6 +17620,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get walletTotalEarned => '累計收入';
+
+  @override
+  String get walletTotalWithdrawn => '累計提現';
 
   @override
   String get walletTotalSpent => '累計消費';

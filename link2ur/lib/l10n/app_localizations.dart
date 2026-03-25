@@ -5865,6 +5865,24 @@ abstract class AppLocalizations {
   /// **'Setup Payment Account'**
   String get stripeConnectSetupAccount;
 
+  /// No description provided for @stripeConnectRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment Account Required'**
+  String get stripeConnectRequired;
+
+  /// No description provided for @stripeConnectSetupPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'You need to set up a payout account before withdrawing. Would you like to set it up now?'**
+  String get stripeConnectSetupPrompt;
+
+  /// No description provided for @stripeConnectSetupNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Set Up Now'**
+  String get stripeConnectSetupNow;
+
   /// No description provided for @activityLoadFailed.
   ///
   /// In en, this message translates to:
@@ -13123,6 +13141,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Total Earned'**
   String get walletTotalEarned;
+
+  /// No description provided for @walletTotalWithdrawn.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Withdrawn'**
+  String get walletTotalWithdrawn;
 
   /// No description provided for @walletTotalSpent.
   ///

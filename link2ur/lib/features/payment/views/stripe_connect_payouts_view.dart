@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/router/app_routes.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/error_localizer.dart';
@@ -31,7 +34,8 @@ class StripeConnectPayoutsView extends StatefulWidget {
 }
 
 class _StripeConnectPayoutsViewState extends State<StripeConnectPayoutsView> {
-  StripeConnectBalance? _balance;
+  WalletBalance? _walletBalance;
+  StripeConnectStatus? _connectStatus;
   StripeConnectAccountDetails? _accountDetails;
   List<ExternalAccount> _externalAccounts = [];
   List<StripeConnectTransaction> _transactions = [];
@@ -56,20 +60,22 @@ class _StripeConnectPayoutsViewState extends State<StripeConnectPayoutsView> {
 
     try {
       final results = await Future.wait([
-        _repo.getStripeConnectBalanceTyped(),
+        _repo.getWalletBalance(),
+        _repo.getStripeConnectStatus(),
         _repo.getStripeConnectTransactions(),
       ]);
 
       if (!mounted) return;
 
-      final allTransactions = results[1] as List<StripeConnectTransaction>;
+      final allTransactions = results[2] as List<StripeConnectTransaction>;
       // 对标 iOS：提现记录页只显示支出（expense）
       final expenseOnly = allTransactions
           .where((t) => t.type.toLowerCase() == 'expense')
           .toList();
 
       setState(() {
-        _balance = results[0] as StripeConnectBalance;
+        _walletBalance = results[0] as WalletBalance;
+        _connectStatus = results[1] as StripeConnectStatus;
         _transactions = expenseOnly;
         _isLoading = false;
       });
@@ -104,8 +110,8 @@ class _StripeConnectPayoutsViewState extends State<StripeConnectPayoutsView> {
     setState(() => _isCreatingPayout = true);
 
     try {
-      // 后端接收英镑金额（后端自行转换为 pence 调用 Stripe API）
-      await _repo.requestPayoutInPounds(amount: amount, currency: currency);
+      final requestId = const Uuid().v4();
+      await _repo.requestWithdrawal(amount: amount, requestId: requestId);
 
       if (!mounted) return;
 
@@ -254,12 +260,12 @@ class _StripeConnectPayoutsViewState extends State<StripeConnectPayoutsView> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               // 余额卡片
-                              if (_balance != null) ...[
-                                _BalanceCard(balance: _balance!),
+                              if (_walletBalance != null) ...[
+                                _BalanceCard(walletBalance: _walletBalance!),
                                 AppSpacing.vMd,
                                 // 按钮组
                                 _ActionButtons(
-                                  balance: _balance!,
+                                  walletBalance: _walletBalance!,
                                   isCreatingPayout: _isCreatingPayout,
                                   onViewDetails: () async {
                                     await _loadAccountDetails();
@@ -269,7 +275,7 @@ class _StripeConnectPayoutsViewState extends State<StripeConnectPayoutsView> {
                                   onPayout: () => _showPayoutSheet(),
                                 ),
                                 AppSpacing.vMd,
-                                if (_balance!.available == 0)
+                                if (_walletBalance!.balance == 0)
                                   Container(
                                     padding: const EdgeInsets.symmetric(
                                         vertical: 16),
@@ -343,6 +349,31 @@ class _StripeConnectPayoutsViewState extends State<StripeConnectPayoutsView> {
   }
 
   void _showPayoutSheet() {
+    // 检查是否已绑定收款账户
+    if (_connectStatus == null || !_connectStatus!.isConnected) {
+      showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(context.l10n.stripeConnectRequired),
+          content: Text(context.l10n.stripeConnectSetupPrompt),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(context.l10n.commonCancel),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                context.go(AppRoutes.stripeConnectOnboarding);
+              },
+              child: Text(context.l10n.stripeConnectSetupNow),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     SheetAdaptation.showAdaptiveModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -350,7 +381,7 @@ class _StripeConnectPayoutsViewState extends State<StripeConnectPayoutsView> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) => _PayoutSheet(
-        balance: _balance!,
+        walletBalance: _walletBalance!,
         isCreatingPayout: _isCreatingPayout,
         onCreatePayout: _createPayout,
       ),
@@ -399,10 +430,14 @@ class _StripeConnectPayoutsViewState extends State<StripeConnectPayoutsView> {
   }
 }
 
-/// 余额卡片（对标 iOS BalanceCard）
+/// 余额卡片（本地钱包余额）
 class _BalanceCard extends StatelessWidget {
-  const _BalanceCard({required this.balance});
-  final StripeConnectBalance balance;
+  const _BalanceCard({required this.walletBalance});
+  final WalletBalance walletBalance;
+
+  String _formatAmount(double amount) {
+    return '£${amount.toStringAsFixed(2)}';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -424,9 +459,9 @@ class _BalanceCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // 总余额
+          // 可提现余额
           Text(
-            l10n.paymentTotalBalance,
+            l10n.paymentAvailableBalance,
             style: TextStyle(
               fontSize: 13,
               color: isDark
@@ -436,7 +471,7 @@ class _BalanceCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            balance.formatAmount(balance.total),
+            _formatAmount(walletBalance.balance),
             style: const TextStyle(
               fontSize: 32,
               fontWeight: FontWeight.w700,
@@ -446,7 +481,7 @@ class _BalanceCard extends StatelessWidget {
           AppSpacing.vMd,
           const Divider(),
           AppSpacing.vMd,
-          // 可用余额和待处理余额
+          // 累计收入和累计提现
           Row(
             children: [
               Expanded(
@@ -454,7 +489,7 @@ class _BalanceCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      l10n.paymentAvailableBalance,
+                      l10n.walletTotalEarned,
                       style: TextStyle(
                         fontSize: 12,
                         color: isDark
@@ -464,7 +499,7 @@ class _BalanceCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      balance.formatAmount(balance.available),
+                      _formatAmount(walletBalance.totalEarned),
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
@@ -479,7 +514,7 @@ class _BalanceCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      l10n.paymentPending,
+                      l10n.walletTotalWithdrawn,
                       style: TextStyle(
                         fontSize: 12,
                         color: isDark
@@ -489,7 +524,7 @@ class _BalanceCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      balance.formatAmount(balance.pending),
+                      _formatAmount(walletBalance.totalWithdrawn),
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
@@ -507,16 +542,16 @@ class _BalanceCard extends StatelessWidget {
   }
 }
 
-/// 操作按钮组（对标 iOS HStack 按钮）
+/// 操作按钮组
 class _ActionButtons extends StatelessWidget {
   const _ActionButtons({
-    required this.balance,
+    required this.walletBalance,
     required this.isCreatingPayout,
     required this.onViewDetails,
     required this.onPayout,
   });
 
-  final StripeConnectBalance balance;
+  final WalletBalance walletBalance;
   final bool isCreatingPayout;
   final VoidCallback onViewDetails;
   final VoidCallback onPayout;
@@ -541,7 +576,7 @@ class _ActionButtons extends StatelessWidget {
             ),
           ),
         ),
-        if (balance.available > 0) ...[
+        if (walletBalance.balance > 0) ...[
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: FilledButton.icon(
@@ -653,15 +688,15 @@ class _TransactionCard extends StatelessWidget {
   }
 }
 
-/// 提现弹窗（对标 iOS PayoutSheet）
+/// 提现弹窗
 class _PayoutSheet extends StatefulWidget {
   const _PayoutSheet({
-    required this.balance,
+    required this.walletBalance,
     required this.isCreatingPayout,
     required this.onCreatePayout,
   });
 
-  final StripeConnectBalance balance;
+  final WalletBalance walletBalance;
   final bool isCreatingPayout;
   final Future<void> Function(double amount, String currency) onCreatePayout;
 
@@ -734,7 +769,7 @@ class _PayoutSheetState extends State<_PayoutSheet> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  widget.balance.formatAmount(widget.balance.available),
+                  '£${widget.walletBalance.balance.toStringAsFixed(2)}',
                   style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w700,
@@ -784,7 +819,7 @@ class _PayoutSheetState extends State<_PayoutSheet> {
               final amount = double.tryParse(value.text);
               final canCreate = amount != null &&
                   amount > 0 &&
-                  amount <= widget.balance.available &&
+                  amount <= widget.walletBalance.balance &&
                   !_isProcessing;
 
               return PrimaryButton(
@@ -797,7 +832,7 @@ class _PayoutSheetState extends State<_PayoutSheet> {
                         final navigator = Navigator.of(context);
                         setState(() => _isProcessing = true);
                         await widget.onCreatePayout(
-                            amount, widget.balance.currency);
+                            amount, widget.walletBalance.currency);
                         if (mounted) {
                           setState(() => _isProcessing = false);
                           navigator.pop();
