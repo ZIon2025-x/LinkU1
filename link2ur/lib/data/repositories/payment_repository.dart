@@ -584,15 +584,36 @@ class PaymentRepository {
 
   // ==================== Local Wallet ====================
 
-  /// 获取本地钱包余额
-  Future<WalletBalance> getWalletBalance() async {
+  /// 获取所有币种的本地钱包余额（多币种）
+  Future<List<WalletBalance>> getWalletBalances() async {
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.walletBalance,
     );
     if (response.isSuccess && response.data != null) {
-      return WalletBalance.fromJson(response.data!);
+      // 新 API 返回 { "wallets": [...] }
+      final walletsList = response.data!['wallets'] as List?;
+      if (walletsList != null) {
+        return walletsList
+            .map((e) => WalletBalance.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+      // 向后兼容：旧 API 返回单个对象
+      return [WalletBalance.fromJson(response.data!)];
     }
     throw PaymentException(response.message ?? '获取钱包余额失败');
+  }
+
+  /// 获取本地钱包余额（便捷方法，返回第一个/GBP钱包）
+  Future<WalletBalance> getWalletBalance() async {
+    final wallets = await getWalletBalances();
+    if (wallets.isEmpty) {
+      return const WalletBalance();
+    }
+    // 优先返回 GBP 钱包，否则返回第一个
+    return wallets.firstWhere(
+      (w) => w.currency.toUpperCase() == 'GBP',
+      orElse: () => wallets.first,
+    );
   }
 
   /// 获取本地钱包流水记录
@@ -600,12 +621,14 @@ class PaymentRepository {
     int page = 1,
     int pageSize = 20,
     String? type,
+    String? currency,
   }) async {
     final params = <String, dynamic>{
       'page': page,
       'page_size': pageSize,
     };
     if (type != null) params['type'] = type;
+    if (currency != null) params['currency'] = currency;
 
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.walletTransactions,
@@ -629,12 +652,14 @@ class PaymentRepository {
   Future<Map<String, dynamic>> requestWithdrawal({
     required double amount,
     required String requestId,
+    String currency = 'GBP',
   }) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.walletWithdraw,
       data: {
         'amount': amount,
         'request_id': requestId,
+        'currency': currency,
       },
     );
     if (response.isSuccess && response.data != null) {

@@ -59,7 +59,7 @@ class _WalletContent extends StatelessWidget {
         buildWhen: (previous, current) =>
             previous.isLoading != current.isLoading ||
             previous.pointsAccount != current.pointsAccount ||
-            previous.walletBalance != current.walletBalance ||
+            previous.walletBalances != current.walletBalances ||
             previous.connectBalance != current.connectBalance ||
             previous.stripeConnectStatus != current.stripeConnectStatus ||
             previous.errorMessage != current.errorMessage ||
@@ -99,7 +99,7 @@ class _WalletContent extends StatelessWidget {
                                 _PointsCard(
                                   account: state.pointsAccount!,
                                   connectBalance: state.connectBalance,
-                                  walletBalance: state.walletBalance,
+                                  walletBalances: state.walletBalances,
                                 ),
                               AppSpacing.vLg,
                               // 快捷操作卡片 - 与iOS对齐
@@ -132,10 +132,10 @@ class _WalletContent extends StatelessWidget {
 // ==================== 子组件 ====================
 
 class _PointsCard extends StatefulWidget {
-  const _PointsCard({required this.account, this.connectBalance, this.walletBalance});
+  const _PointsCard({required this.account, this.connectBalance, this.walletBalances = const []});
   final PointsAccount account;
   final StripeConnectBalance? connectBalance;
-  final WalletBalance? walletBalance;
+  final List<WalletBalance> walletBalances;
 
   @override
   State<_PointsCard> createState() => _PointsCardState();
@@ -157,8 +157,17 @@ class _PointsCardState extends State<_PointsCard> {
     setState(() { _rotateX = 0; _rotateY = 0; });
   }
 
+  /// 主钱包（GBP 优先）
+  WalletBalance? get _primaryWallet => widget.walletBalances.isEmpty
+      ? null
+      : widget.walletBalances.firstWhere(
+          (w) => w.currency.toUpperCase() == 'GBP',
+          orElse: () => widget.walletBalances.first,
+        );
+
   @override
   Widget build(BuildContext context) {
+    final primaryWallet = _primaryWallet;
     // 分离 Transform 和装饰：AnimatedContainer 只做 transform 动画，
     // boxShadow 放在静态 Container 里，避免每帧 pan 手势触发阴影插值。
     return GestureDetector(
@@ -200,29 +209,66 @@ class _PointsCardState extends State<_PointsCard> {
               ),
             ),
             AppSpacing.vSm,
-            // 未提现收入 — 本地钱包余额（£），优先使用 walletBalance，回退到 connectBalance
-            Text(
-              Helpers.formatPrice(
-                widget.walletBalance?.balance ?? widget.connectBalance?.available ?? 0,
+            // 多币种余额显示
+            if (widget.walletBalances.length > 1)
+              // 多币种：并排显示各币种余额
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  for (int i = 0; i < widget.walletBalances.length; i++) ...[
+                    if (i > 0)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Text(
+                          '+',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w300,
+                            color: Colors.white.withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ),
+                    Text(
+                      Helpers.formatPrice(
+                        widget.walletBalances[i].balance,
+                        currency: widget.walletBalances[i].currency,
+                      ),
+                      style: TextStyle(
+                        fontSize: i == 0 ? 40 : 32,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        height: 1.1,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ],
+                ],
+              )
+            else
+              // 单币种或无钱包：显示主余额，回退到 connectBalance
+              Text(
+                Helpers.formatPrice(
+                  primaryWallet?.balance ?? widget.connectBalance?.available ?? 0,
+                  currency: primaryWallet?.currency ?? 'GBP',
+                ),
+                style: const TextStyle(
+                  fontSize: 48,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  height: 1.1,
+                  fontFeatures: [FontFeature.tabularFigures()],
+                ),
               ),
-              style: const TextStyle(
-                fontSize: 48,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                height: 1.1,
-                fontFeatures: [FontFeature.tabularFigures()],
-              ),
-            ),
             AppSpacing.vLg,
-            // 累计收入 / 累计消费 — 优先使用 walletBalance 统计，回退到 pointsAccount
+            // 累计收入 / 累计消费 — 合计所有币种（简化显示），回退到 pointsAccount
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _BalanceStatItem(
                   label: context.l10n.walletTotalEarned,
-                  value: Helpers.formatPrice(
-                    widget.walletBalance?.totalEarned ?? widget.account.totalPaymentIncome,
-                  ),
+                  value: widget.walletBalances.isNotEmpty
+                      ? _formatMultiCurrencyTotal(widget.walletBalances, (w) => w.totalEarned)
+                      : Helpers.formatPrice(widget.account.totalPaymentIncome),
                 ),
                 Container(
                   width: 1,
@@ -231,9 +277,9 @@ class _PointsCardState extends State<_PointsCard> {
                 ),
                 _BalanceStatItem(
                   label: context.l10n.walletTotalSpent,
-                  value: Helpers.formatPrice(
-                    widget.walletBalance?.totalSpent ?? widget.account.totalPaymentSpent,
-                  ),
+                  value: widget.walletBalances.isNotEmpty
+                      ? _formatMultiCurrencyTotal(widget.walletBalances, (w) => w.totalSpent)
+                      : Helpers.formatPrice(widget.account.totalPaymentSpent),
                 ),
               ],
             ),
@@ -242,6 +288,25 @@ class _PointsCardState extends State<_PointsCard> {
       ),
       ),
     );
+  }
+
+  /// 格式化多币种合计：如果只有一个币种直接显示，多个用 " / " 分隔
+  String _formatMultiCurrencyTotal(
+    List<WalletBalance> wallets,
+    double Function(WalletBalance) getter,
+  ) {
+    final nonZero = wallets.where((w) => getter(w) > 0).toList();
+    if (nonZero.isEmpty) {
+      // 全部为 0，显示主钱包的格式
+      final primary = _primaryWallet ?? wallets.first;
+      return Helpers.formatPrice(0, currency: primary.currency);
+    }
+    if (nonZero.length == 1) {
+      return Helpers.formatPrice(getter(nonZero.first), currency: nonZero.first.currency);
+    }
+    return nonZero
+        .map((w) => Helpers.formatPrice(getter(w), currency: w.currency))
+        .join(' / ');
   }
 }
 

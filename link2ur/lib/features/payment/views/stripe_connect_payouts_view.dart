@@ -34,7 +34,9 @@ class StripeConnectPayoutsView extends StatefulWidget {
 }
 
 class _StripeConnectPayoutsViewState extends State<StripeConnectPayoutsView> {
-  WalletBalance? _walletBalance;
+  List<WalletBalance> _walletBalances = [];
+  /// 当前选中的钱包索引（用于提现时选择币种）
+  int _selectedWalletIndex = 0;
   StripeConnectStatus? _connectStatus;
   StripeConnectAccountDetails? _accountDetails;
   List<ExternalAccount> _externalAccounts = [];
@@ -44,6 +46,10 @@ class _StripeConnectPayoutsViewState extends State<StripeConnectPayoutsView> {
   String? _error;
 
   late final PaymentRepository _repo;
+
+  /// 便捷访问：当前选中的钱包
+  WalletBalance? get _selectedWallet =>
+      _walletBalances.isNotEmpty ? _walletBalances[_selectedWalletIndex] : null;
 
   @override
   void initState() {
@@ -60,13 +66,14 @@ class _StripeConnectPayoutsViewState extends State<StripeConnectPayoutsView> {
 
     try {
       final results = await Future.wait([
-        _repo.getWalletBalance(),
+        _repo.getWalletBalances(),
         _repo.getStripeConnectStatus(),
         _repo.getStripeConnectTransactions(),
       ]);
 
       if (!mounted) return;
 
+      final wallets = results[0] as List<WalletBalance>;
       final allTransactions = results[2] as List<StripeConnectTransaction>;
       // 对标 iOS：提现记录页只显示支出（expense）
       final expenseOnly = allTransactions
@@ -74,7 +81,11 @@ class _StripeConnectPayoutsViewState extends State<StripeConnectPayoutsView> {
           .toList();
 
       setState(() {
-        _walletBalance = results[0] as WalletBalance;
+        _walletBalances = wallets;
+        // 确保 selectedIndex 不越界
+        if (_selectedWalletIndex >= wallets.length) {
+          _selectedWalletIndex = 0;
+        }
         _connectStatus = results[1] as StripeConnectStatus;
         _transactions = expenseOnly;
         _isLoading = false;
@@ -111,7 +122,11 @@ class _StripeConnectPayoutsViewState extends State<StripeConnectPayoutsView> {
 
     try {
       final requestId = const Uuid().v4();
-      await _repo.requestWithdrawal(amount: amount, requestId: requestId);
+      await _repo.requestWithdrawal(
+        amount: amount,
+        requestId: requestId,
+        currency: currency,
+      );
 
       if (!mounted) return;
 
@@ -259,13 +274,23 @@ class _StripeConnectPayoutsViewState extends State<StripeConnectPayoutsView> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // 余额卡片
-                              if (_walletBalance != null) ...[
-                                _BalanceCard(walletBalance: _walletBalance!),
+                              // 余额卡片 — 支持多币种
+                              if (_walletBalances.isNotEmpty) ...[
+                                // 多币种选择器
+                                if (_walletBalances.length > 1) ...[
+                                  _CurrencySelector(
+                                    wallets: _walletBalances,
+                                    selectedIndex: _selectedWalletIndex,
+                                    onSelected: (index) =>
+                                        setState(() => _selectedWalletIndex = index),
+                                  ),
+                                  AppSpacing.vMd,
+                                ],
+                                _BalanceCard(walletBalance: _selectedWallet!),
                                 AppSpacing.vMd,
                                 // 按钮组
                                 _ActionButtons(
-                                  walletBalance: _walletBalance!,
+                                  walletBalance: _selectedWallet!,
                                   isCreatingPayout: _isCreatingPayout,
                                   onViewDetails: () async {
                                     await _loadAccountDetails();
@@ -275,7 +300,7 @@ class _StripeConnectPayoutsViewState extends State<StripeConnectPayoutsView> {
                                   onPayout: () => _showPayoutSheet(),
                                 ),
                                 AppSpacing.vMd,
-                                if (_walletBalance!.balance == 0)
+                                if (_selectedWallet!.balance == 0)
                                   Container(
                                     padding: const EdgeInsets.symmetric(
                                         vertical: 16),
@@ -381,7 +406,7 @@ class _StripeConnectPayoutsViewState extends State<StripeConnectPayoutsView> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) => _PayoutSheet(
-        walletBalance: _walletBalance!,
+        walletBalance: _selectedWallet!,
         isCreatingPayout: _isCreatingPayout,
         onCreatePayout: _createPayout,
       ),
@@ -430,13 +455,86 @@ class _StripeConnectPayoutsViewState extends State<StripeConnectPayoutsView> {
   }
 }
 
+/// 币种选择器（多钱包时显示）
+class _CurrencySelector extends StatelessWidget {
+  const _CurrencySelector({
+    required this.wallets,
+    required this.selectedIndex,
+    required this.onSelected,
+  });
+
+  final List<WalletBalance> wallets;
+  final int selectedIndex;
+  final ValueChanged<int> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        for (int i = 0; i < wallets.length; i++) ...[
+          if (i > 0) const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: GestureDetector(
+              onTap: () => onSelected(i),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                decoration: BoxDecoration(
+                  color: i == selectedIndex
+                      ? AppColors.primary.withValues(alpha: 0.1)
+                      : Theme.of(context).cardColor,
+                  borderRadius: BorderRadius.circular(AppRadius.medium),
+                  border: Border.all(
+                    color: i == selectedIndex
+                        ? AppColors.primary
+                        : Colors.transparent,
+                    width: 1.5,
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      wallets[i].currency.toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: i == selectedIndex
+                            ? AppColors.primary
+                            : AppColors.textTertiary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      Helpers.formatPrice(
+                        wallets[i].balance,
+                        currency: wallets[i].currency,
+                      ),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: i == selectedIndex
+                            ? AppColors.primary
+                            : null,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
 /// 余额卡片（本地钱包余额）
 class _BalanceCard extends StatelessWidget {
   const _BalanceCard({required this.walletBalance});
   final WalletBalance walletBalance;
 
   String _formatAmount(double amount) {
-    return '£${amount.toStringAsFixed(2)}';
+    return '${Helpers.currencySymbolFor(walletBalance.currency)}${amount.toStringAsFixed(2)}';
   }
 
   @override
@@ -769,7 +867,7 @@ class _PayoutSheetState extends State<_PayoutSheet> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '£${widget.walletBalance.balance.toStringAsFixed(2)}',
+                  '${Helpers.currencySymbolFor(widget.walletBalance.currency)}${widget.walletBalance.balance.toStringAsFixed(2)}',
                   style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w700,
@@ -789,7 +887,7 @@ class _PayoutSheetState extends State<_PayoutSheet> {
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             autofocus: true,
             decoration: InputDecoration(
-              prefixText: '£ ',
+              prefixText: '${Helpers.currencySymbolFor(widget.walletBalance.currency)} ',
               hintText: '0.00',
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppRadius.medium),

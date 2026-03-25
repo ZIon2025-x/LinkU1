@@ -36,7 +36,7 @@ class WalletState extends Equatable {
     this.status = WalletStatus.initial,
     this.pointsAccount,
     this.connectBalance,
-    this.walletBalance,
+    this.walletBalances = const [],
     this.transactions = const [],
     this.coupons = const [],
     this.stripeConnectStatus,
@@ -48,7 +48,8 @@ class WalletState extends Equatable {
   final WalletStatus status;
   final PointsAccount? pointsAccount;
   final StripeConnectBalance? connectBalance;
-  final WalletBalance? walletBalance;
+  /// 多币种钱包余额列表
+  final List<WalletBalance> walletBalances;
   final List<PointsTransaction> transactions;
   final List<UserCoupon> coupons;
   final StripeConnectStatus? stripeConnectStatus;
@@ -58,11 +59,19 @@ class WalletState extends Equatable {
 
   bool get isLoading => status == WalletStatus.loading;
 
+  /// 便捷访问：主钱包（GBP 优先），向后兼容
+  WalletBalance? get primaryWallet => walletBalances.isEmpty
+      ? null
+      : walletBalances.firstWhere(
+          (w) => w.currency.toUpperCase() == 'GBP',
+          orElse: () => walletBalances.first,
+        );
+
   WalletState copyWith({
     WalletStatus? status,
     PointsAccount? pointsAccount,
     StripeConnectBalance? connectBalance,
-    WalletBalance? walletBalance,
+    List<WalletBalance>? walletBalances,
     List<PointsTransaction>? transactions,
     List<UserCoupon>? coupons,
     StripeConnectStatus? stripeConnectStatus,
@@ -75,7 +84,7 @@ class WalletState extends Equatable {
       status: status ?? this.status,
       pointsAccount: pointsAccount ?? this.pointsAccount,
       connectBalance: connectBalance ?? this.connectBalance,
-      walletBalance: walletBalance ?? this.walletBalance,
+      walletBalances: walletBalances ?? this.walletBalances,
       transactions: transactions ?? this.transactions,
       coupons: coupons ?? this.coupons,
       stripeConnectStatus: stripeConnectStatus ?? this.stripeConnectStatus,
@@ -90,7 +99,7 @@ class WalletState extends Equatable {
         status,
         pointsAccount,
         connectBalance,
-        walletBalance,
+        walletBalances,
         transactions,
         coupons,
         stripeConnectStatus,
@@ -135,15 +144,15 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
       try {
         balance = await _paymentRepo.getStripeConnectBalanceTyped();
       } catch (_) {
-        // 无 Connect 账户或 API 错误，balance 保持 null → UI 显示 £0.00
+        // 无 Connect 账户或 API 错误，balance 保持 null → UI 显示 0.00
       }
 
-      // 加载本地钱包余额（API 错误时静默失败，UI 显示 0）
-      WalletBalance? walletBalance;
+      // 加载多币种钱包余额（API 错误时静默失败，UI 显示空列表）
+      List<WalletBalance> walletBalances = [];
       try {
-        walletBalance = await _paymentRepo.getWalletBalance();
+        walletBalances = await _paymentRepo.getWalletBalances();
       } catch (_) {
-        // 无钱包账户或 API 错误，walletBalance 保持 null → UI 显示 0
+        // 无钱包账户或 API 错误，walletBalances 保持空 → UI 显示 0
       }
 
       emit(state.copyWith(
@@ -153,7 +162,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
         coupons: results[2] as List<UserCoupon>,
         stripeConnectStatus: results[3] as StripeConnectStatus,
         connectBalance: balance,
-        walletBalance: walletBalance,
+        walletBalances: walletBalances,
         transactionPage: 1,
         hasMoreTransactions:
             (results[1] as List<PointsTransaction>).length >= 20,
