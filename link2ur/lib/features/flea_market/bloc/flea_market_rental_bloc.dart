@@ -104,6 +104,15 @@ class RentalRespondCounterOffer extends FleaMarketRentalEvent {
   List<Object?> get props => [requestId, itemId, accept];
 }
 
+class RentalRenterConfirmReturn extends FleaMarketRentalEvent {
+  const RentalRenterConfirmReturn(this.rentalId);
+
+  final String rentalId;
+
+  @override
+  List<Object?> get props => [rentalId];
+}
+
 class RentalConfirmReturn extends FleaMarketRentalEvent {
   const RentalConfirmReturn(this.rentalId);
 
@@ -237,6 +246,7 @@ class FleaMarketRentalBloc
     on<RentalRejectRequest>(_onRejectRequest);
     on<RentalCounterOffer>(_onCounterOffer);
     on<RentalRespondCounterOffer>(_onRespondCounterOffer);
+    on<RentalRenterConfirmReturn>(_onRenterConfirmReturn);
     on<RentalConfirmReturn>(_onConfirmReturn);
     on<RentalLoadDetail>(_onLoadDetail);
     on<RentalLoadMyRentals>(_onLoadMyRentals);
@@ -409,6 +419,32 @@ class FleaMarketRentalBloc
       add(RentalLoadRequests(event.itemId));
     } catch (e) {
       AppLogger.error('Failed to respond to rental counter offer', e);
+      emit(state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onRenterConfirmReturn(
+    RentalRenterConfirmReturn event,
+    Emitter<FleaMarketRentalState> emit,
+  ) async {
+    if (state.isSubmitting) return;
+    emit(state.copyWith(isSubmitting: true));
+
+    try {
+      await _repository.renterConfirmReturn(event.rentalId);
+
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'rental_renter_confirm_return',
+      ));
+
+      // 刷新租赁详情
+      add(RentalLoadDetail(event.rentalId));
+    } catch (e) {
+      AppLogger.error('Failed to renter confirm return', e);
       emit(state.copyWith(
         isSubmitting: false,
         errorMessage: e.toString(),

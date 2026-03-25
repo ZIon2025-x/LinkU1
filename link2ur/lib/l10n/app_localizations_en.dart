@@ -2264,10 +2264,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskApplyQuoteAmountLabel => 'Quote amount (required)';
 
   @override
-  String get taskApplyQuoteAmountHint => 'Must be greater than £1';
+  String taskApplyQuoteAmountHint(String currencySymbol) {
+    return 'Must be greater than ${currencySymbol}1';
+  }
 
   @override
-  String get taskApplyQuoteAmountMin => 'Quote amount must be greater than £1';
+  String taskApplyQuoteAmountMin(String currencySymbol) {
+    return 'Quote amount must be greater than ${currencySymbol}1';
+  }
 
   @override
   String get taskDetailApplyReasonHint =>
@@ -5027,8 +5031,8 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String notificationContentNegotiationOffer(String task_title, String message,
-      String negotiated_price, String currency) {
-    return 'The publisher of task「$task_title」proposed a negotiation\nMessage: $message\nNegotiated price: £$negotiated_price $currency';
+      String negotiated_price, String currencySymbol) {
+    return 'The publisher of task「$task_title」proposed a negotiation\nMessage: $message\nNegotiated price: $currencySymbol$negotiated_price';
   }
 
   @override
@@ -5495,8 +5499,8 @@ class AppLocalizationsEn extends AppLocalizations {
       'Waiting for seller confirmation';
 
   @override
-  String fleaMarketNegotiateAmountFormat(double param1) {
-    return 'Negotiated price: £$param1';
+  String fleaMarketNegotiateAmountFormat(double param1, String currencySymbol) {
+    return 'Negotiated price: $currencySymbol$param1';
   }
 
   @override
@@ -5544,16 +5548,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fleaMarketRejectCounterOffer => 'Decline';
 
   @override
-  String fleaMarketCounterOfferReceived(String price) {
-    return 'Seller counter-offered £$price';
+  String fleaMarketCounterOfferReceived(String price, String currencySymbol) {
+    return 'Seller counter-offered $currencySymbol$price';
   }
 
   @override
   String get fleaMarketAcceptCounterOfferConfirmTitle => 'Accept Counter Offer';
 
   @override
-  String fleaMarketAcceptCounterOfferConfirmMessage(String price) {
-    return 'Are you sure you want to accept the seller\'s counter offer of £$price?';
+  String fleaMarketAcceptCounterOfferConfirmMessage(
+      String price, String currencySymbol) {
+    return 'Are you sure you want to accept the seller\'s counter offer of $currencySymbol$price?';
   }
 
   @override
@@ -6074,8 +6079,8 @@ class AppLocalizationsEn extends AppLocalizations {
       'Partial refund amount cannot be greater than or equal to task amount. Please choose full refund.';
 
   @override
-  String refundAmountExceedsTask(double param1) {
-    return 'Refund amount cannot exceed task amount (£$param1)';
+  String refundAmountExceedsTask(double param1, String currencySymbol) {
+    return 'Refund amount cannot exceed task amount ($currencySymbol$param1)';
   }
 
   @override
@@ -6099,19 +6104,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get refundAmountOrRatioRequired => 'Refund amount or ratio *';
 
   @override
-  String get refundAmountPound => 'Refund amount (£)';
+  String refundAmountPound(String currencySymbol) {
+    return 'Refund amount ($currencySymbol)';
+  }
 
   @override
   String get refundRatioPercent => 'Refund ratio (%)';
 
   @override
-  String refundTaskAmountFormat(double param1) {
-    return 'Task amount: £$param1';
+  String refundTaskAmountFormat(double param1, String currencySymbol) {
+    return 'Task amount: $currencySymbol$param1';
   }
 
   @override
-  String refundRefundAmountFormat(double param1) {
-    return 'Refund amount: £$param1';
+  String refundRefundAmountFormat(double param1, String currencySymbol) {
+    return 'Refund amount: $currencySymbol$param1';
   }
 
   @override
@@ -6240,8 +6247,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get refundDescProcessing => 'Refund is being processed. Please wait.';
 
   @override
-  String refundDescApprovedAmount(String param1, double param2) {
-    return 'Refund amount: £$param2$param1. Will be returned in 5-10 business days.';
+  String refundDescApprovedAmount(
+      String param1, double param2, String currencySymbol) {
+    return 'Refund amount: $currencySymbol$param2$param1. Will be returned in 5-10 business days.';
   }
 
   @override
@@ -6257,8 +6265,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get refundDescRejectedGeneric => 'Refund has been rejected.';
 
   @override
-  String refundDescCompletedAmount(String param1, double param2) {
-    return 'Refund amount: £$param2$param1. Returned to your original payment method.';
+  String refundDescCompletedAmount(
+      String param1, double param2, String currencySymbol) {
+    return 'Refund amount: $currencySymbol$param2$param1. Returned to your original payment method.';
   }
 
   @override
@@ -6725,7 +6734,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Failed to initiate payment. Please try again.';
 
   @override
-  String get priceExceedsMaximum => 'Price cannot exceed £50,000';
+  String priceExceedsMaximum(String currencySymbol) {
+    return 'Price cannot exceed ${currencySymbol}50,000';
+  }
 
   @override
   String get errorTaskListLoadFailed => 'Failed to load tasks.';
@@ -7845,8 +7856,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get createTaskCategoryOther => 'Other';
 
   @override
-  String get profileDirectRequestValidation =>
-      'Please fill in the title and a valid price (≥£1)';
+  String profileDirectRequestValidation(String currencySymbol) {
+    return 'Please fill in the title and a valid price (≥${currencySymbol}1)';
+  }
 
   @override
   String get profileDirectRequestHintLocation => 'Location';
@@ -10584,8 +10596,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskChat => 'Task Chat';
 
   @override
-  String currentPrice(String price) {
-    return 'Current price: £$price';
+  String currentPrice(String price, String currencySymbol) {
+    return 'Current price: $currencySymbol$price';
   }
 
   @override
@@ -11219,7 +11231,8 @@ class AppLocalizationsEn extends AppLocalizations {
       'Up to 9, showing reference cases or requirements';
 
   @override
-  String get errorAiOptimizeFailed => 'AI optimization failed, please try again later';
+  String get errorAiOptimizeFailed =>
+      'AI optimization failed, please try again later';
 
   @override
   String get fleaMarketListingTypeSale => 'For Sale';
@@ -11264,13 +11277,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fleaMarketDesiredTime => 'Desired Start Time';
 
   @override
-  String get fleaMarketDesiredTimeHint => 'Please describe when you\'d like to start renting';
+  String get fleaMarketDesiredTimeHint =>
+      'Please describe when you\'d like to start renting';
 
   @override
   String get fleaMarketUsageDescription => 'Usage Description';
 
   @override
-  String get fleaMarketUsageDescriptionHint => 'Briefly describe your intended use';
+  String get fleaMarketUsageDescriptionHint =>
+      'Briefly describe your intended use';
 
   @override
   String get fleaMarketRentalCostPreview => 'Cost Preview';
@@ -11294,7 +11309,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fleaMarketConfirmReturn => 'Confirm Return';
 
   @override
-  String get fleaMarketConfirmReturnMessage => 'Confirm the item has been returned? The deposit will be refunded to the renter.';
+  String get fleaMarketConfirmReturnMessage =>
+      'Confirm the item has been returned? The deposit will be refunded to the renter.';
+
+  @override
+  String get fleaMarketRenterConfirmReturn => 'Confirm Returned';
+
+  @override
+  String get fleaMarketPendingOwnerConfirm => 'Waiting for owner to confirm';
+
+  @override
+  String get fleaMarketRentalPendingReturn => 'Pending Return Confirmation';
 
   @override
   String get fleaMarketRentalActive => 'Currently Rented';
@@ -11330,7 +11355,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fleaMarketProposedPrice => 'Proposed Price (Optional)';
 
   @override
-  String get fleaMarketProposedPriceHint => 'Leave blank to use the listed price';
+  String get fleaMarketProposedPriceHint =>
+      'Leave blank to use the listed price';
 
   @override
   String get fleaMarketCounterOfferPrice => 'Counter Offer Price';
@@ -11342,35 +11368,45 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fleaMarketRentalRequestSubmitted => 'Request Submitted';
 
   @override
-  String get fleaMarketCurrentlyRented => 'Currently rented out. You can still apply for a future time slot.';
+  String get fleaMarketCurrentlyRented =>
+      'Currently rented out. You can still apply for a future time slot.';
 
   @override
-  String get fleaMarketErrorRentalRequestFailed => 'Failed to send rental request';
+  String get fleaMarketErrorRentalRequestFailed =>
+      'Failed to send rental request';
 
   @override
-  String get fleaMarketErrorApproveRentalFailed => 'Failed to approve rental request';
+  String get fleaMarketErrorApproveRentalFailed =>
+      'Failed to approve rental request';
 
   @override
-  String get fleaMarketErrorRejectRentalFailed => 'Failed to reject rental request';
+  String get fleaMarketErrorRejectRentalFailed =>
+      'Failed to reject rental request';
 
   @override
-  String get fleaMarketErrorCounterOfferRentalFailed => 'Failed to counter-offer rental request';
+  String get fleaMarketErrorCounterOfferRentalFailed =>
+      'Failed to counter-offer rental request';
 
   @override
   String get fleaMarketErrorConfirmReturnFailed => 'Failed to confirm return';
 
   @override
-  String get fleaMarketErrorGetRentalDetailFailed => 'Failed to load rental details';
+  String get fleaMarketErrorGetRentalDetailFailed =>
+      'Failed to load rental details';
 
   @override
-  String get fleaMarketErrorGetRentalRequestsFailed => 'Failed to load rental requests';
+  String get fleaMarketErrorGetRentalRequestsFailed =>
+      'Failed to load rental requests';
 
   @override
-  String get fleaMarketErrorNotRentalItem => 'This item is not available for rent';
+  String get fleaMarketErrorNotRentalItem =>
+      'This item is not available for rent';
 
   @override
-  String get fleaMarketErrorCannotRentOwnItem => 'You cannot rent your own item';
+  String get fleaMarketErrorCannotRentOwnItem =>
+      'You cannot rent your own item';
 
   @override
-  String get fleaMarketErrorRentalPaymentExpired => 'Rental payment has expired';
+  String get fleaMarketErrorRentalPaymentExpired =>
+      'Rental payment has expired';
 }

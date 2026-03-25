@@ -40,6 +40,7 @@ RENTAL_REQUEST_EXPIRED = 'expired'
 
 # Rental statuses
 RENTAL_STATUS_ACTIVE = 'active'
+RENTAL_STATUS_PENDING_RETURN = 'pending_return'
 RENTAL_STATUS_RETURNED = 'returned'
 RENTAL_STATUS_OVERDUE = 'overdue'
 RENTAL_STATUS_DISPUTED = 'disputed'

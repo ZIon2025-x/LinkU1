@@ -168,6 +168,7 @@ class ApiEndpoints {
   static String fleaMarketRentalRequestReject(String requestId) => '/api/flea-market/rental-requests/$requestId/reject';
   static String fleaMarketRentalRequestCounterOffer(String requestId) => '/api/flea-market/rental-requests/$requestId/counter-offer';
   static String fleaMarketRentalRequestRespondCounterOffer(String requestId) => '/api/flea-market/rental-requests/$requestId/respond-counter-offer';
+  static String fleaMarketRentalRenterConfirmReturn(String rentalId) => '/api/flea-market/rentals/$rentalId/renter-confirm-return';
   static String fleaMarketRentalConfirmReturn(String rentalId) => '/api/flea-market/rentals/$rentalId/confirm-return';
   static String fleaMarketRentalDetail(String rentalId) => '/api/flea-market/rentals/$rentalId';
   static const String fleaMarketMyRentals = '/api/flea-market/my-rentals';

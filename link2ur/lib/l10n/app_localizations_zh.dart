@@ -2157,10 +2157,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskApplyQuoteAmountLabel => '报价金额（必填）';
 
   @override
-  String get taskApplyQuoteAmountHint => '需大于 £1';
+  String taskApplyQuoteAmountHint(String currencySymbol) {
+    return '需大于 ${currencySymbol}1';
+  }
 
   @override
-  String get taskApplyQuoteAmountMin => '报价金额必须大于 £1';
+  String taskApplyQuoteAmountMin(String currencySymbol) {
+    return '报价金额必须大于 ${currencySymbol}1';
+  }
 
   @override
   String get taskDetailApplyReasonHint => '向发布者说明你的申请理由，有助于提高申请成功率';
@@ -4818,8 +4822,8 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String notificationContentNegotiationOffer(String task_title, String message,
-      String negotiated_price, String currency) {
-    return '任务「$task_title」的发布者提出议价\n留言：$message\n议价金额：£$negotiated_price $currency';
+      String negotiated_price, String currencySymbol) {
+    return '任务「$task_title」的发布者提出议价\n留言：$message\n议价金额：$currencySymbol$negotiated_price';
   }
 
   @override
@@ -5257,8 +5261,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get fleaMarketWaitingSellerConfirm => '等待卖家确认';
 
   @override
-  String fleaMarketNegotiateAmountFormat(double param1) {
-    return '议价金额：£$param1';
+  String fleaMarketNegotiateAmountFormat(double param1, String currencySymbol) {
+    return '议价金额：$currencySymbol$param1';
   }
 
   @override
@@ -5304,16 +5308,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get fleaMarketRejectCounterOffer => '拒绝';
 
   @override
-  String fleaMarketCounterOfferReceived(String price) {
-    return '卖家还价 £$price';
+  String fleaMarketCounterOfferReceived(String price, String currencySymbol) {
+    return '卖家还价 $currencySymbol$price';
   }
 
   @override
   String get fleaMarketAcceptCounterOfferConfirmTitle => '接受还价';
 
   @override
-  String fleaMarketAcceptCounterOfferConfirmMessage(String price) {
-    return '确定接受卖家的还价 £$price 吗？';
+  String fleaMarketAcceptCounterOfferConfirmMessage(
+      String price, String currencySymbol) {
+    return '确定接受卖家的还价 $currencySymbol$price 吗？';
   }
 
   @override
@@ -5815,8 +5820,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get refundPartialAmountTooHigh => '部分退款金额不能大于或等于任务金额，请选择全额退款';
 
   @override
-  String refundAmountExceedsTask(double param1) {
-    return '退款金额不能超过任务金额（£$param1）';
+  String refundAmountExceedsTask(double param1, String currencySymbol) {
+    return '退款金额不能超过任务金额（$currencySymbol$param1）';
   }
 
   @override
@@ -5838,19 +5843,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get refundAmountOrRatioRequired => '退款金额或比例 *';
 
   @override
-  String get refundAmountPound => '退款金额（£）';
+  String refundAmountPound(String currencySymbol) {
+    return '退款金额（$currencySymbol）';
+  }
 
   @override
   String get refundRatioPercent => '退款比例（%）';
 
   @override
-  String refundTaskAmountFormat(double param1) {
-    return '任务金额: £$param1';
+  String refundTaskAmountFormat(double param1, String currencySymbol) {
+    return '任务金额: $currencySymbol$param1';
   }
 
   @override
-  String refundRefundAmountFormat(double param1) {
-    return '退款金额: £$param1';
+  String refundRefundAmountFormat(double param1, String currencySymbol) {
+    return '退款金额: $currencySymbol$param1';
   }
 
   @override
@@ -5977,8 +5984,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get refundDescProcessing => '退款正在处理中，请耐心等待';
 
   @override
-  String refundDescApprovedAmount(String param1, double param2) {
-    return '退款金额：£$param2$param1，退款将在5-10个工作日内退回';
+  String refundDescApprovedAmount(
+      String param1, double param2, String currencySymbol) {
+    return '退款金额：$currencySymbol$param2$param1，退款将在5-10个工作日内退回';
   }
 
   @override
@@ -5993,8 +6001,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get refundDescRejectedGeneric => '退款申请已被拒绝';
 
   @override
-  String refundDescCompletedAmount(String param1, double param2) {
-    return '退款金额：£$param2$param1，已退回您的原支付方式';
+  String refundDescCompletedAmount(
+      String param1, double param2, String currencySymbol) {
+    return '退款金额：$currencySymbol$param2$param1，已退回您的原支付方式';
   }
 
   @override
@@ -6422,7 +6431,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get errorTaskConfirmPayFailed => '发起支付失败，请重试';
 
   @override
-  String get priceExceedsMaximum => '价格不能超过 £50,000';
+  String priceExceedsMaximum(String currencySymbol) {
+    return '价格不能超过 ${currencySymbol}50,000';
+  }
 
   @override
   String get errorTaskListLoadFailed => '加载任务列表失败';
@@ -7522,7 +7533,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get createTaskCategoryOther => '其他';
 
   @override
-  String get profileDirectRequestValidation => '请填写标题和有效价格（≥£1）';
+  String profileDirectRequestValidation(String currencySymbol) {
+    return '请填写标题和有效价格（≥${currencySymbol}1）';
+  }
 
   @override
   String get profileDirectRequestHintLocation => '地点';
@@ -10167,8 +10180,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskChat => '任务聊天';
 
   @override
-  String currentPrice(String price) {
-    return '当前价格: £$price';
+  String currentPrice(String price, String currencySymbol) {
+    return '当前价格: $currencySymbol$price';
   }
 
   @override
@@ -10861,6 +10874,15 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get fleaMarketConfirmReturnMessage => '确认物品已归还？押金将退还给租客。';
+
+  @override
+  String get fleaMarketRenterConfirmReturn => '确认已归还';
+
+  @override
+  String get fleaMarketPendingOwnerConfirm => '等待出租人确认';
+
+  @override
+  String get fleaMarketRentalPendingReturn => '待确认归还';
 
   @override
   String get fleaMarketRentalActive => '出租中';
@@ -13094,10 +13116,14 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get taskApplyQuoteAmountLabel => '報價金額（必填）';
 
   @override
-  String get taskApplyQuoteAmountHint => '需大於 £1';
+  String taskApplyQuoteAmountHint(String currencySymbol) {
+    return '需大於 ${currencySymbol}1';
+  }
 
   @override
-  String get taskApplyQuoteAmountMin => '報價金額必須大於 £1';
+  String taskApplyQuoteAmountMin(String currencySymbol) {
+    return '報價金額必須大於 ${currencySymbol}1';
+  }
 
   @override
   String get taskDetailApplyReasonHint => '向發布者說明你的申請理由，有助於提高申請成功率';
@@ -15755,8 +15781,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String notificationContentNegotiationOffer(String task_title, String message,
-      String negotiated_price, String currency) {
-    return '任務「$task_title」的發布者提出議價\n留言：$message\n議價金額：£$negotiated_price $currency';
+      String negotiated_price, String currencySymbol) {
+    return '任務「$task_title」的發布者提出議價\n留言：$message\n議價金額：$currencySymbol$negotiated_price';
   }
 
   @override
@@ -16194,8 +16220,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get fleaMarketWaitingSellerConfirm => '等待賣家確認';
 
   @override
-  String fleaMarketNegotiateAmountFormat(double param1) {
-    return '議價金額：£$param1';
+  String fleaMarketNegotiateAmountFormat(double param1, String currencySymbol) {
+    return '議價金額：$currencySymbol$param1';
   }
 
   @override
@@ -16241,16 +16267,17 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get fleaMarketRejectCounterOffer => '拒絕';
 
   @override
-  String fleaMarketCounterOfferReceived(String price) {
-    return '賣家還價 £$price';
+  String fleaMarketCounterOfferReceived(String price, String currencySymbol) {
+    return '賣家還價 $currencySymbol$price';
   }
 
   @override
   String get fleaMarketAcceptCounterOfferConfirmTitle => '接受還價';
 
   @override
-  String fleaMarketAcceptCounterOfferConfirmMessage(String price) {
-    return '確定接受賣家的還價 £$price 嗎？';
+  String fleaMarketAcceptCounterOfferConfirmMessage(
+      String price, String currencySymbol) {
+    return '確定接受賣家的還價 $currencySymbol$price 嗎？';
   }
 
   @override
@@ -16752,8 +16779,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get refundPartialAmountTooHigh => '部分退款金額不能大於或等於任務金額，請選擇全額退款';
 
   @override
-  String refundAmountExceedsTask(double param1) {
-    return '退款金額不能超過任務金額（£$param1）';
+  String refundAmountExceedsTask(double param1, String currencySymbol) {
+    return '退款金額不能超過任務金額（$currencySymbol$param1）';
   }
 
   @override
@@ -16775,19 +16802,21 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get refundAmountOrRatioRequired => '退款金額或比例 *';
 
   @override
-  String get refundAmountPound => '退款金額（£）';
+  String refundAmountPound(String currencySymbol) {
+    return '退款金額（$currencySymbol）';
+  }
 
   @override
   String get refundRatioPercent => '退款比例（%）';
 
   @override
-  String refundTaskAmountFormat(double param1) {
-    return '任務金額: £$param1';
+  String refundTaskAmountFormat(double param1, String currencySymbol) {
+    return '任務金額: $currencySymbol$param1';
   }
 
   @override
-  String refundRefundAmountFormat(double param1) {
-    return '退款金額: £$param1';
+  String refundRefundAmountFormat(double param1, String currencySymbol) {
+    return '退款金額: $currencySymbol$param1';
   }
 
   @override
@@ -16914,8 +16943,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get refundDescProcessing => '退款正在處理中，請耐心等待';
 
   @override
-  String refundDescApprovedAmount(String param1, double param2) {
-    return '退款金額：£$param2$param1，退款將在5-10個工作日內退回';
+  String refundDescApprovedAmount(
+      String param1, double param2, String currencySymbol) {
+    return '退款金額：$currencySymbol$param2$param1，退款將在5-10個工作日內退回';
   }
 
   @override
@@ -16930,8 +16960,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get refundDescRejectedGeneric => '退款申請已被拒絕';
 
   @override
-  String refundDescCompletedAmount(String param1, double param2) {
-    return '退款金額：£$param2$param1，已退回您的原支付方式';
+  String refundDescCompletedAmount(
+      String param1, double param2, String currencySymbol) {
+    return '退款金額：$currencySymbol$param2$param1，已退回您的原支付方式';
   }
 
   @override
@@ -17359,7 +17390,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get errorTaskConfirmPayFailed => '發起支付失敗，請重試';
 
   @override
-  String get priceExceedsMaximum => '價格不能超過 £50,000';
+  String priceExceedsMaximum(String currencySymbol) {
+    return '價格不能超過 ${currencySymbol}50,000';
+  }
 
   @override
   String get errorTaskListLoadFailed => '載入任務列表失敗';
@@ -18459,7 +18492,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get createTaskCategoryOther => '其他';
 
   @override
-  String get profileDirectRequestValidation => '請填寫標題和有效價格（≥£1）';
+  String profileDirectRequestValidation(String currencySymbol) {
+    return '請填寫標題和有效價格（≥${currencySymbol}1）';
+  }
 
   @override
   String get profileDirectRequestHintLocation => '地點';
@@ -21060,8 +21095,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get taskChat => '任務聊天';
 
   @override
-  String currentPrice(String price) {
-    return '當前價格: £$price';
+  String currentPrice(String price, String currencySymbol) {
+    return '當前價格: $currencySymbol$price';
   }
 
   @override
@@ -21681,13 +21716,37 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get errorAiOptimizeFailed => 'AI 優化失敗，請稍後重試';
 
   @override
+  String get fleaMarketListingTypeSale => '出售';
+
+  @override
+  String get fleaMarketListingTypeRental => '出租';
+
+  @override
+  String get fleaMarketDeposit => '押金';
+
+  @override
+  String get fleaMarketRentalPrice => '租金';
+
+  @override
   String get fleaMarketRentalUnit => '租期單位';
+
+  @override
+  String get fleaMarketRentalUnitDay => '天';
 
   @override
   String get fleaMarketRentalUnitWeek => '週';
 
   @override
+  String get fleaMarketRentalUnitMonth => '月';
+
+  @override
+  String get fleaMarketPerDay => '/天';
+
+  @override
   String get fleaMarketPerWeek => '/週';
+
+  @override
+  String get fleaMarketPerMonth => '/月';
 
   @override
   String get fleaMarketApplyToRent => '申請租用';
@@ -21732,7 +21791,22 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get fleaMarketConfirmReturnMessage => '確認物品已歸還？押金將退還給租客。';
 
   @override
+  String get fleaMarketRenterConfirmReturn => '確認已歸還';
+
+  @override
+  String get fleaMarketPendingOwnerConfirm => '等待出租人確認';
+
+  @override
+  String get fleaMarketRentalPendingReturn => '待確認歸還';
+
+  @override
+  String get fleaMarketRentalActive => '出租中';
+
+  @override
   String get fleaMarketRentalReturned => '已歸還';
+
+  @override
+  String get fleaMarketRentalOverdue => '已逾期';
 
   @override
   String get fleaMarketDepositHeld => '押金凍結中';
@@ -21751,6 +21825,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get fleaMarketNoRentalRequests => '暫無租用申請';
+
+  @override
+  String get fleaMarketRentBadge => '出租';
 
   @override
   String get fleaMarketProposedPrice => '建議價格（選填）';

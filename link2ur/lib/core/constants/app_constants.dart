@@ -83,6 +83,7 @@ class AppConstants {
 
   // Rental statuses
   static const String rentalStatusActive = 'active';
+  static const String rentalStatusPendingReturn = 'pending_return';
   static const String rentalStatusReturned = 'returned';
   static const String rentalStatusOverdue = 'overdue';
   static const String rentalStatusDisputed = 'disputed';

@@ -707,7 +707,7 @@ async def get_flea_market_item(
                 select(models.FleaMarketRental)
                 .where(
                     models.FleaMarketRental.item_id == db_id,
-                    models.FleaMarketRental.status.in_(["active", "overdue"]),
+                    models.FleaMarketRental.status.in_(["active", "overdue", "pending_return"]),
                 )
             )
             active_rental_rows = active_rental_result.scalars().all()
@@ -956,7 +956,7 @@ async def create_flea_market_item(
             title=item_data.title,
             description=item_data.description,
             price=item_price,
-            currency="GBP",
+            currency=getattr(item_data, "currency", None) or "GBP",
             images=json.dumps(item_data.images) if item_data.images else None,
             location=item_data.location or "Online",
             latitude=getattr(item_data, "latitude", None),  # 纬度（可选）
@@ -1217,7 +1217,7 @@ async def update_flea_market_item(
                 select(func.count(models.FleaMarketRental.id))
                 .where(
                     models.FleaMarketRental.item_id == db_id,
-                    models.FleaMarketRental.status.in_(["active", "overdue"]),
+                    models.FleaMarketRental.status.in_(["active", "overdue", "pending_return"]),
                 )
             )
             if (active_rental_count_result.scalar() or 0) > 0:
@@ -1902,7 +1902,7 @@ async def direct_purchase_item(
             reward=float(item.price),
             base_reward=item.price,
             agreed_reward=None,  # 直接购买无议价
-            currency="GBP",
+            currency=item.currency or "GBP",
             location=item.location or "Online",
             task_type="Second-hand & Rental",
             poster_id=current_user.id,  # 买家
@@ -2321,7 +2321,7 @@ async def approve_purchase_request(
             reward=float(final_price),
             base_reward=item.price,
             agreed_reward=final_price,
-            currency="GBP",
+            currency=item.currency or "GBP",
             location=item.location or "Online",
             task_type="Second-hand & Rental",
             poster_id=purchase_request.buyer_id,
@@ -2635,7 +2635,7 @@ async def accept_purchase_request(
             reward=float(final_price),
             base_reward=item.price,
             agreed_reward=final_price,
-            currency="GBP",
+            currency=item.currency or "GBP",
             location=item.location or "Online",
             task_type="Second-hand & Rental",
             poster_id=purchase_request.buyer_id,

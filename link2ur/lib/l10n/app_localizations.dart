@@ -4182,14 +4182,14 @@ abstract class AppLocalizations {
   /// No description provided for @taskApplyQuoteAmountHint.
   ///
   /// In en, this message translates to:
-  /// **'Must be greater than £1'**
-  String get taskApplyQuoteAmountHint;
+  /// **'Must be greater than {currencySymbol}1'**
+  String taskApplyQuoteAmountHint(String currencySymbol);
 
   /// No description provided for @taskApplyQuoteAmountMin.
   ///
   /// In en, this message translates to:
-  /// **'Quote amount must be greater than £1'**
-  String get taskApplyQuoteAmountMin;
+  /// **'Quote amount must be greater than {currencySymbol}1'**
+  String taskApplyQuoteAmountMin(String currencySymbol);
 
   /// No description provided for @taskDetailApplyReasonHint.
   ///
@@ -9267,9 +9267,9 @@ abstract class AppLocalizations {
   /// No description provided for @notificationContentNegotiationOffer.
   ///
   /// In en, this message translates to:
-  /// **'The publisher of task「{task_title}」proposed a negotiation\nMessage: {message}\nNegotiated price: £{negotiated_price} {currency}'**
+  /// **'The publisher of task「{task_title}」proposed a negotiation\nMessage: {message}\nNegotiated price: {currencySymbol}{negotiated_price}'**
   String notificationContentNegotiationOffer(String task_title, String message,
-      String negotiated_price, String currency);
+      String negotiated_price, String currencySymbol);
 
   /// No description provided for @notificationContentNegotiationRejected.
   ///
@@ -10103,8 +10103,8 @@ abstract class AppLocalizations {
   /// No description provided for @fleaMarketNegotiateAmountFormat.
   ///
   /// In en, this message translates to:
-  /// **'Negotiated price: £{param1}'**
-  String fleaMarketNegotiateAmountFormat(double param1);
+  /// **'Negotiated price: {currencySymbol}{param1}'**
+  String fleaMarketNegotiateAmountFormat(double param1, String currencySymbol);
 
   /// No description provided for @fleaMarketContinuePayment.
   ///
@@ -10193,8 +10193,8 @@ abstract class AppLocalizations {
   /// No description provided for @fleaMarketCounterOfferReceived.
   ///
   /// In en, this message translates to:
-  /// **'Seller counter-offered £{price}'**
-  String fleaMarketCounterOfferReceived(String price);
+  /// **'Seller counter-offered {currencySymbol}{price}'**
+  String fleaMarketCounterOfferReceived(String price, String currencySymbol);
 
   /// No description provided for @fleaMarketAcceptCounterOfferConfirmTitle.
   ///
@@ -10205,8 +10205,9 @@ abstract class AppLocalizations {
   /// No description provided for @fleaMarketAcceptCounterOfferConfirmMessage.
   ///
   /// In en, this message translates to:
-  /// **'Are you sure you want to accept the seller\'s counter offer of £{price}?'**
-  String fleaMarketAcceptCounterOfferConfirmMessage(String price);
+  /// **'Are you sure you want to accept the seller\'s counter offer of {currencySymbol}{price}?'**
+  String fleaMarketAcceptCounterOfferConfirmMessage(
+      String price, String currencySymbol);
 
   /// No description provided for @fleaMarketRejectCounterOfferConfirmTitle.
   ///
@@ -11129,8 +11130,8 @@ abstract class AppLocalizations {
   /// No description provided for @refundAmountExceedsTask.
   ///
   /// In en, this message translates to:
-  /// **'Refund amount cannot exceed task amount (£{param1})'**
-  String refundAmountExceedsTask(double param1);
+  /// **'Refund amount cannot exceed task amount ({currencySymbol}{param1})'**
+  String refundAmountExceedsTask(double param1, String currencySymbol);
 
   /// No description provided for @refundAmountMustBePositive.
   ///
@@ -11171,8 +11172,8 @@ abstract class AppLocalizations {
   /// No description provided for @refundAmountPound.
   ///
   /// In en, this message translates to:
-  /// **'Refund amount (£)'**
-  String get refundAmountPound;
+  /// **'Refund amount ({currencySymbol})'**
+  String refundAmountPound(String currencySymbol);
 
   /// No description provided for @refundRatioPercent.
   ///
@@ -11183,14 +11184,14 @@ abstract class AppLocalizations {
   /// No description provided for @refundTaskAmountFormat.
   ///
   /// In en, this message translates to:
-  /// **'Task amount: £{param1}'**
-  String refundTaskAmountFormat(double param1);
+  /// **'Task amount: {currencySymbol}{param1}'**
+  String refundTaskAmountFormat(double param1, String currencySymbol);
 
   /// No description provided for @refundRefundAmountFormat.
   ///
   /// In en, this message translates to:
-  /// **'Refund amount: £{param1}'**
-  String refundRefundAmountFormat(double param1);
+  /// **'Refund amount: {currencySymbol}{param1}'**
+  String refundRefundAmountFormat(double param1, String currencySymbol);
 
   /// No description provided for @refundSubmitRefundApplication.
   ///
@@ -11435,8 +11436,9 @@ abstract class AppLocalizations {
   /// No description provided for @refundDescApprovedAmount.
   ///
   /// In en, this message translates to:
-  /// **'Refund amount: £{param2}{param1}. Will be returned in 5-10 business days.'**
-  String refundDescApprovedAmount(String param1, double param2);
+  /// **'Refund amount: {currencySymbol}{param2}{param1}. Will be returned in 5-10 business days.'**
+  String refundDescApprovedAmount(
+      String param1, double param2, String currencySymbol);
 
   /// No description provided for @refundDescApprovedGeneric.
   ///
@@ -11459,8 +11461,9 @@ abstract class AppLocalizations {
   /// No description provided for @refundDescCompletedAmount.
   ///
   /// In en, this message translates to:
-  /// **'Refund amount: £{param2}{param1}. Returned to your original payment method.'**
-  String refundDescCompletedAmount(String param1, double param2);
+  /// **'Refund amount: {currencySymbol}{param2}{param1}. Returned to your original payment method.'**
+  String refundDescCompletedAmount(
+      String param1, double param2, String currencySymbol);
 
   /// No description provided for @refundDescCompletedGeneric.
   ///
@@ -12293,8 +12296,8 @@ abstract class AppLocalizations {
   /// No description provided for @priceExceedsMaximum.
   ///
   /// In en, this message translates to:
-  /// **'Price cannot exceed £50,000'**
-  String get priceExceedsMaximum;
+  /// **'Price cannot exceed {currencySymbol}50,000'**
+  String priceExceedsMaximum(String currencySymbol);
 
   /// No description provided for @errorTaskListLoadFailed.
   ///
@@ -14411,8 +14414,8 @@ abstract class AppLocalizations {
   /// No description provided for @profileDirectRequestValidation.
   ///
   /// In en, this message translates to:
-  /// **'Please fill in the title and a valid price (≥£1)'**
-  String get profileDirectRequestValidation;
+  /// **'Please fill in the title and a valid price (≥{currencySymbol}1)'**
+  String profileDirectRequestValidation(String currencySymbol);
 
   /// No description provided for @profileDirectRequestHintLocation.
   ///
@@ -19505,8 +19508,8 @@ abstract class AppLocalizations {
   /// No description provided for @currentPrice.
   ///
   /// In en, this message translates to:
-  /// **'Current price: £{price}'**
-  String currentPrice(String price);
+  /// **'Current price: {currencySymbol}{price}'**
+  String currentPrice(String price, String currencySymbol);
 
   /// No description provided for @typeMessage.
   ///
@@ -20863,6 +20866,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Confirm the item has been returned? The deposit will be refunded to the renter.'**
   String get fleaMarketConfirmReturnMessage;
+
+  /// No description provided for @fleaMarketRenterConfirmReturn.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Returned'**
+  String get fleaMarketRenterConfirmReturn;
+
+  /// No description provided for @fleaMarketPendingOwnerConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for owner to confirm'**
+  String get fleaMarketPendingOwnerConfirm;
+
+  /// No description provided for @fleaMarketRentalPendingReturn.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending Return Confirmation'**
+  String get fleaMarketRentalPendingReturn;
 
   /// No description provided for @fleaMarketRentalActive.
   ///

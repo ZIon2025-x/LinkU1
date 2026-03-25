@@ -859,8 +859,10 @@
   "taskDetailPriceNegotiation": "價格協商",
   "taskRewardToBeQuoted": "待報價",
   "taskApplyQuoteAmountLabel": "報價金額（必填）",
-  "taskApplyQuoteAmountHint": "需大於 £1",
-  "taskApplyQuoteAmountMin": "報價金額必須大於 £1",
+  "taskApplyQuoteAmountHint": "需大於 {currencySymbol}1",
+  "@taskApplyQuoteAmountHint": {"placeholders": {"currencySymbol": {"type": "String"}}},
+  "taskApplyQuoteAmountMin": "報價金額必須大於 {currencySymbol}1",
+  "@taskApplyQuoteAmountMin": {"placeholders": {"currencySymbol": {"type": "String"}}},
   "taskDetailApplyReasonHint": "向發布者說明你的申請理由，有助於提高申請成功率",
   "taskDetailSubmitApplication": "提交申請",
   "taskDetailApplicantsList": "申請者列表 ({param1})",
@@ -1201,7 +1203,7 @@
       }
     }
   },
-  "notificationContentNegotiationOffer": "任務「{task_title}」的發布者提出議價\n留言：{message}\n議價金額：£{negotiated_price} {currency}",
+  "notificationContentNegotiationOffer": "任務「{task_title}」的發布者提出議價\n留言：{message}\n議價金額：{currencySymbol}{negotiated_price}",
   "@notificationContentNegotiationOffer": {
     "placeholders": {
       "task_title": {
@@ -1213,7 +1215,7 @@
       "negotiated_price": {
         "type": "String"
       },
-      "currency": {
+      "currencySymbol": {
         "type": "String"
       }
     }
@@ -2504,11 +2506,14 @@
   },
   "fleaMarketNoPurchaseRequests": "暫無購買申請",
   "fleaMarketWaitingSellerConfirm": "等待賣家確認",
-  "fleaMarketNegotiateAmountFormat": "議價金額：£{param1}",
+  "fleaMarketNegotiateAmountFormat": "議價金額：{currencySymbol}{param1}",
   "@fleaMarketNegotiateAmountFormat": {
     "placeholders": {
       "param1": {
         "type": "double"
+      },
+      "currencySymbol": {
+        "type": "String"
       }
     }
   },
@@ -2526,17 +2531,19 @@
   "fleaMarketRequestStatusRejected": "已拒絕",
   "fleaMarketAcceptCounterOffer": "接受",
   "fleaMarketRejectCounterOffer": "拒絕",
-  "fleaMarketCounterOfferReceived": "賣家還價 £{price}",
+  "fleaMarketCounterOfferReceived": "賣家還價 {currencySymbol}{price}",
   "@fleaMarketCounterOfferReceived": {
     "placeholders": {
-      "price": { "type": "String" }
+      "price": { "type": "String" },
+      "currencySymbol": { "type": "String" }
     }
   },
   "fleaMarketAcceptCounterOfferConfirmTitle": "接受還價",
-  "fleaMarketAcceptCounterOfferConfirmMessage": "確定接受賣家的還價 £{price} 嗎？",
+  "fleaMarketAcceptCounterOfferConfirmMessage": "確定接受賣家的還價 {currencySymbol}{price} 嗎？",
   "@fleaMarketAcceptCounterOfferConfirmMessage": {
     "placeholders": {
-      "price": { "type": "String" }
+      "price": { "type": "String" },
+      "currencySymbol": { "type": "String" }
     }
   },
   "fleaMarketRejectCounterOfferConfirmTitle": "拒絕還價",
@@ -2832,11 +2839,14 @@
   "refundReasonTypeRequired": "退款原因類型 *",
   "refundReasonTypePlaceholder": "請選擇退款原因類型",
   "refundPartialAmountTooHigh": "部分退款金額不能大於或等於任務金額，請選擇全額退款",
-  "refundAmountExceedsTask": "退款金額不能超過任務金額（£{param1}）",
+  "refundAmountExceedsTask": "退款金額不能超過任務金額（{currencySymbol}{param1}）",
   "@refundAmountExceedsTask": {
     "placeholders": {
       "param1": {
         "type": "double"
+      },
+      "currencySymbol": {
+        "type": "String"
       }
     }
   },
@@ -2846,21 +2856,32 @@
   "refundReasonMinLength": "退款原因至少需要10個字符",
   "refundTypeRequired": "退款類型 *",
   "refundAmountOrRatioRequired": "退款金額或比例 *",
-  "refundAmountPound": "退款金額（£）",
+  "refundAmountPound": "退款金額（{currencySymbol}）",
+  "@refundAmountPound": {
+    "placeholders": {
+      "currencySymbol": {"type": "String"}
+    }
+  },
   "refundRatioPercent": "退款比例（%）",
-  "refundTaskAmountFormat": "任務金額: £{param1}",
+  "refundTaskAmountFormat": "任務金額: {currencySymbol}{param1}",
   "@refundTaskAmountFormat": {
     "placeholders": {
       "param1": {
         "type": "double"
+      },
+      "currencySymbol": {
+        "type": "String"
       }
     }
   },
-  "refundRefundAmountFormat": "退款金額: £{param1}",
+  "refundRefundAmountFormat": "退款金額: {currencySymbol}{param1}",
   "@refundRefundAmountFormat": {
     "placeholders": {
       "param1": {
         "type": "double"
+      },
+      "currencySymbol": {
+        "type": "String"
       }
     }
   },
@@ -2911,7 +2932,7 @@
   "refundStatusCancelledFull": "退款申請已取消",
   "refundDescPending": "您的退款申請已提交，管理員將在3-5個工作日內審核",
   "refundDescProcessing": "退款正在處理中，請耐心等待",
-  "refundDescApprovedAmount": "退款金額：£{param2}{param1}，退款將在5-10個工作日內退回",
+  "refundDescApprovedAmount": "退款金額：{currencySymbol}{param2}{param1}，退款將在5-10個工作日內退回",
   "@refundDescApprovedAmount": {
     "placeholders": {
       "param1": {
@@ -2919,6 +2940,9 @@
       },
       "param2": {
         "type": "double"
+      },
+      "currencySymbol": {
+        "type": "String"
       }
     }
   },
@@ -2932,7 +2956,7 @@
     }
   },
   "refundDescRejectedGeneric": "退款申請已被拒絕",
-  "refundDescCompletedAmount": "退款金額：£{param2}{param1}，已退回您的原支付方式",
+  "refundDescCompletedAmount": "退款金額：{currencySymbol}{param2}{param1}，已退回您的原支付方式",
   "@refundDescCompletedAmount": {
     "placeholders": {
       "param1": {
@@ -2940,6 +2964,9 @@
       },
       "param2": {
         "type": "double"
+      },
+      "currencySymbol": {
+        "type": "String"
       }
     }
   },
@@ -3084,7 +3111,8 @@
   "errorTaskStartChatFailed": "開啟聊天失敗，請重試",
   "errorTaskProposePriceFailed": "提出報價失敗，請重試",
   "errorTaskConfirmPayFailed": "發起支付失敗，請重試",
-  "priceExceedsMaximum": "價格不能超過 £50,000",
+  "priceExceedsMaximum": "價格不能超過 {currencySymbol}50,000",
+  "@priceExceedsMaximum": {"placeholders": {"currencySymbol": {"type": "String"}}},
   "errorTaskListLoadFailed": "載入任務列表失敗",
   "errorTaskQuoteFailed": "報價提交失敗，請重試",
   "errorTaskQuoteAcceptFailed": "報價已提交，但自動接單失敗，請聯繫客服",
@@ -3575,7 +3603,8 @@
   "createTaskCategoryCampusLife": "校園生活",
   "createTaskCategorySecondHand": "二手交易",
   "createTaskCategoryOther": "其他",
-  "profileDirectRequestValidation": "請填寫標題和有效價格（≥£1）",
+  "profileDirectRequestValidation": "請填寫標題和有效價格（≥{currencySymbol}1）",
+  "@profileDirectRequestValidation": {"placeholders": {"currencySymbol": {"type": "String"}}},
   "profileDirectRequestHintLocation": "地點",
   "profileDirectRequestHintDeadline": "截止日期（選填）",
   "taskTypeHousekeeping": "家政服務",
@@ -4661,10 +4690,11 @@
   "applicationChatting": "溝通中",
   "posterSelectedAnother": "發佈者已選擇了其他申請者",
   "taskChat": "任務聊天",
-  "currentPrice": "當前價格: £{price}",
+  "currentPrice": "當前價格: {currencySymbol}{price}",
   "@currentPrice": {
     "placeholders": {
-      "price": {"type": "String"}
+      "price": {"type": "String"},
+      "currencySymbol": {"type": "String"}
     }
   },
   "typeMessage": "輸入訊息...",
@@ -4904,6 +4934,9 @@
   "fleaMarketRentalRejected": "租用被拒絕",
   "fleaMarketConfirmReturn": "確認歸還",
   "fleaMarketConfirmReturnMessage": "確認物品已歸還？押金將退還給租客。",
+  "fleaMarketRenterConfirmReturn": "確認已歸還",
+  "fleaMarketPendingOwnerConfirm": "等待出租人確認",
+  "fleaMarketRentalPendingReturn": "待確認歸還",
   "fleaMarketRentalActive": "出租中",
   "fleaMarketRentalReturned": "已歸還",
   "fleaMarketRentalOverdue": "已逾期",

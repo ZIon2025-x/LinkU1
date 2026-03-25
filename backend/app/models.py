@@ -1963,7 +1963,7 @@ class FleaMarketRental(Base):
 
     __table_args__ = (
         CheckConstraint(
-            "status IN ('active', 'returned', 'overdue', 'disputed')",
+            "status IN ('active', 'pending_return', 'returned', 'overdue', 'disputed')",
             name="check_rental_status_valid"
         ),
         CheckConstraint(

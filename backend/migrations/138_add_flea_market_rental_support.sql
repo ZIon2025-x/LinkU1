@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS flea_market_rentals (
     returned_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     CONSTRAINT check_rental_status_valid
-        CHECK (status IN ('active', 'returned', 'overdue', 'disputed')),
+        CHECK (status IN ('active', 'pending_return', 'returned', 'overdue', 'disputed')),
     CONSTRAINT check_deposit_status_valid
         CHECK (deposit_status IN ('held', 'refunded', 'forfeited'))
 );

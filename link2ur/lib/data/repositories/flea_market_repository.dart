@@ -748,6 +748,19 @@ class FleaMarketRepository {
     return response.data;
   }
 
+  /// 租客确认已归还
+  Future<void> renterConfirmReturn(String rentalId) async {
+    final response = await _apiService.post(
+      ApiEndpoints.fleaMarketRentalRenterConfirmReturn(rentalId),
+    );
+
+    if (!response.isSuccess) {
+      throw FleaMarketException(response.message ?? 'flea_market_error_confirm_return_failed');
+    }
+
+    await _cache.invalidateMyFleaMarketCache();
+  }
+
   /// 确认归还（物主操作）
   Future<void> confirmReturn(String rentalId) async {
     final response = await _apiService.post(

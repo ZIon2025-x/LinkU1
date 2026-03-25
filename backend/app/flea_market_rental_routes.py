@@ -904,6 +904,88 @@ async def respond_rental_counter_offer(
         )
 
 
+# ==================== 7.5 租客确认已归还 ====================
+
+@rental_router.post("/rentals/{rental_id}/renter-confirm-return", response_model=dict)
+async def renter_confirm_return(
+    rental_id: int,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """租客确认已归还物品，状态变为 pending_return，等待物主确认"""
+    try:
+        rental_result = await db.execute(
+            select(models.FleaMarketRental)
+            .where(models.FleaMarketRental.id == rental_id)
+            .with_for_update()
+        )
+        rental = rental_result.scalar_one_or_none()
+
+        if not rental:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="租赁记录不存在"
+            )
+
+        # 权限：租客
+        if rental.renter_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="无权限操作此租赁"
+            )
+
+        if rental.status not in ("active", "overdue"):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="该租赁状态不支持确认归还"
+            )
+
+        now = get_utc_time()
+
+        await db.execute(
+            update(models.FleaMarketRental)
+            .where(models.FleaMarketRental.id == rental_id)
+            .values(status="pending_return")
+        )
+        await db.commit()
+
+        # 获取物品信息用于通知
+        item_result = await db.execute(
+            select(models.FleaMarketItem).where(models.FleaMarketItem.id == rental.item_id)
+        )
+        item = item_result.scalar_one_or_none()
+
+        # 通知物主：租客已确认归还
+        if item:
+            await _send_rental_notification(
+                db=db,
+                user_id=item.seller_id,
+                notification_type="flea_market_rental_pending_return",
+                title="租客已确认归还",
+                content=f"租客已确认归还物品「{item.title}」，请检查物品后确认归还。",
+                related_id=str(rental.id),
+                push_data={"rental_id": str(rental.id), "item_id": format_flea_market_id(item.id)},
+                push_template_vars={"item_title": item.title},
+            )
+
+        return {
+            "success": True,
+            "data": {
+                "status": "pending_return",
+            },
+            "message": "已确认归还，等待出租人确认"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"租客确认归还失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="确认归还失败"
+        )
+
+
 # ==================== 8. 物主确认归还 ====================
 
 @rental_router.post("/rentals/{rental_id}/confirm-return", response_model=dict)
@@ -927,10 +1009,10 @@ async def confirm_rental_return(
                 detail="租赁记录不存在"
             )
 
-        if rental.status not in ("active", "overdue"):
+        if rental.status != "pending_return":
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="该租赁状态不支持确认归还"
+                detail="该租赁状态不支持确认归还，需要租客先确认归还"
             )
 
         # 权限：物主
@@ -968,6 +1050,32 @@ async def confirm_rental_return(
                     detail="押金退款失败，请稍后重试"
                 )
 
+        # 租金入账到物主钱包
+        wallet_credited = False
+        rent_amount = float(rental.total_rent)
+        if rent_amount > 0:
+            try:
+                def _credit_rent(sync_session):
+                    from app.wallet_service import credit_wallet
+                    credit_wallet(
+                        db=sync_session,
+                        user_id=current_user.id,
+                        amount=Decimal(str(rental.total_rent)),
+                        source="flea_market_rental",
+                        related_id=str(rental.id),
+                        related_type="rental",
+                        description=f"租赁 #{rental.id} 租金收入 — {item.title}",
+                        currency=rental.currency or item.currency or "GBP",
+                        idempotency_key=f"earning:rental:{rental.id}:owner:{current_user.id}",
+                    )
+
+                await db.run_sync(_credit_rent)
+                wallet_credited = True
+                logger.info(f"租赁 {rental_id} 租金 {rent_amount} 已入账物主钱包")
+            except Exception as e:
+                logger.error(f"租赁 {rental_id} 租金入账失败: {e}", exc_info=True)
+                # 租金入账失败不阻塞归还流程，记录错误继续
+
         # 更新租赁记录
         update_values = {
             "status": "returned",
@@ -985,13 +1093,15 @@ async def confirm_rental_return(
         await db.commit()
 
         # 通知租客
+        rent_msg = f"\n租金 {'€' if (rental.currency or item.currency) == 'EUR' else '£'}{rent_amount:.2f} 已入账出租人钱包。" if wallet_credited else ""
         await _send_rental_notification(
             db=db,
             user_id=rental.renter_id,
             notification_type="flea_market_rental_returned",
             title="物品归还确认",
             content=f"物主已确认物品「{item.title}」归还。"
-                    + (f"\n押金 {'€' if item.currency == 'EUR' else '£'}{float(rental.deposit_amount):.2f} 已退还。" if stripe_refund_id else ""),
+                    + (f"\n押金 {'€' if (rental.currency or item.currency) == 'EUR' else '£'}{float(rental.deposit_amount):.2f} 已退还。" if stripe_refund_id else "")
+                    + rent_msg,
             related_id=str(rental.id),
             push_data={"rental_id": str(rental.id), "item_id": format_flea_market_id(item.id)},
             push_template_vars={"item_title": item.title},
@@ -1003,8 +1113,10 @@ async def confirm_rental_return(
                 "status": "returned",
                 "deposit_status": "refunded" if stripe_refund_id else "held",
                 "stripe_refund_id": stripe_refund_id,
+                "wallet_credited": wallet_credited,
+                "rent_credited": rent_amount if wallet_credited else 0,
             },
-            "message": "归还确认成功" + ("，押金已退还" if stripe_refund_id else "")
+            "message": "归还确认成功" + ("，押金已退还" if stripe_refund_id else "") + ("，租金已入账" if wallet_credited else "")
         }
     except HTTPException:
         raise

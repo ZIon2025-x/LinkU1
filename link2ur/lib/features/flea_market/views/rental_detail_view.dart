@@ -52,6 +52,7 @@ class _RentalDetailContent extends StatelessWidget {
           if (state.actionMessage != null) {
             final message = switch (state.actionMessage) {
               'rental_return_confirmed' => l10n.fleaMarketConfirmReturn,
+              'rental_renter_confirm_return' => l10n.fleaMarketRenterConfirmReturn,
               _ => state.actionMessage ?? '',
             };
             ScaffoldMessenger.of(context).showSnackBar(
@@ -115,8 +116,15 @@ class _RentalDetailBody extends StatelessWidget {
     // 通过 renterId 反推：如果当前用户不是 renter，则为 owner）
     // 注意：更准确的做法需要后端返回 ownerId，这里先用简单逻辑
     final isOwner = currentUserId != null && currentUserId != rental.renterId;
-    final canConfirmReturn =
-        isOwner && (rental.status == 'active' || rental.status == 'overdue');
+    final isRenter = currentUserId != null && currentUserId == rental.renterId;
+
+    // 租客：active/overdue 时可确认归还
+    final renterCanConfirm =
+        isRenter && (rental.status == 'active' || rental.status == 'overdue');
+    // 租客：pending_return 时显示等待标签
+    final renterWaiting = isRenter && rental.status == 'pending_return';
+    // 物主：pending_return 时可确认归还
+    final ownerCanConfirm = isOwner && rental.status == 'pending_return';
 
     return Column(
       children: [
@@ -158,8 +166,49 @@ class _RentalDetailBody extends StatelessWidget {
           ),
         ),
 
-        // 确认归还按钮
-        if (canConfirmReturn)
+        // 租客：确认已归还按钮
+        if (renterCanConfirm)
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: isSubmitting
+                      ? null
+                      : () => _renterConfirmReturn(context),
+                  child: isSubmitting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(l10n.fleaMarketRenterConfirmReturn),
+                ),
+              ),
+            ),
+          ),
+
+        // 租客：等待出租人确认标签
+        if (renterWaiting)
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: SizedBox(
+                width: double.infinity,
+                child: FilledButton.tonal(
+                  onPressed: null,
+                  child: Text(l10n.fleaMarketPendingOwnerConfirm),
+                ),
+              ),
+            ),
+          ),
+
+        // 物主：确认归还按钮（仅 pending_return 状态）
+        if (ownerCanConfirm)
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(AppSpacing.md),
@@ -184,6 +233,32 @@ class _RentalDetailBody extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+
+  void _renterConfirmReturn(BuildContext context) {
+    final l10n = context.l10n;
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.fleaMarketRenterConfirmReturn),
+        content: Text(l10n.fleaMarketConfirmReturnMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(MaterialLocalizations.of(dialogContext).cancelButtonLabel),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              context
+                  .read<FleaMarketRentalBloc>()
+                  .add(RentalRenterConfirmReturn(rental.id.toString()));
+            },
+            child: Text(l10n.fleaMarketConfirm),
+          ),
+        ],
+      ),
     );
   }
 

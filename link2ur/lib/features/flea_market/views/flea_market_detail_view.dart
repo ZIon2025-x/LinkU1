@@ -3294,26 +3294,40 @@ class _ActiveRentalsSection extends StatelessWidget {
                             ],
                           ),
                         ),
-                        FilledButton(
-                          onPressed: () {
-                            context.read<FleaMarketRentalBloc>().add(
-                                  RentalConfirmReturn(rental.id.toString()),
-                                );
-                          },
-                          style: FilledButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 8),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                        if (rental.status == 'pending_return')
+                          FilledButton(
+                            onPressed: () {
+                              context.read<FleaMarketRentalBloc>().add(
+                                    RentalConfirmReturn(rental.id.toString()),
+                                  );
+                            },
+                            style: FilledButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: Text(
+                              context.l10n.fleaMarketConfirmReturn,
+                              style: const TextStyle(
+                                  fontSize: 13, color: Colors.white),
+                            ),
+                          )
+                        else
+                          Text(
+                            rental.status == 'overdue'
+                                ? context.l10n.fleaMarketRentalOverdue
+                                : context.l10n.fleaMarketRentalActive,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: rental.status == 'overdue'
+                                  ? AppColors.error
+                                  : AppColors.primary,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                          child: Text(
-                            context.l10n.fleaMarketConfirmReturn,
-                            style: const TextStyle(
-                                fontSize: 13, color: Colors.white),
-                          ),
-                        ),
                       ],
                     ),
                   )),
