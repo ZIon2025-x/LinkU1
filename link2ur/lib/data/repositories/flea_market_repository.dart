@@ -771,7 +771,17 @@ class FleaMarketRepository {
       throw FleaMarketException(response.message ?? 'flea_market_error_get_rental_detail_failed');
     }
 
-    return FleaMarketRental.fromJson(response.data!);
+    // Backend returns { "rental": {...}, "item": {...} }
+    final rentalJson = response.data!['rental'] as Map<String, dynamic>? ?? response.data!;
+    final itemJson = response.data!['item'] as Map<String, dynamic>?;
+    // Merge item info into rental for display
+    if (itemJson != null) {
+      rentalJson['item_title'] = itemJson['title'];
+      rentalJson['item_image'] = (itemJson['images'] as List?)?.isNotEmpty == true
+          ? (itemJson['images'] as List).first
+          : null;
+    }
+    return FleaMarketRental.fromJson(rentalJson);
   }
 
   /// 获取我的租赁列表
@@ -792,9 +802,19 @@ class FleaMarketRepository {
     }
 
     final items = response.data!['items'] as List<dynamic>? ?? [];
-    return items
-        .map((e) => FleaMarketRental.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return items.map((e) {
+      final map = e as Map<String, dynamic>;
+      // Backend returns { "rental": {...}, "item": {...} } per entry
+      final rentalJson = map['rental'] as Map<String, dynamic>? ?? map;
+      final itemJson = map['item'] as Map<String, dynamic>?;
+      if (itemJson != null) {
+        rentalJson['item_title'] = itemJson['title'];
+        rentalJson['item_image'] = (itemJson['images'] as List?)?.isNotEmpty == true
+            ? (itemJson['images'] as List).first
+            : null;
+      }
+      return FleaMarketRental.fromJson(rentalJson);
+    }).toList();
   }
 }
 

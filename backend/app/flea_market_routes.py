@@ -1194,12 +1194,15 @@ async def update_flea_market_item(
                 update_data["category"] = item_data.category
             if item_data.contact is not None:
                 update_data["contact"] = item_data.contact
-            if item_data.deposit is not None:
-                update_data["deposit"] = item_data.deposit
-            if item_data.rental_price is not None:
-                update_data["rental_price"] = item_data.rental_price
-            if item_data.rental_unit is not None:
-                update_data["rental_unit"] = item_data.rental_unit
+            # 仅出租类型物品可更新租赁字段
+            if item.listing_type == "rental":
+                if item_data.deposit is not None:
+                    update_data["deposit"] = item_data.deposit
+                if item_data.rental_price is not None:
+                    update_data["rental_price"] = item_data.rental_price
+                    update_data["price"] = item_data.rental_price  # 同步 price 字段
+                if item_data.rental_unit is not None:
+                    update_data["rental_unit"] = item_data.rental_unit
 
             await db.execute(
                 update(models.FleaMarketItem)

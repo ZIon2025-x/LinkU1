@@ -6721,7 +6721,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                                     total_rent=rent_pence / 100.0,
                                     deposit_amount=deposit_pence / 100.0,
                                     total_paid=total_pence / 100.0,
-                                    currency="GBP",
+                                    currency=flea_item.currency if flea_item else "GBP",
                                     start_date=now,
                                     end_date=end_date,
                                     status="active",
@@ -7951,9 +7951,33 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                     logger.info(f"✅ [WEBHOOK] Transfer 记录已更新为成功: transfer_record_id={transfer_record_id}")
             else:
                 logger.warning(f"⚠️ [WEBHOOK] 未找到转账记录: transfer_record_id={transfer_record_id_str}")
+        # 🔒 Fix W1: 处理钱包提现 Transfer（metadata 含 wallet_tx_id）
+        elif transfer.get("metadata", {}).get("wallet_tx_id"):
+            _w_tx_id = transfer["metadata"]["wallet_tx_id"]
+            _w_user_id = transfer["metadata"].get("user_id", "")
+            logger.info(
+                f"✅ [WEBHOOK] 钱包提现 Transfer 成功: "
+                f"transfer_id={transfer_id}, wallet_tx_id={_w_tx_id}, user={_w_user_id}"
+            )
+            try:
+                from app.wallet_service import complete_withdrawal as _cw
+                from app.wallet_models import WalletTransaction as _WT
+                # 幂等：仅 pending 状态才更新
+                _existing = db.query(_WT).filter(_WT.id == int(_w_tx_id)).first()
+                if _existing and _existing.status == "pending":
+                    _cw(db, int(_w_tx_id), transfer_id)
+                    db.commit()
+                    logger.info(f"✅ [WEBHOOK] 钱包提现已确认: wallet_tx_id={_w_tx_id}")
+                elif _existing:
+                    logger.info(f"ℹ️ [WEBHOOK] 钱包提现 tx 已是 {_existing.status}，跳过: wallet_tx_id={_w_tx_id}")
+                else:
+                    logger.error(f"❌ [WEBHOOK] 钱包提现 tx 不存在: wallet_tx_id={_w_tx_id}")
+            except Exception as _w_err:
+                logger.error(f"❌ [WEBHOOK] 确认钱包提现失败: wallet_tx_id={_w_tx_id}, error={_w_err}")
+                db.rollback()
         else:
-            logger.warning(f"⚠️ [WEBHOOK] Transfer metadata 中没有 transfer_record_id")
-    
+            logger.warning(f"⚠️ [WEBHOOK] Transfer metadata 中没有 transfer_record_id 或 wallet_tx_id")
+
     elif event_type == "transfer.failed":
         transfer = event_data
         transfer_id = transfer.get("id")
@@ -7961,34 +7985,61 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         task_id = int(transfer.get("metadata", {}).get("task_id", 0))
         failure_code = transfer.get("failure_code", "unknown")
         failure_message = transfer.get("failure_message", "Unknown error")
-        
+
         logger.warning(f"❌ [WEBHOOK] Transfer 支付失败:")
         logger.warning(f"  - Transfer ID: {transfer_id}")
         logger.warning(f"  - Transfer Record ID: {transfer_record_id_str}")
         logger.warning(f"  - Task ID: {task_id}")
         logger.warning(f"  - 失败代码: {failure_code}")
         logger.warning(f"  - 失败信息: {failure_message}")
-        
+
         if transfer_record_id_str:
             transfer_record_id = int(transfer_record_id_str)
             transfer_record = db.query(models.PaymentTransfer).filter(
                 models.PaymentTransfer.id == transfer_record_id
             ).first()
-            
+
             if transfer_record:
                 # 更新转账记录状态为失败
                 transfer_record.status = "failed"
                 transfer_record.last_error = f"{failure_code}: {failure_message}"
                 transfer_record.next_retry_at = None
-                
+
                 # 不更新任务状态，保持原状
-                
+
                 db.commit()
                 logger.info(f"✅ [WEBHOOK] Transfer 记录已更新为失败: transfer_record_id={transfer_record_id}")
             else:
                 logger.warning(f"⚠️ [WEBHOOK] 未找到转账记录: transfer_record_id={transfer_record_id_str}")
+        # 🔒 Fix W1: 处理钱包提现 Transfer 失败
+        elif transfer.get("metadata", {}).get("wallet_tx_id"):
+            _wf_tx_id = transfer["metadata"]["wallet_tx_id"]
+            _wf_user_id = transfer["metadata"].get("user_id", "")
+            logger.warning(
+                f"❌ [WEBHOOK] 钱包提现 Transfer 失败: "
+                f"transfer_id={transfer_id}, wallet_tx_id={_wf_tx_id}, user={_wf_user_id}, "
+                f"failure={failure_code}: {failure_message}"
+            )
+            try:
+                from app.wallet_service import fail_withdrawal as _fw
+                from app.wallet_models import WalletTransaction as _WT2
+                from decimal import Decimal as _Dec
+                _fail_tx = db.query(_WT2).filter(_WT2.id == int(_wf_tx_id)).first()
+                if _fail_tx and _fail_tx.status == "pending":
+                    _refund_amount = abs(_fail_tx.amount)
+                    # 用 DB 记录的 user_id，不信任 metadata（防御性）
+                    _fw(db, int(_wf_tx_id), _fail_tx.user_id, _refund_amount, currency=_fail_tx.currency)
+                    db.commit()
+                    logger.info(f"✅ [WEBHOOK] 钱包提现失败，余额已退还: wallet_tx_id={_wf_tx_id}, amount={_refund_amount}")
+                elif _fail_tx:
+                    logger.info(f"ℹ️ [WEBHOOK] 钱包提现 tx 已是 {_fail_tx.status}，跳过: wallet_tx_id={_wf_tx_id}")
+                else:
+                    logger.error(f"❌ [WEBHOOK] 钱包提现 tx 不存在: wallet_tx_id={_wf_tx_id}")
+            except Exception as _wf_err:
+                logger.error(f"❌ [WEBHOOK] 退还钱包提现余额失败: wallet_tx_id={_wf_tx_id}, error={_wf_err}")
+                db.rollback()
         else:
-            logger.warning(f"⚠️ [WEBHOOK] Transfer metadata 中没有 transfer_record_id")
+            logger.warning(f"⚠️ [WEBHOOK] Transfer metadata 中没有 transfer_record_id 或 wallet_tx_id")
     
     else:
         logger.info(f"ℹ️ [WEBHOOK] 未处理的事件类型: {event_type}")
