@@ -65,6 +65,33 @@ class AppConstants {
   static const String fleaMarketStatusActive = 'active';
   static const String fleaMarketStatusSold = 'sold';
 
+  // Listing types
+  static const String listingTypeSale = 'sale';
+  static const String listingTypeRental = 'rental';
+
+  // Rental units
+  static const String rentalUnitDay = 'day';
+  static const String rentalUnitWeek = 'week';
+  static const String rentalUnitMonth = 'month';
+
+  // Rental request statuses
+  static const String rentalRequestPending = 'pending';
+  static const String rentalRequestApproved = 'approved';
+  static const String rentalRequestRejected = 'rejected';
+  static const String rentalRequestCounterOffer = 'counter_offer';
+  static const String rentalRequestExpired = 'expired';
+
+  // Rental statuses
+  static const String rentalStatusActive = 'active';
+  static const String rentalStatusReturned = 'returned';
+  static const String rentalStatusOverdue = 'overdue';
+  static const String rentalStatusDisputed = 'disputed';
+
+  // Deposit statuses
+  static const String depositHeld = 'held';
+  static const String depositRefunded = 'refunded';
+  static const String depositForfeited = 'forfeited';
+
   /// 退款状态
   static const String refundStatusPending = 'pending';
   static const String refundStatusCompleted = 'completed';

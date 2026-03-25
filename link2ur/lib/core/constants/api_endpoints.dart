@@ -161,6 +161,17 @@ class ApiEndpoints {
   static String fleaMarketApprovePurchaseRequest(String requestId) =>
       '/api/flea-market/purchase-requests/$requestId/approve';
 
+  // --- 跳蚤市场租赁 ---
+  static String fleaMarketRentalRequest(String id) => '/api/flea-market/items/$id/rental-request';
+  static String fleaMarketItemRentalRequests(String id) => '/api/flea-market/items/$id/rental-requests';
+  static String fleaMarketRentalRequestApprove(String requestId) => '/api/flea-market/rental-requests/$requestId/approve';
+  static String fleaMarketRentalRequestReject(String requestId) => '/api/flea-market/rental-requests/$requestId/reject';
+  static String fleaMarketRentalRequestCounterOffer(String requestId) => '/api/flea-market/rental-requests/$requestId/counter-offer';
+  static String fleaMarketRentalRequestRespondCounterOffer(String requestId) => '/api/flea-market/rental-requests/$requestId/respond-counter-offer';
+  static String fleaMarketRentalConfirmReturn(String rentalId) => '/api/flea-market/rentals/$rentalId/confirm-return';
+  static String fleaMarketRentalDetail(String rentalId) => '/api/flea-market/rentals/$rentalId';
+  static const String fleaMarketMyRentals = '/api/flea-market/my-rentals';
+
   // ==================== 任务达人 ====================
   // 后端: task_expert_routes.py (prefix: /api/task-experts)
   static const String taskExperts = '/api/task-experts';

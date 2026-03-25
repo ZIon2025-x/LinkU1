@@ -10748,6 +10748,159 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get errorAiOptimizeFailed => 'AI 优化失败，请稍后重试';
+
+  @override
+  String get fleaMarketListingTypeSale => '出售';
+
+  @override
+  String get fleaMarketListingTypeRental => '出租';
+
+  @override
+  String get fleaMarketDeposit => '押金';
+
+  @override
+  String get fleaMarketRentalPrice => '租金';
+
+  @override
+  String get fleaMarketRentalUnit => '租期单位';
+
+  @override
+  String get fleaMarketRentalUnitDay => '天';
+
+  @override
+  String get fleaMarketRentalUnitWeek => '周';
+
+  @override
+  String get fleaMarketRentalUnitMonth => '月';
+
+  @override
+  String get fleaMarketPerDay => '/天';
+
+  @override
+  String get fleaMarketPerWeek => '/周';
+
+  @override
+  String get fleaMarketPerMonth => '/月';
+
+  @override
+  String get fleaMarketApplyToRent => '申请租用';
+
+  @override
+  String get fleaMarketRentalDuration => '租用时长';
+
+  @override
+  String get fleaMarketDesiredTime => '期望开始时间';
+
+  @override
+  String get fleaMarketDesiredTimeHint => '请说明希望什么时候开始租用';
+
+  @override
+  String get fleaMarketUsageDescription => '使用场景';
+
+  @override
+  String get fleaMarketUsageDescriptionHint => '请简要描述用途，帮助出租人了解';
+
+  @override
+  String get fleaMarketRentalCostPreview => '费用预览';
+
+  @override
+  String get fleaMarketRentalSubtotal => '租金小计';
+
+  @override
+  String get fleaMarketRentalTotal => '合计';
+
+  @override
+  String get fleaMarketRentalRequestSent => '租用申请已发送';
+
+  @override
+  String get fleaMarketRentalApproved => '租用已批准';
+
+  @override
+  String get fleaMarketRentalRejected => '租用被拒绝';
+
+  @override
+  String get fleaMarketConfirmReturn => '确认归还';
+
+  @override
+  String get fleaMarketConfirmReturnMessage => '确认物品已归还？押金将退还给租客。';
+
+  @override
+  String get fleaMarketRentalActive => '出租中';
+
+  @override
+  String get fleaMarketRentalReturned => '已归还';
+
+  @override
+  String get fleaMarketRentalOverdue => '已逾期';
+
+  @override
+  String get fleaMarketDepositHeld => '押金冻结中';
+
+  @override
+  String get fleaMarketDepositRefunded => '押金已退还';
+
+  @override
+  String get fleaMarketMyRentals => '我的租赁';
+
+  @override
+  String get fleaMarketRentalDetail => '租赁详情';
+
+  @override
+  String get fleaMarketRentalRequests => '租用申请';
+
+  @override
+  String get fleaMarketNoRentalRequests => '暂无租用申请';
+
+  @override
+  String get fleaMarketRentBadge => '出租';
+
+  @override
+  String get fleaMarketProposedPrice => '建议价格（选填）';
+
+  @override
+  String get fleaMarketProposedPriceHint => '留空则使用标价';
+
+  @override
+  String get fleaMarketCounterOfferPrice => '还价';
+
+  @override
+  String get fleaMarketRentalPending => '等待审批';
+
+  @override
+  String get fleaMarketRentalRequestSubmitted => '已提交申请';
+
+  @override
+  String get fleaMarketCurrentlyRented => '当前已被租出，你仍可申请未来的时间段。';
+
+  @override
+  String get fleaMarketErrorRentalRequestFailed => '发送租用申请失败';
+
+  @override
+  String get fleaMarketErrorApproveRentalFailed => '批准租用申请失败';
+
+  @override
+  String get fleaMarketErrorRejectRentalFailed => '拒绝租用申请失败';
+
+  @override
+  String get fleaMarketErrorCounterOfferRentalFailed => '租用还价失败';
+
+  @override
+  String get fleaMarketErrorConfirmReturnFailed => '确认归还失败';
+
+  @override
+  String get fleaMarketErrorGetRentalDetailFailed => '加载租赁详情失败';
+
+  @override
+  String get fleaMarketErrorGetRentalRequestsFailed => '加载租用申请失败';
+
+  @override
+  String get fleaMarketErrorNotRentalItem => '该商品不可租用';
+
+  @override
+  String get fleaMarketErrorCannotRentOwnItem => '不能租用自己的商品';
+
+  @override
+  String get fleaMarketErrorRentalPaymentExpired => '租赁支付已过期';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -21450,4 +21603,124 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get errorAiOptimizeFailed => 'AI 優化失敗，請稍後重試';
+
+  @override
+  String get fleaMarketRentalUnit => '租期單位';
+
+  @override
+  String get fleaMarketRentalUnitWeek => '週';
+
+  @override
+  String get fleaMarketPerWeek => '/週';
+
+  @override
+  String get fleaMarketApplyToRent => '申請租用';
+
+  @override
+  String get fleaMarketRentalDuration => '租用時長';
+
+  @override
+  String get fleaMarketDesiredTime => '期望開始時間';
+
+  @override
+  String get fleaMarketDesiredTimeHint => '請說明希望什麼時候開始租用';
+
+  @override
+  String get fleaMarketUsageDescription => '使用場景';
+
+  @override
+  String get fleaMarketUsageDescriptionHint => '請簡要描述用途，幫助出租人了解';
+
+  @override
+  String get fleaMarketRentalCostPreview => '費用預覽';
+
+  @override
+  String get fleaMarketRentalSubtotal => '租金小計';
+
+  @override
+  String get fleaMarketRentalTotal => '合計';
+
+  @override
+  String get fleaMarketRentalRequestSent => '租用申請已發送';
+
+  @override
+  String get fleaMarketRentalApproved => '租用已批準';
+
+  @override
+  String get fleaMarketRentalRejected => '租用被拒絕';
+
+  @override
+  String get fleaMarketConfirmReturn => '確認歸還';
+
+  @override
+  String get fleaMarketConfirmReturnMessage => '確認物品已歸還？押金將退還給租客。';
+
+  @override
+  String get fleaMarketRentalReturned => '已歸還';
+
+  @override
+  String get fleaMarketDepositHeld => '押金凍結中';
+
+  @override
+  String get fleaMarketDepositRefunded => '押金已退還';
+
+  @override
+  String get fleaMarketMyRentals => '我的租賃';
+
+  @override
+  String get fleaMarketRentalDetail => '租賃詳情';
+
+  @override
+  String get fleaMarketRentalRequests => '租用申請';
+
+  @override
+  String get fleaMarketNoRentalRequests => '暫無租用申請';
+
+  @override
+  String get fleaMarketProposedPrice => '建議價格（選填）';
+
+  @override
+  String get fleaMarketProposedPriceHint => '留空則使用標價';
+
+  @override
+  String get fleaMarketCounterOfferPrice => '還價';
+
+  @override
+  String get fleaMarketRentalPending => '等待審批';
+
+  @override
+  String get fleaMarketRentalRequestSubmitted => '已提交申請';
+
+  @override
+  String get fleaMarketCurrentlyRented => '當前已被租出，你仍可申請未來的時間段。';
+
+  @override
+  String get fleaMarketErrorRentalRequestFailed => '發送租用申請失敗';
+
+  @override
+  String get fleaMarketErrorApproveRentalFailed => '批準租用申請失敗';
+
+  @override
+  String get fleaMarketErrorRejectRentalFailed => '拒絕租用申請失敗';
+
+  @override
+  String get fleaMarketErrorCounterOfferRentalFailed => '租用還價失敗';
+
+  @override
+  String get fleaMarketErrorConfirmReturnFailed => '確認歸還失敗';
+
+  @override
+  String get fleaMarketErrorGetRentalDetailFailed => '加載租賃詳情失敗';
+
+  @override
+  String get fleaMarketErrorGetRentalRequestsFailed => '加載租用申請失敗';
+
+  @override
+  String get fleaMarketErrorNotRentalItem => '該商品不可租用';
+
+  @override
+  String get fleaMarketErrorCannotRentOwnItem => '不能租用自己的商品';
+
+  @override
+  String get fleaMarketErrorRentalPaymentExpired => '租賃支付已過期';
 }
