@@ -1991,6 +1991,7 @@ class TaskPaymentRequest(BaseModel):
     preferred_payment_method: Optional[str] = None  # 首选支付方式：card / alipay / wechat_pay；传则创建仅含该方式的 PI，PaymentSheet 不再弹选择窗
     task_source: Optional[str] = None  # 任务来源：flea_market、normal 等，用于跳蚤市场支付时补充 PI metadata
     flea_market_item_id: Optional[str] = None  # 跳蚤市场商品 ID（如 S0123），用于 webhook 更新商品状态
+    use_wallet_balance: bool = False  # 是否使用钱包余额支付（可与 Stripe 混合支付）
     
     @validator('payment_method')
     def validate_payment_method(cls, v):
@@ -2018,9 +2019,13 @@ class TaskPaymentResponse(BaseModel):
     coupon_name: Optional[str] = None  # 优惠券名称
     coupon_type: Optional[str] = None  # 优惠券类型：fixed_amount, percentage
     coupon_description: Optional[str] = None  # 优惠券描述
-    final_amount: int  # 最终需要支付的金额（便士）
+    wallet_deduction: Optional[int] = None  # 钱包余额抵扣金额（便士）
+    wallet_deduction_display: Optional[str] = None
+    final_amount: int  # 最终需要 Stripe 支付的金额（便士）
     final_amount_display: str
     currency: str
+    # 支付类型：stripe / wallet / mixed（全额钱包 / 全额 Stripe / 混合）
+    payment_type: Optional[str] = None
     # Stripe 支付相关
     client_secret: Optional[str] = None  # Payment Intent 的 client_secret，前端需要
     payment_intent_id: Optional[str] = None  # Payment Intent ID

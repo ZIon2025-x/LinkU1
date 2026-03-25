@@ -957,7 +957,51 @@ def create_task_payment(
     
     # 计算最终需要支付的金额
     final_amount = max(0, total_amount)
-    
+
+    # ==================== 钱包余额抵扣 ====================
+    wallet_deduction_pence = 0
+    wallet_tx_id = None
+
+    if payment_request.use_wallet_balance and final_amount > 0:
+        from app.wallet_service import lock_wallet, debit_wallet
+        from decimal import Decimal
+
+        try:
+            wallet_account = lock_wallet(db, str(current_user.id))
+            # 将余额转换为便士进行比较（余额存储为英镑 Decimal）
+            balance_pence = int(wallet_account.balance * 100)
+            wallet_deduction_pence = min(balance_pence, final_amount)
+
+            if wallet_deduction_pence > 0:
+                wallet_deduction_pounds = Decimal(str(wallet_deduction_pence)) / Decimal("100")
+                wallet_tx = debit_wallet(
+                    db=db,
+                    user_id=str(current_user.id),
+                    amount=wallet_deduction_pounds,
+                    source="task_payment",
+                    related_id=str(task_id),
+                    related_type="task",
+                    description=f"任务 #{task_id} 余额支付",
+                    status="pending",  # Pending until Stripe confirms or full-wallet
+                    idempotency_key=f"wallet_task_payment_{task_id}_{current_user.id}",
+                )
+                wallet_tx_id = wallet_tx.id
+                final_amount = final_amount - wallet_deduction_pence
+                logger.info(
+                    f"钱包余额抵扣: task_id={task_id}, wallet_deduction={wallet_deduction_pence}p, "
+                    f"remaining_stripe={final_amount}p, wallet_tx_id={wallet_tx_id}"
+                )
+        except ValueError as ve:
+            # Idempotency duplicate — wallet already debited for this task, skip
+            logger.warning(f"钱包扣款跳过（幂等）: {ve}")
+            wallet_deduction_pence = 0
+            wallet_tx_id = None
+        except Exception as e:
+            logger.error(f"钱包余额抵扣失败: {e}")
+            # 钱包扣款失败不阻塞支付流程，回退到全额 Stripe 支付
+            wallet_deduction_pence = 0
+            wallet_tx_id = None
+
     # 如果使用优惠券全额抵扣，直接完成支付（不需要Stripe支付）
     if final_amount == 0 and coupon_discount > 0:
         try:
@@ -1029,9 +1073,12 @@ def create_task_payment(
                 "coupon_name": coupon_info['name'] if coupon_info else None,
                 "coupon_type": coupon_info['type'] if coupon_info else None,
                 "coupon_description": coupon_info['description'] if coupon_info else None,
+                "wallet_deduction": None,
+                "wallet_deduction_display": None,
                 "final_amount": final_amount,
                 "final_amount_display": "0.00",
                 "currency": "GBP",
+                "payment_type": "coupon",
                 "client_secret": None,
                 "payment_intent_id": None,
                 "customer_id": None,
@@ -1046,8 +1093,111 @@ def create_task_payment(
                 status_code=500,
                 detail=f"支付处理失败，请稍后重试"
             )
-    
-    # 如果需要Stripe支付（优惠券抵扣后仍有余额）
+
+    # 如果钱包余额全额抵扣（可能叠加优惠券），直接完成支付
+    if final_amount == 0 and wallet_deduction_pence > 0:
+        try:
+            from app.wallet_service import complete_debit
+
+            # 标记钱包交易为已完成
+            complete_debit(db, wallet_tx_id)
+
+            # 标记任务为已支付
+            task.is_paid = 1
+            task.payment_intent_id = None
+            taker_amount = task_amount - (application_fee_pence / 100.0)
+            task.escrow_amount = max(0.0, taker_amount)
+            if task.status == "pending_payment":
+                task.status = "in_progress"
+
+            # 创建支付历史记录
+            payment_history = models.PaymentHistory(
+                order_no=models.PaymentHistory.generate_order_no(),
+                task_id=task_id,
+                user_id=current_user.id,
+                payment_intent_id=None,
+                payment_method="wallet",
+                total_amount=task_amount_pence,
+                points_used=0,
+                coupon_discount=coupon_discount,
+                stripe_amount=0,
+                final_amount=0,
+                currency="GBP",
+                status="succeeded",
+                application_fee=application_fee_pence,
+                escrow_amount=taker_amount,
+                coupon_usage_log_id=coupon_usage_log.id if coupon_usage_log else None,
+                extra_metadata={
+                    "wallet_only": True,
+                    "wallet_deduction_pence": wallet_deduction_pence,
+                    "wallet_tx_id": wallet_tx_id,
+                    "task_title": task.title,
+                }
+            )
+            db.add(payment_history)
+            db.commit()
+
+            # 构建计算过程步骤
+            calculation_steps = [
+                {
+                    "label": "任务金额",
+                    "amount": original_amount,
+                    "amount_display": f"{original_amount / 100:.2f}",
+                    "type": "original"
+                }
+            ]
+            if coupon_discount > 0:
+                calculation_steps.append({
+                    "label": f"优惠券折扣" + (f"（{coupon_info['name'] if coupon_info else ''}）" if coupon_info else ""),
+                    "amount": -coupon_discount,
+                    "amount_display": f"-{coupon_discount / 100:.2f}",
+                    "type": "discount"
+                })
+            calculation_steps.append({
+                "label": "钱包余额抵扣",
+                "amount": -wallet_deduction_pence,
+                "amount_display": f"-{wallet_deduction_pence / 100:.2f}",
+                "type": "wallet"
+            })
+            calculation_steps.append({
+                "label": "最终支付金额",
+                "amount": 0,
+                "amount_display": "0.00",
+                "type": "final"
+            })
+
+            return {
+                "payment_id": None,
+                "fee_type": "task_amount",
+                "original_amount": original_amount,
+                "original_amount_display": f"{original_amount / 100:.2f}",
+                "coupon_discount": coupon_discount if coupon_discount > 0 else None,
+                "coupon_discount_display": f"{coupon_discount / 100:.2f}" if coupon_discount > 0 else None,
+                "coupon_name": coupon_info['name'] if coupon_info else None,
+                "coupon_type": coupon_info['type'] if coupon_info else None,
+                "coupon_description": coupon_info['description'] if coupon_info else None,
+                "wallet_deduction": wallet_deduction_pence,
+                "wallet_deduction_display": f"{wallet_deduction_pence / 100:.2f}",
+                "final_amount": 0,
+                "final_amount_display": "0.00",
+                "currency": "GBP",
+                "payment_type": "wallet",
+                "client_secret": None,
+                "payment_intent_id": None,
+                "customer_id": None,
+                "ephemeral_key_secret": None,
+                "calculation_steps": calculation_steps,
+                "note": f"任务金额已支付（使用钱包余额），任务接受人将获得 {taker_amount:.2f} 镑（已扣除平台服务费 {application_fee_pence / 100.0:.2f} 镑）"
+            }
+        except Exception as e:
+            db.rollback()
+            logger.error(f"钱包全额支付失败: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"支付处理失败，请稍后重试"
+            )
+
+    # 如果需要Stripe支付（优惠券/钱包抵扣后仍有余额）
     if final_amount > 0:
         # ⚠️ 重要：检查是否已有未完成的 PaymentIntent，避免重复创建
         # 若请求了 preferred_payment_method（仅用该方式），不复用已有 PI，必须新建仅含该方式的 PI
@@ -1276,6 +1426,10 @@ def create_task_payment(
             "coupon_discount": str(coupon_discount) if coupon_discount > 0 else "",
             "application_fee": str(application_fee_pence),
         }
+        # 钱包混合支付：将钱包交易信息存入 PI metadata，供 webhook 使用
+        if wallet_tx_id and wallet_deduction_pence > 0:
+            metadata["wallet_tx_id"] = str(wallet_tx_id)
+            metadata["wallet_deduction"] = str(wallet_deduction_pence)
         # 跳蚤市场：补充 webhook 需要的 payment_type 和 flea_market_item_id
         flea_market_item_id = payment_request.flea_market_item_id
         if not flea_market_item_id and (
@@ -1327,12 +1481,19 @@ def create_task_payment(
         # 安全：Stripe 支付的状态更新必须通过 Webhook 处理
         # 这里只创建 PaymentIntent 和支付历史记录，不更新任务状态（is_paid, status）
         # 任务状态更新只能由 Stripe Webhook 触发
+        ph_extra_metadata = {
+            "task_title": task.title,
+            "taker_id": str(task.taker_id),
+        }
+        if wallet_tx_id and wallet_deduction_pence > 0:
+            ph_extra_metadata["wallet_tx_id"] = wallet_tx_id
+            ph_extra_metadata["wallet_deduction_pence"] = wallet_deduction_pence
         payment_history = models.PaymentHistory(
             order_no=models.PaymentHistory.generate_order_no(),
             task_id=task_id,
             user_id=current_user.id,
             payment_intent_id=payment_intent.id,
-            payment_method="stripe",
+            payment_method="mixed" if wallet_deduction_pence > 0 else "stripe",
             total_amount=task_amount_pence,
             points_used=0,  # 不再使用积分支付
             coupon_discount=coupon_discount,
@@ -1342,10 +1503,7 @@ def create_task_payment(
             status="pending",  # 待支付，webhook 会更新为 succeeded
             application_fee=application_fee_pence,
             coupon_usage_log_id=coupon_usage_log.id if coupon_usage_log else None,
-            extra_metadata={
-                "task_title": task.title,
-                "taker_id": str(task.taker_id)
-            }
+            extra_metadata=ph_extra_metadata,
         )
         db.add(payment_history)
         db.commit()
@@ -1366,13 +1524,22 @@ def create_task_payment(
                 "amount_display": f"-{coupon_discount / 100:.2f}",
                 "type": "discount"
             })
+        if wallet_deduction_pence > 0:
+            calculation_steps.append({
+                "label": "钱包余额抵扣",
+                "amount": -wallet_deduction_pence,
+                "amount_display": f"-{wallet_deduction_pence / 100:.2f}",
+                "type": "wallet"
+            })
         calculation_steps.append({
             "label": "最终支付金额",
             "amount": final_amount,
             "amount_display": f"{final_amount / 100:.2f}",
             "type": "final"
         })
-        
+
+        _payment_type = "mixed" if wallet_deduction_pence > 0 else "stripe"
+
         return {
             "payment_id": None,
             "fee_type": "task_amount",
@@ -1383,9 +1550,12 @@ def create_task_payment(
             "coupon_name": coupon_info['name'] if coupon_info else None,
             "coupon_type": coupon_info['type'] if coupon_info else None,
             "coupon_description": coupon_info['description'] if coupon_info else None,
+            "wallet_deduction": wallet_deduction_pence if wallet_deduction_pence > 0 else None,
+            "wallet_deduction_display": f"{wallet_deduction_pence / 100:.2f}" if wallet_deduction_pence > 0 else None,
             "final_amount": final_amount,
             "final_amount_display": f"{final_amount / 100:.2f}",
             "currency": "GBP",
+            "payment_type": _payment_type,
             "client_secret": payment_intent.client_secret,
             "payment_intent_id": payment_intent.id,
             "customer_id": customer_id,

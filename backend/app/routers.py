@@ -6562,9 +6562,20 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 application_fee = application_fee_pence / 100.0
                 taker_amount = task_amount - application_fee
                 task.escrow_amount = max(0.0, taker_amount)  # 确保不为负数
-                
-                # 检查是否是待确认的批准（pending_approval）
+
+                # ==================== 钱包混合支付：确认钱包扣款 ====================
                 metadata = payment_intent.get("metadata", {})
+                _wallet_tx_id = metadata.get("wallet_tx_id")
+                if _wallet_tx_id:
+                    try:
+                        from app.wallet_service import complete_debit
+                        complete_debit(db, int(_wallet_tx_id))
+                        logger.info(f"✅ [WEBHOOK] 钱包扣款已确认: wallet_tx_id={_wallet_tx_id}, task_id={task_id}")
+                    except Exception as wallet_err:
+                        logger.error(f"❌ [WEBHOOK] 确认钱包扣款失败: wallet_tx_id={_wallet_tx_id}, error={wallet_err}")
+                        # 钱包确认失败不阻塞主流程（交易已经 pending，可后续修复）
+
+                # 检查是否是待确认的批准（pending_approval）
                 is_pending_approval = metadata.get("pending_approval") == "true"
                 
                 # ⚠️ 优化：如果是跳蚤市场购买，支付成功后更新商品状态为 sold
@@ -6851,6 +6862,17 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                             task.is_paid = 0
                             task.payment_intent_id = None
                             task.escrow_amount = None
+                            # 退还钱包扣款（如果有）
+                            if _wallet_tx_id:
+                                try:
+                                    from app.wallet_service import reverse_debit
+                                    _wd = metadata.get("wallet_deduction")
+                                    if _wd:
+                                        from decimal import Decimal
+                                        reverse_debit(db, int(_wallet_tx_id), metadata.get("user_id", ""), Decimal(_wd) / Decimal("100"))
+                                        logger.info(f"✅ [WEBHOOK] 申请撤回退款，钱包扣款已退还: wallet_tx_id={_wallet_tx_id}")
+                                except Exception as w_err:
+                                    logger.error(f"❌ [WEBHOOK] 退还钱包扣款失败（撤回）: {w_err}")
                             try:
                                 stripe.Refund.create(payment_intent=payment_intent_id)
                                 logger.info(
@@ -6886,6 +6908,17 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                             task.is_paid = 0
                             task.payment_intent_id = None
                             task.escrow_amount = None
+                            # 退还钱包扣款（如果有）
+                            if _wallet_tx_id:
+                                try:
+                                    from app.wallet_service import reverse_debit
+                                    _wd = metadata.get("wallet_deduction")
+                                    if _wd:
+                                        from decimal import Decimal
+                                        reverse_debit(db, int(_wallet_tx_id), metadata.get("user_id", ""), Decimal(_wd) / Decimal("100"))
+                                        logger.info(f"✅ [WEBHOOK] 申请未找到退款，钱包扣款已退还: wallet_tx_id={_wallet_tx_id}")
+                                except Exception as w_err:
+                                    logger.error(f"❌ [WEBHOOK] 退还钱包扣款失败（未找到）: {w_err}")
                             try:
                                 stripe.Refund.create(payment_intent=payment_intent_id)
                                 logger.info(
@@ -7131,7 +7164,27 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                     logger.info(f"✅ [WEBHOOK] 已更新支付历史记录状态为失败: order_no={payment_history.order_no}")
             except Exception as e:
                 logger.error(f"❌ [WEBHOOK] 更新支付历史记录失败: {e}", exc_info=True)
-        
+
+        # ==================== 钱包混合支付：退还钱包扣款 ====================
+        _failed_metadata = payment_intent.get("metadata", {})
+        _failed_wallet_tx_id = _failed_metadata.get("wallet_tx_id")
+        _failed_wallet_deduction = _failed_metadata.get("wallet_deduction")
+        if _failed_wallet_tx_id and _failed_wallet_deduction:
+            try:
+                from app.wallet_service import reverse_debit
+                from decimal import Decimal
+                _user_id = _failed_metadata.get("user_id", "")
+                _deduction_pounds = Decimal(_failed_wallet_deduction) / Decimal("100")
+                reverse_debit(db, int(_failed_wallet_tx_id), _user_id, _deduction_pounds)
+                db.commit()
+                logger.info(
+                    f"✅ [WEBHOOK] 支付失败，钱包扣款已退还: "
+                    f"wallet_tx_id={_failed_wallet_tx_id}, amount={_failed_wallet_deduction}p, task_id={task_id}"
+                )
+            except Exception as wallet_err:
+                logger.error(f"❌ [WEBHOOK] 退还钱包扣款失败: wallet_tx_id={_failed_wallet_tx_id}, error={wallet_err}")
+                db.rollback()
+
         # 支付失败时，清除 payment_intent_id（申请状态保持为 pending，可以重新尝试）
         if task_id and application_id_str:
             application_id = int(application_id_str)
@@ -7529,7 +7582,27 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         payment_intent_id = payment_intent.get("id")
         task_id = int(payment_intent.get("metadata", {}).get("task_id", 0))
         logger.warning(f"⚠️ [WEBHOOK] Payment intent canceled: payment_intent_id={payment_intent_id}, task_id={task_id}")
-        
+
+        # ==================== 钱包混合支付：退还钱包扣款 ====================
+        _canceled_metadata = payment_intent.get("metadata", {})
+        _canceled_wallet_tx_id = _canceled_metadata.get("wallet_tx_id")
+        _canceled_wallet_deduction = _canceled_metadata.get("wallet_deduction")
+        if _canceled_wallet_tx_id and _canceled_wallet_deduction:
+            try:
+                from app.wallet_service import reverse_debit
+                from decimal import Decimal
+                _user_id = _canceled_metadata.get("user_id", "")
+                _deduction_pounds = Decimal(_canceled_wallet_deduction) / Decimal("100")
+                reverse_debit(db, int(_canceled_wallet_tx_id), _user_id, _deduction_pounds)
+                db.commit()
+                logger.info(
+                    f"✅ [WEBHOOK] 支付取消，钱包扣款已退还: "
+                    f"wallet_tx_id={_canceled_wallet_tx_id}, amount={_canceled_wallet_deduction}p, task_id={task_id}"
+                )
+            except Exception as wallet_err:
+                logger.error(f"❌ [WEBHOOK] 退还钱包扣款失败: wallet_tx_id={_canceled_wallet_tx_id}, error={wallet_err}")
+                db.rollback()
+
         # ⚠️ 处理 PaymentIntent 取消事件
         # 新流程：任务保持 open 状态，支付取消时只需清除 payment_intent_id
         # 这样用户可以继续批准其他申请者或重新批准同一个申请者

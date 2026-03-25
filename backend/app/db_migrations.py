@@ -413,17 +413,42 @@ def verify_migration_007(engine: Engine) -> bool:
         return True  # 验证失败不影响迁移，假设成功
 
 
+def _verify_columns_exist(engine: Engine, table: str, columns: list[str]) -> list[str]:
+    """检查表中是否存在指定的列，返回缺失的列名列表"""
+    try:
+        from sqlalchemy import inspect
+        inspector = inspect(engine)
+        existing = [col['name'] for col in inspector.get_columns(table)]
+        return [c for c in columns if c not in existing]
+    except Exception as e:
+        logger.warning(f"检查表 {table} 列时出错: {e}")
+        return []
+
+
+def _reset_migration_if_columns_missing(engine: Engine, migration_name: str, table: str, columns: list[str]):
+    """如果迁移被标记为已执行但列实际不存在，删除迁移记录以便重新执行"""
+    if not is_migration_executed(engine, migration_name):
+        return
+    missing = _verify_columns_exist(engine, table, columns)
+    if missing:
+        logger.warning(f"⚠️  迁移 {migration_name} 已标记执行但缺少列: {missing}")
+        with engine.connect() as conn:
+            conn.execute(
+                text(f"DELETE FROM {MIGRATION_TABLE} WHERE migration_name = :name"),
+                {"name": migration_name}
+            )
+            conn.commit()
+        logger.info(f"✅ 已删除错误记录，迁移 {migration_name} 将重新执行")
+
+
 def check_and_fix_broken_migrations(engine: Engine):
     """检查并修复错误标记的迁移（迁移记录存在但实际未执行）"""
     try:
         # 检查迁移 007
         migration_name = "007_add_multi_participant_tasks.sql"
         if is_migration_executed(engine, migration_name):
-            # 验证迁移是否真正成功
             if not verify_migration_007(engine):
                 logger.warning(f"⚠️  检测到错误标记的迁移: {migration_name}")
-                logger.info(f"🔄 删除错误记录并重新执行迁移...")
-                # 删除错误记录
                 with engine.connect() as conn:
                     conn.execute(
                         text(f"DELETE FROM {MIGRATION_TABLE} WHERE migration_name = :name"),
@@ -431,6 +456,22 @@ def check_and_fix_broken_migrations(engine: Engine):
                     )
                     conn.commit()
                 logger.info(f"✅ 已删除错误记录，迁移将在下次执行")
+
+        # 检查迁移 103 — counter_offer 字段
+        _reset_migration_if_columns_missing(
+            engine,
+            "103_add_counter_offer_to_tasks.sql",
+            "tasks",
+            ["counter_offer_price", "counter_offer_status", "counter_offer_user_id"],
+        )
+
+        # 检查迁移 136 — pricing_type / task_mode / required_skills
+        _reset_migration_if_columns_missing(
+            engine,
+            "136_add_pricing_type_task_mode_required_skills.sql",
+            "tasks",
+            ["pricing_type", "task_mode", "required_skills"],
+        )
     except Exception as e:
         logger.warning(f"检查迁移状态时出错: {e}")
 
