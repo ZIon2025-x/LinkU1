@@ -1183,7 +1183,9 @@ async def startup_event():
             # Official accounts & activities
             OfficialActivityApplication,
             # Content filtering
-            SensitiveWord, HomophoneMapping, ContentReview, FilterLog
+            SensitiveWord, HomophoneMapping, ContentReview, FilterLog,
+            # Flea market rental
+            FleaMarketRentalRequest, FleaMarketRental
         )
 
         # 🔧 自动检测并修复迁移状态（如果启用）
@@ -1192,6 +1194,13 @@ async def startup_event():
             run_auto_fix_if_needed(sync_engine)
         except Exception as e:
             logger.warning(f"自动修复检查失败（继续启动）: {e}")
+
+        # 自动迁移：给已有表添加新字段
+        try:
+            from app.auto_add_columns import auto_add_missing_columns
+            auto_add_missing_columns(sync_engine)
+        except Exception as e:
+            logger.warning(f"自动添加字段检查失败（继续启动）: {e}")
 
         logger.info("正在创建数据库表...")
 
