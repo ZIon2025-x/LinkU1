@@ -32,6 +32,7 @@ class FleaMarketRepository {
     String? category,
     String? keyword,
     String? sortBy,
+    String? listingType,
     CancelToken? cancelToken,
   }) async {
     // 「全部」或空字符串时不传 category，后端不按分类筛选
@@ -44,6 +45,7 @@ class FleaMarketRepository {
       if (effectiveCategory != null) 'category': effectiveCategory,
       if (keyword != null) 'keyword': keyword,
       if (sortBy != null) 'sort_by': sortBy,
+      if (listingType != null) 'listing_type': listingType,
     };
 
     final cacheKey = keyword == null
