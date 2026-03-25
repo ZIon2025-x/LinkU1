@@ -329,6 +329,9 @@ class AsyncTaskCRUD:
                 task_source=task_source,
                 is_public=getattr(task, "is_public", 1),  # 默认为公开
                 images=images_json,  # 存储为JSON字符串
+                pricing_type=getattr(task, 'pricing_type', 'fixed') or 'fixed',
+                task_mode=getattr(task, 'task_mode', 'online') or 'online',
+                required_skills=json.dumps(getattr(task, 'required_skills', None) or [], ensure_ascii=False),
             )
 
             db.add(db_task)

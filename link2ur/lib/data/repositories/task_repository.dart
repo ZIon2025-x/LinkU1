@@ -239,6 +239,28 @@ class TaskRepository {
     return Task.fromJson(response.data!);
   }
 
+  /// AI 优化任务描述
+  Future<Map<String, dynamic>> aiOptimizeTask({
+    required String title,
+    required String description,
+    String? taskType,
+  }) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.aiOptimizeTask,
+      data: {
+        'title': title,
+        'description': description,
+        if (taskType != null) 'task_type': taskType,
+      },
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw TaskException(response.message ?? 'ai_optimize_failed');
+    }
+
+    return response.data!;
+  }
+
   /// 申请任务（支持留言、议价金额与货币）
   Future<void> applyTask(
     int taskId, {

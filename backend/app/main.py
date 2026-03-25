@@ -386,6 +386,10 @@ app.add_exception_handler(BusinessError, business_exception_handler)
 app.add_exception_handler(ReadOnlyModeError, read_only_mode_handler)
 app.add_exception_handler(Exception, general_exception_handler)
 
+# AI 任务描述优化接口
+from app.routes.ai_optimize import router as ai_optimize_router
+app.include_router(ai_optimize_router)
+
 # 添加任务相关的路由（不需要/users前缀）
 from app.async_routers import async_router
 

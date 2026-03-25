@@ -20407,6 +20407,234 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'From {title}'**
   String serviceReviewFrom(String title);
+
+  /// No description provided for @createTaskPricingFixed.
+  ///
+  /// In en, this message translates to:
+  /// **'Fixed Price'**
+  String get createTaskPricingFixed;
+
+  /// No description provided for @createTaskPricingHourly.
+  ///
+  /// In en, this message translates to:
+  /// **'Hourly'**
+  String get createTaskPricingHourly;
+
+  /// No description provided for @createTaskPricingNegotiable.
+  ///
+  /// In en, this message translates to:
+  /// **'Negotiate'**
+  String get createTaskPricingNegotiable;
+
+  /// No description provided for @createTaskModeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Task Mode'**
+  String get createTaskModeLabel;
+
+  /// No description provided for @createTaskModeOnline.
+  ///
+  /// In en, this message translates to:
+  /// **'Online/Remote'**
+  String get createTaskModeOnline;
+
+  /// No description provided for @createTaskModeOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'In Person'**
+  String get createTaskModeOffline;
+
+  /// No description provided for @createTaskModeBoth.
+  ///
+  /// In en, this message translates to:
+  /// **'Either'**
+  String get createTaskModeBoth;
+
+  /// No description provided for @createTaskDeadline24h.
+  ///
+  /// In en, this message translates to:
+  /// **'24 Hours'**
+  String get createTaskDeadline24h;
+
+  /// No description provided for @createTaskDeadline3d.
+  ///
+  /// In en, this message translates to:
+  /// **'3 Days'**
+  String get createTaskDeadline3d;
+
+  /// No description provided for @createTaskDeadline1w.
+  ///
+  /// In en, this message translates to:
+  /// **'1 Week'**
+  String get createTaskDeadline1w;
+
+  /// No description provided for @createTaskDeadline2w.
+  ///
+  /// In en, this message translates to:
+  /// **'2 Weeks'**
+  String get createTaskDeadline2w;
+
+  /// No description provided for @createTaskDeadlineNoRush.
+  ///
+  /// In en, this message translates to:
+  /// **'No Rush'**
+  String get createTaskDeadlineNoRush;
+
+  /// No description provided for @createTaskDeadlineCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get createTaskDeadlineCustom;
+
+  /// No description provided for @createTaskRequiredSkills.
+  ///
+  /// In en, this message translates to:
+  /// **'Required Skills'**
+  String get createTaskRequiredSkills;
+
+  /// No description provided for @createTaskAddCustomSkill.
+  ///
+  /// In en, this message translates to:
+  /// **'+ Custom'**
+  String get createTaskAddCustomSkill;
+
+  /// No description provided for @createTaskAiOptimize.
+  ///
+  /// In en, this message translates to:
+  /// **'AI Optimize'**
+  String get createTaskAiOptimize;
+
+  /// No description provided for @createTaskAiOptimizeDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Let AI optimize your task description for better matches'**
+  String get createTaskAiOptimizeDesc;
+
+  /// No description provided for @createTaskAiOptimizeBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Optimize'**
+  String get createTaskAiOptimizeBtn;
+
+  /// No description provided for @createTaskAiTipPrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'AI Tip: '**
+  String get createTaskAiTipPrefix;
+
+  /// No description provided for @createTaskAiTipContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Add these for better quotes: 1. Target audience 2. Competitor references 3. Brand color/style preferences'**
+  String get createTaskAiTipContent;
+
+  /// No description provided for @createTaskSaveDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Save Draft'**
+  String get createTaskSaveDraft;
+
+  /// No description provided for @createTaskPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview'**
+  String get createTaskPreview;
+
+  /// No description provided for @createTaskDraftSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Draft saved'**
+  String get createTaskDraftSaved;
+
+  /// No description provided for @createTaskDraftLoaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Draft restored'**
+  String get createTaskDraftLoaded;
+
+  /// No description provided for @createTaskDraftRestore.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore'**
+  String get createTaskDraftRestore;
+
+  /// No description provided for @createTaskPublishBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Publish Task'**
+  String get createTaskPublishBtn;
+
+  /// No description provided for @createTaskTitleHintNew.
+  ///
+  /// In en, this message translates to:
+  /// **'Briefly describe what help you need'**
+  String get createTaskTitleHintNew;
+
+  /// No description provided for @createTaskDescHintNew.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe your needs in detail to help experts understand...'**
+  String get createTaskDescHintNew;
+
+  /// No description provided for @createTaskRefImages.
+  ///
+  /// In en, this message translates to:
+  /// **'Reference Images'**
+  String get createTaskRefImages;
+
+  /// No description provided for @createTaskRefImagesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Up to 9, showing reference cases or requirements'**
+  String get createTaskRefImagesHint;
+
+  /// No description provided for @createTaskNewCatDesign.
+  ///
+  /// In en, this message translates to:
+  /// **'🎨 Design'**
+  String get createTaskNewCatDesign;
+
+  /// No description provided for @createTaskNewCatProgramming.
+  ///
+  /// In en, this message translates to:
+  /// **'💻 Programming'**
+  String get createTaskNewCatProgramming;
+
+  /// No description provided for @createTaskNewCatPhotography.
+  ///
+  /// In en, this message translates to:
+  /// **'📷 Photography'**
+  String get createTaskNewCatPhotography;
+
+  /// No description provided for @createTaskNewCatCopywriting.
+  ///
+  /// In en, this message translates to:
+  /// **'📝 Copywriting'**
+  String get createTaskNewCatCopywriting;
+
+  /// No description provided for @createTaskNewCatMusic.
+  ///
+  /// In en, this message translates to:
+  /// **'🎵 Music'**
+  String get createTaskNewCatMusic;
+
+  /// No description provided for @createTaskNewCatLifestyle.
+  ///
+  /// In en, this message translates to:
+  /// **'🏠 Lifestyle'**
+  String get createTaskNewCatLifestyle;
+
+  /// No description provided for @createTaskNewCatTutoring.
+  ///
+  /// In en, this message translates to:
+  /// **'📚 Tutoring'**
+  String get createTaskNewCatTutoring;
+
+  /// No description provided for @errorAiOptimizeFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'AI optimization failed, please try again later'**
+  String get errorAiOptimizeFailed;
 }
 
 class _AppLocalizationsDelegate

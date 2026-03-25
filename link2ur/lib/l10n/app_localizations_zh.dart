@@ -10628,6 +10628,121 @@ class AppLocalizationsZh extends AppLocalizations {
   String serviceReviewFrom(String title) {
     return '来自 $title';
   }
+
+  @override
+  String get createTaskPricingFixed => '固定价';
+
+  @override
+  String get createTaskPricingHourly => '时薪';
+
+  @override
+  String get createTaskPricingNegotiable => '协商定价';
+
+  @override
+  String get createTaskModeLabel => '任务方式';
+
+  @override
+  String get createTaskModeOnline => '线上/远程';
+
+  @override
+  String get createTaskModeOffline => '线下见面';
+
+  @override
+  String get createTaskModeBoth => '都可以';
+
+  @override
+  String get createTaskDeadline24h => '24小时内';
+
+  @override
+  String get createTaskDeadline3d => '3天内';
+
+  @override
+  String get createTaskDeadline1w => '1周内';
+
+  @override
+  String get createTaskDeadline2w => '2周内';
+
+  @override
+  String get createTaskDeadlineNoRush => '不急';
+
+  @override
+  String get createTaskDeadlineCustom => '自定义';
+
+  @override
+  String get createTaskRequiredSkills => '需要的技能';
+
+  @override
+  String get createTaskAddCustomSkill => '+ 自定义';
+
+  @override
+  String get createTaskAiOptimize => 'AI 智能优化';
+
+  @override
+  String get createTaskAiOptimizeDesc => '让 AI 帮你优化任务描述，提升匹配率';
+
+  @override
+  String get createTaskAiOptimizeBtn => '优化';
+
+  @override
+  String get createTaskAiTipPrefix => 'AI 建议：';
+
+  @override
+  String get createTaskAiTipContent =>
+      '补充以下信息可以获得更精准的报价：1. 目标用户群体 2. 竞品参考链接 3. 品牌色/风格偏好';
+
+  @override
+  String get createTaskSaveDraft => '存为草稿';
+
+  @override
+  String get createTaskPreview => '预览效果';
+
+  @override
+  String get createTaskDraftSaved => '草稿已保存';
+
+  @override
+  String get createTaskDraftLoaded => '已恢复草稿';
+
+  @override
+  String get createTaskDraftRestore => '恢复';
+
+  @override
+  String get createTaskPublishBtn => '发布任务';
+
+  @override
+  String get createTaskTitleHintNew => '简洁描述你需要的帮助';
+
+  @override
+  String get createTaskDescHintNew => '详细描述你的需求，帮助达人更好理解...';
+
+  @override
+  String get createTaskRefImages => '参考图片';
+
+  @override
+  String get createTaskRefImagesHint => '最多 9 张，展示参考案例或需求说明';
+
+  @override
+  String get createTaskNewCatDesign => '🎨 设计';
+
+  @override
+  String get createTaskNewCatProgramming => '💻 编程';
+
+  @override
+  String get createTaskNewCatPhotography => '📷 摄影';
+
+  @override
+  String get createTaskNewCatCopywriting => '📝 文案';
+
+  @override
+  String get createTaskNewCatMusic => '🎵 音乐';
+
+  @override
+  String get createTaskNewCatLifestyle => '🏠 生活';
+
+  @override
+  String get createTaskNewCatTutoring => '📚 辅导';
+
+  @override
+  String get errorAiOptimizeFailed => 'AI 优化失败，请稍后重试';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -21210,4 +21325,119 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String serviceReviewFrom(String title) {
     return '來自 $title';
   }
+
+  @override
+  String get createTaskPricingFixed => '固定價';
+
+  @override
+  String get createTaskPricingHourly => '時薪';
+
+  @override
+  String get createTaskPricingNegotiable => '協商定價';
+
+  @override
+  String get createTaskModeLabel => '任務方式';
+
+  @override
+  String get createTaskModeOnline => '線上/遠程';
+
+  @override
+  String get createTaskModeOffline => '線下見面';
+
+  @override
+  String get createTaskModeBoth => '都可以';
+
+  @override
+  String get createTaskDeadline24h => '24小時內';
+
+  @override
+  String get createTaskDeadline3d => '3天內';
+
+  @override
+  String get createTaskDeadline1w => '1週內';
+
+  @override
+  String get createTaskDeadline2w => '2週內';
+
+  @override
+  String get createTaskDeadlineNoRush => '不急';
+
+  @override
+  String get createTaskDeadlineCustom => '自訂';
+
+  @override
+  String get createTaskRequiredSkills => '需要的技能';
+
+  @override
+  String get createTaskAddCustomSkill => '+ 自訂';
+
+  @override
+  String get createTaskAiOptimize => 'AI 智慧優化';
+
+  @override
+  String get createTaskAiOptimizeDesc => '讓 AI 幫你優化任務描述，提升配對率';
+
+  @override
+  String get createTaskAiOptimizeBtn => '優化';
+
+  @override
+  String get createTaskAiTipPrefix => 'AI 建議：';
+
+  @override
+  String get createTaskAiTipContent =>
+      '補充以下資訊可以獲得更精準的報價：1. 目標用戶群體 2. 競品參考連結 3. 品牌色/風格偏好';
+
+  @override
+  String get createTaskSaveDraft => '存為草稿';
+
+  @override
+  String get createTaskPreview => '預覽效果';
+
+  @override
+  String get createTaskDraftSaved => '草稿已儲存';
+
+  @override
+  String get createTaskDraftLoaded => '已恢復草稿';
+
+  @override
+  String get createTaskDraftRestore => '恢復';
+
+  @override
+  String get createTaskPublishBtn => '發布任務';
+
+  @override
+  String get createTaskTitleHintNew => '簡潔描述你需要的幫助';
+
+  @override
+  String get createTaskDescHintNew => '詳細描述你的需求，幫助達人更好理解...';
+
+  @override
+  String get createTaskRefImages => '參考圖片';
+
+  @override
+  String get createTaskRefImagesHint => '最多 9 張，展示參考案例或需求說明';
+
+  @override
+  String get createTaskNewCatDesign => '🎨 設計';
+
+  @override
+  String get createTaskNewCatProgramming => '💻 編程';
+
+  @override
+  String get createTaskNewCatPhotography => '📷 攝影';
+
+  @override
+  String get createTaskNewCatCopywriting => '📝 文案';
+
+  @override
+  String get createTaskNewCatMusic => '🎵 音樂';
+
+  @override
+  String get createTaskNewCatLifestyle => '🏠 生活';
+
+  @override
+  String get createTaskNewCatTutoring => '📚 輔導';
+
+  @override
+  String get errorAiOptimizeFailed => 'AI 優化失敗，請稍後重試';
 }
