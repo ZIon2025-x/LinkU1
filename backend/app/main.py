@@ -510,6 +510,9 @@ app.include_router(admin_incentive_router, tags=["管理员-激励系统"])
 from app.image_proxy_routes import router as image_proxy_router
 app.include_router(image_proxy_router, prefix="/api", tags=["图片代理"])
 
+from app.routes.questions import router as questions_router
+app.include_router(questions_router)
+
 # 创建上传目录
 import os
 RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
