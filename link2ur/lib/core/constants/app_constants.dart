@@ -82,9 +82,19 @@ class AppConstants {
     'other',         // 其他
   ];
 
-  /// 货币（统一英镑）
+  /// 支持的货币
+  static const List<String> supportedCurrencies = ['GBP', 'EUR'];
   static const String defaultCurrency = 'GBP';
-  static const String currencySymbol = '£';
+  static const String currencySymbol = '£'; // 保留向后兼容
+
+  /// 根据货币代码返回符号
+  static String currencySymbolFor(String currency) {
+    switch (currency.toUpperCase()) {
+      case 'EUR': return '€';
+      case 'GBP': return '£';
+      default: return '£';
+    }
+  }
 
   /// 分页
   static const int defaultPageSize = 20;

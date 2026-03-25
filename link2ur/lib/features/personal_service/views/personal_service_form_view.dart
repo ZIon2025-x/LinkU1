@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../core/constants/api_endpoints.dart';
 import '../../../core/constants/expert_constants.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/utils/service_category_helper.dart';
 import '../../../core/widgets/cross_platform_image.dart';
 import '../../../core/widgets/location_picker.dart';
@@ -489,7 +490,7 @@ class _FormContentState extends State<_FormContent> {
                       ),
                     ],
                     decoration: InputDecoration(
-                      prefixText: '\u00A3 ', // £ symbol
+                      prefixText: '${Helpers.currencySymbol} ',
                       hintText: '0.00',
                       suffixText:
                           _pricingType == 'hourly' ? context.l10n.personalServicePerHour : null,

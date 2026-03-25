@@ -2,6 +2,7 @@ import 'dart:ui' show Locale;
 
 import 'package:equatable/equatable.dart';
 
+import '../../core/utils/helpers.dart';
 import '../../core/utils/json_utils.dart';
 import '../../core/utils/localized_string.dart';
 import '../../l10n/app_localizations.dart';
@@ -385,7 +386,7 @@ class TaskExpertService extends Equatable {
   bool get isPersonalService => serviceType == 'personal';
 
   /// 价格显示
-  String get priceDisplay => '£${basePrice.toStringAsFixed(2)}';
+  String get priceDisplay => '${Helpers.currencySymbolFor(currency)}${basePrice.toStringAsFixed(2)}';
 
   /// 第一张图片
   String? get firstImage =>

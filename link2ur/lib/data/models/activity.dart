@@ -2,6 +2,7 @@ import 'dart:ui' show Locale;
 
 import 'package:equatable/equatable.dart';
 
+import '../../core/utils/helpers.dart';
 import '../../core/utils/json_utils.dart';
 import '../../core/utils/localized_string.dart';
 
@@ -192,11 +193,12 @@ class Activity extends Equatable {
 
   /// 显示价格
   String get priceDisplay {
+    final sym = Helpers.currencySymbolFor(currency);
     if (discountedPricePerParticipant != null) {
-      return '£${discountedPricePerParticipant!.toStringAsFixed(2)}';
+      return '$sym${discountedPricePerParticipant!.toStringAsFixed(2)}';
     }
     if (originalPricePerParticipant != null) {
-      return '£${originalPricePerParticipant!.toStringAsFixed(2)}';
+      return '$sym${originalPricePerParticipant!.toStringAsFixed(2)}';
     }
     return '免费';
   }

@@ -1339,9 +1339,9 @@ class _PriceView extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '£',
-              style: TextStyle(
+            Text(
+              Helpers.currencySymbolFor(activity.currency),
+              style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
                 color: AppColors.primary,

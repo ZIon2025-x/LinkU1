@@ -1235,7 +1235,7 @@ class _DiscoveryTaskCard extends StatelessWidget {
                           _buildTag(
                             item.rewardToBeQuoted == true
                                 ? context.l10n.taskRewardToBeQuoted
-                                : '£${item.price!.toStringAsFixed(0)}',
+                                : '${Helpers.currencySymbolFor(item.currency ?? 'GBP')}${item.price!.toStringAsFixed(0)}',
                             isDark
                                 ? Colors.white.withValues(alpha: 0.12)
                                 : const Color(0xFFFFF0F0),

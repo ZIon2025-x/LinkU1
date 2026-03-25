@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_spacing.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
 
 /// AI 生成的任务草稿卡片 — 用户点击确认后跳转到发布页预填
@@ -27,7 +28,7 @@ class TaskDraftCard extends StatelessWidget {
     final reward = draft['reward'];
     final currency = draft['currency'] as String? ?? 'GBP';
     final location = draft['location'] as String? ?? '';
-    final currencySymbol = currency == 'GBP' ? '£' : currency;
+    final currencySymbol = Helpers.currencySymbolFor(currency);
 
     return Padding(
       padding: const EdgeInsets.symmetric(

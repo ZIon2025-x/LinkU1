@@ -1,7 +1,7 @@
 part of 'home_view.dart';
 
-/// Currency symbol (unified to £)
-String _currencySymbol(String? currency) => '£';
+/// Currency symbol — delegates to Helpers for multi-currency support
+String _currencySymbol(String? currency) => Helpers.currencySymbolFor(currency ?? 'GBP');
 
 
 // =============================================================================

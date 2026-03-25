@@ -1011,9 +1011,9 @@ class _TaskCard extends StatelessWidget {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Text(
-                                '£',
-                                style: TextStyle(
+                              Text(
+                                Helpers.currencySymbolFor(task.currency),
+                                style: const TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.white,

@@ -875,7 +875,7 @@ class _FollowFeedCard extends StatelessWidget {
                 if (item.feedType == 'product' && item.price != null) ...[
                   const SizedBox(height: 8),
                   Text(
-                    '£${item.price!.toStringAsFixed(item.price! == item.price!.roundToDouble() ? 0 : 2)}',
+                    '${Helpers.currencySymbolFor(item.currency ?? 'GBP')}${item.price!.toStringAsFixed(item.price! == item.price!.roundToDouble() ? 0 : 2)}',
                     style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFFEE5A24)),
                   ),
                 ],
@@ -947,7 +947,7 @@ class _FollowFeedCard extends StatelessWidget {
         if (reward != null && reward > 0)
           _InfoChip(
             icon: Icons.paid_outlined,
-            label: '£${reward.toStringAsFixed(0)}',
+            label: '${Helpers.currencySymbolFor(item.currency ?? 'GBP')}${reward.toStringAsFixed(0)}',
             isDark: isDark,
             highlight: true,
           )
@@ -981,7 +981,7 @@ class _FollowFeedCard extends StatelessWidget {
         if (price != null && price > 0)
           _InfoChip(
             icon: Icons.paid_outlined,
-            label: '£${price.toStringAsFixed(0)}',
+            label: '${Helpers.currencySymbolFor(item.currency ?? 'GBP')}${price.toStringAsFixed(0)}',
             isDark: isDark,
             highlight: true,
           ),
@@ -1007,7 +1007,7 @@ class _FollowFeedCard extends StatelessWidget {
         if (price != null && price > 0)
           _InfoChip(
             icon: Icons.paid_outlined,
-            label: '£${price.toStringAsFixed(0)}',
+            label: '${Helpers.currencySymbolFor(item.activityInfo?.currency ?? item.currency ?? 'GBP')}${price.toStringAsFixed(0)}',
             isDark: isDark,
             highlight: true,
           )

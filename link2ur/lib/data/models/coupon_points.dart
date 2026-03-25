@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/utils/helpers.dart';
 
 /// 积分账户模型
 /// 参考后端 PointsAccountOut
@@ -207,7 +208,7 @@ class Coupon extends Equatable {
           ? '${pct.round()}%'
           : '${pct.toStringAsFixed(1)}%';
     } else {
-      return '£${(discountValue / 100).toStringAsFixed(2)}';
+      return '${Helpers.currencySymbolFor(currency)}${(discountValue / 100).toStringAsFixed(2)}';
     }
   }
 

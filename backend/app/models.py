@@ -1817,7 +1817,6 @@ class FleaMarketItem(Base):
         Index("idx_flea_market_items_refreshed_at", refreshed_at),  # 用于自动删除查询
         Index("idx_flea_market_items_view_count", view_count),  # 用于按浏览量排序
         CheckConstraint("price >= 0", name="check_price_positive"),
-        CheckConstraint("currency = 'GBP'", name="check_currency_gbp"),
         CheckConstraint("status IN ('active', 'sold', 'deleted')", name="check_status_valid"),
     )
 

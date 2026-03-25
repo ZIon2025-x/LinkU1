@@ -703,7 +703,7 @@ class _ApplicationCard extends StatelessWidget {
                     size: 16, color: AppColors.primary),
                 const SizedBox(width: 4),
                 Text(
-                  '£${application.proposedPrice!.toStringAsFixed(2)}',
+                  '${Helpers.currencySymbolFor(application.currency ?? 'GBP')}${application.proposedPrice!.toStringAsFixed(2)}',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,

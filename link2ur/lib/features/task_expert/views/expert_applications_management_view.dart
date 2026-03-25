@@ -311,7 +311,7 @@ class _ApplicationCard extends StatelessWidget {
                           ),
                     ),
                     Text(
-                      '£${_formatPrice(negotiatedPrice)}',
+                      '${Helpers.currencySymbolFor(application['currency'] as String? ?? 'GBP')}${_formatPrice(negotiatedPrice)}',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             fontWeight: FontWeight.w600,
                             color: AppColors.primary,
@@ -330,7 +330,7 @@ class _ApplicationCard extends StatelessWidget {
                           ),
                     ),
                     Text(
-                      '£${_formatPrice(expertCounterPrice)}',
+                      '${Helpers.currencySymbolFor(application['currency'] as String? ?? 'GBP')}${_formatPrice(expertCounterPrice)}',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             fontWeight: FontWeight.w600,
                             color: AppColors.accent,
@@ -519,9 +519,9 @@ class _ApplicationCard extends StatelessWidget {
                 ? CupertinoTextField(
                     controller: priceController,
                     placeholder: l10n.expertApplicationCounterPriceHint,
-                    prefix: const Padding(
-                      padding: EdgeInsets.only(left: 8),
-                      child: Text('£ '),
+                    prefix: Padding(
+                      padding: const EdgeInsets.only(left: 8),
+                      child: Text('${Helpers.currencySymbolFor(application['currency'] as String? ?? 'GBP')} '),
                     ),
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
@@ -531,7 +531,7 @@ class _ApplicationCard extends StatelessWidget {
                     decoration: InputDecoration(
                       labelText: l10n.expertApplicationCounterPrice,
                       hintText: l10n.expertApplicationCounterPriceHint,
-                      prefixText: '£ ',
+                      prefixText: '${Helpers.currencySymbolFor(application['currency'] as String? ?? 'GBP')} ',
                       border: const OutlineInputBorder(),
                     ),
                     keyboardType:

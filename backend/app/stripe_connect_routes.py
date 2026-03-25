@@ -2222,30 +2222,52 @@ def create_onboarding_session(
         )
     
     try:
-        account = stripe.Account.retrieve(current_user.stripe_account_id)
-        
-        # 如果账户已完成 onboarding，返回成功
-        if account.details_submitted and account.charges_enabled:
-            return {
-                "account_id": account.id,
-                "client_secret": None,
-                "account_status": account.details_submitted,
-                "charges_enabled": account.charges_enabled,
-                "message": "账户已完成设置"
-            }
-        
-        # 创建新的 AccountSession（每次调用都新建，避免前端复用导致 "already been claimed"）
+        # 兼容 V1 和 V2 账户：先尝试 V2，回退 V1
+        account_id = current_user.stripe_account_id
+        details_submitted = False
+        charges_enabled = False
+        try:
+            details_submitted, charges_enabled = _retrieve_existing_connect_account_for_reuse(account_id)
+        except Exception as e:
+            logger.warning(f"Failed to retrieve account via V2/V1: {e}")
+
+        # 如果账户已完成 onboarding，创建 account_management session（用于编辑信息）
+        if details_submitted and charges_enabled:
+            try:
+                mgmt_session = create_account_session_safe(
+                    account_id,
+                    enable_account_management=True,
+                    enable_account_onboarding=True,
+                )
+                return {
+                    "account_id": account_id,
+                    "client_secret": mgmt_session.client_secret,
+                    "account_status": True,
+                    "charges_enabled": True,
+                    "message": "账户已完成设置"
+                }
+            except stripe.error.StripeError as mgmt_err:
+                logger.warning(f"Failed to create management session, falling back: {mgmt_err}")
+                return {
+                    "account_id": account_id,
+                    "client_secret": None,
+                    "account_status": True,
+                    "charges_enabled": True,
+                    "message": "账户已完成设置"
+                }
+
+        # 账户未完成 onboarding → 创建 onboarding session
         onboarding_session = create_account_session_safe(
-            account.id, enable_account_onboarding=True
+            account_id, enable_account_onboarding=True
         )
         return {
-            "account_id": account.id,
+            "account_id": account_id,
             "client_secret": onboarding_session.client_secret,
-            "account_status": account.details_submitted,
-            "charges_enabled": account.charges_enabled,
+            "account_status": details_submitted,
+            "charges_enabled": charges_enabled,
             "message": "请完成账户设置"
         }
-        
+
     except stripe.error.StripeError as e:
         logger.error(f"Stripe error creating onboarding session: {e}")
         raise HTTPException(

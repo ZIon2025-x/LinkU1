@@ -5,6 +5,7 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/adaptive_dialogs.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../core/widgets/buttons.dart';
@@ -890,7 +891,7 @@ void _showCouponDetail(BuildContext context, UserCoupon userCoupon) {
               _CouponDetailRow(
                 label: l10n.couponDetailMinAmount,
                 value: coupon.minAmount > 0
-                    ? '£${(coupon.minAmount / 100).toStringAsFixed(2)}'
+                    ? '${Helpers.currencySymbolFor(coupon.currency)}${(coupon.minAmount / 100).toStringAsFixed(2)}'
                     : l10n.couponDetailNoThreshold,
                 isDark: isDark,
               ),

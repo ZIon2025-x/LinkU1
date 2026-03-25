@@ -417,9 +417,9 @@ class _PriceAndTitleCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
-              const Text(
-                '£',
-                style: TextStyle(
+              Text(
+                Helpers.currencySymbolFor(service.currency),
+                style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFFE84D3D),
@@ -1626,7 +1626,7 @@ class _ApplyServiceSheetState extends State<_ApplyServiceSheet> {
                         keyboardType: const TextInputType.numberWithOptions(
                             decimal: true),
                         decoration: InputDecoration(
-                          prefixText: '£ ',
+                          prefixText: '${Helpers.currencySymbolFor(widget.service.currency)} ',
                           hintText: Helpers.formatAmountNumber(
                               widget.service.basePrice),
                           border: OutlineInputBorder(

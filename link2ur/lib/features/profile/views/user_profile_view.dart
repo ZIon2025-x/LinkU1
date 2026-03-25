@@ -659,7 +659,7 @@ class UserProfileView extends StatelessWidget {
                                     decimal: true),
                             decoration: InputDecoration(
                               labelText: l10n.profileDirectRequestHintPrice,
-                              prefixText: rewardToBeQuoted ? null : '£ ',
+                              prefixText: rewardToBeQuoted ? null : '${Helpers.currencySymbol} ',
                               hintText: rewardToBeQuoted ? l10n.taskRewardToBeQuoted : null,
                               border: OutlineInputBorder(
                                 borderRadius:
@@ -1165,7 +1165,7 @@ class UserProfileView extends StatelessWidget {
             ),
             if (reward > 0)
               Text(
-                '£${(reward / 100).toStringAsFixed(2)}',
+                '${Helpers.currencySymbolFor(task['currency'] as String? ?? 'GBP')}${(reward / 100).toStringAsFixed(2)}',
                 style: AppTypography.body.copyWith(
                   color: AppColors.primary,
                   fontWeight: FontWeight.w600,

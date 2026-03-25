@@ -614,7 +614,7 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
     final l10n = context.l10n;
     final amountDisplay = _effectiveAmountDisplay ?? widget.paymentData.amountDisplay;
     final amountText = amountDisplay != null && amountDisplay.isNotEmpty
-        ? '${Helpers.currencySymbolFor(widget.paymentData.currency ?? 'GBP')}$amountDisplay'
+        ? '${Helpers.currencySymbolFor(widget.paymentData.currency)}$amountDisplay'
         : '';
     const showCouponSection = true; // taskId is always non-null (int)
     final showCountdown = widget.paymentData.paymentExpiresAt != null &&

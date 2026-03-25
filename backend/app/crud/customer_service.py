@@ -507,7 +507,7 @@ def calculate_estimated_wait_time(queue_position: int, db: Session) -> int:
         .filter(
             CustomerServiceChat.is_ended == 1,
             CustomerServiceChat.ended_at.isnot(None),
-            CustomerServiceChat.assigned_at.isnot(None),
+            CustomerServiceChat.created_at.isnot(None),
         )
         .order_by(CustomerServiceChat.ended_at.desc())
         .limit(100)
@@ -521,8 +521,8 @@ def calculate_estimated_wait_time(queue_position: int, db: Session) -> int:
     count = 0
 
     for chat in recent_chats:
-        if chat.assigned_at and chat.ended_at:
-            assigned_utc = to_utc(chat.assigned_at)
+        if chat.created_at and chat.ended_at:
+            assigned_utc = to_utc(chat.created_at)
             ended_utc = to_utc(chat.ended_at)
             duration = (ended_utc - assigned_utc).total_seconds() / 60
             total_duration += duration

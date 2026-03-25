@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/utils/helpers.dart';
 
 /// 跳蚤市场商品模型
 /// 参考后端 FleaMarketItemResponse
@@ -104,7 +105,7 @@ class FleaMarketItem extends Equatable {
   bool get isFree => price == 0;
 
   /// 价格显示（不含免费文案，免费时由 View 层用 l10n 显示）
-  String get priceDisplay => '£${price.toStringAsFixed(2)}';
+  String get priceDisplay => '${Helpers.currencySymbolFor(currency)}${price.toStringAsFixed(2)}';
 
   /// 是否有待支付
   bool get hasPendingPayment => pendingPaymentClientSecret != null;

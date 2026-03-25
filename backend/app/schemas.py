@@ -6,6 +6,9 @@ from pydantic import BaseModel, Field, validator, field_validator, model_validat
 from pydantic import condecimal, conlist
 
 
+SUPPORTED_CURRENCIES = ("GBP", "EUR")
+
+
 class UserBrief(BaseModel):
     """用户简要信息（嵌套在任务等对象中返回）"""
     id: str
@@ -375,6 +378,13 @@ class TaskCreate(TaskBase):
     pricing_type: Optional[str] = "fixed"       # fixed / hourly / negotiable
     task_mode: Optional[str] = "online"          # online / offline / both
     required_skills: Optional[List[str]] = []    # 技能标签列表
+
+    @field_validator("currency")
+    @classmethod
+    def validate_currency(cls, v):
+        if v and v not in SUPPORTED_CURRENCIES:
+            raise ValueError(f"currency must be one of {SUPPORTED_CURRENCIES}")
+        return v or "GBP"
 
     @validator('pricing_type')
     def validate_pricing_type(cls, v):
@@ -2266,7 +2276,7 @@ class TaskExpertServiceCreate(BaseModel):
     category: Optional[str] = None
     images: Optional[List[str]] = None
     base_price: condecimal(gt=0, max_digits=12, decimal_places=2)  # 使用condecimal与DB的DECIMAL一致
-    currency: Literal["GBP"] = "GBP"  # 统一为Literal类型
+    currency: Literal["GBP", "EUR"] = "GBP"  # 统一为Literal类型
     display_order: int = 0
     # 时间段相关字段
     has_time_slots: bool = False
@@ -2285,7 +2295,7 @@ class TaskExpertServiceUpdate(BaseModel):
     category: Optional[str] = None
     images: Optional[List[str]] = None
     base_price: Optional[condecimal(gt=0, max_digits=12, decimal_places=2)] = None  # 使用condecimal与DB的DECIMAL一致，避免精度丢失
-    currency: Optional[Literal["GBP"]] = None  # 统一为Literal类型
+    currency: Optional[Literal["GBP", "EUR"]] = None  # 统一为Literal类型
     status: Optional[str] = None
     display_order: Optional[int] = None
     # 时间段相关字段
@@ -2372,7 +2382,7 @@ class TaskExpertServiceOut(BaseModel):
     description: str
     images: Optional[List[str]]
     base_price: float
-    currency: Literal["GBP"]  # 统一为Literal类型
+    currency: Literal["GBP", "EUR"]  # 统一为Literal类型
     status: str
     display_order: int
     view_count: int
@@ -2622,7 +2632,7 @@ class ServiceApplicationOut(BaseModel):
     application_message: Optional[str]
     negotiated_price: Optional[float]  # 输出时保持float，输入时使用condecimal
     expert_counter_price: Optional[float]
-    currency: Literal["GBP"]  # 统一为Literal类型
+    currency: Literal["GBP", "EUR"]  # 统一为Literal类型
     status: str
     final_price: Optional[float]
     task_id: Optional[int]
@@ -2650,7 +2660,7 @@ class ServiceApplicationCreate(BaseModel):
     # 注意：service_id 从路径参数获取，不需要在请求体中
     application_message: Optional[str] = None
     negotiated_price: Optional[condecimal(gt=0, max_digits=12, decimal_places=2)] = None  # 修复：添加校验，必须大于0
-    currency: Literal["GBP"] = "GBP"
+    currency: Literal["GBP", "EUR"] = "GBP"
     deadline: Optional[datetime.datetime] = None  # 任务截至日期（如果is_flexible为False）
     is_flexible: Optional[int] = 0  # 是否灵活（1=灵活，无截至日期；0=有截至日期）
     time_slot_id: Optional[int] = None  # 选择的时间段ID（如果服务启用了时间段）
@@ -2698,7 +2708,7 @@ class FleaMarketItemBase(BaseModel):
 
 class FleaMarketItemCreate(FleaMarketItemBase):
     """创建商品请求"""
-    pass
+    currency: Literal["GBP", "EUR"] = "GBP"
 
 
 class FleaMarketItemUpdate(BaseModel):
@@ -2721,7 +2731,7 @@ class FleaMarketItemResponse(BaseModel):
     title: str
     description: str
     price: Decimal
-    currency: Literal["GBP"] = "GBP"
+    currency: Literal["GBP", "EUR"] = "GBP"
     images: List[str]
     location: Optional[str]
     latitude: Optional[float] = None  # 纬度（用于地图选点和距离计算）

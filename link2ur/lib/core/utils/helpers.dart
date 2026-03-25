@@ -11,9 +11,18 @@ class Helpers {
   /// 货币符号（统一英镑）
   static const String currencySymbol = '£';
 
-  /// 格式化价格（统一英镑）：整数不显示小数，否则保留两位
+  /// 根据货币代码返回符号
+  static String currencySymbolFor(String currency) {
+    switch (currency.toUpperCase()) {
+      case 'EUR': return '€';
+      case 'GBP': return '£';
+      default: return '£';
+    }
+  }
+
+  /// 格式化价格：支持多币种
   static String formatPrice(double price, {String currency = 'GBP'}) {
-    return '$currencySymbol${formatAmountNumber(price)}';
+    return '${currencySymbolFor(currency)}${formatAmountNumber(price)}';
   }
 
   /// 仅格式化金额数字部分：整数返回无小数（如 "12"），否则两位小数（如 "12.34"）

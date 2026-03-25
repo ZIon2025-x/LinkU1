@@ -7,7 +7,6 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
-import '../../../core/router/app_routes.dart';
 import '../../../core/utils/adaptive_dialogs.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/widgets/app_select_sheet.dart';

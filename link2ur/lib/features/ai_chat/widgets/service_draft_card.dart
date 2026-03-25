@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_spacing.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
 
 /// AI 生成的服务草稿卡片 — 用户点击确认后跳转到发布页预填
@@ -29,7 +30,7 @@ class ServiceDraftCard extends StatelessWidget {
     final currency = draft['currency'] as String? ?? 'GBP';
     final locationType = draft['location_type'] as String? ?? '';
     final location = draft['location'] as String? ?? '';
-    final currencySymbol = currency == 'GBP' ? '\u00a3' : currency;
+    final currencySymbol = Helpers.currencySymbolFor(currency);
 
     String pricingDisplay = '';
     if (pricingType == 'negotiable') {

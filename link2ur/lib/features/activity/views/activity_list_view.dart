@@ -542,9 +542,9 @@ class ActivityCardView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.baseline,
       textBaseline: TextBaseline.alphabetic,
       children: [
-        const Text(
-          '£',
-          style: TextStyle(
+        Text(
+          Helpers.currencySymbolFor(activity.currency),
+          style: const TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.bold,
             color: AppColors.primary,

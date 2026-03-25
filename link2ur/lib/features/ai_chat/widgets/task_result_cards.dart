@@ -4,6 +4,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/router/go_router_extensions.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
 
 /// AI 工具结果的水平滚动卡片列表（支持任务、服务、达人、跳蚤商品、帖子等）
@@ -165,13 +166,13 @@ class _ResultCard extends StatelessWidget {
         final reward = data['reward'];
         if (reward == null) return null;
         final currency = data['currency'] as String? ?? 'GBP';
-        final symbol = currency == 'GBP' ? '£' : currency;
+        final symbol = Helpers.currencySymbolFor(currency);
         return '$symbol${reward is num ? reward.toStringAsFixed(2) : reward}';
       case _CardType.service:
         final price = data['base_price'];
         if (price == null) return null;
         final currency = data['currency'] as String? ?? 'GBP';
-        final symbol = currency == 'GBP' ? '£' : currency;
+        final symbol = Helpers.currencySymbolFor(currency);
         return '$symbol${price is num ? price.toStringAsFixed(2) : price}';
       case _CardType.expert:
         final rating = data['rating'];
@@ -181,7 +182,7 @@ class _ResultCard extends StatelessWidget {
         final price = data['price'] ?? data['base_price'];
         if (price == null) return null;
         final currency = data['currency'] as String? ?? 'GBP';
-        final symbol = currency == 'GBP' ? '£' : currency;
+        final symbol = Helpers.currencySymbolFor(currency);
         return '$symbol${price is num ? price.toStringAsFixed(2) : price}';
       case _CardType.forumPost:
         return null;
