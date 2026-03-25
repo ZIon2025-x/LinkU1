@@ -7,8 +7,10 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/utils/debouncer.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/haptic_feedback.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/utils/sheet_adaptation.dart';
 import '../../../core/widgets/animated_list_item.dart';
@@ -269,21 +271,62 @@ class _FleaMarketViewContentState extends State<_FleaMarketViewContent> {
           },
         ),
       ),
-      body: BlocBuilder<FleaMarketBloc, FleaMarketState>(
-        buildWhen: (prev, curr) =>
-            prev.items != curr.items ||
-            prev.status != curr.status ||
-            prev.hasMore != curr.hasMore ||
-            prev.isEmpty != curr.isEmpty,
-        builder: (context, state) {
-          final content = AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            switchInCurve: Curves.easeOut,
-            switchOutCurve: Curves.easeIn,
-            child: _buildFleaMarketContent(context, state),
-          );
-          return isDesktop ? ContentConstraint(child: content) : content;
-        },
+      body: Column(
+        children: [
+          // 列表类型筛选: 全部 | 出售 | 出租
+          BlocBuilder<FleaMarketBloc, FleaMarketState>(
+            buildWhen: (p, c) => p.listingTypeFilter != c.listingTypeFilter,
+            builder: (context, state) {
+              return Padding(
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+                child: Row(
+                  children: [
+                    for (final type in ['all', 'sale', 'rental'])
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: Text(
+                            type == 'all'
+                                ? context.l10n.fleaMarketCategoryAll
+                                : type == 'sale'
+                                    ? context.l10n.fleaMarketListingTypeSale
+                                    : context.l10n.fleaMarketListingTypeRental,
+                          ),
+                          selected: state.listingTypeFilter == type,
+                          onSelected: (selected) {
+                            if (selected) {
+                              context.read<FleaMarketBloc>().add(
+                                FleaMarketListingTypeFilterChanged(type),
+                              );
+                            }
+                          },
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            },
+          ),
+          // 主内容区
+          Expanded(
+            child: BlocBuilder<FleaMarketBloc, FleaMarketState>(
+              buildWhen: (prev, curr) =>
+                  prev.items != curr.items ||
+                  prev.status != curr.status ||
+                  prev.hasMore != curr.hasMore ||
+                  prev.isEmpty != curr.isEmpty,
+              builder: (context, state) {
+                final content = AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  switchInCurve: Curves.easeOut,
+                  switchOutCurve: Curves.easeIn,
+                  child: _buildFleaMarketContent(context, state),
+                );
+                return isDesktop ? ContentConstraint(child: content) : content;
+              },
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
@@ -506,6 +549,28 @@ class _FleaMarketItemCard extends StatelessWidget {
                             ),
                           ),
                         ),
+                      // 右上: 出租标签（仅在 active 状态下显示）
+                      if (item.isRental && item.isActive)
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.orange,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              context.l10n.fleaMarketRentBadge,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
                       // 左下: VIP/Super卖家标签
                       if (item.sellerUserLevel == 'vip' ||
                           item.sellerUserLevel == 'super')
@@ -596,13 +661,15 @@ class _FleaMarketItemCard extends StatelessWidget {
                       // 价格
                       Expanded(
                         child: Text(
-                          item.isFree
-                              ? context.l10n.commonFree
-                              : item.priceDisplay,
+                          item.isRental
+                              ? _rentalPriceDisplay(item, context.l10n)
+                              : (item.isFree
+                                  ? context.l10n.commonFree
+                                  : item.priceDisplay),
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
-                            color: item.isFree
+                            color: item.isFree && !item.isRental
                                 ? AppColors.success
                                 : AppColors.priceRed,
                           ),
@@ -643,4 +710,17 @@ class _FleaMarketItemCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 租赁价格显示: 如 "£5.00/天"
+String _rentalPriceDisplay(FleaMarketItem item, AppLocalizations l10n) {
+  final symbol = Helpers.currencySymbolFor(item.currency);
+  final price = (item.rentalPrice ?? 0).toStringAsFixed(2);
+  final unit = switch (item.rentalUnit) {
+    'day' => l10n.fleaMarketPerDay,
+    'week' => l10n.fleaMarketPerWeek,
+    'month' => l10n.fleaMarketPerMonth,
+    _ => l10n.fleaMarketPerDay,
+  };
+  return '$symbol$price$unit';
 }
