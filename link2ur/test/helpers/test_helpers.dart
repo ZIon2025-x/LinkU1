@@ -14,6 +14,7 @@ import 'package:link2ur/data/repositories/student_verification_repository.dart';
 import 'package:link2ur/data/repositories/task_expert_repository.dart';
 import 'package:link2ur/data/repositories/common_repository.dart';
 import 'package:link2ur/data/repositories/discovery_repository.dart';
+import 'package:link2ur/data/repositories/question_repository.dart';
 import 'package:link2ur/data/services/api_service.dart';
 import 'package:link2ur/data/services/storage_service.dart';
 import 'package:link2ur/data/models/user.dart';
@@ -57,6 +58,8 @@ class MockTaskExpertRepository extends Mock implements TaskExpertRepository {}
 class MockCommonRepository extends Mock implements CommonRepository {}
 
 class MockDiscoveryRepository extends Mock implements DiscoveryRepository {}
+
+class MockQuestionRepository extends Mock implements QuestionRepository {}
 
 // Test data helpers
 

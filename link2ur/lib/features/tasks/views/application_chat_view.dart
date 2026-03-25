@@ -10,6 +10,7 @@ import '../../../data/models/message.dart';
 import '../../../data/models/task_application.dart';
 import '../../../data/repositories/message_repository.dart';
 import '../../../data/repositories/notification_repository.dart';
+import '../../../data/repositories/question_repository.dart';
 import '../../../data/repositories/task_repository.dart';
 import '../../../data/services/api_service.dart';
 import '../../../data/services/storage_service.dart';
@@ -41,6 +42,7 @@ class ApplicationChatView extends StatelessWidget {
       create: (_) => TaskDetailBloc(
         taskRepository: taskRepository,
         notificationRepository: notificationRepository,
+        questionRepository: context.read<QuestionRepository>(),
       )..add(TaskDetailLoadRequested(taskId)),
       child: _ApplicationChatContent(
         taskId: taskId,
