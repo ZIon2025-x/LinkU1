@@ -23,6 +23,8 @@ class AppRoutes {
   static const String fleaMarketDetail = '/flea-market/:id';
   static const String createFleaMarketItem = '/flea-market/create';
   static const String editFleaMarketItem = '/flea-market/:id/edit';
+  static const String fleaMarketRentalDetail = '/flea-market/rental/:id';
+  static const String fleaMarketMyRentals = '/flea-market/my-rentals';
 
   // 任务达人
   static const String taskExperts = '/task-experts';
@@ -152,6 +154,8 @@ const authRequiredRoutes = <String>{
   AppRoutes.expertProfileEdit,
   AppRoutes.applyLeaderboard,
   AppRoutes.submitLeaderboardItem,
+  AppRoutes.fleaMarketRentalDetail,
+  AppRoutes.fleaMarketMyRentals,
   AppRoutes.wallet,
   AppRoutes.payment,
   AppRoutes.stripeConnectOnboarding,
