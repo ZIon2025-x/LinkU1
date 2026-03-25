@@ -17054,6 +17054,114 @@ abstract class AppLocalizations {
   /// **'Searching forum…'**
   String get toolCallLoadingSearchForumPosts;
 
+  /// No description provided for @toolCallGetActivityDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity details'**
+  String get toolCallGetActivityDetail;
+
+  /// No description provided for @toolCallGetExpertDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Expert details'**
+  String get toolCallGetExpertDetail;
+
+  /// No description provided for @toolCallGetForumPostDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Post details'**
+  String get toolCallGetForumPostDetail;
+
+  /// No description provided for @toolCallGetFleaMarketItemDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Item details'**
+  String get toolCallGetFleaMarketItemDetail;
+
+  /// No description provided for @toolCallListMyApplications.
+  ///
+  /// In en, this message translates to:
+  /// **'My applications'**
+  String get toolCallListMyApplications;
+
+  /// No description provided for @toolCallListMyServiceApplications.
+  ///
+  /// In en, this message translates to:
+  /// **'My service applications'**
+  String get toolCallListMyServiceApplications;
+
+  /// No description provided for @toolCallListMyActivities.
+  ///
+  /// In en, this message translates to:
+  /// **'My activities'**
+  String get toolCallListMyActivities;
+
+  /// No description provided for @toolCallListForumCategories.
+  ///
+  /// In en, this message translates to:
+  /// **'Forum categories'**
+  String get toolCallListForumCategories;
+
+  /// No description provided for @toolCallGetTaskReviews.
+  ///
+  /// In en, this message translates to:
+  /// **'Task reviews'**
+  String get toolCallGetTaskReviews;
+
+  /// No description provided for @toolCallLoadingGetActivityDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading activity details…'**
+  String get toolCallLoadingGetActivityDetail;
+
+  /// No description provided for @toolCallLoadingGetExpertDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading expert details…'**
+  String get toolCallLoadingGetExpertDetail;
+
+  /// No description provided for @toolCallLoadingGetForumPostDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading post details…'**
+  String get toolCallLoadingGetForumPostDetail;
+
+  /// No description provided for @toolCallLoadingGetFleaMarketItemDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading item details…'**
+  String get toolCallLoadingGetFleaMarketItemDetail;
+
+  /// No description provided for @toolCallLoadingListMyApplications.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading your applications…'**
+  String get toolCallLoadingListMyApplications;
+
+  /// No description provided for @toolCallLoadingListMyServiceApplications.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading service applications…'**
+  String get toolCallLoadingListMyServiceApplications;
+
+  /// No description provided for @toolCallLoadingListMyActivities.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading your activities…'**
+  String get toolCallLoadingListMyActivities;
+
+  /// No description provided for @toolCallLoadingListForumCategories.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading forum categories…'**
+  String get toolCallLoadingListForumCategories;
+
+  /// No description provided for @toolCallLoadingGetTaskReviews.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading task reviews…'**
+  String get toolCallLoadingGetTaskReviews;
+
   /// No description provided for @toolCallPrepareTaskDraft.
   ///
   /// In en, this message translates to:
@@ -17065,6 +17173,156 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Preparing task draft…'**
   String get toolCallLoadingPrepareTaskDraft;
+
+  /// No description provided for @toolCallSearchServices.
+  ///
+  /// In en, this message translates to:
+  /// **'Search services'**
+  String get toolCallSearchServices;
+
+  /// No description provided for @toolCallLoadingSearchServices.
+  ///
+  /// In en, this message translates to:
+  /// **'Searching services…'**
+  String get toolCallLoadingSearchServices;
+
+  /// No description provided for @toolCallGetExpertReviews.
+  ///
+  /// In en, this message translates to:
+  /// **'Expert reviews'**
+  String get toolCallGetExpertReviews;
+
+  /// No description provided for @toolCallLoadingGetExpertReviews.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading expert reviews…'**
+  String get toolCallLoadingGetExpertReviews;
+
+  /// No description provided for @toolCallPrepareServiceDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Service draft'**
+  String get toolCallPrepareServiceDraft;
+
+  /// No description provided for @toolCallLoadingPrepareServiceDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing service draft…'**
+  String get toolCallLoadingPrepareServiceDraft;
+
+  /// No description provided for @aiServiceDraftTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Service Draft'**
+  String get aiServiceDraftTitle;
+
+  /// No description provided for @aiServiceDraftName.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get aiServiceDraftName;
+
+  /// No description provided for @aiServiceDraftDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Desc'**
+  String get aiServiceDraftDesc;
+
+  /// No description provided for @aiServiceDraftCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Category'**
+  String get aiServiceDraftCategory;
+
+  /// No description provided for @aiServiceDraftPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Price'**
+  String get aiServiceDraftPrice;
+
+  /// No description provided for @aiServiceDraftLocType.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get aiServiceDraftLocType;
+
+  /// No description provided for @aiServiceDraftLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get aiServiceDraftLocation;
+
+  /// No description provided for @aiServiceDraftConfirmButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Review & Publish'**
+  String get aiServiceDraftConfirmButton;
+
+  /// No description provided for @aiServiceDraftNegotiable.
+  ///
+  /// In en, this message translates to:
+  /// **'Negotiable'**
+  String get aiServiceDraftNegotiable;
+
+  /// No description provided for @aiServiceDraftHour.
+  ///
+  /// In en, this message translates to:
+  /// **'hour'**
+  String get aiServiceDraftHour;
+
+  /// No description provided for @toolCallAnalyzeMySkills.
+  ///
+  /// In en, this message translates to:
+  /// **'Skill analysis'**
+  String get toolCallAnalyzeMySkills;
+
+  /// No description provided for @toolCallLoadingAnalyzeMySkills.
+  ///
+  /// In en, this message translates to:
+  /// **'Analyzing your skills…'**
+  String get toolCallLoadingAnalyzeMySkills;
+
+  /// No description provided for @toolCallRecommendTakers.
+  ///
+  /// In en, this message translates to:
+  /// **'Recommend takers'**
+  String get toolCallRecommendTakers;
+
+  /// No description provided for @toolCallLoadingRecommendTakers.
+  ///
+  /// In en, this message translates to:
+  /// **'Finding suitable helpers…'**
+  String get toolCallLoadingRecommendTakers;
+
+  /// No description provided for @toolCallGetNextAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Next step'**
+  String get toolCallGetNextAction;
+
+  /// No description provided for @toolCallLoadingGetNextAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking task status…'**
+  String get toolCallLoadingGetNextAction;
+
+  /// No description provided for @aiThinkingHint1.
+  ///
+  /// In en, this message translates to:
+  /// **'Understanding your question…'**
+  String get aiThinkingHint1;
+
+  /// No description provided for @aiThinkingHint2.
+  ///
+  /// In en, this message translates to:
+  /// **'Analyzing information…'**
+  String get aiThinkingHint2;
+
+  /// No description provided for @aiThinkingHint3.
+  ///
+  /// In en, this message translates to:
+  /// **'Organizing response…'**
+  String get aiThinkingHint3;
 
   /// No description provided for @aiTaskDraftTitle.
   ///

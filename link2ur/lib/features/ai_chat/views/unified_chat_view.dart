@@ -24,7 +24,9 @@ import '../../../data/services/ai_chat_service.dart';
 import '../../tasks/views/create_task_view.dart' show TaskDraftData;
 import '../bloc/unified_chat_bloc.dart';
 import '../widgets/ai_message_bubble.dart';
+import '../widgets/service_draft_card.dart';
 import '../widgets/task_draft_card.dart';
+import '../widgets/task_result_cards.dart';
 import '../widgets/tool_call_card.dart';
 
 /// 统一 AI + 人工客服聊天页面（唯一 AI 聊天入口，替代原 AI 页）
@@ -424,7 +426,8 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
           curr.errorMessage != null ||
           prev.aiMessages.length != curr.aiMessages.length ||
           prev.csMessages.length != curr.csMessages.length ||
-          prev.taskDraft != curr.taskDraft,
+          prev.taskDraft != curr.taskDraft ||
+          prev.serviceDraft != curr.serviceDraft,
       listener: (context, state) {
         if (state.actionMessage != null) {
           final message = switch (state.actionMessage) {
@@ -596,7 +599,9 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
           prev.streamingContent != curr.streamingContent ||
           prev.isTyping != curr.isTyping ||
           prev.activeToolCall != curr.activeToolCall ||
+          prev.toolCallCompleted != curr.toolCallCompleted ||
           prev.taskDraft != curr.taskDraft ||
+          prev.serviceDraft != curr.serviceDraft ||
           prev.mode != curr.mode,
       builder: (context, state) {
         // 构建虚拟列表项
@@ -627,9 +632,14 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
           items.add(_ChatListItem.streaming(state.streamingContent));
         }
 
-        // 任务草稿卡片（与 AI 页一致）
+        // 任务草稿卡片
         if (state.taskDraft != null) {
           items.add(_ChatListItem.draft(state.taskDraft!));
+        }
+
+        // 服务草稿卡片
+        if (state.serviceDraft != null) {
+          items.add(_ChatListItem.serviceDraft(state.serviceDraft!));
         }
 
         // 分割线
@@ -662,14 +672,31 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
                 case _ChatItemType.welcome:
                   return _buildLinkerWelcome(isDark);
                 case _ChatItemType.ai:
+                  final msg = item.aiMessage!;
+                  final rd = msg.toolResultData;
+                  final hasTaskCards = rd != null && const ['tasks', 'services', 'experts', 'items', 'posts']
+                      .any((k) => rd[k] is List && (rd[k] as List).isNotEmpty);
+                  if (hasTaskCards) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        AIMessageBubble(
+                          key: ValueKey('ai_${msg.id ?? 'local_${item.index}'}'),
+                          message: msg,
+                        ),
+                        TaskResultCards(toolResult: msg.toolResultData!),
+                      ],
+                    );
+                  }
                   return AIMessageBubble(
-                    key: ValueKey('ai_${item.aiMessage!.id ?? 'local_${item.index}'}'),
-                    message: item.aiMessage!,
+                    key: ValueKey('ai_${msg.id ?? 'local_${item.index}'}'),
+                    message: msg,
                   );
                 case _ChatItemType.tool:
                   return ToolCallCard(
                     key: ValueKey('tool_${item.toolName}'),
                     toolName: item.toolName!,
+                    isLoading: !state.toolCallCompleted,
                   );
                 case _ChatItemType.streaming:
                   return StreamingBubble(
@@ -684,6 +711,16 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
                       final draftData = TaskDraftData.fromJson(state.taskDraft!);
                       context.read<UnifiedChatBloc>().add(const UnifiedChatClearTaskDraft());
                       context.push(AppRoutes.createTask, extra: draftData);
+                    },
+                  );
+                case _ChatItemType.serviceDraftItem:
+                  return ServiceDraftCard(
+                    key: const ValueKey('service_draft'),
+                    draft: item.serviceDraftData!,
+                    onConfirm: () {
+                      final draft = state.serviceDraft!;
+                      context.read<UnifiedChatBloc>().add(const UnifiedChatClearServiceDraft());
+                      context.push(AppRoutes.createService, extra: draft);
                     },
                   );
                 case _ChatItemType.dividerItem:
@@ -1179,7 +1216,7 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
 
 // ==================== ListView.builder helper ====================
 
-enum _ChatItemType { welcome, ai, tool, streaming, taskDraft, dividerItem, cs }
+enum _ChatItemType { welcome, ai, tool, streaming, taskDraft, serviceDraftItem, dividerItem, cs }
 
 class _ChatListItem {
   const _ChatListItem._({
@@ -1189,6 +1226,7 @@ class _ChatListItem {
     this.toolName,
     this.streamingContent,
     this.taskDraft,
+    this.serviceDraftData,
     this.index = 0,
   });
 
@@ -1198,6 +1236,7 @@ class _ChatListItem {
   final String? toolName;
   final String? streamingContent;
   final Map<String, dynamic>? taskDraft;
+  final Map<String, dynamic>? serviceDraftData;
   final int index;
 
   factory _ChatListItem.welcome() =>
@@ -1214,6 +1253,9 @@ class _ChatListItem {
 
   factory _ChatListItem.draft(Map<String, dynamic> draft) =>
       _ChatListItem._(type: _ChatItemType.taskDraft, taskDraft: draft);
+
+  factory _ChatListItem.serviceDraft(Map<String, dynamic> draft) =>
+      _ChatListItem._(type: _ChatItemType.serviceDraftItem, serviceDraftData: draft);
 
   factory _ChatListItem.divider() =>
       const _ChatListItem._(type: _ChatItemType.dividerItem);

@@ -8897,10 +8897,139 @@ class AppLocalizationsZh extends AppLocalizations {
   String get toolCallLoadingSearchForumPosts => '正在搜索论坛…';
 
   @override
+  String get toolCallGetActivityDetail => '活动详情';
+
+  @override
+  String get toolCallGetExpertDetail => '达人详情';
+
+  @override
+  String get toolCallGetForumPostDetail => '帖子详情';
+
+  @override
+  String get toolCallGetFleaMarketItemDetail => '商品详情';
+
+  @override
+  String get toolCallListMyApplications => '我的任务申请';
+
+  @override
+  String get toolCallListMyServiceApplications => '我的服务申请';
+
+  @override
+  String get toolCallListMyActivities => '我参加的活动';
+
+  @override
+  String get toolCallListForumCategories => '论坛分类';
+
+  @override
+  String get toolCallGetTaskReviews => '任务评价';
+
+  @override
+  String get toolCallLoadingGetActivityDetail => '正在加载活动详情…';
+
+  @override
+  String get toolCallLoadingGetExpertDetail => '正在加载达人详情…';
+
+  @override
+  String get toolCallLoadingGetForumPostDetail => '正在加载帖子详情…';
+
+  @override
+  String get toolCallLoadingGetFleaMarketItemDetail => '正在加载商品详情…';
+
+  @override
+  String get toolCallLoadingListMyApplications => '正在加载您的申请…';
+
+  @override
+  String get toolCallLoadingListMyServiceApplications => '正在加载服务申请…';
+
+  @override
+  String get toolCallLoadingListMyActivities => '正在加载您参加的活动…';
+
+  @override
+  String get toolCallLoadingListForumCategories => '正在加载论坛分类…';
+
+  @override
+  String get toolCallLoadingGetTaskReviews => '正在加载任务评价…';
+
+  @override
   String get toolCallPrepareTaskDraft => '任务草稿';
 
   @override
   String get toolCallLoadingPrepareTaskDraft => '正在生成任务草稿…';
+
+  @override
+  String get toolCallSearchServices => '搜索服务';
+
+  @override
+  String get toolCallLoadingSearchServices => '正在搜索服务…';
+
+  @override
+  String get toolCallGetExpertReviews => '达人评价';
+
+  @override
+  String get toolCallLoadingGetExpertReviews => '正在加载达人评价…';
+
+  @override
+  String get toolCallPrepareServiceDraft => '服务草稿';
+
+  @override
+  String get toolCallLoadingPrepareServiceDraft => '正在生成服务草稿…';
+
+  @override
+  String get aiServiceDraftTitle => '服务草稿';
+
+  @override
+  String get aiServiceDraftName => '名称';
+
+  @override
+  String get aiServiceDraftDesc => '描述';
+
+  @override
+  String get aiServiceDraftCategory => '分类';
+
+  @override
+  String get aiServiceDraftPrice => '价格';
+
+  @override
+  String get aiServiceDraftLocType => '方式';
+
+  @override
+  String get aiServiceDraftLocation => '地点';
+
+  @override
+  String get aiServiceDraftConfirmButton => '确认并去发布';
+
+  @override
+  String get aiServiceDraftNegotiable => '可协商';
+
+  @override
+  String get aiServiceDraftHour => '小时';
+
+  @override
+  String get toolCallAnalyzeMySkills => '技能分析';
+
+  @override
+  String get toolCallLoadingAnalyzeMySkills => '正在分析你的技能…';
+
+  @override
+  String get toolCallRecommendTakers => '推荐接单人';
+
+  @override
+  String get toolCallLoadingRecommendTakers => '正在寻找合适的人选…';
+
+  @override
+  String get toolCallGetNextAction => '下一步操作';
+
+  @override
+  String get toolCallLoadingGetNextAction => '正在检查任务状态…';
+
+  @override
+  String get aiThinkingHint1 => '正在理解你的问题…';
+
+  @override
+  String get aiThinkingHint2 => '正在分析信息…';
+
+  @override
+  String get aiThinkingHint3 => '正在组织回复…';
 
   @override
   String get aiTaskDraftTitle => '任务草稿';
@@ -19335,10 +19464,139 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get toolCallLoadingSearchForumPosts => '正在搜尋論壇…';
 
   @override
+  String get toolCallGetActivityDetail => '活動詳情';
+
+  @override
+  String get toolCallGetExpertDetail => '達人詳情';
+
+  @override
+  String get toolCallGetForumPostDetail => '帖子詳情';
+
+  @override
+  String get toolCallGetFleaMarketItemDetail => '商品詳情';
+
+  @override
+  String get toolCallListMyApplications => '我的任務申請';
+
+  @override
+  String get toolCallListMyServiceApplications => '我的服務申請';
+
+  @override
+  String get toolCallListMyActivities => '我參加的活動';
+
+  @override
+  String get toolCallListForumCategories => '論壇分類';
+
+  @override
+  String get toolCallGetTaskReviews => '任務評價';
+
+  @override
+  String get toolCallLoadingGetActivityDetail => '正在載入活動詳情…';
+
+  @override
+  String get toolCallLoadingGetExpertDetail => '正在載入達人詳情…';
+
+  @override
+  String get toolCallLoadingGetForumPostDetail => '正在載入帖子詳情…';
+
+  @override
+  String get toolCallLoadingGetFleaMarketItemDetail => '正在載入商品詳情…';
+
+  @override
+  String get toolCallLoadingListMyApplications => '正在載入您的申請…';
+
+  @override
+  String get toolCallLoadingListMyServiceApplications => '正在載入服務申請…';
+
+  @override
+  String get toolCallLoadingListMyActivities => '正在載入您參加的活動…';
+
+  @override
+  String get toolCallLoadingListForumCategories => '正在載入論壇分類…';
+
+  @override
+  String get toolCallLoadingGetTaskReviews => '正在載入任務評價…';
+
+  @override
   String get toolCallPrepareTaskDraft => '任務草稿';
 
   @override
   String get toolCallLoadingPrepareTaskDraft => '正在生成任務草稿…';
+
+  @override
+  String get toolCallSearchServices => '搜尋服務';
+
+  @override
+  String get toolCallLoadingSearchServices => '正在搜尋服務…';
+
+  @override
+  String get toolCallGetExpertReviews => '達人評價';
+
+  @override
+  String get toolCallLoadingGetExpertReviews => '正在載入達人評價…';
+
+  @override
+  String get toolCallPrepareServiceDraft => '服務草稿';
+
+  @override
+  String get toolCallLoadingPrepareServiceDraft => '正在生成服務草稿…';
+
+  @override
+  String get aiServiceDraftTitle => '服務草稿';
+
+  @override
+  String get aiServiceDraftName => '名稱';
+
+  @override
+  String get aiServiceDraftDesc => '描述';
+
+  @override
+  String get aiServiceDraftCategory => '分類';
+
+  @override
+  String get aiServiceDraftPrice => '價格';
+
+  @override
+  String get aiServiceDraftLocType => '方式';
+
+  @override
+  String get aiServiceDraftLocation => '地點';
+
+  @override
+  String get aiServiceDraftConfirmButton => '確認並去發佈';
+
+  @override
+  String get aiServiceDraftNegotiable => '可協商';
+
+  @override
+  String get aiServiceDraftHour => '小時';
+
+  @override
+  String get toolCallAnalyzeMySkills => '技能分析';
+
+  @override
+  String get toolCallLoadingAnalyzeMySkills => '正在分析你的技能…';
+
+  @override
+  String get toolCallRecommendTakers => '推薦接單人';
+
+  @override
+  String get toolCallLoadingRecommendTakers => '正在尋找合適的人選…';
+
+  @override
+  String get toolCallGetNextAction => '下一步操作';
+
+  @override
+  String get toolCallLoadingGetNextAction => '正在檢查任務狀態…';
+
+  @override
+  String get aiThinkingHint1 => '正在理解你的問題…';
+
+  @override
+  String get aiThinkingHint2 => '正在分析資訊…';
+
+  @override
+  String get aiThinkingHint3 => '正在組織回覆…';
 
   @override
   String get aiTaskDraftTitle => '任務草稿';

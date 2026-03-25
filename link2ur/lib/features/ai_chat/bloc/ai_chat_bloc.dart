@@ -59,6 +59,16 @@ class _AIChatTokenReceived extends AIChatEvent {
   List<Object?> get props => [content];
 }
 
+/// Fallback 完整内容替换（避免与已接收的 token 重复）
+class _AIChatContentReplace extends AIChatEvent {
+  const _AIChatContentReplace(this.content);
+
+  final String content;
+
+  @override
+  List<Object?> get props => [content];
+}
+
 /// 工具调用事件
 class _AIChatToolCall extends AIChatEvent {
   const _AIChatToolCall(this.toolName, this.toolInput);
@@ -127,6 +137,21 @@ class AIChatClearTaskDraft extends AIChatEvent {
   const AIChatClearTaskDraft();
 }
 
+/// 服务草稿事件（内部事件）
+class _AIChatServiceDraft extends AIChatEvent {
+  const _AIChatServiceDraft(this.draft);
+
+  final Map<String, dynamic> draft;
+
+  @override
+  List<Object?> get props => [draft];
+}
+
+/// 清除服务草稿（用户点击后清除）
+class AIChatClearServiceDraft extends AIChatEvent {
+  const AIChatClearServiceDraft();
+}
+
 /// 归档对话
 class AIChatArchiveConversation extends AIChatEvent {
   const AIChatArchiveConversation(this.conversationId);
@@ -150,11 +175,14 @@ class AIChatState extends Equatable {
     this.isReplying = false,
     this.streamingContent = '',
     this.activeToolCall,
+    this.toolCallCompleted = false,
     this.errorMessage,
     this.csAvailableSignal,
     this.csContactEmail,
     this.taskDraft,
+    this.serviceDraft,
     this.lastToolName,
+    this.lastToolResultData,
   });
 
   final AIChatStatus status;
@@ -164,11 +192,14 @@ class AIChatState extends Equatable {
   final bool isReplying;
   final String streamingContent;
   final String? activeToolCall;
+  final bool toolCallCompleted;
   final String? errorMessage;
   final bool? csAvailableSignal;
   final String? csContactEmail;
   final Map<String, dynamic>? taskDraft;
+  final Map<String, dynamic>? serviceDraft;
   final String? lastToolName;
+  final Map<String, dynamic>? lastToolResultData;
 
   /// Sentinel-based copyWith: omitting a nullable field preserves its current
   /// value; passing `null` explicitly clears it. This eliminates the fragile
@@ -181,11 +212,14 @@ class AIChatState extends Equatable {
     bool? isReplying,
     String? streamingContent,
     Object? activeToolCall = _sentinel,
+    bool? toolCallCompleted,
     Object? errorMessage = _sentinel,
     Object? csAvailableSignal = _sentinel,
     Object? csContactEmail = _sentinel,
     Object? taskDraft = _sentinel,
+    Object? serviceDraft = _sentinel,
     Object? lastToolName = _sentinel,
+    Object? lastToolResultData = _sentinel,
   }) {
     return AIChatState(
       status: status ?? this.status,
@@ -198,6 +232,7 @@ class AIChatState extends Equatable {
       activeToolCall: identical(activeToolCall, _sentinel)
           ? this.activeToolCall
           : activeToolCall as String?,
+      toolCallCompleted: toolCallCompleted ?? this.toolCallCompleted,
       errorMessage: identical(errorMessage, _sentinel)
           ? this.errorMessage
           : errorMessage as String?,
@@ -210,9 +245,15 @@ class AIChatState extends Equatable {
       taskDraft: identical(taskDraft, _sentinel)
           ? this.taskDraft
           : taskDraft as Map<String, dynamic>?,
+      serviceDraft: identical(serviceDraft, _sentinel)
+          ? this.serviceDraft
+          : serviceDraft as Map<String, dynamic>?,
       lastToolName: identical(lastToolName, _sentinel)
           ? this.lastToolName
           : lastToolName as String?,
+      lastToolResultData: identical(lastToolResultData, _sentinel)
+          ? this.lastToolResultData
+          : lastToolResultData as Map<String, dynamic>?,
     );
   }
 
@@ -225,11 +266,14 @@ class AIChatState extends Equatable {
         isReplying,
         streamingContent,
         activeToolCall,
+        toolCallCompleted,
         errorMessage,
         csAvailableSignal,
         csContactEmail,
         taskDraft,
+        serviceDraft,
         lastToolName,
+        lastToolResultData,
       ];
 }
 
@@ -244,6 +288,7 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
     on<AIChatLoadHistory>(_onLoadHistory);
     on<AIChatSendMessage>(_onSendMessage);
     on<_AIChatTokenReceived>(_onTokenReceived);
+    on<_AIChatContentReplace>(_onContentReplace);
     on<_AIChatToolCall>(_onToolCall);
     on<_AIChatToolResult>(_onToolResult);
     on<_AIChatMessageCompleted>(_onMessageCompleted);
@@ -251,6 +296,8 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
     on<_AIChatCSAvailable>(_onCSAvailable);
     on<_AIChatTaskDraft>(_onTaskDraft);
     on<AIChatClearTaskDraft>(_onClearTaskDraft);
+    on<_AIChatServiceDraft>(_onServiceDraft);
+    on<AIChatClearServiceDraft>(_onClearServiceDraft);
     on<AIChatArchiveConversation>(_onArchiveConversation);
   }
 
@@ -365,6 +412,7 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
       activeToolCall: null,
       errorMessage: null,
       lastToolName: null,
+      lastToolResultData: null,
     ));
 
     // 取消之前的 SSE 订阅
@@ -377,6 +425,8 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
       switch (sseEvent.type) {
         case AIChatEventType.token:
           return _AIChatTokenReceived(sseEvent.content ?? '');
+        case AIChatEventType.contentReplace:
+          return _AIChatContentReplace(sseEvent.content ?? '');
         case AIChatEventType.toolCall:
           return _AIChatToolCall(
               sseEvent.toolName ?? '', sseEvent.toolInput);
@@ -392,6 +442,8 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
               sseEvent.csAvailable ?? false, sseEvent.contactEmail);
         case AIChatEventType.taskDraft:
           return _AIChatTaskDraft(sseEvent.taskDraft ?? {});
+        case AIChatEventType.serviceDraft:
+          return _AIChatServiceDraft(sseEvent.serviceDraft ?? {});
       }
     }).listen(
       (event) => add(event),
@@ -403,8 +455,27 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
     _AIChatTokenReceived event,
     Emitter<AIChatState> emit,
   ) {
+    // 收到 token 时，清除已完成的工具卡片
+    if (state.toolCallCompleted && state.activeToolCall != null) {
+      emit(state.copyWith(
+        streamingContent: state.streamingContent + event.content,
+        activeToolCall: null,
+        toolCallCompleted: false,
+      ));
+    } else {
+      emit(state.copyWith(
+        streamingContent: state.streamingContent + event.content,
+      ));
+    }
+  }
+
+  /// Fallback 完整内容替换 — 直接覆盖 streamingContent，避免与已流式接收的 token 重复
+  void _onContentReplace(
+    _AIChatContentReplace event,
+    Emitter<AIChatState> emit,
+  ) {
     emit(state.copyWith(
-      streamingContent: state.streamingContent + event.content,
+      streamingContent: event.content,
     ));
   }
 
@@ -414,6 +485,7 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
   ) {
     emit(state.copyWith(
       activeToolCall: event.toolName,
+      toolCallCompleted: false,
     ));
   }
 
@@ -422,17 +494,32 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
     Emitter<AIChatState> emit,
   ) {
     // 工具结果到达，清除 activeToolCall（LLM 会继续生成），记录 lastToolName
-    // 若后端未单独发 task_draft 事件，从 tool_result 中解析草稿作为后备
-    final Map<String, dynamic>? draftFromResult =
+    // 若后端未单独发 task_draft / service_draft 事件，从 tool_result 中解析草稿作为后备
+    final Map<String, dynamic>? taskDraftFromResult =
         event.toolName == 'prepare_task_draft' &&
                 event.toolResult != null &&
                 event.toolResult!['draft'] != null
             ? event.toolResult!['draft'] as Map<String, dynamic>
             : null;
+    final Map<String, dynamic>? serviceDraftFromResult =
+        event.toolName == 'prepare_service_draft' &&
+                event.toolResult != null &&
+                event.toolResult!['draft'] != null
+            ? event.toolResult!['draft'] as Map<String, dynamic>
+            : null;
+    // 保存含列表数据的工具结果（用于渲染卡片）
+    final bool hasCardData = event.toolResult != null &&
+        const {
+          'search_tasks', 'recommend_tasks', 'query_my_tasks', 'search_experts',
+          'search_services', 'list_task_experts', 'search_flea_market',
+          'search_forum_posts', 'get_leaderboard_summary',
+        }.contains(event.toolName);
     emit(state.copyWith(
-      activeToolCall: null, // clear tool indicator
+      toolCallCompleted: true, // keep card visible, show completed state
       lastToolName: event.toolName,
-      taskDraft: draftFromResult ?? state.taskDraft,
+      taskDraft: taskDraftFromResult ?? state.taskDraft,
+      serviceDraft: serviceDraftFromResult ?? state.serviceDraft,
+      lastToolResultData: hasCardData ? event.toolResult : state.lastToolResultData,
     ));
   }
 
@@ -448,12 +535,14 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
         content: state.streamingContent,
         createdAt: DateTime.now(),
         toolName: state.lastToolName,
+        toolResultData: state.lastToolResultData,
       );
       emit(state.copyWith(
         messages: [...state.messages, assistantMessage],
         isReplying: false,
         streamingContent: '',
         activeToolCall: null,
+        lastToolResultData: null,
       ));
     } else {
       emit(state.copyWith(
@@ -486,9 +575,23 @@ class AIChatBloc extends Bloc<AIChatEvent, AIChatState> {
     AIChatClearTaskDraft event,
     Emitter<AIChatState> emit,
   ) {
-    // With sentinel copyWith, pass null to explicitly clear taskDraft;
-    // all other fields are automatically preserved when omitted.
     emit(state.copyWith(taskDraft: null));
+  }
+
+  void _onServiceDraft(
+    _AIChatServiceDraft event,
+    Emitter<AIChatState> emit,
+  ) {
+    emit(state.copyWith(
+      serviceDraft: event.draft,
+    ));
+  }
+
+  void _onClearServiceDraft(
+    AIChatClearServiceDraft event,
+    Emitter<AIChatState> emit,
+  ) {
+    emit(state.copyWith(serviceDraft: null));
   }
 
   void _onError(

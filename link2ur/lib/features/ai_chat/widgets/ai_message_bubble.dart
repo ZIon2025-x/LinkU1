@@ -232,7 +232,7 @@ class StreamingBubble extends StatelessWidget {
   }
 }
 
-/// 思考中指示器
+/// 思考中指示器（三点 + 轮播提示文字）
 class _ThinkingIndicator extends StatefulWidget {
   const _ThinkingIndicator({required this.isDark});
 
@@ -250,9 +250,25 @@ class _ThinkingIndicator extends StatefulWidget {
     case 'recommend_tasks':
       return ('View tasks →', AppRoutes.tasks);
     case 'list_activities':
+    case 'get_activity_detail':
       return ('View activities →', AppRoutes.activities);
     case 'get_my_points_and_coupons':
       return ('Go to wallet →', AppRoutes.wallet);
+    case 'search_forum_posts':
+    case 'list_my_forum_posts':
+    case 'get_forum_post_detail':
+      return ('View forum →', AppRoutes.forum);
+    case 'search_flea_market':
+    case 'get_flea_market_item_detail':
+    case 'get_my_flea_market_items':
+      return ('View market →', AppRoutes.fleaMarket);
+    case 'get_leaderboard_summary':
+      return ('View leaderboard →', AppRoutes.leaderboard);
+    case 'list_task_experts':
+    case 'get_expert_detail':
+    case 'get_expert_reviews':
+    case 'search_services':
+      return ('View experts →', AppRoutes.taskExperts);
     default:
       return null;
   }
@@ -311,7 +327,9 @@ class _ActionButton extends StatelessWidget {
 class _ThinkingIndicatorState extends State<_ThinkingIndicator>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
-  late final Animation<double> _animation;
+  late final Animation<double> _dotsAnimation;
+
+  int _hintIndex = 0;
 
   @override
   void initState() {
@@ -320,7 +338,17 @@ class _ThinkingIndicatorState extends State<_ThinkingIndicator>
       vsync: this,
       duration: const Duration(milliseconds: 800),
     )..repeat(reverse: true);
-    _animation = Tween<double>(begin: 0.3, end: 1.0).animate(_controller);
+    _dotsAnimation =
+        Tween<double>(begin: 0.3, end: 1.0).animate(_controller);
+
+    // 每 3 秒切换一条提示
+    Future.delayed(const Duration(seconds: 3), _cycleHint);
+  }
+
+  void _cycleHint() {
+    if (!mounted) return;
+    setState(() => _hintIndex++);
+    Future.delayed(const Duration(seconds: 3), _cycleHint);
   }
 
   @override
@@ -331,24 +359,50 @@ class _ThinkingIndicatorState extends State<_ThinkingIndicator>
 
   @override
   Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _animation,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (int i = 0; i < 3; i++) ...[
-            if (i > 0) const SizedBox(width: 4),
-            Container(
-              width: 6,
-              height: 6,
-              decoration: BoxDecoration(
-                color: widget.isDark ? Colors.white54 : Colors.black38,
-                shape: BoxShape.circle,
-              ),
-            ),
-          ],
-        ],
-      ),
+    final l10n = context.l10n;
+    final hints = [
+      l10n.aiThinkingHint1,
+      l10n.aiThinkingHint2,
+      l10n.aiThinkingHint3,
+    ];
+    final hint = hints[_hintIndex % hints.length];
+    final hintColor =
+        widget.isDark ? Colors.white38 : Colors.black26;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        FadeTransition(
+          opacity: _dotsAnimation,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (int i = 0; i < 3; i++) ...[
+                if (i > 0) const SizedBox(width: 4),
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color:
+                        widget.isDark ? Colors.white54 : Colors.black38,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 6),
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 400),
+          child: Text(
+            hint,
+            key: ValueKey<int>(_hintIndex % hints.length),
+            style: TextStyle(fontSize: 11, color: hintColor),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -61,8 +61,38 @@ class ToolCallCard extends StatelessWidget {
         return l10n.toolCallGetMyFleaMarketItems;
       case 'search_forum_posts':
         return l10n.toolCallSearchForumPosts;
+      case 'get_activity_detail':
+        return l10n.toolCallGetActivityDetail;
+      case 'get_expert_detail':
+        return l10n.toolCallGetExpertDetail;
+      case 'get_forum_post_detail':
+        return l10n.toolCallGetForumPostDetail;
+      case 'get_flea_market_item_detail':
+        return l10n.toolCallGetFleaMarketItemDetail;
+      case 'list_my_applications':
+        return l10n.toolCallListMyApplications;
+      case 'list_my_service_applications':
+        return l10n.toolCallListMyServiceApplications;
+      case 'list_my_activities':
+        return l10n.toolCallListMyActivities;
+      case 'list_forum_categories':
+        return l10n.toolCallListForumCategories;
+      case 'get_task_reviews':
+        return l10n.toolCallGetTaskReviews;
       case 'prepare_task_draft':
         return l10n.toolCallPrepareTaskDraft;
+      case 'search_services':
+        return l10n.toolCallSearchServices;
+      case 'get_expert_reviews':
+        return l10n.toolCallGetExpertReviews;
+      case 'prepare_service_draft':
+        return l10n.toolCallPrepareServiceDraft;
+      case 'analyze_my_skills':
+        return l10n.toolCallAnalyzeMySkills;
+      case 'recommend_takers':
+        return l10n.toolCallRecommendTakers;
+      case 'get_next_action':
+        return l10n.toolCallGetNextAction;
       default:
         return toolName;
     }
@@ -114,8 +144,38 @@ class ToolCallCard extends StatelessWidget {
         return l10n.toolCallLoadingGetMyFleaMarketItems;
       case 'search_forum_posts':
         return l10n.toolCallLoadingSearchForumPosts;
+      case 'get_activity_detail':
+        return l10n.toolCallLoadingGetActivityDetail;
+      case 'get_expert_detail':
+        return l10n.toolCallLoadingGetExpertDetail;
+      case 'get_forum_post_detail':
+        return l10n.toolCallLoadingGetForumPostDetail;
+      case 'get_flea_market_item_detail':
+        return l10n.toolCallLoadingGetFleaMarketItemDetail;
+      case 'list_my_applications':
+        return l10n.toolCallLoadingListMyApplications;
+      case 'list_my_service_applications':
+        return l10n.toolCallLoadingListMyServiceApplications;
+      case 'list_my_activities':
+        return l10n.toolCallLoadingListMyActivities;
+      case 'list_forum_categories':
+        return l10n.toolCallLoadingListForumCategories;
+      case 'get_task_reviews':
+        return l10n.toolCallLoadingGetTaskReviews;
       case 'prepare_task_draft':
         return l10n.toolCallLoadingPrepareTaskDraft;
+      case 'search_services':
+        return l10n.toolCallLoadingSearchServices;
+      case 'get_expert_reviews':
+        return l10n.toolCallLoadingGetExpertReviews;
+      case 'prepare_service_draft':
+        return l10n.toolCallLoadingPrepareServiceDraft;
+      case 'analyze_my_skills':
+        return l10n.toolCallLoadingAnalyzeMySkills;
+      case 'recommend_takers':
+        return l10n.toolCallLoadingRecommendTakers;
+      case 'get_next_action':
+        return l10n.toolCallLoadingGetNextAction;
       default:
         return _displayName(context);
     }
@@ -165,8 +225,38 @@ class ToolCallCard extends StatelessWidget {
         return Icons.inventory_2;
       case 'search_forum_posts':
         return Icons.manage_search;
+      case 'get_activity_detail':
+        return Icons.event_note;
+      case 'get_expert_detail':
+        return Icons.person_search;
+      case 'get_forum_post_detail':
+        return Icons.article;
+      case 'get_flea_market_item_detail':
+        return Icons.shopping_bag;
+      case 'list_my_applications':
+        return Icons.assignment;
+      case 'list_my_service_applications':
+        return Icons.work_outline;
+      case 'list_my_activities':
+        return Icons.event_available;
+      case 'list_forum_categories':
+        return Icons.category;
+      case 'get_task_reviews':
+        return Icons.rate_review;
       case 'prepare_task_draft':
         return Icons.edit_note;
+      case 'search_services':
+        return Icons.miscellaneous_services;
+      case 'get_expert_reviews':
+        return Icons.reviews;
+      case 'prepare_service_draft':
+        return Icons.home_repair_service;
+      case 'analyze_my_skills':
+        return Icons.insights;
+      case 'recommend_takers':
+        return Icons.people_outline;
+      case 'get_next_action':
+        return Icons.next_plan;
       default:
         return Icons.build;
     }

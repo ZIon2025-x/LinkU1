@@ -120,7 +120,9 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
       if (d.reward != null) _rewardController.text = Helpers.formatAmountNumber(d.reward!);
       if (d.currency != null) _selectedCurrency = d.currency!;
       if (d.location != null) _location = d.location;
-      if (d.deadline != null) _deadline = d.deadline;
+      if (d.deadline != null && d.deadline!.isAfter(DateTime.now())) {
+        _deadline = d.deadline;
+      }
       if (d.taskType != null) {
         const validKeys = [
           'Housekeeping', 'Campus Life', 'Second-hand & Rental',
@@ -163,7 +165,9 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
   Future<void> _selectDeadline() async {
     final date = await showDatePicker(
       context: context,
-      initialDate: _deadline ?? DateTime.now().add(const Duration(days: 7)),
+      initialDate: (_deadline != null && _deadline!.isAfter(DateTime.now()))
+          ? _deadline!
+          : DateTime.now().add(const Duration(days: 7)),
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );

@@ -14,7 +14,10 @@ List<RouteBase> get personalServiceRoutes => [
       GoRoute(
         path: '/services/create',
         name: 'createService',
-        builder: (context, state) => const PersonalServiceFormView(),
+        builder: (context, state) {
+          final data = state.extra as Map<String, dynamic>?;
+          return PersonalServiceFormView(serviceData: data);
+        },
       ),
       GoRoute(
         path: '/services/edit/:id',

@@ -223,10 +223,10 @@ class AIChatService {
         if (lastAssistant.content.isEmpty) continue;
 
         // 成功获取到 AI 回复
-        // 先以 token 事件发送完整内容（UI 会显示流式气泡），再发 done
+        // 用 contentReplace 替换（而非追加）流式内容，避免与已接收的 token 重复
         if (!controller.isClosed) {
           controller.add(AIChatEvent(
-            type: AIChatEventType.token,
+            type: AIChatEventType.contentReplace,
             content: lastAssistant.content,
           ));
         }
@@ -320,6 +320,11 @@ class AIChatService {
           return AIChatEvent(
             type: AIChatEventType.taskDraft,
             taskDraft: json,
+          );
+        case 'service_draft':
+          return AIChatEvent(
+            type: AIChatEventType.serviceDraft,
+            serviceDraft: json,
           );
         case 'error':
           return AIChatEvent(

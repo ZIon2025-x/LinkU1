@@ -67,12 +67,12 @@ class _FormContentState extends State<_FormContent> {
   bool _isUploadingImages = false;
   static const _maxImages = 6;
 
-  bool get _isEditMode => widget.serviceData != null;
+  bool get _isEditMode => widget.serviceData != null && widget.serviceData!['id'] != null;
 
   @override
   void initState() {
     super.initState();
-    if (_isEditMode) {
+    if (widget.serviceData != null) {
       final data = widget.serviceData!;
       _nameController.text = (data['service_name'] as String?) ?? '';
       _nameEnController.text = (data['service_name_en'] as String?) ?? '';

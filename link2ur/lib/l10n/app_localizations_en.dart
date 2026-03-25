@@ -9264,10 +9264,140 @@ class AppLocalizationsEn extends AppLocalizations {
   String get toolCallLoadingSearchForumPosts => 'Searching forum…';
 
   @override
+  String get toolCallGetActivityDetail => 'Activity details';
+
+  @override
+  String get toolCallGetExpertDetail => 'Expert details';
+
+  @override
+  String get toolCallGetForumPostDetail => 'Post details';
+
+  @override
+  String get toolCallGetFleaMarketItemDetail => 'Item details';
+
+  @override
+  String get toolCallListMyApplications => 'My applications';
+
+  @override
+  String get toolCallListMyServiceApplications => 'My service applications';
+
+  @override
+  String get toolCallListMyActivities => 'My activities';
+
+  @override
+  String get toolCallListForumCategories => 'Forum categories';
+
+  @override
+  String get toolCallGetTaskReviews => 'Task reviews';
+
+  @override
+  String get toolCallLoadingGetActivityDetail => 'Loading activity details…';
+
+  @override
+  String get toolCallLoadingGetExpertDetail => 'Loading expert details…';
+
+  @override
+  String get toolCallLoadingGetForumPostDetail => 'Loading post details…';
+
+  @override
+  String get toolCallLoadingGetFleaMarketItemDetail => 'Loading item details…';
+
+  @override
+  String get toolCallLoadingListMyApplications => 'Loading your applications…';
+
+  @override
+  String get toolCallLoadingListMyServiceApplications =>
+      'Loading service applications…';
+
+  @override
+  String get toolCallLoadingListMyActivities => 'Loading your activities…';
+
+  @override
+  String get toolCallLoadingListForumCategories => 'Loading forum categories…';
+
+  @override
+  String get toolCallLoadingGetTaskReviews => 'Loading task reviews…';
+
+  @override
   String get toolCallPrepareTaskDraft => 'Task draft';
 
   @override
   String get toolCallLoadingPrepareTaskDraft => 'Preparing task draft…';
+
+  @override
+  String get toolCallSearchServices => 'Search services';
+
+  @override
+  String get toolCallLoadingSearchServices => 'Searching services…';
+
+  @override
+  String get toolCallGetExpertReviews => 'Expert reviews';
+
+  @override
+  String get toolCallLoadingGetExpertReviews => 'Loading expert reviews…';
+
+  @override
+  String get toolCallPrepareServiceDraft => 'Service draft';
+
+  @override
+  String get toolCallLoadingPrepareServiceDraft => 'Preparing service draft…';
+
+  @override
+  String get aiServiceDraftTitle => 'Service Draft';
+
+  @override
+  String get aiServiceDraftName => 'Name';
+
+  @override
+  String get aiServiceDraftDesc => 'Desc';
+
+  @override
+  String get aiServiceDraftCategory => 'Category';
+
+  @override
+  String get aiServiceDraftPrice => 'Price';
+
+  @override
+  String get aiServiceDraftLocType => 'Type';
+
+  @override
+  String get aiServiceDraftLocation => 'Location';
+
+  @override
+  String get aiServiceDraftConfirmButton => 'Review & Publish';
+
+  @override
+  String get aiServiceDraftNegotiable => 'Negotiable';
+
+  @override
+  String get aiServiceDraftHour => 'hour';
+
+  @override
+  String get toolCallAnalyzeMySkills => 'Skill analysis';
+
+  @override
+  String get toolCallLoadingAnalyzeMySkills => 'Analyzing your skills…';
+
+  @override
+  String get toolCallRecommendTakers => 'Recommend takers';
+
+  @override
+  String get toolCallLoadingRecommendTakers => 'Finding suitable helpers…';
+
+  @override
+  String get toolCallGetNextAction => 'Next step';
+
+  @override
+  String get toolCallLoadingGetNextAction => 'Checking task status…';
+
+  @override
+  String get aiThinkingHint1 => 'Understanding your question…';
+
+  @override
+  String get aiThinkingHint2 => 'Analyzing information…';
+
+  @override
+  String get aiThinkingHint3 => 'Organizing response…';
 
   @override
   String get aiTaskDraftTitle => 'Task Draft';

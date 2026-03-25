@@ -82,6 +82,11 @@ class UnifiedChatClearTaskDraft extends UnifiedChatEvent {
   const UnifiedChatClearTaskDraft();
 }
 
+/// 清除服务草稿（用户确认后跳发布页）
+class UnifiedChatClearServiceDraft extends UnifiedChatEvent {
+  const UnifiedChatClearServiceDraft();
+}
+
 /// 加载客服聊天历史（从历史记录入口进入）
 class UnifiedChatLoadCSHistory extends UnifiedChatEvent {
   const UnifiedChatLoadCSHistory({
@@ -126,7 +131,9 @@ class UnifiedChatState extends Equatable {
     this.isTyping = false,
     this.streamingContent = '',
     this.activeToolCall,
+    this.toolCallCompleted = false,
     this.taskDraft,
+    this.serviceDraft,
     this.csOnlineStatus,
     this.csContactEmail,
     this.csServiceName,
@@ -142,7 +149,9 @@ class UnifiedChatState extends Equatable {
   final bool isTyping;
   final String streamingContent;
   final String? activeToolCall;
-  final Map<String, dynamic>? taskDraft; // AI 生成的任务草稿，与 AI 页 TaskDraftCard 一致
+  final bool toolCallCompleted;
+  final Map<String, dynamic>? taskDraft;
+  final Map<String, dynamic>? serviceDraft;
   final bool? csOnlineStatus; // null=未检查, true/false=结果
   final String? csContactEmail;
   final String? csServiceName;
@@ -160,7 +169,9 @@ class UnifiedChatState extends Equatable {
     bool? isTyping,
     String? streamingContent,
     Object? activeToolCall = _sentinel,
+    bool? toolCallCompleted,
     Object? taskDraft = _sentinel,
+    Object? serviceDraft = _sentinel,
     bool? csOnlineStatus,
     String? csContactEmail,
     String? csServiceName,
@@ -178,9 +189,13 @@ class UnifiedChatState extends Equatable {
       activeToolCall: identical(activeToolCall, _sentinel)
           ? this.activeToolCall
           : activeToolCall as String?,
+      toolCallCompleted: toolCallCompleted ?? this.toolCallCompleted,
       taskDraft: identical(taskDraft, _sentinel)
           ? this.taskDraft
           : taskDraft as Map<String, dynamic>?,
+      serviceDraft: identical(serviceDraft, _sentinel)
+          ? this.serviceDraft
+          : serviceDraft as Map<String, dynamic>?,
       csOnlineStatus: csOnlineStatus ?? this.csOnlineStatus,
       csContactEmail: csContactEmail ?? this.csContactEmail,
       csServiceName: csServiceName ?? this.csServiceName,
@@ -203,7 +218,9 @@ class UnifiedChatState extends Equatable {
         isTyping,
         streamingContent,
         activeToolCall,
+        toolCallCompleted,
         taskDraft,
+        serviceDraft,
         csOnlineStatus,
         csServiceName,
         csChatId,
@@ -232,6 +249,7 @@ class UnifiedChatBloc extends Bloc<UnifiedChatEvent, UnifiedChatState> {
     on<UnifiedChatReturnToAI>(_onReturnToAI);
     on<UnifiedChatLoadHistory>(_onLoadHistory);
     on<UnifiedChatClearTaskDraft>(_onClearTaskDraft);
+    on<UnifiedChatClearServiceDraft>(_onClearServiceDraft);
     on<UnifiedChatLoadCSHistory>(_onLoadCSHistory);
     on<_AIStateChanged>(_onAIStateChanged);
     on<_CSStateChanged>(_onCSStateChanged);
@@ -338,6 +356,15 @@ class UnifiedChatBloc extends Bloc<UnifiedChatEvent, UnifiedChatState> {
     emit(state.copyWith(taskDraft: null));
   }
 
+  /// 清除服务草稿并转发给 AI Bloc
+  void _onClearServiceDraft(
+    UnifiedChatClearServiceDraft event,
+    Emitter<UnifiedChatState> emit,
+  ) {
+    _aiBloc.add(const AIChatClearServiceDraft());
+    emit(state.copyWith(serviceDraft: null));
+  }
+
   /// 加载客服聊天历史
   Future<void> _onLoadCSHistory(
     UnifiedChatLoadCSHistory event,
@@ -388,7 +415,9 @@ class UnifiedChatBloc extends Bloc<UnifiedChatEvent, UnifiedChatState> {
       isTyping: aiState.isReplying,
       streamingContent: aiState.streamingContent,
       activeToolCall: aiState.activeToolCall,
+      toolCallCompleted: aiState.toolCallCompleted,
       taskDraft: aiState.taskDraft,
+      serviceDraft: aiState.serviceDraft,
       errorMessage: aiState.errorMessage,
       // 检测 csAvailableSignal
       csOnlineStatus: aiState.csAvailableSignal ?? state.csOnlineStatus,

@@ -1732,6 +1732,170 @@ _VALID_LOCATIONS = [
 
 
 @tool_registry.register(
+    name="search_services",
+    description=(
+        "搜索平台上的服务（包括达人服务和个人服务），支持关键词、类型、排序筛选。"
+        "Search services on the platform (both expert and personal), with keyword, type, and sorting filters."
+    ),
+    input_schema={
+        "type": "object",
+        "properties": {
+            "keyword": {"type": "string", "description": "搜索关键词（匹配服务名称/描述）"},
+            "type": {
+                "type": "string",
+                "enum": ["all", "expert", "personal"],
+                "description": "服务类型筛选：all=全部, expert=达人服务, personal=个人服务",
+            },
+            "sort": {
+                "type": "string",
+                "enum": ["recommended", "newest", "price_asc", "price_desc"],
+                "description": "排序方式",
+            },
+            "page": {"type": "integer", "description": "页码，默认 1"},
+        },
+    },
+    categories=[ToolCategory.PLATFORM],
+)
+async def _search_services(executor: ToolExecutor, input: dict) -> dict:
+    keyword = input.get("keyword", "")
+    svc_type = input.get("type", "all")
+    sort = input.get("sort", "recommended")
+    page = max(1, input.get("page", 1))
+    page_size = 10
+    lang = executor._tool_lang()
+
+    conditions = [models.TaskExpertService.status == "active"]
+    if svc_type == "expert":
+        conditions.append(models.TaskExpertService.service_type == "expert")
+    elif svc_type == "personal":
+        conditions.append(models.TaskExpertService.service_type == "personal")
+    if keyword:
+        like_kw = f"%{keyword}%"
+        conditions.append(or_(
+            models.TaskExpertService.service_name.ilike(like_kw),
+            models.TaskExpertService.description.ilike(like_kw),
+            models.TaskExpertService.service_name_en.ilike(like_kw),
+            models.TaskExpertService.description_en.ilike(like_kw),
+        ))
+
+    query = select(models.TaskExpertService, models.User.name).outerjoin(
+        models.User,
+        models.TaskExpertService.user_id == models.User.id,
+    ).where(and_(*conditions))
+
+    if sort == "newest":
+        query = query.order_by(desc(models.TaskExpertService.created_at))
+    elif sort == "price_asc":
+        query = query.order_by(models.TaskExpertService.base_price.asc())
+    elif sort == "price_desc":
+        query = query.order_by(models.TaskExpertService.base_price.desc())
+    else:
+        query = query.order_by(
+            desc(models.TaskExpertService.application_count),
+            desc(models.TaskExpertService.view_count),
+        )
+
+    query = query.offset((page - 1) * page_size).limit(page_size)
+    rows = (await executor.db.execute(query)).all()
+
+    services = []
+    for svc, owner_name in rows:
+        name_field = (svc.service_name_en if lang == "en" and svc.service_name_en else svc.service_name)
+        desc_field = (svc.description_en if lang == "en" and svc.description_en else svc.description)
+        services.append({
+            "id": svc.id,
+            "service_name": name_field,
+            "description": _truncate(desc_field, 120),
+            "service_type": svc.service_type,
+            "base_price": float(svc.base_price) if svc.base_price else None,
+            "currency": svc.currency,
+            "pricing_type": svc.pricing_type,
+            "location_type": svc.location_type,
+            "location": svc.location,
+            "category": svc.category,
+            "owner_name": owner_name,
+        })
+
+    return {"services": services, "count": len(services), "page": page}
+
+
+@tool_registry.register(
+    name="get_expert_reviews",
+    description=(
+        "查询达人的公开评价列表。Get public reviews for a task expert."
+    ),
+    input_schema={
+        "type": "object",
+        "properties": {
+            "expert_id": {"type": "string", "description": "达人 ID"},
+            "page": {"type": "integer", "description": "页码，默认 1"},
+        },
+        "required": ["expert_id"],
+    },
+    categories=[ToolCategory.PLATFORM],
+)
+async def _get_expert_reviews(executor: ToolExecutor, input: dict) -> dict:
+    msgs = _TOOL_ERRORS.get(executor._tool_lang(), _TOOL_ERRORS["en"])
+    expert_id = input.get("expert_id")
+    if not expert_id:
+        return {"error": msgs["expert_not_found"]}
+    page = max(1, input.get("page", 1))
+    page_size = 10
+
+    # 查询达人关联任务的评价
+    base = (
+        select(models.Review, models.Task.title)
+        .join(models.Task, models.Review.task_id == models.Task.id)
+        .where(and_(
+            models.Task.created_by_expert == True,
+            models.Task.expert_creator_id == expert_id,
+            models.Task.status == "completed",
+        ))
+    )
+    total = (await executor.db.execute(
+        select(func.count(models.Review.id))
+        .join(models.Task, models.Review.task_id == models.Task.id)
+        .where(and_(
+            models.Task.created_by_expert == True,
+            models.Task.expert_creator_id == expert_id,
+            models.Task.status == "completed",
+        ))
+    )).scalar() or 0
+
+    rows = (await executor.db.execute(
+        base.order_by(desc(models.Review.created_at))
+        .offset((page - 1) * page_size).limit(page_size)
+    )).all()
+
+    reviews = [{
+        "rating": float(r.rating),
+        "comment": _truncate(r.comment, 200) if r.comment else None,
+        "task_title": _truncate(task_title, 60) if task_title else None,
+        "created_at": format_iso_utc(r.created_at),
+    } for r, task_title in rows]
+
+    avg_rating = None
+    if total > 0:
+        avg = (await executor.db.execute(
+            select(func.avg(models.Review.rating))
+            .join(models.Task, models.Review.task_id == models.Task.id)
+            .where(and_(
+                models.Task.created_by_expert == True,
+                models.Task.expert_creator_id == expert_id,
+                models.Task.status == "completed",
+            ))
+        )).scalar()
+        avg_rating = round(float(avg), 1) if avg else None
+
+    return {
+        "reviews": reviews,
+        "total": total,
+        "average_rating": avg_rating,
+        "page": page,
+    }
+
+
+@tool_registry.register(
     name="prepare_task_draft",
     description=(
         "根据用户的自然语言描述，生成任务发布草稿。草稿会展示给用户确认后再正式发布，AI 不会直接创建任务。"
@@ -1819,4 +1983,672 @@ async def _prepare_task_draft(executor: ToolExecutor, input: dict) -> dict:
         "action": "task_draft",
         "message": ("已生成任务草稿，请用户确认后发布" if lang == "zh"
                      else "Task draft generated. Please ask the user to review and confirm."),
+    }
+
+
+_VALID_SERVICE_CATEGORIES = [
+    "programming", "translation", "tutoring", "food", "beverage", "cake",
+    "errand_transport", "social_entertainment", "beauty_skincare",
+    "handicraft", "gaming", "photography", "housekeeping",
+]
+
+_VALID_PRICING_TYPES = ["fixed", "hourly", "negotiable"]
+_VALID_LOCATION_TYPES = ["online", "in_person", "both"]
+
+
+@tool_registry.register(
+    name="prepare_service_draft",
+    description=(
+        "根据用户的自然语言描述，生成个人服务发布草稿。草稿会展示给用户确认后再正式发布，AI 不会直接创建服务。"
+        "Generate a personal service draft from user's natural language description. "
+        "The draft is shown for user confirmation before actual posting."
+    ),
+    input_schema={
+        "type": "object",
+        "properties": {
+            "service_name": {
+                "type": "string",
+                "description": "服务名称（必填，最多 100 字）",
+            },
+            "description": {
+                "type": "string",
+                "description": "服务详细描述（必填，最多 2000 字）",
+            },
+            "category": {
+                "type": "string",
+                "description": "服务分类，必须是以下之一: programming, translation, tutoring, food, beverage, cake, errand_transport, social_entertainment, beauty_skincare, handicraft, gaming, photography, housekeeping",
+            },
+            "pricing_type": {
+                "type": "string",
+                "description": "定价方式: fixed（固定价格）, hourly（按小时）, negotiable（可协商）",
+            },
+            "base_price": {
+                "type": "number",
+                "description": "服务基础价格（GBP），pricing_type 为 negotiable 时可不填",
+            },
+            "location_type": {
+                "type": "string",
+                "description": "服务地点类型: online（线上）, in_person（线下）, both（都可以）",
+            },
+            "location": {
+                "type": "string",
+                "description": "服务地点（location_type 非 online 时必填，如城市名）",
+            },
+        },
+        "required": ["service_name", "description", "category", "pricing_type"],
+    },
+    categories=[ToolCategory.PLATFORM],
+)
+async def _prepare_service_draft(executor: ToolExecutor, input: dict) -> dict:
+    lang = executor._tool_lang()
+    errors = []
+
+    service_name = (input.get("service_name") or "").strip()[:100]
+    if not service_name:
+        errors.append("服务名称不能为空" if lang == "zh" else "Service name is required")
+
+    description = (input.get("description") or "").strip()[:2000]
+    if not description:
+        errors.append("服务描述不能为空" if lang == "zh" else "Description is required")
+
+    raw_category = (input.get("category") or "").strip().lower()
+    category = raw_category if raw_category in _VALID_SERVICE_CATEGORIES else None
+    if not category:
+        category = "programming"  # fallback
+
+    raw_pricing = (input.get("pricing_type") or "").strip().lower()
+    pricing_type = raw_pricing if raw_pricing in _VALID_PRICING_TYPES else "fixed"
+
+    base_price = input.get("base_price")
+    try:
+        base_price = float(base_price) if base_price is not None else None
+    except (ValueError, TypeError):
+        base_price = None
+    if pricing_type != "negotiable":
+        if base_price is None or base_price <= 0:
+            errors.append("价格必须大于 0" if lang == "zh" else "Price must be greater than 0")
+
+    raw_loc_type = (input.get("location_type") or "").strip().lower()
+    location_type = raw_loc_type if raw_loc_type in _VALID_LOCATION_TYPES else "online"
+
+    location = (input.get("location") or "").strip()[:100] or None
+    if location_type != "online" and not location:
+        errors.append("线下服务需要填写地点" if lang == "zh" else "Location is required for in-person services")
+
+    if errors:
+        return {"draft": None, "errors": errors}
+
+    draft = {
+        "service_name": service_name,
+        "description": description,
+        "category": category,
+        "pricing_type": pricing_type,
+        "base_price": round(base_price, 2) if base_price else None,
+        "currency": "GBP",
+        "location_type": location_type,
+        "location": location,
+    }
+
+    return {
+        "draft": draft,
+        "action": "service_draft",
+        "message": ("已生成服务草稿，请用户确认后发布" if lang == "zh"
+                     else "Service draft generated. Please ask the user to review and confirm."),
+    }
+
+
+# 任务类型 → 推荐服务分类的映射
+_TASK_TYPE_TO_SERVICE_CATEGORY = {
+    "Skill Service": "programming",
+    "Housekeeping": "housekeeping",
+    "Errand Running": "errand_transport",
+    "Campus Life": "tutoring",
+    "Social Help": "social_entertainment",
+    "Pet Care": "housekeeping",
+    "Life Convenience": "housekeeping",
+    "Second-hand & Rental": None,
+    "Transportation": "errand_transport",
+    "Other": None,
+}
+
+
+@tool_registry.register(
+    name="analyze_my_skills",
+    description=(
+        "分析当前用户的接单历史和评价，统计擅长的任务类型、完成数量、平均评分，"
+        "以及已发布的个人服务，帮助 AI 推荐用户可以发布的服务。"
+        "Analyze the current user's task completion history, reviews, and existing services "
+        "to help AI recommend services the user could publish."
+    ),
+    input_schema={
+        "type": "object",
+        "properties": {},
+    },
+    categories=[ToolCategory.PROFILE, ToolCategory.PLATFORM],
+)
+async def _analyze_my_skills(executor: ToolExecutor, input: dict) -> dict:
+    user_id = executor.user.id
+    lang = executor._tool_lang()
+
+    # 1. 统计用户作为接单方完成的任务，按 task_type 分组
+    completed_by_type = (await executor.db.execute(
+        select(
+            models.Task.task_type,
+            func.count(models.Task.id).label("count"),
+            func.avg(models.Task.reward).label("avg_reward"),
+        )
+        .where(and_(
+            models.Task.taker_id == user_id,
+            models.Task.status == "completed",
+        ))
+        .group_by(models.Task.task_type)
+        .order_by(desc("count"))
+    )).all()
+
+    # 也统计通过多人参与完成的任务
+    multi_by_type = (await executor.db.execute(
+        select(
+            models.Task.task_type,
+            func.count(models.Task.id).label("count"),
+        )
+        .join(models.TaskParticipant, models.Task.id == models.TaskParticipant.task_id)
+        .where(and_(
+            models.TaskParticipant.user_id == user_id,
+            models.TaskParticipant.status == "completed",
+            models.Task.status == "completed",
+        ))
+        .group_by(models.Task.task_type)
+    )).all()
+
+    # 合并统计
+    type_stats: dict[str, dict] = {}
+    for row in completed_by_type:
+        type_stats[row.task_type] = {
+            "count": row.count,
+            "avg_reward": round(float(row.avg_reward), 2) if row.avg_reward else 0,
+        }
+    for row in multi_by_type:
+        if row.task_type in type_stats:
+            type_stats[row.task_type]["count"] += row.count
+        else:
+            type_stats[row.task_type] = {"count": row.count, "avg_reward": 0}
+
+    # 2. 用户作为接单方收到的评价统计
+    review_stats = (await executor.db.execute(
+        select(
+            func.count(models.Review.id).label("total_reviews"),
+            func.avg(models.Review.rating).label("avg_rating"),
+        )
+        .join(models.Task, models.Review.task_id == models.Task.id)
+        .where(and_(
+            models.Task.taker_id == user_id,
+            models.Task.status == "completed",
+        ))
+    )).one_or_none()
+
+    total_reviews = review_stats.total_reviews if review_stats else 0
+    avg_rating = round(float(review_stats.avg_rating), 1) if review_stats and review_stats.avg_rating else None
+
+    # 3. 查询用户已发布的个人服务
+    existing_services = (await executor.db.execute(
+        select(
+            models.TaskExpertService.service_name,
+            models.TaskExpertService.category,
+            models.TaskExpertService.status,
+        )
+        .where(and_(
+            models.TaskExpertService.user_id == user_id,
+            models.TaskExpertService.service_type == "personal",
+        ))
+        .order_by(desc(models.TaskExpertService.created_at))
+        .limit(20)
+    )).all()
+
+    services_list = [{
+        "service_name": s.service_name,
+        "category": s.category,
+        "status": s.status,
+    } for s in existing_services]
+
+    # 4. 生成推荐
+    total_completed = sum(s["count"] for s in type_stats.values())
+    skill_summary = sorted(
+        [{"task_type": k, **v} for k, v in type_stats.items()],
+        key=lambda x: x["count"],
+        reverse=True,
+    )
+
+    # 5. 推荐服务分类（基于完成最多的任务类型）
+    recommended_categories = []
+    existing_cats = {s.category for s in existing_services if s.status == "active"}
+    for item in skill_summary[:5]:
+        cat = _TASK_TYPE_TO_SERVICE_CATEGORY.get(item["task_type"])
+        if cat and cat not in existing_cats and cat not in recommended_categories:
+            recommended_categories.append(cat)
+
+    return {
+        "total_completed_tasks": total_completed,
+        "skill_summary": skill_summary[:10],
+        "total_reviews": total_reviews,
+        "avg_rating_as_taker": avg_rating,
+        "existing_services": services_list,
+        "recommended_categories": recommended_categories,
+        "note": (
+            "根据用户的接单历史和评价数据进行分析。请用自然语言总结用户的特长，"
+            "推荐适合发布的服务类型，并可用 prepare_service_draft 帮用户生成服务草稿。"
+            if lang == "zh" else
+            "Analysis based on user's task completion history and reviews. "
+            "Summarize strengths, recommend service types, and use prepare_service_draft to create drafts."
+        ),
+    }
+
+
+@tool_registry.register(
+    name="recommend_takers",
+    description="为指定任务推荐合适的接单人。Recommend suitable takers for a given task.",
+    input_schema={
+        "type": "object",
+        "properties": {
+            "task_id": {"type": "integer", "description": "任务 ID"},
+            "limit": {"type": "integer", "description": "返回数量，默认 5，最大 10", "default": 5},
+        },
+        "required": ["task_id"],
+    },
+    categories=[ToolCategory.TASK],
+)
+async def _recommend_takers(executor: ToolExecutor, input: dict) -> dict:
+    msgs = _TOOL_ERRORS.get(executor._tool_lang(), _TOOL_ERRORS["en"])
+    task_id = input.get("task_id")
+    if not task_id:
+        return {"error": msgs["task_id_required"]}
+
+    task = (await executor.db.execute(
+        select(models.Task).where(models.Task.id == task_id)
+    )).scalar_one_or_none()
+    if not task:
+        return {"error": msgs["task_not_found"]}
+
+    # 仅任务发布者可使用
+    if task.poster_id != executor.user.id:
+        return {"error": msgs["task_no_permission"]}
+
+    limit = min(10, max(1, input.get("limit", 5)))
+    lang = executor._tool_lang()
+
+    # ── 候选人收集：完成过同类任务的用户 ──
+    # 排除自己、已接单者、已申请者
+    excluded_ids = {executor.user.id}
+    if task.taker_id:
+        excluded_ids.add(task.taker_id)
+    existing_applicants = (await executor.db.execute(
+        select(models.TaskApplication.applicant_id)
+        .where(models.TaskApplication.task_id == task_id)
+    )).scalars().all()
+    excluded_ids.update(existing_applicants)
+
+    # 1) 完成过同类任务的用户（核心信号）
+    same_type_users = (await executor.db.execute(
+        select(
+            models.Task.taker_id.label("user_id"),
+            func.count(models.Task.id).label("completed_count"),
+            func.avg(models.Task.reward).label("avg_reward"),
+        )
+        .where(and_(
+            models.Task.task_type == task.task_type,
+            models.Task.status == "completed",
+            models.Task.taker_id.isnot(None),
+            models.Task.taker_id.notin_(excluded_ids),
+        ))
+        .group_by(models.Task.taker_id)
+    )).all()
+
+    # 2) 多人任务中完成过同类任务的参与者
+    multi_users = (await executor.db.execute(
+        select(
+            models.TaskParticipant.user_id,
+            func.count(models.TaskParticipant.id).label("completed_count"),
+        )
+        .join(models.Task, models.Task.id == models.TaskParticipant.task_id)
+        .where(and_(
+            models.Task.task_type == task.task_type,
+            models.TaskParticipant.status == "completed",
+            models.TaskParticipant.user_id.notin_(excluded_ids),
+        ))
+        .group_by(models.TaskParticipant.user_id)
+    )).all()
+
+    # 合并候选人 ID → 完成次数
+    candidate_counts: dict[str, int] = {}
+    candidate_avg_reward: dict[str, float] = {}
+    for row in same_type_users:
+        candidate_counts[row.user_id] = row.completed_count
+        candidate_avg_reward[row.user_id] = float(row.avg_reward) if row.avg_reward else 0
+    for row in multi_users:
+        candidate_counts[row.user_id] = candidate_counts.get(row.user_id, 0) + row.completed_count
+
+    if not candidate_counts:
+        return {
+            "candidates": [],
+            "count": 0,
+            "note": "没有找到完成过同类任务的用户" if lang == "zh"
+            else "No users found who have completed similar tasks",
+        }
+
+    candidate_ids = list(candidate_counts.keys())
+
+    # ── 批量加载用户信息 + 可靠性 ──
+    users_rows = (await executor.db.execute(
+        select(models.User).where(and_(
+            models.User.id.in_(candidate_ids),
+            models.User.is_active == True,
+            models.User.is_banned == False,
+            models.User.is_suspended == False,
+        ))
+    )).scalars().all()
+    users_map = {u.id: u for u in users_rows}
+
+    reliability_rows = (await executor.db.execute(
+        select(models.UserReliability).where(
+            models.UserReliability.user_id.in_(candidate_ids)
+        )
+    )).scalars().all()
+    reliability_map = {r.user_id: r for r in reliability_rows}
+
+    # ── 评分 ──
+    scored = []
+    for uid in candidate_ids:
+        u = users_map.get(uid)
+        if not u:
+            continue
+
+        score = 0.0
+        reasons = []
+
+        # 同类任务完成数（0-0.35）
+        count = candidate_counts[uid]
+        type_score = min(count / 10, 1.0) * 0.35
+        score += type_score
+        if count >= 3:
+            reasons.append(f"完成过 {count} 个同类任务" if lang == "zh" else f"Completed {count} similar tasks")
+
+        # 用户评分（0-0.25）
+        if u.avg_rating and u.avg_rating > 0:
+            rating_score = (u.avg_rating / 5.0) * 0.25
+            score += rating_score
+            if u.avg_rating >= 4.5:
+                reasons.append(f"评分 {u.avg_rating:.1f}" if lang == "zh" else f"Rating {u.avg_rating:.1f}")
+
+        # 可靠性（0-0.25）
+        rel = reliability_map.get(uid)
+        if rel and rel.reliability_score is not None:
+            rel_score = rel.reliability_score * 0.25
+            score += rel_score
+            if rel.completion_rate and rel.completion_rate >= 0.9:
+                reasons.append("完成率高" if lang == "zh" else "High completion rate")
+            if rel.on_time_rate and rel.on_time_rate >= 0.9:
+                reasons.append("准时率高" if lang == "zh" else "Punctual")
+
+        # 地理匹配（0-0.15）
+        if task.location and u.residence_city:
+            if u.residence_city.lower() in task.location.lower():
+                score += 0.15
+                reasons.append("同城" if lang == "zh" else "Same city")
+
+        if not reasons:
+            reasons.append(f"完成过 {count} 个同类任务" if lang == "zh" else f"Completed {count} similar tasks")
+
+        scored.append({
+            "user_id": uid,
+            "name": u.name,
+            "avg_rating": u.avg_rating,
+            "completed_task_count": u.completed_task_count,
+            "similar_task_count": count,
+            "score": round(score, 2),
+            "reasons": reasons,
+        })
+
+    scored.sort(key=lambda x: x["score"], reverse=True)
+    top = scored[:limit]
+
+    return {
+        "task_id": task_id,
+        "task_title": _task_title(task, lang),
+        "candidates": top,
+        "count": len(top),
+        "total_candidates": len(scored),
+    }
+
+
+@tool_registry.register(
+    name="get_next_action",
+    description="根据任务当前状态，告诉用户下一步该做什么。Get the next recommended action for a task based on its current status.",
+    input_schema={
+        "type": "object",
+        "properties": {
+            "task_id": {"type": "integer", "description": "任务 ID"},
+        },
+        "required": ["task_id"],
+    },
+    categories=[ToolCategory.TASK],
+)
+async def _get_next_action(executor: ToolExecutor, input: dict) -> dict:
+    msgs = _TOOL_ERRORS.get(executor._tool_lang(), _TOOL_ERRORS["en"])
+    task_id = input.get("task_id")
+    if not task_id:
+        return {"error": msgs["task_id_required"]}
+
+    task = (await executor.db.execute(
+        select(models.Task).where(models.Task.id == task_id)
+    )).scalar_one_or_none()
+    if not task:
+        return {"error": msgs["task_not_found"]}
+
+    user_id = executor.user.id
+    is_poster = task.poster_id == user_id
+    is_taker = task.taker_id == user_id
+    if not is_poster and not is_taker:
+        # 也检查多人任务参与者
+        is_participant = (await executor.db.execute(
+            select(func.count()).select_from(models.TaskParticipant).where(and_(
+                models.TaskParticipant.task_id == task_id,
+                models.TaskParticipant.user_id == user_id,
+            ))
+        )).scalar() or 0
+        if not is_participant:
+            return {"error": msgs["task_no_permission"]}
+
+    lang = executor._tool_lang()
+    is_zh = lang == "zh"
+    role = "poster" if is_poster else "taker"
+    actions: list[dict] = []
+
+    status = task.status
+
+    if status == "open":
+        if is_poster:
+            # 检查申请数
+            app_count = (await executor.db.execute(
+                select(func.count()).select_from(models.TaskApplication)
+                .where(and_(
+                    models.TaskApplication.task_id == task_id,
+                    models.TaskApplication.status == "pending",
+                ))
+            )).scalar() or 0
+
+            if app_count > 0:
+                actions.append({
+                    "action": "review_applications",
+                    "label": "查看申请" if is_zh else "Review applications",
+                    "description": (f"有 {app_count} 个待处理申请，去选择合适的接单人" if is_zh
+                                    else f"{app_count} pending application(s). Review and choose a taker."),
+                    "route": f"/tasks/{task_id}",
+                    "priority": "high",
+                })
+            else:
+                # 检查发布了多久
+                from app.utils.time_utils import get_utc_time
+                from datetime import timedelta
+                now = get_utc_time()
+                days_open = (now - task.created_at).days if task.created_at else 0
+                if days_open >= 3:
+                    actions.append({
+                        "action": "adjust_task",
+                        "label": "调整任务" if is_zh else "Adjust task",
+                        "description": (f"任务已发布 {days_open} 天无人申请，建议调整价格或描述" if is_zh
+                                        else f"Task open for {days_open} days with no applicants. Consider adjusting price or description."),
+                        "route": f"/tasks/{task_id}",
+                        "priority": "medium",
+                    })
+                else:
+                    actions.append({
+                        "action": "wait",
+                        "label": "等待接单" if is_zh else "Waiting for takers",
+                        "description": ("任务已发布，等待有人申请" if is_zh
+                                        else "Task is live. Waiting for applicants."),
+                        "route": f"/tasks/{task_id}",
+                        "priority": "low",
+                    })
+
+                actions.append({
+                    "action": "share_task",
+                    "label": "分享任务" if is_zh else "Share task",
+                    "description": ("分享给朋友或社交媒体，增加曝光" if is_zh
+                                    else "Share to friends or social media to increase visibility."),
+                    "route": f"/tasks/{task_id}",
+                    "priority": "low",
+                })
+        else:
+            # 接单者视角：可以申请
+            actions.append({
+                "action": "apply",
+                "label": "申请接单" if is_zh else "Apply for task",
+                "description": ("如果感兴趣可以申请这个任务" if is_zh
+                                else "Apply if you're interested in this task."),
+                "route": f"/tasks/{task_id}",
+                "priority": "medium",
+            })
+
+    elif status == "accepted":
+        if is_poster and not task.is_paid:
+            actions.append({
+                "action": "pay",
+                "label": "去支付" if is_zh else "Make payment",
+                "description": ("接单人已确认，请支付报酬到托管账户" if is_zh
+                                else "Taker confirmed. Please pay the reward to escrow."),
+                "route": f"/tasks/{task_id}",
+                "priority": "high",
+            })
+        elif is_poster and task.is_paid:
+            actions.append({
+                "action": "wait_completion",
+                "label": "等待完成" if is_zh else "Waiting for completion",
+                "description": ("已支付，等待接单方完成任务" if is_zh
+                                else "Payment made. Waiting for the taker to complete the task."),
+                "route": f"/tasks/{task_id}",
+                "priority": "low",
+            })
+            actions.append({
+                "action": "contact_taker",
+                "label": "联系接单方" if is_zh else "Contact taker",
+                "description": ("有问题可以直接联系接单方沟通" if is_zh
+                                else "Contact the taker if you have questions."),
+                "route": f"/task-chat/{task_id}",
+                "priority": "low",
+            })
+        elif is_taker:
+            actions.append({
+                "action": "complete_task",
+                "label": "标记完成" if is_zh else "Mark as complete",
+                "description": ("完成任务后请标记完成，发布方确认后报酬将转给你" if is_zh
+                                else "Mark the task as complete when finished. Payment is released after poster confirms."),
+                "route": f"/tasks/{task_id}",
+                "priority": "high",
+            })
+
+    elif status == "completed":
+        if is_poster and not task.is_confirmed:
+            deadline_str = ""
+            if task.confirmation_deadline:
+                from datetime import timedelta
+                from app.utils.time_utils import get_utc_time
+                remaining = task.confirmation_deadline - get_utc_time()
+                days_left = max(0, remaining.days)
+                deadline_str = (f"（剩余 {days_left} 天自动确认）" if is_zh
+                                else f" ({days_left} days until auto-confirm)")
+
+            actions.append({
+                "action": "confirm_completion",
+                "label": "确认完成" if is_zh else "Confirm completion",
+                "description": (f"接单方已标记完成，请确认后报酬将转给对方{deadline_str}" if is_zh
+                                else f"Taker marked as complete. Confirm to release payment.{deadline_str}"),
+                "route": f"/tasks/{task_id}",
+                "priority": "high",
+            })
+        elif is_taker:
+            actions.append({
+                "action": "wait_confirmation",
+                "label": "等待确认" if is_zh else "Waiting for confirmation",
+                "description": ("你已标记完成，等待发布方确认。超时将自动确认。" if is_zh
+                                else "You marked it complete. Waiting for poster to confirm. Auto-confirms if no response."),
+                "route": f"/tasks/{task_id}",
+                "priority": "low",
+            })
+
+    elif status == "confirmed":
+        # 检查是否已评价
+        has_review = (await executor.db.execute(
+            select(func.count()).select_from(models.Review).where(and_(
+                models.Review.task_id == task_id,
+                models.Review.user_id == user_id,
+            ))
+        )).scalar() or 0
+
+        if not has_review:
+            actions.append({
+                "action": "leave_review",
+                "label": "去评价" if is_zh else "Leave a review",
+                "description": ("评价对方的服务质量，可获得积分奖励" if is_zh
+                                else "Rate the other party's service. Earn points for reviewing."),
+                "route": f"/tasks/{task_id}",
+                "priority": "medium",
+            })
+
+        if is_taker:
+            actions.append({
+                "action": "check_wallet",
+                "label": "查看钱包" if is_zh else "Check wallet",
+                "description": ("报酬已到账，可在钱包查看或提现" if is_zh
+                                else "Payment received. Check your wallet or withdraw."),
+                "route": "/profile-tab",
+                "priority": "low",
+            })
+
+        if not has_review and not actions:
+            actions.append({
+                "action": "done",
+                "label": "已完成" if is_zh else "All done",
+                "description": ("任务已圆满完成" if is_zh
+                                else "Task completed successfully."),
+                "route": f"/tasks/{task_id}",
+                "priority": "low",
+            })
+
+    elif status == "cancelled":
+        actions.append({
+            "action": "view_details",
+            "label": "查看详情" if is_zh else "View details",
+            "description": ("任务已取消，可查看详情了解原因" if is_zh
+                            else "Task was cancelled. View details for more info."),
+            "route": f"/tasks/{task_id}",
+            "priority": "low",
+        })
+
+    return {
+        "task_id": task_id,
+        "task_title": _task_title(task, lang),
+        "status": status,
+        "role": role,
+        "is_paid": bool(task.is_paid),
+        "is_confirmed": bool(task.is_confirmed),
+        "next_actions": actions,
     }

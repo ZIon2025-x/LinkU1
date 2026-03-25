@@ -259,26 +259,11 @@ class IntentType:
     FAQ = "faq"
     TASK_QUERY = "task"
     PROFILE = "profile"
-    COMPLEX = "complex"
-    OFF_TOPIC = "off_topic"
     UNKNOWN = "unknown"
     TRANSFER_TO_CS = "transfer_to_cs"
     ACTIVITY_QUERY = "activity_query"
     POINTS_QUERY = "points_query"
 
-
-_OFF_TOPIC_PATTERNS = [
-    r"写(一篇|个|段|首)(作文|文章|诗|歌|小说|故事|代码|程序|脚本)",
-    r"(翻译|帮我翻译|translate)",
-    r"(编程|写代码|debug|代码|python|java|javascript|html|css)",
-    r"(数学|算一下|计算|方程|几何|概率)",
-    r"(天气|股票|新闻|体育|娱乐|明星|游戏|电影)",
-    r"(谁是|什么是|历史上|科学|物理|化学|生物)",
-    r"(聊天|闲聊|无聊|讲个笑话|joke|chat with me)",
-    r"(写信|写邮件|写简历|resume|cover letter)",
-    r"(AI|GPT|Claude|OpenAI|人工智能).*(是什么|怎么样|对比)",
-]
-_OFF_TOPIC_RE = re.compile("|".join(_OFF_TOPIC_PATTERNS), re.IGNORECASE)
 
 _FAQ_KEYWORDS = {
     "faq_about": ["link2ur是什么", "什么是link2ur", "what is link2ur", "谁可以使用", "who can use", "平台介绍", "如何加入", "加入你们", "怎么加入", "how to join", "可以合作吗", "合作", "partner", "partnership", "collaborate", "成为合作伙伴", "become partner"],
@@ -311,7 +296,11 @@ _TASK_KEYWORDS = ["任务", "task", "我的任务", "my task", "进行中", "已
                   "状态", "status", "订单", "order",
                   "发布任务", "发任务", "帮我发", "post task", "create task", "publish task",
                   "帮我找人", "帮我请人", "需要帮忙", "need help",
-                  "想找人帮", "找人帮忙", "hire someone", "找人做"]
+                  "想找人帮", "找人帮忙", "hire someone", "找人做",
+                  "推荐接单", "谁能帮", "谁适合", "合适的人", "recommend taker",
+                  "who can help", "suitable person", "find someone",
+                  "下一步", "接下来", "该怎么办", "怎么操作", "next step",
+                  "what should i do", "what's next", "how to proceed"]
 
 _PROFILE_KEYWORDS = ["个人资料", "我的资料", "my profile", "评分", "rating", "等级", "level",
                      "统计", "stats", "我的信息"]
@@ -369,6 +358,13 @@ _PERSONAL_DATA_KEYWORDS = [
     # 论坛个人
     "搜帖子", "search posts", "热帖", "hot posts", "热门帖子",
     "我收藏的帖子", "my favorite posts", "我的回复", "my replies",
+    # 服务
+    "个人服务", "personal service", "服务列表", "搜索服务", "search service",
+    "有什么服务", "推荐服务", "找服务", "browse service", "服务推荐",
+    "发布服务", "发服务", "create service", "publish service", "帮我发服务",
+    "我有什么特长", "我的特长", "我擅长", "适合发布", "推荐服务", "推荐我做",
+    "what am i good at", "my strengths", "my skills", "what service", "recommend service",
+    "达人评价", "expert review", "达人评分", "expert rating",
 ]
 
 _CONFIRMATION_WORDS = {
@@ -385,11 +381,9 @@ _CONFIRMATION_WORDS = {
 def classify_intent(message: str) -> str:
     msg_lower = message.lower().strip()
     if not msg_lower:
-        return IntentType.OFF_TOPIC
+        return IntentType.UNKNOWN
     if msg_lower in _CONFIRMATION_WORDS:
         return IntentType.UNKNOWN
-    if _OFF_TOPIC_RE.search(msg_lower):
-        return IntentType.OFF_TOPIC
     if any(kw in msg_lower for kw in _TRANSFER_CS_KEYWORDS):
         return IntentType.TRANSFER_TO_CS
     if any(kw in msg_lower for kw in _ACTIVITY_QUERY_KEYWORDS):
@@ -462,6 +456,30 @@ _DEFAULT_SYSTEM_PROMPT = """你是 Link2Ur 技能互助平台的官方 AI 客服
 13. 查看签到状态和奖励进度
 14. 查询跳蚤市场我的商品、收藏和购买记录
 15. 搜索论坛帖子、查看热帖、我的收藏和回复
+16. 帮助用户发布个人服务（生成服务草稿）
+17. 分析用户的接单历史和评价，推荐适合发布的服务
+18. 为发布者推荐合适的接单人（谁适合做这个任务）
+19. 根据任务状态引导用户下一步操作（确认、支付、评价等）
+
+【交易流程引导】
+当用户询问"接下来该怎么办"、"下一步做什么"、任务进展相关问题时，使用 get_next_action 工具。
+- 根据任务状态和用户角色（发布者/接单者）返回具体的下一步操作
+- 每个操作包含说明和优先级，优先提醒 high 优先级的操作
+- 回复时用简洁的语言引导用户，告知具体操作步骤
+
+【推荐接单人】
+当用户发布了任务后问"谁能帮我做"、"有没有合适的人"、"推荐接单人"等，使用 recommend_takers 工具。
+- 需要用户提供 task_id（可先用 query_my_tasks 找到任务）
+- 基于同类任务完成数、评分、可靠性、地理位置综合评分
+- 推荐结果包含每个候选人的匹配原因，方便用户选择
+- 用户可以在平台上直接查看推荐人的主页或邀请接单
+
+【技能分析与服务推荐】
+当用户询问"我有什么特长"、"我适合发布什么服务"、"推荐我做什么"等问题时，使用 analyze_my_skills 工具。
+- 分析用户完成的任务类型统计、平均评分、收到的评价
+- 结合数据给出个性化建议，推荐适合发布的服务类型
+- 如果用户同意，可以接着用 prepare_service_draft 帮用户生成服务草稿
+- 注意避免推荐用户已经发布过的同类服务
 
 【发布任务 — 草稿模式】
 当用户要求帮忙发布任务时，使用 prepare_task_draft 工具生成草稿。
@@ -469,6 +487,13 @@ _DEFAULT_SYSTEM_PROMPT = """你是 Link2Ur 技能互助平台的官方 AI 客服
 - 如果缺少必填信息（尤其是报酬金额），先询问用户
 - 草稿生成后，告诉用户"已为您生成任务草稿，请点击下方按钮确认发布"
 - 你不能直接创建任务，只能生成草稿供用户确认
+
+【发布个人服务 — 草稿模式】
+当用户要求帮忙发布个人服务时，使用 prepare_service_draft 工具生成草稿。
+- 从用户的描述中提取服务名称、描述、分类、定价方式、价格、服务地点类型
+- 如果缺少必填信息（尤其是价格和分类），先询问用户
+- 草稿生成后，告诉用户"已为您生成服务草稿，请点击下方按钮确认发布"
+- 你不能直接创建服务，只能生成草稿供用户确认
 
 【严格禁止 — 必须拒绝的请求】
 - 任何与 Link2Ur 平台无关的问题（闲聊、写作文、编程、数学、翻译、新闻等）
@@ -616,11 +641,126 @@ async def build_user_profile_context(user_id: str, db) -> str:
     return ""
 
 
-async def get_proactive_suggestions(user_id: str, db) -> str:
-    """Check for high-match tasks (>0.8 score, last 24h). Uses asyncio.to_thread for sync engine."""
-    import asyncio
-    from datetime import datetime, timedelta
+async def get_proactive_suggestions(user_id: str, db, lang: str = "zh") -> str:
+    """构建用户待办提醒，注入 system prompt 让 AI 主动提及。
+
+    检查项：
+    1. 发布的任务无人申请（>3天）
+    2. 有待处理的申请
+    3. 待确认完成的任务
+    4. 待评价的任务
+    5. 高匹配新任务推荐
+    """
+    from datetime import timedelta
+
+    is_zh = lang.startswith("zh")
+    sections: list[str] = []
+    now = get_utc_time()
+
     try:
+        # 1. 发布的任务无人申请（open 超过 3 天，0 个申请）
+        stale_cutoff = now - timedelta(days=3)
+        stale_tasks = (await db.execute(
+            select(models.Task.id, models.Task.title, models.Task.title_zh, models.Task.created_at)
+            .where(and_(
+                models.Task.poster_id == user_id,
+                models.Task.status == "open",
+                models.Task.created_at <= stale_cutoff,
+            ))
+            .order_by(models.Task.created_at.asc())
+            .limit(3)
+        )).all()
+
+        if stale_tasks:
+            # 检查哪些确实没有申请
+            stale_ids = [t.id for t in stale_tasks]
+            app_counts = {}
+            if stale_ids:
+                rows = (await db.execute(
+                    select(
+                        models.TaskApplication.task_id,
+                        func.count(models.TaskApplication.id).label("cnt"),
+                    )
+                    .where(models.TaskApplication.task_id.in_(stale_ids))
+                    .group_by(models.TaskApplication.task_id)
+                )).all()
+                app_counts = {r.task_id: r.cnt for r in rows}
+
+            no_app_tasks = [t for t in stale_tasks if app_counts.get(t.id, 0) == 0]
+            if no_app_tasks:
+                titles = [t.title_zh or t.title or f"#{t.id}" for t in no_app_tasks] if is_zh \
+                    else [t.title or t.title_zh or f"#{t.id}" for t in no_app_tasks]
+                if is_zh:
+                    sections.append(f"⚠️ 用户发布的以下任务已超过3天无人申请：{', '.join(titles)}。建议提醒用户调整价格或描述。")
+                else:
+                    sections.append(f"⚠️ These tasks have had no applicants for 3+ days: {', '.join(titles)}. Suggest adjusting price or description.")
+
+        # 2. 有待处理的申请（用户是发布者，有 pending 申请）
+        pending_apps = (await db.execute(
+            select(
+                models.Task.id, models.Task.title, models.Task.title_zh,
+                func.count(models.TaskApplication.id).label("cnt"),
+            )
+            .join(models.TaskApplication, models.Task.id == models.TaskApplication.task_id)
+            .where(and_(
+                models.Task.poster_id == user_id,
+                models.Task.status == "open",
+                models.TaskApplication.status == "pending",
+            ))
+            .group_by(models.Task.id, models.Task.title, models.Task.title_zh)
+            .limit(3)
+        )).all()
+
+        if pending_apps:
+            parts = []
+            for row in pending_apps:
+                title = (row.title_zh or row.title or f"#{row.id}") if is_zh else (row.title or row.title_zh or f"#{row.id}")
+                parts.append(f"{title}({row.cnt})")
+            if is_zh:
+                sections.append(f"📋 以下任务有待处理的申请：{', '.join(parts)}。提醒用户及时查看。")
+            else:
+                sections.append(f"📋 Pending applications: {', '.join(parts)}. Remind user to review them.")
+
+        # 3. 待确认完成的任务（用户是发布者，任务 completed 但未 confirmed）
+        pending_confirm = (await db.execute(
+            select(models.Task.id, models.Task.title, models.Task.title_zh, models.Task.confirmation_deadline)
+            .where(and_(
+                models.Task.poster_id == user_id,
+                models.Task.status == "completed",
+                models.Task.is_confirmed == 0,
+            ))
+            .limit(3)
+        )).all()
+
+        if pending_confirm:
+            titles = [(t.title_zh or t.title or f"#{t.id}") if is_zh else (t.title or t.title_zh or f"#{t.id}") for t in pending_confirm]
+            if is_zh:
+                sections.append(f"✅ 以下任务等待确认完成：{', '.join(titles)}。确认后报酬才能转给接单方。")
+            else:
+                sections.append(f"✅ Tasks awaiting confirmation: {', '.join(titles)}. Payment is released after confirmation.")
+
+        # 4. 待评价的任务（已确认但未评价）
+        unreviewed = (await db.execute(
+            select(models.Task.id, models.Task.title, models.Task.title_zh)
+            .where(and_(
+                or_(models.Task.poster_id == user_id, models.Task.taker_id == user_id),
+                models.Task.status == "confirmed",
+                ~models.Task.id.in_(
+                    select(models.Review.task_id).where(models.Review.user_id == user_id)
+                ),
+            ))
+            .limit(3)
+        )).all()
+
+        if unreviewed:
+            titles = [(t.title_zh or t.title or f"#{t.id}") if is_zh else (t.title or t.title_zh or f"#{t.id}") for t in unreviewed]
+            if is_zh:
+                sections.append(f"⭐ 以下任务还没评价：{', '.join(titles)}。评价可以获得积分奖励。")
+            else:
+                sections.append(f"⭐ Unreviewed tasks: {', '.join(titles)}. Leave a review to earn points.")
+
+        # 5. 高匹配新任务推荐（保留原逻辑）
+        import asyncio
         from app.task_recommendation import get_task_recommendations
         from app.deps import get_sync_db
 
@@ -632,31 +772,33 @@ async def get_proactive_suggestions(user_id: str, db) -> str:
                 sync_db.close()
 
         recs = await asyncio.to_thread(_get_recs)
-        cutoff = get_utc_time() - timedelta(hours=24)
+        cutoff = now - timedelta(hours=24)
         high_matches = []
         for rec in recs:
-            # Return format: {"task": <ORM Task>, "score": float, "reason": str}
             score = rec.get("score", 0)
             task = rec.get("task")
             if not task or score < 0.8:
                 continue
             created = getattr(task, "created_at", None)
             if created and created >= cutoff:
-                title = getattr(task, "title_zh", None) or getattr(task, "title", "") or ""
-                high_matches.append({
-                    "title": title,
-                    "reason": rec.get("reason", ""),
-                    "score": score,
-                })
+                title = (getattr(task, "title_zh", None) or getattr(task, "title", "") or "") if is_zh \
+                    else (getattr(task, "title", None) or getattr(task, "title_zh", "") or "")
+                high_matches.append(f"{title}(匹配度{score:.0%})" if is_zh else f"{title} ({score:.0%} match)")
         if high_matches:
-            lines = ["最近有以下高匹配任务值得推荐给用户："]
-            for i, m in enumerate(high_matches[:3], 1):
-                lines.append(f"{i}. {m['title']} - {m['reason']} (匹配度: {m['score']:.2f})")
-            lines.append("请在回复中自然地向用户推荐这些任务。")
-            return "\n".join(lines)
+            if is_zh:
+                sections.append(f"🔥 新发布的高匹配任务：{', '.join(high_matches[:3])}。可以推荐给用户。")
+            else:
+                sections.append(f"🔥 New high-match tasks: {', '.join(high_matches[:3])}. Recommend to user.")
+
     except Exception as e:
-        logger.warning(f"Failed to get proactive suggestions: {e}")
-    return ""
+        logger.warning("Failed to get proactive suggestions: %s", e)
+
+    if not sections:
+        return ""
+
+    header = "【用户待办提醒 — 请在回复中自然地提及相关项，不要一次全部列出，选最重要的1-2条】" if is_zh \
+        else "[User action items — mention 1-2 most important naturally, don't list all at once]"
+    return header + "\n" + "\n".join(sections)
 
 
 # ==================== 离题拒绝消息 & 语言推断 ====================
@@ -746,18 +888,6 @@ async def _step_intent_classify(ctx: _PipelineContext) -> AsyncIterator[ServerSe
     logger.info("AI intent: %s for user %s: %s", ctx.intent, ctx.user.id, ctx.user_message[:50])
     return
     yield
-
-
-async def _step_off_topic(ctx: _PipelineContext) -> AsyncIterator[ServerSentEvent]:
-    if ctx.intent != IntentType.OFF_TOPIC:
-        return
-    reply = _OFF_TOPIC_RESPONSES.get(ctx.reply_lang, _OFF_TOPIC_RESPONSES["en"])
-    _state.record_usage(ctx.user.id, 0)
-    await _save_assistant_message(ctx, reply, "local", 0, 0)
-    await ctx.db.commit()
-    yield _make_text_sse(reply)
-    yield _make_done_sse()
-    ctx.terminated = True
 
 
 async def _step_transfer_cs(ctx: _PipelineContext) -> AsyncIterator[ServerSentEvent]:
@@ -889,7 +1019,7 @@ async def _step_points(ctx: _PipelineContext) -> AsyncIterator[ServerSentEvent]:
 
 async def _step_llm(ctx: _PipelineContext) -> AsyncIterator[ServerSentEvent]:
     """核心 LLM 调用 + 工具循环（带 token 上限保护）"""
-    model_tier = "large" if ctx.intent == IntentType.COMPLEX else "small"
+    model_tier = "small"
 
     # Record intent event
     try:
@@ -912,11 +1042,10 @@ async def _step_llm(ctx: _PipelineContext) -> AsyncIterator[ServerSentEvent]:
     if profile_context:
         system_prompt += f"\n\n{profile_context}\n请根据以上用户画像信息提供个性化的回答和推荐。"
 
-    # Proactive suggestions on first message only (no prior history)
-    if not history:
-        suggestions = await get_proactive_suggestions(ctx.user.id, ctx.db)
-        if suggestions:
-            system_prompt += f"\n\n{suggestions}"
+    # Proactive suggestions — 每次对话都注入待办提醒
+    suggestions = await get_proactive_suggestions(ctx.user.id, ctx.db, lang=ctx.reply_lang)
+    if suggestions:
+        system_prompt += f"\n\n{suggestions}"
 
     # 按意图选择工具子集
     intent_for_tools = ctx.intent
@@ -924,8 +1053,6 @@ async def _step_llm(ctx: _PipelineContext) -> AsyncIterator[ServerSentEvent]:
         intent_for_tools = "task"
     elif intent_for_tools in (IntentType.PROFILE,):
         intent_for_tools = "profile"
-    elif intent_for_tools in (IntentType.COMPLEX,):
-        intent_for_tools = "complex"
     else:
         intent_for_tools = "unknown"
     tools = tool_registry.get_tools_for_intent(intent_for_tools)
@@ -1069,6 +1196,12 @@ async def _step_llm(ctx: _PipelineContext) -> AsyncIterator[ServerSentEvent]:
                         event="task_draft",
                     )
 
+                if block.name == "prepare_service_draft" and result.get("draft"):
+                    yield ServerSentEvent(
+                        data=json.dumps(result["draft"], ensure_ascii=False),
+                        event="service_draft",
+                    )
+
                 tool_result_blocks.append({
                     "type": "tool_result", "tool_use_id": block.id,
                     "content": json.dumps(result, ensure_ascii=False),
@@ -1125,7 +1258,6 @@ _PIPELINE = [
     _step_budget_check,
     _step_save_user_message,
     _step_intent_classify,
-    _step_off_topic,
     _step_transfer_cs,
     _step_faq,
     _step_activity,

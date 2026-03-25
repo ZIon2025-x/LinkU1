@@ -48,6 +48,7 @@ class AIMessage extends Equatable {
     this.createdAt,
     this.isStreaming = false,
     this.toolName,
+    this.toolResultData,
   });
 
   final int? id;
@@ -58,6 +59,7 @@ class AIMessage extends Equatable {
   final DateTime? createdAt;
   final bool isStreaming; // 正在流式接收中
   final String? toolName;  // last tool called (client-side only, not persisted)
+  final Map<String, dynamic>? toolResultData; // 工具返回的原始数据（用于渲染任务卡片等）
 
   bool get isUser => role == 'user';
   bool get isAssistant => role == 'assistant';
@@ -72,6 +74,7 @@ class AIMessage extends Equatable {
     DateTime? createdAt,
     bool? isStreaming,
     String? toolName,
+    Map<String, dynamic>? toolResultData,
   }) {
     return AIMessage(
       id: id ?? this.id,
@@ -82,6 +85,7 @@ class AIMessage extends Equatable {
       createdAt: createdAt ?? this.createdAt,
       isStreaming: isStreaming ?? this.isStreaming,
       toolName: toolName ?? this.toolName,
+      toolResultData: toolResultData ?? this.toolResultData,
     );
   }
 
@@ -107,7 +111,7 @@ class AIMessage extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, role, content, isStreaming, toolName];
+  List<Object?> get props => [id, role, content, isStreaming, toolName, toolResultData];
 }
 
 /// AI 工具调用
@@ -156,7 +160,7 @@ class AIToolResult extends Equatable {
 }
 
 /// SSE 事件类型
-enum AIChatEventType { token, toolCall, toolResult, done, error, csAvailable, taskDraft }
+enum AIChatEventType { token, contentReplace, toolCall, toolResult, done, error, csAvailable, taskDraft, serviceDraft }
 
 /// SSE 事件
 class AIChatEvent {
@@ -173,6 +177,7 @@ class AIChatEvent {
     this.csAvailable,
     this.contactEmail,
     this.taskDraft,
+    this.serviceDraft,
   });
 
   final AIChatEventType type;
@@ -187,4 +192,5 @@ class AIChatEvent {
   final bool? csAvailable;
   final String? contactEmail;
   final Map<String, dynamic>? taskDraft;
+  final Map<String, dynamic>? serviceDraft;
 }
