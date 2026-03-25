@@ -133,7 +133,7 @@ class _EmptyState extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
             Text(
               l10n.fleaMarketNoRentalRequests,
-              style: AppTypography.bodyLarge.copyWith(
+              style: AppTypography.body.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
@@ -209,7 +209,7 @@ class _RentalCard extends StatelessWidget {
                         Expanded(
                           child: Text(
                             rental.itemTitle ?? 'Item #${rental.itemId}',
-                            style: AppTypography.titleSmall.copyWith(
+                            style: AppTypography.subheadlineBold.copyWith(
                               color: theme.colorScheme.onSurface,
                             ),
                             maxLines: 1,
@@ -228,7 +228,7 @@ class _RentalCard extends StatelessWidget {
                           ),
                           child: Text(
                             statusLabel,
-                            style: AppTypography.labelSmall.copyWith(
+                            style: AppTypography.caption.copyWith(
                               color: statusColor,
                               fontWeight: FontWeight.w600,
                             ),
@@ -241,7 +241,7 @@ class _RentalCard extends StatelessWidget {
                     // 日期
                     Text(
                       '${_formatDate(rental.startDate)} - ${_formatDate(rental.endDate)}',
-                      style: AppTypography.bodySmall.copyWith(
+                      style: AppTypography.footnote.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
@@ -250,7 +250,7 @@ class _RentalCard extends StatelessWidget {
                     // 金额
                     Text(
                       '${l10n.fleaMarketRentalTotal}: $currencySymbol${rental.totalPaid.toStringAsFixed(2)}',
-                      style: AppTypography.bodySmall.copyWith(
+                      style: AppTypography.footnote.copyWith(
                         color: theme.colorScheme.primary,
                         fontWeight: FontWeight.w600,
                       ),

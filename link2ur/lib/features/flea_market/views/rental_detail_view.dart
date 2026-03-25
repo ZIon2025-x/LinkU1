@@ -268,7 +268,7 @@ class _ItemInfoSection extends StatelessWidget {
           Expanded(
             child: Text(
               rental.itemTitle ?? 'Item #${rental.itemId}',
-              style: AppTypography.titleMedium.copyWith(
+              style: AppTypography.title3.copyWith(
                 color: theme.colorScheme.onSurface,
               ),
               maxLines: 2,
@@ -311,7 +311,7 @@ class _RentalInfoSection extends StatelessWidget {
             children: [
               Text(
                 l10n.fleaMarketRentalDuration,
-                style: AppTypography.titleSmall.copyWith(
+                style: AppTypography.subheadlineBold.copyWith(
                   color: theme.colorScheme.onSurface,
                 ),
               ),
@@ -360,7 +360,7 @@ class _FinancialSection extends StatelessWidget {
         children: [
           Text(
             l10n.fleaMarketRentalCostPreview,
-            style: AppTypography.titleSmall.copyWith(
+            style: AppTypography.subheadlineBold.copyWith(
               color: theme.colorScheme.onSurface,
             ),
           ),
@@ -413,7 +413,7 @@ class _DepositStatusSection extends StatelessWidget {
         children: [
           Text(
             l10n.fleaMarketDeposit,
-            style: AppTypography.bodyMedium.copyWith(
+            style: AppTypography.subheadline.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
@@ -428,7 +428,7 @@ class _DepositStatusSection extends StatelessWidget {
             ),
             child: Text(
               label,
-              style: AppTypography.labelSmall.copyWith(color: color),
+              style: AppTypography.caption.copyWith(color: color),
             ),
           ),
         ],
@@ -466,7 +466,7 @@ class _StatusBadge extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: AppTypography.labelSmall.copyWith(
+        style: AppTypography.caption.copyWith(
           color: color,
           fontWeight: FontWeight.w600,
         ),
@@ -495,13 +495,13 @@ class _InfoRow extends StatelessWidget {
       children: [
         Text(
           label,
-          style: AppTypography.bodyMedium.copyWith(
+          style: AppTypography.subheadline.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),
         ),
         Text(
           value,
-          style: (isBold ? AppTypography.titleSmall : AppTypography.bodyMedium)
+          style: (isBold ? AppTypography.subheadlineBold : AppTypography.subheadline)
               .copyWith(color: theme.colorScheme.onSurface),
         ),
       ],
