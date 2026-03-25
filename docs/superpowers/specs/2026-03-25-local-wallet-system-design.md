@@ -23,7 +23,6 @@ CREATE TABLE wallet_accounts (
     total_earned DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
     total_withdrawn DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
     total_spent DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
-    debt DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
     currency VARCHAR(3) NOT NULL DEFAULT 'GBP',
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
@@ -34,7 +33,6 @@ CREATE TABLE wallet_accounts (
 - `total_earned`: 累计收入（扣手续费后的净收入）
 - `total_withdrawn`: 累计已提现金额
 - `total_spent`: 累计余额支付消费金额
-- `debt`: 平台应收账款（退款时余额不足的差额），新收入优先抵扣
 - `currency`: 默认 GBP，预留多币种扩展
 
 ### WalletTransaction 表
@@ -43,11 +41,11 @@ CREATE TABLE wallet_accounts (
 CREATE TABLE wallet_transactions (
     id BIGSERIAL PRIMARY KEY,
     user_id VARCHAR(8) NOT NULL REFERENCES users(id),
-    type VARCHAR(20) NOT NULL,          -- earning, withdrawal, payment, refund
+    type VARCHAR(20) NOT NULL,          -- earning, withdrawal, payment
     amount DECIMAL(12, 2) NOT NULL,     -- 正数=收入, 负数=支出
     balance_after DECIMAL(12, 2) NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'completed',  -- completed, pending, failed, reversed
-    source VARCHAR(50) NOT NULL,        -- task_reward, flea_market_sale, stripe_transfer, task_payment, dispute_clawback
+    source VARCHAR(50) NOT NULL,        -- task_reward, flea_market_sale, stripe_transfer, task_payment
     related_id VARCHAR(255),            -- 关联对象 ID
     related_type VARCHAR(50),           -- task, flea_market_item, payout
     description TEXT,
@@ -66,7 +64,7 @@ CREATE INDEX idx_wallet_tx_related ON wallet_transactions(related_type, related_
 
 - `idempotency_key`: 防重复入账，格式如 `earning:task:{task_id}:user:{user_id}`
 - `balance_after`: 每笔交易后的余额快照，便于审计
-- `status`: 交易状态 — `completed`（已完成）、`pending`（进行中，用于提现和混合支付）、`failed`（失败）、`reversed`（已撤销，用于退款回滚）
+- `status`: 交易状态 — `completed`（已完成）、`pending`（进行中，用于提现和混合支付）、`failed`（失败）、`reversed`（已撤销，用于混合支付 Stripe 失败时回滚）
 - `fee_amount` + `gross_amount`: 仅 earning 类型使用，记录毛收入和手续费
 
 ## Safety Mechanisms
@@ -83,7 +81,6 @@ CREATE INDEX idx_wallet_tx_related ON wallet_transactions(related_type, related_
 - 收入: `earning:task:{task_id}:user:{user_id}`
 - 提现: `withdrawal:{request_uuid}:user:{user_id}`（客户端生成 UUID，服务端校验）
 - 支付: `payment:task:{task_id}:user:{user_id}`
-- 退款: `refund:task:{task_id}:user:{user_id}`
 
 插入前检查 key 是否已存在，已存在则跳过，绝不重复入账。
 
@@ -120,12 +117,6 @@ confirm_completion 被调用
 检查 idempotency_key 是否已存在 → 已存在则跳过
   ↓
 锁定接单人 WalletAccount (FOR UPDATE)
-  ↓
-if debt > 0:
-  debt_repayment = min(净收入, debt)
-  debt -= debt_repayment
-  净收入 -= debt_repayment
-  （记录 debt 抵扣流水）
   ↓
 balance += 净收入
 total_earned += 净收入
@@ -229,49 +220,13 @@ else:
     COMMIT
 ```
 
-### 4. 退款/争议流程
+### 4. 退款说明
 
-当已入账的任务发生退款或争议时，需要从卖家钱包中回收资金：
+**不需要从钱包回收资金。** 平台的退款规则是：退款只能在待确认期间（pending_confirmation）申请，此时资金尚未入账到卖家钱包（入账发生在 confirm_completion 时）。一旦确认完成，不再支持退款。
 
-```
-退款请求被批准
-  ↓
-检查 idempotency_key (refund:task:{task_id}:user:{user_id})
-  ↓
-锁定卖家 WalletAccount (FOR UPDATE)
-  ↓
-refund_amount = 原始入账的净收入（从 earning 流水查）
-  ↓
-if balance >= refund_amount:
-  --- 正常回收 ---
-  balance -= refund_amount
-  total_earned -= refund_amount
-  写入 WalletTransaction:
-    type=refund, source=dispute_clawback, status=completed
-    amount=-refund_amount
-    related_id=task_id, related_type=task
-  COMMIT
-  ↓
-  执行买家退款（Stripe Refund）
-else:
-  --- 余额不足 ---
-  available = balance
-  shortfall = refund_amount - available
-  ↓
-  扣光可用余额:
-    balance = 0
-    写入 WalletTransaction (amount=-available, status=completed)
-  COMMIT
-  ↓
-  差额 (shortfall) 由平台先行垫付退款给买家
-  记录平台应收账款（debt），待卖家后续入账时自动抵扣
-  ↓
-  卖家后续入账时:
-    新收入优先偿还 debt
-    净入账 = 新收入 - min(新收入, 剩余debt)
-```
-
-**平台应收账款 (debt)** 通过 `WalletAccount.debt` 字段跟踪。入账流程在 `balance += 净收入` 前先检查 `debt > 0`，有欠款时优先抵扣（见入账流程）。
+因此退款流程不涉及钱包操作：
+- 待确认期间退款 → 资金还在平台 Stripe 账户 → 直接 Stripe Refund 给买家
+- 部分退款同理 → Stripe Partial Refund，卖家入账金额在确认时按实际剩余计算
 
 ### 5. 去掉的校验
 
