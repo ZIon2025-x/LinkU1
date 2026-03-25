@@ -46,6 +46,17 @@ class QASection extends StatefulWidget {
 
 class _QASectionState extends State<QASection> {
   final _askController = TextEditingController();
+  bool _isAskSubmitting = false;
+
+  @override
+  void didUpdateWidget(QASection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Questions list changed → ask succeeded, clear input
+    if (_isAskSubmitting && widget.questions.length != oldWidget.questions.length) {
+      _isAskSubmitting = false;
+      _askController.clear();
+    }
+  }
 
   @override
   void dispose() {
@@ -54,10 +65,17 @@ class _QASectionState extends State<QASection> {
   }
 
   void _handleAsk() {
+    if (_isAskSubmitting) return;
     final content = _askController.text.trim();
     if (content.length < 2) return;
+    setState(() => _isAskSubmitting = true);
     widget.onAsk(content);
-    _askController.clear();
+    // Timeout fallback: re-enable button if no state change after 5s (error case)
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted && _isAskSubmitting) {
+        setState(() => _isAskSubmitting = false);
+      }
+    });
   }
 
   @override
@@ -108,6 +126,7 @@ class _QASectionState extends State<QASection> {
                   child: TextField(
                     controller: _askController,
                     maxLength: 100,
+                    enabled: !_isAskSubmitting,
                     decoration: InputDecoration(
                       hintText: l10n.qaAskPlaceholder,
                       counterText: '',
@@ -130,11 +149,18 @@ class _QASectionState extends State<QASection> {
                 ),
                 const SizedBox(width: 8),
                 FilledButton(
-                  onPressed: _handleAsk,
+                  onPressed: _isAskSubmitting ? null : _handleAsk,
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   ),
-                  child: Text(l10n.qaAskButton),
+                  child: _isAskSubmitting
+                      ? const SizedBox(
+                          width: 16, height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white,
+                          ),
+                        )
+                      : Text(l10n.qaAskButton),
                 ),
               ],
             ),
@@ -215,6 +241,18 @@ class _QACard extends StatefulWidget {
 class _QACardState extends State<_QACard> {
   final _replyController = TextEditingController();
   bool _showReplyInput = false;
+  bool _isReplySubmitting = false;
+
+  @override
+  void didUpdateWidget(_QACard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Question now has a reply → reply succeeded, reset input state
+    if (_isReplySubmitting && widget.question.hasReply && !oldWidget.question.hasReply) {
+      _isReplySubmitting = false;
+      _showReplyInput = false;
+      _replyController.clear();
+    }
+  }
 
   @override
   void dispose() {
@@ -223,11 +261,17 @@ class _QACardState extends State<_QACard> {
   }
 
   void _handleReply() {
+    if (_isReplySubmitting) return;
     final content = _replyController.text.trim();
     if (content.length < 2) return;
+    setState(() => _isReplySubmitting = true);
     widget.onReply(widget.question.id, content);
-    setState(() => _showReplyInput = false);
-    _replyController.clear();
+    // Timeout fallback: re-enable button if no state change after 5s (error case)
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted && _isReplySubmitting) {
+        setState(() => _isReplySubmitting = false);
+      }
+    });
   }
 
   void _handleDelete() {
@@ -371,6 +415,7 @@ class _QACardState extends State<_QACard> {
                         child: TextField(
                           controller: _replyController,
                           maxLength: 100,
+                          enabled: !_isReplySubmitting,
                           decoration: InputDecoration(
                             hintText: l10n.qaReplyPlaceholder,
                             counterText: '',
@@ -387,11 +432,18 @@ class _QACardState extends State<_QACard> {
                       ),
                       const SizedBox(width: 8),
                       FilledButton(
-                        onPressed: _handleReply,
+                        onPressed: _isReplySubmitting ? null : _handleReply,
                         style: FilledButton.styleFrom(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         ),
-                        child: Text(l10n.qaReplyButton, style: const TextStyle(fontSize: 13)),
+                        child: _isReplySubmitting
+                            ? const SizedBox(
+                                width: 14, height: 14,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.white,
+                                ),
+                              )
+                            : Text(l10n.qaReplyButton, style: const TextStyle(fontSize: 13)),
                       ),
                     ],
                   ),

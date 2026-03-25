@@ -1528,7 +1528,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
         actionMessage: 'qa_ask_success',
       ));
     } catch (e) {
-      emit(state.copyWith(actionMessage: 'qa_ask_failed'));
+      emit(state.copyWith(actionMessage: _mapQaError(e, 'qa_ask_failed')));
     }
   }
 
@@ -1549,7 +1549,7 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
         actionMessage: 'qa_reply_success',
       ));
     } catch (e) {
-      emit(state.copyWith(actionMessage: 'qa_reply_failed'));
+      emit(state.copyWith(actionMessage: _mapQaError(e, 'qa_reply_failed')));
     }
   }
 
@@ -1566,7 +1566,21 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
         actionMessage: 'qa_delete_success',
       ));
     } catch (e) {
-      emit(state.copyWith(actionMessage: 'qa_delete_failed'));
+      emit(state.copyWith(actionMessage: _mapQaError(e, 'qa_delete_failed')));
     }
+  }
+
+  /// Map backend Q&A error detail to specific error codes
+  static String _mapQaError(Object e, String fallback) {
+    final msg = e.toString();
+    if (msg.contains('Cannot ask on your own post')) return 'qa_cannot_ask_own';
+    if (msg.contains('Already replied')) return 'qa_already_replied';
+    if (msg.contains('Content too short')) return 'qa_content_too_short';
+    if (msg.contains('Only the owner can reply') ||
+        msg.contains('Only the asker can delete')) {
+      return 'qa_no_permission';
+    }
+    if (msg.contains('not found')) return 'qa_not_found';
+    return fallback;
   }
 }

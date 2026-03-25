@@ -474,7 +474,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
   TaskExpertBloc({
     required TaskExpertRepository taskExpertRepository,
     ActivityRepository? activityRepository,
-    QuestionRepository? questionRepository,
+    required QuestionRepository questionRepository,
   })  : _taskExpertRepository = taskExpertRepository,
         _activityRepository = activityRepository,
         _questionRepository = questionRepository,
@@ -508,7 +508,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
 
   final TaskExpertRepository _taskExpertRepository;
   final ActivityRepository? _activityRepository;
-  final QuestionRepository? _questionRepository;
+  final QuestionRepository _questionRepository;
 
   /// 获取城市筛选参数，'all' 时返回 null
   String? _cityParam(String city) => city == 'all' ? null : city;
@@ -1132,7 +1132,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
   ) async {
     emit(state.copyWith(isLoadingServiceQuestions: true));
     try {
-      final result = await _questionRepository!.getQuestions(
+      final result = await _questionRepository.getQuestions(
         targetType: 'service',
         targetId: event.serviceId,
         page: event.page,
@@ -1158,7 +1158,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     Emitter<TaskExpertState> emit,
   ) async {
     try {
-      final question = await _questionRepository!.askQuestion(
+      final question = await _questionRepository.askQuestion(
         targetType: 'service',
         targetId: event.serviceId,
         content: event.content,
@@ -1170,7 +1170,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
       ));
     } catch (e) {
       AppLogger.error('Failed to ask service question', e);
-      emit(state.copyWith(actionMessage: 'qa_ask_failed'));
+      emit(state.copyWith(actionMessage: _mapQaError(e, 'qa_ask_failed')));
     }
   }
 
@@ -1179,7 +1179,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     Emitter<TaskExpertState> emit,
   ) async {
     try {
-      final updated = await _questionRepository!.replyQuestion(
+      final updated = await _questionRepository.replyQuestion(
         questionId: event.questionId,
         content: event.content,
       );
@@ -1192,7 +1192,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
       ));
     } catch (e) {
       AppLogger.error('Failed to reply service question', e);
-      emit(state.copyWith(actionMessage: 'qa_reply_failed'));
+      emit(state.copyWith(actionMessage: _mapQaError(e, 'qa_reply_failed')));
     }
   }
 
@@ -1201,7 +1201,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     Emitter<TaskExpertState> emit,
   ) async {
     try {
-      await _questionRepository!.deleteQuestion(event.questionId);
+      await _questionRepository.deleteQuestion(event.questionId);
       final updatedList = state.serviceQuestions.where((q) => q.id != event.questionId).toList();
       emit(state.copyWith(
         serviceQuestions: updatedList,
@@ -1210,7 +1210,21 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
       ));
     } catch (e) {
       AppLogger.error('Failed to delete service question', e);
-      emit(state.copyWith(actionMessage: 'qa_delete_failed'));
+      emit(state.copyWith(actionMessage: _mapQaError(e, 'qa_delete_failed')));
     }
+  }
+
+  /// Map backend Q&A error detail to specific error codes
+  static String _mapQaError(Object e, String fallback) {
+    final msg = e.toString();
+    if (msg.contains('Cannot ask on your own post')) return 'qa_cannot_ask_own';
+    if (msg.contains('Already replied')) return 'qa_already_replied';
+    if (msg.contains('Content too short')) return 'qa_content_too_short';
+    if (msg.contains('Only the owner can reply') ||
+        msg.contains('Only the asker can delete')) {
+      return 'qa_no_permission';
+    }
+    if (msg.contains('not found')) return 'qa_not_found';
+    return fallback;
   }
 }

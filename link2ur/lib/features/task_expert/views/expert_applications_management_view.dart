@@ -16,6 +16,7 @@ import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/animated_list_item.dart';
+import '../../../data/repositories/question_repository.dart';
 import '../../../data/repositories/task_expert_repository.dart';
 import '../bloc/task_expert_bloc.dart';
 
@@ -34,6 +35,7 @@ class ExpertApplicationsManagementView extends StatelessWidget {
     return BlocProvider(
       create: (context) => TaskExpertBloc(
         taskExpertRepository: context.read<TaskExpertRepository>(),
+        questionRepository: context.read<QuestionRepository>(),
       )..add(const TaskExpertLoadExpertApplications()),
       child: _ExpertApplicationsManagementContent(showAppBar: showAppBar),
     );

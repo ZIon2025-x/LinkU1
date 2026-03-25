@@ -10607,6 +10607,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get qaDeleteSuccess => 'Question deleted';
 
   @override
+  String get qaContentTooShort => 'Content must be at least 2 characters';
+
+  @override
+  String get qaNoPermission => 'You don\'t have permission for this action';
+
+  @override
+  String get qaNotFound => 'Question or target not found';
+
+  @override
   String get taskDetailRaiseDispute => 'Raise a Dispute';
 
   @override

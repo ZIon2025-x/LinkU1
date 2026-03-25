@@ -19544,6 +19544,24 @@ abstract class AppLocalizations {
   /// **'Question deleted'**
   String get qaDeleteSuccess;
 
+  /// No description provided for @qaContentTooShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Content must be at least 2 characters'**
+  String get qaContentTooShort;
+
+  /// No description provided for @qaNoPermission.
+  ///
+  /// In en, this message translates to:
+  /// **'You don\'t have permission for this action'**
+  String get qaNoPermission;
+
+  /// No description provided for @qaNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Question or target not found'**
+  String get qaNotFound;
+
   /// No description provided for @taskDetailRaiseDispute.
   ///
   /// In en, this message translates to:

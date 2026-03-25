@@ -476,15 +476,17 @@ void main() {
                   (s) => s.activeToolCall, 'activeToolCall', 'search_tasks')
               .having((s) => s.taskDraft, 'taskDraft',
                   const {'title': 'Existing Draft'}),
-          // Tool result — activeToolCall cleared (null), lastToolName set, taskDraft preserved
+          // Tool result — toolCallCompleted=true, activeToolCall preserved (sentinel), lastToolName set
           isA<AIChatState>()
-              .having((s) => s.activeToolCall, 'activeToolCall', isNull)
+              .having((s) => s.activeToolCall, 'activeToolCall', 'search_tasks')
+              .having((s) => s.toolCallCompleted, 'toolCallCompleted', true)
               .having(
                   (s) => s.lastToolName, 'lastToolName', 'search_tasks')
               .having((s) => s.taskDraft, 'taskDraft',
                   const {'title': 'Existing Draft'}),
-          // Token
+          // Token — activeToolCall cleared (toolCallCompleted was true)
           isA<AIChatState>()
+              .having((s) => s.activeToolCall, 'activeToolCall', isNull)
               .having((s) => s.streamingContent, 'streamingContent',
                   'Found tasks')
               .having(
@@ -545,17 +547,19 @@ void main() {
           isA<AIChatState>()
               .having((s) => s.activeToolCall, 'activeToolCall',
                   'prepare_task_draft'),
-          // Tool result — taskDraft extracted from result['draft']
+          // Tool result — toolCallCompleted=true, activeToolCall preserved, taskDraft extracted
           isA<AIChatState>()
-              .having((s) => s.activeToolCall, 'activeToolCall', isNull)
+              .having((s) => s.activeToolCall, 'activeToolCall', 'prepare_task_draft')
+              .having((s) => s.toolCallCompleted, 'toolCallCompleted', true)
               .having((s) => s.lastToolName, 'lastToolName',
                   'prepare_task_draft')
               .having((s) => s.taskDraft, 'taskDraft', const {
                 'title': 'New Task',
                 'description': 'Task description',
               }),
-          // Token — taskDraft preserved
+          // Token — activeToolCall cleared, taskDraft preserved
           isA<AIChatState>()
+              .having((s) => s.activeToolCall, 'activeToolCall', isNull)
               .having((s) => s.streamingContent, 'streamingContent',
                   'Draft created')
               .having((s) => s.taskDraft, 'taskDraft', isNotNull),
@@ -999,9 +1003,8 @@ void main() {
         act: (bloc) => bloc.add(const AIChatSendMessage('msg')),
         wait: const Duration(milliseconds: 300),
         verify: (bloc) {
-          // lastToolName is captured in the AIMessage.toolName before messageCompleted clears it
-          // (messageCompleted's copyWith omits lastToolName → null)
-          expect(bloc.state.lastToolName, isNull);
+          // Sentinel-based copyWith preserves lastToolName (not cleared on omit)
+          expect(bloc.state.lastToolName, equals('my_tool'));
           expect(bloc.state.isReplying, isFalse);
           expect(bloc.state.messages.last.toolName, equals('my_tool'));
         },
@@ -1011,7 +1014,7 @@ void main() {
     // ==================== copyWith behavior ====================
 
     group('AIChatState copyWith', () {
-      test('nullable fields are cleared (set to null) when omitted from copyWith', () {
+      test('sentinel fields are preserved when omitted from copyWith', () {
         const state = AIChatState(
           activeToolCall: 'tool1',
           errorMessage: 'err',
@@ -1020,8 +1023,33 @@ void main() {
           taskDraft: {'key': 'value'},
           lastToolName: 'someTool',
         );
-        // copyWith without passing nullable fields → they become null
+        // Sentinel-based copyWith preserves values when not passed
         final newState = state.copyWith(status: AIChatStatus.loaded);
+        expect(newState.activeToolCall, equals('tool1'));
+        expect(newState.errorMessage, equals('err'));
+        expect(newState.csAvailableSignal, isTrue);
+        expect(newState.csContactEmail, equals('test@test.com'));
+        expect(newState.taskDraft, equals({'key': 'value'}));
+        expect(newState.lastToolName, equals('someTool'));
+      });
+
+      test('sentinel fields are cleared when explicitly passed null', () {
+        const state = AIChatState(
+          activeToolCall: 'tool1',
+          errorMessage: 'err',
+          csAvailableSignal: true,
+          csContactEmail: 'test@test.com',
+          taskDraft: {'key': 'value'},
+          lastToolName: 'someTool',
+        );
+        final newState = state.copyWith(
+          activeToolCall: null,
+          errorMessage: null,
+          csAvailableSignal: null,
+          csContactEmail: null,
+          taskDraft: null,
+          lastToolName: null,
+        );
         expect(newState.activeToolCall, isNull);
         expect(newState.errorMessage, isNull);
         expect(newState.csAvailableSignal, isNull);

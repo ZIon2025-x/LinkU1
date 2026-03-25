@@ -226,12 +226,12 @@ class _NearbyTabState extends State<_NearbyTab> {
                     final lat = pickedLat;
                     final lng = pickedLng;
                     Navigator.pop(sheetContext);
-                    if (address != null && address.isNotEmpty) {
-                      setState(() => _city = address);
-                      context.read<HomeBloc>().add(HomeLocationCityUpdated(address));
-                      if (lat != null && lng != null) {
-                        _loadWithCoordinates(lat, lng);
-                      }
+                    if (lat != null && lng != null) {
+                      // 有坐标：反向地理编码获取城市名，然后加载
+                      _switchToLocation(lat, lng);
+                    } else if (address != null && address.isNotEmpty) {
+                      // 仅有文字地址（地理编码未完成）：正向编码后加载
+                      _geocodeAndSwitch(address);
                     }
                   },
                   style: ElevatedButton.styleFrom(
@@ -249,6 +249,39 @@ class _NearbyTabState extends State<_NearbyTab> {
         );
       },
     );
+  }
+
+  /// 切换到指定坐标：反向地理编码获取城市名 → 重新加载
+  Future<void> _switchToLocation(double lat, double lng) async {
+    await _resolveCity(lat, lng);
+    if (!mounted) return;
+    _loadWithCoordinates(lat, lng);
+  }
+
+  /// 仅有文字地址时：正向地理编码获取坐标，再切换
+  Future<void> _geocodeAndSwitch(String address) async {
+    setState(() => _locationLoading = true);
+    try {
+      final locations = await locationFromAddress(address);
+      if (locations.isNotEmpty && mounted) {
+        final loc = locations.first;
+        await _resolveCity(loc.latitude, loc.longitude);
+        if (!mounted) return;
+        _loadWithCoordinates(loc.latitude, loc.longitude);
+      } else if (mounted) {
+        setState(() => _locationLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.locationGetFailed)),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _locationLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.locationGetFailed)),
+        );
+      }
+    }
   }
 
   List<Widget> _buildWaterfallItems(HomeState state) {

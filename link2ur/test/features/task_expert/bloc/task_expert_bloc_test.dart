@@ -6,15 +6,19 @@ import 'package:link2ur/features/task_expert/bloc/task_expert_bloc.dart';
 import 'package:link2ur/data/models/task_expert.dart';
 import 'package:link2ur/data/repositories/task_expert_repository.dart';
 import 'package:link2ur/data/repositories/activity_repository.dart';
+import 'package:link2ur/data/repositories/question_repository.dart';
 
 class MockTaskExpertRepository extends Mock
     implements TaskExpertRepository {}
 
 class MockActivityRepository extends Mock implements ActivityRepository {}
 
+class MockQuestionRepository extends Mock implements QuestionRepository {}
+
 void main() {
   late MockTaskExpertRepository mockExpertRepo;
   late MockActivityRepository mockActivityRepo;
+  late MockQuestionRepository mockQuestionRepo;
   late TaskExpertBloc bloc;
 
   const testExpert = TaskExpert(
@@ -51,9 +55,11 @@ void main() {
   setUp(() {
     mockExpertRepo = MockTaskExpertRepository();
     mockActivityRepo = MockActivityRepository();
+    mockQuestionRepo = MockQuestionRepository();
     bloc = TaskExpertBloc(
       taskExpertRepository: mockExpertRepo,
       activityRepository: mockActivityRepo,
+      questionRepository: mockQuestionRepo,
     );
   });
 

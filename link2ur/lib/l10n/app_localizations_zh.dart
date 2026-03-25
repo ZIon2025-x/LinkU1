@@ -10190,6 +10190,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get qaDeleteSuccess => '已删除';
 
   @override
+  String get qaContentTooShort => '内容至少需要2个字符';
+
+  @override
+  String get qaNoPermission => '你没有权限执行此操作';
+
+  @override
+  String get qaNotFound => '问题或目标不存在';
+
+  @override
   String get taskDetailRaiseDispute => '提出争议';
 
   @override
@@ -20761,6 +20770,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get qaDeleteSuccess => '已刪除';
+
+  @override
+  String get qaContentTooShort => '內容至少需要2個字元';
+
+  @override
+  String get qaNoPermission => '你沒有權限執行此操作';
+
+  @override
+  String get qaNotFound => '問題或目標不存在';
 
   @override
   String get taskDetailRaiseDispute => '提出爭議';

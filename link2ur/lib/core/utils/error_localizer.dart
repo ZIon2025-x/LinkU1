@@ -58,6 +58,16 @@ class ErrorLocalizer {
       case 'qa_reply_failed':
       case 'qa_delete_failed':
         return context.l10n.actionOperationFailed;
+      case 'qa_cannot_ask_own':
+        return context.l10n.qaCannotAskOwn;
+      case 'qa_already_replied':
+        return context.l10n.qaAlreadyReplied;
+      case 'qa_content_too_short':
+        return context.l10n.qaContentTooShort;
+      case 'qa_no_permission':
+        return context.l10n.qaNoPermission;
+      case 'qa_not_found':
+        return context.l10n.qaNotFound;
       case 'error_network_timeout':
         return context.l10n.errorNetworkTimeout;
       case 'error_request_failed':

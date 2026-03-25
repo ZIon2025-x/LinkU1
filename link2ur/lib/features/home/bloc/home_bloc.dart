@@ -278,9 +278,12 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     HomeLoadNearby event,
     Emitter<HomeState> emit,
   ) async {
-    final hasExistingData = state.nearbyTasks.isNotEmpty;
-    if (!event.loadMore && !hasExistingData) {
-      emit(state.copyWith(status: HomeStatus.loading));
+    if (!event.loadMore) {
+      emit(state.copyWith(
+        status: HomeStatus.loading,
+        nearbyTasks: const [],
+        nearbyServices: const [],
+      ));
     }
 
     try {
@@ -324,7 +327,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       ));
     } catch (e) {
       AppLogger.error('Failed to load nearby tasks', e);
-      if (!event.loadMore && !hasExistingData) {
+      if (!event.loadMore) {
         emit(state.copyWith(
           status: HomeStatus.error,
           errorMessage: e.toString(),

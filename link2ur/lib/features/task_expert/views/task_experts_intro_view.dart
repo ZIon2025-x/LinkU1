@@ -7,6 +7,7 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../data/repositories/question_repository.dart';
 import '../../../data/repositories/task_expert_repository.dart';
 import '../../auth/bloc/auth_bloc.dart';
 import '../bloc/task_expert_bloc.dart';
@@ -26,6 +27,7 @@ class TaskExpertsIntroView extends StatelessWidget {
     return BlocProvider(
       create: (ctx) => TaskExpertBloc(
         taskExpertRepository: ctx.read<TaskExpertRepository>(),
+        questionRepository: ctx.read<QuestionRepository>(),
       )..add(const TaskExpertLoadMyExpertApplicationStatus()),
       child: Scaffold(
       appBar: AppBar(

@@ -937,7 +937,7 @@ void main() {
         expect(newState.csServiceName, equals('Agent'));
       });
 
-      test('copyWith resets nullable fields to null when not passed', () {
+      test('copyWith preserves sentinel fields when not passed', () {
         const state = UnifiedChatState(
           activeToolCall: 'search_tasks',
           taskDraft: {'title': 'task'},
@@ -945,8 +945,26 @@ void main() {
           actionMessage: 'some_action',
         );
         final newState = state.copyWith(mode: ChatMode.ai);
-        // activeToolCall, taskDraft, errorMessage, actionMessage use direct assignment
-        // so they reset to null when not passed
+        // Sentinel-based copyWith preserves values when not passed
+        expect(newState.activeToolCall, equals('search_tasks'));
+        expect(newState.taskDraft, equals({'title': 'task'}));
+        expect(newState.errorMessage, equals('some_error'));
+        expect(newState.actionMessage, equals('some_action'));
+      });
+
+      test('copyWith resets sentinel fields to null when explicitly passed', () {
+        const state = UnifiedChatState(
+          activeToolCall: 'search_tasks',
+          taskDraft: {'title': 'task'},
+          errorMessage: 'some_error',
+          actionMessage: 'some_action',
+        );
+        final newState = state.copyWith(
+          activeToolCall: null,
+          taskDraft: null,
+          errorMessage: null,
+          actionMessage: null,
+        );
         expect(newState.activeToolCall, isNull);
         expect(newState.taskDraft, isNull);
         expect(newState.errorMessage, isNull);
@@ -976,8 +994,11 @@ void main() {
 
       test('props includes all fields', () {
         const state = UnifiedChatState();
-        // Verify props has the correct number of entries
-        expect(state.props.length, equals(13));
+        // 16 fields: mode, aiMessages, csMessages, isTyping, streamingContent,
+        // activeToolCall, toolCallCompleted, taskDraft, serviceDraft,
+        // csOnlineStatus, csContactEmail, csServiceName, csChatId,
+        // errorMessage, actionMessage, isRating
+        expect(state.props.length, equals(16));
       });
     });
 

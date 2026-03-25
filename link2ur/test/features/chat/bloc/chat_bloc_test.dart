@@ -116,6 +116,7 @@ void main() {
           return chatBloc;
         },
         act: (bloc) => bloc.add(const ChatLoadMessages(userId: 'user2')),
+        wait: const Duration(milliseconds: 700), // ChatMarkAsRead has 500ms debounce
         expect: () => [
           isA<ChatState>()
               .having((s) => s.status, 'status', ChatStatus.loading)
@@ -130,7 +131,7 @@ void main() {
         ],
         verify: (_) {
           verify(() => mockMessageRepository.getMessagesWith('user2')).called(1);
-          // ChatMarkAsRead triggers markMessagesRead
+          // ChatMarkAsRead debounces 500ms then triggers markMessagesRead
           verify(() => mockMessageRepository.markMessagesRead('user2')).called(1);
         },
       );
@@ -770,6 +771,7 @@ void main() {
           userId: 'user2',
         ),
         act: (bloc) => bloc.add(const ChatMarkAsRead()),
+        wait: const Duration(milliseconds: 700), // 500ms debounce
         expect: () => [],
         verify: (_) {
           verify(() => mockMessageRepository.markMessagesRead('user2'))
@@ -794,6 +796,7 @@ void main() {
           taskId: 42,
         ),
         act: (bloc) => bloc.add(const ChatMarkAsRead()),
+        wait: const Duration(milliseconds: 700), // 500ms debounce
         expect: () => [],
         verify: (_) {
           // messages[0].id is 10 (latest, since task chat is new→old)

@@ -222,6 +222,7 @@ class UnifiedChatState extends Equatable {
         taskDraft,
         serviceDraft,
         csOnlineStatus,
+        csContactEmail,
         csServiceName,
         csChatId,
         errorMessage,
