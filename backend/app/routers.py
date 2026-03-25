@@ -4267,6 +4267,13 @@ def confirm_task_completion(
 
             net_amount = Decimal(str(task.escrow_amount))
 
+            # Determine gross amount: agreed_reward > base_reward > reward (fallback to net)
+            _raw_gross = task.agreed_reward if task.agreed_reward is not None else (
+                task.base_reward if task.base_reward is not None else task.reward
+            )
+            gross_amount = Decimal(str(_raw_gross)) if _raw_gross is not None else net_amount
+            fee_amount = gross_amount - net_amount if gross_amount > net_amount else Decimal("0")
+
             # Determine source: flea market sale or task reward
             source = "flea_market_sale" if getattr(task, "flea_market_item", None) else "task_reward"
 
@@ -4280,6 +4287,8 @@ def confirm_task_completion(
                 related_id=str(task.id),
                 related_type="task",
                 description=f"任务 #{task.id} 奖励",
+                fee_amount=fee_amount,
+                gross_amount=gross_amount,
                 idempotency_key=idempotency_key,
                 currency=task.currency or "GBP",
             )

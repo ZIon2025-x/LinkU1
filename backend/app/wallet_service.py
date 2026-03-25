@@ -12,6 +12,7 @@ This ordering prevents TOCTOU (time-of-check/time-of-use) race conditions.
 from decimal import Decimal
 from typing import Optional
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.wallet_models import WalletAccount, WalletTransaction
@@ -48,16 +49,26 @@ def get_or_create_wallet(db: Session, user_id: str, currency: str = "GBP") -> Wa
         .first()
     )
     if wallet is None:
-        wallet = WalletAccount(
-            user_id=user_id,
-            balance=Decimal("0.00"),
-            total_earned=Decimal("0.00"),
-            total_withdrawn=Decimal("0.00"),
-            total_spent=Decimal("0.00"),
-            currency=currency,
+        savepoint = db.begin_nested()
+        try:
+            wallet = WalletAccount(
+                user_id=user_id,
+                balance=Decimal("0.00"),
+                total_earned=Decimal("0.00"),
+                total_withdrawn=Decimal("0.00"),
+                total_spent=Decimal("0.00"),
+                currency=currency,
+            )
+            db.add(wallet)
+            db.flush()
+        except IntegrityError:
+            savepoint.rollback()
+        # Re-query regardless — handles both the normal path and the concurrent-insert path
+        wallet = (
+            db.query(WalletAccount)
+            .filter(WalletAccount.user_id == user_id, WalletAccount.currency == currency)
+            .first()
         )
-        db.add(wallet)
-        db.flush()
     return wallet
 
 
@@ -79,18 +90,24 @@ def lock_wallet(db: Session, user_id: str, currency: str = "GBP") -> WalletAccou
         .first()
     )
     if wallet is None:
-        # Create without a lock first, flush to persist the row …
-        wallet = WalletAccount(
-            user_id=user_id,
-            balance=Decimal("0.00"),
-            total_earned=Decimal("0.00"),
-            total_withdrawn=Decimal("0.00"),
-            total_spent=Decimal("0.00"),
-            currency=currency,
-        )
-        db.add(wallet)
-        db.flush()
-        # … then re-query with FOR UPDATE to obtain the lock.
+        # Use a savepoint so that a concurrent INSERT (unique constraint violation)
+        # can be rolled back without aborting the outer transaction.
+        savepoint = db.begin_nested()
+        try:
+            wallet = WalletAccount(
+                user_id=user_id,
+                balance=Decimal("0.00"),
+                total_earned=Decimal("0.00"),
+                total_withdrawn=Decimal("0.00"),
+                total_spent=Decimal("0.00"),
+                currency=currency,
+            )
+            db.add(wallet)
+            db.flush()
+        except IntegrityError:
+            savepoint.rollback()
+        # Re-query with FOR UPDATE regardless — picks up either the row we just
+        # inserted or the one a concurrent transaction inserted first.
         wallet = (
             db.query(WalletAccount)
             .filter(WalletAccount.user_id == user_id, WalletAccount.currency == currency)
