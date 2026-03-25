@@ -4258,195 +4258,44 @@ def confirm_task_completion(
             logger.error(f"发放活动奖励失败，已回滚SAVEPOINT: {e}", exc_info=True)
             # 奖励发放失败不影响任务完成流程
     
-    # 如果任务已支付且未确认，执行转账给任务接受人（支持部分转账）
+    # 如果任务已支付，将托管金额记入接受人本地钱包
     if task.is_paid == 1 and task.taker_id and task.escrow_amount > 0:
+        wallet_savepoint = db.begin_nested()
         try:
-            from app.payment_transfer_service import create_transfer_record, execute_transfer
+            from app.wallet_service import credit_wallet
             from decimal import Decimal
-            from sqlalchemy import and_, func
-            
-            # 🔒 并发安全：重新锁定任务，确保转账操作的原子性
-            locked_task_for_transfer = db.execute(
-                select(models.Task).where(models.Task.id == task_id).with_for_update()
-            ).scalar_one_or_none()
-            if locked_task_for_transfer:
-                task = locked_task_for_transfer
-            
-            # ✅ 支持部分转账：计算实际转账金额
-            remaining_escrow = Decimal(str(task.escrow_amount))
-            
-            # 如果指定了部分转账金额
-            if partial_transfer and partial_transfer.transfer_amount is not None:
-                transfer_amount = Decimal(str(partial_transfer.transfer_amount))
-                
-                # 验证部分转账金额
-                if transfer_amount <= 0:
-                    raise HTTPException(
-                        status_code=400,
-                        detail="转账金额必须大于0"
-                    )
-                
-                if transfer_amount > remaining_escrow:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"转账金额（£{transfer_amount:.2f}）不能超过剩余托管金额（£{remaining_escrow:.2f}）"
-                    )
-                
-                logger.info(f"💰 部分转账：任务 {task_id}，转账金额 £{transfer_amount:.2f}，剩余托管金额 £{remaining_escrow:.2f}")
-            else:
-                # 全额转账
-                transfer_amount = remaining_escrow
-                logger.info(f"💰 全额转账：任务 {task_id}，转账金额 £{transfer_amount:.2f}")
-            
-            # ⚠️ 安全修复：防止重复转账 - 检查是否已有成功的转账记录（累计金额）
-            existing_success_transfers = db.query(
-                func.sum(models.PaymentTransfer.amount).label('total_transferred')
-            ).filter(
-                and_(
-                    models.PaymentTransfer.task_id == task_id,
-                    models.PaymentTransfer.status == "succeeded"
-                )
-            ).scalar() or Decimal('0')
-            
-            # 计算已转账总额
-            total_transferred = Decimal(str(existing_success_transfers))
-            remaining_after_transfer = remaining_escrow - total_transferred
-            
-            # 如果已全额转账，更新任务状态
-            if total_transferred >= remaining_escrow:
-                logger.warning(f"⚠️ 任务 {task_id} 已全额转账（累计 £{total_transferred:.2f}），跳过重复转账")
-                if task.is_confirmed == 0:
-                    task.is_confirmed = 1
-                    task.paid_to_user_id = task.taker_id
-                    task.escrow_amount = Decimal('0.0')
-                    db.commit()
-                    logger.info(f"✅ 已更新任务状态为已确认（基于已有成功转账记录）")
-            else:
-                # 验证本次转账后不会超过剩余金额
-                if transfer_amount > remaining_after_transfer:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"转账金额（£{transfer_amount:.2f}）超过剩余可转账金额（£{remaining_after_transfer:.2f}）。已转账：£{total_transferred:.2f}，总托管金额：£{remaining_escrow:.2f}"
-                    )
-                
-                # 确保 escrow_amount 正确（任务金额 - 平台服务费）
-                if remaining_escrow <= 0:
-                    # 重新计算 escrow_amount（按任务来源/类型取费率）
-                    task_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
-                    from app.utils.fee_calculator import calculate_application_fee
-                    task_source = getattr(task, "task_source", None)
-                    task_type = getattr(task, "task_type", None)
-                    application_fee = calculate_application_fee(task_amount, task_source, task_type)
-                    remaining_escrow = Decimal(str(max(0.0, task_amount - application_fee)))
-                    task.escrow_amount = float(remaining_escrow)
-                    logger.info(f"重新计算 escrow_amount: 任务金额={task_amount}, 服务费={application_fee}, escrow={remaining_escrow}")
-                
-                # 获取任务接受人信息
-                taker = crud.get_user_by_id(db, task.taker_id)
-                if not taker:
-                    logger.warning(f"任务接受人不存在: taker_id={task.taker_id}")
-                elif not taker.stripe_account_id:
-                    logger.warning(f"任务接受人尚未创建 Stripe Connect 账户: taker_id={task.taker_id}")
-                    # ⚠️ 安全修复：检查是否已有待处理的转账记录（防止重复创建）
-                    existing_pending_transfer = db.query(models.PaymentTransfer).filter(
-                        and_(
-                            models.PaymentTransfer.task_id == task_id,
-                            models.PaymentTransfer.status.in_(["pending", "retrying"])
-                        )
-                    ).first()
-                    
-                    if existing_pending_transfer:
-                        logger.info(f"ℹ️ 任务 {task_id} 已有待处理的转账记录 (transfer_record_id={existing_pending_transfer.id})，跳过创建新记录")
-                    else:
-                        # 创建转账记录，等待账户设置完成后由定时任务处理
-                        create_transfer_record(
-                            db,
-                            task_id=task_id,
-                            taker_id=task.taker_id,
-                            poster_id=current_user.id,
-                            amount=transfer_amount,  # 使用计算出的转账金额
-                            currency="GBP",
-                            metadata={
-                                "task_title": task.title,
-                                "reason": "taker_stripe_account_not_setup",
-                                "partial_transfer": str(partial_transfer is not None),
-                                "transfer_reason": partial_transfer.reason if partial_transfer and partial_transfer.reason else None
-                            }
-                        )
-                        logger.info(f"✅ 已创建转账记录（金额：£{transfer_amount:.2f}），等待任务接受人设置 Stripe Connect 账户后由定时任务处理")
-                else:
-                    # ⚠️ 安全修复：检查是否已有待处理的转账记录（防止重复创建）
-                    existing_pending_transfer = db.query(models.PaymentTransfer).filter(
-                        and_(
-                            models.PaymentTransfer.task_id == task_id,
-                            models.PaymentTransfer.status.in_(["pending", "retrying"])
-                        )
-                    ).first()
-                    
-                    if existing_pending_transfer:
-                        logger.info(f"ℹ️ 任务 {task_id} 已有待处理的转账记录 (transfer_record_id={existing_pending_transfer.id})，使用现有记录执行转账")
-                        transfer_record = existing_pending_transfer
-                        # 更新转账金额（如果不同）
-                        if transfer_record.amount != transfer_amount:
-                            transfer_record.amount = transfer_amount
-                            db.commit()
-                    else:
-                        # 创建转账记录（用于审计）
-                        transfer_record = create_transfer_record(
-                            db,
-                            task_id=task_id,
-                            taker_id=task.taker_id,
-                            poster_id=current_user.id,
-                            amount=transfer_amount,  # 使用计算出的转账金额（支持部分转账）
-                            currency="GBP",
-                            metadata={
-                                "task_title": task.title,
-                                "transfer_source": "confirm_completion",
-                                "partial_transfer": str(partial_transfer is not None),
-                                "transfer_reason": partial_transfer.reason if partial_transfer and partial_transfer.reason else None,
-                                "remaining_escrow_before": str(remaining_escrow)
-                            }
-                        )
-                    
-                    # 尝试立即执行转账
-                    success, transfer_id, error_msg = execute_transfer(db, transfer_record, taker.stripe_account_id)
-                    
-                    if success:
-                        # ✅ 部分转账：更新剩余托管金额
-                        new_escrow_amount = remaining_escrow - transfer_amount
-                        task.escrow_amount = float(new_escrow_amount)
-                        
-                        # 如果已全额转账，更新任务状态
-                        if new_escrow_amount <= Decimal('0.01'):  # 允许小的浮点误差
-                            task.is_confirmed = 1
-                            task.paid_to_user_id = task.taker_id
-                            task.escrow_amount = 0.0
-                            logger.info(f"✅ 任务 {task_id} 已全额转账，更新任务状态为已确认")
-                        else:
-                            logger.info(f"✅ 任务 {task_id} 部分转账完成，剩余托管金额：£{new_escrow_amount:.2f}")
-                        
-                        db.commit()
-                
-                    if success:
-                        logger.info(f"✅ 任务 {task_id} 转账完成（金额：£{transfer_amount:.2f}），已转给接受人 {task.taker_id}")
-                    else:
-                        # 转账失败，但已创建转账记录，定时任务会自动重试
-                        logger.warning(f"⚠️ 任务 {task_id} 转账失败: {error_msg}，已创建转账记录，定时任务将自动重试")
-                        # 不更新任务状态，等待定时任务重试成功后再更新
-                        # 刷新转账记录以获取最新状态
-                        db.refresh(transfer_record)
-                        # 在任务对象中添加转账状态信息（用于前端显示）
-                        # 注意：这些字段不会保存到数据库，只是临时添加到响应中
-                        task.transfer_status = transfer_record.status
-                        task.transfer_error = transfer_record.last_error
-                        task.transfer_retry_info = {
-                            'retry_count': transfer_record.retry_count,
-                            'max_retries': transfer_record.max_retries,
-                            'next_retry_at': transfer_record.next_retry_at.isoformat() if transfer_record.next_retry_at else None
-                        }
+
+            net_amount = Decimal(str(task.escrow_amount))
+
+            # Determine source: flea market sale or task reward
+            source = "flea_market_sale" if getattr(task, "flea_market_item", None) else "task_reward"
+
+            idempotency_key = f"earning:task:{task.id}:user:{task.taker_id}"
+
+            credit_wallet(
+                db=db,
+                user_id=task.taker_id,
+                amount=net_amount,
+                source=source,
+                related_id=str(task.id),
+                related_type="task",
+                description=f"任务 #{task.id} 奖励",
+                idempotency_key=idempotency_key,
+            )
+
+            # Clear escrow and mark as paid
+            task.escrow_amount = Decimal("0.00")
+            task.paid_to_user_id = task.taker_id
+            task.is_confirmed = 1
+
+            wallet_savepoint.commit()
+            logger.info(
+                f"✅ 任务 {task_id} 奖励 £{net_amount:.2f} 已记入用户 {task.taker_id} 本地钱包"
+            )
         except Exception as e:
-            logger.error(f"转账处理失败 for task {task_id}: {e}", exc_info=True)
-            # 转账失败不影响任务完成确认流程
+            wallet_savepoint.rollback()
+            logger.error(f"钱包入账失败 for task {task_id}: {e}", exc_info=True)
+            # 钱包入账失败不影响任务完成确认流程
 
     return task
 
