@@ -28,38 +28,66 @@ class CreateTaskReset extends CreateTaskEvent {
   const CreateTaskReset();
 }
 
+class CreateTaskAIOptimize extends CreateTaskEvent {
+  const CreateTaskAIOptimize({
+    required this.title,
+    required this.description,
+    this.taskType,
+  });
+  final String title;
+  final String description;
+  final String? taskType;
+
+  @override
+  List<Object?> get props => [title, description, taskType];
+}
+
 // ==================== State ====================
 
-enum CreateTaskStatus { initial, submitting, success, error }
+enum CreateTaskStatus { initial, submitting, success, error, aiOptimizing }
 
 class CreateTaskState extends Equatable {
   const CreateTaskState({
     this.status = CreateTaskStatus.initial,
     this.createdTask,
     this.errorMessage,
+    this.optimizedTitle,
+    this.optimizedDescription,
+    this.suggestedSkills = const [],
   });
 
   final CreateTaskStatus status;
   final Task? createdTask;
   final String? errorMessage;
+  final String? optimizedTitle;
+  final String? optimizedDescription;
+  final List<String> suggestedSkills;
 
   bool get isSubmitting => status == CreateTaskStatus.submitting;
   bool get isSuccess => status == CreateTaskStatus.success;
+  bool get isAiOptimizing => status == CreateTaskStatus.aiOptimizing;
 
   CreateTaskState copyWith({
     CreateTaskStatus? status,
     Task? createdTask,
     String? errorMessage,
+    String? optimizedTitle,
+    String? optimizedDescription,
+    List<String>? suggestedSkills,
   }) {
     return CreateTaskState(
       status: status ?? this.status,
       createdTask: createdTask ?? this.createdTask,
-      errorMessage: errorMessage,
+      errorMessage: errorMessage,           // direct assign, null = clear
+      optimizedTitle: optimizedTitle,       // direct assign, null = clear
+      optimizedDescription: optimizedDescription, // direct assign, null = clear
+      suggestedSkills: suggestedSkills ?? this.suggestedSkills,
     );
   }
 
   @override
-  List<Object?> get props => [status, createdTask, errorMessage];
+  List<Object?> get props => [status, createdTask, errorMessage,
+      optimizedTitle, optimizedDescription, suggestedSkills];
 }
 
 // ==================== Bloc ====================
@@ -70,6 +98,7 @@ class CreateTaskBloc extends Bloc<CreateTaskEvent, CreateTaskState> {
         super(const CreateTaskState()) {
     on<CreateTaskSubmitted>(_onSubmitted, transformer: droppable());
     on<CreateTaskReset>(_onReset);
+    on<CreateTaskAIOptimize>(_onAIOptimize);
   }
 
   final TaskRepository _taskRepository;
@@ -106,5 +135,32 @@ class CreateTaskBloc extends Bloc<CreateTaskEvent, CreateTaskState> {
     Emitter<CreateTaskState> emit,
   ) {
     emit(const CreateTaskState());
+  }
+
+  Future<void> _onAIOptimize(
+    CreateTaskAIOptimize event,
+    Emitter<CreateTaskState> emit,
+  ) async {
+    emit(state.copyWith(status: CreateTaskStatus.aiOptimizing));
+    try {
+      final result = await _taskRepository.aiOptimizeTask(
+        title: event.title,
+        description: event.description,
+        taskType: event.taskType,
+      );
+      emit(state.copyWith(
+        status: CreateTaskStatus.initial,
+        optimizedTitle: result['optimized_title'] as String?,
+        optimizedDescription: result['optimized_description'] as String?,
+        suggestedSkills: (result['suggested_skills'] as List<dynamic>?)
+            ?.map((e) => e as String).toList() ?? [],
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to AI optimize task', e);
+      emit(state.copyWith(
+        status: CreateTaskStatus.error,
+        errorMessage: 'ai_optimize_failed',
+      ));
+    }
   }
 }
