@@ -946,7 +946,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get serviceLoading => '加载中...';
 
   @override
-  String get serviceLoadFailed => '服务信息加载失败';
+  String get serviceLoadFailed => '技能信息加载失败';
 
   @override
   String get serviceNeedDescription => '简单说明你的需求，方便达人了解...';
@@ -1184,19 +1184,22 @@ class AppLocalizationsZh extends AppLocalizations {
   String get studentVerificationBenefitStudentCommunity => '访问学生社区';
 
   @override
-  String get studentVerificationBenefitStudentCommunityDescription => '访问专属学生论坛板块，与校友互动';
+  String get studentVerificationBenefitStudentCommunityDescription =>
+      '访问专属学生论坛板块，与校友互动';
 
   @override
   String get studentVerificationBenefitExclusiveBenefits => '学生专享福利';
 
   @override
-  String get studentVerificationBenefitExclusiveBenefitsDescription => '享受学生折扣、专属活动等更多特权';
+  String get studentVerificationBenefitExclusiveBenefitsDescription =>
+      '享受学生折扣、专属活动等更多特权';
 
   @override
   String get studentVerificationBenefitVerificationBadge => '认证徽章';
 
   @override
-  String get studentVerificationBenefitVerificationBadgeDescription => '显示学生认证徽章，提升可信度';
+  String get studentVerificationBenefitVerificationBadgeDescription =>
+      '显示学生认证徽章，提升可信度';
 
   @override
   String get studentVerificationVerificationEmail => '验证邮箱';
@@ -1513,7 +1516,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get errorCodeAccountHasActiveTasks => '无法删除账户：您有进行中的任务，请先完成或取消';
 
   @override
-  String get errorCodeTempEmailNoPasswordReset => '您当前使用的是临时邮箱，无法接收密码重置邮件，请在设置中更新邮箱';
+  String get errorCodeTempEmailNoPasswordReset =>
+      '您当前使用的是临时邮箱，无法接收密码重置邮件，请在设置中更新邮箱';
 
   @override
   String get stripeDashboard => 'Stripe 仪表板';
@@ -1531,7 +1535,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get stripeConnectOnboardingFailed => '设置收款账户失败';
 
   @override
-  String get stripeConnectOnboardingErrorHint => '若页面内出现「Sorry, something went wrong」，请检查网络或稍后重试；并确认 App 与后端使用同一 Stripe 环境（测试/正式）。';
+  String get stripeConnectOnboardingErrorHint =>
+      '若页面内出现「Sorry, something went wrong」，请检查网络或稍后重试；并确认 App 与后端使用同一 Stripe 环境（测试/正式）。';
 
   @override
   String stripeConnectLoadFailedWithReason(String param1) {
@@ -1721,7 +1726,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get pointsCheckInReward => '签到领积分';
 
   @override
-  String get pointsCheckInDescription => '• 每日签到可获得积分奖励\\n• 连续签到天数越多，奖励越丰厚\\n• 签到中断后，连续天数将重新计算';
+  String get pointsCheckInDescription =>
+      '• 每日签到可获得积分奖励\\n• 连续签到天数越多，奖励越丰厚\\n• 签到中断后，连续天数将重新计算';
 
   @override
   String get pointsTransactionHistory => '您的积分变动记录将显示在这里';
@@ -2221,7 +2227,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskDetailCompleteTaskSuccess => '已提交完成';
 
   @override
-  String get taskDetailConfirmCompletionSuccessMessage => '任务状态已更新为已完成。奖励将自动转给任务接受者。';
+  String get taskDetailConfirmCompletionSuccessMessage =>
+      '任务状态已更新为已完成。奖励将自动转给任务接受者。';
 
   @override
   String get refundRequestSubmitted => '退款申请已提交';
@@ -2359,7 +2366,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get messagesLoadMoreHistory => '加载更多历史消息';
 
   @override
-  String get permissionLocationUsageDescription => '我们需要获取您的位置信息，以便为您提供更精准的服务和任务推荐';
+  String get permissionLocationUsageDescription =>
+      '我们需要获取您的位置信息，以便为您提供更精准的服务和任务推荐';
 
   @override
   String get customerServiceWelcome => '欢迎使用客服中心';
@@ -2832,7 +2840,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get paymentSelectCountryHint => '选择您接收付款的国家。这将决定您账户的货币和合规要求。';
 
   @override
-  String get paymentCurrencyConversionWarning => '本平台交易以英镑 (GBP) 结算。如果您的账户使用其他货币，Stripe 会在提现时自动转换，转换费约为 1%。';
+  String get paymentCurrencyConversionWarning =>
+      '本平台交易以英镑 (GBP) 结算。如果您的账户使用其他货币，Stripe 会在提现时自动转换，转换费约为 1%。';
 
   @override
   String get paymentComplete => '完成';
@@ -3017,7 +3026,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get createTaskDescription => '任务详情';
 
   @override
-  String get createTaskDescriptionPlaceholder => '请详细描述您的需求、时间、特殊要求等。描述越详细，越容易被接受...';
+  String get createTaskDescriptionPlaceholder =>
+      '请详细描述您的需求、时间、特殊要求等。描述越详细，越容易被接受...';
 
   @override
   String get createTaskReward => '任务报酬';
@@ -3284,7 +3294,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get expertCategoryHousekeeping => '家政';
 
   @override
-  String get serviceCategory => '服务分类';
+  String get serviceCategory => '技能分类';
 
   @override
   String get serviceCategoryHint => '选择分类';
@@ -3652,10 +3662,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get infoOurVision => '我们的愿景';
 
   @override
-  String get infoAboutUsContent => 'Link²Ur 是一个创新的任务发布与接取平台，致力于连接需要帮助的人和愿意提供帮助的人。我们相信每个人都有自己的技能和时间，通过平台可以让这些资源得到更好的利用。';
+  String get infoAboutUsContent =>
+      'Link²Ur 是一个创新的任务发布与接取平台，致力于连接需要帮助的人和愿意提供帮助的人。我们相信每个人都有自己的技能和时间，通过平台可以让这些资源得到更好的利用。';
 
   @override
-  String get infoOurMissionContent => '让任务发布和接取变得简单、高效、安全。我们致力于打造一个值得信赖的社区平台，让每个人都能找到合适的任务，也能为他人提供帮助。';
+  String get infoOurMissionContent =>
+      '让任务发布和接取变得简单、高效、安全。我们致力于打造一个值得信赖的社区平台，让每个人都能找到合适的任务，也能为他人提供帮助。';
 
   @override
   String get infoOurVisionContent => '成为英国最受欢迎的任务平台，连接成千上万的用户，创造更多价值，让社区更加紧密。';
@@ -3700,7 +3712,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get vipFaqHowToUpgrade => '如何升级会员？';
 
   @override
-  String get vipFaqHowToUpgradeAnswer => '目前会员升级功能正在开发中，您可以联系管理员手动升级，或等待自动升级功能上线。';
+  String get vipFaqHowToUpgradeAnswer =>
+      '目前会员升级功能正在开发中，您可以联系管理员手动升级，或等待自动升级功能上线。';
 
   @override
   String get vipFaqWhenEffective => '会员权益何时生效？';
@@ -3794,7 +3807,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get serviceNoImages => '暂无图片';
 
   @override
-  String get serviceDetail => '服务详情';
+  String get serviceDetail => '技能详情';
 
   @override
   String get serviceNoDescription => '暂无详细描述';
@@ -3815,7 +3828,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get serviceSelectDate => '选择日期';
 
   @override
-  String get serviceApplyTitle => '申请服务';
+  String get serviceApplyTitle => '申请技能';
 
   @override
   String get offlineMode => '离线模式';
@@ -4402,7 +4415,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskPreferencesPreferredTypes => '偏好任务类型';
 
   @override
-  String get taskPreferencesPreferredTypesDescription => '选择您感兴趣的任务类型。系统将优先推荐这些类型的任务';
+  String get taskPreferencesPreferredTypesDescription =>
+      '选择您感兴趣的任务类型。系统将优先推荐这些类型的任务';
 
   @override
   String get taskPreferencesPreferredLocations => '偏好地点';
@@ -4420,7 +4434,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskPreferencesMinDeadline => '最短截止时间';
 
   @override
-  String get taskPreferencesMinDeadlineDescription => '设置任务截止时间所需的最少天数。系统将只推荐满足此条件的任务';
+  String get taskPreferencesMinDeadlineDescription =>
+      '设置任务截止时间所需的最少天数。系统将只推荐满足此条件的任务';
 
   @override
   String get taskPreferencesDays => '天';
@@ -4495,7 +4510,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskExpertWhatIs => '什么是任务达人？';
 
   @override
-  String get taskExpertWhatIsContent => '任务达人是平台认证的专业服务提供者，拥有丰富的经验和良好的声誉。成为任务达人后，您的服务将获得更多曝光，吸引更多客户';
+  String get taskExpertWhatIsContent =>
+      '任务达人是平台认证的专业服务提供者，拥有丰富的经验和良好的声誉。成为任务达人后，您的服务将获得更多曝光，吸引更多客户';
 
   @override
   String get taskExpertMoreExposure => '更多曝光';
@@ -4543,7 +4559,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskExpertApplyTitle => '申请成为任务达人';
 
   @override
-  String get taskExpertApplicationSubmittedMessage => '您的申请已提交，我们将在3-5个工作日内完成审核';
+  String get taskExpertApplicationSubmittedMessage =>
+      '您的申请已提交，我们将在3-5个工作日内完成审核';
 
   @override
   String get taskExpertNoExperts => '暂无达人';
@@ -4751,12 +4768,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get notificationTitleUnknown => '通知';
 
   @override
-  String notificationContentTaskApplication(String applicant_name, String task_title, String application_message, String price_info) {
+  String notificationContentTaskApplication(String applicant_name,
+      String task_title, String application_message, String price_info) {
     return '$applicant_name 申请了任务「$task_title」\\n申请留言：$application_message\\n议价金额：$price_info';
   }
 
   @override
-  String notificationContentApplicationAccepted(String task_title, String payment_expires_info) {
+  String notificationContentApplicationAccepted(
+      String task_title, String payment_expires_info) {
     return '申请者已接受您对任务「$task_title」的议价，请完成支付。$payment_expires_info';
   }
 
@@ -4771,7 +4790,8 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String notificationContentTaskCompleted(String taker_name, String task_title) {
+  String notificationContentTaskCompleted(
+      String taker_name, String task_title) {
     return '$taker_name 已将任务「$task_title」标记为完成';
   }
 
@@ -4791,12 +4811,14 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String notificationContentApplicationMessage(String task_title, String message) {
+  String notificationContentApplicationMessage(
+      String task_title, String message) {
     return '任务「$task_title」的发布者给您留言：$message';
   }
 
   @override
-  String notificationContentNegotiationOffer(String task_title, String message, String negotiated_price, String currency) {
+  String notificationContentNegotiationOffer(String task_title, String message,
+      String negotiated_price, String currency) {
     return '任务「$task_title」的发布者提出议价\n留言：$message\n议价金额：£$negotiated_price $currency';
   }
 
@@ -4816,7 +4838,8 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String notificationContentTaskApprovedWithPayment(String task_title, String payment_expires_info) {
+  String notificationContentTaskApprovedWithPayment(
+      String task_title, String payment_expires_info) {
     return '您的任务申请已被同意！任务：$task_title$payment_expires_info';
   }
 
@@ -4928,7 +4951,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get onboardingSecurePaymentSubtitle => '平台保障交易安全';
 
   @override
-  String get onboardingSecurePaymentDescription => '使用 Stripe 安全支付，任务完成后自动转账，保障双方权益';
+  String get onboardingSecurePaymentDescription =>
+      '使用 Stripe 安全支付，任务完成后自动转账，保障双方权益';
 
   @override
   String get onboardingCommunityTitle => '社区互动';
@@ -5428,7 +5452,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get forumRequestInstructions => '申请说明';
 
   @override
-  String get forumRequestInstructionsText => '填写以下信息申请新建论坛板块。您的申请将由管理员审核，审核通过后板块将正式创建。';
+  String get forumRequestInstructionsText =>
+      '填写以下信息申请新建论坛板块。您的申请将由管理员审核，审核通过后板块将正式创建。';
 
   @override
   String get forumCategoryName => '板块名称';
@@ -5536,7 +5561,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get serviceApplyAgain => '再次申请';
 
   @override
-  String get serviceInProgress => '服务进行中';
+  String get serviceInProgress => '技能进行中';
 
   @override
   String get taskDetailConfirmDeadline => '确认截止时间';
@@ -5574,7 +5599,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskDetailTaskCompletedTitle => '任务已完成';
 
   @override
-  String get taskDetailTaskCompletedUploadHint => '您已完成此任务。请上传相关证据图片或填写文字说明（可选），以便发布者确认任务完成情况。';
+  String get taskDetailTaskCompletedUploadHint =>
+      '您已完成此任务。请上传相关证据图片或填写文字说明（可选），以便发布者确认任务完成情况。';
 
   @override
   String get taskDetailSectionTextOptional => '文字说明（可选）';
@@ -5612,13 +5638,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskDetailConfirmTaskCompleteAlertTitle => '确认完成任务';
 
   @override
-  String get taskDetailConfirmTaskCompleteAlertMessage => '确定任务已完成吗？提交后将等待发布者确认。';
+  String get taskDetailConfirmTaskCompleteAlertMessage =>
+      '确定任务已完成吗？提交后将等待发布者确认。';
 
   @override
   String get taskDetailConfirmTaskCompleteTitle => '确认任务完成';
 
   @override
-  String get taskDetailConfirmTaskCompleteHint => '您已确认此任务完成。可以上传相关证据图片（可选），如完成截图、验收记录等。';
+  String get taskDetailConfirmTaskCompleteHint =>
+      '您已确认此任务完成。可以上传相关证据图片（可选），如完成截图、验收记录等。';
 
   @override
   String get taskDetailConfirmCompleteButton => '确认完成';
@@ -5774,7 +5802,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get refundApplyRefund => '申请退款';
 
   @override
-  String get refundApplyRefundHint => '请详细说明退款原因，并上传相关证据（如截图、聊天记录等）。管理员将在3-5个工作日内审核。';
+  String get refundApplyRefundHint =>
+      '请详细说明退款原因，并上传相关证据（如截图、聊天记录等）。管理员将在3-5个工作日内审核。';
 
   @override
   String get refundReasonTypeRequired => '退款原因类型 *';
@@ -5848,7 +5877,8 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get refundRebuttalHint => '请详细说明任务完成情况，并上传完成证据（如截图、文件等）。您的反驳将帮助管理员做出公正的裁定。';
+  String get refundRebuttalHint =>
+      '请详细说明任务完成情况，并上传完成证据（如截图、文件等）。您的反驳将帮助管理员做出公正的裁定。';
 
   @override
   String get refundHistorySheetTitle => '退款申请历史记录';
@@ -6043,7 +6073,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskExpertDeliveryTime => '交付时间';
 
   @override
-  String get taskExpertMyApplications => '我的服务申请';
+  String get taskExpertMyApplications => '我的技能申请';
 
   @override
   String get taskExpertNoApplications => '暂无申请';
@@ -6430,7 +6460,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get notificationPermissionTitle => '需要通知权限';
 
   @override
-  String get notificationPermissionDescription => '开启通知后，您可以及时收到：\n\n• 任务状态更新\n• 新消息提醒\n• 任务匹配推荐\n• 优惠活动通知';
+  String get notificationPermissionDescription =>
+      '开启通知后，您可以及时收到：\n\n• 任务状态更新\n• 新消息提醒\n• 任务匹配推荐\n• 优惠活动通知';
 
   @override
   String get notificationPermissionEnable => '开启通知';
@@ -8166,16 +8197,20 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsLanguageChinese => '中文';
 
   @override
-  String get infoTermsContent => 'Link²Ur 服务条款\n\n最后更新日期：2024年1月1日\n\n1. 服务概述\nLink²Ur 是一个英国生活互助平台，旨在帮助用户发布和接受各类生活服务任务。\n\n2. 用户责任\n- 用户应提供真实、准确的个人信息\n- 用户应遵守平台规则和相关法律法规\n- 用户对其发布的内容承担责任\n\n3. 平台责任\n- 平台提供信息中介服务\n- 平台对交易资金实行托管保障\n- 平台有权对违规行为进行处理\n\n4. 支付与结算\n- 所有支付通过第三方支付平台处理\n- 任务完成后平台自动结算\n- 平台收取合理的服务费用\n\n5. 隐私保护\n请参阅我们的隐私政策了解详细信息。\n\n6. 免责声明\n平台作为信息中介，不对用户之间的交易承担直接责任。\n\n如有任何疑问，请联系我们的客服团队。';
+  String get infoTermsContent =>
+      'Link²Ur 服务条款\n\n最后更新日期：2024年1月1日\n\n1. 服务概述\nLink²Ur 是一个英国生活互助平台，旨在帮助用户发布和接受各类生活服务任务。\n\n2. 用户责任\n- 用户应提供真实、准确的个人信息\n- 用户应遵守平台规则和相关法律法规\n- 用户对其发布的内容承担责任\n\n3. 平台责任\n- 平台提供信息中介服务\n- 平台对交易资金实行托管保障\n- 平台有权对违规行为进行处理\n\n4. 支付与结算\n- 所有支付通过第三方支付平台处理\n- 任务完成后平台自动结算\n- 平台收取合理的服务费用\n\n5. 隐私保护\n请参阅我们的隐私政策了解详细信息。\n\n6. 免责声明\n平台作为信息中介，不对用户之间的交易承担直接责任。\n\n如有任何疑问，请联系我们的客服团队。';
 
   @override
-  String get infoPrivacyContent => 'Link²Ur 隐私政策\n\n最后更新日期：2024年1月1日\n\n1. 信息收集\n我们收集以下类型的信息：\n- 注册信息（姓名、邮箱等）\n- 位置信息（用于附近任务推荐）\n- 设备信息（用于推送通知）\n\n2. 信息使用\n我们使用您的信息来：\n- 提供和改善服务\n- 个性化推荐\n- 保障交易安全\n\n3. 信息存储与保护\n- 数据存储在安全的服务器上\n- 采用加密技术保护数据传输\n- 定期进行安全审计\n\n4. 信息共享\n我们不会出售您的个人信息。仅在以下情况下共享：\n- 经您同意\n- 法律要求\n- 服务提供所必需\n\n5. Cookie 政策\n我们使用 Cookie 来改善用户体验。\n\n6. 您的权利\n- 访问和修改个人信息\n- 删除账户\n- 退订通知\n\n如有隐私相关问题，请联系 privacy@link2ur.com';
+  String get infoPrivacyContent =>
+      'Link²Ur 隐私政策\n\n最后更新日期：2024年1月1日\n\n1. 信息收集\n我们收集以下类型的信息：\n- 注册信息（姓名、邮箱等）\n- 位置信息（用于附近任务推荐）\n- 设备信息（用于推送通知）\n\n2. 信息使用\n我们使用您的信息来：\n- 提供和改善服务\n- 个性化推荐\n- 保障交易安全\n\n3. 信息存储与保护\n- 数据存储在安全的服务器上\n- 采用加密技术保护数据传输\n- 定期进行安全审计\n\n4. 信息共享\n我们不会出售您的个人信息。仅在以下情况下共享：\n- 经您同意\n- 法律要求\n- 服务提供所必需\n\n5. Cookie 政策\n我们使用 Cookie 来改善用户体验。\n\n6. 您的权利\n- 访问和修改个人信息\n- 删除账户\n- 退订通知\n\n如有隐私相关问题，请联系 privacy@link2ur.com';
 
   @override
-  String get infoCookieContent => 'Link²Ur Cookie 政策\n\n我们使用 Cookie 和类似技术来改善您的使用体验。\n\n1. 什么是 Cookie\nCookie 是存储在您设备上的小型文本文件。\n\n2. 我们如何使用 Cookie\n- 必要 Cookie：保持登录状态\n- 功能 Cookie：记住偏好设置\n- 分析 Cookie：改善服务质量\n\n3. 管理 Cookie\n您可以在设备设置中管理 Cookie 偏好。';
+  String get infoCookieContent =>
+      'Link²Ur Cookie 政策\n\n我们使用 Cookie 和类似技术来改善您的使用体验。\n\n1. 什么是 Cookie\nCookie 是存储在您设备上的小型文本文件。\n\n2. 我们如何使用 Cookie\n- 必要 Cookie：保持登录状态\n- 功能 Cookie：记住偏好设置\n- 分析 Cookie：改善服务质量\n\n3. 管理 Cookie\n您可以在设备设置中管理 Cookie 偏好。';
 
   @override
-  String get infoCommunityGuidelinesContent => 'Link²Ur 社区准则\n\n生效日期：2026年3月\n\n1. 内容标准\n- 尊重他人：禁止人身攻击、侮辱、歧视性言论\n- 真实可信：禁止虚假、误导或欺诈性信息\n- 合法合规：禁止违法内容、侵权内容\n- 安全健康：禁止危害用户安全的内容\n\n2. 论坛行为规范\n- 帖子应发布在相应学校分区\n- 回复应与主题相关，禁止刷屏\n- 禁止商业广告、学术不诚信内容\n\n3. 任务与交易规范\n- 任务描述应清晰准确\n- 评价应基于真实体验\n- 禁止虚假好评或恶意差评\n\n4. 举报与申诉\n- 点击「举报」按钮举报违规内容\n- 对处罚有异议可在14天内申诉\n\n5. 违规处理\n提醒/警告 → 内容删除 → 临时限制 → 账户暂停 → 永久封禁\n\n如有疑问请联系：info@link2ur.com';
+  String get infoCommunityGuidelinesContent =>
+      'Link²Ur 社区准则\n\n生效日期：2026年3月\n\n1. 内容标准\n- 尊重他人：禁止人身攻击、侮辱、歧视性言论\n- 真实可信：禁止虚假、误导或欺诈性信息\n- 合法合规：禁止违法内容、侵权内容\n- 安全健康：禁止危害用户安全的内容\n\n2. 论坛行为规范\n- 帖子应发布在相应学校分区\n- 回复应与主题相关，禁止刷屏\n- 禁止商业广告、学术不诚信内容\n\n3. 任务与交易规范\n- 任务描述应清晰准确\n- 评价应基于真实体验\n- 禁止虚假好评或恶意差评\n\n4. 举报与申诉\n- 点击「举报」按钮举报违规内容\n- 对处罚有异议可在14天内申诉\n\n5. 违规处理\n提醒/警告 → 内容删除 → 临时限制 → 账户暂停 → 永久封禁\n\n如有疑问请联系：info@link2ur.com';
 
   @override
   String get serviceNegotiatePrice => '价格议价';
@@ -8232,7 +8267,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get publishRelatedContent => '关联内容';
 
   @override
-  String get publishSearchHint => '输入关键词搜索服务、活动、商品、排行榜…';
+  String get publishSearchHint => '输入关键词搜索技能、活动、商品、排行榜…';
 
   @override
   String get publishRelatedToMe => '与我相关';
@@ -8433,7 +8468,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get notificationPermTitle => '开启推送通知';
 
   @override
-  String get notificationPermDesc => '开启通知后，您可以及时收到：\n\n• 任务状态更新\n• 新消息提醒\n• 任务匹配推荐\n• 优惠活动通知';
+  String get notificationPermDesc =>
+      '开启通知后，您可以及时收到：\n\n• 任务状态更新\n• 新消息提醒\n• 任务匹配推荐\n• 优惠活动通知';
 
   @override
   String get notificationPermEnable => '开启通知';
@@ -8781,7 +8817,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aiChatWelcomeSubtitle => '有什么可以帮助你的？';
 
   @override
-  String get aiChatWelcomeIntro => '我是 Link2Ur 的智能助手，可以帮你查询任务状态、搜索任务、解答平台规则、查看积分与优惠券等。直接输入问题，或点击下方快捷问题开始吧。';
+  String get aiChatWelcomeIntro =>
+      '我是 Link2Ur 的智能助手，可以帮你查询任务状态、搜索任务、解答平台规则、查看积分与优惠券等。直接输入问题，或点击下方快捷问题开始吧。';
 
   @override
   String get aiChatQuickStart => '快捷操作';
@@ -8939,7 +8976,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get toolCallListMyApplications => '我的任务申请';
 
   @override
-  String get toolCallListMyServiceApplications => '我的服务申请';
+  String get toolCallListMyServiceApplications => '我的技能申请';
 
   @override
   String get toolCallListMyActivities => '我参加的活动';
@@ -9338,7 +9375,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get publishRelatedContentOptional => '关联内容（选填，可关联服务/活动/商品/排行榜等）';
+  String get publishRelatedContentOptional => '关联内容（选填，可关联技能/活动/商品/排行榜等）';
 
   @override
   String get aiChatLoadConversationsFailed => '加载对话列表失败';
@@ -9863,7 +9900,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get expertDashboardTabStats => '看板';
 
   @override
-  String get expertDashboardTabServices => '我的服务';
+  String get expertDashboardTabServices => '我的技能';
 
   @override
   String get expertDashboardTabApplications => '申请管理';
@@ -10433,34 +10470,34 @@ class AppLocalizationsZh extends AppLocalizations {
   String get errorTaskStatisticsLoadFailed => '加载任务统计失败，请重试';
 
   @override
-  String get profileMyServices => '我的服务';
+  String get profileMyServices => '我的技能';
 
   @override
-  String get profileMyServicesSubtitle => '管理已发布的服务';
+  String get profileMyServicesSubtitle => '管理已发布的技能';
 
   @override
-  String get personalServiceCreate => '发布服务';
+  String get personalServiceCreate => '发布技能';
 
   @override
-  String get personalServiceEdit => '编辑服务';
+  String get personalServiceEdit => '编辑技能';
 
   @override
-  String get personalServiceName => '服务名称';
+  String get personalServiceName => '技能名称';
 
   @override
-  String get personalServiceDescription => '服务描述';
+  String get personalServiceDescription => '技能描述';
 
   @override
   String get personalServicePrice => '价格';
 
   @override
-  String get personalServiceNameEn => '服务名称（英文）';
+  String get personalServiceNameEn => '技能名称（英文）';
 
   @override
-  String get personalServiceNameEnHint => '方便国际用户了解你的服务';
+  String get personalServiceNameEnHint => '方便国际用户了解你的技能';
 
   @override
-  String get personalServiceDescriptionEn => '服务描述（英文）';
+  String get personalServiceDescriptionEn => '技能描述（英文）';
 
   @override
   String get personalServiceDescriptionEnHint => '英文描述（选填）';
@@ -10478,7 +10515,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get personalServicePricingNegotiable => '协商定价';
 
   @override
-  String get personalServiceLocation => '服务方式';
+  String get personalServiceLocation => '技能方式';
 
   @override
   String get personalServiceLocationOnline => '线上/远程';
@@ -10490,34 +10527,34 @@ class AppLocalizationsZh extends AppLocalizations {
   String get personalServiceLocationBoth => '都可以';
 
   @override
-  String get personalServiceCreated => '服务发布成功！';
+  String get personalServiceCreated => '技能发布成功！';
 
   @override
-  String get personalServiceUpdated => '服务已更新';
+  String get personalServiceUpdated => '技能已更新';
 
   @override
-  String get personalServiceDeleted => '服务已删除';
+  String get personalServiceDeleted => '技能已删除';
 
   @override
-  String get personalServiceLimitReached => '最多发布10个服务';
+  String get personalServiceLimitReached => '最多发布10个技能';
 
   @override
-  String get personalServiceEmpty => '还没有服务';
+  String get personalServiceEmpty => '还没有技能';
 
   @override
-  String get personalServiceEmptyHint => '发布你的第一个服务吧';
+  String get personalServiceEmptyHint => '发布你的第一个技能吧';
 
   @override
-  String get personalServiceNameHint => '输入服务名称';
+  String get personalServiceNameHint => '输入技能名称';
 
   @override
-  String get personalServiceNameRequired => '请输入服务名称';
+  String get personalServiceNameRequired => '请输入技能名称';
 
   @override
-  String get personalServiceDescriptionHint => '详细描述你提供的服务内容';
+  String get personalServiceDescriptionHint => '详细描述你提供的技能内容';
 
   @override
-  String get personalServiceDescriptionRequired => '请输入服务描述';
+  String get personalServiceDescriptionRequired => '请输入技能描述';
 
   @override
   String get personalServicePriceRequired => '请输入价格';
@@ -10529,7 +10566,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get personalServicePerHour => '/小时';
 
   @override
-  String get publishService => '发布服务';
+  String get publishService => '发布技能';
 
   @override
   String get publishServiceDesc => '展示你的技能';
@@ -10714,7 +10751,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get createTaskAiTipPrefix => 'AI 建议：';
 
   @override
-  String get createTaskAiTipContent => '补充以下信息可以获得更精准的报价：1. 目标用户群体 2. 竞品参考链接 3. 品牌色/风格偏好';
+  String get createTaskAiTipContent =>
+      '补充以下信息可以获得更精准的报价：1. 目标用户群体 2. 竞品参考链接 3. 品牌色/风格偏好';
 
   @override
   String get createTaskSaveDraft => '存为草稿';
@@ -10752,7 +10790,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
 class AppLocalizationsZhHant extends AppLocalizationsZh {
-  AppLocalizationsZhHant(): super('zh_Hant');
+  AppLocalizationsZhHant() : super('zh_Hant');
 
   @override
   String get commonOk => '確定';
@@ -11692,7 +11730,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get serviceLoading => '加載中...';
 
   @override
-  String get serviceLoadFailed => '服務信息加載失敗';
+  String get serviceLoadFailed => '技能信息加載失敗';
 
   @override
   String get serviceNeedDescription => '簡單說明你的需求，方便達人了解...';
@@ -11930,19 +11968,22 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get studentVerificationBenefitStudentCommunity => '訪問學生社區';
 
   @override
-  String get studentVerificationBenefitStudentCommunityDescription => '訪問專屬學生論壇板塊，與校友互動';
+  String get studentVerificationBenefitStudentCommunityDescription =>
+      '訪問專屬學生論壇板塊，與校友互動';
 
   @override
   String get studentVerificationBenefitExclusiveBenefits => '學生專享福利';
 
   @override
-  String get studentVerificationBenefitExclusiveBenefitsDescription => '享受學生折扣、專屬活動等更多特權';
+  String get studentVerificationBenefitExclusiveBenefitsDescription =>
+      '享受學生折扣、專屬活動等更多特權';
 
   @override
   String get studentVerificationBenefitVerificationBadge => '認證徽章';
 
   @override
-  String get studentVerificationBenefitVerificationBadgeDescription => '顯示學生認證徽章，提升可信度';
+  String get studentVerificationBenefitVerificationBadgeDescription =>
+      '顯示學生認證徽章，提升可信度';
 
   @override
   String get studentVerificationVerificationEmail => '驗證郵箱';
@@ -12259,7 +12300,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get errorCodeAccountHasActiveTasks => '無法刪除賬戶：您有進行中的任務，請先完成或取消';
 
   @override
-  String get errorCodeTempEmailNoPasswordReset => '您當前使用的是臨時郵箱，無法接收密碼重置郵件，請在設置中更新郵箱';
+  String get errorCodeTempEmailNoPasswordReset =>
+      '您當前使用的是臨時郵箱，無法接收密碼重置郵件，請在設置中更新郵箱';
 
   @override
   String get stripeDashboard => 'Stripe 儀錶板';
@@ -12277,7 +12319,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get stripeConnectOnboardingFailed => '設置收款賬戶失敗';
 
   @override
-  String get stripeConnectOnboardingErrorHint => '若頁面內出現「Sorry, something went wrong」，請檢查網絡或稍後重試；並確認 App 與後端使用同一 Stripe 環境（測試/正式）。';
+  String get stripeConnectOnboardingErrorHint =>
+      '若頁面內出現「Sorry, something went wrong」，請檢查網絡或稍後重試；並確認 App 與後端使用同一 Stripe 環境（測試/正式）。';
 
   @override
   String stripeConnectLoadFailedWithReason(String param1) {
@@ -12467,7 +12510,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get pointsCheckInReward => '籤到領積分';
 
   @override
-  String get pointsCheckInDescription => '• 每日籤到可獲得積分獎勵\\n• 連續籤到天數越多，獎勵越豐厚\\n• 籤到中斷後，連續天數將重新計算';
+  String get pointsCheckInDescription =>
+      '• 每日籤到可獲得積分獎勵\\n• 連續籤到天數越多，獎勵越豐厚\\n• 籤到中斷後，連續天數將重新計算';
 
   @override
   String get pointsTransactionHistory => '您的積分變動記錄將顯示在這裡';
@@ -12967,7 +13011,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get taskDetailCompleteTaskSuccess => '已提交完成';
 
   @override
-  String get taskDetailConfirmCompletionSuccessMessage => '任務狀態已更新爲已完成。獎勵將自動轉給任務接受者。';
+  String get taskDetailConfirmCompletionSuccessMessage =>
+      '任務狀態已更新爲已完成。獎勵將自動轉給任務接受者。';
 
   @override
   String get refundRequestSubmitted => '退款申請已提交';
@@ -13105,7 +13150,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get messagesLoadMoreHistory => '加載更多歷史訊息';
 
   @override
-  String get permissionLocationUsageDescription => '我們需要獲取您的位置信息，以便爲您提供更精準的服務和任務推薦';
+  String get permissionLocationUsageDescription =>
+      '我們需要獲取您的位置信息，以便爲您提供更精準的服務和任務推薦';
 
   @override
   String get customerServiceWelcome => '歡迎使用客服中心';
@@ -13578,7 +13624,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get paymentSelectCountryHint => '選擇您接收付款的國家。這將決定您賬戶的貨幣和合規要求。';
 
   @override
-  String get paymentCurrencyConversionWarning => '本平台交易以英鎊 (GBP) 結算。如果您的賬戶使用其他貨幣，Stripe 會在提現時自動轉換，轉換費約為 1%。';
+  String get paymentCurrencyConversionWarning =>
+      '本平台交易以英鎊 (GBP) 結算。如果您的賬戶使用其他貨幣，Stripe 會在提現時自動轉換，轉換費約為 1%。';
 
   @override
   String get paymentComplete => '完成';
@@ -13763,7 +13810,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get createTaskDescription => '任務詳情';
 
   @override
-  String get createTaskDescriptionPlaceholder => '請詳細描述您的需求、時間、特殊要求等。描述越詳細，越容易被接受...';
+  String get createTaskDescriptionPlaceholder =>
+      '請詳細描述您的需求、時間、特殊要求等。描述越詳細，越容易被接受...';
 
   @override
   String get createTaskReward => '任務報酬';
@@ -14030,7 +14078,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get expertCategoryHousekeeping => '家政';
 
   @override
-  String get serviceCategory => '服務分類';
+  String get serviceCategory => '技能分類';
 
   @override
   String get serviceCategoryHint => '選擇分類';
@@ -14398,10 +14446,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get infoOurVision => '我們的願景';
 
   @override
-  String get infoAboutUsContent => 'Link²Ur 是一個創新的任務發布與接取平臺，致力於連接需要幫助的人和願意提供幫助的人。我們相信每個人都有自己的技能和時間，通過平臺可以讓這些資源得到更好的利用。';
+  String get infoAboutUsContent =>
+      'Link²Ur 是一個創新的任務發布與接取平臺，致力於連接需要幫助的人和願意提供幫助的人。我們相信每個人都有自己的技能和時間，通過平臺可以讓這些資源得到更好的利用。';
 
   @override
-  String get infoOurMissionContent => '讓任務發布和接取變得簡單、高效、安全。我們致力於打造一個值得信賴的社區平臺，讓每個人都能找到合適的任務，也能爲他人提供幫助。';
+  String get infoOurMissionContent =>
+      '讓任務發布和接取變得簡單、高效、安全。我們致力於打造一個值得信賴的社區平臺，讓每個人都能找到合適的任務，也能爲他人提供幫助。';
 
   @override
   String get infoOurVisionContent => '成爲英國最受歡迎的任務平臺，連接成千上萬的用戶，創造更多價值，讓社區更加緊密。';
@@ -14446,7 +14496,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get vipFaqHowToUpgrade => '如何升級會員？';
 
   @override
-  String get vipFaqHowToUpgradeAnswer => '目前會員升級功能正在開發中，您可以聯繫管理員手動升級，或等待自動升級功能上線。';
+  String get vipFaqHowToUpgradeAnswer =>
+      '目前會員升級功能正在開發中，您可以聯繫管理員手動升級，或等待自動升級功能上線。';
 
   @override
   String get vipFaqWhenEffective => '會員權益何時生效？';
@@ -14540,7 +14591,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get serviceNoImages => '暫無圖片';
 
   @override
-  String get serviceDetail => '服務詳情';
+  String get serviceDetail => '技能詳情';
 
   @override
   String get serviceNoDescription => '暫無詳細描述';
@@ -14561,7 +14612,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get serviceSelectDate => '選擇日期';
 
   @override
-  String get serviceApplyTitle => '申請服務';
+  String get serviceApplyTitle => '申請技能';
 
   @override
   String get offlineMode => '離線模式';
@@ -15148,7 +15199,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get taskPreferencesPreferredTypes => '偏好任務類型';
 
   @override
-  String get taskPreferencesPreferredTypesDescription => '選擇您感興趣的任務類型。系統將優先推薦這些類型的任務';
+  String get taskPreferencesPreferredTypesDescription =>
+      '選擇您感興趣的任務類型。系統將優先推薦這些類型的任務';
 
   @override
   String get taskPreferencesPreferredLocations => '偏好地點';
@@ -15166,7 +15218,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get taskPreferencesMinDeadline => '最短截止時間';
 
   @override
-  String get taskPreferencesMinDeadlineDescription => '設置任務截止時間所需的最少天數。系統將只推薦滿足此條件的任務';
+  String get taskPreferencesMinDeadlineDescription =>
+      '設置任務截止時間所需的最少天數。系統將只推薦滿足此條件的任務';
 
   @override
   String get taskPreferencesDays => '天';
@@ -15241,7 +15294,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get taskExpertWhatIs => '什麼是任務達人？';
 
   @override
-  String get taskExpertWhatIsContent => '任務達人是平臺認證的專業服務提供者，擁有豐富的經驗和良好的聲譽。成爲任務達人後，您的服務將獲得更多曝光，吸引更多客戶';
+  String get taskExpertWhatIsContent =>
+      '任務達人是平臺認證的專業服務提供者，擁有豐富的經驗和良好的聲譽。成爲任務達人後，您的服務將獲得更多曝光，吸引更多客戶';
 
   @override
   String get taskExpertMoreExposure => '更多曝光';
@@ -15289,7 +15343,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get taskExpertApplyTitle => '申請成爲任務達人';
 
   @override
-  String get taskExpertApplicationSubmittedMessage => '您的申請已提交，我們將在3-5個工作日內完成審核';
+  String get taskExpertApplicationSubmittedMessage =>
+      '您的申請已提交，我們將在3-5個工作日內完成審核';
 
   @override
   String get taskExpertNoExperts => '暫無達人';
@@ -15497,12 +15552,14 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get notificationTitleUnknown => '通知';
 
   @override
-  String notificationContentTaskApplication(String applicant_name, String task_title, String application_message, String price_info) {
+  String notificationContentTaskApplication(String applicant_name,
+      String task_title, String application_message, String price_info) {
     return '$applicant_name 申請了任務「$task_title」\\n申請留言：$application_message\\n議價金額：$price_info';
   }
 
   @override
-  String notificationContentApplicationAccepted(String task_title, String payment_expires_info) {
+  String notificationContentApplicationAccepted(
+      String task_title, String payment_expires_info) {
     return '申請者已接受您對任務「$task_title」的議價，請完成支付。$payment_expires_info';
   }
 
@@ -15517,7 +15574,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
-  String notificationContentTaskCompleted(String taker_name, String task_title) {
+  String notificationContentTaskCompleted(
+      String taker_name, String task_title) {
     return '$taker_name 已將任務「$task_title」標記爲完成';
   }
 
@@ -15537,12 +15595,14 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
-  String notificationContentApplicationMessage(String task_title, String message) {
+  String notificationContentApplicationMessage(
+      String task_title, String message) {
     return '任務「$task_title」的發布者給您留言：$message';
   }
 
   @override
-  String notificationContentNegotiationOffer(String task_title, String message, String negotiated_price, String currency) {
+  String notificationContentNegotiationOffer(String task_title, String message,
+      String negotiated_price, String currency) {
     return '任務「$task_title」的發布者提出議價\n留言：$message\n議價金額：£$negotiated_price $currency';
   }
 
@@ -15562,7 +15622,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
-  String notificationContentTaskApprovedWithPayment(String task_title, String payment_expires_info) {
+  String notificationContentTaskApprovedWithPayment(
+      String task_title, String payment_expires_info) {
     return '您的任務申請已被同意！任務：$task_title$payment_expires_info';
   }
 
@@ -15674,7 +15735,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get onboardingSecurePaymentSubtitle => '平臺保障交易安全';
 
   @override
-  String get onboardingSecurePaymentDescription => '使用 Stripe 安全支付，任務完成後自動轉賬，保障雙方權益';
+  String get onboardingSecurePaymentDescription =>
+      '使用 Stripe 安全支付，任務完成後自動轉賬，保障雙方權益';
 
   @override
   String get onboardingCommunityTitle => '社區互動';
@@ -16174,7 +16236,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get forumRequestInstructions => '申請說明';
 
   @override
-  String get forumRequestInstructionsText => '填寫以下信息申請新建論壇板塊。您的申請將由管理員審核，審核通過後板塊將正式創建。';
+  String get forumRequestInstructionsText =>
+      '填寫以下信息申請新建論壇板塊。您的申請將由管理員審核，審核通過後板塊將正式創建。';
 
   @override
   String get forumCategoryName => '板塊名稱';
@@ -16282,7 +16345,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get serviceApplyAgain => '再次申請';
 
   @override
-  String get serviceInProgress => '服務進行中';
+  String get serviceInProgress => '技能進行中';
 
   @override
   String get taskDetailConfirmDeadline => '確認截止時間';
@@ -16320,7 +16383,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get taskDetailTaskCompletedTitle => '任務已完成';
 
   @override
-  String get taskDetailTaskCompletedUploadHint => '您已完成此任務。請上傳相關證據圖片或填寫文字說明（可選），以便發布者確認任務完成情況。';
+  String get taskDetailTaskCompletedUploadHint =>
+      '您已完成此任務。請上傳相關證據圖片或填寫文字說明（可選），以便發布者確認任務完成情況。';
 
   @override
   String get taskDetailSectionTextOptional => '文字說明（可選）';
@@ -16358,13 +16422,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get taskDetailConfirmTaskCompleteAlertTitle => '確認完成任務';
 
   @override
-  String get taskDetailConfirmTaskCompleteAlertMessage => '確定任務已完成嗎？提交後將等待發布者確認。';
+  String get taskDetailConfirmTaskCompleteAlertMessage =>
+      '確定任務已完成嗎？提交後將等待發布者確認。';
 
   @override
   String get taskDetailConfirmTaskCompleteTitle => '確認任務完成';
 
   @override
-  String get taskDetailConfirmTaskCompleteHint => '您已確認此任務完成。可以上傳相關證據圖片（可選），如完成截圖、驗收記錄等。';
+  String get taskDetailConfirmTaskCompleteHint =>
+      '您已確認此任務完成。可以上傳相關證據圖片（可選），如完成截圖、驗收記錄等。';
 
   @override
   String get taskDetailConfirmCompleteButton => '確認完成';
@@ -16520,7 +16586,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get refundApplyRefund => '申請退款';
 
   @override
-  String get refundApplyRefundHint => '請詳細說明退款原因，並上傳相關證據（如截圖、聊天記錄等）。管理員將在3-5個工作日內審核。';
+  String get refundApplyRefundHint =>
+      '請詳細說明退款原因，並上傳相關證據（如截圖、聊天記錄等）。管理員將在3-5個工作日內審核。';
 
   @override
   String get refundReasonTypeRequired => '退款原因類型 *';
@@ -16594,7 +16661,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
-  String get refundRebuttalHint => '請詳細說明任務完成情況，並上傳完成證據（如截圖、文件等）。您的反駁將幫助管理員做出公正的裁定。';
+  String get refundRebuttalHint =>
+      '請詳細說明任務完成情況，並上傳完成證據（如截圖、文件等）。您的反駁將幫助管理員做出公正的裁定。';
 
   @override
   String get refundHistorySheetTitle => '退款申請歷史記錄';
@@ -16789,7 +16857,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get taskExpertDeliveryTime => '交付時間';
 
   @override
-  String get taskExpertMyApplications => '我的服務申請';
+  String get taskExpertMyApplications => '我的技能申請';
 
   @override
   String get taskExpertNoApplications => '暫無申請';
@@ -17176,7 +17244,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get notificationPermissionTitle => '需要通知權限';
 
   @override
-  String get notificationPermissionDescription => '開啟通知後，您可以即時收到：\n\n• 任務狀態更新\n• 新訊息提醒\n• 任務配對推薦\n• 優惠活動通知';
+  String get notificationPermissionDescription =>
+      '開啟通知後，您可以即時收到：\n\n• 任務狀態更新\n• 新訊息提醒\n• 任務配對推薦\n• 優惠活動通知';
 
   @override
   String get notificationPermissionEnable => '開啟通知';
@@ -18912,16 +18981,20 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get settingsLanguageChinese => '中文';
 
   @override
-  String get infoTermsContent => 'Link²Ur 服務條款\n\n最後更新日期：2024年1月1日\n\n1. 服務概述\nLink²Ur 是一個英國生活互助平台，旨在幫助用戶發布和接受各類生活服務任務。\n\n2. 用戶責任\n- 用戶應提供真實、準確的個人資訊\n- 用戶應遵守平台規則和相關法律法規\n- 用戶對其發布的內容承擔責任\n\n3. 平台責任\n- 平台提供資訊中介服務\n- 平台對交易資金實行託管保障\n- 平台有權對違規行為進行處理\n\n4. 支付與結算\n- 所有支付透過第三方支付平台處理\n- 任務完成後平台自動結算\n- 平台收取合理的服務費用\n\n5. 隱私保護\n請參閱我們的隱私政策了解詳細資訊。\n\n6. 免責聲明\n平台作為資訊中介，不對用戶之間的交易承擔直接責任。\n\n如有任何疑問，請聯繫我們的客服團隊。';
+  String get infoTermsContent =>
+      'Link²Ur 服務條款\n\n最後更新日期：2024年1月1日\n\n1. 服務概述\nLink²Ur 是一個英國生活互助平台，旨在幫助用戶發布和接受各類生活服務任務。\n\n2. 用戶責任\n- 用戶應提供真實、準確的個人資訊\n- 用戶應遵守平台規則和相關法律法規\n- 用戶對其發布的內容承擔責任\n\n3. 平台責任\n- 平台提供資訊中介服務\n- 平台對交易資金實行託管保障\n- 平台有權對違規行為進行處理\n\n4. 支付與結算\n- 所有支付透過第三方支付平台處理\n- 任務完成後平台自動結算\n- 平台收取合理的服務費用\n\n5. 隱私保護\n請參閱我們的隱私政策了解詳細資訊。\n\n6. 免責聲明\n平台作為資訊中介，不對用戶之間的交易承擔直接責任。\n\n如有任何疑問，請聯繫我們的客服團隊。';
 
   @override
-  String get infoPrivacyContent => 'Link²Ur 隱私政策\n\n最後更新日期：2024年1月1日\n\n1. 資訊收集\n我們收集以下類型的資訊：\n- 註冊資訊（姓名、電郵等）\n- 位置資訊（用於附近任務推薦）\n- 設備資訊（用於推送通知）\n\n2. 資訊使用\n我們使用您的資訊來：\n- 提供和改善服務\n- 個性化推薦\n- 保障交易安全\n\n3. 資訊儲存與保護\n- 數據儲存在安全的伺服器上\n- 採用加密技術保護數據傳輸\n- 定期進行安全審計\n\n4. 資訊共享\n我們不會出售您的個人資訊。僅在以下情況下共享：\n- 經您同意\n- 法律要求\n- 服務提供所必需\n\n5. Cookie 政策\n我們使用 Cookie 來改善用戶體驗。\n\n6. 您的權利\n- 存取和修改個人資訊\n- 刪除帳號\n- 退訂通知\n\n如有隱私相關問題，請聯繫 privacy@link2ur.com';
+  String get infoPrivacyContent =>
+      'Link²Ur 隱私政策\n\n最後更新日期：2024年1月1日\n\n1. 資訊收集\n我們收集以下類型的資訊：\n- 註冊資訊（姓名、電郵等）\n- 位置資訊（用於附近任務推薦）\n- 設備資訊（用於推送通知）\n\n2. 資訊使用\n我們使用您的資訊來：\n- 提供和改善服務\n- 個性化推薦\n- 保障交易安全\n\n3. 資訊儲存與保護\n- 數據儲存在安全的伺服器上\n- 採用加密技術保護數據傳輸\n- 定期進行安全審計\n\n4. 資訊共享\n我們不會出售您的個人資訊。僅在以下情況下共享：\n- 經您同意\n- 法律要求\n- 服務提供所必需\n\n5. Cookie 政策\n我們使用 Cookie 來改善用戶體驗。\n\n6. 您的權利\n- 存取和修改個人資訊\n- 刪除帳號\n- 退訂通知\n\n如有隱私相關問題，請聯繫 privacy@link2ur.com';
 
   @override
-  String get infoCookieContent => 'Link²Ur Cookie 政策\n\n我們使用 Cookie 和類似技術來改善您的使用體驗。\n\n1. 什麼是 Cookie\nCookie 是儲存在您設備上的小型文字檔案。\n\n2. 我們如何使用 Cookie\n- 必要 Cookie：保持登入狀態\n- 功能 Cookie：記住偏好設定\n- 分析 Cookie：改善服務品質\n\n3. 管理 Cookie\n您可以在設備設定中管理 Cookie 偏好。';
+  String get infoCookieContent =>
+      'Link²Ur Cookie 政策\n\n我們使用 Cookie 和類似技術來改善您的使用體驗。\n\n1. 什麼是 Cookie\nCookie 是儲存在您設備上的小型文字檔案。\n\n2. 我們如何使用 Cookie\n- 必要 Cookie：保持登入狀態\n- 功能 Cookie：記住偏好設定\n- 分析 Cookie：改善服務品質\n\n3. 管理 Cookie\n您可以在設備設定中管理 Cookie 偏好。';
 
   @override
-  String get infoCommunityGuidelinesContent => 'Link²Ur 社區準則\n\n生效日期：2026年3月\n\n1. 內容標準\n- 尊重他人：禁止人身攻擊、侮辱、歧視性言論\n- 真實可信：禁止虛假、誤導或詐騙性資訊\n- 合法合規：禁止違法內容、侵權內容\n- 安全健康：禁止危害用戶安全的內容\n\n2. 論壇行為規範\n- 帖子應發佈在相應學校分區\n- 回覆應與主題相關，禁止刷屏\n- 禁止商業廣告、學術不誠信內容\n\n3. 任務與交易規範\n- 任務描述應清晰準確\n- 評價應基於真實體驗\n- 禁止虛假好評或惡意差評\n\n4. 舉報與申訴\n- 點擊「舉報」按鈕舉報違規內容\n- 對處罰有異議可在14天內申訴\n\n5. 違規處理\n提醒/警告 → 內容刪除 → 臨時限制 → 帳戶暫停 → 永久封禁\n\n如有疑問請聯繫：info@link2ur.com';
+  String get infoCommunityGuidelinesContent =>
+      'Link²Ur 社區準則\n\n生效日期：2026年3月\n\n1. 內容標準\n- 尊重他人：禁止人身攻擊、侮辱、歧視性言論\n- 真實可信：禁止虛假、誤導或詐騙性資訊\n- 合法合規：禁止違法內容、侵權內容\n- 安全健康：禁止危害用戶安全的內容\n\n2. 論壇行為規範\n- 帖子應發佈在相應學校分區\n- 回覆應與主題相關，禁止刷屏\n- 禁止商業廣告、學術不誠信內容\n\n3. 任務與交易規範\n- 任務描述應清晰準確\n- 評價應基於真實體驗\n- 禁止虛假好評或惡意差評\n\n4. 舉報與申訴\n- 點擊「舉報」按鈕舉報違規內容\n- 對處罰有異議可在14天內申訴\n\n5. 違規處理\n提醒/警告 → 內容刪除 → 臨時限制 → 帳戶暫停 → 永久封禁\n\n如有疑問請聯繫：info@link2ur.com';
 
   @override
   String get serviceNegotiatePrice => '價格議價';
@@ -18978,7 +19051,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get publishRelatedContent => '關聯內容';
 
   @override
-  String get publishSearchHint => '輸入關鍵詞搜尋服務、活動、商品、排行榜…';
+  String get publishSearchHint => '輸入關鍵詞搜尋技能、活動、商品、排行榜…';
 
   @override
   String get publishRelatedToMe => '與我相關';
@@ -19179,7 +19252,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get notificationPermTitle => '開啟推送通知';
 
   @override
-  String get notificationPermDesc => '開啟通知後，您可以即時收到：\n\n• 任務狀態更新\n• 新訊息提醒\n• 任務匹配推薦\n• 優惠活動通知';
+  String get notificationPermDesc =>
+      '開啟通知後，您可以即時收到：\n\n• 任務狀態更新\n• 新訊息提醒\n• 任務匹配推薦\n• 優惠活動通知';
 
   @override
   String get notificationPermEnable => '開啟通知';
@@ -19527,7 +19601,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get aiChatWelcomeSubtitle => '有什麼可以幫助你的？';
 
   @override
-  String get aiChatWelcomeIntro => '我是 Link2Ur 的智能助手，可以幫你查詢任務狀態、搜尋任務、解答平台規則、查看積分與優惠券等。直接輸入問題，或點擊下方快捷問題開始吧。';
+  String get aiChatWelcomeIntro =>
+      '我是 Link2Ur 的智能助手，可以幫你查詢任務狀態、搜尋任務、解答平台規則、查看積分與優惠券等。直接輸入問題，或點擊下方快捷問題開始吧。';
 
   @override
   String get aiChatQuickStart => '快捷操作';
@@ -19685,7 +19760,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get toolCallListMyApplications => '我的任務申請';
 
   @override
-  String get toolCallListMyServiceApplications => '我的服務申請';
+  String get toolCallListMyServiceApplications => '我的技能申請';
 
   @override
   String get toolCallListMyActivities => '我參加的活動';
@@ -20084,7 +20159,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
-  String get publishRelatedContentOptional => '關聯內容（選填，可關聯服務/活動/商品/排行榜等）';
+  String get publishRelatedContentOptional => '關聯內容（選填，可關聯技能/活動/商品/排行榜等）';
 
   @override
   String get aiChatLoadConversationsFailed => '載入對話清單失敗';
@@ -20565,7 +20640,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get expertDashboardTabStats => '看板';
 
   @override
-  String get expertDashboardTabServices => '我的服務';
+  String get expertDashboardTabServices => '我的技能';
 
   @override
   String get expertDashboardTabApplications => '申請管理';
@@ -21135,34 +21210,34 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get errorTaskStatisticsLoadFailed => '載入任務統計失敗，請重試';
 
   @override
-  String get profileMyServices => '我的服務';
+  String get profileMyServices => '我的技能';
 
   @override
-  String get profileMyServicesSubtitle => '管理已發佈的服務';
+  String get profileMyServicesSubtitle => '管理已發佈的技能';
 
   @override
-  String get personalServiceCreate => '發佈服務';
+  String get personalServiceCreate => '發佈技能';
 
   @override
-  String get personalServiceEdit => '編輯服務';
+  String get personalServiceEdit => '編輯技能';
 
   @override
-  String get personalServiceName => '服務名稱';
+  String get personalServiceName => '技能名稱';
 
   @override
-  String get personalServiceDescription => '服務描述';
+  String get personalServiceDescription => '技能描述';
 
   @override
   String get personalServicePrice => '價格';
 
   @override
-  String get personalServiceNameEn => '服務名稱（英文）';
+  String get personalServiceNameEn => '技能名稱（英文）';
 
   @override
-  String get personalServiceNameEnHint => '方便國際用戶了解你的服務';
+  String get personalServiceNameEnHint => '方便國際用戶了解你的技能';
 
   @override
-  String get personalServiceDescriptionEn => '服務描述（英文）';
+  String get personalServiceDescriptionEn => '技能描述（英文）';
 
   @override
   String get personalServiceDescriptionEnHint => '英文描述（選填）';
@@ -21180,7 +21255,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get personalServicePricingNegotiable => '協商定價';
 
   @override
-  String get personalServiceLocation => '服務方式';
+  String get personalServiceLocation => '技能方式';
 
   @override
   String get personalServiceLocationOnline => '線上/遠程';
@@ -21192,34 +21267,34 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get personalServiceLocationBoth => '都可以';
 
   @override
-  String get personalServiceCreated => '服務發佈成功！';
+  String get personalServiceCreated => '技能發佈成功！';
 
   @override
-  String get personalServiceUpdated => '服務已更新';
+  String get personalServiceUpdated => '技能已更新';
 
   @override
-  String get personalServiceDeleted => '服務已刪除';
+  String get personalServiceDeleted => '技能已刪除';
 
   @override
-  String get personalServiceLimitReached => '最多發佈10個服務';
+  String get personalServiceLimitReached => '最多發佈10個技能';
 
   @override
-  String get personalServiceEmpty => '還沒有服務';
+  String get personalServiceEmpty => '還沒有技能';
 
   @override
-  String get personalServiceEmptyHint => '發佈你的第一個服務吧';
+  String get personalServiceEmptyHint => '發佈你的第一個技能吧';
 
   @override
-  String get personalServiceNameHint => '輸入服務名稱';
+  String get personalServiceNameHint => '輸入技能名稱';
 
   @override
-  String get personalServiceNameRequired => '請輸入服務名稱';
+  String get personalServiceNameRequired => '請輸入技能名稱';
 
   @override
-  String get personalServiceDescriptionHint => '詳細描述你提供的服務內容';
+  String get personalServiceDescriptionHint => '詳細描述你提供的技能內容';
 
   @override
-  String get personalServiceDescriptionRequired => '請輸入服務描述';
+  String get personalServiceDescriptionRequired => '請輸入技能描述';
 
   @override
   String get personalServicePriceRequired => '請輸入價格';
@@ -21231,7 +21306,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get personalServicePerHour => '/小時';
 
   @override
-  String get publishService => '發佈服務';
+  String get publishService => '發佈技能';
 
   @override
   String get publishServiceDesc => '展示你的技能';
@@ -21416,7 +21491,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get createTaskAiTipPrefix => 'AI 建議：';
 
   @override
-  String get createTaskAiTipContent => '補充以下資訊可以獲得更精準的報價：1. 目標用戶群體 2. 競品參考連結 3. 品牌色/風格偏好';
+  String get createTaskAiTipContent =>
+      '補充以下資訊可以獲得更精準的報價：1. 目標用戶群體 2. 競品參考連結 3. 品牌色/風格偏好';
 
   @override
   String get createTaskSaveDraft => '存為草稿';

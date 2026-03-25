@@ -9,7 +9,6 @@ import '../../auth/bloc/auth_bloc.dart';
 import '../../tasks/views/create_task_widgets.dart';
 import '../../../core/widgets/cross_platform_image.dart';
 import '../../../core/widgets/location_picker.dart';
-import '../../../core/widgets/app_select_sheet.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_spacing.dart';
@@ -51,9 +50,7 @@ class _FormContent extends StatefulWidget {
 class _FormContentState extends State<_FormContent> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _nameEnController = TextEditingController();
   final _descriptionController = TextEditingController();
-  final _descriptionEnController = TextEditingController();
   final _priceController = TextEditingController();
 
   String? _category;
@@ -77,9 +74,7 @@ class _FormContentState extends State<_FormContent> {
     if (widget.serviceData != null) {
       final data = widget.serviceData!;
       _nameController.text = (data['service_name'] as String?) ?? '';
-      _nameEnController.text = (data['service_name_en'] as String?) ?? '';
       _descriptionController.text = (data['description'] as String?) ?? '';
-      _descriptionEnController.text = (data['description_en'] as String?) ?? '';
       final price = (data['base_price'] as num?)?.toDouble();
       if (price != null) {
         _priceController.text = price.toStringAsFixed(2);
@@ -100,9 +95,7 @@ class _FormContentState extends State<_FormContent> {
   @override
   void dispose() {
     _nameController.dispose();
-    _nameEnController.dispose();
     _descriptionController.dispose();
-    _descriptionEnController.dispose();
     _priceController.dispose();
     super.dispose();
   }
@@ -183,11 +176,6 @@ class _FormContentState extends State<_FormContent> {
       'pricing_type': _pricingType,
       'location_type': _locationType,
     };
-
-    final nameEn = _nameEnController.text.trim();
-    if (nameEn.isNotEmpty) data['service_name_en'] = nameEn;
-    final descEn = _descriptionEnController.text.trim();
-    if (descEn.isNotEmpty) data['description_en'] = descEn;
 
     if (_category != null) {
       data['category'] = _category;
@@ -280,6 +268,7 @@ class _FormContentState extends State<_FormContent> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return BlocListener<PersonalServiceBloc, PersonalServiceState>(
       listenWhen: (prev, curr) =>
           (prev.actionMessage != curr.actionMessage &&
@@ -345,246 +334,258 @@ class _FormContentState extends State<_FormContent> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ── Service Name ──
-                _SectionLabel(label: context.l10n.personalServiceName),
-                const SizedBox(height: AppSpacing.sm),
-                TextFormField(
-                  controller: _nameController,
-                  maxLength: 100,
-                  decoration: InputDecoration(
-                    hintText: context.l10n.personalServiceNameHint,
-                    border: OutlineInputBorder(
-                      borderRadius: AppRadius.input,
-                    ),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return context.l10n.personalServiceNameRequired;
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: AppSpacing.md),
-
-                // ── Description ──
-                _SectionLabel(label: context.l10n.personalServiceDescription),
-                const SizedBox(height: AppSpacing.sm),
-                TextFormField(
-                  controller: _descriptionController,
-                  maxLines: 5,
-                  maxLength: 2000,
-                  decoration: InputDecoration(
-                    hintText: context.l10n.personalServiceDescriptionHint,
-                    alignLabelWithHint: true,
-                    border: OutlineInputBorder(
-                      borderRadius: AppRadius.input,
-                    ),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return context.l10n.personalServiceDescriptionRequired;
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: AppSpacing.md),
-
-                // ── Service Name (English) ──
-                _SectionLabel(label: context.l10n.personalServiceNameEn),
-                const SizedBox(height: AppSpacing.sm),
-                TextFormField(
-                  controller: _nameEnController,
-                  maxLength: 100,
-                  decoration: InputDecoration(
-                    hintText: context.l10n.personalServiceNameEnHint,
-                    border: OutlineInputBorder(
-                      borderRadius: AppRadius.input,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-
-                // ── Description (English) ──
-                _SectionLabel(label: context.l10n.personalServiceDescriptionEn),
-                const SizedBox(height: AppSpacing.sm),
-                TextFormField(
-                  controller: _descriptionEnController,
-                  maxLines: 3,
-                  maxLength: 2000,
-                  decoration: InputDecoration(
-                    hintText: context.l10n.personalServiceDescriptionEnHint,
-                    alignLabelWithHint: true,
-                    border: OutlineInputBorder(
-                      borderRadius: AppRadius.input,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-
-                // ── Category ──
-                _SectionLabel(label: context.l10n.serviceCategory),
-                const SizedBox(height: AppSpacing.sm),
-                AppSelectField<String>(
-                  value: _category,
-                  hint: context.l10n.serviceCategoryHint,
-                  sheetTitle: context.l10n.serviceCategory,
-                  prefixIcon: Icons.category_outlined,
-                  options: CategoryDropdown.getCategories(
-                    context.l10n,
-                    isStudentVerified: context.read<AuthBloc>().state.user?.isStudentVerified ?? false,
-                  ).map((cat) => SelectOption(
-                        value: cat.$1,
-                        label: cat.$2,
-                      ))
-                      .toList(),
-                  onChanged: (value) {
-                    setState(() => _category = value);
-                  },
-                ),
-                const SizedBox(height: AppSpacing.md),
-
-                // ── Pricing Type ──
-                _SectionLabel(label: context.l10n.personalServicePrice),
-                const SizedBox(height: AppSpacing.sm),
-                SizedBox(
-                  width: double.infinity,
-                  child: SegmentedButton<String>(
-                    segments: [
-                      ButtonSegment<String>(
-                        value: 'fixed',
-                        label: Text(context.l10n.personalServicePricingFixed),
-                        icon: const Icon(Icons.attach_money, size: 18),
-                      ),
-                      ButtonSegment<String>(
-                        value: 'hourly',
-                        label: Text(context.l10n.personalServicePricingHourly),
-                        icon: const Icon(Icons.schedule, size: 18),
-                      ),
-                      ButtonSegment<String>(
-                        value: 'negotiable',
-                        label: Text(context.l10n.personalServicePricingNegotiable),
-                        icon: const Icon(Icons.handshake_outlined, size: 18),
-                      ),
-                    ],
-                    selected: {_pricingType},
-                    onSelectionChanged: (selected) {
-                      setState(() => _pricingType = selected.first);
-                    },
-                    showSelectedIcon: false,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-
-                // ── Price (hidden when negotiable) ──
-                if (_pricingType != 'negotiable') ...[
-                  _SectionLabel(
-                    label: context.l10n.personalServicePrice,
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  TextFormField(
-                    controller: _priceController,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(
-                        RegExp(r'^\d*\.?\d{0,2}'),
-                      ),
-                    ],
+                // ── 服务名称 ──
+                SectionCard(
+                  label: context.l10n.personalServiceName,
+                  isRequired: true,
+                  child: TextFormField(
+                    controller: _nameController,
+                    maxLength: 100,
                     decoration: InputDecoration(
-                      prefixText: '${Helpers.currencySymbol} ',
-                      hintText: '0.00',
-                      suffixText:
-                          _pricingType == 'hourly' ? context.l10n.personalServicePerHour : null,
-                      border: OutlineInputBorder(
-                        borderRadius: AppRadius.input,
-                      ),
+                      hintText: context.l10n.personalServiceNameHint,
+                      border: OutlineInputBorder(borderRadius: AppRadius.input),
                     ),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
-                        return context.l10n.personalServicePriceRequired;
-                      }
-                      final price = double.tryParse(value.trim());
-                      if (price == null || price <= 0) {
-                        return context.l10n.personalServicePriceInvalid;
+                        return context.l10n.personalServiceNameRequired;
                       }
                       return null;
                     },
                   ),
-                  const SizedBox(height: AppSpacing.md),
-                ],
+                ),
 
-                // ── Location Type ──
-                _SectionLabel(label: context.l10n.personalServiceLocation),
-                const SizedBox(height: AppSpacing.sm),
-                SizedBox(
-                  width: double.infinity,
-                  child: SegmentedButton<String>(
-                    segments: [
-                      ButtonSegment<String>(
-                        value: 'online',
-                        label: Text(context.l10n.personalServiceLocationOnline),
-                        icon: const Icon(Icons.language, size: 18),
-                      ),
-                      ButtonSegment<String>(
-                        value: 'in_person',
-                        label: Text(context.l10n.personalServiceLocationInPerson),
-                        icon: const Icon(Icons.location_on_outlined, size: 18),
-                      ),
-                      ButtonSegment<String>(
-                        value: 'both',
-                        label: Text(context.l10n.personalServiceLocationBoth),
-                        icon: const Icon(Icons.swap_horiz, size: 18),
-                      ),
-                    ],
-                    selected: {_locationType},
-                    onSelectionChanged: (selected) {
-                      setState(() {
-                        _locationType = selected.first;
-                        if (_locationType == 'online') {
-                          _location = null;
-                          _latitude = null;
-                          _longitude = null;
-                        }
-                      });
+                // ── 分类 ──
+                SectionCard(
+                  label: context.l10n.serviceCategory,
+                  isRequired: true,
+                  child: CategoryDropdown(
+                    selected: _category ?? 'other',
+                    isStudentVerified: context.read<AuthBloc>().state.user?.isStudentVerified ?? false,
+                    onSelected: (value) {
+                      setState(() => _category = value);
                     },
-                    showSelectedIcon: false,
                   ),
                 ),
-                const SizedBox(height: AppSpacing.md),
 
-                // ── Location (when in_person or both) ──
-                if (_locationType == 'in_person' || _locationType == 'both') ...[
-                  _SectionLabel(label: context.l10n.personalServiceLocation),
-                  const SizedBox(height: AppSpacing.sm),
-                  LocationInputField(
-                    initialValue: _location,
-                    initialLatitude: _latitude,
-                    initialLongitude: _longitude,
-                    showOnlineOption: false,
-                    onChanged: (value) {
-                      _location = value;
-                    },
-                    onLocationPicked: (address, lat, lng) {
-                      _location = address;
-                      _latitude = lat;
-                      _longitude = lng;
+                // ── 描述 ──
+                SectionCard(
+                  label: context.l10n.personalServiceDescription,
+                  isRequired: true,
+                  child: TextFormField(
+                    controller: _descriptionController,
+                    maxLines: 5,
+                    maxLength: 2000,
+                    decoration: InputDecoration(
+                      hintText: context.l10n.personalServiceDescriptionHint,
+                      alignLabelWithHint: true,
+                      border: OutlineInputBorder(borderRadius: AppRadius.input),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return context.l10n.personalServiceDescriptionRequired;
+                      }
+                      return null;
                     },
                   ),
-                  const SizedBox(height: AppSpacing.md),
-                ],
+                ),
 
-                // ── Images ──
-                _SectionLabel(label: context.l10n.personalServiceImages),
-                const SizedBox(height: AppSpacing.sm),
-                _buildImagePicker(),
-                if (_isUploadingImages) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  const LinearProgressIndicator(),
-                ],
+                // ── 定价 ──
+                SectionCard(
+                  label: context.l10n.personalServicePrice,
+                  isRequired: true,
+                  child: Column(
+                    children: [
+                      SizedBox(
+                        width: double.infinity,
+                        child: SegmentedButton<String>(
+                          segments: [
+                            ButtonSegment<String>(
+                              value: 'fixed',
+                              label: Text(context.l10n.personalServicePricingFixed),
+                              icon: const Icon(Icons.attach_money, size: 18),
+                            ),
+                            ButtonSegment<String>(
+                              value: 'hourly',
+                              label: Text(context.l10n.personalServicePricingHourly),
+                              icon: const Icon(Icons.schedule, size: 18),
+                            ),
+                            ButtonSegment<String>(
+                              value: 'negotiable',
+                              label: Text(context.l10n.personalServicePricingNegotiable),
+                              icon: const Icon(Icons.handshake_outlined, size: 18),
+                            ),
+                          ],
+                          selected: {_pricingType},
+                          onSelectionChanged: (selected) {
+                            setState(() => _pricingType = selected.first);
+                          },
+                          showSelectedIcon: false,
+                        ),
+                      ),
+                      if (_pricingType != 'negotiable') ...[
+                        const SizedBox(height: AppSpacing.md),
+                        TextFormField(
+                          controller: _priceController,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+                          ],
+                          decoration: InputDecoration(
+                            prefixText: '${Helpers.currencySymbol} ',
+                            hintText: '0.00',
+                            suffixText: _pricingType == 'hourly' ? context.l10n.personalServicePerHour : null,
+                            border: OutlineInputBorder(borderRadius: AppRadius.input),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return context.l10n.personalServicePriceRequired;
+                            }
+                            final price = double.tryParse(value.trim());
+                            if (price == null || price <= 0) {
+                              return context.l10n.personalServicePriceInvalid;
+                            }
+                            return null;
+                          },
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
 
-                const SizedBox(height: AppSpacing.xl),
+                // ── 服务方式 ──
+                SectionCard(
+                  label: context.l10n.personalServiceLocation,
+                  isRequired: true,
+                  child: Column(
+                    children: [
+                      SizedBox(
+                        width: double.infinity,
+                        child: SegmentedButton<String>(
+                          segments: [
+                            ButtonSegment<String>(
+                              value: 'online',
+                              label: Text(context.l10n.personalServiceLocationOnline),
+                              icon: const Icon(Icons.language, size: 18),
+                            ),
+                            ButtonSegment<String>(
+                              value: 'in_person',
+                              label: Text(context.l10n.personalServiceLocationInPerson),
+                              icon: const Icon(Icons.location_on_outlined, size: 18),
+                            ),
+                            ButtonSegment<String>(
+                              value: 'both',
+                              label: Text(context.l10n.personalServiceLocationBoth),
+                              icon: const Icon(Icons.swap_horiz, size: 18),
+                            ),
+                          ],
+                          selected: {_locationType},
+                          onSelectionChanged: (selected) {
+                            setState(() {
+                              _locationType = selected.first;
+                              if (_locationType == 'online') {
+                                _location = null;
+                                _latitude = null;
+                                _longitude = null;
+                              }
+                            });
+                          },
+                          showSelectedIcon: false,
+                        ),
+                      ),
+                      if (_locationType == 'in_person' || _locationType == 'both') ...[
+                        const SizedBox(height: AppSpacing.md),
+                        LocationInputField(
+                          initialValue: _location,
+                          initialLatitude: _latitude,
+                          initialLongitude: _longitude,
+                          showOnlineOption: false,
+                          onChanged: (value) {
+                            _location = value;
+                          },
+                          onLocationPicked: (address, lat, lng) {
+                            _location = address;
+                            _latitude = lat;
+                            _longitude = lng;
+                          },
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
 
-                // ── Submit button (bottom) ──
+                // ── 图片 ──
+                SectionCard(
+                  label: context.l10n.personalServiceImages,
+                  child: Column(
+                    children: [
+                      _buildImagePicker(),
+                      if (_isUploadingImages) ...[
+                        const SizedBox(height: AppSpacing.sm),
+                        const LinearProgressIndicator(),
+                      ],
+                    ],
+                  ),
+                ),
+
+                // ── 小贴士 ──
+                Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Text('💡', style: TextStyle(fontSize: 13)),
+                          const SizedBox(width: 4),
+                          Text(
+                            context.l10n.publishTipsSectionTitle,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      for (final tip in [
+                        context.l10n.publishTip1,
+                        context.l10n.publishTip2,
+                        context.l10n.publishTip3,
+                        context.l10n.publishTip4,
+                      ])
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('💡', style: TextStyle(fontSize: 11)),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  tip,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: isDark ? Colors.white60 : const Color(0xFF666666),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+
+                // ── 提交按钮 ──
                 BlocBuilder<PersonalServiceBloc, PersonalServiceState>(
                   buildWhen: (prev, curr) =>
                       prev.isSubmitting != curr.isSubmitting,
@@ -621,26 +622,6 @@ class _FormContentState extends State<_FormContent> {
           ),
         ),
       ),
-    );
-  }
-}
-
-// =============================================================================
-// Section label
-// =============================================================================
-
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      label,
-      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
     );
   }
 }

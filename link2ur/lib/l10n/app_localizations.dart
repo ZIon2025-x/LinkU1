@@ -62,7 +62,8 @@ import 'app_localizations_zh.dart';
 /// be consistent with the languages listed in the AppLocalizations.supportedLocales
 /// property.
 abstract class AppLocalizations {
-  AppLocalizations(String locale) : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+  AppLocalizations(String locale)
+      : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -70,7 +71,8 @@ abstract class AppLocalizations {
     return Localizations.of<AppLocalizations>(context, AppLocalizations);
   }
 
-  static const LocalizationsDelegate<AppLocalizations> delegate = _AppLocalizationsDelegate();
+  static const LocalizationsDelegate<AppLocalizations> delegate =
+      _AppLocalizationsDelegate();
 
   /// A list of this localizations delegate along with the default localizations
   /// delegates.
@@ -82,7 +84,8 @@ abstract class AppLocalizations {
   /// Additional delegates can be added by appending to this list in
   /// MaterialApp. This list does not have to be used at all if a custom list
   /// of delegates is preferred or required.
-  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates = <LocalizationsDelegate<dynamic>>[
+  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
+      <LocalizationsDelegate<dynamic>>[
     delegate,
     GlobalMaterialLocalizations.delegate,
     GlobalCupertinoLocalizations.delegate,
@@ -1929,7 +1932,7 @@ abstract class AppLocalizations {
   /// No description provided for @serviceLoadFailed.
   ///
   /// In en, this message translates to:
-  /// **'Failed to load service information'**
+  /// **'Failed to load skill information'**
   String get serviceLoadFailed;
 
   /// No description provided for @serviceNeedDescription.
@@ -6357,7 +6360,7 @@ abstract class AppLocalizations {
   /// No description provided for @serviceCategory.
   ///
   /// In en, this message translates to:
-  /// **'Service Category'**
+  /// **'Skill Category'**
   String get serviceCategory;
 
   /// No description provided for @serviceCategoryHint.
@@ -7341,7 +7344,7 @@ abstract class AppLocalizations {
   /// No description provided for @serviceDetail.
   ///
   /// In en, this message translates to:
-  /// **'Service Details'**
+  /// **'Skill Details'**
   String get serviceDetail;
 
   /// No description provided for @serviceNoDescription.
@@ -7383,7 +7386,7 @@ abstract class AppLocalizations {
   /// No description provided for @serviceApplyTitle.
   ///
   /// In en, this message translates to:
-  /// **'Apply for Service'**
+  /// **'Apply for Skill'**
   String get serviceApplyTitle;
 
   /// No description provided for @offlineMode.
@@ -9208,13 +9211,15 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{applicant_name} applied for task「{task_title}」\\nApplication message: {application_message}\\nNegotiated price: {price_info}'**
-  String notificationContentTaskApplication(String applicant_name, String task_title, String application_message, String price_info);
+  String notificationContentTaskApplication(String applicant_name,
+      String task_title, String application_message, String price_info);
 
   /// No description provided for @notificationContentApplicationAccepted.
   ///
   /// In en, this message translates to:
   /// **'The applicant has accepted your negotiation offer for task「{task_title}」. Please complete the payment.{payment_expires_info}'**
-  String notificationContentApplicationAccepted(String task_title, String payment_expires_info);
+  String notificationContentApplicationAccepted(
+      String task_title, String payment_expires_info);
 
   /// No description provided for @notificationContentApplicationRejected.
   ///
@@ -9256,13 +9261,15 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'The publisher of task「{task_title}」sent you a message: {message}'**
-  String notificationContentApplicationMessage(String task_title, String message);
+  String notificationContentApplicationMessage(
+      String task_title, String message);
 
   /// No description provided for @notificationContentNegotiationOffer.
   ///
   /// In en, this message translates to:
   /// **'The publisher of task「{task_title}」proposed a negotiation\nMessage: {message}\nNegotiated price: £{negotiated_price} {currency}'**
-  String notificationContentNegotiationOffer(String task_title, String message, String negotiated_price, String currency);
+  String notificationContentNegotiationOffer(String task_title, String message,
+      String negotiated_price, String currency);
 
   /// No description provided for @notificationContentNegotiationRejected.
   ///
@@ -9286,7 +9293,8 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Your task application has been approved! Task: {task_title}{payment_expires_info}'**
-  String notificationContentTaskApprovedWithPayment(String task_title, String payment_expires_info);
+  String notificationContentTaskApprovedWithPayment(
+      String task_title, String payment_expires_info);
 
   /// No description provided for @notificationContentAnnouncement.
   ///
@@ -10677,7 +10685,7 @@ abstract class AppLocalizations {
   /// No description provided for @serviceInProgress.
   ///
   /// In en, this message translates to:
-  /// **'Service in Progress'**
+  /// **'Skill in Progress'**
   String get serviceInProgress;
 
   /// No description provided for @taskDetailConfirmDeadline.
@@ -11607,7 +11615,7 @@ abstract class AppLocalizations {
   /// No description provided for @taskExpertMyApplications.
   ///
   /// In en, this message translates to:
-  /// **'My Service Applications'**
+  /// **'My Skill Applications'**
   String get taskExpertMyApplications;
 
   /// No description provided for @taskExpertNoApplications.
@@ -15837,7 +15845,7 @@ abstract class AppLocalizations {
   /// No description provided for @publishSearchHint.
   ///
   /// In en, this message translates to:
-  /// **'Search services, activities, items, leaderboards...'**
+  /// **'Search skills, activities, items, leaderboards...'**
   String get publishSearchHint;
 
   /// No description provided for @publishRelatedToMe.
@@ -17199,7 +17207,7 @@ abstract class AppLocalizations {
   /// No description provided for @toolCallListMyServiceApplications.
   ///
   /// In en, this message translates to:
-  /// **'My service applications'**
+  /// **'My skill applications'**
   String get toolCallListMyServiceApplications;
 
   /// No description provided for @toolCallListMyActivities.
@@ -18963,7 +18971,7 @@ abstract class AppLocalizations {
   /// No description provided for @expertDashboardTabServices.
   ///
   /// In en, this message translates to:
-  /// **'Services'**
+  /// **'Skills'**
   String get expertDashboardTabServices;
 
   /// No description provided for @expertDashboardTabApplications.
@@ -20091,37 +20099,37 @@ abstract class AppLocalizations {
   /// No description provided for @profileMyServices.
   ///
   /// In en, this message translates to:
-  /// **'My Services'**
+  /// **'My Skills'**
   String get profileMyServices;
 
   /// No description provided for @profileMyServicesSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Manage your published services'**
+  /// **'Manage your published skills'**
   String get profileMyServicesSubtitle;
 
   /// No description provided for @personalServiceCreate.
   ///
   /// In en, this message translates to:
-  /// **'Publish Service'**
+  /// **'Publish Skill'**
   String get personalServiceCreate;
 
   /// No description provided for @personalServiceEdit.
   ///
   /// In en, this message translates to:
-  /// **'Edit Service'**
+  /// **'Edit Skill'**
   String get personalServiceEdit;
 
   /// No description provided for @personalServiceName.
   ///
   /// In en, this message translates to:
-  /// **'Service Name'**
+  /// **'Skill Name'**
   String get personalServiceName;
 
   /// No description provided for @personalServiceDescription.
   ///
   /// In en, this message translates to:
-  /// **'Service Description'**
+  /// **'Skill Description'**
   String get personalServiceDescription;
 
   /// No description provided for @personalServicePrice.
@@ -20133,7 +20141,7 @@ abstract class AppLocalizations {
   /// No description provided for @personalServiceNameEn.
   ///
   /// In en, this message translates to:
-  /// **'Service Name (English)'**
+  /// **'Skill Name (English)'**
   String get personalServiceNameEn;
 
   /// No description provided for @personalServiceNameEnHint.
@@ -20145,7 +20153,7 @@ abstract class AppLocalizations {
   /// No description provided for @personalServiceDescriptionEn.
   ///
   /// In en, this message translates to:
-  /// **'Service Description (English)'**
+  /// **'Skill Description (English)'**
   String get personalServiceDescriptionEn;
 
   /// No description provided for @personalServiceDescriptionEnHint.
@@ -20181,7 +20189,7 @@ abstract class AppLocalizations {
   /// No description provided for @personalServiceLocation.
   ///
   /// In en, this message translates to:
-  /// **'Service Location'**
+  /// **'Skill Location'**
   String get personalServiceLocation;
 
   /// No description provided for @personalServiceLocationOnline.
@@ -20205,61 +20213,61 @@ abstract class AppLocalizations {
   /// No description provided for @personalServiceCreated.
   ///
   /// In en, this message translates to:
-  /// **'Service published!'**
+  /// **'Skill published!'**
   String get personalServiceCreated;
 
   /// No description provided for @personalServiceUpdated.
   ///
   /// In en, this message translates to:
-  /// **'Service updated'**
+  /// **'Skill updated'**
   String get personalServiceUpdated;
 
   /// No description provided for @personalServiceDeleted.
   ///
   /// In en, this message translates to:
-  /// **'Service deleted'**
+  /// **'Skill deleted'**
   String get personalServiceDeleted;
 
   /// No description provided for @personalServiceLimitReached.
   ///
   /// In en, this message translates to:
-  /// **'Maximum 10 services reached'**
+  /// **'Maximum 10 skills reached'**
   String get personalServiceLimitReached;
 
   /// No description provided for @personalServiceEmpty.
   ///
   /// In en, this message translates to:
-  /// **'No services yet'**
+  /// **'No skills yet'**
   String get personalServiceEmpty;
 
   /// No description provided for @personalServiceEmptyHint.
   ///
   /// In en, this message translates to:
-  /// **'Publish your first service to get started'**
+  /// **'Publish your first skill to get started'**
   String get personalServiceEmptyHint;
 
   /// No description provided for @personalServiceNameHint.
   ///
   /// In en, this message translates to:
-  /// **'Enter service name'**
+  /// **'Enter skill name'**
   String get personalServiceNameHint;
 
   /// No description provided for @personalServiceNameRequired.
   ///
   /// In en, this message translates to:
-  /// **'Please enter a service name'**
+  /// **'Please enter a skill name'**
   String get personalServiceNameRequired;
 
   /// No description provided for @personalServiceDescriptionHint.
   ///
   /// In en, this message translates to:
-  /// **'Describe your service in detail'**
+  /// **'Describe your skill in detail'**
   String get personalServiceDescriptionHint;
 
   /// No description provided for @personalServiceDescriptionRequired.
   ///
   /// In en, this message translates to:
-  /// **'Please enter a service description'**
+  /// **'Please enter a skill description'**
   String get personalServiceDescriptionRequired;
 
   /// No description provided for @personalServicePriceRequired.
@@ -20283,7 +20291,7 @@ abstract class AppLocalizations {
   /// No description provided for @publishService.
   ///
   /// In en, this message translates to:
-  /// **'Publish Service'**
+  /// **'Publish Skill'**
   String get publishService;
 
   /// No description provided for @publishServiceDesc.
@@ -20707,7 +20715,8 @@ abstract class AppLocalizations {
   String get errorAiOptimizeFailed;
 }
 
-class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate
+    extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
   @override
@@ -20716,34 +20725,37 @@ class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> 
   }
 
   @override
-  bool isSupported(Locale locale) => <String>['en', 'zh'].contains(locale.languageCode);
+  bool isSupported(Locale locale) =>
+      <String>['en', 'zh'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
 }
 
 AppLocalizations lookupAppLocalizations(Locale locale) {
-
   // Lookup logic when language+script codes are specified.
   switch (locale.languageCode) {
-    case 'zh': {
-  switch (locale.scriptCode) {
-    case 'Hant': return AppLocalizationsZhHant();
-   }
-  break;
-   }
+    case 'zh':
+      {
+        switch (locale.scriptCode) {
+          case 'Hant':
+            return AppLocalizationsZhHant();
+        }
+        break;
+      }
   }
 
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
-    case 'en': return AppLocalizationsEn();
-    case 'zh': return AppLocalizationsZh();
+    case 'en':
+      return AppLocalizationsEn();
+    case 'zh':
+      return AppLocalizationsZh();
   }
 
   throw FlutterError(
-    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-    'an issue with the localizations generation tool. Please file an issue '
-    'on GitHub with a reproducible sample app and the gen-l10n configuration '
-    'that was used.'
-  );
+      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+      'an issue with the localizations generation tool. Please file an issue '
+      'on GitHub with a reproducible sample app and the gen-l10n configuration '
+      'that was used.');
 }
