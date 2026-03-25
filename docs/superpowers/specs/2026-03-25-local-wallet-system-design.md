@@ -23,6 +23,7 @@ CREATE TABLE wallet_accounts (
     total_earned DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
     total_withdrawn DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
     total_spent DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+    debt DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
     currency VARCHAR(3) NOT NULL DEFAULT 'GBP',
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
@@ -33,6 +34,7 @@ CREATE TABLE wallet_accounts (
 - `total_earned`: 累计收入（扣手续费后的净收入）
 - `total_withdrawn`: 累计已提现金额
 - `total_spent`: 累计余额支付消费金额
+- `debt`: 平台应收账款（退款时余额不足的差额），新收入优先抵扣
 - `currency`: 默认 GBP，预留多币种扩展
 
 ### WalletTransaction 表
@@ -118,6 +120,12 @@ confirm_completion 被调用
 检查 idempotency_key 是否已存在 → 已存在则跳过
   ↓
 锁定接单人 WalletAccount (FOR UPDATE)
+  ↓
+if debt > 0:
+  debt_repayment = min(净收入, debt)
+  debt -= debt_repayment
+  净收入 -= debt_repayment
+  （记录 debt 抵扣流水）
   ↓
 balance += 净收入
 total_earned += 净收入
@@ -263,7 +271,7 @@ else:
     净入账 = 新收入 - min(新收入, 剩余debt)
 ```
 
-**平台应收账款 (debt)** 可通过在 WalletAccount 上增加 `debt DECIMAL(12,2) DEFAULT 0.00` 字段跟踪。入账流程在 `balance += 净收入` 前先检查 `debt > 0`，有欠款时先抵扣。
+**平台应收账款 (debt)** 通过 `WalletAccount.debt` 字段跟踪。入账流程在 `balance += 净收入` 前先检查 `debt > 0`，有欠款时优先抵扣（见入账流程）。
 
 ### 5. 去掉的校验
 
