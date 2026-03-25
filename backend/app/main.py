@@ -517,6 +517,10 @@ app.include_router(image_proxy_router, prefix="/api", tags=["图片代理"])
 from app.routes.questions import router as questions_router
 app.include_router(questions_router)
 
+# 钱包系统路由
+from app.wallet_routes import router as wallet_router
+app.include_router(wallet_router, tags=["钱包系统"])
+
 # 创建上传目录
 import os
 RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
