@@ -1795,6 +1795,10 @@ class FleaMarketItem(Base):
     latitude = Column(DECIMAL(10, 8), nullable=True)  # 纬度（用于地图选点和距离计算）
     longitude = Column(DECIMAL(11, 8), nullable=True)  # 经度（用于地图选点和距离计算）
     category = Column(String(100), nullable=True)
+    listing_type = Column(String(20), default="sale", nullable=False, index=True)
+    deposit = Column(DECIMAL(12, 2), nullable=True)
+    rental_price = Column(DECIMAL(12, 2), nullable=True)
+    rental_unit = Column(String(20), nullable=True)  # day, week, month
     contact = Column(String(200), nullable=True)  # 预留字段，本期不使用
     status = Column(String(20), nullable=False, default="active")
     is_visible = Column(Boolean, default=True, nullable=False)  # 内容过滤：审核期间隐藏
@@ -1818,6 +1822,7 @@ class FleaMarketItem(Base):
         Index("idx_flea_market_items_view_count", view_count),  # 用于按浏览量排序
         CheckConstraint("price >= 0", name="check_price_positive"),
         CheckConstraint("status IN ('active', 'sold', 'deleted')", name="check_status_valid"),
+        CheckConstraint("listing_type IN ('sale', 'rental')", name="check_listing_type_valid"),
     )
 
 
@@ -1897,6 +1902,74 @@ class FleaMarketPurchaseRequest(Base):
         Index("idx_flea_market_purchase_requests_status", status),
         Index("idx_flea_market_purchase_requests_created_at", created_at),
         CheckConstraint("status IN ('pending', 'seller_negotiating', 'accepted', 'rejected')", name="check_status_valid"),
+    )
+
+
+class FleaMarketRentalRequest(Base):
+    """跳蚤市场租借申请表"""
+    __tablename__ = "flea_market_rental_requests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    item_id = Column(Integer, ForeignKey("flea_market_items.id", ondelete="CASCADE"), nullable=False, index=True)
+    renter_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    rental_duration = Column(Integer, nullable=False)
+    desired_time = Column(Text, nullable=True)
+    usage_description = Column(Text, nullable=True)
+    proposed_rental_price = Column(DECIMAL(12, 2), nullable=True)
+    counter_rental_price = Column(DECIMAL(12, 2), nullable=True)
+    status = Column(String(20), default="pending", nullable=False)
+    payment_expires_at = Column(DateTime(timezone=True), nullable=True)
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
+
+    item = relationship("FleaMarketItem", backref="rental_requests")
+    renter = relationship("User", backref="flea_market_rental_requests", foreign_keys=[renter_id])
+
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('pending', 'approved', 'rejected', 'counter_offer', 'expired')",
+            name="check_rental_request_status_valid"
+        ),
+    )
+
+
+class FleaMarketRental(Base):
+    """跳蚤市场租借记录表"""
+    __tablename__ = "flea_market_rentals"
+
+    id = Column(Integer, primary_key=True, index=True)
+    item_id = Column(Integer, ForeignKey("flea_market_items.id", ondelete="CASCADE"), nullable=False, index=True)
+    renter_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    request_id = Column(Integer, ForeignKey("flea_market_rental_requests.id", ondelete="SET NULL"), nullable=True)
+    rental_duration = Column(Integer, nullable=False)
+    rental_unit = Column(String(20), nullable=False)
+    total_rent = Column(DECIMAL(12, 2), nullable=False)
+    deposit_amount = Column(DECIMAL(12, 2), nullable=False)
+    total_paid = Column(DECIMAL(12, 2), nullable=False)
+    currency = Column(String(10), default="GBP", nullable=False)
+    start_date = Column(DateTime(timezone=True), nullable=False)
+    end_date = Column(DateTime(timezone=True), nullable=False)
+    status = Column(String(20), default="active", nullable=False)
+    deposit_status = Column(String(20), default="held", nullable=False)
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True)
+    stripe_refund_id = Column(String(255), nullable=True)
+    returned_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+
+    item = relationship("FleaMarketItem", backref="rentals")
+    renter = relationship("User", backref="flea_market_rentals", foreign_keys=[renter_id])
+    request = relationship("FleaMarketRentalRequest", backref="rental")
+
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('active', 'returned', 'overdue', 'disputed')",
+            name="check_rental_status_valid"
+        ),
+        CheckConstraint(
+            "deposit_status IN ('held', 'refunded', 'forfeited')",
+            name="check_deposit_status_valid"
+        ),
     )
 
 
