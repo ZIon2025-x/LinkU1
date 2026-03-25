@@ -6678,6 +6678,94 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                                 logger.warning(f"⚠️ [WEBHOOK] 跳蚤市场商品 {flea_market_item_id} 未找到或状态不匹配 (db_id: {db_item_id}, task_id: {task_id})")
                         except Exception as e:
                             logger.error(f"❌ [WEBHOOK] 更新跳蚤市场商品状态失败: {e}", exc_info=True)
+
+                # ⚠️ 跳蚤市场租赁：支付成功后创建 FleaMarketRental 记录
+                if payment_type == "flea_market_rental":
+                    rental_request_id = metadata.get("rental_request_id")
+                    flea_market_item_id_str = metadata.get("flea_market_item_id")
+                    if rental_request_id and flea_market_item_id_str:
+                        try:
+                            from app.models import FleaMarketRentalRequest, FleaMarketRental, FleaMarketItem
+                            from datetime import timedelta as _td
+                            from app.utils.time_utils import get_utc_time as _get_utc
+
+                            rr = db.query(FleaMarketRentalRequest).filter(
+                                FleaMarketRentalRequest.id == int(rental_request_id)
+                            ).with_for_update().first()
+
+                            if rr and rr.status == "approved":
+                                flea_item = db.query(FleaMarketItem).filter(
+                                    FleaMarketItem.id == int(flea_market_item_id_str)
+                                ).first()
+
+                                now = _get_utc()
+                                unit = flea_item.rental_unit if flea_item else "day"
+                                duration = rr.rental_duration
+                                if unit == "week":
+                                    end_date = now + _td(days=7 * duration)
+                                elif unit == "month":
+                                    end_date = now + _td(days=30 * duration)
+                                else:
+                                    end_date = now + _td(days=duration)
+
+                                deposit_pence = int(metadata.get("deposit_amount", "0"))
+                                rent_pence = int(metadata.get("rent_amount", "0"))
+                                total_pence = deposit_pence + rent_pence
+
+                                new_rental = FleaMarketRental(
+                                    item_id=rr.item_id,
+                                    renter_id=rr.renter_id,
+                                    request_id=rr.id,
+                                    rental_duration=duration,
+                                    rental_unit=unit,
+                                    total_rent=rent_pence / 100.0,
+                                    deposit_amount=deposit_pence / 100.0,
+                                    total_paid=total_pence / 100.0,
+                                    currency="GBP",
+                                    start_date=now,
+                                    end_date=end_date,
+                                    status="active",
+                                    deposit_status="held",
+                                    task_id=task_id,
+                                )
+                                db.add(new_rental)
+                                db.flush()
+
+                                logger.info(f"✅ [WEBHOOK] 跳蚤市场租赁记录已创建: rental_id={new_rental.id}, request_id={rental_request_id}")
+
+                                # 通知物主和租客
+                                try:
+                                    item_title = flea_item.title if flea_item else "商品"
+                                    renter_id = rr.renter_id
+                                    seller_id = flea_item.seller_id if flea_item else None
+
+                                    if seller_id:
+                                        crud.create_notification(
+                                            db=db,
+                                            user_id=seller_id,
+                                            type="flea_market_rental_payment_success",
+                                            title="租赁支付成功",
+                                            content=f"「{item_title}」的租赁支付已完成，租赁已生效。",
+                                            related_id=str(new_rental.id),
+                                            auto_commit=False,
+                                        )
+
+                                    crud.create_notification(
+                                        db=db,
+                                        user_id=renter_id,
+                                        type="flea_market_rental_payment_success",
+                                        title="租赁支付成功",
+                                        content=f"您已成功租赁「{item_title}」，租赁已生效。",
+                                        related_id=str(new_rental.id),
+                                        auto_commit=False,
+                                    )
+                                except Exception as notify_err:
+                                    logger.warning(f"⚠️ [WEBHOOK] 创建租赁通知失败: {notify_err}")
+                            else:
+                                logger.warning(f"⚠️ [WEBHOOK] 租赁申请 {rental_request_id} 不存在或状态不匹配")
+                        except Exception as e:
+                            logger.error(f"❌ [WEBHOOK] 创建跳蚤市场租赁记录失败: {e}", exc_info=True)
+
                 application_id_str = metadata.get("application_id")
                 
                 logger.debug(f"🔍 Webhook检查: is_pending_approval={is_pending_approval}, application_id={application_id_str}")
