@@ -1,4 +1,4 @@
-import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 /// 任务发布草稿的本地存储服务（Hive）
 /// 使用 Hive 原生 Map 存储（不做 jsonEncode），与项目缓存模式一致
