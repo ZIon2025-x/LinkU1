@@ -876,17 +876,20 @@ class UserProfileView extends StatelessWidget {
         );
       },
     ).whenComplete(() {
-      titleController.dispose();
-      descriptionController.dispose();
-      priceController.dispose();
-      locationController.dispose();
+      // Delay dispose to allow dismiss animation to finish;
+      // controllers may still be referenced by fading TextFields.
+      Future.delayed(const Duration(milliseconds: 300), () {
+        titleController.dispose();
+        descriptionController.dispose();
+        priceController.dispose();
+        locationController.dispose();
+      });
     });
   }
 
   List<Map<String, String>> _getLocalizedTaskTypes(BuildContext context) {
     final l10n = context.l10n;
     return [
-      {'key': 'delivery', 'label': l10n.createTaskCategoryDelivery},
       {'key': 'shopping', 'label': l10n.createTaskCategoryShopping},
       {'key': 'tutoring', 'label': l10n.createTaskCategoryTutoring},
       {'key': 'translation', 'label': l10n.createTaskCategoryTranslation},
@@ -897,6 +900,17 @@ class UserProfileView extends StatelessWidget {
       {'key': 'moving', 'label': l10n.createTaskCategoryMoving},
       {'key': 'cleaning', 'label': l10n.createTaskCategoryCleaning},
       {'key': 'repair', 'label': l10n.createTaskCategoryRepair},
+      {'key': 'pickup_dropoff', 'label': l10n.createTaskCategoryPickupDropoff},
+      {'key': 'cooking', 'label': l10n.createTaskCategoryCooking},
+      {'key': 'language_help', 'label': l10n.createTaskCategoryLanguageHelp},
+      {'key': 'government', 'label': l10n.createTaskCategoryGovernment},
+      {'key': 'pet_care', 'label': l10n.createTaskCategoryPetCare},
+      {'key': 'errand', 'label': l10n.createTaskCategoryErrand},
+      {'key': 'accompany', 'label': l10n.createTaskCategoryAccompany},
+      {'key': 'digital', 'label': l10n.createTaskCategoryDigital},
+      {'key': 'rental_housing', 'label': l10n.createTaskCategoryRentalHousing},
+      {'key': 'campus_life', 'label': l10n.createTaskCategoryCampusLife},
+      {'key': 'second_hand', 'label': l10n.createTaskCategorySecondHand},
       {'key': 'other', 'label': l10n.createTaskCategoryOther},
     ];
   }

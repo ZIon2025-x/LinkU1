@@ -1188,22 +1188,6 @@ def _format_application_item(app, user, unread_count: int = 0):
     }
 
 
-def _format_public_application_item(app, user):
-    """Format application for public (unauthenticated/unrelated) viewers — excludes applicant_id, unread_count, message, and negotiated_price."""
-    return {
-        "id": app.id,
-        "task_id": app.task_id,
-        "applicant_name": user.name if user else None,
-        "applicant_avatar": user.avatar if user and hasattr(user, 'avatar') else None,
-        "applicant_user_level": getattr(user, 'user_level', None) if user else None,
-        "currency": app.currency or "GBP",
-        "created_at": format_iso_utc(app.created_at) if app.created_at else None,
-        "status": app.status,
-        "poster_reply": app.poster_reply,
-        "poster_reply_at": format_iso_utc(app.poster_reply_at) if app.poster_reply_at else None,
-    }
-
-
 @async_router.get("/tasks/{task_id}/applications", response_model=List[dict])
 async def get_task_applications(
     task_id: int,
@@ -1267,31 +1251,27 @@ async def get_task_applications(
                 result.append(_format_application_item(app, app.applicant, unread))
             return result
 
-        # ── Public list (for logged-in non-poster AND unauthenticated) ──
-        public_query = (
+        # ── Non-poster: only return the caller's own application (if any) ──
+        if not user_id_str:
+            return []
+
+        own_query = (
             select(models.TaskApplication)
             .options(selectinload(models.TaskApplication.applicant))
             .where(models.TaskApplication.task_id == task_id)
+            .where(models.TaskApplication.applicant_id == user_id_str)
             .where(models.TaskApplication.status.in_(["pending", "chatting", "approved"]))
-            .order_by(models.TaskApplication.created_at.desc())
-            .offset(skip)
-            .limit(limit)
         )
-        public_result = await db.execute(public_query)
-        public_apps = public_result.scalars().all()
+        own_result = await db.execute(own_query)
+        own_app = own_result.scalar_one_or_none()
 
-        result = []
-        for app in public_apps:
-            # If the current user is this applicant, return full data
-            if user_id_str and str(app.applicant_id) == user_id_str:
-                own_unread = 0
-                if app.status == "chatting":
-                    own_unread = await _get_unread_count(db, task_id, user_id_str, app.id)
-                result.append(_format_application_item(app, app.applicant, own_unread))
-            else:
-                result.append(_format_public_application_item(app, app.applicant))
+        if not own_app:
+            return []
 
-        return result
+        own_unread = 0
+        if own_app.status == "chatting":
+            own_unread = await _get_unread_count(db, task_id, user_id_str, own_app.id)
+        return [_format_application_item(own_app, own_app.applicant, own_unread)]
 
     except HTTPException:
         raise

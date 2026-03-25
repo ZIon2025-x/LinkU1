@@ -18,6 +18,7 @@ import '../../../core/widgets/location_picker.dart';
 import '../../../core/utils/validators.dart';
 import '../../../data/models/task.dart';
 import '../../../data/repositories/task_repository.dart';
+import '../../auth/bloc/auth_bloc.dart';
 import '../../../data/services/task_draft_service.dart';
 import '../bloc/create_task_bloc.dart';
 import 'create_task_widgets.dart';
@@ -94,7 +95,7 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
   String? _location;
   double? _latitude;
   double? _longitude;
-  String _selectedCategory = 'design';
+  String _selectedCategory = 'errand';
   String _selectedCurrency = 'GBP';
   String _pricingType = 'fixed';
   String _taskMode = 'online';
@@ -107,27 +108,28 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
 
   /// 分类对应的技能建议
   static const _skillSuggestions = <String, List<String>>{
-    'design': ['Figma', 'UI设计', 'Sketch', '原型设计', 'Adobe XD', 'Photoshop'],
-    'programming': ['Python', 'Flutter', 'React', 'JavaScript', 'Java', 'iOS'],
-    'photography': ['人像', '产品', '风光', '视频', 'Lightroom', 'PR'],
-    'copywriting': ['公众号', 'SEO', '品牌文案', '短视频脚本', '翻译'],
-    'music': ['作曲', '编曲', '混音', '吉他', '钢琴', '声乐'],
-    'lifestyle': ['搬家', '清洁', '维修', '跑腿', '代购'],
+    'shopping': ['代购', '比价', '海淘'],
     'tutoring': ['数学', '英语', '编程', '考试辅导', '论文'],
-  };
-
-  /// 旧分类名到新分类名映射
-  static const _categoryMigration = <String, String>{
-    'Housekeeping': 'lifestyle',
-    'Campus Life': 'lifestyle',
-    'Second-hand & Rental': 'lifestyle',
-    'Errand Running': 'lifestyle',
-    'Skill Service': 'design',
-    'Social Help': 'lifestyle',
-    'Transportation': 'lifestyle',
-    'Pet Care': 'lifestyle',
-    'Life Convenience': 'lifestyle',
-    'Other': 'design',
+    'translation': ['文件翻译', '口译', '字幕'],
+    'design': ['Figma', 'UI设计', 'Photoshop', '海报'],
+    'programming': ['Python', 'Flutter', 'React', 'JavaScript'],
+    'writing': ['文案', '论文', 'SEO', '公众号'],
+    'photography': ['人像', '产品', '风光', '视频'],
+    'moving': ['搬家', '打包', '家具拆装'],
+    'cleaning': ['日常清洁', '深度清洁', '收纳'],
+    'repair': ['水电', '家电', '家具'],
+    'pickup_dropoff': ['机场接送', '看房接送', '面试接送'],
+    'cooking': ['中餐', '聚会餐饮', '烘焙'],
+    'language_help': ['陪同翻译', '电话翻译', '信件代写'],
+    'government': ['签证材料', '银行开户', 'GP注册'],
+    'pet_care': ['遛狗', '寄养', '美容'],
+    'errand': ['取件', '排队', '代办'],
+    'accompany': ['看病陪同', '租房陪看', '入学陪同'],
+    'digital': ['装系统', '修电脑', '网络设置'],
+    'rental_housing': ['找房', '看房', '合同审核'],
+    'campus_life': ['代课笔记', '校园导览', '社团活动'],
+    'second_hand': ['数码', '教材', '家具', '服饰'],
+    'other': [],
   };
 
   bool get _hasUnsavedChanges {
@@ -154,16 +156,7 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
         _deadline = d.deadline;
       }
       if (d.taskType != null) {
-        // Map old category keys to new ones
-        const newKeys = [
-          'design', 'programming', 'photography',
-          'copywriting', 'music', 'lifestyle', 'tutoring',
-        ];
-        if (newKeys.contains(d.taskType)) {
-          _selectedCategory = d.taskType!;
-        } else {
-          _selectedCategory = _categoryMigration[d.taskType] ?? 'design';
-        }
+        _selectedCategory = d.taskType!;
       }
     }
     // Check for local draft
@@ -571,8 +564,9 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
                     SectionCard(
                       label: context.l10n.createTaskType,
                       isRequired: true,
-                      child: CategoryChips(
+                      child: CategoryDropdown(
                         selected: _selectedCategory,
+                        isStudentVerified: context.read<AuthBloc>().state.user?.isStudentVerified ?? false,
                         onSelected: (cat) {
                           setState(() {
                             _selectedCategory = cat;

@@ -4,6 +4,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../l10n/app_localizations.dart';
 
 // ==================== 1. SectionCard ====================
 
@@ -63,73 +64,84 @@ class SectionCard extends StatelessWidget {
   }
 }
 
-// ==================== 2. CategoryChips ====================
+// ==================== 2. CategoryDropdown ====================
 
-/// 分类选择 chips（7 个新分类 + emoji）
-class CategoryChips extends StatelessWidget {
-  const CategoryChips({
+/// 分类下拉选择框
+class CategoryDropdown extends StatelessWidget {
+  const CategoryDropdown({
     super.key,
     required this.selected,
     required this.onSelected,
+    this.isStudentVerified = false,
   });
 
   final String selected;
   final ValueChanged<String> onSelected;
+  final bool isStudentVerified;
+
+  static List<(String key, String label)> getCategories(
+    AppLocalizations l10n, {
+    bool isStudentVerified = false,
+  }) {
+    return <(String key, String label)>[
+      ('shopping', l10n.createTaskCategoryShopping),
+      ('tutoring', l10n.createTaskCategoryTutoring),
+      ('translation', l10n.createTaskCategoryTranslation),
+      ('design', l10n.createTaskCategoryDesign),
+      ('programming', l10n.createTaskCategoryProgramming),
+      ('writing', l10n.createTaskCategoryWriting),
+      ('photography', l10n.createTaskCategoryPhotography),
+      ('moving', l10n.createTaskCategoryMoving),
+      ('cleaning', l10n.createTaskCategoryCleaning),
+      ('repair', l10n.createTaskCategoryRepair),
+      ('pickup_dropoff', l10n.createTaskCategoryPickupDropoff),
+      ('cooking', l10n.createTaskCategoryCooking),
+      ('language_help', l10n.createTaskCategoryLanguageHelp),
+      ('government', l10n.createTaskCategoryGovernment),
+      ('pet_care', l10n.createTaskCategoryPetCare),
+      ('errand', l10n.createTaskCategoryErrand),
+      ('accompany', l10n.createTaskCategoryAccompany),
+      ('digital', l10n.createTaskCategoryDigital),
+      ('rental_housing', l10n.createTaskCategoryRentalHousing),
+      if (isStudentVerified)
+        ('campus_life', l10n.createTaskCategoryCampusLife),
+      ('second_hand', l10n.createTaskCategorySecondHand),
+      ('other', l10n.createTaskCategoryOther),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final categories = <(String key, String label)>[
-      ('design', l10n.createTaskNewCatDesign),
-      ('programming', l10n.createTaskNewCatProgramming),
-      ('photography', l10n.createTaskNewCatPhotography),
-      ('copywriting', l10n.createTaskNewCatCopywriting),
-      ('music', l10n.createTaskNewCatMusic),
-      ('lifestyle', l10n.createTaskNewCatLifestyle),
-      ('tutoring', l10n.createTaskNewCatTutoring),
-    ];
+    final categories = getCategories(l10n, isStudentVerified: isStudentVerified);
 
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: categories.map((cat) {
-        final isSelected = selected == cat.$1;
-        return GestureDetector(
-          onTap: () => onSelected(cat.$1),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? AppColors.primary.withValues(alpha: 0.1)
-                  : isDark
-                      ? const Color(0xFF2C2C2E)
-                      : const Color(0xFFFAFAFA),
-              borderRadius: AppRadius.allPill,
-              border: Border.all(
-                color: isSelected
-                    ? AppColors.primary
-                    : isDark
-                        ? const Color(0xFF3A3A3C)
-                        : const Color(0xFFEEEEEE),
-                width: 1.5,
-              ),
-            ),
-            child: Text(
-              cat.$2,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                color: isSelected
-                    ? AppColors.primary
-                    : isDark
-                        ? Colors.white70
-                        : const Color(0xFF666666),
-              ),
-            ),
+    return DropdownButtonFormField<String>(
+      initialValue: categories.any((c) => c.$1 == selected) ? selected : categories.first.$1,
+      decoration: InputDecoration(
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: isDark ? const Color(0xFF3A3A3C) : const Color(0xFFEEEEEE),
           ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: isDark ? const Color(0xFF3A3A3C) : const Color(0xFFEEEEEE),
+          ),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      ),
+      items: categories.map((cat) {
+        return DropdownMenuItem<String>(
+          value: cat.$1,
+          child: Text(cat.$2),
         );
       }).toList(),
+      onChanged: (value) {
+        if (value != null) onSelected(value);
+      },
     );
   }
 }

@@ -4,9 +4,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/constants/api_endpoints.dart';
-import '../../../core/constants/expert_constants.dart';
 import '../../../core/utils/helpers.dart';
-import '../../../core/utils/service_category_helper.dart';
+import '../../auth/bloc/auth_bloc.dart';
+import '../../tasks/views/create_task_widgets.dart';
 import '../../../core/widgets/cross_platform_image.dart';
 import '../../../core/widgets/location_picker.dart';
 import '../../../core/widgets/app_select_sheet.dart';
@@ -429,12 +429,13 @@ class _FormContentState extends State<_FormContent> {
                   hint: context.l10n.serviceCategoryHint,
                   sheetTitle: context.l10n.serviceCategory,
                   prefixIcon: Icons.category_outlined,
-                  options: ExpertConstants.serviceCategoryKeys
-                      .map((key) => SelectOption(
-                            value: key,
-                            label: ServiceCategoryHelper.getLocalizedLabel(key, context.l10n),
-                            icon: ServiceCategoryHelper.getIcon(key),
-                          ))
+                  options: CategoryDropdown.getCategories(
+                    context.l10n,
+                    isStudentVerified: context.read<AuthBloc>().state.user?.isStudentVerified ?? false,
+                  ).map((cat) => SelectOption(
+                        value: cat.$1,
+                        label: cat.$2,
+                      ))
                       .toList(),
                   onChanged: (value) {
                     setState(() => _category = value);

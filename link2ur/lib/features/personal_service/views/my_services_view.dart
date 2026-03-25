@@ -121,6 +121,7 @@ class _MyServicesBody extends StatelessWidget {
                     padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                     child: _ServiceCard(
                       service: service,
+                      onTap: () => context.push('/service/${service['id']}'),
                       onEdit: () async {
                         final result = await context.push(
                           '/services/edit/${service['id']}',
@@ -314,11 +315,13 @@ class _EmptyServicesView extends StatelessWidget {
 class _ServiceCard extends StatelessWidget {
   const _ServiceCard({
     required this.service,
+    required this.onTap,
     required this.onEdit,
     required this.onDelete,
   });
 
   final Map<String, dynamic> service;
+  final VoidCallback onTap;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
@@ -344,7 +347,7 @@ class _ServiceCard extends StatelessWidget {
       ),
       child: InkWell(
         borderRadius: AppRadius.allMedium,
-        onTap: onEdit,
+        onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.md),
           child: Row(

@@ -629,8 +629,10 @@ class _ApplicationCard extends StatelessWidget {
         );
       },
     ).whenComplete(() {
-      priceController.dispose();
-      messageController.dispose();
+      Future.delayed(const Duration(milliseconds: 300), () {
+        priceController.dispose();
+        messageController.dispose();
+      });
     });
   }
 }

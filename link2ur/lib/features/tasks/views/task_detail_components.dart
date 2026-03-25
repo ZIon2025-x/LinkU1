@@ -14,7 +14,6 @@ import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/cross_platform_image.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/async_image_view.dart';
-import '../../../core/widgets/user_identity_badges.dart';
 import '../../../core/widgets/bouncing_widget.dart';
 import '../../../core/widgets/animated_star_rating.dart';
 import '../../../core/utils/l10n_extension.dart';
@@ -654,274 +653,6 @@ String _formatTimeString(String timeStr) {
   return DateFormatter.formatRelative(dt.toLocal());
 }
 
-// ============================================================
-// 公开申请留言区 (所有用户可见)
-// ============================================================
-
-class PublicApplicationsSection extends StatelessWidget {
-  const PublicApplicationsSection({
-    super.key,
-    required this.applications,
-    required this.isLoading,
-    required this.isDark,
-  });
-
-  final List<TaskApplication> applications;
-  final bool isLoading;
-  final bool isDark;
-
-  @override
-  Widget build(BuildContext context) {
-    if (isLoading && applications.isEmpty) {
-      return Container(
-        margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: const Center(child: LoadingView()),
-      );
-    }
-
-    if (applications.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: isDark
-            ? AppColors.cardBackgroundDark
-            : AppColors.cardBackgroundLight,
-        borderRadius: AppRadius.allMedium,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.forum_outlined, size: 18, color: AppColors.primary),
-              const SizedBox(width: 8),
-              Text(
-                context.l10n.applicationMessages(applications.length),
-                style: AppTypography.title3.copyWith(
-                  color: isDark
-                      ? AppColors.textPrimaryDark
-                      : AppColors.textPrimaryLight,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          ...applications.map((app) => _PublicApplicationCard(
-                key: ValueKey('public_app_${app.id}'),
-                application: app,
-                isDark: isDark,
-              )),
-        ],
-      ),
-    );
-  }
-}
-
-class _PublicApplicationCard extends StatelessWidget {
-  const _PublicApplicationCard({
-    super.key,
-    required this.application,
-    required this.isDark,
-  });
-
-  final TaskApplication application;
-  final bool isDark;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.md),
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        decoration: BoxDecoration(
-          color: isDark
-              ? AppColors.backgroundDark
-              : AppColors.backgroundLight,
-          borderRadius: AppRadius.allMedium,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Applicant info row
-            Row(
-              children: [
-                AvatarView(
-                  imageUrl: application.applicantAvatar,
-                  name: application.applicantName,
-                  size: 36,
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              application.applicantName ??
-                                  context.l10n.taskDetailUnknownUser,
-                              style: AppTypography.bodyBold.copyWith(
-                                color: isDark
-                                    ? AppColors.textPrimaryDark
-                                    : AppColors.textPrimaryLight,
-                                fontSize: 14,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          if (application.applicantUserLevel != null) ...[
-                            const SizedBox(width: 4),
-                            UserIdentityBadges(
-                              userLevel: application.applicantUserLevel,
-                              compact: true,
-                            ),
-                          ],
-                        ],
-                      ),
-                      if (application.createdAt != null)
-                        Text(
-                          _formatTimeString(application.createdAt!),
-                          style: AppTypography.caption.copyWith(
-                            color: isDark
-                                ? AppColors.textTertiaryDark
-                                : AppColors.textTertiaryLight,
-                            fontSize: 11,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-
-            // Application message
-            if (application.message != null &&
-                application.message!.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(
-                application.message!,
-                style: AppTypography.body.copyWith(
-                  color: isDark
-                      ? AppColors.textSecondaryDark
-                      : AppColors.textSecondaryLight,
-                  height: 1.5,
-                ),
-              ),
-            ],
-
-            // Proposed price
-            if (application.proposedPrice != null &&
-                application.proposedPrice! > 0) ...[
-              const SizedBox(height: 8),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  borderRadius: AppRadius.allSmall,
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.price_change_outlined,
-                        size: 16, color: AppColors.primary),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${context.l10n.taskApplicationExpectedAmount}: ${Helpers.formatPrice(application.proposedPrice!)}',
-                      style: AppTypography.caption.copyWith(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-
-            // Poster reply (if exists)
-            if (application.posterReply != null &&
-                application.posterReply!.isNotEmpty) ...[
-              const SizedBox(height: AppSpacing.sm),
-              Container(
-                width: double.infinity,
-                margin: const EdgeInsets.only(left: AppSpacing.lg),
-                padding: const EdgeInsets.all(AppSpacing.sm),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.06),
-                  borderRadius: AppRadius.allSmall,
-                  border: Border(
-                    left: BorderSide(
-                      color: AppColors.primary.withValues(alpha: 0.4),
-                      width: 3,
-                    ),
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.reply, size: 14,
-                            color: AppColors.primary.withValues(alpha: 0.7)),
-                        const SizedBox(width: 4),
-                        Text(
-                          context.l10n.posterReply,
-                          style: AppTypography.caption.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 11,
-                          ),
-                        ),
-                        const Spacer(),
-                        if (application.posterReplyAt != null)
-                          Text(
-                            _formatTimeString(application.posterReplyAt!),
-                            style: AppTypography.caption.copyWith(
-                              color: isDark
-                                  ? AppColors.textTertiaryDark
-                                  : AppColors.textTertiaryLight,
-                              fontSize: 10,
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      application.posterReply!,
-                      style: AppTypography.body.copyWith(
-                        color: isDark
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondaryLight,
-                        fontSize: 13,
-                        height: 1.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-
-          ],
-        ),
-      ),
-    );
-  }
-
-}
-
 class _ApplicationItem extends StatelessWidget {
   const _ApplicationItem({
     super.key,
@@ -1117,7 +848,19 @@ class _ApplicationItem extends StatelessWidget {
                             );
                       },
                     )
-                  else
+                  else ...[
+                    // 单人任务：直接批准按钮
+                    _ActionCircleButton(
+                      icon: Icons.check_circle,
+                      color: AppColors.success,
+                      onTap: () {
+                        AppHaptics.medium();
+                        context.read<TaskDetailBloc>().add(
+                              TaskDetailAcceptApplicant(application.id),
+                            );
+                      },
+                    ),
+                    const SizedBox(width: 12),
                     // 单人任务：同意沟通按钮
                     Expanded(
                       child: BouncingWidget(
@@ -1154,7 +897,8 @@ class _ApplicationItem extends StatelessWidget {
                         ),
                       ),
                     ),
-                  const SizedBox(width: 16),
+                  ],
+                  const SizedBox(width: 12),
                   _ActionCircleButton(
                     icon: Icons.cancel,
                     color: AppColors.error,
@@ -1250,124 +994,9 @@ class _ApplicationItem extends StatelessWidget {
                 ],
               ),
             ],
-            // 发布者公开回复 (显示已有回复 或 回复按钮)
-            if (application.posterReply != null &&
-                application.posterReply!.isNotEmpty) ...[
-              const SizedBox(height: AppSpacing.sm),
-              Container(
-                width: double.infinity,
-                margin: const EdgeInsets.only(left: AppSpacing.lg),
-                padding: const EdgeInsets.all(AppSpacing.sm),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.06),
-                  borderRadius: AppRadius.allSmall,
-                  border: Border(
-                    left: BorderSide(
-                      color: AppColors.primary.withValues(alpha: 0.4),
-                      width: 3,
-                    ),
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.reply, size: 14,
-                            color: AppColors.primary.withValues(alpha: 0.7)),
-                        const SizedBox(width: 4),
-                        Text(
-                          context.l10n.posterReply,
-                          style: AppTypography.caption.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 11,
-                          ),
-                        ),
-                        const Spacer(),
-                        if (application.posterReplyAt != null)
-                          Text(
-                            _formatTimeString(application.posterReplyAt!),
-                            style: AppTypography.caption.copyWith(
-                              color: isDark
-                                  ? AppColors.textTertiaryDark
-                                  : AppColors.textTertiaryLight,
-                              fontSize: 10,
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      application.posterReply!,
-                      style: AppTypography.body.copyWith(
-                        color: isDark
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondaryLight,
-                        fontSize: 13,
-                        height: 1.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ] else ...[
-              // 未回复：显示回复按钮
-              const SizedBox(height: 4),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  onPressed: () => _showPublicReplyDialog(context),
-                  icon: const Icon(Icons.reply, size: 16),
-                  label: Text(context.l10n.replyToApplication),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    textStyle: AppTypography.caption.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-            ],
           ],
         ),
       ),
-    );
-  }
-
-  void _showPublicReplyDialog(BuildContext context) {
-    final controller = TextEditingController();
-    final bloc = context.read<TaskDetailBloc>();
-
-    AdaptiveDialogs.showConfirmDialog(
-      context: context,
-      title: context.l10n.replyToApplication,
-      barrierDismissible: false,
-      contentWidget: TextField(
-        controller: controller,
-        maxLength: 500,
-        maxLines: 4,
-        decoration: InputDecoration(
-          hintText: context.l10n.publicReplyPlaceholder,
-          border: const OutlineInputBorder(),
-        ),
-      ),
-      confirmText: context.l10n.commonSubmit,
-      cancelText: context.l10n.commonCancel,
-      onConfirm: () {
-        final text = controller.text.trim();
-        if (text.isNotEmpty) {
-          bloc.add(TaskDetailPublicReply(
-            applicationId: application.id,
-            message: text,
-          ));
-        }
-        controller.dispose();
-      },
-      onCancel: () {
-        controller.dispose();
-      },
     );
   }
 

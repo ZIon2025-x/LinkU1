@@ -11,7 +11,6 @@ class AppConstants {
 
   /// 任务类型
   static const List<String> taskTypes = [
-    'delivery',      // 代取代送
     'shopping',      // 代购
     'tutoring',      // 辅导
     'translation',   // 翻译
@@ -22,6 +21,17 @@ class AppConstants {
     'moving',        // 搬家
     'cleaning',      // 清洁
     'repair',        // 维修
+    'pickup_dropoff', // 接送
+    'cooking',       // 做饭/餐饮
+    'language_help', // 语言协助
+    'government',    // 官方事务
+    'pet_care',      // 宠物照料
+    'errand',        // 跑腿
+    'accompany',     // 陪同
+    'digital',       // 数码/IT
+    'rental_housing', // 租房协助
+    'campus_life',   // 校园生活
+    'second_hand',   // 二手交易
     'other',         // 其他
   ];
 

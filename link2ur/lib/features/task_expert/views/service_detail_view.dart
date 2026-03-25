@@ -15,6 +15,8 @@ import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/utils/sheet_adaptation.dart';
+import '../../../core/utils/adaptive_dialogs.dart';
+import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
@@ -1268,11 +1270,69 @@ class _BottomApplyBar extends StatelessWidget {
             top: false,
             child: Padding(
               padding: const EdgeInsets.only(bottom: 8),
-              child: _buildButton(context),
+              child: Row(
+                children: [
+                  if (_showAskButton(context))
+                    Padding(
+                      padding: const EdgeInsets.only(right: 12),
+                      child: IconActionButton(
+                        icon: Icons.question_answer_outlined,
+                        onPressed: () => _showAskDialog(context),
+                        backgroundColor: isDark
+                            ? Colors.white.withValues(alpha: 0.1)
+                            : Colors.grey.withValues(alpha: 0.1),
+                      ),
+                    ),
+                  Expanded(child: _buildButton(context)),
+                ],
+              ),
             ),
           ),
         ),
       ),
+    );
+  }
+
+  bool _showAskButton(BuildContext context) {
+    final currentUserId = StorageService.instance.getUserId();
+    if (currentUserId == null) return false;
+    final isOwner = (service.isPersonalService && currentUserId == service.userId) ||
+        (!service.isPersonalService && currentUserId == service.expertId);
+    return !isOwner;
+  }
+
+  void _showAskDialog(BuildContext context) {
+    final controller = TextEditingController();
+    final bloc = context.read<TaskExpertBloc>();
+
+    AdaptiveDialogs.showConfirmDialog(
+      context: context,
+      title: context.l10n.qaAskButton,
+      barrierDismissible: true,
+      contentWidget: TextField(
+        controller: controller,
+        maxLength: 500,
+        maxLines: 3,
+        decoration: InputDecoration(
+          hintText: context.l10n.qaAskPlaceholder,
+          border: const OutlineInputBorder(),
+        ),
+      ),
+      confirmText: context.l10n.commonSubmit,
+      cancelText: context.l10n.commonCancel,
+      onConfirm: () {
+        final text = controller.text.trim();
+        if (text.length >= 2) {
+          bloc.add(TaskExpertAskServiceQuestion(
+            serviceId: serviceId,
+            content: text,
+          ));
+        }
+        controller.dispose();
+      },
+      onCancel: () {
+        controller.dispose();
+      },
     );
   }
 

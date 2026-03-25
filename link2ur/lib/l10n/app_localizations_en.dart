@@ -154,8 +154,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authLogout => 'Logout';
 
   @override
-  String get authSessionExpired =>
-      'Your session has expired, please log in again';
+  String get authSessionExpired => 'Your session has expired, please log in again';
 
   @override
   String get authForgotPassword => 'Forgot Password';
@@ -187,12 +186,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loginRequired => 'Login Required';
 
   @override
-  String get loginRequiredForPoints =>
-      'Please login to view points and coupons';
+  String get loginRequiredForPoints => 'Please login to view points and coupons';
 
   @override
-  String get loginRequiredForVerification =>
-      'Please login to verify student status';
+  String get loginRequiredForVerification => 'Please login to verify student status';
 
   @override
   String get loginLoginNow => 'Login Now';
@@ -255,8 +252,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authCaptchaMessage => 'Please complete the verification';
 
   @override
-  String get authCaptchaError =>
-      'Unable to load verification, please try again later';
+  String get authCaptchaError => 'Unable to load verification, please try again later';
 
   @override
   String get authUsername => 'Username';
@@ -265,15 +261,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authEnterUsername => 'Enter username';
 
   @override
-  String get authPasswordHint =>
-      'At least 8 characters, including letters and numbers';
+  String get authPasswordHint => 'At least 8 characters, including letters and numbers';
 
   @override
   String get authPhoneOptional => 'Phone (Optional)';
 
   @override
-  String get authInvitationCodeOptional =>
-      'Invite Code / Inviter ID (Optional)';
+  String get authInvitationCodeOptional => 'Invite Code / Inviter ID (Optional)';
 
   @override
   String get authInvitationCodeHint => 'Enter invite code or 8-digit user ID';
@@ -282,8 +276,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authInvitationCodeInvalidTitle => 'Invitation Code Not Found';
 
   @override
-  String get authInvitationCodeInvalidMessage =>
-      'The invitation code or user ID you entered does not exist. Would you like to continue without it?';
+  String get authInvitationCodeInvalidMessage => 'The invitation code or user ID you entered does not exist. Would you like to continue without it?';
 
   @override
   String get authContinueWithoutInvitation => 'Continue without it';
@@ -348,8 +341,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeNoNearbyTasks => 'No nearby tasks';
 
   @override
-  String get homeNoNearbyTasksMessage =>
-      'No tasks have been posted nearby yet. Be the first to post one!';
+  String get homeNoNearbyTasksMessage => 'No tasks have been posted nearby yet. Be the first to post one!';
 
   @override
   String get homeNoExperts => 'No task experts';
@@ -373,8 +365,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeNoRecommendedTasks => 'No recommended tasks';
 
   @override
-  String get homeNoRecommendedTasksMessage =>
-      'No recommended tasks yet. Check out the task hall!';
+  String get homeNoRecommendedTasksMessage => 'No recommended tasks yet. Check out the task hall!';
 
   @override
   String get homeLatestActivity => 'Latest Activity';
@@ -422,8 +413,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tasksCancelTask => 'Cancel Task';
 
   @override
-  String get tasksCancelTaskConfirm =>
-      'Are you sure you want to cancel this task?';
+  String get tasksCancelTaskConfirm => 'Are you sure you want to cancel this task?';
 
   @override
   String get tasksApply => 'Apply';
@@ -441,8 +431,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tasksPriceNegotiation => 'Price Negotiation';
 
   @override
-  String get tasksApplyHint =>
-      'Explain your application reason to the publisher to improve success rate';
+  String get tasksApplyHint => 'Explain your application reason to the publisher to improve success rate';
 
   @override
   String get tasksSubmitApplication => 'Submit Application';
@@ -479,8 +468,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tasksYourTask => 'This is your task';
 
   @override
-  String get tasksManageTask =>
-      'You can view applicants and manage the task below';
+  String get tasksManageTask => 'You can view applicants and manage the task below';
 
   @override
   String tasksReviews(int param1) {
@@ -508,8 +496,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tasksNotInterested => 'Not Interested';
 
   @override
-  String get tasksMarkNotInterestedConfirm =>
-      'Are you sure you want to mark this task as not interested?';
+  String get tasksMarkNotInterestedConfirm => 'Are you sure you want to mark this task as not interested?';
 
   @override
   String get tasksMyTasks => 'My Tasks';
@@ -539,8 +526,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get forumNoPosts => 'No Posts';
 
   @override
-  String get forumNoPostsMessage =>
-      'There are no posts yet. Be the first to post!';
+  String get forumNoPostsMessage => 'There are no posts yet. Be the first to post!';
 
   @override
   String get forumSearchPosts => 'Search posts...';
@@ -585,15 +571,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fleaMarketFleaMarket => 'Flea Market';
 
   @override
-  String get fleaMarketSubtitle =>
-      'Discover great items, sell your unused goods';
+  String get fleaMarketSubtitle => 'Discover great items, sell your unused goods';
 
   @override
   String get fleaMarketNoItems => 'No items';
 
   @override
-  String get fleaMarketNoItemsMessage =>
-      'The flea market has no items yet. Be the first to post one!';
+  String get fleaMarketNoItemsMessage => 'The flea market has no items yet. Be the first to post one!';
 
   @override
   String get fleaMarketSearchItems => 'Search items';
@@ -623,8 +607,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fleaMarketDescription => 'Description';
 
   @override
-  String get fleaMarketDescriptionPlaceholder =>
-      'Describe your product in detail';
+  String get fleaMarketDescriptionPlaceholder => 'Describe your product in detail';
 
   @override
   String get fleaMarketPrice => 'Price';
@@ -669,8 +652,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profilePleaseUpdateEmailTitle => 'Please Update Email';
 
   @override
-  String get profilePleaseUpdateEmailMessage =>
-      'Please update your email address in Settings to avoid missing important notifications.';
+  String get profilePleaseUpdateEmailMessage => 'Please update your email address in Settings to avoid missing important notifications.';
 
   @override
   String get profileName => 'Name';
@@ -754,8 +736,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get leaderboardNoItems => 'No Leaderboards';
 
   @override
-  String get leaderboardNoItemsMessage =>
-      'This leaderboard has no participants yet. Be the first to submit!';
+  String get leaderboardNoItemsMessage => 'This leaderboard has no participants yet. Be the first to submit!';
 
   @override
   String get leaderboardItemCount => 'Entries';
@@ -805,8 +786,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get leaderboardNoImages => 'No Images';
 
   @override
-  String get leaderboardWriteReason =>
-      'Write your reason for others to reference...';
+  String get leaderboardWriteReason => 'Write your reason for others to reference...';
 
   @override
   String get leaderboardAnonymousVote => 'Anonymous Vote';
@@ -878,12 +858,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get leaderboardSubmitting => 'Submitting...';
 
   @override
-  String get leaderboardNamePlaceholder =>
-      'e.g., Most Popular Chinese Restaurant';
+  String get leaderboardNamePlaceholder => 'e.g., Most Popular Chinese Restaurant';
 
   @override
-  String get leaderboardDescriptionPlaceholder =>
-      'Please describe the purpose and inclusion criteria of this leaderboard...';
+  String get leaderboardDescriptionPlaceholder => 'Please describe the purpose and inclusion criteria of this leaderboard...';
 
   @override
   String get leaderboardAddressPlaceholder => 'Please enter detailed address';
@@ -898,16 +876,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get leaderboardPleaseEnterItemName => 'Please enter item name';
 
   @override
-  String get leaderboardVoteSuccess =>
-      'Vote submitted. Thanks for your feedback.';
+  String get leaderboardVoteSuccess => 'Vote submitted. Thanks for your feedback.';
 
   @override
-  String get leaderboardVoteFailed =>
-      'Submission failed. Please try again later.';
+  String get leaderboardVoteFailed => 'Submission failed. Please try again later.';
 
   @override
-  String get leaderboardSubmitFailed =>
-      'Failed to submit entry. Please try again later.';
+  String get leaderboardSubmitFailed => 'Failed to submit entry. Please try again later.';
 
   @override
   String get activityPerson => 'person';
@@ -941,12 +916,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskExpertNoExpertsFound => 'No experts found';
 
   @override
-  String get taskExpertNoExpertsFoundMessage =>
-      'Try adjusting filter conditions';
+  String get taskExpertNoExpertsFoundMessage => 'Try adjusting filter conditions';
 
   @override
-  String get taskExpertNoExpertsFoundWithQuery =>
-      'No experts found matching your search';
+  String get taskExpertNoExpertsFoundWithQuery => 'No experts found matching your search';
 
   @override
   String get taskExpertSearchTitle => 'Search experts';
@@ -976,8 +949,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get serviceLoadFailed => 'Failed to load service information';
 
   @override
-  String get serviceNeedDescription =>
-      'Briefly describe your needs to help the expert understand...';
+  String get serviceNeedDescription => 'Briefly describe your needs to help the expert understand...';
 
   @override
   String get locationGoogleMaps => 'Google Maps';
@@ -1063,15 +1035,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get emptyStateNoContent => 'No content yet';
 
   @override
-  String get emptyStateNoContentMessage =>
-      'Nothing here yet. Try refreshing or come back later.';
+  String get emptyStateNoContentMessage => 'Nothing here yet. Try refreshing or come back later.';
 
   @override
   String get emptyStateNoResults => 'No results found';
 
   @override
-  String get emptyStateNoResultsMessage =>
-      'No matching search results. Try other keywords.';
+  String get emptyStateNoResultsMessage => 'No matching search results. Try other keywords.';
 
   @override
   String get leaderboardEmptyTitle => 'No leaderboard yet';
@@ -1098,8 +1068,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paymentPleaseSetupFirst => 'Please set up payment account first';
 
   @override
-  String get paymentPleaseSetupMessage =>
-      'You need to set up your payment account before applying for tasks. Please go to Settings to complete setup.';
+  String get paymentPleaseSetupMessage => 'You need to set up your payment account before applying for tasks. Please go to Settings to complete setup.';
 
   @override
   String get notificationsNotifications => 'Notifications';
@@ -1123,8 +1092,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationNoNotifications => 'No Notifications';
 
   @override
-  String get notificationNoNotificationsMessage =>
-      'No notification messages received yet';
+  String get notificationNoNotificationsMessage => 'No notification messages received yet';
 
   @override
   String get notificationEnableNotification => 'Enable Notifications';
@@ -1133,12 +1101,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationEnableNotificationTitle => 'Enable Notifications';
 
   @override
-  String get notificationEnableNotificationMessage =>
-      'Receive task updates and message reminders in time';
+  String get notificationEnableNotificationMessage => 'Receive task updates and message reminders in time';
 
   @override
-  String get notificationEnableNotificationDescription =>
-      'Don\'t miss any important information';
+  String get notificationEnableNotificationDescription => 'Don\'t miss any important information';
 
   @override
   String get notificationAllowNotification => 'Allow Notifications';
@@ -1162,8 +1128,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get studentVerificationSchoolEmail => 'School Email';
 
   @override
-  String get studentVerificationSchoolEmailPlaceholder =>
-      'Enter your .ac.uk or .edu email';
+  String get studentVerificationSchoolEmailPlaceholder => 'Enter your .ac.uk or .edu email';
 
   @override
   String get studentVerificationRenewVerification => 'Renew Verification';
@@ -1175,12 +1140,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get studentVerificationSubmitVerification => 'Submit Verification';
 
   @override
-  String get studentVerificationStudentVerificationTitle =>
-      'Student Verification';
+  String get studentVerificationStudentVerificationTitle => 'Student Verification';
 
   @override
-  String get studentVerificationDescription =>
-      'Verify your student identity to enjoy student-exclusive benefits';
+  String get studentVerificationDescription => 'Verify your student identity to enjoy student-exclusive benefits';
 
   @override
   String get studentVerificationStartVerification => 'Start Verification';
@@ -1191,61 +1154,49 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get studentVerificationEmailInstruction =>
-      'Note: Please enter your school email address, and we will send a verification email to that address.';
+  String get studentVerificationEmailInstruction => 'Note: Please enter your school email address, and we will send a verification email to that address.';
 
   @override
   String get studentVerificationRenewInfo => 'Renewal Information';
 
   @override
-  String get studentVerificationRenewEmailPlaceholder =>
-      'Enter your school email';
+  String get studentVerificationRenewEmailPlaceholder => 'Enter your school email';
 
   @override
-  String get studentVerificationRenewInstruction =>
-      'Note: Please enter your school email address to renew verification.';
+  String get studentVerificationRenewInstruction => 'Note: Please enter your school email address to renew verification.';
 
   @override
   String get studentVerificationNewSchoolEmail => 'New School Email';
 
   @override
-  String get studentVerificationNewSchoolEmailPlaceholder =>
-      'Enter new school email';
+  String get studentVerificationNewSchoolEmailPlaceholder => 'Enter new school email';
 
   @override
-  String get studentVerificationChangeEmailInstruction =>
-      'Note: Please enter a new school email address. After changing, re-verification is required.';
+  String get studentVerificationChangeEmailInstruction => 'Note: Please enter a new school email address. After changing, re-verification is required.';
 
   @override
   String get studentVerificationBenefitCampusLife => 'Post Campus Life Tasks';
 
   @override
-  String get studentVerificationBenefitCampusLifeDescription =>
-      'Post and participate in campus life related tasks';
+  String get studentVerificationBenefitCampusLifeDescription => 'Post and participate in campus life related tasks';
 
   @override
-  String get studentVerificationBenefitStudentCommunity =>
-      'Access Student Community';
+  String get studentVerificationBenefitStudentCommunity => 'Access Student Community';
 
   @override
-  String get studentVerificationBenefitStudentCommunityDescription =>
-      'Access exclusive student forum sections and interact with schoolmates';
+  String get studentVerificationBenefitStudentCommunityDescription => 'Access exclusive student forum sections and interact with schoolmates';
 
   @override
-  String get studentVerificationBenefitExclusiveBenefits =>
-      'Student-Exclusive Benefits';
+  String get studentVerificationBenefitExclusiveBenefits => 'Student-Exclusive Benefits';
 
   @override
-  String get studentVerificationBenefitExclusiveBenefitsDescription =>
-      'Enjoy student discounts, exclusive events and more privileges';
+  String get studentVerificationBenefitExclusiveBenefitsDescription => 'Enjoy student discounts, exclusive events and more privileges';
 
   @override
-  String get studentVerificationBenefitVerificationBadge =>
-      'Verification Badge';
+  String get studentVerificationBenefitVerificationBadge => 'Verification Badge';
 
   @override
-  String get studentVerificationBenefitVerificationBadgeDescription =>
-      'Display student verification badge on profile to increase trust';
+  String get studentVerificationBenefitVerificationBadgeDescription => 'Display student verification badge on profile to increase trust';
 
   @override
   String get studentVerificationVerificationEmail => 'Verification Email';
@@ -1298,12 +1249,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get studentVerificationStatusRevoked => 'Revoked';
 
   @override
-  String get studentVerificationBenefitsTitleVerified =>
-      'Student Benefits You Enjoy';
+  String get studentVerificationBenefitsTitleVerified => 'Student Benefits You Enjoy';
 
   @override
-  String get studentVerificationBenefitsTitleUnverified =>
-      'After verification, you will get';
+  String get studentVerificationBenefitsTitleUnverified => 'After verification, you will get';
 
   @override
   String get customerServiceCustomerService => 'Customer Service';
@@ -1381,28 +1330,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorEmailRequired => 'Email is required for registration';
 
   @override
-  String get errorEmailAlreadyRegistered =>
-      'This email is already registered, please use another or log in';
+  String get errorEmailAlreadyRegistered => 'This email is already registered, please use another or log in';
 
   @override
-  String get errorUsernameAlreadyTaken =>
-      'This username is already taken, please choose another';
+  String get errorUsernameAlreadyTaken => 'This username is already taken, please choose another';
 
   @override
-  String get errorUsernameReservedKeywords =>
-      'Username contains reserved keywords';
+  String get errorUsernameReservedKeywords => 'Username contains reserved keywords';
 
   @override
-  String get errorTermsNotAgreed =>
-      'You must agree to the Terms of Service and Privacy Policy';
+  String get errorTermsNotAgreed => 'You must agree to the Terms of Service and Privacy Policy';
 
   @override
-  String get errorPasswordTooWeak =>
-      'Password does not meet security requirements';
+  String get errorPasswordTooWeak => 'Password does not meet security requirements';
 
   @override
-  String get errorVerificationCodeInvalid =>
-      'Verification code is incorrect or expired';
+  String get errorVerificationCodeInvalid => 'Verification code is incorrect or expired';
 
   @override
   String get errorError => 'Error';
@@ -1417,19 +1360,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorInvalidUrl => 'Invalid request URL, please try again later';
 
   @override
-  String get errorNetworkConnectionFailed =>
-      'Network connection failed, please check your network settings';
+  String get errorNetworkConnectionFailed => 'Network connection failed, please check your network settings';
 
   @override
   String get errorRequestTimeout => 'Request timeout, please try again later';
 
   @override
-  String get errorNetworkRequestFailed =>
-      'Network request failed, please try again later';
+  String get errorNetworkRequestFailed => 'Network request failed, please try again later';
 
   @override
-  String get errorInvalidResponse =>
-      'Server response error, please try again later';
+  String get errorInvalidResponse => 'Server response error, please try again later';
 
   @override
   String get errorBadRequest => 'Invalid request parameters';
@@ -1444,8 +1384,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorNotFound => 'Requested resource does not exist';
 
   @override
-  String get errorTooManyRequests =>
-      'Too many requests, please try again later';
+  String get errorTooManyRequests => 'Too many requests, please try again later';
 
   @override
   String get errorServerError => 'Server error, please try again later';
@@ -1456,8 +1395,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get errorDecodingError =>
-      'Data parsing failed, please try again later';
+  String get errorDecodingError => 'Data parsing failed, please try again later';
 
   @override
   String get errorUnknown => 'Unknown error occurred, please try again later';
@@ -1494,136 +1432,106 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get errorCodeEmailAlreadyUsed =>
-      'This email is already used by another account';
+  String get errorCodeEmailAlreadyUsed => 'This email is already used by another account';
 
   @override
-  String get errorCodeEmailAlreadyExists =>
-      'This email is already registered. Use another email or log in';
+  String get errorCodeEmailAlreadyExists => 'This email is already registered. Use another email or log in';
 
   @override
-  String get errorCodePhoneAlreadyUsed =>
-      'This phone number is already used by another account';
+  String get errorCodePhoneAlreadyUsed => 'This phone number is already used by another account';
 
   @override
-  String get errorCodePhoneAlreadyExists =>
-      'This phone number is already registered. Use another or log in';
+  String get errorCodePhoneAlreadyExists => 'This phone number is already registered. Use another or log in';
 
   @override
-  String get errorCodeUsernameAlreadyExists =>
-      'This username is already taken. Please choose another';
+  String get errorCodeUsernameAlreadyExists => 'This username is already taken. Please choose another';
 
   @override
-  String get errorCodeCodeInvalidOrExpired =>
-      'Verification code is invalid or expired. Please request a new one';
+  String get errorCodeCodeInvalidOrExpired => 'Verification code is invalid or expired. Please request a new one';
 
   @override
-  String get errorCodeSendCodeFailed =>
-      'Failed to send verification code. Please try again later';
+  String get errorCodeSendCodeFailed => 'Failed to send verification code. Please try again later';
 
   @override
-  String get errorCodeEmailUpdateNeedCode =>
-      'Please send a verification code to your new email first';
+  String get errorCodeEmailUpdateNeedCode => 'Please send a verification code to your new email first';
 
   @override
-  String get errorCodePhoneUpdateNeedCode =>
-      'Please send a verification code to your new phone number first';
+  String get errorCodePhoneUpdateNeedCode => 'Please send a verification code to your new phone number first';
 
   @override
-  String get errorCodeTempEmailNotAllowed =>
-      'Temporary email addresses are not allowed. Please use a real email';
+  String get errorCodeTempEmailNotAllowed => 'Temporary email addresses are not allowed. Please use a real email';
 
   @override
   String get errorCodeLoginRequired => 'Please log in to view';
 
   @override
-  String get errorCodeForbiddenView =>
-      'You don\'t have permission to view this';
+  String get errorCodeForbiddenView => 'You don\'t have permission to view this';
 
   @override
-  String get errorCodeTaskAlreadyApplied =>
-      'You have already applied for this task';
+  String get errorCodeTaskAlreadyApplied => 'You have already applied for this task';
 
   @override
-  String get errorCodeDisputeAlreadySubmitted =>
-      'You have already submitted a dispute. Please wait for review';
+  String get errorCodeDisputeAlreadySubmitted => 'You have already submitted a dispute. Please wait for review';
 
   @override
-  String get errorCodeRebuttalAlreadySubmitted =>
-      'You have already submitted a rebuttal';
+  String get errorCodeRebuttalAlreadySubmitted => 'You have already submitted a rebuttal';
 
   @override
-  String get errorCodeTaskNotPaid =>
-      'Task is not paid yet. Please complete payment first';
+  String get errorCodeTaskNotPaid => 'Task is not paid yet. Please complete payment first';
 
   @override
-  String get errorCodeTaskPaymentUnavailable =>
-      'Payment is no longer available for this task';
+  String get errorCodeTaskPaymentUnavailable => 'Payment is no longer available for this task';
 
   @override
-  String get errorCodeStripeDisputeFrozen =>
-      'This task is frozen due to a Stripe dispute. Please wait for it to be resolved';
+  String get errorCodeStripeDisputeFrozen => 'This task is frozen due to a Stripe dispute. Please wait for it to be resolved';
 
   @override
-  String get errorCodeStripeSetupRequired =>
-      'Please complete payout account setup first';
+  String get errorCodeStripeSetupRequired => 'Please complete payout account setup first';
 
   @override
-  String get errorCodeStripeOtherPartyNotSetup =>
-      'The other party has not set up their payout account. Please ask them to complete setup';
+  String get errorCodeStripeOtherPartyNotSetup => 'The other party has not set up their payout account. Please ask them to complete setup';
 
   @override
-  String get errorCodeStripeAccountNotVerified =>
-      'Payout account is not verified yet. Please complete account verification';
+  String get errorCodeStripeAccountNotVerified => 'Payout account is not verified yet. Please complete account verification';
 
   @override
-  String get errorCodeStripeAccountInvalid =>
-      'Payout account is invalid. Please set it up again';
+  String get errorCodeStripeAccountInvalid => 'Payout account is invalid. Please set it up again';
 
   @override
-  String get errorCodeStripeVerificationFailed =>
-      'Payout account verification failed. Please check your network and try again';
+  String get errorCodeStripeVerificationFailed => 'Payout account verification failed. Please check your network and try again';
 
   @override
-  String get errorCodeRefundAmountRequired =>
-      'Please enter refund amount or percentage';
+  String get errorCodeRefundAmountRequired => 'Please enter refund amount or percentage';
 
   @override
   String get errorCodeEvidenceFilesLimit => 'Too many evidence files';
 
   @override
-  String get errorCodeEvidenceTextLimit =>
-      'Evidence text must be 500 characters or less';
+  String get errorCodeEvidenceTextLimit => 'Evidence text must be 500 characters or less';
 
   @override
-  String get errorCodeAccountHasActiveTasks =>
-      'Cannot delete account: you have active tasks. Complete or cancel them first';
+  String get errorCodeAccountHasActiveTasks => 'Cannot delete account: you have active tasks. Complete or cancel them first';
 
   @override
-  String get errorCodeTempEmailNoPasswordReset =>
-      'Temporary email cannot receive password reset. Please update your email in Settings';
+  String get errorCodeTempEmailNoPasswordReset => 'Temporary email cannot receive password reset. Please update your email in Settings';
 
   @override
   String get stripeDashboard => 'Stripe Dashboard';
 
   @override
-  String get stripeConnectInitFailed =>
-      'Unable to initialise payout account setup';
+  String get stripeConnectInitFailed => 'Unable to initialise payout account setup';
 
   @override
-  String get stripeConnectLoadFailed =>
-      'Payout setup failed to load, please try again';
+  String get stripeConnectLoadFailed => 'Payout setup failed to load, please try again';
 
   @override
-  String get stripeConnectOnboardingCancelled =>
-      'Payment account setup was cancelled';
+  String get stripeConnectOnboardingCancelled => 'Payment account setup was cancelled';
 
   @override
   String get stripeConnectOnboardingFailed => 'Payment account setup failed';
 
   @override
-  String get stripeConnectOnboardingErrorHint =>
-      'If you see \"Sorry, something went wrong\" in the page, check your network or try again later; ensure the app and backend use the same Stripe environment (test/live).';
+  String get stripeConnectOnboardingErrorHint => 'If you see \"Sorry, something went wrong\" in the page, check your network or try again later; ensure the app and backend use the same Stripe environment (test/live).';
 
   @override
   String stripeConnectLoadFailedWithReason(String param1) {
@@ -1634,31 +1542,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get stripeConnectOpenDashboard => 'Open Stripe Dashboard';
 
   @override
-  String get stripeConnectDashboardUnavailable =>
-      'Unable to open Stripe dashboard';
+  String get stripeConnectDashboardUnavailable => 'Unable to open Stripe dashboard';
 
   @override
-  String get stripeConnectDashboardOnboardingIncomplete =>
-      'Please complete account setup first';
+  String get stripeConnectDashboardOnboardingIncomplete => 'Please complete account setup first';
 
   @override
-  String get stripeConnectDashboardAccountRestricted =>
-      'Account restricted, please contact Stripe support';
+  String get stripeConnectDashboardAccountRestricted => 'Account restricted, please contact Stripe support';
 
   @override
-  String get stripeConnectDashboardUnsupportedType =>
-      'This feature is not supported for your account type';
+  String get stripeConnectDashboardUnsupportedType => 'This feature is not supported for your account type';
 
   @override
   String get stripeConnectManageAccount => 'Manage Account Info';
 
   @override
-  String get stripeOnboardingCreateFailed =>
-      'Unable to create payout setup session, please try again';
+  String get stripeOnboardingCreateFailed => 'Unable to create payout setup session, please try again';
 
   @override
-  String get stripeConnectKeyNotConfigured =>
-      'Payment configuration is missing. Please contact support.';
+  String get stripeConnectKeyNotConfigured => 'Payment configuration is missing. Please contact support.';
 
   @override
   String get paymentGenericError => 'Payment failed. Please try again.';
@@ -1669,19 +1571,16 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get uploadCannotConnectServer =>
-      'Cannot connect to server, please try again later';
+  String get uploadCannotConnectServer => 'Cannot connect to server, please try again later';
 
   @override
-  String get uploadBadRequestFormatImage =>
-      'Invalid request format, please check image format';
+  String get uploadBadRequestFormatImage => 'Invalid request format, please check image format';
 
   @override
   String get uploadBadRequestRetry => 'Invalid request, please try again';
 
   @override
-  String get uploadFileTooLargeChooseSmaller =>
-      'File too large, please choose a smaller file';
+  String get uploadFileTooLargeChooseSmaller => 'File too large, please choose a smaller file';
 
   @override
   String get uploadForbiddenUploadImage => 'No permission to upload image';
@@ -1690,8 +1589,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get uploadForbiddenUploadFile => 'No permission to upload file';
 
   @override
-  String get uploadImageTooLarge =>
-      'Image too large, please choose a smaller one';
+  String get uploadImageTooLarge => 'Image too large, please choose a smaller one';
 
   @override
   String uploadImageTooLargeWithMessage(String param1) {
@@ -1756,8 +1654,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get refundTaskNotFound => 'Task not found or no access';
 
   @override
-  String get refundBadRequestFormat =>
-      'Invalid request, please check your input';
+  String get refundBadRequestFormat => 'Invalid request, please check your input';
 
   @override
   String get successOperationSuccess => 'Operation Successful';
@@ -1772,8 +1669,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get successRefreshSuccess => 'Refresh successful';
 
   @override
-  String get successRefreshSuccessMessage =>
-      'Item refreshed, auto-removal timer reset';
+  String get successRefreshSuccessMessage => 'Item refreshed, auto-removal timer reset';
 
   @override
   String get currencyPound => '£';
@@ -1825,12 +1721,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pointsCheckInReward => 'Check In for Points';
 
   @override
-  String get pointsCheckInDescription =>
-      '• Daily check-in rewards points\\n• More consecutive days, more rewards\\n• Consecutive days reset after interruption';
+  String get pointsCheckInDescription => '• Daily check-in rewards points\\n• More consecutive days, more rewards\\n• Consecutive days reset after interruption';
 
   @override
-  String get pointsTransactionHistory =>
-      'Your point transaction history will be displayed here';
+  String get pointsTransactionHistory => 'Your point transaction history will be displayed here';
 
   @override
   String get pointsNoTransactionHistory => 'No transaction history';
@@ -2096,8 +1990,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get actionsNegotiatePrice => 'Negotiate Price';
 
   @override
-  String get actionsApplyReasonHint =>
-      'Explain your application reason to the publisher to improve success rate';
+  String get actionsApplyReasonHint => 'Explain your application reason to the publisher to improve success rate';
 
   @override
   String get actionsSubmitApplication => 'Submit Application';
@@ -2127,29 +2020,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileMyApplications => 'My Activities';
 
   @override
-  String get profileMyApplicationsSubtitle =>
-      'View applied and favorited activities';
+  String get profileMyApplicationsSubtitle => 'View applied and favorited activities';
 
   @override
   String get profileExpertManagement => 'Expert Applications';
 
   @override
-  String get profileExpertManagementSubtitle =>
-      'Review incoming service applications';
+  String get profileExpertManagementSubtitle => 'Review incoming service applications';
 
   @override
   String get profilePointsCoupons => 'Points & Coupons';
 
   @override
-  String get profilePointsCouponsSubtitle =>
-      'View points, coupons and check-in';
+  String get profilePointsCouponsSubtitle => 'View points, coupons and check-in';
 
   @override
   String get profileStudentVerification => 'Student Verification';
 
   @override
-  String get profileStudentVerificationSubtitle =>
-      'Verify student identity for discounts';
+  String get profileStudentVerificationSubtitle => 'Verify student identity for discounts';
 
   @override
   String get profileActivity => 'Activity';
@@ -2182,8 +2071,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskDetailCancelTask => 'Cancel Task';
 
   @override
-  String get taskDetailCancelTaskConfirm =>
-      'Are you sure you want to cancel this task?';
+  String get taskDetailCancelTaskConfirm => 'Are you sure you want to cancel this task?';
 
   @override
   String get taskDetailNoTaskImages => 'No task images';
@@ -2231,8 +2119,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskDetailYourTask => 'This is your task';
 
   @override
-  String get taskDetailManageTask =>
-      'You can view applicants and manage the task below';
+  String get taskDetailManageTask => 'You can view applicants and manage the task below';
 
   @override
   String taskDetailReviews(int param1) {
@@ -2270,8 +2157,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskApplyQuoteAmountMin => 'Quote amount must be greater than £1';
 
   @override
-  String get taskDetailApplyReasonHint =>
-      'Explain your application reason to the publisher to improve success rate';
+  String get taskDetailApplyReasonHint => 'Explain your application reason to the publisher to improve success rate';
 
   @override
   String get taskDetailSubmitApplication => 'Submit Application';
@@ -2308,12 +2194,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskDetailApplicationSuccess => 'Application Successful';
 
   @override
-  String get taskDetailApplicationSuccessMessage =>
-      'You have successfully applied for this task. Please wait for the publisher to review.';
+  String get taskDetailApplicationSuccessMessage => 'You have successfully applied for this task. Please wait for the publisher to review.';
 
   @override
-  String get taskDetailTaskCompletedMessage =>
-      'Congratulations! You have completed the task. Please wait for the publisher to confirm.';
+  String get taskDetailTaskCompletedMessage => 'Congratulations! You have completed the task. Please wait for the publisher to confirm.';
 
   @override
   String get taskDetailConfirmCompletionSuccess => 'Task Completion Confirmed';
@@ -2337,8 +2221,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskDetailCompleteTaskSuccess => 'Completion submitted';
 
   @override
-  String get taskDetailConfirmCompletionSuccessMessage =>
-      'Task status has been updated to completed. Rewards will be automatically transferred to the task recipient.';
+  String get taskDetailConfirmCompletionSuccessMessage => 'Task status has been updated to completed. Rewards will be automatically transferred to the task recipient.';
 
   @override
   String get refundRequestSubmitted => 'Refund request submitted';
@@ -2347,24 +2230,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get refundRebuttalSubmitted => 'Rebuttal submitted';
 
   @override
-  String get taskDetailApplicationApprovedMessage =>
-      'Congratulations! Your application has been approved. You can start working on the task.';
+  String get taskDetailApplicationApprovedMessage => 'Congratulations! Your application has been approved. You can start working on the task.';
 
   @override
-  String get taskDetailPendingPaymentMessage =>
-      'The task poster is paying the platform service fee. The task will start after payment is completed.';
+  String get taskDetailPendingPaymentMessage => 'The task poster is paying the platform service fee. The task will start after payment is completed.';
 
   @override
-  String get taskDetailApplicationRejectedMessage =>
-      'Sorry, your application was not approved.';
+  String get taskDetailApplicationRejectedMessage => 'Sorry, your application was not approved.';
 
   @override
-  String get taskDetailAlreadyApplied =>
-      'You have already applied for this task.';
+  String get taskDetailAlreadyApplied => 'You have already applied for this task.';
 
   @override
-  String get taskDetailTaskAcceptedByOthers =>
-      'This task has been accepted by another user.';
+  String get taskDetailTaskAcceptedByOthers => 'This task has been accepted by another user.';
 
   @override
   String get taskDetailPendingReview => 'Pending Review';
@@ -2379,8 +2257,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskDetailRejectApplication => 'Reject Application';
 
   @override
-  String get taskDetailRejectApplicationConfirm =>
-      'Are you sure you want to reject this application? This action cannot be undone.';
+  String get taskDetailRejectApplicationConfirm => 'Are you sure you want to reject this application? This action cannot be undone.';
 
   @override
   String get taskDetailUnknown => 'Unknown';
@@ -2389,8 +2266,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskApplicationMessage => 'Message';
 
   @override
-  String get taskApplicationMessageHint =>
-      'Write a message to the applicant...';
+  String get taskApplicationMessageHint => 'Write a message to the applicant...';
 
   @override
   String get taskApplicationMessageSent => 'Message sent';
@@ -2471,8 +2347,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get messagesNoInteractions => 'No Interactions';
 
   @override
-  String get messagesNoInteractionsMessage =>
-      'No interaction notifications yet';
+  String get messagesNoInteractionsMessage => 'No interaction notifications yet';
 
   @override
   String get messagesClickToView => 'Click to view messages';
@@ -2484,15 +2359,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get messagesLoadMoreHistory => 'Load more history';
 
   @override
-  String get permissionLocationUsageDescription =>
-      'We need to access your location information to provide you with more accurate services and task recommendations';
+  String get permissionLocationUsageDescription => 'We need to access your location information to provide you with more accurate services and task recommendations';
 
   @override
   String get customerServiceWelcome => 'Welcome to Customer Service';
 
   @override
-  String get customerServiceStartConversation =>
-      'Click the connect button below to start chatting with customer service';
+  String get customerServiceStartConversation => 'Click the connect button below to start chatting with customer service';
 
   @override
   String get customerServiceLoadingMessages => 'Loading messages...';
@@ -2526,8 +2399,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get customerServiceHistory => 'History';
 
   @override
-  String get customerServiceLoginRequired =>
-      'Please login first to use customer service';
+  String get customerServiceLoginRequired => 'Please login first to use customer service';
 
   @override
   String get customerServiceWhatCanHelp => 'How can we help you?';
@@ -2681,15 +2553,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskApplicationApplyTask => 'Apply for Task';
 
   @override
-  String get taskApplicationIWantToNegotiatePrice =>
-      'I want to negotiate price';
+  String get taskApplicationIWantToNegotiatePrice => 'I want to negotiate price';
 
   @override
   String get taskApplicationExpectedAmount => 'Expected Amount';
 
   @override
-  String get taskApplicationNegotiatePriceHint =>
-      'Tip: Negotiating price may affect the publisher\'s choice.';
+  String get taskApplicationNegotiatePriceHint => 'Tip: Negotiating price may affect the publisher\'s choice.';
 
   @override
   String get taskApplicationSubmitApplication => 'Submit Application';
@@ -2710,33 +2580,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskApplicationUnknownUser => 'Unknown User';
 
   @override
-  String get taskApplicationAdvantagePlaceholder =>
-      'Briefly explain your advantages or how to complete the task...';
+  String get taskApplicationAdvantagePlaceholder => 'Briefly explain your advantages or how to complete the task...';
 
   @override
-  String get taskApplicationReviewPlaceholder =>
-      'Write about your collaboration experience to help other users...';
+  String get taskApplicationReviewPlaceholder => 'Write about your collaboration experience to help other users...';
 
   @override
   String get emptyNoTasks => 'No Tasks';
 
   @override
-  String get emptyNoTasksMessage =>
-      'No tasks have been posted yet. Be the first to post one!';
+  String get emptyNoTasksMessage => 'No tasks have been posted yet. Be the first to post one!';
 
   @override
   String get emptyNoNotifications => 'No Notifications';
 
   @override
-  String get emptyNoNotificationsMessage =>
-      'No notification messages received yet';
+  String get emptyNoNotificationsMessage => 'No notification messages received yet';
 
   @override
   String get emptyNoPaymentRecords => 'No Payment Records';
 
   @override
-  String get emptyNoPaymentRecordsMessage =>
-      'Your payment records will be displayed here';
+  String get emptyNoPaymentRecordsMessage => 'Your payment records will be displayed here';
 
   @override
   String get paymentStatusSuccess => 'Success';
@@ -2765,8 +2630,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationViewAllNotifications => 'View All Notifications';
 
   @override
-  String get customerServiceConversationEndedMessage =>
-      'Conversation ended. Please start a new conversation if you need help.';
+  String get customerServiceConversationEndedMessage => 'Conversation ended. Please start a new conversation if you need help.';
 
   @override
   String customerServiceConnected(String param1) {
@@ -2791,8 +2655,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paymentNoPayoutRecords => 'No Payout Records';
 
   @override
-  String get paymentNoPayoutRecordsMessage =>
-      'Your payout records will be displayed here';
+  String get paymentNoPayoutRecordsMessage => 'Your payout records will be displayed here';
 
   @override
   String get paymentViewDetails => 'View Details';
@@ -2957,8 +2820,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paymentCanReceiveRewards => 'You can now receive task rewards';
 
   @override
-  String get paymentAccountInfoBelow =>
-      'Your account information is as follows';
+  String get paymentAccountInfoBelow => 'Your account information is as follows';
 
   @override
   String get paymentRefreshAccountInfo => 'Refresh Account Info';
@@ -2967,12 +2829,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paymentSelectCountryTitle => 'Select Your Country';
 
   @override
-  String get paymentSelectCountryHint =>
-      'Choose the country where you will receive payments. This determines your account\'s currency and compliance requirements.';
+  String get paymentSelectCountryHint => 'Choose the country where you will receive payments. This determines your account\'s currency and compliance requirements.';
 
   @override
-  String get paymentCurrencyConversionWarning =>
-      'Payments on this platform are in GBP. If your account uses a different currency, Stripe will automatically convert at withdrawal, with a conversion fee of approximately 1%.';
+  String get paymentCurrencyConversionWarning => 'Payments on this platform are in GBP. If your account uses a different currency, Stripe will automatically convert at withdrawal, with a conversion fee of approximately 1%.';
 
   @override
   String get paymentComplete => 'Complete';
@@ -2986,8 +2846,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get paymentCountdownBannerTitle =>
-      'Complete payment within 30 minutes';
+  String get paymentCountdownBannerTitle => 'Complete payment within 30 minutes';
 
   @override
   String paymentCountdownBannerSubtitle(String param1) {
@@ -2995,8 +2854,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get paymentCountdownBannerExpired =>
-      'Payment expired, task will be cancelled';
+  String get paymentCountdownBannerExpired => 'Payment expired, task will be cancelled';
 
   @override
   String couponMinAmountAvailable(String param1) {
@@ -3033,8 +2891,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get couponEnterRedemptionCode => 'Enter Redemption Code';
 
   @override
-  String get couponEnterRedemptionCodePlaceholder =>
-      'Please enter redemption code';
+  String get couponEnterRedemptionCodePlaceholder => 'Please enter redemption code';
 
   @override
   String get couponRedeem => 'Redeem';
@@ -3056,8 +2913,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get couponNoAvailableCoupons => 'No Available Coupons';
 
   @override
-  String get couponNoAvailableCouponsMessage =>
-      'No coupons available to claim, stay tuned for events';
+  String get couponNoAvailableCouponsMessage => 'No coupons available to claim, stay tuned for events';
 
   @override
   String get couponNoMyCoupons => 'You have no coupons yet';
@@ -3075,8 +2931,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get couponCheckInReward => 'Check-in Rewards';
 
   @override
-  String get couponCheckInComingSoon =>
-      'Check-in rewards coming soon, stay tuned';
+  String get couponCheckInComingSoon => 'Check-in rewards coming soon, stay tuned';
 
   @override
   String get couponCheckInSuccess => 'Check-in Successful';
@@ -3162,8 +3017,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get createTaskDescription => 'Task Details';
 
   @override
-  String get createTaskDescriptionPlaceholder =>
-      'Please describe your needs, time, special requirements, etc. in detail. The more detailed, the easier it is to get accepted...';
+  String get createTaskDescriptionPlaceholder => 'Please describe your needs, time, special requirements, etc. in detail. The more detailed, the easier it is to get accepted...';
 
   @override
   String get createTaskReward => 'Reward';
@@ -3175,8 +3029,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get createTaskOnline => 'Online';
 
   @override
-  String get createTaskCampusLifeRestriction =>
-      'Only verified students can post campus life tasks';
+  String get createTaskCampusLifeRestriction => 'Only verified students can post campus life tasks';
 
   @override
   String get studentVerificationStudentVerification => 'Student Verification';
@@ -3188,8 +3041,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get stripeConnectRequired => 'Payment Account Required';
 
   @override
-  String get stripeConnectSetupPrompt =>
-      'You need to set up a payout account before withdrawing. Would you like to set it up now?';
+  String get stripeConnectSetupPrompt => 'You need to set up a payout account before withdrawing. Would you like to set it up now?';
 
   @override
   String get stripeConnectSetupNow => 'Set Up Now';
@@ -3213,8 +3065,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get activityNoAvailableTime => 'No Available Time';
 
   @override
-  String get activityNoAvailableTimeMessage =>
-      'No available time slots at the moment';
+  String get activityNoAvailableTimeMessage => 'No available time slots at the moment';
 
   @override
   String get activityParticipateTime => 'Participate Time';
@@ -3244,8 +3095,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get activityTimeArrangement => 'Time Arrangement';
 
   @override
-  String get activityMultipleTimeSlots =>
-      'Supports multiple time slot bookings';
+  String get activityMultipleTimeSlots => 'Supports multiple time slot bookings';
 
   @override
   String get activityDeadline => 'Deadline';
@@ -3311,8 +3161,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get activityPreferredDate => 'Preferred Date';
 
   @override
-  String get activityTimeFlexibleMessage =>
-      'If you are available at any time in the near future';
+  String get activityTimeFlexibleMessage => 'If you are available at any time in the near future';
 
   @override
   String get activityConfirmApply => 'Confirm Application';
@@ -3570,12 +3419,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get createTaskFillAllRequired => 'Please fill in all required fields';
 
   @override
-  String get createTaskImageUploadFailed =>
-      'Some images failed to upload, please try again';
+  String get createTaskImageUploadFailed => 'Some images failed to upload, please try again';
 
   @override
-  String get createTaskStudentVerificationRequired =>
-      'Only verified students can post campus life tasks';
+  String get createTaskStudentVerificationRequired => 'Only verified students can post campus life tasks';
 
   @override
   String get createTaskPublicTask => 'Public Task';
@@ -3593,8 +3440,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskExpertBecomeExpertTitle => 'Become a Task Expert';
 
   @override
-  String get taskExpertShowcaseSkills =>
-      'Showcase your professional skills and get more task opportunities';
+  String get taskExpertShowcaseSkills => 'Showcase your professional skills and get more task opportunities';
 
   @override
   String get taskExpertBenefits => 'Benefits of Becoming an Expert';
@@ -3612,8 +3458,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskExpertApplicationInfo => 'Application Information';
 
   @override
-  String get taskExpertApplicationHint =>
-      'Please introduce your professional skills, experience and advantages. This will help the platform better understand you.';
+  String get taskExpertApplicationHint => 'Please introduce your professional skills, experience and advantages. This will help the platform better understand you.';
 
   @override
   String get taskExpertSubmitApplication => 'Submit Application';
@@ -3649,8 +3494,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskExpertNegotiatePrice => 'Negotiate Price';
 
   @override
-  String get taskExpertExpertNegotiatePrice =>
-      'Task Expert Proposed Price Negotiation:';
+  String get taskExpertExpertNegotiatePrice => 'Task Expert Proposed Price Negotiation:';
 
   @override
   String get taskExpertViewTask => 'View Task';
@@ -3673,8 +3517,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get forumNeedLogin => 'Login Required';
 
   @override
-  String get forumCommunityLoginMessage =>
-      'Community features are only available to logged-in users who have completed student verification';
+  String get forumCommunityLoginMessage => 'Community features are only available to logged-in users who have completed student verification';
 
   @override
   String get forumLoginNow => 'Login Now';
@@ -3683,20 +3526,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get forumNeedStudentVerification => 'Student Verification Required';
 
   @override
-  String get forumVerificationPending =>
-      'Your student verification application is under review. Please wait patiently.';
+  String get forumVerificationPending => 'Your student verification application is under review. Please wait patiently.';
 
   @override
-  String get forumVerificationRejected =>
-      'Your student verification application was not approved. Please resubmit.';
+  String get forumVerificationRejected => 'Your student verification application was not approved. Please resubmit.';
 
   @override
-  String get forumCompleteVerification =>
-      'Please complete student verification to access community features';
+  String get forumCompleteVerification => 'Please complete student verification to access community features';
 
   @override
-  String get forumCompleteVerificationMessage =>
-      'Please complete student verification to access community features';
+  String get forumCompleteVerificationMessage => 'Please complete student verification to access community features';
 
   @override
   String get forumGoVerify => 'Go Verify';
@@ -3759,22 +3598,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get forumNotificationPinPost => 'Post Pinned';
 
   @override
-  String get forumNotificationPinPostContent =>
-      'Your post has been pinned by an administrator';
+  String get forumNotificationPinPostContent => 'Your post has been pinned by an administrator';
 
   @override
   String get forumNotificationFeaturePost => 'Post Featured';
 
   @override
-  String get forumNotificationFeaturePostContent =>
-      'Your post has been featured by an administrator';
+  String get forumNotificationFeaturePostContent => 'Your post has been featured by an administrator';
 
   @override
   String get forumNotificationDefault => 'Forum Notification';
 
   @override
-  String get forumNotificationDefaultContent =>
-      'You received a forum notification';
+  String get forumNotificationDefaultContent => 'You received a forum notification';
 
   @override
   String get infoConnectPlatform => 'Connect You and Me Task Platform';
@@ -3792,8 +3628,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get infoNeedHelp => 'Need Help?';
 
   @override
-  String get infoContactAdmin =>
-      'Contact administrator for more member information';
+  String get infoContactAdmin => 'Contact administrator for more member information';
 
   @override
   String get infoContactService => 'Contact Service';
@@ -3817,16 +3652,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get infoOurVision => 'Our Vision';
 
   @override
-  String get infoAboutUsContent =>
-      'Link²Ur is an innovative task posting and taking platform dedicated to connecting people who need help with those willing to provide help. We believe everyone has their own skills and time, and through the platform, these resources can be better utilized.';
+  String get infoAboutUsContent => 'Link²Ur is an innovative task posting and taking platform dedicated to connecting people who need help with those willing to provide help. We believe everyone has their own skills and time, and through the platform, these resources can be better utilized.';
 
   @override
-  String get infoOurMissionContent =>
-      'Make task posting and taking simple, efficient, and safe. We are committed to building a trusted community platform where everyone can find suitable tasks and help others.';
+  String get infoOurMissionContent => 'Make task posting and taking simple, efficient, and safe. We are committed to building a trusted community platform where everyone can find suitable tasks and help others.';
 
   @override
-  String get infoOurVisionContent =>
-      'Become the most popular task platform in the UK, connecting thousands of users, creating more value, and making the community closer.';
+  String get infoOurVisionContent => 'Become the most popular task platform in the UK, connecting thousands of users, creating more value, and making the community closer.';
 
   @override
   String get vipMember => 'VIP Member';
@@ -3844,50 +3676,43 @@ class AppLocalizationsEn extends AppLocalizations {
   String get vipPriorityRecommendation => 'Priority Recommendation';
 
   @override
-  String get vipPriorityRecommendationDesc =>
-      'Your tasks and applications will be prioritized, gaining more exposure';
+  String get vipPriorityRecommendationDesc => 'Your tasks and applications will be prioritized, gaining more exposure';
 
   @override
   String get vipFeeDiscount => 'Fee Discount';
 
   @override
-  String get vipFeeDiscountDesc =>
-      'Enjoy lower task posting fees, saving more costs';
+  String get vipFeeDiscountDesc => 'Enjoy lower task posting fees, saving more costs';
 
   @override
   String get vipExclusiveBadge => 'Exclusive Badge';
 
   @override
-  String get vipExclusiveBadgeDesc =>
-      'Display exclusive VIP badge on profile to enhance your credibility';
+  String get vipExclusiveBadgeDesc => 'Display exclusive VIP badge on profile to enhance your credibility';
 
   @override
   String get vipExclusiveActivity => 'Exclusive Activities';
 
   @override
-  String get vipExclusiveActivityDesc =>
-      'Participate in VIP exclusive activities and offers, get more rewards';
+  String get vipExclusiveActivityDesc => 'Participate in VIP exclusive activities and offers, get more rewards';
 
   @override
   String get vipFaqHowToUpgrade => 'How to upgrade membership?';
 
   @override
-  String get vipFaqHowToUpgradeAnswer =>
-      'The membership upgrade feature is currently under development. You can contact the administrator for manual upgrade, or wait for the automatic upgrade feature to be launched.';
+  String get vipFaqHowToUpgradeAnswer => 'The membership upgrade feature is currently under development. You can contact the administrator for manual upgrade, or wait for the automatic upgrade feature to be launched.';
 
   @override
   String get vipFaqWhenEffective => 'When do membership benefits take effect?';
 
   @override
-  String get vipFaqWhenEffectiveAnswer =>
-      'Membership benefits take effect immediately after upgrade, and you can immediately enjoy the corresponding privileged services.';
+  String get vipFaqWhenEffectiveAnswer => 'Membership benefits take effect immediately after upgrade, and you can immediately enjoy the corresponding privileged services.';
 
   @override
   String get vipFaqCanCancel => 'Can I cancel membership at any time?';
 
   @override
-  String get vipFaqCanCancelAnswer =>
-      'Yes, you can contact the administrator to cancel membership service at any time. The cancellation will take effect in the next billing cycle.';
+  String get vipFaqCanCancelAnswer => 'Yes, you can contact the administrator to cancel membership service at any time. The cancellation will take effect in the next billing cycle.';
 
   @override
   String get vipComingSoon => 'VIP feature coming soon, stay tuned!';
@@ -3920,16 +3745,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get vipPurchaseInstructions => 'Purchase Instructions';
 
   @override
-  String get vipSubscriptionAutoRenew =>
-      '• Subscription will auto-renew unless cancelled at least 24 hours before expiry';
+  String get vipSubscriptionAutoRenew => '• Subscription will auto-renew unless cancelled at least 24 hours before expiry';
 
   @override
-  String get vipManageSubscription =>
-      '• Manage subscription in App Store account settings';
+  String get vipManageSubscription => '• Manage subscription in App Store account settings';
 
   @override
-  String get vipPurchaseEffective =>
-      '• Benefits take effect immediately after purchase';
+  String get vipPurchaseEffective => '• Benefits take effect immediately after purchase';
 
   @override
   String get vipPurchaseTitle => 'Purchase VIP Membership';
@@ -3938,8 +3760,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get vipPurchaseSuccess => 'Purchase Successful';
 
   @override
-  String get vipCongratulations =>
-      'Congratulations on becoming a VIP member! Enjoy all VIP benefits.';
+  String get vipCongratulations => 'Congratulations on becoming a VIP member! Enjoy all VIP benefits.';
 
   @override
   String vipRestoreFailed(String param1) {
@@ -3953,8 +3774,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get vipAlreadyVip => 'You are already a VIP member';
 
   @override
-  String get vipThankYou =>
-      'Thank you for your support. Enjoy all VIP benefits.';
+  String get vipThankYou => 'Thank you for your support. Enjoy all VIP benefits.';
 
   @override
   String vipExpiryTime(String param1) {
@@ -3968,8 +3788,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get vipAutoRenewCancelled => 'Auto-renew cancelled';
 
   @override
-  String get vipFaqHowToUpgradeSteps =>
-      'Tap the \'Upgrade to VIP\' button on the VIP membership page and choose a suitable plan to purchase.';
+  String get vipFaqHowToUpgradeSteps => 'Tap the \'Upgrade to VIP\' button on the VIP membership page and choose a suitable plan to purchase.';
 
   @override
   String get serviceNoImages => 'No images';
@@ -4063,15 +3882,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationDetail => 'Notification Detail';
 
   @override
-  String get notificationGetNegotiationFailed =>
-      'Unable to load negotiation info. Please refresh and try again.';
+  String get notificationGetNegotiationFailed => 'Unable to load negotiation info. Please refresh and try again.';
 
   @override
   String get translationFailed => 'Translation Failed';
 
   @override
-  String get translationRetryMessage =>
-      'Unable to translate this message. Please check your network and try again.';
+  String get translationRetryMessage => 'Unable to translate this message. Please check your network and try again.';
 
   @override
   String get taskDetailCollapse => 'Collapse';
@@ -4130,8 +3947,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paymentSuccess => 'Payment Successful';
 
   @override
-  String get paymentSuccessMessage =>
-      'Your payment has been successfully processed, the task will start soon.';
+  String get paymentSuccessMessage => 'Your payment has been successfully processed, the task will start soon.';
 
   @override
   String get paymentError => 'Payment Error';
@@ -4179,16 +3995,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paymentDoNotUseCoupon => 'Don\'t use coupon';
 
   @override
-  String get paymentTimeoutOrRefreshHint =>
-      'If you have already paid, close this page and refresh; otherwise please try again';
+  String get paymentTimeoutOrRefreshHint => 'If you have already paid, close this page and refresh; otherwise please try again';
 
   @override
-  String get paymentConfirmingDoNotRepeat =>
-      'Confirming payment. Please wait and do not pay again.';
+  String get paymentConfirmingDoNotRepeat => 'Confirming payment. Please wait and do not pay again.';
 
   @override
-  String get paymentWaitingConfirmHint =>
-      'If you have already paid, we will confirm automatically. Please wait (within about 5 minutes).';
+  String get paymentWaitingConfirmHint => 'If you have already paid, we will confirm automatically. Please wait (within about 5 minutes).';
 
   @override
   String get paymentTotalAmount => 'Total Amount';
@@ -4275,8 +4088,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsSuccessSound => 'Success Sound';
 
   @override
-  String get settingsSuccessSoundDescription =>
-      'Play a short sound when an action succeeds';
+  String get settingsSuccessSoundDescription => 'Play a short sound when an action succeeds';
 
   @override
   String get settingsAppearance => 'Appearance';
@@ -4324,12 +4136,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsDeleteAccount => 'Delete Account';
 
   @override
-  String get settingsDeleteAccountMessage =>
-      'Are you sure you want to delete your account? This action cannot be undone. All your data will be permanently deleted.';
+  String get settingsDeleteAccountMessage => 'Are you sure you want to delete your account? This action cannot be undone. All your data will be permanently deleted.';
 
   @override
-  String get settingsDeleteAccountFailed =>
-      'Failed to delete account. Please try again.';
+  String get settingsDeleteAccountFailed => 'Failed to delete account. Please try again.';
 
   @override
   String get settingsTraditionalChinese => 'Traditional Chinese';
@@ -4356,15 +4166,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myTasksNetworkUnavailable => 'Network Unavailable';
 
   @override
-  String get myTasksCheckNetwork =>
-      'Please check your network connection and try again';
+  String get myTasksCheckNetwork => 'Please check your network connection and try again';
 
   @override
   String get myTasksNoPendingApplications => 'No Pending Applications';
 
   @override
-  String get myTasksNoPendingApplicationsMessage =>
-      'You have no pending application records yet';
+  String get myTasksNoPendingApplicationsMessage => 'You have no pending application records yet';
 
   @override
   String get myTasksPending => 'Pending';
@@ -4409,8 +4217,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myTasksEmptyInProgress => 'You have no in-progress tasks yet';
 
   @override
-  String get myTasksEmptyPending =>
-      'You have no pending application records yet';
+  String get myTasksEmptyPending => 'You have no pending application records yet';
 
   @override
   String get myTasksEmptyCompleted => 'You have no completed tasks yet';
@@ -4565,8 +4372,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fleaMarketMessageToSeller => 'Message to Seller (Optional)';
 
   @override
-  String get fleaMarketMessagePlaceholder =>
-      'e.g., Hope to meet in person, can you include shipping, etc...';
+  String get fleaMarketMessagePlaceholder => 'e.g., Hope to meet in person, can you include shipping, etc...';
 
   @override
   String get fleaMarketEnterAmount => 'Enter amount';
@@ -4575,24 +4381,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fleaMarketNegotiateRequestSent => 'Negotiation Request Sent';
 
   @override
-  String get fleaMarketNegotiateRequestSentMessage =>
-      'You have submitted a purchase request, please wait for the seller to process';
+  String get fleaMarketNegotiateRequestSentMessage => 'You have submitted a purchase request, please wait for the seller to process';
 
   @override
-  String get fleaMarketNegotiateRequestFailed =>
-      'Failed to send negotiation request. Please try again.';
+  String get fleaMarketNegotiateRequestFailed => 'Failed to send negotiation request. Please try again.';
 
   @override
-  String get fleaMarketNegotiatePriceInvalid =>
-      'Please enter a valid negotiation price.';
+  String get fleaMarketNegotiatePriceInvalid => 'Please enter a valid negotiation price.';
 
   @override
-  String get fleaMarketNegotiatePriceTooHigh =>
-      'Negotiation price cannot be higher than the original price.';
+  String get fleaMarketNegotiatePriceTooHigh => 'Negotiation price cannot be higher than the original price.';
 
   @override
-  String get fleaMarketNegotiatePriceTooLow =>
-      'Negotiation price must be greater than 0.';
+  String get fleaMarketNegotiatePriceTooLow => 'Negotiation price must be greater than 0.';
 
   @override
   String get taskPreferencesTitle => 'Task Preferences';
@@ -4601,29 +4402,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskPreferencesPreferredTypes => 'Preferred Task Types';
 
   @override
-  String get taskPreferencesPreferredTypesDescription =>
-      'Select task types you are interested in. The system will prioritize recommending these types of tasks';
+  String get taskPreferencesPreferredTypesDescription => 'Select task types you are interested in. The system will prioritize recommending these types of tasks';
 
   @override
   String get taskPreferencesPreferredLocations => 'Preferred Locations';
 
   @override
-  String get taskPreferencesPreferredLocationsDescription =>
-      'Select the geographic locations where you want to receive tasks';
+  String get taskPreferencesPreferredLocationsDescription => 'Select the geographic locations where you want to receive tasks';
 
   @override
   String get taskPreferencesPreferredLevels => 'Preferred Task Levels';
 
   @override
-  String get taskPreferencesPreferredLevelsDescription =>
-      'Select task levels you are interested in';
+  String get taskPreferencesPreferredLevelsDescription => 'Select task levels you are interested in';
 
   @override
   String get taskPreferencesMinDeadline => 'Minimum Deadline';
 
   @override
-  String get taskPreferencesMinDeadlineDescription =>
-      'Set the minimum number of days required for task deadlines. The system will only recommend tasks that meet this condition';
+  String get taskPreferencesMinDeadlineDescription => 'Set the minimum number of days required for task deadlines. The system will only recommend tasks that meet this condition';
 
   @override
   String get taskPreferencesDays => 'days';
@@ -4647,15 +4444,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get forumCreatePostPostTitle => 'Post Title';
 
   @override
-  String get forumCreatePostPostTitlePlaceholder =>
-      'Give your post an attractive title';
+  String get forumCreatePostPostTitlePlaceholder => 'Give your post an attractive title';
 
   @override
   String get forumCreatePostPostContent => 'Post Content';
 
   @override
-  String get forumCreatePostContentPlaceholder =>
-      'Share your insights, experiences, or ask questions. Be friendly and help each other grow...';
+  String get forumCreatePostContentPlaceholder => 'Share your insights, experiences, or ask questions. Be friendly and help each other grow...';
 
   @override
   String get forumCreatePostPublishing => 'Publishing...';
@@ -4691,8 +4486,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fleaMarketCreatePublishNow => 'Publish Item Now';
 
   @override
-  String get fleaMarketCreateSearchLocation =>
-      'Search location or enter Online';
+  String get fleaMarketCreateSearchLocation => 'Search location or enter Online';
 
   @override
   String get taskExpertTitle => 'Task Experts';
@@ -4701,64 +4495,55 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskExpertWhatIs => 'What are Task Experts?';
 
   @override
-  String get taskExpertWhatIsContent =>
-      'Task Experts are platform-certified professional service providers with rich experience and good reputation. After becoming a Task Expert, your services will get more exposure and attract more customers.';
+  String get taskExpertWhatIsContent => 'Task Experts are platform-certified professional service providers with rich experience and good reputation. After becoming a Task Expert, your services will get more exposure and attract more customers.';
 
   @override
   String get taskExpertMoreExposure => 'More Exposure';
 
   @override
-  String get taskExpertMoreExposureDesc =>
-      'Your services will be prioritized and get more user attention';
+  String get taskExpertMoreExposureDesc => 'Your services will be prioritized and get more user attention';
 
   @override
   String get taskExpertExclusiveBadge => 'Exclusive Badge';
 
   @override
-  String get taskExpertExclusiveBadgeDesc =>
-      'Display expert certification badge to enhance your professional image';
+  String get taskExpertExclusiveBadgeDesc => 'Display expert certification badge to enhance your professional image';
 
   @override
   String get taskExpertMoreOrders => 'More Orders';
 
   @override
-  String get taskExpertMoreOrdersDesc =>
-      'Get more task applications and increase income opportunities';
+  String get taskExpertMoreOrdersDesc => 'Get more task applications and increase income opportunities';
 
   @override
   String get taskExpertPlatformSupport => 'Platform Support';
 
   @override
-  String get taskExpertPlatformSupportDesc =>
-      'Enjoy professional support and resources provided by the platform';
+  String get taskExpertPlatformSupportDesc => 'Enjoy professional support and resources provided by the platform';
 
   @override
   String get taskExpertFillApplication => 'Fill Application Information';
 
   @override
-  String get taskExpertFillApplicationDesc =>
-      'Introduce your professional skills and experience';
+  String get taskExpertFillApplicationDesc => 'Introduce your professional skills and experience';
 
   @override
   String get taskExpertSubmitReview => 'Submit for Review';
 
   @override
-  String get taskExpertSubmitReviewDesc =>
-      'Platform will complete the review within 3-5 business days';
+  String get taskExpertSubmitReviewDesc => 'Platform will complete the review within 3-5 business days';
 
   @override
   String get taskExpertStartService => 'Start Service';
 
   @override
-  String get taskExpertStartServiceDesc =>
-      'After approval, you can publish services and start accepting orders';
+  String get taskExpertStartServiceDesc => 'After approval, you can publish services and start accepting orders';
 
   @override
   String get taskExpertApplyTitle => 'Apply to Become Expert';
 
   @override
-  String get taskExpertApplicationSubmittedMessage =>
-      'Your application has been submitted. We will complete the review within 3-5 business days.';
+  String get taskExpertApplicationSubmittedMessage => 'Your application has been submitted. We will complete the review within 3-5 business days.';
 
   @override
   String get taskExpertNoExperts => 'No Task Experts';
@@ -4779,16 +4564,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskExpertNoActivities => 'No Activities';
 
   @override
-  String get taskExpertNoFavoritesMessage =>
-      'You have not favorited any activities';
+  String get taskExpertNoFavoritesMessage => 'You have not favorited any activities';
 
   @override
-  String get taskExpertNoAppliedMessage =>
-      'You have not applied for any activities';
+  String get taskExpertNoAppliedMessage => 'You have not applied for any activities';
 
   @override
-  String get taskExpertNoActivitiesMessage =>
-      'You have not applied or favorited any activities';
+  String get taskExpertNoActivitiesMessage => 'You have not applied or favorited any activities';
 
   @override
   String taskExpertRelatedActivitiesAvailable(int count) {
@@ -4796,8 +4578,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get taskExpertRelatedActivitiesSection =>
-      'Expert\'s Related Activities';
+  String get taskExpertRelatedActivitiesSection => 'Expert\'s Related Activities';
 
   @override
   String get taskExpertExpertiseAreas => 'Expertise Areas';
@@ -4853,8 +4634,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get leaderboardReasonTitle => 'Why create this leaderboard?';
 
   @override
-  String get leaderboardReasonPlaceholder =>
-      'Explain to the administrator the necessity of creating this leaderboard, which helps speed up the review process...';
+  String get leaderboardReasonPlaceholder => 'Explain to the administrator the necessity of creating this leaderboard, which helps speed up the review process...';
 
   @override
   String get leaderboardCoverImage => 'Cover Image (Optional)';
@@ -4878,8 +4658,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationNoTaskChat => 'No task chats';
 
   @override
-  String get notificationNoTaskChatMessage =>
-      'No task-related chat records yet';
+  String get notificationNoTaskChatMessage => 'No task-related chat records yet';
 
   @override
   String get notificationNoMessages => 'No messages yet';
@@ -4909,16 +4688,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationTaskEnded => 'Task has ended';
 
   @override
-  String get notificationTaskCompletedCannotSend =>
-      'Task completed, cannot send messages';
+  String get notificationTaskCompletedCannotSend => 'Task completed, cannot send messages';
 
   @override
-  String get notificationTaskCancelledCannotSend =>
-      'Task cancelled, cannot send messages';
+  String get notificationTaskCancelledCannotSend => 'Task cancelled, cannot send messages';
 
   @override
-  String get notificationTaskPendingCannotSend =>
-      'Task pending confirmation, message sending paused';
+  String get notificationTaskPendingCannotSend => 'Task pending confirmation, message sending paused';
 
   @override
   String get notificationSystemNotification => 'System Notification';
@@ -4927,8 +4703,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationTitleTaskApplication => 'New Task Application';
 
   @override
-  String get notificationTitleApplicationAccepted =>
-      'Application Accepted - Payment Required';
+  String get notificationTitleApplicationAccepted => 'Application Accepted - Payment Required';
 
   @override
   String get notificationTitleApplicationRejected => 'Application Rejected';
@@ -4964,8 +4739,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationTitleTaskRewardPaid => 'Task Reward Paid';
 
   @override
-  String get notificationTitleTaskApprovedWithPayment =>
-      'Task Application Approved - Payment Required';
+  String get notificationTitleTaskApprovedWithPayment => 'Task Application Approved - Payment Required';
 
   @override
   String get notificationTitleAnnouncement => 'Announcement';
@@ -4977,14 +4751,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationTitleUnknown => 'Notification';
 
   @override
-  String notificationContentTaskApplication(String applicant_name,
-      String task_title, String application_message, String price_info) {
+  String notificationContentTaskApplication(String applicant_name, String task_title, String application_message, String price_info) {
     return '$applicant_name applied for task「$task_title」\\nApplication message: $application_message\\nNegotiated price: $price_info';
   }
 
   @override
-  String notificationContentApplicationAccepted(
-      String task_title, String payment_expires_info) {
+  String notificationContentApplicationAccepted(String task_title, String payment_expires_info) {
     return 'The applicant has accepted your negotiation offer for task「$task_title」. Please complete the payment.$payment_expires_info';
   }
 
@@ -4999,8 +4771,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String notificationContentTaskCompleted(
-      String taker_name, String task_title) {
+  String notificationContentTaskCompleted(String taker_name, String task_title) {
     return '$taker_name has marked task「$task_title」as completed';
   }
 
@@ -5020,14 +4791,12 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String notificationContentApplicationMessage(
-      String task_title, String message) {
+  String notificationContentApplicationMessage(String task_title, String message) {
     return 'The publisher of task「$task_title」sent you a message: $message';
   }
 
   @override
-  String notificationContentNegotiationOffer(String task_title, String message,
-      String negotiated_price, String currency) {
+  String notificationContentNegotiationOffer(String task_title, String message, String negotiated_price, String currency) {
     return 'The publisher of task「$task_title」proposed a negotiation\nMessage: $message\nNegotiated price: £$negotiated_price $currency';
   }
 
@@ -5047,8 +4816,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String notificationContentTaskApprovedWithPayment(
-      String task_title, String payment_expires_info) {
+  String notificationContentTaskApprovedWithPayment(String task_title, String payment_expires_info) {
     return 'Your task application has been approved! Task: $task_title$payment_expires_info';
   }
 
@@ -5133,8 +4901,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingWelcomeSubtitle => 'UK Life Mutual Aid Platform';
 
   @override
-  String get onboardingWelcomeDescription =>
-      'Publish tasks, accept tasks, buy and sell second-hand goods, everything is in your hands';
+  String get onboardingWelcomeDescription => 'Publish tasks, accept tasks, buy and sell second-hand goods, everything is in your hands';
 
   @override
   String get onboardingPublishTaskTitle => 'Publish Tasks';
@@ -5143,8 +4910,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingPublishTaskSubtitle => 'Easily find help';
 
   @override
-  String get onboardingPublishTaskDescription =>
-      'Need help? Publish a task and let capable users help you complete it';
+  String get onboardingPublishTaskDescription => 'Need help? Publish a task and let capable users help you complete it';
 
   @override
   String get onboardingAcceptTaskTitle => 'Accept Tasks';
@@ -5153,19 +4919,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingAcceptTaskSubtitle => 'Earn extra income';
 
   @override
-  String get onboardingAcceptTaskDescription =>
-      'Browse tasks, accept interesting tasks, and earn rewards after completing them';
+  String get onboardingAcceptTaskDescription => 'Browse tasks, accept interesting tasks, and earn rewards after completing them';
 
   @override
   String get onboardingSecurePaymentTitle => 'Secure Payment';
 
   @override
-  String get onboardingSecurePaymentSubtitle =>
-      'Platform guarantees transaction security';
+  String get onboardingSecurePaymentSubtitle => 'Platform guarantees transaction security';
 
   @override
-  String get onboardingSecurePaymentDescription =>
-      'Use Stripe secure payment, automatic transfer after task completion, protecting both parties\' rights';
+  String get onboardingSecurePaymentDescription => 'Use Stripe secure payment, automatic transfer after task completion, protecting both parties\' rights';
 
   @override
   String get onboardingCommunityTitle => 'Community Interaction';
@@ -5174,15 +4937,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingCommunitySubtitle => 'Connect your world';
 
   @override
-  String get onboardingCommunityDescription =>
-      'Participate in community discussions, view leaderboards, buy and sell second-hand goods, enrich your campus life';
+  String get onboardingCommunityDescription => 'Participate in community discussions, view leaderboards, buy and sell second-hand goods, enrich your campus life';
 
   @override
   String get onboardingPersonalizationTitle => 'Personalization Settings';
 
   @override
-  String get onboardingPersonalizationSubtitle =>
-      'Help us recommend more suitable content for you';
+  String get onboardingPersonalizationSubtitle => 'Help us recommend more suitable content for you';
 
   @override
   String get onboardingPreferredCity => 'Preferred City';
@@ -5194,15 +4955,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingPreferredTaskTypes => 'Interested Task Types';
 
   @override
-  String get onboardingPreferredTaskTypesOptional =>
-      'Interested Task Types (Optional)';
+  String get onboardingPreferredTaskTypesOptional => 'Interested Task Types (Optional)';
 
   @override
   String get onboardingEnableNotifications => 'Enable Notifications';
 
   @override
-  String get onboardingEnableNotificationsDescription =>
-      'Receive task status updates and message reminders in time';
+  String get onboardingEnableNotificationsDescription => 'Receive task status updates and message reminders in time';
 
   @override
   String get onboardingGetStarted => 'Get Started';
@@ -5232,15 +4991,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shortcutsViewMyTasks => 'View My Tasks';
 
   @override
-  String get shortcutsViewMyTasksDescription =>
-      'View tasks I published and accepted';
+  String get shortcutsViewMyTasksDescription => 'View tasks I published and accepted';
 
   @override
   String get shortcutsViewMessages => 'View Messages';
 
   @override
-  String get shortcutsViewMessagesDescription =>
-      'View unread messages and notifications';
+  String get shortcutsViewMessagesDescription => 'View unread messages and notifications';
 
   @override
   String get shortcutsSearchTasks => 'Search Tasks';
@@ -5252,15 +5009,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shortcutsViewFleaMarket => 'View Flea Market';
 
   @override
-  String get shortcutsViewFleaMarketDescription =>
-      'Browse and publish second-hand goods';
+  String get shortcutsViewFleaMarketDescription => 'Browse and publish second-hand goods';
 
   @override
   String get shortcutsViewForum => 'View Forum';
 
   @override
-  String get shortcutsViewForumDescription =>
-      'Participate in community discussions';
+  String get shortcutsViewForumDescription => 'Participate in community discussions';
 
   @override
   String get profileInProgress => 'In Progress';
@@ -5278,19 +5033,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileSystemAndVerification => 'System & Verification';
 
   @override
-  String get profileMyTasksSubtitleText =>
-      'Manage tasks I published and accepted';
+  String get profileMyTasksSubtitleText => 'Manage tasks I published and accepted';
 
   @override
-  String get profileMyPostsSubtitleText =>
-      'Second-hand item transaction records';
+  String get profileMyPostsSubtitleText => 'Second-hand item transaction records';
 
   @override
   String get profileMyForumPosts => 'My Posts';
 
   @override
-  String get profileMyForumPostsSubtitle =>
-      'View discussions I posted in the forum';
+  String get profileMyForumPostsSubtitle => 'View discussions I posted in the forum';
 
   @override
   String get profileMyWalletSubtitleText => 'Balance, recharge and withdrawal';
@@ -5299,23 +5051,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profilePointsCouponsSubtitleText => 'Points details and coupons';
 
   @override
-  String get profileStudentVerificationSubtitleText =>
-      'Get student-exclusive verification badge';
+  String get profileStudentVerificationSubtitleText => 'Get student-exclusive verification badge';
 
   @override
-  String get profileActivitySubtitleText =>
-      'View offline activities I participated in';
+  String get profileActivitySubtitleText => 'View offline activities I participated in';
 
   @override
   String get profileTaskPreferences => 'Task Preferences';
 
   @override
-  String get profileTaskPreferencesSubtitle =>
-      'Personalize recommended content';
+  String get profileTaskPreferencesSubtitle => 'Personalize recommended content';
 
   @override
-  String get profileMyApplicationsSubtitleText =>
-      'Expert/Service provider application status';
+  String get profileMyApplicationsSubtitleText => 'Expert/Service provider application status';
 
   @override
   String get profileSettingsSubtitleText => 'Profile, password and security';
@@ -5324,8 +5072,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profilePaymentAccount => 'Payout Account';
 
   @override
-  String get profilePaymentAccountSubtitle =>
-      'Set up payout account to receive task rewards';
+  String get profilePaymentAccountSubtitle => 'Set up payout account to receive task rewards';
 
   @override
   String get profileNoContactInfo => 'No contact information';
@@ -5367,20 +5114,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myItemsEmptySold => 'No Sold Items';
 
   @override
-  String get myItemsEmptySellingMessage =>
-      'You haven\'t published any second-hand items yet';
+  String get myItemsEmptySellingMessage => 'You haven\'t published any second-hand items yet';
 
   @override
-  String get myItemsEmptyPurchasedMessage =>
-      'You haven\'t purchased any items yet';
+  String get myItemsEmptyPurchasedMessage => 'You haven\'t purchased any items yet';
 
   @override
-  String get myItemsEmptyFavoritesMessage =>
-      'You haven\'t favorited any items yet';
+  String get myItemsEmptyFavoritesMessage => 'You haven\'t favorited any items yet';
 
   @override
-  String get myItemsEmptySoldMessage =>
-      'You haven\'t successfully sold any items yet';
+  String get myItemsEmptySoldMessage => 'You haven\'t successfully sold any items yet';
 
   @override
   String get myItemsStatusSelling => 'For Sale';
@@ -5467,20 +5210,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fleaMarketCategoryOther => 'Other';
 
   @override
-  String get fleaMarketPartialUploadFailed =>
-      'Some images failed to upload, please try again';
+  String get fleaMarketPartialUploadFailed => 'Some images failed to upload, please try again';
 
   @override
-  String get fleaMarketUploadTimeout =>
-      'Image upload timed out, please try again';
+  String get fleaMarketUploadTimeout => 'Image upload timed out, please try again';
 
   @override
-  String get fleaMarketPickImageBusy =>
-      'Image picker is busy, please try again later';
+  String get fleaMarketPickImageBusy => 'Image picker is busy, please try again later';
 
   @override
-  String get fleaMarketFillRequiredFields =>
-      'Please fill in all required fields';
+  String get fleaMarketFillRequiredFields => 'Please fill in all required fields';
 
   @override
   String fleaMarketPurchaseRequestsCount(int param1) {
@@ -5491,8 +5230,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fleaMarketNoPurchaseRequests => 'No Purchase Requests';
 
   @override
-  String get fleaMarketWaitingSellerConfirm =>
-      'Waiting for seller confirmation';
+  String get fleaMarketWaitingSellerConfirm => 'Waiting for seller confirmation';
 
   @override
   String fleaMarketNegotiateAmountFormat(double param1) {
@@ -5506,8 +5244,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fleaMarketPreparing => 'Preparing...';
 
   @override
-  String get fleaMarketSendingNegotiateRequest =>
-      'Sending negotiation request...';
+  String get fleaMarketSendingNegotiateRequest => 'Sending negotiation request...';
 
   @override
   String get fleaMarketProcessingPurchase => 'Processing purchase...';
@@ -5522,8 +5259,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fleaMarketRejectPurchaseConfirmTitle => 'Reject Purchase Request';
 
   @override
-  String get fleaMarketRejectPurchaseConfirmMessage =>
-      'Are you sure you want to reject this purchase request?';
+  String get fleaMarketRejectPurchaseConfirmMessage => 'Are you sure you want to reject this purchase request?';
 
   @override
   String get fleaMarketRequestStatusPending => 'Pending';
@@ -5557,12 +5293,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get fleaMarketRejectCounterOfferConfirmTitle =>
-      'Decline Counter Offer';
+  String get fleaMarketRejectCounterOfferConfirmTitle => 'Decline Counter Offer';
 
   @override
-  String get fleaMarketRejectCounterOfferConfirmMessage =>
-      'Are you sure you want to decline the seller\'s counter offer?';
+  String get fleaMarketRejectCounterOfferConfirmMessage => 'Are you sure you want to decline the seller\'s counter offer?';
 
   @override
   String get fleaMarketCounterOfferAccepted => 'Counter offer accepted';
@@ -5619,8 +5353,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paymentAmount => 'Payment Amount';
 
   @override
-  String get paymentSuccessCompleted =>
-      'Your payment has been successfully completed';
+  String get paymentSuccessCompleted => 'Your payment has been successfully completed';
 
   @override
   String get paymentFailed => 'Payment Failed';
@@ -5644,8 +5377,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get wechatPayCancelPay => 'Cancel Payment';
 
   @override
-  String get wechatPayCancelWarning =>
-      'You will need to initiate payment again if you cancel';
+  String get wechatPayCancelWarning => 'You will need to initiate payment again if you cancel';
 
   @override
   String get wechatPayInvalidLink => 'Invalid payment link';
@@ -5666,8 +5398,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get forumMyPostsEmptyPosted => 'You haven\'t posted any posts yet';
 
   @override
-  String get forumMyPostsEmptyFavorited =>
-      'You haven\'t favorited any posts yet';
+  String get forumMyPostsEmptyFavorited => 'You haven\'t favorited any posts yet';
 
   @override
   String get forumMyPostsEmptyLiked => 'You haven\'t liked any posts yet';
@@ -5691,15 +5422,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get forumRequestSubmitted => 'Request Submitted';
 
   @override
-  String get forumRequestSubmittedMessage =>
-      'Your request has been successfully submitted. The administrator will notify you of the result after review.';
+  String get forumRequestSubmittedMessage => 'Your request has been successfully submitted. The administrator will notify you of the result after review.';
 
   @override
   String get forumRequestInstructions => 'Request Instructions';
 
   @override
-  String get forumRequestInstructionsText =>
-      'Fill in the following information to request a new forum category. Your request will be reviewed by the administrator, and the category will be officially created after approval.';
+  String get forumRequestInstructionsText => 'Fill in the following information to request a new forum category. Your request will be reviewed by the administrator, and the category will be officially created after approval.';
 
   @override
   String get forumCategoryName => 'Category Name';
@@ -5711,15 +5440,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get forumCategoryDescription => 'Category Description';
 
   @override
-  String get forumCategoryDescriptionPlaceholder =>
-      'Please briefly describe the purpose and discussion topics of this category';
+  String get forumCategoryDescriptionPlaceholder => 'Please briefly describe the purpose and discussion topics of this category';
 
   @override
   String get forumCategoryIcon => 'Category Icon (Optional)';
 
   @override
-  String get forumCategoryIconHint =>
-      'You can enter an emoji as the category icon, for example: 💬, 📚, 🎮, etc.';
+  String get forumCategoryIconHint => 'You can enter an emoji as the category icon, for example: 💬, 📚, 🎮, etc.';
 
   @override
   String get forumCategoryIconExample => 'For example: 💬';
@@ -5749,8 +5476,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get forumNoRequests => 'No Requests';
 
   @override
-  String get forumNoRequestsMessage =>
-      'You haven\'t submitted any category requests yet.';
+  String get forumNoRequestsMessage => 'You haven\'t submitted any category requests yet.';
 
   @override
   String get forumNoRequestsFiltered => 'No requests found for this status.';
@@ -5783,8 +5509,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get forumRequestSubmitFailed =>
-      'Submission failed, please check if the input is correct';
+  String get forumRequestSubmitFailed => 'Submission failed, please check if the input is correct';
 
   @override
   String get forumRequestLoginExpired => 'Login expired, please login again';
@@ -5849,27 +5574,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskDetailTaskCompletedTitle => 'Task completed';
 
   @override
-  String get taskDetailTaskCompletedUploadHint =>
-      'You have completed this task. You may upload evidence images or add a text description (optional) for the poster to confirm.';
+  String get taskDetailTaskCompletedUploadHint => 'You have completed this task. You may upload evidence images or add a text description (optional) for the poster to confirm.';
 
   @override
   String get taskDetailSectionTextOptional => 'Text description (optional)';
 
   @override
-  String get taskDetailSectionEvidenceImagesOptional =>
-      'Evidence images (optional)';
+  String get taskDetailSectionEvidenceImagesOptional => 'Evidence images (optional)';
 
   @override
-  String get taskDetailSectionEvidenceFilesOptional =>
-      'Evidence files (optional)';
+  String get taskDetailSectionEvidenceFilesOptional => 'Evidence files (optional)';
 
   @override
-  String get taskDetailSectionCompletionEvidenceOptional =>
-      'Completion evidence (optional)';
+  String get taskDetailSectionCompletionEvidenceOptional => 'Completion evidence (optional)';
 
   @override
-  String get taskDetailTextLimit500 =>
-      'Text description must not exceed 500 characters';
+  String get taskDetailTextLimit500 => 'Text description must not exceed 500 characters';
 
   @override
   String get taskDetailImageLimit5mb5 => 'Max 5MB per image, up to 5 images';
@@ -5892,15 +5612,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskDetailConfirmTaskCompleteAlertTitle => 'Confirm task complete';
 
   @override
-  String get taskDetailConfirmTaskCompleteAlertMessage =>
-      'Are you sure this task is complete? It will be sent to the poster for confirmation.';
+  String get taskDetailConfirmTaskCompleteAlertMessage => 'Are you sure this task is complete? It will be sent to the poster for confirmation.';
 
   @override
   String get taskDetailConfirmTaskCompleteTitle => 'Confirm task complete';
 
   @override
-  String get taskDetailConfirmTaskCompleteHint =>
-      'You have confirmed this task is complete. You may upload evidence images (optional), e.g. screenshots or acceptance records.';
+  String get taskDetailConfirmTaskCompleteHint => 'You have confirmed this task is complete. You may upload evidence images (optional), e.g. screenshots or acceptance records.';
 
   @override
   String get taskDetailConfirmCompleteButton => 'Confirm complete';
@@ -5909,8 +5627,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskDetailPleaseConfirmComplete => 'Please confirm task complete';
 
   @override
-  String get taskDetailAutoConfirmSoon =>
-      'Will auto-confirm soon. Please confirm now.';
+  String get taskDetailAutoConfirmSoon => 'Will auto-confirm soon. Please confirm now.';
 
   @override
   String get taskDetailConfirmNow => 'Confirm now';
@@ -5928,8 +5645,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskDetailDeclineDesignated => 'Decline';
 
   @override
-  String get taskDetailDeclineDesignatedConfirm =>
-      'Are you sure you want to decline this designated task?';
+  String get taskDetailDeclineDesignatedConfirm => 'Are you sure you want to decline this designated task?';
 
   @override
   String get taskDetailAcceptNegotiation => 'Accept';
@@ -5997,8 +5713,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get refundWithdrawApplication => 'Withdraw refund application';
 
   @override
-  String get refundWithdrawApplicationMessage =>
-      'Are you sure you want to withdraw this refund application? This cannot be undone.';
+  String get refundWithdrawApplicationMessage => 'Are you sure you want to withdraw this refund application? This cannot be undone.';
 
   @override
   String get refundWithdrawing => 'Withdrawing...';
@@ -6007,8 +5722,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get refundWithdrawApply => 'Withdraw application';
 
   @override
-  String get refundTaskIncompleteApplyRefund =>
-      'Task incomplete (apply for refund)';
+  String get refundTaskIncompleteApplyRefund => 'Task incomplete (apply for refund)';
 
   @override
   String get refundHistory => 'Refund history';
@@ -6060,8 +5774,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get refundApplyRefund => 'Apply for refund';
 
   @override
-  String get refundApplyRefundHint =>
-      'Please describe the refund reason in detail and upload evidence (e.g. screenshots, chat logs). An admin will review within 3-5 business days.';
+  String get refundApplyRefundHint => 'Please describe the refund reason in detail and upload evidence (e.g. screenshots, chat logs). An admin will review within 3-5 business days.';
 
   @override
   String get refundReasonTypeRequired => 'Refund reason type *';
@@ -6070,8 +5783,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get refundReasonTypePlaceholder => 'Select refund reason type';
 
   @override
-  String get refundPartialAmountTooHigh =>
-      'Partial refund amount cannot be greater than or equal to task amount. Please choose full refund.';
+  String get refundPartialAmountTooHigh => 'Partial refund amount cannot be greater than or equal to task amount. Please choose full refund.';
 
   @override
   String refundAmountExceedsTask(double param1) {
@@ -6079,8 +5791,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get refundAmountMustBePositive =>
-      'Refund amount must be a number greater than 0';
+  String get refundAmountMustBePositive => 'Refund amount must be a number greater than 0';
 
   @override
   String get refundRatioRange => 'Refund percentage must be between 0-100';
@@ -6089,8 +5800,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get refundReasonDetailRequired => 'Refund reason details *';
 
   @override
-  String get refundReasonMinLength =>
-      'Refund reason must be at least 10 characters';
+  String get refundReasonMinLength => 'Refund reason must be at least 10 characters';
 
   @override
   String get refundTypeRequired => 'Refund type *';
@@ -6124,8 +5834,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get refundRebuttalDescription => 'Rebuttal description';
 
   @override
-  String get refundRebuttalMinLength =>
-      'Rebuttal description must be at least 10 characters';
+  String get refundRebuttalMinLength => 'Rebuttal description must be at least 10 characters';
 
   @override
   String get refundUploadLimit5 => 'Up to 5 images or files, max 5MB each';
@@ -6139,8 +5848,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get refundRebuttalHint =>
-      'Please describe the task completion and upload evidence (e.g. screenshots, files). Your rebuttal will help the admin make a fair decision.';
+  String get refundRebuttalHint => 'Please describe the task completion and upload evidence (e.g. screenshots, files). Your rebuttal will help the admin make a fair decision.';
 
   @override
   String get refundHistorySheetTitle => 'Refund history';
@@ -6233,8 +5941,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get refundStatusCancelledFull => 'Refund cancelled';
 
   @override
-  String get refundDescPending =>
-      'Your refund has been submitted. Admin will review within 3-5 business days.';
+  String get refundDescPending => 'Your refund has been submitted. Admin will review within 3-5 business days.';
 
   @override
   String get refundDescProcessing => 'Refund is being processed. Please wait.';
@@ -6245,8 +5952,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get refundDescApprovedGeneric =>
-      'Will be returned to your original payment method in 5-10 business days.';
+  String get refundDescApprovedGeneric => 'Will be returned to your original payment method in 5-10 business days.';
 
   @override
   String refundDescRejectedReason(String param1) {
@@ -6262,8 +5968,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get refundDescCompletedGeneric =>
-      'Refund returned to your original payment method.';
+  String get refundDescCompletedGeneric => 'Refund returned to your original payment method.';
 
   @override
   String get refundDescCancelled => 'Refund cancelled.';
@@ -6293,26 +5998,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskPreferencesTypes => 'Preferred Task Types';
 
   @override
-  String get taskPreferencesTypesDesc =>
-      'Select the task types you are interested in';
+  String get taskPreferencesTypesDesc => 'Select the task types you are interested in';
 
   @override
   String get taskPreferencesLocations => 'Preferred Locations';
 
   @override
-  String get taskPreferencesLocationsDesc =>
-      'Select locations where you prefer to complete tasks';
+  String get taskPreferencesLocationsDesc => 'Select locations where you prefer to complete tasks';
 
   @override
   String get taskPreferencesLevels => 'Preferred Task Levels';
 
   @override
-  String get taskPreferencesLevelsDesc =>
-      'Select the task levels you want to receive';
+  String get taskPreferencesLevelsDesc => 'Select the task levels you want to receive';
 
   @override
-  String get taskPreferencesMinDeadlineDesc =>
-      'Only show tasks with deadline longer than the set days';
+  String get taskPreferencesMinDeadlineDesc => 'Only show tasks with deadline longer than the set days';
 
   @override
   String get vipPleaseSelect => 'Please Select a Plan';
@@ -6348,8 +6049,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskExpertNoApplications => 'No Applications';
 
   @override
-  String get taskExpertNoApplicationsMessage =>
-      'You haven\'t submitted any service applications yet';
+  String get taskExpertNoApplicationsMessage => 'You haven\'t submitted any service applications yet';
 
   @override
   String get taskExpertIntro => 'Task Experts';
@@ -6358,36 +6058,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskExpertIntroTitle => 'Become a Task Expert';
 
   @override
-  String get taskExpertIntroSubtitle =>
-      'Showcase your skills and earn more from completing tasks';
+  String get taskExpertIntroSubtitle => 'Showcase your skills and earn more from completing tasks';
 
   @override
   String get taskExpertBenefit1Title => 'Verified Expert Badge';
 
   @override
-  String get taskExpertBenefit1Desc =>
-      'Stand out with a verified expert badge on your profile';
+  String get taskExpertBenefit1Desc => 'Stand out with a verified expert badge on your profile';
 
   @override
   String get taskExpertBenefit2Title => 'Priority Matching';
 
   @override
-  String get taskExpertBenefit2Desc =>
-      'Get matched with tasks that match your expertise first';
+  String get taskExpertBenefit2Desc => 'Get matched with tasks that match your expertise first';
 
   @override
   String get taskExpertBenefit3Title => 'Higher Earnings';
 
   @override
-  String get taskExpertBenefit3Desc =>
-      'Experts earn up to 20% more on task completions';
+  String get taskExpertBenefit3Desc => 'Experts earn up to 20% more on task completions';
 
   @override
   String get leaderboardScore => 'Score';
 
   @override
-  String get leaderboardApplySuccess =>
-      'Leaderboard application submitted successfully';
+  String get leaderboardApplySuccess => 'Leaderboard application submitted successfully';
 
   @override
   String get leaderboardDescriptionHint => 'Describe this leaderboard';
@@ -6408,15 +6103,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get leaderboardLocation => 'Location';
 
   @override
-  String get leaderboardLocationHint =>
-      'Enter the location for this leaderboard';
+  String get leaderboardLocationHint => 'Enter the location for this leaderboard';
 
   @override
   String get leaderboardApplicationReason => 'Application Reason';
 
   @override
-  String get leaderboardApplicationReasonHint =>
-      'Why do you want to create this leaderboard?';
+  String get leaderboardApplicationReasonHint => 'Why do you want to create this leaderboard?';
 
   @override
   String get leaderboardFillRequired => 'Please fill in all required fields';
@@ -6449,29 +6142,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paymentNoPayments => 'No Payments';
 
   @override
-  String get paymentNoPaymentsMessage =>
-      'You don\'t have any payment records yet';
+  String get paymentNoPaymentsMessage => 'You don\'t have any payment records yet';
 
   @override
   String get paymentNoPayouts => 'No Payouts';
 
   @override
-  String get paymentNoPayoutsMessage =>
-      'You don\'t have any payout records yet';
+  String get paymentNoPayoutsMessage => 'You don\'t have any payout records yet';
 
   @override
   String get paymentExpired => 'Payment Expired';
 
   @override
-  String get paymentExpiredMessage =>
-      'Payment time has expired, please initiate payment again.';
+  String get paymentExpiredMessage => 'Payment time has expired, please initiate payment again.';
 
   @override
   String get paymentCountdownTimeout => 'Payment Timed Out';
 
   @override
-  String get paymentCountdownCompleteInTime =>
-      'Please complete payment within the time limit';
+  String get paymentCountdownCompleteInTime => 'Please complete payment within the time limit';
 
   @override
   String paymentCountdownTimeLeft(String time) {
@@ -6479,20 +6168,16 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get paymentApplePayIOSOnly =>
-      'Apple Pay is only available on iOS devices';
+  String get paymentApplePayIOSOnly => 'Apple Pay is only available on iOS devices';
 
   @override
-  String get paymentApplePayNotSupported =>
-      'Your device does not support Apple Pay, please use another payment method';
+  String get paymentApplePayNotSupported => 'Your device does not support Apple Pay, please use another payment method';
 
   @override
-  String get paymentNetworkConnectionFailed =>
-      'Network connection failed, please check your network and try again.';
+  String get paymentNetworkConnectionFailed => 'Network connection failed, please check your network and try again.';
 
   @override
-  String get paymentRequestTimeout =>
-      'Request timeout, please try again later.';
+  String get paymentRequestTimeout => 'Request timeout, please try again later.';
 
   @override
   String paymentRemainingTime(String param1) {
@@ -6549,8 +6234,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paymentCancelPayment => 'Cancel Payment';
 
   @override
-  String get paymentCancelPaymentConfirm =>
-      'Are you sure you want to cancel payment?';
+  String get paymentCancelPaymentConfirm => 'Are you sure you want to cancel payment?';
 
   @override
   String get paymentContinuePayment => 'Continue Payment';
@@ -6582,8 +6266,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationEmpty => 'No Notifications';
 
   @override
-  String get notificationEmptyMessage =>
-      'You\'re all caught up! No new notifications.';
+  String get notificationEmptyMessage => 'You\'re all caught up! No new notifications.';
 
   @override
   String get notificationAll => 'All Notifications';
@@ -6613,23 +6296,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorUnknownGeneric => 'An unknown error occurred';
 
   @override
-  String get errorInsufficientFunds =>
-      'Insufficient balance. Please change payment method or top up.';
+  String get errorInsufficientFunds => 'Insufficient balance. Please change payment method or top up.';
 
   @override
-  String get errorCardDeclined =>
-      'Card declined. Please change card or contact your bank.';
+  String get errorCardDeclined => 'Card declined. Please change card or contact your bank.';
 
   @override
   String get errorExpiredCard => 'Card expired. Please use a different card.';
 
   @override
-  String get errorCouponPointsLoadTransactionsFailed =>
-      'Failed to load transactions';
+  String get errorCouponPointsLoadTransactionsFailed => 'Failed to load transactions';
 
   @override
-  String get errorCouponPointsLoadMoreTransactionsFailed =>
-      'Failed to load more transactions';
+  String get errorCouponPointsLoadMoreTransactionsFailed => 'Failed to load more transactions';
 
   @override
   String get errorInvalidPaymentAmount => 'Invalid payment amount';
@@ -6644,8 +6323,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorTaskApplicationIdNotFound => 'Application ID not found';
 
   @override
-  String get errorTaskDetailLoadFailed =>
-      'Failed to load task details. Please try again.';
+  String get errorTaskDetailLoadFailed => 'Failed to load task details. Please try again.';
 
   @override
   String get errorTaskApplicationsLoadFailed => 'Failed to load applications.';
@@ -6654,12 +6332,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorTaskReviewsLoadFailed => 'Failed to load reviews.';
 
   @override
-  String get errorTaskApplyFailed =>
-      'Failed to submit application. Please try again.';
+  String get errorTaskApplyFailed => 'Failed to submit application. Please try again.';
 
   @override
-  String get errorTaskCancelApplicationFailed =>
-      'Failed to cancel application.';
+  String get errorTaskCancelApplicationFailed => 'Failed to cancel application.';
 
   @override
   String get errorTaskAcceptApplicantFailed => 'Failed to accept applicant.';
@@ -6668,12 +6344,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorTaskRejectApplicantFailed => 'Failed to reject applicant.';
 
   @override
-  String get errorTaskCompleteFailed =>
-      'Failed to submit completion. Please try again.';
+  String get errorTaskCompleteFailed => 'Failed to submit completion. Please try again.';
 
   @override
-  String get errorTaskConfirmCompletionFailed =>
-      'Failed to confirm completion.';
+  String get errorTaskConfirmCompletionFailed => 'Failed to confirm completion.';
 
   @override
   String get errorTaskCancelFailed => 'Failed to cancel task.';
@@ -6685,8 +6359,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorTaskRefundRequestFailed => 'Failed to submit refund request.';
 
   @override
-  String get errorTaskRefundHistoryLoadFailed =>
-      'Failed to load refund history.';
+  String get errorTaskRefundHistoryLoadFailed => 'Failed to load refund history.';
 
   @override
   String get errorTaskCancelRefundFailed => 'Failed to cancel refund request.';
@@ -6701,28 +6374,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorTaskCounterOfferFailed => 'Failed to submit counter offer.';
 
   @override
-  String get errorTaskRespondCounterOfferFailed =>
-      'Failed to respond to counter offer.';
+  String get errorTaskRespondCounterOfferFailed => 'Failed to respond to counter offer.';
 
   @override
-  String get errorTaskRespondNegotiationFailed =>
-      'Failed to respond to negotiation.';
+  String get errorTaskRespondNegotiationFailed => 'Failed to respond to negotiation.';
 
   @override
-  String get errorTaskVisibilityUpdateFailed =>
-      'Failed to update task visibility.';
+  String get errorTaskVisibilityUpdateFailed => 'Failed to update task visibility.';
 
   @override
-  String get errorTaskStartChatFailed =>
-      'Failed to start chat. Please try again.';
+  String get errorTaskStartChatFailed => 'Failed to start chat. Please try again.';
 
   @override
-  String get errorTaskProposePriceFailed =>
-      'Failed to propose price. Please try again.';
+  String get errorTaskProposePriceFailed => 'Failed to propose price. Please try again.';
 
   @override
-  String get errorTaskConfirmPayFailed =>
-      'Failed to initiate payment. Please try again.';
+  String get errorTaskConfirmPayFailed => 'Failed to initiate payment. Please try again.';
 
   @override
   String get priceExceedsMaximum => 'Price cannot exceed £50,000';
@@ -6731,12 +6398,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorTaskListLoadFailed => 'Failed to load tasks.';
 
   @override
-  String get errorTaskQuoteFailed =>
-      'Failed to submit quote. Please try again.';
+  String get errorTaskQuoteFailed => 'Failed to submit quote. Please try again.';
 
   @override
-  String get errorTaskQuoteAcceptFailed =>
-      'Quote submitted, but automatic acceptance failed. Please contact support.';
+  String get errorTaskQuoteAcceptFailed => 'Quote submitted, but automatic acceptance failed. Please contact support.';
 
   @override
   String get searchTitle => 'Search';
@@ -6765,8 +6430,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationPermissionTitle => 'Notification Permission Required';
 
   @override
-  String get notificationPermissionDescription =>
-      'Stay updated with:\n\n• Task status updates\n• New message alerts\n• Task matching recommendations\n• Promotional notifications';
+  String get notificationPermissionDescription => 'Stay updated with:\n\n• Task status updates\n• New message alerts\n• Task matching recommendations\n• Promotional notifications';
 
   @override
   String get notificationPermissionEnable => 'Enable Notifications';
@@ -6830,8 +6494,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorServerTitle => 'Server Error';
 
   @override
-  String get errorServerMessage =>
-      'Server is temporarily unavailable, please try again later';
+  String get errorServerMessage => 'Server is temporarily unavailable, please try again later';
 
   @override
   String get errorLoadFailedTitle => 'Load Failed';
@@ -6843,22 +6506,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorUnauthorizedTitle => 'Unauthorized';
 
   @override
-  String get errorUnauthorizedMessage =>
-      'You do not have permission to access this content';
+  String get errorUnauthorizedMessage => 'You do not have permission to access this content';
 
   @override
   String get errorContentNotFoundTitle => 'Content Not Found';
 
   @override
-  String get errorContentNotFoundMessage =>
-      'The content you are looking for does not exist or has been removed';
+  String get errorContentNotFoundMessage => 'The content you are looking for does not exist or has been removed';
 
   @override
   String get errorNetworkTitle => 'Network Connection Failed';
 
   @override
-  String get errorNetworkMessage =>
-      'Please check your network connection and try again';
+  String get errorNetworkMessage => 'Please check your network connection and try again';
 
   @override
   String get emptyNoData => 'No Data';
@@ -6870,8 +6530,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get emptyNoMessagesDescription => 'No messages received yet';
 
   @override
-  String get emptyNoTasksDescription =>
-      'No tasks available. Tap below to create a new task';
+  String get emptyNoTasksDescription => 'No tasks available. Tap below to create a new task';
 
   @override
   String get emptyNoSearchResultsTitle => 'No Results Found';
@@ -6888,8 +6547,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get emptyNoFavoritesDescription => 'Your favorites will appear here';
 
   @override
-  String get emptyNoNotificationsDescription =>
-      'Your notifications will appear here';
+  String get emptyNoNotificationsDescription => 'Your notifications will appear here';
 
   @override
   String get sidebarDiscover => 'Discover';
@@ -6916,15 +6574,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get locationGetFailed => 'Failed to get location';
 
   @override
-  String get locationEnableLocationService =>
-      'Please enable location services on your device first';
+  String get locationEnableLocationService => 'Please enable location services on your device first';
 
   @override
   String get locationOpenMapFailed => 'Failed to open map';
 
   @override
-  String get notificationPermissionMessage =>
-      'You have denied notification permission. Please enable it in system settings.';
+  String get notificationPermissionMessage => 'You have denied notification permission. Please enable it in system settings.';
 
   @override
   String get notificationPermissionLater => 'Maybe Later';
@@ -6999,12 +6655,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authConfirmPasswordPlaceholder => 'Enter password again';
 
   @override
-  String get authPasswordRequirement =>
-      'At least 8 characters with letters and numbers';
+  String get authPasswordRequirement => 'At least 8 characters with letters and numbers';
 
   @override
-  String get authPleaseAgreeToTerms =>
-      'Please read and agree to the Terms and Privacy Policy';
+  String get authPleaseAgreeToTerms => 'Please read and agree to the Terms and Privacy Policy';
 
   @override
   String get authPleaseEnterValidEmail => 'Please enter a valid email address';
@@ -7077,8 +6731,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatDeleteChat => 'Delete';
 
   @override
-  String get chatDeletedHint =>
-      'Chat deleted. It will reappear when new messages arrive.';
+  String get chatDeletedHint => 'Chat deleted. It will reappear when new messages arrive.';
 
   @override
   String get chatPinnedHint => 'Chat pinned to top';
@@ -7301,8 +6954,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get customerServiceEndTitle => 'End Conversation';
 
   @override
-  String get customerServiceEndMessage =>
-      'Are you sure you want to end this conversation?';
+  String get customerServiceEndMessage => 'Are you sure you want to end this conversation?';
 
   @override
   String get customerServiceEndButton => 'End';
@@ -7389,8 +7041,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskExpertBook => 'Book';
 
   @override
-  String get createTaskDescPlaceholder =>
-      'Describe task requirements in detail...';
+  String get createTaskDescPlaceholder => 'Describe task requirements in detail...';
 
   @override
   String get createTaskLocationPlaceholder => 'Enter task location';
@@ -7471,8 +7122,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get vipPurchaseConfirm => 'Confirm';
 
   @override
-  String get vipPurchaseRestoreMessage =>
-      'Purchase history checked. Active subscriptions will be restored automatically.';
+  String get vipPurchaseRestoreMessage => 'Purchase history checked. Active subscriptions will be restored automatically.';
 
   @override
   String get vipPurchaseNoPlans => 'No VIP plans available';
@@ -7490,15 +7140,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeStudentVerification => 'Student Verification';
 
   @override
-  String get homeStudentVerificationSubtitle =>
-      'Verify to unlock more benefits';
+  String get homeStudentVerificationSubtitle => 'Verify to unlock more benefits';
 
   @override
   String get homeBecomeExpert => 'Become an Expert';
 
   @override
-  String get homeBecomeExpertSubtitle =>
-      'Showcase skills, get more opportunities';
+  String get homeBecomeExpertSubtitle => 'Showcase skills, get more opportunities';
 
   @override
   String get homeNewUserReward => 'New User Reward';
@@ -7578,8 +7226,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authEmailFormatInvalid => 'Invalid email format';
 
   @override
-  String get authResetPasswordDesc =>
-      'Enter your registered email and we will send a verification code to help you reset your password.';
+  String get authResetPasswordDesc => 'Enter your registered email and we will send a verification code to help you reset your password.';
 
   @override
   String get authCreateAccount => 'Create Account';
@@ -7763,8 +7410,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get createTaskDescHint => 'Describe task requirements in detail...';
 
   @override
-  String get createTaskRewardToBeQuoted =>
-      'To be quoted (leave blank for applicants to quote)';
+  String get createTaskRewardToBeQuoted => 'To be quoted (leave blank for applicants to quote)';
 
   @override
   String get createTaskLocation => 'Location';
@@ -7777,9 +7423,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get createTaskSelectDeadline => 'Select deadline';
-
-  @override
-  String get createTaskCategoryDelivery => 'Delivery';
 
   @override
   String get createTaskCategoryShopping => 'Shopping';
@@ -7812,11 +7455,43 @@ class AppLocalizationsEn extends AppLocalizations {
   String get createTaskCategoryRepair => 'Repair';
 
   @override
+  String get createTaskCategoryPickupDropoff => 'Pickup & Dropoff';
+
+  @override
+  String get createTaskCategoryCooking => 'Cooking';
+
+  @override
+  String get createTaskCategoryLanguageHelp => 'Language Help';
+
+  @override
+  String get createTaskCategoryGovernment => 'Official Affairs';
+
+  @override
+  String get createTaskCategoryPetCare => 'Pet Care';
+
+  @override
+  String get createTaskCategoryErrand => 'Errand';
+
+  @override
+  String get createTaskCategoryAccompany => 'Accompany';
+
+  @override
+  String get createTaskCategoryDigital => 'Digital & IT';
+
+  @override
+  String get createTaskCategoryRentalHousing => 'Rental & Housing';
+
+  @override
+  String get createTaskCategoryCampusLife => 'Campus Life';
+
+  @override
+  String get createTaskCategorySecondHand => 'Second-hand';
+
+  @override
   String get createTaskCategoryOther => 'Other';
 
   @override
-  String get profileDirectRequestValidation =>
-      'Please fill in the title and a valid price (≥£1)';
+  String get profileDirectRequestValidation => 'Please fill in the title and a valid price (≥£1)';
 
   @override
   String get profileDirectRequestHintLocation => 'Location';
@@ -7855,8 +7530,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskTypeOther => 'Other';
 
   @override
-  String get taskTypeCampusLifeNeedVerify =>
-      'Publishing \"Campus Life\" tasks requires student email verification';
+  String get taskTypeCampusLifeNeedVerify => 'Publishing \"Campus Life\" tasks requires student email verification';
 
   @override
   String get taskDetailNoImages => 'No images';
@@ -7873,8 +7547,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get forumNoLeaderboardMessage => 'No leaderboard available';
 
   @override
-  String get forumNoPostsHint =>
-      'No posts yet. Tap below to create the first one!';
+  String get forumNoPostsHint => 'No posts yet. Tap below to create the first one!';
 
   @override
   String get forumEnterTitle => 'Enter title';
@@ -7946,8 +7619,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletViewAll => 'View All';
 
   @override
-  String get walletTransactionsDesc =>
-      'Your points transaction history will appear here';
+  String get walletTransactionsDesc => 'Your points transaction history will appear here';
 
   @override
   String get walletNoCouponsDesc => 'You don\'t have any coupons';
@@ -8068,8 +7740,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fleaMarketCategoryLabel => 'Category';
 
   @override
-  String get fleaMarketNoItemsHint =>
-      'No items yet. Tap below to list the first one!';
+  String get fleaMarketNoItemsHint => 'No items yet. Tap below to list the first one!';
 
   @override
   String get chatNoMessages => 'No messages yet. Start a conversation!';
@@ -8081,8 +7752,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatTaskClosed => 'Task Closed';
 
   @override
-  String get chatTaskClosedHint =>
-      'This task has been closed, messages are disabled';
+  String get chatTaskClosedHint => 'This task has been closed, messages are disabled';
 
   @override
   String get chatTaskCompletedConfirm => 'Task completed, please confirm.';
@@ -8223,8 +7893,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get leaderboardNoLeaderboardsMessage => 'No leaderboards available';
 
   @override
-  String get leaderboardNoCompetitorsHint =>
-      'No competitors yet. Tap below to submit the first one!';
+  String get leaderboardNoCompetitorsHint => 'No competitors yet. Tap below to submit the first one!';
 
   @override
   String leaderboardNetVotesCount(int count) {
@@ -8255,8 +7924,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationInteractionMessages => 'Interactions';
 
   @override
-  String get notificationNoTaskChatDesc =>
-      'Accept or post a task to start chatting';
+  String get notificationNoTaskChatDesc => 'Accept or post a task to start chatting';
 
   @override
   String get taskExpertDetailTitle => 'Expert Details';
@@ -8265,8 +7933,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskExpertExpertNotExist => 'Expert not found';
 
   @override
-  String get taskExpertExpertNotExistDesc =>
-      'This expert does not exist or has been removed';
+  String get taskExpertExpertNotExistDesc => 'This expert does not exist or has been removed';
 
   @override
   String get taskExpertBio => 'Bio';
@@ -8278,8 +7945,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskExpertProvidedServices => 'Services Provided';
 
   @override
-  String get taskExpertNoServicesDesc =>
-      'This expert hasn\'t listed any services yet';
+  String get taskExpertNoServicesDesc => 'This expert hasn\'t listed any services yet';
 
   @override
   String get taskExpertAccepted => 'Accepted';
@@ -8291,16 +7957,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskExpertAppliedStatus => 'Applied';
 
   @override
-  String get taskExpertApplicationPending =>
-      'Your expert application is under review';
+  String get taskExpertApplicationPending => 'Your expert application is under review';
 
   @override
-  String get taskExpertApplicationApproved =>
-      'Your expert application has been approved!';
+  String get taskExpertApplicationApproved => 'Your expert application has been approved!';
 
   @override
-  String get taskExpertApplicationRejected =>
-      'Your expert application was not approved';
+  String get taskExpertApplicationRejected => 'Your expert application was not approved';
 
   @override
   String taskExpertServiceCount(int count) {
@@ -8321,85 +7984,73 @@ class AppLocalizationsEn extends AppLocalizations {
   String get infoFAQAccountQ1 => 'How do I register an account?';
 
   @override
-  String get infoFAQAccountA1 =>
-      'You can register using your email address or phone number. Click \'Register\' on the login page and follow the instructions.';
+  String get infoFAQAccountA1 => 'You can register using your email address or phone number. Click \'Register\' on the login page and follow the instructions.';
 
   @override
   String get infoFAQAccountQ2 => 'How do I reset my password?';
 
   @override
-  String get infoFAQAccountA2 =>
-      'Click \'Forgot Password\' on the login page, enter your registered email and follow the verification steps to reset it.';
+  String get infoFAQAccountA2 => 'Click \'Forgot Password\' on the login page, enter your registered email and follow the verification steps to reset it.';
 
   @override
   String get infoFAQAccountQ3 => 'How do I edit my profile?';
 
   @override
-  String get infoFAQAccountA3 =>
-      'Go to Profile > Edit Profile to update your avatar, nickname, bio and other information.';
+  String get infoFAQAccountA3 => 'Go to Profile > Edit Profile to update your avatar, nickname, bio and other information.';
 
   @override
   String get infoFAQAccountQ4 => 'How do I delete my account?';
 
   @override
-  String get infoFAQAccountA4 =>
-      'Go to Settings > Account Security > Delete Account. Please note this action is irreversible.';
+  String get infoFAQAccountA4 => 'Go to Settings > Account Security > Delete Account. Please note this action is irreversible.';
 
   @override
   String get infoFAQTaskQ1 => 'How do I publish a task?';
 
   @override
-  String get infoFAQTaskA1 =>
-      'Tap the \'+\' button at the bottom of the screen, select \'Publish Task\', fill in the details and submit.';
+  String get infoFAQTaskA1 => 'Tap the \'+\' button at the bottom of the screen, select \'Publish Task\', fill in the details and submit.';
 
   @override
   String get infoFAQTaskQ2 => 'How do I accept a task?';
 
   @override
-  String get infoFAQTaskA2 =>
-      'Browse available tasks, tap on one to view details, then click \'Accept Task\' to start.';
+  String get infoFAQTaskA2 => 'Browse available tasks, tap on one to view details, then click \'Accept Task\' to start.';
 
   @override
   String get infoFAQTaskQ3 => 'How do I cancel a task?';
 
   @override
-  String get infoFAQTaskA3 =>
-      'Go to the task detail page and click \'Cancel Task\'. Please note that cancellation policies may apply.';
+  String get infoFAQTaskA3 => 'Go to the task detail page and click \'Cancel Task\'. Please note that cancellation policies may apply.';
 
   @override
   String get infoFAQTaskQ4 => 'What if there is a dispute?';
 
   @override
-  String get infoFAQTaskA4 =>
-      'You can raise a dispute via the task chat page. Our customer service team will assist in resolving it.';
+  String get infoFAQTaskA4 => 'You can raise a dispute via the task chat page. Our customer service team will assist in resolving it.';
 
   @override
   String get infoFAQPaymentQ1 => 'What payment methods are supported?';
 
   @override
-  String get infoFAQPaymentA1 =>
-      'We support Stripe (credit/debit cards), Apple Pay, and WeChat Pay.';
+  String get infoFAQPaymentA1 => 'We support Stripe (credit/debit cards), Apple Pay, and WeChat Pay.';
 
   @override
   String get infoFAQPaymentQ2 => 'How does the escrow system work?';
 
   @override
-  String get infoFAQPaymentA2 =>
-      'When you pay for a task, the funds are held securely. The helper receives payment only after you confirm task completion.';
+  String get infoFAQPaymentA2 => 'When you pay for a task, the funds are held securely. The helper receives payment only after you confirm task completion.';
 
   @override
   String get infoFAQPaymentQ3 => 'How do I request a refund?';
 
   @override
-  String get infoFAQPaymentA3 =>
-      'Go to the task detail page and click \'Request Refund\'. Provide a reason and our team will review it within 1-3 business days.';
+  String get infoFAQPaymentA3 => 'Go to the task detail page and click \'Request Refund\'. Provide a reason and our team will review it within 1-3 business days.';
 
   @override
   String get infoFAQPaymentQ4 => 'How do I withdraw my earnings?';
 
   @override
-  String get infoFAQPaymentA4 =>
-      'Go to Wallet > Withdraw, connect your Stripe account and withdraw to your bank account.';
+  String get infoFAQPaymentA4 => 'Go to Wallet > Withdraw, connect your Stripe account and withdraw to your bank account.';
 
   @override
   String get vipPlanFeatureMonthly1 => 'Priority task recommendation';
@@ -8440,19 +8091,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatImagePlaceholder => '[Image]';
 
   @override
-  String get studentVerificationEmailLocked =>
-      'Email is locked, please wait for review to complete';
+  String get studentVerificationEmailLocked => 'Email is locked, please wait for review to complete';
 
   @override
-  String get studentVerificationPending =>
-      'Verification under review, please check your email and complete verification';
+  String get studentVerificationPending => 'Verification under review, please check your email and complete verification';
 
   @override
   String get purchaseFailed => 'Purchase failed, please try again later.';
 
   @override
-  String get restorePurchaseFailed =>
-      'Restore purchase failed, please try again later.';
+  String get restorePurchaseFailed => 'Restore purchase failed, please try again later.';
 
   @override
   String get onboardingTaskTypeErrand => 'Errand Running';
@@ -8518,27 +8166,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsLanguageChinese => '中文';
 
   @override
-  String get infoTermsContent =>
-      'Link²Ur Terms of Service\n\nLast updated: January 1, 2024\n\n1. Service Overview\nLink²Ur is a UK life mutual-aid platform designed to help users publish and accept various life service tasks.\n\n2. User Responsibilities\n- Users must provide truthful and accurate personal information\n- Users must comply with platform rules and applicable laws\n- Users are responsible for the content they publish\n\n3. Platform Responsibilities\n- The platform provides information intermediary services\n- The platform implements escrow protection for transaction funds\n- The platform reserves the right to take action against violations\n\n4. Payment & Settlement\n- All payments are processed through third-party payment platforms\n- Tasks are automatically settled upon completion\n- The platform charges reasonable service fees\n\n5. Privacy Protection\nPlease refer to our Privacy Policy for detailed information.\n\n6. Disclaimer\nAs an information intermediary, the platform does not bear direct responsibility for transactions between users.\n\nIf you have any questions, please contact our customer service team.';
+  String get infoTermsContent => 'Link²Ur Terms of Service\n\nLast updated: January 1, 2024\n\n1. Service Overview\nLink²Ur is a UK life mutual-aid platform designed to help users publish and accept various life service tasks.\n\n2. User Responsibilities\n- Users must provide truthful and accurate personal information\n- Users must comply with platform rules and applicable laws\n- Users are responsible for the content they publish\n\n3. Platform Responsibilities\n- The platform provides information intermediary services\n- The platform implements escrow protection for transaction funds\n- The platform reserves the right to take action against violations\n\n4. Payment & Settlement\n- All payments are processed through third-party payment platforms\n- Tasks are automatically settled upon completion\n- The platform charges reasonable service fees\n\n5. Privacy Protection\nPlease refer to our Privacy Policy for detailed information.\n\n6. Disclaimer\nAs an information intermediary, the platform does not bear direct responsibility for transactions between users.\n\nIf you have any questions, please contact our customer service team.';
 
   @override
-  String get infoPrivacyContent =>
-      'Link²Ur Privacy Policy\n\nLast updated: January 1, 2024\n\n1. Information Collection\nWe collect the following types of information:\n- Registration information (name, email, etc.)\n- Location information (for nearby task recommendations)\n- Device information (for push notifications)\n\n2. Information Usage\nWe use your information to:\n- Provide and improve services\n- Personalized recommendations\n- Ensure transaction security\n\n3. Information Storage & Protection\n- Data is stored on secure servers\n- Encryption technology is used to protect data transmission\n- Regular security audits are conducted\n\n4. Information Sharing\nWe do not sell your personal information. We only share in the following cases:\n- With your consent\n- Legal requirements\n- Necessary for service provision\n\n5. Cookie Policy\nWe use cookies to improve user experience.\n\n6. Your Rights\n- Access and modify personal information\n- Delete account\n- Unsubscribe from notifications\n\nFor privacy-related questions, please contact privacy@link2ur.com';
+  String get infoPrivacyContent => 'Link²Ur Privacy Policy\n\nLast updated: January 1, 2024\n\n1. Information Collection\nWe collect the following types of information:\n- Registration information (name, email, etc.)\n- Location information (for nearby task recommendations)\n- Device information (for push notifications)\n\n2. Information Usage\nWe use your information to:\n- Provide and improve services\n- Personalized recommendations\n- Ensure transaction security\n\n3. Information Storage & Protection\n- Data is stored on secure servers\n- Encryption technology is used to protect data transmission\n- Regular security audits are conducted\n\n4. Information Sharing\nWe do not sell your personal information. We only share in the following cases:\n- With your consent\n- Legal requirements\n- Necessary for service provision\n\n5. Cookie Policy\nWe use cookies to improve user experience.\n\n6. Your Rights\n- Access and modify personal information\n- Delete account\n- Unsubscribe from notifications\n\nFor privacy-related questions, please contact privacy@link2ur.com';
 
   @override
-  String get infoCookieContent =>
-      'Link²Ur Cookie Policy\n\nWe use cookies and similar technologies to improve your experience.\n\n1. What are Cookies\nCookies are small text files stored on your device.\n\n2. How We Use Cookies\n- Essential Cookies: Maintain login status\n- Functional Cookies: Remember preferences\n- Analytics Cookies: Improve service quality\n\n3. Managing Cookies\nYou can manage cookie preferences in your device settings.';
+  String get infoCookieContent => 'Link²Ur Cookie Policy\n\nWe use cookies and similar technologies to improve your experience.\n\n1. What are Cookies\nCookies are small text files stored on your device.\n\n2. How We Use Cookies\n- Essential Cookies: Maintain login status\n- Functional Cookies: Remember preferences\n- Analytics Cookies: Improve service quality\n\n3. Managing Cookies\nYou can manage cookie preferences in your device settings.';
 
   @override
-  String get infoCommunityGuidelinesContent =>
-      'Link²Ur Community Guidelines\n\nEffective Date: March 2026\n\n1. Content Standards\n- Respectful Communication: No personal attacks, insults, or discriminatory speech\n- Truthfulness: No false, misleading, or fraudulent information\n- Legal Compliance: No illegal or infringing content\n- Safety: No content endangering user safety\n\n2. Forum Conduct Rules\n- Post in the appropriate school section\n- Replies should be relevant; no spamming\n- No commercial ads or academic dishonesty content\n\n3. Task and Transaction Rules\n- Task descriptions must be clear and accurate\n- Reviews must be based on genuine experiences\n- No fake positive or malicious negative reviews\n\n4. Reporting and Appeals\n- Click \'Report\' to report violating content\n- Appeal penalties within 14 days\n\n5. Enforcement\nReminder/Warning → Content Removal → Temporary Restriction → Account Suspension → Permanent Ban\n\nFor questions contact: info@link2ur.com';
+  String get infoCommunityGuidelinesContent => 'Link²Ur Community Guidelines\n\nEffective Date: March 2026\n\n1. Content Standards\n- Respectful Communication: No personal attacks, insults, or discriminatory speech\n- Truthfulness: No false, misleading, or fraudulent information\n- Legal Compliance: No illegal or infringing content\n- Safety: No content endangering user safety\n\n2. Forum Conduct Rules\n- Post in the appropriate school section\n- Replies should be relevant; no spamming\n- No commercial ads or academic dishonesty content\n\n3. Task and Transaction Rules\n- Task descriptions must be clear and accurate\n- Reviews must be based on genuine experiences\n- No fake positive or malicious negative reviews\n\n4. Reporting and Appeals\n- Click \'Report\' to report violating content\n- Appeal penalties within 14 days\n\n5. Enforcement\nReminder/Warning → Content Removal → Temporary Restriction → Account Suspension → Permanent Ban\n\nFor questions contact: info@link2ur.com';
 
   @override
   String get serviceNegotiatePrice => 'Price Negotiation';
 
   @override
-  String get serviceNegotiatePriceHint =>
-      'Propose a different price to the expert';
+  String get serviceNegotiatePriceHint => 'Propose a different price to the expert';
 
   @override
   String get serviceSelectDeadline => 'Select Deadline';
@@ -8583,15 +8226,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get publishAiAssistTitle => 'Not sure what to write? Ask AI';
 
   @override
-  String get publishAiAssistSubtitle =>
-      'Describe your needs, AI helps you draft';
+  String get publishAiAssistSubtitle => 'Describe your needs, AI helps you draft';
 
   @override
   String get publishRelatedContent => 'Related Content';
 
   @override
-  String get publishSearchHint =>
-      'Search services, activities, items, leaderboards...';
+  String get publishSearchHint => 'Search services, activities, items, leaderboards...';
 
   @override
   String get publishRelatedToMe => 'Related to me';
@@ -8669,12 +8310,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get validatorPasswordRequired => 'Please enter password';
 
   @override
-  String get validatorPasswordMinLength =>
-      'Password must be at least 8 characters';
+  String get validatorPasswordMinLength => 'Password must be at least 8 characters';
 
   @override
-  String get validatorPasswordFormat =>
-      'Password must contain both letters and numbers';
+  String get validatorPasswordFormat => 'Password must contain both letters and numbers';
 
   @override
   String get validatorConfirmPasswordRequired => 'Please confirm password';
@@ -8691,19 +8330,16 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get validatorCodeDigitsOnly =>
-      'Verification code must contain only digits';
+  String get validatorCodeDigitsOnly => 'Verification code must contain only digits';
 
   @override
   String get validatorUsernameRequired => 'Please enter username';
 
   @override
-  String get validatorUsernameMinLength =>
-      'Username must be at least 2 characters';
+  String get validatorUsernameMinLength => 'Username must be at least 2 characters';
 
   @override
-  String get validatorUsernameMaxLength =>
-      'Username must be at most 20 characters';
+  String get validatorUsernameMaxLength => 'Username must be at most 20 characters';
 
   @override
   String get validatorTitleRequired => 'Please enter title';
@@ -8797,8 +8433,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationPermTitle => 'Enable Push Notifications';
 
   @override
-  String get notificationPermDesc =>
-      'Stay updated with:\n\n• Task status updates\n• New message alerts\n• Task match recommendations\n• Deals & promotions';
+  String get notificationPermDesc => 'Stay updated with:\n\n• Task status updates\n• New message alerts\n• Task match recommendations\n• Deals & promotions';
 
   @override
   String get notificationPermEnable => 'Enable Notifications';
@@ -8807,12 +8442,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationPermSkip => 'Skip for Now';
 
   @override
-  String get notificationPermSettingsTitle =>
-      'Notification Permission Required';
+  String get notificationPermSettingsTitle => 'Notification Permission Required';
 
   @override
-  String get notificationPermSettingsDesc =>
-      'You have denied notification permission. Please enable it manually in system settings.';
+  String get notificationPermSettingsDesc => 'You have denied notification permission. Please enable it manually in system settings.';
 
   @override
   String get notificationPermSettingsLater => 'Later';
@@ -8893,8 +8526,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get actionTaskCancelled => 'Task cancelled';
 
   @override
-  String get actionCancelRequestSubmitted =>
-      'Cancel request submitted, awaiting review';
+  String get actionCancelRequestSubmitted => 'Cancel request submitted, awaiting review';
 
   @override
   String get actionReviewSubmitted => 'Review submitted';
@@ -8954,8 +8586,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get actionLeaderboardSubmitted => 'Submitted successfully';
 
   @override
-  String get actionVerificationSubmitted =>
-      'Submitted, please check your email for verification';
+  String get actionVerificationSubmitted => 'Submitted, please check your email for verification';
 
   @override
   String get actionVerificationSuccess => 'Verification successful';
@@ -9096,8 +8727,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get supportChatConnectButton => 'Connect';
 
   @override
-  String get supportChatHumanOffline =>
-      'No agents online. Email support@link2ur.com';
+  String get supportChatHumanOffline => 'No agents online. Email support@link2ur.com';
 
   @override
   String get supportChatConnected => 'Human Support';
@@ -9151,8 +8781,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiChatWelcomeSubtitle => 'How can I help you?';
 
   @override
-  String get aiChatWelcomeIntro =>
-      'I\'m Link2Ur\'s AI assistant. I can help you check task status, search tasks, answer platform rules, view points and coupons, and more. Type your question below or tap a quick question to get started.';
+  String get aiChatWelcomeIntro => 'I\'m Link2Ur\'s AI assistant. I can help you check task status, search tasks, answer platform rules, view points and coupons, and more. Type your question below or tap a quick question to get started.';
 
   @override
   String get aiChatQuickStart => 'Quick start';
@@ -9229,19 +8858,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get toolCallLoadingGetPlatformFaq => 'Looking up FAQ…';
 
   @override
-  String get toolCallLoadingCheckCsAvailability =>
-      'Checking if support is online…';
+  String get toolCallLoadingCheckCsAvailability => 'Checking if support is online…';
 
   @override
-  String get toolCallLoadingGetMyPointsAndCoupons =>
-      'Loading points & coupons…';
+  String get toolCallLoadingGetMyPointsAndCoupons => 'Loading points & coupons…';
 
   @override
   String get toolCallLoadingListActivities => 'Loading activities…';
 
   @override
-  String get toolCallLoadingGetMyNotificationsSummary =>
-      'Loading notifications…';
+  String get toolCallLoadingGetMyNotificationsSummary => 'Loading notifications…';
 
   @override
   String get toolCallLoadingListMyForumPosts => 'Loading your posts…';
@@ -9286,8 +8912,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get toolCallLoadingGetMyVipStatus => 'Checking VIP status…';
 
   @override
-  String get toolCallLoadingGetMyStudentVerification =>
-      'Checking verification…';
+  String get toolCallLoadingGetMyStudentVerification => 'Checking verification…';
 
   @override
   String get toolCallLoadingGetMyCheckinStatus => 'Checking check-in…';
@@ -9341,8 +8966,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get toolCallLoadingListMyApplications => 'Loading your applications…';
 
   @override
-  String get toolCallLoadingListMyServiceApplications =>
-      'Loading service applications…';
+  String get toolCallLoadingListMyServiceApplications => 'Loading service applications…';
 
   @override
   String get toolCallLoadingListMyActivities => 'Loading your activities…';
@@ -9450,8 +9074,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get expertApplicationsEmpty => 'No Applications';
 
   @override
-  String get expertApplicationsEmptyMessage =>
-      'You haven\'t received any service applications yet.';
+  String get expertApplicationsEmptyMessage => 'You haven\'t received any service applications yet.';
 
   @override
   String get expertApplicationApprove => 'Approve';
@@ -9472,43 +9095,37 @@ class AppLocalizationsEn extends AppLocalizations {
   String get expertApplicationCounterOfferSent => 'Counter offer sent';
 
   @override
-  String get expertApplicationActionFailed =>
-      'Operation failed, please try again';
+  String get expertApplicationActionFailed => 'Operation failed, please try again';
 
   @override
   String get expertApplicationRejectReason => 'Reject Reason (Optional)';
 
   @override
-  String get expertApplicationRejectReasonHint =>
-      'Please enter the reason for rejection…';
+  String get expertApplicationRejectReasonHint => 'Please enter the reason for rejection…';
 
   @override
   String get expertApplicationCounterPrice => 'Your Price';
 
   @override
-  String get expertApplicationCounterPriceHint =>
-      'Enter your counter offer price';
+  String get expertApplicationCounterPriceHint => 'Enter your counter offer price';
 
   @override
   String get expertApplicationCounterMessage => 'Message (Optional)';
 
   @override
-  String get expertApplicationCounterMessageHint =>
-      'Add a note about your counter offer…';
+  String get expertApplicationCounterMessageHint => 'Add a note about your counter offer…';
 
   @override
   String get expertApplicationConfirmApprove => 'Confirm Approve';
 
   @override
-  String get expertApplicationConfirmApproveMessage =>
-      'Are you sure you want to approve this application? A task and payment will be created.';
+  String get expertApplicationConfirmApproveMessage => 'Are you sure you want to approve this application? A task and payment will be created.';
 
   @override
   String get expertApplicationConfirmReject => 'Confirm Reject';
 
   @override
-  String get expertApplicationConfirmRejectMessage =>
-      'Are you sure you want to reject this application?';
+  String get expertApplicationConfirmRejectMessage => 'Are you sure you want to reject this application?';
 
   @override
   String get expertApplicationStatusPending => 'Pending';
@@ -9572,8 +9189,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonCurrencySymbol => '£ ';
 
   @override
-  String get forumDeletePostConfirm =>
-      'Are you sure you want to delete this post? This action cannot be undone.';
+  String get forumDeletePostConfirm => 'Are you sure you want to delete this post? This action cannot be undone.';
 
   @override
   String get forumPostDeleted => 'Post deleted';
@@ -9585,19 +9201,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get forumReplyDeleted => 'Reply deleted';
 
   @override
-  String get forumDeleteReplyConfirm =>
-      'Are you sure you want to delete this reply?';
+  String get forumDeleteReplyConfirm => 'Are you sure you want to delete this reply?';
 
   @override
-  String get fleaMarketDeleteItemConfirm =>
-      'Are you sure you want to delete this listing? This action cannot be undone.';
+  String get fleaMarketDeleteItemConfirm => 'Are you sure you want to delete this listing? This action cannot be undone.';
 
   @override
   String get taskEvidenceTitle => 'Completion Evidence';
 
   @override
-  String get taskEvidenceHint =>
-      'You have completed this task. You may upload evidence images or add a text description (optional) for the poster to confirm.';
+  String get taskEvidenceHint => 'You have completed this task. You may upload evidence images or add a text description (optional) for the poster to confirm.';
 
   @override
   String get taskEvidenceTextLabel => 'Text description (optional)';
@@ -9618,8 +9231,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskEvidenceUploading => 'Uploading images...';
 
   @override
-  String get stripeSetupRequired =>
-      'Please set up your payout account before applying for tasks.';
+  String get stripeSetupRequired => 'Please set up your payout account before applying for tasks.';
 
   @override
   String get stripeSetupAction => 'Set up now';
@@ -9645,12 +9257,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get profileEmailRequired =>
-      'Email is required to send verification code';
+  String get profileEmailRequired => 'Email is required to send verification code';
 
   @override
-  String get profilePhoneRequired =>
-      'Phone number is required to send verification code';
+  String get profilePhoneRequired => 'Phone number is required to send verification code';
 
   @override
   String get profileEmailUnchanged => 'Please enter a different email address';
@@ -9659,12 +9269,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profilePhoneUnchanged => 'Please enter a different phone number';
 
   @override
-  String get profileEmailCodeRequired =>
-      'Please enter the email verification code';
+  String get profileEmailCodeRequired => 'Please enter the email verification code';
 
   @override
-  String get profilePhoneCodeRequired =>
-      'Please enter the phone verification code';
+  String get profilePhoneCodeRequired => 'Please enter the phone verification code';
 
   @override
   String get profileNormalizePhoneHint => 'UK format: 07XXX or +44XXX';
@@ -9730,8 +9338,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get publishRelatedContentOptional =>
-      'Related Content (optional, e.g. services, activities, products, etc.)';
+  String get publishRelatedContentOptional => 'Related Content (optional, e.g. services, activities, products, etc.)';
 
   @override
   String get aiChatLoadConversationsFailed => 'Failed to load conversations';
@@ -9743,8 +9350,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiChatLoadHistoryFailed => 'Failed to load message history';
 
   @override
-  String get aiChatCreateConversationRetry =>
-      'Failed to create conversation, please retry';
+  String get aiChatCreateConversationRetry => 'Failed to create conversation, please retry';
 
   @override
   String get aiChatResponseTimeout => 'AI response timeout, please try again';
@@ -9765,15 +9371,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatSendImageFailed => 'Failed to send image';
 
   @override
-  String get taskRefundAmountInvalid =>
-      'Refund amount must be greater than 0 and not exceed the task reward';
+  String get taskRefundAmountInvalid => 'Refund amount must be greater than 0 and not exceed the task reward';
 
   @override
   String get taskNegotiationInvalidAction => 'Invalid negotiation action';
 
   @override
-  String get paymentSessionExpired =>
-      'Payment session expired, please go back and try again';
+  String get paymentSessionExpired => 'Payment session expired, please go back and try again';
 
   @override
   String get commonUnknownError => 'Unknown error';
@@ -9827,15 +9431,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskDetailCounterOfferHint => 'Enter your proposed price (GBP)';
 
   @override
-  String get taskDetailCounterOfferSent =>
-      'Counter-offer sent, waiting for response';
+  String get taskDetailCounterOfferSent => 'Counter-offer sent, waiting for response';
 
   @override
   String get taskDetailCounterOfferPending => 'Counter-offer pending';
 
   @override
-  String get taskDetailPosterCounterOfferTitle =>
-      'Taker proposed a counter-offer';
+  String get taskDetailPosterCounterOfferTitle => 'Taker proposed a counter-offer';
 
   @override
   String get taskDetailPosterCounterOfferPrice => 'Proposed price';
@@ -9856,8 +9458,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonDiscardChanges => 'Discard Changes?';
 
   @override
-  String get commonDiscardChangesMessage =>
-      'You have unsaved changes. Are you sure you want to discard them?';
+  String get commonDiscardChangesMessage => 'You have unsaved changes. Are you sure you want to discard them?';
 
   @override
   String get commonDiscard => 'Discard';
@@ -9872,8 +9473,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskDetailShowOnProfile => 'Show on my profile';
 
   @override
-  String get taskDetailShowOnProfileDesc =>
-      'Display this completed task on your public profile';
+  String get taskDetailShowOnProfileDesc => 'Display this completed task on your public profile';
 
   @override
   String get taskDetailVisibilityUpdated => 'Profile visibility updated';
@@ -9888,12 +9488,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get actionPriceProposed => 'Price proposal sent';
 
   @override
-  String get contentMaskedHint =>
-      'Some content has been automatically processed. Please use in-app chat for communication.';
+  String get contentMaskedHint => 'Some content has been automatically processed. Please use in-app chat for communication.';
 
   @override
-  String get contentUnderReviewHint =>
-      'Your content has been submitted and is pending review.';
+  String get contentUnderReviewHint => 'Your content has been submitted and is pending review.';
 
   @override
   String get contentRejectedHint => 'Your content did not pass review.';
@@ -9944,8 +9542,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fleaMarketErrorPurchaseFailed => 'Purchase failed';
 
   @override
-  String get fleaMarketErrorSendPurchaseRequestFailed =>
-      'Failed to send purchase request';
+  String get fleaMarketErrorSendPurchaseRequestFailed => 'Failed to send purchase request';
 
   @override
   String get fleaMarketErrorOperationFailed => 'Operation failed';
@@ -9957,12 +9554,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fleaMarketErrorReportFailed => 'Report failed';
 
   @override
-  String get fleaMarketErrorGetMyRelatedFailed =>
-      'Failed to load my related items';
+  String get fleaMarketErrorGetMyRelatedFailed => 'Failed to load my related items';
 
   @override
-  String get fleaMarketErrorGetPurchaseHistoryFailed =>
-      'Failed to load purchase history';
+  String get fleaMarketErrorGetPurchaseHistoryFailed => 'Failed to load purchase history';
 
   @override
   String get fleaMarketErrorGetFavoritesFailed => 'Failed to load favorites';
@@ -9989,8 +9584,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fleaMarketErrorDeleteFailed => 'Failed to delete item';
 
   @override
-  String get fleaMarketErrorGetPurchaseRequestsFailed =>
-      'Failed to load purchase requests';
+  String get fleaMarketErrorGetPurchaseRequestsFailed => 'Failed to load purchase requests';
 
   @override
   String get fleaMarketErrorAcceptFailed => 'Failed to accept purchase request';
@@ -10002,23 +9596,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fleaMarketErrorCounterOfferFailed => 'Failed to counter-offer';
 
   @override
-  String get fleaMarketErrorRespondCounterOfferFailed =>
-      'Failed to respond to counter-offer';
+  String get fleaMarketErrorRespondCounterOfferFailed => 'Failed to respond to counter-offer';
 
   @override
   String get errorReviewTaskNotCompleted => 'Task is not completed yet';
 
   @override
-  String get errorReviewNotParticipant =>
-      'You are not a participant of this task';
+  String get errorReviewNotParticipant => 'You are not a participant of this task';
 
   @override
-  String get errorForumCreatePostFailed =>
-      'Failed to publish post, please try again';
+  String get errorForumCreatePostFailed => 'Failed to publish post, please try again';
 
   @override
-  String get errorActivityLoadFailed =>
-      'Failed to load activities, please try again';
+  String get errorActivityLoadFailed => 'Failed to load activities, please try again';
 
   @override
   String get errorActivityLoadMoreFailed => 'Failed to load more activities';
@@ -10027,22 +9617,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorActivityRefreshFailed => 'Failed to refresh activities';
 
   @override
-  String get errorActivityApplyFailed =>
-      'Failed to apply for activity, please try again';
+  String get errorActivityApplyFailed => 'Failed to apply for activity, please try again';
 
   @override
   String get errorActivityDetailLoadFailed => 'Failed to load activity details';
 
   @override
-  String get errorActivityToggleFavoriteFailed =>
-      'Failed to update favorite status';
+  String get errorActivityToggleFavoriteFailed => 'Failed to update favorite status';
 
   @override
   String get errorProfileLoadFailed => 'Failed to load profile';
 
   @override
-  String get errorProfileUpdateFailed =>
-      'Failed to update profile, please try again';
+  String get errorProfileUpdateFailed => 'Failed to update profile, please try again';
 
   @override
   String get errorProfileUpdateAvatarFailed => 'Failed to update avatar';
@@ -10063,16 +9650,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorProfileLoadPreferencesFailed => 'Failed to load preferences';
 
   @override
-  String get errorProfileUpdatePreferencesFailed =>
-      'Failed to update preferences';
+  String get errorProfileUpdatePreferencesFailed => 'Failed to update preferences';
 
   @override
-  String get errorProfileSendEmailCodeFailed =>
-      'Failed to send email verification code';
+  String get errorProfileSendEmailCodeFailed => 'Failed to send email verification code';
 
   @override
-  String get errorProfileSendPhoneCodeFailed =>
-      'Failed to send phone verification code';
+  String get errorProfileSendPhoneCodeFailed => 'Failed to send phone verification code';
 
   @override
   String get errorFollowFailed => 'Failed to follow user';
@@ -10081,8 +9665,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorUnfollowFailed => 'Failed to unfollow user';
 
   @override
-  String get errorIapNotAvailableWeb =>
-      'In-app purchase is not available on web';
+  String get errorIapNotAvailableWeb => 'In-app purchase is not available on web';
 
   @override
   String get errorIapStoreNotAvailable => 'App store is not available';
@@ -10091,8 +9674,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorIapLoadProductsFailed => 'Failed to load products';
 
   @override
-  String get errorIapVerificationFailed =>
-      'Verification failed, please contact support';
+  String get errorIapVerificationFailed => 'Verification failed, please contact support';
 
   @override
   String get errorIapPurchaseFailed => 'Purchase failed';
@@ -10141,8 +9723,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get newbieTaskProgressTitle => 'Task Progress';
 
   @override
-  String get newbieTaskGetRewardsHint =>
-      'Complete tasks to earn points and coupons';
+  String get newbieTaskGetRewardsHint => 'Complete tasks to earn points and coupons';
 
   @override
   String get newbieTaskNoTasks => 'No tasks available';
@@ -10246,8 +9827,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorNewbieTaskNotCompleted => 'This task is not yet completed';
 
   @override
-  String get errorNewbieTaskAlreadyClaimed =>
-      'This reward has already been claimed';
+  String get errorNewbieTaskAlreadyClaimed => 'This reward has already been claimed';
 
   @override
   String get errorNewbieTaskClaimFailed => 'Failed to claim reward';
@@ -10331,8 +9911,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get expertServiceConfirmDelete => 'Delete this service?';
 
   @override
-  String get expertServiceConfirmDeleteMessage =>
-      'This action cannot be undone.';
+  String get expertServiceConfirmDeleteMessage => 'This action cannot be undone.';
 
   @override
   String get expertServiceName => 'Service Name';
@@ -10389,8 +9968,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get expertTimeSlotsEmpty => 'No time slots';
 
   @override
-  String get expertTimeSlotsEmptyMessage =>
-      'Select a service and add time slots';
+  String get expertTimeSlotsEmptyMessage => 'Select a service and add time slots';
 
   @override
   String get expertTimeSlotCreate => 'Add Time Slot';
@@ -10477,8 +10055,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get expertProfileEditSubmitted => 'Submitted — pending admin review';
 
   @override
-  String get expertProfileEditAlreadyPending =>
-      'You already have a pending update request';
+  String get expertProfileEditAlreadyPending => 'You already have a pending update request';
 
   @override
   String get expertViewTask => 'View Task';
@@ -10547,8 +10124,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get applicationChatting => 'Chatting';
 
   @override
-  String get posterSelectedAnother =>
-      'The poster has selected another applicant';
+  String get posterSelectedAnother => 'The poster has selected another applicant';
 
   @override
   String get taskChat => 'Task Chat';
@@ -10585,8 +10161,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get replySubmitted => 'Reply submitted';
 
   @override
-  String get publicReplyPlaceholder =>
-      'Write your reply to this application...';
+  String get publicReplyPlaceholder => 'Write your reply to this application...';
 
   @override
   String get alreadyReplied => 'Already replied to this application';
@@ -10657,19 +10232,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskDetailConfirmCompleteTitle => 'Confirm Task Complete';
 
   @override
-  String get taskDetailConfirmCompleteMessage =>
-      'Are you sure the task is completed satisfactorily? Once confirmed, the escrowed funds will be released to the task taker.';
+  String get taskDetailConfirmCompleteMessage => 'Are you sure the task is completed satisfactorily? Once confirmed, the escrowed funds will be released to the task taker.';
 
   @override
   String get taskDetailConfirmCompleteConfirm => 'Confirm Complete';
 
   @override
-  String get taskDetailDisputeDescription =>
-      'If you are not satisfied with the task completion, you can raise a dispute and apply for a refund.';
+  String get taskDetailDisputeDescription => 'If you are not satisfied with the task completion, you can raise a dispute and apply for a refund.';
 
   @override
-  String get couponLoadFailed =>
-      'Failed to load coupons. Please try again later.';
+  String get couponLoadFailed => 'Failed to load coupons. Please try again later.';
 
   @override
   String get couponNotApplicable => 'Not applicable to this task';
@@ -10732,12 +10304,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get youMightNeed => 'You might need';
 
   @override
-  String get userProfileLoadFailed =>
-      'Failed to load profile, please try again';
+  String get userProfileLoadFailed => 'Failed to load profile, please try again';
 
   @override
-  String get userProfileUpdateFailed =>
-      'Failed to update profile, please try again';
+  String get userProfileUpdateFailed => 'Failed to update profile, please try again';
 
   @override
   String get userProfileDeleteFailed => 'Failed to delete, please try again';
@@ -10746,8 +10316,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get nearbyPushEnabled => 'Nearby Task Alerts';
 
   @override
-  String get nearbyPushDescription =>
-      'Get notified when new tasks are posted nearby';
+  String get nearbyPushDescription => 'Get notified when new tasks are posted nearby';
 
   @override
   String get taskStatisticsTitle => 'Task Statistics';
@@ -10849,8 +10418,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingComplete => 'Done';
 
   @override
-  String get onboardingProfileUpdateInSettings =>
-      'Can be updated in profile settings';
+  String get onboardingProfileUpdateInSettings => 'Can be updated in profile settings';
 
   @override
   String get onboardingSubmitFailed => 'Submit failed, please try again';
@@ -10859,12 +10427,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingInterestsTitle => 'What are you interested in?';
 
   @override
-  String get onboardingInterestsSubtitle =>
-      'Choose your interests so we can recommend better for you';
+  String get onboardingInterestsSubtitle => 'Choose your interests so we can recommend better for you';
 
   @override
-  String get errorTaskStatisticsLoadFailed =>
-      'Failed to load task statistics, please retry';
+  String get errorTaskStatisticsLoadFailed => 'Failed to load task statistics, please retry';
 
   @override
   String get profileMyServices => 'My Services';
@@ -10891,15 +10457,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get personalServiceNameEn => 'Service Name (English)';
 
   @override
-  String get personalServiceNameEnHint =>
-      'English name for international users';
+  String get personalServiceNameEnHint => 'English name for international users';
 
   @override
   String get personalServiceDescriptionEn => 'Service Description (English)';
 
   @override
-  String get personalServiceDescriptionEnHint =>
-      'English description (optional)';
+  String get personalServiceDescriptionEnHint => 'English description (optional)';
 
   @override
   String get personalServiceImages => 'Images';
@@ -10941,8 +10505,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get personalServiceEmpty => 'No services yet';
 
   @override
-  String get personalServiceEmptyHint =>
-      'Publish your first service to get started';
+  String get personalServiceEmptyHint => 'Publish your first service to get started';
 
   @override
   String get personalServiceNameHint => 'Enter service name';
@@ -10951,12 +10514,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get personalServiceNameRequired => 'Please enter a service name';
 
   @override
-  String get personalServiceDescriptionHint =>
-      'Describe your service in detail';
+  String get personalServiceDescriptionHint => 'Describe your service in detail';
 
   @override
-  String get personalServiceDescriptionRequired =>
-      'Please enter a service description';
+  String get personalServiceDescriptionRequired => 'Please enter a service description';
 
   @override
   String get personalServicePriceRequired => 'Please enter a price';
@@ -11144,8 +10705,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get createTaskAiOptimize => 'AI Optimize';
 
   @override
-  String get createTaskAiOptimizeDesc =>
-      'Let AI optimize your task description for better matches';
+  String get createTaskAiOptimizeDesc => 'Let AI optimize your task description for better matches';
 
   @override
   String get createTaskAiOptimizeBtn => 'Optimize';
@@ -11154,8 +10714,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get createTaskAiTipPrefix => 'AI Tip: ';
 
   @override
-  String get createTaskAiTipContent =>
-      'Add these for better quotes: 1. Target audience 2. Competitor references 3. Brand color/style preferences';
+  String get createTaskAiTipContent => 'Add these for better quotes: 1. Target audience 2. Competitor references 3. Brand color/style preferences';
 
   @override
   String get createTaskSaveDraft => 'Save Draft';
@@ -11179,38 +10738,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get createTaskTitleHintNew => 'Briefly describe what help you need';
 
   @override
-  String get createTaskDescHintNew =>
-      'Describe your needs in detail to help experts understand...';
+  String get createTaskDescHintNew => 'Describe your needs in detail to help experts understand...';
 
   @override
   String get createTaskRefImages => 'Reference Images';
 
   @override
-  String get createTaskRefImagesHint =>
-      'Up to 9, showing reference cases or requirements';
+  String get createTaskRefImagesHint => 'Up to 9, showing reference cases or requirements';
 
   @override
-  String get createTaskNewCatDesign => '🎨 Design';
-
-  @override
-  String get createTaskNewCatProgramming => '💻 Programming';
-
-  @override
-  String get createTaskNewCatPhotography => '📷 Photography';
-
-  @override
-  String get createTaskNewCatCopywriting => '📝 Copywriting';
-
-  @override
-  String get createTaskNewCatMusic => '🎵 Music';
-
-  @override
-  String get createTaskNewCatLifestyle => '🏠 Lifestyle';
-
-  @override
-  String get createTaskNewCatTutoring => '📚 Tutoring';
-
-  @override
-  String get errorAiOptimizeFailed =>
-      'AI optimization failed, please try again later';
+  String get errorAiOptimizeFailed => 'AI optimization failed, please try again later';
 }

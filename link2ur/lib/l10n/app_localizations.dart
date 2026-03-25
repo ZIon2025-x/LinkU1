@@ -62,8 +62,7 @@ import 'app_localizations_zh.dart';
 /// be consistent with the languages listed in the AppLocalizations.supportedLocales
 /// property.
 abstract class AppLocalizations {
-  AppLocalizations(String locale)
-      : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+  AppLocalizations(String locale) : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -71,8 +70,7 @@ abstract class AppLocalizations {
     return Localizations.of<AppLocalizations>(context, AppLocalizations);
   }
 
-  static const LocalizationsDelegate<AppLocalizations> delegate =
-      _AppLocalizationsDelegate();
+  static const LocalizationsDelegate<AppLocalizations> delegate = _AppLocalizationsDelegate();
 
   /// A list of this localizations delegate along with the default localizations
   /// delegates.
@@ -84,8 +82,7 @@ abstract class AppLocalizations {
   /// Additional delegates can be added by appending to this list in
   /// MaterialApp. This list does not have to be used at all if a custom list
   /// of delegates is preferred or required.
-  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
-      <LocalizationsDelegate<dynamic>>[
+  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates = <LocalizationsDelegate<dynamic>>[
     delegate,
     GlobalMaterialLocalizations.delegate,
     GlobalCupertinoLocalizations.delegate,
@@ -9211,15 +9208,13 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{applicant_name} applied for task「{task_title}」\\nApplication message: {application_message}\\nNegotiated price: {price_info}'**
-  String notificationContentTaskApplication(String applicant_name,
-      String task_title, String application_message, String price_info);
+  String notificationContentTaskApplication(String applicant_name, String task_title, String application_message, String price_info);
 
   /// No description provided for @notificationContentApplicationAccepted.
   ///
   /// In en, this message translates to:
   /// **'The applicant has accepted your negotiation offer for task「{task_title}」. Please complete the payment.{payment_expires_info}'**
-  String notificationContentApplicationAccepted(
-      String task_title, String payment_expires_info);
+  String notificationContentApplicationAccepted(String task_title, String payment_expires_info);
 
   /// No description provided for @notificationContentApplicationRejected.
   ///
@@ -9261,15 +9256,13 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'The publisher of task「{task_title}」sent you a message: {message}'**
-  String notificationContentApplicationMessage(
-      String task_title, String message);
+  String notificationContentApplicationMessage(String task_title, String message);
 
   /// No description provided for @notificationContentNegotiationOffer.
   ///
   /// In en, this message translates to:
   /// **'The publisher of task「{task_title}」proposed a negotiation\nMessage: {message}\nNegotiated price: £{negotiated_price} {currency}'**
-  String notificationContentNegotiationOffer(String task_title, String message,
-      String negotiated_price, String currency);
+  String notificationContentNegotiationOffer(String task_title, String message, String negotiated_price, String currency);
 
   /// No description provided for @notificationContentNegotiationRejected.
   ///
@@ -9293,8 +9286,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Your task application has been approved! Task: {task_title}{payment_expires_info}'**
-  String notificationContentTaskApprovedWithPayment(
-      String task_title, String payment_expires_info);
+  String notificationContentTaskApprovedWithPayment(String task_title, String payment_expires_info);
 
   /// No description provided for @notificationContentAnnouncement.
   ///
@@ -14276,12 +14268,6 @@ abstract class AppLocalizations {
   /// **'Select deadline'**
   String get createTaskSelectDeadline;
 
-  /// No description provided for @createTaskCategoryDelivery.
-  ///
-  /// In en, this message translates to:
-  /// **'Delivery'**
-  String get createTaskCategoryDelivery;
-
   /// No description provided for @createTaskCategoryShopping.
   ///
   /// In en, this message translates to:
@@ -14341,6 +14327,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Repair'**
   String get createTaskCategoryRepair;
+
+  /// No description provided for @createTaskCategoryPickupDropoff.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup & Dropoff'**
+  String get createTaskCategoryPickupDropoff;
+
+  /// No description provided for @createTaskCategoryCooking.
+  ///
+  /// In en, this message translates to:
+  /// **'Cooking'**
+  String get createTaskCategoryCooking;
+
+  /// No description provided for @createTaskCategoryLanguageHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Language Help'**
+  String get createTaskCategoryLanguageHelp;
+
+  /// No description provided for @createTaskCategoryGovernment.
+  ///
+  /// In en, this message translates to:
+  /// **'Official Affairs'**
+  String get createTaskCategoryGovernment;
+
+  /// No description provided for @createTaskCategoryPetCare.
+  ///
+  /// In en, this message translates to:
+  /// **'Pet Care'**
+  String get createTaskCategoryPetCare;
+
+  /// No description provided for @createTaskCategoryErrand.
+  ///
+  /// In en, this message translates to:
+  /// **'Errand'**
+  String get createTaskCategoryErrand;
+
+  /// No description provided for @createTaskCategoryAccompany.
+  ///
+  /// In en, this message translates to:
+  /// **'Accompany'**
+  String get createTaskCategoryAccompany;
+
+  /// No description provided for @createTaskCategoryDigital.
+  ///
+  /// In en, this message translates to:
+  /// **'Digital & IT'**
+  String get createTaskCategoryDigital;
+
+  /// No description provided for @createTaskCategoryRentalHousing.
+  ///
+  /// In en, this message translates to:
+  /// **'Rental & Housing'**
+  String get createTaskCategoryRentalHousing;
+
+  /// No description provided for @createTaskCategoryCampusLife.
+  ///
+  /// In en, this message translates to:
+  /// **'Campus Life'**
+  String get createTaskCategoryCampusLife;
+
+  /// No description provided for @createTaskCategorySecondHand.
+  ///
+  /// In en, this message translates to:
+  /// **'Second-hand'**
+  String get createTaskCategorySecondHand;
 
   /// No description provided for @createTaskCategoryOther.
   ///
@@ -20648,48 +20700,6 @@ abstract class AppLocalizations {
   /// **'Up to 9, showing reference cases or requirements'**
   String get createTaskRefImagesHint;
 
-  /// No description provided for @createTaskNewCatDesign.
-  ///
-  /// In en, this message translates to:
-  /// **'🎨 Design'**
-  String get createTaskNewCatDesign;
-
-  /// No description provided for @createTaskNewCatProgramming.
-  ///
-  /// In en, this message translates to:
-  /// **'💻 Programming'**
-  String get createTaskNewCatProgramming;
-
-  /// No description provided for @createTaskNewCatPhotography.
-  ///
-  /// In en, this message translates to:
-  /// **'📷 Photography'**
-  String get createTaskNewCatPhotography;
-
-  /// No description provided for @createTaskNewCatCopywriting.
-  ///
-  /// In en, this message translates to:
-  /// **'📝 Copywriting'**
-  String get createTaskNewCatCopywriting;
-
-  /// No description provided for @createTaskNewCatMusic.
-  ///
-  /// In en, this message translates to:
-  /// **'🎵 Music'**
-  String get createTaskNewCatMusic;
-
-  /// No description provided for @createTaskNewCatLifestyle.
-  ///
-  /// In en, this message translates to:
-  /// **'🏠 Lifestyle'**
-  String get createTaskNewCatLifestyle;
-
-  /// No description provided for @createTaskNewCatTutoring.
-  ///
-  /// In en, this message translates to:
-  /// **'📚 Tutoring'**
-  String get createTaskNewCatTutoring;
-
   /// No description provided for @errorAiOptimizeFailed.
   ///
   /// In en, this message translates to:
@@ -20697,8 +20707,7 @@ abstract class AppLocalizations {
   String get errorAiOptimizeFailed;
 }
 
-class _AppLocalizationsDelegate
-    extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
   @override
@@ -20707,37 +20716,34 @@ class _AppLocalizationsDelegate
   }
 
   @override
-  bool isSupported(Locale locale) =>
-      <String>['en', 'zh'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => <String>['en', 'zh'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
 }
 
 AppLocalizations lookupAppLocalizations(Locale locale) {
+
   // Lookup logic when language+script codes are specified.
   switch (locale.languageCode) {
-    case 'zh':
-      {
-        switch (locale.scriptCode) {
-          case 'Hant':
-            return AppLocalizationsZhHant();
-        }
-        break;
-      }
+    case 'zh': {
+  switch (locale.scriptCode) {
+    case 'Hant': return AppLocalizationsZhHant();
+   }
+  break;
+   }
   }
 
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
-    case 'en':
-      return AppLocalizationsEn();
-    case 'zh':
-      return AppLocalizationsZh();
+    case 'en': return AppLocalizationsEn();
+    case 'zh': return AppLocalizationsZh();
   }
 
   throw FlutterError(
-      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-      'an issue with the localizations generation tool. Please file an issue '
-      'on GitHub with a reproducible sample app and the gen-l10n configuration '
-      'that was used.');
+    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+    'an issue with the localizations generation tool. Please file an issue '
+    'on GitHub with a reproducible sample app and the gen-l10n configuration '
+    'that was used.'
+  );
 }

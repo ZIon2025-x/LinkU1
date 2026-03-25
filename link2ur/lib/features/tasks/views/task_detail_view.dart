@@ -175,9 +175,6 @@ class _TaskDetailContent extends StatelessWidget {
             'counter_offer_accepted' => l10n.taskDetailCounterOfferAccepted,
             'counter_offer_rejected' => l10n.taskDetailCounterOfferRejected,
             'counter_offer_respond_failed' => l10n.actionOperationFailed,
-            'public_reply_submitted' => l10n.replySubmitted,
-            'public_reply_already_replied' => l10n.alreadyReplied,
-            'public_reply_failed' => l10n.actionOperationFailed,
             'visibility_updated' => l10n.taskDetailVisibilityUpdated,
             'visibility_update_failed' => l10n.taskDetailVisibilityUpdateFailed,
             'chat_started' => l10n.actionChatStarted,
@@ -743,6 +740,12 @@ class _TaskDetailContent extends StatelessWidget {
             task.status == AppConstants.taskStatusPendingConfirmation ||
             task.status == AppConstants.taskStatusPendingPayment);
 
+    // 提问按钮：非发布者、已登录、任务 open/chatting
+    final showAsk = !isPoster &&
+        currentUserId != null &&
+        (task.status == AppConstants.taskStatusOpen ||
+            task.status == AppConstants.taskStatusChatting);
+
     // 底部按钮：快速操作栏 (高性能半透明背景，替代 BackdropFilter)
     return Container(
       decoration: BoxDecoration(
@@ -764,6 +767,14 @@ class _TaskDetailContent extends StatelessWidget {
               horizontal: 16, vertical: 12),
           child: Row(
             children: [
+              // 提问按钮
+              if (showAsk)
+                IconActionButton(
+                  icon: Icons.question_answer_outlined,
+                  onPressed: () => _showAskDialog(context),
+                  backgroundColor: AppColors.skeletonBase,
+                ),
+              if (showAsk) AppSpacing.hMd,
               // 聊天按钮 — 任务聊天（非私聊）
               if (showChat)
                 IconActionButton(
@@ -782,6 +793,38 @@ class _TaskDetailContent extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  void _showAskDialog(BuildContext context) {
+    final controller = TextEditingController();
+    final bloc = context.read<TaskDetailBloc>();
+
+    AdaptiveDialogs.showConfirmDialog(
+      context: context,
+      title: context.l10n.qaAskButton,
+      barrierDismissible: true,
+      contentWidget: TextField(
+        controller: controller,
+        maxLength: 500,
+        maxLines: 3,
+        decoration: InputDecoration(
+          hintText: context.l10n.qaAskPlaceholder,
+          border: const OutlineInputBorder(),
+        ),
+      ),
+      confirmText: context.l10n.commonSubmit,
+      cancelText: context.l10n.commonCancel,
+      onConfirm: () {
+        final text = controller.text.trim();
+        if (text.length >= 2) {
+          bloc.add(TaskDetailAskQuestion(text));
+        }
+        controller.dispose();
+      },
+      onCancel: () {
+        controller.dispose();
+      },
     );
   }
 

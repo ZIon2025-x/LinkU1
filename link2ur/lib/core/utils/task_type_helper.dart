@@ -48,7 +48,6 @@ class TaskTypeHelper {
     'life convenience': (l) => l.taskTypeLifeConvenience,
     'life': (l) => l.taskTypeLifeConvenience,
     'other': (l) => l.taskTypeOther,
-    'delivery': (l) => l.createTaskCategoryDelivery,
     'shopping': (l) => l.createTaskCategoryShopping,
     'tutoring': (l) => l.createTaskCategoryTutoring,
     'translation': (l) => l.createTaskCategoryTranslation,
