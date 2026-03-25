@@ -10,6 +10,7 @@
 - 用户无需 Connect 账户即可接单、卖二手物品、查看收入
 - 仅在提现时才需要设置 Connect 账户
 - 同时支持余额支付任务（含混合支付）
+- 支持多币种（GBP + EUR），每种货币独立钱包，不做跨币种换汇
 
 ## Data Models
 
@@ -18,18 +19,20 @@
 ```sql
 CREATE TABLE wallet_accounts (
     id BIGSERIAL PRIMARY KEY,
-    user_id VARCHAR(8) NOT NULL REFERENCES users(id) UNIQUE,
+    user_id VARCHAR(8) NOT NULL REFERENCES users(id),
     balance DECIMAL(12, 2) NOT NULL DEFAULT 0.00 CHECK (balance >= 0),
     total_earned DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
     total_withdrawn DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
     total_spent DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
     currency VARCHAR(3) NOT NULL DEFAULT 'GBP',
     created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
+    updated_at TIMESTAMP DEFAULT NOW(),
+    CONSTRAINT uq_wallet_user_currency UNIQUE (user_id, currency)
 );
 ```
 
-- `balance`: 可用余额（英镑），数据库级 CHECK 约束确保非负
+- 每个用户可有多个钱包（每种货币一个），通过 `UNIQUE(user_id, currency)` 约束
+- `balance`: 可用余额，数据库级 CHECK 约束确保非负
 - `total_earned`: 累计收入（扣手续费后的净收入）
 - `total_withdrawn`: 累计已提现金额
 - `total_spent`: 累计余额支付消费金额
@@ -45,13 +48,14 @@ CREATE TABLE wallet_transactions (
     amount DECIMAL(12, 2) NOT NULL,     -- 正数=收入, 负数=支出
     balance_after DECIMAL(12, 2) NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'completed',  -- completed, pending, failed, reversed
+    currency VARCHAR(3) NOT NULL DEFAULT 'GBP',  -- 交易货币
     source VARCHAR(50) NOT NULL,        -- task_reward, flea_market_sale, stripe_transfer, task_payment
     related_id VARCHAR(255),            -- 关联对象 ID
     related_type VARCHAR(50),           -- task, flea_market_item, payout
     description TEXT,
     fee_amount DECIMAL(12, 2),          -- 平台手续费（仅 earning 类型）
     gross_amount DECIMAL(12, 2),        -- 扣费前原始金额（仅 earning 类型）
-    idempotency_key VARCHAR(64) NOT NULL UNIQUE,
+    idempotency_key VARCHAR(128) NOT NULL UNIQUE,
     created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -364,6 +368,10 @@ Response: {
 
 ## Currency
 
-- 平台统一使用 GBP 记账和转账
-- 非 GBP 国家的用户提现时，Stripe 自动换汇到 Connect 账户对应货币
-- 换汇手续费由 Stripe 收取（约 1%），用户承担
+- 平台支持 **GBP** 和 **EUR** 两种货币
+- 每个用户可以有多个钱包（每种货币独立），按需自动创建
+- 收入按任务/商品的货币入对应钱包（GBP 任务收入进 GBP 钱包，EUR 任务收入进 EUR 钱包）
+- 余额支付只能同币种抵扣（GBP 余额只能付 GBP 任务）
+- 提现按币种分开，从对应货币钱包出
+- **不做钱包间换汇**——平台不承担汇率风险，用户如需换汇可提现后自行处理
+- 非匹配货币的 Connect 账户提现时，Stripe 自动换汇，手续费由 Stripe 收取（约 1%）
