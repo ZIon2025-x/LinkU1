@@ -3682,6 +3682,22 @@
   "walletYesterday": "昨天",
   "walletCheckingIn": "签到中...",
   "walletDailyCheckIn": "每日签到",
+  "walletUseBalance": "使用余额支付",
+  "walletAvailableBalance": "可用余额: {amount}",
+  "@walletAvailableBalance": {
+    "placeholders": {
+      "amount": {"type": "String"}
+    }
+  },
+  "walletBalanceDeduction": "余额抵扣",
+  "walletStripePay": "银行卡需付",
+  "walletFullPayment": "全额余额支付，无需银行卡",
+  "walletPayNow": "余额支付 {amount}",
+  "@walletPayNow": {
+    "placeholders": {
+      "amount": {"type": "String"}
+    }
+  },
   "myTasksTitle": "我的任务",
   "myTasksAccepted": "我接的",
   "myTasksPosted": "我发的",

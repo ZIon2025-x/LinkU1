@@ -14636,6 +14636,42 @@ abstract class AppLocalizations {
   /// **'Daily Check-in'**
   String get walletDailyCheckIn;
 
+  /// No description provided for @walletUseBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay with wallet balance'**
+  String get walletUseBalance;
+
+  /// No description provided for @walletAvailableBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'Available: {amount}'**
+  String walletAvailableBalance(String amount);
+
+  /// No description provided for @walletBalanceDeduction.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet deduction'**
+  String get walletBalanceDeduction;
+
+  /// No description provided for @walletStripePay.
+  ///
+  /// In en, this message translates to:
+  /// **'Card payment'**
+  String get walletStripePay;
+
+  /// No description provided for @walletFullPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid in full with wallet balance'**
+  String get walletFullPayment;
+
+  /// No description provided for @walletPayNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay with balance {amount}'**
+  String walletPayNow(String amount);
+
   /// No description provided for @myTasksTitle.
   ///
   /// In en, this message translates to:

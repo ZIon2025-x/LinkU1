@@ -7638,6 +7638,28 @@ class AppLocalizationsZh extends AppLocalizations {
   String get walletDailyCheckIn => '每日签到';
 
   @override
+  String get walletUseBalance => '使用余额支付';
+
+  @override
+  String walletAvailableBalance(String amount) {
+    return '可用余额: $amount';
+  }
+
+  @override
+  String get walletBalanceDeduction => '余额抵扣';
+
+  @override
+  String get walletStripePay => '银行卡需付';
+
+  @override
+  String get walletFullPayment => '全额余额支付，无需银行卡';
+
+  @override
+  String walletPayNow(String amount) {
+    return '余额支付 $amount';
+  }
+
+  @override
   String get myTasksTitle => '我的任务';
 
   @override
@@ -18389,6 +18411,28 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get walletDailyCheckIn => '每日簽到';
+
+  @override
+  String get walletUseBalance => '使用餘額支付';
+
+  @override
+  String walletAvailableBalance(String amount) {
+    return '可用餘額: $amount';
+  }
+
+  @override
+  String get walletBalanceDeduction => '餘額抵扣';
+
+  @override
+  String get walletStripePay => '銀行卡需付';
+
+  @override
+  String get walletFullPayment => '全額餘額支付，無需銀行卡';
+
+  @override
+  String walletPayNow(String amount) {
+    return '餘額支付 $amount';
+  }
 
   @override
   String get myTasksTitle => '我的任務';

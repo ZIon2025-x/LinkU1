@@ -7965,6 +7965,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletDailyCheckIn => 'Daily Check-in';
 
   @override
+  String get walletUseBalance => 'Pay with wallet balance';
+
+  @override
+  String walletAvailableBalance(String amount) {
+    return 'Available: $amount';
+  }
+
+  @override
+  String get walletBalanceDeduction => 'Wallet deduction';
+
+  @override
+  String get walletStripePay => 'Card payment';
+
+  @override
+  String get walletFullPayment => 'Paid in full with wallet balance';
+
+  @override
+  String walletPayNow(String amount) {
+    return 'Pay with balance $amount';
+  }
+
+  @override
   String get myTasksTitle => 'My Tasks';
 
   @override

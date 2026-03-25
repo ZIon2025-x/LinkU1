@@ -3692,6 +3692,22 @@
   "walletYesterday": "Yesterday",
   "walletCheckingIn": "Checking in...",
   "walletDailyCheckIn": "Daily Check-in",
+  "walletUseBalance": "Pay with wallet balance",
+  "walletAvailableBalance": "Available: {amount}",
+  "@walletAvailableBalance": {
+    "placeholders": {
+      "amount": {"type": "String"}
+    }
+  },
+  "walletBalanceDeduction": "Wallet deduction",
+  "walletStripePay": "Card payment",
+  "walletFullPayment": "Paid in full with wallet balance",
+  "walletPayNow": "Pay with balance {amount}",
+  "@walletPayNow": {
+    "placeholders": {
+      "amount": {"type": "String"}
+    }
+  },
   "myTasksTitle": "My Tasks",
   "myTasksAccepted": "Accepted",
   "myTasksPosted": "Posted",

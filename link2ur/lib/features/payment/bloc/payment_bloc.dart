@@ -85,6 +85,26 @@ class PaymentClearError extends PaymentEvent {
   const PaymentClearError();
 }
 
+/// 加载钱包余额
+class PaymentLoadWalletBalance extends PaymentEvent {
+  const PaymentLoadWalletBalance({required this.currency});
+
+  final String currency;
+
+  @override
+  List<Object?> get props => [currency];
+}
+
+/// 切换使用钱包余额
+class PaymentToggleWalletBalance extends PaymentEvent {
+  const PaymentToggleWalletBalance(this.useWallet);
+
+  final bool useWallet;
+
+  @override
+  List<Object?> get props => [useWallet];
+}
+
 /// 标记支付成功（由 Stripe SDK 回调触发）
 class PaymentMarkSuccess extends PaymentEvent {
   const PaymentMarkSuccess();
@@ -114,6 +134,8 @@ class PaymentState extends Equatable {
     this.weChatCheckoutUrl,
     this.errorMessage,
     this.isMethodSwitching = false,
+    this.walletBalance,
+    this.useWalletBalance = false,
   });
 
   final PaymentStatus status;
@@ -126,11 +148,19 @@ class PaymentState extends Equatable {
   final String? errorMessage;
   /// 是否正在切换支付方式（不应重置整个 UI）
   final bool isMethodSwitching;
+  /// 用户钱包余额（与任务同币种）
+  final WalletBalance? walletBalance;
+  /// 是否使用钱包余额支付
+  final bool useWalletBalance;
 
   bool get isLoading => status == PaymentStatus.loading;
   bool get isProcessing => status == PaymentStatus.processing;
   bool get isReady => status == PaymentStatus.ready;
   bool get isSuccess => status == PaymentStatus.success;
+
+  /// 钱包是否有可用余额
+  bool get hasWalletBalance =>
+      walletBalance != null && walletBalance!.balance > 0;
 
   PaymentState copyWith({
     PaymentStatus? status,
@@ -144,6 +174,9 @@ class PaymentState extends Equatable {
     bool clearCoupon = false,
     bool clearWeChatUrl = false,
     bool clearError = false,
+    WalletBalance? walletBalance,
+    bool? useWalletBalance,
+    bool clearWalletBalance = false,
   }) {
     return PaymentState(
       status: status ?? this.status,
@@ -159,6 +192,8 @@ class PaymentState extends Equatable {
           : (weChatCheckoutUrl ?? this.weChatCheckoutUrl),
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       isMethodSwitching: isMethodSwitching ?? this.isMethodSwitching,
+      walletBalance: clearWalletBalance ? null : (walletBalance ?? this.walletBalance),
+      useWalletBalance: useWalletBalance ?? this.useWalletBalance,
     );
   }
 
@@ -172,6 +207,8 @@ class PaymentState extends Equatable {
         weChatCheckoutUrl,
         errorMessage,
         isMethodSwitching,
+        walletBalance,
+        useWalletBalance,
       ];
 }
 
@@ -199,6 +236,8 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
     on<PaymentClearError>(_onClearError);
     on<PaymentMarkSuccess>(_onMarkSuccess);
     on<PaymentMarkFailed>(_onMarkFailed);
+    on<PaymentLoadWalletBalance>(_onLoadWalletBalance);
+    on<PaymentToggleWalletBalance>(_onToggleWalletBalance);
   }
 
   final PaymentRepository _repository;
@@ -229,6 +268,7 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
         taskId: event.taskId,
         userCouponId: event.couponId ?? state.selectedUserCouponId,
         preferredPaymentMethod: event.preferredPaymentMethod,
+        useWalletBalance: state.useWalletBalance,
       );
 
       // Validate payment amount
@@ -359,6 +399,34 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
       status: PaymentStatus.error,
       errorMessage: event.error,
     ));
+  }
+
+  /// 加载钱包余额
+  Future<void> _onLoadWalletBalance(
+    PaymentLoadWalletBalance event,
+    Emitter<PaymentState> emit,
+  ) async {
+    try {
+      final wallets = await _repository.getWalletBalances();
+      // 找到与任务同币种的钱包
+      final matched = wallets.where(
+        (w) => w.currency.toUpperCase() == event.currency.toUpperCase(),
+      );
+      if (matched.isNotEmpty) {
+        emit(state.copyWith(walletBalance: matched.first));
+      }
+    } catch (e) {
+      // 钱包余额加载失败不阻塞支付流程，仅记录日志
+      AppLogger.error('Failed to load wallet balance', e);
+    }
+  }
+
+  /// 切换使用钱包余额
+  Future<void> _onToggleWalletBalance(
+    PaymentToggleWalletBalance event,
+    Emitter<PaymentState> emit,
+  ) async {
+    emit(state.copyWith(useWalletBalance: event.useWallet));
   }
 
   /// 格式化 Stripe / 网络错误为本地化 key 或用户友好消息

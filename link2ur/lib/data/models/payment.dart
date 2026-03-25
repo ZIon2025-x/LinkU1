@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 
+import '../../core/utils/helpers.dart';
 import '../../core/utils/json_utils.dart';
 
 /// 任务支付响应模型
@@ -24,6 +25,9 @@ class TaskPaymentResponse extends Equatable {
     this.ephemeralKeySecret,
     this.note = '',
     this.calculationSteps,
+    this.paymentType,
+    this.walletAmountUsed,
+    this.stripeAmountDue,
   });
 
   final int? paymentId;
@@ -44,6 +48,12 @@ class TaskPaymentResponse extends Equatable {
   final String? ephemeralKeySecret;
   final String? note;
   final List<Map<String, dynamic>>? calculationSteps;
+  /// 支付类型：'stripe' (纯Stripe), 'wallet' (纯余额), 'mixed' (混合支付)
+  final String? paymentType;
+  /// 使用的钱包余额金额（便士）
+  final int? walletAmountUsed;
+  /// 需要 Stripe 支付的金额（便士），混合支付时有值
+  final int? stripeAmountDue;
 
   /// 是否有优惠
   bool get hasDiscount => couponDiscount != null && couponDiscount! > 0;
@@ -51,8 +61,14 @@ class TaskPaymentResponse extends Equatable {
   /// 是否免费
   bool get isFree => finalAmount == 0;
 
+  /// 是否纯钱包支付（无需 Stripe）
+  bool get isWalletOnly => paymentType == 'wallet';
+
+  /// 是否混合支付（钱包 + Stripe）
+  bool get isMixedPayment => paymentType == 'mixed';
+
   /// 是否需要Stripe支付
-  bool get requiresStripePayment => clientSecret != null && !isFree;
+  bool get requiresStripePayment => clientSecret != null && !isFree && !isWalletOnly;
 
   factory TaskPaymentResponse.fromJson(Map<String, dynamic> json) {
     return TaskPaymentResponse(
@@ -78,6 +94,9 @@ class TaskPaymentResponse extends Equatable {
       calculationSteps: (json['calculation_steps'] as List<dynamic>?)
           ?.map((e) => e as Map<String, dynamic>)
           .toList(),
+      paymentType: json['payment_type'] as String?,
+      walletAmountUsed: json['wallet_amount_used'] as int?,
+      stripeAmountDue: json['stripe_amount_due'] as int?,
     );
   }
 
@@ -101,6 +120,9 @@ class TaskPaymentResponse extends Equatable {
       'ephemeral_key_secret': ephemeralKeySecret,
       'note': note,
       'calculation_steps': calculationSteps,
+      'payment_type': paymentType,
+      'wallet_amount_used': walletAmountUsed,
+      'stripe_amount_due': stripeAmountDue,
     };
   }
 
@@ -110,7 +132,7 @@ class TaskPaymentResponse extends Equatable {
         couponDiscount, couponDiscountDisplay, couponName, couponType, couponDescription,
         finalAmount, finalAmountDisplay, currency,
         clientSecret, paymentIntentId, customerId, ephemeralKeySecret,
-        note, calculationSteps,
+        note, calculationSteps, paymentType, walletAmountUsed, stripeAmountDue,
       ];
 }
 
@@ -175,9 +197,9 @@ class WalletInfo extends Equatable {
   final double pendingBalance;
   final StripeConnectStatus? stripeConnectStatus;
 
-  String get balanceDisplay => '£${balance.toStringAsFixed(2)}';
-  String get totalEarnedDisplay => '£${totalEarned.toStringAsFixed(2)}';
-  String get totalSpentDisplay => '£${totalSpent.toStringAsFixed(2)}';
+  String get balanceDisplay => '${Helpers.currencySymbolFor(currency)}${balance.toStringAsFixed(2)}';
+  String get totalEarnedDisplay => '${Helpers.currencySymbolFor(currency)}${totalEarned.toStringAsFixed(2)}';
+  String get totalSpentDisplay => '${Helpers.currencySymbolFor(currency)}${totalSpent.toStringAsFixed(2)}';
 
   factory WalletInfo.fromJson(Map<String, dynamic> json) {
     return WalletInfo(
@@ -221,7 +243,7 @@ class Transaction extends Equatable {
 
   bool get isIncome => amount > 0;
   String get amountDisplay =>
-      '${isIncome ? '+' : ''}£${amount.abs().toStringAsFixed(2)}';
+      '${isIncome ? '+' : ''}${Helpers.currencySymbolFor(currency)}${amount.abs().toStringAsFixed(2)}';
 
   factory Transaction.fromJson(Map<String, dynamic> json) {
     return Transaction(
@@ -257,7 +279,7 @@ class StripeConnectBalance extends Equatable {
   double get total => available + pending;
 
   String formatAmount(double amount) {
-    return '£${amount.toStringAsFixed(2)}';
+    return '${Helpers.currencySymbolFor(currency)}${amount.toStringAsFixed(2)}';
   }
 
   factory StripeConnectBalance.fromJson(Map<String, dynamic> json) {
@@ -425,7 +447,7 @@ class StripeConnectTransaction extends Equatable {
 
   String get amountDisplay {
     final prefix = isIncome ? '+' : '-';
-    return '$prefix£${amount.abs().toStringAsFixed(2)}';
+    return '$prefix${Helpers.currencySymbolFor(currency)}${amount.abs().toStringAsFixed(2)}';
   }
 
   factory StripeConnectTransaction.fromJson(Map<String, dynamic> json) {

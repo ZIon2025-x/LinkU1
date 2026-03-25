@@ -20,7 +20,6 @@ import '../../../core/widgets/loading_view.dart';
 import '../../../data/repositories/coupon_points_repository.dart';
 import '../../../data/repositories/payment_repository.dart';
 import '../../../data/services/payment_service.dart';
-import '../../../data/models/payment.dart';
 import '../bloc/payment_bloc.dart';
 import 'wechat_pay_webview.dart';
 
@@ -120,6 +119,8 @@ class _PaymentContentState extends State<_PaymentContent> {
     _startCountdownIfNeeded();
     _checkPaymentStatusOnInit();
     _setDefaultPaymentMethodIfApplePaySupported();
+    // 加载钱包余额（默认 GBP，PaymentIntent 返回后会根据实际币种更新）
+    context.read<PaymentBloc>().add(const PaymentLoadWalletBalance(currency: 'GBP'));
   }
 
   /// 初始化时检查支付状态（延迟执行，等待 PaymentIntent 创建完成后再检查）
@@ -203,6 +204,20 @@ class _PaymentContentState extends State<_PaymentContent> {
     }
   }
 
+  // ==================== 钱包余额切换 ====================
+
+  void _onWalletToggleChanged(bool value) {
+    final bloc = context.read<PaymentBloc>();
+    bloc.add(PaymentToggleWalletBalance(value));
+    // 重新创建 PaymentIntent 以让后端计算混合支付金额
+    bloc.add(PaymentCreateIntent(
+      taskId: widget.taskId,
+      preferredPaymentMethod:
+          _preferredPaymentMethodForAPI(_selectedPaymentMethod),
+      isMethodSwitch: true, // 不重置 UI 为 loading
+    ));
+  }
+
   // ==================== 倒计时 ====================
 
   void _startCountdownIfNeeded() {
@@ -254,11 +269,17 @@ class _PaymentContentState extends State<_PaymentContent> {
   Future<void> _processPayment() async {
     if (_alreadyPaid) return;
     final bloc = context.read<PaymentBloc>();
-    final state = bloc.state;
-    if (state.paymentResponse == null) return;
+    final payState = bloc.state;
+    if (payState.paymentResponse == null) return;
 
     // 免费订单 —— 后端已在创建 PaymentIntent 时处理
-    if (state.paymentResponse!.isFree) {
+    if (payState.paymentResponse!.isFree) {
+      bloc.add(const PaymentMarkSuccess());
+      return;
+    }
+
+    // 纯钱包支付 —— 后端已在创建 PaymentIntent 时从钱包扣款，无需 Stripe
+    if (payState.paymentResponse!.isWalletOnly) {
       bloc.add(const PaymentMarkSuccess());
       return;
     }
@@ -563,7 +584,9 @@ class _PaymentContentState extends State<_PaymentContent> {
             prev.selectedCouponName != curr.selectedCouponName ||
             prev.preferredPaymentMethod != curr.preferredPaymentMethod ||
             prev.errorMessage != curr.errorMessage ||
-            prev.isMethodSwitching != curr.isMethodSwitching,
+            prev.isMethodSwitching != curr.isMethodSwitching ||
+            prev.walletBalance != curr.walletBalance ||
+            prev.useWalletBalance != curr.useWalletBalance,
         builder: (context, state) {
           return PopScope(
             canPop: !state.isProcessing,
@@ -593,12 +616,22 @@ class _PaymentContentState extends State<_PaymentContent> {
                                     ],
 
                                     // 订单信息
-                                    _buildOrderInfo(state.paymentResponse),
+                                    _buildOrderInfo(state),
                                     AppSpacing.vLg,
 
-                                    // 支付方式选择
-                                    _buildPaymentMethodSection(),
-                                    AppSpacing.vLg,
+                                    // 钱包余额支付开关
+                                    if (state.hasWalletBalance)
+                                      ...[
+                                        _buildWalletToggle(state),
+                                        AppSpacing.vLg,
+                                      ],
+
+                                    // 支付方式选择（纯钱包支付时不需要选择）
+                                    if (!(state.paymentResponse?.isWalletOnly ?? false))
+                                      ...[
+                                        _buildPaymentMethodSection(),
+                                        AppSpacing.vLg,
+                                      ],
 
                                     // 优惠券选择
                                     _buildCouponSection(state),
@@ -734,7 +767,9 @@ class _PaymentContentState extends State<_PaymentContent> {
     );
   }
 
-  Widget _buildOrderInfo(TaskPaymentResponse? response) {
+  Widget _buildOrderInfo(PaymentState payState) {
+    final response = payState.paymentResponse;
+    final currency = response?.currency ?? 'GBP';
     return Container(
       padding: AppSpacing.allLg,
       decoration: BoxDecoration(
@@ -777,22 +812,122 @@ class _PaymentContentState extends State<_PaymentContent> {
                 ),
               ),
             ],
+            // 钱包余额抵扣明细
+            if (response.walletAmountUsed != null && response.walletAmountUsed! > 0) ...[
+              AppSpacing.vSm,
+              _InfoRow(
+                label: context.l10n.walletBalanceDeduction,
+                value: '-${Helpers.formatPrice(response.walletAmountUsed! / 100, currency: currency)}',
+                valueStyle: const TextStyle(
+                  color: AppColors.success,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 12),
               child: Divider(height: 1),
             ),
-            _InfoRow(
-              label: context.l10n.paymentFinalAmount,
-              value: response.finalAmountDisplay.isNotEmpty
-                  ? response.finalAmountDisplay
-                  : Helpers.formatPrice(response.finalAmount / 100),
-              valueStyle: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: AppColors.primary,
+            // 混合支付时显示 Stripe 实际需付金额
+            if (response.isMixedPayment && response.stripeAmountDue != null) ...[
+              _InfoRow(
+                label: context.l10n.paymentFinalAmount,
+                value: Helpers.formatPrice(response.finalAmount / 100, currency: currency),
+                valueStyle: const TextStyle(
+                  fontWeight: FontWeight.w500,
+                ),
               ),
-            ),
+              AppSpacing.vSm,
+              _InfoRow(
+                label: context.l10n.walletStripePay,
+                value: Helpers.formatPrice(response.stripeAmountDue! / 100, currency: currency),
+                valueStyle: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primary,
+                ),
+              ),
+            ] else ...[
+              _InfoRow(
+                label: context.l10n.paymentFinalAmount,
+                value: response.finalAmountDisplay.isNotEmpty
+                    ? response.finalAmountDisplay
+                    : Helpers.formatPrice(response.finalAmount / 100, currency: currency),
+                valueStyle: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primary,
+                ),
+              ),
+            ],
+            // 纯钱包支付提示
+            if (response.isWalletOnly) ...[
+              AppSpacing.vSm,
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withValues(alpha: 0.1),
+                  borderRadius: AppRadius.allSmall,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.account_balance_wallet, size: 16, color: AppColors.success),
+                    const SizedBox(width: 6),
+                    Text(
+                      context.l10n.walletFullPayment,
+                      style: const TextStyle(fontSize: 12, color: AppColors.success, fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWalletToggle(PaymentState payState) {
+    final wallet = payState.walletBalance!;
+    final currency = payState.paymentResponse?.currency ?? wallet.currency;
+    final symbol = Helpers.currencySymbolFor(currency);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: AppRadius.allMedium,
+        border: Border.all(
+          color: payState.useWalletBalance ? AppColors.primary.withValues(alpha: 0.3) : AppColors.dividerLight,
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.account_balance_wallet_outlined, color: AppColors.primary, size: 22),
+          AppSpacing.hMd,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  context.l10n.walletUseBalance,
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
+                Text(
+                  context.l10n.walletAvailableBalance('$symbol${wallet.balance.toStringAsFixed(2)}'),
+                  style: const TextStyle(fontSize: 12, color: AppColors.textSecondaryLight),
+                ),
+              ],
+            ),
+          ),
+          Switch.adaptive(
+            value: payState.useWalletBalance,
+            onChanged: (payState.isProcessing || _alreadyPaid)
+                ? null
+                : _onWalletToggleChanged,
+            activeTrackColor: AppColors.primary.withValues(alpha: 0.5),
+            activeThumbColor: AppColors.primary,
+          ),
         ],
       ),
     );
@@ -964,15 +1099,34 @@ class _PaymentContentState extends State<_PaymentContent> {
 
   Widget _buildPayButton(PaymentState state) {
     final response = state.paymentResponse;
-    final amount = response != null
-        ? response.finalAmountDisplay.isNotEmpty
-            ? response.finalAmountDisplay
-            : Helpers.formatPrice(response.finalAmount / 100)
-        : widget.amount != null
-            ? Helpers.formatPrice(widget.amount!)
-            : '£0.00';
+    final currency = response?.currency ?? 'GBP';
 
+    // 纯钱包支付：按钮显示余额支付
+    final isWalletOnly = response?.isWalletOnly ?? false;
     final isFree = response?.isFree ?? false;
+
+    // 混合支付时按钮显示 Stripe 需支付的金额，否则显示总额
+    final String amount;
+    if (response != null && response.isMixedPayment && response.stripeAmountDue != null) {
+      amount = Helpers.formatPrice(response.stripeAmountDue! / 100, currency: currency);
+    } else if (response != null) {
+      amount = response.finalAmountDisplay.isNotEmpty
+          ? response.finalAmountDisplay
+          : Helpers.formatPrice(response.finalAmount / 100, currency: currency);
+    } else if (widget.amount != null) {
+      amount = Helpers.formatPrice(widget.amount!, currency: currency);
+    } else {
+      amount = '${Helpers.currencySymbolFor(currency)}0.00';
+    }
+
+    final String buttonText;
+    if (isFree) {
+      buttonText = context.l10n.paymentConfirmFree;
+    } else if (isWalletOnly) {
+      buttonText = context.l10n.walletPayNow(amount);
+    } else {
+      buttonText = context.l10n.paymentPayNow(amount);
+    }
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -988,11 +1142,11 @@ class _PaymentContentState extends State<_PaymentContent> {
       ),
       child: SafeArea(
         child: PrimaryButton(
-          text: isFree ? context.l10n.paymentConfirmFree : context.l10n.paymentPayNow(amount),
+          text: buttonText,
           isLoading: state.isProcessing,
           onPressed: (state.isProcessing || _alreadyPaid) ? null : _processPayment,
-          icon: _payButtonIconData(),
-          leading: _payButtonLeadingWidget(),
+          icon: isWalletOnly ? Icons.account_balance_wallet : _payButtonIconData(),
+          leading: isWalletOnly ? null : _payButtonLeadingWidget(),
         ),
       ),
     );

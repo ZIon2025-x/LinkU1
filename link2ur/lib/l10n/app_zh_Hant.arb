@@ -3621,6 +3621,22 @@
   "walletYesterday": "昨天",
   "walletCheckingIn": "簽到中...",
   "walletDailyCheckIn": "每日簽到",
+  "walletUseBalance": "使用餘額支付",
+  "walletAvailableBalance": "可用餘額: {amount}",
+  "@walletAvailableBalance": {
+    "placeholders": {
+      "amount": {"type": "String"}
+    }
+  },
+  "walletBalanceDeduction": "餘額抵扣",
+  "walletStripePay": "銀行卡需付",
+  "walletFullPayment": "全額餘額支付，無需銀行卡",
+  "walletPayNow": "餘額支付 {amount}",
+  "@walletPayNow": {
+    "placeholders": {
+      "amount": {"type": "String"}
+    }
+  },
   "myTasksTitle": "我的任務",
   "myTasksAccepted": "我接的",
   "myTasksPosted": "我發的",

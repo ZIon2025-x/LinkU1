@@ -29,6 +29,7 @@ class PaymentRepository {
     String? preferredPaymentMethod,
     String? taskSource,
     String? fleaMarketItemId,
+    bool useWalletBalance = false,
   }) async {
     final idempotencyKey = _uuid.v4();
     final response = await _apiService.post<Map<String, dynamic>>(
@@ -40,6 +41,7 @@ class PaymentRepository {
           'preferred_payment_method': preferredPaymentMethod,
         if (taskSource != null) 'task_source': taskSource,
         if (fleaMarketItemId != null) 'flea_market_item_id': fleaMarketItemId,
+        if (useWalletBalance) 'use_wallet_balance': true,
       },
       options: Options(headers: {'Idempotency-Key': idempotencyKey}),
     );
@@ -138,6 +140,7 @@ class PaymentRepository {
     String? preferredPaymentMethod,
     String? taskSource,
     String? fleaMarketItemId,
+    bool useWalletBalance = false,
   }) async {
     return createTaskPayment(
       taskId: taskId,
@@ -145,6 +148,7 @@ class PaymentRepository {
       preferredPaymentMethod: preferredPaymentMethod,
       taskSource: taskSource,
       fleaMarketItemId: fleaMarketItemId,
+      useWalletBalance: useWalletBalance,
     );
   }
 
