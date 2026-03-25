@@ -4200,7 +4200,7 @@ def confirm_task_completion(
                                     cash_amount_pence = int(cash_amount * 100)
                                     transfer = stripe.Transfer.create(
                                         amount=cash_amount_pence,
-                                        currency="gbp",
+                                        currency=(task.currency or "GBP").lower(),
                                         destination=taker.stripe_account_id,
                                         metadata={
                                             "task_id": str(task_id),
@@ -6729,6 +6729,8 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                                     task_id=task_id,
                                 )
                                 db.add(new_rental)
+                                # 更新租赁申请状态为已完成
+                                rr.status = "completed"
                                 db.flush()
 
                                 logger.info(f"✅ [WEBHOOK] 跳蚤市场租赁记录已创建: rental_id={new_rental.id}, request_id={rental_request_id}")

@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS flea_market_rental_requests (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     CONSTRAINT check_rental_request_status_valid
-        CHECK (status IN ('pending', 'approved', 'rejected', 'counter_offer', 'expired'))
+        CHECK (status IN ('pending', 'approved', 'rejected', 'counter_offer', 'expired', 'completed'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_flea_market_rental_requests_item_id ON flea_market_rental_requests (item_id);

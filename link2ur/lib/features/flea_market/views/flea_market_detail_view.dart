@@ -695,7 +695,7 @@ class _FleaMarketDetailContent extends StatelessWidget {
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  l10n.fleaMarketCounterOfferReceived(priceText),
+                  l10n.fleaMarketCounterOfferReceived(priceText, Helpers.currencySymbolFor(item.currency)),
                   style: AppTypography.body.copyWith(
                     color: AppColors.warning,
                     fontWeight: FontWeight.w600,
@@ -795,7 +795,7 @@ class _FleaMarketDetailContent extends StatelessWidget {
     AdaptiveDialogs.showConfirmDialog(
       context: context,
       title: l10n.fleaMarketAcceptCounterOfferConfirmTitle,
-      content: l10n.fleaMarketAcceptCounterOfferConfirmMessage(priceText),
+      content: l10n.fleaMarketAcceptCounterOfferConfirmMessage(priceText, Helpers.currencySymbolFor(item.currency)),
       cancelText: l10n.actionsCancel,
       confirmText: l10n.actionsConfirm,
       onConfirm: () {
@@ -981,34 +981,98 @@ class _FleaMarketDetailContent extends StatelessWidget {
   /// 租赁物品的CTA按钮：申请租用 / 已提交申请
   Widget _buildRentalCTAButton(
       BuildContext context, FleaMarketState state, FleaMarketItem item) {
-    final hasPendingRequest = item.userRentalRequestStatus == 'pending';
+    final requestStatus = item.userRentalRequestStatus;
+    final requestId = item.userRentalRequestId;
 
-    if (hasPendingRequest) {
-      // 已提交申请 - 禁用按钮
-      return Container(
-        height: 50,
-        decoration: BoxDecoration(
-          color: AppColors.textTertiary.withValues(alpha: 0.3),
-          borderRadius: BorderRadius.circular(25),
-        ),
-        child: Center(
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.schedule, size: 16, color: AppColors.textSecondary),
-              const SizedBox(width: 8),
-              Text(
-                context.l10n.fleaMarketRentalRequestSubmitted,
-                style: AppTypography.bodyBold
-                    .copyWith(color: AppColors.textSecondary),
-              ),
-            ],
-          ),
-        ),
+    // 等待审批中
+    if (requestStatus == 'pending') {
+      return _buildDisabledRentalButton(
+        context,
+        icon: Icons.schedule,
+        text: context.l10n.fleaMarketRentalRequestSubmitted,
       );
     }
 
-    // 申请租用按钮
+    // 已批准，等待支付
+    if (requestStatus == 'approved') {
+      return _buildDisabledRentalButton(
+        context,
+        icon: Icons.payment,
+        text: context.l10n.fleaMarketRentalApproved,
+      );
+    }
+
+    // 收到还价，需要回应
+    if (requestStatus == 'counter_offer' && requestId != null) {
+      return Row(
+        children: [
+          // 拒绝还价
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                AppHaptics.selection();
+                context.read<FleaMarketRentalBloc>().add(
+                  RentalRespondCounterOffer(
+                    requestId: requestId.toString(),
+                    itemId: item.id,
+                    accept: false,
+                  ),
+                );
+              },
+              child: Container(
+                height: 50,
+                decoration: BoxDecoration(
+                  border: Border.all(color: AppColors.textTertiary),
+                  borderRadius: BorderRadius.circular(25),
+                ),
+                child: Center(
+                  child: Text(
+                    context.l10n.fleaMarketRentalRejected,
+                    style: AppTypography.bodyBold
+                        .copyWith(color: AppColors.textSecondary),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          // 接受还价
+          Expanded(
+            flex: 2,
+            child: GestureDetector(
+              onTap: () {
+                AppHaptics.selection();
+                context.read<FleaMarketRentalBloc>().add(
+                  RentalRespondCounterOffer(
+                    requestId: requestId.toString(),
+                    itemId: item.id,
+                    accept: true,
+                  ),
+                );
+              },
+              child: Container(
+                height: 50,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: AppColors.gradientPrimary,
+                  ),
+                  borderRadius: BorderRadius.circular(25),
+                ),
+                child: Center(
+                  child: Text(
+                    context.l10n.fleaMarketRentalApproved,
+                    style:
+                        AppTypography.bodyBold.copyWith(color: Colors.white),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    // 默认：申请租用按钮
     return Semantics(
       button: true,
       label: 'Apply to rent',
@@ -1047,6 +1111,34 @@ class _FleaMarketDetailContent extends StatelessWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDisabledRentalButton(
+    BuildContext context, {
+    required IconData icon,
+    required String text,
+  }) {
+    return Container(
+      height: 50,
+      decoration: BoxDecoration(
+        color: AppColors.textTertiary.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(25),
+      ),
+      child: Center(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: AppColors.textSecondary),
+            const SizedBox(width: 8),
+            Text(
+              text,
+              style: AppTypography.bodyBold
+                  .copyWith(color: AppColors.textSecondary),
+            ),
+          ],
         ),
       ),
     );
@@ -1353,7 +1445,7 @@ class _FleaMarketPurchaseSheetState extends State<_FleaMarketPurchaseSheet> {
                                         Text(
                                           l10n.fleaMarketNegotiateAmountFormat(
                                               widget.item
-                                                  .userPurchaseRequestProposedPrice!),
+                                                  .userPurchaseRequestProposedPrice!, Helpers.currencySymbolFor(widget.item.currency)),
                                           style: const TextStyle(
                                               fontSize: 13,
                                               color: AppColors.textSecondary),

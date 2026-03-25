@@ -1928,7 +1928,7 @@ class FleaMarketRentalRequest(Base):
 
     __table_args__ = (
         CheckConstraint(
-            "status IN ('pending', 'approved', 'rejected', 'counter_offer', 'expired')",
+            "status IN ('pending', 'approved', 'rejected', 'counter_offer', 'expired', 'completed')",
             name="check_rental_request_status_valid"
         ),
     )

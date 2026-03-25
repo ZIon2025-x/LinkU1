@@ -166,7 +166,7 @@ async def _create_rental_task_and_payment(
         reward=float(total_amount),
         base_reward=item.rental_price,
         agreed_reward=total_amount,
-        currency="GBP",
+        currency=item.currency or "GBP",
         location=item.location or "Online",
         task_type="Second-hand & Rental",
         poster_id=rental_request.renter_id,
@@ -353,7 +353,7 @@ async def create_rental_request(
         content_parts = [f"{renter_name} 申请租赁您的物品「{item.title}」"]
         content_parts.append(f"租期: {request_data.rental_duration} {item.rental_unit or 'day'}")
         if request_data.proposed_rental_price:
-            content_parts.append(f"期望租金: £{float(request_data.proposed_rental_price):.2f}/{item.rental_unit or 'day'}")
+            content_parts.append(f"期望租金: {'€' if item.currency == 'EUR' else '£'}{float(request_data.proposed_rental_price):.2f}/{item.rental_unit or 'day'}")
         if request_data.usage_description:
             content_parts.append(f"用途: {request_data.usage_description}")
 
@@ -545,8 +545,8 @@ async def approve_rental_request(
                 detail="无权限操作此申请"
             )
 
-        # 确定租金（如果租客提出了议价，使用议价；否则使用商品的 rental_price）
-        rental_price = rental_request.proposed_rental_price if rental_request.proposed_rental_price else item.rental_price
+        # 审批使用商品标价（租客建议价仅供参考，接受建议价需走还价流程）
+        rental_price = item.rental_price
 
         # 获取租客信息
         renter = await db.get(models.User, rental_request.renter_id)
@@ -573,9 +573,9 @@ async def approve_rental_request(
             notification_type="flea_market_rental_approved",
             title="租赁申请已通过",
             content=f"您的租赁申请已被通过！\n物品: {item.title}\n"
-                    f"总租金: £{float(result['total_rent']):.2f}\n"
-                    f"押金: £{float(result['deposit']):.2f}\n"
-                    f"总计: £{float(result['total_amount']):.2f}\n"
+                    f"总租金: {'€' if item.currency == 'EUR' else '£'}{float(result['total_rent']):.2f}\n"
+                    f"押金: {'€' if item.currency == 'EUR' else '£'}{float(result['deposit']):.2f}\n"
+                    f"总计: {'€' if item.currency == 'EUR' else '£'}{float(result['total_amount']):.2f}\n"
                     f"请在24小时内完成支付。",
             related_id=str(item.id),
             push_data={"item_id": format_flea_market_id(item.id)},
@@ -752,7 +752,7 @@ async def counter_offer_rental_request(
             user_id=rental_request.renter_id,
             notification_type="flea_market_rental_counter_offer",
             title="租赁还价",
-            content=f"物主对您租赁「{item.title}」的申请进行了还价。\n还价租金: £{float(counter_rental_price):.2f}/{item.rental_unit or 'day'}",
+            content=f"物主对您租赁「{item.title}」的申请进行了还价。\n还价租金: {'€' if item.currency == 'EUR' else '£'}{float(counter_rental_price):.2f}/{item.rental_unit or 'day'}",
             related_id=str(item.id),
             push_data={"item_id": format_flea_market_id(item.id)},
             push_template_vars={"item_title": item.title},
@@ -991,7 +991,7 @@ async def confirm_rental_return(
             notification_type="flea_market_rental_returned",
             title="物品归还确认",
             content=f"物主已确认物品「{item.title}」归还。"
-                    + (f"\n押金 £{float(rental.deposit_amount):.2f} 已退还。" if stripe_refund_id else ""),
+                    + (f"\n押金 {'€' if item.currency == 'EUR' else '£'}{float(rental.deposit_amount):.2f} 已退还。" if stripe_refund_id else ""),
             related_id=str(rental.id),
             push_data={"rental_id": str(rental.id), "item_id": format_flea_market_id(item.id)},
             push_template_vars={"item_title": item.title},
