@@ -22,7 +22,7 @@
 
 ### 物品状态不新增 DB 枚举值
 
-出租中的物品在数据库中 `status` 仍为 `active`（不新增 `rented` 状态），「出租中」是前端根据 `active_rental_id` 是否存在推导的展示状态。现有 CheckConstraint `status IN ('active', 'sold', 'deleted')` 不需要修改。
+出租物品在数据库中 `status` 始终为 `active`（不新增 `rented` 状态）。一个物品可以有多笔租赁记录（不同时间段租给不同人）。现有 CheckConstraint `status IN ('active', 'sold', 'deleted')` 不需要修改。
 
 ### `price` 字段处理
 
@@ -94,7 +94,7 @@
 - `deposit: double?` — 押金
 - `rentalPrice: double?` — 租金单价
 - `rentalUnit: String?` — `'day'` | `'week'` | `'month'`
-- `activeRentalId: int?` — 当前活跃租赁 ID（有值表示出租中）
+- `activeRentals: List<FleaMarketRental>` — 当前进行中的租赁列表（可能有多笔）
 
 **CreateFleaMarketRequest** 新增字段：
 - `listingType: String?` — 默认 `'sale'`
@@ -104,7 +104,7 @@
 
 **FleaMarketItem** 新增 getter：
 - `isRental` → `listingType == 'rental'`
-- `isRentedOut` → `activeRentalId != null`
+- `hasActiveRentals` → `activeRentals.isNotEmpty`
 - 覆盖 `isFree` → `!isRental && price == 0`（出租物品不视为免费）
 
 **新增 FleaMarketRentalRequest 模型** — 对应后端表
@@ -124,7 +124,7 @@
 | `POST /api/flea-market/items` | 支持 `listing_type`, `deposit`, `rental_price`, `rental_unit` 字段 |
 | `PUT /api/flea-market/items/{id}` | 可编辑 `deposit`, `rental_price`, `rental_unit`；`listing_type` 不可更改 |
 | `GET /api/flea-market/items` | 新增 `listing_type` 查询参数用于筛选 |
-| `GET /api/flea-market/items/{id}` | 响应中包含出租字段 + `active_rental_id` |
+| `GET /api/flea-market/items/{id}` | 响应中包含出租字段 + `active_rentals` 列表 |
 
 ### 新增接口
 
@@ -196,7 +196,7 @@ POST /api/flea-market/rental-requests/{id}/respond-counter-offer
 ### 后端校验
 
 - `listing_type=sale`：`price` 必填，出租字段忽略
-- `listing_type=rental`：`deposit`、`rental_price`、`rental_unit` 必填，`price` 设为 0
+- `listing_type=rental`：`deposit`、`rental_price`、`rental_unit` 必填，`price` 设为 `rental_price`
 - `listing_type` 发布后不可更改
 
 ## 列表与详情展示
@@ -212,8 +212,9 @@ POST /api/flea-market/rental-requests/{id}/respond-counter-offer
 **价格区域：** 租金 `£5/天` + 押金 `£50`
 
 **状态展示：**
-- 无活跃租赁 → 可租，显示「申请租用」按钮
-- 有活跃租赁 → 显示「出租中」，不可申请
+- 无活跃租赁 → 显示「可租」
+- 有活跃租赁 → 显示「出租中」+ 当前租赁到期时间，但**仍可申请**（租客可申请未来的时间段）
+- 始终显示「申请租用」按钮（除非物品被删除）
 
 **租客操作 — 申请租用弹窗：**
 - 租期：数量输入 + 单位显示（跟随物品设定）
@@ -227,9 +228,10 @@ POST /api/flea-market/rental-requests/{id}/respond-counter-offer
 - 拒绝
 - 议价 → 调整租金单价
 
-**出租人操作 — 出租中时：**
-- 确认归还 → 确认弹窗 → 退押金 → 物品恢复可租
-- 查看租赁详情 → 租客信息、租期、到期时间
+**出租人操作 — 管理租赁：**
+- 查看所有进行中的租赁列表
+- 对每笔租赁：查看详情（租客、租期、到期时间）、确认归还 → 退押金
+- 即使有租赁进行中，仍可审批新的申请（不同时间段）
 
 ## 支付与生命周期
 
@@ -238,14 +240,18 @@ POST /api/flea-market/rental-requests/{id}/respond-counter-offer
 1. 出租人同意申请 → 创建 Task（`source='flea_market_rental'`）+ Stripe PaymentIntent
 2. 租客收到通知 → 进入支付页，金额 = 租金小计 + 押金
 3. 复用现有 Stripe 支付流程，一次性付清
-4. 支付成功 → 创建 FleaMarketRental（`status=active`），物品标记为出租中
+4. 支付成功 → 创建 FleaMarketRental（`status=active`）
 
-### 并发申请处理
+### 多租赁模型
 
-- 一个物品可以同时有多个 `pending` 状态的租用申请
-- 出租人同意某个申请后，该申请状态变为 `approved`，其他 `pending` 申请**不自动拒绝**（租客可能不付款）
-- 租客支付成功 → 创建 FleaMarketRental → 此时自动拒绝该物品所有其他 `pending` 和 `approved` 的申请
-- 已批准的申请有 **24 小时**支付窗口（复用现有 `pending_payment_expires_at` 机制），超时则申请状态回到 `expired`，物品可继续接受新申请
+出租和出售的核心区别：**一个物品可以反复出租给不同的人**。
+
+- 一个物品可以同时有多个 `pending` 状态的租用申请，不同申请者可能申请不同时间段
+- 出租人同意某个申请后，该申请状态变为 `approved`，**其他申请不受影响、不自动拒绝**
+- 租客支付成功 → 创建 FleaMarketRental，**不影响其他申请**
+- 一个物品可以同时存在多笔 `active` 状态的 FleaMarketRental（不同时间段）
+- 出租人负责根据 `desired_time` 判断时间是否冲突，平台不做强制校验
+- 已批准的申请有 **24 小时**支付窗口，超时则状态变为 `expired`
 
 ### `start_date` 计算
 
@@ -263,7 +269,7 @@ POST /api/flea-market/rental-requests/{id}/respond-counter-offer
     → 出租人同意(approved) → 租客超时未支付 → expired
     → 出租人拒绝(rejected) → 结束，租客可重新申请
     → 出租人议价(counter_offer) → 租客接受/拒绝
-    → 物品被其他人租走 → 自动拒绝(rejected)
+（其他人的申请和租赁不影响此申请的状态）
 ```
 
 ```
@@ -295,15 +301,16 @@ POST /api/flea-market/rental-requests/{id}/respond-counter-offer
 
 ### 物品状态流转
 
-- 无活跃租赁 → `active`，可接受新申请
-- 有活跃租赁 → 显示「出租中」，不可提交新申请
-- 归还后 → 恢复 `active`，可再次出租
+- 出租物品 `status` 始终为 `active`，**始终可接受新申请**
+- 有活跃租赁时，详情页显示「出租中」提示 + 当前租赁到期时间，但不阻止新申请
+- 一个物品可同时有多笔活跃租赁（不同时间段）
+- 出租人通过查看申请中的 `desired_time` 自行判断时间是否可行
 
 ## Flutter 前端变更清单
 
 ### 模型层（data/models/）
 
-- `FleaMarketItem` 新增 7 个字段（含 `userRentalRequestId`, `userRentalRequestStatus`）
+- `FleaMarketItem` 新增字段（`listingType`, `deposit`, `rentalPrice`, `rentalUnit`, `activeRentals`, `userRentalRequestId`, `userRentalRequestStatus`）
 - `CreateFleaMarketRequest` 新增 4 个字段
 - 新增 `FleaMarketRentalRequest` 模型
 - 新增 `FleaMarketRental` 模型
@@ -398,5 +405,6 @@ static const String fleaMarketMyRentals = '/api/flea-market/my-rentals';
 - `flea_market_error_confirm_return_failed`
 - `flea_market_error_get_rental_detail_failed`
 - `flea_market_error_get_rental_requests_failed`
-- `flea_market_error_item_rented` — 物品已被租出
 - `flea_market_error_not_rental_item` — 物品不是出租类型
+- `flea_market_error_cannot_rent_own_item` — 不可租自己的物品
+- `flea_market_error_rental_payment_expired` — 支付超时
