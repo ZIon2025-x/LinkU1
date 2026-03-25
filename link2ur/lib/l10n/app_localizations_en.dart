@@ -10557,6 +10557,56 @@ class AppLocalizationsEn extends AppLocalizations {
   String get alreadyReplied => 'Already replied to this application';
 
   @override
+  String qaTitle(int count) {
+    return 'Q&A ($count)';
+  }
+
+  @override
+  String get qaAskPlaceholder => 'Ask the poster a question...';
+
+  @override
+  String get qaReplyPlaceholder => 'Write your reply...';
+
+  @override
+  String get qaAskButton => 'Ask';
+
+  @override
+  String get qaReplyButton => 'Reply';
+
+  @override
+  String get qaDeleteConfirm => 'Delete this question?';
+
+  @override
+  String get qaDeleteConfirmBody => 'The reply will also be deleted.';
+
+  @override
+  String get qaNoQuestions => 'No questions yet';
+
+  @override
+  String get qaOwnerReply => 'Poster\'s reply';
+
+  @override
+  String get qaServiceOwnerReply => 'Provider\'s reply';
+
+  @override
+  String get qaCannotAskOwn => 'Cannot ask questions on your own post';
+
+  @override
+  String get qaAlreadyReplied => 'Already replied';
+
+  @override
+  String get qaLoadMore => 'Load more';
+
+  @override
+  String get qaAskSuccess => 'Question submitted';
+
+  @override
+  String get qaReplySuccess => 'Reply submitted';
+
+  @override
+  String get qaDeleteSuccess => 'Question deleted';
+
+  @override
   String get taskDetailRaiseDispute => 'Raise a Dispute';
 
   @override

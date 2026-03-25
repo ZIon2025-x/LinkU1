@@ -2434,14 +2434,16 @@ async def get_service_applications(
             "applicant_name": applicant.name if applicant else "Unknown",
             "applicant_avatar": applicant.avatar if applicant else None,
             "applicant_user_level": applicant.user_level if applicant and hasattr(applicant, "user_level") else None,
-            "application_message": app.application_message,
-            "negotiated_price": float(app.negotiated_price) if app.negotiated_price else None,
             "currency": app.currency or "GBP",
             "status": app.status,
             "created_at": app.created_at.isoformat() if app.created_at else None,
             "owner_reply": app.owner_reply,
             "owner_reply_at": app.owner_reply_at.isoformat() if app.owner_reply_at else None,
         }
+        # Only include private fields for owner or the applicant themselves
+        if is_owner or (current_user and str(app.applicant_id) == current_user.id):
+            item["application_message"] = app.application_message
+            item["negotiated_price"] = float(app.negotiated_price) if app.negotiated_price else None
         if is_owner:
             item["applicant_id"] = app.applicant_id
         elif user_id and app.applicant_id == user_id:

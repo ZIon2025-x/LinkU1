@@ -483,6 +483,19 @@ class Notification(Base):
     )
 
 
+class Question(Base):
+    __tablename__ = "questions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    target_type = Column(String(20), nullable=False)  # 'task' / 'service'
+    target_id = Column(Integer, nullable=False)
+    asker_id = Column(String(8), ForeignKey("users.id"), nullable=False)
+    content = Column(Text, nullable=False)
+    reply = Column(Text, nullable=True)
+    reply_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=func.now(), nullable=False)
+
+
 class TaskCancelRequest(Base):
     __tablename__ = "task_cancel_requests"
     id = Column(Integer, primary_key=True, index=True)

@@ -238,6 +238,12 @@ class ApiEndpoints {
   static String ownerCounterOffer(int applicationId) =>
       '/api/users/me/service-applications/$applicationId/owner-counter-offer';
 
+  // ==================== 问答相关 ====================
+  // 后端: routes/questions.py (prefix: /api/questions)
+  static const String questions = '/api/questions';
+  static String questionReply(int id) => '/api/questions/$id/reply';
+  static String questionDelete(int id) => '/api/questions/$id';
+
   // ==================== 论坛相关 ====================
   // 后端: forum_routes.py (prefix: /api/forum)
   static const String forumVisibleCategories = '/api/forum/forums/visible';

@@ -3,7 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../data/models/activity.dart';
 import '../../../data/models/task_expert.dart';
+import '../../../data/models/task_question.dart';
 import '../../../data/repositories/activity_repository.dart';
+import '../../../data/repositories/question_repository.dart';
 import '../../../data/repositories/task_expert_repository.dart';
 import '../../../core/utils/logger.dart';
 
@@ -221,6 +223,37 @@ class TaskExpertReplyServiceApplication extends TaskExpertEvent {
   List<Object?> get props => [serviceId, applicationId, message];
 }
 
+class TaskExpertLoadServiceQuestions extends TaskExpertEvent {
+  const TaskExpertLoadServiceQuestions(this.serviceId, {this.page = 1});
+  final int serviceId;
+  final int page;
+  @override
+  List<Object?> get props => [serviceId, page];
+}
+
+class TaskExpertAskServiceQuestion extends TaskExpertEvent {
+  const TaskExpertAskServiceQuestion({required this.serviceId, required this.content});
+  final int serviceId;
+  final String content;
+  @override
+  List<Object?> get props => [serviceId, content];
+}
+
+class TaskExpertReplyServiceQuestion extends TaskExpertEvent {
+  const TaskExpertReplyServiceQuestion({required this.questionId, required this.content});
+  final int questionId;
+  final String content;
+  @override
+  List<Object?> get props => [questionId, content];
+}
+
+class TaskExpertDeleteServiceQuestion extends TaskExpertEvent {
+  const TaskExpertDeleteServiceQuestion(this.questionId);
+  final int questionId;
+  @override
+  List<Object?> get props => [questionId];
+}
+
 // ==================== State ====================
 
 enum TaskExpertStatus { initial, loading, loaded, error }
@@ -257,6 +290,10 @@ class TaskExpertState extends Equatable {
     this.myExpertApplicationStatus,
     this.serviceApplications = const [],
     this.isLoadingServiceApplications = false,
+    this.serviceQuestions = const [],
+    this.isLoadingServiceQuestions = false,
+    this.serviceQuestionsTotalCount = 0,
+    this.serviceQuestionsCurrentPage = 1,
   });
 
   final TaskExpertStatus status;
@@ -304,6 +341,12 @@ class TaskExpertState extends Equatable {
   final List<Map<String, dynamic>> serviceApplications;
   final bool isLoadingServiceApplications;
 
+  /// 服务 Q&A
+  final List<TaskQuestion> serviceQuestions;
+  final bool isLoadingServiceQuestions;
+  final int serviceQuestionsTotalCount;
+  final int serviceQuestionsCurrentPage;
+
   bool get isLoading => status == TaskExpertStatus.loading;
 
   /// 当前是否有激活的筛选条件（类型非全部 或 城市非全部）
@@ -341,6 +384,10 @@ class TaskExpertState extends Equatable {
     bool clearMyExpertApplicationStatus = false,
     List<Map<String, dynamic>>? serviceApplications,
     bool? isLoadingServiceApplications,
+    List<TaskQuestion>? serviceQuestions,
+    bool? isLoadingServiceQuestions,
+    int? serviceQuestionsTotalCount,
+    int? serviceQuestionsCurrentPage,
   }) {
     return TaskExpertState(
       status: status ?? this.status,
@@ -375,6 +422,10 @@ class TaskExpertState extends Equatable {
           : (myExpertApplicationStatus ?? this.myExpertApplicationStatus),
       serviceApplications: serviceApplications ?? this.serviceApplications,
       isLoadingServiceApplications: isLoadingServiceApplications ?? this.isLoadingServiceApplications,
+      serviceQuestions: serviceQuestions ?? this.serviceQuestions,
+      isLoadingServiceQuestions: isLoadingServiceQuestions ?? this.isLoadingServiceQuestions,
+      serviceQuestionsTotalCount: serviceQuestionsTotalCount ?? this.serviceQuestionsTotalCount,
+      serviceQuestionsCurrentPage: serviceQuestionsCurrentPage ?? this.serviceQuestionsCurrentPage,
     );
   }
 
@@ -410,6 +461,10 @@ class TaskExpertState extends Equatable {
         myExpertApplicationStatus,
         serviceApplications,
         isLoadingServiceApplications,
+        serviceQuestions,
+        isLoadingServiceQuestions,
+        serviceQuestionsTotalCount,
+        serviceQuestionsCurrentPage,
       ];
 }
 
@@ -419,8 +474,10 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
   TaskExpertBloc({
     required TaskExpertRepository taskExpertRepository,
     ActivityRepository? activityRepository,
+    QuestionRepository? questionRepository,
   })  : _taskExpertRepository = taskExpertRepository,
         _activityRepository = activityRepository,
+        _questionRepository = questionRepository,
         super(const TaskExpertState()) {
     on<TaskExpertLoadRequested>(_onLoadRequested);
     on<TaskExpertLoadMore>(_onLoadMore);
@@ -443,10 +500,15 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     on<TaskExpertApplyToBeExpert>(_onApplyToBeExpert);
     on<TaskExpertLoadServiceApplications>(_onLoadServiceApplications);
     on<TaskExpertReplyServiceApplication>(_onReplyServiceApplication);
+    on<TaskExpertLoadServiceQuestions>(_onLoadServiceQuestions);
+    on<TaskExpertAskServiceQuestion>(_onAskServiceQuestion);
+    on<TaskExpertReplyServiceQuestion>(_onReplyServiceQuestion);
+    on<TaskExpertDeleteServiceQuestion>(_onDeleteServiceQuestion);
   }
 
   final TaskExpertRepository _taskExpertRepository;
   final ActivityRepository? _activityRepository;
+  final QuestionRepository? _questionRepository;
 
   /// 获取城市筛选参数，'all' 时返回 null
   String? _cityParam(String city) => city == 'all' ? null : city;
@@ -1061,6 +1123,94 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
         isSubmitting: false,
         errorMessage: e.toString(),
       ));
+    }
+  }
+
+  Future<void> _onLoadServiceQuestions(
+    TaskExpertLoadServiceQuestions event,
+    Emitter<TaskExpertState> emit,
+  ) async {
+    emit(state.copyWith(isLoadingServiceQuestions: true));
+    try {
+      final result = await _questionRepository!.getQuestions(
+        targetType: 'service',
+        targetId: event.serviceId,
+        page: event.page,
+      );
+      final items = result['items'] as List<TaskQuestion>;
+      final allQuestions = event.page == 1
+          ? items
+          : [...state.serviceQuestions, ...items];
+      emit(state.copyWith(
+        serviceQuestions: allQuestions,
+        isLoadingServiceQuestions: false,
+        serviceQuestionsTotalCount: result['total'] as int,
+        serviceQuestionsCurrentPage: event.page,
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to load service questions', e);
+      emit(state.copyWith(isLoadingServiceQuestions: false));
+    }
+  }
+
+  Future<void> _onAskServiceQuestion(
+    TaskExpertAskServiceQuestion event,
+    Emitter<TaskExpertState> emit,
+  ) async {
+    try {
+      final question = await _questionRepository!.askQuestion(
+        targetType: 'service',
+        targetId: event.serviceId,
+        content: event.content,
+      );
+      emit(state.copyWith(
+        serviceQuestions: [question, ...state.serviceQuestions],
+        serviceQuestionsTotalCount: state.serviceQuestionsTotalCount + 1,
+        actionMessage: 'qa_ask_success',
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to ask service question', e);
+      emit(state.copyWith(actionMessage: 'qa_ask_failed'));
+    }
+  }
+
+  Future<void> _onReplyServiceQuestion(
+    TaskExpertReplyServiceQuestion event,
+    Emitter<TaskExpertState> emit,
+  ) async {
+    try {
+      final updated = await _questionRepository!.replyQuestion(
+        questionId: event.questionId,
+        content: event.content,
+      );
+      final updatedList = state.serviceQuestions.map((q) =>
+        q.id == updated.id ? updated : q
+      ).toList();
+      emit(state.copyWith(
+        serviceQuestions: updatedList,
+        actionMessage: 'qa_reply_success',
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to reply service question', e);
+      emit(state.copyWith(actionMessage: 'qa_reply_failed'));
+    }
+  }
+
+  Future<void> _onDeleteServiceQuestion(
+    TaskExpertDeleteServiceQuestion event,
+    Emitter<TaskExpertState> emit,
+  ) async {
+    try {
+      await _questionRepository!.deleteQuestion(event.questionId);
+      final updatedList = state.serviceQuestions.where((q) => q.id != event.questionId).toList();
+      emit(state.copyWith(
+        serviceQuestions: updatedList,
+        serviceQuestionsTotalCount: state.serviceQuestionsTotalCount - 1,
+        actionMessage: 'qa_delete_success',
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to delete service question', e);
+      emit(state.copyWith(actionMessage: 'qa_delete_failed'));
     }
   }
 }

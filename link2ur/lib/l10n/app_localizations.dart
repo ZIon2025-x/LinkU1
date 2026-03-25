@@ -19448,6 +19448,102 @@ abstract class AppLocalizations {
   /// **'Already replied to this application'**
   String get alreadyReplied;
 
+  /// No description provided for @qaTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Q&A ({count})'**
+  String qaTitle(int count);
+
+  /// No description provided for @qaAskPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask the poster a question...'**
+  String get qaAskPlaceholder;
+
+  /// No description provided for @qaReplyPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Write your reply...'**
+  String get qaReplyPlaceholder;
+
+  /// No description provided for @qaAskButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask'**
+  String get qaAskButton;
+
+  /// No description provided for @qaReplyButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply'**
+  String get qaReplyButton;
+
+  /// No description provided for @qaDeleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this question?'**
+  String get qaDeleteConfirm;
+
+  /// No description provided for @qaDeleteConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The reply will also be deleted.'**
+  String get qaDeleteConfirmBody;
+
+  /// No description provided for @qaNoQuestions.
+  ///
+  /// In en, this message translates to:
+  /// **'No questions yet'**
+  String get qaNoQuestions;
+
+  /// No description provided for @qaOwnerReply.
+  ///
+  /// In en, this message translates to:
+  /// **'Poster\'s reply'**
+  String get qaOwnerReply;
+
+  /// No description provided for @qaServiceOwnerReply.
+  ///
+  /// In en, this message translates to:
+  /// **'Provider\'s reply'**
+  String get qaServiceOwnerReply;
+
+  /// No description provided for @qaCannotAskOwn.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot ask questions on your own post'**
+  String get qaCannotAskOwn;
+
+  /// No description provided for @qaAlreadyReplied.
+  ///
+  /// In en, this message translates to:
+  /// **'Already replied'**
+  String get qaAlreadyReplied;
+
+  /// No description provided for @qaLoadMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Load more'**
+  String get qaLoadMore;
+
+  /// No description provided for @qaAskSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Question submitted'**
+  String get qaAskSuccess;
+
+  /// No description provided for @qaReplySuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply submitted'**
+  String get qaReplySuccess;
+
+  /// No description provided for @qaDeleteSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Question deleted'**
+  String get qaDeleteSuccess;
+
   /// No description provided for @taskDetailRaiseDispute.
   ///
   /// In en, this message translates to:

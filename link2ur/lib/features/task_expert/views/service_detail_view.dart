@@ -6,12 +6,9 @@ import 'package:intl/intl.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/design/app_colors.dart';
-import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/router/app_router.dart';
-import '../../../core/utils/adaptive_dialogs.dart';
-import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
@@ -21,11 +18,13 @@ import '../../../core/utils/sheet_adaptation.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
+import '../../../core/widgets/qa_section.dart';
 import '../../../core/widgets/scroll_safe_tap.dart';
 import '../../../data/models/activity.dart';
 import '../../../data/models/task_expert.dart';
 import '../../../data/services/storage_service.dart';
 import '../../../data/repositories/activity_repository.dart';
+import '../../../data/repositories/question_repository.dart';
 import '../../../data/repositories/task_expert_repository.dart';
 import 'activity_price_widget.dart';
 import '../bloc/task_expert_bloc.dart';
@@ -43,11 +42,13 @@ class ServiceDetailView extends StatelessWidget {
       create: (context) => TaskExpertBloc(
         taskExpertRepository: context.read<TaskExpertRepository>(),
         activityRepository: context.read<ActivityRepository>(),
+        questionRepository: context.read<QuestionRepository>(),
       )
         ..add(TaskExpertLoadServiceDetail(serviceId))
         ..add(TaskExpertLoadServiceReviews(serviceId))
         ..add(TaskExpertLoadServiceTimeSlots(serviceId))
-        ..add(TaskExpertLoadServiceApplications(serviceId)),
+        ..add(TaskExpertLoadServiceApplications(serviceId))
+        ..add(TaskExpertLoadServiceQuestions(serviceId)),
       child: _ServiceDetailContent(serviceId: serviceId),
     );
   }
@@ -97,6 +98,9 @@ class _ServiceDetailContent extends StatelessWidget {
                       ? context.localizeError(state.errorMessage)
                       : context.l10n.actionApplicationFailed,
                   'service_reply_submitted' => context.l10n.successOperationSuccess,
+                  'qa_ask_success' => context.l10n.qaAskSuccess,
+                  'qa_reply_success' => context.l10n.qaReplySuccess,
+                  'qa_delete_success' => context.l10n.qaDeleteSuccess,
                   _ => state.actionMessage!,
                 };
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -165,16 +169,29 @@ class _ServiceDetailContent extends StatelessWidget {
                               ),
                               const SizedBox(height: 20),
 
-                              // 申请留言区域
-                              if (state.serviceApplications.isNotEmpty ||
-                                  state.isLoadingServiceApplications)
-                                _ServiceApplicationsSection(
-                                  applications: state.serviceApplications,
-                                  isLoading: state.isLoadingServiceApplications,
-                                  isDark: isDark,
-                                  isOwner: _isServiceOwner(state.selectedService),
-                                  serviceId: serviceId,
+                              // Q&A 区域
+                              QASection(
+                                targetType: 'service',
+                                isOwner: _isServiceOwner(state.selectedService),
+                                isDark: isDark,
+                                questions: state.serviceQuestions,
+                                isLoading: state.isLoadingServiceQuestions,
+                                totalCount: state.serviceQuestionsTotalCount,
+                                isLoggedIn: StorageService.instance.getUserId() != null,
+                                allowAsk: true,
+                                onAsk: (content) => context.read<TaskExpertBloc>().add(
+                                  TaskExpertAskServiceQuestion(serviceId: serviceId, content: content),
                                 ),
+                                onReply: (questionId, content) => context.read<TaskExpertBloc>().add(
+                                  TaskExpertReplyServiceQuestion(questionId: questionId, content: content),
+                                ),
+                                onDelete: (questionId) => context.read<TaskExpertBloc>().add(
+                                  TaskExpertDeleteServiceQuestion(questionId),
+                                ),
+                                onLoadMore: () => context.read<TaskExpertBloc>().add(
+                                  TaskExpertLoadServiceQuestions(serviceId, page: state.serviceQuestionsCurrentPage + 1),
+                                ),
+                              ),
 
                               if (service.hasTimeSlots)
                                 _TimeSlotsCard(
@@ -1976,307 +1993,5 @@ class _ApplyServiceSheetState extends State<_ApplyServiceSheet> {
                 widget.service.hasTimeSlots ? null : deadline,
           ),
         );
-  }
-}
-
-// =============================================================================
-// 服务申请留言区域
-// =============================================================================
-
-String _formatTimeStr(String timeStr) {
-  final dt = DateTime.tryParse(timeStr);
-  if (dt == null) return timeStr;
-  return DateFormatter.formatRelative(dt.toLocal());
-}
-
-class _ServiceApplicationsSection extends StatelessWidget {
-  const _ServiceApplicationsSection({
-    required this.applications,
-    required this.isLoading,
-    required this.isDark,
-    required this.isOwner,
-    required this.serviceId,
-  });
-
-  final List<Map<String, dynamic>> applications;
-  final bool isLoading;
-  final bool isDark;
-  final bool isOwner;
-  final int serviceId;
-
-  @override
-  Widget build(BuildContext context) {
-    if (isLoading && applications.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
-        child: Center(
-          child: SizedBox(
-            width: 24,
-            height: 24,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
-        ),
-      );
-    }
-
-    if (applications.isEmpty) return const SizedBox.shrink();
-
-    return Container(
-      margin: const EdgeInsets.only(top: AppSpacing.md),
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight,
-        borderRadius: AppRadius.allMedium,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.forum_outlined, size: 18, color: AppColors.primary),
-              const SizedBox(width: AppSpacing.sm),
-              Text(
-                context.l10n.applicationMessages(applications.length),
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          ...applications.map((app) => _ServiceApplicationCard(
-                application: app,
-                isDark: isDark,
-                isOwner: isOwner,
-                serviceId: serviceId,
-              )),
-        ],
-      ),
-    );
-  }
-}
-
-class _ServiceApplicationCard extends StatelessWidget {
-  const _ServiceApplicationCard({
-    required this.application,
-    required this.isDark,
-    required this.isOwner,
-    required this.serviceId,
-  });
-
-  final Map<String, dynamic> application;
-  final bool isDark;
-  final bool isOwner;
-  final int serviceId;
-
-  @override
-  Widget build(BuildContext context) {
-    final name = (application['applicant_name'] as String?) ?? 'Unknown';
-    final avatar = application['applicant_avatar'] as String?;
-    final message = application['application_message'] as String?;
-    final price = application['negotiated_price'] as num?;
-    final createdAt = application['created_at'] as String?;
-    final ownerReply = application['owner_reply'] as String?;
-    final ownerReplyAt = application['owner_reply_at'] as String?;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 申请者信息
-          Row(
-            children: [
-              AsyncImageView(
-                imageUrl: avatar,
-                width: 36,
-                height: 36,
-                borderRadius: BorderRadius.circular(18),
-                placeholder: const Icon(Icons.person, size: 20),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (createdAt != null)
-                      Text(
-                        _formatTimeStr(createdAt),
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: isDark
-                                  ? AppColors.textTertiaryDark
-                                  : AppColors.textTertiaryLight,
-                            ),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-
-          // 申请留言
-          if (message != null && message.isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.sm),
-            Text(message, style: Theme.of(context).textTheme.bodyMedium),
-          ],
-
-          // 议价价格
-          if (price != null && price > 0) ...[
-            const SizedBox(height: AppSpacing.sm),
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.sm,
-                vertical: AppSpacing.xs,
-              ),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                borderRadius: AppRadius.allSmall,
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.price_change_outlined,
-                      size: 16, color: AppColors.primary),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${context.l10n.expertApplicationPrice}: £${Helpers.formatAmountNumber(price)}',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-
-          // 所有者回复
-          if (ownerReply != null && ownerReply.isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.sm),
-            Container(
-              margin: const EdgeInsets.only(left: AppSpacing.lg),
-              padding: const EdgeInsets.all(AppSpacing.sm),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.06),
-                borderRadius: AppRadius.allSmall,
-                border: Border(
-                  left: BorderSide(
-                    color: AppColors.primary.withValues(alpha: 0.4),
-                    width: 3,
-                  ),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.reply, size: 14,
-                          color: AppColors.primary.withValues(alpha: 0.7)),
-                      const SizedBox(width: 4),
-                      Text(
-                        context.l10n.posterReply,
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                      ),
-                      const Spacer(),
-                      if (ownerReplyAt != null)
-                        Text(
-                          _formatTimeStr(ownerReplyAt),
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: isDark
-                                    ? AppColors.textTertiaryDark
-                                    : AppColors.textTertiaryLight,
-                                fontSize: 10,
-                              ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(ownerReply,
-                      style: Theme.of(context).textTheme.bodyMedium),
-                ],
-              ),
-            ),
-          ]
-          // 所有者回复按钮（未回复时显示）
-          else if (isOwner) ...[
-            const SizedBox(height: 4),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton.icon(
-                onPressed: () => _showReplyDialog(context),
-                icon: const Icon(Icons.reply, size: 16),
-                label: Text(context.l10n.replyToApplication),
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.primary,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 4),
-                  textStyle: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          ],
-
-          // 分隔线
-          Divider(
-            height: 1,
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.06)
-                : Colors.black.withValues(alpha: 0.06),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showReplyDialog(BuildContext context) {
-    final controller = TextEditingController();
-    final bloc = context.read<TaskExpertBloc>();
-    final appId = application['id'] as int;
-
-    AdaptiveDialogs.showConfirmDialog(
-      context: context,
-      title: context.l10n.replyToApplication,
-      barrierDismissible: false,
-      contentWidget: TextField(
-        controller: controller,
-        maxLength: 500,
-        maxLines: 4,
-        decoration: InputDecoration(
-          hintText: context.l10n.publicReplyPlaceholder,
-          border: const OutlineInputBorder(),
-        ),
-      ),
-      confirmText: context.l10n.commonSubmit,
-      cancelText: context.l10n.commonCancel,
-      onConfirm: () {
-        final text = controller.text.trim();
-        if (text.isNotEmpty) {
-          bloc.add(TaskExpertReplyServiceApplication(
-            serviceId,
-            appId,
-            text,
-          ));
-        }
-        controller.dispose();
-      },
-      onCancel: () {
-        controller.dispose();
-      },
-    );
   }
 }

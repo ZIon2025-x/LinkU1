@@ -6,8 +6,10 @@ import '../../../data/models/task.dart';
 import '../../../data/models/task_application.dart';
 import '../../../data/models/review.dart';
 import '../../../data/models/refund_request.dart';
+import '../../../data/models/task_question.dart';
 import '../../../data/repositories/task_repository.dart';
 import '../../../data/repositories/notification_repository.dart';
+import '../../../data/repositories/question_repository.dart';
 import '../../../core/utils/logger.dart';
 
 // ==================== Events ====================
@@ -331,6 +333,37 @@ class TaskDetailPublicReply extends TaskDetailEvent {
   List<Object> get props => [applicationId, message];
 }
 
+// Q&A events
+
+class TaskDetailLoadQuestions extends TaskDetailEvent {
+  const TaskDetailLoadQuestions({this.page = 1});
+  final int page;
+  @override
+  List<Object?> get props => [page];
+}
+
+class TaskDetailAskQuestion extends TaskDetailEvent {
+  const TaskDetailAskQuestion(this.content);
+  final String content;
+  @override
+  List<Object?> get props => [content];
+}
+
+class TaskDetailReplyQuestion extends TaskDetailEvent {
+  const TaskDetailReplyQuestion({required this.questionId, required this.content});
+  final int questionId;
+  final String content;
+  @override
+  List<Object?> get props => [questionId, content];
+}
+
+class TaskDetailDeleteQuestion extends TaskDetailEvent {
+  const TaskDetailDeleteQuestion(this.questionId);
+  final int questionId;
+  @override
+  List<Object?> get props => [questionId];
+}
+
 // ==================== State ====================
 
 enum TaskDetailStatus { initial, loading, loaded, error }
@@ -354,6 +387,11 @@ class TaskDetailState extends Equatable {
     this.isLoadingReviews = false,
     this.reviewsLoaded = false,
     this.hasSubmittedReview = false,
+    // Q&A
+    this.questions = const [],
+    this.isLoadingQuestions = false,
+    this.questionsTotalCount = 0,
+    this.questionsCurrentPage = 1,
   });
 
   final TaskDetailStatus status;
@@ -383,6 +421,12 @@ class TaskDetailState extends Equatable {
   /// 当前会话中是否已提交过评价（覆盖匿名评价不在 reviews 列表中的情况）
   final bool hasSubmittedReview;
 
+  // Q&A
+  final List<TaskQuestion> questions;
+  final bool isLoadingQuestions;
+  final int questionsTotalCount;
+  final int questionsCurrentPage;
+
   bool get isLoading => status == TaskDetailStatus.loading;
   bool get isLoaded => status == TaskDetailStatus.loaded;
 
@@ -407,6 +451,10 @@ class TaskDetailState extends Equatable {
     bool? isLoadingReviews,
     bool? reviewsLoaded,
     bool? hasSubmittedReview,
+    List<TaskQuestion>? questions,
+    bool? isLoadingQuestions,
+    int? questionsTotalCount,
+    int? questionsCurrentPage,
   }) {
     return TaskDetailState(
       status: status ?? this.status,
@@ -435,6 +483,10 @@ class TaskDetailState extends Equatable {
       isLoadingReviews: isLoadingReviews ?? this.isLoadingReviews,
       reviewsLoaded: reviewsLoaded ?? this.reviewsLoaded,
       hasSubmittedReview: hasSubmittedReview ?? this.hasSubmittedReview,
+      questions: questions ?? this.questions,
+      isLoadingQuestions: isLoadingQuestions ?? this.isLoadingQuestions,
+      questionsTotalCount: questionsTotalCount ?? this.questionsTotalCount,
+      questionsCurrentPage: questionsCurrentPage ?? this.questionsCurrentPage,
     );
   }
 
@@ -457,6 +509,10 @@ class TaskDetailState extends Equatable {
         isLoadingReviews,
         reviewsLoaded,
         hasSubmittedReview,
+        questions,
+        isLoadingQuestions,
+        questionsTotalCount,
+        questionsCurrentPage,
       ];
 }
 
@@ -466,8 +522,10 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
   TaskDetailBloc({
     required TaskRepository taskRepository,
     required NotificationRepository notificationRepository,
+    required QuestionRepository questionRepository,
   })  : _taskRepository = taskRepository,
         _notificationRepository = notificationRepository,
+        _questionRepository = questionRepository,
         super(const TaskDetailState()) {
     on<TaskDetailLoadRequested>(_onLoadRequested, transformer: restartable());
     on<TaskDetailLoadApplications>(_onLoadApplications, transformer: restartable());
@@ -496,10 +554,15 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
     on<TaskDetailRespondNegotiationRequested>(_onRespondNegotiation, transformer: droppable());
     on<TaskDetailToggleProfileVisibility>(_onToggleProfileVisibility, transformer: droppable());
     on<TaskDetailPublicReply>(_onPublicReply, transformer: droppable());
+    on<TaskDetailLoadQuestions>(_onLoadQuestions);
+    on<TaskDetailAskQuestion>(_onAskQuestion);
+    on<TaskDetailReplyQuestion>(_onReplyQuestion);
+    on<TaskDetailDeleteQuestion>(_onDeleteQuestion);
   }
 
   final TaskRepository _taskRepository;
   final NotificationRepository _notificationRepository;
+  final QuestionRepository _questionRepository;
 
   int? get _taskId => state.task?.id;
 
@@ -1416,6 +1479,94 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
         actionMessage: 'visibility_update_failed',
         errorMessage: 'task_visibility_update_failed',
       ));
+    }
+  }
+
+  Future<void> _onLoadQuestions(
+    TaskDetailLoadQuestions event,
+    Emitter<TaskDetailState> emit,
+  ) async {
+    emit(state.copyWith(isLoadingQuestions: true));
+    try {
+      final taskId = state.task?.id;
+      if (taskId == null) return;
+      final result = await _questionRepository.getQuestions(
+        targetType: 'task',
+        targetId: taskId,
+        page: event.page,
+      );
+      final items = result['items'] as List<TaskQuestion>;
+      final allQuestions = event.page == 1
+          ? items
+          : [...state.questions, ...items];
+      emit(state.copyWith(
+        questions: allQuestions,
+        isLoadingQuestions: false,
+        questionsTotalCount: result['total'] as int,
+        questionsCurrentPage: event.page,
+      ));
+    } catch (e) {
+      emit(state.copyWith(isLoadingQuestions: false));
+    }
+  }
+
+  Future<void> _onAskQuestion(
+    TaskDetailAskQuestion event,
+    Emitter<TaskDetailState> emit,
+  ) async {
+    try {
+      final taskId = state.task?.id;
+      if (taskId == null) return;
+      final question = await _questionRepository.askQuestion(
+        targetType: 'task',
+        targetId: taskId,
+        content: event.content,
+      );
+      emit(state.copyWith(
+        questions: [question, ...state.questions],
+        questionsTotalCount: state.questionsTotalCount + 1,
+        actionMessage: 'qa_ask_success',
+      ));
+    } catch (e) {
+      emit(state.copyWith(actionMessage: 'qa_ask_failed'));
+    }
+  }
+
+  Future<void> _onReplyQuestion(
+    TaskDetailReplyQuestion event,
+    Emitter<TaskDetailState> emit,
+  ) async {
+    try {
+      final updated = await _questionRepository.replyQuestion(
+        questionId: event.questionId,
+        content: event.content,
+      );
+      final updatedList = state.questions.map((q) =>
+        q.id == updated.id ? updated : q
+      ).toList();
+      emit(state.copyWith(
+        questions: updatedList,
+        actionMessage: 'qa_reply_success',
+      ));
+    } catch (e) {
+      emit(state.copyWith(actionMessage: 'qa_reply_failed'));
+    }
+  }
+
+  Future<void> _onDeleteQuestion(
+    TaskDetailDeleteQuestion event,
+    Emitter<TaskDetailState> emit,
+  ) async {
+    try {
+      await _questionRepository.deleteQuestion(event.questionId);
+      final updatedList = state.questions.where((q) => q.id != event.questionId).toList();
+      emit(state.copyWith(
+        questions: updatedList,
+        questionsTotalCount: state.questionsTotalCount - 1,
+        actionMessage: 'qa_delete_success',
+      ));
+    } catch (e) {
+      emit(state.copyWith(actionMessage: 'qa_delete_failed'));
     }
   }
 }

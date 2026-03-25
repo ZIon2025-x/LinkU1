@@ -54,6 +54,10 @@ class ErrorLocalizer {
         return context.l10n.actionOperationFailed;
       case 'public_reply_already_replied':
         return context.l10n.alreadyReplied;
+      case 'qa_ask_failed':
+      case 'qa_reply_failed':
+      case 'qa_delete_failed':
+        return context.l10n.actionOperationFailed;
       case 'error_network_timeout':
         return context.l10n.errorNetworkTimeout;
       case 'error_request_failed':

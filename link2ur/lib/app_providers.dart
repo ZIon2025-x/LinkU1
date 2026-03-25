@@ -25,6 +25,7 @@ import 'data/repositories/user_profile_repository.dart';
 import 'data/repositories/personal_service_repository.dart';
 import 'data/repositories/follow_repository.dart';
 import 'data/repositories/ticker_repository.dart';
+import 'data/repositories/question_repository.dart';
 import 'data/services/ai_chat_service.dart';
 import 'data/services/api_service.dart';
 import 'features/auth/bloc/auth_bloc.dart';
@@ -87,6 +88,9 @@ class AppProviders extends StatelessWidget {
             value: discoveryRepository),
         RepositoryProvider<FleaMarketRepository>(
           create: (_) => FleaMarketRepository(apiService: apiService),
+        ),
+        RepositoryProvider<QuestionRepository>(
+          create: (_) => QuestionRepository(apiService: apiService),
         ),
         RepositoryProvider<TaskExpertRepository>(
           create: (_) => TaskExpertRepository(apiService: apiService),

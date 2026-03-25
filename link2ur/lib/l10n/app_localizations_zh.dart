@@ -10140,6 +10140,56 @@ class AppLocalizationsZh extends AppLocalizations {
   String get alreadyReplied => '已经回复过此申请';
 
   @override
+  String qaTitle(int count) {
+    return '问答 ($count)';
+  }
+
+  @override
+  String get qaAskPlaceholder => '向发布者提问...';
+
+  @override
+  String get qaReplyPlaceholder => '写下你的回复...';
+
+  @override
+  String get qaAskButton => '提问';
+
+  @override
+  String get qaReplyButton => '回复';
+
+  @override
+  String get qaDeleteConfirm => '确定删除这个问题？';
+
+  @override
+  String get qaDeleteConfirmBody => '回复也会一起删除。';
+
+  @override
+  String get qaNoQuestions => '暂无问答';
+
+  @override
+  String get qaOwnerReply => '发布者回复';
+
+  @override
+  String get qaServiceOwnerReply => '服务者回复';
+
+  @override
+  String get qaCannotAskOwn => '不能在自己的帖子里提问';
+
+  @override
+  String get qaAlreadyReplied => '已回复';
+
+  @override
+  String get qaLoadMore => '加载更多';
+
+  @override
+  String get qaAskSuccess => '提问成功';
+
+  @override
+  String get qaReplySuccess => '回复成功';
+
+  @override
+  String get qaDeleteSuccess => '已删除';
+
+  @override
   String get taskDetailRaiseDispute => '提出争议';
 
   @override
@@ -20661,6 +20711,56 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get alreadyReplied => '已經回覆過此申請';
+
+  @override
+  String qaTitle(int count) {
+    return '問答 ($count)';
+  }
+
+  @override
+  String get qaAskPlaceholder => '向發布者提問...';
+
+  @override
+  String get qaReplyPlaceholder => '寫下你的回覆...';
+
+  @override
+  String get qaAskButton => '提問';
+
+  @override
+  String get qaReplyButton => '回覆';
+
+  @override
+  String get qaDeleteConfirm => '確定刪除這個問題？';
+
+  @override
+  String get qaDeleteConfirmBody => '回覆也會一起刪除。';
+
+  @override
+  String get qaNoQuestions => '暫無問答';
+
+  @override
+  String get qaOwnerReply => '發布者回覆';
+
+  @override
+  String get qaServiceOwnerReply => '服務者回覆';
+
+  @override
+  String get qaCannotAskOwn => '不能在自己的帖子裡提問';
+
+  @override
+  String get qaAlreadyReplied => '已回覆';
+
+  @override
+  String get qaLoadMore => '載入更多';
+
+  @override
+  String get qaAskSuccess => '提問成功';
+
+  @override
+  String get qaReplySuccess => '回覆成功';
+
+  @override
+  String get qaDeleteSuccess => '已刪除';
 
   @override
   String get taskDetailRaiseDispute => '提出爭議';

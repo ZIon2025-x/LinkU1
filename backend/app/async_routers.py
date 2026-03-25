@@ -1181,27 +1181,13 @@ def _format_application_item(app, user, unread_count: int = 0):
 
 
 def _format_public_application_item(app, user):
-    """Format application for public (unauthenticated/unrelated) viewers — excludes applicant_id and unread_count."""
-    negotiated_price_value = None
-    if app.negotiated_price is not None:
-        try:
-            from decimal import Decimal
-            if isinstance(app.negotiated_price, Decimal):
-                negotiated_price_value = float(app.negotiated_price)
-            elif isinstance(app.negotiated_price, (int, float)):
-                negotiated_price_value = float(app.negotiated_price)
-            else:
-                negotiated_price_value = float(str(app.negotiated_price))
-        except (ValueError, TypeError, AttributeError):
-            negotiated_price_value = None
+    """Format application for public (unauthenticated/unrelated) viewers — excludes applicant_id, unread_count, message, and negotiated_price."""
     return {
         "id": app.id,
         "task_id": app.task_id,
         "applicant_name": user.name if user else None,
         "applicant_avatar": user.avatar if user and hasattr(user, 'avatar') else None,
         "applicant_user_level": getattr(user, 'user_level', None) if user else None,
-        "message": app.message,
-        "negotiated_price": negotiated_price_value,
         "currency": app.currency or "GBP",
         "created_at": format_iso_utc(app.created_at) if app.created_at else None,
         "status": app.status,
