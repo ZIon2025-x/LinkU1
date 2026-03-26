@@ -494,6 +494,21 @@ async def owner_approve_application(
             headers={"X-Stripe-Connect-Required": "true"}
         )
 
+    # 按资金划分任务等级（与普通任务一致）
+    from app.async_crud import AsyncSystemCRUD
+    settings = await AsyncSystemCRUD.get_system_settings(db)
+    vip_threshold = float(settings.get("vip_price_threshold", 10.0))
+    super_threshold = float(settings.get("super_vip_price_threshold", 50.0))
+    user_level = str(current_user.user_level) if current_user.user_level else "normal"
+    if user_level == "super":
+        task_level = "vip"
+    elif price >= super_threshold:
+        task_level = "super"
+    elif price >= vip_threshold:
+        task_level = "vip"
+    else:
+        task_level = "normal"
+
     # 创建任务
     new_task = models.Task(
         title=service.service_name,
@@ -506,7 +521,7 @@ async def owner_approve_application(
         currency=application.currency or service.currency,
         location=location,
         task_type=service.category or "其他",
-        task_level="personal_service",
+        task_level=task_level,
         poster_id=application.applicant_id,
         taker_id=current_user.id,  # 服务所有者是接收方
         expert_service_id=service.id,  # 关联服务，支付过期时能找到对应申请
