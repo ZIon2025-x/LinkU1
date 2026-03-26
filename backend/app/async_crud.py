@@ -213,6 +213,24 @@ class AsyncTaskCRUD:
     """异步任务CRUD操作"""
 
     @staticmethod
+    def _serialize_json_list(value) -> str:
+        """将列表序列化为JSON字符串，如果已经是JSON字符串则直接返回"""
+        if value is None:
+            return json.dumps([])
+        if isinstance(value, str):
+            # 已经是字符串，验证是否为合法JSON数组
+            try:
+                parsed = json.loads(value)
+                if isinstance(parsed, list):
+                    return value
+            except (json.JSONDecodeError, TypeError):
+                pass
+            return json.dumps([])
+        if isinstance(value, list):
+            return json.dumps(value, ensure_ascii=False)
+        return json.dumps([])
+
+    @staticmethod
     async def get_task_by_id(db: AsyncSession, task_id: int) -> Optional[models.Task]:
         """根据ID获取任务"""
         try:
@@ -331,7 +349,7 @@ class AsyncTaskCRUD:
                 images=images_json,  # 存储为JSON字符串
                 pricing_type=getattr(task, 'pricing_type', 'fixed') or 'fixed',
                 task_mode=getattr(task, 'task_mode', 'online') or 'online',
-                required_skills=json.dumps(getattr(task, 'required_skills', None) or [], ensure_ascii=False),
+                required_skills=self._serialize_json_list(getattr(task, 'required_skills', None)),
             )
 
             db.add(db_task)

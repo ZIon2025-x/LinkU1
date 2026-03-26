@@ -213,7 +213,7 @@ async def get_tasks(
                 "images": images_list,
                 "pricing_type": getattr(task, 'pricing_type', 'fixed') or "fixed",
                 "task_mode": getattr(task, 'task_mode', 'online') or "online",
-                "required_skills": json.loads(task.required_skills) if getattr(task, 'required_skills', None) else [],
+                "required_skills": json.loads(task.required_skills) if isinstance(getattr(task, 'required_skills', None), str) else (getattr(task, 'required_skills', None) or []),
                 "points_reward": int(task.points_reward) if task.points_reward else None,
                 # 多人任务相关字段
                 "is_multi_participant": bool(task.is_multi_participant) if hasattr(task, 'is_multi_participant') else False,
@@ -344,7 +344,7 @@ async def get_tasks(
             "images": images_list,
             "pricing_type": getattr(task, 'pricing_type', 'fixed') or "fixed",
             "task_mode": getattr(task, 'task_mode', 'online') or "online",
-            "required_skills": json.loads(task.required_skills) if getattr(task, 'required_skills', None) else [],
+            "required_skills": json.loads(task.required_skills) if isinstance(getattr(task, 'required_skills', None), str) else (getattr(task, 'required_skills', None) or []),
             "points_reward": int(task.points_reward) if task.points_reward else None,
             # 多人任务相关字段
             "is_multi_participant": bool(task.is_multi_participant) if hasattr(task, 'is_multi_participant') else False,
@@ -787,7 +787,7 @@ async def create_task_async(
             "images": images_list,  # 返回图片列表
             "pricing_type": getattr(db_task, 'pricing_type', 'fixed') or "fixed",
             "task_mode": getattr(db_task, 'task_mode', 'online') or "online",
-            "required_skills": json.loads(db_task.required_skills) if getattr(db_task, 'required_skills', None) else [],
+            "required_skills": json.loads(db_task.required_skills) if isinstance(getattr(db_task, 'required_skills', None), str) else (getattr(db_task, 'required_skills', None) or []),
             "content_masked": content_masked,
             "under_review": under_review,
         }
