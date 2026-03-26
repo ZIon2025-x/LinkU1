@@ -104,6 +104,7 @@ class AppSelectField<T> extends StatelessWidget {
         }
       },
       child: InputDecorator(
+        isEmpty: !hasValue,
         decoration: InputDecoration(
           hintText: hint,
           prefixIcon: prefixIcon != null
@@ -161,18 +162,17 @@ class AppSelectField<T> extends StatelessWidget {
               Icon(selected!.icon, size: 18, color: AppColors.primary),
               const SizedBox(width: 8),
             ],
-            Expanded(
-              child: Text(
-                selected?.label ?? hint ?? '',
-                style: TextStyle(
-                  fontSize: 15,
-                  color: hasValue
-                      ? (isDark ? Colors.white : Colors.black87)
-                      : (isDark ? Colors.white38 : Colors.black38),
+            if (hasValue)
+              Expanded(
+                child: Text(
+                  selected!.label,
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: isDark ? Colors.white : Colors.black87,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
-                overflow: TextOverflow.ellipsis,
               ),
-            ),
           ],
         ),
       ),

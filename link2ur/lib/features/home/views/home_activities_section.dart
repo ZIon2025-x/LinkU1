@@ -129,8 +129,6 @@ class _SliverDiscoveryFeed extends StatelessWidget {
 
   /// 把 banner 均匀插入 discoveryItems，返回混合列表
   List<Object> _buildMixedItems(List<DiscoveryFeedItem> items) {
-    if (banners.isEmpty) return items;
-
     final allBanners = <_BannerData>[
       const _BannerData(
         localImage: AppAssets.studentVerificationBanner,

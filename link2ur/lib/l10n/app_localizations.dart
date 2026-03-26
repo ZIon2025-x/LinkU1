@@ -19175,6 +19175,48 @@ abstract class AppLocalizations {
   /// **'Inactive'**
   String get expertServiceStatusInactive;
 
+  /// No description provided for @expertServiceAddEnglish.
+  ///
+  /// In en, this message translates to:
+  /// **'Add English version (optional)'**
+  String get expertServiceAddEnglish;
+
+  /// No description provided for @expertServiceNameEnShort.
+  ///
+  /// In en, this message translates to:
+  /// **'English name'**
+  String get expertServiceNameEnShort;
+
+  /// No description provided for @expertServiceDescEnShort.
+  ///
+  /// In en, this message translates to:
+  /// **'English description'**
+  String get expertServiceDescEnShort;
+
+  /// No description provided for @expertServiceTipsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tips for publishing'**
+  String get expertServiceTipsTitle;
+
+  /// No description provided for @expertServiceTip1.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear titles and descriptions attract more clients'**
+  String get expertServiceTip1;
+
+  /// No description provided for @expertServiceTip2.
+  ///
+  /// In en, this message translates to:
+  /// **'Set competitive prices by referencing similar services'**
+  String get expertServiceTip2;
+
+  /// No description provided for @expertServiceTip3.
+  ///
+  /// In en, this message translates to:
+  /// **'Adding an English version reaches more users'**
+  String get expertServiceTip3;
+
   /// No description provided for @expertTimeSlotsEmpty.
   ///
   /// In en, this message translates to:

@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/design/app_colors.dart';
+import '../../../core/widgets/image_remove_button.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/utils/error_localizer.dart';
@@ -632,6 +633,7 @@ class _CreatePostViewState extends State<CreatePostView> {
       children: [
         ..._selectedImages.asMap().entries.map((entry) {
           return Stack(
+            clipBehavior: Clip.none,
             children: [
               ClipRRect(
                 borderRadius: AppRadius.allSmall,
@@ -642,27 +644,10 @@ class _CreatePostViewState extends State<CreatePostView> {
                 ),
               ),
               Positioned(
-                top: -4,
-                right: -4,
-                child: Semantics(
-                  button: true,
-                  label: 'Remove image',
-                  child: GestureDetector(
-                    onTap: () => _removeImage(entry.key),
-                    child: Container(
-                    width: 22,
-                    height: 22,
-                    decoration: const BoxDecoration(
-                      color: AppColors.error,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.close,
-                      size: 14,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
+                top: -8,
+                right: -8,
+                child: ImageRemoveButton(
+                  onTap: () => _removeImage(entry.key),
                 ),
               ),
             ],

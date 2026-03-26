@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/design/app_colors.dart';
+import '../../../core/widgets/image_remove_button.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/adaptive_dialogs.dart';
@@ -358,6 +359,7 @@ class _EditPostViewState extends State<EditPostView> {
       children: [
         ..._existingUrls.asMap().entries.map((entry) {
           return Stack(
+            clipBehavior: Clip.none,
             children: [
               ClipRRect(
                 borderRadius: AppRadius.allSmall,
@@ -368,23 +370,10 @@ class _EditPostViewState extends State<EditPostView> {
                 ),
               ),
               Positioned(
-                top: -4,
-                right: -4,
-                child: Semantics(
-                  button: true,
-                  label: 'Remove image',
-                  child: GestureDetector(
-                    onTap: () => _removeExistingUrl(entry.key),
-                    child: Container(
-                      width: 22,
-                      height: 22,
-                      decoration: const BoxDecoration(
-                        color: AppColors.error,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.close, size: 14, color: Colors.white),
-                    ),
-                  ),
+                top: -8,
+                right: -8,
+                child: ImageRemoveButton(
+                  onTap: () => _removeExistingUrl(entry.key),
                 ),
               ),
             ],
@@ -392,6 +381,7 @@ class _EditPostViewState extends State<EditPostView> {
         }),
         ..._newFiles.asMap().entries.map((entry) {
           return Stack(
+            clipBehavior: Clip.none,
             children: [
               ClipRRect(
                 borderRadius: AppRadius.allSmall,
@@ -402,23 +392,10 @@ class _EditPostViewState extends State<EditPostView> {
                 ),
               ),
               Positioned(
-                top: -4,
-                right: -4,
-                child: Semantics(
-                  button: true,
-                  label: 'Remove image',
-                  child: GestureDetector(
-                    onTap: () => _removeNewFile(entry.key),
-                    child: Container(
-                      width: 22,
-                      height: 22,
-                      decoration: const BoxDecoration(
-                        color: AppColors.error,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.close, size: 14, color: Colors.white),
-                    ),
-                  ),
+                top: -8,
+                right: -8,
+                child: ImageRemoveButton(
+                  onTap: () => _removeNewFile(entry.key),
                 ),
               ),
             ],

@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/design/app_colors.dart';
+import '../../../core/widgets/image_remove_button.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/haptic_feedback.dart';
@@ -223,24 +224,9 @@ class _ApplyLeaderboardViewState extends State<ApplyLeaderboardView> {
                 ),
               ),
               Positioned(
-                top: 8,
-                right: 8,
-                child: Semantics(
-                  button: true,
-                  label: 'Remove image',
-                  child: GestureDetector(
-                  onTap: _removeCoverImage,
-                  child: Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.5),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.close, color: Colors.white, size: 18),
-                  ),
-                ),
-              ),
+                top: 4,
+                right: 4,
+                child: ImageRemoveButton(onTap: _removeCoverImage),
               ),
               // 重新选择按钮
               Positioned(

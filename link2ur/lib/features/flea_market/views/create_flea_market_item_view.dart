@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/design/app_colors.dart';
+import '../../../core/widgets/image_remove_button.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/adaptive_dialogs.dart';
@@ -16,6 +17,7 @@ import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/location_picker.dart';
 import '../../../data/repositories/flea_market_repository.dart';
 import '../../../data/models/flea_market.dart';
+import '../../tasks/views/create_task_widgets.dart';
 import '../bloc/flea_market_bloc.dart';
 
 /// 发布跳蚤市场商品页面
@@ -276,224 +278,250 @@ class _CreateFleaMarketItemContentState
           title: Text(context.l10n.fleaMarketPublishItem),
         ),
         body: SingleChildScrollView(
-          padding: AppSpacing.allMd,
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // 商品图片
-                Text(
-                  context.l10n.fleaMarketProductImages,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                SectionCard(
+                  label: context.l10n.fleaMarketProductImages,
+                  child: _buildImagePicker(),
                 ),
-                AppSpacing.vSm,
-                _buildImagePicker(),
-                AppSpacing.vLg,
 
                 // 商品标题
-                TextFormField(
-                  controller: _titleController,
-                  maxLength: 100,
-                  decoration: InputDecoration(
-                    labelText: context.l10n.fleaMarketProductTitle,
-                    hintText: context.l10n.fleaMarketProductTitlePlaceholder,
-                    prefixIcon: const Icon(Icons.title),
-                    border: OutlineInputBorder(
-                      borderRadius: AppRadius.allMedium,
+                SectionCard(
+                  label: context.l10n.fleaMarketProductTitle,
+                  isRequired: true,
+                  child: TextFormField(
+                    controller: _titleController,
+                    maxLength: 100,
+                    decoration: InputDecoration(
+                      hintText: context.l10n.fleaMarketProductTitlePlaceholder,
+                      prefixIcon: const Icon(Icons.title),
+                      border: OutlineInputBorder(
+                        borderRadius: AppRadius.allMedium,
+                      ),
                     ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return context.l10n.fleaMarketTitleRequired;
+                      }
+                      if (value.trim().length < 2) {
+                        return context.l10n.fleaMarketTitleMinLength;
+                      }
+                      return null;
+                    },
                   ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return context.l10n.fleaMarketTitleRequired;
-                    }
-                    if (value.trim().length < 2) {
-                      return context.l10n.fleaMarketTitleMinLength;
-                    }
-                    return null;
-                  },
                 ),
-                AppSpacing.vMd,
 
                 // 商品描述
-                TextFormField(
-                  controller: _descriptionController,
-                  decoration: InputDecoration(
-                    labelText: context.l10n.fleaMarketDescOptional,
-                    hintText: context.l10n.fleaMarketDescHint,
-                    prefixIcon: const Icon(Icons.description_outlined),
-                    border: OutlineInputBorder(
-                      borderRadius: AppRadius.allMedium,
-                    ),
-                    alignLabelWithHint: true,
-                  ),
-                  maxLines: 4,
-                  maxLength: 500,
-                ),
-                AppSpacing.vMd,
-
-                // 出售/出租切换
-                SegmentedButton<String>(
-                  segments: [
-                    ButtonSegment(value: 'sale', label: Text(context.l10n.fleaMarketListingTypeSale)),
-                    ButtonSegment(value: 'rental', label: Text(context.l10n.fleaMarketListingTypeRental)),
-                  ],
-                  selected: {_listingType},
-                  onSelectionChanged: (s) => setState(() => _listingType = s.first),
-                ),
-                AppSpacing.vMd,
-
-                // 币种选择
-                SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(value: 'GBP', label: Text('£ GBP')),
-                    ButtonSegment(value: 'EUR', label: Text('€ EUR')),
-                  ],
-                  selected: {_selectedCurrency},
-                  onSelectionChanged: (v) =>
-                      setState(() => _selectedCurrency = v.first),
-                ),
-                AppSpacing.vMd,
-
-                // 价格 (sale) / 押金+租金+租期单位 (rental)
-                if (_listingType == 'sale')
-                  TextFormField(
-                    controller: _priceController,
+                SectionCard(
+                  label: context.l10n.fleaMarketDescOptional,
+                  child: TextFormField(
+                    controller: _descriptionController,
                     decoration: InputDecoration(
-                      labelText: context.l10n.fleaMarketPrice,
-                      hintText: '0.00',
-                      prefixIcon: const Icon(Icons.attach_money),
-                      prefixText: '${Helpers.currencySymbolFor(_selectedCurrency)} ',
+                      hintText: context.l10n.fleaMarketDescHint,
+                      prefixIcon: const Icon(Icons.description_outlined),
                       border: OutlineInputBorder(
                         borderRadius: AppRadius.allMedium,
                       ),
+                      alignLabelWithHint: true,
                     ),
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    validator: (value) {
-                      if (_listingType != 'sale') return null;
-                      if (value == null || value.trim().isEmpty) {
-                        return context.l10n.fleaMarketPriceRequired;
-                      }
-                      final price = double.tryParse(value.trim());
-                      if (price == null || price < 0) {
-                        return context.l10n.fleaMarketInvalidPrice;
-                      }
-                      return null;
-                    },
-                  )
-                else ...[
-                  // 押金
-                  TextFormField(
-                    controller: _depositController,
-                    decoration: InputDecoration(
-                      labelText: context.l10n.fleaMarketDeposit,
-                      hintText: '0.00',
-                      prefixIcon: const Icon(Icons.account_balance_wallet_outlined),
-                      prefixText: '${Helpers.currencySymbolFor(_selectedCurrency)} ',
-                      border: OutlineInputBorder(
-                        borderRadius: AppRadius.allMedium,
-                      ),
-                    ),
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    validator: (value) {
-                      if (_listingType != 'rental') return null;
-                      if (value == null || value.trim().isEmpty) {
-                        return context.l10n.fleaMarketPriceRequired;
-                      }
-                      final deposit = double.tryParse(value.trim());
-                      if (deposit == null || deposit <= 0) {
-                        return context.l10n.fleaMarketInvalidPrice;
-                      }
-                      return null;
-                    },
+                    maxLines: 4,
+                    maxLength: 500,
                   ),
-                  AppSpacing.vMd,
-                  // 租金
-                  TextFormField(
-                    controller: _rentalPriceController,
-                    decoration: InputDecoration(
-                      labelText: context.l10n.fleaMarketRentalPrice,
-                      hintText: '0.00',
-                      prefixIcon: const Icon(Icons.payments_outlined),
-                      prefixText: '${Helpers.currencySymbolFor(_selectedCurrency)} ',
-                      border: OutlineInputBorder(
-                        borderRadius: AppRadius.allMedium,
+                ),
+
+                // 类型 & 币种
+                SectionCard(
+                  label: context.l10n.fleaMarketListingTypeSale,
+                  isRequired: true,
+                  child: Column(
+                    children: [
+                      // 出售/出租切换
+                      SizedBox(
+                        width: double.infinity,
+                        child: SegmentedButton<String>(
+                          segments: [
+                            ButtonSegment(
+                              value: 'sale',
+                              icon: const Icon(Icons.sell_outlined, size: 18),
+                              label: Text(context.l10n.fleaMarketListingTypeSale),
+                            ),
+                            ButtonSegment(
+                              value: 'rental',
+                              icon: const Icon(Icons.handshake_outlined, size: 18),
+                              label: Text(context.l10n.fleaMarketListingTypeRental),
+                            ),
+                          ],
+                          selected: {_listingType},
+                          onSelectionChanged: (s) => setState(() => _listingType = s.first),
+                        ),
                       ),
-                    ),
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    validator: (value) {
-                      if (_listingType != 'rental') return null;
-                      if (value == null || value.trim().isEmpty) {
-                        return context.l10n.fleaMarketPriceRequired;
-                      }
-                      final rentalPrice = double.tryParse(value.trim());
-                      if (rentalPrice == null || rentalPrice <= 0) {
-                        return context.l10n.fleaMarketInvalidPrice;
-                      }
-                      return null;
-                    },
-                  ),
-                  AppSpacing.vMd,
-                  // 租期单位
-                  AppSelectField<String>(
-                    value: _rentalUnit,
-                    hint: context.l10n.fleaMarketRentalUnit,
-                    sheetTitle: context.l10n.fleaMarketRentalUnit,
-                    prefixIcon: Icons.schedule,
-                    clearable: false,
-                    options: [
-                      SelectOption(value: 'day', label: context.l10n.fleaMarketRentalUnitDay),
-                      SelectOption(value: 'week', label: context.l10n.fleaMarketRentalUnitWeek),
-                      SelectOption(value: 'month', label: context.l10n.fleaMarketRentalUnitMonth),
+                      const SizedBox(height: 12),
+                      // 币种选择
+                      SizedBox(
+                        width: double.infinity,
+                        child: SegmentedButton<String>(
+                          segments: const [
+                            ButtonSegment(value: 'GBP', label: Text('£ GBP')),
+                            ButtonSegment(value: 'EUR', label: Text('€ EUR')),
+                          ],
+                          selected: {_selectedCurrency},
+                          onSelectionChanged: (v) =>
+                              setState(() => _selectedCurrency = v.first),
+                        ),
+                      ),
                     ],
-                    onChanged: (v) => setState(() => _rentalUnit = v ?? 'day'),
                   ),
-                ],
-                AppSpacing.vMd,
+                ),
+
+                // 价格
+                SectionCard(
+                  label: context.l10n.fleaMarketPrice,
+                  isRequired: true,
+                  child: _listingType == 'sale'
+                      ? TextFormField(
+                          controller: _priceController,
+                          decoration: InputDecoration(
+                            hintText: '0.00',
+                            prefixIcon: const Icon(Icons.attach_money),
+                            prefixText: '${Helpers.currencySymbolFor(_selectedCurrency)} ',
+                            border: OutlineInputBorder(
+                              borderRadius: AppRadius.allMedium,
+                            ),
+                          ),
+                          keyboardType:
+                              const TextInputType.numberWithOptions(decimal: true),
+                          validator: (value) {
+                            if (_listingType != 'sale') return null;
+                            if (value == null || value.trim().isEmpty) {
+                              return context.l10n.fleaMarketPriceRequired;
+                            }
+                            final price = double.tryParse(value.trim());
+                            if (price == null || price < 0) {
+                              return context.l10n.fleaMarketInvalidPrice;
+                            }
+                            return null;
+                          },
+                        )
+                      : Column(
+                          children: [
+                            // 押金
+                            TextFormField(
+                              controller: _depositController,
+                              decoration: InputDecoration(
+                                labelText: context.l10n.fleaMarketDeposit,
+                                hintText: '0.00',
+                                prefixIcon: const Icon(Icons.account_balance_wallet_outlined),
+                                prefixText: '${Helpers.currencySymbolFor(_selectedCurrency)} ',
+                                border: OutlineInputBorder(
+                                  borderRadius: AppRadius.allMedium,
+                                ),
+                              ),
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(decimal: true),
+                              validator: (value) {
+                                if (_listingType != 'rental') return null;
+                                if (value == null || value.trim().isEmpty) {
+                                  return context.l10n.fleaMarketPriceRequired;
+                                }
+                                final deposit = double.tryParse(value.trim());
+                                if (deposit == null || deposit <= 0) {
+                                  return context.l10n.fleaMarketInvalidPrice;
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 12),
+                            // 租金
+                            TextFormField(
+                              controller: _rentalPriceController,
+                              decoration: InputDecoration(
+                                labelText: context.l10n.fleaMarketRentalPrice,
+                                hintText: '0.00',
+                                prefixIcon: const Icon(Icons.payments_outlined),
+                                prefixText: '${Helpers.currencySymbolFor(_selectedCurrency)} ',
+                                border: OutlineInputBorder(
+                                  borderRadius: AppRadius.allMedium,
+                                ),
+                              ),
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(decimal: true),
+                              validator: (value) {
+                                if (_listingType != 'rental') return null;
+                                if (value == null || value.trim().isEmpty) {
+                                  return context.l10n.fleaMarketPriceRequired;
+                                }
+                                final rentalPrice = double.tryParse(value.trim());
+                                if (rentalPrice == null || rentalPrice <= 0) {
+                                  return context.l10n.fleaMarketInvalidPrice;
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 12),
+                            // 租期单位
+                            AppSelectField<String>(
+                              value: _rentalUnit,
+                              hint: context.l10n.fleaMarketRentalUnit,
+                              sheetTitle: context.l10n.fleaMarketRentalUnit,
+                              prefixIcon: Icons.schedule,
+                              clearable: false,
+                              options: [
+                                SelectOption(value: 'day', label: context.l10n.fleaMarketRentalUnitDay),
+                                SelectOption(value: 'week', label: context.l10n.fleaMarketRentalUnitWeek),
+                                SelectOption(value: 'month', label: context.l10n.fleaMarketRentalUnitMonth),
+                              ],
+                              onChanged: (v) => setState(() => _rentalUnit = v ?? 'day'),
+                            ),
+                          ],
+                        ),
+                ),
 
                 // 分类
-                AppSelectField<String>(
-                  value: _selectedCategory,
-                  hint: context.l10n.fleaMarketSelectCategory,
-                  sheetTitle: context.l10n.fleaMarketCategoryLabel,
-                  prefixIcon: Icons.category_outlined,
-                  options: _getCategories(context)
-                      .map((category) => SelectOption(
-                            value: category.$1,
-                            label: category.$2,
-                          ))
-                      .toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedCategory = value;
-                    });
-                  },
+                SectionCard(
+                  label: context.l10n.fleaMarketCategoryLabel,
+                  child: AppSelectField<String>(
+                    value: _selectedCategory,
+                    hint: context.l10n.fleaMarketSelectCategory,
+                    sheetTitle: context.l10n.fleaMarketCategoryLabel,
+                    prefixIcon: Icons.category_outlined,
+                    options: _getCategories(context)
+                        .map((category) => SelectOption(
+                              value: category.$1,
+                              label: category.$2,
+                            ))
+                        .toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedCategory = value;
+                      });
+                    },
+                  ),
                 ),
-                AppSpacing.vMd,
 
                 // 位置
-                Text(
-                  context.l10n.fleaMarketLocationOptional,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                SectionCard(
+                  label: context.l10n.fleaMarketLocationOptional,
+                  child: LocationInputField(
+                    hintText: context.l10n.fleaMarketLocationHint,
+                    onChanged: (address) {
+                      _location = address.isNotEmpty ? address : null;
+                      _latitude = null;
+                      _longitude = null;
+                    },
+                    onLocationPicked: (address, lat, lng) {
+                      _location = address.isNotEmpty ? address : null;
+                      _latitude = lat;
+                      _longitude = lng;
+                    },
+                  ),
                 ),
-                AppSpacing.vSm,
-                LocationInputField(
-                  hintText: context.l10n.fleaMarketLocationHint,
-                  onChanged: (address) {
-                    _location = address.isNotEmpty ? address : null;
-                    _latitude = null;
-                    _longitude = null;
-                  },
-                  onLocationPicked: (address, lat, lng) {
-                    _location = address.isNotEmpty ? address : null;
-                    _latitude = lat;
-                    _longitude = lng;
-                  },
-                ),
-                AppSpacing.vXl,
+
+                const SizedBox(height: 20),
 
                 // 提交按钮
                 BlocBuilder<FleaMarketBloc, FleaMarketState>(
@@ -522,89 +550,99 @@ class _CreateFleaMarketItemContentState
   }
 
   Widget _buildImagePicker() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const imageSize = 100.0;
+
     return Wrap(
-      spacing: 8,
-      runSpacing: 8,
+      spacing: 10,
+      runSpacing: 10,
       children: [
         // 已选图片
         ..._selectedImages.asMap().entries.map((entry) {
           return Stack(
+            clipBehavior: Clip.none,
             children: [
               ClipRRect(
-                borderRadius: AppRadius.allSmall,
+                borderRadius: BorderRadius.circular(10),
                 child: CrossPlatformImage(
                   xFile: entry.value,
-                  width: 80,
-                  height: 80,
+                  width: imageSize,
+                  height: imageSize,
+                ),
+              ),
+              // 序号角标
+              Positioned(
+                left: 4,
+                bottom: 4,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '${entry.key + 1}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               ),
               Positioned(
-                top: -4,
-                right: -4,
-                child: Semantics(
-                  button: true,
-                  label: 'Remove image',
-                  child: GestureDetector(
-                    onTap: () => _removeImage(entry.key),
-                    child: Container(
-                      width: 22,
-                      height: 22,
-                      decoration: const BoxDecoration(
-                        color: AppColors.error,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.close,
-                        size: 14,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
+                top: -8,
+                right: -8,
+                child: ImageRemoveButton(
+                  onTap: () => _removeImage(entry.key),
                 ),
               ),
             ],
           );
         }),
 
-        // 添加按钮（后端最多 5 张）
+        // 添加按钮
         if (_selectedImages.length < 5)
           Semantics(
             button: true,
             label: 'Upload image',
             child: GestureDetector(
-            onTap: _pickImages,
-            child: Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white.withValues(alpha: 0.08)
-                    : AppColors.skeletonBase,
-                borderRadius: AppRadius.allSmall,
-                border: Border.all(
-                  color: AppColors.textTertiaryLight.withValues(alpha: 0.5),
+              onTap: _pickImages,
+              child: Container(
+                width: imageSize,
+                height: imageSize,
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.06)
+                      : const Color(0xFFF8F9FA),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.12)
+                        : AppColors.textTertiaryLight.withValues(alpha: 0.4),
+                    style: BorderStyle.solid,
+                  ),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.add_photo_alternate_outlined,
+                      size: 30,
+                      color: isDark ? Colors.white54 : AppColors.textTertiaryLight,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      context.l10n.commonImageCount(_selectedImages.length, 5),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isDark ? Colors.white38 : AppColors.textTertiaryLight,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.add_photo_alternate_outlined,
-                    size: 28,
-                    color: AppColors.textTertiaryLight,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    context.l10n.commonImageCount(_selectedImages.length, 5),
-                    style: const TextStyle(
-                      fontSize: 10,
-                      color: AppColors.textTertiaryLight,
-                    ),
-                  ),
-                ],
-              ),
             ),
-          ),
           ),
       ],
     );

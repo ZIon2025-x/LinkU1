@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/design/app_colors.dart';
+import '../../../core/widgets/image_remove_button.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/adaptive_dialogs.dart';
@@ -712,30 +713,16 @@ class _EditFleaMarketItemViewContentState
     return Container(
       margin: const EdgeInsets.only(right: AppSpacing.sm),
       child: Stack(
+        clipBehavior: Clip.none,
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(AppRadius.medium),
             child: SizedBox(width: 90, height: 90, child: child),
           ),
           Positioned(
-            top: 4,
-            right: 4,
-            child: Semantics(
-              button: true,
-              label: 'Remove image',
-              child: GestureDetector(
-                onTap: onRemove,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.5),
-                    shape: BoxShape.circle,
-                  ),
-                  padding: const EdgeInsets.all(4),
-                  child:
-                      const Icon(Icons.close, color: Colors.white, size: 14),
-                ),
-              ),
-            ),
+            top: -8,
+            right: -8,
+            child: ImageRemoveButton(onTap: onRemove),
           ),
         ],
       ),

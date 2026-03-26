@@ -8,6 +8,7 @@ import '../../../core/utils/helpers.dart';
 import '../../auth/bloc/auth_bloc.dart';
 import '../../tasks/views/create_task_widgets.dart';
 import '../../../core/widgets/cross_platform_image.dart';
+import '../../../core/widgets/image_remove_button.dart';
 import '../../../core/widgets/location_picker.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_radius.dart';
@@ -646,20 +647,9 @@ class _ImageTile extends StatelessWidget {
           child: SizedBox(width: 80, height: 80, child: child),
         ),
         Positioned(
-          top: -4,
-          right: -4,
-          child: GestureDetector(
-            onTap: onRemove,
-            child: Container(
-              width: 22,
-              height: 22,
-              decoration: const BoxDecoration(
-                color: AppColors.error,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.close, size: 14, color: Colors.white),
-            ),
-          ),
+          top: -8,
+          right: -8,
+          child: ImageRemoveButton(onTap: onRemove),
         ),
       ],
     );

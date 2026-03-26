@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/design/app_colors.dart';
+import '../../../core/widgets/image_remove_button.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_typography.dart';
@@ -286,6 +287,7 @@ class _SubmitLeaderboardItemContentState
                               return Padding(
                                 padding: const EdgeInsets.only(left: 10),
                                 child: Stack(
+                                  clipBehavior: Clip.none,
                                   children: [
                                     ClipRRect(
                                       borderRadius: BorderRadius.circular(
@@ -297,24 +299,11 @@ class _SubmitLeaderboardItemContentState
                                       ),
                                     ),
                                     Positioned(
-                                      top: 2,
-                                      right: 2,
-                                      child: Semantics(
-                                        button: true,
-                                        label: 'Remove image',
-                                        child: GestureDetector(
+                                      top: -8,
+                                      right: -8,
+                                      child: ImageRemoveButton(
                                         onTap: () => _removeImage(idx),
-                                        child: Container(
-                                          decoration: const BoxDecoration(
-                                            color: Colors.black54,
-                                            shape: BoxShape.circle,
-                                          ),
-                                          padding: const EdgeInsets.all(4),
-                                          child: const Icon(Icons.close,
-                                              size: 14, color: Colors.white),
-                                        ),
                                       ),
-                                    ),
                                     ),
                                   ],
                                 ),

@@ -10428,6 +10428,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get expertServiceStatusInactive => 'Inactive';
 
   @override
+  String get expertServiceAddEnglish => 'Add English version (optional)';
+
+  @override
+  String get expertServiceNameEnShort => 'English name';
+
+  @override
+  String get expertServiceDescEnShort => 'English description';
+
+  @override
+  String get expertServiceTipsTitle => 'Tips for publishing';
+
+  @override
+  String get expertServiceTip1 =>
+      'Clear titles and descriptions attract more clients';
+
+  @override
+  String get expertServiceTip2 =>
+      'Set competitive prices by referencing similar services';
+
+  @override
+  String get expertServiceTip3 =>
+      'Adding an English version reaches more users';
+
+  @override
   String get expertTimeSlotsEmpty => 'No time slots';
 
   @override

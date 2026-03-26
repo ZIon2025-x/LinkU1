@@ -394,6 +394,10 @@ class _ServiceFormSheetState extends State<_ServiceFormSheet> {
   late final TextEditingController _priceController;
   late String _selectedCurrency;
   String? _selectedCategory;
+  bool _showEnglish = false;
+
+  static const _nameMaxLength = 100;
+  static const _descMaxLength = 2000;
 
   @override
   void initState() {
@@ -414,10 +418,23 @@ class _ServiceFormSheetState extends State<_ServiceFormSheet> {
     _selectedCurrency =
         (s?['currency'] as String?) ?? ExpertConstants.serviceCurrencies.first;
     _selectedCategory = s?['category'] as String?;
+
+    // Auto-expand English section if editing and has English content
+    if (_nameEnController.text.isNotEmpty ||
+        _descEnController.text.isNotEmpty) {
+      _showEnglish = true;
+    }
+
+    _nameController.addListener(_onTextChanged);
+    _descriptionController.addListener(_onTextChanged);
   }
+
+  void _onTextChanged() => setState(() {});
 
   @override
   void dispose() {
+    _nameController.removeListener(_onTextChanged);
+    _descriptionController.removeListener(_onTextChanged);
     _nameController.dispose();
     _nameEnController.dispose();
     _descriptionController.dispose();
@@ -427,6 +444,64 @@ class _ServiceFormSheetState extends State<_ServiceFormSheet> {
   }
 
   bool get _isEditing => widget.existingService != null;
+
+  InputDecoration _inputDecoration({
+    required String hintText,
+    bool alignLabelWithHint = false,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return InputDecoration(
+      hintText: hintText,
+      hintStyle: TextStyle(
+        color: isDark ? Colors.white38 : Colors.black38,
+        fontSize: 15,
+      ),
+      alignLabelWithHint: alignLabelWithHint,
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.12)
+              : const Color(0xFFE0E0E0),
+          width: 1.5,
+        ),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.12)
+              : const Color(0xFFE0E0E0),
+          width: 1.5,
+        ),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(
+          color: AppColors.primary,
+          width: 1.5,
+        ),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(
+          color: AppColors.error,
+          width: 1.5,
+        ),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(
+          color: AppColors.error,
+          width: 1.5,
+        ),
+      ),
+      filled: true,
+      fillColor: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+    );
+  }
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
@@ -454,13 +529,13 @@ class _ServiceFormSheetState extends State<_ServiceFormSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final viewInsets = MediaQuery.viewInsetsOf(context);
 
     return Padding(
       padding: EdgeInsets.only(bottom: viewInsets.bottom),
       child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(
-            AppSpacing.md, 0, AppSpacing.md, AppSpacing.xl),
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
         child: Form(
           key: _formKey,
           child: Column(
@@ -469,8 +544,7 @@ class _ServiceFormSheetState extends State<_ServiceFormSheet> {
             children: [
               // Sheet title
               Padding(
-                padding: const EdgeInsets.only(
-                    bottom: AppSpacing.md, top: AppSpacing.sm),
+                padding: const EdgeInsets.only(bottom: 20, top: 4),
                 child: Text(
                   _isEditing
                       ? context.l10n.expertServiceEdit
@@ -481,14 +555,20 @@ class _ServiceFormSheetState extends State<_ServiceFormSheet> {
                 ),
               ),
 
-              // Service name (required)
+              // ── Service name ──
+              _SectionLabel(
+                label: context.l10n.expertServiceName,
+                isRequired: true,
+              ),
+              const SizedBox(height: 8),
               TextFormField(
                 controller: _nameController,
-                decoration: InputDecoration(
-                  labelText: context.l10n.expertServiceName,
+                decoration: _inputDecoration(
                   hintText: context.l10n.expertServiceNameHint,
-                  border: const OutlineInputBorder(),
                 ),
+                maxLength: _nameMaxLength,
+                buildCounter: _buildCharCounter,
+                style: const TextStyle(fontSize: 15),
                 textInputAction: TextInputAction.next,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -498,56 +578,137 @@ class _ServiceFormSheetState extends State<_ServiceFormSheet> {
                   return null;
                 },
               ),
-              const SizedBox(height: AppSpacing.md),
+              const SizedBox(height: 20),
 
-              // Service name (English, optional)
-              TextFormField(
-                controller: _nameEnController,
-                decoration: InputDecoration(
-                  labelText: context.l10n.expertServiceNameEn,
-                  border: const OutlineInputBorder(),
-                ),
-                textInputAction: TextInputAction.next,
+              // ── Description ──
+              _SectionLabel(
+                label: context.l10n.expertServiceDescription,
+                isRequired: true,
               ),
-              const SizedBox(height: AppSpacing.md),
-
-              // Description
+              const SizedBox(height: 8),
               TextFormField(
                 controller: _descriptionController,
-                decoration: InputDecoration(
-                  labelText: context.l10n.expertServiceDescription,
+                decoration: _inputDecoration(
                   hintText: context.l10n.expertServiceDescriptionHint,
-                  border: const OutlineInputBorder(),
                   alignLabelWithHint: true,
                 ),
-                maxLines: 4,
+                maxLines: 5,
+                maxLength: _descMaxLength,
+                buildCounter: _buildCharCounter,
+                style: const TextStyle(fontSize: 15, height: 1.5),
                 textInputAction: TextInputAction.newline,
               ),
-              const SizedBox(height: AppSpacing.md),
+              const SizedBox(height: 20),
 
-              // Description (English, optional)
-              TextFormField(
-                controller: _descEnController,
-                decoration: InputDecoration(
-                  labelText: context.l10n.expertServiceDescriptionEn,
-                  border: const OutlineInputBorder(),
-                  alignLabelWithHint: true,
+              // ── Bilingual toggle ──
+              GestureDetector(
+                onTap: () => setState(() => _showEnglish = !_showEnglish),
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    children: [
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        width: 36,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          color: _showEnglish
+                              ? AppColors.primary
+                              : (isDark
+                                  ? const Color(0xFF3A3A3C)
+                                  : const Color(0xFFE0E0E0)),
+                        ),
+                        child: AnimatedAlign(
+                          duration: const Duration(milliseconds: 200),
+                          alignment: _showEnglish
+                              ? Alignment.centerRight
+                              : Alignment.centerLeft,
+                          child: Container(
+                            width: 16,
+                            height: 16,
+                            margin: const EdgeInsets.symmetric(horizontal: 2),
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        context.l10n.expertServiceAddEnglish,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: isDark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondaryLight,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                maxLines: 4,
-                textInputAction: TextInputAction.newline,
               ),
-              const SizedBox(height: AppSpacing.md),
 
-              // Category
+              // ── English fields (collapsible) ──
+              AnimatedCrossFade(
+                duration: const Duration(milliseconds: 250),
+                crossFadeState: _showEnglish
+                    ? CrossFadeState.showSecond
+                    : CrossFadeState.showFirst,
+                firstChild: const SizedBox.shrink(),
+                secondChild: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const SizedBox(height: 8),
+                    _SectionLabel(
+                      label: context.l10n.expertServiceNameEnShort,
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _nameEnController,
+                      decoration: _inputDecoration(
+                        hintText: 'e.g. Professional PPT Design',
+                      ),
+                      style: const TextStyle(fontSize: 15),
+                      textInputAction: TextInputAction.next,
+                    ),
+                    const SizedBox(height: 16),
+                    _SectionLabel(
+                      label: context.l10n.expertServiceDescEnShort,
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _descEnController,
+                      decoration: _inputDecoration(
+                        hintText: 'Describe your service in English...',
+                        alignLabelWithHint: true,
+                      ),
+                      maxLines: 3,
+                      style: const TextStyle(fontSize: 15, height: 1.5),
+                      textInputAction: TextInputAction.newline,
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // ── Category ──
+              _SectionLabel(
+                label: context.l10n.serviceCategory,
+                isRequired: true,
+              ),
+              const SizedBox(height: 8),
               AppSelectField<String>(
                 value: _selectedCategory,
                 hint: context.l10n.serviceCategoryHint,
-                label: context.l10n.serviceCategory,
                 sheetTitle: context.l10n.serviceCategory,
                 options: ExpertConstants.serviceCategoryKeys
                     .map((key) => SelectOption(
                           value: key,
-                          label: ServiceCategoryHelper.getLocalizedLabel(key, context.l10n),
+                          label: ServiceCategoryHelper.getLocalizedLabel(
+                              key, context.l10n),
                           icon: ServiceCategoryHelper.getIcon(key),
                         ))
                     .toList(),
@@ -555,9 +716,14 @@ class _ServiceFormSheetState extends State<_ServiceFormSheet> {
                   setState(() => _selectedCategory = value);
                 },
               ),
-              const SizedBox(height: AppSpacing.md),
+              const SizedBox(height: 20),
 
-              // Price + currency row
+              // ── Price + currency ──
+              _SectionLabel(
+                label: context.l10n.expertServicePrice,
+                isRequired: true,
+              ),
+              const SizedBox(height: 8),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -565,10 +731,21 @@ class _ServiceFormSheetState extends State<_ServiceFormSheet> {
                     flex: 3,
                     child: TextFormField(
                       controller: _priceController,
-                      decoration: InputDecoration(
-                        labelText: context.l10n.expertServicePrice,
-                        hintText: context.l10n.expertServicePriceHint,
-                        border: const OutlineInputBorder(),
+                      decoration: _inputDecoration(
+                        hintText: '0.00',
+                      ).copyWith(
+                        prefixIcon: Padding(
+                          padding: const EdgeInsets.only(left: 14, right: 4),
+                          child: Text(
+                            _currencySymbol,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                        prefixIconConstraints: const BoxConstraints(),
                       ),
                       keyboardType: const TextInputType.numberWithOptions(
                           decimal: true),
@@ -576,6 +753,7 @@ class _ServiceFormSheetState extends State<_ServiceFormSheet> {
                         FilteringTextInputFormatter.allow(
                             RegExp(r'^\d+\.?\d{0,2}')),
                       ],
+                      style: const TextStyle(fontSize: 15),
                       textInputAction: TextInputAction.done,
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
@@ -612,18 +790,188 @@ class _ServiceFormSheetState extends State<_ServiceFormSheet> {
                   ),
                 ],
               ),
-              const SizedBox(height: AppSpacing.xl),
+              const SizedBox(height: 24),
 
-              // Submit button
-              FilledButton(
-                onPressed: _submit,
-                child: Text(_isEditing
-                    ? context.l10n.commonSave
-                    : context.l10n.commonSubmit),
+              // ── Submit button ──
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  gradient: const LinearGradient(
+                    colors: [AppColors.primary, Color(0xFF409CFF)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: _submit,
+                    borderRadius: BorderRadius.circular(14),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      child: Text(
+                        _isEditing
+                            ? context.l10n.commonSave
+                            : context.l10n.commonSubmit,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+                ),
               ),
+
+              // ── Tips box ──
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.lightbulb_outline,
+                            size: 16, color: AppColors.primary),
+                        const SizedBox(width: 4),
+                        Text(
+                          context.l10n.expertServiceTipsTitle,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    _TipItem(text: context.l10n.expertServiceTip1),
+                    _TipItem(text: context.l10n.expertServiceTip2),
+                    _TipItem(text: context.l10n.expertServiceTip3),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  String get _currencySymbol {
+    switch (_selectedCurrency) {
+      case 'GBP':
+        return '\u00A3';
+      case 'USD':
+        return '\$';
+      case 'EUR':
+        return '\u20AC';
+      case 'CNY':
+        return '\u00A5';
+      default:
+        return _selectedCurrency;
+    }
+  }
+
+  Widget? _buildCharCounter(
+    BuildContext context, {
+    required int currentLength,
+    required bool isFocused,
+    required int? maxLength,
+  }) {
+    if (maxLength == null) return null;
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Text(
+        '$currentLength/$maxLength',
+        style: TextStyle(
+          fontSize: 11,
+          color: currentLength > maxLength * 0.9
+              ? AppColors.error
+              : Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white30
+                  : Colors.black26,
+        ),
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// Shared form widgets
+// =============================================================================
+
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel({required this.label, this.isRequired = false});
+
+  final String label;
+  final bool isRequired;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        if (isRequired)
+          const Padding(
+            padding: EdgeInsets.only(right: 4),
+            child: Text(
+              '*',
+              style: TextStyle(
+                color: AppColors.error,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _TipItem extends StatelessWidget {
+  const _TipItem({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.lightbulb, size: 12, color: AppColors.warning),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

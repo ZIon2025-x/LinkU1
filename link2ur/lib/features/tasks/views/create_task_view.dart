@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/design/app_colors.dart';
+import '../../../core/widgets/image_remove_button.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/adaptive_dialogs.dart';
@@ -700,6 +701,7 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
           final idx = entry.key;
           final img = entry.value;
           return Stack(
+            clipBehavior: Clip.none,
             children: [
               ClipRRect(
                 borderRadius: AppRadius.allMedium,
@@ -710,24 +712,11 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
                 ),
               ),
               Positioned(
-                top: 2,
-                right: 2,
-                child: Semantics(
-                  button: true,
-                  label: 'Remove image',
-                  child: GestureDetector(
-                    onTap: () =>
-                        setState(() => _selectedImages.removeAt(idx)),
-                    child: Container(
-                      decoration: const BoxDecoration(
-                        color: Colors.black54,
-                        shape: BoxShape.circle,
-                      ),
-                      padding: const EdgeInsets.all(2),
-                      child: const Icon(Icons.close,
-                          size: 16, color: Colors.white),
-                    ),
-                  ),
+                top: -8,
+                right: -8,
+                child: ImageRemoveButton(
+                  onTap: () =>
+                      setState(() => _selectedImages.removeAt(idx)),
                 ),
               ),
             ],

@@ -10015,6 +10015,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get expertServiceStatusInactive => '已下架';
 
   @override
+  String get expertServiceAddEnglish => '添加英文版本（可选）';
+
+  @override
+  String get expertServiceNameEnShort => '英文名称';
+
+  @override
+  String get expertServiceDescEnShort => '英文描述';
+
+  @override
+  String get expertServiceTipsTitle => '服务发布小贴士';
+
+  @override
+  String get expertServiceTip1 => '清晰的标题和描述能吸引更多客户';
+
+  @override
+  String get expertServiceTip2 => '合理定价，可参考平台同类服务';
+
+  @override
+  String get expertServiceTip3 => '添加英文版本可覆盖更多用户';
+
+  @override
   String get expertTimeSlotsEmpty => '暂无时间段';
 
   @override
@@ -20958,6 +20979,27 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get expertServiceStatusInactive => '已下架';
+
+  @override
+  String get expertServiceAddEnglish => '新增英文版本（可選）';
+
+  @override
+  String get expertServiceNameEnShort => '英文名稱';
+
+  @override
+  String get expertServiceDescEnShort => '英文描述';
+
+  @override
+  String get expertServiceTipsTitle => '服務發布小貼士';
+
+  @override
+  String get expertServiceTip1 => '清晰的標題和描述能吸引更多客戶';
+
+  @override
+  String get expertServiceTip2 => '合理定價，可參考平台同類服務';
+
+  @override
+  String get expertServiceTip3 => '新增英文版本可覆蓋更多使用者';
 
   @override
   String get expertTimeSlotsEmpty => '暫無時間段';
