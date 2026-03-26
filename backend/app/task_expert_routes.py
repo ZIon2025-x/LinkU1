@@ -29,6 +29,18 @@ from app.utils.time_utils import get_utc_time, format_iso_utc
 
 logger = logging.getLogger(__name__)
 
+
+def _payment_method_types_for_currency(currency: str) -> list:
+    """根据货币动态返回 Stripe 支持的支付方式列表"""
+    c = currency.lower()
+    methods = ["card"]
+    if c in ("gbp", "cny"):
+        methods.extend(["wechat_pay", "alipay"])
+    elif c in ("eur", "usd", "aud", "cad", "hkd", "jpy", "sgd", "nzd"):
+        methods.append("alipay")
+    return methods
+
+
 # 创建任务达人路由器
 task_expert_router = APIRouter(prefix="/api/task-experts", tags=["task-experts"])
 
@@ -3212,7 +3224,7 @@ async def approve_service_application(
         create_pi_kw = {
             "amount": task_amount_pence,
             "currency": (getattr(new_task, "currency", None) or "GBP").lower(),
-            "payment_method_types": ["card", "wechat_pay", "alipay"],
+            "payment_method_types": _payment_method_types_for_currency((getattr(new_task, "currency", None) or "GBP").lower()),
             "description": f"任务达人服务 #{new_task.id}: {service.service_name[:50]}",
             "metadata": {
                 "task_id": str(new_task.id),

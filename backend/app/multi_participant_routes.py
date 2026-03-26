@@ -30,6 +30,17 @@ from app.separate_auth_deps import get_current_admin, get_current_user_optional
 from app.utils.time_utils import get_utc_time
 from app.models import TaskExpertService, TaskExpert
 
+def _payment_method_types_for_currency(currency: str) -> list:
+    """根据货币动态返回 Stripe 支持的支付方式列表"""
+    c = currency.lower()
+    methods = ["card"]
+    if c in ("gbp", "cny"):
+        methods.extend(["wechat_pay", "alipay"])
+    elif c in ("eur", "usd", "aud", "cad", "hkd", "jpy", "sgd", "nzd"):
+        methods.append("alipay")
+    return methods
+
+
 router = APIRouter(prefix="/api", tags=["multi-participant-tasks"])
 
 
@@ -625,7 +636,7 @@ def apply_to_activity(
             create_pi_kw = {
                 "amount": task_amount_pence,
                 "currency": db_activity.currency.lower(),
-                "payment_method_types": ["card", "wechat_pay", "alipay"],
+                "payment_method_types": _payment_method_types_for_currency(db_activity.currency.lower()),
                 "metadata": {
                     "task_id": str(new_task.id),
                     "activity_id": str(activity_id),

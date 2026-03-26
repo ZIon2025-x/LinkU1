@@ -39,6 +39,18 @@ from app.wallet_service import get_or_create_wallet
 
 logger = logging.getLogger(__name__)
 
+
+def _payment_method_types_for_currency(currency: str) -> list:
+    """根据货币动态返回 Stripe 支持的支付方式列表"""
+    c = currency.lower()
+    methods = ["card"]
+    if c in ("gbp", "cny"):
+        methods.extend(["wechat_pay", "alipay"])
+    elif c in ("eur", "usd", "aud", "cad", "hkd", "jpy", "sgd", "nzd"):
+        methods.append("alipay")
+    return methods
+
+
 router = APIRouter(prefix="/api/coupon-points", tags=["优惠券和积分系统"])
 
 
@@ -1469,10 +1481,11 @@ def create_task_payment(
         # 
         # 注意：官方示例代码使用的是 Checkout Session + Direct Charges 模式（立即转账）
         # 但交易市场需要托管模式，所以不设置 transfer_data.destination
+        _currency = (task.currency or "GBP").lower()
         pm_types = (
             [payment_request.preferred_payment_method]
             if payment_request.preferred_payment_method
-            else ["card", "wechat_pay", "alipay"]
+            else _payment_method_types_for_currency(_currency)
         )
         logger.info(
             f"创建 PaymentIntent: preferred_payment_method={payment_request.preferred_payment_method!r}, "

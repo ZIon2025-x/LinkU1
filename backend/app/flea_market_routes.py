@@ -86,6 +86,18 @@ from app.content_filter.filter_service import check_content, create_review, crea
 
 logger = logging.getLogger(__name__)
 
+
+def _payment_method_types_for_currency(currency: str) -> list:
+    """根据货币动态返回 Stripe 支持的支付方式列表"""
+    c = currency.lower()
+    methods = ["card"]
+    if c in ("gbp", "cny"):
+        methods.extend(["wechat_pay", "alipay"])
+    elif c in ("eur", "usd", "aud", "cad", "hkd", "jpy", "sgd", "nzd"):
+        methods.append("alipay")
+    return methods
+
+
 # 创建跳蚤市场路由器
 flea_market_router = APIRouter(prefix="/api/flea-market", tags=["跳蚤市场"])
 
@@ -1973,7 +1985,7 @@ async def direct_purchase_item(
                 create_pi_kw = {
                     "amount": task_amount_pence,
                     "currency": (item.currency or "GBP").lower(),
-                    "payment_method_types": ["card", "wechat_pay", "alipay"],
+                    "payment_method_types": _payment_method_types_for_currency((item.currency or "GBP").lower()),
                     "description": f"跳蚤市场购买 #{new_task.id}: {item.title[:50]}",
                     "metadata": {
                         "task_id": str(new_task.id),
@@ -2368,7 +2380,7 @@ async def approve_purchase_request(
                 create_pi_kw = {
                     "amount": task_amount_pence,
                     "currency": (item.currency or "GBP").lower(),
-                    "payment_method_types": ["card", "wechat_pay", "alipay"],
+                    "payment_method_types": _payment_method_types_for_currency((item.currency or "GBP").lower()),
                     "description": f"跳蚤市场购买（议价） #{new_task.id}: {item.title[:50]}",
                     "metadata": {
                         "task_id": str(new_task.id),
@@ -2670,7 +2682,7 @@ async def accept_purchase_request(
                 create_pi_kw = {
                     "amount": task_amount_pence,
                     "currency": (item.currency or "GBP").lower(),
-                    "payment_method_types": ["card", "wechat_pay", "alipay"],
+                    "payment_method_types": _payment_method_types_for_currency((item.currency or "GBP").lower()),
                     "description": f"跳蚤市场购买（议价） #{new_task.id}: {item.title[:50]}",
                     "metadata": {
                         "task_id": str(new_task.id),

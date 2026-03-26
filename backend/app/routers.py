@@ -90,6 +90,17 @@ from app.config import Config
 router = APIRouter()
 
 
+def _payment_method_types_for_currency(currency: str) -> list:
+    """根据货币动态返回 Stripe 支持的支付方式列表"""
+    c = currency.lower()
+    methods = ["card"]
+    if c in ("gbp", "cny"):
+        methods.extend(["wechat_pay", "alipay"])
+    elif c in ("eur", "usd", "aud", "cad", "hkd", "jpy", "sgd", "nzd"):
+        methods.append("alipay")
+    return methods
+
+
 def _safe_json_loads(s, default=None):
     """安全的 JSON 解析，失败时返回默认值而非抛出异常"""
     if not s:
@@ -6334,7 +6345,7 @@ def create_payment(
     application_fee_pence = calculate_application_fee_pence(task_amount_pence, task_source, task_type)
     # 创建Stripe支付会话
     session = stripe.checkout.Session.create(
-        payment_method_types=["card", "wechat_pay", "alipay"],
+        payment_method_types=_payment_method_types_for_currency((task.currency or "GBP").lower()),
         line_items=[
             {
                 "price_data": {

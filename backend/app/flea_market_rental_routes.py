@@ -30,6 +30,18 @@ from app.flea_market_extensions import invalidate_item_cache
 
 logger = logging.getLogger(__name__)
 
+
+def _payment_method_types_for_currency(currency: str) -> list:
+    """根据货币动态返回 Stripe 支持的支付方式列表"""
+    c = currency.lower()
+    methods = ["card"]
+    if c in ("gbp", "cny"):
+        methods.extend(["wechat_pay", "alipay"])
+    elif c in ("eur", "usd", "aud", "cad", "hkd", "jpy", "sgd", "nzd"):
+        methods.append("alipay")
+    return methods
+
+
 # 创建租赁路由器
 rental_router = APIRouter(prefix="/api/flea-market", tags=["跳蚤市场-租赁"])
 
@@ -205,7 +217,7 @@ async def _create_rental_task_and_payment(
             create_pi_kw = {
                 "amount": task_amount_pence,
                 "currency": (item.currency or "GBP").lower(),
-                "payment_method_types": ["card", "wechat_pay", "alipay"],
+                "payment_method_types": _payment_method_types_for_currency((item.currency or "GBP").lower()),
                 "description": f"跳蚤市场租赁 #{new_task.id}: {item.title[:50]}",
                 "metadata": {
                     "task_id": str(new_task.id),

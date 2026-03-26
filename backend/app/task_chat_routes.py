@@ -65,13 +65,14 @@ async def get_current_user_secure_async_csrf(
 
 
 def _payment_method_types_for_currency(currency: str) -> list:
-    """根据货币动态返回 Stripe 支持的支付方式列表"""
+    """根据货币动态返回 Stripe 支持的支付方式列表
+
+    Alipay 只支持 cny, gbp（Stripe 账户限制）
+    """
     c = currency.lower()
     methods = ["card"]
     if c in ("gbp", "cny"):
         methods.extend(["wechat_pay", "alipay"])
-    elif c in ("eur", "usd", "aud", "cad", "hkd", "jpy", "sgd", "nzd"):
-        methods.append("alipay")
     return methods
 
 
