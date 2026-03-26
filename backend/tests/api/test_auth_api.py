@@ -270,27 +270,16 @@ class TestAuthAPI:
 
     @pytest.mark.api
     @pytest.mark.auth
-    def test_get_current_user_authenticated(self):
+    def test_get_current_user_authenticated(self, auth_client):
         """测试：已登录用户应该能获取自己的信息"""
-        if not TestAuthAPI._cookies and not TestAuthAPI._access_token:
-            pytest.skip("需要先运行 test_login_success")
+        response = auth_client.get(f"{self.base_url}/api/users/me")
 
-        with httpx.Client(timeout=self.timeout, cookies=TestAuthAPI._cookies) as client:
-            headers = {}
-            if TestAuthAPI._access_token:
-                headers["Authorization"] = f"Bearer {TestAuthAPI._access_token}"
+        assert response.status_code == 200, f"获取用户信息失败: {response.text}"
 
-            response = client.get(
-                f"{self.base_url}/api/users/me",
-                headers=headers
-            )
+        data = response.json()
+        assert "email" in data or "id" in data, f"响应缺少用户信息: {data}"
 
-            assert response.status_code == 200, f"获取用户信息失败: {response.text}"
-
-            data = response.json()
-            assert "email" in data or "id" in data, f"响应缺少用户信息: {data}"
-
-            print(f"✅ 成功获取用户信息")
+        print(f"✅ 成功获取用户信息")
 
     @pytest.mark.api
     @pytest.mark.auth
@@ -352,12 +341,6 @@ class TestAuthAPI:
             else:
                 print(f"ℹ️  密码验证返回: {response.status_code}")
 
-    def _get_auth_headers(self) -> dict:
-        """获取认证头"""
-        if TestAuthAPI._access_token:
-            return {"Authorization": f"Bearer {TestAuthAPI._access_token}"}
-        return {}
-
     # =========================================================================
     # 登出测试
     # =========================================================================
@@ -365,13 +348,29 @@ class TestAuthAPI:
     @pytest.mark.api
     @pytest.mark.auth
     def test_logout(self):
-        """测试：登出功能"""
-        if not TestAuthAPI._cookies and not TestAuthAPI._access_token:
-            pytest.skip("需要先运行 test_login_success")
+        """测试：登出端点存在且可响应（不使用 auth_client 避免撤销共享 session）"""
+        with httpx.Client(timeout=self.timeout) as client:
+            # 先登录获取独立 session，再登出（不影响 auth_client 的 session）
+            response = client.post(
+                f"{self.base_url}/api/secure-auth/login",
+                json={"email": TEST_USER_EMAIL, "password": TEST_USER_PASSWORD}
+            )
+            if response.status_code != 200:
+                pytest.skip("登录失败，无法测试登出")
 
-        with httpx.Client(timeout=self.timeout, cookies=TestAuthAPI._cookies) as client:
-            headers = self._get_auth_headers()
-            
+            data = response.json()
+            if "session_id" in data:
+                client.cookies.set("session_id", data["session_id"])
+            csrf_token = client.cookies.get("csrf_token", "")
+            if not csrf_token:
+                for key, value in response.cookies.items():
+                    client.cookies.set(key, value)
+                csrf_token = client.cookies.get("csrf_token", "")
+
+            headers = {}
+            if csrf_token:
+                headers["X-CSRF-Token"] = csrf_token
+
             response = client.post(
                 f"{self.base_url}/api/secure-auth/logout",
                 headers=headers
@@ -503,61 +502,41 @@ class TestUserProfileAPI:
         self.base_url = TEST_API_URL
         self.timeout = REQUEST_TIMEOUT
 
-    def _get_auth(self):
-        """获取认证信息"""
-        return TestAuthAPI._cookies, TestAuthAPI._access_token
-
-    def _get_auth_headers(self) -> dict:
-        """获取认证头"""
-        if TestAuthAPI._access_token:
-            return {"Authorization": f"Bearer {TestAuthAPI._access_token}"}
-        return {}
-
     @pytest.mark.api
     @pytest.mark.auth
-    def test_update_profile(self):
+    def test_update_profile(self, auth_client):
         """测试：更新用户资料"""
-        cookies, token = self._get_auth()
-        if not cookies and not token:
-            pytest.skip("需要先登录")
+        response = auth_client.put(
+            f"{self.base_url}/api/users/me",
+            json={
+                "name": f"Updated Name {int(time.time())}"
+            }
+        )
 
-        with httpx.Client(timeout=self.timeout, cookies=cookies) as client:
-            response = client.put(
-                f"{self.base_url}/api/users/me",
-                json={
-                    "name": f"Updated Name {int(time.time())}"
-                },
-                headers=self._get_auth_headers()
-            )
-
-            if response.status_code == 200:
-                print("✅ 用户资料更新成功")
-            elif response.status_code in [401, 403]:
-                print("ℹ️  认证失败")
-            elif response.status_code == 404:
-                print("ℹ️  更新资料端点不存在")
-            else:
-                print(f"ℹ️  更新资料返回: {response.status_code}")
+        if response.status_code == 200:
+            print("✅ 用户资料更新成功")
+        elif response.status_code in [401, 403]:
+            print("ℹ️  认证失败")
+        elif response.status_code == 404:
+            print("ℹ️  更新资料端点不存在")
+        else:
+            print(f"ℹ️  更新资料返回: {response.status_code}")
 
     @pytest.mark.api
     @pytest.mark.auth
-    def test_get_user_by_id(self):
+    def test_get_user_by_id(self, auth_client):
         """测试：通过 ID 获取用户信息"""
         if not TestAuthAPI._test_user_id:
             pytest.skip("没有用户 ID")
 
-        cookies, token = self._get_auth()
+        response = auth_client.get(
+            f"{self.base_url}/api/users/{TestAuthAPI._test_user_id}"
+        )
 
-        with httpx.Client(timeout=self.timeout, cookies=cookies) as client:
-            response = client.get(
-                f"{self.base_url}/api/users/{TestAuthAPI._test_user_id}",
-                headers=self._get_auth_headers()
-            )
-
-            if response.status_code == 200:
-                data = response.json()
-                print(f"✅ 获取用户信息成功: {data.get('name', 'N/A')}")
-            elif response.status_code == 404:
-                print("ℹ️  用户不存在")
-            else:
-                print(f"ℹ️  获取用户返回: {response.status_code}")
+        if response.status_code == 200:
+            data = response.json()
+            print(f"✅ 获取用户信息成功: {data.get('name', 'N/A')}")
+        elif response.status_code == 404:
+            print("ℹ️  用户不存在")
+        else:
+            print(f"ℹ️  获取用户返回: {response.status_code}")
