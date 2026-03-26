@@ -56,6 +56,14 @@ Widget _buildMyContentSection(BuildContext context, bool isDark) {
               ),
               _profileDivider(isDark),
               _ProfileRow(
+                icon: Icons.assignment_outlined,
+                title: context.l10n.profileMyServiceApplications,
+                subtitle: context.l10n.profileMyServiceApplicationsSubtitle,
+                color: AppColors.info,
+                onTap: () => context.push('/services/my/sent-applications'),
+              ),
+              _profileDivider(isDark),
+              _ProfileRow(
                 icon: Icons.inventory_2,           // shippingbox.fill
                 title: context.l10n.profileMyPosts,
                 subtitle: context.l10n.profileMyPostsSubtitle,

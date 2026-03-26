@@ -239,3 +239,27 @@ async def delete_personal_service(
     await db.delete(service)
     await db.commit()
     return {"message": "服务已删除"}
+
+
+@personal_service_router.patch("/me/{service_id}/status")
+async def toggle_personal_service_status(
+    service_id: int,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    result = await db.execute(
+        select(models.TaskExpertService).where(
+            models.TaskExpertService.id == service_id,
+            models.TaskExpertService.service_type == "personal",
+        )
+    )
+    service = result.scalar_one_or_none()
+    if not service:
+        raise HTTPException(status_code=404, detail="服务不存在")
+    if service.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="无权修改此服务")
+
+    new_status = "inactive" if service.status == "active" else "active"
+    service.status = new_status
+    await db.commit()
+    return {"message": f"服务已{'上架' if new_status == 'active' else '下架'}", "status": new_status}

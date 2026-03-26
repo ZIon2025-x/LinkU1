@@ -241,6 +241,12 @@ class ApiEndpoints {
   static const String myPersonalServices = '/api/services/me';
   static String myPersonalServiceById(String id) => '/api/services/me/$id';
   static const String browseServices = '/api/services/browse';
+  static String personalServiceToggleStatus(String id) =>
+      '/api/services/me/$id/status';
+  static String serviceReviews(int serviceId) =>
+      '/api/services/$serviceId/reviews';
+  static String serviceReviewSummary(int serviceId) =>
+      '/api/services/$serviceId/reviews/summary';
   // --- 服务所有者管理收到的申请（个人服务 + 达人服务通用） ---
   static const String myReceivedApplications =
       '/api/users/me/service-applications/received';

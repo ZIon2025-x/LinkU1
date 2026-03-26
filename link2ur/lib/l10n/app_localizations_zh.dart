@@ -11021,6 +11021,171 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get homeFlowGuaranteeDispute => '争议平台介入';
+
+  @override
+  String get myServiceApplicationsTitle => '我的服务申请';
+
+  @override
+  String get myServiceApplicationsEmpty => '暂无申请';
+
+  @override
+  String get myServiceApplicationsEmptyMessage => '您还没有申请过任何服务。浏览可用服务开始吧。';
+
+  @override
+  String get myServiceApplicationsFilterAll => '全部';
+
+  @override
+  String get myServiceApplicationsFilterPending => '待处理';
+
+  @override
+  String get myServiceApplicationsFilterNegotiating => '议价中';
+
+  @override
+  String get myServiceApplicationsFilterApproved => '已通过';
+
+  @override
+  String get myServiceApplicationsFilterRejected => '已拒绝';
+
+  @override
+  String get serviceApplicationCancelSuccess => '申请已取消';
+
+  @override
+  String get serviceApplicationCancelFailed => '取消申请失败';
+
+  @override
+  String get serviceApplicationConfirmCancel => '取消申请';
+
+  @override
+  String get serviceApplicationConfirmCancelMessage => '确定要取消这个申请吗？';
+
+  @override
+  String get serviceCounterOfferReceived => '收到还价';
+
+  @override
+  String get serviceCounterOfferAccepted => '已接受还价';
+
+  @override
+  String get serviceCounterOfferRejected => '已拒绝还价';
+
+  @override
+  String get serviceCounterOfferAcceptConfirm => '接受还价';
+
+  @override
+  String serviceCounterOfferAcceptConfirmMessage(String price) {
+    return '接受 $price 的还价？';
+  }
+
+  @override
+  String get serviceCounterOfferRejectConfirm => '拒绝还价';
+
+  @override
+  String get serviceCounterOfferRejectConfirmMessage => '拒绝这个还价？您可以继续协商。';
+
+  @override
+  String get serviceCounterOfferRespondFailed => '回应还价失败';
+
+  @override
+  String get browseServicesTitle => '浏览服务';
+
+  @override
+  String get browseServicesSearchHint => '搜索服务...';
+
+  @override
+  String get browseServicesFilterAll => '全部';
+
+  @override
+  String get browseServicesFilterPersonal => '个人';
+
+  @override
+  String get browseServicesFilterExpert => '达人';
+
+  @override
+  String get browseServicesSortRecommended => '推荐';
+
+  @override
+  String get browseServicesSortNewest => '最新';
+
+  @override
+  String get browseServicesSortPriceAsc => '价格从低到高';
+
+  @override
+  String get browseServicesSortPriceDesc => '价格从高到低';
+
+  @override
+  String get browseServicesEmpty => '未找到服务';
+
+  @override
+  String get browseServicesEmptyMessage => '请尝试调整搜索条件或筛选条件。';
+
+  @override
+  String get browseServicesLoadMore => '加载更多';
+
+  @override
+  String get browseServicesNoMore => '没有更多服务了';
+
+  @override
+  String get serviceStatusToggle => '切换状态';
+
+  @override
+  String get serviceStatusActivate => '上架';
+
+  @override
+  String get serviceStatusDeactivate => '下架';
+
+  @override
+  String get serviceStatusActivated => '服务已上架';
+
+  @override
+  String get serviceStatusDeactivated => '服务已下架';
+
+  @override
+  String get serviceStatusToggleFailed => '更新服务状态失败';
+
+  @override
+  String get serviceStatusConfirmDeactivate => '下架服务';
+
+  @override
+  String get serviceStatusConfirmDeactivateMessage =>
+      '下架后服务将不会出现在浏览列表中。您可以随时重新上架。';
+
+  @override
+  String get serviceReviewTitle => '服务评价';
+
+  @override
+  String get serviceReviewEmpty => '暂无评价';
+
+  @override
+  String get serviceReviewEmptyMessage => '成为第一个评价此服务的用户。';
+
+  @override
+  String get serviceReviewWriteReview => '写评价';
+
+  @override
+  String get serviceReviewRating => '评分';
+
+  @override
+  String get serviceReviewComment => '评价内容';
+
+  @override
+  String get serviceReviewCommentHint => '分享您对此服务的体验...';
+
+  @override
+  String get serviceReviewSubmit => '提交评价';
+
+  @override
+  String get serviceReviewSubmitted => '评价提交成功';
+
+  @override
+  String get serviceReviewSubmitFailed => '评价提交失败';
+
+  @override
+  String get serviceReviewAlreadyReviewed => '您已经评价过此服务';
+
+  @override
+  String get profileMyServiceApplications => '我的服务申请';
+
+  @override
+  String get profileMyServiceApplicationsSubtitle => '跟踪服务申请进度';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -22040,4 +22205,169 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get homeFlowGuaranteeDispute => '爭議平台介入';
+
+  @override
+  String get myServiceApplicationsTitle => '我的服務申請';
+
+  @override
+  String get myServiceApplicationsEmpty => '暫無申請';
+
+  @override
+  String get myServiceApplicationsEmptyMessage => '您還沒有申請過任何服務。瀏覽可用服務開始吧。';
+
+  @override
+  String get myServiceApplicationsFilterAll => '全部';
+
+  @override
+  String get myServiceApplicationsFilterPending => '待處理';
+
+  @override
+  String get myServiceApplicationsFilterNegotiating => '議價中';
+
+  @override
+  String get myServiceApplicationsFilterApproved => '已通過';
+
+  @override
+  String get myServiceApplicationsFilterRejected => '已拒絕';
+
+  @override
+  String get serviceApplicationCancelSuccess => '申請已取消';
+
+  @override
+  String get serviceApplicationCancelFailed => '取消申請失敗';
+
+  @override
+  String get serviceApplicationConfirmCancel => '取消申請';
+
+  @override
+  String get serviceApplicationConfirmCancelMessage => '確定要取消這個申請嗎？';
+
+  @override
+  String get serviceCounterOfferReceived => '收到還價';
+
+  @override
+  String get serviceCounterOfferAccepted => '已接受還價';
+
+  @override
+  String get serviceCounterOfferRejected => '已拒絕還價';
+
+  @override
+  String get serviceCounterOfferAcceptConfirm => '接受還價';
+
+  @override
+  String serviceCounterOfferAcceptConfirmMessage(String price) {
+    return '接受 $price 的還價？';
+  }
+
+  @override
+  String get serviceCounterOfferRejectConfirm => '拒絕還價';
+
+  @override
+  String get serviceCounterOfferRejectConfirmMessage => '拒絕這個還價？您可以繼續協商。';
+
+  @override
+  String get serviceCounterOfferRespondFailed => '回應還價失敗';
+
+  @override
+  String get browseServicesTitle => '瀏覽服務';
+
+  @override
+  String get browseServicesSearchHint => '搜尋服務...';
+
+  @override
+  String get browseServicesFilterAll => '全部';
+
+  @override
+  String get browseServicesFilterPersonal => '個人';
+
+  @override
+  String get browseServicesFilterExpert => '達人';
+
+  @override
+  String get browseServicesSortRecommended => '推薦';
+
+  @override
+  String get browseServicesSortNewest => '最新';
+
+  @override
+  String get browseServicesSortPriceAsc => '價格從低到高';
+
+  @override
+  String get browseServicesSortPriceDesc => '價格從高到低';
+
+  @override
+  String get browseServicesEmpty => '未找到服務';
+
+  @override
+  String get browseServicesEmptyMessage => '請嘗試調整搜尋條件或篩選條件。';
+
+  @override
+  String get browseServicesLoadMore => '載入更多';
+
+  @override
+  String get browseServicesNoMore => '沒有更多服務了';
+
+  @override
+  String get serviceStatusToggle => '切換狀態';
+
+  @override
+  String get serviceStatusActivate => '上架';
+
+  @override
+  String get serviceStatusDeactivate => '下架';
+
+  @override
+  String get serviceStatusActivated => '服務已上架';
+
+  @override
+  String get serviceStatusDeactivated => '服務已下架';
+
+  @override
+  String get serviceStatusToggleFailed => '更新服務狀態失敗';
+
+  @override
+  String get serviceStatusConfirmDeactivate => '下架服務';
+
+  @override
+  String get serviceStatusConfirmDeactivateMessage =>
+      '下架後服務將不會出現在瀏覽列表中。您可以隨時重新上架。';
+
+  @override
+  String get serviceReviewTitle => '服務評價';
+
+  @override
+  String get serviceReviewEmpty => '暫無評價';
+
+  @override
+  String get serviceReviewEmptyMessage => '成為第一個評價此服務的用戶。';
+
+  @override
+  String get serviceReviewWriteReview => '寫評價';
+
+  @override
+  String get serviceReviewRating => '評分';
+
+  @override
+  String get serviceReviewComment => '評價內容';
+
+  @override
+  String get serviceReviewCommentHint => '分享您對此服務的體驗...';
+
+  @override
+  String get serviceReviewSubmit => '提交評價';
+
+  @override
+  String get serviceReviewSubmitted => '評價提交成功';
+
+  @override
+  String get serviceReviewSubmitFailed => '評價提交失敗';
+
+  @override
+  String get serviceReviewAlreadyReviewed => '您已經評價過此服務';
+
+  @override
+  String get profileMyServiceApplications => '我的服務申請';
+
+  @override
+  String get profileMyServiceApplicationsSubtitle => '追蹤服務申請進度';
 }

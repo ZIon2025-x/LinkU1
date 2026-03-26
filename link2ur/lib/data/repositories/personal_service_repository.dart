@@ -86,6 +86,86 @@ class PersonalServiceRepository {
     return Map<String, dynamic>.from(response.data);
   }
 
+  // ==================== 申请者的申请列表 ====================
+
+  Future<Map<String, dynamic>> getMyServiceApplications({
+    String? status,
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    final params = <String, dynamic>{
+      'page': page,
+      'page_size': pageSize,
+    };
+    if (status != null && status.isNotEmpty) params['status'] = status;
+
+    final response = await _apiService.get(
+      ApiEndpoints.myServiceApplications,
+      queryParameters: params,
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw Exception(response.message ?? 'load_applications_failed');
+    }
+    return Map<String, dynamic>.from(response.data);
+  }
+
+  Future<void> respondCounterOffer(int applicationId, {required bool accept}) async {
+    final response = await _apiService.post(
+      ApiEndpoints.respondServiceCounterOffer(applicationId),
+      data: {'accept': accept},
+    );
+    if (!response.isSuccess) {
+      throw Exception(response.message ?? 'respond_counter_offer_failed');
+    }
+  }
+
+  Future<void> cancelApplication(int applicationId) async {
+    final response = await _apiService.post(
+      ApiEndpoints.cancelServiceApplication(applicationId),
+    );
+    if (!response.isSuccess) {
+      throw Exception(response.message ?? 'cancel_application_failed');
+    }
+  }
+
+  // ==================== 服务状态开关 ====================
+
+  Future<Map<String, dynamic>> toggleServiceStatus(String id) async {
+    final response = await _apiService.patch(
+      ApiEndpoints.personalServiceToggleStatus(id),
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw Exception(response.message ?? 'toggle_status_failed');
+    }
+    return Map<String, dynamic>.from(response.data);
+  }
+
+  // ==================== 服务评价 ====================
+
+  Future<Map<String, dynamic>> getServiceReviews(int serviceId, {
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    final response = await _apiService.get(
+      ApiEndpoints.serviceReviews(serviceId),
+      queryParameters: {'page': page, 'page_size': pageSize},
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw Exception(response.message ?? 'load_reviews_failed');
+    }
+    return Map<String, dynamic>.from(response.data);
+  }
+
+  Future<Map<String, dynamic>> getServiceReviewSummary(int serviceId) async {
+    final response = await _apiService.get(
+      ApiEndpoints.serviceReviewSummary(serviceId),
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw Exception(response.message ?? 'load_review_summary_failed');
+    }
+    return Map<String, dynamic>.from(response.data);
+  }
+
   // ==================== 收到的申请管理 ====================
 
   Future<Map<String, dynamic>> getReceivedApplications({

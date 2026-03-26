@@ -39,9 +39,18 @@ class _MyServicesBody extends StatelessWidget {
       listener: (context, state) {
         final msg = state.actionMessage;
         if (msg == null) return;
+        final l10n = context.l10n;
+        final text = switch (msg) {
+          'service_activated' => l10n.serviceStatusActivated,
+          'service_deactivated' => l10n.serviceStatusDeactivated,
+          'toggle_status_failed' => l10n.serviceStatusToggleFailed,
+          _ => context.localizeError(msg),
+        };
+        final isError = msg.contains('failed');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(context.localizeError(msg)),
+            content: Text(text),
+            backgroundColor: isError ? AppColors.error : null,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -50,6 +59,11 @@ class _MyServicesBody extends StatelessWidget {
         appBar: AppBar(
           title: Text(context.l10n.profileMyServices),
           actions: [
+            IconButton(
+              icon: const Icon(Icons.explore_outlined),
+              tooltip: context.l10n.browseServicesTitle,
+              onPressed: () => context.push('/services/browse'),
+            ),
             IconButton(
               icon: const Icon(Icons.inbox_outlined),
               tooltip: context.l10n.expertApplicationsTitle,
@@ -132,6 +146,20 @@ class _MyServicesBody extends StatelessWidget {
                         }
                       },
                       onDelete: () => _confirmDelete(context, service),
+                      onToggleStatus: () {
+                        context.read<PersonalServiceBloc>().add(
+                              PersonalServiceToggleStatus(
+                                service['id']?.toString() ?? '',
+                              ),
+                            );
+                      },
+                      onViewReviews: () {
+                        final id = service['id'];
+                        context.push(
+                          '/services/$id/reviews',
+                          extra: {'serviceName': service['service_name']},
+                        );
+                      },
                     ),
                   );
                 },
@@ -318,12 +346,16 @@ class _ServiceCard extends StatelessWidget {
     required this.onTap,
     required this.onEdit,
     required this.onDelete,
+    this.onToggleStatus,
+    this.onViewReviews,
   });
 
   final Map<String, dynamic> service;
   final VoidCallback onTap;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+  final VoidCallback? onToggleStatus;
+  final VoidCallback? onViewReviews;
 
   @override
   Widget build(BuildContext context) {
@@ -394,8 +426,36 @@ class _ServiceCard extends StatelessWidget {
                 onSelected: (value) {
                   if (value == 'edit') onEdit();
                   if (value == 'delete') onDelete();
+                  if (value == 'toggle') onToggleStatus?.call();
+                  if (value == 'reviews') onViewReviews?.call();
                 },
                 itemBuilder: (context) => [
+                  PopupMenuItem(
+                    value: 'toggle',
+                    child: ListTile(
+                      leading: Icon(
+                        status == 'active'
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
+                      ),
+                      title: Text(
+                        status == 'active'
+                            ? context.l10n.serviceStatusDeactivate
+                            : context.l10n.serviceStatusActivate,
+                      ),
+                      contentPadding: EdgeInsets.zero,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'reviews',
+                    child: ListTile(
+                      leading: const Icon(Icons.rate_review_outlined),
+                      title: Text(context.l10n.serviceReviewTitle),
+                      contentPadding: EdgeInsets.zero,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
                   PopupMenuItem(
                     value: 'edit',
                     child: ListTile(

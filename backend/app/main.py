@@ -430,6 +430,10 @@ app.include_router(user_service_application_router)
 from app.personal_service_routes import personal_service_router
 app.include_router(personal_service_router)
 
+# 服务评价路由
+from app.service_review_routes import service_review_router
+app.include_router(service_review_router)
+
 # 服务浏览（公开）路由
 from app.service_browse_routes import service_browse_router
 app.include_router(service_browse_router)

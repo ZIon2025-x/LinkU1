@@ -11473,4 +11473,178 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homeFlowGuaranteeDispute => 'Dispute Mediation';
+
+  @override
+  String get myServiceApplicationsTitle => 'My Service Applications';
+
+  @override
+  String get myServiceApplicationsEmpty => 'No Applications Yet';
+
+  @override
+  String get myServiceApplicationsEmptyMessage =>
+      'You haven\'t applied to any services yet. Browse available services to get started.';
+
+  @override
+  String get myServiceApplicationsFilterAll => 'All';
+
+  @override
+  String get myServiceApplicationsFilterPending => 'Pending';
+
+  @override
+  String get myServiceApplicationsFilterNegotiating => 'Negotiating';
+
+  @override
+  String get myServiceApplicationsFilterApproved => 'Approved';
+
+  @override
+  String get myServiceApplicationsFilterRejected => 'Rejected';
+
+  @override
+  String get serviceApplicationCancelSuccess => 'Application cancelled';
+
+  @override
+  String get serviceApplicationCancelFailed => 'Failed to cancel application';
+
+  @override
+  String get serviceApplicationConfirmCancel => 'Cancel Application';
+
+  @override
+  String get serviceApplicationConfirmCancelMessage =>
+      'Are you sure you want to cancel this application?';
+
+  @override
+  String get serviceCounterOfferReceived => 'Counter offer received';
+
+  @override
+  String get serviceCounterOfferAccepted => 'Counter offer accepted';
+
+  @override
+  String get serviceCounterOfferRejected => 'Counter offer rejected';
+
+  @override
+  String get serviceCounterOfferAcceptConfirm => 'Accept Counter Offer';
+
+  @override
+  String serviceCounterOfferAcceptConfirmMessage(String price) {
+    return 'Accept the counter offer of $price?';
+  }
+
+  @override
+  String get serviceCounterOfferRejectConfirm => 'Reject Counter Offer';
+
+  @override
+  String get serviceCounterOfferRejectConfirmMessage =>
+      'Reject this counter offer? You can continue negotiating.';
+
+  @override
+  String get serviceCounterOfferRespondFailed =>
+      'Failed to respond to counter offer';
+
+  @override
+  String get browseServicesTitle => 'Browse Services';
+
+  @override
+  String get browseServicesSearchHint => 'Search services...';
+
+  @override
+  String get browseServicesFilterAll => 'All';
+
+  @override
+  String get browseServicesFilterPersonal => 'Personal';
+
+  @override
+  String get browseServicesFilterExpert => 'Expert';
+
+  @override
+  String get browseServicesSortRecommended => 'Recommended';
+
+  @override
+  String get browseServicesSortNewest => 'Newest';
+
+  @override
+  String get browseServicesSortPriceAsc => 'Price: Low to High';
+
+  @override
+  String get browseServicesSortPriceDesc => 'Price: High to Low';
+
+  @override
+  String get browseServicesEmpty => 'No Services Found';
+
+  @override
+  String get browseServicesEmptyMessage =>
+      'Try adjusting your search or filters.';
+
+  @override
+  String get browseServicesLoadMore => 'Load more';
+
+  @override
+  String get browseServicesNoMore => 'No more services';
+
+  @override
+  String get serviceStatusToggle => 'Toggle Status';
+
+  @override
+  String get serviceStatusActivate => 'Activate';
+
+  @override
+  String get serviceStatusDeactivate => 'Deactivate';
+
+  @override
+  String get serviceStatusActivated => 'Service activated';
+
+  @override
+  String get serviceStatusDeactivated => 'Service deactivated';
+
+  @override
+  String get serviceStatusToggleFailed => 'Failed to update service status';
+
+  @override
+  String get serviceStatusConfirmDeactivate => 'Deactivate Service';
+
+  @override
+  String get serviceStatusConfirmDeactivateMessage =>
+      'This service will be hidden from browse. You can reactivate it anytime.';
+
+  @override
+  String get serviceReviewTitle => 'Service Reviews';
+
+  @override
+  String get serviceReviewEmpty => 'No Reviews Yet';
+
+  @override
+  String get serviceReviewEmptyMessage =>
+      'Be the first to review this service.';
+
+  @override
+  String get serviceReviewWriteReview => 'Write a Review';
+
+  @override
+  String get serviceReviewRating => 'Rating';
+
+  @override
+  String get serviceReviewComment => 'Comment';
+
+  @override
+  String get serviceReviewCommentHint =>
+      'Share your experience with this service...';
+
+  @override
+  String get serviceReviewSubmit => 'Submit Review';
+
+  @override
+  String get serviceReviewSubmitted => 'Review submitted successfully';
+
+  @override
+  String get serviceReviewSubmitFailed => 'Failed to submit review';
+
+  @override
+  String get serviceReviewAlreadyReviewed =>
+      'You have already reviewed this service';
+
+  @override
+  String get profileMyServiceApplications => 'My Applications';
+
+  @override
+  String get profileMyServiceApplicationsSubtitle =>
+      'Track your service applications';
 }

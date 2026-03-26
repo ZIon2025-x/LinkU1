@@ -21160,6 +21160,330 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Dispute Mediation'**
   String get homeFlowGuaranteeDispute;
+
+  /// No description provided for @myServiceApplicationsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'My Service Applications'**
+  String get myServiceApplicationsTitle;
+
+  /// No description provided for @myServiceApplicationsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No Applications Yet'**
+  String get myServiceApplicationsEmpty;
+
+  /// No description provided for @myServiceApplicationsEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'You haven\'t applied to any services yet. Browse available services to get started.'**
+  String get myServiceApplicationsEmptyMessage;
+
+  /// No description provided for @myServiceApplicationsFilterAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get myServiceApplicationsFilterAll;
+
+  /// No description provided for @myServiceApplicationsFilterPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get myServiceApplicationsFilterPending;
+
+  /// No description provided for @myServiceApplicationsFilterNegotiating.
+  ///
+  /// In en, this message translates to:
+  /// **'Negotiating'**
+  String get myServiceApplicationsFilterNegotiating;
+
+  /// No description provided for @myServiceApplicationsFilterApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get myServiceApplicationsFilterApproved;
+
+  /// No description provided for @myServiceApplicationsFilterRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get myServiceApplicationsFilterRejected;
+
+  /// No description provided for @serviceApplicationCancelSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Application cancelled'**
+  String get serviceApplicationCancelSuccess;
+
+  /// No description provided for @serviceApplicationCancelFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to cancel application'**
+  String get serviceApplicationCancelFailed;
+
+  /// No description provided for @serviceApplicationConfirmCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel Application'**
+  String get serviceApplicationConfirmCancel;
+
+  /// No description provided for @serviceApplicationConfirmCancelMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to cancel this application?'**
+  String get serviceApplicationConfirmCancelMessage;
+
+  /// No description provided for @serviceCounterOfferReceived.
+  ///
+  /// In en, this message translates to:
+  /// **'Counter offer received'**
+  String get serviceCounterOfferReceived;
+
+  /// No description provided for @serviceCounterOfferAccepted.
+  ///
+  /// In en, this message translates to:
+  /// **'Counter offer accepted'**
+  String get serviceCounterOfferAccepted;
+
+  /// No description provided for @serviceCounterOfferRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Counter offer rejected'**
+  String get serviceCounterOfferRejected;
+
+  /// No description provided for @serviceCounterOfferAcceptConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept Counter Offer'**
+  String get serviceCounterOfferAcceptConfirm;
+
+  /// No description provided for @serviceCounterOfferAcceptConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept the counter offer of {price}?'**
+  String serviceCounterOfferAcceptConfirmMessage(String price);
+
+  /// No description provided for @serviceCounterOfferRejectConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject Counter Offer'**
+  String get serviceCounterOfferRejectConfirm;
+
+  /// No description provided for @serviceCounterOfferRejectConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject this counter offer? You can continue negotiating.'**
+  String get serviceCounterOfferRejectConfirmMessage;
+
+  /// No description provided for @serviceCounterOfferRespondFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to respond to counter offer'**
+  String get serviceCounterOfferRespondFailed;
+
+  /// No description provided for @browseServicesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse Services'**
+  String get browseServicesTitle;
+
+  /// No description provided for @browseServicesSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search services...'**
+  String get browseServicesSearchHint;
+
+  /// No description provided for @browseServicesFilterAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get browseServicesFilterAll;
+
+  /// No description provided for @browseServicesFilterPersonal.
+  ///
+  /// In en, this message translates to:
+  /// **'Personal'**
+  String get browseServicesFilterPersonal;
+
+  /// No description provided for @browseServicesFilterExpert.
+  ///
+  /// In en, this message translates to:
+  /// **'Expert'**
+  String get browseServicesFilterExpert;
+
+  /// No description provided for @browseServicesSortRecommended.
+  ///
+  /// In en, this message translates to:
+  /// **'Recommended'**
+  String get browseServicesSortRecommended;
+
+  /// No description provided for @browseServicesSortNewest.
+  ///
+  /// In en, this message translates to:
+  /// **'Newest'**
+  String get browseServicesSortNewest;
+
+  /// No description provided for @browseServicesSortPriceAsc.
+  ///
+  /// In en, this message translates to:
+  /// **'Price: Low to High'**
+  String get browseServicesSortPriceAsc;
+
+  /// No description provided for @browseServicesSortPriceDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Price: High to Low'**
+  String get browseServicesSortPriceDesc;
+
+  /// No description provided for @browseServicesEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No Services Found'**
+  String get browseServicesEmpty;
+
+  /// No description provided for @browseServicesEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Try adjusting your search or filters.'**
+  String get browseServicesEmptyMessage;
+
+  /// No description provided for @browseServicesLoadMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Load more'**
+  String get browseServicesLoadMore;
+
+  /// No description provided for @browseServicesNoMore.
+  ///
+  /// In en, this message translates to:
+  /// **'No more services'**
+  String get browseServicesNoMore;
+
+  /// No description provided for @serviceStatusToggle.
+  ///
+  /// In en, this message translates to:
+  /// **'Toggle Status'**
+  String get serviceStatusToggle;
+
+  /// No description provided for @serviceStatusActivate.
+  ///
+  /// In en, this message translates to:
+  /// **'Activate'**
+  String get serviceStatusActivate;
+
+  /// No description provided for @serviceStatusDeactivate.
+  ///
+  /// In en, this message translates to:
+  /// **'Deactivate'**
+  String get serviceStatusDeactivate;
+
+  /// No description provided for @serviceStatusActivated.
+  ///
+  /// In en, this message translates to:
+  /// **'Service activated'**
+  String get serviceStatusActivated;
+
+  /// No description provided for @serviceStatusDeactivated.
+  ///
+  /// In en, this message translates to:
+  /// **'Service deactivated'**
+  String get serviceStatusDeactivated;
+
+  /// No description provided for @serviceStatusToggleFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to update service status'**
+  String get serviceStatusToggleFailed;
+
+  /// No description provided for @serviceStatusConfirmDeactivate.
+  ///
+  /// In en, this message translates to:
+  /// **'Deactivate Service'**
+  String get serviceStatusConfirmDeactivate;
+
+  /// No description provided for @serviceStatusConfirmDeactivateMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This service will be hidden from browse. You can reactivate it anytime.'**
+  String get serviceStatusConfirmDeactivateMessage;
+
+  /// No description provided for @serviceReviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Service Reviews'**
+  String get serviceReviewTitle;
+
+  /// No description provided for @serviceReviewEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No Reviews Yet'**
+  String get serviceReviewEmpty;
+
+  /// No description provided for @serviceReviewEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Be the first to review this service.'**
+  String get serviceReviewEmptyMessage;
+
+  /// No description provided for @serviceReviewWriteReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Write a Review'**
+  String get serviceReviewWriteReview;
+
+  /// No description provided for @serviceReviewRating.
+  ///
+  /// In en, this message translates to:
+  /// **'Rating'**
+  String get serviceReviewRating;
+
+  /// No description provided for @serviceReviewComment.
+  ///
+  /// In en, this message translates to:
+  /// **'Comment'**
+  String get serviceReviewComment;
+
+  /// No description provided for @serviceReviewCommentHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Share your experience with this service...'**
+  String get serviceReviewCommentHint;
+
+  /// No description provided for @serviceReviewSubmit.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit Review'**
+  String get serviceReviewSubmit;
+
+  /// No description provided for @serviceReviewSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Review submitted successfully'**
+  String get serviceReviewSubmitted;
+
+  /// No description provided for @serviceReviewSubmitFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to submit review'**
+  String get serviceReviewSubmitFailed;
+
+  /// No description provided for @serviceReviewAlreadyReviewed.
+  ///
+  /// In en, this message translates to:
+  /// **'You have already reviewed this service'**
+  String get serviceReviewAlreadyReviewed;
+
+  /// No description provided for @profileMyServiceApplications.
+  ///
+  /// In en, this message translates to:
+  /// **'My Applications'**
+  String get profileMyServiceApplications;
+
+  /// No description provided for @profileMyServiceApplicationsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Track your service applications'**
+  String get profileMyServiceApplicationsSubtitle;
 }
 
 class _AppLocalizationsDelegate
