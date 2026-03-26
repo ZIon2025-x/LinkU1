@@ -81,6 +81,12 @@ def auth_client():
             pytest.skip(f"登录失败: HTTP {response.status_code}")
 
         data = response.json()
+
+        # secure-auth 返回 session_id（非 access_token）—
+        # 显式注入 cookie，防止 httpx 因 secure/httponly 属性丢失 Set-Cookie
+        if "session_id" in data:
+            client.cookies.set("session_id", data["session_id"])
+
         access_token = data.get("access_token", "")
         if access_token:
             # JWT Bearer token — 直接绕过 CSRF 检查
@@ -90,6 +96,11 @@ def auth_client():
             # POST/PUT/PATCH/DELETE 需要双提交 CSRF token（X-CSRF-Token header == csrf_token cookie）。
             # csrf_token cookie 是非 HttpOnly 的，httpx 可以读取。
             csrf_token = client.cookies.get("csrf_token", "")
+            if not csrf_token:
+                # 从响应 Set-Cookie 中提取（httpx 可能因 secure 属性未自动存入 client.cookies）
+                for key, value in response.cookies.items():
+                    client.cookies.set(key, value)
+                csrf_token = client.cookies.get("csrf_token", "")
             if csrf_token:
                 client.headers.update({"X-CSRF-Token": csrf_token})
             else:
