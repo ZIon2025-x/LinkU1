@@ -2195,6 +2195,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskDetailSuperTask => 'Super Task';
 
   @override
+  String get taskDetailExpertTask => 'Expert Task';
+
+  @override
   String get taskDetailTaskDescription => 'Task Description';
 
   @override

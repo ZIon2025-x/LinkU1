@@ -1026,6 +1026,7 @@
   "taskDetailNoTaskImages": "No task images",
   "taskDetailVipTask": "VIP Task",
   "taskDetailSuperTask": "Super Task",
+  "taskDetailExpertTask": "Expert Task",
   "taskDetailTaskDescription": "Task Description",
   "taskDetailTimeInfo": "Time Information",
   "taskDetailPublishTime": "Publish Time",

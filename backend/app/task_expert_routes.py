@@ -3168,22 +3168,7 @@ async def approve_service_application(
             headers={"X-Stripe-Connect-Required": "true"}
         )
     
-    # 8. 按资金划分任务等级（与普通任务一致）
-    from app.async_crud import AsyncSystemCRUD
-    settings = await AsyncSystemCRUD.get_system_settings(db)
-    vip_threshold = float(settings.get("vip_price_threshold", 10.0))
-    super_threshold = float(settings.get("super_vip_price_threshold", 50.0))
-    poster_user = await db.get(models.User, application.applicant_id)
-    poster_level = str(poster_user.user_level) if poster_user and poster_user.user_level else "normal"
-    if poster_level == "super":
-        task_level = "vip"
-    elif price >= super_threshold:
-        task_level = "super"
-    elif price >= vip_threshold:
-        task_level = "vip"
-    else:
-        task_level = "normal"
-
+    # 8. 创建任务（达人服务是认证过的，任务等级为 expert）
     # 设置为 pending_payment 状态，等待支付完成
     new_task = models.Task(
         title=service.service_name,
@@ -3196,7 +3181,7 @@ async def approve_service_application(
         currency=application.currency or service.currency,
         location=location,  # 使用任务达人的位置
         task_type=featured_expert.category if featured_expert and featured_expert.category else "其他",
-        task_level=task_level,
+        task_level="expert",
         poster_id=application.applicant_id,  # 申请用户是发布人
         taker_id=application.expert_id,  # 任务达人接收方
         status="pending_payment",  # ⚠️ 安全修复：等待支付，不直接进入进行中状态

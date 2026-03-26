@@ -105,11 +105,25 @@ class TaskLevelBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!task.hasSpecialLevel) return const SizedBox.shrink();
 
-    final isVip = task.isVipTask;
-    final color = isVip ? AppColors.busy : AppColors.pendingPurple;
-    final icon = isVip ? Icons.star : Icons.local_fire_department;
-    final text =
-        isVip ? context.l10n.taskDetailVipTask : context.l10n.taskDetailSuperTask;
+    final Color color;
+    final IconData icon;
+    final String text;
+
+    if (task.isVipTask) {
+      color = AppColors.busy;
+      icon = Icons.star;
+      text = context.l10n.taskDetailVipTask;
+    } else if (task.isExpertTask) {
+      color = AppColors.indigo;
+      icon = Icons.verified;
+      text = context.l10n.taskDetailExpertTask;
+    } else if (task.isSuperTask) {
+      color = AppColors.pendingPurple;
+      icon = Icons.local_fire_department;
+      text = context.l10n.taskDetailSuperTask;
+    } else {
+      return const SizedBox.shrink();
+    }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

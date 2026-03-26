@@ -51,8 +51,7 @@ def get_account_info(
 ):
     """获取积分账户信息"""
     from sqlalchemy import func, and_, or_
-    from decimal import Decimal
-    
+
     account = get_or_create_points_account(db, current_user.id)
 
     # 积分页面：直接显示积分数量（非英镑），balance_display 为整数字符串
@@ -979,8 +978,6 @@ def create_task_payment(
     if payment_request.use_wallet_balance and final_amount > 0:
         from app.wallet_service import lock_wallet, debit_wallet, reverse_debit
         from app.wallet_models import WalletTransaction
-        from decimal import Decimal
-
         # Use the task's currency for wallet operations
         wallet_currency = getattr(task, "currency", None) or "GBP"
         _idempotency_key = f"wallet_task_payment_{task_id}_{current_user.id}"

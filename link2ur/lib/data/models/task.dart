@@ -251,6 +251,9 @@ class Task extends Equatable {
   /// 是否超级任务
   bool get isSuperTask => taskLevel == 'super';
 
+  /// 是否达人任务
+  bool get isExpertTask => taskLevel == 'expert';
+
   /// 是否有特殊等级
   bool get hasSpecialLevel =>
       taskLevel != null && taskLevel != 'normal';

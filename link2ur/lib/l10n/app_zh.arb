@@ -830,6 +830,7 @@
   "taskDetailNoTaskImages": "暂无任务图片",
   "taskDetailVipTask": "VIP任务",
   "taskDetailSuperTask": "超级任务",
+  "taskDetailExpertTask": "达人任务",
   "taskDetailTaskDescription": "任务描述",
   "taskDetailTimeInfo": "时间信息",
   "taskDetailPublishTime": "发布时间",

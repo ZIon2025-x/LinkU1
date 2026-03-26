@@ -4047,6 +4047,12 @@ abstract class AppLocalizations {
   /// **'Super Task'**
   String get taskDetailSuperTask;
 
+  /// No description provided for @taskDetailExpertTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Expert Task'**
+  String get taskDetailExpertTask;
+
   /// No description provided for @taskDetailTaskDescription.
   ///
   /// In en, this message translates to:

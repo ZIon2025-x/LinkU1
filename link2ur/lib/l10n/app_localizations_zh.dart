@@ -2089,6 +2089,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskDetailSuperTask => '超级任务';
 
   @override
+  String get taskDetailExpertTask => '达人任务';
+
+  @override
   String get taskDetailTaskDescription => '任务描述';
 
   @override
@@ -13100,6 +13103,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get taskDetailSuperTask => '超級任務';
+
+  @override
+  String get taskDetailExpertTask => '達人任務';
 
   @override
   String get taskDetailTaskDescription => '任務描述';
