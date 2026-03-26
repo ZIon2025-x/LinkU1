@@ -193,8 +193,13 @@ class TestAuthAPI:
             data = response.json()
             assert "user" in data or "access_token" in data, f"响应缺少用户信息: {data}"
             
-            # 保存 cookies 供后续测试使用
+            # 保存认证信息供后续测试使用
+            # 1) 从 Set-Cookie 头获取 cookies
             TestAuthAPI._cookies = dict(response.cookies)
+            # 2) secure-auth 返回 session_id 而非 access_token —
+            #    显式放入 cookies dict，防止 httpx 因 secure/httponly 属性丢失 cookie
+            if "session_id" in data:
+                TestAuthAPI._cookies["session_id"] = data["session_id"]
             if "access_token" in data:
                 TestAuthAPI._access_token = data["access_token"]
             if "user" in data and "id" in data["user"]:
