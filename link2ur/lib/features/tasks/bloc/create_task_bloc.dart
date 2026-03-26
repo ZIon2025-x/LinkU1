@@ -54,6 +54,7 @@ class CreateTaskState extends Equatable {
     this.optimizedTitle,
     this.optimizedDescription,
     this.suggestedSkills = const [],
+    this.suggestedCategory,
   });
 
   final CreateTaskStatus status;
@@ -62,6 +63,7 @@ class CreateTaskState extends Equatable {
   final String? optimizedTitle;
   final String? optimizedDescription;
   final List<String> suggestedSkills;
+  final String? suggestedCategory;
 
   bool get isSubmitting => status == CreateTaskStatus.submitting;
   bool get isSuccess => status == CreateTaskStatus.success;
@@ -74,6 +76,7 @@ class CreateTaskState extends Equatable {
     String? optimizedTitle,
     String? optimizedDescription,
     List<String>? suggestedSkills,
+    String? suggestedCategory,
   }) {
     return CreateTaskState(
       status: status ?? this.status,
@@ -82,12 +85,13 @@ class CreateTaskState extends Equatable {
       optimizedTitle: optimizedTitle,       // direct assign, null = clear
       optimizedDescription: optimizedDescription, // direct assign, null = clear
       suggestedSkills: suggestedSkills ?? this.suggestedSkills,
+      suggestedCategory: suggestedCategory, // direct assign, null = clear
     );
   }
 
   @override
   List<Object?> get props => [status, createdTask, errorMessage,
-      optimizedTitle, optimizedDescription, suggestedSkills];
+      optimizedTitle, optimizedDescription, suggestedSkills, suggestedCategory];
 }
 
 // ==================== Bloc ====================
@@ -154,6 +158,7 @@ class CreateTaskBloc extends Bloc<CreateTaskEvent, CreateTaskState> {
         optimizedDescription: result['optimized_description'] as String?,
         suggestedSkills: (result['suggested_skills'] as List<dynamic>?)
             ?.map((e) => e as String).toList() ?? [],
+        suggestedCategory: result['suggested_category'] as String?,
       ));
     } catch (e) {
       AppLogger.error('Failed to AI optimize task', e);

@@ -384,7 +384,7 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
   }
 
   Future<void> _showAIOptimizeResult(
-      String title, String desc, List<String> skills) async {
+      String title, String desc, List<String> skills, String? category) async {
     final accepted = await AdaptiveDialogs.showConfirmDialog(
       context: context,
       title: context.l10n.createTaskAiOptimize,
@@ -399,6 +399,9 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
         _selectedSkills
           ..clear()
           ..addAll(skills);
+      }
+      if (category != null && category.isNotEmpty) {
+        _selectedCategory = category;
       }
       if (mounted) setState(() {});
     }
@@ -479,6 +482,7 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
             state.optimizedTitle!,
             state.optimizedDescription ?? '',
             state.suggestedSkills,
+            state.suggestedCategory,
           );
           // Reset AI state to avoid re-showing
           context.read<CreateTaskBloc>().add(const CreateTaskReset());

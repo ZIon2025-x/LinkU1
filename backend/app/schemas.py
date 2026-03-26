@@ -493,6 +493,24 @@ class TaskOut(TaskBase):
     counter_offer_status: Optional[str] = None
     counter_offer_user_id: Optional[str] = None
 
+    @validator('required_skills', pre=True)
+    def parse_required_skills(cls, v):
+        """将JSON字符串解析为列表"""
+        if v is None:
+            return []
+        if isinstance(v, str):
+            import json
+            try:
+                parsed = json.loads(v)
+                if isinstance(parsed, list):
+                    return parsed
+                return []
+            except (json.JSONDecodeError, TypeError):
+                return []
+        if isinstance(v, list):
+            return v
+        return []
+
     @validator('images', pre=True)
     def parse_images(cls, v):
         """将JSON字符串解析为列表，处理各种输入类型"""
