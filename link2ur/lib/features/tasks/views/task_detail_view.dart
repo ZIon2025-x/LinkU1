@@ -70,7 +70,7 @@ class TaskDetailView extends StatelessWidget {
         taskRepository: context.read<TaskRepository>(),
         notificationRepository: context.read<NotificationRepository>(),
         questionRepository: context.read<QuestionRepository>(),
-      )..add(TaskDetailLoadRequested(taskId))..add(const TaskDetailLoadQuestions()),
+      )..add(TaskDetailLoadRequested(taskId)),
       child: _TaskDetailContent(taskId: taskId, notificationId: notificationId),
     );
   }

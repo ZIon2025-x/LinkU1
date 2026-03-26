@@ -88,11 +88,14 @@ class _NearbyTabState extends State<_NearbyTab> {
     try {
       final placemarks = await placemarkFromCoordinates(lat, lng);
       if (placemarks.isNotEmpty) {
-        // locality 通常是城市名（如 "Birmingham"、"London"）
-        _city = placemarks.first.locality;
-        // 同步到 HomeBloc 供左上角定位显示
-        if (_city != null && mounted) {
-          context.read<HomeBloc>().add(HomeLocationCityUpdated(_city!));
+        final p = placemarks.first;
+        // locality 通常是城市名；fallback 到 subAdministrativeArea 或 administrativeArea
+        final city = p.locality ??
+            p.subAdministrativeArea ??
+            p.administrativeArea;
+        if (city != null && city.isNotEmpty && mounted) {
+          setState(() => _city = city);
+          context.read<HomeBloc>().add(HomeLocationCityUpdated(city));
         }
       }
     } catch (_) {
@@ -172,16 +175,19 @@ class _NearbyTabState extends State<_NearbyTab> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       showDragHandle: false,
       backgroundColor: isDark ? const Color(0xFF1C1C1E) : Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (sheetContext) {
+        final bottomPadding = MediaQuery.of(sheetContext).viewInsets.bottom +
+            MediaQuery.of(sheetContext).viewPadding.bottom;
         return Padding(
           padding: EdgeInsets.fromLTRB(
             20, 16, 20,
-            MediaQuery.of(sheetContext).viewInsets.bottom + 20,
+            bottomPadding.clamp(20.0, double.infinity),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -210,7 +216,12 @@ class _NearbyTabState extends State<_NearbyTab> {
               LocationInputField(
                 initialValue: _city,
                 showOnlineOption: false,
-                onChanged: (value) => pickedAddress = value,
+                onChanged: (value) {
+                  pickedAddress = value;
+                  // 手动输入时清除之前的坐标，强制重新地理编码
+                  pickedLat = null;
+                  pickedLng = null;
+                },
                 onLocationPicked: (address, lat, lng) {
                   pickedAddress = address;
                   pickedLat = lat;
@@ -253,6 +264,7 @@ class _NearbyTabState extends State<_NearbyTab> {
 
   /// 切换到指定坐标：反向地理编码获取城市名 → 重新加载
   Future<void> _switchToLocation(double lat, double lng) async {
+    setState(() => _locationLoading = true);
     await _resolveCity(lat, lng);
     if (!mounted) return;
     _loadWithCoordinates(lat, lng);

@@ -586,6 +586,8 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
         status: TaskDetailStatus.loaded,
         task: task,
       ));
+      // 任务加载成功后自动加载问答（初始 dispatch 时 taskId 可能还是 null）
+      add(const TaskDetailLoadQuestions());
     } catch (e) {
       AppLogger.error('Failed to load task detail', e);
       emit(state.copyWith(
@@ -1490,10 +1492,13 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
     TaskDetailLoadQuestions event,
     Emitter<TaskDetailState> emit,
   ) async {
+    final taskId = state.task?.id;
+    if (taskId == null) {
+      // 任务还没加载完，不设 isLoadingQuestions 避免永远转圈
+      return;
+    }
     emit(state.copyWith(isLoadingQuestions: true));
     try {
-      final taskId = state.task?.id;
-      if (taskId == null) return;
       final result = await _questionRepository.getQuestions(
         targetType: 'task',
         targetId: taskId,
