@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/constants/app_constants.dart';
 import '../../../core/design/app_colors.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/utils/adaptive_dialogs.dart';
@@ -287,6 +289,7 @@ class _TimeSlotCard extends StatelessWidget {
     final startTime = _trimSeconds(slot['start_time'] as String? ?? '');
     final endTime = _trimSeconds(slot['end_time'] as String? ?? '');
     final price = (slot['price_per_participant'] as num?)?.toDouble() ?? 0.0;
+    final currency = (slot['currency'] as String?) ?? AppConstants.defaultCurrency;
     final maxParticipants = (slot['max_participants'] as num?)?.toInt() ?? 0;
     final currentParticipants =
         (slot['current_participants'] as num?)?.toInt() ?? 0;
@@ -353,7 +356,7 @@ class _TimeSlotCard extends StatelessWidget {
                   Row(
                     children: [
                       Text(
-                        'GBP ${price.toStringAsFixed(2)}',
+                        '${Helpers.currencySymbolFor(currency)}${price.toStringAsFixed(2)}',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               color: AppColors.primary,
                               fontWeight: FontWeight.w500,
@@ -638,7 +641,7 @@ class _TimeSlotFormSheetState extends State<_TimeSlotFormSheet> {
                 decoration: InputDecoration(
                   labelText: context.l10n.expertTimeSlotPrice,
                   border: const OutlineInputBorder(),
-                  prefixText: 'GBP ',
+                  prefixText: '${Helpers.currencySymbolFor(AppConstants.defaultCurrency)} ',
                 ),
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),

@@ -892,14 +892,15 @@ def create_connect_account(
                         db.commit()
                         db.refresh(db_user_clear)
         
-            # 保存账户 ID 到用户记录
+            # 保存账户 ID 和国家到用户记录
             try:
                 # 重新查询用户以确保对象在当前会话中
                 db_user = db.query(models.User).filter(models.User.id == current_user.id).first()
                 if not db_user:
                     raise HTTPException(status_code=404, detail="用户不存在")
-                
+
                 db_user.stripe_account_id = account.id
+                db_user.stripe_connect_country = country_cfg["country"]
                 db.add(db_user)  # 确保对象被添加到会话
                 db.commit()
                 db.refresh(db_user)  # 刷新对象以确保数据是最新的
@@ -1233,14 +1234,15 @@ def create_connect_account_embedded(
                     current_user.stripe_account_id = None
                     db.commit()
         
-            # 保存账户 ID 到用户记录
+            # 保存账户 ID 和国家到用户记录
             try:
                 # 重新查询用户以确保对象在当前会话中
                 db_user = db.query(models.User).filter(models.User.id == current_user.id).first()
                 if not db_user:
                     raise HTTPException(status_code=404, detail="用户不存在")
-                
+
                 db_user.stripe_account_id = account.id
+                db_user.stripe_connect_country = country_cfg["country"]
                 db.add(db_user)  # 确保对象被添加到会话
                 db.commit()
                 db.refresh(db_user)  # 刷新对象以确保数据是最新的

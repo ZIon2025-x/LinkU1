@@ -40,6 +40,29 @@ class _LoginViewState extends State<LoginView>
   LoginMethod _loginMethod = LoginMethod.password;
   bool _showSessionExpiredBanner = false;
   bool _agreeTerms = false;
+
+  /// 手机区号选择
+  static const _phoneCodes = [
+    ('🇬🇧', '+44', 'UK'),
+    ('🇫🇷', '+33', 'France'),
+    ('🇩🇪', '+49', 'Germany'),
+    ('🇪🇸', '+34', 'Spain'),
+    ('🇮🇹', '+39', 'Italy'),
+    ('🇳🇱', '+31', 'Netherlands'),
+    ('🇧🇪', '+32', 'Belgium'),
+    ('🇦🇹', '+43', 'Austria'),
+    ('🇮🇪', '+353', 'Ireland'),
+    ('🇵🇹', '+351', 'Portugal'),
+    ('🇬🇷', '+30', 'Greece'),
+    ('🇸🇪', '+46', 'Sweden'),
+    ('🇩🇰', '+45', 'Denmark'),
+    ('🇫🇮', '+358', 'Finland'),
+    ('🇳🇴', '+47', 'Norway'),
+    ('🇵🇱', '+48', 'Poland'),
+    ('🇨🇿', '+420', 'Czech'),
+    ('🇨🇭', '+41', 'Switzerland'),
+  ];
+  int _selectedPhoneCodeIndex = 0; // default UK
   late TapGestureRecognizer _termsTapRecognizer;
   late TapGestureRecognizer _privacyTapRecognizer;
 
@@ -155,7 +178,8 @@ class _LoginViewState extends State<LoginView>
       case LoginMethod.phoneCode:
         final rawPhone = _emailController.text.trim();
         final localNumber = rawPhone.startsWith('0') ? rawPhone.substring(1) : rawPhone;
-        final fullPhone = '+44$localNumber';
+        final code = _phoneCodes[_selectedPhoneCodeIndex].$2;
+        final fullPhone = '$code$localNumber';
         bloc.add(AuthLoginWithPhoneRequested(
           phone: fullPhone,
           code: _codeController.text.trim(),
@@ -180,11 +204,41 @@ class _LoginViewState extends State<LoginView>
     if (_loginMethod == LoginMethod.emailCode) {
       context.read<AuthBloc>().add(AuthSendEmailCodeRequested(email: input));
     } else {
-      // 去掉前导0后拼接 +44（英国号码国际格式不含前导0）
+      // 去掉前导0后拼接所选区号
       final localNumber = input.startsWith('0') ? input.substring(1) : input;
-      final fullPhone = '+44$localNumber';
+      final code = _phoneCodes[_selectedPhoneCodeIndex].$2;
+      final fullPhone = '$code$localNumber';
       context.read<AuthBloc>().add(AuthSendPhoneCodeRequested(phone: fullPhone));
     }
+  }
+
+  void _showPhoneCodePicker(bool isDark) {
+    showModalBottomSheet<int>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: ListView.builder(
+          shrinkWrap: true,
+          itemCount: _phoneCodes.length,
+          itemBuilder: (_, i) {
+            final (flag, code, name) = _phoneCodes[i];
+            final selected = i == _selectedPhoneCodeIndex;
+            return ListTile(
+              leading: Text(flag, style: const TextStyle(fontSize: 22)),
+              title: Text('$code  $name'),
+              trailing: selected
+                  ? const Icon(Icons.check, color: AppColors.primary)
+                  : null,
+              selected: selected,
+              onTap: () => Navigator.pop(ctx, i),
+            );
+          },
+        ),
+      ),
+    ).then((index) {
+      if (index != null && index != _selectedPhoneCodeIndex) {
+        setState(() => _selectedPhoneCodeIndex = index);
+      }
+    });
   }
 
   void _startCountdown() {
@@ -913,36 +967,46 @@ class _LoginViewState extends State<LoginView>
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 固定区号 +44
-                Container(
-                  height: 52,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? Colors.white.withValues(alpha: 0.06)
-                        : AppColors.backgroundLight,
-                    borderRadius: AppRadius.allMedium,
-                    border: Border.all(
+                // 可选区号
+                GestureDetector(
+                  onTap: () => _showPhoneCodePicker(isDark),
+                  child: Container(
+                    height: 52,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
                       color: isDark
-                          ? Colors.white.withValues(alpha: 0.08)
-                          : AppColors.dividerLight,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text('🇬🇧', style: TextStyle(fontSize: 18)),
-                      const SizedBox(width: 6),
-                      Text(
-                        '+44',
-                        style: AppTypography.body.copyWith(
-                          color: isDark
-                              ? AppColors.textPrimaryDark
-                              : AppColors.textPrimaryLight,
-                          fontWeight: FontWeight.w500,
-                        ),
+                          ? Colors.white.withValues(alpha: 0.06)
+                          : AppColors.backgroundLight,
+                      borderRadius: AppRadius.allMedium,
+                      border: Border.all(
+                        color: isDark
+                            ? Colors.white.withValues(alpha: 0.08)
+                            : AppColors.dividerLight,
                       ),
-                    ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(_phoneCodes[_selectedPhoneCodeIndex].$1,
+                            style: const TextStyle(fontSize: 18)),
+                        const SizedBox(width: 6),
+                        Text(
+                          _phoneCodes[_selectedPhoneCodeIndex].$2,
+                          style: AppTypography.body.copyWith(
+                            color: isDark
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimaryLight,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(Icons.arrow_drop_down,
+                            size: 20,
+                            color: isDark
+                                ? AppColors.textSecondaryDark
+                                : AppColors.textSecondaryLight),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),

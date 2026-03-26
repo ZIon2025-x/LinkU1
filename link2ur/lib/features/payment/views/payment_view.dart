@@ -119,8 +119,7 @@ class _PaymentContentState extends State<_PaymentContent> {
     _startCountdownIfNeeded();
     _checkPaymentStatusOnInit();
     _setDefaultPaymentMethodIfApplePaySupported();
-    // 加载钱包余额（默认 GBP，PaymentIntent 返回后会根据实际币种更新）
-    context.read<PaymentBloc>().add(const PaymentLoadWalletBalance(currency: 'GBP'));
+    // 钱包余额由 PaymentBloc 在 PaymentIntent 创建成功后自动加载（使用任务实际币种）
   }
 
   /// 初始化时检查支付状态（延迟执行，等待 PaymentIntent 创建完成后再检查）

@@ -70,8 +70,14 @@ def get_balance(
             .all()
         )
         if not wallets:
-            # Create default GBP wallet
-            wallets = [get_or_create_wallet(db, current_user.id, "GBP")]
+            # Create default wallet — use user's Stripe Connect country currency, fallback to GBP
+            from app.stripe_connect_routes import STRIPE_COUNTRY_CONFIG
+            default_currency = "GBP"
+            if current_user.stripe_connect_country:
+                cfg = STRIPE_COUNTRY_CONFIG.get(current_user.stripe_connect_country.upper())
+                if cfg:
+                    default_currency = cfg["currency"]
+            wallets = [get_or_create_wallet(db, current_user.id, default_currency)]
     db.commit()
     return WalletBalancesResponse(
         wallets=[_format_wallet(w) for w in wallets],

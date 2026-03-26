@@ -1,3 +1,5 @@
+import '../utils/helpers.dart';
+
 /// 应用常量
 class AppConstants {
   AppConstants._();
@@ -125,14 +127,9 @@ class AppConstants {
   static const String defaultCurrency = 'GBP';
   static const String currencySymbol = '£'; // 保留向后兼容
 
-  /// 根据货币代码返回符号
-  static String currencySymbolFor(String currency) {
-    switch (currency.toUpperCase()) {
-      case 'EUR': return '€';
-      case 'GBP': return '£';
-      default: return '£';
-    }
-  }
+  /// 根据货币代码返回符号 — 委托给 Helpers.currencySymbolFor
+  static String currencySymbolFor(String currency) =>
+      Helpers.currencySymbolFor(currency);
 
   /// 分页
   static const int defaultPageSize = 20;

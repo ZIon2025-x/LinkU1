@@ -59,13 +59,9 @@ class WalletState extends Equatable {
 
   bool get isLoading => status == WalletStatus.loading;
 
-  /// 便捷访问：主钱包（GBP 优先），向后兼容
-  WalletBalance? get primaryWallet => walletBalances.isEmpty
-      ? null
-      : walletBalances.firstWhere(
-          (w) => w.currency.toUpperCase() == 'GBP',
-          orElse: () => walletBalances.first,
-        );
+  /// 便捷访问：主钱包（列表首个，后端按主币种排序）
+  WalletBalance? get primaryWallet =>
+      walletBalances.isEmpty ? null : walletBalances.first;
 
   WalletState copyWith({
     WalletStatus? status,

@@ -163,6 +163,7 @@ class User(Base):
     invitation_code_text = Column(String(50), nullable=True)  # 邀请码文本
     flea_market_notice_agreed_at = Column(DateTime(timezone=True), nullable=True)  # 跳蚤市场须知同意时间
     stripe_account_id = Column(String(255), nullable=True, unique=True)  # Stripe Connect 账户 ID
+    stripe_connect_country = Column(String(2), nullable=True)  # Stripe Connect 账户所在国家（ISO 3166-1 alpha-2）
     stripe_customer_id = Column(String(255), nullable=True, unique=True)  # Stripe Customer ID（用于支付）
     bio = Column(Text, default="")
     profile_views = Column(Integer, default=0)

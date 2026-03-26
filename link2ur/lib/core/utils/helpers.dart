@@ -8,15 +8,29 @@ class Helpers {
   Helpers._();
 
   // ==================== 货币格式化 ====================
-  /// 货币符号（统一英镑）
+  /// 货币符号（保留向后兼容）
   static const String currencySymbol = '£';
 
   /// 根据货币代码返回符号
   static String currencySymbolFor(String currency) {
     switch (currency.toUpperCase()) {
-      case 'EUR': return '€';
       case 'GBP': return '£';
-      default: return '£';
+      case 'EUR': return '€';
+      case 'USD': return '\$';
+      case 'CNY' || 'JPY': return '¥';
+      case 'CHF': return 'CHF';
+      case 'SEK' || 'NOK' || 'DKK': return 'kr';
+      case 'PLN': return 'zł';
+      case 'CZK': return 'Kč';
+      case 'HUF': return 'Ft';
+      case 'RON': return 'lei';
+      case 'BGN': return 'лв';
+      case 'HKD' || 'SGD' || 'AUD' || 'CAD': return '\$';
+      case 'MYR': return 'RM';
+      case 'THB': return '฿';
+      case 'AED': return 'د.إ';
+      case 'BRL': return 'R\$';
+      default: return currency.toUpperCase(); // 未知币种显示代码本身
     }
   }
 

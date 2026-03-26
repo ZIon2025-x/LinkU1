@@ -111,20 +111,27 @@ class _EditProfileContentState extends State<_EditProfileContent> {
       _normalizePhone(_phoneController.text.trim()) != _originalPhone &&
       _phoneController.text.trim().isNotEmpty;
 
+  /// 标准化手机号：去空格/括号，处理各国区号
+  /// - 已有 `+` 前缀 → 仅去除区号后多余的前导 0（如 +440xxx → +44xxx）
+  /// - 无 `+` 前缀、以 0 开头 → 视为英国本地号（+44）
+  /// - 无 `+`、无 0 → 原样返回（用户可能漏了 +，不强制加区号）
   String _normalizePhone(String phone) {
     if (phone.isEmpty) return phone;
     var cleaned = phone.replaceAll(RegExp(r'[\s\-\(\)]'), '');
-    if (cleaned.startsWith('+44')) {
-      final local = cleaned.substring(3);
-      if (local.startsWith('0')) {
-        cleaned = '+44${local.substring(1)}';
+    if (cleaned.startsWith('+')) {
+      // 已有国际区号 — 仅修正 +XX0... 中多余的 0
+      final match = RegExp(r'^\+(\d{1,3})0(\d+)$').firstMatch(cleaned);
+      if (match != null) {
+        final code = match.group(1)!;
+        final rest = match.group(2)!;
+        // 常见区号后跟 0 的情况（如 +440xxx），去掉多余的 0
+        if (['44', '33', '49', '34', '39', '31', '32', '43', '353'].contains(code)) {
+          cleaned = '+$code$rest';
+        }
       }
-    } else if (!cleaned.startsWith('+')) {
-      if (cleaned.startsWith('0')) {
-        cleaned = '+44${cleaned.substring(1)}';
-      } else {
-        cleaned = '+44$cleaned';
-      }
+    } else if (cleaned.startsWith('0')) {
+      // 无区号、0 开头 → 英国本地号（向后兼容）
+      cleaned = '+44${cleaned.substring(1)}';
     }
     return cleaned;
   }

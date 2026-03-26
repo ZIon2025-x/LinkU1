@@ -289,6 +289,9 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
         isMethodSwitching: false,
         clearError: true,
       ));
+
+      // 自动加载与任务同币种的钱包余额
+      add(PaymentLoadWalletBalance(currency: response.currency));
     } catch (e) {
       AppLogger.error('Failed to create payment intent', e);
       emit(state.copyWith(

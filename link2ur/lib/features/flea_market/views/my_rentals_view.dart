@@ -7,6 +7,7 @@ import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/utils/error_localizer.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../data/models/flea_market_rental.dart';
@@ -156,7 +157,7 @@ class _RentalCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final theme = Theme.of(context);
-    final currencySymbol = rental.currency == 'GBP' ? '\u00A3' : rental.currency;
+    final currencySymbol = Helpers.currencySymbolFor(rental.currency);
 
     final (statusLabel, statusColor) = switch (rental.status) {
       'active' => (l10n.fleaMarketRentalActive, AppColors.success),

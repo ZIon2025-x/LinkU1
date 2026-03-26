@@ -161,13 +161,9 @@ class _PointsCardState extends State<_PointsCard> {
     setState(() { _rotateX = 0; _rotateY = 0; });
   }
 
-  /// 主钱包（GBP 优先）
-  WalletBalance? get _primaryWallet => widget.walletBalances.isEmpty
-      ? null
-      : widget.walletBalances.firstWhere(
-          (w) => w.currency.toUpperCase() == 'GBP',
-          orElse: () => widget.walletBalances.first,
-        );
+  /// 主钱包（列表首个，后端按主币种排序）
+  WalletBalance? get _primaryWallet =>
+      widget.walletBalances.isEmpty ? null : widget.walletBalances.first;
 
   @override
   Widget build(BuildContext context) {

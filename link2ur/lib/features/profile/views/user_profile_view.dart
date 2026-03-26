@@ -790,7 +790,7 @@ class UserProfileView extends StatelessWidget {
                                   ScaffoldMessenger.of(ctx).showSnackBar(
                                     SnackBar(
                                         content: Text(l10n
-                                            .profileDirectRequestValidation(Helpers.currencySymbolFor('GBP')))),
+                                            .profileDirectRequestValidation(Helpers.currencySymbolFor(AppConstants.defaultCurrency)))),
                                   );
                                   return;
                                 }
@@ -798,7 +798,7 @@ class UserProfileView extends StatelessWidget {
                                   ScaffoldMessenger.of(ctx).showSnackBar(
                                     SnackBar(
                                         content: Text(l10n
-                                            .profileDirectRequestValidation(Helpers.currencySymbolFor('GBP')))),
+                                            .profileDirectRequestValidation(Helpers.currencySymbolFor(AppConstants.defaultCurrency)))),
                                   );
                                   return;
                                 }

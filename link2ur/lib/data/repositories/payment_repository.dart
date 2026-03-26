@@ -607,17 +607,13 @@ class PaymentRepository {
     throw PaymentException(response.message ?? '获取钱包余额失败');
   }
 
-  /// 获取本地钱包余额（便捷方法，返回第一个/GBP钱包）
+  /// 获取本地钱包余额（便捷方法，返回列表首个钱包）
   Future<WalletBalance> getWalletBalance() async {
     final wallets = await getWalletBalances();
     if (wallets.isEmpty) {
       return const WalletBalance();
     }
-    // 优先返回 GBP 钱包，否则返回第一个
-    return wallets.firstWhere(
-      (w) => w.currency.toUpperCase() == 'GBP',
-      orElse: () => wallets.first,
-    );
+    return wallets.first;
   }
 
   /// 获取本地钱包流水记录
