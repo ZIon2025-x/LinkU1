@@ -1,6 +1,10 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+
+import '../../payment/views/stripe_connect_account_webview.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
@@ -812,7 +816,7 @@ String _dashboardUnavailableMessage(BuildContext context, String? reason) {
 }
 
 /// V2 账户打开嵌入式账户管理（替代 Express Dashboard）
-/// iOS/Android 均使用原生 Stripe Connect SDK（Android 需 com.stripe:connect:23.0+）
+/// iOS 使用原生 Stripe Connect SDK，Android 使用 WebView 加载 Stripe.js 嵌入式组件
 Future<void> _openAccountManagement(BuildContext context, String accountId) async {
   final repo = context.read<PaymentRepository>();
   final scaffoldMessenger = ScaffoldMessenger.of(context);
@@ -836,10 +840,21 @@ Future<void> _openAccountManagement(BuildContext context, String accountId) asyn
       return;
     }
 
-    await StripeConnectService.instance.openAccountManagement(
-      publishableKey: publishableKey,
-      clientSecret: clientSecret,
-    );
+    if (Platform.isAndroid) {
+      // Android: SDK 22.8.0 不支持原生 AccountManagement，使用 WebView + Stripe.js
+      if (!context.mounted) return;
+      await StripeConnectAccountWebView.open(
+        context,
+        publishableKey: publishableKey,
+        clientSecret: clientSecret,
+      );
+    } else {
+      // iOS: 使用原生 Stripe Connect SDK
+      await StripeConnectService.instance.openAccountManagement(
+        publishableKey: publishableKey,
+        clientSecret: clientSecret,
+      );
+    }
   } catch (e) {
     if (!context.mounted) return;
     scaffoldMessenger.showSnackBar(
