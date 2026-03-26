@@ -598,8 +598,12 @@ async def _fetch_rankings(db: AsyncSession, limit: int) -> list:
             getattr(models.CustomLeaderboard, "description_zh", None).label("description_zh"),
             getattr(models.CustomLeaderboard, "description_en", None).label("description_en"),
             models.CustomLeaderboard.cover_image,
+            models.CustomLeaderboard.applicant_id,
             models.CustomLeaderboard.created_at,
+            models.User.name.label("user_name"),
+            models.User.avatar.label("user_avatar"),
         )
+        .join(models.User, models.CustomLeaderboard.applicant_id == models.User.id)
         .where(models.CustomLeaderboard.status == "active")
         .order_by(desc(models.CustomLeaderboard.created_at))
         .limit(limit)
@@ -668,8 +672,9 @@ async def _fetch_rankings(db: AsyncSession, limit: int) -> list:
             "description_zh": (desc_zh or "")[:80] if desc_zh else None,
             "description_en": (desc_en or "")[:80] if desc_en else None,
             "images": [row.cover_image] if row.cover_image else None,
-            "user_name": None,
-            "user_avatar": None,
+            "user_id": str(row.applicant_id) if row.applicant_id else None,
+            "user_name": row.user_name,
+            "user_avatar": row.user_avatar,
             "price": None,
             "original_price": None,
             "discount_percentage": None,

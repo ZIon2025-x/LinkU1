@@ -480,6 +480,7 @@ class _FleaMarketDetailContent extends StatelessWidget {
                         _RentalRequestsCard(
                           itemId: item.id,
                           isDark: isDark,
+                          rentalUnit: item.rentalUnit,
                         ),
 
                       const SizedBox(height: 100),
@@ -2805,9 +2806,11 @@ class _RentalRequestsCard extends StatelessWidget {
   const _RentalRequestsCard({
     required this.itemId,
     required this.isDark,
+    this.rentalUnit,
   });
   final String itemId;
   final bool isDark;
+  final String? rentalUnit;
 
   @override
   Widget build(BuildContext context) {
@@ -2899,6 +2902,7 @@ class _RentalRequestsCard extends StatelessWidget {
                             request: request,
                             isDark: isDark,
                             itemId: itemId,
+                            rentalUnit: rentalUnit,
                           )),
                   ],
                 ),
@@ -2923,17 +2927,22 @@ class _RentalRequestItem extends StatelessWidget {
     required this.request,
     required this.isDark,
     required this.itemId,
+    this.rentalUnit,
   });
   final FleaMarketRentalRequest request;
   final bool isDark;
   final String itemId;
+  final String? rentalUnit;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final unitLabel = switch (request.rentalDuration) {
-      _ => '${request.rentalDuration}',
+    final unitSuffix = switch (rentalUnit) {
+      'week' => l10n.fleaMarketRentalUnitWeek,
+      'month' => l10n.fleaMarketRentalUnitMonth,
+      _ => l10n.fleaMarketRentalUnitDay,
     };
+    final unitLabel = '${request.rentalDuration} $unitSuffix';
 
     return Container(
       margin: const EdgeInsets.only(top: 8),

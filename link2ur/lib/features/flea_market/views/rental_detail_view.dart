@@ -115,7 +115,7 @@ class _RentalDetailBody extends StatelessWidget {
     // 判断当前用户是否为物品所有者（owner 信息从 rental model 无法判断时，
     // 通过 renterId 反推：如果当前用户不是 renter，则为 owner）
     // 注意：更准确的做法需要后端返回 ownerId，这里先用简单逻辑
-    final isOwner = currentUserId != null && currentUserId != rental.renterId;
+    final isOwner = currentUserId != null && rental.sellerId != null && currentUserId == rental.sellerId;
     final isRenter = currentUserId != null && currentUserId == rental.renterId;
 
     // 租客：active/overdue 时可确认归还

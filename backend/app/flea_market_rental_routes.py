@@ -725,6 +725,13 @@ async def counter_offer_rental_request(
                 detail="该申请状态不允许还价"
             )
 
+        # 还价金额必须大于0
+        if counter_rental_price is not None and counter_rental_price <= 0:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="还价金额必须大于0"
+            )
+
         item_result = await db.execute(
             select(models.FleaMarketItem).where(models.FleaMarketItem.id == rental_request.item_id)
         )
@@ -945,7 +952,7 @@ async def renter_confirm_return(
         await db.execute(
             update(models.FleaMarketRental)
             .where(models.FleaMarketRental.id == rental_id)
-            .values(status="pending_return")
+            .values(status="pending_return", updated_at=now)
         )
         await db.commit()
 
@@ -1142,6 +1149,86 @@ async def confirm_rental_return(
         )
 
 
+# ==================== 8.5 物主延期租赁 ====================
+
+@rental_router.post("/rentals/{rental_id}/extend", response_model=dict)
+async def extend_rental(
+    rental_id: int,
+    extra_duration: int = Body(..., embed=True, ge=1),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """物主延长租赁期限（双方私下协商后由物主操作）"""
+    try:
+        rental_result = await db.execute(
+            select(models.FleaMarketRental)
+            .where(models.FleaMarketRental.id == rental_id)
+            .with_for_update()
+        )
+        rental = rental_result.scalar_one_or_none()
+
+        if not rental:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="租赁记录不存在")
+
+        if rental.status not in ("active", "overdue"):
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="该租赁状态不支持延期")
+
+        # 权限：物主
+        item_result = await db.execute(
+            select(models.FleaMarketItem).where(models.FleaMarketItem.id == rental.item_id)
+        )
+        item = item_result.scalar_one_or_none()
+        if not item or item.seller_id != current_user.id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="无权限操作此租赁")
+
+        # 计算新的结束日期
+        old_end_date = rental.end_date
+        new_end_date = _compute_rental_end_date(old_end_date, extra_duration, rental.rental_unit)
+
+        now = get_utc_time()
+        await db.execute(
+            update(models.FleaMarketRental)
+            .where(models.FleaMarketRental.id == rental_id)
+            .values(
+                end_date=new_end_date,
+                rental_duration=rental.rental_duration + extra_duration,
+                status="active",  # overdue → active if extended
+                updated_at=now,
+            )
+        )
+        await db.commit()
+
+        # 通知租客
+        unit_label = {"week": "周", "month": "月"}.get(rental.rental_unit, "天")
+        await _send_rental_notification(
+            db=db,
+            user_id=rental.renter_id,
+            notification_type="flea_market_rental_extended",
+            title="租赁已延期",
+            content=f"物主已将「{item.title}」的租赁延长 {extra_duration} {unit_label}，"
+                    f"新到期日：{format_iso_utc(new_end_date)[:10]}",
+            related_id=str(rental.id),
+            push_data={"rental_id": str(rental.id), "item_id": format_flea_market_id(item.id)},
+            push_template_vars={"item_title": item.title},
+        )
+
+        return {
+            "success": True,
+            "data": {
+                "new_end_date": format_iso_utc(new_end_date),
+                "new_duration": rental.rental_duration + extra_duration,
+                "status": "active",
+            },
+            "message": f"租赁已延期 {extra_duration} {unit_label}"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"延期租赁失败: {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="延期租赁失败")
+
+
 # ==================== 9. 租赁详情 ====================
 
 @rental_router.get("/rentals/{rental_id}", response_model=dict)
@@ -1189,6 +1276,7 @@ async def get_rental_detail(
             renter_id=rental.renter_id,
             renter_name=renter_row[0] if renter_row else None,
             renter_avatar=renter_row[1] if renter_row else None,
+            seller_id=item.seller_id if item else None,
             rental_duration=rental.rental_duration,
             rental_unit=rental.rental_unit,
             total_rent=float(rental.total_rent),
@@ -1292,6 +1380,7 @@ async def get_my_rentals(
                     id=r.id,
                     item_id=format_flea_market_id(r.item_id),
                     renter_id=r.renter_id,
+                    seller_id=item_info_map.get(r.item_id, {}).get("seller_id"),
                     rental_duration=r.rental_duration,
                     rental_unit=r.rental_unit,
                     total_rent=float(r.total_rent),

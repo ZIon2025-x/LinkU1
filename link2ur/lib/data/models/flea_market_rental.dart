@@ -63,6 +63,7 @@ class FleaMarketRental extends Equatable {
   final String renterId;
   final String? renterName;
   final String? renterAvatar;
+  final String? sellerId;
   final int rentalDuration;
   final String rentalUnit;
   final double totalRent;
@@ -85,6 +86,7 @@ class FleaMarketRental extends Equatable {
     required this.renterId,
     this.renterName,
     this.renterAvatar,
+    this.sellerId,
     required this.rentalDuration,
     required this.rentalUnit,
     required this.totalRent,
@@ -108,6 +110,7 @@ class FleaMarketRental extends Equatable {
       renterId: json['renter_id']?.toString() ?? '',
       renterName: json['renter_name'] as String?,
       renterAvatar: json['renter_avatar'] as String?,
+      sellerId: json['seller_id'] as String?,
       rentalDuration: json['rental_duration'] as int? ?? 0,
       rentalUnit: json['rental_unit'] as String? ?? 'day',
       totalRent: (json['total_rent'] as num?)?.toDouble() ?? 0,
@@ -126,5 +129,5 @@ class FleaMarketRental extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, itemId, renterId, status, depositStatus, returnedAt];
+  List<Object?> get props => [id, itemId, renterId, sellerId, status, depositStatus, returnedAt];
 }

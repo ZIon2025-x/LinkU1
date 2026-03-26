@@ -1171,5 +1171,43 @@ def init_scheduler():
         description="可靠度分数周校准"
     )
 
+    # ========== 租赁定时任务 ==========
+
+    # 检查逾期租赁 - 每小时
+    def check_overdue_rentals_task():
+        from app.rental_scheduled_tasks import check_overdue_rentals
+        with_db(check_overdue_rentals)()
+
+    scheduler.register_task(
+        'check_overdue_rentals',
+        check_overdue_rentals_task,
+        interval_seconds=3600,
+        description="检查逾期租赁并通知"
+    )
+
+    # 检查 pending_return 超时 - 每6小时
+    def check_pending_return_timeout_task():
+        from app.rental_scheduled_tasks import check_pending_return_timeout
+        with_db(check_pending_return_timeout)()
+
+    scheduler.register_task(
+        'check_pending_return_timeout',
+        check_pending_return_timeout_task,
+        interval_seconds=21600,
+        description="检查租赁归还确认超时"
+    )
+
+    # 检查租赁申请支付过期 - 每30分钟
+    def check_expired_rental_approvals_task():
+        from app.rental_scheduled_tasks import check_expired_rental_approvals
+        with_db(check_expired_rental_approvals)()
+
+    scheduler.register_task(
+        'check_expired_rental_approvals',
+        check_expired_rental_approvals_task,
+        interval_seconds=1800,
+        description="检查租赁申请支付过期"
+    )
+
     logger.info(f"已注册 {len(scheduler.tasks)} 个定时任务")
     return scheduler

@@ -2936,6 +2936,7 @@ class FleaMarketRentalResponse(BaseModel):
     renter_id: str
     renter_name: Optional[str] = None
     renter_avatar: Optional[str] = None
+    seller_id: Optional[str] = None
     rental_duration: int
     rental_unit: str
     total_rent: float

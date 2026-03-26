@@ -1956,6 +1956,7 @@ class FleaMarketRental(Base):
     stripe_refund_id = Column(String(255), nullable=True)
     returned_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), default=get_utc_time)
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
 
     item = relationship("FleaMarketItem", backref="rentals")
     renter = relationship("User", backref="flea_market_rentals", foreign_keys=[renter_id])
