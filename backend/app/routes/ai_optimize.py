@@ -41,8 +41,10 @@ async def ai_optimize_task(
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    # Build user profile context for personalized optimization
+    # --- Phase 1: DB work (fast) — 读完就释放连接 ---
     profile_context = await build_user_profile_context(str(current_user.id), db)
+    # 显式关闭 session，不让 LLM 调用期间占用 DB 连接
+    await db.close()
 
     profile_section = ""
     if profile_context:
@@ -66,6 +68,7 @@ async def ai_optimize_task(
 }}
 只返回 JSON，不要其他内容。"""
 
+    # --- Phase 2: LLM call (slow) — 不持有 DB 连接 ---
     text = ""
     try:
         llm = LLMClient()
@@ -73,7 +76,7 @@ async def ai_optimize_task(
             messages=[{"role": "user", "content": prompt}],
             system="你是一个任务发布优化助手，只返回JSON格式的结果，不要用markdown代码块包裹。不要思考太多，直接输出结果。",
             model_tier="small",
-            max_tokens=4096,
+            max_tokens=2048,
         )
         # Extract text content from response
         for block in response.content:
