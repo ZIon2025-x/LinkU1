@@ -1331,12 +1331,10 @@ class _BottomApplyBar extends StatelessWidget {
             content: text,
           ));
         }
-        controller.dispose();
       },
-      onCancel: () {
-        controller.dispose();
-      },
-    );
+    ).then((_) {
+      controller.dispose();
+    });
   }
 
   /// 申请状态为「达人审核/议价中」：pending / negotiating / price_agreed
@@ -1541,22 +1539,22 @@ class _ApplyServiceSheet extends StatefulWidget {
   const _ApplyServiceSheet({
     required this.service,
     required this.serviceId,
+    required this.bloc,
   });
 
   final TaskExpertService service;
   final int serviceId;
+  final TaskExpertBloc bloc;
 
   static void show(
       BuildContext context, TaskExpertService service, int serviceId) {
+    final bloc = context.read<TaskExpertBloc>();
     SheetAdaptation.showAdaptiveModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       showDragHandle: false,
-      builder: (_) => BlocProvider.value(
-        value: context.read<TaskExpertBloc>(),
-        child: _ApplyServiceSheet(service: service, serviceId: serviceId),
-      ),
+      builder: (_) => _ApplyServiceSheet(service: service, serviceId: serviceId, bloc: bloc),
     );
   }
 
@@ -1584,6 +1582,7 @@ class _ApplyServiceSheetState extends State<_ApplyServiceSheet> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return BlocListener<TaskExpertBloc, TaskExpertState>(
+      bloc: widget.bloc,
       listenWhen: (prev, curr) =>
           curr.actionMessage != null &&
           prev.actionMessage != curr.actionMessage,
@@ -1707,6 +1706,7 @@ class _ApplyServiceSheetState extends State<_ApplyServiceSheet> {
                           context.l10n.taskExpertOptionalTimeSlots),
                       const SizedBox(height: 8),
                       BlocBuilder<TaskExpertBloc, TaskExpertState>(
+                        bloc: widget.bloc,
                         buildWhen: (prev, curr) =>
                             prev.isLoadingTimeSlots != curr.isLoadingTimeSlots ||
                             prev.timeSlots != curr.timeSlots,
@@ -1916,6 +1916,7 @@ class _ApplyServiceSheetState extends State<_ApplyServiceSheet> {
                 child: SafeArea(
                   top: false,
                   child: BlocBuilder<TaskExpertBloc, TaskExpertState>(
+                    bloc: widget.bloc,
                     buildWhen: (prev, curr) =>
                         prev.isSubmitting != curr.isSubmitting,
                     builder: (context, state) {
@@ -2042,7 +2043,7 @@ class _ApplyServiceSheetState extends State<_ApplyServiceSheet> {
       deadline = endOfDay.toUtc().toIso8601String();
     }
 
-    context.read<TaskExpertBloc>().add(
+    widget.bloc.add(
           TaskExpertApplyServiceEnhanced(
             widget.serviceId,
             message: _messageController.text.isNotEmpty

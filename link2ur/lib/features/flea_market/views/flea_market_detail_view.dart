@@ -1210,10 +1210,12 @@ class _FleaMarketPurchaseSheet extends StatefulWidget {
   const _FleaMarketPurchaseSheet({
     required this.item,
     required this.itemId,
+    required this.bloc,
   });
 
   final FleaMarketItem item;
   final String itemId;
+  final FleaMarketBloc bloc;
 
   static void show(BuildContext context, FleaMarketItem item, String itemId) {
     final bloc = context.read<FleaMarketBloc>();
@@ -1221,10 +1223,7 @@ class _FleaMarketPurchaseSheet extends StatefulWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => BlocProvider.value(
-        value: bloc,
-        child: _FleaMarketPurchaseSheet(item: item, itemId: itemId),
-      ),
+      builder: (ctx) => _FleaMarketPurchaseSheet(item: item, itemId: itemId, bloc: bloc),
     );
   }
 
@@ -1291,7 +1290,7 @@ class _FleaMarketPurchaseSheetState extends State<_FleaMarketPurchaseSheet> {
         : (_showNegotiate
             ? double.tryParse(_amountController.text.trim())
             : null);
-    context.read<FleaMarketBloc>().add(
+    widget.bloc.add(
           FleaMarketSubmitPurchaseOrRequest(
             widget.itemId,
             message: message.isEmpty ? null : message,
@@ -1312,6 +1311,7 @@ class _FleaMarketPurchaseSheetState extends State<_FleaMarketPurchaseSheet> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return BlocListener<FleaMarketBloc, FleaMarketState>(
+      bloc: widget.bloc,
       listenWhen: (p, c) =>
           c.actionMessage == 'purchase_success' ||
           c.actionMessage == 'negotiate_request_sent' ||

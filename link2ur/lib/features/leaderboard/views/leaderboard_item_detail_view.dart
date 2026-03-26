@@ -355,20 +355,19 @@ class _ItemDetailContent extends StatelessWidget {
   void _showVoteSheet(
       BuildContext context, String voteType, LeaderboardItem item) {
     AppHaptics.selection();
+    final bloc = context.read<LeaderboardBloc>();
     SheetAdaptation.showAdaptiveModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => BlocProvider.value(
-        value: context.read<LeaderboardBloc>(),
-        child: _VoteCommentSheet(
-          itemId: itemId,
-          voteType: voteType,
-          existingComment:
-              item.userVote == voteType ? item.userVoteComment : null,
-          existingAnonymous:
-              item.userVote == voteType ? (item.userVoteIsAnonymous ?? false) : false,
-        ),
+      builder: (_) => _VoteCommentSheet(
+        itemId: itemId,
+        voteType: voteType,
+        bloc: bloc,
+        existingComment:
+            item.userVote == voteType ? item.userVoteComment : null,
+        existingAnonymous:
+            item.userVote == voteType ? (item.userVoteIsAnonymous ?? false) : false,
       ),
     );
   }
@@ -380,12 +379,14 @@ class _VoteCommentSheet extends StatefulWidget {
   const _VoteCommentSheet({
     required this.itemId,
     required this.voteType,
+    required this.bloc,
     this.existingComment,
     this.existingAnonymous = false,
   });
 
   final int itemId;
   final String voteType;
+  final LeaderboardBloc bloc;
   final String? existingComment;
   final bool existingAnonymous;
 
@@ -523,7 +524,7 @@ class _VoteCommentSheetState extends State<_VoteCommentSheet> {
   void _submit() {
     AppHaptics.medium();
     final comment = _controller.text.trim();
-    context.read<LeaderboardBloc>().add(
+    widget.bloc.add(
           LeaderboardVoteItem(
             widget.itemId,
             voteType: widget.voteType,

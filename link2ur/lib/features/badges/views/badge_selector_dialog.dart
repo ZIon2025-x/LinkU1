@@ -22,7 +22,9 @@ import '../bloc/badges_bloc.dart';
 /// );
 /// ```
 class BadgeSelectorDialog extends StatelessWidget {
-  const BadgeSelectorDialog({super.key});
+  const BadgeSelectorDialog({super.key, required this.badgesBloc});
+
+  final BadgesBloc badgesBloc;
 
   /// Show the badge selector dialog.
   ///
@@ -30,10 +32,7 @@ class BadgeSelectorDialog extends StatelessWidget {
   static Future<void> show(BuildContext context, BadgesBloc badgesBloc) {
     return showDialog(
       context: context,
-      builder: (_) => BlocProvider.value(
-        value: badgesBloc,
-        child: const BadgeSelectorDialog(),
-      ),
+      builder: (_) => BadgeSelectorDialog(badgesBloc: badgesBloc),
     );
   }
 
@@ -80,6 +79,7 @@ class BadgeSelectorDialog extends StatelessWidget {
             // Badge list
             Flexible(
               child: BlocBuilder<BadgesBloc, BadgesState>(
+                bloc: badgesBloc,
                 builder: (context, state) {
                   if (state.badges.isEmpty) {
                     return Padding(
@@ -146,9 +146,7 @@ class BadgeSelectorDialog extends StatelessWidget {
                       return _BadgeSelectionItem(
                         badge: badge,
                         onTap: () {
-                          context
-                              .read<BadgesBloc>()
-                              .add(BadgeDisplayToggled(badge.id));
+                          badgesBloc.add(BadgeDisplayToggled(badge.id));
                         },
                       );
                     },
@@ -166,7 +164,7 @@ class BadgeSelectorDialog extends StatelessWidget {
     // Toggle off all displayed badges
     final displayedBadges = state.badges.where((b) => b.isDisplayed);
     for (final badge in displayedBadges) {
-      context.read<BadgesBloc>().add(BadgeDisplayToggled(badge.id));
+      badgesBloc.add(BadgeDisplayToggled(badge.id));
     }
   }
 }

@@ -821,12 +821,10 @@ class _TaskDetailContent extends StatelessWidget {
         if (text.length >= 2) {
           bloc.add(TaskDetailAskQuestion(text));
         }
-        controller.dispose();
       },
-      onCancel: () {
-        controller.dispose();
-      },
-    );
+    ).then((_) {
+      controller.dispose();
+    });
   }
 
   /// 底部主操作按钮 — 根据状态 + 角色显示最重要的操作

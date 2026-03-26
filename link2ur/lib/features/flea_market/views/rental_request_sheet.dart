@@ -12,9 +12,10 @@ import '../bloc/flea_market_rental_bloc.dart';
 
 /// 租用申请底部弹窗
 class RentalRequestSheet extends StatefulWidget {
-  const RentalRequestSheet({super.key, required this.item});
+  const RentalRequestSheet({super.key, required this.item, required this.bloc});
 
   final FleaMarketItem item;
+  final FleaMarketRentalBloc bloc;
 
   static Future<void> show(BuildContext context, FleaMarketItem item) {
     final bloc = context.read<FleaMarketRentalBloc>();
@@ -22,10 +23,7 @@ class RentalRequestSheet extends StatefulWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => BlocProvider.value(
-        value: bloc,
-        child: RentalRequestSheet(item: item),
-      ),
+      builder: (ctx) => RentalRequestSheet(item: item, bloc: bloc),
     );
   }
 
@@ -94,7 +92,7 @@ class _RentalRequestSheetState extends State<RentalRequestSheet> {
     final desiredTime = _desiredTimeController.text.trim();
     final usage = _usageController.text.trim();
 
-    context.read<FleaMarketRentalBloc>().add(
+    widget.bloc.add(
           RentalSubmitRequest(
             itemId: widget.item.id,
             rentalDuration: _duration!,
@@ -112,6 +110,7 @@ class _RentalRequestSheetState extends State<RentalRequestSheet> {
     final symbol = Helpers.currencySymbolFor(widget.item.currency);
 
     return BlocListener<FleaMarketRentalBloc, FleaMarketRentalState>(
+      bloc: widget.bloc,
       listenWhen: (p, c) =>
           c.actionMessage == 'rental_request_sent' ||
           (c.errorMessage != null && c.errorMessage != p.errorMessage),

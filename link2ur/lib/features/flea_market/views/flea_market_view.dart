@@ -80,9 +80,8 @@ class _FleaMarketViewContentState extends State<_FleaMarketViewContent> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (sheetContext) {
-        return BlocProvider.value(
-          value: bloc,
-          child: BlocBuilder<FleaMarketBloc, FleaMarketState>(
+        return BlocBuilder<FleaMarketBloc, FleaMarketState>(
+            bloc: bloc,
             buildWhen: (prev, curr) => prev.selectedCategory != curr.selectedCategory,
             builder: (ctx, state) {
               return SafeArea(
@@ -170,8 +169,7 @@ class _FleaMarketViewContentState extends State<_FleaMarketViewContent> {
                 ),
               );
             },
-          ),
-        );
+          );
       },
     );
   }

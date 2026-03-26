@@ -2009,10 +2009,12 @@ class ActivityApplySheet extends StatefulWidget {
     super.key,
     required this.activityId,
     required this.activity,
+    required this.bloc,
   });
 
   final int activityId;
   final Activity activity;
+  final ActivityBloc bloc;
 
   /// 弹出申请弹窗
   static Future<void> show(
@@ -2020,18 +2022,17 @@ class ActivityApplySheet extends StatefulWidget {
     required int activityId,
     required Activity activity,
   }) {
+    final bloc = context.read<ActivityBloc>();
     return SheetAdaptation.showAdaptiveModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => BlocProvider.value(
-        value: context.read<ActivityBloc>(),
-        child: ActivityApplySheet(
-          activityId: activityId,
-          activity: activity,
-        ),
+      builder: (_) => ActivityApplySheet(
+        activityId: activityId,
+        activity: activity,
+        bloc: bloc,
       ),
     );
   }
@@ -2055,7 +2056,7 @@ class _ActivityApplySheetState extends State<ActivityApplySheet> {
     if (_hasTimeSlots) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        context.read<ActivityBloc>().add(ActivityLoadTimeSlots(
+        widget.bloc.add(ActivityLoadTimeSlots(
               serviceId: widget.activity.expertServiceId,
               activityId: widget.activityId,
             ));
@@ -2068,6 +2069,7 @@ class _ActivityApplySheetState extends State<ActivityApplySheet> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return BlocConsumer<ActivityBloc, ActivityState>(
+      bloc: widget.bloc,
       listenWhen: (prev, curr) =>
           curr.actionMessage != null &&
           prev.actionMessage != curr.actionMessage,
@@ -2482,13 +2484,13 @@ class _ActivityApplySheetState extends State<ActivityApplySheet> {
 
     if (_hasTimeSlots) {
       // 时间段模式 - 传 timeSlotId
-      context.read<ActivityBloc>().add(ActivityApply(
+      widget.bloc.add(ActivityApply(
             widget.activityId,
             timeSlotId: _selectedTimeSlotId,
           ));
     } else {
       // 灵活时间/日期模式
-      context.read<ActivityBloc>().add(ActivityApply(
+      widget.bloc.add(ActivityApply(
             widget.activityId,
             preferredDeadline: _isFlexibleTime
                 ? null

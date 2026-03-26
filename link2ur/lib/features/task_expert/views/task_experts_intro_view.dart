@@ -208,16 +208,15 @@ void _showApplySheet(BuildContext context) {
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
-    builder: (_) => BlocProvider.value(
-      value: bloc,
-      child: const _ExpertApplySheet(),
-    ),
+    builder: (_) => _ExpertApplySheet(bloc: bloc),
   );
 }
 
 /// 申请成为达人的表单弹窗（对标 iOS TaskExpertApplyView）
 class _ExpertApplySheet extends StatefulWidget {
-  const _ExpertApplySheet();
+  const _ExpertApplySheet({required this.bloc});
+
+  final TaskExpertBloc bloc;
 
   @override
   State<_ExpertApplySheet> createState() => _ExpertApplySheetState();
@@ -235,7 +234,7 @@ class _ExpertApplySheetState extends State<_ExpertApplySheet> {
   void _submit() {
     final message = _controller.text.trim();
     if (message.isEmpty) return;
-    context.read<TaskExpertBloc>().add(
+    widget.bloc.add(
           TaskExpertApplyToBeExpert(message: message),
         );
   }
@@ -246,6 +245,7 @@ class _ExpertApplySheetState extends State<_ExpertApplySheet> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return BlocListener<TaskExpertBloc, TaskExpertState>(
+      bloc: widget.bloc,
       listenWhen: (p, c) => p.actionMessage != c.actionMessage,
       listener: (ctx, state) {
         if (state.actionMessage == 'expert_application_submitted') {
@@ -326,6 +326,7 @@ class _ExpertApplySheetState extends State<_ExpertApplySheet> {
             const SizedBox(height: AppSpacing.md),
             // 提交按钮
             BlocBuilder<TaskExpertBloc, TaskExpertState>(
+              bloc: widget.bloc,
               buildWhen: (p, c) => p.isSubmitting != c.isSubmitting,
               builder: (ctx, state) {
                 final canSubmit =
