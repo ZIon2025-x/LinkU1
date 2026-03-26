@@ -251,7 +251,8 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
     PaymentCreateIntent event,
     Emitter<PaymentState> emit,
   ) async {
-    if (state.status == PaymentStatus.loading || state.status == PaymentStatus.processing) return;
+    // 支付进行中不允许重建 PI；loading 中但钱包/券切换时允许覆盖
+    if (state.status == PaymentStatus.processing) return;
 
     if (event.isMethodSwitch) {
       // 方法切换：不清空 UI，保留旧的 paymentResponse 显示金额信息

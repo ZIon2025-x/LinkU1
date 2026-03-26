@@ -1024,3 +1024,220 @@ def weekly_reliability_calibration_task(self):
         db.close()
         release_redis_distributed_lock(lock_key)
 
+    # ==================== 钱包 pending 交易超时清理 ====================
+
+    @celery_app.task(
+        name='app.celery_tasks.cleanup_stale_pending_wallet_txs_task',
+        bind=True,
+        max_retries=3,
+        default_retry_delay=60
+    )
+    def cleanup_stale_pending_wallet_txs_task(self):
+        """清理超时的 pending 钱包支付交易（防止余额被永久锁定）
+
+        扫描 wallet_transactions 中 type='payment' AND status='pending'
+        且 created_at 超过 30 分钟的记录，逐条 reverse。
+        """
+        start_time = time.time()
+        task_name = 'cleanup_stale_pending_wallet_txs_task'
+        lock_key = f"celery_lock:{task_name}"
+
+        if not get_redis_distributed_lock(lock_key, lock_ttl=300):
+            logger.info(f"跳过 {task_name}：另一实例正在执行")
+            return {"status": "skipped", "message": "lock held"}
+
+        db = SessionLocal()
+        try:
+            from datetime import datetime, timedelta, timezone
+            from app.wallet_models import WalletTransaction
+            from app.wallet_service import reverse_debit
+
+            cutoff = datetime.now(timezone.utc) - timedelta(minutes=30)
+            # 先收集需要处理的 tx 信息到 list，避免 commit 后 ORM 对象 stale
+            stale_rows = (
+                db.query(
+                    WalletTransaction.id,
+                    WalletTransaction.user_id,
+                    WalletTransaction.amount,
+                    WalletTransaction.currency,
+                    WalletTransaction.created_at,
+                )
+                .filter(
+                    WalletTransaction.type == "payment",
+                    WalletTransaction.status == "pending",
+                    WalletTransaction.created_at < cutoff,
+                )
+                .limit(100)  # 每次最多处理 100 条，避免长事务
+                .all()
+            )
+
+            reversed_count = 0
+            for row in stale_rows:
+                tx_id, user_id, amount_raw, currency, created_at = row
+                try:
+                    amount = abs(amount_raw)
+                    reverse_debit(db, tx_id, user_id, amount, currency=currency)
+                    db.commit()
+                    reversed_count += 1
+                    logger.info(
+                        f"✅ 已 reverse 超时 pending wallet tx: "
+                        f"id={tx_id}, user={user_id}, amount={amount}, "
+                        f"created_at={created_at}"
+                    )
+                except Exception as e:
+                    db.rollback()
+                    logger.error(
+                        f"❌ reverse pending wallet tx 失败: "
+                        f"id={tx_id}, error={e}"
+                    )
+
+            duration = time.time() - start_time
+            logger.info(
+                f"钱包 pending 清理完成: reversed={reversed_count}/{len(stale_rows)} "
+                f"(耗时: {duration:.2f}秒)"
+            )
+            _record_task_metrics(task_name, "success", duration)
+            return {
+                "status": "success",
+                "reversed": reversed_count,
+                "total_stale": len(stale_rows),
+            }
+        except Exception as e:
+            duration = time.time() - start_time
+            logger.error(f"钱包 pending 清理失败: {e}", exc_info=True)
+            _record_task_metrics(task_name, "error", duration)
+            try:
+                db.rollback()
+            except Exception:
+                pass
+            if self.request.retries < self.max_retries:
+                raise self.retry(exc=e)
+            raise
+        finally:
+            db.close()
+            release_redis_distributed_lock(lock_key)
+
+    # ==================== 钱包提现 pending 对账 ====================
+
+    @celery_app.task(
+        name='app.celery_tasks.reconcile_pending_withdrawals_task',
+        bind=True,
+        max_retries=3,
+        default_retry_delay=60
+    )
+    def reconcile_pending_withdrawals_task(self):
+        """对账超时的 pending 提现交易
+
+        扫描 wallet_transactions 中 type='withdrawal' AND status='pending'
+        且 created_at 超过 15 分钟的记录，通过 Stripe API 查询 Transfer 状态：
+        - Transfer succeeded → complete_withdrawal
+        - Transfer failed/not found → fail_withdrawal（退还余额）
+        """
+        start_time = time.time()
+        task_name = 'reconcile_pending_withdrawals_task'
+        lock_key = f"celery_lock:{task_name}"
+
+        if not get_redis_distributed_lock(lock_key, lock_ttl=300):
+            logger.info(f"跳过 {task_name}：另一实例正在执行")
+            return {"status": "skipped", "message": "lock held"}
+
+        db = SessionLocal()
+        try:
+            import stripe
+            from datetime import datetime, timedelta, timezone
+            from app.wallet_models import WalletTransaction
+            from app.wallet_service import complete_withdrawal, fail_withdrawal
+
+            cutoff = datetime.now(timezone.utc) - timedelta(minutes=15)
+            pending_rows = (
+                db.query(
+                    WalletTransaction.id,
+                    WalletTransaction.user_id,
+                    WalletTransaction.amount,
+                    WalletTransaction.currency,
+                    WalletTransaction.related_id,  # Stripe transfer ID (if already set)
+                    WalletTransaction.created_at,
+                )
+                .filter(
+                    WalletTransaction.type == "withdrawal",
+                    WalletTransaction.status == "pending",
+                    WalletTransaction.created_at < cutoff,
+                )
+                .limit(50)
+                .all()
+            )
+
+            completed_count = 0
+            failed_count = 0
+            for row in pending_rows:
+                tx_id, user_id, amount_raw, currency, related_id, created_at = row
+                try:
+                    # 如果 related_id 已经是 Transfer ID，直接查询
+                    if related_id and related_id.startswith("tr_"):
+                        transfer = stripe.Transfer.retrieve(related_id)
+                    else:
+                        # 没有 Transfer ID，按创建时间范围搜索 Stripe Transfer
+                        transfers = stripe.Transfer.list(
+                            limit=20,
+                            created={"gte": int(created_at.timestamp())},
+                        )
+                        transfer = None
+                        for t in transfers.data:
+                            if t.metadata.get("wallet_tx_id") == str(tx_id):
+                                transfer = t
+                                break
+
+                    if transfer and not transfer.get("reversed", False):
+                        # Transfer 存在且未被 reverse → 确认提现
+                        # 幂等检查：重新查 DB 确认仍是 pending
+                        from app.wallet_models import WalletTransaction as _WTCheck
+                        _fresh = db.query(_WTCheck).filter(_WTCheck.id == tx_id).first()
+                        if _fresh and _fresh.status == "pending":
+                            complete_withdrawal(db, tx_id, transfer.id)
+                            db.commit()
+                            completed_count += 1
+                            logger.info(
+                                f"✅ 对账完成提现: tx_id={tx_id}, transfer_id={transfer.id}"
+                            )
+                    else:
+                        # Transfer 不存在或已 reverse，超时 → 退还余额
+                        # 仅对超过 30 分钟的进行 fail（给 webhook 充足时间）
+                        if created_at < datetime.now(timezone.utc) - timedelta(minutes=30):
+                            refund_amount = abs(amount_raw)
+                            fail_withdrawal(db, tx_id, user_id, refund_amount, currency=currency)
+                            db.commit()
+                            failed_count += 1
+                            logger.info(
+                                f"✅ 对账退还提现: tx_id={tx_id}, amount={refund_amount}"
+                            )
+                except Exception as e:
+                    db.rollback()
+                    logger.error(f"❌ 对账提现失败: tx_id={tx_id}, error={e}")
+
+            duration = time.time() - start_time
+            logger.info(
+                f"提现对账完成: completed={completed_count}, failed={failed_count}, "
+                f"total={len(pending_rows)} (耗时: {duration:.2f}秒)"
+            )
+            _record_task_metrics(task_name, "success", duration)
+            return {
+                "status": "success",
+                "completed": completed_count,
+                "failed": failed_count,
+                "total": len(pending_rows),
+            }
+        except Exception as e:
+            duration = time.time() - start_time
+            logger.error(f"提现对账任务失败: {e}", exc_info=True)
+            _record_task_metrics(task_name, "error", duration)
+            try:
+                db.rollback()
+            except Exception:
+                pass
+            if self.request.retries < self.max_retries:
+                raise self.retry(exc=e)
+            raise
+        finally:
+            db.close()
+            release_redis_distributed_lock(lock_key)
+

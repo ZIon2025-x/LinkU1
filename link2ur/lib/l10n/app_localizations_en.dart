@@ -11409,4 +11409,35 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get fleaMarketErrorRentalPaymentExpired =>
       'Rental payment has expired';
+
+  @override
+  String get homeFlowTitle => 'Safe Transactions, Easy Collaboration';
+
+  @override
+  String get homeFlowSubtitle =>
+      'Escrowed funds · Full protection · Dispute refunds';
+
+  @override
+  String get homeFlowStepPost => 'Post Task/Skill';
+
+  @override
+  String get homeFlowStepApply => 'Apply & Approve';
+
+  @override
+  String get homeFlowStepPay => 'Pay & Escrow';
+
+  @override
+  String get homeFlowStepConfirm => 'Confirm Done';
+
+  @override
+  String get homeFlowStepRelease => 'Release Funds';
+
+  @override
+  String get homeFlowGuaranteeEscrow => 'Fund Escrow';
+
+  @override
+  String get homeFlowGuaranteeRefund => 'Full Refund Guarantee';
+
+  @override
+  String get homeFlowGuaranteeDispute => 'Dispute Mediation';
 }

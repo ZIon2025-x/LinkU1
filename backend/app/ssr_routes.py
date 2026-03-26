@@ -663,7 +663,7 @@ async def ssr_task_detail(
             "jobLocationType": "TELECOMMUTE" if is_online else None,
             "baseSalary": {
                 "@type": "MonetaryAmount",
-                "currency": "GBP",
+                "currency": getattr(task, "currency", None) or "GBP",
                 "value": {
                     "@type": "QuantitativeValue",
                     "value": reward,

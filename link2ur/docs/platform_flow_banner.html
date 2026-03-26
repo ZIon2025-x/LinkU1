@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Link2Ur 平台流程图 Banner</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    background: #f5f5f5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    gap: 40px;
+  }
+
+  h2 {
+    color: #333;
+    font-size: 18px;
+    margin-bottom: 8px;
+  }
+  .subtitle {
+    color: #888;
+    font-size: 13px;
+    margin-bottom: 16px;
+  }
+
+  /* ===== 方案 A: 横向滚动卡片流程 ===== */
+  .phone-frame {
+    width: 390px;
+    background: #fff;
+    border-radius: 24px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+    overflow: hidden;
+    position: relative;
+  }
+  .phone-frame::before {
+    content: '';
+    display: block;
+    width: 120px;
+    height: 28px;
+    background: #000;
+    border-radius: 0 0 16px 16px;
+    margin: 0 auto;
+  }
+
+  .banner-area {
+    padding: 16px;
+  }
+
+  /* 流程图 Banner */
+  .flow-banner {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 16px;
+    padding: 20px 16px 16px;
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+  }
+  .flow-banner::after {
+    content: '';
+    position: absolute;
+    top: -40px;
+    right: -40px;
+    width: 120px;
+    height: 120px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 50%;
+  }
+
+  .flow-banner-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .flow-banner-desc {
+    font-size: 12px;
+    opacity: 0.8;
+    margin-bottom: 16px;
+  }
+
+  .flow-steps {
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+  .flow-steps::-webkit-scrollbar { display: none; }
+
+  .flow-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 64px;
+    flex-shrink: 0;
+    position: relative;
+  }
+
+  .step-icon {
+    width: 40px;
+    height: 40px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    backdrop-filter: blur(4px);
+    border: 1.5px solid rgba(255,255,255,0.3);
+    position: relative;
+    z-index: 1;
+  }
+
+  .step-label {
+    font-size: 10px;
+    margin-top: 6px;
+    text-align: center;
+    line-height: 1.3;
+    opacity: 0.95;
+    font-weight: 500;
+  }
+
+  .flow-arrow {
+    display: flex;
+    align-items: center;
+    padding-top: 0;
+    margin-top: 8px;
+    min-width: 20px;
+    color: rgba(255,255,255,0.5);
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .flow-dots {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    margin-top: 10px;
+  }
+  .flow-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.4);
+  }
+  .flow-dot.active {
+    width: 12px;
+    border-radius: 4px;
+    background: #fff;
+  }
+
+
+  /* ===== 方案 B: 紧凑双行网格 ===== */
+  .flow-banner-b {
+    background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%);
+    border-radius: 16px;
+    padding: 18px 14px 14px;
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+  }
+  .flow-banner-b::after {
+    content: '';
+    position: absolute;
+    bottom: -30px;
+    left: -30px;
+    width: 100px;
+    height: 100px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 50%;
+  }
+
+  .flow-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px 6px;
+    position: relative;
+  }
+
+  .flow-grid-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .grid-icon {
+    width: 36px;
+    height: 36px;
+    background: rgba(255,255,255,0.18);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    border: 1px solid rgba(255,255,255,0.25);
+  }
+
+  .grid-num {
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    width: 14px;
+    height: 14px;
+    background: #fff;
+    color: #6366f1;
+    border-radius: 50%;
+    font-size: 8px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .grid-icon-wrap {
+    position: relative;
+  }
+
+  .grid-label {
+    font-size: 10px;
+    text-align: center;
+    line-height: 1.2;
+    opacity: 0.95;
+  }
+
+  /* 连接箭头 overlay */
+  .grid-connector {
+    position: absolute;
+    top: 18px;
+    left: 0;
+    right: 0;
+    height: 1px;
+    z-index: 0;
+  }
+
+
+  /* ===== 方案 C: 时间线竖版 ===== */
+  .flow-banner-c {
+    background: linear-gradient(160deg, #f97316 0%, #ec4899 100%);
+    border-radius: 16px;
+    padding: 18px 16px 14px;
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-top: 12px;
+  }
+
+  .timeline-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    position: relative;
+  }
+
+  .timeline-track {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 28px;
+    flex-shrink: 0;
+  }
+
+  .timeline-dot {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.25);
+    border: 2px solid rgba(255,255,255,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+
+  .timeline-line {
+    width: 2px;
+    height: 12px;
+    background: rgba(255,255,255,0.3);
+  }
+
+  .timeline-content {
+    padding-top: 3px;
+  }
+
+  .timeline-title {
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  .timeline-sub {
+    font-size: 10px;
+    opacity: 0.7;
+    line-height: 1.3;
+    margin-bottom: 6px;
+  }
+
+  /* 保障标签 */
+  .safety-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 20px;
+    padding: 4px 10px;
+    font-size: 11px;
+    margin-top: 10px;
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255,255,255,0.2);
+  }
+
+
+  /* ===== 方案 D: 极简进度条式 ===== */
+  .flow-banner-d {
+    background: linear-gradient(135deg, #007AFF 0%, #409CFF 50%, #5AC8FA 100%);
+    border-radius: 16px;
+    padding: 18px 16px 16px;
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .progress-flow {
+    margin-top: 14px;
+  }
+
+  .progress-track {
+    display: flex;
+    align-items: center;
+    position: relative;
+    padding: 0 4px;
+  }
+
+  .progress-line {
+    position: absolute;
+    top: 50%;
+    left: 20px;
+    right: 20px;
+    height: 3px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 2px;
+    transform: translateY(-50%);
+  }
+
+  .progress-node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    position: relative;
+    z-index: 1;
+  }
+
+  .node-circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.25);
+    border: 2px solid #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+  }
+
+  .node-label {
+    font-size: 9px;
+    margin-top: 6px;
+    text-align: center;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  .guarantee-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 14px;
+    padding: 8px;
+    background: rgba(255,255,255,0.12);
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+
+  .guarantee-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+  }
+
+  .guarantee-icon {
+    font-size: 14px;
+  }
+
+  /* Section label */
+  .section-label {
+    text-align: center;
+    padding: 20px 0 8px;
+    color: #666;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 1px;
+  }
+
+  .divider {
+    width: 100%;
+    max-width: 390px;
+    border: none;
+    border-top: 1px dashed #ddd;
+    margin: 20px 0;
+  }
+</style>
+</head>
+<body>
+
+  <h1 style="color:#333; font-size:24px; margin-bottom: 0;">Link2Ur 平台流程 Banner 方案</h1>
+  <p style="color:#888; font-size:14px; margin-top:4px;">替代原首页 Banner 区域，展示平台交易保障流程</p>
+
+  <!-- ========== 方案 A ========== -->
+  <div class="section-label">— 方案 A：横向滚动卡片 —</div>
+  <div class="phone-frame">
+    <div class="banner-area">
+      <div class="flow-banner">
+        <div class="flow-banner-title">🔒 平台全程保障交易</div>
+        <div class="flow-banner-desc">资金托管 · 争议可退 · 安心互助</div>
+
+        <div class="flow-steps">
+          <div class="flow-step">
+            <div class="step-icon">📝</div>
+            <div class="step-label">发布<br>任务</div>
+          </div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step">
+            <div class="step-icon">🙋</div>
+            <div class="step-label">专家<br>申请</div>
+          </div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step">
+            <div class="step-icon">✅</div>
+            <div class="step-label">批准<br>沟通</div>
+          </div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step">
+            <div class="step-icon">💳</div>
+            <div class="step-label">安全<br>支付</div>
+          </div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step">
+            <div class="step-icon">🏦</div>
+            <div class="step-label">平台<br>托管</div>
+          </div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step">
+            <div class="step-icon">🤝</div>
+            <div class="step-label">确认<br>完成</div>
+          </div>
+          <div class="flow-arrow">›</div>
+          <div class="flow-step">
+            <div class="step-icon">💰</div>
+            <div class="step-label">平台<br>放款</div>
+          </div>
+        </div>
+
+        <div class="flow-dots">
+          <div class="flow-dot active"></div>
+          <div class="flow-dot"></div>
+          <div class="flow-dot"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <hr class="divider">
+
+
+  <!-- ========== 方案 B ========== -->
+  <div class="section-label">— 方案 B：双行网格 —</div>
+  <div class="phone-frame">
+    <div class="banner-area">
+      <div class="flow-banner-b">
+        <div class="flow-banner-title">交易如何进行？</div>
+        <div class="flow-banner-desc" style="margin-bottom:14px;">平台全程保障，资金安全托管</div>
+
+        <div class="flow-grid">
+          <!-- Row 1 -->
+          <div class="flow-grid-step">
+            <div class="grid-icon-wrap">
+              <div class="grid-icon">📝</div>
+              <div class="grid-num">1</div>
+            </div>
+            <div class="grid-label">发布任务</div>
+          </div>
+          <div class="flow-grid-step">
+            <div class="grid-icon-wrap">
+              <div class="grid-icon">🙋</div>
+              <div class="grid-num">2</div>
+            </div>
+            <div class="grid-label">专家申请</div>
+          </div>
+          <div class="flow-grid-step">
+            <div class="grid-icon-wrap">
+              <div class="grid-icon">💬</div>
+              <div class="grid-num">3</div>
+            </div>
+            <div class="grid-label">批准沟通</div>
+          </div>
+          <div class="flow-grid-step">
+            <div class="grid-icon-wrap">
+              <div class="grid-icon">💳</div>
+              <div class="grid-num">4</div>
+            </div>
+            <div class="grid-label">安全支付</div>
+          </div>
+          <!-- Row 2 -->
+          <div class="flow-grid-step">
+            <div class="grid-icon-wrap">
+              <div class="grid-icon">🏦</div>
+              <div class="grid-num">5</div>
+            </div>
+            <div class="grid-label">平台托管</div>
+          </div>
+          <div class="flow-grid-step">
+            <div class="grid-icon-wrap">
+              <div class="grid-icon">🤝</div>
+              <div class="grid-num">6</div>
+            </div>
+            <div class="grid-label">双方确认</div>
+          </div>
+          <div class="flow-grid-step">
+            <div class="grid-icon-wrap">
+              <div class="grid-icon">💰</div>
+              <div class="grid-num">7</div>
+            </div>
+            <div class="grid-label">平台放款</div>
+          </div>
+          <div class="flow-grid-step">
+            <div class="grid-icon-wrap">
+              <div class="grid-icon">🛡️</div>
+              <div class="grid-num">8</div>
+            </div>
+            <div class="grid-label">争议退款</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <hr class="divider">
+
+
+  <!-- ========== 方案 C ========== -->
+  <div class="section-label">— 方案 C：竖向时间线 —</div>
+  <div class="phone-frame">
+    <div class="banner-area">
+      <div class="flow-banner-c">
+        <div class="flow-banner-title">🛡️ 安心交易，全程保障</div>
+        <div class="flow-banner-desc">每一步都有平台为你护航</div>
+
+        <div class="timeline">
+          <div class="timeline-row">
+            <div class="timeline-track">
+              <div class="timeline-dot">📝</div>
+              <div class="timeline-line"></div>
+            </div>
+            <div class="timeline-content">
+              <div class="timeline-title">发布任务 → 专家申请 → 批准沟通</div>
+              <div class="timeline-sub">描述需求，收到申请后选择合适的专家</div>
+            </div>
+          </div>
+          <div class="timeline-row">
+            <div class="timeline-track">
+              <div class="timeline-dot">💳</div>
+              <div class="timeline-line"></div>
+            </div>
+            <div class="timeline-content">
+              <div class="timeline-title">支付 → 平台托管</div>
+              <div class="timeline-sub">款项由平台安全代管，双方放心</div>
+            </div>
+          </div>
+          <div class="timeline-row">
+            <div class="timeline-track">
+              <div class="timeline-dot">🤝</div>
+              <div class="timeline-line"></div>
+            </div>
+            <div class="timeline-content">
+              <div class="timeline-title">双方确认完成 → 平台放款</div>
+              <div class="timeline-sub">任务完成后资金自动释放给专家</div>
+            </div>
+          </div>
+          <div class="timeline-row">
+            <div class="timeline-track">
+              <div class="timeline-dot">🛡️</div>
+            </div>
+            <div class="timeline-content">
+              <div class="timeline-title">争议？支持全额退款</div>
+              <div class="timeline-sub">未完成或有争议，平台介入保障权益</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="safety-badge">
+          🔒 资金托管保障 &nbsp;·&nbsp; 争议全额可退
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <hr class="divider">
+
+
+  <!-- ========== 方案 D ========== -->
+  <div class="section-label">— 方案 D：极简进度条 —</div>
+  <div class="phone-frame">
+    <div class="banner-area">
+      <div class="flow-banner-d">
+        <div class="flow-banner-title">安全交易，轻松互助</div>
+        <div class="flow-banner-desc">平台托管资金 · 全程保障 · 争议可退</div>
+
+        <div class="progress-flow">
+          <div class="progress-track">
+            <div class="progress-line"></div>
+            <div class="progress-node">
+              <div class="node-circle">📝</div>
+              <div class="node-label">发布任务/技能</div>
+            </div>
+            <div class="progress-node">
+              <div class="node-circle">🙋</div>
+              <div class="node-label">申请&amp;批准</div>
+            </div>
+            <div class="progress-node">
+              <div class="node-circle">💳</div>
+              <div class="node-label">支付托管</div>
+            </div>
+            <div class="progress-node">
+              <div class="node-circle">🤝</div>
+              <div class="node-label">确认完成</div>
+            </div>
+            <div class="progress-node">
+              <div class="node-circle">💰</div>
+              <div class="node-label">平台放款</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="guarantee-bar">
+          <div class="guarantee-item">
+            <span class="guarantee-icon">🏦</span>
+            <span>资金托管</span>
+          </div>
+          <div class="guarantee-item">
+            <span class="guarantee-icon">🛡️</span>
+            <span>全额退款保障</span>
+          </div>
+          <div class="guarantee-item">
+            <span class="guarantee-icon">⚖️</span>
+            <span>争议平台介入</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="height: 40px;"></div>
+
+</body>
+</html>

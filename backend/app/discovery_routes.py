@@ -889,7 +889,7 @@ async def _fetch_tasks(
             "price": float(row.reward) if row.reward else None,
             "original_price": float(row.base_reward) if row.base_reward else None,
             "discount_percentage": None,
-            "currency": "GBP",
+            "currency": getattr(row, "currency", None) or "GBP",
             "rating": None,
             "like_count": None,
             "comment_count": None,

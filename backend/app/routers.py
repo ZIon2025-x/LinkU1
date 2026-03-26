@@ -4187,7 +4187,7 @@ def confirm_task_completion(
                                         taker_id=task.taker_id,
                                         poster_id=task.poster_id,
                                         amount=Decimal(str(cash_amount)),
-                                        currency="GBP",
+                                        currency=task.currency or "GBP",
                                         metadata={
                                             "transfer_type": "activity_applicant_cash_reward",
                                             "activity_id": str(task.parent_activity_id),
@@ -4275,7 +4275,7 @@ def confirm_task_completion(
             fee_amount = gross_amount - net_amount if gross_amount > net_amount else Decimal("0")
 
             # Determine source: flea market sale or task reward
-            source = "flea_market_sale" if getattr(task, "flea_market_item", None) else "task_reward"
+            source = "flea_market_sale" if getattr(task, "task_source", "normal") in ("flea_market", "flea_market_rental") else "task_reward"
 
             idempotency_key = f"earning:task:{task.id}:user:{task.taker_id}"
 
@@ -8084,8 +8084,12 @@ def confirm_task_complete(
     task_id: int, current_user=Depends(check_user_status), db: Session = Depends(get_db)
 ):
     """
-    确认任务完成并转账给任务接受人
-    
+    [已弃用] 确认任务完成并通过 Stripe Transfer 直接转账给接受人的 Connect 账户。
+
+    前端已切换到 POST /tasks/{task_id}/confirm_completion（钱包入账模式）。
+    此端点仅供管理后台或特殊场景使用（如接受人要求直接 Stripe 到账）。
+    自动结算由 auto_transfer_expired_tasks 定时任务处理。
+
     要求：
     1. 任务必须已支付
     2. 任务状态必须为 completed
@@ -8171,7 +8175,7 @@ def confirm_task_complete(
             task.escrow_amount = max(0.0, task_amount - application_fee)
             logger.info(f"重新计算 escrow_amount: 任务金额={task_amount}, 服务费={application_fee}, escrow={task.escrow_amount}")
         
-        transfer_amount_pence = int(task.escrow_amount * 100)  # 转换为便士
+        transfer_amount_pence = round(Decimal(str(task.escrow_amount)) * 100)  # 转换为便士（Decimal 避免浮点精度丢失）
         
         logger.info(f"准备转账: 金额={transfer_amount_pence} 便士 (£{task.escrow_amount:.2f}), 目标账户={taker.stripe_account_id}")
         
@@ -8237,14 +8241,15 @@ def confirm_task_complete(
         # 更新任务状态
         task.is_confirmed = 1
         task.paid_to_user_id = task.taker_id
+        transfer_amount = task.escrow_amount  # 先保存转账金额
         task.escrow_amount = 0.0  # 转账后清空托管金额
-        
+
         db.commit()
-        
+
         return {
             "message": "Payment released to taker.",
             "transfer_id": transfer.id,
-            "amount": task.escrow_amount,
+            "amount": transfer_amount,
             "currency": task.currency or "GBP"
         }
         

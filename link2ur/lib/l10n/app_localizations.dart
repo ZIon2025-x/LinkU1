@@ -21040,6 +21040,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Rental payment has expired'**
   String get fleaMarketErrorRentalPaymentExpired;
+
+  /// No description provided for @homeFlowTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Safe Transactions, Easy Collaboration'**
+  String get homeFlowTitle;
+
+  /// No description provided for @homeFlowSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Escrowed funds · Full protection · Dispute refunds'**
+  String get homeFlowSubtitle;
+
+  /// No description provided for @homeFlowStepPost.
+  ///
+  /// In en, this message translates to:
+  /// **'Post Task/Skill'**
+  String get homeFlowStepPost;
+
+  /// No description provided for @homeFlowStepApply.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply & Approve'**
+  String get homeFlowStepApply;
+
+  /// No description provided for @homeFlowStepPay.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay & Escrow'**
+  String get homeFlowStepPay;
+
+  /// No description provided for @homeFlowStepConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Done'**
+  String get homeFlowStepConfirm;
+
+  /// No description provided for @homeFlowStepRelease.
+  ///
+  /// In en, this message translates to:
+  /// **'Release Funds'**
+  String get homeFlowStepRelease;
+
+  /// No description provided for @homeFlowGuaranteeEscrow.
+  ///
+  /// In en, this message translates to:
+  /// **'Fund Escrow'**
+  String get homeFlowGuaranteeEscrow;
+
+  /// No description provided for @homeFlowGuaranteeRefund.
+  ///
+  /// In en, this message translates to:
+  /// **'Full Refund Guarantee'**
+  String get homeFlowGuaranteeRefund;
+
+  /// No description provided for @homeFlowGuaranteeDispute.
+  ///
+  /// In en, this message translates to:
+  /// **'Dispute Mediation'**
+  String get homeFlowGuaranteeDispute;
 }
 
 class _AppLocalizationsDelegate

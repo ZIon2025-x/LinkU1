@@ -153,7 +153,7 @@ def get_tasks_summary(
                 "category": task.category,
                 "location": task.location,
                 "reward": task.agreed_reward or task.base_reward or task.reward or 0,
-                "currency": "GBP",
+                "currency": getattr(task, "currency", None) or "GBP",
                 "url": f"https://www.link2ur.com/tasks/{task.id}",
                 "created_at": task.created_at.isoformat() if task.created_at else None
             })

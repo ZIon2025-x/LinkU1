@@ -7,8 +7,9 @@ from datetime import datetime, date, timezone
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
-from sqlalchemy import and_
+from sqlalchemy import and_, select
 from datetime import timedelta
+from decimal import Decimal
 
 from app import schemas
 from app import crud
@@ -603,7 +604,7 @@ def create_task_payment(
             "coupon_description": coupon_info['description'] if coupon_info else None,
             "final_amount": 0,
             "final_amount_display": "0.00",
-            "currency": "GBP",
+            "currency": task.currency or "GBP",
             "client_secret": None,
             "payment_intent_id": task.payment_intent_id,
             "customer_id": None,
@@ -611,7 +612,7 @@ def create_task_payment(
             "calculation_steps": calculation_steps,
             "note": "任务已支付"
         }
-    
+
     # 检查任务状态：只有 pending_payment 状态的任务需要支付
     # 但如果任务有 payment_intent_id（批准申请时创建的），说明是待确认的批准，也允许支付
     if task.status != "pending_payment":
@@ -719,7 +720,7 @@ def create_task_payment(
                         "coupon_description": coupon_info['description'] if coupon_info else None,
                         "final_amount": 0,
                         "final_amount_display": "0.00",
-                        "currency": "GBP",
+                        "currency": task.currency or "GBP",
                         "client_secret": None,
                         "payment_intent_id": task.payment_intent_id,
                         "customer_id": None,
@@ -762,6 +763,9 @@ def create_task_payment(
                         except Exception as e:
                             logger.warning(f"获取优惠券信息失败: {e}")
                     
+                    # 🔒 Fix #5: 从 PI metadata 读取钱包抵扣信息
+                    _reuse_wallet_deduction = int(metadata.get("wallet_deduction", 0)) if metadata.get("wallet_deduction") else 0
+
                     # 构建计算过程步骤
                     calculation_steps = [
                         {
@@ -778,13 +782,21 @@ def create_task_payment(
                             "amount_display": f"-{coupon_discount / 100:.2f}",
                             "type": "discount"
                         })
+                    if _reuse_wallet_deduction > 0:
+                        calculation_steps.append({
+                            "label": "钱包余额抵扣",
+                            "amount": -_reuse_wallet_deduction,
+                            "amount_display": f"-{_reuse_wallet_deduction / 100:.2f}",
+                            "type": "wallet"
+                        })
                     calculation_steps.append({
                         "label": "最终支付金额",
                         "amount": payment_intent.amount,
                         "amount_display": f"{payment_intent.amount / 100:.2f}",
                         "type": "final"
                     })
-                    
+
+                    _reuse_payment_type = "mixed" if _reuse_wallet_deduction > 0 else "stripe"
                     return {
                         "payment_id": None,
                         "fee_type": "task_amount",
@@ -795,9 +807,12 @@ def create_task_payment(
                         "coupon_name": coupon_info['name'] if coupon_info else None,
                         "coupon_type": coupon_info['type'] if coupon_info else None,
                         "coupon_description": coupon_info['description'] if coupon_info else None,
+                        "wallet_deduction": _reuse_wallet_deduction if _reuse_wallet_deduction > 0 else None,
+                        "wallet_deduction_display": f"{_reuse_wallet_deduction / 100:.2f}" if _reuse_wallet_deduction > 0 else None,
                         "final_amount": payment_intent.amount,
                         "final_amount_display": f"{payment_intent.amount / 100:.2f}",
-                        "currency": "GBP",
+                        "currency": task.currency or "GBP",
+                        "payment_type": _reuse_payment_type,
                         "client_secret": payment_intent.client_secret,
                         "payment_intent_id": payment_intent.id,
                         "customer_id": None,
@@ -839,17 +854,19 @@ def create_task_payment(
                 detail="支付已过期，无法继续支付。任务将自动取消。"
             )
     
-    # 获取任务金额（使用最终成交价或原始标价）
-    task_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
-    
+    # 🔒 Fix #6: 使用 Decimal 避免 float 精度丢失（如 19.99 → 19.989999...）
+    _raw_reward = task.agreed_reward if task.agreed_reward is not None else task.base_reward if task.base_reward is not None else None
+    task_amount_decimal = Decimal(str(_raw_reward)) if _raw_reward is not None else Decimal("0")
+    task_amount = float(task_amount_decimal)  # 保留 float 兼容下游使用（如 escrow_amount、note 格式化）
+
     # 验证任务金额必须大于0
-    if task_amount <= 0:
+    if task_amount_decimal <= 0:
         raise HTTPException(
             status_code=400,
             detail="任务金额必须大于0，无法进行支付"
         )
-    
-    task_amount_pence = round(task_amount * 100)  # 转换为最小货币单位
+
+    task_amount_pence = int(task_amount_decimal * 100)  # Decimal → int，无精度损失
     
     # 计算平台服务费（按任务来源/类型取费率）
     from app.utils.fee_calculator import calculate_application_fee_pence
@@ -933,7 +950,8 @@ def create_task_payment(
             task.location,
             task.task_type,
             get_utc_time(),
-            idempotency_key=f"task_payment_{task_id}_{current_user.id}"
+            idempotency_key=f"task_payment_{task_id}_{current_user.id}",
+            currency=task.currency or "GBP"
         )
         
         if error:
@@ -959,13 +977,37 @@ def create_task_payment(
     wallet_tx_id = None
 
     if payment_request.use_wallet_balance and final_amount > 0:
-        from app.wallet_service import lock_wallet, debit_wallet
+        from app.wallet_service import lock_wallet, debit_wallet, reverse_debit
+        from app.wallet_models import WalletTransaction
         from decimal import Decimal
 
         # Use the task's currency for wallet operations
         wallet_currency = getattr(task, "currency", None) or "GBP"
+        _idempotency_key = f"wallet_task_payment_{task_id}_{current_user.id}"
 
         try:
+            # 🔒 Fix #2: 检查是否已有此任务的 pending wallet tx（如用户切换支付方式重复调用）
+            # 如有 pending tx，先 reverse 再重新扣款，避免旧 pending tx 永远悬挂
+            existing_wallet_tx = (
+                db.query(WalletTransaction)
+                .filter(
+                    WalletTransaction.idempotency_key == _idempotency_key,
+                    WalletTransaction.status == "pending",
+                )
+                .first()
+            )
+            if existing_wallet_tx:
+                _existing_amount = abs(existing_wallet_tx.amount)
+                logger.info(
+                    f"发现已有 pending wallet tx: id={existing_wallet_tx.id}, "
+                    f"amount={_existing_amount}, 先 reverse 再重新扣款"
+                )
+                reverse_debit(
+                    db, existing_wallet_tx.id, str(current_user.id),
+                    _existing_amount, currency=wallet_currency,
+                )
+                db.flush()
+
             wallet_account = lock_wallet(db, str(current_user.id), wallet_currency)
             # 将余额转换为最小单位进行比较（余额存储为主单位 Decimal）
             balance_pence = int(wallet_account.balance * 100)
@@ -982,7 +1024,7 @@ def create_task_payment(
                     related_type="task",
                     description=f"任务 #{task_id} 余额支付",
                     status="pending",  # Pending until Stripe confirms or full-wallet
-                    idempotency_key=f"wallet_task_payment_{task_id}_{current_user.id}",
+                    idempotency_key=_idempotency_key,
                     currency=wallet_currency,
                 )
                 wallet_tx_id = wallet_tx.id
@@ -991,13 +1033,17 @@ def create_task_payment(
                     f"钱包余额抵扣: task_id={task_id}, wallet_deduction={wallet_deduction_pence}p, "
                     f"remaining_stripe={final_amount}p, wallet_tx_id={wallet_tx_id}"
                 )
-        except ValueError as ve:
-            # Idempotency duplicate — wallet already debited for this task, skip
-            logger.warning(f"钱包扣款跳过（幂等）: {ve}")
-            wallet_deduction_pence = 0
-            wallet_tx_id = None
         except Exception as e:
             logger.error(f"钱包余额抵扣失败: {e}")
+            # 🔒 Fix #1: 如果扣款成功但后续操作失败，显式 reverse pending debit
+            if wallet_tx_id:
+                try:
+                    _deduction_pounds = Decimal(str(wallet_deduction_pence)) / Decimal("100")
+                    reverse_debit(db, wallet_tx_id, str(current_user.id), _deduction_pounds, currency=wallet_currency)
+                    db.flush()
+                    logger.info(f"已 reverse 钱包扣款: wallet_tx_id={wallet_tx_id}")
+                except Exception as reverse_err:
+                    logger.error(f"reverse 钱包扣款失败: {reverse_err}")
             # 钱包扣款失败不阻塞支付流程，回退到全额 Stripe 支付
             wallet_deduction_pence = 0
             wallet_tx_id = None
@@ -1005,6 +1051,13 @@ def create_task_payment(
     # 如果使用优惠券全额抵扣，直接完成支付（不需要Stripe支付）
     if final_amount == 0 and coupon_discount > 0:
         try:
+            # 🔒 Fix #3: FOR UPDATE 锁定任务行，防止并发支付重复标记
+            locked_task = db.execute(
+                select(models.Task).where(models.Task.id == task_id).with_for_update()
+            ).scalar_one_or_none()
+            if locked_task and locked_task.is_paid:
+                raise HTTPException(status_code=400, detail="任务已支付，请勿重复支付")
+            task = locked_task  # 使用锁定后的对象
             # 标记任务为已支付（优惠券全额抵扣，没有 payment_intent_id）
             task.is_paid = 1
             task.payment_intent_id = None
@@ -1021,13 +1074,13 @@ def create_task_payment(
                 task_id=task_id,
                 user_id=current_user.id,
                 payment_intent_id=None,
-                payment_method="stripe",  # 虽然没用到Stripe，但记录为stripe类型
+                payment_method="coupon",  # 优惠券全额抵扣，未使用Stripe
                 total_amount=task_amount_pence,
                 points_used=0,
                 coupon_discount=coupon_discount,
                 stripe_amount=0,
                 final_amount=0,
-                currency="GBP",
+                currency=task.currency or "GBP",
                 status="succeeded",
                 application_fee=application_fee_pence,
                 escrow_amount=taker_amount,
@@ -1077,7 +1130,7 @@ def create_task_payment(
                 "wallet_deduction_display": None,
                 "final_amount": final_amount,
                 "final_amount_display": "0.00",
-                "currency": "GBP",
+                "currency": task.currency or "GBP",
                 "payment_type": "coupon",
                 "client_secret": None,
                 "payment_intent_id": None,
@@ -1097,7 +1150,20 @@ def create_task_payment(
     # 如果钱包余额全额抵扣（可能叠加优惠券），直接完成支付
     if final_amount == 0 and wallet_deduction_pence > 0:
         try:
-            from app.wallet_service import complete_debit
+            from app.wallet_service import complete_debit, reverse_debit
+
+            # 🔒 Fix #3: FOR UPDATE 锁定任务行，防止并发支付重复标记
+            locked_task = db.execute(
+                select(models.Task).where(models.Task.id == task_id).with_for_update()
+            ).scalar_one_or_none()
+            if locked_task and locked_task.is_paid:
+                # 已支付，reverse 钱包扣款
+                reverse_debit(db, wallet_tx_id, str(current_user.id),
+                              Decimal(str(wallet_deduction_pence)) / Decimal("100"),
+                              currency=getattr(task, "currency", None) or "GBP")
+                db.commit()
+                raise HTTPException(status_code=400, detail="任务已支付，请勿重复支付")
+            task = locked_task  # 使用锁定后的对象
 
             # 标记钱包交易为已完成
             complete_debit(db, wallet_tx_id)
@@ -1122,7 +1188,7 @@ def create_task_payment(
                 coupon_discount=coupon_discount,
                 stripe_amount=0,
                 final_amount=0,
-                currency="GBP",
+                currency=task.currency or "GBP",
                 status="succeeded",
                 application_fee=application_fee_pence,
                 escrow_amount=taker_amount,
@@ -1180,7 +1246,7 @@ def create_task_payment(
                 "wallet_deduction_display": f"{wallet_deduction_pence / 100:.2f}",
                 "final_amount": 0,
                 "final_amount_display": "0.00",
-                "currency": "GBP",
+                "currency": task.currency or "GBP",
                 "payment_type": "wallet",
                 "client_secret": None,
                 "payment_intent_id": None,
@@ -1279,6 +1345,9 @@ def create_task_payment(
                         except Exception as e:
                             logger.warning(f"获取优惠券信息失败: {e}")
                     
+                    # 🔒 Fix #5: 从 PI metadata 读取钱包抵扣信息
+                    _reuse_wallet_deduction2 = int(metadata.get("wallet_deduction", 0)) if metadata.get("wallet_deduction") else 0
+
                     # 构建计算过程步骤
                     calculation_steps = [
                         {
@@ -1295,13 +1364,21 @@ def create_task_payment(
                             "amount_display": f"-{coupon_discount / 100:.2f}",
                             "type": "discount"
                         })
+                    if _reuse_wallet_deduction2 > 0:
+                        calculation_steps.append({
+                            "label": "钱包余额抵扣",
+                            "amount": -_reuse_wallet_deduction2,
+                            "amount_display": f"-{_reuse_wallet_deduction2 / 100:.2f}",
+                            "type": "wallet"
+                        })
                     calculation_steps.append({
                         "label": "最终支付金额",
                         "amount": existing_payment_intent.amount,
                         "amount_display": f"{existing_payment_intent.amount / 100:.2f}",
                         "type": "final"
                     })
-                    
+
+                    _reuse_payment_type2 = "mixed" if _reuse_wallet_deduction2 > 0 else "stripe"
                     return {
                         "payment_id": None,
                         "fee_type": "task_amount",
@@ -1312,9 +1389,12 @@ def create_task_payment(
                         "coupon_name": coupon_info['name'] if coupon_info else None,
                         "coupon_type": coupon_info['type'] if coupon_info else None,
                         "coupon_description": coupon_info['description'] if coupon_info else None,
+                        "wallet_deduction": _reuse_wallet_deduction2 if _reuse_wallet_deduction2 > 0 else None,
+                        "wallet_deduction_display": f"{_reuse_wallet_deduction2 / 100:.2f}" if _reuse_wallet_deduction2 > 0 else None,
                         "final_amount": existing_payment_intent.amount,
                         "final_amount_display": f"{existing_payment_intent.amount / 100:.2f}",
-                        "currency": "GBP",
+                        "currency": task.currency or "GBP",
+                        "payment_type": _reuse_payment_type2,
                         "client_secret": existing_payment_intent.client_secret,
                         "payment_intent_id": existing_payment_intent.id,
                         "customer_id": customer_id,
@@ -1451,7 +1531,7 @@ def create_task_payment(
 
         create_kw = {
             "amount": final_amount,
-            "currency": "gbp",
+            "currency": (task.currency or "GBP").lower(),
             "payment_method_types": pm_types,
             "metadata": metadata,
             "description": f"任务 #{task_id} 任务金额支付 - {task.title}",
@@ -1461,8 +1541,24 @@ def create_task_payment(
             create_kw["customer"] = customer_id
         if payment_method_options:
             create_kw["payment_method_options"] = payment_method_options
-        payment_intent = stripe.PaymentIntent.create(**create_kw)
-        
+        try:
+            payment_intent = stripe.PaymentIntent.create(**create_kw)
+        except Exception as stripe_err:
+            # 🔒 Fix #1: PI 创建失败时显式 reverse pending wallet debit
+            # 注：get_db() 异常时也会 rollback flush，但显式 reverse 更安全（防止中间有 commit）
+            if wallet_tx_id and wallet_deduction_pence > 0:
+                try:
+                    from app.wallet_service import reverse_debit as _rev_debit
+                    _wd_pounds = Decimal(str(wallet_deduction_pence)) / Decimal("100")
+                    _rev_debit(db, wallet_tx_id, str(current_user.id), _wd_pounds,
+                               currency=getattr(task, "currency", None) or "GBP")
+                    db.commit()
+                    logger.info(f"PI 创建失败，已 reverse 钱包扣款: wallet_tx_id={wallet_tx_id}")
+                except Exception as rev_err:
+                    logger.error(f"PI 创建失败且 reverse 钱包扣款也失败: {rev_err}")
+            logger.error(f"Stripe PaymentIntent 创建失败: {stripe_err}")
+            raise HTTPException(status_code=500, detail="创建支付失败，请稍后重试")
+
         # 记录 PaymentIntent 的支付方式类型（仅当未指定 preferred 时检查 WeChat Pay）
         payment_method_types = payment_intent.get("payment_method_types", [])
         logger.info(f"PaymentIntent 创建的支付方式类型: {payment_method_types}")
@@ -1500,7 +1596,7 @@ def create_task_payment(
             coupon_discount=coupon_discount,
             stripe_amount=final_amount,
             final_amount=final_amount,
-            currency="GBP",
+            currency=task.currency or "GBP",
             status="pending",  # 待支付，webhook 会更新为 succeeded
             application_fee=application_fee_pence,
             coupon_usage_log_id=coupon_usage_log.id if coupon_usage_log else None,
@@ -1555,7 +1651,7 @@ def create_task_payment(
             "wallet_deduction_display": f"{wallet_deduction_pence / 100:.2f}" if wallet_deduction_pence > 0 else None,
             "final_amount": final_amount,
             "final_amount_display": f"{final_amount / 100:.2f}",
-            "currency": "GBP",
+            "currency": task.currency or "GBP",
             "payment_type": _payment_type,
             "client_secret": payment_intent.client_secret,
             "payment_intent_id": payment_intent.id,
@@ -1767,7 +1863,8 @@ async def create_wechat_checkout_session(
                 task.location,
                 task.task_type,
                 get_utc_time(),
-                idempotency_key=f"wechat_checkout_{task_id}_{current_user.id}"
+                idempotency_key=f"wechat_checkout_{task_id}_{current_user.id}",
+                currency=task.currency or "GBP"
             )
             
             if error:
@@ -1811,7 +1908,7 @@ async def create_wechat_checkout_session(
                 coupon_discount=coupon_discount,
                 stripe_amount=0,
                 final_amount=0,
-                currency="GBP",
+                currency=task.currency or "GBP",
                 status="succeeded",
                 application_fee=application_fee_pence,
                 coupon_usage_log_id=coupon_usage_log.id if coupon_usage_log else None,
@@ -1893,7 +1990,7 @@ async def create_wechat_checkout_session(
             },
             "line_items": [{
                 'price_data': {
-                    'currency': 'gbp',
+                    'currency': (task.currency or "GBP").lower(),
                     'product_data': {
                         'name': f'任务支付 - {task.title[:50]}' if task.title else f'任务 #{task_id} 支付',
                         'description': f'Link²Ur 任务金额支付',
@@ -1938,7 +2035,7 @@ async def create_wechat_checkout_session(
             coupon_discount=coupon_discount,
             stripe_amount=final_amount,
             final_amount=final_amount,
-            currency="GBP",
+            currency=task.currency or "GBP",
             status="pending",
             application_fee=application_fee_pence,
             coupon_usage_log_id=coupon_usage_log.id if coupon_usage_log else None,
@@ -1958,7 +2055,7 @@ async def create_wechat_checkout_session(
             "coupon_full_discount": False,
             "final_amount": final_amount,
             "final_amount_display": f"{final_amount / 100:.2f}",
-            "currency": "GBP",
+            "currency": task.currency or "GBP",
             "expires_at": session.expires_at,
         }
         

@@ -50,24 +50,16 @@ class _RecommendedTab extends StatelessWidget {
                       : const _StoryRow(),
                 ),
 
-                // 2. Ticker + Banner
+                // 2. Platform Flow Chart
                 SliverToBoxAdapter(
                   child: isDesktop
-                      ? ContentConstraint(
-                          child: _TickerBanner(
-                            tickerItems: state.tickerItems,
-                            banners: state.banners,
-                          ),
-                        )
-                      : _TickerBanner(
-                          tickerItems: state.tickerItems,
-                          banners: state.banners,
-                        ),
+                      ? const ContentConstraint(child: _PlatformFlowBanner())
+                      : const _PlatformFlowBanner(),
                 ),
 
                 const SliverToBoxAdapter(child: SizedBox(height: 8)),
 
-                // 3. "为你推荐" 标题
+                // 3. "发现更多" 标题
                 SliverToBoxAdapter(
                   child: isDesktop
                       ? ContentConstraint(
@@ -121,7 +113,17 @@ class _RecommendedTab extends StatelessWidget {
                         ),
                 ),
 
-                // 4. 瀑布流 — 复用 _SliverDiscoveryFeed
+                // 3b. Ticker — 发现更多区域顶部
+                if (state.tickerItems.isNotEmpty)
+                  SliverToBoxAdapter(
+                    child: isDesktop
+                        ? ContentConstraint(
+                            child: _TickerOnly(tickerItems: state.tickerItems),
+                          )
+                        : _TickerOnly(tickerItems: state.tickerItems),
+                  ),
+
+                // 4. 瀑布流（含 Banner 卡片穿插）
                 SliverLayoutBuilder(
                   builder: (context, constraints) {
                     final w = constraints.crossAxisExtent;
@@ -137,7 +139,10 @@ class _RecommendedTab extends StatelessWidget {
                     }
                     return SliverPadding(
                       padding: EdgeInsets.symmetric(horizontal: outerPad),
-                      sliver: _SliverDiscoveryFeed(horizontalPadding: innerPad),
+                      sliver: _SliverDiscoveryFeed(
+                        horizontalPadding: innerPad,
+                        banners: state.banners,
+                      ),
                     );
                   },
                 ),

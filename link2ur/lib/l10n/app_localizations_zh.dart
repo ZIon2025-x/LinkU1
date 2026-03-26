@@ -10961,6 +10961,36 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get fleaMarketErrorRentalPaymentExpired => '租赁支付已过期';
+
+  @override
+  String get homeFlowTitle => '安全交易，轻松互助';
+
+  @override
+  String get homeFlowSubtitle => '平台托管资金 · 全程保障 · 争议可退';
+
+  @override
+  String get homeFlowStepPost => '发布任务/技能';
+
+  @override
+  String get homeFlowStepApply => '申请&批准';
+
+  @override
+  String get homeFlowStepPay => '支付托管';
+
+  @override
+  String get homeFlowStepConfirm => '确认完成';
+
+  @override
+  String get homeFlowStepRelease => '平台放款';
+
+  @override
+  String get homeFlowGuaranteeEscrow => '资金托管';
+
+  @override
+  String get homeFlowGuaranteeRefund => '全额退款保障';
+
+  @override
+  String get homeFlowGuaranteeDispute => '争议平台介入';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -21876,4 +21906,34 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get fleaMarketErrorRentalPaymentExpired => '租賃支付已過期';
+
+  @override
+  String get homeFlowTitle => '安全交易，輕鬆互助';
+
+  @override
+  String get homeFlowSubtitle => '平台託管資金 · 全程保障 · 爭議可退';
+
+  @override
+  String get homeFlowStepPost => '發佈任務/技能';
+
+  @override
+  String get homeFlowStepApply => '申請&批准';
+
+  @override
+  String get homeFlowStepPay => '支付託管';
+
+  @override
+  String get homeFlowStepConfirm => '確認完成';
+
+  @override
+  String get homeFlowStepRelease => '平台放款';
+
+  @override
+  String get homeFlowGuaranteeEscrow => '資金託管';
+
+  @override
+  String get homeFlowGuaranteeRefund => '全額退款保障';
+
+  @override
+  String get homeFlowGuaranteeDispute => '爭議平台介入';
 }

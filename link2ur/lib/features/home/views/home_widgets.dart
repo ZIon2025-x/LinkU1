@@ -432,6 +432,289 @@ class _BannerCarouselState extends State<_BannerCarousel> {
   }
 }
 
+// =============================================================================
+// Ticker Only — 只有公告滚动条（流程图替代了 Banner，Ticker 独立显示）
+// =============================================================================
+
+class _TickerOnly extends StatefulWidget {
+  const _TickerOnly({required this.tickerItems});
+  final List<TickerItem> tickerItems;
+
+  @override
+  State<_TickerOnly> createState() => _TickerOnlyState();
+}
+
+class _TickerOnlyState extends State<_TickerOnly> {
+  int _tickerIndex = 0;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _startTickerTimer();
+  }
+
+  @override
+  void didUpdateWidget(covariant _TickerOnly oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.tickerItems != widget.tickerItems) {
+      _timer?.cancel();
+      _tickerIndex = 0;
+      _startTickerTimer();
+    }
+  }
+
+  void _startTickerTimer() {
+    if (widget.tickerItems.isNotEmpty) {
+      _timer = Timer.periodic(const Duration(seconds: 3), (_) {
+        if (mounted) {
+          setState(() =>
+              _tickerIndex = (_tickerIndex + 1) % widget.tickerItems.length);
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.tickerItems.isEmpty) return const SizedBox.shrink();
+    final locale = Localizations.localeOf(context).languageCode;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: AppColors.gradientPrimary,
+          ),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.white.withAlpha(56),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                context.l10n.homeTickerLabel,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: SizedBox(
+                height: 22,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 500),
+                  transitionBuilder: (child, animation) {
+                    final isEntering = child.key == ValueKey(_tickerIndex);
+                    final begin = isEntering
+                        ? const Offset(0, 1)
+                        : const Offset(0, -1);
+                    return ClipRect(
+                      child: SlideTransition(
+                        position: Tween<Offset>(
+                          begin: begin,
+                          end: Offset.zero,
+                        ).animate(animation),
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: Text(
+                    widget.tickerItems[_tickerIndex].displayText(locale),
+                    key: ValueKey(_tickerIndex),
+                    style: TextStyle(
+                      color: Colors.white.withAlpha(230),
+                      fontSize: 12,
+                      height: 1.4,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// Platform Flow Banner — 方案D: 极简进度条式流程图
+// =============================================================================
+
+class _PlatformFlowBanner extends StatelessWidget {
+  const _PlatformFlowBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
+    final steps = [
+      (icon: Icons.edit_note_rounded, label: l10n.homeFlowStepPost),
+      (icon: Icons.person_add_rounded, label: l10n.homeFlowStepApply),
+      (icon: Icons.account_balance_wallet_rounded, label: l10n.homeFlowStepPay),
+      (icon: Icons.handshake_rounded, label: l10n.homeFlowStepConfirm),
+      (icon: Icons.payments_rounded, label: l10n.homeFlowStepRelease),
+    ];
+
+    final guarantees = [
+      (icon: Icons.account_balance_rounded, label: l10n.homeFlowGuaranteeEscrow),
+      (icon: Icons.shield_rounded, label: l10n.homeFlowGuaranteeRefund),
+      (icon: Icons.gavel_rounded, label: l10n.homeFlowGuaranteeDispute),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF007AFF), Color(0xFF409CFF), Color(0xFF5AC8FA)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Title
+            Text(
+              l10n.homeFlowTitle,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              l10n.homeFlowSubtitle,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.8),
+                fontSize: 11,
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            // Progress nodes
+            SizedBox(
+              height: 62,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return Stack(
+                    children: [
+                      // Connection line
+                      Positioned(
+                        top: 16,
+                        left: constraints.maxWidth / (steps.length * 2),
+                        right: constraints.maxWidth / (steps.length * 2),
+                        child: Container(
+                          height: 3,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                      // Nodes
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: steps.map((step) {
+                          return Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.white.withValues(alpha: 0.25),
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: Icon(
+                                  step.icon,
+                                  size: 16,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                step.label,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            // Guarantee bar
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.15),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: guarantees.map((g) {
+                  return Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(g.icon, size: 14, color: Colors.white),
+                      const SizedBox(width: 4),
+                      Text(
+                        g.label,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// 统一的 banner 数据（硬编码 + 后端共用）
 class _BannerData {
   const _BannerData({

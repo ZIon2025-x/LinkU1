@@ -15,7 +15,7 @@ import '../../../core/utils/logger.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../data/models/coupon_points.dart';
 import '../../../data/repositories/coupon_points_repository.dart';
-import '../../../data/models/payment.dart' show TaskPaymentResponse;
+import '../../../data/models/payment.dart' show TaskPaymentResponse, WalletBalance;
 import '../../../data/repositories/payment_repository.dart';
 import '../../../data/services/payment_service.dart';
 import '../../../core/constants/app_assets.dart';
@@ -62,6 +62,12 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
   String? _effectiveAmountDisplay;
   // createTaskPayment 返回的完整响应（用于 Apple Pay amount 等）
   TaskPaymentResponse? _paymentResponse;
+  // 钱包余额
+  WalletBalance? _walletBalance;
+  bool _useWalletBalance = false;
+  bool _loadingWallet = false;
+  bool _togglingWallet = false;
+
   // 支付宝单独 PaymentIntent（选择支付宝时懒加载）
   String? _alipayClientSecret;
   String? _alipayCustomerId;
@@ -91,6 +97,7 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
     _effectiveAmountDisplay = widget.paymentData.amountDisplay;
     _initCountdown();
     _loadCouponsIfTaskPayment();
+    _loadWalletBalance();
     _checkAlreadyPaid();
     PaymentService.instance.isApplePaySupported().then((v) {
       if (mounted) setState(() => _applePaySupported = v);
@@ -184,6 +191,66 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
     });
   }
 
+  Future<void> _loadWalletBalance() async {
+    setState(() => _loadingWallet = true);
+    try {
+      final balance = await context.read<PaymentRepository>().getWalletBalance();
+      if (mounted) {
+        setState(() {
+          _walletBalance = balance;
+          _loadingWallet = false;
+        });
+      }
+    } catch (e) {
+      AppLogger.warning('Failed to load wallet balance: $e');
+      if (mounted) setState(() => _loadingWallet = false);
+    }
+  }
+
+  Future<void> _toggleWalletBalance(bool useWallet) async {
+    if (_togglingWallet) return;
+    final taskId = widget.paymentData.taskId;
+    setState(() {
+      _togglingWallet = true;
+      _useWalletBalance = useWallet;
+      _errorMessage = null;
+    });
+    try {
+      final response = await context.read<PaymentRepository>().createTaskPayment(
+        taskId: taskId,
+        userCouponId: _selectedUserCoupon?.id,
+        taskSource: widget.paymentData.taskSource,
+        fleaMarketItemId: widget.paymentData.fleaMarketItemId,
+        useWalletBalance: useWallet,
+      );
+      if (!mounted) return;
+      setState(() {
+        _togglingWallet = false;
+        _paymentResponse = response;
+        _effectiveClientSecret = response.clientSecret;
+        _effectiveCustomerId = response.customerId;
+        _effectiveEphemeralKeySecret = response.ephemeralKeySecret;
+        _effectiveAmountDisplay = response.finalAmountDisplay;
+        // 钱包变更后需要重新请求 Alipay PaymentIntent
+        _alipayClientSecret = null;
+        _alipayCustomerId = null;
+        _alipayEphemeralKeySecret = null;
+      });
+
+      // 纯钱包支付（后端已扣款完成）
+      if (response.isWalletOnly) {
+        _handlePaymentSuccess();
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _togglingWallet = false;
+        _useWalletBalance = !useWallet; // 回退
+        _errorMessage = e.toString().replaceAll('PaymentException: ', '');
+      });
+    }
+  }
+
   void _loadCouponsIfTaskPayment() {
     setState(() => _loadingCoupons = true);
     context.read<CouponPointsRepository>().getMyCoupons(
@@ -235,6 +302,7 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
         userCouponId: coupon?.id,
         taskSource: widget.paymentData.taskSource,
         fleaMarketItemId: widget.paymentData.fleaMarketItemId,
+        useWalletBalance: _useWalletBalance,
       );
       if (!mounted) return;
       setState(() {
@@ -680,7 +748,8 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
                     ),
                     const SizedBox(height: AppSpacing.lg),
                   ],
-                  if (amountText.isNotEmpty) ...[
+                  // 钱包余额切换
+                  if (_walletBalance != null && _walletBalance!.balance > 0) ...[
                     Container(
                       padding: const EdgeInsets.all(AppSpacing.lg),
                       decoration: BoxDecoration(
@@ -695,17 +764,90 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
                         ],
                       ),
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            l10n.paymentFinalPayment,
-                            style: AppTypography.bodyBold,
-                          ),
-                          Text(
-                            amountText,
-                            style: AppTypography.title2.copyWith(
-                              color: AppColors.primary,
+                          const Icon(Icons.account_balance_wallet_outlined,
+                              size: 20, color: AppColors.primary),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(l10n.walletBalance,
+                                    style: AppTypography.subheadlineBold),
+                                Text(
+                                  '${Helpers.currencySymbolFor(_walletBalance!.currency)}${_walletBalance!.balance.toStringAsFixed(2)}',
+                                  style: AppTypography.caption.copyWith(
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ],
                             ),
+                          ),
+                          if (_togglingWallet)
+                            const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          else
+                            Switch.adaptive(
+                              value: _useWalletBalance,
+                              onChanged: _isProcessing ? null : _toggleWalletBalance,
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                  ],
+                  if (amountText.isNotEmpty) ...[
+                    Container(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).cardColor,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 5),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          if (_paymentResponse?.walletAmountUsed != null &&
+                              _paymentResponse!.walletAmountUsed! > 0) ...[
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(l10n.walletBalance,
+                                    style: AppTypography.body),
+                                Text(
+                                  '-${Helpers.currencySymbolFor(widget.paymentData.currency)}${(_paymentResponse!.walletAmountUsed! / 100).toStringAsFixed(2)}',
+                                  style: AppTypography.body.copyWith(
+                                    color: AppColors.success,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                          ],
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                l10n.paymentFinalPayment,
+                                style: AppTypography.bodyBold,
+                              ),
+                              Text(
+                                _paymentResponse?.isMixedPayment == true
+                                    ? '${Helpers.currencySymbolFor(widget.paymentData.currency)}${(_paymentResponse!.stripeAmountDue! / 100).toStringAsFixed(2)}'
+                                    : amountText,
+                                style: AppTypography.title2.copyWith(
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),

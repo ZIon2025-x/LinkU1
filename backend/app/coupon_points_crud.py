@@ -50,12 +50,12 @@ def get_points_account(db: Session, user_id: str) -> Optional[models.PointsAccou
     return db.query(models.PointsAccount).filter(models.PointsAccount.user_id == user_id).first()
 
 
-def create_points_account(db: Session, user_id: str) -> models.PointsAccount:
+def create_points_account(db: Session, user_id: str, currency: str = "GBP") -> models.PointsAccount:
     """创建积分账户"""
     account = models.PointsAccount(
         user_id=user_id,
         balance=0,
-        currency="GBP",
+        currency=currency,
         total_earned=0,
         total_spent=0
     )
@@ -84,7 +84,8 @@ def add_points_transaction(
     batch_id: Optional[str] = None,
     expires_at: Optional[datetime] = None,
     description: Optional[str] = None,
-    idempotency_key: Optional[str] = None
+    idempotency_key: Optional[str] = None,
+    currency: str = "GBP"
 ) -> models.PointsTransaction:
     """
     添加积分交易记录并更新账户余额（带并发控制和幂等性保护）
@@ -112,7 +113,7 @@ def add_points_transaction(
         account = models.PointsAccount(
             user_id=user_id,
             balance=0,
-            currency="GBP",
+            currency=currency if currency else "GBP",
             total_earned=0,
             total_spent=0
         )
@@ -534,7 +535,8 @@ def use_coupon(
     task_location: Optional[str] = None,
     task_type: Optional[str] = None,
     task_date: Optional[datetime] = None,
-    idempotency_key: Optional[str] = None
+    idempotency_key: Optional[str] = None,
+    currency: str = "GBP"
 ) -> tuple[Optional[models.CouponUsageLog], Optional[str]]:
     """使用优惠券"""
     # 检查幂等性
@@ -583,7 +585,7 @@ def use_coupon(
         order_amount_incl_tax=order_amount,
         final_amount_before_tax=final_amount,
         final_amount_incl_tax=final_amount,
-        currency="GBP",
+        currency=currency or "GBP",
         idempotency_key=idempotency_key
     )
     db.add(usage_log)

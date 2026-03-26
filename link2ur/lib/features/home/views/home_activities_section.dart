@@ -120,8 +120,54 @@ class _DiscoveryFeedSkeleton extends StatelessWidget {
 ///   鈫?鎵€鏈夋潯鐩珛鍗冲叏閮?layout锛屾棤瑙嗗彛瑁佸壀锛宨tems 瓒婂瓒婂崱
 /// 鏂版柟妗堬細SliverMasonryGrid 澶╃劧鏀寔瑙嗗彛浼樺寲锛屽彧鏋勫缓鍙鍖哄煙
 class _SliverDiscoveryFeed extends StatelessWidget {
-  const _SliverDiscoveryFeed({required this.horizontalPadding});
+  const _SliverDiscoveryFeed({
+    required this.horizontalPadding,
+    this.banners = const [],
+  });
   final double horizontalPadding;
+  final List<app_banner.Banner> banners;
+
+  /// 把 banner 均匀插入 discoveryItems，返回混合列表
+  List<Object> _buildMixedItems(List<DiscoveryFeedItem> items) {
+    if (banners.isEmpty) return items;
+
+    final allBanners = <_BannerData>[
+      const _BannerData(
+        localImage: AppAssets.studentVerificationBanner,
+        gradient: AppColors.gradientIndigo,
+        icon: Icons.school,
+        linkUrl: '/student-verification',
+      ),
+      for (final b in banners)
+        _BannerData(
+          title: b.title,
+          subtitle: b.subtitle,
+          networkImage: b.imageUrl,
+          gradient: AppColors.gradientPrimary,
+          icon: Icons.campaign,
+          linkType: b.linkType,
+          linkUrl: b.linkUrl,
+        ),
+    ];
+
+    // 每隔 interval 个 feed item 插一个 banner
+    final interval = items.length > allBanners.length
+        ? (items.length / (allBanners.length + 1)).ceil().clamp(3, 8)
+        : 4;
+
+    final mixed = <Object>[];
+    int bannerIdx = 0;
+    for (int i = 0; i < items.length; i++) {
+      if (i > 0 && i % interval == 0 && bannerIdx < allBanners.length) {
+        mixed.add(allBanners[bannerIdx++]);
+      }
+      mixed.add(items[i]);
+    }
+    while (bannerIdx < allBanners.length) {
+      mixed.add(allBanners[bannerIdx++]);
+    }
+    return mixed;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -155,6 +201,8 @@ class _SliverDiscoveryFeed extends StatelessWidget {
         }
 
         // 璁＄畻鎬?item 鏁?= feed items + (鍔犺浇鏇村鎸夐挳鍗?1 涓?Sliver)
+        final mixedItems = _buildMixedItems(state.discoveryItems);
+
         return SliverMainAxisGroup(
           slivers: [
             SliverPadding(
@@ -163,11 +211,16 @@ class _SliverDiscoveryFeed extends StatelessWidget {
                 crossAxisCount: ResponsiveUtils.gridColumnCount(context),
                 mainAxisSpacing: 8,
                 crossAxisSpacing: 8,
-                childCount: state.discoveryItems.length,
+                childCount: mixedItems.length,
                 itemBuilder: (context, index) {
-                  final item = state.discoveryItems[index];
+                  final item = mixedItems[index];
+                  if (item is _BannerData) {
+                    return RepaintBoundary(
+                      child: _DiscoveryBannerCard(banner: item),
+                    );
+                  }
                   return RepaintBoundary(
-                    child: _DiscoveryFeedCard(item: item),
+                    child: _DiscoveryFeedCard(item: item as DiscoveryFeedItem),
                   );
                 },
               ),
@@ -314,6 +367,161 @@ class _FeedTypeBadge extends StatelessWidget {
       default:
         return l10n.sidebarDiscover;
     }
+  }
+}
+
+/// 发现更多区域内的 Banner 静态卡片（单张，非轮播）
+class _DiscoveryBannerCard extends StatelessWidget {
+  const _DiscoveryBannerCard({required this.banner});
+  final _BannerData banner;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final displayTitle = banner.title ??
+        (banner.linkUrl == '/student-verification'
+            ? l10n.homeStudentVerification
+            : '');
+    final displaySubtitle = banner.subtitle ??
+        (banner.linkUrl == '/student-verification'
+            ? l10n.homeStudentVerificationSubtitle
+            : '');
+
+    return GestureDetector(
+      onTap: () {
+        final linkUrl = banner.linkUrl;
+        if (linkUrl == null || linkUrl.isEmpty) return;
+        if (banner.linkType == 'external') {
+          ExternalWebView.openInApp(context, url: linkUrl);
+        } else {
+          context.safePush(linkUrl);
+        }
+      },
+      child: Container(
+        clipBehavior: Clip.hardEdge,
+        decoration: BoxDecoration(
+          gradient: !banner.hasImage
+              ? LinearGradient(
+                  colors: banner.gradient,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          borderRadius: BorderRadius.circular(_kDiscoveryCardRadius),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: AspectRatio(
+          aspectRatio: 16 / 9,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (banner.localImage != null)
+                Image.asset(
+                  banner.localImage!,
+                  fit: BoxFit.cover,
+                  cacheWidth: 800,
+                  errorBuilder: (_, __, ___) => Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: banner.gradient,
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                  ),
+                )
+              else if (banner.networkImage != null && banner.networkImage!.isNotEmpty)
+                AsyncImageView(
+                  imageUrl: banner.networkImage!,
+                  memCacheWidth: 800,
+                  placeholder: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: banner.gradient,
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                  ),
+                  errorWidget: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: banner.gradient,
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                  ),
+                ),
+              if (banner.hasImage)
+                Positioned(
+                  left: 0, right: 0, bottom: 0, height: 60,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.black.withValues(alpha: 0.5),
+                          Colors.transparent,
+                        ],
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                      ),
+                    ),
+                  ),
+                ),
+              if (!banner.hasImage)
+                Positioned(
+                  right: 10, top: 8,
+                  child: Icon(
+                    banner.icon,
+                    size: 40,
+                    color: Colors.white.withValues(alpha: 0.25),
+                  ),
+                ),
+              if (displayTitle.isNotEmpty || displaySubtitle.isNotEmpty)
+                Positioned(
+                  left: 10, right: 10, bottom: 8,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (displayTitle.isNotEmpty)
+                        Text(
+                          displayTitle,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            shadows: [Shadow(color: Colors.black38, blurRadius: 4)],
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      if (displaySubtitle.isNotEmpty)
+                        Text(
+                          displaySubtitle,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.9),
+                            fontSize: 11,
+                            shadows: const [Shadow(color: Colors.black38, blurRadius: 4)],
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

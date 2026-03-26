@@ -11,7 +11,7 @@ from typing import Tuple, Optional
 from sqlalchemy.orm import Session
 from app import models, crud
 from app.utils.time_utils import get_utc_time
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 
 logger = logging.getLogger(__name__)
 
@@ -150,6 +150,58 @@ def process_refund(
                         # 反向转账失败不影响退款流程，但需要记录
                         refund_transfer_id = None
         
+        # 2.5 退还混合支付中的钱包扣款部分（如果有）
+        try:
+            payment_history = db.query(models.PaymentHistory).filter(
+                models.PaymentHistory.task_id == task.id,
+                models.PaymentHistory.status == "succeeded",
+                models.PaymentHistory.payment_method.in_(["mixed", "wallet"]),
+            ).order_by(models.PaymentHistory.created_at.desc()).first()
+
+            if payment_history and payment_history.extra_metadata:
+                wallet_tx_id = payment_history.extra_metadata.get("wallet_tx_id")
+                wallet_deduction_pence = payment_history.extra_metadata.get("wallet_deduction_pence", 0)
+
+                if wallet_tx_id and wallet_deduction_pence and int(wallet_deduction_pence) > 0:
+                    from app.wallet_service import credit_wallet
+                    wallet_refund_pounds = Decimal(str(wallet_deduction_pence)) / Decimal("100")
+
+                    # 部分退款时：按退款比例退还钱包部分
+                    refund_amount_decimal = Decimal(str(refund_amount))
+                    task_amount = (
+                        Decimal(str(task.agreed_reward)) if task.agreed_reward is not None
+                        else Decimal(str(task.base_reward)) if task.base_reward is not None
+                        else Decimal("0")
+                    )
+                    if task_amount > 0 and refund_amount_decimal < task_amount:
+                        # 部分退款：按比例退还钱包扣款
+                        refund_ratio = refund_amount_decimal / task_amount
+                        wallet_refund_pounds = (wallet_refund_pounds * refund_ratio).quantize(
+                            Decimal("0.01"), rounding=ROUND_HALF_UP
+                        )
+
+                    if wallet_refund_pounds > 0:
+                        idempotency_key = f"refund_wallet:task:{task.id}:refund:{refund_request.id}"
+                        credit_wallet(
+                            db=db,
+                            user_id=str(payment_history.user_id),
+                            amount=wallet_refund_pounds,
+                            source="refund",
+                            related_id=str(task.id),
+                            related_type="task",
+                            description=f"退款 - 任务 #{task.id} 钱包扣款退还",
+                            idempotency_key=idempotency_key,
+                            currency=payment_history.currency or "GBP",
+                        )
+                        logger.info(
+                            f"✅ 钱包扣款已退还: task_id={task.id}, "
+                            f"wallet_refund=£{wallet_refund_pounds:.2f}, "
+                            f"original_deduction={wallet_deduction_pence}p"
+                        )
+        except Exception as e:
+            logger.warning(f"退还钱包扣款时发生错误: {e}，不影响退款流程", exc_info=True)
+            # 钱包退还失败不阻塞退款流程
+
         # 3. 更新任务状态和托管金额
         # 🔒 并发安全：使用 SELECT FOR UPDATE 锁定任务，防止并发退款操作修改 escrow
         from sqlalchemy import func, and_, select as sa_select
@@ -292,7 +344,7 @@ def process_refund(
                                         taker_id=task.taker_id,
                                         poster_id=task.poster_id,
                                         amount=remaining_after_transfer,  # 只转账剩余部分
-                                        currency="GBP",
+                                        currency=task.currency or "GBP",
                                         metadata={
                                             "task_title": task.title,
                                             "transfer_source": "partial_refund_auto",
@@ -327,7 +379,7 @@ def process_refund(
                                     taker_id=task.taker_id,
                                     poster_id=task.poster_id,
                                     amount=remaining_after_transfer,
-                                    currency="GBP",
+                                    currency=task.currency or "GBP",
                                     metadata={
                                         "task_title": task.title,
                                         "transfer_source": "partial_refund_auto",

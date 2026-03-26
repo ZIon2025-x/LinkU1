@@ -1347,7 +1347,7 @@ class _ApplyTaskSheetState extends State<ApplyTaskSheet> {
       }
       // 待报价任务：报价金额必须大于 £1
       if (widget.task.rewardToBeQuoted && amount <= 1.0) {
-        return context.l10n.taskApplyQuoteAmountMin;
+        return context.l10n.taskApplyQuoteAmountMin(Helpers.currencySymbolFor(widget.task.currency));
       }
     }
     return null;
@@ -1521,7 +1521,7 @@ class _ApplyTaskSheetState extends State<ApplyTaskSheet> {
                             decoration: InputDecoration(
                               labelText: l10n.taskApplicationExpectedAmount,
                               hintText: widget.task.rewardToBeQuoted
-                                  ? l10n.taskApplyQuoteAmountHint
+                                  ? l10n.taskApplyQuoteAmountHint(Helpers.currencySymbolFor(widget.task.currency))
                                   : null,
                               prefixText:
                                   '${Helpers.currencySymbolFor(widget.task.currency)} ',
@@ -1540,7 +1540,7 @@ class _ApplyTaskSheetState extends State<ApplyTaskSheet> {
                           const SizedBox(height: 4),
                           Text(
                             widget.task.rewardToBeQuoted
-                                ? l10n.taskApplyQuoteAmountMin
+                                ? l10n.taskApplyQuoteAmountMin(Helpers.currencySymbolFor(widget.task.currency))
                                 : l10n.taskApplicationNegotiatePriceHint,
                             style: const TextStyle(
                               fontSize: 12,
@@ -1881,7 +1881,7 @@ class _RefundRequestSheetState extends State<RefundRequestSheet> {
               ),
               const SizedBox(height: 4),
               Text(
-                context.l10n.refundTaskAmountFormat(widget.taskAmount),
+                context.l10n.refundTaskAmountFormat(widget.taskAmount, Helpers.currencySymbolFor(widget.currency)),
                 style: AppTypography.caption.copyWith(
                   color: isDark
                       ? AppColors.textSecondaryDark
@@ -1898,7 +1898,7 @@ class _RefundRequestSheetState extends State<RefundRequestSheet> {
                           const TextInputType.numberWithOptions(decimal: true),
                       onChanged: _onAmountChanged,
                       decoration: InputDecoration(
-                        labelText: context.l10n.refundAmountPound,
+                        labelText: context.l10n.refundAmountPound(Helpers.currencySymbolFor(widget.currency)),
                         prefixText: '${Helpers.currencySymbolFor(widget.currency)} ',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -2681,7 +2681,7 @@ class _QuoteDesignatedPriceSheetState
   String? _validate() {
     final amount = double.tryParse(_amountController.text.trim());
     if (amount == null || amount <= 1.0) {
-      return context.l10n.taskApplyQuoteAmountMin;
+      return context.l10n.taskApplyQuoteAmountMin(Helpers.currencySymbolFor(widget.currency ?? 'GBP'));
     }
     return null;
   }
@@ -2761,7 +2761,7 @@ class _QuoteDesignatedPriceSheetState
                       const TextInputType.numberWithOptions(decimal: true),
                   decoration: InputDecoration(
                     labelText: l10n.taskApplyQuoteAmountLabel,
-                    hintText: l10n.taskApplyQuoteAmountHint,
+                    hintText: l10n.taskApplyQuoteAmountHint(currencySymbol),
                     prefixText: '$currencySymbol ',
                     border: const OutlineInputBorder(),
                     errorText: _errorMessage,

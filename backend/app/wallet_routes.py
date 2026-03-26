@@ -7,12 +7,14 @@ import logging
 from decimal import Decimal, ROUND_DOWN
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 import stripe
 
 from app import models
 from app.deps import get_db, get_current_user_secure_sync_csrf
+from app.rate_limiting import rate_limit
 from app.wallet_models import WalletAccount, WalletTransaction
 from app.wallet_schemas import (
     WalletBalanceOut,
@@ -139,9 +141,16 @@ def get_transactions(
 # POST /api/wallet/withdraw
 # ---------------------------------------------------------------------------
 
+# 🔒 Fix W3: 提现金额限制
+MAX_SINGLE_WITHDRAWAL = Decimal("5000.00")  # 单笔上限 £5000
+MAX_DAILY_WITHDRAWAL = Decimal("10000.00")  # 日累计上限 £10000
+
+
 @router.post("/withdraw", response_model=WithdrawResponse)
+@rate_limit("wallet_withdraw")
 def withdraw(
     req: WithdrawRequest,
+    request: Request,  # rate_limit 需要
     current_user: models.User = Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db),
 ):
@@ -164,6 +173,33 @@ def withdraw(
     amount_pence = int(amount * 100)
 
     currency = req.currency.upper()
+
+    # 🔒 Fix W3: 单笔提现上限
+    if amount > MAX_SINGLE_WITHDRAWAL:
+        raise HTTPException(
+            status_code=400,
+            detail=f"单笔提现不能超过 £{MAX_SINGLE_WITHDRAWAL}",
+        )
+
+    # 🔒 Fix W3: 日累计提现上限（查最近 24 小时已完成 + pending 的提现总额）
+    from datetime import datetime, timedelta, timezone as tz
+    _24h_ago = datetime.now(tz.utc) - timedelta(hours=24)
+    daily_total = (
+        db.query(func.coalesce(func.sum(func.abs(WalletTransaction.amount)), 0))
+        .filter(
+            WalletTransaction.user_id == current_user.id,
+            WalletTransaction.type == "withdrawal",
+            WalletTransaction.status.in_(["completed", "pending"]),
+            WalletTransaction.currency == currency,
+            WalletTransaction.created_at >= _24h_ago,
+        )
+        .scalar()
+    )
+    if Decimal(str(daily_total)) + amount > MAX_DAILY_WITHDRAWAL:
+        raise HTTPException(
+            status_code=400,
+            detail=f"24小时内累计提现不能超过 £{MAX_DAILY_WITHDRAWAL}（已提 £{daily_total:.2f}）",
+        )
 
     # Phase 1: DB — create pending withdrawal (commits internally via flush, we commit here)
     try:

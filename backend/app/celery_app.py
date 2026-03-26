@@ -299,6 +299,20 @@ celery_app.conf.beat_schedule = {
         'task': 'app.celery_tasks.cleanup_nearby_task_pushes_task',
         'schedule': crontab(hour=2, minute=30),
     },
+
+    # 🔒 钱包 pending 交易超时清理 - 每15分钟执行
+    # 防止因 PI 创建失败或用户切换支付方式导致 pending wallet tx 永远悬挂
+    'cleanup-stale-pending-wallet-txs': {
+        'task': 'app.celery_tasks.cleanup_stale_pending_wallet_txs_task',
+        'schedule': crontab(minute='*/15'),  # 每15分钟
+    },
+
+    # 🔒 钱包提现对账 - 每10分钟执行
+    # 对账 Stripe Transfer 状态，处理 DB 更新失败或 webhook 遗漏的提现
+    'reconcile-pending-withdrawals': {
+        'task': 'app.celery_tasks.reconcile_pending_withdrawals_task',
+        'schedule': 600.0,  # 每10分钟
+    },
 }
 
 # 如果使用内存后端，禁用结果存储

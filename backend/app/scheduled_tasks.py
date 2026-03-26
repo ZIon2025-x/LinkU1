@@ -1954,6 +1954,13 @@ def auto_transfer_expired_tasks(db: Session):
                     savepoint.rollback()
                     stats["skipped"] += 1
                     continue
+
+                # 保护层 2.5：锁定后重新校验 escrow（防止 process_refund 在查询和锁定之间修改了 escrow）
+                if locked_task.escrow_amount is None or Decimal(str(locked_task.escrow_amount)) <= 0:
+                    logger.info(f"任务 {task.id} 锁定后 escrow_amount 已为 0，跳过")
+                    savepoint.rollback()
+                    stats["skipped"] += 1
+                    continue
                 
                 # ======== 创建转账记录 ========
                 
@@ -1964,7 +1971,7 @@ def auto_transfer_expired_tasks(db: Session):
                         taker_id=task.taker_id,
                         poster_id=task.poster_id,
                         amount=auto_transfer_amount,
-                        currency="GBP",
+                        currency=task.currency or "GBP",
                         metadata={
                             "transfer_source": "auto_confirm_expired",
                             "original_escrow": str(escrow),

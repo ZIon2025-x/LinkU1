@@ -18,6 +18,7 @@ import '../../../core/constants/api_endpoints.dart';
 import '../../../core/router/page_transitions.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
+import '../../../core/utils/helpers.dart';
 import '../bloc/task_detail_bloc.dart';
 import 'approval_payment_page.dart';
 
@@ -224,7 +225,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
                 }
                 if (price > 50000) {
                   setDialogState(() {
-                    errorText = context.l10n.priceExceedsMaximum;
+                    errorText = context.l10n.priceExceedsMaximum(Helpers.currencySymbolFor(context.read<TaskDetailBloc>().state.task?.currency ?? 'GBP'));
                   });
                   return;
                 }
@@ -374,7 +375,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
           AppSpacing.hSm,
           Expanded(
             child: Text(
-              context.l10n.currentPrice(priceDisplay),
+              context.l10n.currentPrice(priceDisplay, Helpers.currencySymbolFor(state.task?.currency ?? 'GBP')),
               style: const TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 14,

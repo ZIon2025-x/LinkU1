@@ -1985,7 +1985,7 @@ async def accept_application(
             pi_metadata["original_paid_pence"] = str(round(top_up_original_paid * 100))
         create_pi_kw = {
             "amount": charge_pence,
-            "currency": "gbp",
+            "currency": (getattr(locked_task, "currency", None) or "GBP").lower(),
             "payment_method_types": ["card", "wechat_pay", "alipay"],
             "description": payment_description,
             "metadata": pi_metadata,
@@ -2031,7 +2031,7 @@ async def accept_application(
             "client_secret": payment_intent.client_secret,
             "amount": charge_pence,
             "amount_display": f"{charge_pence / 100:.2f}",
-            "currency": "GBP",
+            "currency": getattr(locked_task, "currency", None) or "GBP",
             "customer_id": customer_id,
             "ephemeral_key_secret": ephemeral_key_secret,
         }
@@ -2609,7 +2609,7 @@ async def confirm_and_pay(
         payment_method_options = get_wechat_pay_payment_method_options(request)
         create_pi_kw = {
             "amount": final_price_pence,
-            "currency": "gbp",
+            "currency": (getattr(locked_task, "currency", None) or "GBP").lower(),
             "payment_method_types": ["card", "wechat_pay", "alipay"],
             "description": payment_description,
             "metadata": {
@@ -2663,7 +2663,7 @@ async def confirm_and_pay(
             "client_secret": payment_intent.client_secret,
             "amount": final_price_pence,
             "amount_display": f"{final_price_pence / 100:.2f}",
-            "currency": "GBP",
+            "currency": getattr(locked_task, "currency", None) or "GBP",
             "customer_id": customer_id,
             "ephemeral_key_secret": ephemeral_key_secret,
         }
@@ -3933,7 +3933,7 @@ async def respond_negotiation(
                 payment_method_options = get_wechat_pay_payment_method_options(http_request)
                 create_pi_kw = {
                     "amount": task_amount_pence,
-                    "currency": "gbp",
+                    "currency": (getattr(locked_task, "currency", None) or "GBP").lower(),
                     "payment_method_types": ["card", "wechat_pay", "alipay"],
                     "description": f"任务 #{task_id}: {locked_task.title[:50] if locked_task.title else 'Task'} - 接受议价申请 #{application_id}",
                     "metadata": {

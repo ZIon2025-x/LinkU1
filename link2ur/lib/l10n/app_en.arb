@@ -5155,5 +5155,16 @@
   "fleaMarketErrorGetRentalRequestsFailed": "Failed to load rental requests",
   "fleaMarketErrorNotRentalItem": "This item is not available for rent",
   "fleaMarketErrorCannotRentOwnItem": "You cannot rent your own item",
-  "fleaMarketErrorRentalPaymentExpired": "Rental payment has expired"
+  "fleaMarketErrorRentalPaymentExpired": "Rental payment has expired",
+
+  "homeFlowTitle": "Safe Transactions, Easy Collaboration",
+  "homeFlowSubtitle": "Escrowed funds · Full protection · Dispute refunds",
+  "homeFlowStepPost": "Post Task/Skill",
+  "homeFlowStepApply": "Apply & Approve",
+  "homeFlowStepPay": "Pay & Escrow",
+  "homeFlowStepConfirm": "Confirm Done",
+  "homeFlowStepRelease": "Release Funds",
+  "homeFlowGuaranteeEscrow": "Fund Escrow",
+  "homeFlowGuaranteeRefund": "Full Refund Guarantee",
+  "homeFlowGuaranteeDispute": "Dispute Mediation"
 }

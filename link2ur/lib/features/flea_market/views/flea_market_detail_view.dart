@@ -75,29 +75,87 @@ class _FleaMarketDetailContent extends StatelessWidget {
 
     return BlocListener<FleaMarketRentalBloc, FleaMarketRentalState>(
       listenWhen: (prev, curr) =>
-          curr.actionMessage != null &&
-          prev.actionMessage != curr.actionMessage,
+          (curr.actionMessage != null &&
+              prev.actionMessage != curr.actionMessage) ||
+          (curr.acceptPaymentData != null &&
+              prev.acceptPaymentData != curr.acceptPaymentData),
       listener: (context, rentalState) {
-        final l10n = context.l10n;
-        final message = switch (rentalState.actionMessage) {
-          'rental_request_sent' => l10n.fleaMarketRentalRequestSent,
-          'rental_request_approved' => l10n.fleaMarketRentalApproved,
-          'rental_request_rejected' => l10n.fleaMarketRentalRejected,
-          'rental_counter_offer_sent' => l10n.fleaMarketNegotiate,
-          'rental_return_confirmed' => l10n.fleaMarketConfirmReturn,
-          _ => rentalState.actionMessage ?? '',
-        };
-        final isSuccess = rentalState.actionMessage == 'rental_request_sent' ||
-            rentalState.actionMessage == 'rental_request_approved' ||
-            rentalState.actionMessage == 'rental_request_rejected' ||
-            rentalState.actionMessage == 'rental_counter_offer_sent' ||
-            rentalState.actionMessage == 'rental_return_confirmed';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(message),
-            backgroundColor: isSuccess ? AppColors.success : AppColors.error,
-          ),
-        );
+        // 租客接受还价后打开支付页（物主 approve 不打开支付页，由通知引导租客支付）
+        if (rentalState.actionMessage == 'rental_counter_offer_accepted' &&
+            rentalState.acceptPaymentData != null) {
+          final raw = rentalState.acceptPaymentData!;
+          final data = raw['data'] as Map<String, dynamic>? ?? raw;
+          final clientSecret = data['client_secret'] as String?;
+          if (clientSecret != null && clientSecret.isNotEmpty) {
+            context
+                .read<FleaMarketRentalBloc>()
+                .add(const RentalClearPaymentData());
+            final paymentData = AcceptPaymentData(
+              taskId: int.tryParse(data['task_id']?.toString() ?? '') ?? 0,
+              clientSecret: clientSecret,
+              customerId: data['customer_id']?.toString() ?? '',
+              ephemeralKeySecret:
+                  data['ephemeral_key_secret']?.toString() ?? '',
+              amountDisplay: data['amount'] != null
+                  ? '${(data['amount'] as num) / 100}'
+                  : null,
+              paymentExpiresAt:
+                  data['payment_expires_at']?.toString(),
+              taskSource: 'flea_market_rental',
+              currency: data['currency']?.toString() ?? 'GBP',
+            );
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!context.mounted) return;
+              pushWithSwipeBack<bool>(
+                context,
+                ApprovalPaymentPage(paymentData: paymentData),
+              ).then((paid) {
+                if (!context.mounted) return;
+                if (paid == true) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(context.l10n.actionPurchaseSuccess),
+                      backgroundColor: AppColors.success,
+                    ),
+                  );
+                }
+                context
+                    .read<FleaMarketBloc>()
+                    .add(FleaMarketLoadDetailRequested(itemId));
+              });
+            });
+            return;
+          }
+        }
+
+        if (rentalState.actionMessage != null) {
+          final l10n = context.l10n;
+          final message = switch (rentalState.actionMessage) {
+            'rental_request_sent' => l10n.fleaMarketRentalRequestSent,
+            'rental_request_approved' => l10n.fleaMarketRentalApproved,
+            'rental_request_rejected' => l10n.fleaMarketRentalRejected,
+            'rental_counter_offer_sent' => l10n.fleaMarketNegotiate,
+            'rental_return_confirmed' => l10n.fleaMarketConfirmReturn,
+            'rental_counter_offer_accepted' =>
+              l10n.fleaMarketRentalApproved,
+            _ => rentalState.actionMessage ?? '',
+          };
+          final isSuccess =
+              rentalState.actionMessage == 'rental_request_sent' ||
+                  rentalState.actionMessage == 'rental_request_approved' ||
+                  rentalState.actionMessage == 'rental_request_rejected' ||
+                  rentalState.actionMessage == 'rental_counter_offer_sent' ||
+                  rentalState.actionMessage == 'rental_return_confirmed' ||
+                  rentalState.actionMessage ==
+                      'rental_counter_offer_accepted';
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(message),
+              backgroundColor:
+                  isSuccess ? AppColors.success : AppColors.error,
+            ),
+          );
+        }
         // 刷新商品详情
         context.read<FleaMarketBloc>().add(FleaMarketLoadDetailRequested(itemId));
       },

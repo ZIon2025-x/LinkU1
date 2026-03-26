@@ -4962,5 +4962,16 @@
   "fleaMarketErrorGetRentalRequestsFailed": "加載租用申請失敗",
   "fleaMarketErrorNotRentalItem": "該商品不可租用",
   "fleaMarketErrorCannotRentOwnItem": "不能租用自己的商品",
-  "fleaMarketErrorRentalPaymentExpired": "租賃支付已過期"
+  "fleaMarketErrorRentalPaymentExpired": "租賃支付已過期",
+
+  "homeFlowTitle": "安全交易，輕鬆互助",
+  "homeFlowSubtitle": "平台託管資金 · 全程保障 · 爭議可退",
+  "homeFlowStepPost": "發佈任務/技能",
+  "homeFlowStepApply": "申請&批准",
+  "homeFlowStepPay": "支付託管",
+  "homeFlowStepConfirm": "確認完成",
+  "homeFlowStepRelease": "平台放款",
+  "homeFlowGuaranteeEscrow": "資金託管",
+  "homeFlowGuaranteeRefund": "全額退款保障",
+  "homeFlowGuaranteeDispute": "爭議平台介入"
 }

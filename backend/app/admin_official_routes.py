@@ -305,7 +305,7 @@ async def create_official_activity(
         completion_rule="min",
         reward_distribution="equal",
         reward_type="points" if data.prize_type == "points" else "cash",
-        currency="GBP",
+        currency=getattr(data, "currency", None) or "GBP",
         has_time_slots=False,
         deadline=data.draw_at or data.deadline,
         images=data.images,
