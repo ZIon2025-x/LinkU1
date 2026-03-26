@@ -13823,6 +13823,49 @@ def get_banners(
         raise HTTPException(status_code=500, detail="获取广告列表失败")
 
 
+# ==================== App 版本检查 API ====================
+
+def _parse_semver(version_str: str) -> tuple:
+    """将版本字符串解析为 (major, minor, patch) 元组用于比较"""
+    try:
+        parts = version_str.strip().split(".")
+        return tuple(int(p) for p in parts[:3])
+    except (ValueError, AttributeError):
+        return (0, 0, 0)
+
+
+@router.get("/api/app/version-check")
+def check_app_version(platform: str, current_version: str):
+    """
+    公开接口：检查 App 版本。
+    - platform: ios / android
+    - current_version: 当前 App 版本号，如 1.1.1
+    返回最新版本、最低版本、是否强制更新、更新链接。
+    """
+    latest = Config.APP_LATEST_VERSION
+    min_ver = Config.APP_MIN_VERSION
+    release_notes = Config.APP_RELEASE_NOTES
+
+    # 根据平台返回对应商店链接
+    if platform.lower() == "ios":
+        update_url = Config.IOS_STORE_URL
+    else:
+        update_url = Config.ANDROID_STORE_URL
+
+    # 语义化版本比较
+    current_parsed = _parse_semver(current_version)
+    min_parsed = _parse_semver(min_ver)
+    force_update = current_parsed < min_parsed
+
+    return {
+        "latest_version": latest,
+        "min_version": min_ver,
+        "force_update": force_update,
+        "update_url": update_url,
+        "release_notes": release_notes,
+    }
+
+
 # ==================== FAQ 库 API ====================
 
 @router.get("/faq", response_model=schemas.FaqListResponse)
