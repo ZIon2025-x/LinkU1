@@ -279,17 +279,17 @@ class TestAuthAPI:
             headers = {}
             if TestAuthAPI._access_token:
                 headers["Authorization"] = f"Bearer {TestAuthAPI._access_token}"
-            
+
             response = client.get(
                 f"{self.base_url}/api/users/me",
                 headers=headers
             )
 
             assert response.status_code == 200, f"获取用户信息失败: {response.text}"
-            
+
             data = response.json()
             assert "email" in data or "id" in data, f"响应缺少用户信息: {data}"
-            
+
             print(f"✅ 成功获取用户信息")
 
     @pytest.mark.api
