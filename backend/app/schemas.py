@@ -2415,6 +2415,7 @@ class TaskExpertServiceOut(BaseModel):
     images: Optional[List[str]]
     base_price: float
     currency: Literal["GBP", "EUR"]  # 统一为Literal类型
+    skills: Optional[List[str]] = None
     status: str
     display_order: int
     view_count: int
@@ -2452,6 +2453,7 @@ class TaskExpertServiceOut(BaseModel):
             "images": obj.images,
             "base_price": float(obj.base_price),
             "currency": obj.currency,
+            "skills": obj.skills if obj.skills else None,
             "status": obj.status,
             "display_order": obj.display_order,
             "view_count": obj.view_count,

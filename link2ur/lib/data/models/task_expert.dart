@@ -339,6 +339,7 @@ class TaskExpertService extends Equatable {
     this.ownerName,
     this.ownerAvatar,
     this.ownerRating,
+    this.skills,
   });
 
   final int id;
@@ -361,6 +362,7 @@ class TaskExpertService extends Equatable {
   final int viewCount;
   final int applicationCount;
   final DateTime? createdAt;
+  final List<String>? skills;
 
   // 时间段相关
   final bool hasTimeSlots;
@@ -445,6 +447,9 @@ class TaskExpertService extends Equatable {
       ownerName: json['owner_name']?.toString(),
       ownerAvatar: json['owner_avatar']?.toString(),
       ownerRating: (json['owner_rating'] as num?)?.toDouble(),
+      skills: (json['skills'] as List<dynamic>?)
+          ?.map((e) => e.toString())
+          .toList(),
     );
   }
 
@@ -478,11 +483,12 @@ class TaskExpertService extends Equatable {
       'owner_name': ownerName,
       'owner_avatar': ownerAvatar,
       'owner_rating': ownerRating,
+      'skills': skills,
     };
   }
 
   @override
-  List<Object?> get props => [id, expertId, serviceType, userId, serviceName, basePrice, pricingType, locationType, location, latitude, longitude, status, isExpertVerified, ownerName, ownerAvatar, ownerRating];
+  List<Object?> get props => [id, expertId, serviceType, userId, serviceName, basePrice, pricingType, locationType, location, latitude, longitude, status, isExpertVerified, ownerName, ownerAvatar, ownerRating, skills];
 }
 
 /// 任务达人列表响应

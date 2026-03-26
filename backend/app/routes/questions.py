@@ -141,10 +141,10 @@ async def ask_question(
             notification_type="question_asked",
             title=f"有人对你的{target_label}提了一个问题",
             content=content[:50],
-            related_id=str(question.id),
+            related_id=str(body.target_id),
             title_en=f"Someone asked a question on your {target_label_en}",
             content_en=content[:50],
-            related_type="question_id",
+            related_type=f"{body.target_type}_id",
         )
     except Exception as e:
         logger.warning(f"Failed to create question notification: {e}")
@@ -184,16 +184,18 @@ async def reply_question(
     await db.refresh(question)
 
     try:
+        target_label = "任务" if question.target_type == "task" else "服务"
+        target_label_en = "task" if question.target_type == "task" else "service"
         await AsyncNotificationCRUD.create_notification(
             db=db,
             user_id=question.asker_id,
             notification_type="question_replied",
-            title="你的问题收到了回复",
+            title=f"你在{target_label}上的问题收到了回复",
             content=content[:50],
-            related_id=str(question.id),
-            title_en="Your question received a reply",
+            related_id=str(question.target_id),
+            title_en=f"Your question on a {target_label_en} received a reply",
             content_en=content[:50],
-            related_type="question_id",
+            related_type=f"{question.target_type}_id",
         )
     except Exception as e:
         logger.warning(f"Failed to create reply notification: {e}")

@@ -1996,6 +1996,54 @@ class _TaskInfoCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
           ],
 
+          // 技能标签
+          if (task.requiredSkills.isNotEmpty) ...[
+            Row(
+              children: [
+                const Icon(
+                  Icons.label_outlined,
+                  size: 18,
+                  color: AppColors.primary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  context.l10n.createTaskRequiredSkills,
+                  style: AppTypography.title3.copyWith(
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: task.requiredSkills.map((skill) => Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  skill,
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              )).toList(),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Divider(
+              color: isDark
+                  ? AppColors.dividerDark
+                  : AppColors.dividerLight,
+            ),
+            const SizedBox(height: AppSpacing.md),
+          ],
+
           // 2x2 网格布局展示信息
           LayoutBuilder(
             builder: (context, constraints) {

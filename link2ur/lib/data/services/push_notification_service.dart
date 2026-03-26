@@ -600,6 +600,9 @@ class PushNotificationService with WidgetsBindingObserver {
           _router!.push('/notifications');
         }
         break;
+      case 'service_application':
+        _router!.push('/expert-applications-management');
+        break;
       default:
         _router!.push('/notifications');
         break;

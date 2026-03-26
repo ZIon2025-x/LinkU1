@@ -531,6 +531,46 @@ class _DescriptionCard extends StatelessWidget {
                   : FontStyle.italic,
             ),
           ),
+          // 技能标签
+          if (service.skills != null && service.skills!.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Divider(color: isDark ? AppColors.dividerDark : AppColors.dividerLight),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Icon(Icons.label_outlined, size: 16, color: AppColors.primary),
+                const SizedBox(width: 6),
+                Text(
+                  context.l10n.createTaskRequiredSkills,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: service.skills!.map((skill) => Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  skill,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              )).toList(),
+            ),
+          ],
         ],
       ),
     );

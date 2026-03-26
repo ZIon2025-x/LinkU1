@@ -260,9 +260,13 @@ class _NotificationListViewContentState
       context.push('/my-service-applications');
       return;
     }
+    // 新服务申请：跳转到服务申请管理页面
+    if (type == 'service_application') {
+      context.push('/expert-applications-management');
+      return;
+    }
     // 服务申请 / 议价类：related_id 是 service_id
-    if (type == 'service_application' ||
-        type == 'service_application_rejected' ||
+    if (type == 'service_application_rejected' ||
         type == 'service_application_cancelled' ||
         type == 'counter_offer' ||
         type == 'counter_offer_accepted' ||
@@ -270,6 +274,21 @@ class _NotificationListViewContentState
         type == 'counter_offer_rejected' ||
         type == 'service_owner_reply') {
       if (relatedId != null) context.safePush('/service/$relatedId');
+      return;
+    }
+
+    // ==================== 提问/回复 ====================
+    // related_type 为 "task_id" 或 "service_id"，related_id 为对应的 target_id
+    if (type == 'question_asked' || type == 'question_replied') {
+      if (relatedId != null) {
+        final relatedType = notification.relatedType;
+        if (relatedType == 'service_id') {
+          context.safePush('/service/$relatedId');
+        } else {
+          // 默认当 task 处理
+          context.safePush('/tasks/$relatedId');
+        }
+      }
       return;
     }
 
