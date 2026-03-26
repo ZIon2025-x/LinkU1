@@ -100,6 +100,7 @@
   "authEmailPassword": "邮箱/ID密码",
   "authEmailCode": "邮箱登录",
   "authPhoneCode": "手机登录",
+  "authSelectCountryCode": "选择国家区号",
   "authEnterEmail": "请输入邮箱",
   "authEnterEmailOrId": "请输入邮箱或ID",
   "authEnterPassword": "请输入密码",

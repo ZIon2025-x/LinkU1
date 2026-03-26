@@ -87,6 +87,7 @@
   "authEmailPassword": "Email/ID & Password",
   "authEmailCode": "Email Login",
   "authPhoneCode": "Phone Login",
+  "authSelectCountryCode": "Select Country Code",
   "authEnterEmail": "Enter email",
   "authEnterEmailOrId": "Enter email or ID",
   "authEnterPassword": "Enter password",

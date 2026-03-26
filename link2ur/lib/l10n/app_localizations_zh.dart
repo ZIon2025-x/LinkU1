@@ -213,6 +213,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get authPhoneCode => '手机登录';
 
   @override
+  String get authSelectCountryCode => '选择国家区号';
+
+  @override
   String get authEnterEmail => '请输入邮箱';
 
   @override
@@ -11415,6 +11418,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get authPhoneCode => '手機登入';
+
+  @override
+  String get authSelectCountryCode => '選擇國家區號';
 
   @override
   String get authEnterEmail => '請輸入郵箱';

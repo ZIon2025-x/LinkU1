@@ -100,6 +100,7 @@
   "authEmailPassword": "郵箱/ID密碼",
   "authEmailCode": "郵箱登入",
   "authPhoneCode": "手機登入",
+  "authSelectCountryCode": "選擇國家區號",
   "authEnterEmail": "請輸入郵箱",
   "authEnterEmailOrId": "請輸入郵箱或ID",
   "authEnterPassword": "請輸入密碼",

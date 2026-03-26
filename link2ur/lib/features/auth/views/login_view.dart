@@ -13,6 +13,7 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/validators.dart';
+import '../../../core/widgets/app_select_sheet.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/router/app_router.dart';
@@ -212,33 +213,23 @@ class _LoginViewState extends State<LoginView>
     }
   }
 
-  void _showPhoneCodePicker(bool isDark) {
-    showModalBottomSheet<int>(
-      context: context,
-      builder: (ctx) => SafeArea(
-        child: ListView.builder(
-          shrinkWrap: true,
-          itemCount: _phoneCodes.length,
-          itemBuilder: (_, i) {
-            final (flag, code, name) = _phoneCodes[i];
-            final selected = i == _selectedPhoneCodeIndex;
-            return ListTile(
-              leading: Text(flag, style: const TextStyle(fontSize: 22)),
-              title: Text('$code  $name'),
-              trailing: selected
-                  ? const Icon(Icons.check, color: AppColors.primary)
-                  : null,
-              selected: selected,
-              onTap: () => Navigator.pop(ctx, i),
-            );
-          },
+  void _showPhoneCodePicker(bool isDark) async {
+    final options = [
+      for (int i = 0; i < _phoneCodes.length; i++)
+        SelectOption(
+          value: i,
+          label: '${_phoneCodes[i].$1}  ${_phoneCodes[i].$2}  ${_phoneCodes[i].$3}',
         ),
-      ),
-    ).then((index) {
-      if (index != null && index != _selectedPhoneCodeIndex) {
-        setState(() => _selectedPhoneCodeIndex = index);
-      }
-    });
+    ];
+    final result = await showAppSelectSheet<int>(
+      context: context,
+      options: options,
+      value: _selectedPhoneCodeIndex,
+      title: context.l10n.authSelectCountryCode,
+    );
+    if (result != null && result.value != _selectedPhoneCodeIndex) {
+      setState(() => _selectedPhoneCodeIndex = result.value);
+    }
   }
 
   void _startCountdown() {
@@ -1552,3 +1543,4 @@ enum LoginMethod {
   const LoginMethod(this.label);
   final String label;
 }
+

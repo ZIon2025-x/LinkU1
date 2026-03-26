@@ -216,6 +216,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authPhoneCode => 'Phone Login';
 
   @override
+  String get authSelectCountryCode => 'Select Country Code';
+
+  @override
   String get authEnterEmail => 'Enter email';
 
   @override

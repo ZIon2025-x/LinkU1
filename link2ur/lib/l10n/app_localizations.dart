@@ -495,6 +495,12 @@ abstract class AppLocalizations {
   /// **'Phone Login'**
   String get authPhoneCode;
 
+  /// No description provided for @authSelectCountryCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Country Code'**
+  String get authSelectCountryCode;
+
   /// No description provided for @authEnterEmail.
   ///
   /// In en, this message translates to:
