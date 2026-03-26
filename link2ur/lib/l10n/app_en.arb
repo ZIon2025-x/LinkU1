@@ -4479,7 +4479,7 @@
   "profilePhoneUnchanged": "Please enter a different phone number",
   "profileEmailCodeRequired": "Please enter the email verification code",
   "profilePhoneCodeRequired": "Please enter the phone verification code",
-  "profileNormalizePhoneHint": "UK format: 07XXX or +44XXX",
+  "profileNormalizePhoneHint": "Include country code, e.g. +44 7XXX or +33 6XXX",
 
   "forumPdfPreviewTitle": "PDF Preview",
   "forumPdfContentEmpty": "PDF content is empty",
@@ -5240,5 +5240,16 @@
   "serviceReviewAlreadyReviewed": "You have already reviewed this service",
 
   "profileMyServiceApplications": "My Applications",
-  "profileMyServiceApplicationsSubtitle": "Track your service applications"
+  "profileMyServiceApplicationsSubtitle": "Track your service applications",
+  "versionUpdateRequired": "Update Required",
+  "versionUpdateAvailable": "New Version Available",
+  "versionUpdateRequiredMessage": "Your current version is no longer supported. Please update to continue using the app.",
+  "versionUpdateAvailableMessage": "A new version {version} is available.",
+  "@versionUpdateAvailableMessage": {
+    "placeholders": {
+      "version": {"type": "String"}
+    }
+  },
+  "versionUpdateNow": "Update Now",
+  "versionUpdateLater": "Later"
 }

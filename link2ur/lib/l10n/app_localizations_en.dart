@@ -9715,7 +9715,8 @@ class AppLocalizationsEn extends AppLocalizations {
       'Please enter the phone verification code';
 
   @override
-  String get profileNormalizePhoneHint => 'UK format: 07XXX or +44XXX';
+  String get profileNormalizePhoneHint =>
+      'Include country code, e.g. +44 7XXX or +33 6XXX';
 
   @override
   String get forumPdfPreviewTitle => 'PDF Preview';
@@ -11647,4 +11648,25 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get profileMyServiceApplicationsSubtitle =>
       'Track your service applications';
+
+  @override
+  String get versionUpdateRequired => 'Update Required';
+
+  @override
+  String get versionUpdateAvailable => 'New Version Available';
+
+  @override
+  String get versionUpdateRequiredMessage =>
+      'Your current version is no longer supported. Please update to continue using the app.';
+
+  @override
+  String versionUpdateAvailableMessage(String version) {
+    return 'A new version $version is available.';
+  }
+
+  @override
+  String get versionUpdateNow => 'Update Now';
+
+  @override
+  String get versionUpdateLater => 'Later';
 }

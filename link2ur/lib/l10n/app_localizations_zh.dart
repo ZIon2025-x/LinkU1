@@ -9331,7 +9331,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get profilePhoneCodeRequired => '请输入手机验证码';
 
   @override
-  String get profileNormalizePhoneHint => '英国格式: 07XXX 或 +44XXX';
+  String get profileNormalizePhoneHint => '请带国家区号，如 +44 7XXX 或 +33 6XXX';
 
   @override
   String get forumPdfPreviewTitle => 'PDF 预览';
@@ -11186,6 +11186,26 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get profileMyServiceApplicationsSubtitle => '跟踪服务申请进度';
+
+  @override
+  String get versionUpdateRequired => '需要更新';
+
+  @override
+  String get versionUpdateAvailable => '发现新版本';
+
+  @override
+  String get versionUpdateRequiredMessage => '当前版本过旧，请更新到最新版本以继续使用。';
+
+  @override
+  String versionUpdateAvailableMessage(String version) {
+    return '新版本 $version 已发布。';
+  }
+
+  @override
+  String get versionUpdateNow => '立即更新';
+
+  @override
+  String get versionUpdateLater => '稍后';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -20515,7 +20535,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get profilePhoneCodeRequired => '請輸入手機驗證碼';
 
   @override
-  String get profileNormalizePhoneHint => '英國格式: 07XXX 或 +44XXX';
+  String get profileNormalizePhoneHint => '請帶國家區號，如 +44 7XXX 或 +33 6XXX';
 
   @override
   String get forumPdfPreviewTitle => 'PDF 預覽';
@@ -22370,4 +22390,24 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get profileMyServiceApplicationsSubtitle => '追蹤服務申請進度';
+
+  @override
+  String get versionUpdateRequired => '需要更新';
+
+  @override
+  String get versionUpdateAvailable => '發現新版本';
+
+  @override
+  String get versionUpdateRequiredMessage => '目前版本過舊，請更新至最新版本以繼續使用。';
+
+  @override
+  String versionUpdateAvailableMessage(String version) {
+    return '新版本 $version 已發佈。';
+  }
+
+  @override
+  String get versionUpdateNow => '立即更新';
+
+  @override
+  String get versionUpdateLater => '稍後';
 }

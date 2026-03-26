@@ -17882,7 +17882,7 @@ abstract class AppLocalizations {
   /// No description provided for @profileNormalizePhoneHint.
   ///
   /// In en, this message translates to:
-  /// **'UK format: 07XXX or +44XXX'**
+  /// **'Include country code, e.g. +44 7XXX or +33 6XXX'**
   String get profileNormalizePhoneHint;
 
   /// No description provided for @forumPdfPreviewTitle.
@@ -21484,6 +21484,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Track your service applications'**
   String get profileMyServiceApplicationsSubtitle;
+
+  /// No description provided for @versionUpdateRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Update Required'**
+  String get versionUpdateRequired;
+
+  /// No description provided for @versionUpdateAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'New Version Available'**
+  String get versionUpdateAvailable;
+
+  /// No description provided for @versionUpdateRequiredMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Your current version is no longer supported. Please update to continue using the app.'**
+  String get versionUpdateRequiredMessage;
+
+  /// No description provided for @versionUpdateAvailableMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'A new version {version} is available.'**
+  String versionUpdateAvailableMessage(String version);
+
+  /// No description provided for @versionUpdateNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Update Now'**
+  String get versionUpdateNow;
+
+  /// No description provided for @versionUpdateLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Later'**
+  String get versionUpdateLater;
 }
 
 class _AppLocalizationsDelegate

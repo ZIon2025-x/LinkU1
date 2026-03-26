@@ -4309,7 +4309,7 @@
   "profilePhoneUnchanged": "請輸入不同的手機號碼",
   "profileEmailCodeRequired": "請輸入信箱驗證碼",
   "profilePhoneCodeRequired": "請輸入手機驗證碼",
-  "profileNormalizePhoneHint": "英國格式: 07XXX 或 +44XXX",
+  "profileNormalizePhoneHint": "請帶國家區號，如 +44 7XXX 或 +33 6XXX",
 
   "forumPdfPreviewTitle": "PDF 預覽",
   "forumPdfContentEmpty": "PDF 內容為空",
@@ -5069,5 +5069,16 @@
   "serviceReviewAlreadyReviewed": "您已經評價過此服務",
 
   "profileMyServiceApplications": "我的服務申請",
-  "profileMyServiceApplicationsSubtitle": "追蹤服務申請進度"
+  "profileMyServiceApplicationsSubtitle": "追蹤服務申請進度",
+  "versionUpdateRequired": "需要更新",
+  "versionUpdateAvailable": "發現新版本",
+  "versionUpdateRequiredMessage": "目前版本過舊，請更新至最新版本以繼續使用。",
+  "versionUpdateAvailableMessage": "新版本 {version} 已發佈。",
+  "@versionUpdateAvailableMessage": {
+    "placeholders": {
+      "version": {"type": "String"}
+    }
+  },
+  "versionUpdateNow": "立即更新",
+  "versionUpdateLater": "稍後"
 }
