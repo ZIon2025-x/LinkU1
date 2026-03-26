@@ -1312,7 +1312,7 @@ class _TransactionDetailSheet extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      Helpers.formatPrice(transaction.amount.abs()),
+                      Helpers.formatPrice(transaction.amount.abs(), currency: transaction.currency),
                       style: TextStyle(
                         fontSize: 36,
                         fontWeight: FontWeight.w700,

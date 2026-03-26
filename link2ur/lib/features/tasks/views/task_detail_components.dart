@@ -836,7 +836,7 @@ class _ApplicationItem extends StatelessWidget {
                         size: 16, color: AppColors.primary),
                     const SizedBox(width: 4),
                     Text(
-                      '${context.l10n.taskApplicationExpectedAmount}: ${Helpers.formatPrice(application.proposedPrice!)}',
+                      '${context.l10n.taskApplicationExpectedAmount}: ${Helpers.formatPrice(application.proposedPrice!, currency: task.currency)}',
                       style: AppTypography.caption.copyWith(
                         color: AppColors.primary,
                         fontWeight: FontWeight.w600,
@@ -1227,10 +1227,12 @@ class RefundStatusCard extends StatelessWidget {
     super.key,
     required this.refundRequest,
     required this.isDark,
+    this.currency = 'GBP',
   });
 
   final RefundRequest refundRequest;
   final bool isDark;
+  final String currency;
 
   @override
   Widget build(BuildContext context) {
@@ -1256,7 +1258,7 @@ class RefundStatusCard extends StatelessWidget {
               const Spacer(),
               if (refundRequest.refundAmount != null)
                 Text(
-                  Helpers.formatPrice(refundRequest.refundAmount!),
+                  Helpers.formatPrice(refundRequest.refundAmount!, currency: currency),
                   style: AppTypography.title3.copyWith(color: color),
                 ),
             ],
@@ -2039,7 +2041,9 @@ class _RefundTypeChip extends StatelessWidget {
 // ============================================================
 
 class RefundHistorySheet extends StatelessWidget {
-  const RefundHistorySheet({super.key});
+  const RefundHistorySheet({super.key, this.currency = 'GBP'});
+
+  final String currency;
 
   @override
   Widget build(BuildContext context) {
@@ -2118,6 +2122,7 @@ class RefundHistorySheet extends StatelessWidget {
                         key: ValueKey(refund.id),
                         refund: refund,
                         isDark: isDark,
+                        currency: currency,
                       );
                     },
                   ),
@@ -2136,10 +2141,12 @@ class _RefundHistoryItem extends StatelessWidget {
     super.key,
     required this.refund,
     required this.isDark,
+    this.currency = 'GBP',
   });
 
   final RefundRequest refund;
   final bool isDark;
+  final String currency;
 
   @override
   Widget build(BuildContext context) {
@@ -2180,7 +2187,7 @@ class _RefundHistoryItem extends StatelessWidget {
               const Spacer(),
               if (refund.refundAmount != null)
                 Text(
-                  Helpers.formatPrice(refund.refundAmount!),
+                  Helpers.formatPrice(refund.refundAmount!, currency: currency),
                   style: AppTypography.bodyBold.copyWith(color: color),
                 ),
             ],

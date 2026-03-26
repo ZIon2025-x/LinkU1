@@ -103,7 +103,6 @@ class _FleaMarketDetailContent extends StatelessWidget {
                   data['payment_expires_at']?.toString(),
               taskSource: 'flea_market_rental',
               currency: (data['currency'] as String?) ?? 'GBP',
-              currency: data['currency']?.toString() ?? 'GBP',
             );
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (!context.mounted) return;
@@ -482,6 +481,7 @@ class _FleaMarketDetailContent extends StatelessWidget {
                           itemId: item.id,
                           isDark: isDark,
                           rentalUnit: item.rentalUnit,
+                          currency: item.currency,
                         ),
 
                       const SizedBox(height: 100),
@@ -736,8 +736,8 @@ class _FleaMarketDetailContent extends StatelessWidget {
       BuildContext context, FleaMarketState state, FleaMarketItem item) {
     final counterPrice = item.userPurchaseRequestProposedPrice;
     final priceText = counterPrice != null
-        ? Helpers.formatPrice(counterPrice)
-        : Helpers.formatPrice(item.price);
+        ? Helpers.formatPrice(counterPrice, currency: item.currency)
+        : Helpers.formatPrice(item.price, currency: item.currency);
     final l10n = context.l10n;
 
     return Column(
@@ -1427,7 +1427,7 @@ class _FleaMarketPurchaseSheetState extends State<_FleaMarketPurchaseSheet> {
                                     )
                                   else
                                     Text(
-                                      Helpers.formatPrice(widget.item.price),
+                                      Helpers.formatPrice(widget.item.price, currency: widget.item.currency),
                                       style: const TextStyle(
                                         fontSize: 22,
                                         fontWeight: FontWeight.bold,
@@ -2427,6 +2427,7 @@ class _PurchaseRequestsCard extends StatelessWidget {
                     request: request,
                     isDark: isDark,
                     itemId: state.selectedItem?.id ?? '',
+                    currency: state.selectedItem?.currency ?? 'GBP',
                   )),
           ],
         ),
@@ -2442,10 +2443,12 @@ class _PurchaseRequestItem extends StatelessWidget {
     required this.request,
     required this.isDark,
     required this.itemId,
+    this.currency = 'GBP',
   });
   final PurchaseRequest request;
   final bool isDark;
   final String itemId;
+  final String currency;
 
   @override
   Widget build(BuildContext context) {
@@ -2487,7 +2490,7 @@ class _PurchaseRequestItem extends StatelessWidget {
                     ),
                     if (request.proposedPrice != null)
                       Text(
-                        Helpers.formatPrice(request.proposedPrice!),
+                        Helpers.formatPrice(request.proposedPrice!, currency: currency),
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -2516,7 +2519,7 @@ class _PurchaseRequestItem extends StatelessWidget {
                       size: 14, color: AppColors.warning),
                   const SizedBox(width: 4),
                   Text(
-                    '${context.l10n.fleaMarketSellerNegotiateLabel} ${Helpers.formatPrice(request.sellerCounterPrice!)}',
+                    '${context.l10n.fleaMarketSellerNegotiateLabel} ${Helpers.formatPrice(request.sellerCounterPrice!, currency: currency)}',
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
@@ -2809,10 +2812,12 @@ class _RentalRequestsCard extends StatelessWidget {
     required this.itemId,
     required this.isDark,
     this.rentalUnit,
+    this.currency = 'GBP',
   });
   final String itemId;
   final bool isDark;
   final String? rentalUnit;
+  final String currency;
 
   @override
   Widget build(BuildContext context) {
@@ -2905,6 +2910,7 @@ class _RentalRequestsCard extends StatelessWidget {
                             isDark: isDark,
                             itemId: itemId,
                             rentalUnit: rentalUnit,
+                            currency: currency,
                           )),
                   ],
                 ),
@@ -2930,11 +2936,13 @@ class _RentalRequestItem extends StatelessWidget {
     required this.isDark,
     required this.itemId,
     this.rentalUnit,
+    this.currency = 'GBP',
   });
   final FleaMarketRentalRequest request;
   final bool isDark;
   final String itemId;
   final String? rentalUnit;
+  final String currency;
 
   @override
   Widget build(BuildContext context) {
@@ -3055,7 +3063,7 @@ class _RentalRequestItem extends StatelessWidget {
                     size: 14, color: AppColors.warning),
                 const SizedBox(width: 4),
                 Text(
-                  '${l10n.fleaMarketProposedPrice}: ${Helpers.formatPrice(request.proposedRentalPrice!)}',
+                  '${l10n.fleaMarketProposedPrice}: ${Helpers.formatPrice(request.proposedRentalPrice!, currency: currency)}',
                   style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
@@ -3082,7 +3090,7 @@ class _RentalRequestItem extends StatelessWidget {
                       size: 14, color: AppColors.warning),
                   const SizedBox(width: 4),
                   Text(
-                    '${l10n.fleaMarketNegotiate}: ${Helpers.formatPrice(request.counterRentalPrice!)}',
+                    '${l10n.fleaMarketNegotiate}: ${Helpers.formatPrice(request.counterRentalPrice!, currency: currency)}',
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,

@@ -588,6 +588,7 @@ class WalletTransactionItem extends Equatable {
   final String? description;
   final double? feeAmount;
   final double? grossAmount;
+  final String currency;
   final String createdAt;
 
   const WalletTransactionItem({
@@ -602,6 +603,7 @@ class WalletTransactionItem extends Equatable {
     this.description,
     this.feeAmount,
     this.grossAmount,
+    this.currency = 'GBP',
     required this.createdAt,
   });
 
@@ -618,10 +620,11 @@ class WalletTransactionItem extends Equatable {
       description: json['description'] as String?,
       feeAmount: (json['fee_amount'] as num?)?.toDouble(),
       grossAmount: (json['gross_amount'] as num?)?.toDouble(),
+      currency: json['currency'] as String? ?? 'GBP',
       createdAt: json['created_at'] as String,
     );
   }
 
   @override
-  List<Object?> get props => [id, type, amount, status, source, createdAt];
+  List<Object?> get props => [id, type, amount, status, source, currency, createdAt];
 }

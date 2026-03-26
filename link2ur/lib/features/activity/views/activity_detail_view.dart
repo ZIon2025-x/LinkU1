@@ -1363,7 +1363,7 @@ class _PriceView extends StatelessWidget {
         if (activity.hasDiscount &&
             activity.originalPricePerParticipant != null)
           Text(
-            Helpers.formatPrice(activity.originalPricePerParticipant!),
+            Helpers.formatPrice(activity.originalPricePerParticipant!, currency: activity.currency),
             style: const TextStyle(
               fontSize: 14,
               decoration: TextDecoration.lineThrough,
@@ -2278,6 +2278,7 @@ class _ActivityApplySheetState extends State<ActivityApplySheet> {
                         slot: slot,
                         isSelected: _selectedTimeSlotId == slot.id,
                         isDark: isDark,
+                        currency: widget.activity.currency,
                         onSelect: () {
                           if (slot.canSelect) {
                             setState(() => _selectedTimeSlotId = slot.id);
@@ -2557,12 +2558,14 @@ class _ActivityTimeSlotCard extends StatelessWidget {
     required this.isSelected,
     required this.isDark,
     required this.onSelect,
+    this.currency = 'GBP',
   });
 
   final ServiceTimeSlot slot;
   final bool isSelected;
   final bool isDark;
   final VoidCallback onSelect;
+  final String currency;
 
   @override
   Widget build(BuildContext context) {
@@ -2663,7 +2666,7 @@ class _ActivityTimeSlotCard extends StatelessWidget {
             if (slot.displayPrice != null) ...[
               const SizedBox(height: 4),
               Text(
-                Helpers.formatPrice(slot.displayPrice!),
+                Helpers.formatPrice(slot.displayPrice!, currency: currency),
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,

@@ -527,7 +527,7 @@ class UserProfileView extends StatelessWidget {
                     subtitle: Padding(
                       padding: const EdgeInsets.only(top: 4),
                       child: Text(
-                        '${t.status} · ${Helpers.formatPrice(t.reward)}',
+                        '${t.status} · ${Helpers.formatPrice(t.reward, currency: t.currency)}',
                         style: const TextStyle(
                           fontSize: 12,
                           color: AppColors.textSecondary,
@@ -1066,7 +1066,7 @@ class UserProfileView extends StatelessWidget {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                Helpers.formatPrice(item.price),
+                                Helpers.formatPrice(item.price, currency: item.currency),
                                 style: const TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,

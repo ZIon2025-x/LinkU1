@@ -387,6 +387,7 @@ class UserProfileTask {
     this.titleZh,
     required this.status,
     required this.reward,
+    this.currency = 'GBP',
     this.createdAt,
     this.taskType,
   });
@@ -397,6 +398,7 @@ class UserProfileTask {
   final String? titleZh;
   final String status;
   final double reward;
+  final String currency;
   final String? createdAt;
   final String? taskType;
 
@@ -417,6 +419,7 @@ class UserProfileTask {
       titleZh: json['title_zh'] as String?,
       status: json['status'] as String? ?? '',
       reward: (json['reward'] as num?)?.toDouble() ?? 0,
+      currency: json['currency'] as String? ?? 'GBP',
       createdAt: json['created_at']?.toString(),
       taskType: json['task_type'] as String?,
     );
@@ -517,6 +520,7 @@ class UserProfileFleaItem {
     required this.id,
     required this.title,
     required this.price,
+    this.currency = 'GBP',
     this.images = const [],
     this.status = 'sold',
     this.viewCount = 0,
@@ -526,6 +530,7 @@ class UserProfileFleaItem {
   final int id;
   final String title;
   final double price;
+  final String currency;
   final List<String> images;
   final String status;
   final int viewCount;
@@ -536,6 +541,7 @@ class UserProfileFleaItem {
       id: json['id'] as int? ?? 0,
       title: json['title'] as String? ?? '',
       price: (json['price'] as num?)?.toDouble() ?? 0,
+      currency: json['currency'] as String? ?? 'GBP',
       images: (json['images'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toList() ??

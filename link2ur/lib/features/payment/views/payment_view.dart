@@ -797,14 +797,14 @@ class _PaymentContentState extends State<_PaymentContent> {
               label: context.l10n.paymentOriginalPrice,
               value: response.originalAmountDisplay.isNotEmpty
                   ? response.originalAmountDisplay
-                  : Helpers.formatPrice(response.originalAmount / 100),
+                  : Helpers.formatPrice(response.originalAmount / 100, currency: currency),
             ),
             if (response.hasDiscount) ...[
               AppSpacing.vSm,
               _InfoRow(
                 label: context.l10n.paymentDiscount(response.couponName ?? ''),
                 value:
-                    '-${response.couponDiscountDisplay ?? Helpers.formatPrice(response.couponDiscount! / 100)}',
+                    '-${response.couponDiscountDisplay ?? Helpers.formatPrice(response.couponDiscount! / 100, currency: currency)}',
                 valueStyle: const TextStyle(
                   color: AppColors.success,
                   fontWeight: FontWeight.w500,

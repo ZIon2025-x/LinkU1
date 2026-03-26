@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/utils/helpers.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
@@ -184,7 +185,7 @@ class _WalletTransactionCard extends StatelessWidget {
     final typeIcon = _getTypeIcon(item.type);
     final typeColor = _getTypeColor(item.type);
     final sourceLabel = _getSourceLabel(item.source);
-    final amountText = _formatAmount(item.amount, isIncome);
+    final amountText = _formatAmount(item.amount, isIncome, currency: item.currency);
     final dateText = _formatDate(item.createdAt);
 
     return Container(
@@ -323,9 +324,9 @@ class _WalletTransactionCard extends StatelessWidget {
     }
   }
 
-  String _formatAmount(double amount, bool isIncome) {
+  String _formatAmount(double amount, bool isIncome, {String currency = 'GBP'}) {
     final abs = amount.abs();
-    const symbol = '£';
+    final symbol = Helpers.currencySymbolFor(currency);
     final formatted = abs.toStringAsFixed(2);
     return isIncome ? '+$symbol$formatted' : '-$symbol$formatted';
   }

@@ -511,7 +511,7 @@ class _TaskCard extends StatelessWidget {
               Text(
                 task.isPriceToBeQuoted
                     ? context.l10n.taskRewardToBeQuoted
-                    : Helpers.formatPrice(task.displayReward),
+                    : Helpers.formatPrice(task.displayReward, currency: task.currency),
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
