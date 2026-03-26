@@ -484,6 +484,7 @@ class _ActivityDetailViewContent extends StatelessWidget {
                 customerId: resp.customerId ?? '',
                 ephemeralKeySecret: resp.ephemeralKeySecret ?? '',
                 amountDisplay: resp.finalAmountDisplay,
+                currency: resp.currency,
               );
               final result = await pushWithSwipeBack<bool>(
                 context,

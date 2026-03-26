@@ -666,6 +666,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
       paymentExpiresAt: payload['payment_expires_at'] as String?,
       taskSource: itemId != null ? AppConstants.taskSourceFleaMarket : null,
       fleaMarketItemId: itemId,
+      currency: (payload['currency'] as String?) ?? 'GBP',
     );
   }
 

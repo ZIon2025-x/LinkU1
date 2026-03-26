@@ -605,9 +605,11 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
             ?? ((double.tryParse(
                     (widget.paymentData.amountDisplay ?? '').replaceAll(RegExp(r'[^0-9.]'), ''),
                 ) ?? 0) * 100).round();
+        final appleCurrency = _paymentResponse?.currency ?? widget.paymentData.currency;
         success = await PaymentService.instance.presentApplePay(
           clientSecret: clientSecret,
           amount: amountPence.round(),
+          currency: appleCurrency,
         ).timeout(paymentTimeout);
       } else {
         success = await PaymentService.instance.presentPaymentSheet(

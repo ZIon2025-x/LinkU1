@@ -9,6 +9,7 @@ import '../../auth/bloc/auth_bloc.dart';
 import '../../../core/utils/adaptive_dialogs.dart';
 import '../../tasks/views/create_task_widgets.dart';
 import '../../../core/widgets/cross_platform_image.dart';
+import '../../../core/widgets/currency_selector.dart';
 import '../../../core/widgets/image_remove_button.dart';
 import '../../../core/widgets/location_picker.dart';
 import '../../../core/design/app_colors.dart';
@@ -492,14 +493,9 @@ class _FormContentState extends State<_FormContent> {
                       ),
                       if (_pricingType != 'negotiable') ...[
                         const SizedBox(height: AppSpacing.md),
-                        SegmentedButton<String>(
-                          segments: const [
-                            ButtonSegment(value: 'GBP', label: Text('\u00A3 GBP')),
-                            ButtonSegment(value: 'EUR', label: Text('\u20AC EUR')),
-                          ],
-                          selected: {_selectedCurrency},
-                          onSelectionChanged: (v) =>
-                              setState(() => _selectedCurrency = v.first),
+                        CurrencySelector(
+                          selected: _selectedCurrency,
+                          onChanged: (v) => setState(() => _selectedCurrency = v),
                         ),
                         const SizedBox(height: AppSpacing.sm),
                         TextFormField(

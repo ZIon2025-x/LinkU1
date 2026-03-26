@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/constants/expert_constants.dart';
 import '../../../core/utils/service_category_helper.dart';
+import '../../../core/widgets/currency_selector.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_spacing.dart';
@@ -724,16 +725,9 @@ class _ServiceFormSheetState extends State<_ServiceFormSheet> {
                 isRequired: true,
               ),
               const SizedBox(height: 8),
-              SegmentedButton<String>(
-                segments: const [
-                  ButtonSegment(value: 'GBP', label: Text('\u00A3 GBP')),
-                  ButtonSegment(value: 'EUR', label: Text('\u20AC EUR')),
-                  ButtonSegment(value: 'CNY', label: Text('\u00A5 CNY')),
-                  ButtonSegment(value: 'USD', label: Text('\$ USD')),
-                ],
-                selected: {_selectedCurrency},
-                onSelectionChanged: (v) =>
-                    setState(() => _selectedCurrency = v.first),
+              CurrencySelector(
+                selected: _selectedCurrency,
+                onChanged: (v) => setState(() => _selectedCurrency = v),
               ),
               const SizedBox(height: 12),
               TextFormField(

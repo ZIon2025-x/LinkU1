@@ -37,7 +37,7 @@ class ExpertConstants {
   ];
 
   /// Expert service currencies
-  static const List<String> serviceCurrencies = ['GBP', 'EUR', 'CNY', 'USD'];
+  static const List<String> serviceCurrencies = ['GBP', 'EUR'];
 
   /// Max images per service
   static const int serviceMaxImages = 4;

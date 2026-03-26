@@ -102,6 +102,7 @@ class _FleaMarketDetailContent extends StatelessWidget {
               paymentExpiresAt:
                   data['payment_expires_at']?.toString(),
               taskSource: 'flea_market_rental',
+              currency: (data['currency'] as String?) ?? 'GBP',
               currency: data['currency']?.toString() ?? 'GBP',
             );
             WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -966,6 +967,7 @@ class _FleaMarketDetailContent extends StatelessWidget {
                     paymentExpiresAt: item.pendingPaymentExpiresAt,
                     taskSource: AppConstants.taskSourceFleaMarket,
                     fleaMarketItemId: itemId,
+                    currency: item.pendingPaymentCurrency ?? item.currency,
                   );
                   pushWithSwipeBack<bool>(
                         context,

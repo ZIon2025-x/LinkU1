@@ -14,6 +14,7 @@ import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/app_feedback.dart';
 import '../../../core/widgets/buttons.dart';
+import '../../../core/widgets/currency_selector.dart';
 import '../../../core/widgets/cross_platform_image.dart';
 import '../../../core/widgets/location_picker.dart';
 import '../../../core/utils/validators.dart';
@@ -601,14 +602,9 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
                       isRequired: true,
                       child: Column(
                         children: [
-                          SegmentedButton<String>(
-                            segments: const [
-                              ButtonSegment(value: 'GBP', label: Text('£ GBP')),
-                              ButtonSegment(value: 'EUR', label: Text('€ EUR')),
-                            ],
-                            selected: {_selectedCurrency},
-                            onSelectionChanged: (v) =>
-                                setState(() => _selectedCurrency = v.first),
+                          CurrencySelector(
+                            selected: _selectedCurrency,
+                            onChanged: (v) => setState(() => _selectedCurrency = v),
                           ),
                           const SizedBox(height: 12),
                           PriceRow(
