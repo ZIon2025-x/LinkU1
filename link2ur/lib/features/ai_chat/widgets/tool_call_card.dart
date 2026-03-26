@@ -288,7 +288,6 @@ class ToolCallCard extends StatelessWidget {
           ),
         ),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               _icon,
@@ -296,11 +295,15 @@ class ToolCallCard extends StatelessWidget {
               color: AppColors.primary,
             ),
             const SizedBox(width: AppSpacing.sm),
-            Text(
-              isLoading ? _loadingHint(context) : _displayName(context),
-              style: TextStyle(
-                fontSize: 13,
-                color: isDark ? Colors.white70 : Colors.black54,
+            Flexible(
+              child: Text(
+                isLoading ? _loadingHint(context) : _displayName(context),
+                style: TextStyle(
+                  fontSize: 13,
+                  color: isDark ? Colors.white70 : Colors.black54,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
             if (isLoading) ...[
