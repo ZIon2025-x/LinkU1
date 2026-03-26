@@ -1,5 +1,7 @@
 """AI 任务描述优化接口"""
 import json
+import logging
+import re
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional
@@ -7,6 +9,8 @@ from typing import List, Optional
 from app.services.ai_llm_client import LLMClient
 from app.deps import get_current_user_secure_async_csrf
 from app import models
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 
@@ -21,6 +25,12 @@ class AIOptimizeResponse(BaseModel):
     optimized_title: str
     optimized_description: str
     suggested_skills: List[str]
+
+
+def _extract_json(text: str) -> str:
+    """Strip markdown code fences (```json ... ``` or ``` ... ```) from LLM output."""
+    m = re.search(r"```(?:json)?\s*\n?(.*?)\n?\s*```", text, re.DOTALL)
+    return m.group(1).strip() if m else text.strip()
 
 
 @router.post("/ai-optimize", response_model=AIOptimizeResponse)
@@ -46,7 +56,7 @@ async def ai_optimize_task(
         llm = LLMClient()
         response = await llm.chat(
             messages=[{"role": "user", "content": prompt}],
-            system="你是一个任务发布优化助手，只返回JSON格式的结果。",
+            system="你是一个任务发布优化助手，只返回JSON格式的结果，不要用markdown代码块包裹。",
             model_tier="small",
         )
         # Extract text content from response
@@ -56,9 +66,11 @@ async def ai_optimize_task(
                 text = block.text
                 break
 
+        text = _extract_json(text)
         data = json.loads(text)
         return AIOptimizeResponse(**data)
-    except (json.JSONDecodeError, KeyError, Exception):
+    except Exception as e:
+        logger.warning(f"AI optimize failed: {e}, raw text: {text!r:.200}")
         # Fallback: return original content
         return AIOptimizeResponse(
             optimized_title=request.title,
