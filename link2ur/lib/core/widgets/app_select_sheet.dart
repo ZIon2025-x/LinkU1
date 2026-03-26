@@ -193,6 +193,7 @@ Future<SelectOption<T>?> showAppSelectSheet<T>({
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
+    showDragHandle: false,
     builder: (_) => _SelectSheet<T>(
       options: options,
       value: value,

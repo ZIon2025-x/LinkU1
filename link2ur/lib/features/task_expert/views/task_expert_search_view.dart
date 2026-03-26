@@ -9,6 +9,7 @@ import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/widgets/app_select_sheet.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
@@ -222,13 +223,10 @@ class _TaskExpertSearchContentState
   }
 
   Widget _buildFilterRow(BuildContext context, bool isDark) {
-    final l10n = context.l10n;
     final dropdownBg =
         isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight;
     final borderColor = (isDark ? AppColors.separatorDark : AppColors.separatorLight)
         .withValues(alpha: 0.5);
-    final textColor =
-        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
     final hintColor =
         isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
 
@@ -240,73 +238,38 @@ class _TaskExpertSearchContentState
       child: Row(
         children: [
           Expanded(
-            child: _buildDropdown(
-              value: _selectedCategory,
-              items: ExpertConstants.categoryKeys
-                  .map((key) => DropdownMenuItem(
-                        value: key,
-                        child: Text(
-                          _categoryLabel(context, key),
-                          style: AppTypography.body.copyWith(color: textColor),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ))
-                  .toList(),
-              hint: l10n.taskExpertCategory,
+            child: _buildFilterChip(
+              label: _categoryLabel(context, _selectedCategory),
+              isDefault: _selectedCategory == 'all',
               isDark: isDark,
               dropdownBg: dropdownBg,
               borderColor: borderColor,
-              textColor: textColor,
               hintColor: hintColor,
-              onChanged: (val) {
-                if (val == null) return;
-                setState(() => _selectedCategory = val);
-                if (_hasSearched) _search();
-              },
+              onTap: () => _showCategoryPicker(context),
             ),
           ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
-            child: _buildDropdown(
-              value: _selectedCity,
-              items: [
-                DropdownMenuItem(
-                  value: 'all',
-                  child: Text(
-                    l10n.commonAll,
-                    style: AppTypography.body.copyWith(color: textColor),
-                  ),
-                ),
-                ...UKCities.all.map((city) => DropdownMenuItem(
-                      value: city,
-                      child: Text(
-                        _cityLabel(context, city),
-                        style: AppTypography.body.copyWith(color: textColor),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    )),
-              ],
-              hint: l10n.taskFilterCity,
+            child: _buildFilterChip(
+              label: _cityLabel(context, _selectedCity),
+              isDefault: _selectedCity == 'all',
               isDark: isDark,
               dropdownBg: dropdownBg,
               borderColor: borderColor,
-              textColor: textColor,
               hintColor: hintColor,
-              onChanged: (val) {
-                if (val == null) return;
-                setState(() => _selectedCity = val);
-                if (_hasSearched) _search();
-              },
+              onTap: () => _showCityPicker(context),
             ),
           ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
-            child: _buildSortDropdown(
+            child: _buildFilterChip(
+              label: _sortLabel(context, _selectedSort),
+              isDefault: _selectedSort == 'rating_desc',
               isDark: isDark,
               dropdownBg: dropdownBg,
               borderColor: borderColor,
-              textColor: textColor,
               hintColor: hintColor,
+              onTap: () => _showSortPicker(context),
             ),
           ),
         ],
@@ -314,86 +277,99 @@ class _TaskExpertSearchContentState
     );
   }
 
-  Widget _buildSortDropdown({
+  Widget _buildFilterChip({
+    required String label,
+    required bool isDefault,
     required bool isDark,
     required Color dropdownBg,
     required Color borderColor,
-    required Color textColor,
     required Color hintColor,
+    required VoidCallback onTap,
   }) {
-    const sortKeys = ['rating_desc', 'completed_desc', 'newest'];
-
-    return _buildDropdown(
-      value: _selectedSort,
-      items: sortKeys
-          .map((key) => DropdownMenuItem(
-                value: key,
-                child: Text(
-                  _sortLabel(context, key),
-                  style: AppTypography.body.copyWith(color: textColor),
-                  overflow: TextOverflow.ellipsis,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 40,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: isDefault ? dropdownBg : AppColors.primary.withValues(alpha: 0.08),
+          borderRadius: AppRadius.allMedium,
+          border: Border.all(
+            color: isDefault ? borderColor : AppColors.primary.withValues(alpha: 0.4),
+            width: 0.5,
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: AppTypography.body.copyWith(
+                  color: isDefault ? hintColor : AppColors.primary,
                 ),
-              ))
-          .toList(),
-      hint: context.l10n.expertSearchSortLabel,
-      isDark: isDark,
-      dropdownBg: dropdownBg,
-      borderColor: borderColor,
-      textColor: textColor,
-      hintColor: hintColor,
-      isSortDropdown: true,
-      onChanged: (val) {
-        if (val == null) return;
-        setState(() => _selectedSort = val);
-        if (_hasSearched) _search();
-      },
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Icon(
+              Icons.keyboard_arrow_down_rounded,
+              size: 18,
+              color: isDefault ? hintColor : AppColors.primary,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildDropdown({
-    required String value,
-    required List<DropdownMenuItem<String>> items,
-    required String hint,
-    required bool isDark,
-    required Color dropdownBg,
-    required Color borderColor,
-    required Color textColor,
-    required Color hintColor,
-    required ValueChanged<String?> onChanged,
-    bool isSortDropdown = false,
-  }) {
-    final isDefault = isSortDropdown ? value == 'rating_desc' : value == 'all';
-
-    return Container(
-      height: 40,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: isDefault ? dropdownBg : AppColors.primary.withValues(alpha: 0.08),
-        borderRadius: AppRadius.allMedium,
-        border: Border.all(
-          color: isDefault ? borderColor : AppColors.primary.withValues(alpha: 0.4),
-          width: 0.5,
-        ),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: value,
-          items: items,
-          onChanged: onChanged,
-          isExpanded: true,
-          icon: Icon(
-            Icons.keyboard_arrow_down_rounded,
-            size: 18,
-            color: isDefault ? hintColor : AppColors.primary,
-          ),
-          dropdownColor: dropdownBg,
-          style: AppTypography.body.copyWith(
-            color: isDefault ? hintColor : AppColors.primary,
-          ),
-          borderRadius: AppRadius.allMedium,
-        ),
-      ),
+  Future<void> _showCategoryPicker(BuildContext context) async {
+    final options = ExpertConstants.categoryKeys
+        .map((key) => SelectOption(value: key, label: _categoryLabel(context, key)))
+        .toList();
+    final result = await showAppSelectSheet<String>(
+      context: context,
+      options: options,
+      value: _selectedCategory,
+      title: context.l10n.taskExpertCategory,
     );
+    if (result != null && result.value != _selectedCategory) {
+      setState(() => _selectedCategory = result.value);
+      if (_hasSearched) _search();
+    }
+  }
+
+  Future<void> _showCityPicker(BuildContext context) async {
+    final options = [
+      SelectOption(value: 'all', label: context.l10n.commonAll),
+      ...UKCities.all.map((city) =>
+          SelectOption(value: city, label: _cityLabel(context, city))),
+    ];
+    final result = await showAppSelectSheet<String>(
+      context: context,
+      options: options,
+      value: _selectedCity,
+      title: context.l10n.taskFilterCity,
+    );
+    if (result != null && result.value != _selectedCity) {
+      setState(() => _selectedCity = result.value);
+      if (_hasSearched) _search();
+    }
+  }
+
+  Future<void> _showSortPicker(BuildContext context) async {
+    const sortKeys = ['rating_desc', 'completed_desc', 'newest'];
+    final options = sortKeys
+        .map((key) => SelectOption(value: key, label: _sortLabel(context, key)))
+        .toList();
+    final result = await showAppSelectSheet<String>(
+      context: context,
+      options: options,
+      value: _selectedSort,
+      title: context.l10n.expertSearchSortLabel,
+    );
+    if (result != null && result.value != _selectedSort) {
+      setState(() => _selectedSort = result.value);
+      if (_hasSearched) _search();
+    }
   }
 }
 

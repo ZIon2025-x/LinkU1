@@ -7,6 +7,7 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/widgets/app_select_sheet.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../data/repositories/personal_service_repository.dart';
@@ -177,33 +178,29 @@ class _ContentState extends State<_Content> {
                   ),
                 ),
                 // Sort dropdown
-                PopupMenuButton<String>(
+                IconButton(
                   icon: Icon(Icons.sort,
                       color: isDark
                           ? AppColors.textSecondaryDark
                           : AppColors.textSecondaryLight),
-                  onSelected: (value) {
-                    setState(() => _selectedSort = value);
-                    _search();
+                  onPressed: () async {
+                    final options = [
+                      SelectOption(value: 'recommended', label: l10n.browseServicesSortRecommended),
+                      SelectOption(value: 'newest', label: l10n.browseServicesSortNewest),
+                      SelectOption(value: 'price_asc', label: l10n.browseServicesSortPriceAsc),
+                      SelectOption(value: 'price_desc', label: l10n.browseServicesSortPriceDesc),
+                    ];
+                    final result = await showAppSelectSheet<String>(
+                      context: context,
+                      options: options,
+                      value: _selectedSort,
+                      title: l10n.expertSearchSortLabel,
+                    );
+                    if (result != null && result.value != _selectedSort) {
+                      setState(() => _selectedSort = result.value);
+                      _search();
+                    }
                   },
-                  itemBuilder: (context) => [
-                    PopupMenuItem(
-                      value: 'recommended',
-                      child: Text(l10n.browseServicesSortRecommended),
-                    ),
-                    PopupMenuItem(
-                      value: 'newest',
-                      child: Text(l10n.browseServicesSortNewest),
-                    ),
-                    PopupMenuItem(
-                      value: 'price_asc',
-                      child: Text(l10n.browseServicesSortPriceAsc),
-                    ),
-                    PopupMenuItem(
-                      value: 'price_desc',
-                      child: Text(l10n.browseServicesSortPriceDesc),
-                    ),
-                  ],
                 ),
               ],
             ),

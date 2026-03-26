@@ -244,11 +244,11 @@ def secure_login(
                 "X-Auth-Status": "authenticated"
             } if is_mobile else None
         }
-        
+
         # 移动端需要 refresh_token 在响应体中（无法读取 HTTP-only cookies）
         if is_mobile:
             response_data["refresh_token"] = refresh_token
-        
+
         return response_data
 
     except HTTPException:

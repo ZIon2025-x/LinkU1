@@ -37,7 +37,7 @@ async def get_current_user_secure_async_csrf(
     """CSRF保护的安全用户认证（异步版本）"""
     # 首先尝试使用会话认证
     from app.secure_auth import validate_session
-    
+
     session = validate_session(request)
     if session:
         user = await async_crud.async_user_crud.get_user_by_id(db, session.user_id)
@@ -52,9 +52,9 @@ async def get_current_user_secure_async_csrf(
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN, detail="账户已被封禁"
                 )
-            
+
             return user
-    
+
     # 如果会话认证失败，抛出认证错误
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED, detail="未提供有效的认证信息"
