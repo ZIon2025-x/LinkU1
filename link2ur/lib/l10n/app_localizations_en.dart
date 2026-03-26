@@ -11203,6 +11203,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get createTaskRequiredSkills => 'Required Skills';
 
   @override
+  String get personalServiceSkills => 'Skills Offered';
+
+  @override
   String get createTaskAddCustomSkill => '+ Custom';
 
   @override

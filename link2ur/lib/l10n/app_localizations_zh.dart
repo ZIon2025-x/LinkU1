@@ -10770,6 +10770,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get createTaskRequiredSkills => '需要的技能';
 
   @override
+  String get personalServiceSkills => '提供的技能';
+
+  @override
   String get createTaskAddCustomSkill => '+ 自定义';
 
   @override
@@ -21734,6 +21737,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get createTaskRequiredSkills => '需要的技能';
+
+  @override
+  String get personalServiceSkills => '提供的技能';
 
   @override
   String get createTaskAddCustomSkill => '+ 自訂';

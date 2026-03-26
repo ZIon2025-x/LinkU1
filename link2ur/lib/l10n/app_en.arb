@@ -5092,6 +5092,7 @@
   "createTaskDeadlineNoRush": "No Rush",
   "createTaskDeadlineCustom": "Custom",
   "createTaskRequiredSkills": "Required Skills",
+  "personalServiceSkills": "Skills Offered",
   "createTaskAddCustomSkill": "+ Custom",
   "createTaskAiOptimize": "AI Optimize",
   "createTaskAiOptimizeDesc": "Let AI optimize your task description for better matches",

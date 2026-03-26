@@ -20657,6 +20657,12 @@ abstract class AppLocalizations {
   /// **'Required Skills'**
   String get createTaskRequiredSkills;
 
+  /// No description provided for @personalServiceSkills.
+  ///
+  /// In en, this message translates to:
+  /// **'Skills Offered'**
+  String get personalServiceSkills;
+
   /// No description provided for @createTaskAddCustomSkill.
   ///
   /// In en, this message translates to:

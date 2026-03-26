@@ -141,7 +141,7 @@ class _FormContentState extends State<_FormContent> {
     final result = await AdaptiveDialogs.showInputDialog(
       context: context,
       title: context.l10n.createTaskAddCustomSkill,
-      placeholder: context.l10n.createTaskRequiredSkills,
+      placeholder: context.l10n.personalServiceSkills,
     );
     if (result != null && result.isNotEmpty && mounted) {
       setState(() {
@@ -448,7 +448,7 @@ class _FormContentState extends State<_FormContent> {
 
                 // ── 技能标签（可选）──
                 SectionCard(
-                  label: context.l10n.createTaskRequiredSkills,
+                  label: context.l10n.personalServiceSkills,
                   child: SkillTagSelector(
                     selected: _selectedSkills,
                     suggestions: _skillSuggestions[_category] ?? [],

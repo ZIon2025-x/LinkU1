@@ -585,33 +585,195 @@ def _build_system_prompt(template: str, user: models.User, resolved_lang: str | 
 
 
 async def build_user_profile_context(user_id: str, db) -> str:
-    """Build user profile summary for AI system prompt injection. Uses async DB."""
+    """Build comprehensive user profile for AI system prompt injection.
+
+    Queries 9 sources: User info, capabilities, preferences, demand, reliability,
+    posted tasks, taken tasks, reviews received, published services.
+    """
     try:
+        # 1. User basic info
+        user_result = await db.execute(
+            select(models.User).where(models.User.id == user_id)
+        )
+        user = user_result.scalars().first()
+
+        # 2. Capabilities (declared skills)
+        caps_result = await db.execute(
+            select(models.UserCapability).where(models.UserCapability.user_id == user_id)
+        )
+        capabilities = caps_result.scalars().all()
+
+        # 3. Preferences
         pref_result = await db.execute(
             select(models.UserProfilePreference).where(models.UserProfilePreference.user_id == user_id)
         )
         pref = pref_result.scalars().first()
+
+        # 4. Demand (inferred)
         demand_result = await db.execute(
             select(models.UserDemand).where(models.UserDemand.user_id == user_id)
         )
         demand = demand_result.scalars().first()
+
+        # 5. Reliability
         reliability_result = await db.execute(
             select(models.UserReliability).where(models.UserReliability.user_id == user_id)
         )
         reliability = reliability_result.scalars().first()
+
+        # 6. Posted tasks — type distribution
+        posted_stats = await db.execute(
+            select(
+                models.Task.task_type,
+                func.count().label("cnt"),
+            )
+            .where(models.Task.poster_id == user_id)
+            .group_by(models.Task.task_type)
+            .order_by(desc("cnt"))
+            .limit(5)
+        )
+        posted_rows = posted_stats.all()
+
+        # 7. Taken tasks — type distribution + completion stats
+        taken_stats = await db.execute(
+            select(
+                models.Task.task_type,
+                func.count().label("cnt"),
+                func.sum(func.cast(models.Task.status == "completed", models.Integer)).label("done"),
+            )
+            .where(models.Task.taker_id == user_id)
+            .group_by(models.Task.task_type)
+            .order_by(desc("cnt"))
+            .limit(5)
+        )
+        taken_rows = taken_stats.all()
+
+        # 8. Reviews received (as task poster or taker — reviews on tasks they participated in)
+        review_stats = await db.execute(
+            select(
+                func.count().label("cnt"),
+                func.avg(models.Review.rating).label("avg"),
+            )
+            .join(models.Task, models.Review.task_id == models.Task.id)
+            .where(
+                (models.Task.poster_id == user_id) | (models.Task.taker_id == user_id),
+                models.Review.user_id != user_id,  # exclude self-reviews
+            )
+        )
+        review_row = review_stats.first()
+
+        # Recent review comments (latest 3)
+        recent_reviews = await db.execute(
+            select(models.Review.rating, models.Review.comment)
+            .join(models.Task, models.Review.task_id == models.Task.id)
+            .where(
+                (models.Task.poster_id == user_id) | (models.Task.taker_id == user_id),
+                models.Review.user_id != user_id,
+                models.Review.comment.isnot(None),
+                models.Review.comment != "",
+            )
+            .order_by(desc(models.Review.created_at))
+            .limit(3)
+        )
+        recent_review_rows = recent_reviews.all()
+
+        # 9. Published services
+        services_result = await db.execute(
+            select(
+                models.TaskExpertService.service_name,
+                models.TaskExpertService.category,
+                models.TaskExpertService.skills,
+            )
+            .where(
+                models.TaskExpertService.user_id == user_id,
+                models.TaskExpertService.service_type == "personal",
+                models.TaskExpertService.status == "active",
+            )
+            .limit(5)
+        )
+        service_rows = services_result.all()
+
     except Exception as e:
         logger.warning(f"Failed to load user profile for AI context: {e}")
         return ""
 
-    sections = []
+    sections: list[str] = []
+
+    # ── User basic info ──
+    if user:
+        if user.bio:
+            sections.append(f"- 个人简介: {user.bio[:100]}")
+        if user.task_count:
+            sections.append(f"- 已发布任务: {user.task_count}个, 已完成: {user.completed_task_count or 0}个")
+        if user.avg_rating and user.avg_rating > 0:
+            sections.append(f"- 用户评分: {user.avg_rating:.1f}")
+
+    # ── Capabilities (user-declared skills with proficiency) ──
+    if capabilities:
+        skill_parts = []
+        for cap in capabilities[:8]:
+            level_map = {"beginner": "入门", "intermediate": "中级", "expert": "精通"}
+            level = level_map.get(cap.proficiency.value, "") if cap.proficiency else ""
+            skill_parts.append(f"{cap.skill_name}({level})" if level else cap.skill_name)
+        sections.append(f"- 已声明技能: {', '.join(skill_parts)}")
+
+    # ── Posted task types ──
+    if posted_rows:
+        parts = [f"{row.task_type}({row.cnt})" for row in posted_rows]
+        sections.append(f"- 发布任务类型: {', '.join(parts)}")
+
+    # ── Taken task types + completion ──
+    if taken_rows:
+        parts = []
+        for row in taken_rows:
+            done = row.done or 0
+            parts.append(f"{row.task_type}({done}/{row.cnt}完成)")
+        sections.append(f"- 接单类型: {', '.join(parts)}")
+
+    # ── Reviews received ──
+    if review_row and review_row.cnt and review_row.cnt > 0:
+        sections.append(f"- 收到评价: {review_row.cnt}条, 均分: {review_row.avg:.1f}")
+        if recent_review_rows:
+            comments = [f"「{r.comment[:30]}」({r.rating}★)" for r in recent_review_rows]
+            sections.append(f"- 近期评价: {'; '.join(comments)}")
+
+    # ── Published services ──
+    if service_rows:
+        svc_parts = []
+        for s in service_rows:
+            skills_str = ""
+            if s.skills:
+                skills_str = f"[{','.join(s.skills[:3])}]"
+            svc_parts.append(f"{s.service_name}{skills_str}")
+        sections.append(f"- 发布的服务: {', '.join(svc_parts)}")
+
+    # ── Preferences ──
     if pref:
         mode_val = pref.mode.value if pref.mode else "不限"
         sections.append(f"- 偏好模式: {mode_val}")
+        if pref.duration_type:
+            dur_map = {"one_time": "一次性", "long_term": "长期", "both": "都可以"}
+            sections.append(f"- 任务时长偏好: {dur_map.get(pref.duration_type.value, pref.duration_type.value)}")
+        if pref.reward_preference:
+            rew_map = {"high_freq_low_amount": "高频低价", "low_freq_high_amount": "低频高价", "no_preference": "不限"}
+            sections.append(f"- 报酬偏好: {rew_map.get(pref.reward_preference.value, pref.reward_preference.value)}")
         if pref.preferred_time_slots:
             sections.append(f"- 可用时段: {', '.join(pref.preferred_time_slots)}")
+        if pref.preferred_categories:
+            sections.append(f"- 偏好分类: {', '.join(str(c) for c in pref.preferred_categories[:5])}")
         if pref.city:
             sections.append(f"- 所在城市: {pref.city}")
+
+    # ── Demand (inferred by system) ──
     if demand:
+        if demand.user_stage:
+            stages = demand.user_stage if isinstance(demand.user_stage, list) else [demand.user_stage]
+            stage_map = {"new_arrival": "新到", "settling": "安顿中", "established": "已安顿", "experienced": "老手"}
+            stage_labels = [stage_map.get(s, s) for s in stages[:3]]
+            sections.append(f"- 用户阶段: {', '.join(stage_labels)}")
+        if demand.identity:
+            id_map = {"pre_arrival": "即将来英", "in_uk": "在英国"}
+            sections.append(f"- 身份状态: {id_map.get(demand.identity, demand.identity)}")
         if demand.recent_interests:
             interests = demand.recent_interests
             if isinstance(interests, dict):
@@ -627,8 +789,9 @@ async def build_user_profile_context(user_id: str, db) -> str:
             if isinstance(needs, dict):
                 needs = list(needs.keys())
             sections.append(f"- 预测需求: {', '.join(str(n) for n in needs[:5])}")
+
+    # ── Reliability ──
     if reliability:
-        # Map reliability score to qualitative level (do not expose raw score to user)
         score = reliability.reliability_score or 0
         if score >= 0.8:
             level = "高"
@@ -636,7 +799,13 @@ async def build_user_profile_context(user_id: str, db) -> str:
             level = "中"
         else:
             level = "待提升"
-        sections.append(f"- 用户信誉等级: {level}")
+        sections.append(f"- 信誉等级: {level}")
+        if reliability.completion_rate and reliability.completion_rate > 0:
+            sections.append(f"- 完成率: {reliability.completion_rate:.0%}")
+        if reliability.on_time_rate and reliability.on_time_rate > 0:
+            sections.append(f"- 准时率: {reliability.on_time_rate:.0%}")
+        if reliability.total_tasks_taken:
+            sections.append(f"- 已接单数: {reliability.total_tasks_taken}")
 
     if sections:
         return "用户画像:\n" + "\n".join(sections)

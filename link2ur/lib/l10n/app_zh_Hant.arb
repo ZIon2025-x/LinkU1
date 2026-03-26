@@ -4899,6 +4899,7 @@
   "createTaskDeadlineNoRush": "不急",
   "createTaskDeadlineCustom": "自訂",
   "createTaskRequiredSkills": "需要的技能",
+  "personalServiceSkills": "提供的技能",
   "createTaskAddCustomSkill": "+ 自訂",
   "createTaskAiOptimize": "AI 智慧優化",
   "createTaskAiOptimizeDesc": "讓 AI 幫你優化任務描述，提升配對率",
