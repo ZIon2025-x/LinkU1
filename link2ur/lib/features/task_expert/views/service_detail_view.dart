@@ -1332,9 +1332,7 @@ class _BottomApplyBar extends StatelessWidget {
           ));
         }
       },
-    ).then((_) {
-      controller.dispose();
-    });
+    );
   }
 
   /// 申请状态为「达人审核/议价中」：pending / negotiating / price_agreed

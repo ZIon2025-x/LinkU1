@@ -265,10 +265,10 @@ class AdaptiveDialogs {
           ),
         ],
       ),
-    ).then((result) {
-      controller.dispose();
-      return result;
-    });
+    );
+    // 不手动 dispose controller — dialog 退出动画期间 widget tree 仍在 rebuild，
+    // 手动 dispose 会导致 "TextEditingController used after being disposed"。
+    // Flutter 会在动画结束后自动 dispose State，GC 回收 controller。
   }
 
   static Future<String?> _showMaterialInputDialog({
@@ -318,10 +318,8 @@ class AdaptiveDialogs {
           ),
         ],
       ),
-    ).then((result) {
-      controller.dispose();
-      return result;
-    });
+    );
+    // 同上：不手动 dispose，避免退出动画期间 crash
   }
 
   // ---------------------------------------------------------------------------

@@ -825,9 +825,7 @@ class _TaskDetailContent extends StatelessWidget {
           bloc.add(TaskDetailAskQuestion(text));
         }
       },
-    ).then((_) {
-      controller.dispose();
-    });
+    );
   }
 
   /// 底部主操作按钮 — 根据状态 + 角色显示最重要的操作
