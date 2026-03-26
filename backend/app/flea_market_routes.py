@@ -93,8 +93,6 @@ def _payment_method_types_for_currency(currency: str) -> list:
     methods = ["card"]
     if c in ("gbp", "cny"):
         methods.extend(["wechat_pay", "alipay"])
-    elif c in ("eur", "usd", "aud", "cad", "hkd", "jpy", "sgd", "nzd"):
-        methods.append("alipay")
     return methods
 
 
@@ -1981,11 +1979,12 @@ async def direct_purchase_item(
             
             def create_payment_intent_sync(customer_id=None):
                 from app.secure_auth import get_wechat_pay_payment_method_options
-                payment_method_options = get_wechat_pay_payment_method_options(request)
+                pm_types = _payment_method_types_for_currency((item.currency or "GBP").lower())
+                payment_method_options = get_wechat_pay_payment_method_options(request) if "wechat_pay" in pm_types else {}
                 create_pi_kw = {
                     "amount": task_amount_pence,
                     "currency": (item.currency or "GBP").lower(),
-                    "payment_method_types": _payment_method_types_for_currency((item.currency or "GBP").lower()),
+                    "payment_method_types": pm_types,
                     "description": f"跳蚤市场购买 #{new_task.id}: {item.title[:50]}",
                     "metadata": {
                         "task_id": str(new_task.id),
@@ -2376,11 +2375,12 @@ async def approve_purchase_request(
             
             try:
                 from app.secure_auth import get_wechat_pay_payment_method_options
-                payment_method_options = get_wechat_pay_payment_method_options(request)
+                pm_types = _payment_method_types_for_currency((item.currency or "GBP").lower())
+                payment_method_options = get_wechat_pay_payment_method_options(request) if "wechat_pay" in pm_types else {}
                 create_pi_kw = {
                     "amount": task_amount_pence,
                     "currency": (item.currency or "GBP").lower(),
-                    "payment_method_types": _payment_method_types_for_currency((item.currency or "GBP").lower()),
+                    "payment_method_types": pm_types,
                     "description": f"跳蚤市场购买（议价） #{new_task.id}: {item.title[:50]}",
                     "metadata": {
                         "task_id": str(new_task.id),
@@ -2678,11 +2678,12 @@ async def accept_purchase_request(
             
             try:
                 from app.secure_auth import get_wechat_pay_payment_method_options
-                payment_method_options = get_wechat_pay_payment_method_options(request)
+                pm_types = _payment_method_types_for_currency((item.currency or "GBP").lower())
+                payment_method_options = get_wechat_pay_payment_method_options(request) if "wechat_pay" in pm_types else {}
                 create_pi_kw = {
                     "amount": task_amount_pence,
                     "currency": (item.currency or "GBP").lower(),
-                    "payment_method_types": _payment_method_types_for_currency((item.currency or "GBP").lower()),
+                    "payment_method_types": pm_types,
                     "description": f"跳蚤市场购买（议价） #{new_task.id}: {item.title[:50]}",
                     "metadata": {
                         "task_id": str(new_task.id),

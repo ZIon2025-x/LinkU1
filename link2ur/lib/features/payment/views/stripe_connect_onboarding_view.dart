@@ -121,8 +121,11 @@ class _StripeConnectOnboardingViewState
       });
     } catch (e) {
       if (!mounted) return;
-      // 获取国家列表失败时使用默认 GB 直接创建
-      await _createOnboardingSession();
+      // 获取国家列表失败时显示错误，而不是静默用 GB 创建
+      setState(() {
+        _viewState = _ViewState.error;
+        _error = context.localizeError(e.toString());
+      });
     }
   }
 
@@ -443,39 +446,6 @@ class _StripeConnectOnboardingViewState
               },
             ),
           ),
-          if (_selectedCountry != 'GB') ...[
-            AppSpacing.vSm,
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              decoration: BoxDecoration(
-                color: AppColors.warning.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(AppRadius.small),
-                border: Border.all(
-                  color: AppColors.warning.withValues(alpha: 0.3),
-                ),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.info_outline,
-                      size: 18,
-                      color: AppColors.warning.withValues(alpha: 0.8)),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      l10n.paymentCurrencyConversionWarning,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: isDark
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondaryLight,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
           AppSpacing.vMd,
           PrimaryButton(
             text: l10n.commonNext,

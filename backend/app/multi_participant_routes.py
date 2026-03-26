@@ -36,8 +36,6 @@ def _payment_method_types_for_currency(currency: str) -> list:
     methods = ["card"]
     if c in ("gbp", "cny"):
         methods.extend(["wechat_pay", "alipay"])
-    elif c in ("eur", "usd", "aud", "cad", "hkd", "jpy", "sgd", "nzd"):
-        methods.append("alipay")
     return methods
 
 
@@ -632,11 +630,12 @@ def apply_to_activity(
         
         try:
             from app.secure_auth import get_wechat_pay_payment_method_options
-            payment_method_options = get_wechat_pay_payment_method_options(http_request)
+            pm_types = _payment_method_types_for_currency(db_activity.currency.lower())
+            payment_method_options = get_wechat_pay_payment_method_options(http_request) if "wechat_pay" in pm_types else {}
             create_pi_kw = {
                 "amount": task_amount_pence,
                 "currency": db_activity.currency.lower(),
-                "payment_method_types": _payment_method_types_for_currency(db_activity.currency.lower()),
+                "payment_method_types": pm_types,
                 "metadata": {
                     "task_id": str(new_task.id),
                     "activity_id": str(activity_id),

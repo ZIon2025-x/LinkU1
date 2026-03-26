@@ -46,8 +46,6 @@ def _payment_method_types_for_currency(currency: str) -> list:
     methods = ["card"]
     if c in ("gbp", "cny"):
         methods.extend(["wechat_pay", "alipay"])
-    elif c in ("eur", "usd", "aud", "cad", "hkd", "jpy", "sgd", "nzd"):
-        methods.append("alipay")
     return methods
 
 

@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=375">
+<title>Currency Selector Mockup</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f5f5f5;
+    display: flex;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+  .phone-frame {
+    width: 375px;
+    background: #fff;
+    border-radius: 24px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.12);
+    overflow: hidden;
+  }
+  .status-bar {
+    height: 44px;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .nav-bar {
+    height: 48px;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .nav-bar .back { font-size: 22px; color: #333; cursor: pointer; }
+  .nav-bar .title { flex: 1; text-align: center; font-size: 17px; font-weight: 600; color: #1a1a1a; margin-right: 22px; }
+
+  .content { padding: 24px 16px; }
+  .section-title { font-size: 15px; font-weight: 600; color: #1a1a1a; margin-bottom: 12px; }
+
+  .currency-option {
+    display: flex;
+    align-items: center;
+    padding: 14px 16px;
+    border-radius: 12px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 2px solid transparent;
+  }
+  .currency-option:hover { background: #f8f8f8; }
+  .currency-option.selected {
+    border-color: #6C5CE7;
+    background: rgba(108, 92, 231, 0.04);
+  }
+
+  .currency-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    margin-right: 12px;
+    flex-shrink: 0;
+  }
+  .currency-icon.gbp { background: #EEF0FF; }
+  .currency-icon.eur { background: #FFF8E1; }
+
+  .currency-info { flex: 1; min-width: 0; }
+  .currency-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1a1a1a;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .badge-recommended {
+    font-size: 10px;
+    font-weight: 600;
+    color: #6C5CE7;
+    background: rgba(108, 92, 231, 0.1);
+    padding: 2px 8px;
+    border-radius: 10px;
+    letter-spacing: 0.3px;
+  }
+  .currency-desc {
+    font-size: 12.5px;
+    color: #888;
+    margin-top: 3px;
+  }
+  .payment-methods {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+  }
+  .pay-tag {
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 6px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+  .pay-tag.wechat { background: #E8F5E9; color: #2E7D32; }
+  .pay-tag.alipay { background: #E3F2FD; color: #1565C0; }
+  .pay-tag.card { background: #F3E5F5; color: #7B1FA2; }
+  .pay-tag.apple { background: #F5F5F5; color: #333; }
+
+  .radio-outer {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid #ddd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s;
+  }
+  .selected .radio-outer {
+    border-color: #6C5CE7;
+  }
+  .radio-inner {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #6C5CE7;
+    display: none;
+  }
+  .selected .radio-inner { display: block; }
+
+  .divider {
+    height: 1px;
+    background: #f0f0f0;
+    margin: 16px 0;
+  }
+
+  .btn-next {
+    width: 100%;
+    height: 48px;
+    border: none;
+    border-radius: 12px;
+    background: #6C5CE7;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 24px;
+    transition: opacity 0.2s;
+  }
+  .btn-next:hover { opacity: 0.9; }
+</style>
+</head>
+<body>
+
+<div class="phone-frame">
+  <div class="status-bar">9:41</div>
+  <div class="nav-bar">
+    <span class="back">‹</span>
+    <span class="title">选择货币</span>
+  </div>
+
+  <div class="content">
+    <div class="section-title">请选择任务结算货币</div>
+
+    <!-- GBP - selected -->
+    <div class="currency-option selected" onclick="select(this)">
+      <div class="currency-icon gbp">£</div>
+      <div class="currency-info">
+        <div class="currency-name">
+          英镑 GBP
+          <span class="badge-recommended">推荐</span>
+        </div>
+        <div class="currency-desc">British Pound Sterling</div>
+        <div class="payment-methods">
+          <span class="pay-tag card">💳 银行卡</span>
+          <span class="pay-tag apple">Apple Pay</span>
+          <span class="pay-tag wechat">微信支付</span>
+          <span class="pay-tag alipay">支付宝</span>
+        </div>
+      </div>
+      <div class="radio-outer"><div class="radio-inner"></div></div>
+    </div>
+
+    <!-- EUR -->
+    <div class="currency-option" onclick="select(this)">
+      <div class="currency-icon eur">€</div>
+      <div class="currency-info">
+        <div class="currency-name">欧元 EUR</div>
+        <div class="currency-desc">Euro</div>
+        <div class="payment-methods">
+          <span class="pay-tag card">💳 银行卡</span>
+          <span class="pay-tag apple">Apple Pay</span>
+        </div>
+      </div>
+      <div class="radio-outer"><div class="radio-inner"></div></div>
+    </div>
+
+    <button class="btn-next">下一步</button>
+  </div>
+</div>
+
+<script>
+function select(el) {
+  document.querySelectorAll('.currency-option').forEach(e => e.classList.remove('selected'));
+  el.classList.add('selected');
+}
+</script>
+</body>
+</html>

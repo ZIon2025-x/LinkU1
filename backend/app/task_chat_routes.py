@@ -1972,8 +1972,6 @@ async def accept_application(
         else:
             payment_description = f"任务 #{task_id}: {task_title_short} - 批准申请 #{application_id}"
 
-        from app.secure_auth import get_wechat_pay_payment_method_options
-        payment_method_options = get_wechat_pay_payment_method_options(request)
         payment_type = "top_up" if is_top_up else "application_approval"
         task_amount_pence = round(task_amount * 100)
         pi_metadata = {
@@ -1996,10 +1994,13 @@ async def accept_application(
         if is_top_up:
             pi_metadata["original_paid_pence"] = str(round(top_up_original_paid * 100))
         pi_currency = (getattr(locked_task, "currency", None) or "GBP").lower()
+        pi_pm_types = _payment_method_types_for_currency(pi_currency)
+        from app.secure_auth import get_wechat_pay_payment_method_options
+        payment_method_options = get_wechat_pay_payment_method_options(request) if "wechat_pay" in pi_pm_types else {}
         create_pi_kw = {
             "amount": charge_pence,
             "currency": pi_currency,
-            "payment_method_types": _payment_method_types_for_currency(pi_currency),
+            "payment_method_types": pi_pm_types,
             "description": payment_description,
             "metadata": pi_metadata,
         }
@@ -2618,13 +2619,14 @@ async def confirm_and_pay(
         task_title_short = locked_task.title[:50] if locked_task.title else f"Task #{task_id}"
         payment_description = f"任务 #{task_id}: {task_title_short} - 确认支付申请 #{application_id}"
 
-        from app.secure_auth import get_wechat_pay_payment_method_options
-        payment_method_options = get_wechat_pay_payment_method_options(request)
         pi_currency_2 = (getattr(locked_task, "currency", None) or "GBP").lower()
+        pi_pm_types_2 = _payment_method_types_for_currency(pi_currency_2)
+        from app.secure_auth import get_wechat_pay_payment_method_options
+        payment_method_options = get_wechat_pay_payment_method_options(request) if "wechat_pay" in pi_pm_types_2 else {}
         create_pi_kw = {
             "amount": final_price_pence,
             "currency": pi_currency_2,
-            "payment_method_types": _payment_method_types_for_currency(pi_currency_2),
+            "payment_method_types": pi_pm_types_2,
             "description": payment_description,
             "metadata": {
                 "task_id": str(task_id),
@@ -3943,13 +3945,14 @@ async def respond_negotiation(
             import os
 
             try:
-                from app.secure_auth import get_wechat_pay_payment_method_options
-                payment_method_options = get_wechat_pay_payment_method_options(http_request)
                 pi_currency_3 = (getattr(locked_task, "currency", None) or "GBP").lower()
+                pi_pm_types_3 = _payment_method_types_for_currency(pi_currency_3)
+                from app.secure_auth import get_wechat_pay_payment_method_options
+                payment_method_options = get_wechat_pay_payment_method_options(http_request) if "wechat_pay" in pi_pm_types_3 else {}
                 create_pi_kw = {
                     "amount": task_amount_pence,
                     "currency": pi_currency_3,
-                    "payment_method_types": _payment_method_types_for_currency(pi_currency_3),
+                    "payment_method_types": pi_pm_types_3,
                     "description": f"任务 #{task_id}: {locked_task.title[:50] if locked_task.title else 'Task'} - 接受议价申请 #{application_id}",
                     "metadata": {
                         "task_id": str(task_id),
