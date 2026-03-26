@@ -2,7 +2,7 @@
 import json
 import logging
 import re
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -76,18 +76,23 @@ async def ai_optimize_task(
         )
         # Extract text content from response
         for block in response.content:
-            if hasattr(block, 'text'):
+            if hasattr(block, 'text') and block.text:
                 text = block.text
                 break
+
+        if not text.strip():
+            logger.error(
+                f"AI optimize: LLM returned empty content, "
+                f"model={response.model}, stop_reason={response.stop_reason}, "
+                f"blocks={len(response.content)}, usage={response.usage}"
+            )
+            raise HTTPException(status_code=502, detail="ai_optimize_failed")
 
         text = _extract_json(text)
         data = json.loads(text)
         return AIOptimizeResponse(**data)
+    except HTTPException:
+        raise
     except Exception as e:
         logger.warning(f"AI optimize failed: {e}, raw text: {text!r:.200}")
-        # Fallback: return original content
-        return AIOptimizeResponse(
-            optimized_title=request.title,
-            optimized_description=request.description,
-            suggested_skills=[],
-        )
+        raise HTTPException(status_code=502, detail="ai_optimize_failed")

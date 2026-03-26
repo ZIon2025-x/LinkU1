@@ -248,13 +248,28 @@ class OpenAICompatibleProvider:
         resp.raise_for_status()
         data = resp.json()
 
+        logger.debug(
+            f"OpenAI-compatible raw response: model={model}, "
+            f"choices_count={len(data.get('choices', []))}, "
+            f"finish_reason={data.get('choices', [{}])[0].get('finish_reason')}, "
+            f"content_preview={str(data.get('choices', [{}])[0].get('message', {}).get('content', ''))[:200]!r}"
+        )
+
         # 解析 OpenAI 响应 → 统一格式
         choice = data["choices"][0]
         message = choice["message"]
 
         content: list[LLMTextBlock | LLMToolUse] = []
-        if message.get("content"):
-            content.append(LLMTextBlock(text=message["content"]))
+        msg_content = message.get("content")
+        if msg_content is not None and msg_content != "":
+            content.append(LLMTextBlock(text=msg_content))
+        elif not message.get("tool_calls"):
+            # 既没有 content 也没有 tool_calls — 可能是内容审核拦截
+            logger.warning(
+                f"OpenAI-compatible API returned empty content: "
+                f"model={model}, finish_reason={choice.get('finish_reason')}, "
+                f"message_keys={list(message.keys())}"
+            )
 
         if message.get("tool_calls"):
             for tc in message["tool_calls"]:

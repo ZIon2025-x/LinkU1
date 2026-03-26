@@ -82,29 +82,33 @@ class _ServiceDetailContent extends StatelessWidget {
         elevation: 0,
         scrolledUnderElevation: 0,
         foregroundColor: Colors.white,
-        titleSpacing: 0,
-        title: BlocSelector<TaskExpertBloc, TaskExpertState, TaskExpertService?>(
-          selector: (state) => state.selectedService,
-          builder: (context, service) {
-            if (service == null || !service.isPersonalService) return const SizedBox.shrink();
-            final avatar = service.ownerAvatar;
-            return GestureDetector(
-              onTap: service.userId != null
-                  ? () => context.push('/profile/${service.userId}')
-                  : null,
-              child: CircleAvatar(
-                radius: 16,
-                backgroundColor: Colors.white.withValues(alpha: 0.3),
-                backgroundImage: avatar != null && avatar.isNotEmpty
-                    ? NetworkImage(Helpers.getImageUrl(avatar))
-                    : null,
-                child: avatar == null || avatar.isEmpty
-                    ? const Icon(Icons.person, size: 16, color: Colors.white)
-                    : null,
-              ),
-            );
-          },
-        ),
+        actions: [
+          BlocSelector<TaskExpertBloc, TaskExpertState, TaskExpertService?>(
+            selector: (state) => state.selectedService,
+            builder: (context, service) {
+              if (service == null || !service.isPersonalService) return const SizedBox.shrink();
+              final avatar = service.ownerAvatar;
+              return Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: GestureDetector(
+                  onTap: service.userId != null
+                      ? () => context.goToUserProfile(service.userId!)
+                      : null,
+                  child: CircleAvatar(
+                    radius: 16,
+                    backgroundColor: Colors.white.withValues(alpha: 0.3),
+                    backgroundImage: avatar != null && avatar.isNotEmpty
+                        ? NetworkImage(Helpers.getImageUrl(avatar))
+                        : null,
+                    child: avatar == null || avatar.isEmpty
+                        ? const Icon(Icons.person, size: 16, color: Colors.white)
+                        : null,
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: Center(
         child: ConstrainedBox(
