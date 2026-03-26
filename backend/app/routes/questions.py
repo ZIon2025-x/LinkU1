@@ -48,7 +48,7 @@ async def _get_target_owner_id(
     """Get the owner user_id of a task or service."""
     if target_type == "task":
         result = await db.execute(
-            select(models.Task.user_id).where(models.Task.id == target_id)
+            select(models.Task.poster_id).where(models.Task.id == target_id)
         )
         row = result.scalar_one_or_none()
         return str(row) if row else None

@@ -109,7 +109,10 @@ def configure_logging():
     """
     from app.request_logging_middleware import RequestIDFilter
 
-    is_production = os.getenv("ENVIRONMENT", "development") == "production"
+    is_production = (
+        os.getenv("ENVIRONMENT", "development") == "production"
+        or os.getenv("RAILWAY_ENVIRONMENT", "").lower() == "production"
+    )
     log_level_str = os.getenv("LOG_LEVEL", "INFO" if is_production else "DEBUG").upper()
     log_level = getattr(logging, log_level_str, logging.INFO)
 

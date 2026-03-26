@@ -65,7 +65,7 @@ class AdaptiveDialogs {
               isDefaultAction: !isDestructive,
               onPressed: () {
                 final result = onConfirm?.call();
-                Navigator.of(ctx).pop(result ?? true as T);
+                Navigator.of(ctx).pop(onConfirm != null ? result : true);
               },
               child: Text(effectiveConfirmText),
             ),
@@ -96,7 +96,7 @@ class AdaptiveDialogs {
               TextButton(
                 onPressed: () {
                   final result = onConfirm?.call();
-                  Navigator.of(ctx).pop(result ?? true as T);
+                  Navigator.of(ctx).pop(onConfirm != null ? result : true);
                 },
                 child: Text(
                   effectiveConfirmText,
@@ -107,7 +107,7 @@ class AdaptiveDialogs {
               FilledButton(
                 onPressed: () {
                   final result = onConfirm?.call();
-                  Navigator.of(ctx).pop(result ?? true as T);
+                  Navigator.of(ctx).pop(onConfirm != null ? result : true);
                 },
                 child: Text(effectiveConfirmText),
               ),

@@ -415,7 +415,7 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
         ],
       ),
     );
-    controller.dispose();
+    // 不手动 dispose — dialog 退场过渡期间 TextField 仍在使用 controller
     if (result != null && result.isNotEmpty && mounted) {
       setState(() {
         if (!_selectedSkills.contains(result)) {
