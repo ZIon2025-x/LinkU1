@@ -20,6 +20,7 @@ import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/adaptive_dialogs.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/helpers.dart';
+import '../../../core/widgets/app_select_sheet.dart';
 import '../../../data/models/task.dart';
 import '../../../data/models/task_application.dart';
 import '../../../data/models/review.dart';
@@ -1790,34 +1791,19 @@ class _RefundRequestSheetState extends State<RefundRequestSheet> {
               style: AppTypography.bodyBold,
             ),
             const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                borderRadius: AppRadius.allMedium,
-                border: Border.all(
-                  color: isDark
-                      ? AppColors.dividerDark
-                      : AppColors.dividerLight,
-                ),
-                color: isDark
-                    ? AppColors.secondaryBackgroundDark
-                    : AppColors.backgroundLight,
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<RefundReasonType>(
-                  value: _selectedReasonType,
-                  isExpanded: true,
-                  hint: Text(context.l10n.refundReasonTypePlaceholder),
-                  items: RefundReasonType.values.map((type) {
-                    return DropdownMenuItem(
-                      value: type,
-                      child: Text(_reasonTypeText(type, context)),
-                    );
-                  }).toList(),
-                  onChanged: (v) =>
-                      setState(() => _selectedReasonType = v),
-                ),
-              ),
+            AppSelectField<RefundReasonType>(
+              value: _selectedReasonType,
+              hint: context.l10n.refundReasonTypePlaceholder,
+              sheetTitle: context.l10n.refundReasonTypeRequired,
+              clearable: false,
+              options: RefundReasonType.values
+                  .map((type) => SelectOption(
+                        value: type,
+                        label: _reasonTypeText(type, context),
+                      ))
+                  .toList(),
+              onChanged: (v) =>
+                  setState(() => _selectedReasonType = v),
             ),
             const SizedBox(height: 16),
 

@@ -380,15 +380,14 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
       confirmText: context.l10n.commonConfirm,
     );
     if (accepted == true && mounted) {
-      setState(() {
-        _titleController.text = title;
-        _descriptionController.text = desc;
-        if (skills.isNotEmpty) {
-          _selectedSkills
-            ..clear()
-            ..addAll(skills);
-        }
-      });
+      _titleController.text = title;
+      _descriptionController.text = desc;
+      if (skills.isNotEmpty) {
+        _selectedSkills
+          ..clear()
+          ..addAll(skills);
+      }
+      if (mounted) setState(() {});
     }
   }
 
@@ -456,6 +455,7 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
           AppFeedback.showSuccess(
               context, context.l10n.feedbackTaskPublishSuccess);
           context.pop();
+          return;
         } else if (state.status == CreateTaskStatus.error) {
           AppFeedback.showError(context,
               context.localizeError(state.errorMessage ?? 'create_task_failed'));

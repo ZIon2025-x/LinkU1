@@ -804,13 +804,16 @@ class _TaskDetailContent extends StatelessWidget {
       context: context,
       title: context.l10n.qaAskButton,
       barrierDismissible: true,
-      contentWidget: TextField(
-        controller: controller,
-        maxLength: 500,
-        maxLines: 3,
-        decoration: InputDecoration(
-          hintText: context.l10n.qaAskPlaceholder,
-          border: const OutlineInputBorder(),
+      contentWidget: Material(
+        color: Colors.transparent,
+        child: TextField(
+          controller: controller,
+          maxLength: 500,
+          maxLines: 3,
+          decoration: InputDecoration(
+            hintText: context.l10n.qaAskPlaceholder,
+            border: const OutlineInputBorder(),
+          ),
         ),
       ),
       confirmText: context.l10n.commonSubmit,

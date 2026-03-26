@@ -4,6 +4,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/widgets/app_select_sheet.dart';
 import '../../../l10n/app_localizations.dart';
 
 // ==================== 1. SectionCard ====================
@@ -113,32 +114,16 @@ class CategoryDropdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final categories = getCategories(l10n, isStudentVerified: isStudentVerified);
 
-    return DropdownButtonFormField<String>(
-      initialValue: categories.any((c) => c.$1 == selected) ? selected : categories.first.$1,
-      decoration: InputDecoration(
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: isDark ? const Color(0xFF3A3A3C) : const Color(0xFFEEEEEE),
-          ),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: isDark ? const Color(0xFF3A3A3C) : const Color(0xFFEEEEEE),
-          ),
-        ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      ),
-      items: categories.map((cat) {
-        return DropdownMenuItem<String>(
-          value: cat.$1,
-          child: Text(cat.$2),
-        );
-      }).toList(),
+    return AppSelectField<String>(
+      value: categories.any((c) => c.$1 == selected) ? selected : null,
+      options: categories
+          .map((cat) => SelectOption<String>(value: cat.$1, label: cat.$2))
+          .toList(),
+      hint: l10n.createTaskType,
+      sheetTitle: l10n.createTaskType,
+      clearable: false,
       onChanged: (value) {
         if (value != null) onSelected(value);
       },

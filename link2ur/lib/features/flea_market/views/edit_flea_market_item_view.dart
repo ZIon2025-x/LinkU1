@@ -417,19 +417,15 @@ class _EditFleaMarketItemViewContentState
                           ],
                         ),
                         const SizedBox(height: 6),
-                        DropdownButtonFormField<String>(
-                          initialValue: _rentalUnit,
-                          decoration: InputDecoration(
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(AppRadius.medium),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 12),
-                          ),
-                          items: [
-                            DropdownMenuItem(value: 'day', child: Text(l10n.fleaMarketRentalUnitDay)),
-                            DropdownMenuItem(value: 'week', child: Text(l10n.fleaMarketRentalUnitWeek)),
-                            DropdownMenuItem(value: 'month', child: Text(l10n.fleaMarketRentalUnitMonth)),
+                        AppSelectField<String>(
+                          value: _rentalUnit,
+                          hint: l10n.fleaMarketRentalUnit,
+                          sheetTitle: l10n.fleaMarketRentalUnit,
+                          clearable: false,
+                          options: [
+                            SelectOption(value: 'day', label: l10n.fleaMarketRentalUnitDay),
+                            SelectOption(value: 'week', label: l10n.fleaMarketRentalUnitWeek),
+                            SelectOption(value: 'month', label: l10n.fleaMarketRentalUnitMonth),
                           ],
                           onChanged: (v) => setState(() => _rentalUnit = v ?? 'day'),
                         ),

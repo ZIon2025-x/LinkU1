@@ -438,19 +438,16 @@ class _CreateFleaMarketItemContentState
                   ),
                   AppSpacing.vMd,
                   // 租期单位
-                  DropdownButtonFormField<String>(
-                    initialValue: _rentalUnit,
-                    decoration: InputDecoration(
-                      labelText: context.l10n.fleaMarketRentalUnit,
-                      prefixIcon: const Icon(Icons.schedule),
-                      border: OutlineInputBorder(
-                        borderRadius: AppRadius.allMedium,
-                      ),
-                    ),
-                    items: [
-                      DropdownMenuItem(value: 'day', child: Text(context.l10n.fleaMarketRentalUnitDay)),
-                      DropdownMenuItem(value: 'week', child: Text(context.l10n.fleaMarketRentalUnitWeek)),
-                      DropdownMenuItem(value: 'month', child: Text(context.l10n.fleaMarketRentalUnitMonth)),
+                  AppSelectField<String>(
+                    value: _rentalUnit,
+                    hint: context.l10n.fleaMarketRentalUnit,
+                    sheetTitle: context.l10n.fleaMarketRentalUnit,
+                    prefixIcon: Icons.schedule,
+                    clearable: false,
+                    options: [
+                      SelectOption(value: 'day', label: context.l10n.fleaMarketRentalUnitDay),
+                      SelectOption(value: 'week', label: context.l10n.fleaMarketRentalUnitWeek),
+                      SelectOption(value: 'month', label: context.l10n.fleaMarketRentalUnitMonth),
                     ],
                     onChanged: (v) => setState(() => _rentalUnit = v ?? 'day'),
                   ),
