@@ -53,7 +53,11 @@ class DemandScorer(BaseScorer):
             task_text = f"{task.task_type} {task.title or ''} {task.description or ''}".lower()
             matched_skills = [s for s in skills if s.lower() in task_text]
             if matched_skills:
-                max_conf = max(skills.get(s, 0.5) for s in matched_skills)
+                def _conf(v):
+                    if isinstance(v, (int, float)):
+                        return float(v)
+                    return 0.5
+                max_conf = max(_conf(skills.get(s, 0.5)) for s in matched_skills)
                 score += 0.30 * min(1.0, max_conf)
                 reasons.append(f"匹配您的技能：{', '.join(matched_skills[:2])}")
         # 3. Inferred preferences (0.20)

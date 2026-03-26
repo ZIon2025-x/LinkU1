@@ -730,8 +730,9 @@ class _FollowFeedCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = context.l10n;
-    final title = item.displayTitle(locale);
-    final description = item.displayDescription(locale);
+    final title = Helpers.normalizeContentNewlines(item.displayTitle(locale));
+    final rawDesc = item.displayDescription(locale);
+    final description = rawDesc != null ? Helpers.normalizeContentNewlines(rawDesc) : null;
     final timeAgo = item.createdAt != null
         ? DateFormatter.formatRelative(item.createdAt!, l10n: l10n)
         : '';

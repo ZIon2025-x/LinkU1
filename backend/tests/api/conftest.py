@@ -146,14 +146,24 @@ def auth_client():
 
     后端 secure-auth 的 session 绑定了 IP 和设备指纹。GitHub Actions
     出站 IP 可能在请求间变化，导致 session 被撤销返回 401。
-    AutoReauthClient 会在遇到 401 时透明地重新登录并重试。
+
+    解决方案：以移动端应用身份登录（X-Platform: ios + Link2Ur-iOS UA），
+    后端对移动端会话放宽 IP 验证（允许 IP 变化，不撤销 session）。
+    同时 AutoReauthClient 作为兜底，遇到 401 仍会自动重试。
     """
     from tests.config import TEST_API_URL, TEST_USER_EMAIL, TEST_USER_PASSWORD, REQUEST_TIMEOUT
 
     if not TEST_USER_EMAIL or not TEST_USER_PASSWORD:
         pytest.skip("未配置测试账号 (TEST_USER_EMAIL / TEST_USER_PASSWORD)")
 
-    with httpx.Client(timeout=REQUEST_TIMEOUT) as client:
+    # 伪装移动端应用：后端 is_mobile_app_request() 检测到后会创建 is_ios_app=True 的 session，
+    # validate_session() 对移动端允许 IP 变化，解决 GitHub Actions 出站 IP 不稳定的问题。
+    mobile_headers = {
+        "User-Agent": "Link2Ur-iOS/1.0",
+        "X-Platform": "ios",
+    }
+
+    with httpx.Client(timeout=REQUEST_TIMEOUT, headers=mobile_headers) as client:
         response = client.post(
             f"{TEST_API_URL}/api/secure-auth/login",
             json={"email": TEST_USER_EMAIL, "password": TEST_USER_PASSWORD}

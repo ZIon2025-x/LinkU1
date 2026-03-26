@@ -37,6 +37,7 @@ async def _fetch_recent_completions(db: AsyncSession) -> list:
                 models.Task.task_type,
                 func.max(models.Review.rating).label("rating"),
             )
+            .select_from(models.TaskHistory)
             .join(models.Task, models.TaskHistory.task_id == models.Task.id)
             .join(models.User, models.TaskHistory.user_id == models.User.id)
             .outerjoin(
