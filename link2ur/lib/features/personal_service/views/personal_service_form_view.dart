@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/constants/api_endpoints.dart';
 import '../../../core/utils/helpers.dart';
 import '../../auth/bloc/auth_bloc.dart';
+import '../../../core/utils/adaptive_dialogs.dart';
 import '../../tasks/views/create_task_widgets.dart';
 import '../../../core/widgets/cross_platform_image.dart';
 import '../../../core/widgets/image_remove_button.dart';
@@ -58,6 +59,7 @@ class _FormContentState extends State<_FormContent> {
   String _pricingType = 'fixed';
   String _selectedCurrency = 'GBP';
   String _locationType = 'online';
+  final List<String> _selectedSkills = [];
   String? _location;
   double? _latitude;
   double? _longitude;
@@ -92,6 +94,10 @@ class _FormContentState extends State<_FormContent> {
       if (images != null) {
         _existingImageUrls.addAll(images.map((e) => e.toString()));
       }
+      final skills = data['skills'] as List<dynamic>?;
+      if (skills != null) {
+        _selectedSkills.addAll(skills.whereType<String>());
+      }
     }
   }
 
@@ -101,6 +107,49 @@ class _FormContentState extends State<_FormContent> {
     _descriptionController.dispose();
     _priceController.dispose();
     super.dispose();
+  }
+
+  // Skill suggestions per category (same as task creation)
+  static const _skillSuggestions = <String, List<String>>{
+    'tutoring': ['数学', '英语', '编程', '考试辅导', '论文'],
+    'translation': ['文件翻译', '口译', '字幕'],
+    'design': ['Figma', 'UI设计', 'Photoshop', '海报'],
+    'programming': ['Python', 'Flutter', 'React', 'JavaScript'],
+    'writing': ['文案', '论文', 'SEO', '公众号'],
+    'photography': ['人像', '产品', '风光', '视频'],
+    'moving': ['搬家', '打包', '家具拆装'],
+    'cleaning': ['日常清洁', '深度清洁', '收纳'],
+    'repair': ['水电', '家电', '家具'],
+    'cooking': ['中餐', '聚会餐饮', '烘焙'],
+    'language_help': ['陪同翻译', '电话翻译', '信件代写'],
+    'government': ['签证材料', '银行开户', 'GP注册'],
+    'pet_care': ['遛狗', '寄养', '美容'],
+    'digital': ['装系统', '修电脑', '网络设置'],
+  };
+
+  void _onSkillToggle(String skill) {
+    setState(() {
+      if (_selectedSkills.contains(skill)) {
+        _selectedSkills.remove(skill);
+      } else {
+        _selectedSkills.add(skill);
+      }
+    });
+  }
+
+  Future<void> _addCustomSkill() async {
+    final result = await AdaptiveDialogs.showInputDialog(
+      context: context,
+      title: context.l10n.createTaskAddCustomSkill,
+      placeholder: context.l10n.createTaskRequiredSkills,
+    );
+    if (result != null && result.isNotEmpty && mounted) {
+      setState(() {
+        if (!_selectedSkills.contains(result)) {
+          _selectedSkills.add(result);
+        }
+      });
+    }
   }
 
   Future<void> _pickImages() async {
@@ -208,6 +257,10 @@ class _FormContentState extends State<_FormContent> {
 
     // Always send images array — empty list clears existing images on update
     data['images'] = allImages;
+
+    if (_selectedSkills.isNotEmpty) {
+      data['skills'] = _selectedSkills;
+    }
 
     if (!mounted) return;
     final bloc = context.read<PersonalServiceBloc>();
@@ -390,6 +443,17 @@ class _FormContentState extends State<_FormContent> {
                       }
                       return null;
                     },
+                  ),
+                ),
+
+                // ── 技能标签（可选）──
+                SectionCard(
+                  label: context.l10n.createTaskRequiredSkills,
+                  child: SkillTagSelector(
+                    selected: _selectedSkills,
+                    suggestions: _skillSuggestions[_category] ?? [],
+                    onToggle: _onSkillToggle,
+                    onAddCustom: _addCustomSkill,
                   ),
                 ),
 

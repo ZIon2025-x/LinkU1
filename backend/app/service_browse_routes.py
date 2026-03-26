@@ -123,6 +123,7 @@ async def browse_services(
             "is_expert_verified": s.service_type == "expert",
             "status": s.status,
             "images": s.images or [],
+            "skills": s.skills or [],
             "owner_id": effective_owner_id,
             "owner_name": owner.name if owner else "Unknown",
             "owner_avatar": owner.avatar if owner else None,

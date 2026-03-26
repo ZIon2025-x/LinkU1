@@ -1531,7 +1531,7 @@ class _DiscoveryCompletionCard extends StatelessWidget {
           if (item.userAvatar != null)
             CircleAvatar(
               radius: 20,
-              backgroundImage: NetworkImage(item.userAvatar!),
+              backgroundImage: NetworkImage(Helpers.getImageUrl(item.userAvatar)),
             )
           else
             CircleAvatar(

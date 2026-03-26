@@ -44,6 +44,7 @@ class HomeState extends Equatable {
     this.locationCity,
     this.nearbyServices = const [],
     this.nearbyRadius = 5,
+    this.isLoadingNearby = false,
   });
 
   final HomeStatus status;
@@ -101,6 +102,8 @@ class HomeState extends Equatable {
   final List<Map<String, dynamic>> nearbyServices;
   /// 附近服务搜索半径（km）
   final int nearbyRadius;
+  /// 附近数据加载中（切换半径时不清空已有数据）
+  final bool isLoadingNearby;
 
   bool get isLoading => status == HomeStatus.loading;
   bool get isLoaded => status == HomeStatus.loaded;
@@ -142,6 +145,7 @@ class HomeState extends Equatable {
     String? locationCity,
     List<Map<String, dynamic>>? nearbyServices,
     int? nearbyRadius,
+    bool? isLoadingNearby,
   }) {
     return HomeState(
       status: status ?? this.status,
@@ -179,6 +183,7 @@ class HomeState extends Equatable {
       locationCity: locationCity ?? this.locationCity,
       nearbyServices: nearbyServices ?? this.nearbyServices,
       nearbyRadius: nearbyRadius ?? this.nearbyRadius,
+      isLoadingNearby: isLoadingNearby ?? this.isLoadingNearby,
     );
   }
 
@@ -217,5 +222,6 @@ class HomeState extends Equatable {
         locationCity,
         nearbyServices,
         nearbyRadius,
+        isLoadingNearby,
       ];
 }

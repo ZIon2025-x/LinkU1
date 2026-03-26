@@ -8,6 +8,7 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/utils/error_localizer.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/constants/interest_categories.dart';
 import '../../../data/repositories/user_profile_repository.dart';
@@ -219,13 +220,11 @@ class _ProfileStepState extends State<_ProfileStep> {
                                 radius: 40,
                                 backgroundColor: AppColors.primary.withAlpha(30),
                                 backgroundImage: user?.avatar != null &&
-                                        user!.avatar!.isNotEmpty &&
-                                        Uri.tryParse(user.avatar!)?.hasScheme == true
-                                    ? NetworkImage(user.avatar!)
+                                        user!.avatar!.isNotEmpty
+                                    ? NetworkImage(Helpers.getImageUrl(user.avatar))
                                     : null,
                                 child: user?.avatar == null ||
-                                        user!.avatar!.isEmpty ||
-                                        Uri.tryParse(user.avatar!)?.hasScheme != true
+                                        user!.avatar!.isEmpty
                                     ? const Icon(Icons.person_rounded,
                                         size: 40, color: AppColors.primary)
                                     : null,

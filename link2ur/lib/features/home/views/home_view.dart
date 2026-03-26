@@ -420,7 +420,7 @@ class _HomeViewContentState extends State<_HomeViewContent> {
               label: context.l10n.drawerHelpFeedback,
               onTap: () {
                 Navigator.of(context).pop();
-                context.push('/support-chat');
+                context.push('/faq');
               },
             ),
 

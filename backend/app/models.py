@@ -1622,13 +1622,14 @@ class TaskExpertService(Base):
     images = Column(JSONB, nullable=True)  # JSON数组（使用PostgreSQL JSONB类型）
     base_price = Column(DECIMAL(12, 2), nullable=False)
     currency = Column(String(3), default="GBP")
+    skills = Column(JSONB, nullable=True)  # 技能标签 JSON数组，如 ["Python", "Flutter"]
     status = Column(String(20), default="active")  # active, inactive
     display_order = Column(Integer, default=0)
     view_count = Column(Integer, default=0)
     application_count = Column(Integer, default=0)
     created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
-    
+
     # 时间段相关字段
     has_time_slots = Column(Boolean, default=False, nullable=False)  # 是否启用时间段
     time_slot_duration_minutes = Column(Integer, nullable=True)  # 每个时间段的时长（分钟）

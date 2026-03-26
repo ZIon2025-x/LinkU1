@@ -2965,7 +2965,7 @@ class _RentalRequestItem extends StatelessWidget {
                   color: AppColors.primary,
                   image: request.renterAvatar != null
                       ? DecorationImage(
-                          image: NetworkImage(request.renterAvatar!),
+                          image: NetworkImage(Helpers.getImageUrl(request.renterAvatar)),
                           fit: BoxFit.cover,
                         )
                       : null,

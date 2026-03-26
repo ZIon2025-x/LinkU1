@@ -278,11 +278,12 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     HomeLoadNearby event,
     Emitter<HomeState> emit,
   ) async {
+    final isFirstLoad = !event.loadMore && state.nearbyTasks.isEmpty;
     if (!event.loadMore) {
       emit(state.copyWith(
-        status: HomeStatus.loading,
-        nearbyTasks: const [],
-        nearbyServices: const [],
+        // 首次加载用全局 loading（显示骨架屏）；切换半径保留已有数据
+        status: isFirstLoad ? HomeStatus.loading : null,
+        isLoadingNearby: true,
       ));
     }
 
@@ -325,15 +326,15 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         nearbyTasks: allTasks,
         hasMoreNearby: nearby.hasMore,
         nearbyPage: page,
+        isLoadingNearby: false,
       ));
     } catch (e) {
       AppLogger.error('Failed to load nearby tasks', e);
-      if (!event.loadMore) {
-        emit(state.copyWith(
-          status: HomeStatus.error,
-          errorMessage: e.toString(),
-        ));
-      }
+      emit(state.copyWith(
+        status: isFirstLoad ? HomeStatus.error : null,
+        errorMessage: isFirstLoad ? e.toString() : null,
+        isLoadingNearby: false,
+      ));
     }
   }
 

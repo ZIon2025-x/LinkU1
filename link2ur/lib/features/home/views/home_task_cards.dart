@@ -270,6 +270,7 @@ class _NearbyTabState extends State<_NearbyTab> {
           prev.nearbyServices != curr.nearbyServices ||
           prev.nearbyRadius != curr.nearbyRadius ||
           prev.hasMoreNearby != curr.hasMoreNearby ||
+          prev.isLoadingNearby != curr.isLoadingNearby ||
           prev.isLoading != curr.isLoading,
       builder: (context, state) {
         if (state.isLoading && state.nearbyTasks.isEmpty) {
@@ -277,7 +278,7 @@ class _NearbyTabState extends State<_NearbyTab> {
           return isDesktop ? const ContentConstraint(child: body) : body;
         }
 
-        if (state.nearbyTasks.isEmpty && state.nearbyServices.isEmpty) {
+        if (!state.isLoadingNearby && state.nearbyTasks.isEmpty && state.nearbyServices.isEmpty) {
           final isDarkEmpty = Theme.of(context).brightness == Brightness.dark;
           final center = Center(
             child: Column(
@@ -303,59 +304,70 @@ class _NearbyTabState extends State<_NearbyTab> {
         // Build mixed list of tasks + services for waterfall
         final waterfallItems = _buildWaterfallItems(state);
 
-        final content = RefreshIndicator(
-          onRefresh: () async {
-            final homeBloc = context.read<HomeBloc>();
-            await _loadLocation();
-            await homeBloc.stream
-                .firstWhere((s) => !s.isLoading, orElse: () => state);
-          },
-          child: CustomScrollView(
-            slivers: [
-              // Location bar
-              SliverToBoxAdapter(
-                child: _NearbyLocationBar(
-                  city: _city,
-                  onRefreshTap: _loadLocation,
-                ),
-              ),
-              // Radius selector
-              SliverToBoxAdapter(
-                child: _NearbyRadiusSelector(
-                  selectedRadius: state.nearbyRadius,
-                  onChanged: _onRadiusChanged,
-                ),
-              ),
-              // Waterfall grid
-              SliverPadding(
-                padding: const EdgeInsets.all(8),
-                sliver: SliverMasonryGrid.count(
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 8,
-                  crossAxisSpacing: 8,
-                  childCount: waterfallItems.length,
-                  itemBuilder: (context, index) => waterfallItems[index],
-                ),
-              ),
-              // Load more trigger
-              if (state.hasMoreNearby)
-                SliverToBoxAdapter(
-                  child: _NearbyLoadMoreTrigger(
-                    onVisible: () {
-                      final bloc = context.read<HomeBloc>();
-                      bloc.add(HomeLoadNearby(
-                        latitude: _currentLat,
-                        longitude: _currentLng,
-                        loadMore: true,
-                        city: _city,
-                        radius: bloc.state.nearbyRadius,
-                      ));
-                    },
+        final content = Stack(
+          children: [
+            RefreshIndicator(
+              onRefresh: () async {
+                final homeBloc = context.read<HomeBloc>();
+                await _loadLocation();
+                await homeBloc.stream
+                    .firstWhere((s) => !s.isLoadingNearby, orElse: () => state);
+              },
+              child: CustomScrollView(
+                slivers: [
+                  // Location bar
+                  SliverToBoxAdapter(
+                    child: _NearbyLocationBar(
+                      city: _city,
+                      onRefreshTap: _loadLocation,
+                    ),
                   ),
+                  // Radius selector
+                  SliverToBoxAdapter(
+                    child: _NearbyRadiusSelector(
+                      selectedRadius: state.nearbyRadius,
+                      onChanged: _onRadiusChanged,
+                    ),
+                  ),
+                  // Waterfall grid
+                  SliverPadding(
+                    padding: const EdgeInsets.all(8),
+                    sliver: SliverMasonryGrid.count(
+                      crossAxisCount: 2,
+                      mainAxisSpacing: 8,
+                      crossAxisSpacing: 8,
+                      childCount: waterfallItems.length,
+                      itemBuilder: (context, index) => waterfallItems[index],
+                    ),
+                  ),
+                  // Load more trigger
+                  if (state.hasMoreNearby)
+                    SliverToBoxAdapter(
+                      child: _NearbyLoadMoreTrigger(
+                        onVisible: () {
+                          final bloc = context.read<HomeBloc>();
+                          bloc.add(HomeLoadNearby(
+                            latitude: _currentLat,
+                            longitude: _currentLng,
+                            loadMore: true,
+                            city: _city,
+                            radius: bloc.state.nearbyRadius,
+                          ));
+                        },
+                      ),
+                    ),
+                  const SliverPadding(padding: EdgeInsets.only(bottom: AppSpacing.lg)),
+                ],
+              ),
+            ),
+            if (state.isLoadingNearby)
+              Positioned.fill(
+                child: ColoredBox(
+                  color: Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.5),
+                  child: const Center(child: CircularProgressIndicator()),
                 ),
-              const SliverPadding(padding: EdgeInsets.only(bottom: AppSpacing.lg)),
-            ],
-          ),
+              ),
+          ],
         );
         return isDesktop ? ContentConstraint(child: content) : content;
       },
@@ -586,7 +598,7 @@ class _NearbyWaterfallCard extends StatelessWidget {
                           CircleAvatar(
                             radius: 10,
                             backgroundImage: ownerAvatar != null && ownerAvatar!.isNotEmpty
-                                ? NetworkImage(ownerAvatar!)
+                                ? NetworkImage(Helpers.getImageUrl(ownerAvatar))
                                 : null,
                             backgroundColor: isDark ? Colors.grey[700] : const Color(0xFFE8E8E8),
                             child: ownerAvatar == null || ownerAvatar!.isEmpty

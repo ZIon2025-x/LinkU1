@@ -2333,6 +2333,7 @@ class PersonalServiceCreate(BaseModel):
     latitude: Optional[condecimal(ge=-90, le=90, max_digits=10, decimal_places=8)] = None
     longitude: Optional[condecimal(ge=-180, le=180, max_digits=11, decimal_places=8)] = None
     images: Optional[conlist(str, max_length=6)] = None
+    skills: Optional[conlist(str, max_length=10)] = None  # 技能标签，可选
 
     @model_validator(mode='after')
     def validate_price(self):
@@ -2355,6 +2356,7 @@ class PersonalServiceUpdate(BaseModel):
     latitude: Optional[condecimal(ge=-90, le=90, max_digits=10, decimal_places=8)] = None
     longitude: Optional[condecimal(ge=-180, le=180, max_digits=11, decimal_places=8)] = None
     images: Optional[conlist(str, max_length=6)] = None
+    skills: Optional[conlist(str, max_length=10)] = None  # 技能标签，可选
 
     @model_validator(mode='after')
     def validate_price_on_update(self):

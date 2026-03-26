@@ -130,6 +130,7 @@ async def create_personal_service(
         latitude=data.latitude,
         longitude=data.longitude,
         images=data.images or [],
+        skills=data.skills or [],
         status="active",
     )
     db.add(new_service)
