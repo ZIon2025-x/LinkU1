@@ -1307,9 +1307,11 @@ class ApplyTaskSheet extends StatefulWidget {
   const ApplyTaskSheet({
     super.key,
     required this.task,
+    required this.bloc,
   });
 
   final Task task;
+  final TaskDetailBloc bloc;
 
   @override
   State<ApplyTaskSheet> createState() => _ApplyTaskSheetState();
@@ -1381,7 +1383,7 @@ class _ApplyTaskSheetState extends State<ApplyTaskSheet> {
         : null;
 
     if (!mounted) return;
-    context.read<TaskDetailBloc>().add(TaskDetailApplyRequested(
+    widget.bloc.add(TaskDetailApplyRequested(
           message: message.isEmpty ? null : message,
           negotiatedPrice: negotiatedPrice,
           currency: currency,
@@ -1395,6 +1397,7 @@ class _ApplyTaskSheetState extends State<ApplyTaskSheet> {
     final showPriceSection = widget.task.isMultiParticipant != true;
 
     return BlocListener<TaskDetailBloc, TaskDetailState>(
+      bloc: widget.bloc,
       listenWhen: (prev, cur) =>
           cur.isSubmitting != prev.isSubmitting ||
           (cur.actionMessage != null &&
@@ -1595,11 +1598,13 @@ class RefundRequestSheet extends StatefulWidget {
     super.key,
     required this.taskId,
     required this.taskAmount,
+    required this.bloc,
     this.currency = 'GBP',
   });
 
   final int taskId;
   final double taskAmount;
+  final TaskDetailBloc bloc;
   final String currency;
 
   @override
@@ -1683,7 +1688,7 @@ class _RefundRequestSheetState extends State<RefundRequestSheet> {
     final amount = double.tryParse(_amountController.text);
     final pct = double.tryParse(_percentageController.text);
 
-    context.read<TaskDetailBloc>().add(TaskDetailRequestRefund(
+    widget.bloc.add(TaskDetailRequestRefund(
           reasonType: _selectedReasonType!.value,
           reason: _reasonController.text.trim(),
           refundType: _refundType,
@@ -1698,6 +1703,7 @@ class _RefundRequestSheetState extends State<RefundRequestSheet> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return BlocListener<TaskDetailBloc, TaskDetailState>(
+      bloc: widget.bloc,
       listenWhen: (prev, curr) =>
           curr.actionMessage != null &&
           prev.actionMessage != curr.actionMessage,
@@ -2643,9 +2649,10 @@ class _EvidenceCollectionSheetState extends State<_EvidenceCollectionSheet> {
 // ============================================================
 
 class QuoteDesignatedPriceSheet extends StatefulWidget {
-  const QuoteDesignatedPriceSheet({super.key, this.currency});
+  const QuoteDesignatedPriceSheet({super.key, this.currency, required this.bloc});
 
   final String? currency;
+  final TaskDetailBloc bloc;
 
   @override
   State<QuoteDesignatedPriceSheet> createState() =>
@@ -2683,7 +2690,7 @@ class _QuoteDesignatedPriceSheetState
       _errorMessage = null;
     });
     final amount = double.parse(_amountController.text.trim());
-    context.read<TaskDetailBloc>().add(
+    widget.bloc.add(
       TaskDetailQuoteDesignatedPriceRequested(price: amount),
     );
   }
@@ -2695,6 +2702,7 @@ class _QuoteDesignatedPriceSheetState
     final currencySymbol = Helpers.currencySymbolFor(widget.currency ?? 'GBP');
 
     return BlocListener<TaskDetailBloc, TaskDetailState>(
+      bloc: widget.bloc,
       listenWhen: (prev, cur) =>
           cur.actionMessage == 'quote_failed' &&
           cur.actionMessage != prev.actionMessage,

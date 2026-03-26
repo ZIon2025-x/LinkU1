@@ -43,7 +43,7 @@ class HomeState extends Equatable {
     this.activitiesListPage = 0,
     this.locationCity,
     this.nearbyServices = const [],
-    this.nearbyRadius = 25,
+    this.nearbyRadius = 5,
   });
 
   final HomeStatus status;

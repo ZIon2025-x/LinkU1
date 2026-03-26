@@ -445,13 +445,11 @@ class _TaskDetailContent extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (_) => BlocProvider.value(
-        value: bloc,
-        child: RefundRequestSheet(
-          taskId: task.id,
-          taskAmount: task.displayReward,
-          currency: task.currency,
-        ),
+      builder: (_) => RefundRequestSheet(
+        taskId: task.id,
+        taskAmount: task.displayReward,
+        currency: task.currency,
+        bloc: bloc,
       ),
     );
   }
@@ -932,14 +930,12 @@ class _TaskDetailContent extends StatelessWidget {
             context: context,
             isScrollControlled: true,
             backgroundColor: Colors.transparent,
-            builder: (ctx) => BlocProvider.value(
-              value: bloc,
-              child: BlocListener<TaskDetailBloc, TaskDetailState>(
-                listenWhen: (prev, cur) =>
-                    cur.actionMessage == 'application_submitted',
-                listener: (c, _) => Navigator.of(c).pop(),
-                child: ApplyTaskSheet(task: task),
-              ),
+            builder: (ctx) => BlocListener<TaskDetailBloc, TaskDetailState>(
+              bloc: bloc,
+              listenWhen: (prev, cur) =>
+                  cur.actionMessage == 'application_submitted',
+              listener: (c, _) => Navigator.of(c).pop(),
+              child: ApplyTaskSheet(task: task, bloc: bloc),
             ),
           );
         }),
@@ -1226,14 +1222,12 @@ class _TaskDetailContent extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => BlocProvider.value(
-        value: bloc,
-        child: BlocListener<TaskDetailBloc, TaskDetailState>(
-          listenWhen: (prev, cur) =>
-              cur.actionMessage == 'quote_submitted',
-          listener: (c, _) => Navigator.of(c).pop(),
-          child: QuoteDesignatedPriceSheet(currency: task.currency),
-        ),
+      builder: (ctx) => BlocListener<TaskDetailBloc, TaskDetailState>(
+        bloc: bloc,
+        listenWhen: (prev, cur) =>
+            cur.actionMessage == 'quote_submitted',
+        listener: (c, _) => Navigator.of(c).pop(),
+        child: QuoteDesignatedPriceSheet(currency: task.currency, bloc: bloc),
       ),
     );
   }

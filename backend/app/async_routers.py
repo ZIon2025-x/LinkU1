@@ -121,6 +121,7 @@ async def get_tasks(
     parent_activity_id: Optional[int] = Query(None),
     user_latitude: Optional[float] = Query(None, ge=-90, le=90, description="用户纬度（用于距离排序）"),
     user_longitude: Optional[float] = Query(None, ge=-180, le=180, description="用户经度（用于距离排序）"),
+    radius: Optional[float] = Query(None, ge=1, le=100, description="搜索半径（km），仅在距离排序时生效"),
     db: AsyncSession = Depends(get_async_db_dependency),
     current_user: Optional[models.User] = Depends(get_current_user_optional),
 ):
@@ -276,6 +277,7 @@ async def get_tasks(
         parent_activity_id=parent_activity_id,
         user_latitude=user_latitude,
         user_longitude=user_longitude,
+        radius_km=radius,
     )
     
     # 任务双语标题直接从任务表列读取（title_zh, title_en）

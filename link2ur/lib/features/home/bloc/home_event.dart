@@ -35,6 +35,7 @@ class HomeLoadNearby extends HomeEvent {
     required this.longitude,
     this.loadMore = false,
     this.city,
+    this.radius,
   });
 
   final double latitude;
@@ -44,8 +45,11 @@ class HomeLoadNearby extends HomeEvent {
   /// 反向地理编码得到的城市名（如 "Birmingham"），用于后端同城过滤
   final String? city;
 
+  /// 搜索半径（km）
+  final int? radius;
+
   @override
-  List<Object?> get props => [latitude, longitude, loadMore, city];
+  List<Object?> get props => [latitude, longitude, loadMore, city, radius];
 }
 
 /// 切换Tab
@@ -121,7 +125,7 @@ class HomeLoadNearbyServices extends HomeEvent {
   const HomeLoadNearbyServices({
     required this.latitude,
     required this.longitude,
-    this.radius = 25,
+    this.radius = 5,
   });
   final double latitude;
   final double longitude;

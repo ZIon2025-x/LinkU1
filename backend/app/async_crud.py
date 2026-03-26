@@ -530,6 +530,7 @@ class AsyncTaskCRUD:
         parent_activity_id: Optional[int] = None,
         user_latitude: Optional[float] = None,
         user_longitude: Optional[float] = None,
+        radius_km: Optional[float] = None,
     ) -> tuple[List[models.Task], int]:
         """
         获取任务列表 + 总数（使用缓存 + 精确 count，不用 reltuples 估算）
@@ -736,11 +737,17 @@ class AsyncTaskCRUD:
             elif user_latitude is not None and user_longitude is not None and sort_by in ("distance", "nearby"):
                 use_distance_sorting = True
                 
-                # 粗略的距离过滤：使用简单的经纬度范围过滤（扩大范围以确保有结果）
-                # 1度纬度 ≈ 111km，所以 ±1度 ≈ ±111km
-                # 1度经度在UK纬度（约51度）≈ 111km * cos(51°) ≈ 70km，所以 ±1.5度 ≈ ±105km
-                lat_range = 1.0  # 约111km（扩大范围）
-                lon_range = 1.5  # 约105km（在UK纬度，扩大范围）
+                # 粗略的距离过滤：使用简单的经纬度范围过滤
+                # 1度纬度 ≈ 111km；1度经度在UK纬度（约51度）≈ 70km
+                import math
+                if radius_km is not None:
+                    # 根据用户选择的半径计算范围，乘以1.2留余量
+                    lat_range = (radius_km / 111.0) * 1.2
+                    cos_lat = math.cos(math.radians(user_latitude))
+                    lon_range = (radius_km / (111.0 * max(cos_lat, 0.1))) * 1.2
+                else:
+                    lat_range = 1.0  # 约111km（默认）
+                    lon_range = 1.5  # 约105km（默认）
                 
                 # 获取有坐标的任务（在粗略范围内）和没有坐标但同城的任务（用于城市匹配）
                 # 使用 OR 条件：有坐标且在范围内 OR 没有坐标但同城
@@ -940,35 +947,33 @@ class AsyncTaskCRUD:
                     # 如果已经按城市过滤（location参数不为空），只返回同城的任务
                     # 否则，按距离过滤
                     if location and location not in ["全部城市", "全部", "all"]:
-                        # 已经按城市过滤，返回所有同城任务（有坐标的按距离排序，无坐标的排在后面）
-                        # 只排除完全不匹配的任务（距离为999999.0）
+                        # 已经按城市过滤：有坐标的任务按radius过滤，无坐标的同城任务保留
+                        max_km = radius_km if radius_km is not None else 999998.0
                         nearby_tasks = [
-                            (d, t) for d, t, has_coords in tasks_with_distance 
-                            if d < 999999.0  # 排除完全不匹配的
+                            (d, t) for d, t, has_coords in tasks_with_distance
+                            if (has_coords and d <= max_km) or (not has_coords and d < 999999.0)
                         ]
                     else:
                         # 没有按城市过滤，使用距离过滤
-                        # 可选：限制距离范围（只返回50km内的任务，提升用户体验）
-                        # 但如果50km内没有任务，返回最近的几个任务（最多100km）
-                        max_distance_km = 50.0  # 首选最大距离50km
+                        # 使用前端传入的半径，默认50km
+                        max_distance_km = radius_km if radius_km is not None else 50.0
                         nearby_tasks = [
-                            (d, t) for d, t, has_coords in tasks_with_distance 
+                            (d, t) for d, t, has_coords in tasks_with_distance
                             if d <= max_distance_km
                         ]
-                        
-                        # 如果50km内没有任务，放宽到100km
+
+                        # 如果指定半径内没有任务，放宽到2倍半径
                         if not nearby_tasks and tasks_with_distance:
-                            max_distance_km = 100.0
+                            fallback_km = max_distance_km * 2
                             nearby_tasks = [
-                                (d, t) for d, t, has_coords in tasks_with_distance 
-                                if d <= max_distance_km
+                                (d, t) for d, t, has_coords in tasks_with_distance
+                                if d <= fallback_km
                             ]
-                        
-                        # 如果100km内还是没有，返回最近的几个任务（包括匹配城市的无坐标任务）
+
+                        # 如果还是没有，返回最近的几个任务（包括匹配城市的无坐标任务）
                         if not nearby_tasks and tasks_with_distance:
-                            # 优先返回有坐标的任务，然后是匹配城市的无坐标任务
                             nearby_tasks = [
-                                (d, t) for d, t, has_coords in tasks_with_distance 
+                                (d, t) for d, t, has_coords in tasks_with_distance
                                 if d < 999999.0  # 排除完全不匹配的
                             ][:min(limit * 2, 20)]  # 最多返回20个
                     

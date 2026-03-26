@@ -293,6 +293,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         longitude: event.longitude,
         page: page,
         city: event.city,
+        radius: event.radius?.toDouble(),
       );
 
       // 为每个任务计算与用户的距离

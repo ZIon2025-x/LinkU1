@@ -21,7 +21,7 @@ class _NearbyTabState extends State<_NearbyTab> {
   static const _defaultLat = 51.5074;
   static const _defaultLng = -0.1278;
 
-  static const _radiusOptions = [5, 10, 25, 50, 100];
+  static const _radiusOptions = [1, 3, 5, 10, 15];
 
   @override
   void initState() {
@@ -126,6 +126,7 @@ class _NearbyTabState extends State<_NearbyTab> {
               latitude: position.latitude,
               longitude: position.longitude,
               city: _city,
+              radius: bloc.state.nearbyRadius,
             ));
         bloc.add(HomeLoadNearbyServices(
               latitude: position.latitude,
@@ -148,6 +149,7 @@ class _NearbyTabState extends State<_NearbyTab> {
           latitude: lat,
           longitude: lng,
           city: _city,
+          radius: bloc.state.nearbyRadius,
         ));
     bloc.add(HomeLoadNearbyServices(
           latitude: lat,
@@ -159,6 +161,12 @@ class _NearbyTabState extends State<_NearbyTab> {
   void _onRadiusChanged(int radius) {
     final bloc = context.read<HomeBloc>();
     bloc.add(HomeChangeNearbyRadius(radius));
+    bloc.add(HomeLoadNearby(
+      latitude: _currentLat,
+      longitude: _currentLng,
+      city: _city,
+      radius: radius,
+    ));
     bloc.add(HomeLoadNearbyServices(
       latitude: _currentLat,
       longitude: _currentLng,
@@ -464,11 +472,13 @@ class _NearbyTabState extends State<_NearbyTab> {
                 SliverToBoxAdapter(
                   child: _NearbyLoadMoreTrigger(
                     onVisible: () {
-                      context.read<HomeBloc>().add(HomeLoadNearby(
+                      final bloc = context.read<HomeBloc>();
+                      bloc.add(HomeLoadNearby(
                         latitude: _currentLat,
                         longitude: _currentLng,
                         loadMore: true,
                         city: _city,
+                        radius: bloc.state.nearbyRadius,
                       ));
                     },
                   ),
