@@ -14,6 +14,86 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
+class AutoReauthClient:
+    """
+    httpx.Client 包装器：遇到 401 时自动重新登录并重试。
+
+    GitHub Actions 出站 IP 可能在请求间变化，后端 validate_session 检测到
+    IP 不匹配后会撤销 session，导致 401。此包装器透明地处理重新认证。
+    """
+
+    def __init__(self, client, api_url, email, password):
+        self._client = client
+        self._api_url = api_url
+        self._email = email
+        self._password = password
+        self._reauth_count = 0
+
+    def _reauth(self):
+        """重新登录并更新 session"""
+        self._reauth_count += 1
+        print(f"\n⚠️  检测到 401，自动重新登录（第 {self._reauth_count} 次）...")
+
+        response = self._client.post(
+            f"{self._api_url}/api/secure-auth/login",
+            json={"email": self._email, "password": self._password}
+        )
+        if response.status_code != 200:
+            return False
+
+        data = response.json()
+
+        if "session_id" in data:
+            self._client.cookies.set("session_id", data["session_id"])
+
+        access_token = data.get("access_token", "")
+        if access_token:
+            self._client.headers.update({"Authorization": f"Bearer {access_token}"})
+        else:
+            csrf_token = self._client.cookies.get("csrf_token", "")
+            if not csrf_token:
+                for key, value in response.cookies.items():
+                    self._client.cookies.set(key, value)
+                csrf_token = self._client.cookies.get("csrf_token", "")
+            if csrf_token:
+                self._client.headers.update({"X-CSRF-Token": csrf_token})
+
+        print(f"  ✅ 重新登录成功 (session: {data.get('session_id', '?')[:8]}...)")
+        return True
+
+    def _request_with_reauth(self, method, url, **kwargs):
+        """发送请求，401 时自动重新登录并重试一次"""
+        response = getattr(self._client, method)(url, **kwargs)
+        if response.status_code == 401 and self._reauth_count < 5:
+            if self._reauth():
+                response = getattr(self._client, method)(url, **kwargs)
+        return response
+
+    def get(self, url, **kwargs):
+        return self._request_with_reauth("get", url, **kwargs)
+
+    def post(self, url, **kwargs):
+        return self._request_with_reauth("post", url, **kwargs)
+
+    def put(self, url, **kwargs):
+        return self._request_with_reauth("put", url, **kwargs)
+
+    def patch(self, url, **kwargs):
+        return self._request_with_reauth("patch", url, **kwargs)
+
+    def delete(self, url, **kwargs):
+        return self._request_with_reauth("delete", url, **kwargs)
+
+    # 代理常用属性，让测试代码透明使用
+    @property
+    def cookies(self):
+        return self._client.cookies
+
+    @property
+    def headers(self):
+        return self._client.headers
+
+
 def pytest_configure(config):
     """pytest 配置钩子"""
     # 注册自定义标记
@@ -28,7 +108,7 @@ def setup_api_tests():
     print("\n" + "=" * 60)
     print("LinkU API 集成测试")
     print("=" * 60)
-    
+
     # 导入配置会触发安全检查
     try:
         from tests.config import TEST_API_URL, CONFIG_VALID
@@ -38,11 +118,11 @@ def setup_api_tests():
             print("⚠️ 配置不完整，部分测试将被跳过")
     except Exception as e:
         print(f"配置加载失败: {e}")
-    
+
     print("=" * 60 + "\n")
-    
+
     yield
-    
+
     print("\n" + "=" * 60)
     print("测试完成")
     print("=" * 60)
@@ -62,15 +142,11 @@ def skip_if_config_invalid():
 @pytest.fixture(scope="session")
 def auth_client():
     """
-    整个测试会话只登录一次，所有测试类共用同一个 httpx.Client。
+    整个测试会话共用一个带自动重认证的 httpx.Client。
 
-    使用 scope="session" 而非 scope="class"，因为：
-    1. 后端有单点登录（SSO）机制 — 每次登录会撤销该用户的所有旧会话
-    2. scope="class" 时每个测试类重新登录，可能导致前面类的会话被撤销
-    3. GitHub Actions 出站 IP 可能在请求间变化，导致会话 IP 验证失败
-
-    Client 自动管理 cookie，无需手动传递。
-    登录失败时跳过所有测试。
+    后端 secure-auth 的 session 绑定了 IP 和设备指纹。GitHub Actions
+    出站 IP 可能在请求间变化，导致 session 被撤销返回 401。
+    AutoReauthClient 会在遇到 401 时透明地重新登录并重试。
     """
     from tests.config import TEST_API_URL, TEST_USER_EMAIL, TEST_USER_PASSWORD, REQUEST_TIMEOUT
 
@@ -87,42 +163,25 @@ def auth_client():
 
         data = response.json()
 
-        # secure-auth 返回 session_id（非 access_token）—
-        # 显式注入 cookie，防止 httpx 因 secure/httponly 属性丢失 Set-Cookie
         if "session_id" in data:
             client.cookies.set("session_id", data["session_id"])
 
         access_token = data.get("access_token", "")
         if access_token:
-            # JWT Bearer token — 直接绕过 CSRF 检查
             client.headers.update({"Authorization": f"Bearer {access_token}"})
         else:
-            # 无 JWT：后端使用 cookie session 认证。
-            # POST/PUT/PATCH/DELETE 需要双提交 CSRF token（X-CSRF-Token header == csrf_token cookie）。
-            # csrf_token cookie 是非 HttpOnly 的，httpx 可以读取。
             csrf_token = client.cookies.get("csrf_token", "")
             if not csrf_token:
-                # 从响应 Set-Cookie 中提取（httpx 可能因 secure 属性未自动存入 client.cookies）
                 for key, value in response.cookies.items():
                     client.cookies.set(key, value)
                 csrf_token = client.cookies.get("csrf_token", "")
             if csrf_token:
                 client.headers.update({"X-CSRF-Token": csrf_token})
             else:
-                # 没有 CSRF token 也没有 JWT，写操作会失败
                 import warnings
                 warnings.warn("auth_client: 登录响应未包含 csrf_token cookie，POST/PUT/DELETE 测试可能返回 401")
 
-        # 验证登录后的会话确实可用（防止 IP 绑定等问题导致后续请求 401）
-        verify_resp = client.get(f"{TEST_API_URL}/api/secure-auth/status")
-        if verify_resp.status_code == 200:
-            verify_data = verify_resp.json()
-            if not verify_data.get("authenticated"):
-                pytest.skip("登录成功但会话验证失败（可能是 CI 环境 IP 不稳定），跳过认证测试")
-        else:
-            pytest.skip(f"会话验证端点异常: HTTP {verify_resp.status_code}")
-
-        yield client
+        yield AutoReauthClient(client, TEST_API_URL, TEST_USER_EMAIL, TEST_USER_PASSWORD)
 
 
 def pytest_runtest_makereport(item, call):
