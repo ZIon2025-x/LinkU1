@@ -1918,7 +1918,27 @@ async def _get_expert_reviews(executor: ToolExecutor, input: dict) -> dict:
             },
             "reward": {
                 "type": "number",
-                "description": "任务报酬金额（GBP），最少 1.0",
+                "description": "任务报酬金额，最少 1.0（pricing_type 为 negotiable 时可省略）",
+            },
+            "currency": {
+                "type": "string",
+                "enum": ["GBP", "CNY", "EUR", "USD"],
+                "description": "货币类型，默认 GBP",
+            },
+            "pricing_type": {
+                "type": "string",
+                "enum": ["fixed", "hourly", "negotiable"],
+                "description": "定价方式: fixed=固定价, hourly=时薪, negotiable=协商定价。默认 fixed",
+            },
+            "task_mode": {
+                "type": "string",
+                "enum": ["online", "offline", "both"],
+                "description": "完成方式: online=线上/远程, offline=线下见面, both=都可以。默认 online",
+            },
+            "required_skills": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "技能要求标签列表（可选），如 ['Python', '翻译', 'Photoshop']",
             },
             "location": {
                 "type": "string",
@@ -1929,7 +1949,7 @@ async def _get_expert_reviews(executor: ToolExecutor, input: dict) -> dict:
                 "description": "截止时间 ISO 8601 格式（可选），必须在未来",
             },
         },
-        "required": ["title", "description", "task_type", "reward", "location"],
+        "required": ["title", "description", "task_type", "location"],
     },
     categories=[ToolCategory.TASK],
 )
@@ -1950,13 +1970,37 @@ async def _prepare_task_draft(executor: ToolExecutor, input: dict) -> dict:
     if not task_type:
         task_type = "Other"
 
+    # Currency
+    valid_currencies = {"GBP", "CNY", "EUR", "USD"}
+    currency = (input.get("currency") or "GBP").strip().upper()
+    if currency not in valid_currencies:
+        currency = "GBP"
+
+    # Pricing type
+    pricing_type = (input.get("pricing_type") or "fixed").strip().lower()
+    if pricing_type not in ("fixed", "hourly", "negotiable"):
+        pricing_type = "fixed"
+
+    # Reward (optional when negotiable)
     reward = input.get("reward")
     try:
         reward = float(reward) if reward is not None else 0.0
     except (ValueError, TypeError):
         reward = 0.0
-    if reward < 1.0:
-        errors.append("报酬最少 £1.0" if lang == "zh" else "Minimum reward is £1.0")
+    if pricing_type != "negotiable" and reward < 1.0:
+        errors.append("报酬最少 1.0" if lang == "zh" else "Minimum reward is 1.0")
+
+    # Task mode
+    task_mode = (input.get("task_mode") or "online").strip().lower()
+    if task_mode not in ("online", "offline", "both"):
+        task_mode = "online"
+
+    # Required skills
+    raw_skills = input.get("required_skills") or []
+    if isinstance(raw_skills, list):
+        required_skills = [str(s).strip()[:30] for s in raw_skills[:10] if str(s).strip()]
+    else:
+        required_skills = []
 
     raw_location = (input.get("location") or "").strip()
     location = next((c for c in _VALID_LOCATIONS if c.lower() == raw_location.lower()), None)
@@ -1972,8 +2016,11 @@ async def _prepare_task_draft(executor: ToolExecutor, input: dict) -> dict:
         "title": title,
         "description": description,
         "task_type": task_type,
-        "reward": round(reward, 2),
-        "currency": "GBP",
+        "reward": round(reward, 2) if pricing_type != "negotiable" else None,
+        "currency": currency,
+        "pricing_type": pricing_type,
+        "task_mode": task_mode,
+        "required_skills": required_skills if required_skills else None,
         "location": location,
         "deadline": deadline_str,
     }

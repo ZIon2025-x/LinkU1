@@ -38,7 +38,6 @@ import 'package:geolocator/geolocator.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/widgets/content_constraint.dart';
 import '../../../core/widgets/decorative_background.dart';
-import '../../../core/widgets/location_picker.dart';
 import '../../../core/router/app_router.dart';
 import '../../../data/models/task.dart';
 import '../../../data/models/task_expert.dart';

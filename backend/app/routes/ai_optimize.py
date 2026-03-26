@@ -2,12 +2,14 @@
 import json
 import logging
 import re
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from typing import List, Optional
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.ai_llm_client import LLMClient
-from app.deps import get_current_user_secure_async_csrf
+from app.services.ai_agent import build_user_profile_context
+from app.deps import get_current_user_secure_async_csrf, get_async_db_dependency
 from app import models
 
 logger = logging.getLogger(__name__)
@@ -37,13 +39,25 @@ def _extract_json(text: str) -> str:
 async def ai_optimize_task(
     request: AIOptimizeRequest,
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
 ):
+    # Build user profile context for personalized optimization
+    profile_context = await build_user_profile_context(str(current_user.id), db)
+
+    profile_section = ""
+    if profile_context:
+        profile_section = f"""
+
+以下是发布者的画像信息，请据此优化描述风格和推荐更贴合的技能标签：
+{profile_context}
+"""
+
     prompt = f"""你是一个任务发布优化助手。请优化以下任务信息，使其更清晰、专业，更容易吸引合适的人接单。
 
 原标题：{request.title}
 原描述：{request.description}
 任务分类：{request.task_type or '未指定'}
-
+{profile_section}
 请返回 JSON 格式：
 {{
   "optimized_title": "优化后的标题（50字以内）",
@@ -52,6 +66,7 @@ async def ai_optimize_task(
 }}
 只返回 JSON，不要其他内容。"""
 
+    text = ""
     try:
         llm = LLMClient()
         response = await llm.chat(
@@ -60,7 +75,6 @@ async def ai_optimize_task(
             model_tier="small",
         )
         # Extract text content from response
-        text = ""
         for block in response.content:
             if hasattr(block, 'text'):
                 text = block.text

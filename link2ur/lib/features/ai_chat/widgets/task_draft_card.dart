@@ -5,6 +5,7 @@ import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../l10n/app_localizations.dart';
 
 /// AI 生成的任务草稿卡片 — 用户点击确认后跳转到发布页预填
 class TaskDraftCard extends StatelessWidget {
@@ -29,6 +30,12 @@ class TaskDraftCard extends StatelessWidget {
     final currency = draft['currency'] as String? ?? 'GBP';
     final location = draft['location'] as String? ?? '';
     final currencySymbol = Helpers.currencySymbolFor(currency);
+    final pricingType = draft['pricing_type'] as String? ?? '';
+    final taskMode = draft['task_mode'] as String? ?? '';
+    final rawSkills = draft['required_skills'];
+    final requiredSkills = rawSkills is List
+        ? rawSkills.whereType<String>().toList()
+        : <String>[];
 
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -74,11 +81,35 @@ class TaskDraftCard extends StatelessWidget {
               ),
             if (taskType.isNotEmpty)
               _buildField(context, l10n.createTaskType, taskType),
-            if (reward != null)
+            if (reward != null && pricingType != 'negotiable')
+              _buildField(
+                context,
+                l10n.createTaskReward,
+                '${_pricingLabel(l10n, pricingType)}  $currencySymbol${(reward is num ? reward.toStringAsFixed(2) : reward)}',
+              )
+            else if (pricingType == 'negotiable')
+              _buildField(
+                context,
+                l10n.createTaskReward,
+                _pricingLabel(l10n, pricingType),
+              )
+            else if (reward != null)
               _buildField(
                 context,
                 l10n.createTaskReward,
                 '$currencySymbol${(reward is num ? reward.toStringAsFixed(2) : reward)}',
+              ),
+            if (taskMode.isNotEmpty)
+              _buildField(
+                context,
+                l10n.createTaskModeLabel,
+                _taskModeLabel(l10n, taskMode),
+              ),
+            if (requiredSkills.isNotEmpty)
+              _buildField(
+                context,
+                l10n.createTaskRequiredSkills,
+                requiredSkills.join(', '),
               ),
             if (location.isNotEmpty)
               _buildField(context, l10n.createTaskLocation, location),
@@ -105,6 +136,22 @@ class TaskDraftCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  static String _pricingLabel(AppLocalizations l10n, String type) {
+    return switch (type) {
+      'hourly' => l10n.createTaskPricingHourly,
+      'negotiable' => l10n.createTaskPricingNegotiable,
+      _ => l10n.createTaskPricingFixed,
+    };
+  }
+
+  static String _taskModeLabel(AppLocalizations l10n, String mode) {
+    return switch (mode) {
+      'offline' => l10n.createTaskModeOffline,
+      'both' => l10n.createTaskModeBoth,
+      _ => l10n.createTaskModeOnline,
+    };
   }
 
   Widget _buildField(BuildContext context, String label, String value) {

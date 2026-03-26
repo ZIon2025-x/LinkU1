@@ -34,6 +34,9 @@ class TaskDraftData {
     this.currency,
     this.location,
     this.deadline,
+    this.pricingType,
+    this.taskMode,
+    this.requiredSkills,
   });
 
   final String? title;
@@ -43,12 +46,19 @@ class TaskDraftData {
   final String? currency;
   final String? location;
   final DateTime? deadline;
+  final String? pricingType;
+  final String? taskMode;
+  final List<String>? requiredSkills;
 
   factory TaskDraftData.fromJson(Map<String, dynamic> json) {
     DateTime? deadline;
     if (json['deadline'] != null) {
       deadline = DateTime.tryParse(json['deadline'].toString());
     }
+    final rawSkills = json['required_skills'];
+    final skills = rawSkills is List
+        ? rawSkills.whereType<String>().toList()
+        : null;
     return TaskDraftData(
       title: json['title'] as String?,
       description: json['description'] as String?,
@@ -57,6 +67,9 @@ class TaskDraftData {
       currency: json['currency'] as String? ?? 'GBP',
       location: json['location'] as String?,
       deadline: deadline,
+      pricingType: json['pricing_type'] as String?,
+      taskMode: json['task_mode'] as String?,
+      requiredSkills: skills,
     );
   }
 }
@@ -158,6 +171,13 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
       }
       if (d.taskType != null) {
         _selectedCategory = d.taskType!;
+      }
+      if (d.pricingType != null) _pricingType = d.pricingType!;
+      if (d.taskMode != null) _taskMode = d.taskMode!;
+      if (d.requiredSkills != null && d.requiredSkills!.isNotEmpty) {
+        _selectedSkills
+          ..clear()
+          ..addAll(d.requiredSkills!);
       }
     }
     // Check for local draft
@@ -331,6 +351,7 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
       latitude: _taskMode == 'online' ? null : _latitude,
       longitude: _taskMode == 'online' ? null : _longitude,
       deadline: _deadline,
+      isFlexible: _deadlinePreset == 'no_rush',
       images: imageUrls,
       pricingType: _pricingType,
       taskMode: _taskMode,

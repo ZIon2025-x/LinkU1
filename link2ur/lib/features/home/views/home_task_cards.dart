@@ -174,136 +174,6 @@ class _NearbyTabState extends State<_NearbyTab> {
     ));
   }
 
-  void _showNearbyLocationPicker() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    String? pickedAddress;
-    double? pickedLat;
-    double? pickedLng;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      showDragHandle: false,
-      backgroundColor: isDark ? const Color(0xFF1C1C1E) : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (sheetContext) {
-        final bottomPadding = MediaQuery.of(sheetContext).viewInsets.bottom +
-            MediaQuery.of(sheetContext).viewPadding.bottom;
-        return Padding(
-          padding: EdgeInsets.fromLTRB(
-            20, 16, 20,
-            bottomPadding.clamp(20.0, double.infinity),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 36, height: 4,
-                  decoration: BoxDecoration(
-                    color: isDark ? Colors.white24 : Colors.black12,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                context.l10n.locationSetLocation,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                context.l10n.locationSetLocationHint,
-                style: TextStyle(fontSize: 13, color: Colors.grey[500]),
-              ),
-              const SizedBox(height: 16),
-              LocationInputField(
-                initialValue: _city,
-                showOnlineOption: false,
-                onChanged: (value) {
-                  pickedAddress = value;
-                  // 手动输入时清除之前的坐标，强制重新地理编码
-                  pickedLat = null;
-                  pickedLng = null;
-                },
-                onLocationPicked: (address, lat, lng) {
-                  pickedAddress = address;
-                  pickedLat = lat;
-                  pickedLng = lng;
-                },
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    final address = pickedAddress;
-                    final lat = pickedLat;
-                    final lng = pickedLng;
-                    Navigator.pop(sheetContext);
-                    if (lat != null && lng != null) {
-                      // 有坐标：反向地理编码获取城市名，然后加载
-                      _switchToLocation(lat, lng);
-                    } else if (address != null && address.isNotEmpty) {
-                      // 仅有文字地址（地理编码未完成）：正向编码后加载
-                      _geocodeAndSwitch(address);
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: Text(context.l10n.commonConfirm),
-                ),
-              ),
-              const SizedBox(height: 8),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  /// 切换到指定坐标：反向地理编码获取城市名 → 重新加载
-  Future<void> _switchToLocation(double lat, double lng) async {
-    setState(() => _locationLoading = true);
-    await _resolveCity(lat, lng);
-    if (!mounted) return;
-    _loadWithCoordinates(lat, lng);
-  }
-
-  /// 仅有文字地址时：正向地理编码获取坐标，再切换
-  Future<void> _geocodeAndSwitch(String address) async {
-    setState(() => _locationLoading = true);
-    try {
-      final locations = await locationFromAddress(address);
-      if (locations.isNotEmpty && mounted) {
-        final loc = locations.first;
-        await _resolveCity(loc.latitude, loc.longitude);
-        if (!mounted) return;
-        _loadWithCoordinates(loc.latitude, loc.longitude);
-      } else if (mounted) {
-        setState(() => _locationLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.l10n.locationGetFailed)),
-        );
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() => _locationLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.l10n.locationGetFailed)),
-        );
-      }
-    }
-  }
-
   List<Widget> _buildWaterfallItems(HomeState state) {
     final locale = Localizations.localeOf(context);
     final isEn = locale.languageCode == 'en';
@@ -446,7 +316,7 @@ class _NearbyTabState extends State<_NearbyTab> {
               SliverToBoxAdapter(
                 child: _NearbyLocationBar(
                   city: _city,
-                  onSwitchTap: _showNearbyLocationPicker,
+                  onRefreshTap: _loadLocation,
                 ),
               ),
               // Radius selector
@@ -565,11 +435,11 @@ class _NearbyRadiusSelector extends StatelessWidget {
 class _NearbyLocationBar extends StatelessWidget {
   const _NearbyLocationBar({
     required this.city,
-    required this.onSwitchTap,
+    required this.onRefreshTap,
   });
 
   final String? city;
-  final VoidCallback onSwitchTap;
+  final VoidCallback onRefreshTap;
 
   @override
   Widget build(BuildContext context) {
@@ -594,14 +464,11 @@ class _NearbyLocationBar extends StatelessWidget {
           ),
           const SizedBox(width: 6),
           GestureDetector(
-            onTap: onSwitchTap,
-            child: Text(
-              l10n.nearbySwitch,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.primary,
-              ),
+            onTap: onRefreshTap,
+            child: const Icon(
+              Icons.my_location,
+              size: 14,
+              color: AppColors.primary,
             ),
           ),
         ],
