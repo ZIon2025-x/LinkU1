@@ -1,10 +1,13 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'app_providers.dart';
 import 'core/design/app_theme.dart';
@@ -27,6 +30,8 @@ import 'data/repositories/message_repository.dart';
 import 'data/repositories/notification_repository.dart';
 import 'data/repositories/activity_repository.dart';
 import 'data/repositories/discovery_repository.dart';
+import 'data/models/version_check_response.dart';
+import 'data/repositories/version_check_repository.dart';
 import 'data/services/api_service.dart';
 import 'data/services/push_notification_service.dart';
 import 'l10n/app_localizations.dart';
@@ -49,6 +54,7 @@ class _Link2UrAppState extends State<Link2UrApp> {
   late final NotificationRepository _notificationRepository;
   late final ActivityRepository _activityRepository;
   late final DiscoveryRepository _discoveryRepository;
+  late final VersionCheckRepository _versionCheckRepository;
   late final AuthBloc _authBloc;
   late final AppRouter _appRouter;
   final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -57,6 +63,7 @@ class _Link2UrAppState extends State<Link2UrApp> {
   void initState() {
     super.initState();
     _apiService = ApiService();
+    _versionCheckRepository = VersionCheckRepository(apiService: _apiService);
     _authRepository = AuthRepository(apiService: _apiService);
     _taskRepository = TaskRepository(apiService: _apiService);
     _userRepository = UserRepository(apiService: _apiService);
@@ -132,7 +139,9 @@ class _Link2UrAppState extends State<Link2UrApp> {
                       curr.status == AuthStatus.checking;
                   return wasChecking && !isChecking;
                 },
-                listener: (context, state) {
+                listener: (context, state) async {
+                  // Auth check 完成 → 版本检查 → 移除 splash
+                  await _checkAppVersion(context);
                   FlutterNativeSplash.remove();
                 },
               ),
@@ -199,6 +208,81 @@ class _Link2UrAppState extends State<Link2UrApp> {
               },
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  /// 比较语义化版本号，返回 current < other
+  bool _isVersionLessThan(String current, String other) {
+    final currentParts = current.split('.').map(int.tryParse).toList();
+    final otherParts = other.split('.').map(int.tryParse).toList();
+    for (var i = 0; i < 3; i++) {
+      final c = (i < currentParts.length ? currentParts[i] : 0) ?? 0;
+      final o = (i < otherParts.length ? otherParts[i] : 0) ?? 0;
+      if (c < o) return true;
+      if (c > o) return false;
+    }
+    return false;
+  }
+
+  Future<void> _checkAppVersion(BuildContext context) async {
+    // Web 端不检查版本
+    if (kIsWeb) return;
+
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      final platform = Platform.isIOS ? 'ios' : 'android';
+      final result = await _versionCheckRepository.checkVersion(
+        platform: platform,
+        currentVersion: packageInfo.version,
+      );
+      if (result == null || !context.mounted) return;
+
+      if (result.forceUpdate) {
+        _showUpdateDialog(context, result, force: true);
+      } else if (_isVersionLessThan(packageInfo.version, result.latestVersion)) {
+        _showUpdateDialog(context, result, force: false);
+      }
+    } catch (e) {
+      AppLogger.error('Version check error', e);
+    }
+  }
+
+  void _showUpdateDialog(BuildContext context, VersionCheckResponse response, {required bool force}) {
+    final l10n = AppLocalizations.of(context);
+    showDialog<void>(
+      context: context,
+      barrierDismissible: !force,
+      builder: (dialogContext) => PopScope(
+        canPop: !force,
+        child: AlertDialog(
+          title: Text(
+            force
+                ? (l10n?.versionUpdateRequired ?? '需要更新')
+                : (l10n?.versionUpdateAvailable ?? '发现新版本'),
+          ),
+          content: Text(
+            force
+                ? (l10n?.versionUpdateRequiredMessage ?? '当前版本过旧，请更新到最新版本以继续使用。')
+                : (l10n?.versionUpdateAvailableMessage(response.latestVersion) ?? '新版本 ${response.latestVersion} 已发布。'),
+          ),
+          actions: [
+            if (!force)
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: Text(l10n?.versionUpdateLater ?? '稍后'),
+              ),
+            TextButton(
+              onPressed: () async {
+                final uri = Uri.tryParse(response.updateUrl);
+                if (uri != null) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                }
+              },
+              child: Text(l10n?.versionUpdateNow ?? '立即更新'),
+            ),
+          ],
         ),
       ),
     );
