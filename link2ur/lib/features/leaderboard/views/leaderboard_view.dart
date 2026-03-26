@@ -301,6 +301,35 @@ class _LeaderboardCard extends StatelessWidget {
               ),
             ),
 
+            // 创建者信息
+            if (leaderboard.applicant != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    AvatarView(
+                      imageUrl: leaderboard.applicant!.avatar,
+                      name: leaderboard.applicant!.name,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        leaderboard.applicant!.name,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondaryLight,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
             // 统计行 (对标iOS CompactStatItem: items + votes + views)
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,

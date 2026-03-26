@@ -768,18 +768,10 @@ class _FollowFeedCard extends StatelessWidget {
                 // ── 头部：头像 + 名字 + 时间 + 类型标签 ──
                 Row(
                   children: [
-                    CircleAvatar(
-                      radius: 18,
-                      backgroundImage: item.userAvatar != null && item.userAvatar!.isNotEmpty
-                          ? NetworkImage(item.userAvatar!)
-                          : null,
-                      backgroundColor: isDark ? Colors.grey[800] : const Color(0xFFE8E8E8),
-                      onBackgroundImageError: item.userAvatar != null && item.userAvatar!.isNotEmpty
-                          ? (_, __) {}
-                          : null,
-                      child: item.userAvatar == null || item.userAvatar!.isEmpty
-                          ? Icon(Icons.person, size: 18, color: isDark ? Colors.grey[400] : Colors.grey[600])
-                          : null,
+                    AvatarView(
+                      imageUrl: item.userAvatar,
+                      name: item.userName,
+                      size: 36,
                     ),
                     const SizedBox(width: 10),
                     Expanded(

@@ -56,6 +56,7 @@ class _FormContentState extends State<_FormContent> {
 
   String? _category;
   String _pricingType = 'fixed';
+  String _selectedCurrency = 'GBP';
   String _locationType = 'online';
   String? _location;
   double? _latitude;
@@ -82,6 +83,7 @@ class _FormContentState extends State<_FormContent> {
       }
       _category = data['category'] as String?;
       _pricingType = (data['pricing_type'] as String?) ?? 'fixed';
+      _selectedCurrency = (data['currency'] as String?) ?? 'GBP';
       _locationType = (data['location_type'] as String?) ?? 'online';
       _location = (data['location'] as String?);
       _latitude = (data['latitude'] as num?)?.toDouble();
@@ -175,6 +177,7 @@ class _FormContentState extends State<_FormContent> {
       'service_name': _nameController.text.trim(),
       'description': _descriptionController.text.trim(),
       'pricing_type': _pricingType,
+      'currency': _selectedCurrency,
       'location_type': _locationType,
     };
 
@@ -425,6 +428,16 @@ class _FormContentState extends State<_FormContent> {
                       ),
                       if (_pricingType != 'negotiable') ...[
                         const SizedBox(height: AppSpacing.md),
+                        SegmentedButton<String>(
+                          segments: const [
+                            ButtonSegment(value: 'GBP', label: Text('\u00A3 GBP')),
+                            ButtonSegment(value: 'EUR', label: Text('\u20AC EUR')),
+                          ],
+                          selected: {_selectedCurrency},
+                          onSelectionChanged: (v) =>
+                              setState(() => _selectedCurrency = v.first),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
                         TextFormField(
                           controller: _priceController,
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -432,7 +445,7 @@ class _FormContentState extends State<_FormContent> {
                             FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
                           ],
                           decoration: InputDecoration(
-                            prefixText: '${Helpers.currencySymbol} ',
+                            prefixText: '${Helpers.currencySymbolFor(_selectedCurrency)} ',
                             hintText: '0.00',
                             suffixText: _pricingType == 'hourly' ? context.l10n.personalServicePerHour : null,
                             border: OutlineInputBorder(borderRadius: AppRadius.input),

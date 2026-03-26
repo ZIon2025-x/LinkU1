@@ -724,71 +724,56 @@ class _ServiceFormSheetState extends State<_ServiceFormSheet> {
                 isRequired: true,
               ),
               const SizedBox(height: 8),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: TextFormField(
-                      controller: _priceController,
-                      decoration: _inputDecoration(
-                        hintText: '0.00',
-                      ).copyWith(
-                        prefixIcon: Padding(
-                          padding: const EdgeInsets.only(left: 14, right: 4),
-                          child: Text(
-                            _currencySymbol,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                        ),
-                        prefixIconConstraints: const BoxConstraints(),
-                      ),
-                      keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true),
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(
-                            RegExp(r'^\d+\.?\d{0,2}')),
-                      ],
-                      style: const TextStyle(fontSize: 15),
-                      textInputAction: TextInputAction.done,
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return context.l10n.validatorFieldRequired(
-                              context.l10n.expertServicePrice);
-                        }
-                        final parsed = double.tryParse(value.trim());
-                        if (parsed == null || parsed <= 0) {
-                          return context.l10n.validatorFieldRequired(
-                              context.l10n.expertServicePrice);
-                        }
-                        return null;
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    flex: 2,
-                    child: AppSelectField<String>(
-                      value: _selectedCurrency,
-                      hint: context.l10n.expertServiceCurrency,
-                      sheetTitle: context.l10n.expertServiceCurrency,
-                      searchThreshold: 99,
-                      clearable: false,
-                      options: ExpertConstants.serviceCurrencies
-                          .map((c) => SelectOption(value: c, label: c))
-                          .toList(),
-                      onChanged: (value) {
-                        if (value != null) {
-                          setState(() => _selectedCurrency = value);
-                        }
-                      },
-                    ),
-                  ),
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(value: 'GBP', label: Text('\u00A3 GBP')),
+                  ButtonSegment(value: 'EUR', label: Text('\u20AC EUR')),
+                  ButtonSegment(value: 'CNY', label: Text('\u00A5 CNY')),
+                  ButtonSegment(value: 'USD', label: Text('\$ USD')),
                 ],
+                selected: {_selectedCurrency},
+                onSelectionChanged: (v) =>
+                    setState(() => _selectedCurrency = v.first),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _priceController,
+                decoration: _inputDecoration(
+                  hintText: '0.00',
+                ).copyWith(
+                  prefixIcon: Padding(
+                    padding: const EdgeInsets.only(left: 14, right: 4),
+                    child: Text(
+                      _currencySymbol,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                  prefixIconConstraints: const BoxConstraints(),
+                ),
+                keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(
+                      RegExp(r'^\d+\.?\d{0,2}')),
+                ],
+                style: const TextStyle(fontSize: 15),
+                textInputAction: TextInputAction.done,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return context.l10n.validatorFieldRequired(
+                        context.l10n.expertServicePrice);
+                  }
+                  final parsed = double.tryParse(value.trim());
+                  if (parsed == null || parsed <= 0) {
+                    return context.l10n.validatorFieldRequired(
+                        context.l10n.expertServicePrice);
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 24),
 
