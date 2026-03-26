@@ -538,6 +538,7 @@ class ApiEndpoints {
   static const String privateFile = '/api/private-file'; // [RESERVED]
   static const String banners = '/api/banners';
   static const String healthCheck = '/api/health';
+  static const String versionCheck = '/api/app/version-check';
   static const String systemSettingsPublic = '/api/system-settings/public';
   static const String jobPositions = '/api/job-positions';
   static String faq({String lang = 'zh'}) => '/api/faq?lang=$lang';
