@@ -348,21 +348,40 @@ def retry_failed_transfer(
         return False, error_msg
     
     if not taker.stripe_account_id:
-        error_msg = "任务接受人尚未创建 Stripe Connect 账户"
-        transfer_record.status = "failed"
-        transfer_record.last_error = error_msg
-        from app.transaction_utils import safe_commit
-        if not safe_commit(db, f"标记转账记录为失败（无Stripe账户） transfer_record_id={transfer_record.id}"):
-            logger.error(f"标记转账记录为失败时提交失败: transfer_record_id={transfer_record.id}")
-        return False, error_msg
-    
+        # 无 Stripe Connect 账户，改为钱包入账
+        logger.info(f"接单人无 Stripe Connect，转为钱包入账: transfer_record_id={transfer_record.id}")
+        try:
+            from app.wallet_service import credit_wallet
+            from decimal import Decimal
+            wallet_tx = credit_wallet(
+                db,
+                user_id=taker.id,
+                amount=Decimal(str(transfer_record.amount)),
+                source="task_earning",
+                related_id=str(transfer_record.task_id),
+                related_type="task",
+                description=f"任务 #{transfer_record.task_id} 收入（转账重试转钱包）",
+                currency=transfer_record.currency or "GBP",
+            )
+            transfer_record.status = "succeeded"
+            transfer_record.last_error = None
+            transfer_record.succeeded_at = get_utc_time()
+            from app.transaction_utils import safe_commit
+            if not safe_commit(db, f"转账记录转钱包入账 transfer_record_id={transfer_record.id}"):
+                logger.error(f"转账记录转钱包入账提交失败: transfer_record_id={transfer_record.id}")
+                return False, "数据库提交失败"
+            logger.info(f"✅ 转账记录转钱包入账成功: transfer_record_id={transfer_record.id}")
+            return True, None
+        except Exception as e:
+            logger.error(f"转账记录转钱包入账失败: {e}")
+            return False, str(e)
+
+    # 有 Stripe Connect 账户，走原有 Stripe Transfer 重试
     # 修复 P1#8：不在此处预增 retry_count，避免与 execute_transfer 中的增量重复。
-    # execute_transfer 在遇到可重试的 Stripe 错误时会自行增加 retry_count 并设置 next_retry_at。
-    # 若在此处也增加，同一次重试会导致 retry_count += 2，max_retries 提前耗尽。
     transfer_record.status = "retrying"
-    
+
     logger.info(f"🔄 重试转账: transfer_record_id={transfer_record.id}, retry_count={transfer_record.retry_count}/{transfer_record.max_retries}")
-    
+
     # 执行转账
     success, transfer_id, error_msg = execute_transfer(db, transfer_record, taker.stripe_account_id)
     
@@ -521,25 +540,36 @@ def process_pending_transfers(db: Session) -> Dict[str, Any]:
             stats["processed"] += 1
             
             try:
-                # 获取任务接受人的 Stripe Connect 账户ID
+                # 获取任务接受人信息
                 taker = db.query(models.User).filter(models.User.id == transfer_record.taker_id).first()
-                if not taker or not taker.stripe_account_id:
+                if not taker:
                     transfer_record.status = "failed"
-                    transfer_record.last_error = "任务接受人没有 Stripe Connect 账户"
+                    transfer_record.last_error = "任务接受人不存在"
                     from app.transaction_utils import safe_commit
-                    if not safe_commit(db, f"标记转账记录为失败（无Stripe账户） transfer_record_id={transfer_record.id}"):
+                    if not safe_commit(db, f"标记转账记录为失败（接受人不存在） transfer_record_id={transfer_record.id}"):
                         logger.error(f"标记转账记录为失败时提交失败: transfer_record_id={transfer_record.id}")
                     stats["failed"] += 1
                     continue
-                
-                # 执行转账
-                if transfer_record.status == "pending":
-                    # 首次尝试
-                    success, transfer_id, error_msg = execute_transfer(db, transfer_record, taker.stripe_account_id)
-                else:
-                    # 重试
-                    success, error_msg = retry_failed_transfer(db, transfer_record)
-                    transfer_id = transfer_record.transfer_id if success else None
+
+                # 统一走钱包入账，不再 Stripe Transfer
+                from app.wallet_service import credit_wallet
+                wallet_tx = credit_wallet(
+                    db,
+                    user_id=taker.id,
+                    amount=Decimal(str(transfer_record.amount)),
+                    source="task_earning",
+                    related_id=str(transfer_record.task_id),
+                    related_type="task",
+                    description=f"任务 #{transfer_record.task_id} 收入（待处理转账）",
+                    currency=transfer_record.currency or "GBP",
+                )
+                transfer_record.status = "succeeded"
+                transfer_record.succeeded_at = get_utc_time()
+                from app.transaction_utils import safe_commit
+                safe_commit(db, f"待处理转账转钱包入账 transfer_record_id={transfer_record.id}")
+                success = True
+                transfer_id = None
+                error_msg = None
                 
                 if success:
                     stats["succeeded"] += 1

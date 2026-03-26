@@ -606,15 +606,8 @@ def apply_to_activity(
     # 如果需要支付，创建支付意图
     payment_intent_id = None
     if needs_payment and price > 0:
-        # 检查达人是否有Stripe Connect账户
+        # 获取达人信息（不再要求 Stripe Connect，收入统一进本地钱包）
         expert_user = db.query(User).filter(User.id == db_activity.expert_id).first()
-        if not expert_user or not expert_user.stripe_account_id:
-            db.rollback()
-            raise HTTPException(
-                status_code=400,
-                detail="任务达人尚未创建 Stripe Connect 收款账户，无法完成支付。请联系任务达人先创建收款账户。",
-                headers={"X-Stripe-Connect-Required": "true"}
-            )
         
         # 创建支付意图
         import stripe
@@ -638,7 +631,7 @@ def apply_to_activity(
                     "activity_id": str(activity_id),
                     "poster_id": current_user.id if not is_multi_participant else None,
                     "taker_id": db_activity.expert_id,
-                    "taker_stripe_account_id": expert_user.stripe_account_id,
+                    "taker_stripe_account_id": expert_user.stripe_account_id if expert_user else None,
                     "application_fee": str(application_fee_pence),
                     "task_amount": str(task_amount_pence),
                     "task_type": "activity_application",

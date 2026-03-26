@@ -165,7 +165,7 @@ class AppSelectField<T> extends StatelessWidget {
             if (hasValue)
               Expanded(
                 child: Text(
-                  selected!.label,
+                  selected.label,
                   style: TextStyle(
                     fontSize: 15,
                     color: isDark ? Colors.white : Colors.black87,

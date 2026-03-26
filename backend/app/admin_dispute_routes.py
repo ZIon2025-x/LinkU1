@@ -359,18 +359,27 @@ def resolve_task_dispute(
                             commit=False
                         )
                         
-                        # 尝试立即执行转账
+                        # 统一钱包入账
                         taker = crud.get_user_by_id(db, task.taker_id)
-                        if taker and taker.stripe_account_id:
-                            success, transfer_id, error_msg = execute_transfer(db, transfer_record, taker.stripe_account_id)
-                            if success:
-                                task.escrow_amount = 0.0
-                                task.paid_to_user_id = task.taker_id
-                                logger.info(f"✅ 争议 {dispute_id} 转账成功: £{transfer_amount:.2f}")
-                            else:
-                                logger.warning(f"⚠️ 争议 {dispute_id} 转账失败: {error_msg}，已创建转账记录，定时任务将自动重试")
+                        if taker:
+                            from app.wallet_service import credit_wallet
+                            wallet_tx = credit_wallet(
+                                db,
+                                user_id=taker.id,
+                                amount=transfer_amount,
+                                source="task_earning",
+                                related_id=str(task.id),
+                                related_type="task",
+                                description=f"任务 #{task.id} 收入（争议裁决）",
+                                currency=(task.currency or "GBP").upper(),
+                            )
+                            transfer_record.status = "succeeded"
+                            transfer_record.succeeded_at = get_utc_time()
+                            task.escrow_amount = 0.0
+                            task.paid_to_user_id = task.taker_id
+                            logger.info(f"✅ 争议 {dispute_id} 钱包入账成功: £{transfer_amount:.2f}")
                         else:
-                            logger.info(f"ℹ️ 争议 {dispute_id} 接单人未设置Stripe账户，已创建转账记录")
+                            logger.warning(f"⚠️ 争议 {dispute_id} 接单人不存在，转账记录保留待处理")
                 else:
                     task.escrow_amount = 0.0
                     task.paid_to_user_id = task.taker_id

@@ -4164,91 +4164,60 @@ def confirm_task_completion(
                     ).first()
                     
                     if not existing_cash_reward:
-                        # 获取任务接受人信息
+                        # 活动现金奖励统一入本地钱包
                         taker = crud.get_user_by_id(db, task.taker_id)
-                        if taker and taker.stripe_account_id:
+                        if taker:
                             try:
-                                # 验证 Stripe Connect 账户状态
-                                account = stripe.Account.retrieve(taker.stripe_account_id)
-                                if not account.details_submitted:
-                                    logger.warning(f"用户 {task.taker_id} 的 Stripe Connect 账户未完成设置，无法发放现金奖励")
-                                elif not account.charges_enabled:
-                                    logger.warning(f"用户 {task.taker_id} 的 Stripe Connect 账户未启用收款，无法发放现金奖励")
+                                from app.wallet_service import credit_wallet
+                                from decimal import Decimal
+
+                                wallet_tx = credit_wallet(
+                                    db,
+                                    user_id=taker.id,
+                                    amount=Decimal(str(cash_amount)),
+                                    source="activity_cash_reward",
+                                    related_id=str(task_id),
+                                    related_type="task",
+                                    description=f"活动 #{task.parent_activity_id} 现金奖励",
+                                    currency=(task.currency or "GBP").upper(),
+                                    idempotency_key=activity_cash_reward_idempotency_key,
+                                )
+
+                                if wallet_tx:
+                                    logger.info(f"活动现金奖励已入账钱包: 用户 {task.taker_id}, 活动 {task.parent_activity_id}, 金额 £{cash_amount:.2f}")
                                 else:
-                                    # 🔒 安全修复：先创建DB记录（flush），再执行Stripe转账
-                                    # 如果Stripe失败，DB可以回滚；如果先Stripe后DB失败，钱已转出但无记录
-                                    from app.payment_transfer_service import create_transfer_record
-                                    from decimal import Decimal
-                                    
-                                    # 先创建待处理的转账记录（flush到DB但不提交）
-                                    transfer_record = create_transfer_record(
+                                    logger.info(f"活动现金奖励已处理过（幂等跳过）: task_id={task_id}")
+
+                                # 发送通知给申请者
+                                try:
+                                    crud.create_notification(
                                         db=db,
-                                        task_id=task_id,
-                                        taker_id=task.taker_id,
-                                        poster_id=task.poster_id,
-                                        amount=Decimal(str(cash_amount)),
-                                        currency=task.currency or "GBP",
-                                        metadata={
-                                            "transfer_type": "activity_applicant_cash_reward",
-                                            "activity_id": str(task.parent_activity_id),
-                                            "idempotency_key": activity_cash_reward_idempotency_key,
-                                        },
-                                        commit=False  # 仅flush，不提交
+                                        user_id=task.taker_id,
+                                        type="activity_reward_cash",
+                                        title="活动现金奖励已发放",
+                                        content=f"您完成活动「{activity.title}」的任务，获得 £{cash_amount:.2f} 现金奖励（已入账钱包）",
+                                        related_id=str(task.parent_activity_id),
+                                        auto_commit=False
                                     )
-                                    
-                                    # 然后执行 Stripe Transfer 转账现金奖励
-                                    cash_amount_pence = int(cash_amount * 100)
-                                    transfer = stripe.Transfer.create(
-                                        amount=cash_amount_pence,
-                                        currency=(task.currency or "GBP").lower(),
-                                        destination=taker.stripe_account_id,
-                                        metadata={
-                                            "task_id": str(task_id),
-                                            "activity_id": str(task.parent_activity_id),
-                                            "taker_id": str(task.taker_id),
-                                            "transfer_type": "activity_applicant_cash_reward"
-                                        },
-                                        description=f"活动 #{task.parent_activity_id} 任务 #{task_id} 现金奖励"
-                                    )
-                                    
-                                    # Stripe成功后更新转账记录状态
-                                    transfer_record.transfer_id = transfer.id
-                                    transfer_record.status = "succeeded"
-                                    transfer_record.succeeded_at = get_utc_time()
-                                    
-                                    logger.info(f"活动现金奖励已发放: 用户 {task.taker_id}, 活动 {task.parent_activity_id}, 金额 £{cash_amount:.2f}")
-                                    
-                                    # 发送通知给申请者
+
                                     try:
-                                        crud.create_notification(
+                                        from app.push_notification_service import send_push_notification
+                                        send_push_notification(
                                             db=db,
                                             user_id=task.taker_id,
-                                            type="activity_reward_cash",
-                                            title="活动现金奖励已发放",
-                                            content=f"您完成活动「{activity.title}」的任务，获得 £{cash_amount:.2f} 现金奖励",
-                                            related_id=str(task.parent_activity_id),
-                                            auto_commit=False
+                                            notification_type="activity_reward_cash",
+                                            data={"activity_id": task.parent_activity_id, "task_id": task_id, "amount": cash_amount},
+                                            template_vars={"activity_title": activity.title, "amount": cash_amount}
                                         )
-                                        
-                                        # 发送推送通知
-                                        try:
-                                            from app.push_notification_service import send_push_notification
-                                            send_push_notification(
-                                                db=db,
-                                                user_id=task.taker_id,
-                                                notification_type="activity_reward_cash",
-                                                data={"activity_id": task.parent_activity_id, "task_id": task_id, "amount": cash_amount},
-                                                template_vars={"activity_title": activity.title, "amount": cash_amount}
-                                            )
-                                        except Exception as e:
-                                            logger.warning(f"发送活动现金奖励推送通知失败: {e}")
                                     except Exception as e:
-                                        logger.warning(f"创建活动现金奖励通知失败: {e}")
+                                        logger.warning(f"发送活动现金奖励推送通知失败: {e}")
+                                except Exception as e:
+                                    logger.warning(f"创建活动现金奖励通知失败: {e}")
                             except Exception as e:
                                 logger.error(f"发放活动现金奖励失败: {e}", exc_info=True)
                                 # 现金奖励发放失败不影响任务完成流程
                         else:
-                            logger.warning(f"用户 {task.taker_id} 没有 Stripe Connect 账户，无法发放现金奖励")
+                            logger.warning(f"用户 {task.taker_id} 不存在，无法发放现金奖励")
                 
                 # 提交SAVEPOINT内的所有奖励发放更改
                 activity_rewards_savepoint.commit()
@@ -8121,51 +8090,17 @@ def confirm_task_complete(
             status_code=404, detail="Task taker not found."
         )
     
-    # 检查任务接受人是否有 Stripe Connect 账户
-    if not taker.stripe_account_id:
-        raise HTTPException(
-            status_code=400,
-            detail="任务接受人尚未创建 Stripe Connect 账户，无法接收付款。请通知接受人先创建收款账户。",
-            headers={"X-Stripe-Connect-Required": "true"}
-        )
-    
-    # 检查 Stripe Connect 账户状态
-    try:
-        account = stripe.Account.retrieve(taker.stripe_account_id)
-        
-        # 检查账户是否已完成 onboarding
-        if not account.details_submitted:
-            raise HTTPException(
-                status_code=400,
-                detail="任务接受人的 Stripe Connect 账户尚未完成设置，无法接收付款。请通知接受人完成账户设置。",
-                headers={"X-Stripe-Connect-Onboarding-Required": "true"}
-            )
-        
-        # 检查账户是否已启用收款
-        if not account.charges_enabled:
-            raise HTTPException(
-                status_code=400,
-                detail="任务接受人的 Stripe Connect 账户尚未启用收款功能，无法接收付款。",
-                headers={"X-Stripe-Connect-Charges-Not-Enabled": "true"}
-            )
-    except stripe.error.StripeError as e:
-        logger.error(f"Error retrieving Stripe account for user {taker.id}: {e}")
-        raise HTTPException(
-            status_code=400,
-            detail=f"无法验证任务接受人的收款账户: {str(e)}"
-        )
-    
     # 检查 escrow_amount 是否大于0
     if task.escrow_amount <= 0:
         raise HTTPException(
             status_code=400,
             detail="任务托管金额为0，无需转账。"
         )
-    
-    # 执行 Stripe Transfer 转账
-    # 交易市场模式：资金在平台账户，现在转账给任务接受人
+
+    # 统一走本地钱包入账，不再直接 Stripe Transfer
+    # 用户需要提现时再通过 Stripe Connect 转出
     try:
-        # 确保 escrow_amount 正确（任务金额 - 平台服务费，按任务来源/类型取费率）
+        # 确保 escrow_amount 正确（任务金额 - 平台服务费）
         if task.escrow_amount <= 0:
             task_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
             from app.utils.fee_calculator import calculate_application_fee
@@ -8174,91 +8109,44 @@ def confirm_task_complete(
             application_fee = calculate_application_fee(task_amount, task_source, task_type)
             task.escrow_amount = max(0.0, task_amount - application_fee)
             logger.info(f"重新计算 escrow_amount: 任务金额={task_amount}, 服务费={application_fee}, escrow={task.escrow_amount}")
-        
-        transfer_amount_pence = round(Decimal(str(task.escrow_amount)) * 100)  # 转换为便士（Decimal 避免浮点精度丢失）
-        
-        logger.info(f"准备转账: 金额={transfer_amount_pence} 便士 (£{task.escrow_amount:.2f}), 目标账户={taker.stripe_account_id}")
-        
-        # 创建 Transfer 到接受人的 Stripe Connect 账户
-        # 注意：这是从平台账户转账到连接账户，不涉及 application_fee
-        # 平台服务费已经在计算 escrow_amount 时扣除
-        transfer = stripe.Transfer.create(
-            amount=transfer_amount_pence,
-            currency=(task.currency or "GBP").lower(),
-            destination=taker.stripe_account_id,
-            metadata={
-                "task_id": str(task_id),
-                "taker_id": str(taker.id),
-                "poster_id": str(current_user.id),
-                "transfer_type": "task_reward"
-            },
-            description=f"任务 #{task_id} 奖励 - {task.title}"
+
+        escrow_amount = Decimal(str(task.escrow_amount))
+        currency = (task.currency or "GBP").upper()
+
+        logger.info(f"任务完成，入账本地钱包: 金额=£{escrow_amount:.2f}, 接单人={taker.id}")
+
+        # 钱包入账（幂等，基于 idempotency_key）
+        from app.wallet_service import credit_wallet
+        wallet_tx = credit_wallet(
+            db,
+            user_id=taker.id,
+            amount=escrow_amount,
+            source="task_earning",
+            related_id=str(task_id),
+            related_type="task",
+            description=f"任务 #{task_id} 收入 - {task.title}",
+            currency=currency,
         )
-        
-        logger.info(f"✅ Transfer 创建成功: transfer_id={transfer.id}, amount=£{task.escrow_amount:.2f}")
-        
-        # 创建 PaymentTransfer 记录（用于累计获得统计）
-        from app.payment_transfer_service import create_transfer_record
-        try:
-            # 检查是否已存在转账记录（防止重复创建）
-            existing_transfer = db.query(models.PaymentTransfer).filter(
-                and_(
-                    models.PaymentTransfer.task_id == task_id,
-                    models.PaymentTransfer.transfer_id == transfer.id
-                )
-            ).first()
-            
-            if not existing_transfer:
-                transfer_record = create_transfer_record(
-                    db,
-                    task_id=task_id,
-                    taker_id=task.taker_id,
-                    poster_id=current_user.id,
-                    amount=Decimal(str(task.escrow_amount)),
-                    currency=task.currency or "GBP",
-                    metadata={
-                        "task_title": task.title,
-                        "transfer_source": "confirm_complete"
-                    }
-                )
-                # 更新转账记录：设置 transfer_id 和状态
-                transfer_record.transfer_id = transfer.id
-                transfer_record.status = "succeeded"  # 直接设为成功，因为 Transfer 已创建
-                transfer_record.succeeded_at = get_utc_time()
-                db.commit()
-                logger.info(f"✅ 已创建 PaymentTransfer 记录: transfer_record_id={transfer_record.id}")
-            else:
-                # 如果记录已存在，更新状态
-                existing_transfer.status = "succeeded"
-                existing_transfer.succeeded_at = get_utc_time()
-                db.commit()
-                logger.info(f"✅ 已更新现有 PaymentTransfer 记录: transfer_record_id={existing_transfer.id}")
-        except Exception as e:
-            logger.error(f"创建 PaymentTransfer 记录失败: {e}", exc_info=True)
-            # 不影响主流程，继续执行
-        
+
+        if wallet_tx:
+            logger.info(f"✅ 钱包入账成功: wallet_tx_id={wallet_tx.id}, amount=£{escrow_amount:.2f}")
+        else:
+            logger.info(f"钱包入账已处理过（幂等跳过）: task_id={task_id}")
+
         # 更新任务状态
         task.is_confirmed = 1
         task.paid_to_user_id = task.taker_id
         transfer_amount = task.escrow_amount  # 先保存转账金额
-        task.escrow_amount = 0.0  # 转账后清空托管金额
+        task.escrow_amount = 0.0  # 入账后清空托管金额
 
         db.commit()
 
         return {
-            "message": "Payment released to taker.",
-            "transfer_id": transfer.id,
+            "message": "Payment credited to taker wallet.",
             "amount": transfer_amount,
-            "currency": task.currency or "GBP"
+            "currency": currency
         }
-        
-    except stripe.error.StripeError as e:
-        logger.error(f"Stripe transfer error for task {task_id}: {e}")
-        db.rollback()
-        raise HTTPException(
-            status_code=500,
-            detail=f"转账失败: {str(e)}"
-        )
+
     except Exception as e:
         logger.error(f"Error confirming task {task_id}: {e}")
         db.rollback()

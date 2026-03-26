@@ -65,7 +65,6 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
   // 钱包余额
   WalletBalance? _walletBalance;
   bool _useWalletBalance = false;
-  bool _loadingWallet = false;
   bool _togglingWallet = false;
 
   // 支付宝单独 PaymentIntent（选择支付宝时懒加载）
@@ -192,18 +191,15 @@ class _ApprovalPaymentPageState extends State<ApprovalPaymentPage> {
   }
 
   Future<void> _loadWalletBalance() async {
-    setState(() => _loadingWallet = true);
     try {
       final balance = await context.read<PaymentRepository>().getWalletBalance();
       if (mounted) {
         setState(() {
           _walletBalance = balance;
-          _loadingWallet = false;
         });
       }
     } catch (e) {
       AppLogger.warning('Failed to load wallet balance: $e');
-      if (mounted) setState(() => _loadingWallet = false);
     }
   }
 

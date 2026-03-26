@@ -1988,54 +1988,45 @@ def auto_transfer_expired_tasks(db: Session):
                     stats["skipped"] += 1
                     continue
                 
-                # ======== 执行 Stripe 转账 ========
-                
+                # ======== 钱包入账（统一不再 Stripe Transfer）========
+
                 taker = crud.get_user_by_id(db, task.taker_id)
-                
-                if taker and taker.stripe_account_id:
-                    success, transfer_id, error = execute_transfer(
-                        db, transfer_record, taker.stripe_account_id,
-                        commit=False  # 在 SAVEPOINT 内使用 flush，避免破坏事务隔离
+
+                if taker:
+                    from app.wallet_service import credit_wallet
+                    wallet_tx = credit_wallet(
+                        db,
+                        user_id=taker.id,
+                        amount=auto_transfer_amount,
+                        source="task_earning",
+                        related_id=str(task.id),
+                        related_type="task",
+                        description=f"任务 #{task.id} 收入（自动确认）",
+                        currency=(task.currency or "GBP").upper(),
                     )
-                    
-                    if success:
-                        # 更新任务确认状态
-                        locked_task.confirmed_at = current_time
-                        locked_task.auto_confirmed = 1
-                        locked_task.is_confirmed = 1
-                        locked_task.paid_to_user_id = task.taker_id
-                        locked_task.escrow_amount = Decimal('0.00')  # 清零托管金额，防止其他流程重复转账
-                        
-                        # 记录历史（使用 flush 版本，避免 commit 破坏 SAVEPOINT 隔离）
-                        _add_task_history_flush(db, task.id, None, "auto_3d_confirm")
-                        
-                        auto_transfer_count += 1
-                        stats["transferred"] += 1
-                        logger.info(
-                            f"✅ 任务 {task.id} 自动转账成功：£{auto_transfer_amount} → 接单方 {task.taker_id}，"
-                            f"transfer_id={transfer_id}"
-                        )
-                    else:
-                        stats["failed"] += 1
-                        logger.error(
-                            f"❌ 任务 {task.id} 自动转账执行失败: {error}，"
-                            f"转账记录 {transfer_record.id} 保留待重试"
-                        )
-                else:
-                    # 接单方无 Stripe 账户 — 不设 is_confirmed=1
-                    # 转账记录保留为 pending，由 process_pending_payment_transfers 在转账成功后设置 is_confirmed
-                    # 只标记 auto_confirmed=1 表示系统已决定自动确认
+
+                    # 更新转账记录状态
+                    transfer_record.status = "succeeded"
+                    transfer_record.succeeded_at = current_time
+                    db.flush()
+
+                    # 更新任务确认状态
+                    locked_task.confirmed_at = current_time
+                    locked_task.auto_confirmed = 1
+                    locked_task.is_confirmed = 1
+                    locked_task.paid_to_user_id = task.taker_id
+                    locked_task.escrow_amount = Decimal('0.00')
+
+                    _add_task_history_flush(db, task.id, None, "auto_3d_confirm")
+
                     auto_transfer_count += 1
                     stats["transferred"] += 1
-                    
-                    locked_task.auto_confirmed = 1
-                    # 不设 is_confirmed=1 和 paid_to_user_id，等转账真正成功后再设
-                    _add_task_history_flush(db, task.id, None, "auto_pending")
-                    
                     logger.info(
-                        f"⏳ 任务 {task.id} 自动确认意图已记录：接单方 {task.taker_id} 无 Stripe 账户，"
-                        f"转账记录 {transfer_record.id} 待后续处理（is_confirmed 待转账成功后更新）"
+                        f"✅ 任务 {task.id} 自动入账钱包成功：£{auto_transfer_amount} → 接单方 {task.taker_id}"
                     )
+                else:
+                    stats["failed"] += 1
+                    logger.error(f"❌ 任务 {task.id} 接单方 {task.taker_id} 不存在，无法入账")
                 
                 # 提交当前任务的 SAVEPOINT
                 savepoint.commit()

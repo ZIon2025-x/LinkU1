@@ -1290,14 +1290,9 @@ def create_task_payment(
                 if existing_payment_intent.status in ["requires_payment_method", "requires_confirmation", "requires_action"]:
                     logger.info(f"复用已有的 PaymentIntent: {task.payment_intent_id}, 状态: {existing_payment_intent.status}")
                     
-                    # 获取任务接受人的 Stripe Connect 账户 ID
+                    # 获取任务接受人信息（不再要求 Stripe Connect，收入统一进本地钱包）
                     taker = db.query(models.User).filter(models.User.id == task.taker_id).first()
-                    if not taker or not taker.stripe_account_id:
-                        raise HTTPException(
-                            status_code=400,
-                            detail="任务接受人尚未设置 Stripe Connect 收款账户，无法进行支付"
-                        )
-                    
+
                     # 创建或获取 Stripe Customer（用于保存支付方式）
                     customer_id = None
                     ephemeral_key_secret = None
@@ -1413,14 +1408,9 @@ def create_task_payment(
             except Exception as e:
                 logger.warning(f"获取已有 PaymentIntent 失败: {e}，将创建新的 PaymentIntent")
         
-        # 获取任务接受人的 Stripe Connect 账户 ID
+        # 获取任务接受人信息（不再要求 Stripe Connect，收入统一进本地钱包）
         taker = db.query(models.User).filter(models.User.id == task.taker_id).first()
-        if not taker or not taker.stripe_account_id:
-            raise HTTPException(
-                status_code=400,
-                detail="任务接受人尚未设置 Stripe Connect 收款账户，无法进行支付"
-            )
-        
+
         # 创建或获取 Stripe Customer（用于保存支付方式）
         # 优先使用数据库缓存的 stripe_customer_id，避免 Stripe Search API 索引延迟导致重复创建
         customer_id = None
@@ -1497,7 +1487,7 @@ def create_task_payment(
             "task_id": str(task_id),
             "user_id": str(current_user.id),
             "taker_id": str(task.taker_id),
-            "taker_stripe_account_id": taker.stripe_account_id,
+            "taker_stripe_account_id": taker.stripe_account_id if taker else None,
             "task_amount": str(task_amount_pence),
             "coupon_usage_log_id": str(coupon_usage_log.id) if coupon_usage_log else "",
             "coupon_discount": str(coupon_discount) if coupon_discount > 0 else "",
@@ -1937,17 +1927,14 @@ async def create_wechat_checkout_session(
     if effective_taker_id:
         taker = db.query(models.User).filter(models.User.id == effective_taker_id).first()
     
+    # 不再要求接单人有 Stripe Connect，收入统一进本地钱包，提现时才需要
     if taker and taker.stripe_account_id:
-        # 正常路径：从数据库获取 taker 的 stripe_account_id
         effective_taker_stripe_account_id = taker.stripe_account_id
     elif effective_taker_stripe_account_id:
-        # Fallback：使用 PaymentIntent metadata 中的 stripe_account_id
         logger.info(f"微信支付：使用 PaymentIntent metadata 中的 stripe_account_id={effective_taker_stripe_account_id}")
     else:
-        raise HTTPException(
-            status_code=400,
-            detail="任务接受人尚未设置 Stripe Connect 收款账户，无法进行支付"
-        )
+        # 接单人无 Stripe Connect，metadata 中记录为空即可
+        effective_taker_stripe_account_id = None
     
     # 创建或获取 Stripe Customer（用于预填邮箱/姓名，减少 Checkout 表单输入）
     customer_id = None

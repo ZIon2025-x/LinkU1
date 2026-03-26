@@ -13,6 +13,7 @@ void main() {
   late MockTaskExpertRepository mockTaskExpertRepo;
   late MockActivityRepository mockActivityRepo;
   late MockLeaderboardRepository mockLeaderboardRepo;
+  late MockPersonalServiceRepository mockPersonalServiceRepo;
   late SearchBloc bloc;
 
   setUp(() {
@@ -22,6 +23,7 @@ void main() {
     mockTaskExpertRepo = MockTaskExpertRepository();
     mockActivityRepo = MockActivityRepository();
     mockLeaderboardRepo = MockLeaderboardRepository();
+    mockPersonalServiceRepo = MockPersonalServiceRepository();
     bloc = SearchBloc(
       taskRepository: mockTaskRepo,
       forumRepository: mockForumRepo,
@@ -29,6 +31,7 @@ void main() {
       taskExpertRepository: mockTaskExpertRepo,
       activityRepository: mockActivityRepo,
       leaderboardRepository: mockLeaderboardRepo,
+      personalServiceRepository: mockPersonalServiceRepo,
     );
   });
 
@@ -308,6 +311,7 @@ void main() {
             taskExpertRepository: mockTaskExpertRepo,
             activityRepository: mockActivityRepo,
             leaderboardRepository: mockLeaderboardRepo,
+            personalServiceRepository: mockPersonalServiceRepo,
           );
         },
         act: (bloc) => bloc.add(const SearchSubmitted('flutter')),
@@ -400,6 +404,7 @@ void main() {
             taskExpertRepository: mockTaskExpertRepo,
             activityRepository: mockActivityRepo,
             leaderboardRepository: mockLeaderboardRepo,
+            personalServiceRepository: mockPersonalServiceRepo,
           );
         },
         act: (bloc) {

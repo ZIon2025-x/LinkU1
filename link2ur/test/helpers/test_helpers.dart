@@ -62,6 +62,9 @@ class MockDiscoveryRepository extends Mock implements DiscoveryRepository {}
 
 class MockQuestionRepository extends Mock implements QuestionRepository {}
 
+class MockPersonalServiceRepository extends Mock
+    implements PersonalServiceRepository {}
+
 // Test data helpers
 
 /// 创建测试用户对象

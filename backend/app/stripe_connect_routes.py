@@ -927,17 +927,17 @@ def create_connect_account(
                 logger.error(f"Error saving stripe_account_id to database: {db_err}", exc_info=True)
                 raise
         
-            # 默认设置手动提现（用户可在提现管理中自行修改为 daily/weekly/monthly）
+            # 默认设置每日自动提现（用户可在提现管理中自行修改为 weekly/monthly/manual）
             try:
                 stripe.Account.modify(
                     account.id,
                     settings={
                         "payouts": {
-                            "schedule": {"interval": "manual"}
+                            "schedule": {"interval": "daily"}
                         }
                     }
                 )
-                logger.info(f"Set manual payout schedule for account {account.id}")
+                logger.info(f"Set daily payout schedule for account {account.id}")
             except stripe.error.StripeError as payout_err:
                 # 设置失败不影响账户创建流程，仅记录警告
                 logger.warning(f"Failed to set manual payout for account {account.id}: {payout_err}")
