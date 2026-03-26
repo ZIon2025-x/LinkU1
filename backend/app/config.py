@@ -376,6 +376,13 @@ class Config:
     USE_PG_TRGM = os.getenv("USE_PG_TRGM", "false").lower() == "true"  # 是否使用pg_trgm扩展
     SEARCH_LANGUAGE = os.getenv("SEARCH_LANGUAGE", "english")  # 全文搜索语言
 
+    # ==================== App 版本检查 ====================
+    APP_LATEST_VERSION = os.getenv("APP_LATEST_VERSION", "1.1.1")
+    APP_MIN_VERSION = os.getenv("APP_MIN_VERSION", "1.0.0")
+    IOS_STORE_URL = os.getenv("IOS_STORE_URL", "")
+    ANDROID_STORE_URL = os.getenv("ANDROID_STORE_URL", "")
+    APP_RELEASE_NOTES = os.getenv("APP_RELEASE_NOTES", "")
+
     @classmethod
     def get_redis_config(cls) -> Optional[dict]:
         """获取Redis配置，如果禁用则返回None"""
