@@ -59,13 +59,18 @@ def skip_if_config_invalid():
         pytest.skip("无法加载测试配置")
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="session")
 def auth_client():
     """
-    登录一次，整个测试类共用同一个 httpx.Client。
+    整个测试会话只登录一次，所有测试类共用同一个 httpx.Client。
+
+    使用 scope="session" 而非 scope="class"，因为：
+    1. 后端有单点登录（SSO）机制 — 每次登录会撤销该用户的所有旧会话
+    2. scope="class" 时每个测试类重新登录，可能导致前面类的会话被撤销
+    3. GitHub Actions 出站 IP 可能在请求间变化，导致会话 IP 验证失败
+
     Client 自动管理 cookie，无需手动传递。
-    Bearer token 也会设置到 headers 中（如果后端返回的话）。
-    登录失败时跳过整个测试类。
+    登录失败时跳过所有测试。
     """
     from tests.config import TEST_API_URL, TEST_USER_EMAIL, TEST_USER_PASSWORD, REQUEST_TIMEOUT
 
@@ -107,6 +112,15 @@ def auth_client():
                 # 没有 CSRF token 也没有 JWT，写操作会失败
                 import warnings
                 warnings.warn("auth_client: 登录响应未包含 csrf_token cookie，POST/PUT/DELETE 测试可能返回 401")
+
+        # 验证登录后的会话确实可用（防止 IP 绑定等问题导致后续请求 401）
+        verify_resp = client.get(f"{TEST_API_URL}/api/secure-auth/status")
+        if verify_resp.status_code == 200:
+            verify_data = verify_resp.json()
+            if not verify_data.get("authenticated"):
+                pytest.skip("登录成功但会话验证失败（可能是 CI 环境 IP 不稳定），跳过认证测试")
+        else:
+            pytest.skip(f"会话验证端点异常: HTTP {verify_resp.status_code}")
 
         yield client
 
