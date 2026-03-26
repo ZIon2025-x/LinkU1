@@ -5,11 +5,9 @@ import re
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services.ai_llm_client import LLMClient
-from app.services.ai_agent import build_user_profile_context
-from app.deps import get_current_user_secure_async_csrf, get_async_db_dependency
+from app.services.ai_agent import get_llm_client
+from app.deps import get_current_user_secure_async_csrf
 from app import models
 
 logger = logging.getLogger(__name__)
@@ -39,46 +37,26 @@ def _extract_json(text: str) -> str:
 async def ai_optimize_task(
     request: AIOptimizeRequest,
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
-    db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    # --- Phase 1: DB work (fast) — 读完就释放连接 ---
-    profile_context = await build_user_profile_context(str(current_user.id), db)
-    # 显式关闭 session，不让 LLM 调用期间占用 DB 连接
-    await db.close()
+    prompt = f"""优化以下任务信息，使其更清晰专业。
 
-    profile_section = ""
-    if profile_context:
-        profile_section = f"""
+标题：{request.title}
+描述：{request.description}
+分类：{request.task_type or '未指定'}
 
-以下是发布者的画像信息，请据此优化描述风格和推荐更贴合的技能标签：
-{profile_context}
-"""
+返回JSON：
+{{"optimized_title":"优化后标题(50字内)","optimized_description":"优化后描述","suggested_skills":["技能1","技能2","技能3"]}}
+只返回JSON。"""
 
-    prompt = f"""你是一个任务发布优化助手。请优化以下任务信息，使其更清晰、专业，更容易吸引合适的人接单。
-
-原标题：{request.title}
-原描述：{request.description}
-任务分类：{request.task_type or '未指定'}
-{profile_section}
-请返回 JSON 格式：
-{{
-  "optimized_title": "优化后的标题（50字以内）",
-  "optimized_description": "优化后的详细描述",
-  "suggested_skills": ["建议的技能标签1", "技能2", "技能3"]
-}}
-只返回 JSON，不要其他内容。"""
-
-    # --- Phase 2: LLM call (slow) — 不持有 DB 连接 ---
     text = ""
     try:
-        llm = LLMClient()
+        llm = get_llm_client()
         response = await llm.chat(
             messages=[{"role": "user", "content": prompt}],
-            system="你是一个任务发布优化助手，只返回JSON格式的结果，不要用markdown代码块包裹。不要思考太多，直接输出结果。",
+            system="任务优化助手，只返回JSON，不要markdown代码块。直接输出结果。",
             model_tier="small",
-            max_tokens=2048,
+            max_tokens=1024,
         )
-        # Extract text content from response
         for block in response.content:
             if hasattr(block, 'text') and block.text:
                 text = block.text
@@ -86,9 +64,8 @@ async def ai_optimize_task(
 
         if not text.strip():
             logger.error(
-                f"AI optimize: LLM returned empty content, "
-                f"model={response.model}, stop_reason={response.stop_reason}, "
-                f"blocks={len(response.content)}, usage={response.usage}"
+                f"AI optimize: empty content, model={response.model}, "
+                f"stop_reason={response.stop_reason}, blocks={len(response.content)}"
             )
             raise HTTPException(status_code=502, detail="ai_optimize_failed")
 

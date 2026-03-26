@@ -98,7 +98,7 @@ class CreateTaskBloc extends Bloc<CreateTaskEvent, CreateTaskState> {
         super(const CreateTaskState()) {
     on<CreateTaskSubmitted>(_onSubmitted, transformer: droppable());
     on<CreateTaskReset>(_onReset);
-    on<CreateTaskAIOptimize>(_onAIOptimize);
+    on<CreateTaskAIOptimize>(_onAIOptimize, transformer: droppable());
   }
 
   final TaskRepository _taskRepository;
