@@ -168,16 +168,7 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
     if (widget.draft != null) return; // AI draft takes priority
     final draft = await TaskDraftService.loadDraft();
     if (draft != null && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(context.l10n.createTaskDraftLoaded),
-          action: SnackBarAction(
-            label: context.l10n.createTaskDraftRestore,
-            onPressed: () => _restoreDraft(draft),
-          ),
-          duration: const Duration(seconds: 5),
-        ),
-      );
+      _restoreDraft(draft);
     }
   }
 
@@ -485,6 +476,7 @@ class _CreateTaskContentState extends State<_CreateTaskContent> {
                 isDestructive: true,
               ).then((confirmed) {
                 if (confirmed == true && context.mounted) {
+                  TaskDraftService.deleteDraft();
                   Navigator.of(context).pop();
                 }
               });
