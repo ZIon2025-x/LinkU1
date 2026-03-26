@@ -357,17 +357,10 @@ class _HomeViewContentState extends State<_HomeViewContent> {
                     padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
                     child: Row(
                       children: [
-                        CircleAvatar(
-                          radius: 28,
-                          backgroundImage: (isLoggedIn && user?.avatar != null)
-                              ? NetworkImage(user!.avatar!)
-                              : null,
-                          backgroundColor: isDark ? Colors.grey[800] : const Color(0xFFE8E8E8),
-                          child: (isLoggedIn && user?.avatar != null)
-                              ? null
-                              : Icon(Icons.person,
-                                  size: 28,
-                                  color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                        AvatarView(
+                          imageUrl: isLoggedIn ? user?.avatar : null,
+                          name: isLoggedIn ? user?.name : null,
+                          size: 56,
                         ),
                         const SizedBox(width: 14),
                         Expanded(

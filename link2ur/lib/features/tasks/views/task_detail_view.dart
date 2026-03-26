@@ -102,7 +102,10 @@ class _TaskDetailContent extends StatelessWidget {
           prev.reviews != curr.reviews ||
           prev.hasSubmittedReview != curr.hasSubmittedReview ||
           prev.isLoadingApplications != curr.isLoadingApplications ||
-          prev.isLoadingReviews != curr.isLoadingReviews,
+          prev.isLoadingReviews != curr.isLoadingReviews ||
+          prev.questions != curr.questions ||
+          prev.isLoadingQuestions != curr.isLoadingQuestions ||
+          prev.questionsTotalCount != curr.questionsTotalCount,
       listenWhen: (prev, curr) =>
           prev.actionMessage != curr.actionMessage ||
           prev.acceptPaymentData != curr.acceptPaymentData ||
