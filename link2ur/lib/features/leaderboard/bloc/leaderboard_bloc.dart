@@ -756,11 +756,11 @@ class LeaderboardBloc extends Bloc<LeaderboardEvent, LeaderboardState> {
     final previousVotes = state.itemVotes;
     final updatedVotes = state.itemVotes.map((vote) {
       if (vote['id'] == event.voteId) {
-        final wasLiked = vote['is_liked'] == true;
+        final wasLiked = vote['user_liked'] == true;
         final currentLikes = (vote['like_count'] as int?) ?? 0;
         return {
           ...vote,
-          'is_liked': !wasLiked,
+          'user_liked': !wasLiked,
           'like_count': wasLiked ? currentLikes - 1 : currentLikes + 1,
         };
       }

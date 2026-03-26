@@ -4983,5 +4983,27 @@
   "homeFlowStepRelease": "平台放款",
   "homeFlowGuaranteeEscrow": "資金託管",
   "homeFlowGuaranteeRefund": "全額退款保障",
-  "homeFlowGuaranteeDispute": "爭議平台介入"
+  "homeFlowGuaranteeDispute": "爭議平台介入",
+
+  "skillLeaderboard": "技能排行榜",
+  "leaderboardTop10": "前 10 名",
+  "leaderboardMyRank": "我的排名",
+  "leaderboardNotRanked": "暫未上榜",
+  "leaderboardTasks": "任務數",
+  "leaderboardRating": "評分",
+  "myBadges": "我的徽章",
+  "badgeSelector": "選擇展示徽章",
+  "badgeNone": "無徽章",
+  "badgeTop": "前 {rank} 名",
+  "@badgeTop": {
+    "placeholders": {
+      "rank": {
+        "type": "String"
+      }
+    }
+  },
+  "profileViews": "主頁瀏覽量",
+  "editBio": "編輯簡介",
+  "addSkills": "添加技能",
+  "skillTags": "技能標籤"
 }

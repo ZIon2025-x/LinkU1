@@ -20855,6 +20855,50 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
+  String get skillLeaderboard => '技能排行榜';
+
+  @override
+  String get leaderboardTop10 => '前 10 名';
+
+  @override
+  String get leaderboardMyRank => '我的排名';
+
+  @override
+  String get leaderboardNotRanked => '暫未上榜';
+
+  @override
+  String get leaderboardTasks => '任務數';
+
+  @override
+  String get leaderboardRating => '評分';
+
+  @override
+  String get myBadges => '我的徽章';
+
+  @override
+  String get badgeSelector => '選擇展示徽章';
+
+  @override
+  String get badgeNone => '無徽章';
+
+  @override
+  String badgeTop(String rank) {
+    return '前 $rank 名';
+  }
+
+  @override
+  String get profileViews => '主頁瀏覽量';
+
+  @override
+  String get editBio => '編輯簡介';
+
+  @override
+  String get addSkills => '添加技能';
+
+  @override
+  String get skillTags => '技能標籤';
+
+  @override
   String get errorNewbieTaskNotCompleted => '該任務尚未完成';
 
   @override

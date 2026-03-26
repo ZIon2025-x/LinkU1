@@ -1068,7 +1068,7 @@ class _CommentCard extends StatelessWidget {
     final voteType = vote['vote_type'] as String? ?? '';
     final comment = vote['comment'] as String? ?? '';
     final likeCount = (vote['like_count'] as int?) ?? 0;
-    final isLiked = vote['is_liked'] == true || vote['user_liked'] == true;
+    final isLiked = vote['user_liked'] == true;
     final voteId = vote['id'] as int?;
     final createdAt = vote['created_at'] as String?;
 
@@ -1180,7 +1180,7 @@ class _CommentCard extends StatelessWidget {
                     size: 14,
                     color: isLiked
                         ? AppColors.error
-                        : AppColors.textTertiaryLight,
+                        : (isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight),
                   ),
                   if (likeCount > 0) ...[
                     const SizedBox(width: 3),
@@ -1189,7 +1189,7 @@ class _CommentCard extends StatelessWidget {
                       style: AppTypography.caption.copyWith(
                         color: isLiked
                             ? AppColors.error
-                            : AppColors.textTertiaryLight,
+                            : (isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight),
                       ),
                     ),
                   ],

@@ -14,6 +14,7 @@ import 'package:link2ur/data/repositories/student_verification_repository.dart';
 import 'package:link2ur/data/repositories/task_expert_repository.dart';
 import 'package:link2ur/data/repositories/common_repository.dart';
 import 'package:link2ur/data/repositories/discovery_repository.dart';
+import 'package:link2ur/data/repositories/personal_service_repository.dart';
 import 'package:link2ur/data/repositories/question_repository.dart';
 import 'package:link2ur/data/services/api_service.dart';
 import 'package:link2ur/data/services/storage_service.dart';
