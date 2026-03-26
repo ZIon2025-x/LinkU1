@@ -64,6 +64,17 @@ async def get_current_user_secure_async_csrf(
     )
 
 
+def _payment_method_types_for_currency(currency: str) -> list:
+    """根据货币动态返回 Stripe 支持的支付方式列表"""
+    c = currency.lower()
+    methods = ["card"]
+    if c in ("gbp", "cny"):
+        methods.extend(["wechat_pay", "alipay"])
+    elif c in ("eur", "usd", "aud", "cad", "hkd", "jpy", "sgd", "nzd"):
+        methods.append("alipay")
+    return methods
+
+
 async def _create_customer_and_ephemeral_key(stripe_module, user_obj, db_session):
     """
     为支付方创建/获取 Stripe Customer，并生成 Ephemeral Key（用于客户端保存/复用支付方式）。
@@ -1983,10 +1994,11 @@ async def accept_application(
         }
         if is_top_up:
             pi_metadata["original_paid_pence"] = str(round(top_up_original_paid * 100))
+        pi_currency = (getattr(locked_task, "currency", None) or "GBP").lower()
         create_pi_kw = {
             "amount": charge_pence,
-            "currency": (getattr(locked_task, "currency", None) or "GBP").lower(),
-            "payment_method_types": ["card", "wechat_pay", "alipay"],
+            "currency": pi_currency,
+            "payment_method_types": _payment_method_types_for_currency(pi_currency),
             "description": payment_description,
             "metadata": pi_metadata,
         }
@@ -2043,7 +2055,7 @@ async def accept_application(
         raise
     except Exception as e:
         await db.rollback()
-        logger.error(f"接受申请失败: {e}")
+        logger.error(f"接受申请失败: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="接受申请失败，请稍后重试"
@@ -2607,10 +2619,11 @@ async def confirm_and_pay(
 
         from app.secure_auth import get_wechat_pay_payment_method_options
         payment_method_options = get_wechat_pay_payment_method_options(request)
+        pi_currency_2 = (getattr(locked_task, "currency", None) or "GBP").lower()
         create_pi_kw = {
             "amount": final_price_pence,
-            "currency": (getattr(locked_task, "currency", None) or "GBP").lower(),
-            "payment_method_types": ["card", "wechat_pay", "alipay"],
+            "currency": pi_currency_2,
+            "payment_method_types": _payment_method_types_for_currency(pi_currency_2),
             "description": payment_description,
             "metadata": {
                 "task_id": str(task_id),
@@ -3931,10 +3944,11 @@ async def respond_negotiation(
             try:
                 from app.secure_auth import get_wechat_pay_payment_method_options
                 payment_method_options = get_wechat_pay_payment_method_options(http_request)
+                pi_currency_3 = (getattr(locked_task, "currency", None) or "GBP").lower()
                 create_pi_kw = {
                     "amount": task_amount_pence,
-                    "currency": (getattr(locked_task, "currency", None) or "GBP").lower(),
-                    "payment_method_types": ["card", "wechat_pay", "alipay"],
+                    "currency": pi_currency_3,
+                    "payment_method_types": _payment_method_types_for_currency(pi_currency_3),
                     "description": f"任务 #{task_id}: {locked_task.title[:50] if locked_task.title else 'Task'} - 接受议价申请 #{application_id}",
                     "metadata": {
                         "task_id": str(task_id),
