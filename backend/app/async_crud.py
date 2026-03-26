@@ -349,7 +349,7 @@ class AsyncTaskCRUD:
                 images=images_json,  # 存储为JSON字符串
                 pricing_type=getattr(task, 'pricing_type', 'fixed') or 'fixed',
                 task_mode=getattr(task, 'task_mode', 'online') or 'online',
-                required_skills=self._serialize_json_list(getattr(task, 'required_skills', None)),
+                required_skills=AsyncTaskCRUD._serialize_json_list(getattr(task, 'required_skills', None)),
             )
 
             db.add(db_task)
