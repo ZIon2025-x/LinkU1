@@ -261,10 +261,16 @@ class OpenAICompatibleProvider:
 
         content: list[LLMTextBlock | LLMToolUse] = []
         msg_content = message.get("content")
+        # 推理模型 (如 GLM-4.7-Flash) 可能把内容放在 reasoning_content 里
+        # 当 content 为空但 reasoning_content 有值时，尝试从中提取
+        if not msg_content and message.get("reasoning_content"):
+            logger.info(
+                f"OpenAI-compatible: content is empty but reasoning_content exists "
+                f"({len(message['reasoning_content'])} chars), model={model}"
+            )
         if msg_content is not None and msg_content != "":
             content.append(LLMTextBlock(text=msg_content))
         elif not message.get("tool_calls"):
-            # 既没有 content 也没有 tool_calls — 可能是内容审核拦截
             logger.warning(
                 f"OpenAI-compatible API returned empty content: "
                 f"model={model}, finish_reason={choice.get('finish_reason')}, "

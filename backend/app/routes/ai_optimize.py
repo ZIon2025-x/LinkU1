@@ -71,8 +71,9 @@ async def ai_optimize_task(
         llm = LLMClient()
         response = await llm.chat(
             messages=[{"role": "user", "content": prompt}],
-            system="你是一个任务发布优化助手，只返回JSON格式的结果，不要用markdown代码块包裹。",
+            system="你是一个任务发布优化助手，只返回JSON格式的结果，不要用markdown代码块包裹。不要思考太多，直接输出结果。",
             model_tier="small",
+            max_tokens=4096,
         )
         # Extract text content from response
         for block in response.content:
