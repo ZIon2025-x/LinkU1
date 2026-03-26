@@ -7388,6 +7388,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchForumCategoriesTitle => 'Forum Categories';
 
   @override
+  String get searchServicesTitle => 'Personal Services';
+
+  @override
   String get leaderboardRankLabel => 'Rank';
 
   @override

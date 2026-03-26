@@ -785,6 +785,12 @@ class _RetryInterceptor extends Interceptor {
   }
 
   bool _shouldRetry(DioException err) {
+    // POST/PUT/PATCH/DELETE 等非幂等方法不重试，避免重复支付等副作用
+    final method = err.requestOptions.method.toUpperCase();
+    if (method != 'GET' && method != 'HEAD' && method != 'OPTIONS') {
+      return false;
+    }
+
     switch (err.type) {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:

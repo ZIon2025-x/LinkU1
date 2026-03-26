@@ -17,6 +17,7 @@ import '../../../data/repositories/flea_market_repository.dart';
 import '../../../data/repositories/task_expert_repository.dart';
 import '../../../data/repositories/activity_repository.dart';
 import '../../../data/repositories/leaderboard_repository.dart';
+import '../../../data/repositories/personal_service_repository.dart';
 import '../bloc/search_bloc.dart';
 
 /// 全局搜索视图
@@ -34,6 +35,7 @@ class SearchView extends StatelessWidget {
         taskExpertRepository: context.read<TaskExpertRepository>(),
         activityRepository: context.read<ActivityRepository>(),
         leaderboardRepository: context.read<LeaderboardRepository>(),
+        personalServiceRepository: context.read<PersonalServiceRepository>(),
       ),
       child: const _SearchContent(),
     );
@@ -100,7 +102,8 @@ class _SearchContentState extends State<_SearchContent> {
             previous.activityResults != current.activityResults ||
             previous.leaderboardResults != current.leaderboardResults ||
             previous.leaderboardItemResults != current.leaderboardItemResults ||
-            previous.forumCategoryResults != current.forumCategoryResults,
+            previous.forumCategoryResults != current.forumCategoryResults ||
+            previous.serviceResults != current.serviceResults,
         builder: (context, state) {
           if (state.status == SearchStatus.initial) {
             return _buildInitialState(context, state, isDark);
@@ -359,6 +362,25 @@ class _SearchContentState extends State<_SearchContent> {
                   onTap: () {
                     final id = result['id'];
                     if (id != null) context.safePush('/activities/$id');
+                  },
+                )),
+            AppSpacing.vLg,
+          ],
+
+          // 个人服务结果
+          if (state.serviceResults.isNotEmpty) ...[
+            _SectionHeader(
+              title: context.l10n.searchServicesTitle,
+              count: state.serviceResults.length,
+              icon: Icons.home_repair_service,
+              color: AppColors.primary,
+            ),
+            AppSpacing.vSm,
+            ...state.serviceResults.map((result) => _SearchResultCard(
+                  result: result,
+                  onTap: () {
+                    final id = result['id'];
+                    if (id != null) context.safePush('/service/$id');
                   },
                 )),
             AppSpacing.vLg,

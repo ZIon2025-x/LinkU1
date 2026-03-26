@@ -8199,7 +8199,6 @@ def confirm_task_complete(
         
         # 创建 PaymentTransfer 记录（用于累计获得统计）
         from app.payment_transfer_service import create_transfer_record
-        from decimal import Decimal
         try:
             # 检查是否已存在转账记录（防止重复创建）
             existing_transfer = db.query(models.PaymentTransfer).filter(

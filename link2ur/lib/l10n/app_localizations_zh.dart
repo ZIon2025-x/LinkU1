@@ -7071,6 +7071,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get searchForumCategoriesTitle => '论坛板块';
 
   @override
+  String get searchServicesTitle => '个人服务';
+
+  @override
   String get leaderboardRankLabel => '排名';
 
   @override
@@ -18085,6 +18088,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get searchForumCategoriesTitle => '論壇板塊';
+
+  @override
+  String get searchServicesTitle => '個人服務';
 
   @override
   String get leaderboardRankLabel => '排名';

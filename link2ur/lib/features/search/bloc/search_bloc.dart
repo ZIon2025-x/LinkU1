@@ -10,6 +10,7 @@ import '../../../data/repositories/flea_market_repository.dart';
 import '../../../data/repositories/task_expert_repository.dart';
 import '../../../data/repositories/activity_repository.dart';
 import '../../../data/repositories/leaderboard_repository.dart';
+import '../../../data/repositories/personal_service_repository.dart';
 import '../../../data/services/storage_service.dart';
 import '../../../core/utils/logger.dart';
 
@@ -81,6 +82,7 @@ class SearchState extends Equatable {
     this.leaderboardResults = const [],
     this.leaderboardItemResults = const [],
     this.forumCategoryResults = const [],
+    this.serviceResults = const [],
     this.recentSearches = const [],
     this.errorMessage,
     this.searchPage = 1,
@@ -97,6 +99,7 @@ class SearchState extends Equatable {
   final List<Map<String, dynamic>> leaderboardResults;
   final List<Map<String, dynamic>> leaderboardItemResults;
   final List<Map<String, dynamic>> forumCategoryResults;
+  final List<Map<String, dynamic>> serviceResults;
   /// 最近搜索关键词列表（从 StorageService 加载）
   final List<String> recentSearches;
   final String? errorMessage;
@@ -115,7 +118,8 @@ class SearchState extends Equatable {
       activityResults.isNotEmpty ||
       leaderboardResults.isNotEmpty ||
       leaderboardItemResults.isNotEmpty ||
-      forumCategoryResults.isNotEmpty;
+      forumCategoryResults.isNotEmpty ||
+      serviceResults.isNotEmpty;
   int get totalResults =>
       taskResults.length +
       forumResults.length +
@@ -124,7 +128,8 @@ class SearchState extends Equatable {
       activityResults.length +
       leaderboardResults.length +
       leaderboardItemResults.length +
-      forumCategoryResults.length;
+      forumCategoryResults.length +
+      serviceResults.length;
 
   SearchState copyWith({
     SearchStatus? status,
@@ -137,6 +142,7 @@ class SearchState extends Equatable {
     List<Map<String, dynamic>>? leaderboardResults,
     List<Map<String, dynamic>>? leaderboardItemResults,
     List<Map<String, dynamic>>? forumCategoryResults,
+    List<Map<String, dynamic>>? serviceResults,
     List<String>? recentSearches,
     String? errorMessage,
     int? searchPage,
@@ -153,6 +159,7 @@ class SearchState extends Equatable {
       leaderboardResults: leaderboardResults ?? this.leaderboardResults,
       leaderboardItemResults: leaderboardItemResults ?? this.leaderboardItemResults,
       forumCategoryResults: forumCategoryResults ?? this.forumCategoryResults,
+      serviceResults: serviceResults ?? this.serviceResults,
       recentSearches: recentSearches ?? this.recentSearches,
       errorMessage: errorMessage,
       searchPage: searchPage ?? this.searchPage,
@@ -172,6 +179,7 @@ class SearchState extends Equatable {
         leaderboardResults,
         leaderboardItemResults,
         forumCategoryResults,
+        serviceResults,
         recentSearches,
         errorMessage,
         searchPage,
@@ -189,12 +197,14 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     required TaskExpertRepository taskExpertRepository,
     required ActivityRepository activityRepository,
     required LeaderboardRepository leaderboardRepository,
+    required PersonalServiceRepository personalServiceRepository,
   })  : _taskRepository = taskRepository,
         _forumRepository = forumRepository,
         _fleaMarketRepository = fleaMarketRepository,
         _taskExpertRepository = taskExpertRepository,
         _activityRepository = activityRepository,
         _leaderboardRepository = leaderboardRepository,
+        _personalServiceRepository = personalServiceRepository,
         super(const SearchState()) {
     on<SearchSubmitted>(
       _onSubmitted,
@@ -212,6 +222,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
   final TaskExpertRepository _taskExpertRepository;
   final ActivityRepository _activityRepository;
   final LeaderboardRepository _leaderboardRepository;
+  final PersonalServiceRepository _personalServiceRepository;
 
   Future<void> _onSubmitted(
     SearchSubmitted event,
@@ -237,6 +248,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
         _searchLeaderboards(query, locale),
         _searchLeaderboardItems(query, locale),
         _searchForumCategories(query, locale),
+        _searchServices(query),
       ]);
 
       emit(state.copyWith(
@@ -249,6 +261,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
         leaderboardResults: results[5],
         leaderboardItemResults: results[6],
         forumCategoryResults: results[7],
+        serviceResults: results[8],
         searchPage: 1,
         // Each source returns at most 10; hasMore if any source returned 10
         searchHasMore: results.any((r) => r.length >= 10),
@@ -295,6 +308,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       leaderboardResults: [],
       leaderboardItemResults: [],
       forumCategoryResults: [],
+      serviceResults: [],
     ));
   }
 
@@ -511,6 +525,31 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
               'description': locale != null
                   ? (c.displayDescription(locale) ?? '')
                   : (descRaw ?? ''),
+            };
+          })
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// 搜索个人服务
+  Future<List<Map<String, dynamic>>> _searchServices(String query) async {
+    try {
+      final response = await _personalServiceRepository.browseServices(
+        query: query,
+        pageSize: 10,
+      );
+      final items = response['services'] as List<dynamic>? ?? [];
+      return items
+          .take(10)
+          .map((s) {
+            final item = Map<String, dynamic>.from(s as Map);
+            return {
+              'id': item['id'],
+              'title': item['name'] ?? item['title'] ?? '',
+              'type': 'service',
+              'description': item['description'] ?? '',
             };
           })
           .toList();

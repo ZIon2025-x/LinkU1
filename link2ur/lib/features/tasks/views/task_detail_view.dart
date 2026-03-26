@@ -915,7 +915,7 @@ class _TaskDetailContent extends StatelessWidget {
         icon: Icons.credit_card,
         onPressed: task.isPaymentExpired
             ? null
-            : () => _openPaymentPageForPendingTask(context, task.id),
+            : () => _openPaymentPageForPendingTask(context, task),
       );
     }
 
@@ -1124,13 +1124,18 @@ class _TaskDetailContent extends StatelessWidget {
   }
 
   /// 待支付任务：拉取支付数据并打开支付页
+  static bool _paymentInProgress = false;
   Future<void> _openPaymentPageForPendingTask(
-      BuildContext context, int taskId) async {
+      BuildContext context, Task task) async {
+    if (_paymentInProgress) return;
+    _paymentInProgress = true;
+    final taskId = task.id;
     final currentUserId =
         context.read<AuthBloc>().state.user?.id;
     try {
       final resp = await context.read<PaymentRepository>().createTaskPayment(
         taskId: taskId,
+        taskSource: task.taskSource,
       );
       if (!context.mounted) return;
       if (resp.clientSecret == null || resp.clientSecret!.isEmpty) {
@@ -1148,6 +1153,10 @@ class _TaskDetailContent extends StatelessWidget {
         customerId: resp.customerId ?? '',
         ephemeralKeySecret: resp.ephemeralKeySecret ?? '',
         amountDisplay: resp.finalAmountDisplay,
+        paymentExpiresAt: task.paymentExpiresAt,
+        taskTitle: task.title,
+        taskSource: task.taskSource,
+        currency: task.currency,
       );
       final result = await pushWithSwipeBack<bool>(
         context,
@@ -1176,6 +1185,8 @@ class _TaskDetailContent extends StatelessWidget {
           ),
         );
       }
+    } finally {
+      _paymentInProgress = false;
     }
   }
 

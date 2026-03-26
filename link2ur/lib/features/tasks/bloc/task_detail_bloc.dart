@@ -840,8 +840,10 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
             ephemeralKeySecret: ephemeralKey,
             amountDisplay: amountDisplay,
             applicationId: event.applicationId,
+            paymentExpiresAt: state.task?.paymentExpiresAt,
             taskTitle: state.task?.title,
             applicantName: approvedApp?.applicantName,
+            taskSource: state.task?.taskSource,
             currency: state.task?.currency ?? 'GBP',
           ),
         ));
@@ -1433,9 +1435,11 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
               : result['amount_display'] as String?,
           taskId: _taskId!,
           applicationId: event.applicationId,
+          paymentExpiresAt: state.task?.paymentExpiresAt,
           taskTitle: state.task?.title,
           applicantName:
               approvedApp?.applicantName ?? result['applicant_name'] as String?,
+          taskSource: state.task?.taskSource,
           currency: state.task?.currency ?? 'GBP',
         );
         emit(state.copyWith(

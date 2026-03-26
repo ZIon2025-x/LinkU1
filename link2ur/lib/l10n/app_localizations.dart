@@ -13523,6 +13523,12 @@ abstract class AppLocalizations {
   /// **'Forum Categories'**
   String get searchForumCategoriesTitle;
 
+  /// No description provided for @searchServicesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Personal Services'**
+  String get searchServicesTitle;
+
   /// No description provided for @leaderboardRankLabel.
   ///
   /// In en, this message translates to:
