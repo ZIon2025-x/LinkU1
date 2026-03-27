@@ -33,20 +33,39 @@ async def security_headers_middleware(request: Request, call_next):
         if origin.startswith('https://'):
             connect_sources.append(origin)
     
-    csp = (
-        "default-src 'self'; "
-        "script-src 'self' 'strict-dynamic'; "  # 不使用 nonce，避免内联脚本
-        "style-src 'self' 'unsafe-inline'; "  # 暂时保留 unsafe-inline 以兼容现有代码
-        "img-src 'self' data: https: blob:; "
-        "font-src 'self' data:; "
-        f"connect-src {' '.join(connect_sources)}; "
-        "object-src 'none'; "
-        "base-uri 'self'; "
-        "form-action 'self'; "
-        "frame-ancestors 'none'; "
-        "upgrade-insecure-requests; "
-        "report-uri /api/csp-report;"  # CSP 违规报告
-    )
+    # Stripe Connect onboarding-page 需要加载 connect-js.stripe.com 脚本和 iframe
+    is_stripe_page = "/stripe/connect/onboarding-page" in request.url.path
+
+    if is_stripe_page:
+        csp = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' https://connect-js.stripe.com https://js.stripe.com; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data: https: blob:; "
+            "font-src 'self' data: https://fonts.gstatic.com; "
+            f"connect-src {' '.join(connect_sources)} https://*.stripe.com; "
+            "frame-src https://connect-js.stripe.com https://js.stripe.com; "
+            "object-src 'none'; "
+            "base-uri 'self'; "
+            "form-action 'self'; "
+            "frame-ancestors 'none'; "
+            "upgrade-insecure-requests;"
+        )
+    else:
+        csp = (
+            "default-src 'self'; "
+            "script-src 'self' 'strict-dynamic'; "  # 不使用 nonce，避免内联脚本
+            "style-src 'self' 'unsafe-inline'; "  # 暂时保留 unsafe-inline 以兼容现有代码
+            "img-src 'self' data: https: blob:; "
+            "font-src 'self' data:; "
+            f"connect-src {' '.join(connect_sources)}; "
+            "object-src 'none'; "
+            "base-uri 'self'; "
+            "form-action 'self'; "
+            "frame-ancestors 'none'; "
+            "upgrade-insecure-requests; "
+            "report-uri /api/csp-report;"  # CSP 违规报告
+        )
     
     # 只对HTML响应设置CSP，API响应不需要
     if "text/html" in response.headers.get("Content-Type", ""):

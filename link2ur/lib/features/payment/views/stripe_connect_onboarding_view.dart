@@ -231,16 +231,20 @@ class _StripeConnectOnboardingViewState
     }
   }
 
-  /// Web 端：在新标签页中打开后端 onboarding-page，完成后用户手动返回刷新
+  /// Web 端：在新标签页中打开后端 onboarding-page
+  /// 打开后显示提示，让用户完成后手动点击刷新
   Future<void> _startWebOnboarding(String clientSecret) async {
     final baseUrl = AppConfig.instance.baseUrl;
     final url = '$baseUrl/api/stripe/connect/onboarding-page?client_secret=${Uri.encodeComponent(clientSecret)}';
 
     await ExternalWebView.open(url);
 
-    // 用户从 Stripe 页面返回后，刷新状态
+    // 不自动刷新，显示提示让用户完成后手动点击刷新
     if (mounted) {
-      _loadOnboardingSession();
+      setState(() {
+        _viewState = _ViewState.error;
+        _error = context.l10n.stripeConnectWebOnboardingHint;
+      });
     }
   }
 

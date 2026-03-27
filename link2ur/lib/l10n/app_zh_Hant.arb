@@ -1487,6 +1487,7 @@
   "stripeConnectOnboardingCancelled": "已取消設置收款賬戶",
   "stripeConnectOnboardingFailed": "設置收款賬戶失敗",
   "stripeConnectOnboardingErrorHint": "若頁面內出現「Sorry, something went wrong」，請檢查網絡或稍後重試；並確認 App 與後端使用同一 Stripe 環境（測試/正式）。",
+  "stripeConnectWebOnboardingHint": "已打開新頁面進行賬戶設置。完成設置後，請返回此頁面點擊「重試」刷新狀態。",
   "activityLoadFailed": "加載失敗",
   "activityPleaseRetry": "請重試",
   "activityDescription": "活動描述",

@@ -3075,6 +3075,12 @@ abstract class AppLocalizations {
   /// **'If you see \"Sorry, something went wrong\" in the page, check your network or try again later; ensure the app and backend use the same Stripe environment (test/live).'**
   String get stripeConnectOnboardingErrorHint;
 
+  /// No description provided for @stripeConnectWebOnboardingHint.
+  ///
+  /// In en, this message translates to:
+  /// **'A new page has been opened for account setup. After completing the setup, come back and tap Retry to refresh.'**
+  String get stripeConnectWebOnboardingHint;
+
   /// No description provided for @stripeConnectLoadFailedWithReason.
   ///
   /// In en, this message translates to:

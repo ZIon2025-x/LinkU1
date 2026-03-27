@@ -1542,6 +1542,10 @@ class AppLocalizationsZh extends AppLocalizations {
       '若页面内出现「Sorry, something went wrong」，请检查网络或稍后重试；并确认 App 与后端使用同一 Stripe 环境（测试/正式）。';
 
   @override
+  String get stripeConnectWebOnboardingHint =>
+      '已打开新页面进行账户设置。完成设置后，请返回此页面点击「重试」刷新状态。';
+
+  @override
   String stripeConnectLoadFailedWithReason(String param1) {
     return '加载失败：$param1';
   }
@@ -12747,6 +12751,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String get stripeConnectOnboardingErrorHint =>
       '若頁面內出現「Sorry, something went wrong」，請檢查網絡或稍後重試；並確認 App 與後端使用同一 Stripe 環境（測試/正式）。';
+
+  @override
+  String get stripeConnectWebOnboardingHint =>
+      '已打開新頁面進行賬戶設置。完成設置後，請返回此頁面點擊「重試」刷新狀態。';
 
   @override
   String stripeConnectLoadFailedWithReason(String param1) {

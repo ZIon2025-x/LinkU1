@@ -1629,6 +1629,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'If you see \"Sorry, something went wrong\" in the page, check your network or try again later; ensure the app and backend use the same Stripe environment (test/live).';
 
   @override
+  String get stripeConnectWebOnboardingHint =>
+      'A new page has been opened for account setup. After completing the setup, come back and tap Retry to refresh.';
+
+  @override
   String stripeConnectLoadFailedWithReason(String param1) {
     return 'Load failed: $param1';
   }
