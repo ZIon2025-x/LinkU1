@@ -1203,30 +1203,32 @@ class CleanupTasks:
                                 logger.debug(f"跳过无效的用户头像目录: {user_dir.name}: {e}")
                                 continue
                 
-                # 5. 清理不存在任务达人的服务图片文件夹
+                # 5. 清理不存在的服务图片文件夹
+                # 目录名是 user_id（上传时 resource_id=user_id），需同时匹配
+                # TaskExpert.id（达人服务）和 User.id（个人服务）
                 service_images_dir = base_upload_dir / "public" / "images" / "service_images"
                 if service_images_dir.exists():
-                    # 获取所有存在的任务达人ID
                     from sqlalchemy import select
                     experts_result = db.execute(select(models.TaskExpert.id))
                     existing_expert_ids = {expert_id for expert_id, in experts_result.all()}
-                    
-                    # 遍历目录，找出不存在的任务达人ID对应的文件夹
-                    for expert_dir in service_images_dir.iterdir():
+                    users_result = db.execute(select(models.User.id))
+                    existing_user_ids = {uid for uid, in users_result.all()}
+                    valid_ids = existing_expert_ids | existing_user_ids
+
+                    for service_dir in service_images_dir.iterdir():
                         if cleaned_count >= max_dirs_per_run:
                             logger.info(f"已达到单次处理上限（{max_dirs_per_run}），停止处理")
                             break
-                        
-                        if expert_dir.is_dir():
+
+                        if service_dir.is_dir():
                             try:
-                                expert_id = expert_dir.name
-                                if expert_id not in existing_expert_ids:
-                                    # 任务达人不存在，删除服务图片文件夹
-                                    shutil.rmtree(expert_dir)
+                                dir_id = service_dir.name
+                                if dir_id not in valid_ids:
+                                    shutil.rmtree(service_dir)
                                     cleaned_count += 1
-                                    logger.info(f"删除不存在任务达人 {expert_id} 的服务图片文件夹: {expert_dir}")
+                                    logger.info(f"删除不存在用户/达人 {dir_id} 的服务图片文件夹: {service_dir}")
                             except Exception as e:
-                                logger.debug(f"跳过无效的服务图片目录: {expert_dir.name}: {e}")
+                                logger.debug(f"跳过无效的服务图片目录: {service_dir.name}: {e}")
                                 continue
                 
                 # 6. 清理不存在Banner的图片文件夹
@@ -1464,27 +1466,32 @@ class CleanupTasks:
                             cleaned_count += 1
                             logger.info(f"删除不存在用户 {user_dir_name} 的头像文件夹（云存储）: {dir_path}")
             
-            # 5. 清理不存在任务达人的服务图片文件夹
+            # 5. 清理不存在的服务图片文件夹
+            # 目录名是 user_id（上传时 resource_id=user_id），需同时匹配
+            # TaskExpert.id（达人服务）和 User.id（个人服务）
             service_images_prefix = "public/images/service_images/"
             if cleaned_count < max_dirs_per_run:
                 experts_result = db.execute(select(models.TaskExpert.id))
                 existing_expert_ids = {str(expert_id) for expert_id, in experts_result.all()}
-                
+                users_result = db.execute(select(models.User.id))
+                existing_user_ids = {str(uid) for uid, in users_result.all()}
+                valid_ids = existing_expert_ids | existing_user_ids
+
                 all_files = storage.list_files(service_images_prefix)
-                expert_dirs = set()
+                service_dirs = set()
                 for file_key in all_files:
                     parts = file_key.replace(service_images_prefix, '').split('/')
                     if parts and parts[0]:
-                        expert_dirs.add(parts[0])
-                
-                for expert_dir_name in expert_dirs:
+                        service_dirs.add(parts[0])
+
+                for dir_name in service_dirs:
                     if cleaned_count >= max_dirs_per_run:
                         break
-                    if expert_dir_name not in existing_expert_ids:
-                        dir_path = f"{service_images_prefix}{expert_dir_name}"
+                    if dir_name not in valid_ids:
+                        dir_path = f"{service_images_prefix}{dir_name}"
                         if storage.delete_directory(dir_path):
                             cleaned_count += 1
-                            logger.info(f"删除不存在任务达人 {expert_dir_name} 的服务图片文件夹（云存储）: {dir_path}")
+                            logger.info(f"删除不存在用户/达人 {dir_name} 的服务图片文件夹（云存储）: {dir_path}")
             
             # 6. 清理不存在Banner的图片文件夹
             banner_prefix = "public/images/banner/"
