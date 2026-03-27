@@ -1883,7 +1883,10 @@ async def accept_application(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="任务已被接受"
             )
-        
+
+        # 获取申请人信息（用于 metadata）
+        applicant = await db.get(models.User, application.applicant_id)
+
         # 获取当前时间
         current_time = get_utc_time()
         
