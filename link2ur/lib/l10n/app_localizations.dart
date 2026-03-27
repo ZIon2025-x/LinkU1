@@ -4257,6 +4257,18 @@ abstract class AppLocalizations {
   /// **'Application Approved'**
   String get taskDetailApplicationApproved;
 
+  /// No description provided for @taskDetailChattingStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat in Progress'**
+  String get taskDetailChattingStatus;
+
+  /// No description provided for @taskDetailChattingMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'The publisher has approved the chat. Please discuss the task details via chat.'**
+  String get taskDetailChattingMessage;
+
   /// No description provided for @taskDetailApplicationRejected.
   ///
   /// In en, this message translates to:

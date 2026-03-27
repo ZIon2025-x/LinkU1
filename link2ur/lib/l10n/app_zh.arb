@@ -887,6 +887,8 @@
   "taskDetailWaitingReview": "等待发布者审核",
   "taskDetailTaskCompleted": "任务已完成",
   "taskDetailApplicationApproved": "申请已通过",
+  "taskDetailChattingStatus": "聊天沟通中",
+  "taskDetailChattingMessage": "发布者已批准聊天，请通过聊天进一步沟通任务详情。",
   "taskDetailApplicationRejected": "申请被拒绝",
   "taskDetailUnknownStatus": "未知状态",
   "taskDetailApplicationSuccess": "申请成功",

@@ -2313,6 +2313,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskDetailApplicationApproved => 'Application Approved';
 
   @override
+  String get taskDetailChattingStatus => 'Chat in Progress';
+
+  @override
+  String get taskDetailChattingMessage =>
+      'The publisher has approved the chat. Please discuss the task details via chat.';
+
+  @override
   String get taskDetailApplicationRejected => 'Application Rejected';
 
   @override

@@ -449,6 +449,7 @@ class ApplicationStatusCard extends StatelessWidget {
     if (appStatus == null) return const SizedBox.shrink();
 
     final (color, icon, title, desc) = _statusInfo(appStatus, context);
+    final isChatting = appStatus == 'chatting';
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
@@ -458,51 +459,71 @@ class ApplicationStatusCard extends StatelessWidget {
         borderRadius: AppRadius.allMedium,
         border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
-      child: Row(
+      child: Column(
         children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, size: 24, color: color),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: AppTypography.title3.copyWith(color: color),
+          Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  desc,
-                  style: AppTypography.caption.copyWith(
-                    color: isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondaryLight,
-                  ),
-                  maxLines: 2,
-                ),
-                if (application?.message != null &&
-                    application!.message!.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    context.l10n.taskDetailMessageLabel(application!.message!),
-                    style: AppTypography.caption.copyWith(
-                      color: isDark
-                          ? AppColors.textTertiaryDark
-                          : AppColors.textTertiaryLight,
+                child: Icon(icon, size: 24, color: color),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: AppTypography.title3.copyWith(color: color),
                     ),
-                  ),
-                ],
-              ],
-            ),
+                    const SizedBox(height: 4),
+                    Text(
+                      desc,
+                      style: AppTypography.caption.copyWith(
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
+                      ),
+                      maxLines: 2,
+                    ),
+                    if (application?.message != null &&
+                        application!.message!.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        context.l10n.taskDetailMessageLabel(application!.message!),
+                        style: AppTypography.caption.copyWith(
+                          color: isDark
+                              ? AppColors.textTertiaryDark
+                              : AppColors.textTertiaryLight,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
           ),
+          // chatting 状态下为接单方提供聊天入口
+          if (isChatting && application != null) ...[
+            const SizedBox(height: AppSpacing.md),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () {
+                  context.push(
+                    '/tasks/${task.id}/applications/${application!.id}/chat',
+                  );
+                },
+                icon: const Icon(Icons.chat_bubble_outline, size: 18),
+                label: Text(context.l10n.taskChat),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -517,6 +538,13 @@ class ApplicationStatusCard extends StatelessWidget {
           Icons.access_time_filled,
           context.l10n.taskDetailWaitingReview,
           context.l10n.taskDetailApplicationSuccess,
+        );
+      case 'chatting':
+        return (
+          AppColors.primary,
+          Icons.chat_bubble,
+          context.l10n.taskDetailChattingStatus,
+          context.l10n.taskDetailChattingMessage,
         );
       case 'approved':
         if (task.status == AppConstants.taskStatusPendingPayment) {

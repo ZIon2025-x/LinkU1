@@ -2205,6 +2205,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskDetailApplicationApproved => '申请已通过';
 
   @override
+  String get taskDetailChattingStatus => '聊天沟通中';
+
+  @override
+  String get taskDetailChattingMessage => '发布者已批准聊天，请通过聊天进一步沟通任务详情。';
+
+  @override
   String get taskDetailApplicationRejected => '申请被拒绝';
 
   @override
@@ -13414,6 +13420,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get taskDetailApplicationApproved => '申請已通過';
+
+  @override
+  String get taskDetailChattingStatus => '聊天溝通中';
+
+  @override
+  String get taskDetailChattingMessage => '發布者已批准聊天，請通過聊天進一步溝通任務詳情。';
 
   @override
   String get taskDetailApplicationRejected => '申請被拒絕';

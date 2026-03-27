@@ -1092,6 +1092,8 @@
   "taskDetailWaitingReview": "Waiting for publisher review",
   "taskDetailTaskCompleted": "Task Completed",
   "taskDetailApplicationApproved": "Application Approved",
+  "taskDetailChattingStatus": "Chat in Progress",
+  "taskDetailChattingMessage": "The publisher has approved the chat. Please discuss the task details via chat.",
   "taskDetailApplicationRejected": "Application Rejected",
   "taskDetailUnknownStatus": "Unknown Status",
   "taskDetailApplicationSuccess": "Application Successful",

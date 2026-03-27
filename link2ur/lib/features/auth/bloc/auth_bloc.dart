@@ -6,6 +6,7 @@ import 'package:stream_transform/stream_transform.dart';
 
 import '../../../data/models/user.dart';
 import '../../../data/repositories/auth_repository.dart';
+import '../../../data/services/storage_service.dart';
 import '../../../data/services/push_notification_service.dart';
 import '../../../core/utils/logger.dart';
 import '../../../core/utils/cache_manager.dart';
@@ -299,6 +300,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) {
     emit(state.copyWith(user: event.user));
+    // 同步写入本地缓存，确保下次启动时 getCurrentUser() 读到最新状态
+    StorageService.instance.saveUserInfo(event.user.toJson());
   }
 
   /// 强制登出（Token过期/刷新失败）
