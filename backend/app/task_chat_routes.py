@@ -1884,50 +1884,6 @@ async def accept_application(
                 detail="任务已被接受"
             )
         
-        # 检查申请人是否有 Stripe Connect 账户（用于接收任务奖励）
-        applicant = await db.get(models.User, application.applicant_id)
-        if not applicant:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="申请人不存在"
-            )
-        
-        if not applicant.stripe_account_id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="申请人尚未创建 Stripe Connect 收款账户，无法接受任务。请先创建收款账户。",
-                headers={"X-Stripe-Connect-Required": "true"}
-            )
-        
-        # 检查 Stripe Connect 账户状态（异步检查，不阻塞）
-        try:
-            import stripe
-            import os
-
-            account = stripe.Account.retrieve(applicant.stripe_account_id)
-            
-            # 检查账户是否已完成 onboarding
-            if not account.details_submitted:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="申请人的 Stripe Connect 账户尚未完成设置，无法接受任务。请先完成账户设置。",
-                    headers={"X-Stripe-Connect-Onboarding-Required": "true"}
-                )
-            
-            # 检查账户是否已启用收款
-            if not account.charges_enabled:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="申请人的 Stripe Connect 账户尚未启用收款功能，无法接受任务。",
-                    headers={"X-Stripe-Connect-Charges-Not-Enabled": "true"}
-                )
-        except HTTPException:
-            raise
-        except Exception as e:
-            # 如果 Stripe API 调用失败，记录错误但不阻止接受申请
-            # 在确认完成时会再次检查
-            logger.warning(f"无法验证申请人 {application.applicant_id} 的 Stripe Connect 账户: {e}")
-        
         # 获取当前时间
         current_time = get_utc_time()
         
@@ -1962,9 +1918,6 @@ async def accept_application(
         import stripe
         import os
 
-        # 获取接受者的 Stripe Connect 账户ID
-        taker_stripe_account_id = applicant.stripe_account_id
-
         # 构建支付描述（方便在 Stripe Dashboard 中查看）
         task_title_short = locked_task.title[:50] if locked_task.title else f"Task #{task_id}"
         if is_top_up:
@@ -1982,7 +1935,7 @@ async def accept_application(
             "poster_name": current_user.name or f"User {current_user.id}",
             "taker_id": str(application.applicant_id),
             "taker_name": applicant.name or f"User {application.applicant_id}",
-            "taker_stripe_account_id": taker_stripe_account_id,
+
             "application_fee": str(application_fee_pence),
             "task_amount": str(task_amount_pence),
             "task_amount_display": f"{task_amount:.2f}",
@@ -2561,45 +2514,13 @@ async def confirm_and_pay(
                 detail="任务金额必须大于0，无法进行支付"
             )
 
-        # 检查申请人是否有 Stripe Connect 账户
+        # 获取申请人信息
         applicant = await db.get(models.User, application.applicant_id)
         if not applicant:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="申请人不存在"
             )
-
-        if not applicant.stripe_account_id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="申请人尚未创建 Stripe Connect 收款账户，无法进行支付。",
-                headers={"X-Stripe-Connect-Required": "true"}
-            )
-
-        # 检查 Stripe Connect 账户状态
-        try:
-            import stripe
-            import os
-
-            account = stripe.Account.retrieve(applicant.stripe_account_id)
-
-            if not account.details_submitted:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="申请人的 Stripe Connect 账户尚未完成设置。",
-                    headers={"X-Stripe-Connect-Onboarding-Required": "true"}
-                )
-
-            if not account.charges_enabled:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="申请人的 Stripe Connect 账户尚未启用收款功能。",
-                    headers={"X-Stripe-Connect-Charges-Not-Enabled": "true"}
-                )
-        except HTTPException:
-            raise
-        except Exception as e:
-            logger.warning(f"无法验证申请人 {application.applicant_id} 的 Stripe Connect 账户: {e}")
 
         # 计算金额（pence）
         final_price_pence = round(final_price * 100)
@@ -2613,8 +2534,6 @@ async def confirm_and_pay(
         # 创建 Stripe Payment Intent
         import stripe
         import os
-
-        taker_stripe_account_id = applicant.stripe_account_id
 
         task_title_short = locked_task.title[:50] if locked_task.title else f"Task #{task_id}"
         payment_description = f"任务 #{task_id}: {task_title_short} - 确认支付申请 #{application_id}"
@@ -2636,7 +2555,7 @@ async def confirm_and_pay(
                 "poster_name": current_user.name or f"User {current_user.id}",
                 "taker_id": str(application.applicant_id),
                 "taker_name": applicant.name or f"User {application.applicant_id}",
-                "taker_stripe_account_id": taker_stripe_account_id,
+    
                 "application_fee": str(application_fee_pence),
                 "task_amount": str(final_price_pence),
                 "task_amount_display": f"{final_price:.2f}",
@@ -3930,16 +3849,6 @@ async def respond_negotiation(
                     detail="申请者不存在"
                 )
             
-            # 获取接受者的 Stripe Connect 账户ID
-            taker_stripe_account_id = applicant.stripe_account_id
-            
-            if not taker_stripe_account_id:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="申请者尚未创建 Stripe Connect 收款账户，无法完成支付。请联系申请者先创建收款账户。",
-                    headers={"X-Stripe-Connect-Required": "true"}
-                )
-            
             # 创建 Stripe Payment Intent
             import stripe
             import os
@@ -3960,7 +3869,7 @@ async def respond_negotiation(
                         "poster_id": str(locked_task.poster_id),
                         "taker_id": str(application.applicant_id),
                         "taker_name": applicant.name if applicant else f"User {application.applicant_id}",
-                        "taker_stripe_account_id": taker_stripe_account_id,
+            
                         "application_fee": str(application_fee_pence),
                         "task_amount": str(task_amount_pence),
                         "task_amount_display": f"{task_amount:.2f}",
