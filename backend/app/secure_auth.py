@@ -624,60 +624,70 @@ def is_mobile_request(request: Request) -> bool:
 
 def is_mobile_app_request(request: Request) -> bool:
     """
-    检测是否为移动端原生应用请求（iOS 原生 / Flutter iOS / Flutter Android）
-    
-    匹配以下任一条件即视为移动端应用：
-    
+    检测是否为应用请求（iOS 原生 / Flutter iOS / Flutter Android / Flutter Web）
+
+    匹配以下任一条件即视为应用请求：
+
     A) iOS 应用（原生 Swift 或 Flutter）：
        - X-Platform 头为 "ios"
        - User-Agent 包含 "link2ur-ios" 或 "link2ur/ios"
        - 排除 Safari 浏览器（含 "safari"+"version/"）
-    
+
     B) Android 应用（Flutter）：
        - X-Platform 头为 "android"
        - User-Agent 包含 "link2ur-android" 或 "link2ur/android"
-    
-    C) Flutter（dart:io UA 兜底，未自定义 UA 时）：
+
+    C) Flutter Web（浏览器中运行的 Flutter 应用）：
+       - X-App-Platform 头为 "flutter"
+       - X-Platform 头为 "web"
+       - 浏览器 UA（含 mozilla）是正常的，因为 Flutter Web 无法自定义 UA
+
+    D) Flutter（dart:io UA 兜底，未自定义 UA 时）：
        - X-App-Platform 头为 "flutter"
        - User-Agent 包含 "dart" 且不含 "mozilla"（排除浏览器）
-    
-    移动端应用会话将获得长期有效期，CAPTCHA 豁免（登录/验证码）
+
+    应用会话将获得长期有效期、宽松 IP 策略、CAPTCHA 豁免
     """
     user_agent = request.headers.get("user-agent", "").lower()
-    
+
     x_platform = request.headers.get("X-Platform", "").lower()
-    
+
     # ========== 路径 A: iOS 原生 / Flutter iOS ==========
     if x_platform == "ios":
         # 排除 Safari 浏览器
         if "safari" in user_agent and "version/" in user_agent:
             logger.debug(f"[移动端检测] Safari 浏览器，非应用: UA={user_agent[:80]}")
             return False
-        
+
         # iOS 应用标识（原生 Swift 或 Flutter）
         if "link2ur-ios" in user_agent or "link2ur/ios" in user_agent:
             logger.info(f"[移动端检测] ✅ iOS 应用，长期会话（{IOS_SESSION_EXPIRE_HOURS // 24}天）: UA={user_agent[:80]}")
             return True
-    
+
     # ========== 路径 B: Flutter Android ==========
     if x_platform == "android":
         if "link2ur-android" in user_agent or "link2ur/android" in user_agent:
             logger.info(f"[移动端检测] ✅ Android 应用，长期会话（{IOS_SESSION_EXPIRE_HOURS // 24}天）: UA={user_agent[:80]}")
             return True
-    
-    # ========== 路径 C: Flutter（dart:io UA，未自定义 UA 时的兜底） ==========
+
+    # ========== 路径 C & D: Flutter（含 Web 和 dart:io） ==========
     x_app_platform = request.headers.get("X-App-Platform", "").lower()
     if x_app_platform == "flutter":
-        # Flutter 默认 UA 含 "dart"，排除浏览器（含 mozilla）
+        # C) Flutter Web: X-Platform=web，浏览器 UA 含 mozilla 是正常的
+        if x_platform == "web":
+            logger.info(f"[移动端检测] ✅ Flutter Web 应用，宽松 IP 策略: UA={user_agent[:80]}")
+            return True
+
+        # D) Flutter 原生兜底: UA 含 "dart" 且不含 "mozilla"
         if "dart" in user_agent and "mozilla" not in user_agent:
             platform_detail = x_platform or "unknown"
             logger.info(f"[移动端检测] ✅ Flutter 应用（平台={platform_detail}），长期会话（{IOS_SESSION_EXPIRE_HOURS // 24}天）: UA={user_agent[:80]}")
             return True
-        
-        # X-App-Platform=flutter 但 UA 不匹配，可能是伪造
-        logger.warning(f"[移动端检测] X-App-Platform=flutter 但 UA 不含 dart 或含 mozilla，拒绝: UA={user_agent[:80]}")
+
+        # X-App-Platform=flutter 但既不是 web 也没有 dart UA，可能是伪造
+        logger.warning(f"[移动端检测] X-App-Platform=flutter 但 X-Platform={x_platform}，UA 不含 dart: UA={user_agent[:80]}")
         return False
-    
+
     # ========== 未匹配任何移动端特征 ==========
     if x_platform or x_app_platform:
         logger.debug(f"[移动端检测] 未匹配移动端应用: X-Platform={x_platform}, X-App-Platform={x_app_platform}, UA={user_agent[:80]}")

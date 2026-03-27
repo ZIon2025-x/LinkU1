@@ -1886,6 +1886,11 @@ async def accept_application(
 
         # 获取申请人信息（用于 metadata）
         applicant = await db.get(models.User, application.applicant_id)
+        if not applicant:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="申请人不存在"
+            )
 
         # 获取当前时间
         current_time = get_utc_time()

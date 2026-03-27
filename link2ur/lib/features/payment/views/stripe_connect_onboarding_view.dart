@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -168,8 +169,15 @@ class _StripeConnectOnboardingViewState
     }
   }
 
-  /// 启动原生 Onboarding 流程
+  /// 启动 Onboarding 流程
+  /// Web 端：打开后端 onboarding-page（Stripe Connect.js 嵌入式页面）
+  /// 移动端：调用原生 SDK
   Future<void> _startNativeOnboarding(String clientSecret) async {
+    if (kIsWeb) {
+      await _startWebOnboarding(clientSecret);
+      return;
+    }
+
     // 暂时显示 ready 状态（或 loading）
     setState(() => _viewState = _ViewState.ready);
 
@@ -177,7 +185,7 @@ class _StripeConnectOnboardingViewState
       // 获取 Publishable Key
       // 优先从 AppConfig 获取（通过 --dart-define 传入）
       final publishableKey = AppConfig.instance.stripePublishableKey;
-      
+
       // publishable key 必须通过 --dart-define 传入
       if (publishableKey.isEmpty) {
         if (mounted) {
@@ -223,9 +231,28 @@ class _StripeConnectOnboardingViewState
     }
   }
 
+  /// Web 端：在新标签页中打开后端 onboarding-page，完成后用户手动返回刷新
+  Future<void> _startWebOnboarding(String clientSecret) async {
+    final baseUrl = AppConfig.instance.baseUrl;
+    final url = '$baseUrl/api/stripe/connect/onboarding-page?client_secret=${Uri.encodeComponent(clientSecret)}';
+
+    await ExternalWebView.open(url);
+
+    // 用户从 Stripe 页面返回后，刷新状态
+    if (mounted) {
+      _loadOnboardingSession();
+    }
+  }
+
   /// 打开嵌入式账户管理（更新收款信息）
-  /// Android 不支持嵌入式组件，降级为打开 Express Dashboard URL
+  /// Web/Android 不支持嵌入式组件，降级为打开 Express Dashboard URL
   Future<void> _openAccountManagement() async {
+    // Web 端直接用 Express Dashboard
+    if (kIsWeb) {
+      await _fallbackToExpressDashboard();
+      return;
+    }
+
     final accountId = _accountDetails?.accountId;
     if (accountId == null) return;
 
