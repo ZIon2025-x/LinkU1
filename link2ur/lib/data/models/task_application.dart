@@ -42,6 +42,8 @@ class TaskApplication extends Equatable {
   bool get isApproved => status == 'approved';
   bool get isRejected => status == 'rejected';
   bool get isChatting => status == 'chatting';
+  bool get isConsulting => status == 'consulting';
+  bool get isNegotiating => status == 'negotiating';
   /// 任务仍在接受申请（open 状态）
   bool get isTaskOpen => taskStatus == 'open';
 

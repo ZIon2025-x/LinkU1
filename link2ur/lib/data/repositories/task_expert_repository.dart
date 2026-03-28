@@ -747,6 +747,105 @@ class TaskExpertRepository {
     }
   }
 
+  /// 创建咨询申请
+  Future<Map<String, dynamic>> createConsultation(int serviceId) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.consultService(serviceId),
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw TaskExpertException(response.message ?? '创建咨询失败');
+    }
+    return response.data!;
+  }
+
+  /// 用户发起议价
+  Future<Map<String, dynamic>> negotiatePrice(
+    int applicationId, {
+    required double proposedPrice,
+  }) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.negotiateApplication(applicationId),
+      data: {'proposed_price': proposedPrice},
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw TaskExpertException(response.message ?? '议价失败');
+    }
+    return response.data!;
+  }
+
+  /// 达人报价
+  Future<Map<String, dynamic>> quotePrice(
+    int applicationId, {
+    required double quotedPrice,
+    String? message,
+  }) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.quoteApplication(applicationId),
+      data: {
+        'quoted_price': quotedPrice,
+        if (message != null && message.isNotEmpty) 'message': message,
+      },
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw TaskExpertException(response.message ?? '报价失败');
+    }
+    return response.data!;
+  }
+
+  /// 回应议价/报价
+  Future<Map<String, dynamic>> respondToNegotiation(
+    int applicationId, {
+    required String action,
+    double? counterPrice,
+  }) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.negotiateResponse(applicationId),
+      data: {
+        'action': action,
+        if (counterPrice != null) 'counter_price': counterPrice,
+      },
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw TaskExpertException(response.message ?? '操作失败');
+    }
+    return response.data!;
+  }
+
+  /// 咨询转正式申请
+  Future<Map<String, dynamic>> formalApply(
+    int applicationId, {
+    double? proposedPrice,
+    String? message,
+    int? timeSlotId,
+    String? deadline,
+    int isFlexible = 0,
+  }) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.formalApply(applicationId),
+      data: {
+        if (proposedPrice != null) 'proposed_price': proposedPrice,
+        if (message != null && message.isNotEmpty) 'message': message,
+        if (timeSlotId != null) 'time_slot_id': timeSlotId,
+        if (deadline != null) 'deadline': deadline,
+        'is_flexible': isFlexible,
+      },
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw TaskExpertException(response.message ?? '提交申请失败');
+    }
+    return response.data!;
+  }
+
+  /// 关闭咨询
+  Future<void> closeConsultation(int applicationId) async {
+    final response = await _apiService.post(
+      ApiEndpoints.closeConsultation(applicationId),
+    );
+    if (!response.isSuccess) {
+      throw TaskExpertException(response.message ?? '关闭咨询失败');
+    }
+  }
+
   /// 取消服务申请
   Future<void> cancelServiceApplication(int applicationId) async {
     final response = await _apiService.post(

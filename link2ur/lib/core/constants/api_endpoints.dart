@@ -236,6 +236,20 @@ class ApiEndpoints {
   static String replyServiceApplication(int serviceId, int applicationId) =>
       '/api/task-experts/services/$serviceId/applications/$applicationId/reply';
 
+  // Consultation endpoints
+  static String consultService(int serviceId) =>
+      '/api/task-experts/services/$serviceId/consult';
+  static String negotiateApplication(int applicationId) =>
+      '/api/task-experts/applications/$applicationId/negotiate';
+  static String quoteApplication(int applicationId) =>
+      '/api/task-experts/applications/$applicationId/quote';
+  static String negotiateResponse(int applicationId) =>
+      '/api/task-experts/applications/$applicationId/negotiate-response';
+  static String formalApply(int applicationId) =>
+      '/api/task-experts/applications/$applicationId/formal-apply';
+  static String closeConsultation(int applicationId) =>
+      '/api/task-experts/applications/$applicationId/close';
+
   // ==================== 个人服务 ====================
   // Personal Services (non-expert users publishing their own services)
   static const String myPersonalServices = '/api/services/me';

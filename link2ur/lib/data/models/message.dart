@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:ui' show Locale;
 
 import 'package:equatable/equatable.dart';
@@ -88,6 +89,8 @@ class Message extends Equatable {
     this.isRead = false,
     this.createdAt,
     this.attachments = const [],
+    this.negotiationPrice,
+    this.negotiationCurrency,
   });
 
   final int id;
@@ -102,12 +105,22 @@ class Message extends Equatable {
   final bool isRead;
   final DateTime? createdAt;
   final List<MessageAttachment> attachments;
+  final double? negotiationPrice;
+  final String? negotiationCurrency;
 
   /// 是否是图片消息
   bool get isImage => messageType == 'image';
 
   /// 是否是系统消息 - 对齐iOS: msgType == .system || senderId == nil
   bool get isSystem => messageType == 'system' || senderId.isEmpty;
+
+  /// 议价相关消息类型
+  bool get isNegotiation => messageType == 'negotiation';
+  bool get isQuote => messageType == 'quote';
+  bool get isCounterOffer => messageType == 'counter_offer';
+  bool get isNegotiationAccepted => messageType == 'negotiation_accepted';
+  bool get isNegotiationRejected => messageType == 'negotiation_rejected';
+  bool get isNegotiationType => isNegotiation || isQuote || isCounterOffer || isNegotiationAccepted || isNegotiationRejected;
 
   /// 是否有图片附件
   bool get hasImageAttachments =>
@@ -126,6 +139,15 @@ class Message extends Equatable {
   }
 
   factory Message.fromJson(Map<String, dynamic> json) {
+    // Parse meta JSON string for negotiation data
+    final metaStr = json['meta'] as String?;
+    Map<String, dynamic>? metaMap;
+    if (metaStr != null && metaStr.isNotEmpty) {
+      try {
+        metaMap = jsonDecode(metaStr) as Map<String, dynamic>?;
+      } catch (_) {}
+    }
+
     return Message(
       id: json['id'] as int,
       senderId: json['sender_id']?.toString() ?? '',
@@ -147,6 +169,10 @@ class Message extends Equatable {
                   MessageAttachment.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
+      negotiationPrice: metaMap?['price'] != null
+          ? (metaMap!['price'] as num).toDouble()
+          : null,
+      negotiationCurrency: metaMap?['currency'] as String?,
     );
   }
 
@@ -179,6 +205,8 @@ class Message extends Equatable {
     bool? isRead,
     DateTime? createdAt,
     List<MessageAttachment>? attachments,
+    double? negotiationPrice,
+    String? negotiationCurrency,
   }) {
     return Message(
       id: id ?? this.id,
@@ -193,11 +221,13 @@ class Message extends Equatable {
       isRead: isRead ?? this.isRead,
       createdAt: createdAt ?? this.createdAt,
       attachments: attachments ?? this.attachments,
+      negotiationPrice: negotiationPrice ?? this.negotiationPrice,
+      negotiationCurrency: negotiationCurrency ?? this.negotiationCurrency,
     );
   }
 
   @override
-  List<Object?> get props => [id, senderId, receiverId, content, createdAt];
+  List<Object?> get props => [id, senderId, receiverId, content, createdAt, negotiationPrice, negotiationCurrency];
 }
 
 /// 最后一条消息（含发送者信息，对齐iOS LastMessage）
