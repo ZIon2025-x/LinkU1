@@ -2692,6 +2692,51 @@ class ServiceApplicationOut(BaseModel):
         from_attributes = True
 
 
+class ConsultationOut(BaseModel):
+    """Response for creating/getting a consultation"""
+    application_id: int
+    service_id: int
+    task_id: Optional[int] = None
+    status: str
+    created_at: datetime.datetime
+    is_existing: bool = False  # True if returning existing consultation
+
+    class Config:
+        from_attributes = True
+
+
+class NegotiateRequest(BaseModel):
+    """User initiates price negotiation"""
+    proposed_price: condecimal(gt=0, max_digits=12, decimal_places=2)
+
+
+class QuoteRequest(BaseModel):
+    """Expert quotes a price"""
+    quoted_price: condecimal(gt=0, max_digits=12, decimal_places=2)
+    message: Optional[str] = None
+
+
+class NegotiateResponseRequest(BaseModel):
+    """Response to a negotiation/quote"""
+    action: Literal["accept", "reject", "counter"]
+    counter_price: Optional[condecimal(gt=0, max_digits=12, decimal_places=2)] = None
+
+    @model_validator(mode="after")
+    def validate_counter_price(self):
+        if self.action == "counter" and self.counter_price is None:
+            raise ValueError("counter_price is required when action is 'counter'")
+        return self
+
+
+class FormalApplyRequest(BaseModel):
+    """Convert consultation to formal application"""
+    proposed_price: Optional[condecimal(gt=0, max_digits=12, decimal_places=2)] = None
+    message: Optional[str] = None
+    time_slot_id: Optional[int] = None
+    deadline: Optional[datetime.datetime] = None
+    is_flexible: Optional[int] = 0
+
+
 class ServiceApplicationCreate(BaseModel):
     # 注意：service_id 从路径参数获取，不需要在请求体中
     application_message: Optional[str] = None
