@@ -764,7 +764,7 @@ class TaskExpertRepository {
     required double proposedPrice,
   }) async {
     final response = await _apiService.post<Map<String, dynamic>>(
-      ApiEndpoints.negotiateApplication(applicationId),
+      ApiEndpoints.negotiateConsultation(applicationId),
       data: {'proposed_price': proposedPrice},
     );
     if (!response.isSuccess || response.data == null) {

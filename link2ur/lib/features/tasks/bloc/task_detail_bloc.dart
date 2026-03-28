@@ -754,6 +754,12 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
         isSubmitting: false,
         actionMessage: 'application_submitted',
       ));
+    } on TaskException catch (e) {
+      AppLogger.error('Failed to apply task (TaskException)', e);
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: e.message,
+      ));
     } catch (e) {
       AppLogger.error('Failed to apply task', e);
       emit(state.copyWith(

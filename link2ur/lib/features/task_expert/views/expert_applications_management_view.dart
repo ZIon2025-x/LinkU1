@@ -11,6 +11,7 @@ import '../../../core/design/app_radius.dart';
 import '../../../core/utils/adaptive_dialogs.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/router/go_router_extensions.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/widgets/skeleton_view.dart';

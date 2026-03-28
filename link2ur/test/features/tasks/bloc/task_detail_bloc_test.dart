@@ -5,6 +5,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:link2ur/features/tasks/bloc/task_detail_bloc.dart';
 import 'package:link2ur/data/models/task.dart';
 import 'package:link2ur/data/models/review.dart';
+import 'package:link2ur/data/models/task_question.dart';
 import 'package:link2ur/data/repositories/task_repository.dart';
 
 import '../../../helpers/test_helpers.dart';
@@ -57,6 +58,13 @@ void main() {
     );
     registerFallbackValues();
     registerFallbackValue(FakeCreateReviewRequest());
+    // Default mock for getQuestions (auto-dispatched after task load)
+    when(() => mockQuestionRepository.getQuestions(
+          targetType: any(named: 'targetType'),
+          targetId: any(named: 'targetId'),
+          page: any(named: 'page'),
+          pageSize: any(named: 'pageSize'),
+        )).thenAnswer((_) async => {'items': <TaskQuestion>[], 'total': 0});
   });
 
   tearDown(() {
@@ -85,10 +93,15 @@ void main() {
         act: (bloc) => bloc.add(const TaskDetailLoadRequested(42)),
         expect: () => [
           const TaskDetailState(status: TaskDetailStatus.loading),
-          const TaskDetailState(
-            status: TaskDetailStatus.loaded,
-            task: testTask,
-          ),
+          isA<TaskDetailState>()
+              .having((s) => s.status, 'status', TaskDetailStatus.loaded)
+              .having((s) => s.task, 'task', testTask),
+          // TaskDetailLoadQuestions auto-dispatched after load
+          isA<TaskDetailState>()
+              .having((s) => s.isLoadingQuestions, 'isLoadingQuestions', true),
+          isA<TaskDetailState>()
+              .having((s) => s.isLoadingQuestions, 'isLoadingQuestions', false)
+              .having((s) => s.questions, 'questions', isEmpty),
         ],
       );
 
