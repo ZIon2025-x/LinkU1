@@ -113,6 +113,11 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
     }
   }
 
+  String _getCurrencySymbol() {
+    final currency = _consultationApp?['currency'] as String? ?? 'GBP';
+    return Helpers.currencySymbolFor(currency);
+  }
+
   @override
   void dispose() {
     _messageController.dispose();
@@ -1296,7 +1301,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
                 const TextInputType.numberWithOptions(decimal: true),
             decoration: InputDecoration(
               hintText: context.l10n.negotiatePriceHint,
-              prefixText: '\u00a3',
+              prefixText: _getCurrencySymbol(),
               errorText: errorText,
             ),
           ),
@@ -1347,7 +1352,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
                     const TextInputType.numberWithOptions(decimal: true),
                 decoration: InputDecoration(
                   hintText: context.l10n.quotePriceHint,
-                  prefixText: '\u00a3',
+                  prefixText: _getCurrencySymbol(),
                   errorText: errorText,
                 ),
               ),
@@ -1413,7 +1418,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
                     const TextInputType.numberWithOptions(decimal: true),
                 decoration: InputDecoration(
                   hintText: context.l10n.negotiatePriceHint,
-                  prefixText: '\u00a3',
+                  prefixText: _getCurrencySymbol(),
                   errorText: errorText,
                 ),
               ),
@@ -1536,7 +1541,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
                 const TextInputType.numberWithOptions(decimal: true),
             decoration: InputDecoration(
               hintText: context.l10n.counterOfferHint,
-              prefixText: '\u00a3',
+              prefixText: _getCurrencySymbol(),
               errorText: errorText,
             ),
           ),

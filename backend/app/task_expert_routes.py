@@ -3055,6 +3055,7 @@ async def negotiate_price(
     app_result = await db.execute(
         select(models.ServiceApplication)
         .where(models.ServiceApplication.id == application_id)
+        .with_for_update()
     )
     application = app_result.scalar_one_or_none()
 
@@ -3072,6 +3073,8 @@ async def negotiate_price(
     application.negotiated_price = request_data.proposed_price
     application.updated_at = get_utc_time()
 
+    price_display = f"{float(request_data.proposed_price):.2f}"
+
     # 插入议价消息
     negotiate_msg = models.Message(
         sender_id=current_user.id,
@@ -3085,6 +3088,23 @@ async def negotiate_price(
     db.add(negotiate_msg)
 
     await db.commit()
+
+    # Send notification to service owner
+    try:
+        from app import async_crud
+        receiver_id = application.service_owner_id or application.expert_id
+        if receiver_id:
+            await async_crud.async_notification_crud.create_notification(
+                db=db,
+                user_id=receiver_id,
+                notification_type="service_application",
+                title="收到议价",
+                content=f"用户对您的服务提出了议价: {price_display}",
+                related_id=str(application.task_id) if application.task_id else None,
+            )
+            await db.commit()
+    except Exception as e:
+        logger.error(f"Failed to send negotiate notification: {e}")
 
     return {
         "message": "议价已发送",
@@ -3104,6 +3124,7 @@ async def quote_price(
     app_result = await db.execute(
         select(models.ServiceApplication)
         .where(models.ServiceApplication.id == application_id)
+        .with_for_update()
     )
     application = app_result.scalar_one_or_none()
 
@@ -3121,6 +3142,8 @@ async def quote_price(
     application.status = "negotiating"
     application.expert_counter_price = request_data.quoted_price
     application.updated_at = get_utc_time()
+
+    price_display = f"{float(request_data.quoted_price):.2f}"
 
     # 构建消息 meta
     meta_data = {"price": float(request_data.quoted_price), "currency": application.currency}
@@ -3141,6 +3164,21 @@ async def quote_price(
 
     await db.commit()
 
+    # Send notification to applicant
+    try:
+        from app import async_crud
+        await async_crud.async_notification_crud.create_notification(
+            db=db,
+            user_id=application.applicant_id,
+            notification_type="service_application",
+            title="收到报价",
+            content=f"达人对您的咨询发送了报价: {price_display}",
+            related_id=str(application.task_id) if application.task_id else None,
+        )
+        await db.commit()
+    except Exception as e:
+        logger.error(f"Failed to send quote notification: {e}")
+
     return {
         "message": "报价已发送",
         "status": "negotiating",
@@ -3159,6 +3197,7 @@ async def negotiate_response(
     app_result = await db.execute(
         select(models.ServiceApplication)
         .where(models.ServiceApplication.id == application_id)
+        .with_for_update()
     )
     application = app_result.scalar_one_or_none()
 
@@ -3236,6 +3275,42 @@ async def negotiate_response(
 
     await db.commit()
 
+    # Send notification to the other party
+    try:
+        from app import async_crud
+        if action == "accept":
+            price_display = f"{float(agreed_price):.2f}" if agreed_price is not None else "0.00"
+            await async_crud.async_notification_crud.create_notification(
+                db=db,
+                user_id=receiver_id,
+                notification_type="service_application",
+                title="报价已接受",
+                content=f"对方已接受价格 {price_display}",
+                related_id=str(application.task_id) if application.task_id else None,
+            )
+        elif action == "reject":
+            await async_crud.async_notification_crud.create_notification(
+                db=db,
+                user_id=receiver_id,
+                notification_type="service_application",
+                title="报价被拒绝",
+                content="对方拒绝了报价",
+                related_id=str(application.task_id) if application.task_id else None,
+            )
+        elif action == "counter":
+            price_display = f"{float(request_data.counter_price):.2f}"
+            await async_crud.async_notification_crud.create_notification(
+                db=db,
+                user_id=receiver_id,
+                notification_type="service_application",
+                title="收到还价",
+                content=f"对方提出了新的价格: {price_display}",
+                related_id=str(application.task_id) if application.task_id else None,
+            )
+        await db.commit()
+    except Exception as e:
+        logger.error(f"Failed to send negotiate response notification: {e}")
+
     return {
         "message": content,
         "status": application.status,
@@ -3254,6 +3329,7 @@ async def formal_apply(
     app_result = await db.execute(
         select(models.ServiceApplication)
         .where(models.ServiceApplication.id == application_id)
+        .with_for_update()
     )
     application = app_result.scalar_one_or_none()
 
@@ -3321,6 +3397,7 @@ async def close_consultation(
     app_result = await db.execute(
         select(models.ServiceApplication)
         .where(models.ServiceApplication.id == application_id)
+        .with_for_update()
     )
     application = app_result.scalar_one_or_none()
 
