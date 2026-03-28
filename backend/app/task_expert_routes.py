@@ -4335,3 +4335,41 @@ async def reject_service_application(
         "application_id": application_id,
     }
 
+
+@task_expert_router.get("/applications/{application_id}/status")
+async def get_application_status(
+    application_id: int,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取服务申请状态"""
+    application = await db.get(models.ServiceApplication, application_id)
+    if not application:
+        raise HTTPException(status_code=404, detail="申请不存在")
+
+    # Only applicant or service owner can view
+    is_applicant = application.applicant_id == current_user.id
+    is_owner = (application.service_owner_id == current_user.id) or (
+        application.expert_id == current_user.id
+    )
+    if not is_applicant and not is_owner:
+        raise HTTPException(status_code=403, detail="无权查看")
+
+    return {
+        "id": application.id,
+        "service_id": application.service_id,
+        "applicant_id": application.applicant_id,
+        "status": application.status,
+        "negotiated_price": float(application.negotiated_price)
+        if application.negotiated_price
+        else None,
+        "expert_counter_price": float(application.expert_counter_price)
+        if application.expert_counter_price
+        else None,
+        "final_price": float(application.final_price)
+        if application.final_price
+        else None,
+        "currency": application.currency,
+        "task_id": application.task_id,
+    }
+

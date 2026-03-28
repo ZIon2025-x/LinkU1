@@ -1313,7 +1313,7 @@ class _BottomApplyBar extends StatelessWidget {
           final taskId = state.consultationData!['task_id'];
           final appId = state.consultationData!['application_id'];
           if (taskId != null && appId != null) {
-            context.push('/tasks/$taskId/applications/$appId/chat');
+            context.push('/tasks/$taskId/applications/$appId/chat?consultation=true');
           }
         } else if (state.actionMessage == 'consultation_failed') {
           ScaffoldMessenger.of(context).showSnackBar(

@@ -438,7 +438,7 @@ class _ApplicationCard extends StatelessWidget {
                     onPressed: () {
                       final taskId = application['task_id'];
                       final appId = application['id'];
-                      context.push('/tasks/$taskId/applications/$appId/chat');
+                      context.push('/tasks/$taskId/applications/$appId/chat?consultation=true');
                     },
                     icon: const Icon(Icons.chat_outlined, size: 16),
                     label: Text(l10n.expertApplicationChat),

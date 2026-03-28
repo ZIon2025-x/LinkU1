@@ -236,6 +236,10 @@ class ApiEndpoints {
   static String replyServiceApplication(int serviceId, int applicationId) =>
       '/api/task-experts/services/$serviceId/applications/$applicationId/reply';
 
+  // Consultation status
+  static String consultationStatus(int applicationId) =>
+      '/api/task-experts/applications/$applicationId/status';
+
   // Consultation endpoints
   static String consultService(int serviceId) =>
       '/api/task-experts/services/$serviceId/consult';

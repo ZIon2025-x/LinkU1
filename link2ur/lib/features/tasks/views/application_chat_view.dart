@@ -29,10 +29,12 @@ class ApplicationChatView extends StatelessWidget {
     super.key,
     required this.taskId,
     required this.applicationId,
+    this.isConsultation = false,
   });
 
   final int taskId;
   final int applicationId;
+  final bool isConsultation;
 
   @override
   Widget build(BuildContext context) {
@@ -48,6 +50,7 @@ class ApplicationChatView extends StatelessWidget {
       child: _ApplicationChatContent(
         taskId: taskId,
         applicationId: applicationId,
+        isConsultation: isConsultation,
       ),
     );
   }
@@ -57,10 +60,12 @@ class _ApplicationChatContent extends StatefulWidget {
   const _ApplicationChatContent({
     required this.taskId,
     required this.applicationId,
+    this.isConsultation = false,
   });
 
   final int taskId;
   final int applicationId;
+  final bool isConsultation;
 
   @override
   State<_ApplicationChatContent> createState() =>
@@ -77,11 +82,18 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
   String? _messagesError;
   bool _isSendingMessage = false;
 
+  // Consultation mode state
+  Map<String, dynamic>? _consultationApp;
+  bool _isLoadingConsultation = false;
+
   @override
   void initState() {
     super.initState();
     _currentUserId = StorageService.instance.getUserId();
     _loadMessages();
+    if (widget.isConsultation) {
+      _loadConsultationStatus();
+    }
   }
 
   @override
@@ -102,7 +114,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
       final response = await apiService.get<Map<String, dynamic>>(
         ApiEndpoints.taskChatMessages(widget.taskId),
         queryParameters: {
-          'application_id': widget.applicationId,
+          if (!widget.isConsultation) 'application_id': widget.applicationId,
           'limit': 50,
         },
       );
@@ -157,7 +169,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
         data: {
           'content': content,
           'message_type': 'text',
-          'application_id': widget.applicationId,
+          if (!widget.isConsultation) 'application_id': widget.applicationId,
         },
       );
 
@@ -256,6 +268,52 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
     return _currentUserId == state.task!.posterId;
   }
 
+  // ── Consultation mode helpers ───────────────────────────────────────
+
+  Future<void> _loadConsultationStatus() async {
+    if (!widget.isConsultation) return;
+    setState(() => _isLoadingConsultation = true);
+    try {
+      final apiService = context.read<ApiService>();
+      final response = await apiService.get<Map<String, dynamic>>(
+        ApiEndpoints.consultationStatus(widget.applicationId),
+      );
+      if (!mounted) return;
+      if (response.isSuccess && response.data != null) {
+        setState(() {
+          _consultationApp = response.data;
+          _isLoadingConsultation = false;
+        });
+      } else {
+        setState(() => _isLoadingConsultation = false);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoadingConsultation = false);
+    }
+  }
+
+  /// Get application status - works in both regular and consultation modes
+  String? _getAppStatus(TaskDetailState state) {
+    if (widget.isConsultation) {
+      return _consultationApp?['status'] as String?;
+    }
+    return _findApplication(state)?.status;
+  }
+
+  bool _isApplicantInConsultation() {
+    if (widget.isConsultation) {
+      return _currentUserId == (_consultationApp?['applicant_id'] as String?);
+    }
+    return false;
+  }
+
+  bool _isChatActiveForStatus(String? appStatus) {
+    if (appStatus == null) return false;
+    return ['chatting', 'consulting', 'negotiating', 'price_agreed']
+        .contains(appStatus);
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<TaskDetailBloc, TaskDetailState>(
@@ -311,13 +369,22 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
         }
       },
       builder: (context, state) {
-        final application = _findApplication(state);
+        final application = widget.isConsultation ? null : _findApplication(state);
         final isPoster = _isPoster(state);
-        final isChatActive = application?.isChatting == true ||
-            application?.isConsulting == true ||
-            application?.isNegotiating == true ||
-            application?.isPriceAgreed == true;
+        final appStatus = _getAppStatus(state);
+        final isChatActive = widget.isConsultation
+            ? _isChatActiveForStatus(appStatus)
+            : (application?.isChatting == true ||
+                application?.isConsulting == true ||
+                application?.isNegotiating == true ||
+                application?.isPriceAgreed == true);
         final isLoaded = state.status == TaskDetailStatus.loaded;
+        final isConsultingOrNeg =
+            appStatus == 'consulting' || appStatus == 'negotiating';
+        final showServiceCard = !_isLoadingConsultation &&
+            (appStatus == 'consulting' ||
+                appStatus == 'negotiating' ||
+                appStatus == 'price_agreed');
 
         return Scaffold(
           backgroundColor:
@@ -331,16 +398,11 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
           body: Column(
             children: [
               // Service info card (consulting/negotiating/price_agreed mode)
-              if (isLoaded &&
-                  (application?.isConsulting == true ||
-                      application?.isNegotiating == true ||
-                      application?.isPriceAgreed == true))
+              if (isLoaded && showServiceCard)
                 _buildServiceInfoCard(state),
 
               // Price bar (non-consulting mode — keep existing behavior)
-              if (isLoaded &&
-                  application?.isConsulting != true &&
-                  application?.isNegotiating != true)
+              if (isLoaded && !showServiceCard && !widget.isConsultation)
                 _buildPriceBar(state, application),
 
               // Closed channel banner
@@ -351,15 +413,16 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
 
               // Consulting action buttons
               if (isChatActive &&
-                  application != null &&
-                  (application.isConsulting || application.isNegotiating || application.isPriceAgreed))
-                _buildConsultingActions(application),
+                  (isConsultingOrNeg || appStatus == 'price_agreed'))
+                _buildConsultingActions2(appStatus),
 
               // Input bar (when chat is active)
               if (isChatActive) _buildInputBar(),
 
               // Confirm & Pay button (poster only, chatting mode — not consulting)
-              if (application?.isChatting == true && isPoster)
+              if (!widget.isConsultation &&
+                  application?.isChatting == true &&
+                  isPoster)
                 _buildConfirmAndPayButton(state),
             ],
           ),
@@ -803,8 +866,14 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
 
   Widget _buildServiceInfoCard(TaskDetailState state) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final application = _findApplication(state);
-    final price = application?.proposedPrice ?? state.task?.displayReward;
+    final application = widget.isConsultation ? null : _findApplication(state);
+    final consultationPrice = widget.isConsultation
+        ? (_consultationApp?['final_price'] as num? ??
+            _consultationApp?['negotiated_price'] as num?)
+            ?.toDouble()
+        : null;
+    final price =
+        consultationPrice ?? application?.proposedPrice ?? state.task?.displayReward;
     final priceDisplay = price != null ? price.toStringAsFixed(2) : '--';
     final currencySymbol =
         Helpers.currencySymbolFor(state.task?.currency ?? 'GBP');
@@ -1023,9 +1092,24 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
     );
   }
 
-  Widget _buildConsultingActions(TaskApplication application) {
+  Widget _buildConsultingActions2(String? appStatus) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isApplicant = _currentUserId == application.applicantId;
+    final isApplicant = widget.isConsultation
+        ? _isApplicantInConsultation()
+        : _currentUserId != null; // fallback; regular mode used _findApplication
+    final isConsulting = appStatus == 'consulting';
+    final isNegotiating = appStatus == 'negotiating';
+    final isPriceAgreed = appStatus == 'price_agreed';
+
+    // In regular mode, determine isApplicant from the TaskApplication
+    final bool isApplicantFinal;
+    if (!widget.isConsultation) {
+      final state = context.read<TaskDetailBloc>().state;
+      final application = _findApplication(state);
+      isApplicantFinal = _currentUserId == application?.applicantId;
+    } else {
+      isApplicantFinal = isApplicant;
+    }
 
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -1050,7 +1134,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
         child: Row(
           children: [
             // User (poster / consulting initiator): negotiate & formal apply
-            if (isApplicant && (application.isConsulting || application.isNegotiating)) ...[
+            if (isApplicantFinal && (isConsulting || isNegotiating)) ...[
               ActionChip(
                 avatar: const Icon(Icons.local_offer, size: 16),
                 label: Text(context.l10n.negotiatePrice),
@@ -1065,7 +1149,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
               const SizedBox(width: 8),
             ],
             // Expert (service provider): quote
-            if (!isApplicant && (application.isConsulting || application.isNegotiating)) ...[
+            if (!isApplicantFinal && (isConsulting || isNegotiating)) ...[
               ActionChip(
                 avatar: const Icon(Icons.request_quote, size: 16),
                 label: Text(context.l10n.quotePrice),
@@ -1074,8 +1158,8 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
               const SizedBox(width: 8),
             ],
             // Price agreed: applicant can formal-apply, expert can approve
-            if (application.isPriceAgreed) ...[
-              if (isApplicant) ...[
+            if (isPriceAgreed) ...[
+              if (isApplicantFinal) ...[
                 ActionChip(
                   avatar: const Icon(Icons.assignment, size: 16),
                   label: Text(context.l10n.formalApply),
@@ -1083,7 +1167,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
                 ),
                 const SizedBox(width: 8),
               ],
-              if (!isApplicant) ...[
+              if (!isApplicantFinal) ...[
                 ActionChip(
                   avatar: const Icon(Icons.check_circle, size: 16,
                       color: AppColors.success),
@@ -1318,11 +1402,41 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
             child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(dialogContext);
-              context.read<TaskDetailBloc>().add(
-                    TaskDetailConfirmAndPay(widget.applicationId),
+              if (widget.isConsultation) {
+                // Call owner-approve directly for consultation
+                try {
+                  final apiService = context.read<ApiService>();
+                  final response =
+                      await apiService.post<Map<String, dynamic>>(
+                    ApiEndpoints.ownerApproveApplication(
+                        widget.applicationId),
                   );
+                  if (!mounted) return;
+                  if (response.isSuccess && response.data != null) {
+                    _loadMessages();
+                    _loadConsultationStatus();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                          content: Text(
+                              context.l10n.expertApplicationApproved)),
+                    );
+                  }
+                } catch (e) {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                        content:
+                            Text(context.localizeError(e.toString()))),
+                  );
+                }
+              } else {
+                // Regular mode: use TaskDetailBloc
+                context.read<TaskDetailBloc>().add(
+                      TaskDetailConfirmAndPay(widget.applicationId),
+                    );
+              }
             },
             style: TextButton.styleFrom(foregroundColor: AppColors.success),
             child: Text(context.l10n.expertApplicationConfirmApprove),
@@ -1427,6 +1541,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
           ? context.l10n.negotiationAccepted
           : context.l10n.negotiationRejected,
     );
+    _loadConsultationStatus();
     // Reload task detail to reflect status change
     if (mounted) {
       context
@@ -1458,6 +1573,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
           SnackBar(content: Text(successMessage)),
         );
         _loadMessages();
+        _loadConsultationStatus();
         // Reload application status
         if (mounted) {
           context.read<TaskDetailBloc>().add(TaskDetailLoadRequested(widget.taskId));

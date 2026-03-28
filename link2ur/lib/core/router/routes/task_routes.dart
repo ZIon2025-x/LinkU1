@@ -55,6 +55,8 @@ GoRoute(
           final taskId = int.tryParse(state.pathParameters['taskId'] ?? '');
           final applicationId =
               int.tryParse(state.pathParameters['applicationId'] ?? '');
+          final isConsultation =
+              state.uri.queryParameters['consultation'] == 'true';
           if (taskId == null || taskId <= 0 || applicationId == null || applicationId <= 0) {
             return platformDetailPage(
               context,
@@ -68,6 +70,7 @@ GoRoute(
             child: ApplicationChatView(
               taskId: taskId,
               applicationId: applicationId,
+              isConsultation: isConsultation,
             ),
           );
         },
