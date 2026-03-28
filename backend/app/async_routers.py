@@ -537,6 +537,19 @@ async def get_task_by_id(
         setattr(task, "has_applied", None)
         setattr(task, "user_application_status", None)
 
+    # 当前用户是否已评价该任务
+    if current_user:
+        review_query = select(models.Review.id).where(
+            and_(
+                models.Review.task_id == task_id,
+                models.Review.user_id == str(current_user.id),
+            )
+        ).limit(1)
+        review_result = await db.execute(review_query)
+        setattr(task, "has_reviewed", review_result.scalar_one_or_none() is not None)
+    else:
+        setattr(task, "has_reviewed", False)
+
     # 任务完成证据（与同步路由一致）
     completion_evidence = []
     if task.status in ("pending_confirmation", "completed") and task.completed_at:

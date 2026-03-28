@@ -88,7 +88,7 @@ async def ai_optimize_task(
             messages=[{"role": "user", "content": prompt}],
             system="任务优化助手，只返回JSON，不要markdown代码块。直接输出结果。",
             model_tier="small",
-            max_tokens=1024,
+            max_tokens=2048,  # 推理模型的思考 token 也计入总量，需要更大配额
         )
         for block in response.content:
             if hasattr(block, 'text') and block.text:

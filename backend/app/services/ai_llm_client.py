@@ -261,13 +261,23 @@ class OpenAICompatibleProvider:
 
         content: list[LLMTextBlock | LLMToolUse] = []
         msg_content = message.get("content")
-        # 推理模型 (如 GLM-4.7-Flash) 可能把内容放在 reasoning_content 里
-        # 当 content 为空但 reasoning_content 有值时，尝试从中提取
+        # 推理模型 (如 GLM-4.7-FlashX) 把思考过程放在 reasoning_content，实际回答放在 content
+        # 当 finish_reason=length 时，推理 token 可能耗尽配额导致 content 为空
+        # 此时尝试从 reasoning_content 中提取可用内容作为 fallback
         if not msg_content and message.get("reasoning_content"):
+            reasoning = message["reasoning_content"]
             logger.info(
                 f"OpenAI-compatible: content is empty but reasoning_content exists "
-                f"({len(message['reasoning_content'])} chars), model={model}"
+                f"({len(reasoning)} chars), model={model}, "
+                f"finish_reason={choice.get('finish_reason')}"
             )
+            if choice.get("finish_reason") == "length":
+                # 推理 token 耗尽，尝试用 reasoning_content 作为 fallback
+                msg_content = reasoning
+                logger.info(
+                    f"OpenAI-compatible: using reasoning_content as fallback "
+                    f"(finish_reason=length), model={model}"
+                )
         if msg_content is not None and msg_content != "":
             content.append(LLMTextBlock(text=msg_content))
         elif not message.get("tool_calls"):

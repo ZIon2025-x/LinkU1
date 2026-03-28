@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import select, func, or_, and_, desc
+from sqlalchemy.orm import aliased
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models, schemas
@@ -697,22 +698,29 @@ async def _fetch_rankings(db: AsyncSession, limit: int) -> list:
 
 
 async def _fetch_expert_services(db: AsyncSession, limit: int) -> list:
-    """获取达人服务推荐
+    """获取达人服务 + 个人服务推荐
     注意:
     - TaskExpertService 用 service_name 而非 name
     - TaskExpertService 用 images (JSONB) 而非 cover_image
     - TaskExpertService 用 status == 'active' 而非 is_active == True
     - TaskExpert 用 rating 而非 average_rating
+    - service_type='expert' 通过 expert_id JOIN TaskExpert → User
+    - service_type='personal' 通过 user_id 直接 JOIN User（无 TaskExpert）
     """
+    # 给个人服务 owner 用户起别名，避免与达人用户表冲突
+    PersonalOwner = aliased(models.User, name="personal_owner")
+
     query = (
         select(
             models.TaskExpertService.id,
+            models.TaskExpertService.service_type,
             models.TaskExpertService.service_name,
             models.TaskExpertService.description,
             models.TaskExpertService.category,
             models.TaskExpertService.images.label("service_images"),
             models.TaskExpertService.base_price,
             models.TaskExpertService.currency,
+            models.TaskExpertService.user_id.label("personal_owner_id"),
             models.TaskExpertService.created_at,
             models.TaskExpert.id.label("expert_user_id"),
             models.TaskExpert.expert_name.label("expert_display_name"),
@@ -720,9 +728,12 @@ async def _fetch_expert_services(db: AsyncSession, limit: int) -> list:
             models.TaskExpert.rating.label("expert_rating"),
             models.User.name.label("user_name"),
             models.User.avatar.label("user_avatar_url"),
+            PersonalOwner.name.label("personal_owner_name"),
+            PersonalOwner.avatar.label("personal_owner_avatar"),
         )
-        .join(models.TaskExpert, models.TaskExpertService.expert_id == models.TaskExpert.id)
-        .join(models.User, models.TaskExpert.id == models.User.id)
+        .outerjoin(models.TaskExpert, models.TaskExpertService.expert_id == models.TaskExpert.id)
+        .outerjoin(models.User, models.TaskExpert.id == models.User.id)
+        .outerjoin(PersonalOwner, models.TaskExpertService.user_id == PersonalOwner.id)
         .where(models.TaskExpertService.status == "active")
         .order_by(desc(models.TaskExpertService.created_at))
         .limit(limit)
@@ -731,20 +742,28 @@ async def _fetch_expert_services(db: AsyncSession, limit: int) -> list:
     items = []
     for row in result:
         service_thumb = _first_image(row.service_images)
-        # 达人展示名和头像：优先用 TaskExpert 的，否则用 User 的
-        expert_name = row.expert_display_name or row.user_name
-        expert_avatar = row.expert_avatar_url or row.user_avatar_url
+        is_personal = row.service_type == "personal"
 
-        expert_id_val = str(row.expert_user_id) if row.expert_user_id else None
+        if is_personal:
+            display_name = row.personal_owner_name
+            display_avatar = row.personal_owner_avatar
+            owner_id = str(row.personal_owner_id) if row.personal_owner_id else None
+            expert_id_val = None
+        else:
+            display_name = row.expert_display_name or row.user_name
+            display_avatar = row.expert_avatar_url or row.user_avatar_url
+            owner_id = str(row.expert_user_id) if row.expert_user_id else None
+            expert_id_val = owner_id
+
         items.append({
             "feed_type": "service",
             "id": f"service_{row.id}",
             "title": row.service_name,
             "description": (row.description or "")[:80],
             "images": [service_thumb] if service_thumb else None,
-            "user_id": expert_id_val,
-            "user_name": expert_name,
-            "user_avatar": expert_avatar,
+            "user_id": owner_id,
+            "user_name": display_name,
+            "user_avatar": display_avatar,
             "expert_id": expert_id_val,
             "price": float(row.base_price) if row.base_price else None,
             "original_price": None,
