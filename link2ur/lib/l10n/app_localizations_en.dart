@@ -5839,6 +5839,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskDetailConfirmDeadline => 'Confirm deadline';
 
   @override
+  String get taskDetailApproveAndPay => 'Approve & Pay';
+
+  @override
   String get taskDetailPlatformServiceFee => 'Platform service fee';
 
   @override

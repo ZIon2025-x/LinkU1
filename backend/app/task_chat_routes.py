@@ -1879,10 +1879,17 @@ async def accept_application(
 
         # 检查任务是否还有名额（已付款 top-up 路径 taker_id 已被清除，为 None）
         if locked_task.taker_id is not None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="任务已被接受"
-            )
+            # 指定接单任务：允许发布者为已指定的接单者创建支付
+            if (locked_task.status == "pending_acceptance"
+                    and str(application.applicant_id) == str(locked_task.taker_id)):
+                logger.info(
+                    f"✅ 指定接单任务 {task_id}：发布者批准指定接单者 {application.applicant_id} 的申请"
+                )
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="任务已被接受"
+                )
 
         # 获取申请人信息（用于 metadata）
         applicant = await db.get(models.User, application.applicant_id)

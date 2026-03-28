@@ -1215,14 +1215,13 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
   ) async {
     if (_taskId == null || state.isSubmitting) return;
     emit(state.copyWith(isSubmitting: true));
-    bool applied = false;
     try {
+      // 只提交报价，不调用 acceptTask
+      // 发布者后续通过 accept_application 批准并支付
       await _taskRepository.applyTask(
         _taskId!,
         negotiatedPrice: event.price,
       );
-      applied = true;
-      await _taskRepository.acceptTask(_taskId!);
       final task = await _refreshTask();
       emit(state.copyWith(
         task: task,
@@ -1231,22 +1230,10 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       ));
     } catch (e) {
       AppLogger.error('Failed to submit designated task quote', e);
-      // If applyTask succeeded but acceptTask failed, refresh to reflect actual state
-      if (applied) {
-        try {
-          final task = await _refreshTask();
-          emit(state.copyWith(task: task));
-        } catch (refreshError) {
-          AppLogger.warning(
-            'QuoteDesignatedPrice: refresh also failed after partial success',
-            refreshError,
-          );
-        }
-      }
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'quote_failed',
-        errorMessage: applied ? 'task_quote_accept_failed' : 'task_quote_failed',
+        errorMessage: 'task_quote_failed',
       ));
     }
   }

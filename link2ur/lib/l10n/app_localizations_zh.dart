@@ -5588,6 +5588,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskDetailConfirmDeadline => '确认截止时间';
 
   @override
+  String get taskDetailApproveAndPay => '批准并支付';
+
+  @override
   String get taskDetailPlatformServiceFee => '支付平台服务费';
 
   @override
@@ -16803,6 +16806,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get taskDetailConfirmDeadline => '確認截止時間';
+
+  @override
+  String get taskDetailApproveAndPay => '批准並支付';
 
   @override
   String get taskDetailPlatformServiceFee => '支付平臺服務費';

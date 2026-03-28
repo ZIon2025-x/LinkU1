@@ -10725,6 +10725,12 @@ abstract class AppLocalizations {
   /// **'Confirm deadline'**
   String get taskDetailConfirmDeadline;
 
+  /// No description provided for @taskDetailApproveAndPay.
+  ///
+  /// In en, this message translates to:
+  /// **'Approve & Pay'**
+  String get taskDetailApproveAndPay;
+
   /// No description provided for @taskDetailPlatformServiceFee.
   ///
   /// In en, this message translates to:

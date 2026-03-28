@@ -40,6 +40,7 @@ import '../../../core/utils/task_type_helper.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/task_status_helper.dart';
 import '../../../data/models/task.dart';
+import '../../../data/models/task_application.dart';
 import '../../../data/models/review.dart';
 import '../../../data/models/user.dart';
 import '../../../data/repositories/task_repository.dart';
@@ -638,10 +639,11 @@ class _TaskDetailContent extends StatelessWidget {
                 ),
                 const SizedBox(height: AppSpacing.md),
 
-                // 申请列表 (isPoster && open/chatting) — 含管理操作按钮
+                // 申请列表 (isPoster && open/chatting/pending_acceptance) — 含管理操作按钮
                 if (isPoster &&
                     (task.status == AppConstants.taskStatusOpen ||
-                     task.status == AppConstants.taskStatusChatting)) ...[
+                     task.status == AppConstants.taskStatusChatting ||
+                     task.status == AppConstants.taskStatusPendingAcceptance)) ...[
                   AnimatedListItem(
                     index: 4,
                     child: ApplicationsListView(
@@ -906,6 +908,27 @@ class _TaskDetailContent extends StatelessWidget {
           ),
         ],
       );
+    }
+
+    // 发布者 + pending_acceptance + 无反报价 + 有申请 → 批准并支付按钮
+    if (isPoster &&
+        task.status == AppConstants.taskStatusPendingAcceptance &&
+        !task.hasCounterOfferPending) {
+      final designatedApp = state.applications.cast<TaskApplication?>().firstWhere(
+        (a) => a!.applicantId == task.takerId && a.isPending,
+        orElse: () => null,
+      );
+      if (designatedApp != null) {
+        return PrimaryButton(
+          text: context.l10n.taskDetailApproveAndPay,
+          icon: Icons.credit_card,
+          onPressed: () {
+            context.read<TaskDetailBloc>().add(
+              TaskDetailAcceptApplicant(designatedApp.id),
+            );
+          },
+        );
+      }
     }
 
     // 发布者 + 待支付 → 支付按钮

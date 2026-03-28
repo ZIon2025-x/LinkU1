@@ -2661,6 +2661,7 @@
   "serviceApplyAgain": "Apply Again",
   "serviceInProgress": "Skill in Progress",
   "taskDetailConfirmDeadline": "Confirm deadline",
+  "taskDetailApproveAndPay": "Approve & Pay",
   "taskDetailPlatformServiceFee": "Platform service fee",
   "taskDetailServiceFeeRate": "Service fee rate",
   "taskDetailServiceFeeAmount": "Service fee",

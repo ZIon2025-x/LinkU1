@@ -379,10 +379,10 @@ def accept_task(db: Session, task_id: int, taker_id: str):
                 return "task_deadline_passed"
 
         is_designated_accept = task.status == "pending_acceptance"
-        task.taker_id = str(taker_id)
-        task.status = "taken"
-        # 指定用户接受时：从申请中的议价金额或任务基础金额设定 agreed_reward
+
         if is_designated_accept:
+            # 指定接单者"接受"：只设 agreed_reward，不改状态
+            # 发布者后续通过 accept_application 创建支付、完成批准
             from app.models import TaskApplication
             app = (
                 db.query(TaskApplication)
@@ -400,11 +400,23 @@ def accept_task(db: Session, task_id: int, taker_id: str):
                 task.agreed_reward = task.base_reward
                 if getattr(task, "reward_to_be_quoted", False):
                     task.reward_to_be_quoted = False
-        if not safe_commit(db, f"接受任务 {task_id}"):
-            return "commit_failed"
-        db.refresh(task)
-        logger.info(f"成功接受任务 {task_id}，接收者: {taker_id}")
-        return task
+            if not safe_commit(db, f"指定接单者确认任务 {task_id}"):
+                return "commit_failed"
+            db.refresh(task)
+            logger.info(
+                f"指定接单者 {taker_id} 确认任务 {task_id}，"
+                f"agreed_reward={task.agreed_reward}，等待发布者支付"
+            )
+            return task
+        else:
+            # 普通任务接受：设 taken + taker_id
+            task.taker_id = str(taker_id)
+            task.status = "taken"
+            if not safe_commit(db, f"接受任务 {task_id}"):
+                return "commit_failed"
+            db.refresh(task)
+            logger.info(f"成功接受任务 {task_id}，接收者: {taker_id}")
+            return task
     except Exception as e:
         logger.error(f"接受任务 {task_id} 失败: {e}", exc_info=True)
         db.rollback()
