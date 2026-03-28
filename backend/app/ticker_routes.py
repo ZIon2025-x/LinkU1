@@ -21,6 +21,25 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/feed", tags=["动态"])
 
 
+# ==================== 工具函数 ====================
+
+
+def _mask_name(name: str) -> str:
+    """对用户名做隐私脱敏：保留首尾，中间用 *** 替代。
+    - 1字符: *
+    - 2字符: 首*
+    - 3字符及以上: 首***尾
+    """
+    if not name:
+        return "***"
+    length = len(name)
+    if length == 1:
+        return "*"
+    if length == 2:
+        return name[0] + "*"
+    return name[0] + "***" + name[-1]
+
+
 # ==================== 数据源函数 ====================
 
 
@@ -62,31 +81,30 @@ async def _fetch_recent_completions(db: AsyncSession) -> list:
         result = await db.execute(stmt)
         rows = result.all()
 
-        items = []
-        for row in rows:
-            user_id = row.user_id
-            user_name = row.user_name
-            task_type = row.task_type or "未知"
-            rating = row.rating
+        if not rows:
+            return []
 
-            if rating:
-                rating_int = int(rating)
-                text_zh = f"👏 {user_name} 刚完成了一个 {task_type} 订单，获得{rating_int}星好评"
-                text_en = f"👏 {user_name} completed a {task_type} order with a {rating_int}-star review"
-            else:
-                text_zh = f"✅ {user_name} 刚完成了一个 {task_type} 订单"
-                text_en = f"✅ {user_name} just completed a {task_type} order"
+        row = random.choice(rows)
+        user_name = _mask_name(row.user_name)
+        task_type = row.task_type or "未知"
+        rating = row.rating
 
-            items.append(
-                {
-                    "text_zh": text_zh,
-                    "text_en": text_en,
-                    "link_type": "user",
-                    "link_id": user_id,
-                }
-            )
+        if rating:
+            rating_int = int(rating)
+            text_zh = f"👏 {user_name} 刚完成了一个 {task_type} 订单，获得{rating_int}星好评"
+            text_en = f"👏 {user_name} completed a {task_type} order with a {rating_int}-star review"
+        else:
+            text_zh = f"✅ {user_name} 刚完成了一个 {task_type} 订单"
+            text_en = f"✅ {user_name} just completed a {task_type} order"
 
-        return items
+        return [
+            {
+                "text_zh": text_zh,
+                "text_en": text_en,
+                "link_type": "user",
+                "link_id": row.user_id,
+            }
+        ]
     except Exception as e:
         logger.warning(f"Ticker: failed to fetch recent completions: {e}")
         return []
@@ -146,22 +164,19 @@ async def _fetch_active_user_stats(db: AsyncSession) -> list:
         total_result = await db.execute(total_stmt)
         total_counts = {row.user_id: row.total_count for row in total_result.all()}
 
-        items = []
-        for user_id in user_ids:
-            user_name = user_names.get(user_id, user_id)
-            count = today_counts[user_id]
-            total = total_counts.get(user_id, 0)
+        picked_id = random.choice(user_ids)
+        user_name = _mask_name(user_names.get(picked_id, str(picked_id)))
+        count = today_counts[picked_id]
+        total = total_counts.get(picked_id, 0)
 
-            items.append(
-                {
-                    "text_zh": f"🎉 {user_name} 今日已接 {count} 单，累计完成 {total} 单",
-                    "text_en": f"🎉 {user_name} has accepted {count} orders today, {total} completed in total",
-                    "link_type": "user",
-                    "link_id": user_id,
-                }
-            )
-
-        return items
+        return [
+            {
+                "text_zh": f"🎉 {user_name} 今日已接 {count} 单，累计完成 {total} 单",
+                "text_en": f"🎉 {user_name} has accepted {count} orders today, {total} completed in total",
+                "link_type": "user",
+                "link_id": picked_id,
+            }
+        ]
     except Exception as e:
         logger.warning(f"Ticker: failed to fetch active user stats: {e}")
         return []
@@ -216,28 +231,27 @@ async def _fetch_activity_spots(db: AsyncSession) -> list:
         result = await db.execute(stmt)
         rows = result.all()
 
-        items = []
+        candidates = []
         for row in rows:
             remaining = row.max_participants - row.participant_count
-            if remaining <= 0:
-                continue
+            if remaining > 0:
+                candidates.append((row, remaining))
 
-            title_zh = row.title
-            title_en = row.title_en or row.title
+        if not candidates:
+            return []
 
-            items.append(
-                {
-                    "text_zh": f"📣 {title_zh} 还剩{remaining}个名额，快来报名",
-                    "text_en": f"📣 {title_en} has {remaining} spot(s) left — sign up now",
-                    "link_type": "activity",
-                    "link_id": str(row.id),
-                }
-            )
+        row, remaining = random.choice(candidates)
+        title_zh = row.title
+        title_en = row.title_en or row.title
 
-            if len(items) >= 3:
-                break
-
-        return items
+        return [
+            {
+                "text_zh": f"📣 {title_zh} 还剩{remaining}个名额，快来报名",
+                "text_en": f"📣 {title_en} has {remaining} spot(s) left — sign up now",
+                "link_type": "activity",
+                "link_id": str(row.id),
+            }
+        ]
     except Exception as e:
         logger.warning(f"Ticker: failed to fetch activity spots: {e}")
         return []
@@ -272,31 +286,32 @@ async def _fetch_new_tasks(db: AsyncSession) -> list:
         result = await db.execute(stmt)
         rows = result.all()
 
-        items = []
-        for row in rows:
-            title_zh = row.title
-            title_en = row.title_en or row.title
+        if not rows:
+            return []
 
-            if row.reward_to_be_quoted:
-                reward_zh = "金额待议"
-                reward_en = "price negotiable"
-            else:
-                reward = int(row.reward) if row.reward == int(row.reward) else row.reward
-                currency = row.currency or "GBP"
-                symbol = "€" if currency == "EUR" else "£"
-                reward_zh = f"赏金{symbol}{reward}"
-                reward_en = f"{symbol}{reward}"
+        row = random.choice(rows)
+        title_zh = row.title
+        title_en = row.title_en or row.title
+        poster = _mask_name(row.poster_name)
 
-            items.append(
-                {
-                    "text_zh": f"📝 {row.poster_name} 发布了新任务「{title_zh}」{reward_zh}",
-                    "text_en": f"📝 {row.poster_name} posted a new task \"{title_en}\" — {reward_en}",
-                    "link_type": "task",
-                    "link_id": str(row.id),
-                }
-            )
+        if row.reward_to_be_quoted:
+            reward_zh = "金额待议"
+            reward_en = "price negotiable"
+        else:
+            reward = int(row.reward) if row.reward == int(row.reward) else row.reward
+            currency = row.currency or "GBP"
+            symbol = "€" if currency == "EUR" else "£"
+            reward_zh = f"赏金{symbol}{reward}"
+            reward_en = f"{symbol}{reward}"
 
-        return items
+        return [
+            {
+                "text_zh": f"📝 {poster} 发布了新任务「{title_zh}」{reward_zh}",
+                "text_en": f"📝 {poster} posted a new task \"{title_en}\" — {reward_en}",
+                "link_type": "task",
+                "link_id": str(row.id),
+            }
+        ]
     except Exception as e:
         logger.warning(f"Ticker: failed to fetch new tasks: {e}")
         return []
@@ -329,22 +344,23 @@ async def _fetch_trending_posts(db: AsyncSession) -> list:
         result = await db.execute(stmt)
         rows = result.all()
 
-        items = []
-        for row in rows:
-            title_zh = row.title
-            title_en = row.title_en or row.title
-            likes = row.like_count
+        if not rows:
+            return []
 
-            items.append(
-                {
-                    "text_zh": f"🔥 {row.author_name} 的帖子「{title_zh}」获得了 {likes} 个点赞",
-                    "text_en": f"🔥 {row.author_name}'s post \"{title_en}\" got {likes} likes",
-                    "link_type": "forum_post",
-                    "link_id": str(row.id),
-                }
-            )
+        row = random.choice(rows)
+        title_zh = row.title
+        title_en = row.title_en or row.title
+        author = _mask_name(row.author_name)
+        likes = row.like_count
 
-        return items
+        return [
+            {
+                "text_zh": f"🔥 {author} 的帖子「{title_zh}」获得了 {likes} 个点赞",
+                "text_en": f"🔥 {author}'s post \"{title_en}\" got {likes} likes",
+                "link_type": "forum_post",
+                "link_id": str(row.id),
+            }
+        ]
     except Exception as e:
         logger.warning(f"Ticker: failed to fetch trending posts: {e}")
         return []
@@ -377,18 +393,7 @@ async def _fetch_flea_market_activity(db: AsyncSession) -> list:
         )
 
         new_result = await db.execute(new_stmt)
-        for row in new_result.all():
-            price = int(row.price) if row.price == int(row.price) else row.price
-            currency = row.currency or "GBP"
-            symbol = "€" if currency == "EUR" else "£"
-            items.append(
-                {
-                    "text_zh": f"🛒 {row.seller_name} 刚上架了「{row.title}」{symbol}{price}",
-                    "text_en": f"🛒 {row.seller_name} listed \"{row.title}\" for {symbol}{price}",
-                    "link_type": "flea_market",
-                    "link_id": str(row.id),
-                }
-            )
+        new_rows = new_result.all()
 
         # 最近售出
         sold_stmt = (
@@ -403,21 +408,41 @@ async def _fetch_flea_market_activity(db: AsyncSession) -> list:
                 models.FleaMarketItem.updated_at >= since,
             )
             .order_by(desc(models.FleaMarketItem.updated_at))
-            .limit(2)
+            .limit(3)
         )
 
         sold_result = await db.execute(sold_stmt)
-        for row in sold_result.all():
-            items.append(
+        sold_rows = sold_result.all()
+
+        # 从新上架和售出中各随机取一条，合并后随机选1条
+        candidates = []
+        if new_rows:
+            row = random.choice(new_rows)
+            price = int(row.price) if row.price == int(row.price) else row.price
+            currency = row.currency or "GBP"
+            symbol = "€" if currency == "EUR" else "£"
+            seller = _mask_name(row.seller_name)
+            candidates.append(
                 {
-                    "text_zh": f"🎉 {row.seller_name} 的「{row.title}」已售出",
-                    "text_en": f"🎉 {row.seller_name}'s \"{row.title}\" just sold",
+                    "text_zh": f"🛒 {seller} 刚上架了「{row.title}」{symbol}{price}",
+                    "text_en": f"🛒 {seller} listed \"{row.title}\" for {symbol}{price}",
+                    "link_type": "flea_market",
+                    "link_id": str(row.id),
+                }
+            )
+        if sold_rows:
+            row = random.choice(sold_rows)
+            seller = _mask_name(row.seller_name)
+            candidates.append(
+                {
+                    "text_zh": f"🎉 {seller} 的「{row.title}」已售出",
+                    "text_en": f"🎉 {seller}'s \"{row.title}\" just sold",
                     "link_type": "flea_market",
                     "link_id": str(row.id),
                 }
             )
 
-        return items
+        return [random.choice(candidates)] if candidates else []
     except Exception as e:
         logger.warning(f"Ticker: failed to fetch flea market activity: {e}")
         return []
@@ -451,22 +476,21 @@ async def _fetch_student_verifications(db: AsyncSession) -> list:
         result = await db.execute(stmt)
         rows = result.all()
 
-        items = []
-        for row in rows:
-            count = row.count
-            name_en = row.name
-            name_zh = row.name_cn or row.name
+        if not rows:
+            return []
 
-            items.append(
-                {
-                    "text_zh": f"🎓 本周有 {count} 位 {name_zh} 同学完成了学生认证",
-                    "text_en": f"🎓 {count} student(s) from {name_en} verified this week",
-                    "link_type": None,
-                    "link_id": None,
-                }
-            )
+        row = random.choice(rows)
+        name_en = row.name
+        name_zh = row.name_cn or row.name
 
-        return items
+        return [
+            {
+                "text_zh": f"🎓 本周有 {row.count} 位 {name_zh} 同学完成了学生认证",
+                "text_en": f"🎓 {row.count} student(s) from {name_en} verified this week",
+                "link_type": None,
+                "link_id": None,
+            }
+        ]
     except Exception as e:
         logger.warning(f"Ticker: failed to fetch student verifications: {e}")
         return []
@@ -504,22 +528,21 @@ async def _fetch_leaderboard_updates(db: AsyncSession) -> list:
         result = await db.execute(stmt)
         rows = result.all()
 
-        items = []
-        for row in rows:
-            lb_name_zh = row.lb_name_zh or row.lb_name
-            lb_name_en = row.lb_name
-            votes = row.net_votes
+        if not rows:
+            return []
 
-            items.append(
-                {
-                    "text_zh": f"🏆 「{row.item_name}」在「{lb_name_zh}」排行榜获得 {votes} 票",
-                    "text_en": f"🏆 \"{row.item_name}\" got {votes} votes on \"{lb_name_en}\" leaderboard",
-                    "link_type": "leaderboard",
-                    "link_id": str(row.lb_id),
-                }
-            )
+        row = random.choice(rows)
+        lb_name_zh = row.lb_name_zh or row.lb_name
+        lb_name_en = row.lb_name
 
-        return items
+        return [
+            {
+                "text_zh": f"🏆 「{row.item_name}」在「{lb_name_zh}」排行榜获得 {row.net_votes} 票",
+                "text_en": f"🏆 \"{row.item_name}\" got {row.net_votes} votes on \"{lb_name_en}\" leaderboard",
+                "link_type": "leaderboard",
+                "link_id": str(row.lb_id),
+            }
+        ]
     except Exception as e:
         logger.warning(f"Ticker: failed to fetch leaderboard updates: {e}")
         return []
@@ -557,12 +580,11 @@ async def get_ticker(
         await _fetch_leaderboard_updates(db),
     ]
 
-    # 每类最多取 2 条，确保类型多样性
+    # 每个数据源最多1条，汇总后打散顺序
     all_items = []
     for source in sources:
-        all_items.extend(source[:2])
+        all_items.extend(source)
 
-    # 打散顺序，避免同类扎堆
     random.shuffle(all_items)
 
-    return {"items": all_items[:12]}
+    return {"items": all_items}
