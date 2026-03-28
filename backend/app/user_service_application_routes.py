@@ -519,32 +519,61 @@ async def owner_approve_application(
     else:
         task_level = "normal"
 
-    # 创建任务
-    new_task = models.Task(
-        title=service.service_name,
-        description=service.description,
-        deadline=task_deadline,
-        is_flexible=application.is_flexible or 0,
-        reward=price,
-        base_reward=service.base_price,
-        agreed_reward=price,
-        currency=application.currency or service.currency,
-        location=location,
-        task_type=service.category or "其他",
-        task_level=task_level,
-        poster_id=application.applicant_id,
-        taker_id=current_user.id,  # 服务所有者是接收方
-        expert_service_id=service.id,  # 关联服务，支付过期时能找到对应申请
-        status="pending_payment",
-        is_paid=0,
-        payment_expires_at=get_utc_time() + timedelta(minutes=30),
-        images=images_json,
-        accepted_at=get_utc_time(),
-        task_source="personal_service",
-    )
+    # Check if task already exists (from consultation flow)
+    existing_task = None
+    if application.task_id:
+        existing_task = await db.get(models.Task, application.task_id)
 
-    db.add(new_task)
-    await db.flush()
+    if existing_task:
+        # Update existing consultation task instead of creating new one
+        existing_task.title = service.service_name
+        existing_task.description = service.description or f"服务: {service.service_name}"
+        existing_task.reward = price
+        existing_task.base_reward = float(service.base_price)
+        existing_task.agreed_reward = price
+        existing_task.currency = application.currency or service.currency
+        existing_task.status = "pending_payment"
+        existing_task.is_paid = 0
+        existing_task.payment_expires_at = get_utc_time() + timedelta(minutes=30)
+        existing_task.accepted_at = get_utc_time()
+        existing_task.task_source = "consultation"
+        # Set deadline
+        if application.is_flexible == 1:
+            existing_task.deadline = None
+        elif application.deadline:
+            existing_task.deadline = application.deadline
+        else:
+            existing_task.deadline = get_utc_time() + timedelta(days=7)
+
+        new_task = existing_task
+        await db.flush()
+    else:
+        # 创建任务
+        new_task = models.Task(
+            title=service.service_name,
+            description=service.description,
+            deadline=task_deadline,
+            is_flexible=application.is_flexible or 0,
+            reward=price,
+            base_reward=service.base_price,
+            agreed_reward=price,
+            currency=application.currency or service.currency,
+            location=location,
+            task_type=service.category or "其他",
+            task_level=task_level,
+            poster_id=application.applicant_id,
+            taker_id=current_user.id,  # 服务所有者是接收方
+            expert_service_id=service.id,  # 关联服务，支付过期时能找到对应申请
+            status="pending_payment",
+            is_paid=0,
+            payment_expires_at=get_utc_time() + timedelta(minutes=30),
+            images=images_json,
+            accepted_at=get_utc_time(),
+            task_source="personal_service",
+        )
+
+        db.add(new_task)
+        await db.flush()
 
     # 创建支付意图
     import stripe

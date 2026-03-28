@@ -3187,6 +3187,14 @@ async def negotiate_response(
         message_type = "negotiation_accepted"
         content = f"已接受价格: {agreed_price}"
 
+        # Update placeholder task with agreed price
+        if application.task_id:
+            task = await db.get(models.Task, application.task_id)
+            if task:
+                task.reward = float(agreed_price)
+                task.agreed_reward = float(agreed_price)
+                task.status = "price_agreed"
+
     elif action == "reject":
         application.status = "consulting"
         application.updated_at = now
@@ -3255,8 +3263,8 @@ async def formal_apply(
     if application.applicant_id != current_user.id:
         raise HTTPException(status_code=403, detail="只有申请者可以提交正式申请")
 
-    if application.status != "consulting":
-        raise HTTPException(status_code=400, detail=f"当前状态 {application.status} 不允许提交正式申请，需为咨询状态")
+    if application.status not in ("consulting", "price_agreed"):
+        raise HTTPException(status_code=400, detail=f"当前状态 {application.status} 不允许提交正式申请，需为咨询或价格已商定状态")
 
     # 更新申请
     application.status = "pending"
@@ -3280,6 +3288,8 @@ async def formal_apply(
         task = task_result.scalar_one_or_none()
         if task:
             task.status = "open"
+            if request_data.proposed_price is not None:
+                task.reward = float(request_data.proposed_price)
 
     # 发送系统消息
     system_msg = models.Message(
