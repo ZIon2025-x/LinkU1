@@ -3609,29 +3609,57 @@ async def approve_service_application(
     
     # 8. 创建任务（达人服务是认证过的，任务等级为 expert）
     # 设置为 pending_payment 状态，等待支付完成
-    new_task = models.Task(
-        title=service.service_name,
-        description=service.description,
-        deadline=task_deadline,
-        is_flexible=application.is_flexible or 0,  # 设置灵活时间标识
-        reward=price,
-        base_reward=service.base_price,
-        agreed_reward=price,
-        currency=application.currency or service.currency,
-        location=location,  # 使用任务达人的位置
-        task_type=featured_expert.category if featured_expert and featured_expert.category else "其他",
-        task_level="expert",
-        poster_id=application.applicant_id,  # 申请用户是发布人
-        taker_id=application.expert_id,  # 任务达人接收方
-        status="pending_payment",  # ⚠️ 安全修复：等待支付，不直接进入进行中状态
-        is_paid=0,  # 明确标记为未支付
-        payment_expires_at=get_utc_time() + timedelta(minutes=30),  # 支付过期时间（30分钟）
-        images=images_json,  # 存储为JSON字符串
-        accepted_at=get_utc_time(),
-        task_source="expert_service",  # 达人服务任务
-    )
-    
-    db.add(new_task)
+
+    # Check if task already exists (from consultation flow)
+    existing_task = None
+    if application.task_id:
+        existing_task = await db.get(models.Task, application.task_id)
+
+    if existing_task:
+        # Update existing consultation task instead of creating new one
+        existing_task.title = service.service_name
+        existing_task.description = service.description or f"服务: {service.service_name}"
+        existing_task.reward = price
+        existing_task.base_reward = float(service.base_price)
+        existing_task.agreed_reward = price
+        existing_task.currency = application.currency or service.currency or "GBP"
+        existing_task.status = "pending_payment"
+        existing_task.is_paid = 0
+        existing_task.payment_expires_at = get_utc_time() + timedelta(minutes=30)
+        existing_task.accepted_at = get_utc_time()
+        existing_task.task_source = "consultation"
+        if application.is_flexible == 1:
+            existing_task.deadline = None
+        elif application.deadline:
+            existing_task.deadline = application.deadline
+        else:
+            existing_task.deadline = get_utc_time() + timedelta(days=7)
+        new_task = existing_task
+    else:
+        # Original task creation code
+        new_task = models.Task(
+            title=service.service_name,
+            description=service.description,
+            deadline=task_deadline,
+            is_flexible=application.is_flexible or 0,  # 设置灵活时间标识
+            reward=price,
+            base_reward=service.base_price,
+            agreed_reward=price,
+            currency=application.currency or service.currency,
+            location=location,  # 使用任务达人的位置
+            task_type=featured_expert.category if featured_expert and featured_expert.category else "其他",
+            task_level="expert",
+            poster_id=application.applicant_id,  # 申请用户是发布人
+            taker_id=application.expert_id,  # 任务达人接收方
+            status="pending_payment",  # ⚠️ 安全修复：等待支付，不直接进入进行中状态
+            is_paid=0,  # 明确标记为未支付
+            payment_expires_at=get_utc_time() + timedelta(minutes=30),  # 支付过期时间（30分钟）
+            images=images_json,  # 存储为JSON字符串
+            accepted_at=get_utc_time(),
+            task_source="expert_service",  # 达人服务任务
+        )
+        db.add(new_task)
+
     await db.flush()  # 获取任务ID
     
     # ⚠️ 安全修复：创建支付意图，确保任务达人服务也需要支付

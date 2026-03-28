@@ -320,7 +320,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
 
   bool _isApplicantInConsultation() {
     if (widget.isConsultation) {
-      return _currentUserId == (_consultationApp?['applicant_id'] as String?);
+      return _currentUserId == _consultationApp?['applicant_id']?.toString();
     }
     return false;
   }
@@ -1172,6 +1172,9 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
 
   Widget _buildConsultingActions2(String? appStatus) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isSubmitting = widget.isConsultation
+        ? context.watch<TaskExpertBloc>().state.isSubmitting
+        : false;
     final isApplicant = widget.isConsultation
         ? _isApplicantInConsultation()
         : _currentUserId != null; // fallback; regular mode used _findApplication
@@ -1216,13 +1219,13 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
               ActionChip(
                 avatar: const Icon(Icons.local_offer, size: 16),
                 label: Text(context.l10n.negotiatePrice),
-                onPressed: _showNegotiateDialog,
+                onPressed: isSubmitting ? null : _showNegotiateDialog,
               ),
               const SizedBox(width: 8),
               ActionChip(
                 avatar: const Icon(Icons.assignment, size: 16),
                 label: Text(context.l10n.formalApply),
-                onPressed: _showFormalApplyDialog,
+                onPressed: isSubmitting ? null : _showFormalApplyDialog,
               ),
               const SizedBox(width: 8),
             ],
@@ -1231,7 +1234,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
               ActionChip(
                 avatar: const Icon(Icons.request_quote, size: 16),
                 label: Text(context.l10n.quotePrice),
-                onPressed: _showQuoteDialog,
+                onPressed: isSubmitting ? null : _showQuoteDialog,
               ),
               const SizedBox(width: 8),
             ],
@@ -1241,7 +1244,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
                 ActionChip(
                   avatar: const Icon(Icons.assignment, size: 16),
                   label: Text(context.l10n.formalApply),
-                  onPressed: _showFormalApplyDialog,
+                  onPressed: isSubmitting ? null : _showFormalApplyDialog,
                 ),
                 const SizedBox(width: 8),
               ],
@@ -1253,7 +1256,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
                     context.l10n.expertApplicationConfirmApprove,
                     style: const TextStyle(color: AppColors.success),
                   ),
-                  onPressed: _showApproveConfirmation,
+                  onPressed: isSubmitting ? null : _showApproveConfirmation,
                 ),
                 const SizedBox(width: 8),
               ],
@@ -1267,7 +1270,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
                 style: TextStyle(
                     color: AppColors.error.withValues(alpha: 0.8)),
               ),
-              onPressed: _showCloseConfirmation,
+              onPressed: isSubmitting ? null : _showCloseConfirmation,
             ),
           ],
         ),

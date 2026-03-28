@@ -1035,7 +1035,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     TaskExpertApproveApplication event,
     Emitter<TaskExpertState> emit,
   ) async {
-    emit(state.copyWith(isSubmitting: true));
+    emit(state.copyWith(isSubmitting: true, errorMessage: null, actionMessage: null));
 
     try {
       await _taskExpertRepository.approveServiceApplication(event.applicationId);
