@@ -12,6 +12,8 @@ import '../../../data/repositories/message_repository.dart';
 import '../../../data/repositories/notification_repository.dart';
 import '../../../data/repositories/question_repository.dart';
 import '../../../data/repositories/task_repository.dart';
+import '../../../data/repositories/activity_repository.dart';
+import '../../../data/repositories/task_expert_repository.dart';
 import '../../../data/services/api_service.dart';
 import '../../../data/services/storage_service.dart';
 import '../../../core/constants/api_endpoints.dart';
@@ -19,6 +21,7 @@ import '../../../core/router/page_transitions.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/utils/helpers.dart';
+import '../../task_expert/bloc/task_expert_bloc.dart';
 import '../bloc/task_detail_bloc.dart';
 import 'approval_payment_page.dart';
 
@@ -41,7 +44,7 @@ class ApplicationChatView extends StatelessWidget {
     final taskRepository = context.read<TaskRepository>();
     final notificationRepository = context.read<NotificationRepository>();
 
-    return BlocProvider(
+    Widget child = BlocProvider(
       create: (_) => TaskDetailBloc(
         taskRepository: taskRepository,
         notificationRepository: notificationRepository,
@@ -53,6 +56,20 @@ class ApplicationChatView extends StatelessWidget {
         isConsultation: isConsultation,
       ),
     );
+
+    // In consultation mode, also provide TaskExpertBloc
+    if (isConsultation) {
+      child = BlocProvider(
+        create: (_) => TaskExpertBloc(
+          taskExpertRepository: context.read<TaskExpertRepository>(),
+          activityRepository: context.read<ActivityRepository>(),
+          questionRepository: context.read<QuestionRepository>(),
+        ),
+        child: child,
+      );
+    }
+
+    return child;
   }
 }
 
@@ -316,6 +333,67 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.isConsultation) {
+      return BlocListener<TaskExpertBloc, TaskExpertState>(
+        listenWhen: (prev, curr) =>
+            prev.actionMessage != curr.actionMessage ||
+            prev.errorMessage != curr.errorMessage,
+        listener: (context, expertState) {
+          // Handle errors
+          if (expertState.errorMessage != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(context.localizeError(expertState.errorMessage))),
+            );
+            return;
+          }
+
+          // Handle success actions
+          final action = expertState.actionMessage;
+          if (action == null) return;
+
+          // Reload messages and status on any successful action
+          if (action == 'negotiation_sent' ||
+              action == 'quote_sent' ||
+              action == 'formal_apply_submitted' ||
+              action == 'consultation_closed' ||
+              action == 'application_approved' ||
+              action.startsWith('negotiate_response_')) {
+            _loadMessages();
+            _loadConsultationStatus();
+
+            // Reload task detail to reflect status change
+            context
+                .read<TaskDetailBloc>()
+                .add(TaskDetailLoadRequested(widget.taskId));
+            context.read<TaskDetailBloc>().add(
+                  TaskDetailLoadApplications(currentUserId: _currentUserId),
+                );
+
+            // Show success message
+            String? msg;
+            if (action == 'negotiation_sent') msg = context.l10n.negotiationSent;
+            if (action == 'quote_sent') msg = context.l10n.quoteSent;
+            if (action == 'formal_apply_submitted') msg = context.l10n.formalApplySubmitted;
+            if (action == 'consultation_closed') msg = context.l10n.consultationClosed;
+            if (action == 'application_approved') msg = context.l10n.expertApplicationApproved;
+            if (action == 'negotiate_response_price_agreed') msg = context.l10n.priceAgreed;
+            if (action == 'negotiate_response_consulting') msg = context.l10n.negotiationRejected;
+            if (action == 'negotiate_response_negotiating') msg = context.l10n.negotiationSent;
+
+            if (msg != null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(msg)),
+              );
+            }
+          }
+        },
+        child: _buildMainContent(),
+      );
+    }
+    return _buildMainContent();
+  }
+
+  Widget _buildMainContent() {
     return BlocConsumer<TaskDetailBloc, TaskDetailState>(
       listenWhen: (prev, curr) =>
           prev.actionMessage != curr.actionMessage ||
@@ -1224,7 +1302,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
                   Text(MaterialLocalizations.of(context).cancelButtonLabel),
             ),
             TextButton(
-              onPressed: () async {
+              onPressed: () {
                 final price =
                     double.tryParse(priceController.text.trim());
                 if (price == null || price <= 0) {
@@ -1234,10 +1312,8 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
                   return;
                 }
                 Navigator.pop(dialogContext);
-                await _callConsultingApi(
-                  ApiEndpoints.negotiateConsultation(widget.applicationId),
-                  data: {'proposed_price': price},
-                  successMessage: context.l10n.negotiationSent,
+                context.read<TaskExpertBloc>().add(
+                  TaskExpertNegotiatePrice(widget.applicationId, price: price),
                 );
               },
               child: Text(MaterialLocalizations.of(context).okButtonLabel),
@@ -1288,7 +1364,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
                   Text(MaterialLocalizations.of(context).cancelButtonLabel),
             ),
             TextButton(
-              onPressed: () async {
+              onPressed: () {
                 final price =
                     double.tryParse(priceController.text.trim());
                 if (price == null || price <= 0) {
@@ -1299,13 +1375,8 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
                 }
                 Navigator.pop(dialogContext);
                 final msg = messageController.text.trim();
-                await _callConsultingApi(
-                  ApiEndpoints.quoteApplication(widget.applicationId),
-                  data: {
-                    'quoted_price': price,
-                    if (msg.isNotEmpty) 'message': msg,
-                  },
-                  successMessage: context.l10n.quoteSent,
+                context.read<TaskExpertBloc>().add(
+                  TaskExpertQuotePrice(widget.applicationId, price: price, message: msg.isNotEmpty ? msg : null),
                 );
               },
               child: Text(MaterialLocalizations.of(context).okButtonLabel),
@@ -1359,7 +1430,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
                   Text(MaterialLocalizations.of(context).cancelButtonLabel),
             ),
             TextButton(
-              onPressed: () async {
+              onPressed: () {
                 final price =
                     double.tryParse(priceController.text.trim());
                 if (price == null || price <= 0) {
@@ -1370,13 +1441,8 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
                 }
                 Navigator.pop(dialogContext);
                 final msg = messageController.text.trim();
-                await _callConsultingApi(
-                  ApiEndpoints.formalApply(widget.applicationId),
-                  data: {
-                    'proposed_price': price,
-                    if (msg.isNotEmpty) 'message': msg,
-                  },
-                  successMessage: context.l10n.formalApplySubmitted,
+                context.read<TaskExpertBloc>().add(
+                  TaskExpertFormalApply(widget.applicationId, proposedPrice: price, message: msg.isNotEmpty ? msg : null),
                 );
               },
               child: Text(MaterialLocalizations.of(context).okButtonLabel),
@@ -1402,35 +1468,13 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
             child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
           ),
           TextButton(
-            onPressed: () async {
+            onPressed: () {
               Navigator.pop(dialogContext);
               if (widget.isConsultation) {
-                // Call owner-approve directly for consultation
-                try {
-                  final apiService = context.read<ApiService>();
-                  final response =
-                      await apiService.post<Map<String, dynamic>>(
-                    ApiEndpoints.ownerApproveApplication(
-                        widget.applicationId),
-                  );
-                  if (!mounted) return;
-                  if (response.isSuccess && response.data != null) {
-                    _loadMessages();
-                    _loadConsultationStatus();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                          content: Text(
-                              context.l10n.expertApplicationApproved)),
-                    );
-                  }
-                } catch (e) {
-                  if (!mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                        content:
-                            Text(context.localizeError(e.toString()))),
-                  );
-                }
+                // Consultation mode: use TaskExpertBloc
+                context.read<TaskExpertBloc>().add(
+                  TaskExpertApproveApplication(widget.applicationId),
+                );
               } else {
                 // Regular mode: use TaskDetailBloc
                 context.read<TaskDetailBloc>().add(
@@ -1459,22 +1503,11 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
                 Text(MaterialLocalizations.of(context).cancelButtonLabel),
           ),
           TextButton(
-            onPressed: () async {
+            onPressed: () {
               Navigator.pop(dialogContext);
-              await _callConsultingApi(
-                ApiEndpoints.closeConsultation(widget.applicationId),
-                successMessage: context.l10n.consultationClosed,
+              context.read<TaskExpertBloc>().add(
+                TaskExpertCloseConsultation(widget.applicationId),
               );
-              // Reload task detail to reflect status change
-              if (mounted) {
-                context
-                    .read<TaskDetailBloc>()
-                    .add(TaskDetailLoadRequested(widget.taskId));
-                context.read<TaskDetailBloc>().add(
-                      TaskDetailLoadApplications(
-                          currentUserId: _currentUserId),
-                    );
-              }
             },
             style: TextButton.styleFrom(foregroundColor: AppColors.error),
             child: Text(MaterialLocalizations.of(context).okButtonLabel),
@@ -1509,7 +1542,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
                   Text(MaterialLocalizations.of(context).cancelButtonLabel),
             ),
             TextButton(
-              onPressed: () async {
+              onPressed: () {
                 final price =
                     double.tryParse(priceController.text.trim());
                 if (price == null || price <= 0) {
@@ -1519,10 +1552,8 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
                   return;
                 }
                 Navigator.pop(dialogContext);
-                await _callConsultingApi(
-                  ApiEndpoints.negotiateResponse(widget.applicationId),
-                  data: {'action': 'counter', 'counter_price': price},
-                  successMessage: context.l10n.negotiationSent,
+                context.read<TaskExpertBloc>().add(
+                  TaskExpertNegotiateResponse(widget.applicationId, action: 'counter', counterPrice: price),
                 );
               },
               child: Text(MaterialLocalizations.of(context).okButtonLabel),
@@ -1533,68 +1564,12 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
     ).then((_) => priceController.dispose());
   }
 
-  Future<void> _handleNegotiationResponse(String action) async {
-    await _callConsultingApi(
-      ApiEndpoints.negotiateResponse(widget.applicationId),
-      data: {'action': action},
-      successMessage: action == 'accept'
-          ? context.l10n.negotiationAccepted
-          : context.l10n.negotiationRejected,
+  void _handleNegotiationResponse(String action) {
+    context.read<TaskExpertBloc>().add(
+      TaskExpertNegotiateResponse(widget.applicationId, action: action),
     );
-    _loadConsultationStatus();
-    // Reload task detail to reflect status change
-    if (mounted) {
-      context
-          .read<TaskDetailBloc>()
-          .add(TaskDetailLoadRequested(widget.taskId));
-      context.read<TaskDetailBloc>().add(
-            TaskDetailLoadApplications(currentUserId: _currentUserId),
-          );
-    }
   }
 
-  /// Shared helper for consulting API calls (negotiate, quote, etc.)
-  Future<void> _callConsultingApi(
-    String endpoint, {
-    Map<String, dynamic>? data,
-    required String successMessage,
-  }) async {
-    try {
-      final apiService = context.read<ApiService>();
-      final response = await apiService.post<Map<String, dynamic>>(
-        endpoint,
-        data: data,
-      );
-
-      if (!mounted) return;
-
-      if (response.isSuccess) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(successMessage)),
-        );
-        _loadMessages();
-        _loadConsultationStatus();
-        // Reload application status
-        if (mounted) {
-          context.read<TaskDetailBloc>().add(TaskDetailLoadRequested(widget.taskId));
-          context.read<TaskDetailBloc>().add(
-                TaskDetailLoadApplications(currentUserId: _currentUserId),
-              );
-        }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(
-                  context.localizeError(response.message ?? 'unknown_error'))),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.localizeError(e.toString()))),
-      );
-    }
-  }
 }
 
 /// Small action button used in negotiation cards
