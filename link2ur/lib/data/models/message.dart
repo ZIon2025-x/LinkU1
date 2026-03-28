@@ -170,7 +170,7 @@ class Message extends Equatable {
               .toList() ??
           const [],
       negotiationPrice: metaMap?['price'] != null
-          ? (metaMap!['price'] as num).toDouble()
+          ? (num.tryParse(metaMap!['price'].toString()) ?? 0).toDouble()
           : null,
       negotiationCurrency: metaMap?['currency'] as String?,
     );

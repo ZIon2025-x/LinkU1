@@ -3080,7 +3080,7 @@ async def negotiate_price(
         task_id=application.task_id,
         message_type="negotiation",
         conversation_type="task",
-        meta=json.dumps({"price": str(request_data.proposed_price), "currency": application.currency}),
+        meta=json.dumps({"price": float(request_data.proposed_price), "currency": application.currency}),
     )
     db.add(negotiate_msg)
 
@@ -3123,7 +3123,7 @@ async def quote_price(
     application.updated_at = get_utc_time()
 
     # 构建消息 meta
-    meta_data = {"price": str(request_data.quoted_price), "currency": application.currency}
+    meta_data = {"price": float(request_data.quoted_price), "currency": application.currency}
     if request_data.message:
         meta_data["message"] = request_data.message
 
@@ -3211,9 +3211,9 @@ async def negotiate_response(
     # 插入消息
     meta_data = {"action": action, "currency": application.currency}
     if action == "accept":
-        meta_data["price"] = str(agreed_price)
+        meta_data["price"] = float(agreed_price) if agreed_price is not None else 0.0
     elif action == "counter":
-        meta_data["price"] = str(request_data.counter_price)
+        meta_data["price"] = float(request_data.counter_price)
 
     response_msg = models.Message(
         sender_id=current_user.id,

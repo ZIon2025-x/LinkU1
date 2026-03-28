@@ -423,7 +423,8 @@ class _ApplicationCard extends StatelessWidget {
             ),
           ] else ...[
             // "沟通" button for consulting applications / "查看任务" button for approved applications
-            if (application['status'] == 'consulting' &&
+            if ((application['status'] == 'consulting' ||
+                    application['status'] == 'negotiating') &&
                 application['task_id'] != null) ...[
               const SizedBox(height: AppSpacing.xs),
               const Divider(height: 1),

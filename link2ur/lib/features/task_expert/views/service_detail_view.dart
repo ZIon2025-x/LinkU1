@@ -119,6 +119,11 @@ class _ServiceDetailContent extends StatelessWidget {
                 prev.actionMessage != curr.actionMessage,
             listener: (context, state) {
               if (state.actionMessage != null) {
+                // consultation_started/failed are handled by _BottomApplyBar's BlocConsumer
+                if (state.actionMessage == 'consultation_started' ||
+                    state.actionMessage == 'consultation_failed') {
+                  return;
+                }
                 final isError = state.actionMessage!.contains('failed');
                 final message = switch (state.actionMessage) {
                   'application_submitted' =>
@@ -1229,6 +1234,13 @@ class _BottomApplyBar extends StatelessWidget {
   final int serviceId;
   final bool isDark;
 
+  bool get _isOwner {
+    final currentUserId = StorageService.instance.getUserId();
+    if (currentUserId == null) return false;
+    return (service.isPersonalService && currentUserId == service.userId) ||
+        (!service.isPersonalService && currentUserId == service.expertId);
+  }
+
   @override
   Widget build(BuildContext context) {
     return ClipRect(
@@ -1264,6 +1276,10 @@ class _BottomApplyBar extends StatelessWidget {
                             : Colors.grey.withValues(alpha: 0.1),
                       ),
                     ),
+                  if (_showConsultButton)
+                    Expanded(child: _buildConsultButton(context)),
+                  if (_showConsultButton)
+                    const SizedBox(width: 12),
                   Expanded(child: _buildButton(context)),
                 ],
               ),
@@ -1274,12 +1290,89 @@ class _BottomApplyBar extends StatelessWidget {
     );
   }
 
+  bool get _showConsultButton {
+    if (_isOwner) return false;
+    if (service.isPending || service.isRejected) return false;
+    return true;
+  }
+
+  Widget _buildConsultButton(BuildContext context) {
+    final hasConsulting = service.userApplicationStatus == 'consulting';
+    final label = hasConsulting
+        ? context.l10n.continueConsultation
+        : context.l10n.consultExpert;
+
+    return BlocConsumer<TaskExpertBloc, TaskExpertState>(
+      listenWhen: (prev, curr) =>
+          prev.actionMessage != curr.actionMessage &&
+          (curr.actionMessage == 'consultation_started' ||
+           curr.actionMessage == 'consultation_failed'),
+      listener: (context, state) {
+        if (state.actionMessage == 'consultation_started' &&
+            state.consultationData != null) {
+          final taskId = state.consultationData!['task_id'];
+          final appId = state.consultationData!['application_id'];
+          if (taskId != null && appId != null) {
+            context.push('/tasks/$taskId/applications/$appId/chat');
+          }
+        } else if (state.actionMessage == 'consultation_failed') {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                state.errorMessage != null
+                    ? context.localizeError(state.errorMessage)
+                    : context.l10n.consultExpert,
+              ),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      },
+      buildWhen: (prev, curr) => prev.isSubmitting != curr.isSubmitting,
+      builder: (context, state) {
+        return SizedBox(
+          height: 54,
+          child: OutlinedButton.icon(
+            onPressed: state.isSubmitting
+                ? null
+                : () => context
+                    .read<TaskExpertBloc>()
+                    .add(TaskExpertStartConsultation(serviceId)),
+            icon: state.isSubmitting
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Icon(
+                    hasConsulting ? Icons.chat : Icons.chat_bubble_outline,
+                    size: 18,
+                  ),
+            label: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.primary,
+              side: const BorderSide(color: AppColors.primary),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(27),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   bool _showAskButton(BuildContext context) {
     final currentUserId = StorageService.instance.getUserId();
     if (currentUserId == null) return false;
-    final isOwner = (service.isPersonalService && currentUserId == service.userId) ||
-        (!service.isPersonalService && currentUserId == service.expertId);
-    return !isOwner;
+    return !_isOwner;
   }
 
   void _showAskDialog(BuildContext context) {
@@ -1332,13 +1425,8 @@ class _BottomApplyBar extends StatelessWidget {
     }
 
     // 服务所有者不能申请自己的服务
-    final currentUserId = StorageService.instance.getUserId();
-    if (currentUserId != null) {
-      final isOwner = (service.isPersonalService && currentUserId == service.userId) ||
-          (!service.isPersonalService && currentUserId == service.expertId);
-      if (isOwner) {
-        return const SizedBox.shrink();
-      }
+    if (_isOwner) {
+      return const SizedBox.shrink();
     }
 
     if (service.userApplicationId != null) {

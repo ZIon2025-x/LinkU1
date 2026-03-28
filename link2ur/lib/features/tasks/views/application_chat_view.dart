@@ -497,7 +497,9 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
 
         // Negotiation/quote/counter_offer cards
         if (message.isNegotiation || message.isQuote || message.isCounterOffer) {
-          return _buildNegotiationCard(message, isMe);
+          // Only show action buttons on the latest negotiation-type message
+          final isLatestNegotiation = _isLatestNegotiationMessage(message);
+          return _buildNegotiationCard(message, isMe, isLatestNegotiation: isLatestNegotiation);
         }
 
         // Special rendering for price_proposal messages
@@ -851,7 +853,18 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
     );
   }
 
-  Widget _buildNegotiationCard(Message message, bool isMe) {
+  /// Check if a message is the last negotiation-type message in the list
+  bool _isLatestNegotiationMessage(Message message) {
+    for (int i = _messages.length - 1; i >= 0; i--) {
+      final m = _messages[i];
+      if (m.isNegotiation || m.isQuote || m.isCounterOffer) {
+        return m.id == message.id;
+      }
+    }
+    return false;
+  }
+
+  Widget _buildNegotiationCard(Message message, bool isMe, {bool isLatestNegotiation = false}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final price = message.negotiationPrice;
     final currency = message.negotiationCurrency ?? 'GBP';
@@ -935,8 +948,8 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
                     ),
                   ),
                 ),
-              // Action buttons for incoming negotiation
-              if (!isMe) ...[
+              // Action buttons for incoming negotiation (only on latest)
+              if (!isMe && isLatestNegotiation) ...[
                 const SizedBox(height: 12),
                 Row(
                   mainAxisSize: MainAxisSize.min,
@@ -1035,7 +1048,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
         child: Row(
           children: [
             // User (poster / consulting initiator): negotiate & formal apply
-            if (isApplicant && application.isConsulting) ...[
+            if (isApplicant && (application.isConsulting || application.isNegotiating)) ...[
               ActionChip(
                 avatar: const Icon(Icons.local_offer, size: 16),
                 label: Text(context.l10n.negotiatePrice),
@@ -1050,7 +1063,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
               const SizedBox(width: 8),
             ],
             // Expert (service provider): quote
-            if (!isApplicant && application.isConsulting) ...[
+            if (!isApplicant && (application.isConsulting || application.isNegotiating)) ...[
               ActionChip(
                 avatar: const Icon(Icons.request_quote, size: 16),
                 label: Text(context.l10n.quotePrice),
@@ -1114,7 +1127,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
                 Navigator.pop(dialogContext);
                 await _callConsultingApi(
                   ApiEndpoints.negotiateConsultation(widget.applicationId),
-                  data: {'price': price},
+                  data: {'proposed_price': price},
                   successMessage: context.l10n.negotiationSent,
                 );
               },
@@ -1180,7 +1193,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
                 await _callConsultingApi(
                   ApiEndpoints.quoteApplication(widget.applicationId),
                   data: {
-                    'price': price,
+                    'quoted_price': price,
                     if (msg.isNotEmpty) 'message': msg,
                   },
                   successMessage: context.l10n.quoteSent,
@@ -1251,7 +1264,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
                 await _callConsultingApi(
                   ApiEndpoints.formalApply(widget.applicationId),
                   data: {
-                    'price': price,
+                    'proposed_price': price,
                     if (msg.isNotEmpty) 'message': msg,
                   },
                   successMessage: context.l10n.formalApplySubmitted,
@@ -1343,7 +1356,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
                 Navigator.pop(dialogContext);
                 await _callConsultingApi(
                   ApiEndpoints.negotiateResponse(widget.applicationId),
-                  data: {'action': 'counter', 'price': price},
+                  data: {'action': 'counter', 'counter_price': price},
                   successMessage: context.l10n.negotiationSent,
                 );
               },
