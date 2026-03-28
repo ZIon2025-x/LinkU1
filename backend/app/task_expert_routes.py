@@ -3,6 +3,7 @@
 实现任务达人相关的所有接口
 """
 
+import json
 import logging
 from datetime import datetime, timedelta, timezone, date, time as dt_time
 from decimal import Decimal
@@ -2938,6 +2939,424 @@ async def apply_for_service(
         logger.error(f"Failed to send notification: {e}")
 
     return new_application
+
+
+# ==================== 咨询与议价相关接口 ====================
+
+@task_expert_router.post("/services/{service_id}/consult")
+async def create_consultation(
+    service_id: int,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """创建咨询（轻量级，无需填写表单）"""
+    # 1. 获取服务信息
+    service_result = await db.execute(
+        select(models.TaskExpertService)
+        .where(models.TaskExpertService.id == service_id)
+    )
+    service = service_result.scalar_one_or_none()
+
+    if not service:
+        raise HTTPException(status_code=404, detail="服务不存在")
+
+    if service.status != "active":
+        raise HTTPException(status_code=400, detail="服务未上架，无法咨询")
+
+    # 2. 不能咨询自己的服务
+    if service.owner_user_id == current_user.id:
+        raise HTTPException(status_code=400, detail="不能咨询自己的服务")
+
+    # 3. 检查是否已有活跃的咨询申请
+    existing_result = await db.execute(
+        select(models.ServiceApplication)
+        .where(models.ServiceApplication.service_id == service_id)
+        .where(models.ServiceApplication.applicant_id == current_user.id)
+        .where(models.ServiceApplication.status.in_(["consulting", "negotiating"]))
+    )
+    existing_app = existing_result.scalar_one_or_none()
+    if existing_app:
+        return {
+            "application_id": existing_app.id,
+            "service_id": existing_app.service_id,
+            "task_id": existing_app.task_id,
+            "status": existing_app.status,
+            "created_at": existing_app.created_at.isoformat() if existing_app.created_at else None,
+            "is_existing": True,
+        }
+
+    # 4. 创建 ServiceApplication（status=consulting）
+    new_application = models.ServiceApplication(
+        service_id=service_id,
+        applicant_id=current_user.id,
+        expert_id=service.expert_id,
+        service_owner_id=service.owner_user_id,
+        currency=service.currency,
+        is_flexible=1,
+        status="consulting",
+    )
+    db.add(new_application)
+    await db.flush()  # get new_application.id
+
+    # 5. 创建占位 Task（status=consulting）
+    new_task = models.Task(
+        title=f"咨询: {service.service_name}",
+        description=f"咨询服务: {service.service_name}",
+        reward=service.base_price,
+        base_reward=service.base_price,
+        currency=service.currency,
+        location=service.location or "online",
+        task_type=service.category or "consultation",
+        task_level="normal",
+        poster_id=current_user.id,
+        taker_id=service.owner_user_id,
+        expert_service_id=service.id,
+        status="consulting",
+        task_source="consultation",
+        is_flexible=1,
+    )
+    db.add(new_task)
+    await db.flush()  # get new_task.id
+
+    # 6. 关联 task_id
+    new_application.task_id = new_task.id
+
+    # 7. 发送系统消息
+    system_message = models.Message(
+        sender_id=None,
+        receiver_id=service.owner_user_id,
+        content=f"{current_user.name} 想咨询您的服务「{service.service_name}」",
+        task_id=new_task.id,
+        message_type="system",
+        conversation_type="task",
+    )
+    db.add(system_message)
+
+    await db.commit()
+
+    return {
+        "application_id": new_application.id,
+        "service_id": service_id,
+        "task_id": new_task.id,
+        "status": "consulting",
+        "created_at": new_application.created_at.isoformat() if new_application.created_at else None,
+        "is_existing": False,
+    }
+
+
+@task_expert_router.post("/applications/{application_id}/negotiate")
+async def negotiate_price(
+    application_id: int,
+    request_data: schemas.NegotiateRequest,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """用户发起议价"""
+    app_result = await db.execute(
+        select(models.ServiceApplication)
+        .where(models.ServiceApplication.id == application_id)
+    )
+    application = app_result.scalar_one_or_none()
+
+    if not application:
+        raise HTTPException(status_code=404, detail="申请不存在")
+
+    if application.applicant_id != current_user.id:
+        raise HTTPException(status_code=403, detail="只有申请者可以发起议价")
+
+    if application.status not in ("consulting", "negotiating"):
+        raise HTTPException(status_code=400, detail=f"当前状态 {application.status} 不允许议价")
+
+    # 更新申请状态
+    application.status = "negotiating"
+    application.negotiated_price = request_data.proposed_price
+    application.updated_at = get_utc_time()
+
+    # 插入议价消息
+    negotiate_msg = models.Message(
+        sender_id=current_user.id,
+        receiver_id=application.service_owner_id,
+        content=f"提出议价: {request_data.proposed_price}",
+        task_id=application.task_id,
+        message_type="negotiation",
+        conversation_type="task",
+        meta=json.dumps({"price": str(request_data.proposed_price), "currency": application.currency}),
+    )
+    db.add(negotiate_msg)
+
+    await db.commit()
+
+    return {
+        "message": "议价已发送",
+        "status": "negotiating",
+        "application_id": application_id,
+    }
+
+
+@task_expert_router.post("/applications/{application_id}/quote")
+async def quote_price(
+    application_id: int,
+    request_data: schemas.QuoteRequest,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """达人/服务所有者报价"""
+    app_result = await db.execute(
+        select(models.ServiceApplication)
+        .where(models.ServiceApplication.id == application_id)
+    )
+    application = app_result.scalar_one_or_none()
+
+    if not application:
+        raise HTTPException(status_code=404, detail="申请不存在")
+
+    # 验证当前用户是服务所有者
+    if application.service_owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="只有服务所有者可以报价")
+
+    if application.status not in ("consulting", "negotiating"):
+        raise HTTPException(status_code=400, detail=f"当前状态 {application.status} 不允许报价")
+
+    # 更新申请状态
+    application.status = "negotiating"
+    application.expert_counter_price = request_data.quoted_price
+    application.updated_at = get_utc_time()
+
+    # 构建消息 meta
+    meta_data = {"price": str(request_data.quoted_price), "currency": application.currency}
+    if request_data.message:
+        meta_data["message"] = request_data.message
+
+    # 插入报价消息
+    quote_msg = models.Message(
+        sender_id=current_user.id,
+        receiver_id=application.applicant_id,
+        content=f"报价: {request_data.quoted_price}" + (f" - {request_data.message}" if request_data.message else ""),
+        task_id=application.task_id,
+        message_type="quote",
+        conversation_type="task",
+        meta=json.dumps(meta_data),
+    )
+    db.add(quote_msg)
+
+    await db.commit()
+
+    return {
+        "message": "报价已发送",
+        "status": "negotiating",
+        "application_id": application_id,
+    }
+
+
+@task_expert_router.post("/applications/{application_id}/negotiate-response")
+async def negotiate_response(
+    application_id: int,
+    request_data: schemas.NegotiateResponseRequest,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """接受/拒绝/还价"""
+    app_result = await db.execute(
+        select(models.ServiceApplication)
+        .where(models.ServiceApplication.id == application_id)
+    )
+    application = app_result.scalar_one_or_none()
+
+    if not application:
+        raise HTTPException(status_code=404, detail="申请不存在")
+
+    # 双方都可以响应
+    is_applicant = application.applicant_id == current_user.id
+    is_owner = application.service_owner_id == current_user.id
+    if not is_applicant and not is_owner:
+        raise HTTPException(status_code=403, detail="无权操作此申请")
+
+    if application.status != "negotiating":
+        raise HTTPException(status_code=400, detail=f"当前状态 {application.status} 不允许响应议价")
+
+    action = request_data.action
+    now = get_utc_time()
+
+    if action == "accept":
+        # 确定成交价格：优先 expert_counter_price，其次 negotiated_price
+        agreed_price = application.expert_counter_price or application.negotiated_price
+        application.final_price = agreed_price
+        application.status = "price_agreed"
+        application.price_agreed_at = now
+        application.updated_at = now
+        message_type = "negotiation_accepted"
+        content = f"已接受价格: {agreed_price}"
+
+    elif action == "reject":
+        application.status = "consulting"
+        application.updated_at = now
+        message_type = "negotiation_rejected"
+        content = "已拒绝当前议价"
+
+    elif action == "counter":
+        if is_applicant:
+            application.negotiated_price = request_data.counter_price
+        else:
+            application.expert_counter_price = request_data.counter_price
+        application.updated_at = now
+        message_type = "counter_offer"
+        content = f"还价: {request_data.counter_price}"
+
+    else:
+        raise HTTPException(status_code=400, detail="无效的操作")
+
+    # 确定接收者
+    receiver_id = application.service_owner_id if is_applicant else application.applicant_id
+
+    # 插入消息
+    meta_data = {"action": action, "currency": application.currency}
+    if action == "accept":
+        meta_data["price"] = str(agreed_price)
+    elif action == "counter":
+        meta_data["price"] = str(request_data.counter_price)
+
+    response_msg = models.Message(
+        sender_id=current_user.id,
+        receiver_id=receiver_id,
+        content=content,
+        task_id=application.task_id,
+        message_type=message_type,
+        conversation_type="task",
+        meta=json.dumps(meta_data),
+    )
+    db.add(response_msg)
+
+    await db.commit()
+
+    return {
+        "message": content,
+        "status": application.status,
+        "application_id": application_id,
+    }
+
+
+@task_expert_router.post("/applications/{application_id}/formal-apply")
+async def formal_apply(
+    application_id: int,
+    request_data: schemas.FormalApplyRequest,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """将咨询转为正式申请"""
+    app_result = await db.execute(
+        select(models.ServiceApplication)
+        .where(models.ServiceApplication.id == application_id)
+    )
+    application = app_result.scalar_one_or_none()
+
+    if not application:
+        raise HTTPException(status_code=404, detail="申请不存在")
+
+    if application.applicant_id != current_user.id:
+        raise HTTPException(status_code=403, detail="只有申请者可以提交正式申请")
+
+    if application.status != "consulting":
+        raise HTTPException(status_code=400, detail=f"当前状态 {application.status} 不允许提交正式申请，需为咨询状态")
+
+    # 更新申请
+    application.status = "pending"
+    application.updated_at = get_utc_time()
+    if request_data.proposed_price is not None:
+        application.negotiated_price = request_data.proposed_price
+    if request_data.message is not None:
+        application.application_message = request_data.message
+    if request_data.time_slot_id is not None:
+        application.time_slot_id = request_data.time_slot_id
+    if request_data.deadline is not None:
+        application.deadline = request_data.deadline
+    if request_data.is_flexible is not None:
+        application.is_flexible = request_data.is_flexible
+
+    # 更新关联任务状态
+    if application.task_id:
+        task_result = await db.execute(
+            select(models.Task).where(models.Task.id == application.task_id)
+        )
+        task = task_result.scalar_one_or_none()
+        if task:
+            task.status = "open"
+
+    # 发送系统消息
+    system_msg = models.Message(
+        sender_id=None,
+        receiver_id=application.service_owner_id,
+        content=f"{current_user.name} 已提交正式申请",
+        task_id=application.task_id,
+        message_type="system",
+        conversation_type="task",
+    )
+    db.add(system_msg)
+
+    await db.commit()
+
+    return {
+        "message": "正式申请已提交",
+        "status": "pending",
+        "application_id": application_id,
+    }
+
+
+@task_expert_router.post("/applications/{application_id}/close")
+async def close_consultation(
+    application_id: int,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """关闭咨询"""
+    app_result = await db.execute(
+        select(models.ServiceApplication)
+        .where(models.ServiceApplication.id == application_id)
+    )
+    application = app_result.scalar_one_or_none()
+
+    if not application:
+        raise HTTPException(status_code=404, detail="申请不存在")
+
+    # 双方都可以关闭
+    if application.applicant_id != current_user.id and application.service_owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="无权操作此申请")
+
+    if application.status not in ("consulting", "negotiating"):
+        raise HTTPException(status_code=400, detail=f"当前状态 {application.status} 不允许关闭咨询")
+
+    application.status = "cancelled"
+    application.updated_at = get_utc_time()
+
+    # 更新关联任务状态
+    if application.task_id:
+        task_result = await db.execute(
+            select(models.Task).where(models.Task.id == application.task_id)
+        )
+        task = task_result.scalar_one_or_none()
+        if task:
+            task.status = "cancelled"
+
+    # 发送系统消息
+    # 确定接收者为对方
+    receiver_id = application.service_owner_id if application.applicant_id == current_user.id else application.applicant_id
+
+    system_msg = models.Message(
+        sender_id=None,
+        receiver_id=receiver_id,
+        content="咨询已关闭",
+        task_id=application.task_id,
+        message_type="system",
+        conversation_type="task",
+    )
+    db.add(system_msg)
+
+    await db.commit()
+
+    return {
+        "message": "咨询已关闭",
+        "status": "cancelled",
+        "application_id": application_id,
+    }
 
 
 @task_expert_router.get("/me/applications", response_model=schemas.PaginatedResponse)
