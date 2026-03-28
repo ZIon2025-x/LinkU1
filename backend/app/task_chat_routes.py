@@ -341,6 +341,19 @@ async def get_task_chat_list(
                 task_participants_dict.setdefault(row.task_id, []).append(row.user_id)
                 all_user_ids.add(row.user_id)
 
+        # 批量查询 consultation 任务的 ServiceApplication ID
+        consultation_task_ids = [t.id for t in tasks if getattr(t, 'task_source', '') == 'consultation']
+        service_app_map = {}
+        if consultation_task_ids:
+            sa_query = select(
+                models.ServiceApplication.task_id,
+                models.ServiceApplication.id
+            ).where(
+                models.ServiceApplication.task_id.in_(consultation_task_ids)
+            )
+            sa_result = await db.execute(sa_query)
+            service_app_map = {row[0]: row[1] for row in sa_result.all()}
+
         # 一次查询所有用户信息
         if all_user_ids:
             users_query = select(models.User).where(
@@ -443,6 +456,7 @@ async def get_task_chat_list(
                 "expert_creator_id": task.expert_creator_id if hasattr(task, 'expert_creator_id') else None,
                 "created_by_expert": bool(task.created_by_expert) if hasattr(task, 'created_by_expert') else False,
                 "task_source": getattr(task, 'task_source', 'normal'),  # 任务来源
+                "service_application_id": service_app_map.get(task.id),  # consultation 任务对应的申请ID
                 # 参与者信息（排除当前用户自己）
                 "participants": _build_participants(
                     task, task_participants_dict, senders_dict, current_user.id

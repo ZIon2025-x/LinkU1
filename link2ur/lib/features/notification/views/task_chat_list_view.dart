@@ -153,14 +153,20 @@ class _TaskChatListViewContent extends StatelessWidget {
               chat: chat,
               isPinned: isPinned,
               onTap: () {
-                // 先导航，再异步清零未读计数
-                context.push('/task-chat/${chat.taskId}').then((_) {
-                  if (context.mounted && chat.unreadCount > 0) {
-                    context
-                        .read<MessageBloc>()
-                        .add(MessageMarkTaskChatRead(chat.taskId));
-                  }
-                });
+                // Consultation tasks → ApplicationChatView
+                if (chat.isConsultation && chat.serviceApplicationId != null) {
+                  context.push('/tasks/${chat.taskId}/applications/${chat.serviceApplicationId}/chat?consultation=true').then((_) {
+                    if (context.mounted && chat.unreadCount > 0) {
+                      context.read<MessageBloc>().add(MessageMarkTaskChatRead(chat.taskId));
+                    }
+                  });
+                } else {
+                  context.push('/task-chat/${chat.taskId}').then((_) {
+                    if (context.mounted && chat.unreadCount > 0) {
+                      context.read<MessageBloc>().add(MessageMarkTaskChatRead(chat.taskId));
+                    }
+                  });
+                }
               },
             ),
           );

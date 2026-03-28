@@ -568,7 +568,12 @@ class _TaskChatItem extends StatelessWidget {
         if (taskChat.unreadCount > 0) {
           context.read<MessageBloc>().add(MessageMarkTaskChatRead(taskChat.taskId));
         }
-        context.push('/task-chat/${taskChat.taskId}');
+        // Consultation tasks → ApplicationChatView with consultation mode
+        if (taskChat.isConsultation && taskChat.serviceApplicationId != null) {
+          context.push('/tasks/${taskChat.taskId}/applications/${taskChat.serviceApplicationId}/chat?consultation=true');
+        } else {
+          context.push('/task-chat/${taskChat.taskId}');
+        }
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: AppSpacing.sm),

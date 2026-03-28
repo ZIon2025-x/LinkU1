@@ -277,6 +277,7 @@ class TaskChat extends Equatable {
     this.lastMessageObj,
     this.lastMessageTime,
     this.unreadCount = 0,
+    this.serviceApplicationId,
   });
 
   final int taskId;
@@ -296,6 +297,10 @@ class TaskChat extends Equatable {
   final ChatLastMessage? lastMessageObj;
   final DateTime? lastMessageTime;
   final int unreadCount;
+  final int? serviceApplicationId;
+
+  /// 是否是咨询类任务
+  bool get isConsultation => taskSource == 'consultation';
 
   /// 多语言显示标题（根据 locale 选择 zh/en）
   String displayTitle(Locale locale) =>
@@ -353,6 +358,7 @@ class TaskChat extends Equatable {
       lastMessageObj: lastMessageObj,
       lastMessageTime: lastMessageTime,
       unreadCount: json['unread_count'] as int? ?? 0,
+      serviceApplicationId: json['service_application_id'] as int?,
     );
   }
 
@@ -378,11 +384,12 @@ class TaskChat extends Equatable {
       lastMessageObj: lastMessageObj,
       lastMessageTime: lastMessageTime,
       unreadCount: unreadCount ?? this.unreadCount,
+      serviceApplicationId: serviceApplicationId,
     );
   }
 
   @override
-  List<Object?> get props => [taskId, lastMessage, unreadCount];
+  List<Object?> get props => [taskId, lastMessage, unreadCount, serviceApplicationId];
 }
 
 /// 发送消息请求
