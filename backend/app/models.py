@@ -447,7 +447,7 @@ class Message(Base):
         ),
         # 枚举约束：限定 message_type 的合法值
         CheckConstraint(
-            "message_type IN ('normal', 'system', 'price_proposal')",
+            "message_type IN ('normal', 'system', 'price_proposal', 'negotiation', 'quote', 'counter_offer', 'negotiation_accepted', 'negotiation_rejected')",
             name="ck_messages_type"
         ),
         # 枚举约束：限定 conversation_type 的合法值
