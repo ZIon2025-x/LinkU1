@@ -1815,7 +1815,7 @@ def accept_task(
             raise HTTPException(status_code=404, detail="Task not found")
 
 
-        if db_task.status != "open":
+        if db_task.status not in ("open", "pending_acceptance"):
             raise HTTPException(
                 status_code=400, detail="Task is not available for acceptance"
             )

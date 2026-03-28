@@ -1244,15 +1244,6 @@ class _DiscoveryTaskCard extends StatelessWidget {
                           ),
                       ],
                     ),
-                    const SizedBox(height: 10),
-                    // Footer: avatar + name
-                    _DiscoveryUserRow(
-                      userId: item.userId,
-                      userName: item.userName,
-                      userAvatar: item.userAvatar,
-                      expertId: item.expertId,
-                      isDark: isDark,
-                    ),
                   ],
                 ),
               ),
