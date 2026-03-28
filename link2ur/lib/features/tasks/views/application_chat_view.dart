@@ -1261,17 +1261,19 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
                 const SizedBox(width: 8),
               ],
             ],
-            // Both: close consultation
-            ActionChip(
-              avatar: Icon(Icons.close, size: 16,
-                  color: AppColors.error.withValues(alpha: 0.8)),
-              label: Text(
-                context.l10n.closeConsultation,
-                style: TextStyle(
+            // Both: close consultation (only when consulting or negotiating)
+            if (isConsulting || isNegotiating) ...[
+              ActionChip(
+                avatar: Icon(Icons.close, size: 16,
                     color: AppColors.error.withValues(alpha: 0.8)),
+                label: Text(
+                  context.l10n.closeConsultation,
+                  style: TextStyle(
+                      color: AppColors.error.withValues(alpha: 0.8)),
+                ),
+                onPressed: isSubmitting ? null : _showCloseConfirmation,
               ),
-              onPressed: isSubmitting ? null : _showCloseConfirmation,
-            ),
+            ],
           ],
         ),
       ),

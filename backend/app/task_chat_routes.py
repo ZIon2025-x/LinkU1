@@ -835,7 +835,8 @@ async def get_task_messages(
                 "task_id": msg.task_id,
                 "created_at": format_iso_utc(msg.created_at) if msg.created_at else None,
                 "is_read": is_read,
-                "attachments": attachments_by_message.get(msg.id, [])
+                "attachments": attachments_by_message.get(msg.id, []),
+                "meta": msg.meta,
             }
             messages_data.append(message_data)
         
@@ -998,7 +999,7 @@ async def send_task_message(
                     detail="申请不存在"
                 )
 
-            if application.status not in ("chatting", "consulting", "negotiating"):
+            if application.status not in ("chatting", "consulting", "negotiating", "price_agreed"):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="该申请当前不在聊天状态"
