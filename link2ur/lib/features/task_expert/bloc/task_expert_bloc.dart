@@ -188,6 +188,77 @@ class TaskExpertApplyServiceEnhanced extends TaskExpertEvent {
       [serviceId, message, counterPrice, timeSlotId, preferredDeadline, isFlexibleTime];
 }
 
+/// 创建咨询
+class TaskExpertStartConsultation extends TaskExpertEvent {
+  const TaskExpertStartConsultation(this.serviceId);
+  final int serviceId;
+
+  @override
+  List<Object?> get props => [serviceId];
+}
+
+/// 用户议价
+class TaskExpertNegotiatePrice extends TaskExpertEvent {
+  const TaskExpertNegotiatePrice(this.applicationId, {required this.price});
+  final int applicationId;
+  final double price;
+
+  @override
+  List<Object?> get props => [applicationId, price];
+}
+
+/// 达人报价
+class TaskExpertQuotePrice extends TaskExpertEvent {
+  const TaskExpertQuotePrice(this.applicationId, {required this.price, this.message});
+  final int applicationId;
+  final double price;
+  final String? message;
+
+  @override
+  List<Object?> get props => [applicationId, price, message];
+}
+
+/// 回应议价/报价
+class TaskExpertNegotiateResponse extends TaskExpertEvent {
+  const TaskExpertNegotiateResponse(this.applicationId, {required this.action, this.counterPrice});
+  final int applicationId;
+  final String action; // 'accept', 'reject', 'counter'
+  final double? counterPrice;
+
+  @override
+  List<Object?> get props => [applicationId, action, counterPrice];
+}
+
+/// 咨询转正式申请
+class TaskExpertFormalApply extends TaskExpertEvent {
+  const TaskExpertFormalApply(
+    this.applicationId, {
+    this.proposedPrice,
+    this.message,
+    this.timeSlotId,
+    this.deadline,
+    this.isFlexible = 0,
+  });
+  final int applicationId;
+  final double? proposedPrice;
+  final String? message;
+  final int? timeSlotId;
+  final String? deadline;
+  final int isFlexible;
+
+  @override
+  List<Object?> get props => [applicationId, proposedPrice, message, timeSlotId, deadline, isFlexible];
+}
+
+/// 关闭咨询
+class TaskExpertCloseConsultation extends TaskExpertEvent {
+  const TaskExpertCloseConsultation(this.applicationId);
+  final int applicationId;
+
+  @override
+  List<Object?> get props => [applicationId];
+}
+
 /// 加载我的达人申请状态 — 对标 iOS getMyExpertApplication
 class TaskExpertLoadMyExpertApplicationStatus extends TaskExpertEvent {
   const TaskExpertLoadMyExpertApplicationStatus();
@@ -294,6 +365,7 @@ class TaskExpertState extends Equatable {
     this.isLoadingServiceQuestions = false,
     this.serviceQuestionsTotalCount = 0,
     this.serviceQuestionsCurrentPage = 1,
+    this.consultationData,
   });
 
   final TaskExpertStatus status;
@@ -347,6 +419,9 @@ class TaskExpertState extends Equatable {
   final int serviceQuestionsTotalCount;
   final int serviceQuestionsCurrentPage;
 
+  /// 咨询创建后返回的数据
+  final Map<String, dynamic>? consultationData;
+
   bool get isLoading => status == TaskExpertStatus.loading;
 
   /// 当前是否有激活的筛选条件（类型非全部 或 城市非全部）
@@ -388,6 +463,8 @@ class TaskExpertState extends Equatable {
     bool? isLoadingServiceQuestions,
     int? serviceQuestionsTotalCount,
     int? serviceQuestionsCurrentPage,
+    Map<String, dynamic>? consultationData,
+    bool clearConsultationData = false,
   }) {
     return TaskExpertState(
       status: status ?? this.status,
@@ -426,6 +503,9 @@ class TaskExpertState extends Equatable {
       isLoadingServiceQuestions: isLoadingServiceQuestions ?? this.isLoadingServiceQuestions,
       serviceQuestionsTotalCount: serviceQuestionsTotalCount ?? this.serviceQuestionsTotalCount,
       serviceQuestionsCurrentPage: serviceQuestionsCurrentPage ?? this.serviceQuestionsCurrentPage,
+      consultationData: clearConsultationData
+          ? null
+          : (consultationData ?? this.consultationData),
     );
   }
 
@@ -465,6 +545,7 @@ class TaskExpertState extends Equatable {
         isLoadingServiceQuestions,
         serviceQuestionsTotalCount,
         serviceQuestionsCurrentPage,
+        consultationData,
       ];
 }
 
@@ -504,6 +585,12 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     on<TaskExpertAskServiceQuestion>(_onAskServiceQuestion);
     on<TaskExpertReplyServiceQuestion>(_onReplyServiceQuestion);
     on<TaskExpertDeleteServiceQuestion>(_onDeleteServiceQuestion);
+    on<TaskExpertStartConsultation>(_onStartConsultation);
+    on<TaskExpertNegotiatePrice>(_onNegotiatePrice);
+    on<TaskExpertQuotePrice>(_onQuotePrice);
+    on<TaskExpertNegotiateResponse>(_onNegotiateResponse);
+    on<TaskExpertFormalApply>(_onFormalApply);
+    on<TaskExpertCloseConsultation>(_onCloseConsultation);
   }
 
   final TaskExpertRepository _taskExpertRepository;
@@ -1211,6 +1298,115 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     } catch (e) {
       AppLogger.error('Failed to delete service question', e);
       emit(state.copyWith(actionMessage: _mapQaError(e, 'qa_delete_failed')));
+    }
+  }
+
+  Future<void> _onStartConsultation(
+    TaskExpertStartConsultation event,
+    Emitter<TaskExpertState> emit,
+  ) async {
+    emit(state.copyWith(isSubmitting: true, errorMessage: null, actionMessage: null));
+    try {
+      final result = await _taskExpertRepository.createConsultation(event.serviceId);
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'consultation_started',
+        consultationData: result,
+      ));
+    } on TaskExpertException catch (e) {
+      emit(state.copyWith(isSubmitting: false, errorMessage: e.message, actionMessage: 'consultation_failed'));
+    } catch (e) {
+      emit(state.copyWith(isSubmitting: false, errorMessage: e.toString(), actionMessage: 'consultation_failed'));
+    }
+  }
+
+  Future<void> _onNegotiatePrice(
+    TaskExpertNegotiatePrice event,
+    Emitter<TaskExpertState> emit,
+  ) async {
+    emit(state.copyWith(isSubmitting: true, errorMessage: null, actionMessage: null));
+    try {
+      await _taskExpertRepository.negotiatePrice(event.applicationId, proposedPrice: event.price);
+      emit(state.copyWith(isSubmitting: false, actionMessage: 'negotiation_sent'));
+    } on TaskExpertException catch (e) {
+      emit(state.copyWith(isSubmitting: false, errorMessage: e.message));
+    } catch (e) {
+      emit(state.copyWith(isSubmitting: false, errorMessage: e.toString()));
+    }
+  }
+
+  Future<void> _onQuotePrice(
+    TaskExpertQuotePrice event,
+    Emitter<TaskExpertState> emit,
+  ) async {
+    emit(state.copyWith(isSubmitting: true, errorMessage: null, actionMessage: null));
+    try {
+      await _taskExpertRepository.quotePrice(event.applicationId, quotedPrice: event.price, message: event.message);
+      emit(state.copyWith(isSubmitting: false, actionMessage: 'quote_sent'));
+    } on TaskExpertException catch (e) {
+      emit(state.copyWith(isSubmitting: false, errorMessage: e.message));
+    } catch (e) {
+      emit(state.copyWith(isSubmitting: false, errorMessage: e.toString()));
+    }
+  }
+
+  Future<void> _onNegotiateResponse(
+    TaskExpertNegotiateResponse event,
+    Emitter<TaskExpertState> emit,
+  ) async {
+    emit(state.copyWith(isSubmitting: true, errorMessage: null, actionMessage: null));
+    try {
+      final result = await _taskExpertRepository.respondToNegotiation(
+        event.applicationId,
+        action: event.action,
+        counterPrice: event.counterPrice,
+      );
+      final status = result['status'] as String? ?? '';
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'negotiate_response_$status',
+      ));
+    } on TaskExpertException catch (e) {
+      emit(state.copyWith(isSubmitting: false, errorMessage: e.message));
+    } catch (e) {
+      emit(state.copyWith(isSubmitting: false, errorMessage: e.toString()));
+    }
+  }
+
+  Future<void> _onFormalApply(
+    TaskExpertFormalApply event,
+    Emitter<TaskExpertState> emit,
+  ) async {
+    emit(state.copyWith(isSubmitting: true, errorMessage: null, actionMessage: null));
+    try {
+      await _taskExpertRepository.formalApply(
+        event.applicationId,
+        proposedPrice: event.proposedPrice,
+        message: event.message,
+        timeSlotId: event.timeSlotId,
+        deadline: event.deadline,
+        isFlexible: event.isFlexible,
+      );
+      emit(state.copyWith(isSubmitting: false, actionMessage: 'formal_apply_submitted'));
+    } on TaskExpertException catch (e) {
+      emit(state.copyWith(isSubmitting: false, errorMessage: e.message));
+    } catch (e) {
+      emit(state.copyWith(isSubmitting: false, errorMessage: e.toString()));
+    }
+  }
+
+  Future<void> _onCloseConsultation(
+    TaskExpertCloseConsultation event,
+    Emitter<TaskExpertState> emit,
+  ) async {
+    emit(state.copyWith(isSubmitting: true, errorMessage: null, actionMessage: null));
+    try {
+      await _taskExpertRepository.closeConsultation(event.applicationId);
+      emit(state.copyWith(isSubmitting: false, actionMessage: 'consultation_closed'));
+    } on TaskExpertException catch (e) {
+      emit(state.copyWith(isSubmitting: false, errorMessage: e.message));
+    } catch (e) {
+      emit(state.copyWith(isSubmitting: false, errorMessage: e.toString()));
     }
   }
 
