@@ -9239,6 +9239,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get expertApplicationViewTask => '查看任务';
 
   @override
+  String get expertApplicationChat => '沟通';
+
+  @override
   String get commonUnnamed => '未命名';
 
   @override
@@ -20559,6 +20562,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get expertApplicationViewTask => '查看任務';
+
+  @override
+  String get expertApplicationChat => '溝通';
 
   @override
   String get commonUnnamed => '未命名';

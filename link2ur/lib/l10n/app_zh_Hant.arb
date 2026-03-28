@@ -4266,6 +4266,7 @@
   "expertApplicationPrice": "出價",
   "expertApplicationBasePrice": "基礎價格",
   "expertApplicationViewTask": "查看任務",
+  "expertApplicationChat": "溝通",
 
   "commonUnnamed": "未命名",
   "commonImageUploadFailed": "上傳圖片失敗: {error}",

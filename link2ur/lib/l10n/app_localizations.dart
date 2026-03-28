@@ -17705,6 +17705,12 @@ abstract class AppLocalizations {
   /// **'View Task'**
   String get expertApplicationViewTask;
 
+  /// No description provided for @expertApplicationChat.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat'**
+  String get expertApplicationChat;
+
   /// No description provided for @commonUnnamed.
   ///
   /// In en, this message translates to:

@@ -175,6 +175,7 @@ class _ApplicationCard extends StatelessWidget {
       'approved' => l10n.expertApplicationStatusApproved,
       'rejected' => l10n.expertApplicationStatusRejected,
       'cancelled' => l10n.expertApplicationStatusCancelled,
+      'consulting' => l10n.expertApplicationStatusConsulting,
       _ => application['status']?.toString() ?? '',
     };
   }
@@ -187,6 +188,7 @@ class _ApplicationCard extends StatelessWidget {
       'approved' => AppColors.success,
       'rejected' => AppColors.error,
       'cancelled' => AppColors.textTertiaryLight,
+      'consulting' => AppColors.info,
       _ => AppColors.textSecondaryLight,
     };
   }
@@ -419,8 +421,32 @@ class _ApplicationCard extends StatelessWidget {
               ),
             ),
           ] else ...[
-            // "查看任务" button for approved applications with a linked task
-            if (application['status'] == 'approved' &&
+            // "沟通" button for consulting applications / "查看任务" button for approved applications
+            if (application['status'] == 'consulting' &&
+                application['task_id'] != null) ...[
+              const SizedBox(height: AppSpacing.xs),
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () {
+                      final taskId = application['task_id'];
+                      final appId = application['id'];
+                      context.push('/tasks/$taskId/applications/$appId/chat');
+                    },
+                    icon: const Icon(Icons.chat_outlined, size: 16),
+                    label: Text(l10n.expertApplicationChat),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.info,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
+                ),
+              ),
+            ] else if (application['status'] == 'approved' &&
                 application['task_id'] != null) ...[
               const SizedBox(height: AppSpacing.xs),
               const Divider(height: 1),

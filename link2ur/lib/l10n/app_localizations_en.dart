@@ -9615,6 +9615,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get expertApplicationViewTask => 'View Task';
 
   @override
+  String get expertApplicationChat => 'Chat';
+
+  @override
   String get commonUnnamed => 'Unnamed';
 
   @override

@@ -4425,6 +4425,7 @@
   "expertApplicationPrice": "Offered Price",
   "expertApplicationBasePrice": "Base Price",
   "expertApplicationViewTask": "View Task",
+  "expertApplicationChat": "Chat",
 
   "commonUnnamed": "Unnamed",
   "commonImageUploadFailed": "Image upload failed: {error}",
