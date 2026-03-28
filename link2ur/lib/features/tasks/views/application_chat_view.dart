@@ -313,7 +313,9 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
       builder: (context, state) {
         final application = _findApplication(state);
         final isPoster = _isPoster(state);
-        final isChatActive = application?.isChatting ?? false;
+        final isChatActive = application?.isChatting == true ||
+            application?.isConsulting == true ||
+            application?.isNegotiating == true;
         final isLoaded = state.status == TaskDetailStatus.loaded;
 
         return Scaffold(
@@ -327,8 +329,17 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
           ),
           body: Column(
             children: [
-              // Price bar
-              if (isLoaded) _buildPriceBar(state, application),
+              // Service info card (consulting/negotiating mode)
+              if (isLoaded &&
+                  (application?.isConsulting == true ||
+                      application?.isNegotiating == true))
+                _buildServiceInfoCard(state),
+
+              // Price bar (non-consulting mode — keep existing behavior)
+              if (isLoaded &&
+                  application?.isConsulting != true &&
+                  application?.isNegotiating != true)
+                _buildPriceBar(state, application),
 
               // Closed channel banner
               if (isLoaded && !isChatActive) _buildClosedBanner(),
@@ -336,11 +347,17 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
               // Message list
               Expanded(child: _buildMessageList()),
 
-              // Input bar (only when chat is active)
+              // Consulting action buttons
+              if (isChatActive &&
+                  application != null &&
+                  (application.isConsulting || application.isNegotiating))
+                _buildConsultingActions(application),
+
+              // Input bar (when chat is active)
               if (isChatActive) _buildInputBar(),
 
-              // Confirm & Pay button (poster only, chat active)
-              if (isChatActive && isPoster)
+              // Confirm & Pay button (poster only, chatting mode — not consulting)
+              if (application?.isChatting == true && isPoster)
                 _buildConfirmAndPayButton(state),
             ],
           ),
@@ -472,6 +489,16 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
       itemBuilder: (context, index) {
         final message = _messages[index];
         final isMe = message.senderId == currentUserId;
+
+        // Negotiation status messages (accepted/rejected)
+        if (message.isNegotiationAccepted || message.isNegotiationRejected) {
+          return _buildNegotiationStatusMessage(message);
+        }
+
+        // Negotiation/quote/counter_offer cards
+        if (message.isNegotiation || message.isQuote || message.isCounterOffer) {
+          return _buildNegotiationCard(message, isMe);
+        }
 
         // Special rendering for price_proposal messages
         if (message.messageType == 'price_proposal') {
@@ -764,6 +791,654 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  // ── Consulting Mode Widgets ──────────────────────────────────────────
+
+  Widget _buildServiceInfoCard(TaskDetailState state) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final application = _findApplication(state);
+    final price = application?.proposedPrice ?? state.task?.displayReward;
+    final priceDisplay = price != null ? price.toStringAsFixed(2) : '--';
+    final currencySymbol =
+        Helpers.currencySymbolFor(state.task?.currency ?? 'GBP');
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppColors.cardBackgroundDark
+            : AppColors.cardBackgroundLight,
+        border: Border(
+          bottom: BorderSide(
+            color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
+          ),
+        ),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(AppRadius.small),
+          bottomRight: Radius.circular(AppRadius.small),
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.design_services,
+              size: 20, color: AppColors.primary),
+          AppSpacing.hSm,
+          Expanded(
+            child: Text(
+              context.l10n.serviceInfoCard,
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+            ),
+          ),
+          Text(
+            '$currencySymbol$priceDisplay',
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              color: AppColors.primary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNegotiationCard(Message message, bool isMe) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final price = message.negotiationPrice;
+    final currency = message.negotiationCurrency ?? 'GBP';
+    final currencySymbol = Helpers.currencySymbolFor(currency);
+
+    String title;
+    IconData icon;
+    if (message.isQuote) {
+      title = context.l10n.quotePrice;
+      icon = Icons.request_quote;
+    } else if (message.isCounterOffer) {
+      title = context.l10n.counterOffer;
+      icon = Icons.swap_horiz;
+    } else {
+      title = context.l10n.negotiatePrice;
+      icon = Icons.local_offer;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
+      child: Align(
+        alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 280),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: isDark
+                  ? [const Color(0xFF1A2340), const Color(0xFF1E2A4A)]
+                  : [const Color(0xFFF0F4FF), const Color(0xFFE8EEFF)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(AppRadius.medium),
+            border: Border.all(
+              color: AppColors.primary.withValues(alpha: isDark ? 0.4 : 0.2),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 16, color: AppColors.primary),
+                  const SizedBox(width: 6),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                price != null
+                    ? '$currencySymbol${price.toStringAsFixed(2)}'
+                    : message.content,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : AppColors.textPrimaryLight,
+                ),
+              ),
+              if (message.content.isNotEmpty &&
+                  price != null &&
+                  !message.content.startsWith(currencySymbol))
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    message.content,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondaryLight,
+                    ),
+                  ),
+                ),
+              // Action buttons for incoming negotiation
+              if (!isMe) ...[
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _NegotiationActionButton(
+                      label: context.l10n.acceptPrice,
+                      color: AppColors.success,
+                      onPressed: () =>
+                          _handleNegotiationResponse('accept'),
+                    ),
+                    const SizedBox(width: 8),
+                    _NegotiationActionButton(
+                      label: context.l10n.rejectPrice,
+                      color: AppColors.error,
+                      onPressed: () =>
+                          _handleNegotiationResponse('reject'),
+                    ),
+                    const SizedBox(width: 8),
+                    _NegotiationActionButton(
+                      label: context.l10n.counterOffer,
+                      color: AppColors.info,
+                      onPressed: _showCounterOfferDialog,
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNegotiationStatusMessage(Message message) {
+    final isAccepted = message.isNegotiationAccepted;
+    final color = isAccepted ? AppColors.success : AppColors.error;
+    final icon = isAccepted ? Icons.check_circle : Icons.cancel;
+    final text = isAccepted
+        ? context.l10n.negotiationAccepted
+        : context.l10n.negotiationRejected;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 32),
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(AppRadius.small),
+            border: Border.all(color: color.withValues(alpha: 0.3)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 16, color: color),
+              const SizedBox(width: 6),
+              Text(
+                text,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildConsultingActions(TaskApplication application) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isApplicant = _currentUserId == application.applicantId;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppColors.cardBackgroundDark.withValues(alpha: 0.85)
+            : AppColors.cardBackgroundLight.withValues(alpha: 0.92),
+        border: Border(
+          top: BorderSide(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.06)
+                : Colors.black.withValues(alpha: 0.04),
+            width: 0.5,
+          ),
+        ),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            // User (poster / consulting initiator): negotiate & formal apply
+            if (isApplicant && application.isConsulting) ...[
+              ActionChip(
+                avatar: const Icon(Icons.local_offer, size: 16),
+                label: Text(context.l10n.negotiatePrice),
+                onPressed: _showNegotiateDialog,
+              ),
+              const SizedBox(width: 8),
+              ActionChip(
+                avatar: const Icon(Icons.assignment, size: 16),
+                label: Text(context.l10n.formalApply),
+                onPressed: _showFormalApplyDialog,
+              ),
+              const SizedBox(width: 8),
+            ],
+            // Expert (service provider): quote
+            if (!isApplicant && application.isConsulting) ...[
+              ActionChip(
+                avatar: const Icon(Icons.request_quote, size: 16),
+                label: Text(context.l10n.quotePrice),
+                onPressed: _showQuoteDialog,
+              ),
+              const SizedBox(width: 8),
+            ],
+            // Both: close consultation
+            ActionChip(
+              avatar: Icon(Icons.close, size: 16,
+                  color: AppColors.error.withValues(alpha: 0.8)),
+              label: Text(
+                context.l10n.closeConsultation,
+                style: TextStyle(
+                    color: AppColors.error.withValues(alpha: 0.8)),
+              ),
+              onPressed: _showCloseConfirmation,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Consulting Dialogs ───────────────────────────────────────────────
+
+  void _showNegotiateDialog() {
+    final priceController = TextEditingController();
+    String? errorText;
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: Text(context.l10n.negotiatePrice),
+          content: TextField(
+            controller: priceController,
+            keyboardType:
+                const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(
+              hintText: context.l10n.negotiatePriceHint,
+              prefixText: '\u00a3',
+              errorText: errorText,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child:
+                  Text(MaterialLocalizations.of(context).cancelButtonLabel),
+            ),
+            TextButton(
+              onPressed: () async {
+                final price =
+                    double.tryParse(priceController.text.trim());
+                if (price == null || price <= 0) {
+                  setDialogState(() {
+                    errorText = context.l10n.negotiatePriceHint;
+                  });
+                  return;
+                }
+                Navigator.pop(dialogContext);
+                await _callConsultingApi(
+                  ApiEndpoints.negotiateConsultation(widget.applicationId),
+                  data: {'price': price},
+                  successMessage: context.l10n.negotiationSent,
+                );
+              },
+              child: Text(MaterialLocalizations.of(context).okButtonLabel),
+            ),
+          ],
+        ),
+      ),
+    ).then((_) => priceController.dispose());
+  }
+
+  void _showQuoteDialog() {
+    final priceController = TextEditingController();
+    final messageController = TextEditingController();
+    String? errorText;
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: Text(context.l10n.quotePrice),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: priceController,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  hintText: context.l10n.quotePriceHint,
+                  prefixText: '\u00a3',
+                  errorText: errorText,
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: messageController,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  hintText: context.l10n.quoteMessageHint,
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child:
+                  Text(MaterialLocalizations.of(context).cancelButtonLabel),
+            ),
+            TextButton(
+              onPressed: () async {
+                final price =
+                    double.tryParse(priceController.text.trim());
+                if (price == null || price <= 0) {
+                  setDialogState(() {
+                    errorText = context.l10n.quotePriceHint;
+                  });
+                  return;
+                }
+                Navigator.pop(dialogContext);
+                final msg = messageController.text.trim();
+                await _callConsultingApi(
+                  ApiEndpoints.quoteApplication(widget.applicationId),
+                  data: {
+                    'price': price,
+                    if (msg.isNotEmpty) 'message': msg,
+                  },
+                  successMessage: context.l10n.quoteSent,
+                );
+              },
+              child: Text(MaterialLocalizations.of(context).okButtonLabel),
+            ),
+          ],
+        ),
+      ),
+    ).then((_) {
+      priceController.dispose();
+      messageController.dispose();
+    });
+  }
+
+  void _showFormalApplyDialog() {
+    final priceController = TextEditingController();
+    final messageController = TextEditingController();
+    String? errorText;
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: Text(context.l10n.formalApply),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: priceController,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  hintText: context.l10n.negotiatePriceHint,
+                  prefixText: '\u00a3',
+                  errorText: errorText,
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: messageController,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  hintText: context.l10n.quoteMessageHint,
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child:
+                  Text(MaterialLocalizations.of(context).cancelButtonLabel),
+            ),
+            TextButton(
+              onPressed: () async {
+                final price =
+                    double.tryParse(priceController.text.trim());
+                if (price == null || price <= 0) {
+                  setDialogState(() {
+                    errorText = context.l10n.negotiatePriceHint;
+                  });
+                  return;
+                }
+                Navigator.pop(dialogContext);
+                final msg = messageController.text.trim();
+                await _callConsultingApi(
+                  ApiEndpoints.formalApply(widget.applicationId),
+                  data: {
+                    'price': price,
+                    if (msg.isNotEmpty) 'message': msg,
+                  },
+                  successMessage: context.l10n.formalApplySubmitted,
+                );
+              },
+              child: Text(MaterialLocalizations.of(context).okButtonLabel),
+            ),
+          ],
+        ),
+      ),
+    ).then((_) {
+      priceController.dispose();
+      messageController.dispose();
+    });
+  }
+
+  void _showCloseConfirmation() {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.l10n.closeConsultation),
+        content: Text(context.l10n.closeConsultationConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child:
+                Text(MaterialLocalizations.of(context).cancelButtonLabel),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              await _callConsultingApi(
+                ApiEndpoints.closeConsultation(widget.applicationId),
+                successMessage: context.l10n.consultationClosed,
+              );
+              // Reload task detail to reflect status change
+              if (mounted) {
+                context
+                    .read<TaskDetailBloc>()
+                    .add(TaskDetailLoadRequested(widget.taskId));
+                context.read<TaskDetailBloc>().add(
+                      TaskDetailLoadApplications(
+                          currentUserId: _currentUserId),
+                    );
+              }
+            },
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: Text(MaterialLocalizations.of(context).okButtonLabel),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCounterOfferDialog() {
+    final priceController = TextEditingController();
+    String? errorText;
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: Text(context.l10n.counterOffer),
+          content: TextField(
+            controller: priceController,
+            keyboardType:
+                const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(
+              hintText: context.l10n.counterOfferHint,
+              prefixText: '\u00a3',
+              errorText: errorText,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child:
+                  Text(MaterialLocalizations.of(context).cancelButtonLabel),
+            ),
+            TextButton(
+              onPressed: () async {
+                final price =
+                    double.tryParse(priceController.text.trim());
+                if (price == null || price <= 0) {
+                  setDialogState(() {
+                    errorText = context.l10n.counterOfferHint;
+                  });
+                  return;
+                }
+                Navigator.pop(dialogContext);
+                await _callConsultingApi(
+                  ApiEndpoints.negotiateResponse(widget.applicationId),
+                  data: {'action': 'counter', 'price': price},
+                  successMessage: context.l10n.negotiationSent,
+                );
+              },
+              child: Text(MaterialLocalizations.of(context).okButtonLabel),
+            ),
+          ],
+        ),
+      ),
+    ).then((_) => priceController.dispose());
+  }
+
+  Future<void> _handleNegotiationResponse(String action) async {
+    await _callConsultingApi(
+      ApiEndpoints.negotiateResponse(widget.applicationId),
+      data: {'action': action},
+      successMessage: action == 'accept'
+          ? context.l10n.negotiationAccepted
+          : context.l10n.negotiationRejected,
+    );
+    // Reload task detail to reflect status change
+    if (mounted) {
+      context
+          .read<TaskDetailBloc>()
+          .add(TaskDetailLoadRequested(widget.taskId));
+      context.read<TaskDetailBloc>().add(
+            TaskDetailLoadApplications(currentUserId: _currentUserId),
+          );
+    }
+  }
+
+  /// Shared helper for consulting API calls (negotiate, quote, etc.)
+  Future<void> _callConsultingApi(
+    String endpoint, {
+    Map<String, dynamic>? data,
+    required String successMessage,
+  }) async {
+    try {
+      final apiService = context.read<ApiService>();
+      final response = await apiService.post<Map<String, dynamic>>(
+        endpoint,
+        data: data,
+      );
+
+      if (!mounted) return;
+
+      if (response.isSuccess) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(successMessage)),
+        );
+        _loadMessages();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(
+                  context.localizeError(response.message ?? 'unknown_error'))),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.localizeError(e.toString()))),
+      );
+    }
+  }
+}
+
+/// Small action button used in negotiation cards
+class _NegotiationActionButton extends StatelessWidget {
+  const _NegotiationActionButton({
+    required this.label,
+    required this.color,
+    required this.onPressed,
+  });
+
+  final String label;
+  final Color color;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 28,
+      child: TextButton(
+        onPressed: onPressed,
+        style: TextButton.styleFrom(
+          foregroundColor: color,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          minimumSize: Size.zero,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.small),
+            side: BorderSide(color: color.withValues(alpha: 0.4)),
+          ),
+        ),
+        child: Text(label, style: const TextStyle(fontSize: 12)),
       ),
     );
   }

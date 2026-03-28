@@ -239,7 +239,7 @@ class ApiEndpoints {
   // Consultation endpoints
   static String consultService(int serviceId) =>
       '/api/task-experts/services/$serviceId/consult';
-  static String negotiateApplication(int applicationId) =>
+  static String negotiateConsultation(int applicationId) =>
       '/api/task-experts/applications/$applicationId/negotiate';
   static String quoteApplication(int applicationId) =>
       '/api/task-experts/applications/$applicationId/quote';
