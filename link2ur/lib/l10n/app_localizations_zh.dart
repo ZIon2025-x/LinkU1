@@ -6801,6 +6801,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatUnpinnedHint => '已取消置顶';
 
   @override
+  String get chatTyping => '正在输入...';
+
+  @override
   String get chatTaskDetailLabel => '任务详情';
 
   @override
@@ -11222,6 +11225,105 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get versionUpdateLater => '稍后';
+
+  @override
+  String get reportItemTitle => '举报商品';
+
+  @override
+  String get reportReasonSpam => '垃圾信息';
+
+  @override
+  String get reportReasonInappropriate => '不当内容';
+
+  @override
+  String get reportReasonCounterfeit => '假冒商品';
+
+  @override
+  String get reportReasonScam => '欺诈';
+
+  @override
+  String get reportReasonOther => '其他';
+
+  @override
+  String get reportSubmitted => '举报已提交';
+
+  @override
+  String get consultExpert => '咨询达人';
+
+  @override
+  String get continueConsultation => '继续咨询';
+
+  @override
+  String get consultationStarted => '咨询已创建';
+
+  @override
+  String get consultationFailed => '创建咨询失败';
+
+  @override
+  String get consultationStatus => '咨询中';
+
+  @override
+  String get negotiatePrice => '议价';
+
+  @override
+  String get quotePrice => '报价';
+
+  @override
+  String get formalApply => '正式申请';
+
+  @override
+  String get closeConsultation => '关闭咨询';
+
+  @override
+  String get closeConsultationConfirm => '确定关闭咨询吗？';
+
+  @override
+  String get negotiatePriceHint => '输入您的期望价格';
+
+  @override
+  String get quotePriceHint => '输入您的报价';
+
+  @override
+  String get quoteMessageHint => '添加报价说明（可选）';
+
+  @override
+  String get negotiationSent => '议价已发送';
+
+  @override
+  String get quoteSent => '报价已发送';
+
+  @override
+  String get negotiationAccepted => '已同意报价';
+
+  @override
+  String get negotiationRejected => '已拒绝报价';
+
+  @override
+  String get counterOffer => '还价';
+
+  @override
+  String get counterOfferHint => '输入还价金额';
+
+  @override
+  String get acceptPrice => '同意';
+
+  @override
+  String get rejectPrice => '拒绝';
+
+  @override
+  String get priceAgreed => '价格已达成一致';
+
+  @override
+  String get formalApplySubmitted => '已转为正式申请';
+
+  @override
+  String get consultationClosed => '咨询已关闭';
+
+  @override
+  String get serviceInfoCard => '服务信息';
+
+  @override
+  String get expertApplicationStatusConsulting => '咨询中';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -18021,6 +18123,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get chatUnpinnedHint => '已取消置頂';
 
   @override
+  String get chatTyping => '正在輸入...';
+
+  @override
   String get chatTaskDetailLabel => '任務詳情';
 
   @override
@@ -22442,4 +22547,103 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get versionUpdateLater => '稍後';
+
+  @override
+  String get reportItemTitle => '舉報商品';
+
+  @override
+  String get reportReasonSpam => '垃圾訊息';
+
+  @override
+  String get reportReasonInappropriate => '不當內容';
+
+  @override
+  String get reportReasonCounterfeit => '假冒商品';
+
+  @override
+  String get reportReasonScam => '欺詐';
+
+  @override
+  String get reportReasonOther => '其他';
+
+  @override
+  String get reportSubmitted => '舉報已提交';
+
+  @override
+  String get consultExpert => '諮詢達人';
+
+  @override
+  String get continueConsultation => '繼續諮詢';
+
+  @override
+  String get consultationStarted => '諮詢已建立';
+
+  @override
+  String get consultationFailed => '建立諮詢失敗';
+
+  @override
+  String get consultationStatus => '諮詢中';
+
+  @override
+  String get negotiatePrice => '議價';
+
+  @override
+  String get quotePrice => '報價';
+
+  @override
+  String get formalApply => '正式申請';
+
+  @override
+  String get closeConsultation => '關閉諮詢';
+
+  @override
+  String get closeConsultationConfirm => '確定關閉諮詢嗎？';
+
+  @override
+  String get negotiatePriceHint => '輸入您的期望價格';
+
+  @override
+  String get quotePriceHint => '輸入您的報價';
+
+  @override
+  String get quoteMessageHint => '添加報價說明（可選）';
+
+  @override
+  String get negotiationSent => '議價已發送';
+
+  @override
+  String get quoteSent => '報價已發送';
+
+  @override
+  String get negotiationAccepted => '已同意報價';
+
+  @override
+  String get negotiationRejected => '已拒絕報價';
+
+  @override
+  String get counterOffer => '還價';
+
+  @override
+  String get counterOfferHint => '輸入還價金額';
+
+  @override
+  String get acceptPrice => '同意';
+
+  @override
+  String get rejectPrice => '拒絕';
+
+  @override
+  String get priceAgreed => '價格已達成一致';
+
+  @override
+  String get formalApplySubmitted => '已轉為正式申請';
+
+  @override
+  String get consultationClosed => '諮詢已關閉';
+
+  @override
+  String get serviceInfoCard => '服務資訊';
+
+  @override
+  String get expertApplicationStatusConsulting => '諮詢中';
 }

@@ -12989,6 +12989,12 @@ abstract class AppLocalizations {
   /// **'Chat unpinned'**
   String get chatUnpinnedHint;
 
+  /// No description provided for @chatTyping.
+  ///
+  /// In en, this message translates to:
+  /// **'typing...'**
+  String get chatTyping;
+
   /// No description provided for @chatTaskDetailLabel.
   ///
   /// In en, this message translates to:
@@ -21550,6 +21556,204 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Later'**
   String get versionUpdateLater;
+
+  /// No description provided for @reportItemTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Report Item'**
+  String get reportItemTitle;
+
+  /// No description provided for @reportReasonSpam.
+  ///
+  /// In en, this message translates to:
+  /// **'Spam'**
+  String get reportReasonSpam;
+
+  /// No description provided for @reportReasonInappropriate.
+  ///
+  /// In en, this message translates to:
+  /// **'Inappropriate Content'**
+  String get reportReasonInappropriate;
+
+  /// No description provided for @reportReasonCounterfeit.
+  ///
+  /// In en, this message translates to:
+  /// **'Counterfeit Item'**
+  String get reportReasonCounterfeit;
+
+  /// No description provided for @reportReasonScam.
+  ///
+  /// In en, this message translates to:
+  /// **'Scam / Fraud'**
+  String get reportReasonScam;
+
+  /// No description provided for @reportReasonOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get reportReasonOther;
+
+  /// No description provided for @reportSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Report submitted'**
+  String get reportSubmitted;
+
+  /// No description provided for @consultExpert.
+  ///
+  /// In en, this message translates to:
+  /// **'Consult Expert'**
+  String get consultExpert;
+
+  /// No description provided for @continueConsultation.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue Consultation'**
+  String get continueConsultation;
+
+  /// No description provided for @consultationStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'Consultation created'**
+  String get consultationStarted;
+
+  /// No description provided for @consultationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to create consultation'**
+  String get consultationFailed;
+
+  /// No description provided for @consultationStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Consulting'**
+  String get consultationStatus;
+
+  /// No description provided for @negotiatePrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Negotiate'**
+  String get negotiatePrice;
+
+  /// No description provided for @quotePrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Quote'**
+  String get quotePrice;
+
+  /// No description provided for @formalApply.
+  ///
+  /// In en, this message translates to:
+  /// **'Formal Apply'**
+  String get formalApply;
+
+  /// No description provided for @closeConsultation.
+  ///
+  /// In en, this message translates to:
+  /// **'Close Consultation'**
+  String get closeConsultation;
+
+  /// No description provided for @closeConsultationConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Close this consultation?'**
+  String get closeConsultationConfirm;
+
+  /// No description provided for @negotiatePriceHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your desired price'**
+  String get negotiatePriceHint;
+
+  /// No description provided for @quotePriceHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your quote price'**
+  String get quotePriceHint;
+
+  /// No description provided for @quoteMessageHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a note (optional)'**
+  String get quoteMessageHint;
+
+  /// No description provided for @negotiationSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Negotiation sent'**
+  String get negotiationSent;
+
+  /// No description provided for @quoteSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Quote sent'**
+  String get quoteSent;
+
+  /// No description provided for @negotiationAccepted.
+  ///
+  /// In en, this message translates to:
+  /// **'Price accepted'**
+  String get negotiationAccepted;
+
+  /// No description provided for @negotiationRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Price rejected'**
+  String get negotiationRejected;
+
+  /// No description provided for @counterOffer.
+  ///
+  /// In en, this message translates to:
+  /// **'Counter Offer'**
+  String get counterOffer;
+
+  /// No description provided for @counterOfferHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter counter price'**
+  String get counterOfferHint;
+
+  /// No description provided for @acceptPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept'**
+  String get acceptPrice;
+
+  /// No description provided for @rejectPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject'**
+  String get rejectPrice;
+
+  /// No description provided for @priceAgreed.
+  ///
+  /// In en, this message translates to:
+  /// **'Price agreed'**
+  String get priceAgreed;
+
+  /// No description provided for @formalApplySubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Formal application submitted'**
+  String get formalApplySubmitted;
+
+  /// No description provided for @consultationClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'Consultation closed'**
+  String get consultationClosed;
+
+  /// No description provided for @serviceInfoCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Service Info'**
+  String get serviceInfoCard;
+
+  /// No description provided for @expertApplicationStatusConsulting.
+  ///
+  /// In en, this message translates to:
+  /// **'Consulting'**
+  String get expertApplicationStatusConsulting;
 }
 
 class _AppLocalizationsDelegate

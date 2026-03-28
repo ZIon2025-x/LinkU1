@@ -7118,6 +7118,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatUnpinnedHint => 'Chat unpinned';
 
   @override
+  String get chatTyping => 'typing...';
+
+  @override
   String get chatTaskDetailLabel => 'Task Details';
 
   @override
@@ -11686,4 +11689,103 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get versionUpdateLater => 'Later';
+
+  @override
+  String get reportItemTitle => 'Report Item';
+
+  @override
+  String get reportReasonSpam => 'Spam';
+
+  @override
+  String get reportReasonInappropriate => 'Inappropriate Content';
+
+  @override
+  String get reportReasonCounterfeit => 'Counterfeit Item';
+
+  @override
+  String get reportReasonScam => 'Scam / Fraud';
+
+  @override
+  String get reportReasonOther => 'Other';
+
+  @override
+  String get reportSubmitted => 'Report submitted';
+
+  @override
+  String get consultExpert => 'Consult Expert';
+
+  @override
+  String get continueConsultation => 'Continue Consultation';
+
+  @override
+  String get consultationStarted => 'Consultation created';
+
+  @override
+  String get consultationFailed => 'Failed to create consultation';
+
+  @override
+  String get consultationStatus => 'Consulting';
+
+  @override
+  String get negotiatePrice => 'Negotiate';
+
+  @override
+  String get quotePrice => 'Quote';
+
+  @override
+  String get formalApply => 'Formal Apply';
+
+  @override
+  String get closeConsultation => 'Close Consultation';
+
+  @override
+  String get closeConsultationConfirm => 'Close this consultation?';
+
+  @override
+  String get negotiatePriceHint => 'Enter your desired price';
+
+  @override
+  String get quotePriceHint => 'Enter your quote price';
+
+  @override
+  String get quoteMessageHint => 'Add a note (optional)';
+
+  @override
+  String get negotiationSent => 'Negotiation sent';
+
+  @override
+  String get quoteSent => 'Quote sent';
+
+  @override
+  String get negotiationAccepted => 'Price accepted';
+
+  @override
+  String get negotiationRejected => 'Price rejected';
+
+  @override
+  String get counterOffer => 'Counter Offer';
+
+  @override
+  String get counterOfferHint => 'Enter counter price';
+
+  @override
+  String get acceptPrice => 'Accept';
+
+  @override
+  String get rejectPrice => 'Reject';
+
+  @override
+  String get priceAgreed => 'Price agreed';
+
+  @override
+  String get formalApplySubmitted => 'Formal application submitted';
+
+  @override
+  String get consultationClosed => 'Consultation closed';
+
+  @override
+  String get serviceInfoCard => 'Service Info';
+
+  @override
+  String get expertApplicationStatusConsulting => 'Consulting';
 }
