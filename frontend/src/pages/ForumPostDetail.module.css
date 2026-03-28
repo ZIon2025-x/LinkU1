@@ -1,6 +1,6 @@
 .container {
   min-height: 100vh;
-  background: #f5f5f5;
+  background: linear-gradient(135deg, #f0f4ff 0%, #f5f0ff 50%, #fff0f6 100%);
 }
 
 .header {
@@ -8,9 +8,12 @@
   top: 0;
   left: 0;
   width: 100%;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   z-index: 100;
-  box-shadow: 0 2px 8px #e6f7ff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 4px 16px rgba(59, 130, 246, 0.06);
+  border-bottom: 1px solid rgba(59, 130, 246, 0.08);
 }
 
 .headerContainer {
@@ -31,6 +34,11 @@
   background-clip: text;
   -webkit-text-fill-color: transparent;
   color: transparent;
+  transition: transform 0.2s ease;
+}
+
+.logo:hover {
+  transform: scale(1.05);
 }
 
 .headerActions {
@@ -44,9 +52,9 @@
 }
 
 .content {
-  max-width: 1200px;
+  max-width: 800px;
   margin: 0 auto;
-  padding: 24px 16px;
+  padding: 32px 16px 48px;
 }
 
 .loadingContainer {
@@ -56,26 +64,53 @@
   min-height: 400px;
 }
 
+/* ===== 帖子主卡片 ===== */
 .postCard {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
+  border-radius: 20px !important;
+  border: none !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 8px 32px rgba(59, 130, 246, 0.06) !important;
+  overflow: hidden;
+  transition: box-shadow 0.3s ease;
+}
+
+.postCard:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06), 0 12px 40px rgba(59, 130, 246, 0.1) !important;
 }
 
 .postHeader {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
+  gap: 16px;
 }
 
 .postTitleRow {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex: 1;
 }
 
+.postTitleRow h2 {
+  font-size: 26px !important;
+  font-weight: 700 !important;
+  color: #1e293b !important;
+  line-height: 1.3 !important;
+  margin: 0 !important;
+  letter-spacing: -0.02em;
+}
+
 .postMeta {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
+  padding: 14px 18px;
+  background: linear-gradient(135deg, #f8fafc, #f0f4ff);
+  border-radius: 14px;
+  border: 1px solid rgba(59, 130, 246, 0.08);
 }
 
 .postContent {
@@ -84,22 +119,37 @@
   margin-bottom: 16px;
   padding-bottom: 40px;
   min-height: 40px;
+  color: #374151;
 }
 
+.postContent img {
+  border-radius: 12px;
+  margin: 8px 0;
+}
+
+/* ===== 图片网格 ===== */
 .postImages {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 12px;
-  margin-top: 16px;
+  margin-top: 20px;
 }
 
 .postImageLink {
   display: block;
-  border-radius: 8px;
+  border-radius: 14px;
   overflow: hidden;
-  border: 1px solid #e8e8e8;
+  border: 2px solid #f0f0f0;
   aspect-ratio: 1;
   background: #fafafa;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.postImageLink:hover {
+  border-color: #93b4f8;
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.15);
 }
 
 .postImage {
@@ -107,36 +157,44 @@
   width: 100% !important;
   height: 100% !important;
   object-fit: cover !important;
+  transition: transform 0.4s ease;
 }
 
+.postImageLink:hover .postImage {
+  transform: scale(1.05);
+}
+
+/* ===== 附件 ===== */
 .postAttachments {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-top: 16px;
+  gap: 10px;
+  margin-top: 20px;
 }
 
 .attachmentItem {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  border: 1px solid #e8e8e8;
-  border-radius: 8px;
-  background: #fafafa;
+  gap: 12px;
+  padding: 14px 18px;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #fafbfc, #f5f7fa);
   color: inherit;
   text-decoration: none;
-  transition: background 0.2s, border-color 0.2s;
+  transition: all 0.25s ease;
 }
 
 .attachmentItem:hover {
-  background: #f0f0f0;
-  border-color: #d9d9d9;
+  background: linear-gradient(135deg, #eff6ff, #eef2ff);
+  border-color: #93c5fd;
   color: inherit;
+  transform: translateX(4px);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
 }
 
 .attachmentIcon {
-  font-size: 20px;
+  font-size: 22px;
   flex-shrink: 0;
 }
 
@@ -146,75 +204,101 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 14px;
+  font-weight: 500;
 }
 
 .attachmentSize {
-  color: #999;
+  color: #94a3b8;
   font-size: 12px;
   flex-shrink: 0;
 }
 
+/* ===== 关联项目 ===== */
 .postLinkedItem {
   display: flex;
   align-items: center;
-  margin-top: 12px;
-  padding: 8px 12px;
-  border-left: 3px solid #1890ff;
-  background: #f6f8fa;
-  border-radius: 0 6px 6px 0;
+  margin-top: 16px;
+  padding: 12px 16px;
+  border-left: 3px solid #3b82f6;
+  background: linear-gradient(135deg, #eff6ff, #f5f3ff);
+  border-radius: 0 12px 12px 0;
   font-size: 14px;
 }
 
 .linkedItemLink {
-  color: #1890ff;
+  color: #3b82f6;
   text-decoration: none;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-weight: 500;
+  transition: color 0.2s ease;
 }
 
 .linkedItemLink:hover {
+  color: #2563eb;
   text-decoration: underline;
 }
 
+/* ===== 操作按钮 ===== */
 .postActions {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 4px 0;
 }
 
+.postActions button {
+  border-radius: 10px !important;
+  font-weight: 500 !important;
+  transition: all 0.25s ease !important;
+}
+
+.postActions button:hover {
+  transform: translateY(-1px);
+}
+
+/* ===== 回复区域 ===== */
 .repliesCard {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
+  border-radius: 20px !important;
+  border: none !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 8px 32px rgba(59, 130, 246, 0.06) !important;
 }
 
 .repliesList {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .replyItem {
-  padding: 16px;
-  background: #fff;
-  border-radius: 8px;
-  border-left: 3px solid #1890ff;
-  margin-bottom: 12px;
-  transition: all 0.2s ease;
+  padding: 18px 20px;
+  background: linear-gradient(135deg, #fafbfc, #f8faff);
+  border-radius: 14px;
+  border-left: 3px solid #3b82f6;
+  margin-bottom: 0;
+  transition: all 0.25s ease;
   position: relative;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
 }
 
 .replyItem:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.08);
+  background: linear-gradient(135deg, #ffffff, #f5f8ff);
+  transform: translateX(2px);
 }
 
 .replyItem.nestedReplyItem {
-  background: #f8f9fa;
-  border-left: 3px solid #52c41a;
+  background: linear-gradient(135deg, #f5f7fa, #f0f4ff);
+  border-left: 3px solid #8b5cf6;
   margin-left: 0;
-  margin-top: 12px;
-  padding: 12px 16px;
-  border-radius: 6px;
+  margin-top: 10px;
+  padding: 14px 18px;
+  border-radius: 12px;
 }
 
 .replyItem.nestedReplyItem::before {
@@ -224,7 +308,7 @@
   top: 0;
   bottom: 0;
   width: 3px;
-  background: linear-gradient(to bottom, #52c41a, #73d13d);
+  background: linear-gradient(to bottom, #8b5cf6, #a78bfa);
   border-radius: 3px 0 0 3px;
 }
 
@@ -232,17 +316,19 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .replyContent {
   margin-bottom: 8px;
-  line-height: 1.6;
+  line-height: 1.7;
+  color: #374151;
+  font-size: 15px;
 }
 
 .nestedReplies {
-  margin-top: 12px;
-  padding-left: 0;
+  margin-top: 10px;
+  padding-left: 8px;
   border-left: none;
   position: relative;
 }
@@ -251,31 +337,47 @@
   content: '';
   position: absolute;
   left: 0;
-  top: -12px;
+  top: 0;
   bottom: 0;
   width: 2px;
-  background: linear-gradient(to bottom, transparent, #d9d9d9 20px, #d9d9d9 calc(100% - 20px), transparent);
+  background: linear-gradient(to bottom, transparent, #c4b5fd 20px, #c4b5fd calc(100% - 20px), transparent);
   border-radius: 2px;
-  opacity: 0.6;
+  opacity: 0.5;
 }
 
+/* ===== 写回复卡片 ===== */
 .replyCard {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
+  border-radius: 20px !important;
+  border: none !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 8px 32px rgba(59, 130, 246, 0.06) !important;
 }
 
 .replyToHint {
   margin-bottom: 12px;
-  padding: 8px;
-  background: #f0f0f0;
-  border-radius: 4px;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, #eff6ff, #f5f3ff);
+  border-radius: 10px;
+  border: 1px solid rgba(59, 130, 246, 0.12);
 }
 
 .replyActions {
-  margin-top: 12px;
+  margin-top: 14px;
   display: flex;
   justify-content: flex-end;
 }
 
+.replyActions button {
+  border-radius: 12px !important;
+  padding: 6px 24px !important;
+  font-weight: 600 !important;
+  height: auto !important;
+}
+
+/* ===== 响应式 ===== */
 @media (max-width: 768px) {
   .headerContainer {
     padding: 0 12px;
@@ -295,23 +397,22 @@
   }
 
   .content {
-    padding: 16px 12px;
+    padding: 16px 12px 32px;
   }
 
   .postCard {
-    margin-bottom: 12px;
-    border-radius: 12px;
-    overflow: hidden;
+    margin-bottom: 14px;
+    border-radius: 16px !important;
   }
 
-  .postCard .ant-card-body {
-    padding: 16px !important;
+  .postCard :global(.ant-card-body) {
+    padding: 18px !important;
   }
 
   .postHeader {
     flex-direction: column;
     gap: 12px;
-    margin-bottom: 12px;
+    margin-bottom: 14px;
   }
 
   .postTitleRow {
@@ -320,14 +421,15 @@
   }
 
   .postTitleRow h2 {
-    font-size: 20px !important;
+    font-size: 22px !important;
     line-height: 1.4 !important;
     word-break: break-word;
   }
 
   .postMeta {
-    margin-bottom: 12px;
+    margin-bottom: 14px;
     font-size: 14px;
+    padding: 12px 14px;
   }
 
   .postContent {
@@ -363,13 +465,13 @@
     justify-content: flex-start;
   }
 
-  .postActions .ant-space {
+  .postActions :global(.ant-space) {
     width: 100%;
     flex-wrap: wrap;
     gap: 8px !important;
   }
 
-  .postActions .ant-space-item {
+  .postActions :global(.ant-space-item) {
     flex: 1 1 auto;
     min-width: 0;
   }
@@ -381,27 +483,28 @@
     padding: 6px 12px;
   }
 
-  .postActions .ant-typography {
+  .postActions :global(.ant-typography) {
     font-size: 12px;
     white-space: nowrap;
   }
 
   .repliesCard {
-    margin-bottom: 12px;
+    margin-bottom: 14px;
+    border-radius: 16px !important;
   }
 
   .repliesList {
-    gap: 12px;
+    gap: 10px;
   }
 
   .replyItem {
-    padding: 12px;
-    border-radius: 8px;
+    padding: 14px;
+    border-radius: 12px;
     border-left-width: 3px;
   }
 
   .replyItem.nestedReplyItem {
-    padding: 10px 12px;
+    padding: 12px 14px;
     margin-top: 8px;
   }
 
@@ -433,25 +536,21 @@
 
   .nestedReplies {
     margin-top: 8px;
-    padding-left: 0;
-  }
-
-  .replyItem.nestedReplyItem {
-    padding: 10px 12px;
-    margin-top: 8px;
+    padding-left: 4px;
   }
 
   .replyCard {
-    margin-bottom: 12px;
+    margin-bottom: 14px;
+    border-radius: 16px !important;
   }
 
   .replyToHint {
     font-size: 13px;
-    padding: 6px;
+    padding: 8px 12px;
   }
 
   .replyActions {
-    margin-top: 8px;
+    margin-top: 10px;
     flex-wrap: wrap;
     gap: 6px;
   }
@@ -472,19 +571,20 @@
   }
 
   .content {
-    padding: 12px 8px;
+    padding: 12px 8px 24px;
   }
 
   .postTitleRow h2 {
-    font-size: 18px !important;
+    font-size: 20px !important;
   }
 
   .postMeta {
     font-size: 12px;
+    padding: 10px 12px;
   }
 
-  .postCard .ant-card-body {
-    padding: 14px !important;
+  .postCard :global(.ant-card-body) {
+    padding: 16px !important;
   }
 
   .postContent {
@@ -507,13 +607,13 @@
     padding: 5px 10px;
   }
 
-  .postActions .ant-typography {
+  .postActions :global(.ant-typography) {
     font-size: 11px;
   }
 
   .replyItem {
-    padding: 10px;
-    border-radius: 6px;
+    padding: 12px;
+    border-radius: 10px;
   }
 
   .replyContent {
@@ -521,8 +621,13 @@
     line-height: 1.5;
   }
 
-  .repliesCard .ant-card-body {
-    padding: 12px !important;
+  .repliesCard :global(.ant-card-body) {
+    padding: 14px !important;
+  }
+
+  .postImages {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 8px;
   }
 }
 
@@ -536,15 +641,15 @@
   }
 
   .content {
-    padding: 10px 6px;
+    padding: 10px 6px 20px;
   }
 
-  .postCard .ant-card-body {
-    padding: 12px !important;
+  .postCard :global(.ant-card-body) {
+    padding: 14px !important;
   }
 
   .postTitleRow h2 {
-    font-size: 16px !important;
+    font-size: 18px !important;
   }
 
   .postContent {
@@ -552,11 +657,10 @@
   }
 
   .replyItem {
-    padding: 8px;
+    padding: 10px;
   }
 
   .replyContent {
     font-size: 12px;
   }
 }
-

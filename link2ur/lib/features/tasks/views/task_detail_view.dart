@@ -577,6 +577,29 @@ class _TaskDetailContent extends StatelessWidget {
                   const SizedBox(height: AppSpacing.md),
                 ],
 
+                // 支付倒计时卡片 (pendingPayment && isPoster)
+                if (isPoster &&
+                    task.status == AppConstants.taskStatusPendingPayment &&
+                    task.paymentExpiresAt != null &&
+                    task.paymentExpiresAt!.isNotEmpty) ...[
+                  AnimatedListItem(
+                    index: 2,
+                    child: PendingPaymentCard(
+                      paymentExpiresAt: task.paymentExpiresAt!,
+                      isDark: isDark,
+                      onPay: () => _openPaymentPageForPendingTask(context, task),
+                      onExpired: () {
+                        if (context.mounted) {
+                          context.read<TaskDetailBloc>().add(
+                            TaskDetailLoadRequested(taskId),
+                          );
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                ],
+
                 // 完成证据 (pendingConfirmation || completed + evidence)
                 if ((task.status ==
                             AppConstants.taskStatusPendingConfirmation ||
@@ -622,7 +645,7 @@ class _TaskDetailContent extends StatelessWidget {
                     totalCount: state.questionsTotalCount,
                     isLoggedIn: currentUserId != null,
                     allowAsk: task.status == AppConstants.taskStatusOpen ||
-                              task.status == AppConstants.taskStatusChatting,
+                              task.status == AppConstants.applicationStatusChatting,
                     onAsk: (content) => context.read<TaskDetailBloc>().add(
                       TaskDetailAskQuestion(content),
                     ),
@@ -642,7 +665,7 @@ class _TaskDetailContent extends StatelessWidget {
                 // 申请列表 (isPoster && open/chatting/pending_acceptance) — 含管理操作按钮
                 if (isPoster &&
                     (task.status == AppConstants.taskStatusOpen ||
-                     task.status == AppConstants.taskStatusChatting ||
+                     task.status == AppConstants.applicationStatusChatting ||
                      task.status == AppConstants.taskStatusPendingAcceptance)) ...[
                   AnimatedListItem(
                     index: 4,
@@ -747,7 +770,7 @@ class _TaskDetailContent extends StatelessWidget {
     final showAsk = !isPoster &&
         currentUserId != null &&
         (task.status == AppConstants.taskStatusOpen ||
-            task.status == AppConstants.taskStatusChatting);
+            task.status == AppConstants.applicationStatusChatting);
 
     // 底部按钮：快速操作栏 (高性能半透明背景，替代 BackdropFilter)
     return Container(

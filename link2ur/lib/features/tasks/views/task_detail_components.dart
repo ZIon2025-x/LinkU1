@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -209,7 +211,7 @@ class PosterInfoCard extends StatelessWidget {
 // 确认截止提醒卡片 (pendingConfirmation && isPoster)
 // ============================================================
 
-class ConfirmationReminderCard extends StatelessWidget {
+class ConfirmationReminderCard extends StatefulWidget {
   const ConfirmationReminderCard({
     super.key,
     required this.deadline,
@@ -222,15 +224,72 @@ class ConfirmationReminderCard extends StatelessWidget {
   final VoidCallback onConfirm;
 
   @override
+  State<ConfirmationReminderCard> createState() =>
+      _ConfirmationReminderCardState();
+}
+
+class _ConfirmationReminderCardState extends State<ConfirmationReminderCard> {
+  Timer? _timer;
+  Duration _remaining = Duration.zero;
+
+  @override
+  void initState() {
+    super.initState();
+    _updateRemaining();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      _updateRemaining();
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _updateRemaining() {
+    final deadlineTime = DateTime.tryParse(widget.deadline);
+    if (deadlineTime == null) return;
+    final now = DateTime.now();
+    final diff = deadlineTime.difference(now);
+    if (mounted) {
+      final newRemaining = diff.isNegative ? Duration.zero : diff;
+      setState(() {
+        _remaining = newRemaining;
+      });
+      if (newRemaining == Duration.zero) {
+        _timer?.cancel();
+        _timer = null;
+      }
+    }
+  }
+
+  String _formatCountdown() {
+    if (_remaining == Duration.zero) return '00:00:00';
+    final days = _remaining.inDays;
+    final hours = _remaining.inHours % 24;
+    final minutes = _remaining.inMinutes % 60;
+    final seconds = _remaining.inSeconds % 60;
+    if (days > 0) {
+      return '${days}d ${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    }
+    return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final isUrgent = _remaining.inHours < 24;
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: AppColors.warning.withValues(alpha: 0.1),
+        color: (isUrgent ? AppColors.error : AppColors.warning)
+            .withValues(alpha: 0.1),
         borderRadius: AppRadius.allMedium,
         border: Border.all(
-          color: AppColors.warning.withValues(alpha: 0.3),
+          color: (isUrgent ? AppColors.error : AppColors.warning)
+              .withValues(alpha: 0.3),
         ),
       ),
       child: Column(
@@ -238,23 +297,40 @@ class ConfirmationReminderCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.schedule, size: 20, color: AppColors.warning),
+              Icon(Icons.schedule, size: 20,
+                  color: isUrgent ? AppColors.error : AppColors.warning),
               const SizedBox(width: 8),
-              Text(
-                context.l10n.taskDetailPleaseConfirmComplete,
-                style: AppTypography.bodyBold.copyWith(
-                  color: AppColors.warning,
+              Expanded(
+                child: Text(
+                  context.l10n.taskDetailPleaseConfirmComplete,
+                  style: AppTypography.bodyBold.copyWith(
+                    color: isUrgent ? AppColors.error : AppColors.warning,
+                  ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 8),
-          Text(
-            context.l10n.taskDetailAutoConfirmSoon,
-            style: AppTypography.caption.copyWith(
-              color: isDark
-                  ? AppColors.textSecondaryDark
-                  : AppColors.textSecondaryLight,
+          // Countdown display
+          Center(
+            child: Text(
+              _formatCountdown(),
+              style: AppTypography.title2.copyWith(
+                color: isUrgent ? AppColors.error : AppColors.warning,
+                fontWeight: FontWeight.bold,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Center(
+            child: Text(
+              context.l10n.taskDetailAutoConfirmSoon,
+              style: AppTypography.caption.copyWith(
+                color: widget.isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
+              ),
             ),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -262,9 +338,174 @@ class ConfirmationReminderCard extends StatelessWidget {
             width: double.infinity,
             child: PrimaryButton(
               text: context.l10n.taskDetailConfirmNow,
-              onPressed: onConfirm,
+              onPressed: widget.onConfirm,
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================
+// 支付倒计时卡片 (pendingPayment && isPoster)
+// ============================================================
+
+class PendingPaymentCard extends StatefulWidget {
+  const PendingPaymentCard({
+    super.key,
+    required this.paymentExpiresAt,
+    required this.isDark,
+    required this.onPay,
+    this.onExpired,
+  });
+
+  final String paymentExpiresAt;
+  final bool isDark;
+  final VoidCallback onPay;
+  final VoidCallback? onExpired;
+
+  @override
+  State<PendingPaymentCard> createState() => _PendingPaymentCardState();
+}
+
+class _PendingPaymentCardState extends State<PendingPaymentCard> {
+  Timer? _timer;
+  Duration _remaining = Duration.zero;
+
+  @override
+  void initState() {
+    super.initState();
+    _updateRemaining();
+    if (_remaining > Duration.zero) {
+      _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+        _updateRemaining();
+      });
+    } else {
+      // Already expired on mount - notify parent after frame
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) widget.onExpired?.call();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _updateRemaining() {
+    final expiryTime = DateTime.tryParse(widget.paymentExpiresAt);
+    if (expiryTime == null) return;
+    final now = DateTime.now();
+    final diff = expiryTime.difference(now);
+    if (mounted) {
+      final wasPositive = _remaining.inSeconds > 0;
+      setState(() {
+        _remaining = diff.isNegative ? Duration.zero : diff;
+      });
+      if (wasPositive && _remaining.inSeconds <= 0) {
+        _timer?.cancel();
+        widget.onExpired?.call();
+      }
+    }
+  }
+
+  String _formatCountdown() {
+    if (_remaining == Duration.zero) return '00:00';
+    final hours = _remaining.inHours;
+    final minutes = _remaining.inMinutes % 60;
+    final seconds = _remaining.inSeconds % 60;
+    if (hours > 0) {
+      return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    }
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isExpired = _remaining.inSeconds <= 0;
+    final statusColor = isExpired ? AppColors.error : AppColors.warning;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: statusColor.withValues(alpha: 0.1),
+        borderRadius: AppRadius.allMedium,
+        border: Border.all(
+          color: statusColor.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                isExpired
+                    ? Icons.warning_amber_rounded
+                    : Icons.credit_card,
+                size: 20,
+                color: statusColor,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  isExpired
+                      ? context.l10n.paymentCountdownTimeout
+                      : context.l10n.paymentCountdownCompleteInTime,
+                  style: AppTypography.bodyBold.copyWith(color: statusColor),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // Countdown display
+          Center(
+            child: Text(
+              _formatCountdown(),
+              style: AppTypography.title2.copyWith(
+                color: statusColor,
+                fontWeight: FontWeight.bold,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+          ),
+          if (!isExpired) ...[
+            const SizedBox(height: 4),
+            Center(
+              child: Text(
+                context.l10n.paymentCountdownTimeLeft(_formatCountdown()),
+                style: AppTypography.caption.copyWith(
+                  color: widget.isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondaryLight,
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            SizedBox(
+              width: double.infinity,
+              child: PrimaryButton(
+                text: context.l10n.taskDetailPlatformServiceFee,
+                icon: Icons.credit_card,
+                onPressed: widget.onPay,
+              ),
+            ),
+          ],
+          if (isExpired) ...[
+            const SizedBox(height: 4),
+            Center(
+              child: Text(
+                context.l10n.paymentCountdownBannerExpired,
+                style: AppTypography.caption.copyWith(
+                  color: AppColors.error,
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

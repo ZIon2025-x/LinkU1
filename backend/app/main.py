@@ -1850,6 +1850,21 @@ async def websocket_chat(
                     logger.debug(f"Received pong from user {user_id}")
                     continue
 
+                # ⚠️ 处理 typing 状态转发（不存库，直接转发给接收方）
+                if msg.get("type") == "typing":
+                    typing_receiver = msg.get("receiver_id")
+                    if typing_receiver and isinstance(typing_receiver, str):
+                        ws_manager = get_ws_manager()
+                        await ws_manager.send_to_user(
+                            typing_receiver,
+                            {
+                                "type": "typing",
+                                "sender_id": user_id,
+                                "task_id": msg.get("task_id"),
+                            },
+                        )
+                    continue
+
                 # 验证消息格式
                 if not isinstance(msg, dict):
                     await websocket.send_text(

@@ -46,24 +46,31 @@ class AppNotification extends Equatable {
   String displayContent(Locale locale) =>
       localizedString(content, contentEn, content, locale);
 
-  /// 通知类型图标名称
-  String get typeIcon {
-    switch (type) {
-      case 'task_applied':
-      case 'task_accepted':
-      case 'task_completed':
-      case 'task_confirmed':
-      case 'task_cancelled':
-        return 'task';
-      case 'message':
-        return 'message';
-      case 'payment':
-        return 'payment';
-      case 'system':
-        return 'system';
-      default:
-        return 'notification';
+  /// 通知类型分类（用于图标和颜色区分）
+  String get typeCategory {
+    // 任务相关
+    if (type.startsWith('task_')) return 'task';
+    // 支付相关
+    if (type.startsWith('payment') || type == 'wallet_earning' ||
+        type == 'withdrawal') {
+      return 'payment';
     }
+    // 论坛互动
+    if (type.startsWith('forum_like') || type == 'forum_feature_post' ||
+        type == 'forum_pin_post') {
+      return 'forum_like';
+    }
+    if (type.startsWith('forum_reply')) return 'forum_reply';
+    if (type.startsWith('forum_')) return 'forum';
+    // 排行榜
+    if (type.startsWith('leaderboard_')) return 'leaderboard';
+    // 消息
+    if (type == 'message' || type == 'new_message') return 'message';
+    // 系统/公告
+    if (type == 'system' || type == 'announcement') return 'system';
+    // 优惠券/积分
+    if (type.startsWith('coupon') || type.startsWith('points')) return 'reward';
+    return 'notification';
   }
 
   factory AppNotification.fromJson(Map<String, dynamic> json) {

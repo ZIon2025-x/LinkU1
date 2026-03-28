@@ -63,6 +63,7 @@ class _TaskChatContentState extends State<_TaskChatContent> {
   final _imagePicker = ImagePicker();
   String? _currentUserId;
   bool _showActionMenu = false;
+  DateTime? _lastTypingSent;
 
   /// 任务标题用于 AppBar，加载一次
   Future<Task?>? _taskFuture;
@@ -191,7 +192,8 @@ class _TaskChatContentState extends State<_TaskChatContent> {
           prev.messages != curr.messages ||
           prev.isSending != curr.isSending ||
           prev.isLoadingMore != curr.isLoadingMore ||
-          prev.taskStatus != curr.taskStatus,
+          prev.taskStatus != curr.taskStatus ||
+          prev.peerIsTyping != curr.peerIsTyping,
       builder: (context, state) {
         return Scaffold(
           backgroundColor: AppColors.backgroundFor(Theme.of(context).brightness),
@@ -255,6 +257,10 @@ class _TaskChatContentState extends State<_TaskChatContent> {
                     context.safePush('/tasks/${widget.taskId}');
                   },
                 ),
+
+              // Typing indicator
+              if (!state.isTaskClosed && state.peerIsTyping)
+                _buildTypingIndicator(),
 
               // 输入区域
               if (!state.isTaskClosed) _buildInputArea(state),
@@ -566,6 +572,16 @@ class _TaskChatContentState extends State<_TaskChatContent> {
                       ),
                     ),
                     textInputAction: TextInputAction.send,
+                    onChanged: (text) {
+                      if (text.isNotEmpty) {
+                        final now = DateTime.now();
+                        if (_lastTypingSent == null ||
+                            now.difference(_lastTypingSent!).inSeconds >= 2) {
+                          _lastTypingSent = now;
+                          context.read<ChatBloc>().add(const ChatSendTyping());
+                        }
+                      }
+                    },
                     onSubmitted: (_) => _sendMessage(),
                     onTap: () {
                       if (_showActionMenu) {
@@ -624,6 +640,30 @@ class _TaskChatContentState extends State<_TaskChatContent> {
     ),
     );
   }
+
+  Widget _buildTypingIndicator() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 24,
+            height: 16,
+            child: _TypingDotsAnimation(),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            context.l10n.chatTyping,
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppColors.textTertiaryLight,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _QuickActionChip extends StatelessWidget {
@@ -665,6 +705,62 @@ class _QuickActionChip extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _TypingDotsAnimation extends StatefulWidget {
+  @override
+  State<_TypingDotsAnimation> createState() => _TypingDotsAnimationState();
+}
+
+class _TypingDotsAnimationState extends State<_TypingDotsAnimation>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(3, (i) {
+            final delay = i * 0.2;
+            final t = (_controller.value - delay).clamp(0.0, 1.0);
+            final scale = 0.5 + 0.5 * (1 - (2 * t - 1).abs());
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 1.5),
+              child: Transform.scale(
+                scale: scale,
+                child: Container(
+                  width: 5,
+                  height: 5,
+                  decoration: const BoxDecoration(
+                    color: AppColors.textTertiaryLight,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+            );
+          }),
+        );
+      },
     );
   }
 }

@@ -257,6 +257,7 @@ async def _fetch_new_tasks(db: AsyncSession) -> list:
                 models.Task.task_type,
                 models.Task.reward,
                 models.Task.currency,
+                models.Task.reward_to_be_quoted,
                 models.User.name.label("poster_name"),
             )
             .join(models.User, models.Task.poster_id == models.User.id)
@@ -275,14 +276,21 @@ async def _fetch_new_tasks(db: AsyncSession) -> list:
         for row in rows:
             title_zh = row.title
             title_en = row.title_en or row.title
-            reward = int(row.reward) if row.reward == int(row.reward) else row.reward
-            currency = row.currency or "GBP"
-            symbol = "€" if currency == "EUR" else "£"
+
+            if row.reward_to_be_quoted:
+                reward_zh = "金额待议"
+                reward_en = "price negotiable"
+            else:
+                reward = int(row.reward) if row.reward == int(row.reward) else row.reward
+                currency = row.currency or "GBP"
+                symbol = "€" if currency == "EUR" else "£"
+                reward_zh = f"赏金{symbol}{reward}"
+                reward_en = f"{symbol}{reward}"
 
             items.append(
                 {
-                    "text_zh": f"📝 {row.poster_name} 发布了新任务「{title_zh}」赏金{symbol}{reward}",
-                    "text_en": f"📝 {row.poster_name} posted a new task \"{title_en}\" — {symbol}{reward}",
+                    "text_zh": f"📝 {row.poster_name} 发布了新任务「{title_zh}」{reward_zh}",
+                    "text_en": f"📝 {row.poster_name} posted a new task \"{title_en}\" — {reward_en}",
                     "link_type": "task",
                     "link_id": str(row.id),
                 }

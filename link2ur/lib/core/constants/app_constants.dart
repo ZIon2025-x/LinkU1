@@ -37,7 +37,7 @@ class AppConstants {
     'other',         // 其他
   ];
 
-  /// 任务状态
+  /// 任务状态（与后端 Task.status 对齐）
   static const String taskStatusOpen = 'open';
   static const String taskStatusTaken = 'taken';
   static const String taskStatusInProgress = 'in_progress';
@@ -47,11 +47,12 @@ class AppConstants {
   static const String taskStatusCancelled = 'cancelled';
   static const String taskStatusDisputed = 'disputed';
   static const String taskStatusPendingAcceptance = 'pending_acceptance';
-  static const String taskStatusChatting = 'chatting';
+
+  /// 以下状态后端不会主动返回，仅用于前端防御性处理（聊天页判断任务关闭等）
   static const String taskStatusExpired = 'expired';
   static const String taskStatusClosed = 'closed';
 
-  // Application statuses
+  // Application statuses（TaskApplication.status，不是 Task.status）
   static const String applicationStatusPending = 'pending';
   static const String applicationStatusChatting = 'chatting';
   static const String applicationStatusApproved = 'approved';

@@ -375,8 +375,36 @@ class _NotificationItem extends StatelessWidget {
   final models.AppNotification notification;
   final bool isSystem;
 
+  /// 根据通知类型返回对应图标和颜色
+  (IconData, Color) _iconForType() {
+    switch (notification.typeCategory) {
+      case 'task':
+        return (Icons.assignment_outlined, AppColors.primary);
+      case 'payment':
+        return (Icons.payment_outlined, AppColors.success);
+      case 'forum_like':
+        return (Icons.favorite_outline, AppColors.accentPink);
+      case 'forum_reply':
+        return (Icons.chat_bubble_outline, AppColors.info);
+      case 'forum':
+        return (Icons.forum_outlined, AppColors.primary);
+      case 'leaderboard':
+        return (Icons.emoji_events_outlined, AppColors.warning);
+      case 'message':
+        return (Icons.mail_outline, AppColors.info);
+      case 'system':
+        return (Icons.campaign_outlined, AppColors.textSecondaryLight);
+      case 'reward':
+        return (Icons.card_giftcard_outlined, AppColors.warning);
+      default:
+        return (Icons.notifications_outlined, AppColors.primary);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final (icon, iconColor) = _iconForType();
+
     return Semantics(
       button: true,
       label: 'View details',
@@ -396,19 +424,15 @@ class _NotificationItem extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 图标
+            // 类型图标（按通知类型区分）
             Container(
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: (isSystem ? AppColors.primary : AppColors.accentPink)
-                    .withValues(alpha: 0.1),
+                color: iconColor.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                isSystem ? Icons.notifications_outlined : Icons.favorite_outline,
-                color: isSystem ? AppColors.primary : AppColors.accentPink,
-              ),
+              child: Icon(icon, color: iconColor),
             ),
             AppSpacing.hMd,
 

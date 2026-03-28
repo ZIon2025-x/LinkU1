@@ -97,6 +97,10 @@ class ChatReadReceiptReceived extends ChatEvent {
   List<Object?> get props => [senderId];
 }
 
+class ChatSendTyping extends ChatEvent {
+  const ChatSendTyping();
+}
+
 class ChatClearError extends ChatEvent {
   const ChatClearError();
 }
@@ -219,6 +223,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     on<ChatMarkAsRead>(_onMarkAsRead);
     on<ChatPeerTypingReceived>(_onPeerTyping);
     on<ChatReadReceiptReceived>(_onReadReceipt);
+    on<ChatSendTyping>(_onSendTyping);
     on<ChatClearError>((event, emit) {
       emit(state.copyWith());
     });
@@ -623,6 +628,16 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       }
     } catch (e) {
       AppLogger.warning('Failed to mark as read', e);
+    }
+  }
+
+  void _onSendTyping(
+    ChatSendTyping event,
+    Emitter<ChatState> emit,
+  ) {
+    final receiverId = state.userId;
+    if (receiverId.isNotEmpty) {
+      _messageRepository.sendTypingStatus(receiverId, taskId: state.taskId);
     }
   }
 

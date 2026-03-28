@@ -217,7 +217,7 @@ class Task extends Equatable {
 
   /// 是否可以申请
   bool get canApply =>
-      (status == AppConstants.taskStatusOpen || status == AppConstants.taskStatusChatting) &&
+      (status == AppConstants.taskStatusOpen || status == AppConstants.applicationStatusChatting) &&
       !hasApplied &&
       !isExpired &&
       currentParticipants < maxParticipants;

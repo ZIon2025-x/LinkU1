@@ -270,6 +270,17 @@ class FleaMarketDeleteItem extends FleaMarketEvent {
   List<Object?> get props => [itemId];
 }
 
+/// 举报商品 - 对标后端 POST /api/flea-market/items/{id}/report
+class FleaMarketReportItem extends FleaMarketEvent {
+  const FleaMarketReportItem(this.itemId, {required this.reason});
+
+  final String itemId;
+  final String reason;
+
+  @override
+  List<Object?> get props => [itemId, reason];
+}
+
 /// 切换列表类型筛选：'all', 'sale', 'rental'
 class FleaMarketListingTypeFilterChanged extends FleaMarketEvent {
   const FleaMarketListingTypeFilterChanged(this.listingType);
@@ -309,6 +320,7 @@ class FleaMarketState extends Equatable {
     this.isLoadingMore = false,
     this.acceptPaymentData,
     this.clearAcceptPaymentData = false,
+    this.reportSuccess = false,
   });
 
   final FleaMarketStatus status;
@@ -336,6 +348,7 @@ class FleaMarketState extends Equatable {
   /// 直接购买后需支付时由后端返回，用于打开支付页（对标 iOS handlePurchaseComplete）
   final AcceptPaymentData? acceptPaymentData;
   final bool clearAcceptPaymentData;
+  final bool reportSuccess;
 
   bool get isLoading => status == FleaMarketStatus.loading;
   bool get isEmpty => items.isEmpty && status == FleaMarketStatus.loaded;
@@ -366,6 +379,7 @@ class FleaMarketState extends Equatable {
     bool? isLoadingMore,
     AcceptPaymentData? acceptPaymentData,
     bool clearAcceptPaymentData = false,
+    bool? reportSuccess,
   }) {
     final resolvedSelectedItem = selectedItem ?? this.selectedItem;
     return FleaMarketState(
@@ -394,6 +408,7 @@ class FleaMarketState extends Equatable {
           ? null
           : (acceptPaymentData ?? this.acceptPaymentData),
       clearAcceptPaymentData: clearAcceptPaymentData,
+      reportSuccess: reportSuccess ?? false,
     );
   }
 
@@ -422,6 +437,7 @@ class FleaMarketState extends Equatable {
         isLoadingMore,
         acceptPaymentData,
         clearAcceptPaymentData,
+        reportSuccess,
       ];
 }
 
@@ -457,6 +473,7 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     on<FleaMarketRespondCounterOffer>(_onRespondCounterOffer);
     on<FleaMarketDeleteItem>(_onDeleteItem);
     on<FleaMarketListingTypeFilterChanged>(_onListingTypeFilterChanged);
+    on<FleaMarketReportItem>(_onReportItem);
   }
 
   final FleaMarketRepository _fleaMarketRepository;
@@ -1236,6 +1253,19 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
         status: FleaMarketStatus.error,
         errorMessage: e.toString(),
       ));
+    }
+  }
+
+  Future<void> _onReportItem(
+    FleaMarketReportItem event,
+    Emitter<FleaMarketState> emit,
+  ) async {
+    try {
+      await _fleaMarketRepository.reportItem(event.itemId, reason: event.reason);
+      emit(state.copyWith(reportSuccess: true, actionMessage: 'report_success'));
+    } catch (e) {
+      AppLogger.error('Failed to report item', e);
+      emit(state.copyWith(actionMessage: e.toString()));
     }
   }
 }

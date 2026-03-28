@@ -226,6 +226,7 @@ class _FleaMarketDetailContent extends StatelessWidget {
             'counter_offer_success' => l10n.expertApplicationCounterOfferSent,
             'item_deleted' => l10n.fleaMarketItemDeleted,
             'delete_failed' => l10n.fleaMarketErrorDeleteFailed,
+            'report_success' => l10n.reportSubmitted,
             _ => state.actionMessage ?? '',
           };
           final displayMessage = state.errorMessage != null
@@ -241,7 +242,8 @@ class _FleaMarketDetailContent extends StatelessWidget {
               state.actionMessage == 'counter_offer_accepted' ||
               state.actionMessage == 'counter_offer_rejected' ||
               state.actionMessage == 'counter_offer_success' ||
-              state.actionMessage == 'item_deleted';
+              state.actionMessage == 'item_deleted' ||
+              state.actionMessage == 'report_success';
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(displayMessage),
@@ -285,7 +287,7 @@ class _FleaMarketDetailContent extends StatelessWidget {
 
         return Scaffold(
           extendBodyBehindAppBar: true,
-          appBar: _buildAppBar(context, state, hasImages),
+          appBar: _buildAppBar(context, state, hasImages, currentUserId),
           body: Center(
             child: ConstrainedBox(
               constraints: BoxConstraints(maxWidth: ResponsiveUtils.detailMaxWidth(context)),
@@ -304,7 +306,7 @@ class _FleaMarketDetailContent extends StatelessWidget {
 
   /// 透明AppBar - 始终透明
   PreferredSizeWidget _buildAppBar(
-      BuildContext context, FleaMarketState state, bool hasImages) {
+      BuildContext context, FleaMarketState state, bool hasImages, String? currentUserId) {
     return AppBar(
       backgroundColor: Colors.transparent,
       elevation: 0,
@@ -352,6 +354,18 @@ class _FleaMarketDetailContent extends StatelessWidget {
             }
           }),
         ),
+        // 举报按钮 - 仅非卖家可见
+        if (state.selectedItem != null &&
+            currentUserId != null &&
+            state.selectedItem!.sellerId != currentUserId)
+          _buildCircleButton(
+            context,
+            icon: Icons.more_horiz,
+            onTap: () {
+              AppHaptics.selection();
+              _showReportDialog(context, state.selectedItem!.id);
+            },
+          ),
       ],
     );
   }
@@ -380,6 +394,74 @@ class _FleaMarketDetailContent extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  void _showReportDialog(BuildContext context, String itemId) {
+    final reasons = [
+      'spam',
+      'inappropriate',
+      'counterfeit',
+      'scam',
+      'other',
+    ];
+    final l10n = context.l10n;
+    final reasonLabels = {
+      'spam': l10n.reportReasonSpam,
+      'inappropriate': l10n.reportReasonInappropriate,
+      'counterfeit': l10n.reportReasonCounterfeit,
+      'scam': l10n.reportReasonScam,
+      'other': l10n.reportReasonOther,
+    };
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                Text(
+                  l10n.reportItemTitle,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ...reasons.map((reason) => ListTile(
+                  leading: const Icon(Icons.flag_outlined),
+                  title: Text(reasonLabels[reason] ?? reason),
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    context.read<FleaMarketBloc>().add(
+                      FleaMarketReportItem(itemId, reason: reason),
+                    );
+                  },
+                )),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 

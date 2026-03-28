@@ -464,8 +464,8 @@ class MessageRepository {
   }
 
   /// 发送正在输入状态
-  void sendTypingStatus(String receiverId) {
-    WebSocketService.instance.sendTyping(receiverId: receiverId);
+  void sendTypingStatus(String receiverId, {int? taskId}) {
+    WebSocketService.instance.sendTyping(receiverId: receiverId, taskId: taskId);
   }
 
   /// 获取消息流（WebSocket）

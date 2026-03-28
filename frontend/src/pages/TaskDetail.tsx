@@ -2089,41 +2089,12 @@ const TaskDetail: React.FC = () => {
       )}
       
       {/* 顶部导航栏 */}
-      <header style={{position: 'fixed', top: 0, left: 0, width: '100%', background: '#fff', zIndex: 100, boxShadow: '0 2px 8px #e6f7ff'}}>
-        <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60, maxWidth: 1200, margin: '0 auto', padding: '0 24px'}}>
-          {/* Logo */}
-          <div 
-            style={{
-              fontWeight: 'bold', 
-              fontSize: 24, 
-              background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', 
-              WebkitBackgroundClip: 'text', 
-              WebkitTextFillColor: 'transparent',
-              cursor: 'pointer',
-              transition: 'all 0.3s ease',
-              padding: '4px 8px',
-              borderRadius: '8px',
-              flexShrink: 0
-            }}
-            onClick={() => navigate('/')}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'scale(1.05)';
-              e.currentTarget.style.background = 'linear-gradient(135deg, #2563eb, #7c3aed)';
-              (e.currentTarget.style as any).webkitBackgroundClip = 'text';
-              (e.currentTarget.style as any).webkitTextFillColor = 'transparent';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'scale(1)';
-              e.currentTarget.style.background = 'linear-gradient(135deg, #3b82f6, #8b5cf6)';
-              (e.currentTarget.style as any).webkitBackgroundClip = 'text';
-              (e.currentTarget.style as any).webkitTextFillColor = 'transparent';
-            }}
-          >
+      <header className={styles.header}>
+        <div className={styles.headerInner}>
+          <div className={styles.logo} onClick={() => navigate('/')}>
             Link²Ur
           </div>
-          
-          {/* 语言切换器、通知按钮和汉堡菜单 */}
-          <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+          <div className={styles.headerActions}>
             <LanguageSwitcher />
             <NotificationButton
               user={user}
@@ -2145,8 +2116,7 @@ const TaskDetail: React.FC = () => {
           </div>
         </div>
       </header>
-      {/* 占位，防止内容被导航栏遮挡 */}
-      <div style={{height: 60}} />
+      <div className={styles.headerSpacer} />
 
       {/* 通知面板 */}
       <NotificationPanel
@@ -2158,42 +2128,11 @@ const TaskDetail: React.FC = () => {
         onMarkAllRead={handleMarkAllRead}
       />
 
-      <div style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        padding: '20px'
-      }}>
-        <div style={{
-          maxWidth: '900px',
-          margin: '0 auto',
-          background: '#fff',
-          borderRadius: '24px',
-          boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
-          padding: '40px',
-          position: 'relative',
-          overflow: 'hidden'
-        }}>
+      <div className={styles.pageWrapper}>
+        <div className={styles.mainCard}>
         {/* 装饰性背景 */}
-        <div style={{
-          position: 'absolute',
-          top: '-50px',
-          right: '-50px',
-          width: '200px',
-          height: '200px',
-          background: 'linear-gradient(45deg, #667eea, #764ba2)',
-          borderRadius: '50%',
-          opacity: 0.1
-        }} />
-        <div style={{
-          position: 'absolute',
-          bottom: '-30px',
-          left: '-30px',
-          width: '150px',
-          height: '150px',
-          background: 'linear-gradient(45deg, #764ba2, #667eea)',
-          borderRadius: '50%',
-          opacity: 0.1
-        }} />
+        <div className={styles.decorCircleTopRight} />
+        <div className={styles.decorCircleBottomLeft} />
         
         {/* SEO优化：H1标签，可见但样式简洁 */}
         <h1 style={{ 
@@ -2216,28 +2155,10 @@ const TaskDetail: React.FC = () => {
         </h1>
         
         {/* 标题区域 */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '20px',
-          marginBottom: '32px',
-          flexWrap: 'wrap',
-          position: 'relative',
-          zIndex: 1
-        }}>
+        <div className={styles.titleSection}>
           <div style={{ flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px', flexWrap: 'wrap' }}>
-              <h2 style={{
-                fontSize: '32px',
-                fontWeight: '800',
-                background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                margin: 0,
-                lineHeight: 1.2,
-                flex: 1,
-                minWidth: '200px'
-              }}>
+              <h2 className={styles.taskTitle}>
                 {translatedTitle || getTaskDisplayTitle(task, language)}
               </h2>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -2334,57 +2255,33 @@ const TaskDetail: React.FC = () => {
           </div>
         </div>
         {/* 任务信息卡片 */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(2, 1fr)',
-          gap: '20px',
-          marginBottom: '32px',
-          position: 'relative',
-          zIndex: 1
-        }}>
-          <div style={{
-            background: '#f8fafc',
-            padding: '20px',
-            borderRadius: '16px',
-            border: '2px solid #e2e8f0',
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '24px', marginBottom: '8px' }}>📋</div>
-            <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '4px' }}>任务类型</div>
-            <div style={{ fontSize: '16px', fontWeight: '600', color: '#1e293b' }}>{task.task_type}</div>
+        <div className={styles.infoGrid}>
+          <div className={styles.infoCard}>
+            <div className={styles.infoCardIcon}>📋</div>
+            <div className={styles.infoCardLabel}>任务类型</div>
+            <div className={styles.infoCardValue}>{task.task_type}</div>
           </div>
-          
-          <div style={{
-            background: task.location?.toLowerCase() === 'online' ? '#e6f3ff' : '#f8fafc',
-            padding: '20px',
-            borderRadius: '16px',
-            border: task.location?.toLowerCase() === 'online' ? '2px solid #93c5fd' : '2px solid #e2e8f0',
-            textAlign: 'center'
+
+          <div className={styles.infoCard} style={{
+            background: task.location?.toLowerCase() === 'online' ? 'linear-gradient(135deg, #e6f3ff, #dbeafe)' : undefined,
+            borderColor: task.location?.toLowerCase() === 'online' ? 'rgba(147, 197, 253, 0.5)' : undefined
           }}>
-            <div style={{ fontSize: '24px', marginBottom: '8px' }}>
+            <div className={styles.infoCardIcon}>
               {task.location?.toLowerCase() === 'online' ? '🌐' : '📍'}
             </div>
-            <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '4px' }}>
+            <div className={styles.infoCardLabel}>
               {task.location?.toLowerCase() === 'online' ? '任务方式' : '所在城市'}
             </div>
-            <div style={{ 
-              fontSize: '16px', 
-              fontWeight: '600', 
-              color: task.location?.toLowerCase() === 'online' ? '#2563eb' : '#1e293b' 
+            <div className={styles.infoCardValue} style={{
+              color: task.location?.toLowerCase() === 'online' ? '#2563eb' : undefined
             }}>
               {obfuscateLocation(task.location)}
             </div>
           </div>
-          
-          <div style={{
-            background: '#f8fafc',
-            padding: '20px',
-            borderRadius: '16px',
-            border: '2px solid #e2e8f0',
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '24px', marginBottom: '8px' }}>💰</div>
-            <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '4px' }}>任务金额</div>
+
+          <div className={styles.infoCard}>
+            <div className={styles.infoCardIcon}>💰</div>
+            <div className={styles.infoCardLabel}>任务金额</div>
             {/* 判断是否有议价且已批准 */}
             {task.agreed_reward && task.agreed_reward !== task.base_reward ? (
               <div>
@@ -2415,13 +2312,7 @@ const TaskDetail: React.FC = () => {
           
           {/* 款项信息区域 - 仅任务双方可见 */}
           {user && (user.id === task.poster_id || user.id === task.taker_id) && (
-            <div style={{
-              background: '#f0fdf4',
-              padding: '20px',
-              borderRadius: '16px',
-              border: '2px solid #bbf7d0',
-              marginTop: '16px'
-            }}>
+            <div className={styles.paymentInfoCard}>
               <div style={{ fontSize: '18px', fontWeight: '700', color: '#065f46', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 💳 {language === 'zh' ? '款项信息' : 'Payment Information'}
               </div>
@@ -2576,16 +2467,10 @@ const TaskDetail: React.FC = () => {
             </div>
           )}
           
-          <div style={{
-            background: '#f8fafc',
-            padding: '20px',
-            borderRadius: '16px',
-            border: '2px solid #e2e8f0',
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '24px', marginBottom: '8px' }}>⏰</div>
-            <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '4px' }}>截止时间</div>
-            <div style={{ fontSize: '16px', fontWeight: '600', color: '#1e293b' }}>
+          <div className={styles.infoCard}>
+            <div className={styles.infoCardIcon}>⏰</div>
+            <div className={styles.infoCardLabel}>截止时间</div>
+            <div className={styles.infoCardValue}>
               {(() => {
                 // 如果有截止日期，显示截止日期
                 if (task.deadline) {
@@ -2610,17 +2495,7 @@ const TaskDetail: React.FC = () => {
         
         {/* 进行中任务提示 */}
         {task.status === 'in_progress' && (
-          <div style={{
-            marginBottom: '24px',
-            padding: '16px 20px',
-            background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
-            borderRadius: '12px',
-            border: '2px solid #fbbf24',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            boxShadow: '0 2px 8px rgba(251, 191, 36, 0.2)'
-          }}>
+          <div className={`${styles.progressAlert} ${styles.progressAlertWarning}`}>
             <span style={{ fontSize: '24px', flexShrink: 0 }}>⚠️</span>
             <span style={{
               fontSize: '15px',
@@ -2634,30 +2509,11 @@ const TaskDetail: React.FC = () => {
         )}
         
         {/* 任务描述 */}
-        <div style={{
-          background: '#f8fafc',
-          padding: '24px',
-          borderRadius: '16px',
-          border: '2px solid #e2e8f0',
-          marginBottom: '32px',
-          position: 'relative',
-          zIndex: 1
-        }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '12px',
-            marginBottom: '16px'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ fontSize: '20px' }}>📝</div>
-              <h3 style={{
-                fontSize: '18px',
-                fontWeight: '600',
-                color: '#1e293b',
-                margin: 0
-              }}>任务描述</h3>
+        <div className={styles.descriptionSection}>
+          <div className={styles.sectionHeader}>
+            <div className={styles.sectionTitle}>
+              <div className={styles.sectionTitleIcon}>📝</div>
+              <h3 className={styles.sectionTitleText}>任务描述</h3>
             </div>
             <div>
               {translatedDescription ? (
@@ -2707,33 +2563,17 @@ const TaskDetail: React.FC = () => {
               ) : null}
             </div>
           </div>
-          <div style={{
-            fontSize: '16px',
-            lineHeight: 1.6,
-            color: '#374151',
-            whiteSpace: 'pre-wrap'
-          }}>{translatedDescription || getTaskDisplayDescription(task, language)}</div>
+          <div className={styles.descriptionContent}>{translatedDescription || getTaskDisplayDescription(task, language)}</div>
         </div>
 
         {/* 任务图片 */}
         {task.images && Array.isArray(task.images) && task.images.length > 0 && (
-          <div style={{
-            background: '#f8fafc',
-            padding: '24px',
-            borderRadius: '16px',
-            border: '2px solid #e2e8f0',
-            marginBottom: '32px',
-            position: 'relative',
-            zIndex: 1
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-              <div style={{ fontSize: '20px' }}>🖼️</div>
-              <h3 style={{
-                fontSize: '18px',
-                fontWeight: '600',
-                color: '#1e293b',
-                margin: 0
-              }}>{language === 'zh' ? '任务图片' : 'Task Images'}</h3>
+          <div className={styles.imagesSection}>
+            <div className={styles.sectionHeader} style={{ justifyContent: 'flex-start' }}>
+              <div className={styles.sectionTitle}>
+                <div className={styles.sectionTitleIcon}>🖼️</div>
+                <h3 className={styles.sectionTitleText}>{language === 'zh' ? '任务图片' : 'Task Images'}</h3>
+              </div>
               <span style={{ fontSize: '14px', color: '#94a3b8' }}>
                 {task.images.length} {language === 'zh' ? '张' : task.images.length === 1 ? 'image' : 'images'}
               </span>
@@ -3317,14 +3157,8 @@ const TaskDetail: React.FC = () => {
           {(task.status === 'pending_confirmation' || task.status === 'completed') &&
            task.completion_evidence &&
            task.completion_evidence.length > 0 && (
-            <div style={{
-              marginTop: '20px',
-              padding: '20px',
-              background: '#f8f9fa',
-              borderRadius: '12px',
-              border: '1px solid #e9ecef'
-            }}>
-              <h3 style={{ margin: '0 0 16px 0', color: '#333', fontSize: '18px' }}>
+            <div className={styles.sectionCard}>
+              <h3>
                 {language === 'zh' ? '任务完成证据' : 'Task completion evidence'}
               </h3>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
@@ -3367,14 +3201,8 @@ const TaskDetail: React.FC = () => {
 
         {/* 多人任务：参与者列表 - 所有人可见 */}
         {task.is_multi_participant && (
-          <div style={{
-            marginTop: '20px',
-            padding: '20px',
-            background: '#f8f9fa',
-            borderRadius: '12px',
-            border: '1px solid #e9ecef'
-          }}>
-            <h3 style={{ margin: '0 0 16px 0', color: '#333', fontSize: '18px' }}>
+          <div className={styles.sectionCard}>
+            <h3>
               {language === 'zh' ? `参与者列表 (${participants.length}/${task.max_participants || 1})` : `Participants (${participants.length}/${task.max_participants || 1})`}
             </h3>
             
@@ -3629,14 +3457,8 @@ const TaskDetail: React.FC = () => {
 
         {/* 申请者列表 - 仅任务发布者可见 */}
         {isTaskPoster && (task.status === 'taken' || task.status === 'open') && !task.is_multi_participant && (
-          <div style={{
-            marginTop: '20px',
-            padding: '20px',
-            background: '#f8f9fa',
-            borderRadius: '12px',
-            border: '1px solid #e9ecef'
-          }}>
-            <h3 style={{ margin: '0 0 16px 0', color: '#333', fontSize: '18px' }}>
+          <div className={styles.sectionCard}>
+            <h3>
               申请者列表 ({applications.length})
             </h3>
             
@@ -4063,22 +3885,8 @@ const TaskDetail: React.FC = () => {
                 background: #94a3b8;
               }
             `}</style>
-            <div style={{
-              marginTop: '60px',
-              paddingTop: '40px',
-              borderTop: '2px solid #e5e7eb',
-              position: 'relative',
-              zIndex: 1
-            }}>
-              <h3 style={{
-                fontSize: '24px',
-                fontWeight: '700',
-                marginBottom: '24px',
-                color: '#1f2937',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px'
-              }}>
+            <div className={styles.recommendedSection}>
+              <h3 className={styles.recommendedTitle}>
                 {language === 'zh' ? '你可能感兴趣' : 'You May Also Like'}
               </h3>
               
@@ -4435,130 +4243,34 @@ const TaskDetail: React.FC = () => {
       {/* 登录弹窗 */}
       {/* 图片放大查看 */}
       {enlargedImageIndex !== null && task?.images && (
-        <div
-          onClick={() => setEnlargedImageIndex(null)}
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100vw',
-            height: '100vh',
-            background: 'rgba(0,0,0,0.9)',
-            zIndex: 2000,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer'
-          }}
-        >
-          {/* 关闭按钮 */}
-          <button
-            onClick={() => setEnlargedImageIndex(null)}
-            style={{
-              position: 'absolute',
-              top: '20px',
-              right: '20px',
-              background: 'rgba(255,255,255,0.2)',
-              border: 'none',
-              color: '#fff',
-              fontSize: '28px',
-              width: '44px',
-              height: '44px',
-              borderRadius: '50%',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 2001
-            }}
-          >
+        <div className={styles.lightboxOverlay} onClick={() => setEnlargedImageIndex(null)}>
+          <button className={`${styles.lightboxButton} ${styles.lightboxClose}`} onClick={() => setEnlargedImageIndex(null)}>
             ✕
           </button>
-          {/* 上一张 */}
           {task.images.length > 1 && (
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setEnlargedImageIndex((enlargedImageIndex - 1 + task.images.length) % task.images.length);
-              }}
-              style={{
-                position: 'absolute',
-                left: '16px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                background: 'rgba(255,255,255,0.2)',
-                border: 'none',
-                color: '#fff',
-                fontSize: '24px',
-                width: '48px',
-                height: '48px',
-                borderRadius: '50%',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                zIndex: 2001
-              }}
+              className={`${styles.lightboxButton} ${styles.lightboxPrev}`}
+              onClick={(e) => { e.stopPropagation(); setEnlargedImageIndex((enlargedImageIndex - 1 + task.images.length) % task.images.length); }}
             >
               ◀
             </button>
           )}
-          {/* 图片 */}
           <img
             src={ensureAbsoluteImageUrl(task.images[enlargedImageIndex])}
             alt={`${language === 'zh' ? '任务图片' : 'Task image'} ${enlargedImageIndex + 1}`}
             onClick={(e) => e.stopPropagation()}
-            style={{
-              maxWidth: '90vw',
-              maxHeight: '85vh',
-              objectFit: 'contain',
-              borderRadius: '8px',
-              cursor: 'default'
-            }}
+            style={{ maxWidth: '90vw', maxHeight: '85vh', objectFit: 'contain', borderRadius: '12px', cursor: 'default' }}
           />
-          {/* 下一张 */}
           {task.images.length > 1 && (
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setEnlargedImageIndex((enlargedImageIndex + 1) % task.images.length);
-              }}
-              style={{
-                position: 'absolute',
-                right: '16px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                background: 'rgba(255,255,255,0.2)',
-                border: 'none',
-                color: '#fff',
-                fontSize: '24px',
-                width: '48px',
-                height: '48px',
-                borderRadius: '50%',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                zIndex: 2001
-              }}
+              className={`${styles.lightboxButton} ${styles.lightboxNext}`}
+              onClick={(e) => { e.stopPropagation(); setEnlargedImageIndex((enlargedImageIndex + 1) % task.images.length); }}
             >
               ▶
             </button>
           )}
-          {/* 图片计数 */}
           {task.images.length > 1 && (
-            <div style={{
-              position: 'absolute',
-              bottom: '24px',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              color: '#fff',
-              fontSize: '16px',
-              fontWeight: '600',
-              background: 'rgba(0,0,0,0.5)',
-              padding: '8px 16px',
-              borderRadius: '20px'
-            }}>
+            <div className={styles.lightboxCounter}>
               {enlargedImageIndex + 1} / {task.images.length}
             </div>
           )}
@@ -4583,121 +4295,7 @@ const TaskDetail: React.FC = () => {
         }}
       />
 
-      {/* 移动端响应式样式 */}
-      <style>
-        {`
-          /* 移动端适配 */
-          @media (max-width: 768px) {
-            /* 外层容器移动端优化 */
-            div[style*="padding: '20px'"] {
-              padding: 12px !important;
-            }
-
-            /* 主内容卡片移动端优化 */
-            div[style*="maxWidth: '900px'"] {
-              padding: 20px 16px !important;
-              border-radius: 16px !important;
-            }
-
-            /* 标题区域移动端优化 */
-            div[style*="display: flex"][style*="alignItems: center"] {
-              flex-direction: column !important;
-              align-items: flex-start !important;
-              gap: 12px !important;
-            }
-
-            /* 标题文字移动端优化 */
-            h2[style*="fontSize: 28"] {
-              font-size: 20px !important;
-              line-height: 1.4 !important;
-            }
-
-            /* 任务信息网格移动端优化 */
-            div[style*="display: grid"][style*="gridTemplateColumns"] {
-              grid-template-columns: 1fr !important;
-              gap: 12px !important;
-            }
-
-            /* 描述区域移动端优化 */
-            div[style*="padding: '24px'"] {
-              padding: 16px !important;
-            }
-
-            /* 按钮组移动端优化 */
-            div[style*="display: flex"][style*="gap: '12px'"] {
-              flex-direction: column !important;
-              gap: 8px !important;
-            }
-
-            button[style*="padding: '12px 24px'"] {
-              width: 100% !important;
-              padding: 12px 16px !important;
-              font-size: 14px !important;
-            }
-
-            /* 参与者列表移动端优化 */
-            div[style*="display: flex"][style*="flexDirection: column"] {
-              gap: 12px !important;
-            }
-
-            /* 申请者列表移动端优化 */
-            div[style*="padding: '16px'"] {
-              padding: 12px !important;
-            }
-
-            /* 评价区域移动端优化 */
-            div[style*="padding: '24px'"] {
-              padding: 16px !important;
-            }
-
-            /* 推荐任务移动端优化 */
-            div[style*="display: grid"][style*="gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))'"] {
-              grid-template-columns: 1fr !important;
-              gap: 12px !important;
-            }
-          }
-
-          /* 超小屏幕优化 */
-          @media (max-width: 480px) {
-            div[style*="padding: '12px'"] {
-              padding: 8px !important;
-            }
-
-            div[style*="maxWidth: '900px'"] {
-              padding: 16px 12px !important;
-              border-radius: 12px !important;
-            }
-
-            h2[style*="fontSize: 20"] {
-              font-size: 18px !important;
-            }
-
-            div[style*="padding: '16px'"] {
-              padding: 12px !important;
-            }
-
-            button[style*="padding: '12px 16px'"] {
-              padding: 10px 12px !important;
-              font-size: 13px !important;
-            }
-          }
-
-          /* 极小屏幕优化 */
-          @media (max-width: 360px) {
-            div[style*="padding: '8px'"] {
-              padding: 6px !important;
-            }
-
-            div[style*="maxWidth: '900px'"] {
-              padding: 12px 8px !important;
-            }
-
-            h2[style*="fontSize: 18"] {
-              font-size: 16px !important;
-            }
-          }
-        `}
-      </style>
+      {/* 响应式样式已迁移到 TaskDetail.module.css */}
       </div>
     </div>
   );
