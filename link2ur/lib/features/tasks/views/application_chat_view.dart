@@ -315,7 +315,8 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
         final isPoster = _isPoster(state);
         final isChatActive = application?.isChatting == true ||
             application?.isConsulting == true ||
-            application?.isNegotiating == true;
+            application?.isNegotiating == true ||
+            application?.isPriceAgreed == true;
         final isLoaded = state.status == TaskDetailStatus.loaded;
 
         return Scaffold(
@@ -329,10 +330,11 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
           ),
           body: Column(
             children: [
-              // Service info card (consulting/negotiating mode)
+              // Service info card (consulting/negotiating/price_agreed mode)
               if (isLoaded &&
                   (application?.isConsulting == true ||
-                      application?.isNegotiating == true))
+                      application?.isNegotiating == true ||
+                      application?.isPriceAgreed == true))
                 _buildServiceInfoCard(state),
 
               // Price bar (non-consulting mode — keep existing behavior)
@@ -350,7 +352,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
               // Consulting action buttons
               if (isChatActive &&
                   application != null &&
-                  (application.isConsulting || application.isNegotiating))
+                  (application.isConsulting || application.isNegotiating || application.isPriceAgreed))
                 _buildConsultingActions(application),
 
               // Input bar (when chat is active)
@@ -1071,6 +1073,29 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
               ),
               const SizedBox(width: 8),
             ],
+            // Price agreed: applicant can formal-apply, expert can approve
+            if (application.isPriceAgreed) ...[
+              if (isApplicant) ...[
+                ActionChip(
+                  avatar: const Icon(Icons.assignment, size: 16),
+                  label: Text(context.l10n.formalApply),
+                  onPressed: _showFormalApplyDialog,
+                ),
+                const SizedBox(width: 8),
+              ],
+              if (!isApplicant) ...[
+                ActionChip(
+                  avatar: const Icon(Icons.check_circle, size: 16,
+                      color: AppColors.success),
+                  label: Text(
+                    context.l10n.expertApplicationConfirmApprove,
+                    style: const TextStyle(color: AppColors.success),
+                  ),
+                  onPressed: _showApproveConfirmation,
+                ),
+                const SizedBox(width: 8),
+              ],
+            ],
             // Both: close consultation
             ActionChip(
               avatar: Icon(Icons.close, size: 16,
@@ -1281,6 +1306,32 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
     });
   }
 
+  void _showApproveConfirmation() {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.l10n.expertApplicationConfirmApprove),
+        content: Text(context.l10n.expertApplicationConfirmApproveMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              context.read<TaskDetailBloc>().add(
+                    TaskDetailConfirmAndPay(widget.applicationId),
+                  );
+            },
+            style: TextButton.styleFrom(foregroundColor: AppColors.success),
+            child: Text(context.l10n.expertApplicationConfirmApprove),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showCloseConfirmation() {
     showDialog(
       context: context,
@@ -1407,6 +1458,13 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
           SnackBar(content: Text(successMessage)),
         );
         _loadMessages();
+        // Reload application status
+        if (mounted) {
+          context.read<TaskDetailBloc>().add(TaskDetailLoadRequested(widget.taskId));
+          context.read<TaskDetailBloc>().add(
+                TaskDetailLoadApplications(currentUserId: _currentUserId),
+              );
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
