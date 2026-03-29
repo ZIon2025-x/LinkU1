@@ -31,6 +31,11 @@ import '../bloc/flea_market_rental_bloc.dart';
 import '../../tasks/views/approval_payment_page.dart';
 import '../../tasks/bloc/task_detail_bloc.dart' show AcceptPaymentData;
 import 'rental_request_sheet.dart';
+import '../../../data/repositories/task_expert_repository.dart';
+import '../../../data/repositories/activity_repository.dart';
+import '../../../data/repositories/question_repository.dart';
+import '../../task_expert/bloc/task_expert_bloc.dart';
+import '../../../core/widgets/buttons.dart';
 
 /// 跳蚤市场商品详情页 - 对标iOS FleaMarketDetailView.swift
 class FleaMarketDetailView extends StatelessWidget {
@@ -802,7 +807,47 @@ class _FleaMarketDetailContent extends StatelessWidget {
 
     return Row(
       children: [
-        // 私聊入口已隐藏，仅保留主操作按钮
+        // 咨询按钮：仅在商品可购买时显示
+        if (!isUnavailable)
+          BlocProvider(
+            create: (ctx) => TaskExpertBloc(
+              taskExpertRepository: ctx.read<TaskExpertRepository>(),
+              activityRepository: ctx.read<ActivityRepository>(),
+              questionRepository: ctx.read<QuestionRepository>(),
+            ),
+            child: BlocConsumer<TaskExpertBloc, TaskExpertState>(
+              listenWhen: (prev, curr) =>
+                  prev.actionMessage != curr.actionMessage &&
+                  (curr.actionMessage == 'consultation_started' ||
+                   curr.actionMessage == 'consultation_failed'),
+              listener: (ctx, state) {
+                if (state.actionMessage == 'consultation_started' &&
+                    state.consultationData != null) {
+                  final taskId = state.consultationData!['task_id'] as int?;
+                  final reqId = state.consultationData!['purchase_request_id'] as int?;
+                  if (taskId != null && reqId != null) {
+                    ctx.push('/tasks/$taskId/applications/$reqId/chat?consultation=true&type=flea_market');
+                  }
+                } else if (state.actionMessage == 'consultation_failed') {
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    SnackBar(content: Text(ctx.localizeError(state.errorMessage))),
+                  );
+                }
+              },
+              builder: (ctx, state) {
+                return IconActionButton(
+                  icon: Icons.chat_bubble_outline,
+                  onPressed: state.isSubmitting
+                      ? null
+                      : () => ctx.read<TaskExpertBloc>().add(
+                            TaskExpertStartFleaMarketConsultation(item.id),
+                          ),
+                  backgroundColor: AppColors.skeletonBase,
+                );
+              },
+            ),
+          ),
+        if (!isUnavailable) AppSpacing.hMd,
         // 主操作按钮：继续支付 / 立即购买 / 已被预留 或 已售出
         Expanded(
           child: isUnavailable
