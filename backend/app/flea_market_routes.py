@@ -3836,3 +3836,628 @@ async def delete_flea_market_item_admin(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="删除商品失败"
         )
+
+
+# ==================== 跳蚤市场咨询相关API ====================
+
+
+@flea_market_router.post("/items/{item_id}/consult", response_model=dict)
+async def create_flea_market_consultation(
+    item_id: str,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """创建跳蚤市场咨询"""
+    try:
+        item_id_int = int(item_id)
+    except (ValueError, TypeError):
+        # 尝试解析格式化的ID
+        try:
+            item_id_int = parse_flea_market_id(item_id)
+        except Exception:
+            raise HTTPException(status_code=400, detail="无效的商品ID")
+
+    try:
+        # 1. 查询商品
+        result = await db.execute(
+            select(models.FleaMarketItem).where(models.FleaMarketItem.id == item_id_int)
+        )
+        item = result.scalar_one_or_none()
+
+        if not item:
+            raise HTTPException(status_code=404, detail="商品不存在")
+        if item.status != "active":
+            raise HTTPException(status_code=400, detail="商品不在销售中")
+
+        # 2. 不能咨询自己的商品
+        if item.seller_id == current_user.id:
+            raise HTTPException(status_code=400, detail="不能咨询自己的商品")
+
+        # 3. 检查是否已有活跃的咨询
+        existing_result = await db.execute(
+            select(models.FleaMarketPurchaseRequest)
+            .where(models.FleaMarketPurchaseRequest.item_id == item_id_int)
+            .where(models.FleaMarketPurchaseRequest.buyer_id == current_user.id)
+            .where(models.FleaMarketPurchaseRequest.status.in_(["consulting", "negotiating", "price_agreed"]))
+        )
+        existing_req = existing_result.scalar_one_or_none()
+        if existing_req:
+            return {
+                "purchase_request_id": existing_req.id,
+                "task_id": existing_req.task_id,
+                "item_id": format_flea_market_id(item_id_int),
+                "status": existing_req.status,
+                "created_at": existing_req.created_at.isoformat() if existing_req.created_at else None,
+                "is_existing": True,
+            }
+
+        # 4. 创建 FleaMarketPurchaseRequest（status=consulting）
+        new_request = models.FleaMarketPurchaseRequest(
+            item_id=item_id_int,
+            buyer_id=current_user.id,
+            status="consulting",
+        )
+        db.add(new_request)
+        await db.flush()
+
+        # 5. 创建占位 Task（status=consulting）
+        new_task = models.Task(
+            title=f"咨询: {item.title}",
+            description=f"跳蚤市场咨询: {item.title}",
+            reward=item.price,
+            base_reward=item.price,
+            currency=item.currency or "GBP",
+            location=item.location or "online",
+            task_type="flea_market",
+            task_level="normal",
+            poster_id=current_user.id,
+            taker_id=item.seller_id,
+            status="consulting",
+            task_source="flea_market_consultation",
+            is_flexible=1,
+        )
+        db.add(new_task)
+        await db.flush()
+
+        # 6. 关联 task_id
+        new_request.task_id = new_task.id
+
+        # 7. 发送系统消息
+        system_message = models.Message(
+            sender_id=None,
+            receiver_id=item.seller_id,
+            content=f"{current_user.name} 想咨询您的商品「{item.title}」",
+            task_id=new_task.id,
+            message_type="system",
+            conversation_type="task",
+        )
+        db.add(system_message)
+
+        await db.commit()
+
+        return {
+            "purchase_request_id": new_request.id,
+            "task_id": new_task.id,
+            "item_id": format_flea_market_id(item_id_int),
+            "status": "consulting",
+            "created_at": new_request.created_at.isoformat() if new_request.created_at else None,
+            "is_existing": False,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"创建跳蚤市场咨询失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="创建咨询失败"
+        )
+
+
+@flea_market_router.post("/purchase-requests/{request_id}/consult-negotiate", response_model=dict)
+async def flea_market_consult_negotiate(
+    request_id: int,
+    request_data: schemas.NegotiateRequest,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """买家发起议价"""
+    try:
+        req_result = await db.execute(
+            select(models.FleaMarketPurchaseRequest)
+            .where(models.FleaMarketPurchaseRequest.id == request_id)
+            .with_for_update()
+        )
+        purchase_req = req_result.scalar_one_or_none()
+
+        if not purchase_req:
+            raise HTTPException(status_code=404, detail="购买申请不存在")
+        if purchase_req.buyer_id != current_user.id:
+            raise HTTPException(status_code=403, detail="只有买家可以发起议价")
+        if purchase_req.status not in ("consulting", "negotiating"):
+            raise HTTPException(status_code=400, detail=f"当前状态 {purchase_req.status} 不允许议价")
+
+        # 更新状态
+        purchase_req.status = "negotiating"
+        purchase_req.proposed_price = request_data.proposed_price
+        purchase_req.updated_at = get_utc_time()
+
+        # 获取商品信息（用于通知）
+        item = await db.get(models.FleaMarketItem, purchase_req.item_id)
+        seller_id = item.seller_id if item else None
+
+        price_display = f"{float(request_data.proposed_price):.2f}"
+
+        # 插入议价消息
+        negotiate_msg = models.Message(
+            sender_id=current_user.id,
+            receiver_id=seller_id,
+            content=f"提出议价: {request_data.proposed_price}",
+            task_id=purchase_req.task_id,
+            message_type="negotiation",
+            conversation_type="task",
+            meta=json.dumps({"price": float(request_data.proposed_price), "currency": item.currency if item else "GBP"}),
+        )
+        db.add(negotiate_msg)
+        await db.commit()
+
+        # 发送通知给卖家
+        if seller_id:
+            try:
+                from app import async_crud
+                await async_crud.async_notification_crud.create_notification(
+                    db=db,
+                    user_id=seller_id,
+                    notification_type="flea_market_consultation",
+                    title="收到议价",
+                    content=f"买家对您的商品「{item.title}」提出议价: {price_display}",
+                    related_id=str(purchase_req.task_id) if purchase_req.task_id else None,
+                )
+                await db.commit()
+            except Exception as e:
+                logger.error(f"Failed to send negotiate notification: {e}")
+
+        return {
+            "message": "议价已发送",
+            "status": "negotiating",
+            "purchase_request_id": request_id,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"跳蚤市场议价失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="议价失败"
+        )
+
+
+@flea_market_router.post("/purchase-requests/{request_id}/consult-quote", response_model=dict)
+async def flea_market_consult_quote(
+    request_id: int,
+    request_data: schemas.QuoteRequest,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """卖家报价"""
+    try:
+        req_result = await db.execute(
+            select(models.FleaMarketPurchaseRequest)
+            .where(models.FleaMarketPurchaseRequest.id == request_id)
+            .with_for_update()
+        )
+        purchase_req = req_result.scalar_one_or_none()
+
+        if not purchase_req:
+            raise HTTPException(status_code=404, detail="购买申请不存在")
+
+        # 验证当前用户是卖家
+        item = await db.get(models.FleaMarketItem, purchase_req.item_id)
+        if not item:
+            raise HTTPException(status_code=404, detail="商品不存在")
+        if item.seller_id != current_user.id:
+            raise HTTPException(status_code=403, detail="只有卖家可以报价")
+
+        if purchase_req.status not in ("consulting", "negotiating"):
+            raise HTTPException(status_code=400, detail=f"当前状态 {purchase_req.status} 不允许报价")
+
+        # 更新状态
+        purchase_req.status = "negotiating"
+        purchase_req.seller_counter_price = request_data.quoted_price
+        purchase_req.updated_at = get_utc_time()
+
+        price_display = f"{float(request_data.quoted_price):.2f}"
+
+        # 构建消息 meta
+        meta_data = {"price": float(request_data.quoted_price), "currency": item.currency or "GBP"}
+        if request_data.message:
+            meta_data["message"] = request_data.message
+
+        # 插入报价消息
+        quote_msg = models.Message(
+            sender_id=current_user.id,
+            receiver_id=purchase_req.buyer_id,
+            content=f"报价: {request_data.quoted_price}" + (f" - {request_data.message}" if request_data.message else ""),
+            task_id=purchase_req.task_id,
+            message_type="quote",
+            conversation_type="task",
+            meta=json.dumps(meta_data),
+        )
+        db.add(quote_msg)
+        await db.commit()
+
+        # 发送通知给买家
+        try:
+            from app import async_crud
+            await async_crud.async_notification_crud.create_notification(
+                db=db,
+                user_id=purchase_req.buyer_id,
+                notification_type="flea_market_consultation",
+                title="收到报价",
+                content=f"卖家对商品「{item.title}」发送了报价: {price_display}",
+                related_id=str(purchase_req.task_id) if purchase_req.task_id else None,
+            )
+            await db.commit()
+        except Exception as e:
+            logger.error(f"Failed to send quote notification: {e}")
+
+        return {
+            "message": "报价已发送",
+            "status": "negotiating",
+            "purchase_request_id": request_id,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"跳蚤市场报价失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="报价失败"
+        )
+
+
+@flea_market_router.post("/purchase-requests/{request_id}/consult-respond", response_model=dict)
+async def flea_market_consult_respond(
+    request_id: int,
+    request_data: schemas.NegotiateResponseRequest,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """接受/拒绝/还价"""
+    try:
+        req_result = await db.execute(
+            select(models.FleaMarketPurchaseRequest)
+            .where(models.FleaMarketPurchaseRequest.id == request_id)
+            .with_for_update()
+        )
+        purchase_req = req_result.scalar_one_or_none()
+
+        if not purchase_req:
+            raise HTTPException(status_code=404, detail="购买申请不存在")
+
+        # 获取商品信息
+        item = await db.get(models.FleaMarketItem, purchase_req.item_id)
+        if not item:
+            raise HTTPException(status_code=404, detail="商品不存在")
+
+        # 双方都可以响应
+        is_buyer = purchase_req.buyer_id == current_user.id
+        is_seller = item.seller_id == current_user.id
+        if not is_buyer and not is_seller:
+            raise HTTPException(status_code=403, detail="无权操作此申请")
+
+        if purchase_req.status != "negotiating":
+            raise HTTPException(status_code=400, detail=f"当前状态 {purchase_req.status} 不允许响应议价")
+
+        action = request_data.action
+        now = get_utc_time()
+        currency = item.currency or "GBP"
+
+        if action == "accept":
+            # 确定成交价格：优先 seller_counter_price，其次 proposed_price
+            agreed_price = purchase_req.seller_counter_price or purchase_req.proposed_price
+            purchase_req.final_price = agreed_price
+            purchase_req.status = "price_agreed"
+            purchase_req.updated_at = now
+            message_type = "negotiation_accepted"
+            content = f"已接受价格: {agreed_price}"
+
+            # 更新占位任务
+            if purchase_req.task_id:
+                task = await db.get(models.Task, purchase_req.task_id)
+                if task:
+                    task.reward = float(agreed_price) if agreed_price else task.reward
+                    task.agreed_reward = float(agreed_price) if agreed_price else None
+                    task.status = "price_agreed"
+
+        elif action == "reject":
+            purchase_req.status = "consulting"
+            purchase_req.updated_at = now
+            # 重置任务状态
+            if purchase_req.task_id:
+                task = await db.get(models.Task, purchase_req.task_id)
+                if task and task.status == "price_agreed":
+                    task.status = "consulting"
+            message_type = "negotiation_rejected"
+            content = "已拒绝当前议价"
+
+        elif action == "counter":
+            if is_buyer:
+                purchase_req.proposed_price = request_data.counter_price
+            else:
+                purchase_req.seller_counter_price = request_data.counter_price
+            purchase_req.updated_at = now
+            message_type = "counter_offer"
+            content = f"还价: {request_data.counter_price}"
+
+        else:
+            raise HTTPException(status_code=400, detail="无效的操作")
+
+        # 确定接收者
+        receiver_id = item.seller_id if is_buyer else purchase_req.buyer_id
+
+        # 插入消息
+        meta_data = {"action": action, "currency": currency}
+        if action == "accept" and agreed_price is not None:
+            meta_data["price"] = float(agreed_price)
+        elif action == "counter":
+            meta_data["price"] = float(request_data.counter_price)
+
+        respond_msg = models.Message(
+            sender_id=current_user.id,
+            receiver_id=receiver_id,
+            content=content,
+            task_id=purchase_req.task_id,
+            message_type=message_type,
+            conversation_type="task",
+            meta=json.dumps(meta_data),
+        )
+        db.add(respond_msg)
+        await db.commit()
+
+        # 发送通知
+        try:
+            from app import async_crud
+            action_text = {"accept": "接受了议价", "reject": "拒绝了议价", "counter": "发起了还价"}
+            await async_crud.async_notification_crud.create_notification(
+                db=db,
+                user_id=receiver_id,
+                notification_type="flea_market_consultation",
+                title="议价更新",
+                content=f"商品「{item.title}」的议价有新进展: {action_text.get(action, action)}",
+                related_id=str(purchase_req.task_id) if purchase_req.task_id else None,
+            )
+            await db.commit()
+        except Exception as e:
+            logger.error(f"Failed to send respond notification: {e}")
+
+        return {
+            "message": f"操作成功: {action}",
+            "status": purchase_req.status,
+            "purchase_request_id": request_id,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"跳蚤市场议价响应失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="议价响应失败"
+        )
+
+
+@flea_market_router.post("/purchase-requests/{request_id}/consult-formal-buy", response_model=dict)
+async def flea_market_consult_formal_buy(
+    request_id: int,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """将咨询转为正式购买（进入正常购买流程）"""
+    try:
+        req_result = await db.execute(
+            select(models.FleaMarketPurchaseRequest)
+            .where(models.FleaMarketPurchaseRequest.id == request_id)
+            .with_for_update()
+        )
+        purchase_req = req_result.scalar_one_or_none()
+
+        if not purchase_req:
+            raise HTTPException(status_code=404, detail="购买申请不存在")
+        if purchase_req.buyer_id != current_user.id:
+            raise HTTPException(status_code=403, detail="只有买家可以发起正式购买")
+        if purchase_req.status not in ("consulting", "price_agreed"):
+            raise HTTPException(status_code=400, detail=f"当前状态 {purchase_req.status} 不允许转为正式购买")
+
+        # 如果有协商价格，使用协商价格作为 proposed_price
+        if purchase_req.final_price:
+            purchase_req.proposed_price = purchase_req.final_price
+
+        # 设置为 pending 状态，进入正常购买审批流程
+        purchase_req.status = "pending"
+        purchase_req.updated_at = get_utc_time()
+
+        # 获取商品信息
+        item = await db.get(models.FleaMarketItem, purchase_req.item_id)
+
+        # 发送系统消息
+        if purchase_req.task_id:
+            system_msg = models.Message(
+                sender_id=None,
+                receiver_id=item.seller_id if item else None,
+                content="买家已发起正式购买申请，请前往审批",
+                task_id=purchase_req.task_id,
+                message_type="system",
+                conversation_type="task",
+            )
+            db.add(system_msg)
+
+        await db.commit()
+
+        # 发送通知给卖家
+        if item:
+            try:
+                from app import async_crud
+                await async_crud.async_notification_crud.create_notification(
+                    db=db,
+                    user_id=item.seller_id,
+                    notification_type="flea_market_purchase",
+                    title="收到购买申请",
+                    content=f"买家对商品「{item.title}」发起了正式购买申请",
+                    related_id=str(purchase_req.task_id) if purchase_req.task_id else None,
+                )
+                await db.commit()
+            except Exception as e:
+                logger.error(f"Failed to send formal buy notification: {e}")
+
+        return {
+            "message": "已发起正式购买",
+            "status": "pending",
+            "purchase_request_id": request_id,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"跳蚤市场正式购买失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="正式购买失败"
+        )
+
+
+@flea_market_router.post("/purchase-requests/{request_id}/consult-close", response_model=dict)
+async def flea_market_consult_close(
+    request_id: int,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """关闭咨询"""
+    try:
+        req_result = await db.execute(
+            select(models.FleaMarketPurchaseRequest)
+            .where(models.FleaMarketPurchaseRequest.id == request_id)
+            .with_for_update()
+        )
+        purchase_req = req_result.scalar_one_or_none()
+
+        if not purchase_req:
+            raise HTTPException(status_code=404, detail="购买申请不存在")
+
+        # 获取商品信息
+        item = await db.get(models.FleaMarketItem, purchase_req.item_id)
+        if not item:
+            raise HTTPException(status_code=404, detail="商品不存在")
+
+        # 双方都可以关闭
+        is_buyer = purchase_req.buyer_id == current_user.id
+        is_seller = item.seller_id == current_user.id
+        if not is_buyer and not is_seller:
+            raise HTTPException(status_code=403, detail="无权操作此申请")
+
+        if purchase_req.status not in ("consulting", "negotiating"):
+            raise HTTPException(status_code=400, detail=f"当前状态 {purchase_req.status} 不允许关闭")
+
+        # 设置为 cancelled
+        purchase_req.status = "cancelled"
+        purchase_req.updated_at = get_utc_time()
+
+        # 同时取消占位任务
+        if purchase_req.task_id:
+            task = await db.get(models.Task, purchase_req.task_id)
+            if task:
+                task.status = "cancelled"
+
+            # 发送系统消息
+            system_msg = models.Message(
+                sender_id=None,
+                receiver_id=item.seller_id if is_buyer else purchase_req.buyer_id,
+                content="咨询已关闭",
+                task_id=purchase_req.task_id,
+                message_type="system",
+                conversation_type="task",
+            )
+            db.add(system_msg)
+
+        await db.commit()
+
+        # 发送通知给对方
+        receiver_id = item.seller_id if is_buyer else purchase_req.buyer_id
+        try:
+            from app import async_crud
+            await async_crud.async_notification_crud.create_notification(
+                db=db,
+                user_id=receiver_id,
+                notification_type="flea_market_consultation",
+                title="咨询已关闭",
+                content=f"商品「{item.title}」的咨询已被对方关闭",
+                related_id=str(purchase_req.task_id) if purchase_req.task_id else None,
+            )
+            await db.commit()
+        except Exception as e:
+            logger.error(f"Failed to send close notification: {e}")
+
+        return {
+            "message": "咨询已关闭",
+            "status": "cancelled",
+            "purchase_request_id": request_id,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"关闭跳蚤市场咨询失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="关闭咨询失败"
+        )
+
+
+@flea_market_router.get("/purchase-requests/{request_id}/consult-status", response_model=dict)
+async def flea_market_consult_status(
+    request_id: int,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取咨询状态"""
+    try:
+        req_result = await db.execute(
+            select(models.FleaMarketPurchaseRequest)
+            .where(models.FleaMarketPurchaseRequest.id == request_id)
+        )
+        purchase_req = req_result.scalar_one_or_none()
+
+        if not purchase_req:
+            raise HTTPException(status_code=404, detail="购买申请不存在")
+
+        # 获取商品信息
+        item = await db.get(models.FleaMarketItem, purchase_req.item_id)
+        if not item:
+            raise HTTPException(status_code=404, detail="商品不存在")
+
+        # 双方都可以查看
+        if purchase_req.buyer_id != current_user.id and item.seller_id != current_user.id:
+            raise HTTPException(status_code=403, detail="无权查看此咨询")
+
+        return {
+            "id": purchase_req.id,
+            "item_id": format_flea_market_id(purchase_req.item_id),
+            "buyer_id": purchase_req.buyer_id,
+            "seller_id": item.seller_id,
+            "status": purchase_req.status,
+            "proposed_price": float(purchase_req.proposed_price) if purchase_req.proposed_price else None,
+            "seller_counter_price": float(purchase_req.seller_counter_price) if purchase_req.seller_counter_price else None,
+            "final_price": float(purchase_req.final_price) if purchase_req.final_price else None,
+            "currency": item.currency or "GBP",
+            "task_id": purchase_req.task_id,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取咨询状态失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="获取咨询状态失败"
+        )
