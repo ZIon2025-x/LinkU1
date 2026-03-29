@@ -570,7 +570,8 @@ class _TaskChatItem extends StatelessWidget {
         }
         // Consultation tasks → ApplicationChatView with consultation mode
         if (taskChat.isConsultation && taskChat.serviceApplicationId != null) {
-          context.push('/tasks/${taskChat.taskId}/applications/${taskChat.serviceApplicationId}/chat?consultation=true');
+          final type = taskChat.consultationTypeParam;
+          context.push('/tasks/${taskChat.taskId}/applications/${taskChat.serviceApplicationId}/chat?consultation=true&type=$type');
         } else {
           context.push('/task-chat/${taskChat.taskId}');
         }

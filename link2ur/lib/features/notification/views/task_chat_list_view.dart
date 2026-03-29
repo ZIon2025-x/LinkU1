@@ -155,7 +155,8 @@ class _TaskChatListViewContent extends StatelessWidget {
               onTap: () {
                 // Consultation tasks → ApplicationChatView
                 if (chat.isConsultation && chat.serviceApplicationId != null) {
-                  context.push('/tasks/${chat.taskId}/applications/${chat.serviceApplicationId}/chat?consultation=true').then((_) {
+                  final type = chat.consultationTypeParam;
+                  context.push('/tasks/${chat.taskId}/applications/${chat.serviceApplicationId}/chat?consultation=true&type=$type').then((_) {
                     if (context.mounted && chat.unreadCount > 0) {
                       context.read<MessageBloc>().add(MessageMarkTaskChatRead(chat.taskId));
                     }
