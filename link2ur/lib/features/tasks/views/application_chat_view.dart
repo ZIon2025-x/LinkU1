@@ -495,7 +495,8 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
               Expanded(child: _buildMessageList()),
 
               // Consulting action buttons
-              if (isChatActive &&
+              if (widget.isConsultation &&
+                  isChatActive &&
                   (isConsultingOrNeg || appStatus == 'price_agreed'))
                 _buildConsultingActions2(appStatus),
 

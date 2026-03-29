@@ -2972,7 +2972,7 @@ async def create_consultation(
         select(models.ServiceApplication)
         .where(models.ServiceApplication.service_id == service_id)
         .where(models.ServiceApplication.applicant_id == current_user.id)
-        .where(models.ServiceApplication.status.in_(["consulting", "negotiating"]))
+        .where(models.ServiceApplication.status.in_(["consulting", "negotiating", "price_agreed"]))
     )
     existing_app = existing_result.scalar_one_or_none()
     if existing_app:
@@ -3237,6 +3237,11 @@ async def negotiate_response(
     elif action == "reject":
         application.status = "consulting"
         application.updated_at = now
+        # Reset task status if it was price_agreed
+        if application.task_id:
+            task = await db.get(models.Task, application.task_id)
+            if task and task.status == "price_agreed":
+                task.status = "consulting"
         message_type = "negotiation_rejected"
         content = "已拒绝当前议价"
 
@@ -3347,6 +3352,7 @@ async def formal_apply(
     application.updated_at = get_utc_time()
     if request_data.proposed_price is not None:
         application.negotiated_price = request_data.proposed_price
+        application.final_price = None  # Clear old agreed price
     if request_data.message is not None:
         application.application_message = request_data.message
     if request_data.time_slot_id is not None:
@@ -3707,6 +3713,19 @@ async def approve_service_application(
         existing_task.accepted_at = get_utc_time()
         existing_task.task_source = "consultation"
         existing_task.task_level = "expert"
+        existing_task.location = location or "线上"
+        existing_task.task_type = featured_expert.category if featured_expert and featured_expert.category else "其他"
+        existing_task.is_flexible = application.is_flexible or 0
+        existing_task.expert_service_id = service.id
+        # images
+        images_list = []
+        if service.images:
+            try:
+                images_list = json.loads(service.images) if isinstance(service.images, str) else service.images
+            except:
+                pass
+        if images_list:
+            existing_task.images = json.dumps(images_list) if isinstance(images_list, list) else service.images
         if application.is_flexible == 1:
             existing_task.deadline = None
         elif application.deadline:

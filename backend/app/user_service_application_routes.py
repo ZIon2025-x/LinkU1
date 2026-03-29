@@ -537,6 +537,11 @@ async def owner_approve_application(
         existing_task.payment_expires_at = get_utc_time() + timedelta(minutes=30)
         existing_task.accepted_at = get_utc_time()
         existing_task.task_source = "consultation"
+        existing_task.location = service.location or "线上"
+        existing_task.task_type = service.category or "其他"
+        existing_task.task_level = "expert" if hasattr(service, 'expert_id') and service.expert_id else task_level
+        existing_task.is_flexible = application.is_flexible or 0
+        existing_task.expert_service_id = service.id
         # Set deadline
         if application.is_flexible == 1:
             existing_task.deadline = None
