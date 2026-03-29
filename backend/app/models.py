@@ -1893,17 +1893,20 @@ class FleaMarketPurchaseRequest(Base):
     status = Column(String(20), nullable=False, default="pending")
     created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
-    
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True)
+    final_price = Column(DECIMAL(12, 2), nullable=True)
+
     # 关系
     item = relationship("FleaMarketItem", backref="purchase_requests")  # 商品关系
     buyer = relationship("User", backref="flea_market_purchase_requests")  # 买家关系
-    
+    task = relationship("Task", foreign_keys=[task_id])
+
     __table_args__ = (
         Index("idx_flea_market_purchase_requests_item_id", item_id),
         Index("idx_flea_market_purchase_requests_buyer_id", buyer_id),
         Index("idx_flea_market_purchase_requests_status", status),
         Index("idx_flea_market_purchase_requests_created_at", created_at),
-        CheckConstraint("status IN ('pending', 'seller_negotiating', 'accepted', 'rejected')", name="check_status_valid"),
+        CheckConstraint("status IN ('pending', 'seller_negotiating', 'accepted', 'rejected', 'consulting', 'negotiating', 'price_agreed', 'cancelled')", name="check_status_valid"),
     )
 
 
