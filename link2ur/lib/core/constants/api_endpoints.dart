@@ -254,6 +254,36 @@ class ApiEndpoints {
   static String closeConsultation(int applicationId) =>
       '/api/task-experts/applications/$applicationId/close';
 
+  // Task consultation endpoints
+  static String consultTask(int taskId) => '/api/tasks/$taskId/consult';
+  static String taskConsultNegotiate(int taskId, int applicationId) =>
+      '/api/tasks/$taskId/applications/$applicationId/consult-negotiate';
+  static String taskConsultQuote(int taskId, int applicationId) =>
+      '/api/tasks/$taskId/applications/$applicationId/consult-quote';
+  static String taskConsultRespond(int taskId, int applicationId) =>
+      '/api/tasks/$taskId/applications/$applicationId/consult-respond';
+  static String taskConsultFormalApply(int taskId, int applicationId) =>
+      '/api/tasks/$taskId/applications/$applicationId/consult-formal-apply';
+  static String taskConsultClose(int taskId, int applicationId) =>
+      '/api/tasks/$taskId/applications/$applicationId/consult-close';
+  static String taskConsultStatus(int taskId, int applicationId) =>
+      '/api/tasks/$taskId/applications/$applicationId/consult-status';
+
+  // Flea market consultation endpoints
+  static String consultFleaMarketItem(String itemId) => '/api/flea-market/items/$itemId/consult';
+  static String fleaMarketConsultNegotiate(int requestId) =>
+      '/api/flea-market/purchase-requests/$requestId/consult-negotiate';
+  static String fleaMarketConsultQuote(int requestId) =>
+      '/api/flea-market/purchase-requests/$requestId/consult-quote';
+  static String fleaMarketConsultRespond(int requestId) =>
+      '/api/flea-market/purchase-requests/$requestId/consult-respond';
+  static String fleaMarketConsultFormalBuy(int requestId) =>
+      '/api/flea-market/purchase-requests/$requestId/consult-formal-buy';
+  static String fleaMarketConsultClose(int requestId) =>
+      '/api/flea-market/purchase-requests/$requestId/consult-close';
+  static String fleaMarketConsultStatus(int requestId) =>
+      '/api/flea-market/purchase-requests/$requestId/consult-status';
+
   // ==================== 个人服务 ====================
   // Personal Services (non-expert users publishing their own services)
   static const String myPersonalServices = '/api/services/me';

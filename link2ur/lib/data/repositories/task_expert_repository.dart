@@ -857,6 +857,192 @@ class TaskExpertRepository {
     }
   }
 
+  // ==================== Task consultation methods ====================
+
+  /// 创建任务咨询
+  Future<Map<String, dynamic>> createTaskConsultation(int taskId) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.consultTask(taskId),
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw TaskExpertException(response.message ?? '创建咨询失败');
+    }
+    return response.data!;
+  }
+
+  /// 任务咨询议价
+  Future<Map<String, dynamic>> negotiateTaskConsultation(
+    int taskId,
+    int applicationId, {
+    required double proposedPrice,
+  }) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.taskConsultNegotiate(taskId, applicationId),
+      data: {'proposed_price': proposedPrice},
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw TaskExpertException(response.message ?? '议价失败');
+    }
+    return response.data!;
+  }
+
+  /// 任务咨询报价
+  Future<Map<String, dynamic>> quoteTaskConsultation(
+    int taskId,
+    int applicationId, {
+    required double quotedPrice,
+    String? message,
+  }) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.taskConsultQuote(taskId, applicationId),
+      data: {
+        'quoted_price': quotedPrice,
+        if (message != null && message.isNotEmpty) 'message': message,
+      },
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw TaskExpertException(response.message ?? '报价失败');
+    }
+    return response.data!;
+  }
+
+  /// 回应任务咨询议价
+  Future<Map<String, dynamic>> respondTaskNegotiation(
+    int taskId,
+    int applicationId, {
+    required String action,
+    double? counterPrice,
+  }) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.taskConsultRespond(taskId, applicationId),
+      data: {
+        'action': action,
+        if (counterPrice != null) 'counter_price': counterPrice,
+      },
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw TaskExpertException(response.message ?? '操作失败');
+    }
+    return response.data!;
+  }
+
+  /// 任务咨询转正式申请
+  Future<Map<String, dynamic>> formalApplyTaskConsultation(
+    int taskId,
+    int applicationId, {
+    double? proposedPrice,
+    String? message,
+  }) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.taskConsultFormalApply(taskId, applicationId),
+      data: {
+        if (proposedPrice != null) 'proposed_price': proposedPrice,
+        if (message != null && message.isNotEmpty) 'message': message,
+      },
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw TaskExpertException(response.message ?? '提交申请失败');
+    }
+    return response.data!;
+  }
+
+  /// 关闭任务咨询
+  Future<void> closeTaskConsultation(int taskId, int applicationId) async {
+    final response = await _apiService.post(
+      ApiEndpoints.taskConsultClose(taskId, applicationId),
+    );
+    if (!response.isSuccess) {
+      throw TaskExpertException(response.message ?? '关闭咨询失败');
+    }
+  }
+
+  // ==================== Flea market consultation methods ====================
+
+  /// 创建跳蚤市场咨询
+  Future<Map<String, dynamic>> createFleaMarketConsultation(String itemId) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.consultFleaMarketItem(itemId),
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw TaskExpertException(response.message ?? '创建咨询失败');
+    }
+    return response.data!;
+  }
+
+  /// 跳蚤市场咨询议价
+  Future<Map<String, dynamic>> negotiateFleaMarketConsultation(
+    int requestId, {
+    required double proposedPrice,
+  }) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.fleaMarketConsultNegotiate(requestId),
+      data: {'proposed_price': proposedPrice},
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw TaskExpertException(response.message ?? '议价失败');
+    }
+    return response.data!;
+  }
+
+  /// 跳蚤市场咨询报价
+  Future<Map<String, dynamic>> quoteFleaMarketConsultation(
+    int requestId, {
+    required double quotedPrice,
+    String? message,
+  }) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.fleaMarketConsultQuote(requestId),
+      data: {
+        'quoted_price': quotedPrice,
+        if (message != null && message.isNotEmpty) 'message': message,
+      },
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw TaskExpertException(response.message ?? '报价失败');
+    }
+    return response.data!;
+  }
+
+  /// 回应跳蚤市场咨询议价
+  Future<Map<String, dynamic>> respondFleaMarketNegotiation(
+    int requestId, {
+    required String action,
+    double? counterPrice,
+  }) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.fleaMarketConsultRespond(requestId),
+      data: {
+        'action': action,
+        if (counterPrice != null) 'counter_price': counterPrice,
+      },
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw TaskExpertException(response.message ?? '操作失败');
+    }
+    return response.data!;
+  }
+
+  /// 跳蚤市场咨询转正式购买
+  Future<Map<String, dynamic>> formalBuyFleaMarket(int requestId) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.fleaMarketConsultFormalBuy(requestId),
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw TaskExpertException(response.message ?? '购买失败');
+    }
+    return response.data!;
+  }
+
+  /// 关闭跳蚤市场咨询
+  Future<void> closeFleaMarketConsultation(int requestId) async {
+    final response = await _apiService.post(
+      ApiEndpoints.fleaMarketConsultClose(requestId),
+    );
+    if (!response.isSuccess) {
+      throw TaskExpertException(response.message ?? '关闭咨询失败');
+    }
+  }
+
   /// 取消服务申请
   Future<void> cancelServiceApplication(int applicationId) async {
     final response = await _apiService.post(
