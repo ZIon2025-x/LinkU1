@@ -57,6 +57,12 @@ GoRoute(
               int.tryParse(state.pathParameters['applicationId'] ?? '');
           final isConsultation =
               state.uri.queryParameters['consultation'] == 'true';
+          final typeStr = state.uri.queryParameters['type'];
+          final consultationType = switch (typeStr) {
+            'task' => ConsultationType.task,
+            'flea_market' => ConsultationType.fleaMarket,
+            _ => ConsultationType.service,
+          };
           if (taskId == null || taskId <= 0 || applicationId == null || applicationId <= 0) {
             return platformDetailPage(
               context,
@@ -71,6 +77,7 @@ GoRoute(
               taskId: taskId,
               applicationId: applicationId,
               isConsultation: isConsultation,
+              consultationType: consultationType,
             ),
           );
         },

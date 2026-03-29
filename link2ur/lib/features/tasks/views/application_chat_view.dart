@@ -25,6 +25,8 @@ import '../../task_expert/bloc/task_expert_bloc.dart';
 import '../bloc/task_detail_bloc.dart';
 import 'approval_payment_page.dart';
 
+enum ConsultationType { service, task, fleaMarket }
+
 /// Application-scoped chat view for chat-before-payment flow.
 /// Accessed via /tasks/:taskId/applications/:applicationId/chat
 class ApplicationChatView extends StatelessWidget {
@@ -33,11 +35,13 @@ class ApplicationChatView extends StatelessWidget {
     required this.taskId,
     required this.applicationId,
     this.isConsultation = false,
+    this.consultationType = ConsultationType.service,
   });
 
   final int taskId;
   final int applicationId;
   final bool isConsultation;
+  final ConsultationType consultationType;
 
   @override
   Widget build(BuildContext context) {
@@ -54,6 +58,7 @@ class ApplicationChatView extends StatelessWidget {
         taskId: taskId,
         applicationId: applicationId,
         isConsultation: isConsultation,
+        consultationType: consultationType,
       ),
     );
 
@@ -78,11 +83,13 @@ class _ApplicationChatContent extends StatefulWidget {
     required this.taskId,
     required this.applicationId,
     this.isConsultation = false,
+    this.consultationType = ConsultationType.service,
   });
 
   final int taskId;
   final int applicationId;
   final bool isConsultation;
+  final ConsultationType consultationType;
 
   @override
   State<_ApplicationChatContent> createState() =>
@@ -136,7 +143,8 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
       final response = await apiService.get<Map<String, dynamic>>(
         ApiEndpoints.taskChatMessages(widget.taskId),
         queryParameters: {
-          if (!widget.isConsultation) 'application_id': widget.applicationId,
+          if (!widget.isConsultation || widget.consultationType == ConsultationType.task)
+            'application_id': widget.applicationId,
           'limit': 50,
         },
       );
@@ -191,7 +199,8 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
         data: {
           'content': content,
           'message_type': 'text',
-          if (!widget.isConsultation) 'application_id': widget.applicationId,
+          if (!widget.isConsultation || widget.consultationType == ConsultationType.task)
+            'application_id': widget.applicationId,
         },
       );
 
@@ -297,8 +306,17 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
     setState(() => _isLoadingConsultation = true);
     try {
       final apiService = context.read<ApiService>();
+      final String endpoint;
+      switch (widget.consultationType) {
+        case ConsultationType.service:
+          endpoint = ApiEndpoints.consultationStatus(widget.applicationId);
+        case ConsultationType.task:
+          endpoint = ApiEndpoints.taskConsultStatus(widget.taskId, widget.applicationId);
+        case ConsultationType.fleaMarket:
+          endpoint = ApiEndpoints.fleaMarketConsultStatus(widget.applicationId);
+      }
       final response = await apiService.get<Map<String, dynamic>>(
-        ApiEndpoints.consultationStatus(widget.applicationId),
+        endpoint,
       );
       if (!mounted) return;
       if (response.isSuccess && response.data != null) {
@@ -324,10 +342,14 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
   }
 
   bool _isApplicantInConsultation() {
-    if (widget.isConsultation) {
-      return _currentUserId == _consultationApp?['applicant_id']?.toString();
+    if (!widget.isConsultation) return false;
+    switch (widget.consultationType) {
+      case ConsultationType.service:
+      case ConsultationType.task:
+        return _currentUserId == _consultationApp?['applicant_id']?.toString();
+      case ConsultationType.fleaMarket:
+        return _currentUserId == _consultationApp?['buyer_id']?.toString();
     }
-    return false;
   }
 
   bool _isChatActiveForStatus(String? appStatus) {
@@ -1230,7 +1252,9 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
               const SizedBox(width: 8),
               ActionChip(
                 avatar: const Icon(Icons.assignment, size: 16),
-                label: Text(context.l10n.formalApply),
+                label: Text(widget.consultationType == ConsultationType.fleaMarket
+                    ? context.l10n.fleaMarketBuyNow
+                    : context.l10n.formalApply),
                 onPressed: isSubmitting ? null : _showFormalApplyDialog,
               ),
               const SizedBox(width: 8),
@@ -1249,7 +1273,9 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
               if (isApplicantFinal) ...[
                 ActionChip(
                   avatar: const Icon(Icons.assignment, size: 16),
-                  label: Text(context.l10n.formalApply),
+                  label: Text(widget.consultationType == ConsultationType.fleaMarket
+                      ? context.l10n.fleaMarketBuyNow
+                      : context.l10n.formalApply),
                   onPressed: isSubmitting ? null : _showFormalApplyDialog,
                 ),
                 const SizedBox(width: 8),
@@ -1284,6 +1310,68 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
         ),
       ),
     );
+  }
+
+  // ── Dispatch helpers (route by consultationType) ─────────────────────
+
+  void _dispatchNegotiate(double price) {
+    final bloc = context.read<TaskExpertBloc>();
+    switch (widget.consultationType) {
+      case ConsultationType.service:
+        bloc.add(TaskExpertNegotiatePrice(widget.applicationId, price: price));
+      case ConsultationType.task:
+        bloc.add(TaskExpertTaskNegotiate(widget.taskId, widget.applicationId, price: price));
+      case ConsultationType.fleaMarket:
+        bloc.add(TaskExpertFleaMarketNegotiate(widget.applicationId, price: price));
+    }
+  }
+
+  void _dispatchQuote(double price, String? message) {
+    final bloc = context.read<TaskExpertBloc>();
+    switch (widget.consultationType) {
+      case ConsultationType.service:
+        bloc.add(TaskExpertQuotePrice(widget.applicationId, price: price, message: message));
+      case ConsultationType.task:
+        bloc.add(TaskExpertTaskQuote(widget.taskId, widget.applicationId, price: price, message: message));
+      case ConsultationType.fleaMarket:
+        bloc.add(TaskExpertFleaMarketQuote(widget.applicationId, price: price, message: message));
+    }
+  }
+
+  void _dispatchNegotiateResponse(String action, {double? counterPrice}) {
+    final bloc = context.read<TaskExpertBloc>();
+    switch (widget.consultationType) {
+      case ConsultationType.service:
+        bloc.add(TaskExpertNegotiateResponse(widget.applicationId, action: action, counterPrice: counterPrice));
+      case ConsultationType.task:
+        bloc.add(TaskExpertTaskNegotiateResponse(widget.taskId, widget.applicationId, action: action, counterPrice: counterPrice));
+      case ConsultationType.fleaMarket:
+        bloc.add(TaskExpertFleaMarketNegotiateResponse(widget.applicationId, action: action, counterPrice: counterPrice));
+    }
+  }
+
+  void _dispatchFormalApply(double? price, String? message) {
+    final bloc = context.read<TaskExpertBloc>();
+    switch (widget.consultationType) {
+      case ConsultationType.service:
+        bloc.add(TaskExpertFormalApply(widget.applicationId, proposedPrice: price, message: message));
+      case ConsultationType.task:
+        bloc.add(TaskExpertTaskFormalApply(widget.taskId, widget.applicationId, proposedPrice: price, message: message));
+      case ConsultationType.fleaMarket:
+        bloc.add(TaskExpertFleaMarketFormalBuy(widget.applicationId));
+    }
+  }
+
+  void _dispatchClose() {
+    final bloc = context.read<TaskExpertBloc>();
+    switch (widget.consultationType) {
+      case ConsultationType.service:
+        bloc.add(TaskExpertCloseConsultation(widget.applicationId));
+      case ConsultationType.task:
+        bloc.add(TaskExpertCloseTaskConsultation(widget.taskId, widget.applicationId));
+      case ConsultationType.fleaMarket:
+        bloc.add(TaskExpertCloseFleaMarketConsultation(widget.applicationId));
+    }
   }
 
   // ── Consulting Dialogs ───────────────────────────────────────────────
@@ -1323,9 +1411,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
                   return;
                 }
                 Navigator.pop(dialogContext);
-                context.read<TaskExpertBloc>().add(
-                  TaskExpertNegotiatePrice(widget.applicationId, price: price),
-                );
+                _dispatchNegotiate(price);
               },
               child: Text(MaterialLocalizations.of(context).okButtonLabel),
             ),
@@ -1386,9 +1472,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
                 }
                 Navigator.pop(dialogContext);
                 final msg = messageController.text.trim();
-                context.read<TaskExpertBloc>().add(
-                  TaskExpertQuotePrice(widget.applicationId, price: price, message: msg.isNotEmpty ? msg : null),
-                );
+                _dispatchQuote(price, msg.isNotEmpty ? msg : null);
               },
               child: Text(MaterialLocalizations.of(context).okButtonLabel),
             ),
@@ -1452,9 +1536,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
                 }
                 Navigator.pop(dialogContext);
                 final msg = messageController.text.trim();
-                context.read<TaskExpertBloc>().add(
-                  TaskExpertFormalApply(widget.applicationId, proposedPrice: price, message: msg.isNotEmpty ? msg : null),
-                );
+                _dispatchFormalApply(price, msg.isNotEmpty ? msg : null);
               },
               child: Text(MaterialLocalizations.of(context).okButtonLabel),
             ),
@@ -1525,9 +1607,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
           TextButton(
             onPressed: () {
               Navigator.pop(dialogContext);
-              context.read<TaskExpertBloc>().add(
-                TaskExpertCloseConsultation(widget.applicationId),
-              );
+              _dispatchClose();
             },
             style: TextButton.styleFrom(foregroundColor: AppColors.error),
             child: Text(MaterialLocalizations.of(context).okButtonLabel),
@@ -1572,9 +1652,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
                   return;
                 }
                 Navigator.pop(dialogContext);
-                context.read<TaskExpertBloc>().add(
-                  TaskExpertNegotiateResponse(widget.applicationId, action: 'counter', counterPrice: price),
-                );
+                _dispatchNegotiateResponse('counter', counterPrice: price);
               },
               child: Text(MaterialLocalizations.of(context).okButtonLabel),
             ),
@@ -1585,9 +1663,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
   }
 
   void _handleNegotiationResponse(String action) {
-    context.read<TaskExpertBloc>().add(
-      TaskExpertNegotiateResponse(widget.applicationId, action: action),
-    );
+    _dispatchNegotiateResponse(action);
   }
 
 }
