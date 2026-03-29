@@ -367,6 +367,22 @@ async def get_task_chat_list(
             flea_result = await db.execute(flea_query)
             flea_app_map = {row[0]: row[1] for row in flea_result.all()}
 
+        # 批量查询 task consultation 的 TaskApplication ID
+        task_consult_ids = [t.id for t in tasks if getattr(t, 'task_source', 'normal') not in ('consultation', 'flea_market_consultation')]
+        task_app_map = {}
+        if task_consult_ids:
+            ta_query = select(
+                models.TaskApplication.task_id,
+                models.TaskApplication.id
+            ).where(
+                models.TaskApplication.task_id.in_(task_consult_ids),
+                models.TaskApplication.status.in_(["consulting", "negotiating", "price_agreed"]),
+            )
+            ta_result = await db.execute(ta_query)
+            for row in ta_result.all():
+                if row[0] not in task_app_map:
+                    task_app_map[row[0]] = row[1]
+
         # 一次查询所有用户信息
         if all_user_ids:
             users_query = select(models.User).where(
@@ -469,7 +485,7 @@ async def get_task_chat_list(
                 "expert_creator_id": task.expert_creator_id if hasattr(task, 'expert_creator_id') else None,
                 "created_by_expert": bool(task.created_by_expert) if hasattr(task, 'created_by_expert') else False,
                 "task_source": getattr(task, 'task_source', 'normal'),  # 任务来源
-                "service_application_id": service_app_map.get(task.id) or flea_app_map.get(task.id),  # consultation 任务对应的申请ID
+                "service_application_id": service_app_map.get(task.id) or flea_app_map.get(task.id) or task_app_map.get(task.id),  # consultation/task consultation 任务对应的申请ID
                 # 参与者信息（排除当前用户自己）
                 "participants": _build_participants(
                     task, task_participants_dict, senders_dict, current_user.id

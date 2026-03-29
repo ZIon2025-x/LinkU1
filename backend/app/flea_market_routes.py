@@ -3977,13 +3977,17 @@ async def flea_market_consult_negotiate(
         if purchase_req.status not in ("consulting", "negotiating"):
             raise HTTPException(status_code=400, detail=f"当前状态 {purchase_req.status} 不允许议价")
 
+        # 检查商品是否仍然有效
+        item = await db.get(models.FleaMarketItem, purchase_req.item_id)
+        if item and item.status != "active":
+            raise HTTPException(status_code=400, detail="商品已下架或已售出")
+
         # 更新状态
         purchase_req.status = "negotiating"
         purchase_req.proposed_price = request_data.proposed_price
         purchase_req.updated_at = get_utc_time()
 
-        # 获取商品信息（用于通知）
-        item = await db.get(models.FleaMarketItem, purchase_req.item_id)
+        # 获取商品信息（用于通知） - already loaded above
         seller_id = item.seller_id if item else None
 
         price_display = f"{float(request_data.proposed_price):.2f}"
@@ -4058,6 +4062,8 @@ async def flea_market_consult_quote(
             raise HTTPException(status_code=404, detail="商品不存在")
         if item.seller_id != current_user.id:
             raise HTTPException(status_code=403, detail="只有卖家可以报价")
+        if item.status != "active":
+            raise HTTPException(status_code=400, detail="商品已下架或已售出")
 
         if purchase_req.status not in ("consulting", "negotiating"):
             raise HTTPException(status_code=400, detail=f"当前状态 {purchase_req.status} 不允许报价")
@@ -4141,6 +4147,8 @@ async def flea_market_consult_respond(
         item = await db.get(models.FleaMarketItem, purchase_req.item_id)
         if not item:
             raise HTTPException(status_code=404, detail="商品不存在")
+        if item.status != "active":
+            raise HTTPException(status_code=400, detail="商品已下架或已售出")
 
         # 双方都可以响应
         is_buyer = purchase_req.buyer_id == current_user.id
@@ -4270,6 +4278,11 @@ async def flea_market_consult_formal_buy(
             raise HTTPException(status_code=403, detail="只有买家可以发起正式购买")
         if purchase_req.status not in ("consulting", "price_agreed"):
             raise HTTPException(status_code=400, detail=f"当前状态 {purchase_req.status} 不允许转为正式购买")
+
+        # 检查商品是否仍然有效
+        item_check = await db.get(models.FleaMarketItem, purchase_req.item_id)
+        if item_check and item_check.status != "active":
+            raise HTTPException(status_code=400, detail="商品已下架或已售出")
 
         # 如果有协商价格，使用协商价格作为 proposed_price
         if purchase_req.final_price:
