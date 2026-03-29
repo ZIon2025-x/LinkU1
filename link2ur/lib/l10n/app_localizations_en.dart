@@ -11715,7 +11715,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportSubmitted => 'Report submitted';
 
   @override
-  String get consultExpert => 'Consult Expert';
+  String get consultExpert => 'Consult';
 
   @override
   String get continueConsultation => 'Continue Consultation';

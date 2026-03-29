@@ -21608,7 +21608,7 @@ abstract class AppLocalizations {
   /// No description provided for @consultExpert.
   ///
   /// In en, this message translates to:
-  /// **'Consult Expert'**
+  /// **'Consult'**
   String get consultExpert;
 
   /// No description provided for @continueConsultation.

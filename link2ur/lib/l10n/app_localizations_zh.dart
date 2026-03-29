@@ -11251,7 +11251,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get reportSubmitted => '举报已提交';
 
   @override
-  String get consultExpert => '咨询达人';
+  String get consultExpert => '咨询';
 
   @override
   String get continueConsultation => '继续咨询';
@@ -22576,7 +22576,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get reportSubmitted => '舉報已提交';
 
   @override
-  String get consultExpert => '諮詢達人';
+  String get consultExpert => '諮詢';
 
   @override
   String get continueConsultation => '繼續諮詢';
