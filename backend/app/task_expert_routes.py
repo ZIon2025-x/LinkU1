@@ -3606,12 +3606,13 @@ async def approve_service_application(
     if service.status != "active":
         raise HTTPException(status_code=400, detail="服务未上架，无法创建任务")
     
-    # 4. 确定最终价格
-    if application.status == "price_agreed":
-        # 用户已同意任务达人的议价，使用任务达人的议价价格
-        if application.expert_counter_price is None:
-            raise HTTPException(status_code=400, detail="议价价格不存在")
+    # 4. 确定最终价格（与 user_service_application_routes 保持一致的回退逻辑）
+    if application.status == "price_agreed" and application.expert_counter_price is not None:
+        # 任务达人议价且用户同意
         price = float(application.expert_counter_price)
+    elif application.final_price is not None:
+        # 已确定的最终价格
+        price = float(application.final_price)
     elif application.negotiated_price is not None:
         # 用户提出的议价价格
         price = float(application.negotiated_price)
@@ -3705,6 +3706,7 @@ async def approve_service_application(
         existing_task.payment_expires_at = get_utc_time() + timedelta(minutes=30)
         existing_task.accepted_at = get_utc_time()
         existing_task.task_source = "consultation"
+        existing_task.task_level = "expert"
         if application.is_flexible == 1:
             existing_task.deadline = None
         elif application.deadline:
