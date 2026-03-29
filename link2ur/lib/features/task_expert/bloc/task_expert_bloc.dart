@@ -268,6 +268,109 @@ class TaskExpertCloseConsultation extends TaskExpertEvent {
   List<Object?> get props => [applicationId];
 }
 
+// ── Task consultation events ──────────────────────
+class TaskExpertStartTaskConsultation extends TaskExpertEvent {
+  const TaskExpertStartTaskConsultation(this.taskId);
+  final int taskId;
+  @override
+  List<Object?> get props => [taskId];
+}
+
+class TaskExpertTaskNegotiate extends TaskExpertEvent {
+  const TaskExpertTaskNegotiate(this.taskId, this.applicationId, {required this.price});
+  final int taskId;
+  final int applicationId;
+  final double price;
+  @override
+  List<Object?> get props => [taskId, applicationId, price];
+}
+
+class TaskExpertTaskQuote extends TaskExpertEvent {
+  const TaskExpertTaskQuote(this.taskId, this.applicationId, {required this.price, this.message});
+  final int taskId;
+  final int applicationId;
+  final double price;
+  final String? message;
+  @override
+  List<Object?> get props => [taskId, applicationId, price, message];
+}
+
+class TaskExpertTaskNegotiateResponse extends TaskExpertEvent {
+  const TaskExpertTaskNegotiateResponse(this.taskId, this.applicationId, {required this.action, this.counterPrice});
+  final int taskId;
+  final int applicationId;
+  final String action;
+  final double? counterPrice;
+  @override
+  List<Object?> get props => [taskId, applicationId, action, counterPrice];
+}
+
+class TaskExpertTaskFormalApply extends TaskExpertEvent {
+  const TaskExpertTaskFormalApply(this.taskId, this.applicationId, {this.proposedPrice, this.message});
+  final int taskId;
+  final int applicationId;
+  final double? proposedPrice;
+  final String? message;
+  @override
+  List<Object?> get props => [taskId, applicationId, proposedPrice, message];
+}
+
+class TaskExpertCloseTaskConsultation extends TaskExpertEvent {
+  const TaskExpertCloseTaskConsultation(this.taskId, this.applicationId);
+  final int taskId;
+  final int applicationId;
+  @override
+  List<Object?> get props => [taskId, applicationId];
+}
+
+// ── Flea market consultation events ───────────────
+class TaskExpertStartFleaMarketConsultation extends TaskExpertEvent {
+  const TaskExpertStartFleaMarketConsultation(this.itemId);
+  final String itemId;
+  @override
+  List<Object?> get props => [itemId];
+}
+
+class TaskExpertFleaMarketNegotiate extends TaskExpertEvent {
+  const TaskExpertFleaMarketNegotiate(this.requestId, {required this.price});
+  final int requestId;
+  final double price;
+  @override
+  List<Object?> get props => [requestId, price];
+}
+
+class TaskExpertFleaMarketQuote extends TaskExpertEvent {
+  const TaskExpertFleaMarketQuote(this.requestId, {required this.price, this.message});
+  final int requestId;
+  final double price;
+  final String? message;
+  @override
+  List<Object?> get props => [requestId, price, message];
+}
+
+class TaskExpertFleaMarketNegotiateResponse extends TaskExpertEvent {
+  const TaskExpertFleaMarketNegotiateResponse(this.requestId, {required this.action, this.counterPrice});
+  final int requestId;
+  final String action;
+  final double? counterPrice;
+  @override
+  List<Object?> get props => [requestId, action, counterPrice];
+}
+
+class TaskExpertFleaMarketFormalBuy extends TaskExpertEvent {
+  const TaskExpertFleaMarketFormalBuy(this.requestId);
+  final int requestId;
+  @override
+  List<Object?> get props => [requestId];
+}
+
+class TaskExpertCloseFleaMarketConsultation extends TaskExpertEvent {
+  const TaskExpertCloseFleaMarketConsultation(this.requestId);
+  final int requestId;
+  @override
+  List<Object?> get props => [requestId];
+}
+
 /// 加载我的达人申请状态 — 对标 iOS getMyExpertApplication
 class TaskExpertLoadMyExpertApplicationStatus extends TaskExpertEvent {
   const TaskExpertLoadMyExpertApplicationStatus();
@@ -601,6 +704,20 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     on<TaskExpertNegotiateResponse>(_onNegotiateResponse);
     on<TaskExpertFormalApply>(_onFormalApply);
     on<TaskExpertCloseConsultation>(_onCloseConsultation);
+    // Task consultation
+    on<TaskExpertStartTaskConsultation>(_onStartTaskConsultation);
+    on<TaskExpertTaskNegotiate>(_onTaskNegotiate);
+    on<TaskExpertTaskQuote>(_onTaskQuote);
+    on<TaskExpertTaskNegotiateResponse>(_onTaskNegotiateResponse);
+    on<TaskExpertTaskFormalApply>(_onTaskFormalApply);
+    on<TaskExpertCloseTaskConsultation>(_onCloseTaskConsultation);
+    // Flea market consultation
+    on<TaskExpertStartFleaMarketConsultation>(_onStartFleaMarketConsultation);
+    on<TaskExpertFleaMarketNegotiate>(_onFleaMarketNegotiate);
+    on<TaskExpertFleaMarketQuote>(_onFleaMarketQuote);
+    on<TaskExpertFleaMarketNegotiateResponse>(_onFleaMarketNegotiateResponse);
+    on<TaskExpertFleaMarketFormalBuy>(_onFleaMarketFormalBuy);
+    on<TaskExpertCloseFleaMarketConsultation>(_onCloseFleaMarketConsultation);
   }
 
   final TaskExpertRepository _taskExpertRepository;
@@ -1444,6 +1561,204 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     emit(state.copyWith(isSubmitting: true, errorMessage: null, actionMessage: null));
     try {
       await _taskExpertRepository.closeConsultation(event.applicationId);
+      emit(state.copyWith(isSubmitting: false, actionMessage: 'consultation_closed'));
+    } on TaskExpertException catch (e) {
+      emit(state.copyWith(isSubmitting: false, errorMessage: e.message));
+    } catch (e) {
+      emit(state.copyWith(isSubmitting: false, errorMessage: e.toString()));
+    }
+  }
+
+  // ==================== Task consultation handlers ====================
+
+  Future<void> _onStartTaskConsultation(
+    TaskExpertStartTaskConsultation event,
+    Emitter<TaskExpertState> emit,
+  ) async {
+    emit(state.copyWith(isSubmitting: true, errorMessage: null, actionMessage: null));
+    try {
+      final result = await _taskExpertRepository.createTaskConsultation(event.taskId);
+      emit(state.copyWith(isSubmitting: false, actionMessage: 'consultation_started', consultationData: result));
+    } on TaskExpertException catch (e) {
+      emit(state.copyWith(isSubmitting: false, errorMessage: e.message, actionMessage: 'consultation_failed'));
+    } catch (e) {
+      emit(state.copyWith(isSubmitting: false, errorMessage: e.toString(), actionMessage: 'consultation_failed'));
+    }
+  }
+
+  Future<void> _onTaskNegotiate(
+    TaskExpertTaskNegotiate event,
+    Emitter<TaskExpertState> emit,
+  ) async {
+    emit(state.copyWith(isSubmitting: true, errorMessage: null, actionMessage: null));
+    try {
+      await _taskExpertRepository.negotiateTaskConsultation(event.taskId, event.applicationId, proposedPrice: event.price);
+      emit(state.copyWith(isSubmitting: false, actionMessage: 'negotiation_sent'));
+    } on TaskExpertException catch (e) {
+      emit(state.copyWith(isSubmitting: false, errorMessage: e.message));
+    } catch (e) {
+      emit(state.copyWith(isSubmitting: false, errorMessage: e.toString()));
+    }
+  }
+
+  Future<void> _onTaskQuote(
+    TaskExpertTaskQuote event,
+    Emitter<TaskExpertState> emit,
+  ) async {
+    emit(state.copyWith(isSubmitting: true, errorMessage: null, actionMessage: null));
+    try {
+      await _taskExpertRepository.quoteTaskConsultation(event.taskId, event.applicationId, quotedPrice: event.price, message: event.message);
+      emit(state.copyWith(isSubmitting: false, actionMessage: 'quote_sent'));
+    } on TaskExpertException catch (e) {
+      emit(state.copyWith(isSubmitting: false, errorMessage: e.message));
+    } catch (e) {
+      emit(state.copyWith(isSubmitting: false, errorMessage: e.toString()));
+    }
+  }
+
+  Future<void> _onTaskNegotiateResponse(
+    TaskExpertTaskNegotiateResponse event,
+    Emitter<TaskExpertState> emit,
+  ) async {
+    emit(state.copyWith(isSubmitting: true, errorMessage: null, actionMessage: null));
+    try {
+      final result = await _taskExpertRepository.respondTaskNegotiation(
+        event.taskId, event.applicationId,
+        action: event.action,
+        counterPrice: event.counterPrice,
+      );
+      final status = result['status'] as String? ?? '';
+      emit(state.copyWith(isSubmitting: false, actionMessage: 'negotiate_response_$status'));
+    } on TaskExpertException catch (e) {
+      emit(state.copyWith(isSubmitting: false, errorMessage: e.message));
+    } catch (e) {
+      emit(state.copyWith(isSubmitting: false, errorMessage: e.toString()));
+    }
+  }
+
+  Future<void> _onTaskFormalApply(
+    TaskExpertTaskFormalApply event,
+    Emitter<TaskExpertState> emit,
+  ) async {
+    emit(state.copyWith(isSubmitting: true, errorMessage: null, actionMessage: null));
+    try {
+      await _taskExpertRepository.formalApplyTaskConsultation(
+        event.taskId, event.applicationId,
+        proposedPrice: event.proposedPrice,
+        message: event.message,
+      );
+      emit(state.copyWith(isSubmitting: false, actionMessage: 'formal_apply_submitted'));
+    } on TaskExpertException catch (e) {
+      emit(state.copyWith(isSubmitting: false, errorMessage: e.message));
+    } catch (e) {
+      emit(state.copyWith(isSubmitting: false, errorMessage: e.toString()));
+    }
+  }
+
+  Future<void> _onCloseTaskConsultation(
+    TaskExpertCloseTaskConsultation event,
+    Emitter<TaskExpertState> emit,
+  ) async {
+    emit(state.copyWith(isSubmitting: true, errorMessage: null, actionMessage: null));
+    try {
+      await _taskExpertRepository.closeTaskConsultation(event.taskId, event.applicationId);
+      emit(state.copyWith(isSubmitting: false, actionMessage: 'consultation_closed'));
+    } on TaskExpertException catch (e) {
+      emit(state.copyWith(isSubmitting: false, errorMessage: e.message));
+    } catch (e) {
+      emit(state.copyWith(isSubmitting: false, errorMessage: e.toString()));
+    }
+  }
+
+  // ==================== Flea market consultation handlers ====================
+
+  Future<void> _onStartFleaMarketConsultation(
+    TaskExpertStartFleaMarketConsultation event,
+    Emitter<TaskExpertState> emit,
+  ) async {
+    emit(state.copyWith(isSubmitting: true, errorMessage: null, actionMessage: null));
+    try {
+      final result = await _taskExpertRepository.createFleaMarketConsultation(event.itemId);
+      emit(state.copyWith(isSubmitting: false, actionMessage: 'consultation_started', consultationData: result));
+    } on TaskExpertException catch (e) {
+      emit(state.copyWith(isSubmitting: false, errorMessage: e.message, actionMessage: 'consultation_failed'));
+    } catch (e) {
+      emit(state.copyWith(isSubmitting: false, errorMessage: e.toString(), actionMessage: 'consultation_failed'));
+    }
+  }
+
+  Future<void> _onFleaMarketNegotiate(
+    TaskExpertFleaMarketNegotiate event,
+    Emitter<TaskExpertState> emit,
+  ) async {
+    emit(state.copyWith(isSubmitting: true, errorMessage: null, actionMessage: null));
+    try {
+      await _taskExpertRepository.negotiateFleaMarketConsultation(event.requestId, proposedPrice: event.price);
+      emit(state.copyWith(isSubmitting: false, actionMessage: 'negotiation_sent'));
+    } on TaskExpertException catch (e) {
+      emit(state.copyWith(isSubmitting: false, errorMessage: e.message));
+    } catch (e) {
+      emit(state.copyWith(isSubmitting: false, errorMessage: e.toString()));
+    }
+  }
+
+  Future<void> _onFleaMarketQuote(
+    TaskExpertFleaMarketQuote event,
+    Emitter<TaskExpertState> emit,
+  ) async {
+    emit(state.copyWith(isSubmitting: true, errorMessage: null, actionMessage: null));
+    try {
+      await _taskExpertRepository.quoteFleaMarketConsultation(event.requestId, quotedPrice: event.price, message: event.message);
+      emit(state.copyWith(isSubmitting: false, actionMessage: 'quote_sent'));
+    } on TaskExpertException catch (e) {
+      emit(state.copyWith(isSubmitting: false, errorMessage: e.message));
+    } catch (e) {
+      emit(state.copyWith(isSubmitting: false, errorMessage: e.toString()));
+    }
+  }
+
+  Future<void> _onFleaMarketNegotiateResponse(
+    TaskExpertFleaMarketNegotiateResponse event,
+    Emitter<TaskExpertState> emit,
+  ) async {
+    emit(state.copyWith(isSubmitting: true, errorMessage: null, actionMessage: null));
+    try {
+      final result = await _taskExpertRepository.respondFleaMarketNegotiation(
+        event.requestId,
+        action: event.action,
+        counterPrice: event.counterPrice,
+      );
+      final status = result['status'] as String? ?? '';
+      emit(state.copyWith(isSubmitting: false, actionMessage: 'negotiate_response_$status'));
+    } on TaskExpertException catch (e) {
+      emit(state.copyWith(isSubmitting: false, errorMessage: e.message));
+    } catch (e) {
+      emit(state.copyWith(isSubmitting: false, errorMessage: e.toString()));
+    }
+  }
+
+  Future<void> _onFleaMarketFormalBuy(
+    TaskExpertFleaMarketFormalBuy event,
+    Emitter<TaskExpertState> emit,
+  ) async {
+    emit(state.copyWith(isSubmitting: true, errorMessage: null, actionMessage: null));
+    try {
+      await _taskExpertRepository.formalBuyFleaMarket(event.requestId);
+      emit(state.copyWith(isSubmitting: false, actionMessage: 'formal_apply_submitted'));
+    } on TaskExpertException catch (e) {
+      emit(state.copyWith(isSubmitting: false, errorMessage: e.message));
+    } catch (e) {
+      emit(state.copyWith(isSubmitting: false, errorMessage: e.toString()));
+    }
+  }
+
+  Future<void> _onCloseFleaMarketConsultation(
+    TaskExpertCloseFleaMarketConsultation event,
+    Emitter<TaskExpertState> emit,
+  ) async {
+    emit(state.copyWith(isSubmitting: true, errorMessage: null, actionMessage: null));
+    try {
+      await _taskExpertRepository.closeFleaMarketConsultation(event.requestId);
       emit(state.copyWith(isSubmitting: false, actionMessage: 'consultation_closed'));
     } on TaskExpertException catch (e) {
       emit(state.copyWith(isSubmitting: false, errorMessage: e.message));
