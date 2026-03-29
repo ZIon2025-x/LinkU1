@@ -4519,3 +4519,637 @@ async def public_reply_to_application(
         logger.error(f"Error in public reply for task {task_id}, app {application_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to submit reply: {str(e)}")
 
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 任务咨询 (Task Consultation) 端点
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+@task_chat_router.post("/tasks/{task_id}/consult")
+async def create_task_consultation(
+    task_id: int,
+    request: Request,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """创建任务咨询 — 用户对某个任务发起咨询（非正式申请）"""
+    try:
+        # 1. 验证任务存在且状态为 open 或 chatting
+        task_result = await db.execute(
+            select(models.Task).where(models.Task.id == task_id)
+        )
+        task = task_result.scalar_one_or_none()
+        if not task:
+            raise HTTPException(status_code=404, detail="任务不存在")
+        if task.status not in ("open", "chatting"):
+            raise HTTPException(status_code=400, detail="任务当前状态不允许咨询")
+
+        # 2. 不能咨询自己发布的任务
+        if str(task.poster_id) == str(current_user.id):
+            raise HTTPException(status_code=400, detail="不能咨询自己发布的任务")
+
+        # 3. 检查是否已有该任务的申请
+        existing_result = await db.execute(
+            select(models.TaskApplication).where(
+                models.TaskApplication.task_id == task_id,
+                models.TaskApplication.applicant_id == current_user.id,
+            )
+        )
+        existing_app = existing_result.scalar_one_or_none()
+        if existing_app:
+            if existing_app.status in ("consulting", "negotiating", "price_agreed"):
+                return {
+                    "application_id": existing_app.id,
+                    "task_id": task_id,
+                    "status": existing_app.status,
+                    "created_at": format_iso_utc(existing_app.created_at) if existing_app.created_at else None,
+                    "is_existing": True,
+                }
+            else:
+                raise HTTPException(status_code=400, detail="您已有该任务的申请")
+
+        # 4. 创建 TaskApplication (status=consulting)
+        current_time = get_utc_time()
+        new_application = models.TaskApplication(
+            task_id=task_id,
+            applicant_id=current_user.id,
+            status="consulting",
+            currency=task.currency or "GBP",
+            created_at=current_time,
+        )
+        db.add(new_application)
+        await db.flush()  # 获取 id
+
+        # 5. 发送系统消息
+        task_title = task.title or ""
+        user_name = current_user.name if hasattr(current_user, "name") else "用户"
+        content_zh = f"{user_name} 想咨询您的任务「{task_title}」"
+        content_en = f"{user_name} wants to consult about your task \"{task_title}\""
+        system_message = models.Message(
+            sender_id=None,
+            receiver_id=None,
+            content=content_zh,
+            task_id=task_id,
+            message_type="system",
+            conversation_type="task",
+            application_id=new_application.id,
+            meta=json.dumps({"system_action": "consultation_started", "content_en": content_en}),
+            created_at=current_time,
+        )
+        db.add(system_message)
+        await db.commit()
+
+        return {
+            "application_id": new_application.id,
+            "task_id": task_id,
+            "status": new_application.status,
+            "created_at": format_iso_utc(new_application.created_at) if new_application.created_at else None,
+            "is_existing": False,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating consultation for task {task_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"创建咨询失败: {str(e)}")
+
+
+@task_chat_router.post("/tasks/{task_id}/applications/{application_id}/consult-negotiate")
+async def consult_negotiate(
+    task_id: int,
+    application_id: int,
+    body: schemas.NegotiateRequest,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """用户（申请者）发起议价"""
+    try:
+        from decimal import Decimal
+
+        # 行锁查询申请
+        app_result = await db.execute(
+            select(models.TaskApplication)
+            .where(
+                models.TaskApplication.id == application_id,
+                models.TaskApplication.task_id == task_id,
+            )
+            .with_for_update()
+        )
+        application = app_result.scalar_one_or_none()
+        if not application:
+            raise HTTPException(status_code=404, detail="申请不存在")
+
+        # 验证是申请者
+        if str(application.applicant_id) != str(current_user.id):
+            raise HTTPException(status_code=403, detail="只有申请者可以发起议价")
+
+        # 验证状态
+        if application.status not in ("consulting", "negotiating"):
+            raise HTTPException(status_code=400, detail=f"当前状态 {application.status} 不允许议价")
+
+        # 获取任务信息（通知用）
+        task_result = await db.execute(
+            select(models.Task).where(models.Task.id == task_id)
+        )
+        task = task_result.scalar_one_or_none()
+        if not task:
+            raise HTTPException(status_code=404, detail="任务不存在")
+
+        # 更新状态和价格
+        proposed_price = body.proposed_price
+        application.status = "negotiating"
+        application.negotiated_price = Decimal(str(proposed_price))
+
+        # 创建议价消息
+        current_time = get_utc_time()
+        currency = application.currency or task.currency or "GBP"
+        meta_dict = {
+            "price": float(proposed_price),
+            "currency": currency,
+            "action": "negotiate",
+        }
+        negotiate_message = models.Message(
+            sender_id=current_user.id,
+            receiver_id=str(task.poster_id),
+            content=f"提出报价: {currency} {float(proposed_price):.2f}",
+            task_id=task_id,
+            message_type="negotiation",
+            conversation_type="task",
+            application_id=application_id,
+            meta=json.dumps(meta_dict),
+            created_at=current_time,
+        )
+        db.add(negotiate_message)
+        await db.commit()
+
+        # 通知发布者
+        try:
+            from app import async_crud
+            user_name = current_user.name if hasattr(current_user, "name") else "用户"
+            await async_crud.async_notification_crud.create_notification(
+                db, str(task.poster_id), "task",
+                "收到新报价", f'{user_name} 对任务「{task.title}」提出了报价 {currency} {float(proposed_price):.2f}',
+                related_id=str(application_id), title_en="New Price Proposal",
+                content_en=f'{user_name} proposed {currency} {float(proposed_price):.2f} for task "{task.title}"',
+                related_type="application_id",
+                data=json.dumps({"task_id": task_id, "application_id": application_id}),
+            )
+        except Exception as e:
+            logger.warning(f"Failed to create notification for consult-negotiate: {e}")
+
+        return {
+            "message": "议价已提交",
+            "status": application.status,
+            "application_id": application.id,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in consult-negotiate for task {task_id}, app {application_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"议价失败: {str(e)}")
+
+
+@task_chat_router.post("/tasks/{task_id}/applications/{application_id}/consult-quote")
+async def consult_quote(
+    task_id: int,
+    application_id: int,
+    body: schemas.QuoteRequest,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """发布者报价"""
+    try:
+        from decimal import Decimal
+
+        # 验证发布者身份
+        task_result = await db.execute(
+            select(models.Task).where(models.Task.id == task_id)
+        )
+        task = task_result.scalar_one_or_none()
+        if not task:
+            raise HTTPException(status_code=404, detail="任务不存在")
+        if str(task.poster_id) != str(current_user.id):
+            raise HTTPException(status_code=403, detail="只有发布者可以报价")
+
+        # 行锁查询申请
+        app_result = await db.execute(
+            select(models.TaskApplication)
+            .where(
+                models.TaskApplication.id == application_id,
+                models.TaskApplication.task_id == task_id,
+            )
+            .with_for_update()
+        )
+        application = app_result.scalar_one_or_none()
+        if not application:
+            raise HTTPException(status_code=404, detail="申请不存在")
+
+        if application.status not in ("consulting", "negotiating"):
+            raise HTTPException(status_code=400, detail=f"当前状态 {application.status} 不允许报价")
+
+        # 更新状态和价格
+        quoted_price = body.quoted_price
+        application.status = "negotiating"
+        application.negotiated_price = Decimal(str(quoted_price))
+
+        # 创建报价消息
+        current_time = get_utc_time()
+        currency = application.currency or task.currency or "GBP"
+        meta_dict = {
+            "price": float(quoted_price),
+            "currency": currency,
+            "message": body.message or "",
+            "action": "quote",
+        }
+        quote_message = models.Message(
+            sender_id=current_user.id,
+            receiver_id=str(application.applicant_id),
+            content=f"发布者报价: {currency} {float(quoted_price):.2f}" + (f" — {body.message}" if body.message else ""),
+            task_id=task_id,
+            message_type="quote",
+            conversation_type="task",
+            application_id=application_id,
+            meta=json.dumps(meta_dict),
+            created_at=current_time,
+        )
+        db.add(quote_message)
+        await db.commit()
+
+        # 通知申请者
+        try:
+            from app import async_crud
+            poster_name = current_user.name if hasattr(current_user, "name") else "发布者"
+            await async_crud.async_notification_crud.create_notification(
+                db, str(application.applicant_id), "task",
+                "收到报价", f'{poster_name} 对任务「{task.title}」报价 {currency} {float(quoted_price):.2f}',
+                related_id=str(application_id), title_en="New Quote",
+                content_en=f'{poster_name} quoted {currency} {float(quoted_price):.2f} for task "{task.title}"',
+                related_type="application_id",
+                data=json.dumps({"task_id": task_id, "application_id": application_id}),
+            )
+        except Exception as e:
+            logger.warning(f"Failed to create notification for consult-quote: {e}")
+
+        return {
+            "message": "报价已提交",
+            "status": application.status,
+            "application_id": application.id,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in consult-quote for task {task_id}, app {application_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"报价失败: {str(e)}")
+
+
+@task_chat_router.post("/tasks/{task_id}/applications/{application_id}/consult-respond")
+async def consult_respond(
+    task_id: int,
+    application_id: int,
+    body: schemas.NegotiateResponseRequest,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """双方回应议价：accept / reject / counter"""
+    try:
+        from decimal import Decimal
+
+        # 获取任务
+        task_result = await db.execute(
+            select(models.Task).where(models.Task.id == task_id)
+        )
+        task = task_result.scalar_one_or_none()
+        if not task:
+            raise HTTPException(status_code=404, detail="任务不存在")
+
+        # 行锁查询申请
+        app_result = await db.execute(
+            select(models.TaskApplication)
+            .where(
+                models.TaskApplication.id == application_id,
+                models.TaskApplication.task_id == task_id,
+            )
+            .with_for_update()
+        )
+        application = app_result.scalar_one_or_none()
+        if not application:
+            raise HTTPException(status_code=404, detail="申请不存在")
+
+        # 验证身份：双方均可回应
+        is_poster = str(task.poster_id) == str(current_user.id)
+        is_applicant = str(application.applicant_id) == str(current_user.id)
+        if not is_poster and not is_applicant:
+            raise HTTPException(status_code=403, detail="无权操作此申请")
+
+        # 状态必须为 negotiating
+        if application.status != "negotiating":
+            raise HTTPException(status_code=400, detail=f"当前状态 {application.status} 不允许回应")
+
+        action = body.action
+        currency = application.currency or task.currency or "GBP"
+        current_time = get_utc_time()
+        other_party_id = str(task.poster_id) if is_applicant else str(application.applicant_id)
+        user_name = current_user.name if hasattr(current_user, "name") else "用户"
+
+        if action == "accept":
+            application.status = "price_agreed"
+            message_type = "negotiation_accepted"
+            content_zh = f"{user_name} 接受了报价 {currency} {float(application.negotiated_price or 0):.2f}"
+            content_en = f"{user_name} accepted the price {currency} {float(application.negotiated_price or 0):.2f}"
+            notif_title = "报价已接受"
+            notif_title_en = "Price Accepted"
+            notif_body = f'{user_name} 接受了任务「{task.title}」的报价'
+            notif_body_en = f'{user_name} accepted the price for task "{task.title}"'
+        elif action == "reject":
+            application.status = "consulting"
+            message_type = "negotiation_rejected"
+            content_zh = f"{user_name} 拒绝了当前报价"
+            content_en = f"{user_name} rejected the current price"
+            notif_title = "报价被拒绝"
+            notif_title_en = "Price Rejected"
+            notif_body = f'{user_name} 拒绝了任务「{task.title}」的报价'
+            notif_body_en = f'{user_name} rejected the price for task "{task.title}"'
+        elif action == "counter":
+            counter_price = body.counter_price
+            application.negotiated_price = Decimal(str(counter_price))
+            message_type = "counter_offer"
+            content_zh = f"{user_name} 提出还价 {currency} {float(counter_price):.2f}"
+            content_en = f"{user_name} counter-offered {currency} {float(counter_price):.2f}"
+            notif_title = "收到还价"
+            notif_title_en = "Counter Offer"
+            notif_body = f'{user_name} 对任务「{task.title}」还价 {currency} {float(counter_price):.2f}'
+            notif_body_en = f'{user_name} counter-offered {currency} {float(counter_price):.2f} for task "{task.title}"'
+        else:
+            raise HTTPException(status_code=400, detail="无效的 action，必须为 accept / reject / counter")
+
+        # 创建消息
+        meta_dict = {
+            "action": action,
+            "price": float(application.negotiated_price) if application.negotiated_price else None,
+            "currency": currency,
+        }
+        msg = models.Message(
+            sender_id=current_user.id,
+            receiver_id=other_party_id,
+            content=content_zh,
+            task_id=task_id,
+            message_type=message_type,
+            conversation_type="task",
+            application_id=application_id,
+            meta=json.dumps(meta_dict),
+            created_at=current_time,
+        )
+        db.add(msg)
+        await db.commit()
+
+        # 通知对方
+        try:
+            from app import async_crud
+            await async_crud.async_notification_crud.create_notification(
+                db, other_party_id, "task",
+                notif_title, notif_body,
+                related_id=str(application_id), title_en=notif_title_en,
+                content_en=notif_body_en,
+                related_type="application_id",
+                data=json.dumps({"task_id": task_id, "application_id": application_id}),
+            )
+        except Exception as e:
+            logger.warning(f"Failed to create notification for consult-respond: {e}")
+
+        return {
+            "message": content_zh,
+            "status": application.status,
+            "application_id": application.id,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in consult-respond for task {task_id}, app {application_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"回应议价失败: {str(e)}")
+
+
+@task_chat_router.post("/tasks/{task_id}/applications/{application_id}/consult-formal-apply")
+async def consult_formal_apply(
+    task_id: int,
+    application_id: int,
+    body: schemas.FormalApplyRequest,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """将咨询转为正式申请 (status → pending)"""
+    try:
+        from decimal import Decimal
+
+        # 行锁查询申请
+        app_result = await db.execute(
+            select(models.TaskApplication)
+            .where(
+                models.TaskApplication.id == application_id,
+                models.TaskApplication.task_id == task_id,
+            )
+            .with_for_update()
+        )
+        application = app_result.scalar_one_or_none()
+        if not application:
+            raise HTTPException(status_code=404, detail="申请不存在")
+
+        # 验证是申请者
+        if str(application.applicant_id) != str(current_user.id):
+            raise HTTPException(status_code=403, detail="只有申请者可以转为正式申请")
+
+        # 验证状态
+        if application.status not in ("consulting", "price_agreed"):
+            raise HTTPException(status_code=400, detail=f"当前状态 {application.status} 不允许转为正式申请")
+
+        # 获取任务
+        task_result = await db.execute(
+            select(models.Task).where(models.Task.id == task_id)
+        )
+        task = task_result.scalar_one_or_none()
+        if not task:
+            raise HTTPException(status_code=404, detail="任务不存在")
+
+        # 更新申请
+        application.status = "pending"
+        if body.message:
+            application.message = body.message
+        if body.proposed_price is not None:
+            application.negotiated_price = Decimal(str(body.proposed_price))
+
+        # 创建系统消息
+        current_time = get_utc_time()
+        user_name = current_user.name if hasattr(current_user, "name") else "用户"
+        price_info = ""
+        if application.negotiated_price:
+            currency = application.currency or task.currency or "GBP"
+            price_info = f"，报价 {currency} {float(application.negotiated_price):.2f}"
+        content_zh = f"{user_name} 已将咨询转为正式申请{price_info}"
+        content_en = f"{user_name} converted consultation to formal application{price_info}"
+        system_message = models.Message(
+            sender_id=None,
+            receiver_id=None,
+            content=content_zh,
+            task_id=task_id,
+            message_type="system",
+            conversation_type="task",
+            application_id=application_id,
+            meta=json.dumps({"system_action": "consultation_to_formal", "content_en": content_en}),
+            created_at=current_time,
+        )
+        db.add(system_message)
+        await db.commit()
+
+        # 通知发布者
+        try:
+            from app import async_crud
+            await async_crud.async_notification_crud.create_notification(
+                db, str(task.poster_id), "task",
+                "收到正式申请", f'{user_name} 对任务「{task.title}」提交了正式申请',
+                related_id=str(application_id), title_en="New Formal Application",
+                content_en=f'{user_name} submitted a formal application for task "{task.title}"',
+                related_type="application_id",
+                data=json.dumps({"task_id": task_id, "application_id": application_id}),
+            )
+        except Exception as e:
+            logger.warning(f"Failed to create notification for consult-formal-apply: {e}")
+
+        return {
+            "message": "已转为正式申请",
+            "status": application.status,
+            "application_id": application.id,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in consult-formal-apply for task {task_id}, app {application_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"转为正式申请失败: {str(e)}")
+
+
+@task_chat_router.post("/tasks/{task_id}/applications/{application_id}/consult-close")
+async def consult_close(
+    task_id: int,
+    application_id: int,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """关闭咨询 (status → cancelled)"""
+    try:
+        # 获取任务
+        task_result = await db.execute(
+            select(models.Task).where(models.Task.id == task_id)
+        )
+        task = task_result.scalar_one_or_none()
+        if not task:
+            raise HTTPException(status_code=404, detail="任务不存在")
+
+        # 行锁查询申请
+        app_result = await db.execute(
+            select(models.TaskApplication)
+            .where(
+                models.TaskApplication.id == application_id,
+                models.TaskApplication.task_id == task_id,
+            )
+            .with_for_update()
+        )
+        application = app_result.scalar_one_or_none()
+        if not application:
+            raise HTTPException(status_code=404, detail="申请不存在")
+
+        # 双方均可关闭
+        is_poster = str(task.poster_id) == str(current_user.id)
+        is_applicant = str(application.applicant_id) == str(current_user.id)
+        if not is_poster and not is_applicant:
+            raise HTTPException(status_code=403, detail="无权操作此申请")
+
+        # 验证状态
+        if application.status not in ("consulting", "negotiating"):
+            raise HTTPException(status_code=400, detail=f"当前状态 {application.status} 不允许关闭咨询")
+
+        application.status = "cancelled"
+
+        # 系统消息
+        current_time = get_utc_time()
+        user_name = current_user.name if hasattr(current_user, "name") else "用户"
+        content_zh = f"{user_name} 关闭了咨询"
+        content_en = f"{user_name} closed the consultation"
+        system_message = models.Message(
+            sender_id=None,
+            receiver_id=None,
+            content=content_zh,
+            task_id=task_id,
+            message_type="system",
+            conversation_type="task",
+            application_id=application_id,
+            meta=json.dumps({"system_action": "consultation_closed", "content_en": content_en}),
+            created_at=current_time,
+        )
+        db.add(system_message)
+        await db.commit()
+
+        return {
+            "message": "咨询已关闭",
+            "status": application.status,
+            "application_id": application.id,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in consult-close for task {task_id}, app {application_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"关闭咨询失败: {str(e)}")
+
+
+@task_chat_router.get("/tasks/{task_id}/applications/{application_id}/consult-status")
+async def consult_status(
+    task_id: int,
+    application_id: int,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取咨询状态"""
+    try:
+        # 获取任务
+        task_result = await db.execute(
+            select(models.Task).where(models.Task.id == task_id)
+        )
+        task = task_result.scalar_one_or_none()
+        if not task:
+            raise HTTPException(status_code=404, detail="任务不存在")
+
+        # 查询申请
+        app_result = await db.execute(
+            select(models.TaskApplication).where(
+                models.TaskApplication.id == application_id,
+                models.TaskApplication.task_id == task_id,
+            )
+        )
+        application = app_result.scalar_one_or_none()
+        if not application:
+            raise HTTPException(status_code=404, detail="申请不存在")
+
+        # 验证双方均可查看
+        is_poster = str(task.poster_id) == str(current_user.id)
+        is_applicant = str(application.applicant_id) == str(current_user.id)
+        if not is_poster and not is_applicant:
+            raise HTTPException(status_code=403, detail="无权查看此申请")
+
+        return {
+            "id": application.id,
+            "task_id": application.task_id,
+            "applicant_id": application.applicant_id,
+            "status": application.status,
+            "negotiated_price": float(application.negotiated_price) if application.negotiated_price else None,
+            "currency": application.currency,
+            "poster_id": str(task.poster_id),
+            "created_at": format_iso_utc(application.created_at) if application.created_at else None,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in consult-status for task {task_id}, app {application_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"获取咨询状态失败: {str(e)}")
