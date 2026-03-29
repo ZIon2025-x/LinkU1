@@ -4594,6 +4594,39 @@ async def create_task_consultation(
                     "created_at": format_iso_utc(existing_app.created_at) if existing_app.created_at else None,
                     "is_existing": True,
                 }
+            elif existing_app.status == "cancelled":
+                # Re-open cancelled consultation
+                existing_app.status = "consulting"
+                existing_app.negotiated_price = None
+                existing_app.message = None
+
+                # Send system message
+                task_title = task.title or ""
+                user_name = current_user.name if hasattr(current_user, "name") else "用户"
+                content_zh = f"{user_name} 想咨询您的任务「{task_title}」"
+                content_en = f"{user_name} wants to consult about your task \"{task_title}\""
+                current_time = get_utc_time()
+                system_message = models.Message(
+                    sender_id=None,
+                    receiver_id=None,
+                    content=content_zh,
+                    task_id=task_id,
+                    application_id=existing_app.id,
+                    message_type="system",
+                    conversation_type="task",
+                    meta=json.dumps({"system_action": "consultation_started", "content_en": content_en}),
+                    created_at=current_time,
+                )
+                db.add(system_message)
+                await db.commit()
+
+                return {
+                    "application_id": existing_app.id,
+                    "task_id": task_id,
+                    "status": "consulting",
+                    "created_at": format_iso_utc(existing_app.created_at) if existing_app.created_at else None,
+                    "is_existing": False,
+                }
             else:
                 raise HTTPException(status_code=400, detail="您已有该任务的申请")
 

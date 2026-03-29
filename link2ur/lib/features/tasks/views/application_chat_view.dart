@@ -1590,18 +1590,29 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
             onPressed: () {
               Navigator.pop(dialogContext);
               if (widget.isConsultation) {
-                // Check if this is a personal service (has service_owner_id but no expert_id)
-                final expertId = _consultationApp?['expert_id'];
-                if (expertId != null) {
-                  // Expert service → use expert approve endpoint
-                  context.read<TaskExpertBloc>().add(
-                    TaskExpertApproveApplication(widget.applicationId),
-                  );
-                } else {
-                  // Personal service → use owner approve endpoint
-                  context.read<TaskExpertBloc>().add(
-                    TaskExpertOwnerApproveApplication(widget.applicationId),
-                  );
+                switch (widget.consultationType) {
+                  case ConsultationType.service:
+                    // Check if this is a personal service (has service_owner_id but no expert_id)
+                    final expertId = _consultationApp?['expert_id'];
+                    if (expertId != null) {
+                      // Expert service → use expert approve endpoint
+                      context.read<TaskExpertBloc>().add(
+                        TaskExpertApproveApplication(widget.applicationId),
+                      );
+                    } else {
+                      // Personal service → use owner approve endpoint
+                      context.read<TaskExpertBloc>().add(
+                        TaskExpertOwnerApproveApplication(widget.applicationId),
+                      );
+                    }
+                  case ConsultationType.task:
+                    // Task consultation: poster accepts the applicant
+                    context.read<TaskDetailBloc>().add(
+                      TaskDetailAcceptApplicant(widget.applicationId),
+                    );
+                  case ConsultationType.fleaMarket:
+                    // Flea market: seller approves purchase request
+                    _approveFleaMarketPurchase();
                 }
               } else {
                 // Regular mode: use TaskDetailBloc
@@ -1616,6 +1627,32 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
         ],
       ),
     );
+  }
+
+  Future<void> _approveFleaMarketPurchase() async {
+    try {
+      final apiService = context.read<ApiService>();
+      final response = await apiService.post<Map<String, dynamic>>(
+        ApiEndpoints.fleaMarketApprovePurchaseRequest(widget.applicationId.toString()),
+      );
+      if (!mounted) return;
+      if (response.isSuccess) {
+        _loadMessages();
+        _loadConsultationStatus();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.expertApplicationApproved)),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.localizeError(response.message ?? 'unknown_error'))),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.localizeError(e.toString()))),
+      );
+    }
   }
 
   void _showCloseConfirmation() {
