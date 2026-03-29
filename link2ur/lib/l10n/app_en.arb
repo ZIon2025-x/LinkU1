@@ -2045,6 +2045,7 @@
   "taskLocationDetailAddress": "Detail Address",
   "fleaMarketPublishItem": "Publish Item",
   "fleaMarketConfirmPurchase": "Confirm Purchase",
+  "fleaMarketConfirmPurchaseMessage": "Confirm submitting a purchase request?",
   "fleaMarketBidPurchase": "Bid Purchase",
   "fleaMarketPriceAndTransaction": "Price & Transaction",
   "fleaMarketAutoRemovalDays": "Auto removal in {param1} days",

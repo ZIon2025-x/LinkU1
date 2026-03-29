@@ -44,10 +44,10 @@ def _mask_name(name: str) -> str:
 
 
 async def _fetch_recent_completions(db: AsyncSession) -> list:
-    """数据源1：最近24小时内有好评的完成订单"""
+    """数据源1：最近7天内有好评的完成订单"""
     try:
         now = get_utc_time()
-        since = now - timedelta(hours=24)
+        since = now - timedelta(days=7)
 
         # TaskHistory(completed) JOIN Task JOIN User LEFT JOIN Review(rating>=4)
         stmt = (
@@ -111,12 +111,12 @@ async def _fetch_recent_completions(db: AsyncSession) -> list:
 
 
 async def _fetch_active_user_stats(db: AsyncSession) -> list:
-    """数据源2：今日活跃用户统计（今日接单>=2单的用户）"""
+    """数据源2：近3天活跃用户统计（接单>=2单的用户）"""
     try:
         now = get_utc_time()
-        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        since = now - timedelta(days=3)
 
-        # 今日接单>=2的用户及其今日接单数
+        # 近3天接单>=2的用户及其接单数
         accepted_stmt = (
             select(
                 models.TaskHistory.user_id,
@@ -124,7 +124,7 @@ async def _fetch_active_user_stats(db: AsyncSession) -> list:
             )
             .where(
                 models.TaskHistory.action == "accepted",
-                models.TaskHistory.timestamp >= today_start,
+                models.TaskHistory.timestamp >= since,
                 models.TaskHistory.user_id.isnot(None),
             )
             .group_by(models.TaskHistory.user_id)
@@ -258,10 +258,10 @@ async def _fetch_activity_spots(db: AsyncSession) -> list:
 
 
 async def _fetch_new_tasks(db: AsyncSession) -> list:
-    """数据源4：最近6小时新发布的任务"""
+    """数据源4：最近7天新发布的任务"""
     try:
         now = get_utc_time()
-        since = now - timedelta(hours=6)
+        since = now - timedelta(days=7)
 
         stmt = (
             select(
@@ -318,10 +318,10 @@ async def _fetch_new_tasks(db: AsyncSession) -> list:
 
 
 async def _fetch_trending_posts(db: AsyncSession) -> list:
-    """数据源5：最近24小时内点赞数较高的论坛帖子"""
+    """数据源5：最近7天内点赞数较高的论坛帖子"""
     try:
         now = get_utc_time()
-        since = now - timedelta(hours=24)
+        since = now - timedelta(days=7)
 
         stmt = (
             select(
@@ -370,7 +370,7 @@ async def _fetch_flea_market_activity(db: AsyncSession) -> list:
     """数据源6：跳蚤市场 — 新上架商品 + 最近售出"""
     try:
         now = get_utc_time()
-        since = now - timedelta(hours=12)
+        since = now - timedelta(days=7)
         items = []
 
         # 新上架
@@ -449,10 +449,10 @@ async def _fetch_flea_market_activity(db: AsyncSession) -> list:
 
 
 async def _fetch_student_verifications(db: AsyncSession) -> list:
-    """数据源7：最近7天按学校聚合的学生认证数"""
+    """数据源7：最近30天按学校聚合的学生认证数"""
     try:
         now = get_utc_time()
-        since = now - timedelta(days=7)
+        since = now - timedelta(days=30)
 
         stmt = (
             select(
@@ -500,7 +500,7 @@ async def _fetch_leaderboard_updates(db: AsyncSession) -> list:
     """数据源8：排行榜上近期投票热度最高的条目"""
     try:
         now = get_utc_time()
-        since = now - timedelta(days=3)
+        since = now - timedelta(days=14)
 
         stmt = (
             select(
@@ -584,6 +584,36 @@ async def get_ticker(
     all_items = []
     for source in sources:
         all_items.extend(source)
+
+    # 真实数据不足时，用默认宣传文案补齐至至少4条
+    if len(all_items) < 4:
+        defaults = [
+            {
+                "text_zh": "👋 欢迎来到 Link²Ur，发布任务或提供技能，开始互助之旅",
+                "text_en": "👋 Welcome to Link²Ur — post tasks or offer skills to get started",
+            },
+            {
+                "text_zh": "🎯 发现身边的技能达人，找到最适合你的帮手",
+                "text_en": "🎯 Discover skilled helpers nearby — find the perfect match",
+            },
+            {
+                "text_zh": "💡 新用户首次发布任务享专属优惠，快来体验",
+                "text_en": "💡 New users get exclusive deals on first task — try it now",
+            },
+            {
+                "text_zh": "🛍️ 跳蚤市场上架闲置好物，环保又省钱",
+                "text_en": "🛍️ List your pre-loved items on the Flea Market — save & recycle",
+            },
+            {
+                "text_zh": "📣 完成学生认证，解锁更多校园专属功能",
+                "text_en": "📣 Verify your student status to unlock campus-exclusive features",
+            },
+        ]
+        random.shuffle(defaults)
+        for item in defaults:
+            if len(all_items) >= 4:
+                break
+            all_items.append(item)
 
     random.shuffle(all_items)
 

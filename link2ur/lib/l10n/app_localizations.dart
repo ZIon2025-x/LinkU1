@@ -8373,6 +8373,12 @@ abstract class AppLocalizations {
   /// **'Confirm Purchase'**
   String get fleaMarketConfirmPurchase;
 
+  /// No description provided for @fleaMarketConfirmPurchaseMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm submitting a purchase request?'**
+  String get fleaMarketConfirmPurchaseMessage;
+
   /// No description provided for @fleaMarketBidPurchase.
   ///
   /// In en, this message translates to:

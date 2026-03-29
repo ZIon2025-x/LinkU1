@@ -4346,6 +4346,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get fleaMarketConfirmPurchase => '确认购买';
 
   @override
+  String get fleaMarketConfirmPurchaseMessage => '确认提交购买申请？';
+
+  @override
   String get fleaMarketBidPurchase => '竞价购买';
 
   @override
@@ -15669,6 +15672,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get fleaMarketConfirmPurchase => '確認購買';
+
+  @override
+  String get fleaMarketConfirmPurchaseMessage => '確認提交購買申請？';
 
   @override
   String get fleaMarketBidPurchase => '競價購買';

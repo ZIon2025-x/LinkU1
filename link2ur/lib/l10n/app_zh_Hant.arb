@@ -299,6 +299,7 @@
   "fleaMarketBuyNow": "立即購買",
   "fleaMarketCategory": "商品分類",
   "fleaMarketConfirmPurchase": "確認購買",
+  "fleaMarketConfirmPurchaseMessage": "確認提交購買申請？",
   "fleaMarketContactSeller": "聯繫賣家",
   "fleaMarketCreatePublishNow": "立即發布商品",
   "fleaMarketCreatePublishing": "發布中...",

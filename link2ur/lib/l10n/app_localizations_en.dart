@@ -4527,6 +4527,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fleaMarketConfirmPurchase => 'Confirm Purchase';
 
   @override
+  String get fleaMarketConfirmPurchaseMessage =>
+      'Confirm submitting a purchase request?';
+
+  @override
   String get fleaMarketBidPurchase => 'Bid Purchase';
 
   @override

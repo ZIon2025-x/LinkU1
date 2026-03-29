@@ -1486,6 +1486,32 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
   }
 
   void _showFormalApplyDialog() {
+    // Flea market: simple confirmation, no price/message form needed
+    if (widget.consultationType == ConsultationType.fleaMarket) {
+      showDialog(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(context.l10n.fleaMarketConfirmPurchase),
+          content: Text(context.l10n.fleaMarketConfirmPurchaseMessage),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child:
+                  Text(MaterialLocalizations.of(context).cancelButtonLabel),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                _dispatchFormalApply(null, null);
+              },
+              child: Text(MaterialLocalizations.of(context).okButtonLabel),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     final priceController = TextEditingController();
     final messageController = TextEditingController();
     String? errorText;
