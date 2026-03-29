@@ -354,7 +354,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
 
   bool _isChatActiveForStatus(String? appStatus) {
     if (appStatus == null) return false;
-    return ['chatting', 'consulting', 'negotiating', 'price_agreed']
+    return ['chatting', 'consulting', 'negotiating', 'price_agreed', 'pending']
         .contains(appStatus);
   }
 
@@ -482,14 +482,16 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
             : (application?.isChatting == true ||
                 application?.isConsulting == true ||
                 application?.isNegotiating == true ||
-                application?.isPriceAgreed == true);
+                application?.isPriceAgreed == true ||
+                application?.isPending == true);
         final isLoaded = state.status == TaskDetailStatus.loaded;
         final isConsultingOrNeg =
             appStatus == 'consulting' || appStatus == 'negotiating';
         final showServiceCard = !_isLoadingConsultation &&
             (appStatus == 'consulting' ||
                 appStatus == 'negotiating' ||
-                appStatus == 'price_agreed');
+                appStatus == 'price_agreed' ||
+                appStatus == 'pending');
 
         return Scaffold(
           backgroundColor:
@@ -519,7 +521,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
               // Consulting action buttons
               if (widget.isConsultation &&
                   isChatActive &&
-                  (isConsultingOrNeg || appStatus == 'price_agreed'))
+                  (isConsultingOrNeg || appStatus == 'price_agreed' || appStatus == 'pending'))
                 _buildConsultingActions2(appStatus),
 
               // Input bar (when chat is active)
@@ -1268,19 +1270,19 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
               ),
               const SizedBox(width: 8),
             ],
-            // Price agreed: applicant can formal-apply, expert can approve
+            // Price agreed: service can approve directly, task/fleaMarket need formal-apply first
             if (isPriceAgreed) ...[
               if (isApplicantFinal) ...[
                 ActionChip(
                   avatar: const Icon(Icons.assignment, size: 16),
                   label: Text(widget.consultationType == ConsultationType.fleaMarket
-                      ? context.l10n.fleaMarketBuyNow
+                      ? context.l10n.fleaMarketConfirmPurchase
                       : context.l10n.formalApply),
                   onPressed: isSubmitting ? null : _showFormalApplyDialog,
                 ),
                 const SizedBox(width: 8),
               ],
-              if (!isApplicantFinal) ...[
+              if (!isApplicantFinal && widget.consultationType == ConsultationType.service) ...[
                 ActionChip(
                   avatar: const Icon(Icons.check_circle, size: 16,
                       color: AppColors.success),
@@ -1292,6 +1294,19 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
                 ),
                 const SizedBox(width: 8),
               ],
+            ],
+            // Pending: non-applicant can approve for ALL types
+            if (appStatus == 'pending' && !isApplicantFinal) ...[
+              ActionChip(
+                avatar: const Icon(Icons.check_circle, size: 16,
+                    color: AppColors.success),
+                label: Text(
+                  context.l10n.expertApplicationConfirmApprove,
+                  style: const TextStyle(color: AppColors.success),
+                ),
+                onPressed: isSubmitting ? null : _showApproveConfirmation,
+              ),
+              const SizedBox(width: 8),
             ],
             // Both: close consultation (only when consulting or negotiating)
             if (isConsulting || isNegotiating) ...[

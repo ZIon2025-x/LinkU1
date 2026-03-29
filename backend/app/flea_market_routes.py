@@ -3878,7 +3878,7 @@ async def create_flea_market_consultation(
             select(models.FleaMarketPurchaseRequest)
             .where(models.FleaMarketPurchaseRequest.item_id == item_id_int)
             .where(models.FleaMarketPurchaseRequest.buyer_id == current_user.id)
-            .where(models.FleaMarketPurchaseRequest.status.in_(["consulting", "negotiating", "price_agreed"]))
+            .where(models.FleaMarketPurchaseRequest.status.in_(["consulting", "negotiating", "price_agreed", "pending"]))
         )
         existing_req = existing_result.scalar_one_or_none()
         if existing_req:

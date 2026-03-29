@@ -1042,7 +1042,7 @@ async def send_task_message(
                     detail="申请不存在"
                 )
 
-            if application.status not in ("chatting", "consulting", "negotiating", "price_agreed"):
+            if application.status not in ("chatting", "consulting", "negotiating", "price_agreed", "pending"):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="该申请当前不在聊天状态"
