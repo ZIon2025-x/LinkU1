@@ -142,6 +142,15 @@ class TaskExpertApproveApplication extends TaskExpertEvent {
   List<Object?> get props => [applicationId];
 }
 
+/// 服务主同意申请（个人服务）
+class TaskExpertOwnerApproveApplication extends TaskExpertEvent {
+  const TaskExpertOwnerApproveApplication(this.applicationId);
+  final int applicationId;
+
+  @override
+  List<Object?> get props => [applicationId];
+}
+
 /// 达人拒绝申请
 class TaskExpertRejectApplication extends TaskExpertEvent {
   const TaskExpertRejectApplication(this.applicationId, {this.reason});
@@ -575,6 +584,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     on<TaskExpertFilterChanged>(_onFilterChanged);
     on<TaskExpertLoadExpertApplications>(_onLoadExpertApplications);
     on<TaskExpertApproveApplication>(_onApproveApplication);
+    on<TaskExpertOwnerApproveApplication>(_onOwnerApproveApplication);
     on<TaskExpertRejectApplication>(_onRejectApplication);
     on<TaskExpertCounterOffer>(_onCounterOffer);
     on<TaskExpertLoadMyExpertApplicationStatus>(_onLoadMyExpertApplicationStatus);
@@ -1048,6 +1058,38 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
       add(const TaskExpertLoadExpertApplications());
     } catch (e) {
       AppLogger.error('Failed to approve application', e);
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'application_action_failed',
+        errorMessage: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onOwnerApproveApplication(
+    TaskExpertOwnerApproveApplication event,
+    Emitter<TaskExpertState> emit,
+  ) async {
+    emit(state.copyWith(isSubmitting: true, errorMessage: null, actionMessage: null));
+
+    try {
+      await _taskExpertRepository.ownerApproveApplication(event.applicationId);
+
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'application_approved',
+      ));
+
+      add(const TaskExpertLoadExpertApplications());
+    } on TaskExpertException catch (e) {
+      AppLogger.error('Failed to owner-approve application', e);
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'application_action_failed',
+        errorMessage: e.message,
+      ));
+    } catch (e) {
+      AppLogger.error('Failed to owner-approve application', e);
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'application_action_failed',

@@ -687,6 +687,17 @@ class TaskExpertRepository {
     }
   }
 
+  /// 服务主同意申请（个人服务用）
+  Future<Map<String, dynamic>> ownerApproveApplication(int applicationId) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.ownerApproveApplication(applicationId),
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw TaskExpertException(response.message ?? '同意申请失败');
+    }
+    return response.data!;
+  }
+
   /// 达人同意申请（创建任务+支付）
   Future<Map<String, dynamic>> approveServiceApplication(int applicationId) async {
     final response = await _apiService.post<Map<String, dynamic>>(

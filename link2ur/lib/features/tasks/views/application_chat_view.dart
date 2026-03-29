@@ -1482,10 +1482,19 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
             onPressed: () {
               Navigator.pop(dialogContext);
               if (widget.isConsultation) {
-                // Consultation mode: use TaskExpertBloc
-                context.read<TaskExpertBloc>().add(
-                  TaskExpertApproveApplication(widget.applicationId),
-                );
+                // Check if this is a personal service (has service_owner_id but no expert_id)
+                final expertId = _consultationApp?['expert_id'];
+                if (expertId != null) {
+                  // Expert service → use expert approve endpoint
+                  context.read<TaskExpertBloc>().add(
+                    TaskExpertApproveApplication(widget.applicationId),
+                  );
+                } else {
+                  // Personal service → use owner approve endpoint
+                  context.read<TaskExpertBloc>().add(
+                    TaskExpertOwnerApproveApplication(widget.applicationId),
+                  );
+                }
               } else {
                 // Regular mode: use TaskDetailBloc
                 context.read<TaskDetailBloc>().add(

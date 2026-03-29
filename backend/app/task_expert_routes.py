@@ -4497,5 +4497,7 @@ async def get_application_status(
         else None,
         "currency": application.currency,
         "task_id": application.task_id,
+        "expert_id": application.expert_id,
+        "service_owner_id": application.service_owner_id,
     }
 
