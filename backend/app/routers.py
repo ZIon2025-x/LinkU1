@@ -4285,6 +4285,13 @@ def confirm_task_completion(
             logger.error(f"钱包入账失败 for task {task_id}: {e}", exc_info=True)
             # 钱包入账失败不影响任务完成确认流程
 
+    # 提交所有 savepoint 内的变更（积分奖励、活动奖励、钱包入账）
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        logger.error(f"提交奖励/钱包变更失败 for task {task_id}: {e}", exc_info=True)
+
     return task
 
 
