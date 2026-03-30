@@ -1120,21 +1120,8 @@ class _ApplicationItem extends StatelessWidget {
               const SizedBox(height: AppSpacing.md),
               Row(
                 children: [
-                  if (task.isMultiParticipant)
-                    // 多人任务：保持原有的直接接受按钮
-                    _ActionCircleButton(
-                      icon: Icons.check_circle,
-                      color: AppColors.success,
-                      onTap: () {
-                        AppHaptics.medium();
-                        context.read<TaskDetailBloc>().add(
-                              TaskDetailAcceptApplicant(application.id),
-                            );
-                      },
-                    )
-                  else ...[
-                    // 单人任务：直接批准按钮
-                    _ActionCircleButton(
+                  // 批准按钮（单人/多人任务统一）
+                  _ActionCircleButton(
                       icon: Icons.check_circle,
                       color: AppColors.success,
                       onTap: () {
@@ -1144,44 +1131,6 @@ class _ApplicationItem extends StatelessWidget {
                             );
                       },
                     ),
-                    const SizedBox(width: 12),
-                    // 单人任务：同意沟通按钮
-                    Expanded(
-                      child: BouncingWidget(
-                        onTap: () {
-                          AppHaptics.medium();
-                          context.read<TaskDetailBloc>().add(
-                                TaskDetailStartChat(application.id),
-                              );
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.md,
-                            vertical: AppSpacing.sm,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.1),
-                            borderRadius: AppRadius.allSmall,
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.chat_bubble_outline,
-                                  size: 18, color: AppColors.primary),
-                              const SizedBox(width: 6),
-                              Text(
-                                context.l10n.agreeToChat,
-                                style: AppTypography.caption.copyWith(
-                                  color: AppColors.primary,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
                   const SizedBox(width: 12),
                   _ActionCircleButton(
                     icon: Icons.cancel,
