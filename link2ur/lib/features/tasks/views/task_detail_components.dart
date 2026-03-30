@@ -977,7 +977,13 @@ class _ApplicationItem extends StatelessWidget {
             ? AppColors.primary
             : application.isApproved
                 ? AppColors.success
-                : AppColors.error;
+                : application.isConsulting
+                    ? AppColors.info
+                    : application.isNegotiating
+                        ? AppColors.accent
+                        : application.isPriceAgreed
+                            ? AppColors.primary
+                            : AppColors.error;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
@@ -1238,6 +1244,9 @@ class _ApplicationItem extends StatelessWidget {
     if (application.isChatting) return context.l10n.applicationChatting;
     if (application.isApproved) return context.l10n.taskDetailApproved;
     if (application.isRejected) return context.l10n.taskDetailRejected;
+    if (application.isConsulting) return context.l10n.consultationStatus;
+    if (application.isNegotiating) return context.l10n.negotiatePrice;
+    if (application.isPriceAgreed) return context.l10n.priceAgreed;
     return context.l10n.taskDetailUnknown;
   }
 }
