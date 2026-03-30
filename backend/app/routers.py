@@ -3852,7 +3852,7 @@ def confirm_task_completion(
     evidence_files: Optional[List[str]] = Body(None, description="完成证据文件ID列表（可选）"),
     partial_transfer: Optional[schemas.PartialTransferRequest] = Body(None, description="部分转账请求（可选，用于部分完成的任务）"),
     background_tasks: BackgroundTasks = None,
-    current_user=Depends(check_user_status),
+    current_user=Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db),
 ):
     """任务发布者确认任务完成，可上传完成证据文件"""
@@ -3894,7 +3894,10 @@ def confirm_task_completion(
     task.status = "completed"
     task.confirmed_at = get_utc_time()  # 记录确认时间
     task.auto_confirmed = 0  # 手动确认
-    task.is_confirmed = 1  # 标记为已确认（付费任务在转账成功后由转账逻辑再次确认，此处先统一设置）
+    # 付费任务：is_confirmed 在钱包入账成功后才设为 1，避免入账失败时任务被跳过
+    # 免费任务：直接确认
+    if not (task.is_paid == 1 and task.taker_id and task.escrow_amount and task.escrow_amount > 0):
+        task.is_confirmed = 1
     # 更新可靠度画像
     try:
         from app.services.reliability_calculator import on_task_completed
@@ -3986,6 +3989,7 @@ def confirm_task_completion(
         
         db.commit()
     except Exception as e:
+        db.rollback()
         logger.warning(f"Failed to send system message: {e}")
         # 系统消息发送失败不影响任务确认流程
 
@@ -8066,7 +8070,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
 
 @router.post("/tasks/{task_id}/confirm_complete")
 def confirm_task_complete(
-    task_id: int, current_user=Depends(check_user_status), db: Session = Depends(get_db)
+    task_id: int, current_user=Depends(get_current_user_secure_sync_csrf), db: Session = Depends(get_db)
 ):
     """
     [已弃用] 确认任务完成并通过 Stripe Transfer 直接转账给接受人的 Connect 账户。

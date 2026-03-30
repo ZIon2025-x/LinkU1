@@ -1,6 +1,7 @@
-from pydantic import BaseModel, Field
-from typing import Optional, List
+from pydantic import BaseModel, Field, field_validator
+from typing import Optional, List, Literal
 from datetime import datetime
+import math
 
 
 class WalletBalanceOut(BaseModel):
@@ -53,9 +54,16 @@ class WalletTransactionsResponse(BaseModel):
 
 
 class WithdrawRequest(BaseModel):
-    amount: float = Field(gt=0, description="Withdrawal amount")
+    amount: float = Field(gt=0, le=50000, description="Withdrawal amount")
     request_id: str = Field(min_length=1, max_length=64, description="Client-generated UUID")
-    currency: str = Field(default="GBP", description="Currency: GBP or EUR")
+    currency: Literal["GBP", "EUR"] = Field(default="GBP", description="Currency: GBP or EUR")
+
+    @field_validator("amount")
+    @classmethod
+    def amount_must_be_finite(cls, v: float) -> float:
+        if not math.isfinite(v):
+            raise ValueError("amount must be a finite number")
+        return v
 
 
 class WithdrawResponse(BaseModel):

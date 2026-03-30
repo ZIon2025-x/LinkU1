@@ -357,11 +357,16 @@ def create_pending_withdrawal(
 def complete_withdrawal(db: Session, tx_id: int, transfer_id: str) -> None:
     """
     Mark a pending withdrawal transaction as completed and record the Stripe
-    transfer ID.
+    transfer ID.  Only pending transactions can be completed.
     """
     tx = db.query(WalletTransaction).filter(WalletTransaction.id == tx_id).first()
     if tx is None:
         raise ValueError(f"complete_withdrawal: transaction {tx_id} not found")
+    if tx.status != "pending":
+        raise ValueError(
+            f"complete_withdrawal: expected status 'pending', "
+            f"got '{tx.status}' for transaction {tx_id}"
+        )
     tx.status = "completed"
     tx.related_id = transfer_id
     tx.related_type = "payout"
@@ -375,19 +380,24 @@ def complete_withdrawal(db: Session, tx_id: int, transfer_id: str) -> None:
 def fail_withdrawal(db: Session, tx_id: int, user_id: str, amount: Decimal, currency: str = "GBP") -> None:
     """
     Mark a pending withdrawal as failed and refund the reserved amount back to
-    the wallet.
+    the wallet.  Only pending transactions can be failed — prevents double refund.
 
     Lock-first pattern:
-      1. Mark transaction as failed.
+      1. Check transaction is pending, mark as failed.
       2. Acquire row lock on wallet.
       3. Refund balance, decrement total_withdrawn.
     """
     amount = Decimal(str(amount))
 
-    # 1. Update transaction status
+    # 1. Update transaction status (only if still pending)
     tx = db.query(WalletTransaction).filter(WalletTransaction.id == tx_id).first()
     if tx is None:
         raise ValueError(f"fail_withdrawal: transaction {tx_id} not found")
+    if tx.status != "pending":
+        raise ValueError(
+            f"fail_withdrawal: expected status 'pending', "
+            f"got '{tx.status}' for transaction {tx_id} — skipping to prevent double refund"
+        )
     tx.status = "failed"
 
     # 2. Lock wallet and refund

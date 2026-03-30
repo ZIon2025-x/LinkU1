@@ -260,14 +260,14 @@ def withdraw(
                 "request_id": req.request_id,
             },
         )
-    except stripe.error.StripeError as e:
-        # Phase 3a: Stripe failed — refund balance
+    except Exception as e:
+        # Phase 3a: Stripe failed or network error — refund balance
         logger.error(
             f"Stripe Transfer failed for user {current_user.id}, "
             f"tx {pending_tx.id}: {e}"
         )
         try:
-            fail_withdrawal(db, pending_tx.id, current_user.id, amount)
+            fail_withdrawal(db, pending_tx.id, current_user.id, amount, currency=currency)
             db.commit()
         except Exception as rollback_err:
             logger.critical(
@@ -277,7 +277,7 @@ def withdraw(
 
         raise HTTPException(
             status_code=502,
-            detail=f"Stripe transfer failed: {str(e)}",
+            detail="Withdrawal failed. Please try again later or contact support.",
         )
 
     # Phase 3b: Stripe succeeded — mark completed
