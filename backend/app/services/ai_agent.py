@@ -21,7 +21,7 @@ from typing import AsyncIterator
 
 from sse_starlette.sse import ServerSentEvent
 
-from sqlalchemy import select, desc, func, and_
+from sqlalchemy import select, desc, func, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models
@@ -1403,22 +1403,40 @@ async def _step_llm(ctx: _PipelineContext) -> AsyncIterator[ServerSentEvent]:
     total_tokens = ctx.total_input_tokens + ctx.total_output_tokens
     _state.record_usage(ctx.user.id, total_tokens)
 
-    await _save_assistant_message(
-        ctx, ctx.full_response, ctx.model_used,
-        ctx.total_input_tokens, ctx.total_output_tokens,
-        ctx.all_tool_calls, ctx.all_tool_results,
-    )
+    # SSE 流式传输期间 LLM 调用可能持续很长时间，数据库连接可能被服务器关闭。
+    # 尝试用原 session 保存，如果连接断了则创建新 session 重试。
+    try:
+        await _save_assistant_message(
+            ctx, ctx.full_response, ctx.model_used,
+            ctx.total_input_tokens, ctx.total_output_tokens,
+            ctx.all_tool_calls, ctx.all_tool_results,
+        )
 
-    conv_q = select(models.AIConversation).where(models.AIConversation.id == ctx.conversation_id)
-    conv = (await ctx.db.execute(conv_q)).scalar_one_or_none()
-    if conv:
-        conv.total_tokens = (conv.total_tokens or 0) + total_tokens
-        conv.model_used = ctx.model_used
-        conv.updated_at = get_utc_time()
-        if not conv.title and ctx.user_message:
-            conv.title = ctx.user_message[:100]
+        conv_q = select(models.AIConversation).where(models.AIConversation.id == ctx.conversation_id)
+        conv = (await ctx.db.execute(conv_q)).scalar_one_or_none()
+        if conv:
+            conv.total_tokens = (conv.total_tokens or 0) + total_tokens
+            conv.model_used = ctx.model_used
+            conv.updated_at = get_utc_time()
+            if not conv.title and ctx.user_message:
+                conv.title = ctx.user_message[:100]
 
-    await ctx.db.commit()
+        await ctx.db.commit()
+    except Exception as save_err:
+        logger.warning("SSE 结束后保存失败（连接可能已断开），使用新 session 重试: %s", save_err)
+        try:
+            await ctx.db.rollback()
+        except Exception:
+            pass
+        from app.database import AsyncSessionLocal
+        async with AsyncSessionLocal() as fresh_db:
+            await _save_assistant_message_standalone(
+                fresh_db, ctx.conversation_id, ctx.full_response, ctx.model_used,
+                ctx.total_input_tokens, ctx.total_output_tokens,
+                ctx.all_tool_calls, ctx.all_tool_results,
+                ctx.user_message, total_tokens,
+            )
+
     yield _make_done_sse(ctx.total_input_tokens, ctx.total_output_tokens)
 
 
@@ -1618,6 +1636,38 @@ async def _save_assistant_message(
         output_tokens=output_tokens,
     )
     ctx.db.add(msg)
+
+
+async def _save_assistant_message_standalone(
+    db: AsyncSession, conversation_id: str, content: str, model_used: str,
+    input_tokens: int, output_tokens: int,
+    tool_calls: list | None, tool_results: list | None,
+    user_message: str | None, total_tokens: int,
+):
+    """用独立的 db session 保存助手消息和更新会话（连接断开时的备用方案）"""
+    msg = models.AIMessage(
+        conversation_id=conversation_id,
+        role="assistant",
+        content=content,
+        tool_calls=json.dumps(tool_calls, ensure_ascii=False) if tool_calls else None,
+        tool_results=json.dumps(tool_results, ensure_ascii=False) if tool_results else None,
+        model_used=model_used,
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+    )
+    db.add(msg)
+
+    conv_q = select(models.AIConversation).where(models.AIConversation.id == conversation_id)
+    conv = (await db.execute(conv_q)).scalar_one_or_none()
+    if conv:
+        conv.total_tokens = (conv.total_tokens or 0) + total_tokens
+        conv.model_used = model_used
+        conv.updated_at = get_utc_time()
+        if not conv.title and user_message:
+            conv.title = user_message[:100]
+
+    await db.commit()
+    logger.info("SSE 保存重试成功: conversation_id=%s", conversation_id)
 
 
 def _make_text_sse(text: str) -> ServerSentEvent:
