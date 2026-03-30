@@ -554,7 +554,7 @@ class TaskPaymentRecord extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, taskId, amount, status, paymentIntentId];
+  List<Object?> get props => [id, orderNo, taskId, amount, currency, status, paymentMethod, createdAt, counterpartName];
 }
 
 class WalletBalance extends Equatable {

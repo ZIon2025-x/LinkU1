@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../app_routes.dart';
@@ -28,7 +29,12 @@ List<RouteBase> get paymentRoutes => [
         path: AppRoutes.paymentDetail,
         name: 'paymentDetail',
         builder: (context, state) {
-          final record = state.extra as TaskPaymentRecord;
+          final record = state.extra as TaskPaymentRecord?;
+          if (record == null) {
+            return const Scaffold(
+              body: Center(child: Text('Payment record not found')),
+            );
+          }
           return PaymentDetailView(record: record);
         },
       ),

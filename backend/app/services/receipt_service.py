@@ -252,16 +252,18 @@ _RECEIPT_HTML = """<!DOCTYPE html>
 
 def generate_receipt_pdf(payment, task, counterpart_name: str | None) -> bytes:
     """Generate a receipt PDF for a payment record. Returns PDF bytes."""
+    from html import escape
+
     currency = payment.currency or "GBP"
     symbol = _currency_symbol(currency)
 
-    # Conditional rows
+    # Conditional rows — escape all user-controlled strings to prevent HTML injection
     counterpart_row = ""
     if counterpart_name:
         counterpart_row = (
             f'<div class="row">'
             f'<span class="row-label">Seller</span>'
-            f'<span class="row-value">{counterpart_name}</span>'
+            f'<span class="row-value">{escape(counterpart_name)}</span>'
             f'</div>'
         )
 
@@ -286,7 +288,7 @@ def generate_receipt_pdf(payment, task, counterpart_name: str | None) -> bytes:
     task_title = "—"
     task_source = "normal"
     if task:
-        task_title = task.title or f"Task #{task.id}"
+        task_title = escape(task.title or f"Task #{task.id}")
         task_source = getattr(task, "task_source", "normal") or "normal"
 
     html = _RECEIPT_HTML.format(
@@ -294,8 +296,8 @@ def generate_receipt_pdf(payment, task, counterpart_name: str | None) -> bytes:
         status_label=_status_label(payment.status),
         date=_format_date(payment.created_at),
         symbol=symbol,
-        amount_display=f"{payment.final_amount / 100:.2f}" if payment.final_amount else "0.00",
-        order_no=payment.order_no or "—",
+        amount_display=f"{(payment.final_amount or 0) / 100:.2f}",
+        order_no=escape(payment.order_no or "—"),
         payment_method=_method_label(payment.payment_method),
         task_title=task_title,
         task_type=_task_type_label(task_source),

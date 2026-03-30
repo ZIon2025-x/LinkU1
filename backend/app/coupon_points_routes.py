@@ -2128,7 +2128,7 @@ def get_payment_history(
             "payment_intent_id": p.payment_intent_id,
             "payment_method": p.payment_method,
             "total_amount": p.total_amount,
-            "total_amount_display": f"{p.total_amount / 100:.2f}",
+            "total_amount_display": f"{p.total_amount / 100:.2f}" if p.total_amount else "0.00",
             "points_used": p.points_used,
             "points_used_display": str(p.points_used) if p.points_used else None,
             "coupon_discount": p.coupon_discount,
@@ -2136,7 +2136,7 @@ def get_payment_history(
             "stripe_amount": p.stripe_amount,
             "stripe_amount_display": f"{p.stripe_amount / 100:.2f}" if p.stripe_amount else None,
             "final_amount": p.final_amount,
-            "final_amount_display": f"{p.final_amount / 100:.2f}",
+            "final_amount_display": f"{p.final_amount / 100:.2f}" if p.final_amount else "0.00",
             "currency": p.currency,
             "status": p.status,
             "application_fee": p.application_fee,
@@ -2188,7 +2188,8 @@ def download_receipt(
 
     pdf_bytes = generate_receipt_pdf(payment, task, counterpart_name)
 
-    filename = f"receipt_{payment.order_no or payment_id}.pdf"
+    # 用 payment_id 做文件名，避免 order_no 中的特殊字符导致 header 注入
+    filename = f"receipt_{payment_id}.pdf"
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
