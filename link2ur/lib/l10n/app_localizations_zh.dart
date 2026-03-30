@@ -2680,6 +2680,72 @@ class AppLocalizationsZh extends AppLocalizations {
   String get paymentRecordsLoadFailed => '加载失败';
 
   @override
+  String get paymentRecordsStatusSucceeded => '已完成';
+
+  @override
+  String get paymentRecordsStatusPending => '处理中';
+
+  @override
+  String get paymentRecordsStatusFailed => '失败';
+
+  @override
+  String get paymentRecordsStatusCanceled => '已取消';
+
+  @override
+  String get paymentRecordsSubtotal => '小计';
+
+  @override
+  String get paymentRecordsCouponDiscount => '优惠券抵扣';
+
+  @override
+  String get paymentRecordsPointsUsed => '积分抵扣';
+
+  @override
+  String get paymentDetailTitle => '支付详情';
+
+  @override
+  String get paymentDetailOrder => '订单信息';
+
+  @override
+  String get paymentDetailOrderNo => '订单号';
+
+  @override
+  String get paymentDetailDate => '日期';
+
+  @override
+  String get paymentDetailPaymentMethod => '支付方式';
+
+  @override
+  String get paymentDetailItem => '商品信息';
+
+  @override
+  String get paymentDetailItemName => '名称';
+
+  @override
+  String get paymentDetailItemType => '类型';
+
+  @override
+  String get paymentDetailSeller => '卖家';
+
+  @override
+  String get paymentDetailBreakdown => '费用明细';
+
+  @override
+  String get paymentDetailPlatformFee => '平台服务费';
+
+  @override
+  String get paymentDetailTotalPaid => '实付金额';
+
+  @override
+  String get paymentDetailDownloadReceipt => '下载收据';
+
+  @override
+  String get paymentDetailGenerating => '正在生成收据...';
+
+  @override
+  String get paymentDetailReceiptFailed => '收据生成失败';
+
+  @override
   String get paymentNoPayoutRecords => '无提现记录';
 
   @override
@@ -14006,6 +14072,72 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get paymentRecordsLoadFailed => '加載失敗';
+
+  @override
+  String get paymentRecordsStatusSucceeded => '已完成';
+
+  @override
+  String get paymentRecordsStatusPending => '處理中';
+
+  @override
+  String get paymentRecordsStatusFailed => '失敗';
+
+  @override
+  String get paymentRecordsStatusCanceled => '已取消';
+
+  @override
+  String get paymentRecordsSubtotal => '小計';
+
+  @override
+  String get paymentRecordsCouponDiscount => '優惠券抵扣';
+
+  @override
+  String get paymentRecordsPointsUsed => '積分抵扣';
+
+  @override
+  String get paymentDetailTitle => '支付詳情';
+
+  @override
+  String get paymentDetailOrder => '訂單資訊';
+
+  @override
+  String get paymentDetailOrderNo => '訂單號';
+
+  @override
+  String get paymentDetailDate => '日期';
+
+  @override
+  String get paymentDetailPaymentMethod => '支付方式';
+
+  @override
+  String get paymentDetailItem => '商品資訊';
+
+  @override
+  String get paymentDetailItemName => '名稱';
+
+  @override
+  String get paymentDetailItemType => '類型';
+
+  @override
+  String get paymentDetailSeller => '賣家';
+
+  @override
+  String get paymentDetailBreakdown => '費用明細';
+
+  @override
+  String get paymentDetailPlatformFee => '平台服務費';
+
+  @override
+  String get paymentDetailTotalPaid => '實付金額';
+
+  @override
+  String get paymentDetailDownloadReceipt => '下載收據';
+
+  @override
+  String get paymentDetailGenerating => '正在生成收據...';
+
+  @override
+  String get paymentDetailReceiptFailed => '收據生成失敗';
 
   @override
   String get paymentNoPayoutRecords => '無提現記錄';

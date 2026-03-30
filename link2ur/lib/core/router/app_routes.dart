@@ -104,6 +104,7 @@ class AppRoutes {
   static const String stripeConnectOnboarding = '/payment/stripe-connect/onboarding';
   static const String stripeConnectPayments = '/payment/stripe-connect/payments';
   static const String stripeConnectPayouts = '/payment/stripe-connect/payouts';
+  static const String paymentDetail = '/payment/detail';
 
   // 积分与优惠券
   static const String couponPoints = '/coupon-points';

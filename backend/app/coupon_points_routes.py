@@ -2091,57 +2091,109 @@ def get_payment_history(
     
     支持按任务ID和状态筛选
     """
+    from sqlalchemy.orm import joinedload
+
     query = db.query(models.PaymentHistory).filter(
         models.PaymentHistory.user_id == current_user.id
     )
-    
+
     if task_id:
         query = query.filter(models.PaymentHistory.task_id == task_id)
-    
-    if status:
+
+    if status and status != "all":
         query = query.filter(models.PaymentHistory.status == status)
-    
+    elif not status:
+        # 默认只返回成功的支付记录（不显示 pending/failed/canceled）
+        query = query.filter(models.PaymentHistory.status == "succeeded")
+
     # 按创建时间倒序排列
     query = query.order_by(models.PaymentHistory.created_at.desc())
-    
+
     total = query.count()
-    payments = query.offset(skip).limit(limit).all()
+    # joinedload 避免 N+1：一次查询加载 task + task.taker
+    payments = query.options(
+        joinedload(models.PaymentHistory.task).joinedload(models.Task.taker)
+    ).offset(skip).limit(limit).all()
     
+    def _format_payment(p):
+        task = p.task
+        # 对方用户：支付人是买家/发布者，对方是接单人/卖家
+        counterpart_name = None
+        if task and task.taker:
+            counterpart_name = task.taker.name
+        return {
+            "id": p.id,
+            "order_no": p.order_no,
+            "task_id": p.task_id,
+            "payment_intent_id": p.payment_intent_id,
+            "payment_method": p.payment_method,
+            "total_amount": p.total_amount,
+            "total_amount_display": f"{p.total_amount / 100:.2f}",
+            "points_used": p.points_used,
+            "points_used_display": str(p.points_used) if p.points_used else None,
+            "coupon_discount": p.coupon_discount,
+            "coupon_discount_display": f"{p.coupon_discount / 100:.2f}" if p.coupon_discount else None,
+            "stripe_amount": p.stripe_amount,
+            "stripe_amount_display": f"{p.stripe_amount / 100:.2f}" if p.stripe_amount else None,
+            "final_amount": p.final_amount,
+            "final_amount_display": f"{p.final_amount / 100:.2f}",
+            "currency": p.currency,
+            "status": p.status,
+            "application_fee": p.application_fee,
+            "application_fee_display": f"{p.application_fee / 100:.2f}" if p.application_fee else None,
+            "escrow_amount": float(p.escrow_amount) if p.escrow_amount else None,
+            "created_at": p.created_at.isoformat() if p.created_at else None,
+            "updated_at": p.updated_at.isoformat() if p.updated_at else None,
+            "task": {
+                "id": task.id,
+                "title": task.title,
+                "task_source": task.task_source,
+            } if task else None,
+            "counterpart_name": counterpart_name,
+        }
+
     return {
         "total": total,
         "skip": skip,
         "limit": limit,
-        "payments": [
-            {
-                "id": p.id,
-                "task_id": p.task_id,
-                "payment_intent_id": p.payment_intent_id,
-                "payment_method": p.payment_method,
-                "total_amount": p.total_amount,
-                "total_amount_display": f"{p.total_amount / 100:.2f}",
-                "points_used": p.points_used,
-                "points_used_display": str(p.points_used) if p.points_used else None,
-                "coupon_discount": p.coupon_discount,
-                "coupon_discount_display": f"{p.coupon_discount / 100:.2f}" if p.coupon_discount else None,
-                "stripe_amount": p.stripe_amount,
-                "stripe_amount_display": f"{p.stripe_amount / 100:.2f}" if p.stripe_amount else None,
-                "final_amount": p.final_amount,
-                "final_amount_display": f"{p.final_amount / 100:.2f}",
-                "currency": p.currency,
-                "status": p.status,
-                "application_fee": p.application_fee,
-                "application_fee_display": f"{p.application_fee / 100:.2f}" if p.application_fee else None,
-                "escrow_amount": float(p.escrow_amount) if p.escrow_amount else None,
-                "created_at": p.created_at.isoformat() if p.created_at else None,
-                "updated_at": p.updated_at.isoformat() if p.updated_at else None,
-                "task": {
-                    "id": p.task.id if p.task else None,
-                    "title": p.task.title if p.task else None,
-                } if p.task else None,
-            }
-            for p in payments
-        ]
+        "payments": [_format_payment(p) for p in payments],
     }
+
+
+@router.get("/payment-history/{payment_id}/receipt")
+def download_receipt(
+    payment_id: int,
+    current_user: models.User = Depends(get_current_user_secure_sync_csrf),
+    db: Session = Depends(get_db),
+):
+    """下载支付收据 PDF"""
+    from fastapi.responses import Response
+    from app.services.receipt_service import generate_receipt_pdf
+
+    payment = db.query(models.PaymentHistory).filter(
+        models.PaymentHistory.id == payment_id,
+        models.PaymentHistory.user_id == current_user.id,
+    ).first()
+
+    if not payment:
+        raise HTTPException(status_code=404, detail="支付记录不存在")
+
+    if payment.status != "succeeded":
+        raise HTTPException(status_code=400, detail="只有成功的支付记录可以生成收据")
+
+    task = payment.task
+    counterpart_name = None
+    if task and task.taker:
+        counterpart_name = task.taker.name
+
+    pdf_bytes = generate_receipt_pdf(payment, task, counterpart_name)
+
+    filename = f"receipt_{payment.order_no or payment_id}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.get("/tasks/{task_id}/payment-status")

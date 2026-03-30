@@ -5175,6 +5175,138 @@ abstract class AppLocalizations {
   /// **'Load Failed'**
   String get paymentRecordsLoadFailed;
 
+  /// No description provided for @paymentRecordsStatusSucceeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Succeeded'**
+  String get paymentRecordsStatusSucceeded;
+
+  /// No description provided for @paymentRecordsStatusPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get paymentRecordsStatusPending;
+
+  /// No description provided for @paymentRecordsStatusFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed'**
+  String get paymentRecordsStatusFailed;
+
+  /// No description provided for @paymentRecordsStatusCanceled.
+  ///
+  /// In en, this message translates to:
+  /// **'Canceled'**
+  String get paymentRecordsStatusCanceled;
+
+  /// No description provided for @paymentRecordsSubtotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Subtotal'**
+  String get paymentRecordsSubtotal;
+
+  /// No description provided for @paymentRecordsCouponDiscount.
+  ///
+  /// In en, this message translates to:
+  /// **'Coupon Discount'**
+  String get paymentRecordsCouponDiscount;
+
+  /// No description provided for @paymentRecordsPointsUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'Points Used'**
+  String get paymentRecordsPointsUsed;
+
+  /// No description provided for @paymentDetailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment Details'**
+  String get paymentDetailTitle;
+
+  /// No description provided for @paymentDetailOrder.
+  ///
+  /// In en, this message translates to:
+  /// **'ORDER'**
+  String get paymentDetailOrder;
+
+  /// No description provided for @paymentDetailOrderNo.
+  ///
+  /// In en, this message translates to:
+  /// **'Order No.'**
+  String get paymentDetailOrderNo;
+
+  /// No description provided for @paymentDetailDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Date'**
+  String get paymentDetailDate;
+
+  /// No description provided for @paymentDetailPaymentMethod.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment'**
+  String get paymentDetailPaymentMethod;
+
+  /// No description provided for @paymentDetailItem.
+  ///
+  /// In en, this message translates to:
+  /// **'ITEM'**
+  String get paymentDetailItem;
+
+  /// No description provided for @paymentDetailItemName.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get paymentDetailItemName;
+
+  /// No description provided for @paymentDetailItemType.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get paymentDetailItemType;
+
+  /// No description provided for @paymentDetailSeller.
+  ///
+  /// In en, this message translates to:
+  /// **'Seller'**
+  String get paymentDetailSeller;
+
+  /// No description provided for @paymentDetailBreakdown.
+  ///
+  /// In en, this message translates to:
+  /// **'BREAKDOWN'**
+  String get paymentDetailBreakdown;
+
+  /// No description provided for @paymentDetailPlatformFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Platform Fee'**
+  String get paymentDetailPlatformFee;
+
+  /// No description provided for @paymentDetailTotalPaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Paid'**
+  String get paymentDetailTotalPaid;
+
+  /// No description provided for @paymentDetailDownloadReceipt.
+  ///
+  /// In en, this message translates to:
+  /// **'Download Receipt'**
+  String get paymentDetailDownloadReceipt;
+
+  /// No description provided for @paymentDetailGenerating.
+  ///
+  /// In en, this message translates to:
+  /// **'Generating receipt...'**
+  String get paymentDetailGenerating;
+
+  /// No description provided for @paymentDetailReceiptFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to generate receipt'**
+  String get paymentDetailReceiptFailed;
+
   /// No description provided for @paymentNoPayoutRecords.
   ///
   /// In en, this message translates to:

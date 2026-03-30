@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Payment Receipt - Link2Ur</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f5f5f5;
+    padding: 40px 20px;
+    color: #333;
+  }
+  .receipt {
+    max-width: 480px;
+    margin: 0 auto;
+    background: #fff;
+    border-radius: 12px;
+    padding: 40px 32px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  }
+
+  /* Header */
+  .header { text-align: center; margin-bottom: 32px; }
+  .logo { font-size: 24px; font-weight: 700; color: #6C63FF; letter-spacing: -0.5px; }
+  .logo span { color: #333; }
+  .receipt-title { font-size: 13px; color: #999; margin-top: 4px; text-transform: uppercase; letter-spacing: 1.5px; }
+
+  /* Status badge */
+  .status-badge {
+    display: inline-block;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-top: 12px;
+  }
+  .status-success { background: #E8F5E9; color: #2E7D32; }
+  .status-pending { background: #FFF3E0; color: #E65100; }
+  .status-failed { background: #FFEBEE; color: #C62828; }
+
+  /* Divider */
+  .divider {
+    border: none;
+    border-top: 1px dashed #e0e0e0;
+    margin: 24px 0;
+  }
+
+  /* Info rows */
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 8px 0;
+    font-size: 14px;
+  }
+  .info-label { color: #999; }
+  .info-value { color: #333; font-weight: 500; text-align: right; max-width: 60%; }
+
+  /* Amount section */
+  .amount-section { background: #FAFAFA; border-radius: 8px; padding: 16px; margin: 20px 0; }
+  .amount-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    font-size: 14px;
+    color: #666;
+  }
+  .amount-row.discount { color: #2E7D32; }
+  .amount-row.total {
+    border-top: 1px solid #e0e0e0;
+    margin-top: 8px;
+    padding-top: 12px;
+    font-size: 18px;
+    font-weight: 700;
+    color: #333;
+  }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    margin-top: 32px;
+    font-size: 12px;
+    color: #bbb;
+    line-height: 1.8;
+  }
+
+  @media print {
+    body { background: #fff; padding: 0; }
+    .receipt { box-shadow: none; }
+  }
+</style>
+</head>
+<body>
+  <div class="receipt">
+    <!-- Header -->
+    <div class="header">
+      <div class="logo">Link<span>2Ur</span></div>
+      <div class="receipt-title">Payment Receipt</div>
+      <div class="status-badge status-success">Paid</div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- Order Info -->
+    <div class="info-row">
+      <span class="info-label">Order No.</span>
+      <span class="info-value">PAY20260330031153RC8PLWM6</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Date</span>
+      <span class="info-value">30 Mar 2026, 03:11</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Payment Method</span>
+      <span class="info-value">Alipay</span>
+    </div>
+
+    <hr class="divider">
+
+    <!-- Task Info -->
+    <div class="info-row">
+      <span class="info-label">Item</span>
+      <span class="info-value">Vintage Leather Bag</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Type</span>
+      <span class="info-value">Flea Market Purchase</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Seller</span>
+      <span class="info-value">UserA</span>
+    </div>
+
+    <hr class="divider">
+
+    <!-- Amount Breakdown -->
+    <div class="amount-section">
+      <div class="amount-row">
+        <span>Subtotal</span>
+        <span>&pound;828.68</span>
+      </div>
+      <div class="amount-row discount">
+        <span>Coupon Discount</span>
+        <span>-&pound;0.00</span>
+      </div>
+      <div class="amount-row discount">
+        <span>Points Used</span>
+        <span>-&pound;0.00</span>
+      </div>
+      <div class="amount-row total">
+        <span>Total Paid</span>
+        <span>&pound;828.68</span>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <p>Thank you for using Link2Ur!</p>
+      <p>support@link2ur.com &middot; www.link2ur.com</p>
+      <p style="margin-top: 8px;">This is an electronic receipt. No signature required.</p>
+    </div>
+  </div>
+</body>
+</html>

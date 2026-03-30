@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Payment Receipt - Link2Ur</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: #fff;
+    padding: 0;
+    color: #333;
+  }
+  .receipt {
+    max-width: 440px;
+    margin: 0 auto;
+    padding: 24px 20px 32px;
+  }
+
+  /* Header — compact */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .brand-icon {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+  }
+  .brand-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1A1A2E;
+  }
+  .brand-name span { color: #4A9E6B; }
+  .receipt-label {
+    font-size: 11px;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  /* Status + Amount hero row */
+  .hero {
+    background: #F2F9F5;
+    border-radius: 14px;
+    padding: 20px;
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .hero-left {}
+  .hero-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #16A34A;
+    margin-bottom: 4px;
+  }
+  .hero-status .dot {
+    width: 7px;
+    height: 7px;
+    background: #16A34A;
+    border-radius: 50%;
+  }
+  .status-pending .hero-status { color: #D97706; }
+  .status-pending .hero-status .dot { background: #D97706; }
+  .status-failed .hero-status { color: #DC2626; }
+  .status-failed .hero-status .dot { background: #DC2626; }
+  .hero-date { font-size: 12px; color: #999; }
+  .hero-amount {
+    font-size: 28px;
+    font-weight: 800;
+    color: #1A1A2E;
+    letter-spacing: -0.5px;
+  }
+  .hero-amount .currency {
+    font-size: 18px;
+    font-weight: 600;
+    color: #4A9E6B;
+  }
+
+  /* Section card */
+  .section {
+    border: 1px solid #E4F0E9;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+  .section-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: #4A9E6B;
+    font-weight: 700;
+    padding: 14px 16px 0;
+  }
+  .section-body { padding: 10px 16px 14px; }
+
+  .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 7px 0;
+  }
+  .row + .row { border-top: 1px solid #EDF5F0; }
+  .row-label { font-size: 13px; color: #888; }
+  .row-value {
+    font-size: 13px;
+    color: #333;
+    font-weight: 600;
+    text-align: right;
+    max-width: 55%;
+    word-break: break-all;
+  }
+
+  /* Amount breakdown */
+  .breakdown { padding: 14px 16px; }
+  .bk-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    font-size: 13px;
+    color: #666;
+  }
+  .bk-row.discount .bk-val { color: #16A34A; }
+  .bk-row.total {
+    border-top: 1.5px solid #D4E6DA;
+    margin-top: 6px;
+    padding-top: 10px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #1A1A2E;
+  }
+
+  /* Timeline — compact inline */
+  .timeline {
+    display: flex;
+    justify-content: space-between;
+    padding: 14px 16px;
+    gap: 4px;
+  }
+  .tl-step {
+    flex: 1;
+    text-align: center;
+    position: relative;
+  }
+  .tl-step::before {
+    content: '';
+    position: absolute;
+    top: 4px;
+    left: 50%;
+    right: -50%;
+    height: 2px;
+    background: #C2DCCC;
+  }
+  .tl-step:last-child::before { display: none; }
+  .tl-dot {
+    width: 10px;
+    height: 10px;
+    background: #4A9E6B;
+    border-radius: 50%;
+    margin: 0 auto 6px;
+    position: relative;
+    z-index: 1;
+  }
+  .tl-dot.done { background: #16A34A; }
+  .tl-label { font-size: 10px; color: #999; line-height: 1.3; }
+  .tl-time { font-size: 10px; color: #bbb; }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    padding-top: 16px;
+    border-top: 1px solid #F0F0F0;
+    margin-top: 8px;
+  }
+  .footer p { font-size: 11px; color: #ccc; line-height: 1.7; }
+  .footer a { color: #4A9E6B; text-decoration: none; }
+
+  /* Order number mono */
+  .mono { font-family: 'SF Mono', 'Menlo', 'Consolas', monospace; font-size: 12px; }
+
+  @media print {
+    .receipt { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+  <div class="receipt">
+    <!-- Header -->
+    <div class="header">
+      <div class="brand">
+        <img class="brand-icon" src="logo.png" alt="Link2Ur">
+        <div class="brand-name">Link<span>2Ur</span></div>
+      </div>
+      <div class="receipt-label">Receipt</div>
+    </div>
+
+    <!-- Hero: status + amount -->
+    <div class="hero">
+      <div class="hero-left">
+        <div class="hero-status"><span class="dot"></span> Payment Successful</div>
+        <div class="hero-date">30 Mar 2026, 03:11 UTC</div>
+      </div>
+      <div class="hero-amount"><span class="currency">&pound;</span>828.68</div>
+    </div>
+
+    <!-- Order info -->
+    <div class="section">
+      <div class="section-title">Order</div>
+      <div class="section-body">
+        <div class="row">
+          <span class="row-label">Order No.</span>
+          <span class="row-value mono">PAY2026...RC8PLWM6</span>
+        </div>
+        <div class="row">
+          <span class="row-label">Payment</span>
+          <span class="row-value">Alipay via Stripe</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Item info -->
+    <div class="section">
+      <div class="section-title">Item</div>
+      <div class="section-body">
+        <div class="row">
+          <span class="row-label">Name</span>
+          <span class="row-value">Vintage Leather Bag</span>
+        </div>
+        <div class="row">
+          <span class="row-label">Type</span>
+          <span class="row-value">Flea Market</span>
+        </div>
+        <div class="row">
+          <span class="row-label">Seller</span>
+          <span class="row-value">UserA</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Amount breakdown -->
+    <div class="section">
+      <div class="section-title">Breakdown</div>
+      <div class="breakdown">
+        <div class="bk-row">
+          <span>Subtotal</span>
+          <span class="bk-val">&pound;828.68</span>
+        </div>
+        <div class="bk-row discount">
+          <span>Coupon</span>
+          <span class="bk-val">-&pound;0.00</span>
+        </div>
+        <div class="bk-row discount">
+          <span>Points</span>
+          <span class="bk-val">-&pound;0.00</span>
+        </div>
+        <div class="bk-row total">
+          <span>Total Paid</span>
+          <span>&pound;828.68</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Timeline — horizontal -->
+    <div class="section">
+      <div class="section-title">Timeline</div>
+      <div class="timeline">
+        <div class="tl-step">
+          <div class="tl-dot done"></div>
+          <div class="tl-label">Created</div>
+          <div class="tl-time">03:11</div>
+        </div>
+        <div class="tl-step">
+          <div class="tl-dot done"></div>
+          <div class="tl-label">Authorized</div>
+          <div class="tl-time">03:12</div>
+        </div>
+        <div class="tl-step">
+          <div class="tl-dot done"></div>
+          <div class="tl-label">Succeeded</div>
+          <div class="tl-time">03:14</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <p><a href="#">Link2Ur</a> &middot; support@link2ur.com</p>
+      <p>Electronic receipt &middot; No signature required</p>
+    </div>
+  </div>
+</body>
+</html>

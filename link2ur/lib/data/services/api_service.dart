@@ -535,6 +535,20 @@ class ApiService {
     }
   }
 
+  /// 下载文件（返回 bytes），用于 PDF 等二进制下载
+  Future<List<int>?> downloadFile(String path) async {
+    try {
+      final response = await _dio.get<List<int>>(
+        path,
+        options: Options(responseType: ResponseType.bytes),
+      );
+      return response.data;
+    } catch (e) {
+      AppLogger.error('Download file failed: $path', e);
+      return null;
+    }
+  }
+
   /// 上传文件（通过文件路径，仅限移动端/桌面端）
   Future<ApiResponse<T>> uploadFile<T>(
     String path, {

@@ -64,6 +64,9 @@ httpx[http2]>=0.24.0
 # Android 推送通知服务 (FCM)
 firebase-admin>=6.0.0
 
+# PDF 生成（收据）
+xhtml2pdf>=0.2.13,<1.0.0
+
 # 图片处理
 Pillow>=10.0.0,<11.0.0
 

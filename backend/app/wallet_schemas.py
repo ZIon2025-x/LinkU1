@@ -12,6 +12,9 @@ class WalletBalanceOut(BaseModel):
     total_withdrawn: float
     total_spent: float
     currency: str = "GBP"
+    # 全局汇总：包含所有支付方式（Stripe 直接支付 + 钱包 + 优惠券等）
+    total_all_earned: Optional[float] = None
+    total_all_spent: Optional[float] = None
 
 
 # Legacy alias — kept for backward compatibility during migration

@@ -40,7 +40,7 @@ router = APIRouter(prefix="/api/wallet", tags=["Wallet"])
 # GET /api/wallet/balance
 # ---------------------------------------------------------------------------
 
-def _format_wallet(w: WalletAccount) -> WalletBalanceOut:
+def _format_wallet(w: WalletAccount, total_all_earned: float = None, total_all_spent: float = None) -> WalletBalanceOut:
     """Convert a WalletAccount ORM object to a response schema."""
     return WalletBalanceOut(
         # NOTE: float has ~15-digit precision; sufficient for balances < 1 trillion
@@ -50,6 +50,8 @@ def _format_wallet(w: WalletAccount) -> WalletBalanceOut:
         total_withdrawn=float(w.total_withdrawn),
         total_spent=float(w.total_spent),
         currency=w.currency,
+        total_all_earned=total_all_earned,
+        total_all_spent=total_all_spent,
     )
 
 
@@ -79,8 +81,32 @@ def get_balance(
                     default_currency = cfg["currency"]
             wallets = [get_or_create_wallet(db, current_user.id, default_currency)]
     db.commit()
+
+    # 全局汇总：包含所有支付方式（Stripe 直接支付 + 钱包 + 优惠券等）
+    # 累计消费：PaymentHistory 中所有 succeeded 的 total_amount（便士→英镑）
+    total_all_spent_pence = db.query(
+        func.coalesce(func.sum(models.PaymentHistory.total_amount), 0)
+    ).filter(
+        models.PaymentHistory.user_id == current_user.id,
+        models.PaymentHistory.status == "succeeded",
+    ).scalar()
+    total_all_spent = float(total_all_spent_pence) / 100.0
+
+    # 累计收款：PaymentTransfer 中所有 succeeded 且 taker_id 是当前用户的 amount（已是英镑）
+    total_all_earned_raw = db.query(
+        func.coalesce(func.sum(models.PaymentTransfer.amount), 0)
+    ).filter(
+        models.PaymentTransfer.taker_id == current_user.id,
+        models.PaymentTransfer.status == "succeeded",
+    ).scalar()
+    total_all_earned = float(total_all_earned_raw)
+    # 也加上钱包的 total_earned（包含非 transfer 来源的入账，如退款等）
+    wallet_earned = sum(float(w.total_earned) for w in wallets)
+    if wallet_earned > total_all_earned:
+        total_all_earned = wallet_earned
+
     return WalletBalancesResponse(
-        wallets=[_format_wallet(w) for w in wallets],
+        wallets=[_format_wallet(w, total_all_earned=total_all_earned, total_all_spent=total_all_spent) for w in wallets],
     )
 
 

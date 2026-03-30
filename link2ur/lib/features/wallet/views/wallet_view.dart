@@ -267,7 +267,7 @@ class _PointsCardState extends State<_PointsCard> {
                 _BalanceStatItem(
                   label: context.l10n.walletTotalEarned,
                   value: widget.walletBalances.isNotEmpty
-                      ? _formatMultiCurrencyTotal(widget.walletBalances, (w) => w.totalEarned)
+                      ? _formatMultiCurrencyTotal(widget.walletBalances, (w) => w.totalAllEarned ?? w.totalEarned)
                       : Helpers.formatPrice(widget.account.totalPaymentIncome),
                 ),
                 Container(
@@ -278,7 +278,7 @@ class _PointsCardState extends State<_PointsCard> {
                 _BalanceStatItem(
                   label: context.l10n.walletTotalSpent,
                   value: widget.walletBalances.isNotEmpty
-                      ? _formatMultiCurrencyTotal(widget.walletBalances, (w) => w.totalSpent)
+                      ? _formatMultiCurrencyTotal(widget.walletBalances, (w) => w.totalAllSpent ?? w.totalSpent)
                       : Helpers.formatPrice(widget.account.totalPaymentSpent),
                 ),
               ],

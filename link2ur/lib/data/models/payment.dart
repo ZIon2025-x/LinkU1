@@ -474,8 +474,10 @@ class StripeConnectTransaction extends Equatable {
 class TaskPaymentRecord extends Equatable {
   const TaskPaymentRecord({
     required this.id,
+    this.orderNo,
     this.taskId,
     this.taskTitle,
+    this.taskSource,
     this.amount = 0,
     this.currency = 'gbp',
     this.status = '',
@@ -487,11 +489,14 @@ class TaskPaymentRecord extends Equatable {
     this.couponDiscount,
     this.applicationFee,
     this.paymentIntentId,
+    this.counterpartName,
   });
 
   final int id;
+  final String? orderNo;
   final int? taskId;
   final String? taskTitle;
+  final String? taskSource;
   final double amount; // final_amount in pounds
   final String currency;
   final String status;
@@ -503,6 +508,7 @@ class TaskPaymentRecord extends Equatable {
   final double? couponDiscount; // discount in pounds
   final double? applicationFee; // platform fee in pounds
   final String? paymentIntentId;
+  final String? counterpartName;
 
   factory TaskPaymentRecord.fromJson(Map<String, dynamic> json) {
     // 后端返回 final_amount（便士），转换为英镑
@@ -518,6 +524,7 @@ class TaskPaymentRecord extends Equatable {
     final taskData = json['task'] as Map<String, dynamic>?;
     final taskTitle = json['task_title'] as String? ?? taskData?['title'] as String?;
     final taskId = json['task_id'] as int? ?? taskData?['id'] as int?;
+    final taskSource = taskData?['task_source'] as String?;
 
     // 解析其他金额字段（便士→英镑）
     double? parsePence(dynamic val) {
@@ -527,8 +534,10 @@ class TaskPaymentRecord extends Equatable {
 
     return TaskPaymentRecord(
       id: json['id'] as int? ?? 0,
+      orderNo: json['order_no'] as String?,
       taskId: taskId,
       taskTitle: taskTitle,
+      taskSource: taskSource,
       amount: amountPounds,
       currency: json['currency'] as String? ?? 'gbp',
       status: json['status'] as String? ?? '',
@@ -540,6 +549,7 @@ class TaskPaymentRecord extends Equatable {
       couponDiscount: json.containsKey('coupon_discount') ? parsePence(json['coupon_discount']) : null,
       applicationFee: json.containsKey('application_fee') ? parsePence(json['application_fee']) : null,
       paymentIntentId: json['payment_intent_id'] as String?,
+      counterpartName: json['counterpart_name'] as String?,
     );
   }
 
@@ -553,6 +563,9 @@ class WalletBalance extends Equatable {
   final double totalWithdrawn;
   final double totalSpent;
   final String currency;
+  /// 全局汇总：包含所有支付方式（Stripe + 钱包 + 优惠券等）
+  final double? totalAllEarned;
+  final double? totalAllSpent;
 
   const WalletBalance({
     this.balance = 0.0,
@@ -560,6 +573,8 @@ class WalletBalance extends Equatable {
     this.totalWithdrawn = 0.0,
     this.totalSpent = 0.0,
     this.currency = 'GBP',
+    this.totalAllEarned,
+    this.totalAllSpent,
   });
 
   factory WalletBalance.fromJson(Map<String, dynamic> json) {
@@ -569,11 +584,13 @@ class WalletBalance extends Equatable {
       totalWithdrawn: (json['total_withdrawn'] as num?)?.toDouble() ?? 0.0,
       totalSpent: (json['total_spent'] as num?)?.toDouble() ?? 0.0,
       currency: json['currency'] as String? ?? 'GBP',
+      totalAllEarned: (json['total_all_earned'] as num?)?.toDouble(),
+      totalAllSpent: (json['total_all_spent'] as num?)?.toDouble(),
     );
   }
 
   @override
-  List<Object?> get props => [balance, totalEarned, totalWithdrawn, totalSpent, currency];
+  List<Object?> get props => [balance, totalEarned, totalWithdrawn, totalSpent, currency, totalAllEarned, totalAllSpent];
 }
 
 class WalletTransactionItem extends Equatable {

@@ -477,6 +477,8 @@ class ApiEndpoints {
   static String taskPaymentStatus(int taskId) =>
       '/api/coupon-points/tasks/$taskId/payment-status';
   static const String paymentHistory = '/api/coupon-points/payment-history';
+  static String paymentReceipt(int paymentId) =>
+      '/api/coupon-points/payment-history/$paymentId/receipt';
   static String createWeChatCheckout(int taskId) =>
       '/api/coupon-points/tasks/$taskId/wechat-checkout';
 

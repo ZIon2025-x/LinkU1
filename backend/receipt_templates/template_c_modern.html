@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Payment Receipt - Link2Ur</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 40px 20px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+  }
+  .receipt {
+    max-width: 440px;
+    width: 100%;
+    background: #fff;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+  }
+
+  /* Header with gradient */
+  .header {
+    background: linear-gradient(135deg, #6C63FF 0%, #8B5CF6 100%);
+    color: #fff;
+    padding: 32px 28px 48px;
+    text-align: center;
+    position: relative;
+  }
+  .header::after {
+    content: '';
+    position: absolute;
+    bottom: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 40px;
+    background: #fff;
+    border-radius: 50%;
+  }
+  .logo {
+    font-size: 20px;
+    font-weight: 700;
+    opacity: 0.9;
+    margin-bottom: 12px;
+  }
+  .check-icon {
+    width: 56px;
+    height: 56px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 12px;
+    font-size: 28px;
+  }
+  .header h2 {
+    font-size: 16px;
+    font-weight: 500;
+    opacity: 0.9;
+  }
+  .amount-hero {
+    font-size: 36px;
+    font-weight: 800;
+    margin-top: 8px;
+    letter-spacing: -1px;
+  }
+  .amount-hero .currency { font-size: 22px; font-weight: 600; }
+
+  /* Body */
+  .body { padding: 36px 28px 28px; }
+
+  /* Detail card */
+  .detail-card {
+    background: #F8F9FE;
+    border-radius: 14px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  .detail-card-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #6C63FF;
+    font-weight: 700;
+    margin-bottom: 14px;
+  }
+  .detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+  }
+  .detail-row + .detail-row { border-top: 1px solid #EEEDF5; }
+  .detail-label { font-size: 13px; color: #888; }
+  .detail-value { font-size: 13px; color: #333; font-weight: 600; }
+
+  /* Breakdown */
+  .breakdown { padding: 0 4px; }
+  .breakdown-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    font-size: 14px;
+    color: #666;
+  }
+  .breakdown-row + .breakdown-row { border-top: 1px solid #f0f0f0; }
+  .breakdown-row.discount .val { color: #22C55E; }
+  .breakdown-row.total {
+    border-top: 2px solid #E8E8E8;
+    margin-top: 4px;
+    padding-top: 14px;
+    font-weight: 700;
+    font-size: 16px;
+    color: #1A1A2E;
+  }
+
+  /* Timeline */
+  .timeline {
+    margin-top: 24px;
+    padding: 0 4px;
+  }
+  .timeline-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 8px 0;
+    font-size: 13px;
+  }
+  .timeline-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #6C63FF;
+    margin-top: 5px;
+    flex-shrink: 0;
+  }
+  .timeline-dot.done { background: #22C55E; }
+  .timeline-time { color: #bbb; min-width: 44px; }
+  .timeline-text { color: #666; }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    padding: 20px 28px 28px;
+    font-size: 11px;
+    color: #ccc;
+    line-height: 1.8;
+  }
+  .footer a { color: #6C63FF; text-decoration: none; }
+
+  @media print {
+    body { background: #fff; padding: 0; }
+    .receipt { box-shadow: none; border-radius: 0; }
+    .header { background: #6C63FF !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+  <div class="receipt">
+    <!-- Header -->
+    <div class="header">
+      <div class="logo">Link2Ur</div>
+      <div class="check-icon">&#10003;</div>
+      <h2>Payment Successful</h2>
+      <div class="amount-hero"><span class="currency">&pound;</span>828.68</div>
+    </div>
+
+    <div class="body">
+      <!-- Transaction details -->
+      <div class="detail-card">
+        <div class="detail-card-title">Transaction Details</div>
+        <div class="detail-row">
+          <span class="detail-label">Order No.</span>
+          <span class="detail-value">PAY20260330...RC8PLWM6</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Date</span>
+          <span class="detail-value">30 Mar 2026, 03:11</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Payment</span>
+          <span class="detail-value">Alipay</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Status</span>
+          <span class="detail-value" style="color: #22C55E;">Succeeded</span>
+        </div>
+      </div>
+
+      <!-- Item details -->
+      <div class="detail-card">
+        <div class="detail-card-title">Item</div>
+        <div class="detail-row">
+          <span class="detail-label">Name</span>
+          <span class="detail-value">Vintage Leather Bag</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Category</span>
+          <span class="detail-value">Flea Market</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Seller</span>
+          <span class="detail-value">UserA</span>
+        </div>
+      </div>
+
+      <!-- Amount breakdown -->
+      <div class="breakdown">
+        <div class="breakdown-row">
+          <span>Subtotal</span>
+          <span class="val">&pound;828.68</span>
+        </div>
+        <div class="breakdown-row discount">
+          <span>Coupon Discount</span>
+          <span class="val">-&pound;0.00</span>
+        </div>
+        <div class="breakdown-row discount">
+          <span>Points Deduction</span>
+          <span class="val">-&pound;0.00</span>
+        </div>
+        <div class="breakdown-row">
+          <span>Platform Fee (5%)</span>
+          <span class="val">&pound;41.43</span>
+        </div>
+        <div class="breakdown-row total">
+          <span>Total Paid</span>
+          <span>&pound;828.68</span>
+        </div>
+      </div>
+
+      <!-- Timeline -->
+      <div class="timeline">
+        <div class="timeline-item">
+          <div class="timeline-dot done"></div>
+          <span class="timeline-time">03:11</span>
+          <span class="timeline-text">Payment created</span>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot done"></div>
+          <span class="timeline-time">03:12</span>
+          <span class="timeline-text">Payment authorized</span>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot done"></div>
+          <span class="timeline-time">03:14</span>
+          <span class="timeline-text">Payment succeeded</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <p>Thank you for using <a href="#">Link2Ur</a></p>
+      <p>support@link2ur.com</p>
+      <p style="margin-top: 6px;">Electronic receipt &middot; No signature required</p>
+    </div>
+  </div>
+</body>
+</html>

@@ -2809,6 +2809,72 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paymentRecordsLoadFailed => 'Load Failed';
 
   @override
+  String get paymentRecordsStatusSucceeded => 'Succeeded';
+
+  @override
+  String get paymentRecordsStatusPending => 'Pending';
+
+  @override
+  String get paymentRecordsStatusFailed => 'Failed';
+
+  @override
+  String get paymentRecordsStatusCanceled => 'Canceled';
+
+  @override
+  String get paymentRecordsSubtotal => 'Subtotal';
+
+  @override
+  String get paymentRecordsCouponDiscount => 'Coupon Discount';
+
+  @override
+  String get paymentRecordsPointsUsed => 'Points Used';
+
+  @override
+  String get paymentDetailTitle => 'Payment Details';
+
+  @override
+  String get paymentDetailOrder => 'ORDER';
+
+  @override
+  String get paymentDetailOrderNo => 'Order No.';
+
+  @override
+  String get paymentDetailDate => 'Date';
+
+  @override
+  String get paymentDetailPaymentMethod => 'Payment';
+
+  @override
+  String get paymentDetailItem => 'ITEM';
+
+  @override
+  String get paymentDetailItemName => 'Name';
+
+  @override
+  String get paymentDetailItemType => 'Type';
+
+  @override
+  String get paymentDetailSeller => 'Seller';
+
+  @override
+  String get paymentDetailBreakdown => 'BREAKDOWN';
+
+  @override
+  String get paymentDetailPlatformFee => 'Platform Fee';
+
+  @override
+  String get paymentDetailTotalPaid => 'Total Paid';
+
+  @override
+  String get paymentDetailDownloadReceipt => 'Download Receipt';
+
+  @override
+  String get paymentDetailGenerating => 'Generating receipt...';
+
+  @override
+  String get paymentDetailReceiptFailed => 'Failed to generate receipt';
+
+  @override
   String get paymentNoPayoutRecords => 'No Payout Records';
 
   @override
