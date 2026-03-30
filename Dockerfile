@@ -16,6 +16,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     g++ \
     libpq-dev \
+    libcairo2-dev \
+    pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
 # 复制requirements文件（利用Docker缓存层）
