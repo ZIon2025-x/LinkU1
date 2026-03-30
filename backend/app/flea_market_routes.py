@@ -2325,29 +2325,54 @@ async def approve_purchase_request(
         # C3 fix: seller no longer needs Connect account — payment goes to local wallet
         # if not is_free_purchase and not taker_stripe_account_id:
         #     raise HTTPException(...)
-        
-        new_task = models.Task(
-            title=item.title,
-            description=description,
-            reward=float(final_price),
-            base_reward=item.price,
-            agreed_reward=final_price,
-            currency=item.currency or "GBP",
-            location=item.location or "Online",
-            task_type="Second-hand & Rental",
-            poster_id=purchase_request.buyer_id,
-            taker_id=item.seller_id,
-            status="in_progress" if is_free_purchase else "pending_payment",
-            is_paid=1 if is_free_purchase else 0,
-            payment_expires_at=None if is_free_purchase else (get_utc_time() + timedelta(minutes=30)),
-            is_flexible=1,
-            deadline=None,
-            images=json.dumps(images) if images else None,
-            task_source="flea_market",
-        )
-        db.add(new_task)
+
+        # Check if task already exists (from consultation flow)
+        existing_task = None
+        if hasattr(purchase_request, 'task_id') and purchase_request.task_id:
+            existing_task = await db.get(models.Task, purchase_request.task_id)
+
+        if existing_task:
+            # Update existing consultation task instead of creating a duplicate
+            existing_task.title = item.title
+            existing_task.description = description
+            existing_task.reward = float(final_price)
+            existing_task.base_reward = item.price
+            existing_task.agreed_reward = final_price
+            existing_task.currency = item.currency or "GBP"
+            existing_task.location = item.location or "Online"
+            existing_task.task_type = "Second-hand & Rental"
+            existing_task.status = "in_progress" if is_free_purchase else "pending_payment"
+            existing_task.is_paid = 1 if is_free_purchase else 0
+            existing_task.payment_expires_at = None if is_free_purchase else (get_utc_time() + timedelta(minutes=30))
+            existing_task.is_flexible = 1
+            existing_task.images = json.dumps(images) if images else None
+            existing_task.task_source = "flea_market"
+            existing_task.accepted_at = get_utc_time()
+            new_task = existing_task
+        else:
+            # Original task creation (no pre-existing consultation task)
+            new_task = models.Task(
+                title=item.title,
+                description=description,
+                reward=float(final_price),
+                base_reward=item.price,
+                agreed_reward=final_price,
+                currency=item.currency or "GBP",
+                location=item.location or "Online",
+                task_type="Second-hand & Rental",
+                poster_id=purchase_request.buyer_id,
+                taker_id=item.seller_id,
+                status="in_progress" if is_free_purchase else "pending_payment",
+                is_paid=1 if is_free_purchase else 0,
+                payment_expires_at=None if is_free_purchase else (get_utc_time() + timedelta(minutes=30)),
+                is_flexible=1,
+                deadline=None,
+                images=json.dumps(images) if images else None,
+                task_source="flea_market",
+            )
+            db.add(new_task)
         await db.flush()
-        
+
         buyer_result = await db.execute(
             select(models.User).where(models.User.id == purchase_request.buyer_id)
         )
