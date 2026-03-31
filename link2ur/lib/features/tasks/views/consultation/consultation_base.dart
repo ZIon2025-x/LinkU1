@@ -95,24 +95,28 @@ class ActionPill extends StatelessWidget {
     final disabled = onTap == null;
     final effectiveColor = disabled ? c.withValues(alpha: 0.4) : c;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          border: Border.all(color: effectiveColor.withValues(alpha: 0.5)),
-          borderRadius: AppRadius.allPill,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 14, color: effectiveColor),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: TextStyle(fontSize: 12, color: effectiveColor),
-            ),
-          ],
+    return Semantics(
+      button: true,
+      label: label,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            border: Border.all(color: effectiveColor.withValues(alpha: 0.5)),
+            borderRadius: AppRadius.allPill,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 14, color: effectiveColor),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: TextStyle(fontSize: 12, color: effectiveColor),
+              ),
+            ],
+          ),
         ),
       ),
     );
