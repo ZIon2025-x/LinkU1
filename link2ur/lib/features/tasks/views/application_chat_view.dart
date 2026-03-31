@@ -1170,8 +1170,8 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
                     ),
                   ),
                 ),
-              // Action buttons for incoming negotiation (only on latest)
-              if (!isMe && isLatestNegotiation) ...[
+              // Action buttons for incoming negotiation (only on latest, consultation mode only)
+              if (!isMe && isLatestNegotiation && _consultationActions != null) ...[
                 const SizedBox(height: 12),
                 Row(
                   mainAxisSize: MainAxisSize.min,
@@ -1179,37 +1179,19 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
                     NegotiationActionButton(
                       label: context.l10n.acceptPrice,
                       color: AppColors.success,
-                      onPressed: () {
-                        if (_consultationActions != null) {
-                          _consultationActions!.handleNegotiationResponse(context, 'accept');
-                        } else {
-                          _handleNegotiationResponse('accept');
-                        }
-                      },
+                      onPressed: () => _consultationActions!.handleNegotiationResponse(context, 'accept'),
                     ),
                     const SizedBox(width: 8),
                     NegotiationActionButton(
                       label: context.l10n.rejectPrice,
                       color: AppColors.error,
-                      onPressed: () {
-                        if (_consultationActions != null) {
-                          _consultationActions!.handleNegotiationResponse(context, 'reject');
-                        } else {
-                          _handleNegotiationResponse('reject');
-                        }
-                      },
+                      onPressed: () => _consultationActions!.handleNegotiationResponse(context, 'reject'),
                     ),
                     const SizedBox(width: 8),
                     NegotiationActionButton(
                       label: context.l10n.counterOffer,
                       color: AppColors.info,
-                      onPressed: () {
-                        if (_consultationActions != null) {
-                          _consultationActions!.showCounterOfferDialog(context, getCurrencySymbol: _getCurrencySymbol);
-                        } else {
-                          _showCounterOfferDialog();
-                        }
-                      },
+                      onPressed: () => _consultationActions!.showCounterOfferDialog(context, getCurrencySymbol: _getCurrencySymbol),
                     ),
                   ],
                 ),
@@ -1257,55 +1239,6 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
         ),
       ),
     );
-  }
-
-  void _showCounterOfferDialog() {
-    final priceController = TextEditingController();
-    String? errorText;
-    showDialog(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (dialogContext, setDialogState) => AlertDialog(
-          title: Text(context.l10n.counterOffer),
-          content: TextField(
-            controller: priceController,
-            keyboardType:
-                const TextInputType.numberWithOptions(decimal: true),
-            decoration: InputDecoration(
-              hintText: context.l10n.counterOfferHint,
-              prefixText: _getCurrencySymbol(),
-              errorText: errorText,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child:
-                  Text(MaterialLocalizations.of(context).cancelButtonLabel),
-            ),
-            TextButton(
-              onPressed: () {
-                final price =
-                    double.tryParse(priceController.text.trim());
-                if (price == null || price <= 0) {
-                  setDialogState(() {
-                    errorText = context.l10n.counterOfferHint;
-                  });
-                  return;
-                }
-                Navigator.pop(dialogContext);
-                // No-op in regular mode; consultation mode uses _consultationActions
-              },
-              child: Text(MaterialLocalizations.of(context).okButtonLabel),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _handleNegotiationResponse(String action) {
-    // No-op in regular mode; consultation mode uses _consultationActions
   }
 
 }
