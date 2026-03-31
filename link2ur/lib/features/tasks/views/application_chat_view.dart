@@ -14,8 +14,8 @@ import '../../../data/repositories/question_repository.dart';
 import '../../../data/repositories/task_repository.dart';
 import '../../../data/repositories/activity_repository.dart';
 import '../../../data/repositories/task_expert_repository.dart';
-import '../../../data/services/api_service.dart';
 import '../../../data/services/storage_service.dart';
+import '../../../data/services/api_service.dart';
 import '../../../core/constants/api_endpoints.dart';
 import '../../../core/router/page_transitions.dart';
 import '../../../core/widgets/loading_view.dart';
@@ -24,8 +24,9 @@ import '../../../core/utils/helpers.dart';
 import '../../task_expert/bloc/task_expert_bloc.dart';
 import '../bloc/task_detail_bloc.dart';
 import 'approval_payment_page.dart';
+import 'consultation/consultation_base.dart';
 
-enum ConsultationType { service, task, fleaMarket }
+export 'consultation/consultation_base.dart' show ConsultationType;
 
 /// Application-scoped chat view for chat-before-payment flow.
 /// Accessed via /tasks/:taskId/applications/:applicationId/chat
@@ -109,11 +110,19 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
   // Consultation mode state
   Map<String, dynamic>? _consultationApp;
   bool _isLoadingConsultation = false;
+  ConsultationActions? _consultationActions;
 
   @override
   void initState() {
     super.initState();
     _currentUserId = StorageService.instance.getUserId();
+    if (widget.isConsultation) {
+      _consultationActions = ConsultationActions.of(
+        type: widget.consultationType,
+        applicationId: widget.applicationId,
+        taskId: widget.taskId,
+      );
+    }
     _loadMessages();
     if (widget.isConsultation) {
       _loadConsultationStatus();
@@ -143,7 +152,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
       final response = await apiService.get<Map<String, dynamic>>(
         ApiEndpoints.taskChatMessages(widget.taskId),
         queryParameters: {
-          if (!widget.isConsultation || widget.consultationType == ConsultationType.task)
+          if (_consultationActions?.needsApplicationIdInMessages ?? true)
             'application_id': widget.applicationId,
           'limit': 50,
         },
@@ -199,7 +208,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
         data: {
           'content': content,
           'message_type': 'text',
-          if (!widget.isConsultation || widget.consultationType == ConsultationType.task)
+          if (_consultationActions?.needsApplicationIdInMessages ?? true)
             'application_id': widget.applicationId,
         },
       );
@@ -306,15 +315,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
     setState(() => _isLoadingConsultation = true);
     try {
       final apiService = context.read<ApiService>();
-      final String endpoint;
-      switch (widget.consultationType) {
-        case ConsultationType.service:
-          endpoint = ApiEndpoints.consultationStatus(widget.applicationId);
-        case ConsultationType.task:
-          endpoint = ApiEndpoints.taskConsultStatus(widget.taskId, widget.applicationId);
-        case ConsultationType.fleaMarket:
-          endpoint = ApiEndpoints.fleaMarketConsultStatus(widget.applicationId);
-      }
+      final endpoint = _consultationActions!.statusEndpoint;
       final response = await apiService.get<Map<String, dynamic>>(
         endpoint,
       );
@@ -342,14 +343,8 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
   }
 
   bool _isApplicantInConsultation() {
-    if (!widget.isConsultation) return false;
-    switch (widget.consultationType) {
-      case ConsultationType.service:
-      case ConsultationType.task:
-        return _currentUserId == _consultationApp?['applicant_id']?.toString();
-      case ConsultationType.fleaMarket:
-        return _currentUserId == _consultationApp?['buyer_id']?.toString();
-    }
+    if (!widget.isConsultation || _consultationActions == null) return false;
+    return _consultationActions!.isApplicant(_currentUserId, _consultationApp);
   }
 
   bool _isChatActiveForStatus(String? appStatus) {
@@ -522,7 +517,18 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
               if (widget.isConsultation &&
                   isChatActive &&
                   (isConsultingOrNeg || appStatus == 'price_agreed' || appStatus == 'pending'))
-                _buildConsultingActions2(appStatus),
+                _consultationActions!.buildActions(
+                  context: context,
+                  appStatus: appStatus,
+                  isSubmitting: context.watch<TaskExpertBloc>().state.isSubmitting,
+                  isApplicant: _isApplicantInConsultation(),
+                  getCurrencySymbol: _getCurrencySymbol,
+                  consultationApp: _consultationApp,
+                  onActionCompleted: () {
+                    _loadMessages();
+                    _loadConsultationStatus();
+                  },
+                ),
 
               // Input bar (when chat is active)
               if (isChatActive) _buildInputBar(),
@@ -973,6 +979,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
   // ── Consulting Mode Widgets ──────────────────────────────────────────
 
   Widget _buildServiceInfoCard(TaskDetailState state) {
+
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final application = widget.isConsultation ? null : _findApplication(state);
     final consultationPrice = widget.isConsultation
@@ -1133,24 +1140,40 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _NegotiationActionButton(
+                    NegotiationActionButton(
                       label: context.l10n.acceptPrice,
                       color: AppColors.success,
-                      onPressed: () =>
-                          _handleNegotiationResponse('accept'),
+                      onPressed: () {
+                        if (_consultationActions != null) {
+                          _consultationActions!.handleNegotiationResponse(context, 'accept');
+                        } else {
+                          _handleNegotiationResponse('accept');
+                        }
+                      },
                     ),
                     const SizedBox(width: 8),
-                    _NegotiationActionButton(
+                    NegotiationActionButton(
                       label: context.l10n.rejectPrice,
                       color: AppColors.error,
-                      onPressed: () =>
-                          _handleNegotiationResponse('reject'),
+                      onPressed: () {
+                        if (_consultationActions != null) {
+                          _consultationActions!.handleNegotiationResponse(context, 'reject');
+                        } else {
+                          _handleNegotiationResponse('reject');
+                        }
+                      },
                     ),
                     const SizedBox(width: 8),
-                    _NegotiationActionButton(
+                    NegotiationActionButton(
                       label: context.l10n.counterOffer,
                       color: AppColors.info,
-                      onPressed: _showCounterOfferDialog,
+                      onPressed: () {
+                        if (_consultationActions != null) {
+                          _consultationActions!.showCounterOfferDialog(context, getCurrencySymbol: _getCurrencySymbol);
+                        } else {
+                          _showCounterOfferDialog();
+                        }
+                      },
                     ),
                   ],
                 ),
@@ -1200,482 +1223,6 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
     );
   }
 
-  Widget _buildConsultingActions2(String? appStatus) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isSubmitting = widget.isConsultation
-        ? context.watch<TaskExpertBloc>().state.isSubmitting
-        : false;
-    final isApplicant = widget.isConsultation
-        ? _isApplicantInConsultation()
-        : _currentUserId != null; // fallback; regular mode used _findApplication
-    final isConsulting = appStatus == 'consulting';
-    final isNegotiating = appStatus == 'negotiating';
-    final isPriceAgreed = appStatus == 'price_agreed';
-
-    // In regular mode, determine isApplicant from the TaskApplication
-    final bool isApplicantFinal;
-    if (!widget.isConsultation) {
-      final state = context.read<TaskDetailBloc>().state;
-      final application = _findApplication(state);
-      isApplicantFinal = _currentUserId == application?.applicantId;
-    } else {
-      isApplicantFinal = isApplicant;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: isDark
-            ? AppColors.cardBackgroundDark.withValues(alpha: 0.85)
-            : AppColors.cardBackgroundLight.withValues(alpha: 0.92),
-        border: Border(
-          top: BorderSide(
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.06)
-                : Colors.black.withValues(alpha: 0.04),
-            width: 0.5,
-          ),
-        ),
-      ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            // User (poster / consulting initiator): negotiate & formal apply
-            if (isApplicantFinal && (isConsulting || isNegotiating)) ...[
-              _ActionPill(
-                icon: Icons.local_offer,
-                label: context.l10n.negotiatePrice,
-                onTap: isSubmitting ? null : _showNegotiateDialog,
-              ),
-              const SizedBox(width: 8),
-              _ActionPill(
-                icon: Icons.assignment,
-                label: widget.consultationType == ConsultationType.fleaMarket
-                    ? context.l10n.fleaMarketBuyNow
-                    : context.l10n.formalApply,
-                onTap: isSubmitting ? null : _showFormalApplyDialog,
-              ),
-              const SizedBox(width: 8),
-            ],
-            // Expert (service provider): quote
-            if (!isApplicantFinal && (isConsulting || isNegotiating)) ...[
-              _ActionPill(
-                icon: Icons.request_quote,
-                label: context.l10n.quotePrice,
-                onTap: isSubmitting ? null : _showQuoteDialog,
-              ),
-              const SizedBox(width: 8),
-            ],
-            // Price agreed: service can approve directly, task/fleaMarket need formal-apply first
-            if (isPriceAgreed) ...[
-              if (isApplicantFinal) ...[
-                _ActionPill(
-                  icon: Icons.assignment,
-                  label: widget.consultationType == ConsultationType.fleaMarket
-                      ? context.l10n.fleaMarketConfirmPurchase
-                      : context.l10n.formalApply,
-                  onTap: isSubmitting ? null : _showFormalApplyDialog,
-                ),
-                const SizedBox(width: 8),
-              ],
-              if (!isApplicantFinal && widget.consultationType == ConsultationType.service) ...[
-                _ActionPill(
-                  icon: Icons.check_circle,
-                  label: context.l10n.expertApplicationConfirmApprove,
-                  color: AppColors.success,
-                  onTap: isSubmitting ? null : _showApproveConfirmation,
-                ),
-                const SizedBox(width: 8),
-              ],
-            ],
-            // Pending: non-applicant can approve for ALL types
-            if (appStatus == 'pending' && !isApplicantFinal) ...[
-              _ActionPill(
-                icon: Icons.check_circle,
-                label: context.l10n.expertApplicationConfirmApprove,
-                color: AppColors.success,
-                onTap: isSubmitting ? null : _showApproveConfirmation,
-              ),
-              const SizedBox(width: 8),
-            ],
-            // Both: close consultation (only when consulting or negotiating)
-            if (isConsulting || isNegotiating) ...[
-              _ActionPill(
-                icon: Icons.close,
-                label: context.l10n.closeConsultation,
-                color: AppColors.error.withValues(alpha: 0.8),
-                onTap: isSubmitting ? null : _showCloseConfirmation,
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ── Dispatch helpers (route by consultationType) ─────────────────────
-
-  void _dispatchNegotiate(double price) {
-    final bloc = context.read<TaskExpertBloc>();
-    switch (widget.consultationType) {
-      case ConsultationType.service:
-        bloc.add(TaskExpertNegotiatePrice(widget.applicationId, price: price));
-      case ConsultationType.task:
-        bloc.add(TaskExpertTaskNegotiate(widget.taskId, widget.applicationId, price: price));
-      case ConsultationType.fleaMarket:
-        bloc.add(TaskExpertFleaMarketNegotiate(widget.applicationId, price: price));
-    }
-  }
-
-  void _dispatchQuote(double price, String? message) {
-    final bloc = context.read<TaskExpertBloc>();
-    switch (widget.consultationType) {
-      case ConsultationType.service:
-        bloc.add(TaskExpertQuotePrice(widget.applicationId, price: price, message: message));
-      case ConsultationType.task:
-        bloc.add(TaskExpertTaskQuote(widget.taskId, widget.applicationId, price: price, message: message));
-      case ConsultationType.fleaMarket:
-        bloc.add(TaskExpertFleaMarketQuote(widget.applicationId, price: price, message: message));
-    }
-  }
-
-  void _dispatchNegotiateResponse(String action, {double? counterPrice}) {
-    final bloc = context.read<TaskExpertBloc>();
-    switch (widget.consultationType) {
-      case ConsultationType.service:
-        bloc.add(TaskExpertNegotiateResponse(widget.applicationId, action: action, counterPrice: counterPrice));
-      case ConsultationType.task:
-        bloc.add(TaskExpertTaskNegotiateResponse(widget.taskId, widget.applicationId, action: action, counterPrice: counterPrice));
-      case ConsultationType.fleaMarket:
-        bloc.add(TaskExpertFleaMarketNegotiateResponse(widget.applicationId, action: action, counterPrice: counterPrice));
-    }
-  }
-
-  void _dispatchFormalApply(double? price, String? message) {
-    final bloc = context.read<TaskExpertBloc>();
-    switch (widget.consultationType) {
-      case ConsultationType.service:
-        bloc.add(TaskExpertFormalApply(widget.applicationId, proposedPrice: price, message: message));
-      case ConsultationType.task:
-        bloc.add(TaskExpertTaskFormalApply(widget.taskId, widget.applicationId, proposedPrice: price, message: message));
-      case ConsultationType.fleaMarket:
-        bloc.add(TaskExpertFleaMarketFormalBuy(widget.applicationId));
-    }
-  }
-
-  void _dispatchClose() {
-    final bloc = context.read<TaskExpertBloc>();
-    switch (widget.consultationType) {
-      case ConsultationType.service:
-        bloc.add(TaskExpertCloseConsultation(widget.applicationId));
-      case ConsultationType.task:
-        bloc.add(TaskExpertCloseTaskConsultation(widget.taskId, widget.applicationId));
-      case ConsultationType.fleaMarket:
-        bloc.add(TaskExpertCloseFleaMarketConsultation(widget.applicationId));
-    }
-  }
-
-  // ── Consulting Dialogs ───────────────────────────────────────────────
-
-  void _showNegotiateDialog() {
-    final priceController = TextEditingController();
-    String? errorText;
-    showDialog(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (dialogContext, setDialogState) => AlertDialog(
-          title: Text(context.l10n.negotiatePrice),
-          content: TextField(
-            controller: priceController,
-            keyboardType:
-                const TextInputType.numberWithOptions(decimal: true),
-            decoration: InputDecoration(
-              hintText: context.l10n.negotiatePriceHint,
-              prefixText: _getCurrencySymbol(),
-              errorText: errorText,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child:
-                  Text(MaterialLocalizations.of(context).cancelButtonLabel),
-            ),
-            TextButton(
-              onPressed: () {
-                final price =
-                    double.tryParse(priceController.text.trim());
-                if (price == null || price <= 0) {
-                  setDialogState(() {
-                    errorText = context.l10n.negotiatePriceHint;
-                  });
-                  return;
-                }
-                Navigator.pop(dialogContext);
-                _dispatchNegotiate(price);
-              },
-              child: Text(MaterialLocalizations.of(context).okButtonLabel),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showQuoteDialog() {
-    final priceController = TextEditingController();
-    final messageController = TextEditingController();
-    String? errorText;
-    showDialog(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (dialogContext, setDialogState) => AlertDialog(
-          title: Text(context.l10n.quotePrice),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: priceController,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                decoration: InputDecoration(
-                  hintText: context.l10n.quotePriceHint,
-                  prefixText: _getCurrencySymbol(),
-                  errorText: errorText,
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: messageController,
-                maxLines: 3,
-                decoration: InputDecoration(
-                  hintText: context.l10n.quoteMessageHint,
-                  border: const OutlineInputBorder(),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child:
-                  Text(MaterialLocalizations.of(context).cancelButtonLabel),
-            ),
-            TextButton(
-              onPressed: () {
-                final price =
-                    double.tryParse(priceController.text.trim());
-                if (price == null || price <= 0) {
-                  setDialogState(() {
-                    errorText = context.l10n.quotePriceHint;
-                  });
-                  return;
-                }
-                Navigator.pop(dialogContext);
-                final msg = messageController.text.trim();
-                _dispatchQuote(price, msg.isNotEmpty ? msg : null);
-              },
-              child: Text(MaterialLocalizations.of(context).okButtonLabel),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showFormalApplyDialog() {
-    // Flea market: simple confirmation, no price/message form needed
-    if (widget.consultationType == ConsultationType.fleaMarket) {
-      showDialog(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: Text(context.l10n.fleaMarketConfirmPurchase),
-          content: Text(context.l10n.fleaMarketConfirmPurchaseMessage),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child:
-                  Text(MaterialLocalizations.of(context).cancelButtonLabel),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-                _dispatchFormalApply(null, null);
-              },
-              child: Text(MaterialLocalizations.of(context).okButtonLabel),
-            ),
-          ],
-        ),
-      );
-      return;
-    }
-
-    final priceController = TextEditingController();
-    final messageController = TextEditingController();
-    String? errorText;
-    showDialog(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (dialogContext, setDialogState) => AlertDialog(
-          title: Text(context.l10n.formalApply),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: priceController,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                decoration: InputDecoration(
-                  hintText: context.l10n.negotiatePriceHint,
-                  prefixText: _getCurrencySymbol(),
-                  errorText: errorText,
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: messageController,
-                maxLines: 3,
-                decoration: InputDecoration(
-                  hintText: context.l10n.quoteMessageHint,
-                  border: const OutlineInputBorder(),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child:
-                  Text(MaterialLocalizations.of(context).cancelButtonLabel),
-            ),
-            TextButton(
-              onPressed: () {
-                final price =
-                    double.tryParse(priceController.text.trim());
-                if (price == null || price <= 0) {
-                  setDialogState(() {
-                    errorText = context.l10n.negotiatePriceHint;
-                  });
-                  return;
-                }
-                Navigator.pop(dialogContext);
-                final msg = messageController.text.trim();
-                _dispatchFormalApply(price, msg.isNotEmpty ? msg : null);
-              },
-              child: Text(MaterialLocalizations.of(context).okButtonLabel),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showApproveConfirmation() {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(context.l10n.expertApplicationConfirmApprove),
-        content: Text(context.l10n.expertApplicationConfirmApproveMessage),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-              if (widget.isConsultation) {
-                switch (widget.consultationType) {
-                  case ConsultationType.service:
-                    // Check if this is a personal service (has service_owner_id but no expert_id)
-                    final expertId = _consultationApp?['expert_id'];
-                    if (expertId != null) {
-                      // Expert service → use expert approve endpoint
-                      context.read<TaskExpertBloc>().add(
-                        TaskExpertApproveApplication(widget.applicationId),
-                      );
-                    } else {
-                      // Personal service → use owner approve endpoint
-                      context.read<TaskExpertBloc>().add(
-                        TaskExpertOwnerApproveApplication(widget.applicationId),
-                      );
-                    }
-                  case ConsultationType.task:
-                    // Task consultation: poster accepts the applicant
-                    context.read<TaskDetailBloc>().add(
-                      TaskDetailAcceptApplicant(widget.applicationId),
-                    );
-                  case ConsultationType.fleaMarket:
-                    // Flea market: seller approves purchase request
-                    _approveFleaMarketPurchase();
-                }
-              } else {
-                // Regular mode: use TaskDetailBloc
-                context.read<TaskDetailBloc>().add(
-                      TaskDetailConfirmAndPay(widget.applicationId),
-                    );
-              }
-            },
-            style: TextButton.styleFrom(foregroundColor: AppColors.success),
-            child: Text(context.l10n.expertApplicationConfirmApprove),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _approveFleaMarketPurchase() async {
-    try {
-      final apiService = context.read<ApiService>();
-      final response = await apiService.post<Map<String, dynamic>>(
-        ApiEndpoints.fleaMarketApprovePurchaseRequest(widget.applicationId.toString()),
-      );
-      if (!mounted) return;
-      if (response.isSuccess) {
-        _loadMessages();
-        _loadConsultationStatus();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.l10n.expertApplicationApproved)),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.localizeError(response.message ?? 'unknown_error'))),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.localizeError(e.toString()))),
-      );
-    }
-  }
-
-  void _showCloseConfirmation() {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(context.l10n.closeConsultation),
-        content: Text(context.l10n.closeConsultationConfirm),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child:
-                Text(MaterialLocalizations.of(context).cancelButtonLabel),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-              _dispatchClose();
-            },
-            style: TextButton.styleFrom(foregroundColor: AppColors.error),
-            child: Text(MaterialLocalizations.of(context).okButtonLabel),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _showCounterOfferDialog() {
     final priceController = TextEditingController();
     String? errorText;
@@ -1711,7 +1258,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
                   return;
                 }
                 Navigator.pop(dialogContext);
-                _dispatchNegotiateResponse('counter', counterPrice: price);
+                // No-op in regular mode; consultation mode uses _consultationActions
               },
               child: Text(MaterialLocalizations.of(context).okButtonLabel),
             ),
@@ -1722,85 +1269,8 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
   }
 
   void _handleNegotiationResponse(String action) {
-    _dispatchNegotiateResponse(action);
+    // No-op in regular mode; consultation mode uses _consultationActions
   }
 
 }
 
-/// Small action button used in negotiation cards
-class _NegotiationActionButton extends StatelessWidget {
-  const _NegotiationActionButton({
-    required this.label,
-    required this.color,
-    required this.onPressed,
-  });
-
-  final String label;
-  final Color color;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 28,
-      child: TextButton(
-        onPressed: onPressed,
-        style: TextButton.styleFrom(
-          foregroundColor: color,
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          minimumSize: Size.zero,
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.small),
-            side: BorderSide(color: color.withValues(alpha: 0.4)),
-          ),
-        ),
-        child: Text(label, style: const TextStyle(fontSize: 12)),
-      ),
-    );
-  }
-}
-
-/// Pill-shaped action button matching task chat _QuickActionChip style
-class _ActionPill extends StatelessWidget {
-  const _ActionPill({
-    required this.icon,
-    required this.label,
-    this.color,
-    this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final Color? color;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = color ?? AppColors.primary;
-    final disabled = onTap == null;
-    final effectiveColor = disabled ? c.withValues(alpha: 0.4) : c;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          border: Border.all(color: effectiveColor.withValues(alpha: 0.5)),
-          borderRadius: AppRadius.allPill,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 14, color: effectiveColor),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: TextStyle(fontSize: 12, color: effectiveColor),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
