@@ -773,6 +773,7 @@ class _TaskDetailContent extends StatelessWidget {
     final showConsult = !isPoster &&
         currentUserId != null &&
         task.status == AppConstants.taskStatusOpen;
+    final hasConsulting = task.userApplicationStatus == 'consulting';
 
     // 底部按钮：快速操作栏 (高性能半透明背景，替代 BackdropFilter)
     return Container(
@@ -823,14 +824,41 @@ class _TaskDetailContent extends StatelessWidget {
                       }
                     },
                     builder: (ctx, state) {
-                      return IconActionButton(
-                        icon: Icons.chat_bubble_outline,
-                        onPressed: state.isSubmitting
-                            ? null
-                            : () => ctx.read<TaskExpertBloc>().add(
-                                  TaskExpertStartTaskConsultation(task.id),
+                      return SizedBox(
+                        height: 48,
+                        child: OutlinedButton.icon(
+                          onPressed: state.isSubmitting
+                              ? null
+                              : () => ctx.read<TaskExpertBloc>().add(
+                                    TaskExpertStartTaskConsultation(task.id),
+                                  ),
+                          icon: state.isSubmitting
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : Icon(
+                                  hasConsulting ? Icons.chat : Icons.chat_bubble_outline,
+                                  size: 18,
                                 ),
-                        backgroundColor: AppColors.skeletonBase,
+                          label: Text(
+                            hasConsulting
+                                ? ctx.l10n.continueConsultation
+                                : ctx.l10n.consultExpert,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.primary,
+                            side: const BorderSide(color: AppColors.primary),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
                       );
                     },
                   ),

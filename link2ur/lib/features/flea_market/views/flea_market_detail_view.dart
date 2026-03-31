@@ -35,7 +35,6 @@ import '../../../data/repositories/task_expert_repository.dart';
 import '../../../data/repositories/activity_repository.dart';
 import '../../../data/repositories/question_repository.dart';
 import '../../task_expert/bloc/task_expert_bloc.dart';
-import '../../../core/widgets/buttons.dart';
 
 /// 跳蚤市场商品详情页 - 对标iOS FleaMarketDetailView.swift
 class FleaMarketDetailView extends StatelessWidget {
@@ -835,14 +834,42 @@ class _FleaMarketDetailContent extends StatelessWidget {
                 }
               },
               builder: (ctx, state) {
-                return IconActionButton(
-                  icon: Icons.chat_bubble_outline,
-                  onPressed: state.isSubmitting
-                      ? null
-                      : () => requireAuth(ctx, () => ctx.read<TaskExpertBloc>().add(
-                            TaskExpertStartFleaMarketConsultation(item.id),
-                          )),
-                  backgroundColor: AppColors.skeletonBase,
+                final hasConsulting = item.userPurchaseRequestStatus == 'consulting';
+                return SizedBox(
+                  height: 48,
+                  child: OutlinedButton.icon(
+                    onPressed: state.isSubmitting
+                        ? null
+                        : () => requireAuth(ctx, () => ctx.read<TaskExpertBloc>().add(
+                              TaskExpertStartFleaMarketConsultation(item.id),
+                            )),
+                    icon: state.isSubmitting
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Icon(
+                            hasConsulting ? Icons.chat : Icons.chat_bubble_outline,
+                            size: 18,
+                          ),
+                    label: Text(
+                      hasConsulting
+                          ? ctx.l10n.continueConsultation
+                          : ctx.l10n.consultExpert,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                      side: const BorderSide(color: AppColors.primary),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
                 );
               },
             ),
