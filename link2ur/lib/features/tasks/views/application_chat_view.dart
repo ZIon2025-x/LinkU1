@@ -7,6 +7,7 @@ import '../../../core/design/app_radius.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../data/models/message.dart';
+import '../../../data/models/task.dart';
 import '../../../data/models/task_application.dart';
 import '../../../data/repositories/message_repository.dart';
 import '../../../data/repositories/notification_repository.dart';
@@ -132,6 +133,24 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
   String _getCurrencySymbol() {
     final currency = _consultationApp?['currency'] as String? ?? 'GBP';
     return Helpers.currencySymbolFor(currency);
+  }
+
+  /// 咨询模式下的 AppBar 标题：「类型：标题」
+  String _consultationTitle(TaskDetailState state) {
+    final task = state.task;
+    if (task == null) return context.l10n.taskChat;
+    final locale = Localizations.localeOf(context);
+    final typeLabel = _taskSourceLabel(task);
+    final title = task.displayTitle(locale);
+    return '$typeLabel: $title';
+  }
+
+  /// 根据 taskSource 返回本地化类型名称
+  String _taskSourceLabel(Task task) {
+    if (task.isFleaMarketTask) return context.l10n.taskSourceFleaMarket;
+    if (task.isExpertServiceTask) return context.l10n.taskSourceExpertService;
+    if (task.isExpertActivityTask) return context.l10n.taskSourceExpertActivity;
+    return context.l10n.taskSourceNormal;
   }
 
   @override
@@ -493,7 +512,9 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
               AppColors.backgroundFor(Theme.of(context).brightness),
           appBar: AppBar(
             title: Text(
-              application?.applicantName ?? context.l10n.taskChat,
+              widget.isConsultation
+                  ? _consultationTitle(state)
+                  : (application?.applicantName ?? context.l10n.taskChat),
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -1014,16 +1035,25 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.design_services,
-              size: 20, color: AppColors.primary),
+          Icon(
+            state.task != null && state.task!.isFleaMarketTask
+                ? Icons.shopping_bag
+                : Icons.design_services,
+            size: 20,
+            color: AppColors.primary,
+          ),
           AppSpacing.hSm,
           Expanded(
             child: Text(
-              context.l10n.serviceInfoCard,
+              state.task != null
+                  ? '${_taskSourceLabel(state.task!)}: ${state.task!.displayTitle(Localizations.localeOf(context))}'
+                  : context.l10n.serviceInfoCard,
               style: const TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 14,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
           Text(
