@@ -93,26 +93,12 @@ class TaskConsultationActions extends ConsultationActions {
     required Map<String, dynamic>? consultationApp,
     required VoidCallback onActionCompleted,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isConsulting = appStatus == 'consulting';
     final isNegotiating = appStatus == 'negotiating';
     final isPriceAgreed = appStatus == 'price_agreed';
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: isDark
-            ? AppColors.cardBackgroundDark.withValues(alpha: 0.85)
-            : AppColors.cardBackgroundLight.withValues(alpha: 0.92),
-        border: Border(
-          top: BorderSide(
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.06)
-                : Colors.black.withValues(alpha: 0.04),
-            width: 0.5,
-          ),
-        ),
-      ),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
