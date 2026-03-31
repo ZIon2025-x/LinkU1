@@ -170,7 +170,8 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
 
       if (response.isSuccess && response.data != null) {
         final messages =
-            MessageRepository.parseTaskChatMessagesResponse(response.data!);
+            MessageRepository.parseTaskChatMessagesResponse(response.data!)
+                .reversed.toList();
         setState(() {
           _messages = messages;
           _isLoadingMessages = false;
