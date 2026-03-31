@@ -150,7 +150,10 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
       case ConsultationType.fleaMarket:
         return context.l10n.taskSourceFleaMarket;
       case ConsultationType.service:
-        return context.l10n.taskSourceExpertService;
+        final hasExpert = _consultationApp?['expert_id'] != null;
+        return hasExpert
+            ? context.l10n.taskSourceExpertService
+            : context.l10n.discoveryFeedTypePersonalSkill;
       case ConsultationType.task:
         return context.l10n.taskSourceNormal;
     }
