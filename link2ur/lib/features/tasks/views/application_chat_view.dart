@@ -7,7 +7,6 @@ import '../../../core/design/app_radius.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../data/models/message.dart';
-import '../../../data/models/task.dart';
 import '../../../data/models/task_application.dart';
 import '../../../data/repositories/message_repository.dart';
 import '../../../data/repositories/notification_repository.dart';
@@ -140,17 +139,21 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
     final task = state.task;
     if (task == null) return context.l10n.taskChat;
     final locale = Localizations.localeOf(context);
-    final typeLabel = _taskSourceLabel(task);
+    final typeLabel = _consultationTypeLabel();
     final title = task.displayTitle(locale);
     return '$typeLabel: $title';
   }
 
-  /// 根据 taskSource 返回本地化类型名称
-  String _taskSourceLabel(Task task) {
-    if (task.isFleaMarketTask) return context.l10n.taskSourceFleaMarket;
-    if (task.isExpertServiceTask) return context.l10n.taskSourceExpertService;
-    if (task.isExpertActivityTask) return context.l10n.taskSourceExpertActivity;
-    return context.l10n.taskSourceNormal;
+  /// 根据 consultationType 返回本地化类型名称
+  String _consultationTypeLabel() {
+    switch (widget.consultationType) {
+      case ConsultationType.fleaMarket:
+        return context.l10n.taskSourceFleaMarket;
+      case ConsultationType.service:
+        return context.l10n.taskSourceExpertService;
+      case ConsultationType.task:
+        return context.l10n.taskSourceNormal;
+    }
   }
 
   @override
@@ -1036,7 +1039,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
       child: Row(
         children: [
           Icon(
-            state.task != null && state.task!.isFleaMarketTask
+            widget.consultationType == ConsultationType.fleaMarket
                 ? Icons.shopping_bag
                 : Icons.design_services,
             size: 20,
@@ -1046,7 +1049,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
           Expanded(
             child: Text(
               state.task != null
-                  ? '${_taskSourceLabel(state.task!)}: ${state.task!.displayTitle(Localizations.localeOf(context))}'
+                  ? '${_consultationTypeLabel()}: ${state.task!.displayTitle(Localizations.localeOf(context))}'
                   : context.l10n.serviceInfoCard,
               style: const TextStyle(
                 fontWeight: FontWeight.w600,
