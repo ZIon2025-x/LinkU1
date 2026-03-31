@@ -25,16 +25,20 @@ import '../bloc/forum_bloc.dart';
 /// 论坛帖子列表页（按分类筛选）
 /// 参考iOS ForumPostListView.swift
 class ForumPostListView extends StatelessWidget {
-  const ForumPostListView({super.key, this.category});
+  const ForumPostListView({super.key, this.category, this.categoryId});
 
   final ForumCategory? category;
+  /// Fallback: when navigating without a full ForumCategory object (e.g. from
+  /// search results), pass just the ID so posts are still filtered correctly.
+  final int? categoryId;
 
   @override
   Widget build(BuildContext context) {
+    final effectiveId = category?.id ?? categoryId;
     return BlocProvider(
       create: (context) => ForumBloc(
         forumRepository: context.read<ForumRepository>(),
-      )..add(ForumCategoryChanged(category?.id)),
+      )..add(ForumCategoryChanged(effectiveId)),
       child: _ForumPostListViewContent(category: category),
     );
   }

@@ -14138,7 +14138,7 @@ abstract class AppLocalizations {
   /// No description provided for @authPasswordMinLength.
   ///
   /// In en, this message translates to:
-  /// **'Password must be at least 8 characters'**
+  /// **'Password must be at least 12 characters'**
   String get authPasswordMinLength;
 
   /// No description provided for @authConfirmNewPassword.
@@ -16196,14 +16196,44 @@ abstract class AppLocalizations {
   /// No description provided for @validatorPasswordMinLength.
   ///
   /// In en, this message translates to:
-  /// **'Password must be at least 8 characters'**
+  /// **'Password must be at least 12 characters'**
   String get validatorPasswordMinLength;
 
   /// No description provided for @validatorPasswordFormat.
   ///
   /// In en, this message translates to:
-  /// **'Password must contain both letters and numbers'**
+  /// **'Password must contain uppercase, lowercase, number and special character'**
   String get validatorPasswordFormat;
+
+  /// No description provided for @validatorPasswordMaxLength.
+  ///
+  /// In en, this message translates to:
+  /// **'Password must not exceed 128 characters'**
+  String get validatorPasswordMaxLength;
+
+  /// No description provided for @validatorPasswordUppercase.
+  ///
+  /// In en, this message translates to:
+  /// **'Password must contain at least one uppercase letter'**
+  String get validatorPasswordUppercase;
+
+  /// No description provided for @validatorPasswordLowercase.
+  ///
+  /// In en, this message translates to:
+  /// **'Password must contain at least one lowercase letter'**
+  String get validatorPasswordLowercase;
+
+  /// No description provided for @validatorPasswordDigit.
+  ///
+  /// In en, this message translates to:
+  /// **'Password must contain at least one number'**
+  String get validatorPasswordDigit;
+
+  /// No description provided for @validatorPasswordSpecial.
+  ///
+  /// In en, this message translates to:
+  /// **'Password must contain at least one special character'**
+  String get validatorPasswordSpecial;
 
   /// No description provided for @validatorConfirmPasswordRequired.
   ///

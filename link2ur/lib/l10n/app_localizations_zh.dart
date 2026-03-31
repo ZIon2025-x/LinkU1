@@ -7380,7 +7380,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get authEnterNewPassword => '请输入新密码';
 
   @override
-  String get authPasswordMinLength => '密码至少8位';
+  String get authPasswordMinLength => '密码至少12位';
 
   @override
   String get authConfirmNewPassword => '确认新密码';
@@ -8455,10 +8455,25 @@ class AppLocalizationsZh extends AppLocalizations {
   String get validatorPasswordRequired => '请输入密码';
 
   @override
-  String get validatorPasswordMinLength => '密码长度至少8位';
+  String get validatorPasswordMinLength => '密码长度至少12位';
 
   @override
-  String get validatorPasswordFormat => '密码需包含字母和数字';
+  String get validatorPasswordFormat => '密码需包含大小写字母、数字和特殊字符';
+
+  @override
+  String get validatorPasswordMaxLength => '密码长度不能超过128位';
+
+  @override
+  String get validatorPasswordUppercase => '密码必须包含至少一个大写字母';
+
+  @override
+  String get validatorPasswordLowercase => '密码必须包含至少一个小写字母';
+
+  @override
+  String get validatorPasswordDigit => '密码必须包含至少一个数字';
+
+  @override
+  String get validatorPasswordSpecial => '密码必须包含至少一个特殊字符';
 
   @override
   String get validatorConfirmPasswordRequired => '请确认密码';
@@ -18777,7 +18792,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get authEnterNewPassword => '請輸入新密碼';
 
   @override
-  String get authPasswordMinLength => '密碼至少8位';
+  String get authPasswordMinLength => '密碼至少12位';
 
   @override
   String get authConfirmNewPassword => '確認新密碼';
@@ -19852,10 +19867,25 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get validatorPasswordRequired => '請輸入密碼';
 
   @override
-  String get validatorPasswordMinLength => '密碼長度至少8位';
+  String get validatorPasswordMinLength => '密碼長度至少12位';
 
   @override
-  String get validatorPasswordFormat => '密碼需包含字母和數字';
+  String get validatorPasswordFormat => '密碼需包含大小寫字母、數字和特殊字元';
+
+  @override
+  String get validatorPasswordMaxLength => '密碼長度不能超過128位';
+
+  @override
+  String get validatorPasswordUppercase => '密碼必須包含至少一個大寫字母';
+
+  @override
+  String get validatorPasswordLowercase => '密碼必須包含至少一個小寫字母';
+
+  @override
+  String get validatorPasswordDigit => '密碼必須包含至少一個數字';
+
+  @override
+  String get validatorPasswordSpecial => '密碼必須包含至少一個特殊字元';
 
   @override
   String get validatorConfirmPasswordRequired => '請確認密碼';

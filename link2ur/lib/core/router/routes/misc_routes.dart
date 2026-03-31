@@ -6,6 +6,7 @@ import '../../../features/publish/views/publish_view.dart';
 import '../../../features/wallet/views/wallet_view.dart';
 import '../../../features/settings/views/settings_view.dart';
 import '../../../features/student_verification/views/student_verification_view.dart';
+import '../../../data/models/forum.dart';
 import '../../../features/forum/views/forum_post_list_view.dart';
 import '../../../features/newbie_tasks/views/newbie_tasks_center_view.dart';
 import '../../../features/skill_leaderboard/views/skill_leaderboard_view.dart';
@@ -40,8 +41,15 @@ List<RouteBase> get miscRoutes => [
         path: AppRoutes.forumPostList,
         name: 'forumPostList',
         builder: (context, state) {
-          final category = state.extra as dynamic;
-          return ForumPostListView(category: category);
+          final category = state.extra is ForumCategory
+              ? state.extra as ForumCategory
+              : null;
+          final categoryId = int.tryParse(
+              state.pathParameters['categoryId'] ?? '');
+          return ForumPostListView(
+            category: category,
+            categoryId: categoryId,
+          );
         },
       ),
       GoRoute(

@@ -540,14 +540,14 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
         query: query,
         pageSize: 10,
       );
-      final items = response['services'] as List<dynamic>? ?? [];
+      final items = response['items'] as List<dynamic>? ?? [];
       return items
           .take(10)
           .map((s) {
             final item = Map<String, dynamic>.from(s as Map);
             return {
               'id': item['id'],
-              'title': item['name'] ?? item['title'] ?? '',
+              'title': item['service_name'] ?? '',
               'type': 'service',
               'description': item['description'] ?? '',
             };

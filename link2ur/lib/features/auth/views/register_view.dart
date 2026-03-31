@@ -1036,10 +1036,11 @@ class _PasswordStrengthBar extends StatelessWidget {
   /// 0 = 弱, 1 = 中, 2 = 强, 3 = 非常强
   int get _strength {
     int score = 0;
-    if (password.length >= 8) score++;
-    if (RegExp(r'[A-Z]').hasMatch(password)) score++;
+    if (password.length >= 12) score++;
+    if (RegExp(r'[A-Z]').hasMatch(password) &&
+        RegExp(r'[a-z]').hasMatch(password)) score++;
     if (RegExp(r'[0-9]').hasMatch(password)) score++;
-    if (RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(password)) score++;
+    if (RegExp(r'[^A-Za-z0-9\s]').hasMatch(password)) score++;
     return (score - 1).clamp(0, 3);
   }
 

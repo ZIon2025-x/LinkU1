@@ -7704,7 +7704,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authEnterNewPassword => 'Please enter a new password';
 
   @override
-  String get authPasswordMinLength => 'Password must be at least 8 characters';
+  String get authPasswordMinLength => 'Password must be at least 12 characters';
 
   @override
   String get authConfirmNewPassword => 'Confirm New Password';
@@ -8811,11 +8811,31 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get validatorPasswordMinLength =>
-      'Password must be at least 8 characters';
+      'Password must be at least 12 characters';
 
   @override
   String get validatorPasswordFormat =>
-      'Password must contain both letters and numbers';
+      'Password must contain uppercase, lowercase, number and special character';
+
+  @override
+  String get validatorPasswordMaxLength =>
+      'Password must not exceed 128 characters';
+
+  @override
+  String get validatorPasswordUppercase =>
+      'Password must contain at least one uppercase letter';
+
+  @override
+  String get validatorPasswordLowercase =>
+      'Password must contain at least one lowercase letter';
+
+  @override
+  String get validatorPasswordDigit =>
+      'Password must contain at least one number';
+
+  @override
+  String get validatorPasswordSpecial =>
+      'Password must contain at least one special character';
 
   @override
   String get validatorConfirmPasswordRequired => 'Please confirm password';

@@ -21,7 +21,7 @@ class Validators {
 
   /// 密码正则（至少8位，包含字母和数字）
   static final RegExp _passwordRegex =
-      RegExp(r'^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]{8,}$');
+      RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9\s]).{12,128}$');
 
   /// URL正则
   static final RegExp _urlRegex = RegExp(
@@ -65,18 +65,34 @@ class Validators {
     return null;
   }
 
-  /// 验证密码
+  /// 验证密码（与后端 validators.py 保持一致）
   static String? validatePassword(String? value, {AppLocalizations? l10n}) {
     if (value == null || value.isEmpty) {
       return l10n?.validatorPasswordRequired ?? 'Please enter password';
     }
-    if (value.length < 8) {
+    if (value.length < 12) {
       return l10n?.validatorPasswordMinLength ??
-          'Password must be at least 8 characters';
+          'Password must be at least 12 characters';
     }
-    if (!_passwordRegex.hasMatch(value)) {
-      return l10n?.validatorPasswordFormat ??
-          'Password must contain both letters and numbers';
+    if (value.length > 128) {
+      return l10n?.validatorPasswordMaxLength ??
+          'Password must not exceed 128 characters';
+    }
+    if (!RegExp(r'[A-Z]').hasMatch(value)) {
+      return l10n?.validatorPasswordUppercase ??
+          'Password must contain at least one uppercase letter';
+    }
+    if (!RegExp(r'[a-z]').hasMatch(value)) {
+      return l10n?.validatorPasswordLowercase ??
+          'Password must contain at least one lowercase letter';
+    }
+    if (!RegExp(r'\d').hasMatch(value)) {
+      return l10n?.validatorPasswordDigit ??
+          'Password must contain at least one number';
+    }
+    if (!RegExp(r'[^A-Za-z0-9\s]').hasMatch(value)) {
+      return l10n?.validatorPasswordSpecial ??
+          'Password must contain at least one special character';
     }
     return null;
   }
