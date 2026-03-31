@@ -141,7 +141,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
     final locale = Localizations.localeOf(context);
     final typeLabel = _consultationTypeLabel();
     final title = task.displayTitle(locale);
-    return '$typeLabel: $title';
+    return '$typeLabel${context.l10n.consultExpert}: $title';
   }
 
   /// 根据 consultationType 返回本地化类型名称
@@ -1052,7 +1052,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
           Expanded(
             child: Text(
               state.task != null
-                  ? '${_consultationTypeLabel()}: ${state.task!.displayTitle(Localizations.localeOf(context))}'
+                  ? '${_consultationTypeLabel()}${context.l10n.consultExpert}: ${state.task!.displayTitle(Localizations.localeOf(context))}'
                   : context.l10n.serviceInfoCard,
               style: const TextStyle(
                 fontWeight: FontWeight.w600,
