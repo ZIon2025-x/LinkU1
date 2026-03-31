@@ -135,6 +135,9 @@ async def ask_question(
     await db.commit()
     await db.refresh(question)
 
+    # 在通知 commit 前构建返回值，避免属性过期导致 MissingGreenlet
+    response = _format_question(question, user_id)
+
     try:
         target_label = "任务" if body.target_type == "task" else "服务"
         target_label_en = "task" if body.target_type == "task" else "service"
@@ -152,7 +155,7 @@ async def ask_question(
     except Exception as e:
         logger.warning(f"Failed to create question notification: {e}")
 
-    return _format_question(question, user_id)
+    return response
 
 
 @router.post("/{question_id}/reply")
@@ -193,6 +196,8 @@ async def reply_question(
     await db.commit()
     await db.refresh(question)
 
+    response = _format_question(question, user_id)
+
     try:
         target_label = "任务" if target_type == "task" else "服务"
         target_label_en = "task" if target_type == "task" else "service"
@@ -210,7 +215,7 @@ async def reply_question(
     except Exception as e:
         logger.warning(f"Failed to create reply notification: {e}")
 
-    return _format_question(question, user_id)
+    return response
 
 
 @router.delete("/{question_id}", status_code=204)

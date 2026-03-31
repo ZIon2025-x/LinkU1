@@ -508,17 +508,16 @@ async def get_task_by_id(
         ensure_task_description_for_lang,
     )
     lang = _request_lang(request, current_user)
+    # 缓存 user id，避免 commit 后惰性加载触发 MissingGreenlet
+    current_user_id = current_user.id if current_user else None
     await ensure_task_title_for_lang(db, task, lang)
     await ensure_task_description_for_lang(db, task, lang)
     await db.commit()
-    task.title_en = getattr(task, "title_en", None)
-    task.title_zh = getattr(task, "title_zh", None)
-    task.description_en = getattr(task, "description_en", None)
-    task.description_zh = getattr(task, "description_zh", None)
-    
+    await db.refresh(task)
+
     # 与活动详情一致：在详情响应中带上「当前用户是否已申请」及申请状态，便于客户端直接显示「已申请」按钮而不依赖单独接口
-    if current_user:
-        user_id_str = str(current_user.id)
+    if current_user_id:
+        user_id_str = str(current_user_id)
         app_query = select(models.TaskApplication).where(
             and_(
                 models.TaskApplication.task_id == task_id,
@@ -642,6 +641,9 @@ async def create_task_async(
 ):
     """创建任务（异步版本，支持CSRF保护）"""
     try:
+        # 缓存 user id，避免 commit 后惰性加载触发 MissingGreenlet
+        user_id = current_user.id
+
         # 检查用户是否为客服账号
         if False:  # 普通用户不再有客服权限
             raise HTTPException(status_code=403, detail="客服账号不能发布任务")
@@ -650,11 +652,11 @@ async def create_task_async(
         if task.task_type == "Campus Life":
             from sqlalchemy import select
             from app.models import StudentVerification
-            
+
             # 查询用户是否有已验证的学生认证
             verification_result = await db.execute(
                 select(StudentVerification)
-                .where(StudentVerification.user_id == current_user.id)
+                .where(StudentVerification.user_id == user_id)
                 .where(StudentVerification.status == 'verified')
                 .order_by(StudentVerification.created_at.desc())
             )
@@ -676,8 +678,8 @@ async def create_task_async(
                 )
 
         # Content filtering
-        title_result = await check_content(db, task.title, "task", current_user.id)
-        desc_result = await check_content(db, task.description, "task", current_user.id)
+        title_result = await check_content(db, task.title, "task", user_id)
+        desc_result = await check_content(db, task.description, "task", user_id)
 
         filter_actions = [title_result.action, desc_result.action]
         final_action = "review" if "review" in filter_actions else ("mask" if "mask" in filter_actions else "pass")
@@ -687,13 +689,13 @@ async def create_task_async(
         if desc_result.action == "mask":
             task.description = desc_result.cleaned_text
 
-        logger.debug("开始创建任务，用户ID: %s", current_user.id)
+        logger.debug("开始创建任务，用户ID: %s", user_id)
         logger.debug("任务数据: %s", task)
 
         db_task = await async_crud.async_task_crud.create_task(
-            db, task, current_user.id
+            db, task, user_id
         )
-        
+
         logger.debug("任务创建成功，任务ID: %s", db_task.id)
 
         # Content filter: handle review / visibility
@@ -703,32 +705,33 @@ async def create_task_async(
         if under_review:
             db_task.is_visible = False
             combined_matched = title_result.matched_words + desc_result.matched_words
-            await create_review(db, "task", db_task.id, current_user.id,
+            await create_review(db, "task", db_task.id, user_id,
                                f"[title]{task.title}[desc]{task.description}", combined_matched)
             await db.commit()
             await db.refresh(db_task)
         elif final_action == "mask":
             combined_matched = title_result.matched_words + desc_result.matched_words
-            await create_mask_record(db, "task", db_task.id, current_user.id,
+            await create_mask_record(db, "task", db_task.id, user_id,
                                     {"title": task.title, "description": task.description}, combined_matched)
             await db.commit()
+            await db.refresh(db_task)
 
         # 迁移临时图片到正式的任务ID文件夹（使用图片上传服务）
         if task.images and len(task.images) > 0:
             try:
                 from app.services import ImageCategory, get_image_upload_service
                 import json
-                
+
                 service = get_image_upload_service()
-                
+
                 # 使用服务移动临时图片
                 updated_images = service.move_from_temp(
                     category=ImageCategory.TASK,
-                    user_id=current_user.id,
+                    user_id=user_id,
                     resource_id=str(db_task.id),
                     image_urls=list(task.images)
                 )
-                
+
                 # 如果有图片被迁移，更新数据库中的图片URL
                 if updated_images != list(task.images):
                     images_json = json.dumps(updated_images)
@@ -736,31 +739,31 @@ async def create_task_async(
                     await db.commit()
                     await db.refresh(db_task)
                     logger.info(f"已更新任务 {db_task.id} 的图片URL")
-                
+
                 # 尝试删除临时目录
-                service.delete_temp(category=ImageCategory.TASK, user_id=current_user.id)
-                    
+                service.delete_temp(category=ImageCategory.TASK, user_id=user_id)
+
             except Exception as e:
                 # 迁移失败不影响任务创建，只记录错误
                 logger.warning(f"迁移临时图片失败: {e}")
-        
+
         # 清除用户任务缓存，确保新任务能立即显示
         try:
             from app.redis_cache import invalidate_user_cache, invalidate_tasks_cache
-            invalidate_user_cache(current_user.id)
+            invalidate_user_cache(user_id)
             invalidate_tasks_cache()
-            logger.debug("已清除用户 %s 的任务缓存", current_user.id)
+            logger.debug("已清除用户 %s 的任务缓存", user_id)
         except Exception as e:
             logger.debug("清除缓存失败: %s", e)
-        
+
         # 额外清除特定格式的缓存键
         try:
             from app.redis_cache import redis_cache
             # 清除所有可能的用户任务缓存键格式
             patterns = [
-                f"user_tasks:{current_user.id}*",
-                f"{current_user.id}_*",
-                f"user_tasks:{current_user.id}_*"
+                f"user_tasks:{user_id}*",
+                f"{user_id}_*",
+                f"user_tasks:{user_id}_*"
             ]
             for pattern in patterns:
                 deleted = redis_cache.delete_pattern(pattern)
@@ -1549,29 +1552,40 @@ async def create_review_async(
 ):
     """创建任务评价（异步版本）"""
     try:
+        # 缓存 user id，避免 commit 后惰性加载触发 MissingGreenlet
+        user_id = current_user.id
+
         # 检查任务是否存在且已确认完成
         task_query = select(models.Task).where(models.Task.id == task_id)
         task_result = await db.execute(task_query)
         task = task_result.scalar_one_or_none()
-        
+
         if not task:
             raise HTTPException(status_code=404, detail="Task not found")
-        
+
         if task.status != "completed":
             raise HTTPException(status_code=400, detail="Task must be completed to create review")
-        
+
+        # 缓存 task 属性，避免 commit 后惰性加载
+        task_poster_id = task.poster_id
+        task_taker_id = task.taker_id
+        task_is_multi = task.is_multi_participant
+        task_created_by_expert = getattr(task, 'created_by_expert', False)
+        task_expert_creator_id = getattr(task, 'expert_creator_id', None)
+        task_originating_user_id = getattr(task, 'originating_user_id', None)
+
         # 检查用户是否是任务的参与者
         # 对于单人任务：检查是否是发布者或接受者
         # 对于多人任务：检查是否是发布者、接受者或 task_participants 表中的参与者
         is_participant = False
-        if task.poster_id == current_user.id or task.taker_id == current_user.id:
+        if task_poster_id == user_id or task_taker_id == user_id:
             is_participant = True
-        elif task.is_multi_participant:
+        elif task_is_multi:
             # 检查是否是 task_participants 表中的参与者
             from sqlalchemy import select
             participant_query = select(models.TaskParticipant).where(
                 models.TaskParticipant.task_id == task_id,
-                models.TaskParticipant.user_id == current_user.id,
+                models.TaskParticipant.user_id == user_id,
                 models.TaskParticipant.status.in_(['accepted', 'in_progress', 'completed'])
             )
             participant_result = await db.execute(participant_query)
@@ -1585,7 +1599,7 @@ async def create_review_async(
         # 检查用户是否已经评价过这个任务
         existing_review_query = select(models.Review).where(
             models.Review.task_id == task_id,
-            models.Review.user_id == current_user.id
+            models.Review.user_id == user_id
         )
         existing_review_result = await db.execute(existing_review_query)
         existing_review = existing_review_result.scalar_one_or_none()
@@ -1604,7 +1618,7 @@ async def create_review_async(
         
         # 创建评价
         db_review = models.Review(
-            user_id=current_user.id,
+            user_id=user_id,
             task_id=task_id,
             rating=review.rating,
             comment=cleaned_comment,
@@ -1631,21 +1645,21 @@ async def create_review_async(
         #   - 参与者评价达人（expert_creator_id）
         #   - 达人评价第一个参与者（originating_user_id，即第一个申请者）
         reviewed_user_id = None
-        if task.is_multi_participant:
+        if task_is_multi:
             # 多人任务
-            if task.created_by_expert and task.expert_creator_id:
+            if task_created_by_expert and task_expert_creator_id:
                 # 如果评价者是参与者（不是达人），被评价者是达人
-                if current_user.id != task.expert_creator_id:
-                    reviewed_user_id = task.expert_creator_id
+                if user_id != task_expert_creator_id:
+                    reviewed_user_id = task_expert_creator_id
                 # 如果评价者是达人，被评价者是第一个参与者（originating_user_id）
-                elif task.originating_user_id:
-                    reviewed_user_id = task.originating_user_id
-            elif task.taker_id and current_user.id != task.taker_id:
+                elif task_originating_user_id:
+                    reviewed_user_id = task_originating_user_id
+            elif task_taker_id and user_id != task_taker_id:
                 # 如果taker_id存在且不是评价者，则被评价者是taker_id
-                reviewed_user_id = task.taker_id
+                reviewed_user_id = task_taker_id
         else:
             # 单人任务：发布者评价接受者，接受者评价发布者
-            reviewed_user_id = task.taker_id if current_user.id == task.poster_id else task.poster_id
+            reviewed_user_id = task_taker_id if user_id == task_poster_id else task_poster_id
         
         if reviewed_user_id:
             # 使用同步数据库会话更新统计信息
@@ -1756,6 +1770,7 @@ async def get_activity_detail_async(
     await ensure_activity_title_for_lang(db, activity, lang)
     await ensure_activity_description_for_lang(db, activity, lang)
     await db.commit()
+    await db.refresh(activity)
 
     # 参与者数量：多人任务参与者 + 单任务数
     multi_stmt = (
