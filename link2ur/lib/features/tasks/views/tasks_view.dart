@@ -1028,6 +1028,13 @@ class _TaskGridCard extends StatelessWidget {
               fontWeight: FontWeight.bold,
             ),
           ),
+          if (task.pricingType == 'hourly')
+            Text(
+              context.l10n.personalServicePerHour,
+              style: AppTypography.caption2.copyWith(
+                color: Colors.white.withValues(alpha: 0.8),
+              ),
+            ),
         ],
       ),
     );

@@ -461,6 +461,15 @@ class _PriceAndTitleCard extends StatelessWidget {
                   color: Color(0xFFE84D3D),
                 ),
               ),
+              if (service.pricingType == 'hourly')
+                Text(
+                  context.l10n.personalServicePerHour,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFFE84D3D).withValues(alpha: 0.7),
+                  ),
+                ),
               const Spacer(),
             ],
           ),

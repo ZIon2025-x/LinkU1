@@ -881,7 +881,7 @@ class _LoginViewState extends State<LoginView>
           obscureText: _obscurePassword,
           textInputAction: TextInputAction.done,
           isDark: isDark,
-          validator: (v) => Validators.validatePassword(v, l10n: context.l10n),
+          validator: (v) => (v == null || v.isEmpty) ? context.l10n.validatorPasswordRequired : null,
           suffixIcon: IconButton(
             icon: Icon(
               _obscurePassword

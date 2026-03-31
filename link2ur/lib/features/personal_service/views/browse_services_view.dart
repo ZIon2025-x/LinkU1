@@ -442,7 +442,7 @@ class _BrowseServiceCard extends StatelessWidget {
                         ),
                         if (pricingType == 'hourly')
                           Text(
-                            '/hr',
+                            context.l10n.personalServicePerHour,
                             style: Theme.of(context)
                                 .textTheme
                                 .bodySmall

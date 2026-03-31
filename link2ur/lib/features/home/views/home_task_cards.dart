@@ -192,7 +192,7 @@ class _NearbyTabState extends State<_NearbyTab> {
           imageUrl: task.firstImage,
           distance: task.distance,
           tags: [task.taskType],
-          price: '\u00A3${task.reward == task.reward.truncateToDouble() ? task.reward.toInt().toString() : task.reward.toStringAsFixed(2)}',
+          price: '\u00A3${task.reward == task.reward.truncateToDouble() ? task.reward.toInt().toString() : task.reward.toStringAsFixed(2)}${task.pricingType == 'hourly' ? context.l10n.personalServicePerHour : ''}',
           applicantCount: task.currentParticipants,
           itemType: task.taskType,
           onTap: () => context.push('/tasks/${task.id}'),
@@ -209,7 +209,7 @@ class _NearbyTabState extends State<_NearbyTab> {
       final price = service['base_price'];
       final pricingType = service['pricing_type'] as String? ?? '';
       final priceStr = price != null
-          ? '\u00A3${_formatServicePrice(price)}${pricingType.isNotEmpty ? '/$pricingType' : ''}'
+          ? '\u00A3${_formatServicePrice(price)}${pricingType == 'hourly' ? context.l10n.personalServicePerHour : ''}'
           : null;
       final distKm = service['distance_km'] as num?;
       final distMeters = distKm != null ? distKm.toDouble() * 1000 : null;

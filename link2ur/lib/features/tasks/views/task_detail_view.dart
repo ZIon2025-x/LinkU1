@@ -1753,12 +1753,11 @@ class _TaskHeaderCard extends StatelessWidget {
                     : Icons.local_offer,
                 isPrimary: true,
               ),
-              _buildTag(
+              _buildLocationTag(
                 text: task.location ?? 'Online',
                 icon: task.isOnline
                     ? Icons.language
                     : Icons.location_on,
-                isPrimary: false,
               ),
             ],
           ),
@@ -1895,6 +1894,14 @@ class _TaskHeaderCard extends StatelessWidget {
             color: goldColor,
           ),
         ),
+        if (task.pricingType == 'hourly')
+          Text(
+            context.l10n.personalServicePerHour,
+            style: AppTypography.callout.copyWith(
+              color: goldColor.withValues(alpha: 0.7),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
       ],
     );
   }
@@ -1969,6 +1976,116 @@ class _TaskHeaderCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  /// 地址标签 — 文字过长时自动跑马灯滚动
+  Widget _buildLocationTag({
+    required String text,
+    required IconData icon,
+  }) {
+    final color = isDark
+        ? AppColors.textSecondaryDark
+        : AppColors.textSecondaryLight;
+    final bgColor = isDark
+        ? AppColors.backgroundDark
+        : AppColors.backgroundLight;
+
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 220),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: AppRadius.allPill,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 4),
+          Flexible(
+            child: _MarqueeText(
+              text: text,
+              style: AppTypography.caption.copyWith(
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 跑马灯文字：文字不超宽时静止显示，超宽时自动水平滚动
+class _MarqueeText extends StatefulWidget {
+  const _MarqueeText({required this.text, required this.style});
+  final String text;
+  final TextStyle style;
+
+  @override
+  State<_MarqueeText> createState() => _MarqueeTextState();
+}
+
+class _MarqueeTextState extends State<_MarqueeText>
+    with SingleTickerProviderStateMixin {
+  late final ScrollController _scrollController;
+  AnimationController? _animController;
+  bool _needsScroll = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkOverflow());
+  }
+
+  void _checkOverflow() {
+    if (!mounted) return;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    if (maxScroll > 0) {
+      setState(() => _needsScroll = true);
+      _startAnimation(maxScroll);
+    }
+  }
+
+  void _startAnimation(double extent) {
+    // 速度: 30px/s，来回滚动
+    final duration = Duration(milliseconds: (extent / 30 * 1000).round());
+    _animController = AnimationController(vsync: this, duration: duration)
+      ..addListener(() {
+        if (_scrollController.hasClients) {
+          _scrollController.jumpTo(
+            _animController!.value * extent,
+          );
+        }
+      })
+      ..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _animController?.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_needsScroll) {
+      return SingleChildScrollView(
+        controller: _scrollController,
+        scrollDirection: Axis.horizontal,
+        physics: const NeverScrollableScrollPhysics(),
+        child: Text(widget.text, style: widget.style, maxLines: 1),
+      );
+    }
+    return SingleChildScrollView(
+      controller: _scrollController,
+      scrollDirection: Axis.horizontal,
+      physics: const NeverScrollableScrollPhysics(),
+      child: Text(widget.text, style: widget.style, maxLines: 1),
     );
   }
 }
