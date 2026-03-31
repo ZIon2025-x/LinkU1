@@ -7339,6 +7339,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get discoveryFeedTypeService => '达人服务';
 
   @override
+  String get discoveryFeedTypePersonalSkill => '个人技能';
+
+  @override
   String get mainPublishFleaMarket => '发布闲置';
 
   @override
@@ -18731,6 +18734,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get discoveryFeedTypeService => '達人服務';
+
+  @override
+  String get discoveryFeedTypePersonalSkill => '個人技能';
 
   @override
   String get mainPublishFleaMarket => '發佈閒置';

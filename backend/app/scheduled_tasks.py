@@ -1812,11 +1812,18 @@ def auto_transfer_expired_tasks(db: Session):
         
         if not candidate_tasks:
             return stats
-        
+
         logger.info(f"🔍 自动转账检查：找到 {len(candidate_tasks)} 个候选任务")
-        
+
+        # 批量加载所有候选任务的 taker，避免循环内 N+1 查询
+        taker_ids = list({t.taker_id for t in candidate_tasks if t.taker_id})
+        takers_map = {}
+        if taker_ids:
+            takers = db.query(models.User).filter(models.User.id.in_(taker_ids)).all()
+            takers_map = {u.id: u for u in takers}
+
         auto_transfer_count = 0
-        
+
         for task in candidate_tasks:
             # 提前保存 ID，避免 session 崩溃后 lazy load 失败
             task_id = task.id
@@ -1988,22 +1995,79 @@ def auto_transfer_expired_tasks(db: Session):
                     stats["skipped"] += 1
                     continue
                 
-                # ======== 钱包入账（统一不再 Stripe Transfer）========
+                # ======== 支付：优先 Stripe Transfer，否则入钱包 ========
 
-                taker = crud.get_user_by_id(db, task.taker_id)
+                taker = takers_map.get(task.taker_id)
 
                 if taker:
-                    from app.wallet_service import credit_wallet
-                    wallet_tx = credit_wallet(
-                        db,
-                        user_id=taker.id,
-                        amount=auto_transfer_amount,
-                        source="task_earning",
-                        related_id=str(task.id),
-                        related_type="task",
-                        description=f"任务 #{task.id} 收入（自动确认）",
-                        currency=(task.currency or "GBP").upper(),
-                    )
+                    taker_stripe_id = getattr(taker, "stripe_account_id", None)
+                    payout_currency = (task.currency or "GBP").upper()
+                    payout_idempotency_key = f"earning:task:{task.id}:user:{taker.id}"
+
+                    if taker_stripe_id:
+                        # 有 Stripe Connect → 尝试直接转账，失败则回退到钱包
+                        import stripe
+                        amount_minor = int(auto_transfer_amount * 100)
+                        try:
+                            stripe_xfer = stripe.Transfer.create(
+                                amount=amount_minor,
+                                currency=payout_currency.lower(),
+                                destination=taker_stripe_id,
+                                description=f"Task #{task.id} auto payout",
+                                metadata={
+                                    "task_id": str(task.id),
+                                    "taker_id": str(taker.id),
+                                    "transfer_record_id": str(transfer_record.id),
+                                    "source": "auto_confirm_expired",
+                                },
+                                idempotency_key=payout_idempotency_key,
+                            )
+                            transfer_record.transfer_id = stripe_xfer.id
+                            logger.info(
+                                f"✅ 任务 {task.id} 自动 Stripe Transfer：£{auto_transfer_amount} → "
+                                f"{taker_stripe_id} (transfer={stripe_xfer.id})"
+                            )
+                        except stripe.error.StripeError as stripe_err:
+                            # Stripe 明确拒绝 → 回退到钱包入账（不会双重支付）
+                            logger.warning(
+                                f"任务 {task.id} Stripe Transfer 被拒绝，回退到钱包入账: {stripe_err}"
+                            )
+                            from app.wallet_service import credit_wallet
+                            credit_wallet(
+                                db,
+                                user_id=taker.id,
+                                amount=auto_transfer_amount,
+                                source="task_earning",
+                                related_id=str(task.id),
+                                related_type="task",
+                                description=f"任务 #{task.id} 收入（自动确认，Stripe失败回退）",
+                                currency=payout_currency,
+                                idempotency_key=payout_idempotency_key,
+                            )
+                        except Exception as unexpected_err:
+                            # 网络超时等不确定异常 → 不回退钱包（Stripe 可能已成功）
+                            # 抛出让外层 savepoint 处理，下次循环会重试
+                            logger.error(
+                                f"任务 {task.id} Stripe Transfer 异常（可能已成功），不回退钱包: {unexpected_err}"
+                            )
+                            raise
+                    else:
+                        # 无 Stripe Connect → 入本地钱包
+                        from app.wallet_service import credit_wallet
+                        credit_wallet(
+                            db,
+                            user_id=taker.id,
+                            amount=auto_transfer_amount,
+                            source="task_earning",
+                            related_id=str(task.id),
+                            related_type="task",
+                            description=f"任务 #{task.id} 收入（自动确认）",
+                            currency=payout_currency,
+                            idempotency_key=payout_idempotency_key,
+                        )
+                        logger.info(
+                            f"✅ 任务 {task.id} 自动入账钱包：£{auto_transfer_amount} → 接单方 {task.taker_id}（无 Stripe Connect）"
+                        )
 
                     # 更新转账记录状态
                     transfer_record.status = "succeeded"
@@ -2021,9 +2085,6 @@ def auto_transfer_expired_tasks(db: Session):
 
                     auto_transfer_count += 1
                     stats["transferred"] += 1
-                    logger.info(
-                        f"✅ 任务 {task.id} 自动入账钱包成功：£{auto_transfer_amount} → 接单方 {task.taker_id}"
-                    )
                 else:
                     stats["failed"] += 1
                     logger.error(f"❌ 任务 {task.id} 接单方 {task.taker_id} 不存在，无法入账")

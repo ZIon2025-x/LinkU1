@@ -4,33 +4,37 @@ import 'package:webview_flutter/webview_flutter.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/logger.dart';
 
-/// Stripe Connect 账户管理 WebView（Android 替代方案）
+/// Stripe Connect 账户管理 WebView
 ///
-/// 在 Android 上，原生 Stripe Connect SDK (22.8.0) 不支持嵌入式 AccountManagement 组件，
-/// 因此使用 WebView 加载 Stripe.js Connect 的 `<stripe-connect-account-management>` Web Component。
-///
-/// iOS 使用原生 SDK，不走此页面。
+/// 使用 WebView 加载 Stripe.js Connect 的 `<stripe-connect-account-management>` Web Component。
+/// iOS 和 Android 均使用此页面。
+/// 可选提供 [onOpenDashboard] 回调，在 AppBar 显示"前往 Stripe Dashboard"按钮。
 class StripeConnectAccountWebView extends StatefulWidget {
   const StripeConnectAccountWebView({
     super.key,
     required this.publishableKey,
     required this.clientSecret,
+    this.onOpenDashboard,
   });
 
   final String publishableKey;
   final String clientSecret;
+  /// 可选回调：点击"前往 Stripe Dashboard"时触发
+  final VoidCallback? onOpenDashboard;
 
   /// 全屏打开账户管理 WebView
   static Future<void> open(
     BuildContext context, {
     required String publishableKey,
     required String clientSecret,
+    VoidCallback? onOpenDashboard,
   }) {
     return Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(
         builder: (_) => StripeConnectAccountWebView(
           publishableKey: publishableKey,
           clientSecret: clientSecret,
+          onOpenDashboard: onOpenDashboard,
         ),
       ),
     );
@@ -89,6 +93,8 @@ class _StripeConnectAccountWebViewState
   String _buildHtml() {
     // 使用 Stripe Connect embedded components (Web)
     // https://docs.stripe.com/connect/get-started-connect-embedded-components
+    final safeKey = widget.publishableKey.replaceAll(r'\', r'\\').replaceAll('"', r'\"');
+    final safeSecret = widget.clientSecret.replaceAll(r'\', r'\\').replaceAll('"', r'\"');
     return '''
 <!DOCTYPE html>
 <html lang="en">
@@ -136,8 +142,8 @@ class _StripeConnectAccountWebViewState
     (async () => {
       try {
         const stripeConnectInstance = StripeConnect.init({
-          publishableKey: "${widget.publishableKey}",
-          fetchClientSecret: async () => "${widget.clientSecret}",
+          publishableKey: "$safeKey",
+          fetchClientSecret: async () => "$safeSecret",
           appearance: {
             variables: {
               colorPrimary: "#4F46E5",
@@ -180,6 +186,18 @@ class _StripeConnectAccountWebViewState
           icon: const Icon(Icons.close),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          if (widget.onOpenDashboard != null)
+            IconButton(
+              onPressed: () {
+                final callback = widget.onOpenDashboard!;
+                Navigator.pop(context);
+                callback();
+              },
+              icon: const Icon(Icons.open_in_browser_outlined),
+              tooltip: context.l10n.stripeConnectOpenDashboard,
+            ),
+        ],
       ),
       body: Stack(
         children: [

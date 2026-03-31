@@ -780,7 +780,7 @@ class _RankingCard extends StatelessWidget {
 }
 
 // =============================================================================
-// 卡片类型 6: 达人服务推荐卡片
+// 卡片类型 6: 服务推荐卡片（达人服务 / 个人技能）
 // =============================================================================
 
 class _ServiceCard extends StatelessWidget {
@@ -792,6 +792,7 @@ class _ServiceCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final locale = Localizations.localeOf(context);
     final displayTitle = Helpers.normalizeContentNewlines(item.displayTitle(locale));
+    final isExpert = item.expertId != null;
 
     return Semantics(
       button: true,
@@ -806,6 +807,12 @@ class _ServiceCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: isDark ? AppColors.cardBackgroundDark : Colors.white,
             borderRadius: BorderRadius.circular(_kDiscoveryCardRadius),
+            border: isExpert
+                ? Border.all(
+                    color: const Color(0xFFDAA520).withValues(alpha: 0.4),
+                    width: 1.5,
+                  )
+                : null,
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.06),
@@ -858,7 +865,7 @@ class _ServiceCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const _FeedTypeBadge(feedType: 'service'),
+                  _FeedTypeBadge(feedType: isExpert ? 'service' : 'personal_skill'),
                   const SizedBox(height: 6),
                   if (displayTitle.isNotEmpty)
                     Text(

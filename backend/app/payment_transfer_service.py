@@ -535,13 +535,20 @@ def process_pending_transfers(db: Session) -> Dict[str, Any]:
         ).limit(100).all()  # 每次最多处理100条
         
         logger.info(f"🔄 找到 {len(pending_transfers)} 条待处理的转账记录")
-        
+
+        # 批量加载所有 taker，避免循环内 N+1 查询
+        _taker_ids = list({t.taker_id for t in pending_transfers if t.taker_id})
+        _takers_map = {}
+        if _taker_ids:
+            _takers = db.query(models.User).filter(models.User.id.in_(_taker_ids)).all()
+            _takers_map = {u.id: u for u in _takers}
+
         for transfer_record in pending_transfers:
             stats["processed"] += 1
-            
+
             try:
-                # 获取任务接受人信息
-                taker = db.query(models.User).filter(models.User.id == transfer_record.taker_id).first()
+                # 获取任务接受人信息（已批量加载）
+                taker = _takers_map.get(transfer_record.taker_id)
                 if not taker:
                     transfer_record.status = "failed"
                     transfer_record.last_error = "任务接受人不存在"
@@ -551,72 +558,112 @@ def process_pending_transfers(db: Session) -> Dict[str, Any]:
                     stats["failed"] += 1
                     continue
 
-                # 统一走钱包入账，不再 Stripe Transfer
-                from app.wallet_service import credit_wallet
-                wallet_tx = credit_wallet(
-                    db,
-                    user_id=taker.id,
-                    amount=Decimal(str(transfer_record.amount)),
-                    source="task_earning",
-                    related_id=str(transfer_record.task_id),
-                    related_type="task",
-                    description=f"任务 #{transfer_record.task_id} 收入（待处理转账）",
-                    currency=transfer_record.currency or "GBP",
-                )
-                transfer_record.status = "succeeded"
-                transfer_record.succeeded_at = get_utc_time()
-                from app.transaction_utils import safe_commit
-                safe_commit(db, f"待处理转账转钱包入账 transfer_record_id={transfer_record.id}")
-                success = True
-                transfer_id = None
-                error_msg = None
-                
-                if success:
-                    stats["succeeded"] += 1
-                    
-                    # 转账成功后同步更新 Task 字段
-                    # 修复：process_pending_transfers 完成转账后，必须更新 Task 的确认状态，
-                    # 否则 auto_confirmed=1 但 is_confirmed=0 的任务会变成"僵尸"状态
+                # 优先直接 Stripe Transfer（接单者有 Connect 账户时），否则入本地钱包
+                taker_stripe_id = getattr(taker, "stripe_account_id", None)
+                transfer_amount = Decimal(str(transfer_record.amount))
+                transfer_currency = (transfer_record.currency or "GBP").upper()
+                payout_idempotency_key = f"earning:task:{transfer_record.task_id}:user:{taker.id}"
+
+                if taker_stripe_id:
+                    # 有 Stripe Connect → 直接转账
+                    amount_minor = int(transfer_amount * 100)
                     try:
-                        # 🔒 并发安全：使用 SELECT FOR UPDATE 锁定任务，防止并发转账更新
-                        locked_task = db.execute(
-                            select(models.Task).where(
-                                models.Task.id == transfer_record.task_id
-                            ).with_for_update()
-                        ).scalar_one_or_none()
-                        if locked_task and locked_task.is_confirmed != 1:
-                            locked_task.is_confirmed = 1
-                            locked_task.confirmed_at = get_utc_time()
-                            locked_task.paid_to_user_id = transfer_record.taker_id
-                            locked_task.escrow_amount = Decimal('0.00')
+                        stripe_xfer = stripe.Transfer.create(
+                            amount=amount_minor,
+                            currency=transfer_currency.lower(),
+                            destination=taker_stripe_id,
+                            description=f"Task #{transfer_record.task_id} payout",
+                            metadata={
+                                "task_id": str(transfer_record.task_id),
+                                "taker_id": str(taker.id),
+                                "transfer_record_id": str(transfer_record.id),
+                            },
+                            idempotency_key=payout_idempotency_key,
+                        )
+                        transfer_record.transfer_id = stripe_xfer.id
+                        logger.info(
+                            f"✅ 待处理转账直接 Stripe Transfer: transfer_record_id={transfer_record.id}, "
+                            f"stripe_transfer={stripe_xfer.id}, taker={taker.id}"
+                        )
+                    except stripe.error.StripeError as stripe_err:
+                        error_msg = str(stripe_err)
+                        if _is_connect_not_ready_error(error_msg):
+                            # Connect 账户未就绪 → 延迟重试
+                            transfer_record.status = "retrying"
+                            transfer_record.last_error = error_msg
+                            transfer_record.next_retry_at = now + timedelta(seconds=TAKER_CONNECT_INCOMPLETE_RETRY_SECONDS)
                             from app.transaction_utils import safe_commit
-                            if not safe_commit(db, f"更新任务确认状态 task_id={locked_task.id}"):
-                                logger.error(f"更新任务确认状态失败: task_id={locked_task.id}")
-                            else:
-                                logger.info(f"✅ 转账成功后同步更新任务 {locked_task.id} 确认状态: is_confirmed=1, escrow_amount=0")
-                    except Exception as task_err:
-                        logger.error(f"转账成功但更新任务状态失败: task_id={transfer_record.task_id}, error={task_err}", exc_info=True)
-                else:
-                    if _is_connect_not_ready_error(error_msg):
-                        transfer_record.status = "retrying"
-                        transfer_record.last_error = str(error_msg)
-                        transfer_record.next_retry_at = now + timedelta(seconds=TAKER_CONNECT_INCOMPLETE_RETRY_SECONDS)
-                        from app.transaction_utils import safe_commit
-                        if safe_commit(db, f"延期重试（接受人Connect未完成） transfer_record_id={transfer_record.id}"):
+                            safe_commit(db, f"延期重试（接受人Connect未完成） transfer_record_id={transfer_record.id}")
                             stats["retrying"] += 1
                             logger.info(
                                 f"接受人 Stripe Connect 未就绪，已延至 24 小时后重试: "
                                 f"transfer_record_id={transfer_record.id}, taker_id={transfer_record.taker_id}"
                             )
                         else:
-                            stats["failed"] += 1
-                            logger.error(f"延期重试提交失败: transfer_record_id={transfer_record.id}")
-                    else:
+                            # Stripe 转账失败 → 回退到钱包入账
+                            logger.warning(
+                                f"Stripe Transfer 失败，回退到钱包入账: transfer_record_id={transfer_record.id}, "
+                                f"error={error_msg}"
+                            )
+                            from app.wallet_service import credit_wallet
+                            credit_wallet(
+                                db,
+                                user_id=taker.id,
+                                amount=transfer_amount,
+                                source="task_earning",
+                                related_id=str(transfer_record.task_id),
+                                related_type="task",
+                                description=f"任务 #{transfer_record.task_id} 收入（Stripe转账失败，入钱包）",
+                                currency=transfer_currency,
+                                idempotency_key=payout_idempotency_key,
+                            )
+                        # 如果是 retrying，跳过后续的 succeeded 处理
                         if transfer_record.status == "retrying":
-                            stats["retrying"] += 1
+                            continue
+                else:
+                    # 无 Stripe Connect → 入本地钱包
+                    from app.wallet_service import credit_wallet
+                    credit_wallet(
+                        db,
+                        user_id=taker.id,
+                        amount=transfer_amount,
+                        source="task_earning",
+                        related_id=str(transfer_record.task_id),
+                        related_type="task",
+                        description=f"任务 #{transfer_record.task_id} 收入（待处理转账）",
+                        currency=transfer_currency,
+                        idempotency_key=payout_idempotency_key,
+                    )
+                    logger.info(
+                        f"✅ 待处理转账入钱包: transfer_record_id={transfer_record.id}, "
+                        f"taker={taker.id}（无 Stripe Connect）"
+                    )
+
+                transfer_record.status = "succeeded"
+                transfer_record.succeeded_at = get_utc_time()
+                from app.transaction_utils import safe_commit
+                safe_commit(db, f"待处理转账完成 transfer_record_id={transfer_record.id}")
+                stats["succeeded"] += 1
+
+                # 转账成功后同步更新 Task 字段
+                try:
+                    locked_task = db.execute(
+                        select(models.Task).where(
+                            models.Task.id == transfer_record.task_id
+                        ).with_for_update()
+                    ).scalar_one_or_none()
+                    if locked_task and locked_task.is_confirmed != 1:
+                        locked_task.is_confirmed = 1
+                        locked_task.confirmed_at = get_utc_time()
+                        locked_task.paid_to_user_id = transfer_record.taker_id
+                        locked_task.escrow_amount = Decimal('0.00')
+                        from app.transaction_utils import safe_commit
+                        if not safe_commit(db, f"更新任务确认状态 task_id={locked_task.id}"):
+                            logger.error(f"更新任务确认状态失败: task_id={locked_task.id}")
                         else:
-                            stats["failed"] += 1
-                        logger.warning(f"转账处理失败: transfer_record_id={transfer_record.id}, error={error_msg}")
+                            logger.info(f"✅ 转账成功后同步更新任务 {locked_task.id} 确认状态: is_confirmed=1, escrow_amount=0")
+                except Exception as task_err:
+                    logger.error(f"转账成功但更新任务状态失败: task_id={transfer_record.task_id}, error={task_err}", exc_info=True)
             
             except Exception as e:
                 logger.error(f"处理转账记录失败: transfer_record_id={transfer_record.id}, error={e}", exc_info=True)

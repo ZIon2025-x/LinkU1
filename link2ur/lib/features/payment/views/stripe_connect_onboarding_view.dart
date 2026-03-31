@@ -16,6 +16,7 @@ import '../../../core/widgets/loading_view.dart';
 import '../../../data/models/payment.dart';
 import '../../../data/repositories/payment_repository.dart';
 import '../../../data/services/stripe_connect_service.dart';
+import 'stripe_connect_account_webview.dart';
 
 /// Stripe Connect 入驻页
 /// 对标 iOS StripeConnectOnboardingView.swift
@@ -279,16 +280,16 @@ class _StripeConnectOnboardingViewState
         return;
       }
 
-      await StripeConnectService.instance.openAccountManagement(
+      if (!mounted) return;
+      await StripeConnectAccountWebView.open(
+        context,
         publishableKey: publishableKey,
         clientSecret: clientSecret,
+        onOpenDashboard: () => _fallbackToExpressDashboard(),
       );
 
       // 管理完成后刷新账户详情
       if (mounted) await _loadAccountDetails();
-    } on UnsupportedError {
-      // Android 不支持嵌入式账户管理，降级到 Express Dashboard
-      if (mounted) await _fallbackToExpressDashboard();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

@@ -3599,6 +3599,7 @@
   "discoveryFeedTypeServiceReview": "Service Review",
   "discoveryFeedTypeRanking": "Leaderboard",
   "discoveryFeedTypeService": "Expert Service",
+  "discoveryFeedTypePersonalSkill": "Personal Skill",
   "mainPublishFleaMarket": "List Item",
   "linkCopied": "Link copied",
   "paymentAlipaySymbol": "A",

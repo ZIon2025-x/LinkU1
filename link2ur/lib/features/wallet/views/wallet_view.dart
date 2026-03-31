@@ -1,5 +1,3 @@
-import 'dart:io' show Platform;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -23,7 +21,6 @@ import '../../../data/models/coupon_points.dart';
 import '../../../data/models/payment.dart';
 import '../../../data/repositories/coupon_points_repository.dart';
 import '../../../data/repositories/payment_repository.dart';
-import '../../../data/services/stripe_connect_service.dart';
 import '../../../core/config/app_config.dart';
 import '../bloc/wallet_bloc.dart';
 
@@ -812,7 +809,7 @@ String _dashboardUnavailableMessage(BuildContext context, String? reason) {
 }
 
 /// V2 账户打开嵌入式账户管理（替代 Express Dashboard）
-/// iOS 使用原生 Stripe Connect SDK，Android 使用 WebView 加载 Stripe.js 嵌入式组件
+/// 使用 WebView 加载 Stripe.js 嵌入式组件，附带"前往 Stripe Dashboard"按钮
 Future<void> _openAccountManagement(BuildContext context, String accountId) async {
   final repo = context.read<PaymentRepository>();
   final scaffoldMessenger = ScaffoldMessenger.of(context);
@@ -820,8 +817,9 @@ Future<void> _openAccountManagement(BuildContext context, String accountId) asyn
   try {
     final publishableKey = AppConfig.instance.stripePublishableKey;
     if (publishableKey.isEmpty) {
+      if (!context.mounted) return;
       scaffoldMessenger.showSnackBar(
-        const SnackBar(content: Text('Stripe key not configured')),
+        SnackBar(content: Text(context.l10n.stripeConnectKeyNotConfigured)),
       );
       return;
     }
@@ -836,21 +834,13 @@ Future<void> _openAccountManagement(BuildContext context, String accountId) asyn
       return;
     }
 
-    if (Platform.isAndroid) {
-      // Android: SDK 22.8.0 不支持原生 AccountManagement，使用 WebView + Stripe.js
-      if (!context.mounted) return;
-      await StripeConnectAccountWebView.open(
-        context,
-        publishableKey: publishableKey,
-        clientSecret: clientSecret,
-      );
-    } else {
-      // iOS: 使用原生 Stripe Connect SDK
-      await StripeConnectService.instance.openAccountManagement(
-        publishableKey: publishableKey,
-        clientSecret: clientSecret,
-      );
-    }
+    if (!context.mounted) return;
+    // V2 账户没有 Express Dashboard，不传 onOpenDashboard
+    await StripeConnectAccountWebView.open(
+      context,
+      publishableKey: publishableKey,
+      clientSecret: clientSecret,
+    );
   } catch (e) {
     if (!context.mounted) return;
     scaffoldMessenger.showSnackBar(

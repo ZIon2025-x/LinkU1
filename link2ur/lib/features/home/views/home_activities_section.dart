@@ -330,6 +330,8 @@ class _FeedTypeBadge extends StatelessWidget {
         return (_label(context, type), const Color(0xFFDBEAFE), const Color(0xFF2563EB));
       case 'service':
         return (_label(context, type), const Color(0xFFFFF7ED), const Color(0xFFEA580C));
+      case 'personal_skill':
+        return (_label(context, type), const Color(0xFFECFDF5), const Color(0xFF059669));
       case 'task':
         return (_label(context, type), const Color(0xFFEFF6FF), const Color(0xFF3B82F6));
       case 'activity':
@@ -356,6 +358,8 @@ class _FeedTypeBadge extends StatelessWidget {
         return '🏆 ${l10n.discoveryFeedTypeRanking}';
       case 'service':
         return '🔧 ${l10n.discoveryFeedTypeService}';
+      case 'personal_skill':
+        return '✋ ${l10n.discoveryFeedTypePersonalSkill}';
       case 'task':
         return '📋 ${l10n.discoveryFeedTypeTask}';
       case 'activity':

@@ -1676,104 +1676,45 @@ async def confirm_task_completion_async(
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    """任务发布者确认任务完成（异步版本）"""
+    """
+    任务发布者确认任务完成（异步版本）。
+
+    入账逻辑（积分奖励、钱包入账/Stripe Transfer）涉及大量同步 DB 操作
+    （savepoint、FOR UPDATE、Stripe API），因此委托给同步端点处理。
+    """
+    from app.database import SessionLocal
+    from app.routers import confirm_task_completion as sync_confirm
+    from app import crud
+
+    # 使用同步 session 执行完整的确认+入账流程
+    sync_db = SessionLocal()
     try:
-        # 获取任务信息
-        task_query = select(models.Task).where(models.Task.id == task_id)
-        task_result = await db.execute(task_query)
-        task = task_result.scalar_one_or_none()
-        
-        if not task:
-            raise HTTPException(status_code=404, detail="Task not found")
-        
-        # 检查权限
-        if task.poster_id != current_user.id:
-            raise HTTPException(status_code=403, detail="Only task poster can confirm completion")
-        
-        # 检查任务状态
-        if task.status != "pending_confirmation":
-            raise HTTPException(status_code=400, detail="Task is not pending confirmation")
-        
-        # 更新任务状态为已完成
-        task.status = "completed"
-        # 更新可靠度画像（同步调用，在 async 上下文中安全因为是纯计算）
-        try:
-            from app.services.reliability_calculator import on_task_completed
-            from app.database import SessionLocal
-            sync_db = SessionLocal()
-            try:
-                was_on_time = bool(task.deadline and task.completed_at and task.completed_at <= task.deadline)
-                on_task_completed(sync_db, task.taker_id, was_on_time)
-                sync_db.commit()
-            finally:
-                sync_db.close()
-        except Exception as e:
-            import logging
-            logging.getLogger(__name__).warning(f"更新可靠度失败(async task_completed): {e}")
-        await db.commit()
-        
-        # 添加任务历史记录
-        from app import crud
-        from app.database import get_db
-        sync_db = next(get_db())
-        try:
-            crud.add_task_history(sync_db, task_id, current_user.id, "confirmed_completion")
-        finally:
-            sync_db.close()
-        
-        # 重新查询任务以确保获取最新状态（refresh 在异步会话中可能不可靠）
-        await db.refresh(task)
-        # 如果 refresh 失败，重新查询
-        if task.status != "completed":
-            task_query = select(models.Task).where(models.Task.id == task_id)
-            task_result = await db.execute(task_query)
-            task = task_result.scalar_one_or_none()
-            if not task:
-                raise HTTPException(status_code=404, detail="Task not found after update")
-        
-        # 发送任务确认完成通知和邮件给接收者
-        if task.taker_id:
-            try:
-                # 获取接收者信息
-                taker_query = select(models.User).where(models.User.id == task.taker_id)
-                taker_result = await db.execute(taker_query)
-                taker = taker_result.scalar_one_or_none()
-                
-                if taker:
-                    # 发送通知和邮件
-                    from app.task_notifications import send_task_confirmation_notification
-                    from app.database import get_db
-                    from fastapi import BackgroundTasks
-                    
-                    # 确保 background_tasks 存在，如果为 None 则创建新实例
-                    if background_tasks is None:
-                        background_tasks = BackgroundTasks()
-                    
-                    # 创建同步数据库会话用于通知
-                    sync_db = next(get_db())
-                    try:
-                        send_task_confirmation_notification(
-                            db=sync_db,
-                            background_tasks=background_tasks,
-                            task=task,
-                            taker=taker
-                        )
-                    finally:
-                        sync_db.close()
-            except Exception as e:
-                # 通知发送失败不影响确认流程
-                logger.error(f"Failed to send task confirmation notification: {e}")
-        
-        # 注意：统计信息更新暂时跳过，避免异步/同步混用问题
-        # 统计信息可以通过后台任务或定时任务更新
-        
-        return task
-        
+        sync_user = crud.get_user_by_id(sync_db, current_user.id)
+        if not sync_user:
+            raise HTTPException(status_code=401, detail="User not found")
+
+        result = sync_confirm(
+            task_id=task_id,
+            evidence_files=None,
+            partial_transfer=None,
+            background_tasks=background_tasks,
+            current_user=sync_user,
+            db=sync_db,
+        )
+        # 在 session 关闭前转为 dict，避免 DetachedInstanceError
+        if hasattr(result, '__dict__'):
+            sync_db.refresh(result)
+            result_dict = schemas.TaskOut.from_orm(result).model_dump()
+        else:
+            result_dict = result
+        return result_dict
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error confirming task completion: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to confirm task completion: {str(e)}")
+        logger.error(f"Error confirming task completion (async wrapper): {e}")
+        raise HTTPException(status_code=500, detail="Failed to confirm task completion")
+    finally:
+        sync_db.close()
 
 
 # ---------- 活动详情（异步，按语言 ensure 双语列）----------

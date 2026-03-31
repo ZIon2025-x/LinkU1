@@ -14057,6 +14057,12 @@ abstract class AppLocalizations {
   /// **'Expert Service'**
   String get discoveryFeedTypeService;
 
+  /// No description provided for @discoveryFeedTypePersonalSkill.
+  ///
+  /// In en, this message translates to:
+  /// **'Personal Skill'**
+  String get discoveryFeedTypePersonalSkill;
+
   /// No description provided for @mainPublishFleaMarket.
   ///
   /// In en, this message translates to:

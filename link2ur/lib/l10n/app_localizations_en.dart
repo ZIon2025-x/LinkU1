@@ -7662,6 +7662,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get discoveryFeedTypeService => 'Expert Service';
 
   @override
+  String get discoveryFeedTypePersonalSkill => 'Personal Skill';
+
+  @override
   String get mainPublishFleaMarket => 'List Item';
 
   @override

@@ -20,7 +20,7 @@ import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../data/models/payment.dart';
 import '../../../data/repositories/payment_repository.dart';
-import '../../../data/services/stripe_connect_service.dart';
+import 'stripe_connect_account_webview.dart';
 
 /// Stripe Connect 提现管理页
 /// 对标 iOS StripeConnectPayoutsView.swift
@@ -194,38 +194,16 @@ class _StripeConnectPayoutsViewState extends State<StripeConnectPayoutsView> {
         return;
       }
 
-      await StripeConnectService.instance.openAccountManagement(
+      if (!mounted) return;
+      // V2 账户没有 Express Dashboard，不传 onOpenDashboard
+      await StripeConnectAccountWebView.open(
+        context,
         publishableKey: publishableKey,
         clientSecret: clientSecret,
       );
 
       // 管理完成后刷新数据
       if (mounted) await _loadAll();
-    } on UnsupportedError {
-      // Android 不支持嵌入式账户管理，降级到 Express Dashboard
-      if (!mounted) return;
-      await _fallbackToExpressDashboard();
-    } catch (_) {
-      _showDashboardUnavailableSnackBar();
-    }
-  }
-
-  /// Android 降级：打开 Express Dashboard URL
-  Future<void> _fallbackToExpressDashboard() async {
-    try {
-      final details = await _repo.getStripeConnectAccountDetails();
-      if (!mounted) return;
-      final url = details.dashboardUrl;
-      if (url != null && url.isNotEmpty) {
-        await ExternalWebView.openInApp(
-          context,
-          url: url,
-          title: context.l10n.stripeConnectOpenDashboard,
-        );
-        if (mounted) await _loadAll();
-      } else {
-        _showDashboardUnavailableSnackBar(details.dashboardUnavailableReason);
-      }
     } catch (_) {
       _showDashboardUnavailableSnackBar();
     }

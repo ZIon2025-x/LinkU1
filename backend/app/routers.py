@@ -3993,18 +3993,19 @@ def confirm_task_completion(
         logger.warning(f"Failed to send system message: {e}")
         # 系统消息发送失败不影响任务确认流程
 
+    # 查询一次 taker，后续通知/奖励/入账复用
+    taker = crud.get_user_by_id(db, task.taker_id) if task.taker_id else None
+
     # 发送任务确认完成通知和邮件给接收者
-    if task.taker_id:
+    if taker:
         try:
             from app.task_notifications import send_task_confirmation_notification
             from fastapi import BackgroundTasks
-            
+
             # 确保 background_tasks 存在，如果为 None 则创建新实例
             if background_tasks is None:
                 background_tasks = BackgroundTasks()
-            
-            # 获取接收者信息
-            taker = crud.get_user_by_id(db, task.taker_id)
+
             if taker:
                 send_task_confirmation_notification(
                     db=db,
@@ -4016,10 +4017,21 @@ def confirm_task_completion(
             logger.warning(f"Failed to send task confirmation notification: {e}")
             # 通知发送失败不影响任务确认流程
 
-    # 自动更新相关用户的统计信息
-    crud.update_user_statistics(db, task.poster_id)
-    if task.taker_id:
-        crud.update_user_statistics(db, task.taker_id)
+    # 自动更新相关用户的统计信息（后台执行，不阻塞响应）
+    def _bg_update_stats(poster_id, taker_id):
+        from app.database import SessionLocal
+        bg_db = SessionLocal()
+        try:
+            crud.update_user_statistics(bg_db, poster_id)
+            if taker_id:
+                crud.update_user_statistics(bg_db, taker_id)
+        except Exception as e:
+            logger.warning(f"后台更新用户统计失败: {e}")
+        finally:
+            bg_db.close()
+    if background_tasks is None:
+        background_tasks = BackgroundTasks()
+    background_tasks.add_task(_bg_update_stats, task.poster_id, task.taker_id)
     
     # 🔒 使用 SAVEPOINT 包装所有奖励发放操作，确保原子性
     # 任务完成时自动发放积分奖励（平台赠送，非任务报酬）
@@ -4176,10 +4188,7 @@ def confirm_task_completion(
                         PaymentTransfer.idempotency_key == activity_cash_reward_idempotency_key
                     ).first()
                     
-                    if not existing_cash_reward:
-                        # 活动现金奖励统一入本地钱包
-                        taker = crud.get_user_by_id(db, task.taker_id)
-                        if taker:
+                    if not existing_cash_reward and taker:
                             try:
                                 from app.wallet_service import credit_wallet
                                 from decimal import Decimal
@@ -4240,14 +4249,15 @@ def confirm_task_completion(
             logger.error(f"发放活动奖励失败，已回滚SAVEPOINT: {e}", exc_info=True)
             # 奖励发放失败不影响任务完成流程
     
-    # 如果任务已支付，将托管金额记入接受人本地钱包
+    # 如果任务已支付，将托管金额转给接受人
+    # 优先直接 Stripe Transfer（接单者有 Connect 账户时），否则入本地钱包
     if task.is_paid == 1 and task.taker_id and task.escrow_amount > 0:
-        wallet_savepoint = db.begin_nested()
+        payout_savepoint = db.begin_nested()
         try:
-            from app.wallet_service import credit_wallet
             from decimal import Decimal
 
             net_amount = Decimal(str(task.escrow_amount))
+            currency = (task.currency or "GBP").upper()
 
             # Determine gross amount: agreed_reward > base_reward > reward (fallback to net)
             _raw_gross = task.agreed_reward if task.agreed_reward is not None else (
@@ -4256,38 +4266,91 @@ def confirm_task_completion(
             gross_amount = Decimal(str(_raw_gross)) if _raw_gross is not None else net_amount
             fee_amount = gross_amount - net_amount if gross_amount > net_amount else Decimal("0")
 
-            # Determine source: flea market sale or task reward
-            source = "flea_market_sale" if getattr(task, "task_source", "normal") in ("flea_market", "flea_market_rental") else "task_reward"
+            # Determine source: flea market sale or task earning
+            source = "flea_market_sale" if getattr(task, "task_source", "normal") in ("flea_market", "flea_market_rental") else "task_earning"
 
             idempotency_key = f"earning:task:{task.id}:user:{task.taker_id}"
 
-            credit_wallet(
-                db=db,
-                user_id=task.taker_id,
-                amount=net_amount,
-                source=source,
-                related_id=str(task.id),
-                related_type="task",
-                description=f"任务 #{task.id} 奖励",
-                fee_amount=fee_amount,
-                gross_amount=gross_amount,
-                idempotency_key=idempotency_key,
-                currency=task.currency or "GBP",
-            )
+            # 检查接单者是否有 Stripe Connect 账户（taker 已在函数开头查询）
+            taker_stripe_id = getattr(taker, "stripe_account_id", None) if taker else None
+
+            if taker_stripe_id:
+                # 有 Stripe Connect 账户 → 尝试直接转账，失败则回退到钱包
+                amount_minor = int(net_amount * 100)  # 转为最小货币单位（便士/分）
+                try:
+                    transfer = stripe.Transfer.create(
+                        amount=amount_minor,
+                        currency=currency.lower(),
+                        destination=taker_stripe_id,
+                        description=f"Task #{task.id} payout",
+                        metadata={
+                            "task_id": str(task.id),
+                            "taker_id": str(task.taker_id),
+                            "source": source,
+                        },
+                        idempotency_key=idempotency_key,
+                    )
+                    logger.info(
+                        f"✅ 任务 {task_id} 奖励 £{net_amount:.2f} 已直接转账至用户 {task.taker_id} "
+                        f"Stripe 账户 {taker_stripe_id} (transfer={transfer.id})"
+                    )
+                except stripe.error.StripeError as stripe_err:
+                    # Stripe 明确拒绝 → 回退到钱包入账（不会双重支付）
+                    logger.warning(
+                        f"任务 {task_id} Stripe Transfer 被拒绝，回退到钱包入账: {stripe_err}"
+                    )
+                    from app.wallet_service import credit_wallet
+                    credit_wallet(
+                        db=db,
+                        user_id=task.taker_id,
+                        amount=net_amount,
+                        source=source,
+                        related_id=str(task.id),
+                        related_type="task",
+                        description=f"任务 #{task.id} 奖励（Stripe转账失败，入钱包）",
+                        fee_amount=fee_amount,
+                        gross_amount=gross_amount,
+                        idempotency_key=idempotency_key,
+                        currency=currency,
+                    )
+                except Exception as unexpected_err:
+                    # 网络超时等不确定异常 → 不回退钱包（Stripe 可能已成功）
+                    # 抛出让外层 savepoint rollback，由 auto_transfer 定时任务后续处理
+                    logger.error(
+                        f"任务 {task_id} Stripe Transfer 异常（可能已成功），不回退钱包: {unexpected_err}"
+                    )
+                    raise
+            else:
+                # 无 Stripe Connect 账户 → 入本地钱包（用户后续可绑定 Stripe 后提现）
+                from app.wallet_service import credit_wallet
+                credit_wallet(
+                    db=db,
+                    user_id=task.taker_id,
+                    amount=net_amount,
+                    source=source,
+                    related_id=str(task.id),
+                    related_type="task",
+                    description=f"任务 #{task.id} 奖励",
+                    fee_amount=fee_amount,
+                    gross_amount=gross_amount,
+                    idempotency_key=idempotency_key,
+                    currency=currency,
+                )
+                logger.info(
+                    f"✅ 任务 {task_id} 奖励 £{net_amount:.2f} 已记入用户 {task.taker_id} 本地钱包"
+                    f"（用户无 Stripe Connect 账户）"
+                )
 
             # Clear escrow and mark as paid
             task.escrow_amount = Decimal("0.00")
             task.paid_to_user_id = task.taker_id
             task.is_confirmed = 1
 
-            wallet_savepoint.commit()
-            logger.info(
-                f"✅ 任务 {task_id} 奖励 £{net_amount:.2f} 已记入用户 {task.taker_id} 本地钱包"
-            )
+            payout_savepoint.commit()
         except Exception as e:
-            wallet_savepoint.rollback()
-            logger.error(f"钱包入账失败 for task {task_id}: {e}", exc_info=True)
-            # 钱包入账失败不影响任务完成确认流程
+            payout_savepoint.rollback()
+            logger.error(f"任务报酬支付失败 for task {task_id}: {e}", exc_info=True)
+            # 支付失败不影响任务完成确认流程
 
     # 提交所有 savepoint 内的变更（积分奖励、活动奖励、钱包入账）
     try:
@@ -7758,6 +7821,10 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
             task = db.execute(locked_task_query).scalar_one_or_none()
             if task and not task.is_paid:
                 task.is_paid = 1
+                # 存储 PaymentIntent ID（用于后续退款），Checkout Session 内部创建了 PaymentIntent
+                session_pi = session.get("payment_intent")
+                if session_pi and not task.payment_intent_id:
+                    task.payment_intent_id = session_pi
                 # 获取任务金额（使用最终成交价或原始标价）
                 task_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
 
@@ -8084,10 +8151,8 @@ def confirm_task_complete(
     2. 任务状态必须为 completed
     3. 任务接受人必须有 Stripe Connect 账户且已完成 onboarding
     """
-    import stripe
-    import os
     import logging
-    
+
     logger = logging.getLogger(__name__)
 
     task = crud.get_task(db, task_id)
@@ -8117,8 +8182,7 @@ def confirm_task_complete(
             detail="任务托管金额为0，无需转账。"
         )
 
-    # 统一走本地钱包入账，不再直接 Stripe Transfer
-    # 用户需要提现时再通过 Stripe Connect 转出
+    # 优先直接 Stripe Transfer（接单者有 Connect 账户时），否则入本地钱包
     try:
         # 确保 escrow_amount 正确（任务金额 - 平台服务费）
         if task.escrow_amount <= 0:
@@ -8132,26 +8196,54 @@ def confirm_task_complete(
 
         escrow_amount = Decimal(str(task.escrow_amount))
         currency = (task.currency or "GBP").upper()
+        payout_idempotency_key = f"earning:task:{task_id}:user:{taker.id}"
 
-        logger.info(f"任务完成，入账本地钱包: 金额=£{escrow_amount:.2f}, 接单人={taker.id}")
-
-        # 钱包入账（幂等，基于 idempotency_key）
-        from app.wallet_service import credit_wallet
-        wallet_tx = credit_wallet(
-            db,
-            user_id=taker.id,
-            amount=escrow_amount,
-            source="task_earning",
-            related_id=str(task_id),
-            related_type="task",
-            description=f"任务 #{task_id} 收入 - {task.title}",
-            currency=currency,
-        )
-
-        if wallet_tx:
-            logger.info(f"✅ 钱包入账成功: wallet_tx_id={wallet_tx.id}, amount=£{escrow_amount:.2f}")
+        if taker.stripe_account_id:
+            # 有 Stripe Connect 账户 → 尝试直接转账，失败则回退到钱包
+            amount_minor = int(escrow_amount * 100)
+            try:
+                stripe_transfer = stripe.Transfer.create(
+                    amount=amount_minor,
+                    currency=currency.lower(),
+                    destination=taker.stripe_account_id,
+                    description=f"Task #{task_id} payout",
+                    metadata={"task_id": str(task_id), "taker_id": str(taker.id)},
+                    idempotency_key=payout_idempotency_key,
+                )
+                logger.info(f"✅ 直接 Stripe Transfer: task={task_id}, transfer={stripe_transfer.id}, amount=£{escrow_amount:.2f}")
+                payout_method = "stripe_transfer"
+            except stripe.error.StripeError as stripe_err:
+                # Stripe 明确拒绝 → 回退到钱包
+                logger.warning(f"任务 {task_id} Stripe Transfer 被拒绝，回退到钱包入账: {stripe_err}")
+                from app.wallet_service import credit_wallet
+                credit_wallet(
+                    db,
+                    user_id=taker.id,
+                    amount=escrow_amount,
+                    source="task_earning",
+                    related_id=str(task_id),
+                    related_type="task",
+                    description=f"任务 #{task_id} 收入（Stripe失败回退）",
+                    currency=currency,
+                    idempotency_key=payout_idempotency_key,
+                )
+                payout_method = "wallet_fallback"
         else:
-            logger.info(f"钱包入账已处理过（幂等跳过）: task_id={task_id}")
+            # 无 Stripe Connect 账户 → 入本地钱包
+            from app.wallet_service import credit_wallet
+            credit_wallet(
+                db,
+                user_id=taker.id,
+                amount=escrow_amount,
+                source="task_earning",
+                related_id=str(task_id),
+                related_type="task",
+                description=f"任务 #{task_id} 收入 - {task.title}",
+                currency=currency,
+                idempotency_key=payout_idempotency_key,
+            )
+            logger.info(f"✅ 钱包入账: task={task_id}, amount=£{escrow_amount:.2f}（用户无 Stripe Connect）")
+            payout_method = "wallet"
 
         # 更新任务状态
         task.is_confirmed = 1
@@ -8162,7 +8254,7 @@ def confirm_task_complete(
         db.commit()
 
         return {
-            "message": "Payment credited to taker wallet.",
+            "message": f"Payment sent via {payout_method}.",
             "amount": transfer_amount,
             "currency": currency
         }
@@ -8172,7 +8264,7 @@ def confirm_task_complete(
         db.rollback()
         raise HTTPException(
             status_code=500,
-            detail=f"确认任务完成时发生错误: {str(e)}"
+            detail="确认任务完成时发生错误，请重试。"
         )
 
 
