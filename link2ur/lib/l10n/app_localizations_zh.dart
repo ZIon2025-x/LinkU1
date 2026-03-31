@@ -9905,6 +9905,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get newbieTaskLocked => '未解锁';
 
   @override
+  String get newbieWelcomeHint => '按步骤完成下方任务即可获得积分和优惠券奖励，点击未完成的任务即可前往操作！';
+
+  @override
+  String get newbieAllDoneHint => '你已完成全部任务，快去享受奖励吧！';
+
+  @override
   String get newbieOfficialTasksTitle => '官方任务';
 
   @override
@@ -21315,6 +21321,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get newbieTaskLocked => '未解鎖';
+
+  @override
+  String get newbieWelcomeHint => '按步驟完成下方任務即可獲得積分和優惠券獎勵，點擊未完成的任務即可前往操作！';
+
+  @override
+  String get newbieAllDoneHint => '你已完成全部任務，快去享受獎勵吧！';
 
   @override
   String get newbieOfficialTasksTitle => '官方任務';

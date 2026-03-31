@@ -4653,6 +4653,8 @@
     }
   },
   "newbieTaskLocked": "未解鎖",
+  "newbieWelcomeHint": "按步驟完成下方任務即可獲得積分和優惠券獎勵，點擊未完成的任務即可前往操作！",
+  "newbieAllDoneHint": "你已完成全部任務，快去享受獎勵吧！",
   "newbieOfficialTasksTitle": "官方任務",
   "officialTask": "官方",
   "officialTaskCompleted": "已完成",

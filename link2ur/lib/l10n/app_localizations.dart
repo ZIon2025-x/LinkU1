@@ -18977,6 +18977,18 @@ abstract class AppLocalizations {
   /// **'Locked'**
   String get newbieTaskLocked;
 
+  /// No description provided for @newbieWelcomeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete the tasks below step by step to earn points and coupons. Tap any incomplete task to get started!'**
+  String get newbieWelcomeHint;
+
+  /// No description provided for @newbieAllDoneHint.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ve completed all tasks — enjoy your rewards!'**
+  String get newbieAllDoneHint;
+
   /// No description provided for @newbieOfficialTasksTitle.
   ///
   /// In en, this message translates to:

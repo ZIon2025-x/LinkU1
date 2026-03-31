@@ -4631,6 +4631,8 @@
     }
   },
   "newbieTaskLocked": "未解锁",
+  "newbieWelcomeHint": "按步骤完成下方任务即可获得积分和优惠券奖励，点击未完成的任务即可前往操作！",
+  "newbieAllDoneHint": "你已完成全部任务，快去享受奖励吧！",
   "newbieOfficialTasksTitle": "官方任务",
   "officialTask": "官方",
   "officialTaskCompleted": "已完成",

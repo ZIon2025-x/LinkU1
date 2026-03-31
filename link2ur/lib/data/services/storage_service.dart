@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -52,6 +53,9 @@ class StorageService {
     ]);
     _prefs = prefs;
     _cacheBox = cacheBox;
+
+    // 启动时清理 StorageService cacheBox 中的过期条目
+    unawaited(_cleanExpiredCacheEntries());
 
     // 预加载热数据到内存，避免后续 UI 线程同步磁盘读取
     await _loadCachedValues();
@@ -430,6 +434,54 @@ class StorageService {
   /// 清除所有缓存
   Future<void> clearCache() async {
     await _cacheBox?.clear();
+  }
+
+  /// 清理过期的缓存条目 + 超限淘汰
+  static const int _maxCacheBoxEntries = 300;
+
+  Future<void> _cleanExpiredCacheEntries() async {
+    final box = _cacheBox;
+    if (box == null) return;
+
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final keysToRemove = <dynamic>[];
+
+    for (final key in box.keys) {
+      try {
+        final raw = box.get(key);
+        Map<String, dynamic>? cacheData;
+        if (raw is String) {
+          cacheData = jsonDecode(raw) as Map<String, dynamic>;
+        } else if (raw is Map) {
+          cacheData = Map<String, dynamic>.from(raw);
+        }
+        if (cacheData == null) {
+          keysToRemove.add(key);
+          continue;
+        }
+        final expiry = cacheData['expiry'] as int?;
+        if (expiry != null && now > expiry) {
+          keysToRemove.add(key);
+        }
+      } catch (_) {
+        keysToRemove.add(key);
+      }
+    }
+
+    if (keysToRemove.isNotEmpty) {
+      await box.deleteAll(keysToRemove);
+      AppLogger.info('StorageService cleaned ${keysToRemove.length} expired cache entries');
+    }
+
+    // 超限淘汰：如果条目仍然过多，删除最早写入的条目
+    if (box.length > _maxCacheBoxEntries) {
+      final excess = box.length - (_maxCacheBoxEntries * 0.8).toInt();
+      if (excess > 0) {
+        final keys = box.keys.take(excess).toList();
+        await box.deleteAll(keys);
+        AppLogger.info('StorageService evicted $excess excess cache entries');
+      }
+    }
   }
 
   // ==================== 登出清理 ====================

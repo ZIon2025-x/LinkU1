@@ -10324,6 +10324,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get newbieTaskLocked => 'Locked';
 
   @override
+  String get newbieWelcomeHint =>
+      'Complete the tasks below step by step to earn points and coupons. Tap any incomplete task to get started!';
+
+  @override
+  String get newbieAllDoneHint =>
+      'You\'ve completed all tasks — enjoy your rewards!';
+
+  @override
   String get newbieOfficialTasksTitle => 'Official Tasks';
 
   @override

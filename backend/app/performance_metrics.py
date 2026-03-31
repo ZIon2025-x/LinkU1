@@ -18,12 +18,34 @@ logger = logging.getLogger(__name__)
 
 class PerformanceMetrics:
     """性能指标收集器"""
-    
+
+    # 每个 dict 的最大条目数，超过时清除计数最低的条目
+    _MAX_ENTRIES = 200
+
     def __init__(self):
         self.request_stats = defaultdict(lambda: {"count": 0, "total_time": 0.0, "errors": 0})
         self.query_stats = defaultdict(lambda: {"count": 0, "total_time": 0.0})
         self.error_stats = defaultdict(int)
-    
+        self._write_count = 0
+
+    def _evict_if_needed(self):
+        """每 100 次写入检查一次，淘汰低频条目"""
+        self._write_count += 1
+        if self._write_count < 100:
+            return
+        self._write_count = 0
+
+        for store in (self.request_stats, self.query_stats, self.error_stats):
+            if len(store) > self._MAX_ENTRIES:
+                # 按 count 排序，删除最低频的一半
+                if isinstance(next(iter(store.values()), None), dict):
+                    sorted_keys = sorted(store, key=lambda k: store[k].get("count", 0))
+                else:
+                    sorted_keys = sorted(store, key=lambda k: store[k])
+                to_remove = len(store) - self._MAX_ENTRIES // 2
+                for key in sorted_keys[:to_remove]:
+                    del store[key]
+
     def record_request(self, endpoint: str, method: str, duration: float, status_code: int):
         """记录请求指标"""
         key = f"{method} {endpoint}"
@@ -31,12 +53,13 @@ class PerformanceMetrics:
         self.request_stats[key]["total_time"] += duration
         if status_code >= 400:
             self.request_stats[key]["errors"] += 1
-    
+        self._evict_if_needed()
+
     def record_query(self, query_name: str, duration: float):
         """记录查询指标"""
         self.query_stats[query_name]["count"] += 1
         self.query_stats[query_name]["total_time"] += duration
-    
+
     def record_error(self, error_type: str):
         """记录错误"""
         self.error_stats[error_type] += 1

@@ -14,11 +14,13 @@ class TaskItemWidget extends StatelessWidget {
     required this.task,
     this.isClaiming = false,
     this.onClaim,
+    this.onTap,
   });
 
   final NewbieTaskProgress task;
   final bool isClaiming;
   final VoidCallback? onClaim;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -26,61 +28,78 @@ class TaskItemWidget extends StatelessWidget {
     final config = task.config;
     final locale = Localizations.localeOf(context);
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: isDark
-            ? AppColors.cardBackgroundDark
-            : AppColors.cardBackgroundLight,
-        borderRadius: AppRadius.allMedium,
-        border: Border.all(
-          color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
-          width: 0.5,
-        ),
-      ),
-      child: Row(
-        children: [
-          // Task icon
-          _buildTaskIcon(),
-          AppSpacing.hMd,
-          // Title + description + reward
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  config.displayTitle(locale),
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: isDark
-                        ? AppColors.textPrimaryDark
-                        : AppColors.textPrimaryLight,
-                  ),
-                ),
-                if (config.displayDescription(locale).isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    config.displayDescription(locale),
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: isDark
-                          ? AppColors.textSecondaryDark
-                          : AppColors.textSecondaryLight,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-                const SizedBox(height: 4),
-                _buildRewardPreview(context, config),
-              ],
-            ),
+    final canTap = task.isPending && onTap != null;
+
+    return GestureDetector(
+      onTap: canTap ? onTap : null,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isDark
+              ? AppColors.cardBackgroundDark
+              : AppColors.cardBackgroundLight,
+          borderRadius: AppRadius.allMedium,
+          border: Border.all(
+            color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
+            width: 0.5,
           ),
-          AppSpacing.hSm,
-          // Status badge / claim button
-          _buildTrailing(context),
-        ],
+        ),
+        child: Row(
+          children: [
+            // Task icon
+            _buildTaskIcon(),
+            AppSpacing.hMd,
+            // Title + description + reward
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    config.displayTitle(locale),
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimaryLight,
+                    ),
+                  ),
+                  if (config.displayDescription(locale).isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      config.displayDescription(locale),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                  const SizedBox(height: 4),
+                  _buildRewardPreview(context, config),
+                ],
+              ),
+            ),
+            AppSpacing.hSm,
+            // Status badge / claim button
+            _buildTrailing(context),
+            // 未完成任务显示右箭头引导
+            if (canTap) ...[
+              const SizedBox(width: 4),
+              Icon(
+                Icons.chevron_right,
+                size: 18,
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

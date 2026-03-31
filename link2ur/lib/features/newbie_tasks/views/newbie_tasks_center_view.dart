@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_spacing.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/loading_view.dart';
@@ -15,6 +17,22 @@ import 'widgets/official_task_bottom_sheet.dart';
 import 'widgets/official_task_card.dart';
 import 'widgets/stage_progress_widget.dart';
 import 'widgets/task_item_widget.dart';
+
+/// task_key → 跳转路由映射。
+/// pending 状态的任务点击后引导用户去对应页面完成操作。
+const _taskRoutes = <String, String>{
+  'upload_avatar': AppRoutes.editProfile,
+  'fill_bio': AppRoutes.editProfile,
+  'add_skills': AppRoutes.editProfile,
+  'student_verify': AppRoutes.studentVerification,
+  'first_post': AppRoutes.createPost,
+  'first_flea_item': AppRoutes.createFleaMarketItem,
+  'join_activity': AppRoutes.activities,
+  'posts_5': AppRoutes.createPost,
+  'posts_20': AppRoutes.createPost,
+  'first_assigned_task': AppRoutes.tasks,
+  'complete_5_tasks': AppRoutes.tasks,
+};
 
 /// 任务中心页面
 /// 显示新手任务（按阶段分组）+ 官方任务
@@ -92,6 +110,11 @@ class _TaskCenterContent extends StatelessWidget {
     return CustomScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
       slivers: [
+        // Welcome hint for new users
+        SliverToBoxAdapter(
+          child: _WelcomeHint(allCompleted: state.completedCount == state.totalCount && state.totalCount > 0),
+        ),
+
         // Overall progress header
         SliverToBoxAdapter(
           child: _OverallProgressCard(state: state),
@@ -234,6 +257,7 @@ class _TaskCenterContent extends StatelessWidget {
             itemBuilder: (context, index) {
               final task = stageTasks[index];
               final isClaiming = state.claimingTaskKey == task.taskKey;
+              final route = _taskRoutes[task.taskKey];
               return TaskItemWidget(
                 key: ValueKey('task_${task.taskKey}'),
                 task: task,
@@ -241,6 +265,16 @@ class _TaskCenterContent extends StatelessWidget {
                 onClaim: () => context
                     .read<NewbieTasksBloc>()
                     .add(NewbieTaskClaimRequested(task.taskKey)),
+                onTap: route != null
+                    ? () async {
+                        await context.push(route);
+                        if (context.mounted) {
+                          context
+                              .read<NewbieTasksBloc>()
+                              .add(const NewbieTasksLoadRequested());
+                        }
+                      }
+                    : null,
               );
             },
           ),
@@ -261,6 +295,47 @@ class _TaskCenterContent extends StatelessWidget {
           ),
         ),
     ];
+  }
+}
+
+/// 欢迎引导提示 — 告诉用户该怎么做。
+class _WelcomeHint extends StatelessWidget {
+  const _WelcomeHint({required this.allCompleted});
+
+  final bool allCompleted;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            allCompleted ? '🎉' : '👋',
+            style: const TextStyle(fontSize: 18),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              allCompleted
+                  ? l10n.newbieAllDoneHint
+                  : l10n.newbieWelcomeHint,
+              style: TextStyle(
+                fontSize: 13,
+                height: 1.5,
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

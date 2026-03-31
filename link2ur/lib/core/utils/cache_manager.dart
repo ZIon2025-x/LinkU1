@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:hive_flutter/hive_flutter.dart';
@@ -39,6 +40,14 @@ class CacheManager {
   // ==================== 磁盘缓存 ====================
   static const String _diskBoxName = 'api_cache_box';
   Box? _diskBox;
+
+  /// 磁盘缓存条目上限：超过此值触发淘汰
+  static const int _maxDiskCacheCount = 500;
+
+  /// 磁盘缓存大小上限：100MB
+  static const int _maxDiskCacheBytes = 100 * 1024 * 1024;
+
+  int _diskWriteCount = 0;
 
   // ==================== 统计 ====================
   int _hits = 0;
@@ -124,10 +133,24 @@ class CacheManager {
       _diskBox = await Hive.openBox(_diskBoxName);
       // 延迟清理过期缓存，不阻塞启动流程
       Future.microtask(() => clearExpired());
+      // 定期清理：每 10 分钟清理过期 + 淘汰超限条目
+      Future.delayed(const Duration(minutes: 10), _periodicCleanup);
       AppLogger.info('CacheManager initialized');
     } catch (e) {
       AppLogger.error('CacheManager init failed', e);
     }
+  }
+
+  /// 定期清理（每 10 分钟）
+  Future<void> _periodicCleanup() async {
+    try {
+      await clearExpired();
+      await _evictDiskIfNeeded();
+    } catch (e) {
+      AppLogger.warning('CacheManager periodic cleanup error: $e');
+    }
+    // 继续下一轮
+    Future.delayed(const Duration(minutes: 10), _periodicCleanup);
   }
 
   // ==================== 核心 API ====================
@@ -169,6 +192,12 @@ class CacheManager {
         'expiresAt': expiresAt.millisecondsSinceEpoch,
       };
       await _diskBox?.put(key, jsonEncode(diskData));
+      // 每 50 次写入检查一次磁盘容量
+      _diskWriteCount++;
+      if (_diskWriteCount >= 50) {
+        _diskWriteCount = 0;
+        unawaited(_evictDiskIfNeeded());
+      }
     } catch (e) {
       AppLogger.warning('CacheManager disk write failed for key: $key');
     }
@@ -573,6 +602,47 @@ class CacheManager {
     if (entry != null) {
       _memoryCacheSize -= entry.estimatedSize;
       if (_memoryCacheSize < 0) _memoryCacheSize = 0;
+    }
+  }
+
+  /// 磁盘淘汰：优先删除过期条目，再按过期时间升序删除最旧条目
+  Future<void> _evictDiskIfNeeded() async {
+    final box = _diskBox;
+    if (box == null) return;
+
+    final count = box.length;
+    if (count <= _maxDiskCacheCount) return;
+
+    // 收集所有条目的过期时间
+    final entries = <MapEntry<dynamic, int>>[];
+    for (final key in box.keys) {
+      try {
+        final json = box.get(key) as String?;
+        if (json != null) {
+          final data = jsonDecode(json) as Map<String, dynamic>;
+          final expiresAt = data['expiresAt'] as int? ?? 0;
+          entries.add(MapEntry(key, expiresAt));
+        } else {
+          entries.add(MapEntry(key, 0));
+        }
+      } catch (_) {
+        entries.add(MapEntry(key, 0)); // 损坏条目优先删除
+      }
+    }
+
+    // 按过期时间升序排列（最早过期/已损坏的排在前面）
+    entries.sort((a, b) => a.value.compareTo(b.value));
+
+    // 删除多余条目，保留 _maxDiskCacheCount * 0.8 条（留出余量避免频繁淘汰）
+    final target = (_maxDiskCacheCount * 0.8).toInt();
+    final toRemove = entries.length - target;
+    if (toRemove > 0) {
+      final keysToRemove = entries.take(toRemove).map((e) => e.key).toList();
+      await box.deleteAll(keysToRemove);
+      AppLogger.info(
+        'CacheManager disk eviction: removed $toRemove entries, '
+        '${box.length} remaining',
+      );
     }
   }
 

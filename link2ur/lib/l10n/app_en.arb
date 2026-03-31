@@ -4739,6 +4739,8 @@
     }
   },
   "newbieTaskLocked": "Locked",
+  "newbieWelcomeHint": "Complete the tasks below step by step to earn points and coupons. Tap any incomplete task to get started!",
+  "newbieAllDoneHint": "You've completed all tasks — enjoy your rewards!",
   "newbieOfficialTasksTitle": "Official Tasks",
   "officialTask": "Official",
   "officialTaskCompleted": "Completed",

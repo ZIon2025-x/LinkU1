@@ -234,6 +234,7 @@ def secure_login(
                 "email": user.email,
                 "user_level": user.user_level,
                 "is_verified": user.is_verified,
+                "onboarding_completed": getattr(user, 'onboarding_completed', False),
             },
             "session_id": session.session_id,  # 会话ID用于认证
             "expires_in": 300,  # 5分钟
@@ -581,13 +582,19 @@ def secure_logout(
         # 获取当前会话
         session = validate_session(request)
         if session:
+            # 清除该用户的缓存（避免切换账号后残留旧数据）
+            try:
+                from app.redis_cache import invalidate_user_cache
+                invalidate_user_cache(session.user_id)
+            except Exception as e:
+                logger.debug(f"登出清除用户缓存失败: {e}")
             # 撤销会话
             SecureAuthManager.revoke_session(session.session_id)
             logger.info(f"用户登出 - 会话: {session.session_id[:8]}...")
-        
+
         # 清除Cookie
         CookieManager.clear_all_cookies(response)
-        
+
         return {"message": "登出成功"}
 
     except Exception as e:
@@ -611,12 +618,19 @@ def logout_all_sessions(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="会话无效"
             )
         
+        # 清除该用户的缓存
+        try:
+            from app.redis_cache import invalidate_user_cache
+            invalidate_user_cache(session.user_id)
+        except Exception as e:
+            logger.debug(f"登出清除用户缓存失败: {e}")
+
         # 撤销用户的所有会话
         revoked_count = SecureAuthManager.revoke_user_sessions(session.user_id)
-        
+
         # 清除Cookie
         CookieManager.clear_all_cookies(response)
-        
+
         logger.info(f"用户登出所有会话 - 用户: {session.user_id}, 撤销: {revoked_count} 个会话")
         
         return {
@@ -824,6 +838,7 @@ def get_auth_status(
                 "email": user.email,
                 "user_level": user.user_level,
                 "is_verified": user.is_verified,
+                "onboarding_completed": getattr(user, 'onboarding_completed', False),
             },
             "session": {
                 "session_id": session.session_id[:8] + "...",
@@ -1722,6 +1737,7 @@ def login_with_phone_verification_code(
                 "phone": user.phone,
                 "user_level": user.user_level,
                 "is_verified": user.is_verified,
+                "onboarding_completed": getattr(user, 'onboarding_completed', False),
             },
             "session_id": session.session_id,
             "expires_in": 300,
@@ -2008,6 +2024,7 @@ def login_with_verification_code(
                 "email": user.email,
                 "user_level": user.user_level,
                 "is_verified": user.is_verified,
+                "onboarding_completed": getattr(user, 'onboarding_completed', False),
             },
             "session_id": session.session_id,
             "expires_in": 300,
