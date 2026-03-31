@@ -549,7 +549,7 @@ class S3StorageBackend(StorageBackend):
             )
             return True
             
-        except:
+        except Exception:
             return False
     
     def list_files(self, directory: str) -> List[str]:
@@ -684,7 +684,7 @@ class S3StorageBackend(StorageBackend):
             )
             return response['ContentLength']
             
-        except:
+        except Exception:
             return None
     
     EXTENSION_CONTENT_TYPES = {

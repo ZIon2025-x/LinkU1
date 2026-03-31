@@ -94,7 +94,7 @@ def verify_and_delete_code(phone: str, code: str) -> bool:
             redis_client = get_redis_client()
             if redis_client:
                 redis_client.delete(f"{CODE_KEY_PREFIX}:{phone}")
-        except:
+        except Exception:
             pass
         return False
     except Exception as e:

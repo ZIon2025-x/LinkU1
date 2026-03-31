@@ -74,7 +74,7 @@ def get_admin_refund_requests(
         if refund_request.evidence_files:
             try:
                 evidence_files = json.loads(refund_request.evidence_files)
-            except:
+            except (json.JSONDecodeError, TypeError, ValueError):
                 evidence_files = []
         
         # 解析退款原因字段（格式：reason_type|refund_type|reason）

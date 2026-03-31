@@ -151,7 +151,7 @@ def check_database_state():
                     print(f"  • 迁移记录: {migration_count} 条")
                     print(f"  • 实际表数: {len(all_tables)} 个")
                     print(f"  • 这表明迁移记录和实际数据库状态不同步！")
-        except:
+        except Exception:
             pass
 
     # 5. 建议

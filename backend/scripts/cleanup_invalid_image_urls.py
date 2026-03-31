@@ -69,7 +69,7 @@ class ImageURLCleaner:
         try:
             from app.config import Config
             self.frontend_url = Config.FRONTEND_URL.rstrip('/')
-        except:
+        except (ImportError, AttributeError):
             self.frontend_url = "https://www.link2ur.com"
     
     # R2/CDN 域名：这些 URL 指向云存储，本地不存在文件，不应检查

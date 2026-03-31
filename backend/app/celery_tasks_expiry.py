@@ -35,7 +35,7 @@ def send_expiry_reminders_task(self, days_before: int):
         _record_task_metrics(task_name, "error", duration)
         try:
             db.rollback()
-        except:
+        except Exception:
             pass
         if self.request.retries < self.max_retries:
             logger.info(f"任务将重试 ({self.request.retries + 1}/{self.max_retries})")
@@ -70,7 +70,7 @@ def send_expiry_notifications_task(self):
         _record_task_metrics(task_name, "error", duration)
         try:
             db.rollback()
-        except:
+        except Exception:
             pass
         if self.request.retries < self.max_retries:
             logger.info(f"任务将重试 ({self.request.retries + 1}/{self.max_retries})")

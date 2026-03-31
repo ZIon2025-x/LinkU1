@@ -1172,9 +1172,9 @@ def send_email_verification_code(
                 user = crud.get_user_by_email(temp_db, email)
             finally:
                 temp_db.close()
-        except:
+        except Exception:
             pass
-        
+
         language = get_user_language(user) if user else 'en'  # 默认英文
         subject, body = get_login_verification_code_email(language, verification_code)
         
@@ -1199,7 +1199,7 @@ def send_email_verification_code(
         temp_db_for_task = SessionLocal()
         try:
             background_tasks.add_task(send_email, email, subject, body, temp_db_for_task, user_id)
-        except:
+        except Exception:
             temp_db_for_task.close()
         
         logger.info(f"验证码已发送: email={email}")

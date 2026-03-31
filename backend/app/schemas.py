@@ -926,7 +926,7 @@ class TaskDisputeOut(BaseModel):
             try:
                 import json
                 return json.loads(v)
-            except:
+            except (json.JSONDecodeError, ValueError):
                 return []
         return v
     

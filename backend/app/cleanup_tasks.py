@@ -434,7 +434,7 @@ class CleanupTasks:
                                     from app.utils.time_utils import parse_iso_utc
                                     try:
                                         last_modified = parse_iso_utc(last_modified)
-                                    except:
+                                    except (ValueError, TypeError):
                                         continue
                                 
                                 if last_modified < cutoff_time:

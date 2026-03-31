@@ -112,7 +112,7 @@ class TranslationManager:
                                                     try:
                                                         error_detail = e.response.json()
                                                         logger.error(f"API错误详情: {error_detail}")
-                                                    except:
+                                                    except (json.JSONDecodeError, ValueError):
                                                         logger.error(f"API错误响应: {e.response.text}")
                                                 raise
                                     
@@ -495,13 +495,13 @@ class TranslationManager:
         if isinstance(processed_text, bytes):
             try:
                 processed_text = processed_text.decode('utf-8')
-            except:
+            except UnicodeDecodeError:
                 processed_text = processed_text.decode('utf-8', errors='ignore')
         
         # 规范化Unicode字符（NFC格式）
         try:
             processed_text = unicodedata.normalize('NFC', processed_text)
-        except:
+        except (TypeError, ValueError):
             pass  # 如果规范化失败，使用原文本
         
         return processed_text, emoji_positions

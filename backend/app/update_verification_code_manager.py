@@ -127,7 +127,7 @@ def verify_email_update_code(user_id: str, new_email: str, code: str) -> bool:
             redis_client = get_redis_client()
             if redis_client:
                 redis_client.delete(f"{EMAIL_UPDATE_CODE_KEY_PREFIX}:{user_id}:{new_email}")
-        except:
+        except Exception:
             pass
         return False
     except Exception as e:
@@ -174,7 +174,7 @@ def verify_phone_update_code(user_id: str, new_phone: str, code: str) -> bool:
             redis_client = get_redis_client()
             if redis_client:
                 redis_client.delete(f"{PHONE_UPDATE_CODE_KEY_PREFIX}:{user_id}:{new_phone}")
-        except:
+        except Exception:
             pass
         return False
     except Exception as e:

@@ -461,9 +461,9 @@ async def get_flea_market_items(
             if item.images:
                 try:
                     images = json.loads(item.images) if isinstance(item.images, str) else item.images
-                except:
+                except (json.JSONDecodeError, TypeError, ValueError):
                     images = []
-            
+
             # 计算距离自动下架还有多少天（使用常量 AUTO_DELETE_DAYS）
             days_until_auto_delist = None
             if item.refreshed_at:
@@ -598,9 +598,9 @@ async def get_flea_market_item(
         if item.images:
             try:
                 images = json.loads(item.images)
-            except:
+            except (json.JSONDecodeError, TypeError, ValueError):
                 images = []
-        
+
         # 计算距离自动下架还有多少天（使用常量 AUTO_DELETE_DAYS）
         days_until_auto_delist = None
         if item.refreshed_at:
@@ -1129,7 +1129,7 @@ async def update_flea_market_item(
                 if item.images:
                     try:
                         old_images = json.loads(item.images) if isinstance(item.images, str) else item.images
-                    except:
+                    except (json.JSONDecodeError, TypeError, ValueError):
                         old_images = []
                 
                 # 处理临时图片：移动临时图片到正式目录并更新URL（使用图片上传服务）
@@ -1276,7 +1276,7 @@ async def update_flea_market_item(
             if item.images:
                 try:
                     old_images = json.loads(item.images) if isinstance(item.images, str) else item.images
-                except:
+                except (json.JSONDecodeError, TypeError, ValueError):
                     old_images = []
 
             if old_images:
@@ -1305,7 +1305,7 @@ async def update_flea_market_item(
         if updated_item.images:
             try:
                 images = json.loads(updated_item.images)
-            except:
+            except (json.JSONDecodeError, TypeError, ValueError):
                 images = []
         
         # 计算距离自动下架还有多少天
@@ -1896,14 +1896,14 @@ async def direct_purchase_item(
         if item.images:
             try:
                 images = json.loads(item.images)
-            except:
+            except (json.JSONDecodeError, TypeError, ValueError):
                 images = []
-        
+
         # 合并description（仅包含分类，分类用英文 "Category:" 便于解析；联系方式已去掉，统一用 app 消息交流）
         description = item.description
         if item.category:
             description = f"{description}\n\nCategory: {item.category}"
-        
+
         is_free_item = float(item.price) == 0
         
         new_task = models.Task(
@@ -2303,13 +2303,13 @@ async def approve_purchase_request(
         
         # 确定最终成交价（使用买家的议价，如果没有则使用原价）
         final_price = purchase_request.proposed_price if purchase_request.proposed_price else item.price
-        
+
         # 解析images JSON
         images = []
         if item.images:
             try:
                 images = json.loads(item.images)
-            except:
+            except (json.JSONDecodeError, TypeError, ValueError):
                 images = []
         
         # 合并description（仅包含分类，分类用英文 "Category:" 便于解析；联系方式已去掉，统一用 app 消息交流）
@@ -2643,15 +2643,15 @@ async def accept_purchase_request(
         final_price = purchase_request.seller_counter_price
         if final_price is None:
             final_price = purchase_request.proposed_price if purchase_request.proposed_price else item.price
-        
+
         # 解析images JSON
         images = []
         if item.images:
             try:
                 images = json.loads(item.images)
-            except:
+            except (json.JSONDecodeError, TypeError, ValueError):
                 images = []
-        
+
         # 合并description（仅包含分类，分类用英文 "Category:" 便于解析；联系方式已去掉，统一用 app 消息交流）
         description = item.description
         if item.category:
@@ -3367,9 +3367,9 @@ async def get_my_favorite_items(
             if item.images:
                 try:
                     images = json.loads(item.images)
-                except:
+                except (json.JSONDecodeError, TypeError, ValueError):
                     images = []
-            
+
             # 计算收藏数量
             favorite_count_result = await db.execute(
                 select(func.count(models.FleaMarketFavorite.id))
@@ -3681,9 +3681,9 @@ async def get_flea_market_items_admin(
             if item.images:
                 try:
                     images = json.loads(item.images) if isinstance(item.images, str) else item.images
-                except:
+                except (json.JSONDecodeError, TypeError, ValueError):
                     images = []
-            
+
             # 获取卖家信息
             seller_result = await db.execute(
                 select(models.User).where(models.User.id == item.seller_id)

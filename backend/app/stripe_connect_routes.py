@@ -178,9 +178,9 @@ def stripe_v2_api_request(method: str, endpoint: str, data: dict = None, params:
                         if 'v1' in message.lower() or 'V1' in message or code == 'v1_account_instead_of_v2_account':
                             is_v1_account_error = True
                             error_message = message
-                except:
+                except (json.JSONDecodeError, KeyError, TypeError):
                     pass
-        
+
         # 如果是 V1 账户错误，使用 DEBUG 级别（这是正常的回退情况）
         # 其他错误使用 WARNING 级别（避免过多 ERROR 日志）
         if is_v1_account_error:
@@ -201,7 +201,7 @@ def stripe_v2_api_request(method: str, endpoint: str, data: dict = None, params:
                 raise stripe.error.StripeError(message=message, code=code)
             except stripe.error.StripeError:
                 raise
-            except:
+            except Exception:
                 raise stripe.error.StripeError(message=str(e), code='api_error')
         raise
 
@@ -273,7 +273,7 @@ def detect_account_type(account_id: str) -> str:
         try:
             account = stripe.Account.retrieve(account_id)
             return "v1"
-        except:
+        except Exception:
             # 如果都失败，返回 unknown
             return "unknown"
     except Exception:
@@ -281,7 +281,7 @@ def detect_account_type(account_id: str) -> str:
         try:
             account = stripe.Account.retrieve(account_id)
             return "v1"
-        except:
+        except Exception:
             return "unknown"
 
 

@@ -3722,7 +3722,7 @@ async def approve_service_application(
         if service.images:
             try:
                 images_list = json.loads(service.images) if isinstance(service.images, str) else service.images
-            except:
+            except (json.JSONDecodeError, TypeError, ValueError):
                 pass
         if images_list:
             existing_task.images = json.dumps(images_list) if isinstance(images_list, list) else service.images

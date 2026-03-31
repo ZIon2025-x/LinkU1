@@ -67,7 +67,7 @@ class DataAnonymizer:
                 try:
                     major_version = version.split(".")[0]
                     anonymized["os_version"] = f"{major_version}.x"
-                except:
+                except (AttributeError, IndexError, TypeError):
                     anonymized["os_version"] = "unknown"
         
         # 保留浏览器类型，但模糊化版本号
@@ -78,7 +78,7 @@ class DataAnonymizer:
                 try:
                     major_version = version.split(".")[0]
                     anonymized["browser_version"] = f"{major_version}.x"
-                except:
+                except (AttributeError, IndexError, TypeError):
                     anonymized["browser_version"] = "unknown"
         
         # 屏幕尺寸范围化（保留大致范围，不保留精确值）

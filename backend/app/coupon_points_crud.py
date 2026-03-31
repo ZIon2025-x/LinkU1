@@ -737,7 +737,7 @@ def check_in(
         from app.crud import get_system_setting
         daily_base_points_setting = get_system_setting(db, "checkin_daily_base_points")
         daily_base_points = int(daily_base_points_setting.setting_value) if daily_base_points_setting else 0  # 默认0积分
-    except:
+    except (ValueError, TypeError, Exception):
         daily_base_points = 0  # 默认值
     
     # 创建签到记录

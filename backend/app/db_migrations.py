@@ -248,7 +248,7 @@ def execute_sql_file(engine: Engine, sql_file: Path) -> tuple[bool, int]:
                     # 最后确保提交（如果还有未提交的）
                     try:
                         raw_conn.commit()
-                    except:
+                    except Exception:
                         pass
 
                     logger.info("✅ 使用 psycopg2 成功执行迁移")

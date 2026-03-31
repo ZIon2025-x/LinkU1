@@ -10,11 +10,19 @@
 """
 
 import os
+import re
 import logging
 from sqlalchemy import text, inspect
 from sqlalchemy.engine import Engine
 
 logger = logging.getLogger(__name__)
+
+
+def _safe_identifier(name: str) -> str:
+    """验证并引用 PostgreSQL 标识符，防止 SQL 注入"""
+    if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', name):
+        raise ValueError(f"不安全的标识符: {name}")
+    return f'"{name}"'
 
 
 def check_migration_consistency(engine: Engine) -> dict:
@@ -127,7 +135,7 @@ def reset_migration_records(engine: Engine, drop_tables: bool = False):
 
                         for table in all_tables:
                             try:
-                                conn.execute(text(f'DROP TABLE IF EXISTS "{table}" CASCADE'))
+                                conn.execute(text(f'DROP TABLE IF EXISTS {_safe_identifier(table)} CASCADE'))
                             except Exception as e:
                                 logger.warning(f"  删除表 {table} 失败: {e}")
 
@@ -140,7 +148,7 @@ def reset_migration_records(engine: Engine, drop_tables: bool = False):
                         """))
                         for (idx_name,) in indexes_result.fetchall():
                             try:
-                                conn.execute(text(f'DROP INDEX IF EXISTS "{idx_name}" CASCADE'))
+                                conn.execute(text(f'DROP INDEX IF EXISTS {_safe_identifier(idx_name)} CASCADE'))
                             except Exception:
                                 pass
 
@@ -152,7 +160,7 @@ def reset_migration_records(engine: Engine, drop_tables: bool = False):
                         """))
                         for (type_name,) in types_result.fetchall():
                             try:
-                                conn.execute(text(f'DROP TYPE IF EXISTS "{type_name}" CASCADE'))
+                                conn.execute(text(f'DROP TYPE IF EXISTS {_safe_identifier(type_name)} CASCADE'))
                             except Exception:
                                 pass
 
