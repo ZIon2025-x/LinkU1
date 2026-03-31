@@ -4189,57 +4189,57 @@ def confirm_task_completion(
                     ).first()
                     
                     if not existing_cash_reward and taker:
-                            try:
-                                from app.wallet_service import credit_wallet
-                                from decimal import Decimal
+                        try:
+                            from app.wallet_service import credit_wallet
+                            from decimal import Decimal
 
-                                wallet_tx = credit_wallet(
-                                    db,
-                                    user_id=taker.id,
-                                    amount=Decimal(str(cash_amount)),
-                                    source="activity_cash_reward",
-                                    related_id=str(task_id),
-                                    related_type="task",
-                                    description=f"活动 #{task.parent_activity_id} 现金奖励",
-                                    currency=(task.currency or "GBP").upper(),
-                                    idempotency_key=activity_cash_reward_idempotency_key,
+                            wallet_tx = credit_wallet(
+                                db,
+                                user_id=taker.id,
+                                amount=Decimal(str(cash_amount)),
+                                source="activity_cash_reward",
+                                related_id=str(task_id),
+                                related_type="task",
+                                description=f"活动 #{task.parent_activity_id} 现金奖励",
+                                currency=(task.currency or "GBP").upper(),
+                                idempotency_key=activity_cash_reward_idempotency_key,
+                            )
+
+                            if wallet_tx:
+                                logger.info(f"活动现金奖励已入账钱包: 用户 {task.taker_id}, 活动 {task.parent_activity_id}, 金额 £{cash_amount:.2f}")
+                            else:
+                                logger.info(f"活动现金奖励已处理过（幂等跳过）: task_id={task_id}")
+
+                            # 发送通知给申请者
+                            try:
+                                crud.create_notification(
+                                    db=db,
+                                    user_id=task.taker_id,
+                                    type="activity_reward_cash",
+                                    title="活动现金奖励已发放",
+                                    content=f"您完成活动「{activity.title}」的任务，获得 £{cash_amount:.2f} 现金奖励（已入账钱包）",
+                                    related_id=str(task.parent_activity_id),
+                                    auto_commit=False
                                 )
 
-                                if wallet_tx:
-                                    logger.info(f"活动现金奖励已入账钱包: 用户 {task.taker_id}, 活动 {task.parent_activity_id}, 金额 £{cash_amount:.2f}")
-                                else:
-                                    logger.info(f"活动现金奖励已处理过（幂等跳过）: task_id={task_id}")
-
-                                # 发送通知给申请者
                                 try:
-                                    crud.create_notification(
+                                    from app.push_notification_service import send_push_notification
+                                    send_push_notification(
                                         db=db,
                                         user_id=task.taker_id,
-                                        type="activity_reward_cash",
-                                        title="活动现金奖励已发放",
-                                        content=f"您完成活动「{activity.title}」的任务，获得 £{cash_amount:.2f} 现金奖励（已入账钱包）",
-                                        related_id=str(task.parent_activity_id),
-                                        auto_commit=False
+                                        notification_type="activity_reward_cash",
+                                        data={"activity_id": task.parent_activity_id, "task_id": task_id, "amount": cash_amount},
+                                        template_vars={"activity_title": activity.title, "amount": cash_amount}
                                     )
-
-                                    try:
-                                        from app.push_notification_service import send_push_notification
-                                        send_push_notification(
-                                            db=db,
-                                            user_id=task.taker_id,
-                                            notification_type="activity_reward_cash",
-                                            data={"activity_id": task.parent_activity_id, "task_id": task_id, "amount": cash_amount},
-                                            template_vars={"activity_title": activity.title, "amount": cash_amount}
-                                        )
-                                    except Exception as e:
-                                        logger.warning(f"发送活动现金奖励推送通知失败: {e}")
                                 except Exception as e:
-                                    logger.warning(f"创建活动现金奖励通知失败: {e}")
+                                    logger.warning(f"发送活动现金奖励推送通知失败: {e}")
                             except Exception as e:
-                                logger.error(f"发放活动现金奖励失败: {e}", exc_info=True)
-                                # 现金奖励发放失败不影响任务完成流程
-                        else:
-                            logger.warning(f"用户 {task.taker_id} 不存在，无法发放现金奖励")
+                                logger.warning(f"创建活动现金奖励通知失败: {e}")
+                        except Exception as e:
+                            logger.error(f"发放活动现金奖励失败: {e}", exc_info=True)
+                            # 现金奖励发放失败不影响任务完成流程
+                    elif not existing_cash_reward and not taker:
+                        logger.warning(f"用户 {task.taker_id} 不存在，无法发放现金奖励")
                 
                 # 提交SAVEPOINT内的所有奖励发放更改
                 activity_rewards_savepoint.commit()
