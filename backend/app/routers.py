@@ -13946,7 +13946,7 @@ def _parse_semver(version_str: str) -> tuple:
         return (0, 0, 0)
 
 
-@router.get("/api/app/version-check")
+@router.get("/app/version-check")
 def check_app_version(platform: str, current_version: str):
     """
     公开接口：检查 App 版本。

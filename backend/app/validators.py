@@ -170,7 +170,7 @@ class TaskValidator(BaseValidator):
     
     title: str = Field(..., min_length=3, max_length=100)
     description: str = Field(..., min_length=10, max_length=2000)
-    location: Optional[str] = Field(None, max_length=100)
+    location: Optional[str] = Field(None, max_length=255)
     task_type: str = Field(..., max_length=50)
     budget: Optional[float] = Field(None, ge=0, le=100000)
     

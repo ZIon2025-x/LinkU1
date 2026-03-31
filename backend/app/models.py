@@ -195,7 +195,7 @@ class Task(Base):
     agreed_reward = Column(DECIMAL(12, 2), nullable=True)  # 最终成交价（如果有议价）
     reward_to_be_quoted = Column(Boolean, default=False, nullable=False)  # 是否待报价（发布时未填金额，由接单者报价）
     currency = Column(String(3), default="GBP")  # 货币类型
-    location = Column(String(100), nullable=False)  # 位置文本（用于显示）
+    location = Column(String(255), nullable=False)  # 位置文本（用于显示）
     latitude = Column(DECIMAL(10, 8), nullable=True)  # 纬度（用于地图选点和距离计算）
     longitude = Column(DECIMAL(11, 8), nullable=True)  # 经度（用于地图选点和距离计算）
     task_type = Column(String(50), nullable=False)
@@ -1612,7 +1612,7 @@ class TaskExpertService(Base):
     user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=True)  # owner for personal services
     pricing_type = Column(String(20), nullable=False, default="fixed", server_default="fixed")  # 'fixed' | 'hourly' | 'negotiable'
     location_type = Column(String(20), nullable=False, default="online", server_default="online")  # 'online' | 'in_person' | 'both'
-    location = Column(String(100), nullable=True)  # city/address text for display
+    location = Column(String(255), nullable=True)  # city/address text for display
     latitude = Column(DECIMAL(10, 8), nullable=True)  # for distance calc
     longitude = Column(DECIMAL(11, 8), nullable=True)  # for distance calc
     category = Column(String(50), nullable=True)  # service category: programming, translation, tutoring, etc.
@@ -1793,7 +1793,7 @@ class FleaMarketItem(Base):
     price = Column(DECIMAL(12, 2), nullable=False)
     currency = Column(String(3), nullable=False, default="GBP")
     images = Column(Text, nullable=True)  # JSON数组存储图片URL列表
-    location = Column(String(100), nullable=True)  # 位置文本（用于显示，线下交易地点或"Online"）
+    location = Column(String(255), nullable=True)  # 位置文本（用于显示，线下交易地点或"Online"）
     latitude = Column(DECIMAL(10, 8), nullable=True)  # 纬度（用于地图选点和距离计算）
     longitude = Column(DECIMAL(11, 8), nullable=True)  # 经度（用于地图选点和距离计算）
     category = Column(String(100), nullable=True)
@@ -2133,7 +2133,7 @@ class Activity(Base):
     description_en = Column(Text, nullable=True)  # 英文描述，首次翻译后写入
     expert_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     expert_service_id = Column(Integer, ForeignKey("task_expert_services.id", ondelete="RESTRICT"), nullable=True)
-    location = Column(String(100), nullable=False)
+    location = Column(String(255), nullable=False)
     task_type = Column(String(50), nullable=False)
     # 价格相关
     reward_type = Column(String(20), nullable=False, default='cash')  # cash, points, both
