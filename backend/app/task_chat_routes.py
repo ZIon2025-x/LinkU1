@@ -937,7 +937,7 @@ async def get_task_messages(
 
 
 # Pydantic 模型定义
-from pydantic import BaseModel, Field, validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import Dict, Any
 
 
@@ -948,7 +948,8 @@ class SendMessageRequest(BaseModel):
     attachments: List[Dict[str, Any]] = Field(default_factory=list, description="附件数组")
     application_id: Optional[int] = Field(None, description="申请ID（预付费聊天频道）")
     
-    @validator('meta')
+    @field_validator('meta')
+    @classmethod
     def validate_meta(cls, v):
         if v is not None:
             # 检查大小（4KB限制）

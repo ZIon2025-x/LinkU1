@@ -112,10 +112,13 @@ async def ask_question(
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """提问"""
+    # 缓存 user id，避免 commit 后惰性加载触发 MissingGreenlet
+    user_id = current_user.id
+
     owner_id = await _get_target_owner_id(db, body.target_type, body.target_id)
     if not owner_id:
         raise HTTPException(status_code=404, detail="Target not found")
-    if current_user.id == owner_id:
+    if user_id == owner_id:
         raise HTTPException(status_code=403, detail="Cannot ask on your own post")
 
     content = body.content.strip()
@@ -125,7 +128,7 @@ async def ask_question(
     question = models.Question(
         target_type=body.target_type,
         target_id=body.target_id,
-        asker_id=current_user.id,
+        asker_id=user_id,
         content=content,
     )
     db.add(question)
@@ -149,7 +152,7 @@ async def ask_question(
     except Exception as e:
         logger.warning(f"Failed to create question notification: {e}")
 
-    return _format_question(question, current_user.id)
+    return _format_question(question, user_id)
 
 
 @router.post("/{question_id}/reply")
@@ -160,6 +163,8 @@ async def reply_question(
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """回复问题（仅发布者/服务者）"""
+    user_id = current_user.id
+
     result = await db.execute(
         select(models.Question).where(models.Question.id == question_id)
     )
@@ -170,8 +175,13 @@ async def reply_question(
     if question.reply is not None:
         raise HTTPException(status_code=400, detail="Already replied")
 
-    owner_id = await _get_target_owner_id(db, question.target_type, question.target_id)
-    if not owner_id or current_user.id != owner_id:
+    # 在 commit 前缓存需要的属性
+    target_type = question.target_type
+    target_id = question.target_id
+    asker_id = question.asker_id
+
+    owner_id = await _get_target_owner_id(db, target_type, target_id)
+    if not owner_id or user_id != owner_id:
         raise HTTPException(status_code=403, detail="Only the owner can reply")
 
     content = body.content.strip()
@@ -184,23 +194,23 @@ async def reply_question(
     await db.refresh(question)
 
     try:
-        target_label = "任务" if question.target_type == "task" else "服务"
-        target_label_en = "task" if question.target_type == "task" else "service"
+        target_label = "任务" if target_type == "task" else "服务"
+        target_label_en = "task" if target_type == "task" else "service"
         await AsyncNotificationCRUD.create_notification(
             db=db,
-            user_id=question.asker_id,
+            user_id=asker_id,
             notification_type="question_replied",
             title=f"你在{target_label}上的问题收到了回复",
             content=content[:50],
-            related_id=str(question.target_id),
+            related_id=str(target_id),
             title_en=f"Your question on a {target_label_en} received a reply",
             content_en=content[:50],
-            related_type=f"{question.target_type}_id",
+            related_type=f"{target_type}_id",
         )
     except Exception as e:
         logger.warning(f"Failed to create reply notification: {e}")
 
-    return _format_question(question, current_user.id)
+    return _format_question(question, user_id)
 
 
 @router.delete("/{question_id}", status_code=204)
@@ -210,6 +220,8 @@ async def delete_question(
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """删除问题（仅提问者）"""
+    user_id = current_user.id
+
     result = await db.execute(
         select(models.Question).where(models.Question.id == question_id)
     )
@@ -217,7 +229,7 @@ async def delete_question(
     if not question:
         raise HTTPException(status_code=404, detail="Question not found")
 
-    if question.asker_id != current_user.id:
+    if question.asker_id != user_id:
         raise HTTPException(status_code=403, detail="Only the asker can delete")
 
     await db.execute(

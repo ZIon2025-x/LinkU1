@@ -25,7 +25,17 @@ CSRF_COOKIE_MAX_AGE = 3600  # 1小时
 # 移动端应用签名密钥（用于验证请求来自真正的 App）
 # 必须通过环境变量 MOBILE_APP_SECRET 设置，不提供默认值
 MOBILE_APP_SECRET = os.environ.get("MOBILE_APP_SECRET")
+_is_production = (
+    os.environ.get("ENVIRONMENT", "").lower() == "production" or
+    os.environ.get("RAILWAY_ENVIRONMENT", "").lower() == "production"
+)
 if not MOBILE_APP_SECRET:
+    if _is_production:
+        raise RuntimeError(
+            "FATAL: MOBILE_APP_SECRET is not set in production! "
+            "Mobile request signing will not work. "
+            "Set MOBILE_APP_SECRET in your environment variables."
+        )
     logger.warning("⚠️ MOBILE_APP_SECRET 环境变量未设置，移动端签名验证将失败！")
 
 # 已知的合法移动端平台和对应的 User-Agent 前缀

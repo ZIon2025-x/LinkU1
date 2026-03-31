@@ -5,6 +5,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_typography.dart';
+import '../../../core/utils/auth_guard.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
@@ -386,7 +387,7 @@ class UserProfileView extends StatelessWidget {
                 ? OutlinedButton(
                     onPressed: state.isFollowLoading
                         ? null
-                        : () => context.read<ProfileBloc>().add(ProfileUnfollowUser(user.id)),
+                        : () => requireAuth(context, () => context.read<ProfileBloc>().add(ProfileUnfollowUser(user.id))),
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: AppColors.textTertiary),
                       shape: RoundedRectangleBorder(
@@ -404,7 +405,7 @@ class UserProfileView extends StatelessWidget {
                 : ElevatedButton.icon(
                     onPressed: state.isFollowLoading
                         ? null
-                        : () => context.read<ProfileBloc>().add(ProfileFollowUser(user.id)),
+                        : () => requireAuth(context, () => context.read<ProfileBloc>().add(ProfileFollowUser(user.id))),
                     icon: state.isFollowLoading
                         ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                         : const Icon(Icons.add, size: 18),

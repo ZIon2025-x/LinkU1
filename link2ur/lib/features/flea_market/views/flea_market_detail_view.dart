@@ -839,9 +839,9 @@ class _FleaMarketDetailContent extends StatelessWidget {
                   icon: Icons.chat_bubble_outline,
                   onPressed: state.isSubmitting
                       ? null
-                      : () => ctx.read<TaskExpertBloc>().add(
+                      : () => requireAuth(ctx, () => ctx.read<TaskExpertBloc>().add(
                             TaskExpertStartFleaMarketConsultation(item.id),
-                          ),
+                          )),
                   backgroundColor: AppColors.skeletonBase,
                 );
               },

@@ -733,9 +733,9 @@ class _ActivityDetailViewContent extends StatelessWidget {
       child: ElevatedButton(
         onPressed: isDisabled
             ? null
-            : () => context
+            : () => requireAuth(context, () => context
                 .read<ActivityBloc>()
-                .add(ActivityApplyOfficial(activityId: activityId)),
+                .add(ActivityApplyOfficial(activityId: activityId))),
         child: isLoading
             ? const SizedBox(
                 width: 20,

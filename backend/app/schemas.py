@@ -2,7 +2,7 @@ import datetime
 from typing import List, Literal, Optional, Dict, Any
 from decimal import Decimal
 
-from pydantic import BaseModel, Field, validator, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from pydantic import condecimal, conlist
 
 
@@ -398,26 +398,30 @@ class TaskCreate(TaskBase):
             raise ValueError(f"currency must be one of {SUPPORTED_CURRENCIES}")
         return v or "GBP"
 
-    @validator('pricing_type')
+    @field_validator('pricing_type')
+    @classmethod
     def validate_pricing_type(cls, v):
         if v and v not in ('fixed', 'hourly', 'negotiable'):
             raise ValueError('pricing_type must be fixed, hourly, or negotiable')
         return v or 'fixed'
 
-    @validator('task_mode')
+    @field_validator('task_mode')
+    @classmethod
     def validate_task_mode(cls, v):
         if v and v not in ('online', 'offline', 'both'):
             raise ValueError('task_mode must be online, offline, or both')
         return v or 'online'
 
-    @validator('reward')
+    @field_validator('reward')
+    @classmethod
     def validate_reward_minimum(cls, v):
         """创建新任务时：不填表示待报价；若填写则必须>=1.0"""
         if v is not None and v < 1.0:
             raise ValueError('任务金额必须至少为1镑')
         return v
     
-    @validator('deadline')
+    @field_validator('deadline')
+    @classmethod
     def validate_deadline_future(cls, v):
         """截止时间必须在未来"""
         if v is not None:
@@ -428,7 +432,8 @@ class TaskCreate(TaskBase):
                 raise ValueError('截止时间必须在未来')
         return v
     
-    @validator('location')
+    @field_validator('location')
+    @classmethod
     def validate_location_not_empty(cls, v):
         """位置不能为空字符串"""
         if not v or not v.strip():
@@ -495,7 +500,8 @@ class TaskOut(TaskBase):
     counter_offer_status: Optional[str] = None
     counter_offer_user_id: Optional[str] = None
 
-    @validator('required_skills', pre=True)
+    @field_validator('required_skills', mode='before')
+    @classmethod
     def parse_required_skills(cls, v):
         """将JSON字符串解析为列表"""
         if v is None:
@@ -513,7 +519,8 @@ class TaskOut(TaskBase):
             return v
         return []
 
-    @validator('images', pre=True)
+    @field_validator('images', mode='before')
+    @classmethod
     def parse_images(cls, v):
         """将JSON字符串解析为列表，处理各种输入类型"""
         if v is None:
@@ -849,7 +856,8 @@ class ReviewBase(BaseModel):
     comment: Optional[str] = Field(None, max_length=500, description="评价内容（可选，最多500字符）")
     is_anonymous: bool = False  # 是否匿名评价
     
-    @validator('comment')
+    @field_validator('comment')
+    @classmethod
     def validate_comment(cls, v):
         """验证评价内容长度"""
         if v is not None:
@@ -860,7 +868,8 @@ class ReviewBase(BaseModel):
                 return None  # 空字符串转为None
         return v
     
-    @validator('rating')
+    @field_validator('rating')
+    @classmethod
     def validate_rating_step(cls, v):
         """验证评分是否为0.5的倍数（0.5, 1.0, 1.5, ..., 5.0）"""
         if v < 0.5 or v > 5.0:
@@ -917,7 +926,8 @@ class TaskDisputeOut(BaseModel):
     resolved_by: Optional[str] = None
     resolution_note: Optional[str] = None
     
-    @validator('evidence_files', pre=True)
+    @field_validator('evidence_files', mode='before')
+    @classmethod
     def parse_evidence_files(cls, v):
         """解析JSON字符串为列表"""
         if v is None:
@@ -1094,7 +1104,8 @@ class TaskCancelRequestReview(BaseModel):
     status: str  # approved, rejected
     admin_comment: Optional[str] = None
     
-    @validator('status')
+    @field_validator('status')
+    @classmethod
     def validate_status(cls, v):
         if v not in ['approved', 'rejected']:
             raise ValueError('status must be either "approved" or "rejected"')
@@ -1502,7 +1513,8 @@ class CouponBase(BaseModel):
     applicable_scenarios: Optional[List[str]] = None  # 适用场景列表
     distribution_type: str = "public"  # public, code_only
 
-    @validator("per_user_limit_window")
+    @field_validator("per_user_limit_window")
+    @classmethod
     def validate_limit_window(cls, v: Optional[str]) -> Optional[str]:
         if v is None or v == "":
             return None
@@ -1534,7 +1546,8 @@ class CouponUpdate(BaseModel):
     total_quantity: Optional[int] = None
     per_user_limit: Optional[int] = None
 
-    @validator("per_user_limit_window")
+    @field_validator("per_user_limit_window")
+    @classmethod
     def validate_limit_window(cls, v: Optional[str]) -> Optional[str]:
         if v is None or v == "":
             return None
@@ -2035,13 +2048,15 @@ class TaskPaymentRequest(BaseModel):
     flea_market_item_id: Optional[str] = None  # 跳蚤市场商品 ID（如 S0123），用于 webhook 更新商品状态
     use_wallet_balance: bool = False  # 是否使用钱包余额支付（可与 Stripe 混合支付）
     
-    @validator('payment_method')
+    @field_validator('payment_method')
+    @classmethod
     def validate_payment_method(cls, v):
         if v != "stripe":
             raise ValueError("payment_method 必须是 'stripe'（积分不能作为支付手段，只能用于兑换优惠券）")
         return v
     
-    @validator('preferred_payment_method')
+    @field_validator('preferred_payment_method')
+    @classmethod
     def validate_preferred_payment_method(cls, v):
         if v is None or v == "":
             return None
@@ -3199,11 +3214,13 @@ class ActivityOut(BaseModel):
     class Config:
         from_attributes = True
 
-    @validator("original_price_per_participant", pre=True, always=True)
+    @field_validator("original_price_per_participant", mode="before")
+    @classmethod
     def default_price(cls, v):
         return float(v) if v is not None else 0.0
 
-    @validator("current_participants", pre=True, always=True)
+    @field_validator("current_participants", mode="before")
+    @classmethod
     def default_participants(cls, v):
         return int(v) if v is not None else 0
 
@@ -3483,7 +3500,8 @@ class ForumCategoryRequestCreate(BaseModel):
     country: Optional[str] = Field(None, max_length=10, description="国家代码（如 UK），仅 type=root 时使用")
     university_code: Optional[str] = Field(None, max_length=50, description="大学编码（如 UOB），仅 type=university 时使用")
 
-    @validator('name')
+    @field_validator('name')
+    @classmethod
     def validate_name(cls, v):
         """验证板块名称：去除首尾空格，检查是否只包含空格"""
         v = v.strip()
@@ -3495,7 +3513,8 @@ class ForumCategoryRequestCreate(BaseModel):
             raise ValueError('板块名称不能超过100个字符')
         return v
     
-    @validator('description')
+    @field_validator('description')
+    @classmethod
     def validate_description(cls, v):
         """验证板块描述"""
         if v is not None:
@@ -3504,7 +3523,8 @@ class ForumCategoryRequestCreate(BaseModel):
                 raise ValueError('板块描述不能超过500个字符')
         return v
     
-    @validator('icon')
+    @field_validator('icon')
+    @classmethod
     def validate_icon(cls, v):
         """验证图标：检查是否为emoji或有效URL"""
         if v is not None:

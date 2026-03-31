@@ -6,7 +6,7 @@
 import re
 import html
 from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, validator, Field
+from pydantic import BaseModel, field_validator, Field
 from fastapi import HTTPException, status
 
 
@@ -174,21 +174,25 @@ class TaskValidator(BaseValidator):
     task_type: str = Field(..., max_length=50)
     budget: Optional[float] = Field(None, ge=0, le=100000)
     
-    @validator('title')
+    @field_validator('title')
+    @classmethod
     def validate_title(cls, v):
         return StringValidator.sanitize_string(v, 100)
-    
-    @validator('description')
+
+    @field_validator('description')
+    @classmethod
     def validate_description(cls, v):
         return StringValidator.sanitize_string(v, 2000)
-    
-    @validator('location')
+
+    @field_validator('location')
+    @classmethod
     def validate_location(cls, v):
         if v is None:
             return v
         return StringValidator.sanitize_string(v, 100)
-    
-    @validator('task_type')
+
+    @field_validator('task_type')
+    @classmethod
     def validate_task_type(cls, v):
         # 使用与前端一致的任务类型列表
         from app.schemas import TASK_TYPES
@@ -208,22 +212,26 @@ class UserValidator(BaseValidator):
     terms_agreed_at: Optional[str] = Field(None)
     invitation_code: Optional[str] = Field(None, max_length=50)  # 邀请码字段
     
-    @validator('name')
+    @field_validator('name')
+    @classmethod
     def validate_name(cls, v):
         return StringValidator.sanitize_string(v, 50)
-    
-    @validator('email')
+
+    @field_validator('email')
+    @classmethod
     def validate_email(cls, v):
         # 如果email为None或空字符串，返回None（允许为空，用于手机号登录场景）
         if v is None or v == "":
             return None
         return StringValidator.validate_email(v)
-    
-    @validator('password')
+
+    @field_validator('password')
+    @classmethod
     def validate_password(cls, v):
         return StringValidator.validate_password(v)
-    
-    @validator('phone')
+
+    @field_validator('phone')
+    @classmethod
     def validate_phone(cls, v):
         if v is None or v == "":
             return None
@@ -236,11 +244,13 @@ class MessageValidator(BaseValidator):
     content: str = Field(..., min_length=1, max_length=1000)
     receiver_id: str = Field(..., min_length=1, max_length=50)
     
-    @validator('content')
+    @field_validator('content')
+    @classmethod
     def validate_content(cls, v):
         return StringValidator.sanitize_string(v, 1000)
-    
-    @validator('receiver_id')
+
+    @field_validator('receiver_id')
+    @classmethod
     def validate_receiver_id(cls, v):
         if not re.match(r'^[a-zA-Z0-9_-]+$', v):
             raise ValueError("接收者ID格式不正确")

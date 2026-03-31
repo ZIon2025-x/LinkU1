@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, status
 from sqlalchemy.orm import Session
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, field_validator, ValidationInfo
 
 from app import models
 from app.deps import get_sync_db
@@ -28,19 +28,21 @@ class RevokeRequest(BaseModel):
     reason_type: str  # 必填：user_request, violation, account_hacked, other
     reason_detail: str  # 必填：撤销原因详情
     
-    @validator('reason_type')
+    @field_validator('reason_type')
+    @classmethod
     def validate_reason_type(cls, v):
         allowed_types = ['user_request', 'violation', 'account_hacked', 'other']
         if v not in allowed_types:
             raise ValueError(f'reason_type 必须是以下之一: {allowed_types}')
         return v
-    
-    @validator('reason_detail')
-    def validate_reason_detail(cls, v, values):
+
+    @field_validator('reason_detail')
+    @classmethod
+    def validate_reason_detail(cls, v, info: ValidationInfo):
         if not v or not v.strip():
             raise ValueError('reason_detail 不能为空')
         # 如果 reason_type 为 other，reason_detail 必须手输详细原因
-        if values.get('reason_type') == 'other' and len(v.strip()) < 10:
+        if info.data.get('reason_type') == 'other' and len(v.strip()) < 10:
             raise ValueError('reason_type 为 other 时，reason_detail 必须手输至少10个字符的详细原因')
         return v.strip()
 

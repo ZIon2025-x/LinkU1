@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/design/app_colors.dart';
+import '../../../core/utils/auth_guard.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/utils/system_context_menu.dart';
 import '../../../core/design/app_spacing.dart';
@@ -268,7 +269,7 @@ class _ItemDetailContent extends StatelessWidget {
                       button: true,
                       label: 'Downvote',
                       child: GestureDetector(
-                      onTap: () => _showVoteSheet(context, 'downvote', item),
+                      onTap: () => requireAuth(context, () => _showVoteSheet(context, 'downvote', item)),
                       child: Container(
                         height: 50,
                         decoration: BoxDecoration(
@@ -309,7 +310,7 @@ class _ItemDetailContent extends StatelessWidget {
                       button: true,
                       label: 'Upvote',
                       child: GestureDetector(
-                      onTap: () => _showVoteSheet(context, 'upvote', item),
+                      onTap: () => requireAuth(context, () => _showVoteSheet(context, 'upvote', item)),
                       child: Container(
                         height: 50,
                         decoration: BoxDecoration(

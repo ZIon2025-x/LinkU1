@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/utils/auth_guard.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_typography.dart';
@@ -1335,9 +1336,9 @@ class _BottomApplyBar extends StatelessWidget {
           child: OutlinedButton.icon(
             onPressed: state.isSubmitting
                 ? null
-                : () => context
+                : () => requireAuth(context, () => context
                     .read<TaskExpertBloc>()
-                    .add(TaskExpertStartConsultation(serviceId)),
+                    .add(TaskExpertStartConsultation(serviceId))),
             icon: state.isSubmitting
                 ? const SizedBox(
                     width: 18,

@@ -917,24 +917,24 @@ class _RankItemCard extends StatelessWidget {
                 icon: Icons.thumb_up,
                 isActive: item.hasUpvoted,
                 color: AppColors.success,
-                onTap: () {
+                onTap: () => requireAuth(context, () {
                   AppHaptics.selection();
                   context.read<LeaderboardBloc>().add(
                         LeaderboardVoteItem(item.id, voteType: 'upvote'),
                       );
-                },
+                }),
               ),
               const SizedBox(height: 4),
               _VoteCircle(
                 icon: Icons.thumb_down,
                 isActive: item.hasDownvoted,
                 color: AppColors.error,
-                onTap: () {
+                onTap: () => requireAuth(context, () {
                   AppHaptics.selection();
                   context.read<LeaderboardBloc>().add(
                         LeaderboardVoteItem(item.id, voteType: 'downvote'),
                       );
-                },
+                }),
               ),
             ],
           ),
