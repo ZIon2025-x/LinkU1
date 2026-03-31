@@ -282,7 +282,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
           ],
         ),
       ),
-    ).then((_) => priceController.dispose());
+    );
   }
 
   TaskApplication? _findApplication(TaskDetailState state) {
@@ -1223,10 +1223,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.xs,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: isDark
             ? AppColors.cardBackgroundDark.withValues(alpha: 0.85)
@@ -1246,79 +1243,69 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
           children: [
             // User (poster / consulting initiator): negotiate & formal apply
             if (isApplicantFinal && (isConsulting || isNegotiating)) ...[
-              ActionChip(
-                avatar: const Icon(Icons.local_offer, size: 16),
-                label: Text(context.l10n.negotiatePrice),
-                onPressed: isSubmitting ? null : _showNegotiateDialog,
+              _ActionPill(
+                icon: Icons.local_offer,
+                label: context.l10n.negotiatePrice,
+                onTap: isSubmitting ? null : _showNegotiateDialog,
               ),
               const SizedBox(width: 8),
-              ActionChip(
-                avatar: const Icon(Icons.assignment, size: 16),
-                label: Text(widget.consultationType == ConsultationType.fleaMarket
+              _ActionPill(
+                icon: Icons.assignment,
+                label: widget.consultationType == ConsultationType.fleaMarket
                     ? context.l10n.fleaMarketBuyNow
-                    : context.l10n.formalApply),
-                onPressed: isSubmitting ? null : _showFormalApplyDialog,
+                    : context.l10n.formalApply,
+                onTap: isSubmitting ? null : _showFormalApplyDialog,
               ),
               const SizedBox(width: 8),
             ],
             // Expert (service provider): quote
             if (!isApplicantFinal && (isConsulting || isNegotiating)) ...[
-              ActionChip(
-                avatar: const Icon(Icons.request_quote, size: 16),
-                label: Text(context.l10n.quotePrice),
-                onPressed: isSubmitting ? null : _showQuoteDialog,
+              _ActionPill(
+                icon: Icons.request_quote,
+                label: context.l10n.quotePrice,
+                onTap: isSubmitting ? null : _showQuoteDialog,
               ),
               const SizedBox(width: 8),
             ],
             // Price agreed: service can approve directly, task/fleaMarket need formal-apply first
             if (isPriceAgreed) ...[
               if (isApplicantFinal) ...[
-                ActionChip(
-                  avatar: const Icon(Icons.assignment, size: 16),
-                  label: Text(widget.consultationType == ConsultationType.fleaMarket
+                _ActionPill(
+                  icon: Icons.assignment,
+                  label: widget.consultationType == ConsultationType.fleaMarket
                       ? context.l10n.fleaMarketConfirmPurchase
-                      : context.l10n.formalApply),
-                  onPressed: isSubmitting ? null : _showFormalApplyDialog,
+                      : context.l10n.formalApply,
+                  onTap: isSubmitting ? null : _showFormalApplyDialog,
                 ),
                 const SizedBox(width: 8),
               ],
               if (!isApplicantFinal && widget.consultationType == ConsultationType.service) ...[
-                ActionChip(
-                  avatar: const Icon(Icons.check_circle, size: 16,
-                      color: AppColors.success),
-                  label: Text(
-                    context.l10n.expertApplicationConfirmApprove,
-                    style: const TextStyle(color: AppColors.success),
-                  ),
-                  onPressed: isSubmitting ? null : _showApproveConfirmation,
+                _ActionPill(
+                  icon: Icons.check_circle,
+                  label: context.l10n.expertApplicationConfirmApprove,
+                  color: AppColors.success,
+                  onTap: isSubmitting ? null : _showApproveConfirmation,
                 ),
                 const SizedBox(width: 8),
               ],
             ],
             // Pending: non-applicant can approve for ALL types
             if (appStatus == 'pending' && !isApplicantFinal) ...[
-              ActionChip(
-                avatar: const Icon(Icons.check_circle, size: 16,
-                    color: AppColors.success),
-                label: Text(
-                  context.l10n.expertApplicationConfirmApprove,
-                  style: const TextStyle(color: AppColors.success),
-                ),
-                onPressed: isSubmitting ? null : _showApproveConfirmation,
+              _ActionPill(
+                icon: Icons.check_circle,
+                label: context.l10n.expertApplicationConfirmApprove,
+                color: AppColors.success,
+                onTap: isSubmitting ? null : _showApproveConfirmation,
               ),
               const SizedBox(width: 8),
             ],
             // Both: close consultation (only when consulting or negotiating)
             if (isConsulting || isNegotiating) ...[
-              ActionChip(
-                avatar: Icon(Icons.close, size: 16,
-                    color: AppColors.error.withValues(alpha: 0.8)),
-                label: Text(
-                  context.l10n.closeConsultation,
-                  style: TextStyle(
-                      color: AppColors.error.withValues(alpha: 0.8)),
-                ),
-                onPressed: isSubmitting ? null : _showCloseConfirmation,
+              _ActionPill(
+                icon: Icons.close,
+                label: context.l10n.closeConsultation,
+                color: AppColors.error.withValues(alpha: 0.8),
+                onTap: isSubmitting ? null : _showCloseConfirmation,
               ),
             ],
           ],
@@ -1433,7 +1420,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
           ],
         ),
       ),
-    ).then((_) => priceController.dispose());
+    );
   }
 
   void _showQuoteDialog() {
@@ -1494,10 +1481,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
           ],
         ),
       ),
-    ).then((_) {
-      priceController.dispose();
-      messageController.dispose();
-    });
+    );
   }
 
   void _showFormalApplyDialog() {
@@ -1584,10 +1568,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
           ],
         ),
       ),
-    ).then((_) {
-      priceController.dispose();
-      messageController.dispose();
-    });
+    );
   }
 
   void _showApproveConfirmation() {
@@ -1737,7 +1718,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
           ],
         ),
       ),
-    ).then((_) => priceController.dispose());
+    );
   }
 
   void _handleNegotiationResponse(String action) {
@@ -1775,6 +1756,50 @@ class _NegotiationActionButton extends StatelessWidget {
           ),
         ),
         child: Text(label, style: const TextStyle(fontSize: 12)),
+      ),
+    );
+  }
+}
+
+/// Pill-shaped action button matching task chat _QuickActionChip style
+class _ActionPill extends StatelessWidget {
+  const _ActionPill({
+    required this.icon,
+    required this.label,
+    this.color,
+    this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color? color;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = color ?? AppColors.primary;
+    final disabled = onTap == null;
+    final effectiveColor = disabled ? c.withValues(alpha: 0.4) : c;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          border: Border.all(color: effectiveColor.withValues(alpha: 0.5)),
+          borderRadius: AppRadius.allPill,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: effectiveColor),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(fontSize: 12, color: effectiveColor),
+            ),
+          ],
+        ),
       ),
     );
   }

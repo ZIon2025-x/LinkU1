@@ -47,10 +47,7 @@ import '../../../data/repositories/task_repository.dart';
 import '../../../data/repositories/payment_repository.dart';
 import '../../../data/repositories/notification_repository.dart';
 import '../../../data/repositories/question_repository.dart';
-import '../../../data/repositories/task_expert_repository.dart';
-import '../../../data/repositories/activity_repository.dart';
 import '../../../features/auth/bloc/auth_bloc.dart';
-import '../../task_expert/bloc/task_expert_bloc.dart';
 import '../bloc/task_detail_bloc.dart';
 import '../../../core/widgets/glass_button.dart';
 import '../../../core/widgets/bouncing_widget.dart';
@@ -769,11 +766,6 @@ class _TaskDetailContent extends StatelessWidget {
             task.status == AppConstants.taskStatusPendingConfirmation ||
             task.status == AppConstants.taskStatusPendingPayment);
 
-    // 咨询按钮：非发布者、已登录、任务 open
-    final showConsult = !isPoster &&
-        currentUserId != null &&
-        task.status == AppConstants.taskStatusOpen;
-
     // 底部按钮：快速操作栏 (高性能半透明背景，替代 BackdropFilter)
     return Container(
       decoration: BoxDecoration(
@@ -795,48 +787,6 @@ class _TaskDetailContent extends StatelessWidget {
               horizontal: 16, vertical: 12),
           child: Row(
             children: [
-              // 咨询按钮
-              if (showConsult) ...[
-                BlocProvider(
-                  create: (ctx) => TaskExpertBloc(
-                    taskExpertRepository: ctx.read<TaskExpertRepository>(),
-                    activityRepository: ctx.read<ActivityRepository>(),
-                    questionRepository: ctx.read<QuestionRepository>(),
-                  ),
-                  child: BlocConsumer<TaskExpertBloc, TaskExpertState>(
-                    listenWhen: (prev, curr) =>
-                        prev.actionMessage != curr.actionMessage &&
-                        (curr.actionMessage == 'consultation_started' ||
-                         curr.actionMessage == 'consultation_failed'),
-                    listener: (ctx, state) {
-                      if (state.actionMessage == 'consultation_started' &&
-                          state.consultationData != null) {
-                        final taskId = state.consultationData!['task_id'] as int?;
-                        final appId = state.consultationData!['application_id'] as int?;
-                        if (taskId != null && appId != null) {
-                          ctx.push('/tasks/$taskId/applications/$appId/chat?consultation=true&type=task');
-                        }
-                      } else if (state.actionMessage == 'consultation_failed') {
-                        ScaffoldMessenger.of(ctx).showSnackBar(
-                          SnackBar(content: Text(ctx.localizeError(state.errorMessage))),
-                        );
-                      }
-                    },
-                    builder: (ctx, state) {
-                      return IconActionButton(
-                        icon: Icons.chat_bubble_outline,
-                        onPressed: state.isSubmitting
-                            ? null
-                            : () => ctx.read<TaskExpertBloc>().add(
-                                  TaskExpertStartTaskConsultation(task.id),
-                                ),
-                        backgroundColor: AppColors.skeletonBase,
-                      );
-                    },
-                  ),
-                ),
-                AppSpacing.hMd,
-              ],
               // 聊天按钮 — 任务聊天（非私聊）
               if (showChat)
                 IconActionButton(
@@ -855,37 +805,6 @@ class _TaskDetailContent extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-
-  void _showAskDialog(BuildContext context) {
-    final controller = TextEditingController();
-    final bloc = context.read<TaskDetailBloc>();
-
-    AdaptiveDialogs.showConfirmDialog(
-      context: context,
-      title: context.l10n.qaAskButton,
-      barrierDismissible: true,
-      contentWidget: Material(
-        color: Colors.transparent,
-        child: TextField(
-          controller: controller,
-          maxLength: 500,
-          maxLines: 3,
-          decoration: InputDecoration(
-            hintText: context.l10n.qaAskPlaceholder,
-            border: const OutlineInputBorder(),
-          ),
-        ),
-      ),
-      confirmText: context.l10n.commonSubmit,
-      cancelText: context.l10n.commonCancel,
-      onConfirm: () {
-        final text = controller.text.trim();
-        if (text.length >= 2) {
-          bloc.add(TaskDetailAskQuestion(text));
-        }
-      },
     );
   }
 
