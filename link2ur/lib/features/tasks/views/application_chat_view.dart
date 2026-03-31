@@ -134,39 +134,12 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
     return Helpers.currencySymbolFor(currency);
   }
 
-  /// 咨询模式下的 AppBar 标题：「类型咨询：标题」
+  /// 咨询模式下的 AppBar 标题：直接用任务标题（已含"类型咨询：标题"格式）
   String _consultationTitle(TaskDetailState state) {
     final task = state.task;
     if (task == null) return context.l10n.taskChat;
     final locale = Localizations.localeOf(context);
-    final typeLabel = _consultationTypeLabel();
-    final title = _stripConsultPrefix(task.displayTitle(locale));
-    return '$typeLabel${context.l10n.consultExpert}: $title';
-  }
-
-  /// 去掉后端在咨询任务标题中添加的"咨询："前缀
-  String _stripConsultPrefix(String title) {
-    for (final prefix in ['咨询：', '咨询:', 'Consultation: ', 'Consultation:']) {
-      if (title.startsWith(prefix)) {
-        return title.substring(prefix.length).trim();
-      }
-    }
-    return title;
-  }
-
-  /// 根据 consultationType 返回本地化类型名称
-  String _consultationTypeLabel() {
-    switch (widget.consultationType) {
-      case ConsultationType.fleaMarket:
-        return context.l10n.taskSourceFleaMarket;
-      case ConsultationType.service:
-        final hasExpert = _consultationApp?['expert_id'] != null;
-        return hasExpert
-            ? context.l10n.taskSourceExpertService
-            : context.l10n.discoveryFeedTypePersonalSkill;
-      case ConsultationType.task:
-        return context.l10n.taskSourceNormal;
-    }
+    return task.displayTitle(locale);
   }
 
   @override
@@ -1062,7 +1035,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
           Expanded(
             child: Text(
               state.task != null
-                  ? '${_consultationTypeLabel()}${context.l10n.consultExpert}: ${_stripConsultPrefix(state.task!.displayTitle(Localizations.localeOf(context)))}'
+                  ? state.task!.displayTitle(Localizations.localeOf(context))
                   : context.l10n.serviceInfoCard,
               style: const TextStyle(
                 fontWeight: FontWeight.w600,
