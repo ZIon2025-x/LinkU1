@@ -134,12 +134,36 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
     return Helpers.currencySymbolFor(currency);
   }
 
-  /// 咨询模式下的 AppBar 标题：直接用任务标题（已含"类型咨询：标题"格式）
+  /// 咨询模式下的 AppBar 标题：将后端"咨询: xxx"替换为"类型咨询: xxx"
   String _consultationTitle(TaskDetailState state) {
     final task = state.task;
     if (task == null) return context.l10n.taskChat;
     final locale = Localizations.localeOf(context);
-    return task.displayTitle(locale);
+    final title = task.displayTitle(locale);
+    final typeLabel = _consultationTypeLabel();
+
+    // 后端标题格式为 "咨询: xxx"，替换为 "类型咨询: xxx"
+    for (final prefix in ['咨询: ', '咨询：', '咨询:', 'Consultation: ', 'Consultation:']) {
+      if (title.startsWith(prefix)) {
+        return '$typeLabel${context.l10n.consultExpert}: ${title.substring(prefix.length).trim()}';
+      }
+    }
+    return '$typeLabel${context.l10n.consultExpert}: $title';
+  }
+
+  /// 根据 consultationType 返回本地化类型名称
+  String _consultationTypeLabel() {
+    switch (widget.consultationType) {
+      case ConsultationType.fleaMarket:
+        return context.l10n.taskSourceFleaMarket;
+      case ConsultationType.service:
+        final hasExpert = _consultationApp?['expert_id'] != null;
+        return hasExpert
+            ? context.l10n.taskSourceExpertService
+            : context.l10n.discoveryFeedTypePersonalSkill;
+      case ConsultationType.task:
+        return context.l10n.taskSourceNormal;
+    }
   }
 
   @override
@@ -1036,7 +1060,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
           Expanded(
             child: Text(
               state.task != null
-                  ? state.task!.displayTitle(Localizations.localeOf(context))
+                  ? _consultationTitle(state)
                   : context.l10n.serviceInfoCard,
               style: const TextStyle(
                 fontWeight: FontWeight.w600,
