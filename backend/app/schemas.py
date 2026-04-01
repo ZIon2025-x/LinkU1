@@ -3461,9 +3461,10 @@ class ForumCategoryBase(BaseModel):
     is_visible: bool = True
     is_admin_only: bool = False
     # 学校板块访问控制字段
-    type: Optional[str] = Field('general', description="板块类型: general(普通), root(国家/地区级大板块), university(大学级小板块)")
+    type: Optional[str] = Field('general', description="板块类型: general(普通), root(国家/地区级大板块), university(大学级小板块), skill(技能板块)")
     country: Optional[str] = Field(None, description="国家代码（如 UK），仅 type=root 时使用")
     university_code: Optional[str] = Field(None, description="大学编码（如 UOB），仅 type=university 时使用")
+    skill_type: Optional[str] = Field(None, description="Task type for skill sections")
 
 
 class ForumCategoryCreate(ForumCategoryBase):
@@ -3485,6 +3486,7 @@ class ForumCategoryUpdate(BaseModel):
     type: Optional[str] = Field(None, description="板块类型: general(普通), root(国家/地区级大板块), university(大学级小板块)")
     country: Optional[str] = Field(None, description="国家代码（如 UK），仅 type=root 时使用")
     university_code: Optional[str] = Field(None, description="大学编码（如 UOB），仅 type=university 时使用")
+    skill_type: Optional[str] = Field(None)
 
 
 class ForumCategoryRequestCreate(BaseModel):
@@ -3589,7 +3591,8 @@ class ForumCategoryOut(ForumCategoryBase):
     type: Optional[str] = Field(None, description="板块类型: general(普通), root(国家/地区级大板块), university(大学级小板块)")
     country: Optional[str] = Field(None, description="国家代码（如 UK），仅 type=root 时使用")
     university_code: Optional[str] = Field(None, description="大学编码（如 UOB），仅 type=university 时使用")
-    
+    skill_type: Optional[str] = None
+
     class Config:
         from_attributes = True
 

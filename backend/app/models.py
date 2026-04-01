@@ -2359,6 +2359,7 @@ class ForumCategory(Base):
     type = Column(String(20), default='general', server_default=text("'general'"))  # general, root, university
     country = Column(String(10), nullable=True)  # 国家代码（如 UK），仅 type=root 时使用
     university_code = Column(String(50), nullable=True)  # 大学编码（如 UOB），仅 type=university 时使用
+    skill_type = Column(String(50), nullable=True, index=True)  # Links to task_type for skill sections
     created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
     
