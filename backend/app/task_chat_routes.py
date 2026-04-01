@@ -4750,12 +4750,11 @@ async def consult_negotiate(
             from app import async_crud
             user_name = current_user.name if hasattr(current_user, "name") else "用户"
             await async_crud.async_notification_crud.create_notification(
-                db, str(task.poster_id), "task",
+                db, str(task.poster_id), "consultation_update",
                 "收到新报价", f'{user_name} 对任务「{task.title}」提出了报价 {currency} {float(proposed_price):.2f}',
-                related_id=str(application_id), title_en="New Price Proposal",
+                related_id=str(task_id), title_en="New Price Proposal",
                 content_en=f'{user_name} proposed {currency} {float(proposed_price):.2f} for task "{task.title}"',
-                related_type="application_id",
-                data=json.dumps({"task_id": task_id, "application_id": application_id}),
+                related_type="task_id",
             )
         except Exception as e:
             logger.warning(f"Failed to create notification for consult-negotiate: {e}")
@@ -4844,12 +4843,11 @@ async def consult_quote(
             from app import async_crud
             poster_name = current_user.name if hasattr(current_user, "name") else "发布者"
             await async_crud.async_notification_crud.create_notification(
-                db, str(application.applicant_id), "task",
+                db, str(application.applicant_id), "consultation_update",
                 "收到报价", f'{poster_name} 对任务「{task.title}」报价 {currency} {float(quoted_price):.2f}',
-                related_id=str(application_id), title_en="New Quote",
+                related_id=str(task_id), title_en="New Quote",
                 content_en=f'{poster_name} quoted {currency} {float(quoted_price):.2f} for task "{task.title}"',
-                related_type="application_id",
-                data=json.dumps({"task_id": task_id, "application_id": application_id}),
+                related_type="task_id",
             )
         except Exception as e:
             logger.warning(f"Failed to create notification for consult-quote: {e}")
@@ -4971,12 +4969,11 @@ async def consult_respond(
         try:
             from app import async_crud
             await async_crud.async_notification_crud.create_notification(
-                db, other_party_id, "task",
+                db, other_party_id, "consultation_update",
                 notif_title, notif_body,
-                related_id=str(application_id), title_en=notif_title_en,
+                related_id=str(task_id), title_en=notif_title_en,
                 content_en=notif_body_en,
-                related_type="application_id",
-                data=json.dumps({"task_id": task_id, "application_id": application_id}),
+                related_type="task_id",
             )
         except Exception as e:
             logger.warning(f"Failed to create notification for consult-respond: {e}")
@@ -5069,12 +5066,11 @@ async def consult_formal_apply(
         try:
             from app import async_crud
             await async_crud.async_notification_crud.create_notification(
-                db, str(task.poster_id), "task",
+                db, str(task.poster_id), "task_application",
                 "收到正式申请", f'{user_name} 对任务「{task.title}」提交了正式申请',
-                related_id=str(application_id), title_en="New Formal Application",
+                related_id=str(task_id), title_en="New Formal Application",
                 content_en=f'{user_name} submitted a formal application for task "{task.title}"',
-                related_type="application_id",
-                data=json.dumps({"task_id": task_id, "application_id": application_id}),
+                related_type="task_id",
             )
         except Exception as e:
             logger.warning(f"Failed to create notification for consult-formal-apply: {e}")

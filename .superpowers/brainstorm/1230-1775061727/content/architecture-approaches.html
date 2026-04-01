@@ -1,0 +1,136 @@
+<h2>群聊功能 — 架构方案对比</h2>
+<p class="subtitle">基于需求：兴趣群组 / 500-1000人 / 三级管理 / 深度联动 / 实时+离线</p>
+
+<div class="section">
+  <h3>需求总结</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:14px;">
+    <div style="background:#1a1a2e;padding:12px;border-radius:8px;">
+      <div class="label">群组类型</div>
+      <p>兴趣/话题群组，长期社区</p>
+    </div>
+    <div style="background:#1a1a2e;padding:12px;border-radius:8px;">
+      <div class="label">加入方式</div>
+      <p>群主可选：开放 / 审批 / 邀请制</p>
+    </div>
+    <div style="background:#1a1a2e;padding:12px;border-radius:8px;">
+      <div class="label">规模</div>
+      <p>上限 500-1000 人，管理员体系</p>
+    </div>
+    <div style="background:#1a1a2e;padding:12px;border-radius:8px;">
+      <div class="label">消息类型</div>
+      <p>文字/图片/文件/@提及/回复/投票/活动</p>
+    </div>
+    <div style="background:#1a1a2e;padding:12px;border-radius:8px;">
+      <div class="label">管理</div>
+      <p>群主 → 管理员 → 普通成员</p>
+    </div>
+    <div style="background:#1a1a2e;padding:12px;border-radius:8px;">
+      <div class="label">联动</div>
+      <p>分享卡片 + 群内发任务/活动/组队</p>
+    </div>
+  </div>
+</div>
+
+<h3>选择架构方案</h3>
+<p class="subtitle">三种方案各有取舍，点击选择你倾向的方向</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>扩展现有 Task Chat 模型</h3>
+      <p style="margin:8px 0;font-size:14px;">复用现有的 <code>Message</code> 表 + <code>TaskParticipant</code> 模式，新增 <code>ChatGroup</code> 表作为群组元数据，消息仍走 <code>Message</code> 表加 <code>group_id</code> 字段。</p>
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>优点</h4>
+          <ul>
+            <li>复用现有 WebSocket、消息模型、已读追踪</li>
+            <li>开发量最小，迭代最快</li>
+            <li>私聊/任务聊/群聊共享同一套基础设施</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>缺点</h4>
+          <ul>
+            <li>Message 表会变得很大，混合多种聊天类型</li>
+            <li>500+ 人群的查询性能可能有瓶颈</li>
+            <li>群组特有功能（投票、公告）需要硬塞进现有结构</li>
+          </ul>
+        </div>
+      </div>
+      <div style="margin-top:8px;padding:8px;background:#1a3a1a;border-radius:6px;font-size:13px;">
+        ⏱ 预计工作量：中等 &nbsp;|&nbsp; 🏗 架构风险：中
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>独立 Conversation 抽象层（推荐）</h3>
+      <p style="margin:8px 0;font-size:14px;">新建 <code>Conversation</code> 统一抽象（type: private/task/group），所有聊天类型统一管理。群聊相关新增 <code>GroupInfo</code>、<code>GroupMember</code>、<code>GroupMessage</code> 等独立表。</p>
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>优点</h4>
+          <ul>
+            <li>架构清晰，群聊有独立的表和索引，不污染现有数据</li>
+            <li>可以为群消息单独优化（分区、归档）</li>
+            <li>未来扩展容易（频道、直播间等）</li>
+            <li>群组特有功能（投票、角色、公告）有天然存放位置</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>缺点</h4>
+          <ul>
+            <li>开发量较大，需要迁移或适配现有聊天</li>
+            <li>需要统一聊天列表的聚合查询</li>
+            <li>WebSocket 路由需要改造</li>
+          </ul>
+        </div>
+      </div>
+      <div style="margin-top:8px;padding:8px;background:#1a2a4a;border-radius:6px;font-size:13px;">
+        ⭐ 推荐 &nbsp;|&nbsp; ⏱ 工作量：较大 &nbsp;|&nbsp; 🏗 架构风险：低
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>群聊完全独立模块</h3>
+      <p style="margin:8px 0;font-size:14px;">群聊作为完全独立的微服务/模块，有自己的数据库表、API 路由、WebSocket 连接。与现有聊天系统完全解耦。</p>
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>优点</h4>
+          <ul>
+            <li>零风险：完全不影响现有聊天功能</li>
+            <li>可以独立部署和扩展</li>
+            <li>技术选型自由（可以用更适合群聊的方案）</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>缺点</h4>
+          <ul>
+            <li>大量重复代码（WebSocket、消息模型、已读追踪）</li>
+            <li>用户体验割裂（两套聊天系统）</li>
+            <li>维护成本翻倍</li>
+            <li>联动功能实现更复杂</li>
+          </ul>
+        </div>
+      </div>
+      <div style="margin-top:8px;padding:8px;background:#3a1a1a;border-radius:6px;font-size:13px;">
+        ⏱ 工作量：最大 &nbsp;|&nbsp; 🏗 架构风险：低但维护成本高
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:24px;padding:16px;background:#1a1a2e;border-radius:8px;">
+  <h3>💡 我的推荐：方案 B</h3>
+  <p style="font-size:14px;line-height:1.6;">
+    方案 B 在<strong>架构清晰度</strong>和<strong>开发可行性</strong>之间取得了最好的平衡。通过引入 <code>Conversation</code> 抽象层，不仅解决群聊需求，还能统一现有的私聊和任务聊天，为将来的扩展打下基础。群聊的特有功能（投票、公告、角色管理）有天然的存放位置，不会污染现有的 Message 表。
+  </p>
+  <p style="font-size:14px;line-height:1.6;margin-top:8px;">
+    虽然工作量比方案 A 大，但<strong>可以分阶段实施</strong>：先建群聊独立表，现有聊天暂不迁移，后续再统一到 Conversation 模型下。
+  </p>
+</div>
