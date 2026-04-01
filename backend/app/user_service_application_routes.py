@@ -505,8 +505,8 @@ async def owner_approve_application(
         )
 
     # 按资金划分任务等级（与普通任务一致）
-    from app.async_crud import AsyncSystemCRUD
-    settings = await AsyncSystemCRUD.get_system_settings(db)
+    from app.async_crud import AsyncTaskCRUD
+    settings = await AsyncTaskCRUD.get_system_settings_dict(db)
     vip_threshold = float(settings.get("vip_price_threshold", 10.0))
     super_threshold = float(settings.get("super_vip_price_threshold", 50.0))
     user_level = str(current_user.user_level) if current_user.user_level else "normal"
