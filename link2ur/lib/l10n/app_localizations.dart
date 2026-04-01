@@ -21958,6 +21958,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Consulting'**
   String get expertApplicationStatusConsulting;
+
+  /// No description provided for @skillFeedLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load skill feed'**
+  String get skillFeedLoadFailed;
+
+  /// No description provided for @skillFeedLoadMoreFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load more content'**
+  String get skillFeedLoadMoreFailed;
+
+  /// No description provided for @skillFeedTaskLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Task'**
+  String get skillFeedTaskLabel;
+
+  /// No description provided for @skillFeedServiceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Service'**
+  String get skillFeedServiceLabel;
+
+  /// No description provided for @skillFeedDiscussionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Discussion'**
+  String get skillFeedDiscussionLabel;
 }
 
 class _AppLocalizationsDelegate

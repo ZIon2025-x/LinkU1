@@ -11426,6 +11426,21 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get expertApplicationStatusConsulting => '咨询中';
+
+  @override
+  String get skillFeedLoadFailed => '加载技能动态失败';
+
+  @override
+  String get skillFeedLoadMoreFailed => '加载更多内容失败';
+
+  @override
+  String get skillFeedTaskLabel => '任务';
+
+  @override
+  String get skillFeedServiceLabel => '服务';
+
+  @override
+  String get skillFeedDiscussionLabel => '讨论';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -22850,4 +22865,19 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get expertApplicationStatusConsulting => '諮詢中';
+
+  @override
+  String get skillFeedLoadFailed => '載入技能動態失敗';
+
+  @override
+  String get skillFeedLoadMoreFailed => '載入更多內容失敗';
+
+  @override
+  String get skillFeedTaskLabel => '任務';
+
+  @override
+  String get skillFeedServiceLabel => '服務';
+
+  @override
+  String get skillFeedDiscussionLabel => '討論';
 }

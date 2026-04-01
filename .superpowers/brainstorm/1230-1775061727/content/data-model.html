@@ -1,0 +1,123 @@
+<h2>数据模型设计 — 群聊核心表</h2>
+<p class="subtitle">方案 B：独立群聊表 + 未来可扩展的 Conversation 抽象</p>
+
+<div class="section">
+  <h3>阶段策略</h3>
+  <p style="font-size:14px;line-height:1.6;background:#1a1a2e;padding:12px;border-radius:8px;">
+    <strong>第一阶段（本次）：</strong>只建群聊相关的新表，现有私聊/任务聊天保持不动。<br>
+    <strong>第二阶段（后续）：</strong>引入 <code>Conversation</code> 表统一所有聊天类型，迁移现有数据。
+  </p>
+</div>
+
+<div class="section">
+  <h3>ER 关系图</h3>
+  <div class="mockup">
+    <div class="mockup-header">数据表关系</div>
+    <div class="mockup-body" style="padding:20px;font-size:13px;">
+      <pre style="font-family:monospace;line-height:1.8;color:#e0e0e0;white-space:pre-wrap;">
+┌─────────────────┐       ┌──────────────────────┐
+│   chat_groups    │──1:N──│   group_members       │
+│─────────────────│       │──────────────────────│
+│ id (PK)         │       │ id (PK)              │
+│ name            │       │ group_id (FK)        │
+│ description     │       │ user_id (FK → users) │
+│ avatar_url      │       │ role (owner/admin/   │
+│ owner_id (FK)   │       │       member)         │
+│ join_mode       │       │ nickname             │
+│  (open/approval/│       │ muted_until          │
+│   invite)       │       │ joined_at            │
+│ max_members     │       │ status (active/      │
+│ category        │       │   banned/left)       │
+│ tags (JSON)     │       └──────────────────────┘
+│ member_count    │
+│ is_active       │       ┌──────────────────────┐
+│ created_at      │──1:N──│   group_messages      │
+│ updated_at      │       │──────────────────────│
+└─────────────────┘       │ id (PK)              │
+                          │ group_id (FK)        │
+                          │ sender_id (FK)       │
+                          │ content              │
+                          │ message_type         │
+                          │  (text/image/file/   │
+                          │   system/poll/share/ │
+                          │   activity)          │
+                          │ reply_to_id (FK self)│
+                          │ mentions (JSON)      │
+                          │ attachments (JSON)   │
+                          │ meta (JSON)          │
+                          │ is_pinned            │
+                          │ created_at           │
+                          │ edited_at            │
+                          └──────────────────────┘
+
+┌─────────────────────────┐   ┌──────────────────────┐
+│ group_message_reads      │   │   group_polls         │
+│─────────────────────────│   │──────────────────────│
+│ group_id (PK, FK)       │   │ id (PK)              │
+│ user_id (PK, FK)        │   │ group_id (FK)        │
+│ last_read_message_id    │   │ message_id (FK)      │
+│ updated_at              │   │ question             │
+│                         │   │ options (JSON)       │
+└─────────────────────────┘   │ votes (JSON)         │
+                              │ is_anonymous         │
+┌─────────────────────────┐   │ is_multiple          │
+│ group_join_requests      │   │ expires_at           │
+│─────────────────────────│   │ created_by (FK)      │
+│ id (PK)                 │   └──────────────────────┘
+│ group_id (FK)           │
+│ user_id (FK)            │   ┌──────────────────────┐
+│ status (pending/        │   │   group_announcements │
+│   approved/rejected)    │   │──────────────────────│
+│ message (申请理由)       │   │ id (PK)              │
+│ reviewed_by (FK)        │   │ group_id (FK)        │
+│ created_at              │   │ message_id (FK)      │
+│ reviewed_at             │   │ pinned_by (FK)       │
+└─────────────────────────┘   │ pinned_at            │
+                              └──────────────────────┘</pre>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>关键设计决策</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px;">
+    <div style="background:#1a2a1a;padding:12px;border-radius:8px;">
+      <div class="label">✅ group_messages 独立表</div>
+      <p>不与现有 Message 表混用，避免巨表问题。独立索引：<code>(group_id, created_at DESC)</code> 保证群聊查询性能。</p>
+    </div>
+    <div style="background:#1a2a1a;padding:12px;border-radius:8px;">
+      <div class="label">✅ 游标分页</div>
+      <p>复用任务聊天的 cursor-based 分页模式（<code>last_read_message_id</code>），适合消息流场景。</p>
+    </div>
+    <div style="background:#1a2a1a;padding:12px;border-radius:8px;">
+      <div class="label">✅ 已读追踪</div>
+      <p>复用 <code>MessageReadCursor</code> 模式：每用户每群一条记录，记录最后已读消息 ID，而非每条消息标 read。</p>
+    </div>
+    <div style="background:#1a2a1a;padding:12px;border-radius:8px;">
+      <div class="label">✅ mentions 用 JSON</div>
+      <p><code>["user_id_1", "user_id_2", "all"]</code> — 简单高效，支持 @全体。前端解析渲染高亮。</p>
+    </div>
+    <div style="background:#1a2a1a;padding:12px;border-radius:8px;">
+      <div class="label">✅ meta 字段灵活存储</div>
+      <p>分享的任务/商品/活动卡片信息存在 <code>meta</code> JSON 中，不同 message_type 对应不同 schema。</p>
+    </div>
+    <div style="background:#1a2a1a;padding:12px;border-radius:8px;">
+      <div class="label">✅ 软删除 + 状态管理</div>
+      <p>成员用 status（active/banned/left），群组用 is_active，不做物理删除。</p>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:16px;">
+  <h3>索引策略</h3>
+  <div style="background:#1a1a2e;padding:16px;border-radius:8px;font-size:13px;font-family:monospace;line-height:1.8;">
+    <div style="color:#888;">-- 核心查询索引</div>
+    <div>CREATE INDEX ix_group_msg_group_created ON group_messages(group_id, created_at DESC);</div>
+    <div>CREATE INDEX ix_group_msg_group_pinned ON group_messages(group_id) WHERE is_pinned = true;</div>
+    <div>CREATE INDEX ix_group_members_user ON group_members(user_id) WHERE status = 'active';</div>
+    <div>CREATE INDEX ix_group_members_group ON group_members(group_id, role);</div>
+    <div>CREATE UNIQUE INDEX ux_group_reads ON group_message_reads(group_id, user_id);</div>
+    <div>CREATE INDEX ix_groups_category ON chat_groups(category) WHERE is_active = true;</div>
+    <div>CREATE INDEX ix_groups_tags ON chat_groups USING gin(tags);</div>
+  </div>
+</div>

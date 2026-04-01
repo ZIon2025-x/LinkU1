@@ -11898,4 +11898,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get expertApplicationStatusConsulting => 'Consulting';
+
+  @override
+  String get skillFeedLoadFailed => 'Failed to load skill feed';
+
+  @override
+  String get skillFeedLoadMoreFailed => 'Failed to load more content';
+
+  @override
+  String get skillFeedTaskLabel => 'Task';
+
+  @override
+  String get skillFeedServiceLabel => 'Service';
+
+  @override
+  String get skillFeedDiscussionLabel => 'Discussion';
 }
