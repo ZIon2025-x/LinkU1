@@ -260,8 +260,48 @@ def withdraw(
                 "request_id": req.request_id,
             },
         )
+    except stripe.error.StripeError as e:
+        # Phase 3a: Stripe API error — refund balance
+        error_code = getattr(e, 'code', None)
+        logger.error(
+            f"Stripe Transfer failed for user {current_user.id}, "
+            f"tx {pending_tx.id}: {e} (error_code={error_code})"
+        )
+
+        # Log balance details for insufficient funds (platform-side issue)
+        if error_code == 'balance_insufficient':
+            try:
+                balance = stripe.Balance.retrieve()
+                available = balance.available[0].amount if balance.available else 0
+                pending = balance.pending[0].amount if balance.pending else 0
+                logger.error(
+                    f"Platform balance insufficient: need {amount_pence} pence, "
+                    f"available={available} pence (£{available/100:.2f}), "
+                    f"pending={pending} pence (£{pending/100:.2f})"
+                )
+            except Exception as balance_err:
+                logger.warning(f"Unable to get balance details: {balance_err}")
+
+        try:
+            fail_withdrawal(db, pending_tx.id, current_user.id, amount, currency=currency)
+            db.commit()
+        except Exception as rollback_err:
+            logger.critical(
+                f"Failed to rollback withdrawal tx {pending_tx.id}: {rollback_err}"
+            )
+            db.rollback()
+
+        if error_code == 'balance_insufficient':
+            raise HTTPException(
+                status_code=503,
+                detail="Service temporarily unavailable. Withdrawal cannot be processed at this time. Please try again later.",
+            )
+        raise HTTPException(
+            status_code=502,
+            detail="Withdrawal failed. Please try again later or contact support.",
+        )
     except Exception as e:
-        # Phase 3a: Stripe failed or network error — refund balance
+        # Phase 3a: Non-Stripe error (network, etc.) — refund balance
         logger.error(
             f"Stripe Transfer failed for user {current_user.id}, "
             f"tx {pending_tx.id}: {e}"
