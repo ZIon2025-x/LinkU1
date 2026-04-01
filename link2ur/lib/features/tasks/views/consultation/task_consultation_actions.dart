@@ -145,7 +145,19 @@ class TaskConsultationActions extends ConsultationActions {
               ),
               const SizedBox(width: 8),
             ],
-            if ((isPriceAgreed || appStatus == 'pending') && !isApplicant) ...[
+            // price_agreed: 申请方可正式申请
+            if (isPriceAgreed && isApplicant) ...[
+              ActionPill(
+                icon: Icons.assignment,
+                label: context.l10n.formalApply,
+                onTap: isSubmitting
+                    ? null
+                    : () => _showFormalApplyDialog(context, getCurrencySymbol),
+              ),
+              const SizedBox(width: 8),
+            ],
+            // pending: 发布方可审批（后端只接受 pending 状态）
+            if (appStatus == 'pending' && !isApplicant) ...[
               ActionPill(
                 icon: Icons.check_circle,
                 label: context.l10n.expertApplicationConfirmApprove,
