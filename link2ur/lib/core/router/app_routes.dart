@@ -49,6 +49,7 @@ class AppRoutes {
   static const String createPost = '/forum/posts/create';
   static const String forumCategoryRequest = '/forum/category-request';
   static const String forumPostList = '/forum/category/:categoryId';
+  static const String forumSkillFeed = '/forum/skill/:categoryId';
   static const String myForumPosts = '/forum/my-posts';
 
   // 排行榜
@@ -145,6 +146,7 @@ const authRequiredRoutes = <String>{
   AppRoutes.myTasks,
   AppRoutes.myPosts,
   AppRoutes.myForumPosts,
+  AppRoutes.forumSkillFeed,
   AppRoutes.myServiceApplications,
   AppRoutes.myServices,
   AppRoutes.createService,

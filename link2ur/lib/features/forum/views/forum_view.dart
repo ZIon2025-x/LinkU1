@@ -873,8 +873,11 @@ class _CategoryCard extends StatelessWidget {
       child: GestureDetector(
         onTap: () {
           AppHaptics.selection();
-          context.push('/forum/category/${category.id}',
-              extra: category);
+          if (category.isSkillCategory) {
+            context.push('/forum/skill/${category.id}', extra: category);
+          } else {
+            context.push('/forum/category/${category.id}', extra: category);
+          }
         },
         child: GlassContainer(
         borderRadius: AppRadius.allLarge,
