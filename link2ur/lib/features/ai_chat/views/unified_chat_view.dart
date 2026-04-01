@@ -123,6 +123,7 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
+      showDragHandle: false,
       builder: (sheetContext) {
         return SizedBox(
           height: screenHeight * 0.55,

@@ -70,6 +70,7 @@ class ExternalWebView extends StatefulWidget {
     SheetAdaptation.showAdaptiveModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      showDragHandle: false,
       backgroundColor: Colors.transparent,
       maxWidth: SheetAdaptation.tabletSheetMaxWidthLarge,
       builder: (context) => DraggableScrollableSheet(

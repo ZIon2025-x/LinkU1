@@ -468,6 +468,7 @@ class _TaskDetailContent extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
+      showDragHandle: false,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -1007,6 +1008,7 @@ class _TaskDetailContent extends StatelessWidget {
           SheetAdaptation.showAdaptiveModalBottomSheet<void>(
             context: context,
             isScrollControlled: true,
+            showDragHandle: false,
             backgroundColor: Colors.transparent,
             builder: (ctx) => BlocListener<TaskDetailBloc, TaskDetailState>(
               bloc: bloc,

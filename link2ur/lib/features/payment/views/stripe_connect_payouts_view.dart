@@ -395,6 +395,7 @@ class _StripeConnectPayoutsViewState extends State<StripeConnectPayoutsView> {
     SheetAdaptation.showAdaptiveModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      showDragHandle: false,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -416,6 +417,7 @@ class _StripeConnectPayoutsViewState extends State<StripeConnectPayoutsView> {
     SheetAdaptation.showAdaptiveModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      showDragHandle: false,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),

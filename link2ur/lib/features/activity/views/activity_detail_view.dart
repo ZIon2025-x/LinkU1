@@ -2027,6 +2027,7 @@ class ActivityApplySheet extends StatefulWidget {
     return SheetAdaptation.showAdaptiveModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      showDragHandle: false,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),

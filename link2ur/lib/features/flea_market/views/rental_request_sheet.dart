@@ -22,6 +22,7 @@ class RentalRequestSheet extends StatefulWidget {
     return SheetAdaptation.showAdaptiveModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      showDragHandle: false,
       backgroundColor: Colors.transparent,
       builder: (ctx) => RentalRequestSheet(item: item, bloc: bloc),
     );

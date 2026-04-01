@@ -1378,6 +1378,7 @@ class _FleaMarketPurchaseSheet extends StatefulWidget {
     SheetAdaptation.showAdaptiveModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      showDragHandle: false,
       backgroundColor: Colors.transparent,
       builder: (ctx) => _FleaMarketPurchaseSheet(item: item, itemId: itemId, bloc: bloc),
     );
