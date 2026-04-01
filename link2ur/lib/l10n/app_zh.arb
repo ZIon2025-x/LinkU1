@@ -5216,5 +5216,10 @@
   "formalApplySubmitted": "已转为正式申请",
   "consultationClosed": "咨询已关闭",
   "serviceInfoCard": "服务信息",
-  "expertApplicationStatusConsulting": "咨询中"
+  "expertApplicationStatusConsulting": "咨询中",
+  "skillFeedLoadFailed": "加载技能动态失败",
+  "skillFeedLoadMoreFailed": "加载更多内容失败",
+  "skillFeedTaskLabel": "任务",
+  "skillFeedServiceLabel": "服务",
+  "skillFeedDiscussionLabel": "讨论"
 }

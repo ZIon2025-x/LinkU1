@@ -5324,5 +5324,10 @@
   "formalApplySubmitted": "Formal application submitted",
   "consultationClosed": "Consultation closed",
   "serviceInfoCard": "Service Info",
-  "expertApplicationStatusConsulting": "Consulting"
+  "expertApplicationStatusConsulting": "Consulting",
+  "skillFeedLoadFailed": "Failed to load skill feed",
+  "skillFeedLoadMoreFailed": "Failed to load more content",
+  "skillFeedTaskLabel": "Task",
+  "skillFeedServiceLabel": "Service",
+  "skillFeedDiscussionLabel": "Discussion"
 }

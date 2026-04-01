@@ -5153,5 +5153,10 @@
   "formalApplySubmitted": "已轉為正式申請",
   "consultationClosed": "諮詢已關閉",
   "serviceInfoCard": "服務資訊",
-  "expertApplicationStatusConsulting": "諮詢中"
+  "expertApplicationStatusConsulting": "諮詢中",
+  "skillFeedLoadFailed": "載入技能動態失敗",
+  "skillFeedLoadMoreFailed": "載入更多內容失敗",
+  "skillFeedTaskLabel": "任務",
+  "skillFeedServiceLabel": "服務",
+  "skillFeedDiscussionLabel": "討論"
 }

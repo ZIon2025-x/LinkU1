@@ -360,6 +360,10 @@ class ErrorLocalizer {
         return context.l10n.errorLeaderboardLoadFailed;
       case 'badges_load_failed':
         return context.l10n.errorBadgesLoadFailed;
+      case 'skill_feed_load_failed':
+        return context.l10n.skillFeedLoadFailed;
+      case 'skill_feed_load_more_failed':
+        return context.l10n.skillFeedLoadMoreFailed;
       // Expert dashboard action messages
       case 'expertServiceSubmitted':
         return context.l10n.expertServiceSubmitted;
