@@ -365,6 +365,8 @@ class ApiEndpoints {
   static const String forumLeaderboardLikes = '/api/forum/leaderboard/likes';
   static String forumCategoryStats(int categoryId) =>
       '/api/forum/categories/$categoryId/stats';
+  static String forumSkillFeed(int categoryId) =>
+      '/api/forum/categories/$categoryId/feed';
 
   // ==================== 排行榜 ====================
   // 后端: custom_leaderboard_routes.py (prefix: /api/custom-leaderboards)

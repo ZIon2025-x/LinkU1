@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
+import '../models/feed_item.dart';
 import '../models/forum.dart';
 import '../services/api_service.dart';
 import '../../core/constants/api_endpoints.dart';
@@ -834,6 +835,30 @@ class ForumRepository {
     }
 
     return response.data!;
+  }
+
+  /// 获取技能分类 Feed（混合帖子+用户卡片）
+  Future<SkillFeedResponse> getSkillFeed({
+    required int categoryId,
+    int page = 1,
+    int pageSize = 20,
+    String sortBy = 'weight',
+    CancelToken? cancelToken,
+  }) async {
+    try {
+      final response = await _apiService.get(
+        ApiEndpoints.forumSkillFeed(categoryId),
+        queryParameters: {
+          'page': page,
+          'page_size': pageSize,
+          'sort_by': sortBy,
+        },
+        cancelToken: cancelToken,
+      );
+      return SkillFeedResponse.fromJson(response.data as Map<String, dynamic>);
+    } catch (e) {
+      throw ForumException('skill_feed_load_failed');
+    }
   }
 }
 
