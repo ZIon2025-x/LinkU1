@@ -1191,11 +1191,14 @@ class AppLocalizationsZh extends AppLocalizations {
       '访问专属学生论坛板块，与校友互动';
 
   @override
-  String get studentVerificationBenefitExclusiveBenefits => '学生专享福利';
+  String get studentVerificationBenefitSameSchoolRecommendation => '同校任务推荐';
 
   @override
-  String get studentVerificationBenefitExclusiveBenefitsDescription =>
-      '享受学生折扣、专属活动等更多特权';
+  String get studentVerificationBenefitSameSchoolRecommendationDescription =>
+      '优先看到同校同学发布的任务，更容易找到身边的互助机会';
+
+  @override
+  String get studentVerificationGoToCampusForum => '进入校园论坛';
 
   @override
   String get studentVerificationBenefitVerificationBadge => '认证徽章';
@@ -12612,11 +12615,14 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
       '訪問專屬學生論壇板塊，與校友互動';
 
   @override
-  String get studentVerificationBenefitExclusiveBenefits => '學生專享福利';
+  String get studentVerificationBenefitSameSchoolRecommendation => '同校任務推薦';
 
   @override
-  String get studentVerificationBenefitExclusiveBenefitsDescription =>
-      '享受學生折扣、專屬活動等更多特權';
+  String get studentVerificationBenefitSameSchoolRecommendationDescription =>
+      '優先看到同校同學發布的任務，更容易找到身邊的互助機會';
+
+  @override
+  String get studentVerificationGoToCampusForum => '進入校園論壇';
 
   @override
   String get studentVerificationBenefitVerificationBadge => '認證徽章';

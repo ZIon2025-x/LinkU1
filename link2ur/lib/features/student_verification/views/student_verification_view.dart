@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/router/app_routes.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/verification_status_helper.dart';
 import '../../../core/widgets/loading_view.dart';
@@ -120,6 +122,11 @@ class _StudentVerificationContentState
                 children: [
                   _buildStatusCard(verification),
                   AppSpacing.vLg,
+                  _buildBenefitsSection(verification),
+                  AppSpacing.vLg,
+                  if (verification.isVerified)
+                    _buildCampusForumEntry(verification),
+                  if (verification.isVerified) AppSpacing.vLg,
                   if (!verification.isVerified || verification.canRenew)
                     _buildVerificationForm(verification, state),
                 ],
@@ -228,6 +235,138 @@ class _StudentVerificationContentState
             ),
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildBenefitsSection(StudentVerification verification) {
+    final l10n = context.l10n;
+    final benefits = [
+      (
+        icon: Icons.assignment_outlined,
+        title: l10n.studentVerificationBenefitCampusLife,
+        description: l10n.studentVerificationBenefitCampusLifeDescription,
+      ),
+      (
+        icon: Icons.forum_outlined,
+        title: l10n.studentVerificationBenefitStudentCommunity,
+        description: l10n.studentVerificationBenefitStudentCommunityDescription,
+      ),
+      (
+        icon: Icons.recommend_outlined,
+        title: l10n.studentVerificationBenefitSameSchoolRecommendation,
+        description: l10n.studentVerificationBenefitSameSchoolRecommendationDescription,
+      ),
+      (
+        icon: Icons.verified_outlined,
+        title: l10n.studentVerificationBenefitVerificationBadge,
+        description: l10n.studentVerificationBenefitVerificationBadgeDescription,
+      ),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          verification.isVerified
+              ? l10n.studentVerificationBenefitsTitleVerified
+              : l10n.studentVerificationBenefitsTitleUnverified,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+        ),
+        AppSpacing.vMd,
+        ...benefits.map((b) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      borderRadius: AppRadius.allSmall,
+                    ),
+                    child: Icon(b.icon, color: AppColors.primary, size: 22),
+                  ),
+                  AppSpacing.hMd,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          b.title,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          b.description,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: AppColors.textSecondaryLight,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (verification.isVerified)
+                    const Icon(Icons.check_circle,
+                        color: AppColors.success, size: 20),
+                ],
+              ),
+            )),
+      ],
+    );
+  }
+
+  Widget _buildCampusForumEntry(StudentVerification verification) {
+    final universityName = verification.university?.displayName;
+    return InkWell(
+      onTap: () => context.push(AppRoutes.forum),
+      borderRadius: AppRadius.allMedium,
+      child: Container(
+        padding: AppSpacing.allMd,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF3F51B5), Color(0xFF5C6BC0)],
+          ),
+          borderRadius: AppRadius.allMedium,
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.school, color: Colors.white, size: 28),
+            AppSpacing.hMd,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    context.l10n.studentVerificationGoToCampusForum,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (universityName != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      universityName,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.8),
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios,
+                color: Colors.white, size: 16),
+          ],
+        ),
       ),
     );
   }

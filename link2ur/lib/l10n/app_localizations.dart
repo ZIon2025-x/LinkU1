@@ -2409,17 +2409,23 @@ abstract class AppLocalizations {
   /// **'Access exclusive student forum sections and interact with schoolmates'**
   String get studentVerificationBenefitStudentCommunityDescription;
 
-  /// No description provided for @studentVerificationBenefitExclusiveBenefits.
+  /// No description provided for @studentVerificationBenefitSameSchoolRecommendation.
   ///
   /// In en, this message translates to:
-  /// **'Student-Exclusive Benefits'**
-  String get studentVerificationBenefitExclusiveBenefits;
+  /// **'Same-School Recommendations'**
+  String get studentVerificationBenefitSameSchoolRecommendation;
 
-  /// No description provided for @studentVerificationBenefitExclusiveBenefitsDescription.
+  /// No description provided for @studentVerificationBenefitSameSchoolRecommendationDescription.
   ///
   /// In en, this message translates to:
-  /// **'Enjoy student discounts, exclusive events and more privileges'**
-  String get studentVerificationBenefitExclusiveBenefitsDescription;
+  /// **'See tasks from schoolmates first, find nearby help more easily'**
+  String get studentVerificationBenefitSameSchoolRecommendationDescription;
+
+  /// No description provided for @studentVerificationGoToCampusForum.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to Campus Forum'**
+  String get studentVerificationGoToCampusForum;
 
   /// No description provided for @studentVerificationBenefitVerificationBadge.
   ///

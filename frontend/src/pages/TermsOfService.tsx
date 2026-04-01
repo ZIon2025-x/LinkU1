@@ -208,6 +208,8 @@ const TermsOfService: React.FC = () => {
               </h2>
               <p>{getContent('feesAndRules.content')}</p>
               <p style={{ whiteSpace: 'pre-line' }}>{getContent('feesAndRules.applicationFee')}</p>
+              <p style={{ whiteSpace: 'pre-line' }}>{getContent('feesAndRules.serviceFeeSchedule')}</p>
+              <p>{getContent('feesAndRules.serviceFeePayerNote')}</p>
               <p>{getContent('feesAndRules.paymentProcessing')}</p>
               <p>{getContent('feesAndRules.reviews')}</p>
 

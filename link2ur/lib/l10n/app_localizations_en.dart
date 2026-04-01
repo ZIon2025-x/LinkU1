@@ -1235,12 +1235,15 @@ class AppLocalizationsEn extends AppLocalizations {
       'Access exclusive student forum sections and interact with schoolmates';
 
   @override
-  String get studentVerificationBenefitExclusiveBenefits =>
-      'Student-Exclusive Benefits';
+  String get studentVerificationBenefitSameSchoolRecommendation =>
+      'Same-School Recommendations';
 
   @override
-  String get studentVerificationBenefitExclusiveBenefitsDescription =>
-      'Enjoy student discounts, exclusive events and more privileges';
+  String get studentVerificationBenefitSameSchoolRecommendationDescription =>
+      'See tasks from schoolmates first, find nearby help more easily';
+
+  @override
+  String get studentVerificationGoToCampusForum => 'Go to Campus Forum';
 
   @override
   String get studentVerificationBenefitVerificationBadge =>
