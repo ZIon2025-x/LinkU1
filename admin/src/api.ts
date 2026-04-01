@@ -1820,8 +1820,15 @@ export async function deleteSkillCategory(id: number) {
 
 // ==================== Skill Leaderboard ====================
 
-export async function getSkillLeaderboard(category: string) {
-  const res = await api.get(`/api/leaderboard/skills/${category}`);
+export async function getSkillLeaderboard(category: string, city?: string) {
+  const params: Record<string, string> = {};
+  if (city) params.city = city;
+  const res = await api.get(`/api/leaderboard/skills/${category}`, { params });
+  return res.data;
+}
+
+export async function getLeaderboardCities() {
+  const res = await api.get('/api/leaderboard/cities');
   return res.data;
 }
 

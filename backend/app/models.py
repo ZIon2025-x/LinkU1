@@ -3570,6 +3570,7 @@ class SkillLeaderboard(Base):
     id = Column(Integer, primary_key=True, index=True)
     skill_category = Column(String(50), nullable=False)
     user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    city = Column(String(50), nullable=False, default="all", server_default=text("'all'"))
     completed_tasks = Column(Integer, default=0)
     total_amount = Column(Integer, default=0)
     avg_rating = Column(Float, default=0.0)
