@@ -104,6 +104,7 @@ class FleaMarketConsultationActions extends ConsultationActions {
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
+            // 买家：议价（consulting/negotiating）
             if (isApplicant && (isConsulting || isNegotiating)) ...[
               ActionPill(
                 icon: Icons.local_offer,
@@ -113,6 +114,9 @@ class FleaMarketConsultationActions extends ConsultationActions {
                     : () => _showNegotiateDialog(context, getCurrencySymbol),
               ),
               const SizedBox(width: 8),
+            ],
+            // 买家：购买（仅 consulting，negotiating 时不允许）
+            if (isApplicant && isConsulting) ...[
               ActionPill(
                 icon: Icons.assignment,
                 label: context.l10n.fleaMarketBuyNow,

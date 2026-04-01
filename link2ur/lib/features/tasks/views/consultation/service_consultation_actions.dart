@@ -102,6 +102,7 @@ class ServiceConsultationActions extends ConsultationActions {
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
+            // 申请方：议价（consulting/negotiating）
             if (isApplicant && (isConsulting || isNegotiating)) ...[
               ActionPill(
                 icon: Icons.local_offer,
@@ -111,6 +112,9 @@ class ServiceConsultationActions extends ConsultationActions {
                     : () => _showNegotiateDialog(context, getCurrencySymbol),
               ),
               const SizedBox(width: 8),
+            ],
+            // 申请方：正式申请（仅 consulting，negotiating 时不允许）
+            if (isApplicant && isConsulting) ...[
               ActionPill(
                 icon: Icons.assignment,
                 label: context.l10n.formalApply,
