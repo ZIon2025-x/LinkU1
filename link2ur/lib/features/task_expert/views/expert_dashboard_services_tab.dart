@@ -94,7 +94,6 @@ class ExpertDashboardServicesTab extends StatelessWidget {
     SheetAdaptation.showAdaptiveModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      showDragHandle: true,
       builder: (sheetContext) => _ServiceFormSheet(
         existingService: service,
         onSubmit: (data) {
