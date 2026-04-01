@@ -1279,13 +1279,13 @@ async def get_visible_forums(
                     forums_result = await db.execute(
                         select(models.ForumCategory)
                         .where(
-                            models.ForumCategory.type == 'general',
+                            models.ForumCategory.type.in_(['general', 'skill']),
                             models.ForumCategory.is_visible == True
                         )
                         .order_by(models.ForumCategory.sort_order, models.ForumCategory.created_at)
                     )
                     forums = forums_result.scalars().all()
-                    
+
                     # 如果需要包含最新帖子信息
                     if include_latest_post:
                         category_ids = [c.id for c in forums]
@@ -1322,11 +1322,11 @@ async def get_visible_forums(
                                 updated_at=category.updated_at
                             )
                             category_list.append(category_out)
-                        
+
                         return {"categories": category_list}
-                    
+
                     return {"categories": [schemas.ForumCategoryOut.model_validate(f) for f in forums]}
-                
+
                 # 返回该用户可见的板块（用户可以查看，但不能发帖）
                 school_forums_result = await db.execute(
                     select(models.ForumCategory).where(
@@ -1336,7 +1336,7 @@ async def get_visible_forums(
                 )
                 general_forums_result = await db.execute(
                     select(models.ForumCategory).where(
-                        models.ForumCategory.type == 'general',
+                        models.ForumCategory.type.in_(['general', 'skill']),
                         models.ForumCategory.is_visible == True
                     )
                 )
@@ -1458,11 +1458,11 @@ async def get_visible_forums(
     # 普通用户：根据身份返回可见板块
     # 注意：is_admin_only 只控制发帖权限，不影响查看权限，所以这里不过滤 is_admin_only
     if not current_user:
-        # 未登录：仅返回普通板块（用户可以查看，但不能发帖）
+        # 未登录：返回普通板块和技能板块（用户可以查看，但不能发帖）
         forums_result = await db.execute(
             select(models.ForumCategory)
             .where(
-                models.ForumCategory.type == 'general',
+                models.ForumCategory.type.in_(['general', 'skill']),
                 models.ForumCategory.is_visible == True
             )
             .order_by(models.ForumCategory.sort_order, models.ForumCategory.created_at)
@@ -1516,11 +1516,11 @@ async def get_visible_forums(
     logger.info(f"get_visible_forums: visible_ids={visible_ids}")
 
     if not visible_ids:
-        # 未学生认证：仅返回普通板块（用户可以查看，但不能发帖）
+        # 未学生认证：返回普通板块和技能板块（用户可以查看，但不能发帖）
         forums_result = await db.execute(
             select(models.ForumCategory)
             .where(
-                models.ForumCategory.type == 'general',
+                models.ForumCategory.type.in_(['general', 'skill']),
                 models.ForumCategory.is_visible == True
             )
             .order_by(models.ForumCategory.sort_order, models.ForumCategory.created_at)
@@ -1568,7 +1568,7 @@ async def get_visible_forums(
         
         return {"categories": [schemas.ForumCategoryOut.model_validate(f) for f in forums]}
     
-    # 已认证学生：返回普通板块 + 可见的学校板块（用户可以查看，但不能发帖）
+    # 已认证学生：返回普通板块 + 技能板块 + 可见的学校板块（用户可以查看，但不能发帖）
     school_forums_result = await db.execute(
         select(models.ForumCategory).where(
             models.ForumCategory.id.in_(visible_ids),
@@ -1577,7 +1577,7 @@ async def get_visible_forums(
     )
     general_forums_result = await db.execute(
         select(models.ForumCategory).where(
-            models.ForumCategory.type == 'general',
+            models.ForumCategory.type.in_(['general', 'skill']),
             models.ForumCategory.is_visible == True
         )
     )
@@ -2523,6 +2523,242 @@ async def delete_category(
         clear_all_forum_visibility_cache(f"板块 {category_id} 已删除")
     
     return {"message": "板块删除成功"}
+
+
+# ==================== Skill Feed Helpers ====================
+
+def _parse_json_field(value) -> list:
+    """Parse a JSON text field into a list, returning [] on failure."""
+    import json as _json
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return value
+    if isinstance(value, str):
+        try:
+            parsed = _json.loads(value)
+            return parsed if isinstance(parsed, list) else []
+        except (ValueError, TypeError):
+            return []
+    return []
+
+
+def _post_to_feed_data(post: models.ForumPost) -> dict:
+    """Convert a ForumPost to feed data dict."""
+    author_data = None
+    if hasattr(post, 'author') and post.author:
+        author_data = {
+            "id": post.author.id,
+            "name": post.author.name,
+            "avatar": getattr(post.author, 'avatar', None),
+        }
+    elif hasattr(post, 'author_id'):
+        author_data = {"id": post.author_id, "name": "", "avatar": None}
+    return {
+        "id": post.id,
+        "title": post.title,
+        "title_en": post.title_en,
+        "title_zh": post.title_zh,
+        "content_preview": (post.content or "")[:200],
+        "content_preview_en": (post.content_en or "")[:200] if post.content_en else None,
+        "content_preview_zh": (post.content_zh or "")[:200] if post.content_zh else None,
+        "author": author_data,
+        "view_count": post.view_count or 0,
+        "reply_count": post.reply_count or 0,
+        "like_count": post.like_count or 0,
+        "is_pinned": post.is_pinned or False,
+        "images": _parse_json_field(post.images),
+        "created_at": post.created_at.isoformat() if post.created_at else None,
+        "last_reply_at": post.last_reply_at.isoformat() if post.last_reply_at else None,
+    }
+
+
+def _task_to_feed_data(task: models.Task) -> dict:
+    """Convert a Task to feed data dict."""
+    poster_data = None
+    if hasattr(task, 'poster') and task.poster:
+        poster_data = {
+            "id": task.poster.id,
+            "name": task.poster.name,
+            "avatar": getattr(task.poster, 'avatar', None),
+        }
+    elif hasattr(task, 'poster_id'):
+        poster_data = {"id": task.poster_id, "name": "", "avatar": None}
+    return {
+        "id": task.id,
+        "title": task.title,
+        "title_en": task.title_en,
+        "title_zh": task.title_zh,
+        "task_type": task.task_type,
+        "reward": float(task.reward) if task.reward else 0,
+        "currency": task.currency or "GBP",
+        "status": task.status,
+        "pricing_type": task.pricing_type,
+        "location": task.location,
+        "deadline": task.deadline.isoformat() if task.deadline else None,
+        "poster": poster_data,
+        "images": _parse_json_field(task.images),
+        "required_skills": _parse_json_field(task.required_skills),
+        "created_at": task.created_at.isoformat() if task.created_at else None,
+    }
+
+
+def _service_to_feed_data(service: models.TaskExpertService) -> dict:
+    """Convert a TaskExpertService to feed data dict."""
+    return {
+        "id": service.id,
+        "service_name": service.service_name,
+        "service_name_en": getattr(service, 'service_name_en', None),
+        "description": (service.description or "")[:200],
+        "description_en": ((service.description_en or "")[:200]) if getattr(service, 'description_en', None) else None,
+        "base_price": float(service.base_price) if service.base_price else 0,
+        "currency": service.currency or "GBP",
+        "pricing_type": service.pricing_type,
+        "location_type": service.location_type,
+        "images": service.images if isinstance(service.images, list) else [],
+        "skills": service.skills if isinstance(service.skills, list) else [],
+        "status": service.status,
+        "view_count": service.view_count or 0,
+        "application_count": service.application_count or 0,
+        "owner_name": getattr(service, 'owner_name', None),
+        "owner_avatar": getattr(service, 'owner_avatar', None),
+        "owner_rating": float(service.owner_rating) if getattr(service, 'owner_rating', None) else None,
+        "expert_id": service.expert_id,
+        "service_type": service.service_type,
+        "created_at": service.created_at.isoformat() if service.created_at else None,
+    }
+
+
+# ==================== Skill Feed Endpoint ====================
+
+@router.get("/categories/{category_id}/feed", response_model=schemas.SkillFeedResponse)
+async def get_skill_feed(
+    category_id: int,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    sort_by: str = Query("weight", pattern="^(weight|time)$"),
+    current_user: Optional[models.User] = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取技能板块的混合 feed（帖子 + 任务 + 服务）"""
+    import datetime as _datetime
+
+    # 1. Validate category exists and is a skill type
+    cat_result = await db.execute(
+        select(models.ForumCategory).where(
+            models.ForumCategory.id == category_id,
+            models.ForumCategory.is_visible == True,
+        )
+    )
+    category = cat_result.scalar_one_or_none()
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found")
+    if category.type != "skill" or not category.skill_type:
+        raise HTTPException(status_code=400, detail="Not a skill category")
+
+    skill_type = category.skill_type
+    now = get_utc_time()
+    twenty_four_hours_ago = now - _datetime.timedelta(hours=24)
+
+    # 2. Query posts for this category
+    posts_query = (
+        select(models.ForumPost)
+        .where(
+            models.ForumPost.category_id == category_id,
+            models.ForumPost.is_deleted == False,
+            models.ForumPost.is_visible == True,
+        )
+    )
+    posts_result = await db.execute(posts_query)
+    posts = posts_result.scalars().all()
+
+    # 3. Query open tasks matching skill_type
+    tasks_query = (
+        select(models.Task)
+        .where(
+            models.Task.task_type == skill_type,
+            models.Task.status == "open",
+            models.Task.is_visible == True,
+        )
+    )
+    tasks_result = await db.execute(tasks_query)
+    tasks = tasks_result.scalars().all()
+
+    # 4. Query active services matching skill_type (by category field)
+    services_query = (
+        select(models.TaskExpertService)
+        .where(
+            models.TaskExpertService.category == skill_type,
+            models.TaskExpertService.status == "active",
+        )
+    )
+    services_result = await db.execute(services_query)
+    services = services_result.scalars().all()
+
+    # 5. Build feed items with sort scores
+    feed_items = []
+
+    for post in posts:
+        created = post.created_at or now
+        if post.is_pinned:
+            score = 10000.0
+        else:
+            score = created.timestamp()
+        feed_items.append({
+            "item_type": "post",
+            "data": _post_to_feed_data(post),
+            "sort_score": score,
+            "created_at": created,
+        })
+
+    for task in tasks:
+        created = task.created_at or now
+        if created >= twenty_four_hours_ago:
+            age_hours = (now - created).total_seconds() / 3600
+            score = 5000.0 + (24 - age_hours) * 200
+        else:
+            score = created.timestamp()
+        feed_items.append({
+            "item_type": "task",
+            "data": _task_to_feed_data(task),
+            "sort_score": score,
+            "created_at": created,
+        })
+
+    for service in services:
+        created = service.created_at or now
+        if created >= twenty_four_hours_ago:
+            age_hours = (now - created).total_seconds() / 3600
+            score = 4000.0 + (24 - age_hours) * 160
+        else:
+            score = created.timestamp()
+        feed_items.append({
+            "item_type": "service",
+            "data": _service_to_feed_data(service),
+            "sort_score": score,
+            "created_at": created,
+        })
+
+    # 6. Sort
+    if sort_by == "weight":
+        feed_items.sort(key=lambda x: (-x["sort_score"], -x["created_at"].timestamp()))
+    else:
+        feed_items.sort(key=lambda x: -x["created_at"].timestamp())
+
+    # 7. Paginate
+    total = len(feed_items)
+    start = (page - 1) * page_size
+    end = start + page_size
+    page_items = feed_items[start:end]
+    has_more = end < total
+
+    return schemas.SkillFeedResponse(
+        items=[schemas.FeedItem(**item) for item in page_items],
+        total=total,
+        page=page,
+        page_size=page_size,
+        has_more=has_more,
+    )
 
 
 # ==================== 帖子 API ====================
