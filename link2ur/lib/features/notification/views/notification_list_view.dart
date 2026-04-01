@@ -222,15 +222,20 @@ class _NotificationListViewContentState
     // ==================== 跳蚤市场 ====================
     // 用 startsWith('flea_market') 同时覆盖旧 'flea_market' 与新 'flea_market_*' 类型
     if (type.startsWith('flea_market')) {
-      // 这两个类型的 related_id 是 task_id（申请被接受后已创建任务）
+      // purchase_accepted / direct_purchase：related_id 是 task_id
       if (type == 'flea_market_purchase_accepted' ||
           type == 'flea_market_direct_purchase') {
         final id = taskId ?? relatedId;
         if (id != null) context.safePush('/tasks/$id');
+      }
+      // consultation：related_id 是 task_id（咨询聊天任务）
+      else if (type == 'flea_market_consultation') {
+        final id = taskId ?? relatedId;
+        if (id != null) context.safePush('/tasks/$id');
       } else {
         // flea_market / flea_market_purchase_request / flea_market_sold /
-        // flea_market_seller_counter_offer / flea_market_purchase_rejected：
-        // related_id 是商品 id
+        // flea_market_seller_counter_offer / flea_market_purchase_rejected /
+        // flea_market_rental_*：related_id 是商品 id
         if (relatedId != null) context.safePush('/flea-market/$relatedId');
       }
       return;
@@ -289,6 +294,13 @@ class _NotificationListViewContentState
           context.safePush('/tasks/$relatedId');
         }
       }
+      return;
+    }
+
+    // ==================== 咨询议价 ====================
+    if (type == 'consultation_update') {
+      final id = taskId ?? relatedId;
+      if (id != null) context.safePush('/tasks/$id');
       return;
     }
 

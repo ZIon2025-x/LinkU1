@@ -3097,10 +3097,11 @@ async def negotiate_price(
             await async_crud.async_notification_crud.create_notification(
                 db=db,
                 user_id=receiver_id,
-                notification_type="service_application",
+                notification_type="consultation_update",
                 title="收到议价",
                 content=f"用户对您的服务提出了议价: {price_display}",
                 related_id=str(application.task_id) if application.task_id else None,
+                related_type="task_id",
             )
             await db.commit()
     except Exception as e:
@@ -3170,10 +3171,11 @@ async def quote_price(
         await async_crud.async_notification_crud.create_notification(
             db=db,
             user_id=application.applicant_id,
-            notification_type="service_application",
+            notification_type="consultation_update",
             title="收到报价",
             content=f"达人对您的咨询发送了报价: {price_display}",
             related_id=str(application.task_id) if application.task_id else None,
+            related_type="task_id",
         )
         await db.commit()
     except Exception as e:
@@ -3288,29 +3290,32 @@ async def negotiate_response(
             await async_crud.async_notification_crud.create_notification(
                 db=db,
                 user_id=receiver_id,
-                notification_type="service_application",
+                notification_type="consultation_update",
                 title="报价已接受",
                 content=f"对方已接受价格 {price_display}",
                 related_id=str(application.task_id) if application.task_id else None,
+                related_type="task_id",
             )
         elif action == "reject":
             await async_crud.async_notification_crud.create_notification(
                 db=db,
                 user_id=receiver_id,
-                notification_type="service_application",
+                notification_type="consultation_update",
                 title="报价被拒绝",
                 content="对方拒绝了报价",
                 related_id=str(application.task_id) if application.task_id else None,
+                related_type="task_id",
             )
         elif action == "counter":
             price_display = f"{float(request_data.counter_price):.2f}"
             await async_crud.async_notification_crud.create_notification(
                 db=db,
                 user_id=receiver_id,
-                notification_type="service_application",
+                notification_type="consultation_update",
                 title="收到还价",
                 content=f"对方提出了新的价格: {price_display}",
                 related_id=str(application.task_id) if application.task_id else None,
+                related_type="task_id",
             )
         await db.commit()
     except Exception as e:

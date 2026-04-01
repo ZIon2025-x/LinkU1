@@ -4041,6 +4041,7 @@ async def flea_market_consult_negotiate(
                     title="收到议价",
                     content=f"买家对您的商品「{item.title}」提出议价: {price_display}",
                     related_id=str(purchase_req.task_id) if purchase_req.task_id else None,
+                    related_type="task_id",
                 )
                 await db.commit()
             except Exception as e:
@@ -4128,6 +4129,7 @@ async def flea_market_consult_quote(
                 title="收到报价",
                 content=f"卖家对商品「{item.title}」发送了报价: {price_display}",
                 related_id=str(purchase_req.task_id) if purchase_req.task_id else None,
+                related_type="task_id",
             )
             await db.commit()
         except Exception as e:
@@ -4261,6 +4263,7 @@ async def flea_market_consult_respond(
                 title="议价更新",
                 content=f"商品「{item.title}」的议价有新进展: {action_text.get(action, action)}",
                 related_id=str(purchase_req.task_id) if purchase_req.task_id else None,
+                related_type="task_id",
             )
             await db.commit()
         except Exception as e:
@@ -4432,6 +4435,7 @@ async def flea_market_consult_close(
                 title="咨询已关闭",
                 content=f"商品「{item.title}」的咨询已被对方关闭",
                 related_id=str(purchase_req.task_id) if purchase_req.task_id else None,
+                related_type="task_id",
             )
             await db.commit()
         except Exception as e:
