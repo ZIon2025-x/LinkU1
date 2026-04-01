@@ -5,6 +5,19 @@ ALTER TABLE forum_categories ADD COLUMN IF NOT EXISTS skill_type VARCHAR(50);
 -- Create index for skill_type lookups
 CREATE INDEX IF NOT EXISTS idx_forum_categories_skill_type ON forum_categories(skill_type) WHERE skill_type IS NOT NULL;
 
+-- Update CHECK constraint to allow 'skill' type
+ALTER TABLE forum_categories DROP CONSTRAINT IF EXISTS chk_forum_type;
+ALTER TABLE forum_categories ADD CONSTRAINT chk_forum_type
+    CHECK (type IN ('general', 'root', 'university', 'skill'));
+
+-- Update type+university_code constraint to also allow skill type (no university_code)
+ALTER TABLE forum_categories DROP CONSTRAINT IF EXISTS chk_forum_type_university_code;
+ALTER TABLE forum_categories ADD CONSTRAINT chk_forum_type_university_code
+    CHECK (
+        (type = 'university' AND university_code IS NOT NULL) OR
+        (type IN ('general', 'root', 'skill') AND university_code IS NULL)
+    );
+
 -- Seed skill categories from task types
 INSERT INTO forum_categories (name, name_en, name_zh, description, description_en, description_zh, icon, sort_order, is_visible, is_admin_only, type, skill_type, post_count, created_at, updated_at)
 VALUES
