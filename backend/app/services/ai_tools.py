@@ -1696,28 +1696,30 @@ async def _search_forum_posts(executor: ToolExecutor, input: dict) -> dict:
 # =====================================================================
 
 _VALID_TASK_TYPES = [
-    "Housekeeping", "Campus Life", "Second-hand & Rental",
-    "Errand Running", "Skill Service", "Social Help",
-    "Transportation", "Pet Care", "Life Convenience", "Other",
+    "shopping", "tutoring", "translation", "design", "programming",
+    "writing", "photography", "moving", "cleaning", "repair",
+    "pickup_dropoff", "cooking", "language_help", "government",
+    "pet_care", "errand", "accompany", "digital", "rental_housing",
+    "campus_life", "second_hand", "other",
 ]
 
 _CATEGORY_KEY_TO_TASK_TYPE = {
-    "delivery": "Errand Running",
-    "shopping": "Errand Running",
-    "tutoring": "Skill Service",
-    "translation": "Skill Service",
-    "design": "Skill Service",
-    "programming": "Skill Service",
-    "writing": "Skill Service",
-    "housekeeping": "Housekeeping",
-    "campus": "Campus Life",
-    "second-hand": "Second-hand & Rental",
-    "rental": "Second-hand & Rental",
-    "social": "Social Help",
-    "transport": "Transportation",
-    "pet": "Pet Care",
-    "life": "Life Convenience",
-    "other": "Other",
+    "delivery": "errand",
+    "shopping": "shopping",
+    "tutoring": "tutoring",
+    "translation": "translation",
+    "design": "design",
+    "programming": "programming",
+    "writing": "writing",
+    "housekeeping": "cleaning",
+    "campus": "campus_life",
+    "second-hand": "second_hand",
+    "rental": "rental_housing",
+    "social": "accompany",
+    "transport": "pickup_dropoff",
+    "pet": "pet_care",
+    "life": "other",
+    "other": "other",
 }
 
 _VALID_LOCATIONS = [
@@ -1914,7 +1916,7 @@ async def _get_expert_reviews(executor: ToolExecutor, input: dict) -> dict:
             },
             "task_type": {
                 "type": "string",
-                "description": "任务类型，必须是以下之一: Housekeeping, Campus Life, Second-hand & Rental, Errand Running, Skill Service, Social Help, Transportation, Pet Care, Life Convenience, Other",
+                "description": "任务类型，必须是以下之一: shopping, tutoring, translation, design, programming, writing, photography, moving, cleaning, repair, pickup_dropoff, cooking, language_help, government, pet_care, errand, accompany, digital, rental_housing, campus_life, second_hand, other",
             },
             "reward": {
                 "type": "number",
@@ -2146,16 +2148,28 @@ async def _prepare_service_draft(executor: ToolExecutor, input: dict) -> dict:
 
 # 任务类型 → 推荐服务分类的映射
 _TASK_TYPE_TO_SERVICE_CATEGORY = {
-    "Skill Service": "programming",
-    "Housekeeping": "housekeeping",
-    "Errand Running": "errand_transport",
-    "Campus Life": "tutoring",
-    "Social Help": "social_entertainment",
-    "Pet Care": "housekeeping",
-    "Life Convenience": "housekeeping",
-    "Second-hand & Rental": None,
-    "Transportation": "errand_transport",
-    "Other": None,
+    "programming": "programming",
+    "design": "programming",
+    "writing": "programming",
+    "translation": "programming",
+    "tutoring": "tutoring",
+    "cleaning": "housekeeping",
+    "repair": "housekeeping",
+    "cooking": "housekeeping",
+    "errand": "errand_transport",
+    "shopping": "errand_transport",
+    "pickup_dropoff": "errand_transport",
+    "moving": "errand_transport",
+    "campus_life": "tutoring",
+    "accompany": "social_entertainment",
+    "pet_care": "housekeeping",
+    "digital": "programming",
+    "photography": "programming",
+    "language_help": "tutoring",
+    "government": None,
+    "second_hand": None,
+    "rental_housing": None,
+    "other": None,
 }
 
 
