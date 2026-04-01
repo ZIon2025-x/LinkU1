@@ -38,7 +38,7 @@ def recalculate_leaderboard(db: Session, category: Optional[str] = None) -> None
     else:
         categories = [
             row[0]
-            for row in db.query(models.SkillCategory.name_en)
+            for row in db.query(models.SkillCategory.task_type)
             .filter(models.SkillCategory.is_active == True)
             .all()
         ]

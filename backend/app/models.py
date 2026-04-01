@@ -3556,6 +3556,7 @@ class OfficialTaskSubmission(Base):
 class SkillCategory(Base):
     __tablename__ = "skill_categories"
     id = Column(Integer, primary_key=True, index=True)
+    task_type = Column(String(50), unique=True, nullable=False)  # Bridge key to Task.task_type
     name_zh = Column(String(100), nullable=False)
     name_en = Column(String(100), nullable=False)
     icon = Column(String(200), default="")

@@ -4706,6 +4706,7 @@ class SkillCategoryUpdate(BaseModel):
 
 class SkillCategoryOut(BaseModel):
     id: int
+    task_type: str
     name_zh: str
     name_en: str
     icon: str = ""
