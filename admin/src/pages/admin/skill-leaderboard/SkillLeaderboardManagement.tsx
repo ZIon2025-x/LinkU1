@@ -16,6 +16,7 @@ interface LeaderboardEntry {
 
 interface Category {
   id: number;
+  task_type: string;
   name_zh: string;
   name_en: string;
 }
@@ -150,7 +151,7 @@ const SkillLeaderboardManagement: React.FC = () => {
         >
           <option value="">-- Select a category --</option>
           {categories.map((cat) => (
-            <option key={cat.id} value={cat.name_en}>
+            <option key={cat.id} value={cat.task_type}>
               {cat.name_zh} / {cat.name_en}
             </option>
           ))}
