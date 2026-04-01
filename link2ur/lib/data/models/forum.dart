@@ -33,6 +33,7 @@ class ForumCategory extends Equatable {
     this.lastPostAt,
     this.latestPost,
     this.isAdminOnly = false,
+    this.skillType,
   });
 
   // ==================== 板块类型常量 ====================
@@ -57,6 +58,9 @@ class ForumCategory extends Equatable {
   /// 超级会员专属板块
   static const String typeSuperVip = 'super_vip';
 
+  /// 技能专属板块
+  static const String typeSkill = 'skill';
+
   // ==================== 字段 ====================
 
   final int id;
@@ -77,12 +81,16 @@ class ForumCategory extends Equatable {
   final LatestPostInfo? latestPost;
   /// 是否仅管理员可发帖（普通用户不可在此板块发帖）
   final bool isAdminOnly;
+  final String? skillType;
 
   // ==================== 权限辅助 ====================
 
   /// 是否需要学生认证才可见（对标iOS requiresStudentVerification）
   bool get requiresStudentVerification =>
       type == typeRoot || type == typeUniversity;
+
+  /// 是否为技能板块
+  bool get isSkillCategory => type == typeSkill;
 
   /// 是否需要特殊权限（学生/达人/会员）才可见
   bool get requiresSpecialPermission =>
@@ -125,10 +133,11 @@ class ForumCategory extends Equatable {
               json['latest_post'] as Map<String, dynamic>)
           : null,
       isAdminOnly: parseBool(json['is_admin_only']),
+      skillType: json['skill_type'] as String?,
     );
   }
 
-  ForumCategory copyWith({bool? isFavorited}) {
+  ForumCategory copyWith({bool? isFavorited, String? skillType}) {
     return ForumCategory(
       id: id,
       name: name,
@@ -147,11 +156,12 @@ class ForumCategory extends Equatable {
       lastPostAt: lastPostAt,
       latestPost: latestPost,
       isAdminOnly: isAdminOnly,
+      skillType: skillType ?? this.skillType,
     );
   }
 
   @override
-  List<Object?> get props => [id, name, type, isFavorited];
+  List<Object?> get props => [id, name, type, isFavorited, skillType];
 }
 
 /// 板块最新帖子摘要（对标iOS LatestPostInfo）
