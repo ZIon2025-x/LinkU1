@@ -4,9 +4,9 @@
 
 **Goal:** Add a trending search feature that tracks user searches, clusters similar queries via jieba, and displays a Top 10 hot search list on the Discover page.
 
-**Architecture:** Backend logs every search to `search_logs` table with jieba tokens. A Celery hourly task clusters similar queries (Jaccard > 0.5), computes 7-day weighted scores, aggregates content view counts, and caches the Top 10 in Redis. Flutter reads the cached result via a public API endpoint.
+**Architecture:** Backend logs every search to `search_logs` table with jieba tokens. A TaskScheduler hourly task clusters similar queries (Jaccard > 0.5), computes 7-day weighted scores, aggregates content view counts, and caches the Top 10 in Redis. Flutter reads the cached result via a public API endpoint.
 
-**Tech Stack:** Python (jieba, Celery, SQLAlchemy, Redis), PostgreSQL, Flutter (BLoC, Equatable)
+**Tech Stack:** Python (jieba, TaskScheduler, SQLAlchemy, Redis), PostgreSQL, Flutter (BLoC, Equatable)
 
 **Spec:** `docs/superpowers/specs/2026-04-01-trending-search-design.md`
 
@@ -355,12 +355,11 @@ git commit -m "feat: log searches in forum search endpoint for trending"
 
 ---
 
-### Task 6: Trending Computation — Celery Hourly Task
+### Task 6: Trending Computation — TaskScheduler Hourly Task
 
 **Files:**
 - Modify: `backend/app/trending_search.py` (add computation functions)
-- Modify: `backend/app/celery_tasks.py` (add celery task wrapper)
-- Modify: `backend/app/celery_app.py` (add beat schedule)
+- Modify: `backend/app/task_scheduler.py` (register hourly task)
 
 - [ ] **Step 1: Add computation logic to trending_search.py**
 
@@ -435,15 +434,13 @@ def format_heat_display(view_count: int) -> str:
         return f"{view_count}浏览"
 
 
-def compute_trending(db_session) -> List[Dict[str, Any]]:
+def compute_trending(db: "Session") -> List[Dict[str, Any]]:
     """
-    同步版本：计算热搜榜 Top10。供 Celery task 调用。
+    同步版本：计算热搜榜 Top10。供 TaskScheduler with_db 调用。
     返回: [{"rank": 1, "keyword": "...", "heat_display": "...", "tag": "hot"|"new"|"up"|null, "search_count": int}]
     """
-    from sqlalchemy import create_engine
-    from sqlalchemy.orm import Session
-
     now = get_utc_time()
+    db_session = db
     seven_days_ago = now - timedelta(days=7)
     fourteen_days_ago = now - timedelta(days=14)
 
@@ -629,54 +626,29 @@ def compute_trending(db_session) -> List[Dict[str, Any]]:
     return results
 ```
 
-- [ ] **Step 2: Add Celery task wrapper in celery_tasks.py**
+- [ ] **Step 2: Register task in task_scheduler.py**
 
-Add import and task in `backend/app/celery_tasks.py`:
-
-```python
-@celery_app.task(
-    name='app.celery_tasks.compute_trending_searches_task',
-    bind=True,
-    max_retries=3,
-    default_retry_delay=60
-)
-def compute_trending_searches_task(self):
-    """计算热搜榜 - 每小时执行"""
-    import time
-    start_time = time.time()
-    db = SessionLocal()
-    try:
-        from app.trending_search import compute_trending
-        results = compute_trending(db)
-        duration = time.time() - start_time
-        logger.info(f"Trending search computed: {len(results)} items (duration: {duration:.2f}s)")
-        return {"status": "success", "count": len(results)}
-    except Exception as e:
-        logger.error(f"Trending search computation failed: {e}", exc_info=True)
-        if self.request.retries < self.max_retries:
-            raise self.retry(exc=e)
-        raise
-    finally:
-        db.close()
-```
-
-- [ ] **Step 3: Add beat schedule in celery_app.py**
-
-Add to `celery_app.conf.beat_schedule` in `backend/app/celery_app.py`:
+In `backend/app/task_scheduler.py`, inside the `setup_scheduled_tasks()` function, add the import and registration. Place it in the low-frequency section (near other hourly tasks):
 
 ```python
+    from app.trending_search import compute_trending
+
     # 热搜榜 - 每小时计算
-    'compute-trending-searches': {
-        'task': 'app.celery_tasks.compute_trending_searches_task',
-        'schedule': 3600.0,  # 1 hour
-    },
+    scheduler.register_task(
+        'compute_trending_searches',
+        with_db(compute_trending),
+        interval_seconds=3600,
+        description="计算热搜榜",
+    )
 ```
 
-- [ ] **Step 4: Commit**
+Note: `compute_trending` accepts a `db: Session` parameter, which matches the `with_db` wrapper pattern that calls `func(db)`.
+
+- [ ] **Step 3: Commit**
 
 ```bash
-git add backend/app/trending_search.py backend/app/celery_tasks.py backend/app/celery_app.py
-git commit -m "feat: add hourly trending search computation celery task"
+git add backend/app/trending_search.py backend/app/task_scheduler.py
+git commit -m "feat: add hourly trending search computation task"
 ```
 
 ---
