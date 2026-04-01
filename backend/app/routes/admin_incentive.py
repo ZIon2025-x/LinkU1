@@ -468,7 +468,8 @@ def list_skill_categories(
         .order_by(models.SkillCategory.display_order)
         .all()
     )
-    return [schemas.SkillCategoryOut.model_validate(c).model_dump() for c in categories]
+    items = [schemas.SkillCategoryOut.model_validate(c).model_dump() for c in categories]
+    return {"items": items, "total": len(items)}
 
 
 @router.post("/skill-categories")
