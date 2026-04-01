@@ -10781,6 +10781,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get nearbyServicesSection => '附近的服务';
 
   @override
+  String get drawerTaskExpert => '任务达人';
+
+  @override
   String get drawerMyTasks => '我的任务';
 
   @override
@@ -22197,6 +22200,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get nearbyServicesSection => '附近的服務';
+
+  @override
+  String get drawerTaskExpert => '任務達人';
 
   @override
   String get drawerMyTasks => '我的任務';

@@ -4,7 +4,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/constants/expert_constants.dart';
 import '../../../core/utils/service_category_helper.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/widgets/currency_selector.dart';
+import '../../../core/widgets/location_picker.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_spacing.dart';
@@ -395,6 +397,11 @@ class _ServiceFormSheetState extends State<_ServiceFormSheet> {
   late final TextEditingController _priceController;
   late String _selectedCurrency;
   String? _selectedCategory;
+  String _pricingType = 'fixed';
+  String _locationType = 'online';
+  String? _location;
+  double? _latitude;
+  double? _longitude;
   bool _showEnglish = false;
 
   static const _nameMaxLength = 100;
@@ -419,6 +426,11 @@ class _ServiceFormSheetState extends State<_ServiceFormSheet> {
     _selectedCurrency =
         (s?['currency'] as String?) ?? ExpertConstants.serviceCurrencies.first;
     _selectedCategory = s?['category'] as String?;
+    _pricingType = (s?['pricing_type'] as String?) ?? 'fixed';
+    _locationType = (s?['location_type'] as String?) ?? 'online';
+    _location = s?['location'] as String?;
+    _latitude = (s?['latitude'] as num?)?.toDouble();
+    _longitude = (s?['longitude'] as num?)?.toDouble();
 
     // Auto-expand English section if editing and has English content
     if (_nameEnController.text.isNotEmpty ||
@@ -510,12 +522,25 @@ class _ServiceFormSheetState extends State<_ServiceFormSheet> {
     final data = <String, dynamic>{
       'service_name': _nameController.text.trim(),
       'description': _descriptionController.text.trim(),
-      'base_price': double.parse(_priceController.text.trim()),
+      'pricing_type': _pricingType,
       'currency': _selectedCurrency,
+      'location_type': _locationType,
     };
+
+    if (_pricingType != 'negotiable') {
+      data['base_price'] = double.parse(_priceController.text.trim());
+    }
 
     if (_selectedCategory != null) {
       data['category'] = _selectedCategory;
+    }
+
+    if (_locationType != 'online') {
+      if (_location != null && _location!.isNotEmpty) {
+        data['location'] = _location;
+      }
+      if (_latitude != null) data['latitude'] = _latitude;
+      if (_longitude != null) data['longitude'] = _longitude;
     }
 
     final nameEn = _nameEnController.text.trim();
@@ -533,26 +558,50 @@ class _ServiceFormSheetState extends State<_ServiceFormSheet> {
     final isDark = theme.brightness == Brightness.dark;
     final viewInsets = MediaQuery.viewInsetsOf(context);
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: viewInsets.bottom),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Sheet title
+    return DraggableScrollableSheet(
+      initialChildSize: 0.9,
+      minChildSize: 0.4,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (context, scrollController) => Padding(
+        padding: EdgeInsets.only(bottom: viewInsets.bottom),
+        child: SingleChildScrollView(
+          controller: scrollController,
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+              // Sheet header with close button
               Padding(
                 padding: const EdgeInsets.only(bottom: 20, top: 4),
-                child: Text(
-                  _isEditing
-                      ? context.l10n.expertServiceEdit
-                      : context.l10n.expertServiceCreate,
-                  style: theme.textTheme.titleLarge
-                      ?.copyWith(fontWeight: FontWeight.w700),
-                  textAlign: TextAlign.center,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Text(
+                      _isEditing
+                          ? context.l10n.expertServiceEdit
+                          : context.l10n.expertServiceCreate,
+                      style: theme.textTheme.titleLarge
+                          ?.copyWith(fontWeight: FontWeight.w700),
+                      textAlign: TextAlign.center,
+                    ),
+                    Positioned(
+                      right: 0,
+                      child: IconButton(
+                        icon: const Icon(Icons.close, size: 22),
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: IconButton.styleFrom(
+                          backgroundColor: isDark
+                              ? Colors.white.withValues(alpha: 0.08)
+                              : Colors.black.withValues(alpha: 0.05),
+                          shape: const CircleBorder(),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
 
@@ -719,56 +768,148 @@ class _ServiceFormSheetState extends State<_ServiceFormSheet> {
               ),
               const SizedBox(height: 20),
 
-              // ── Price + currency ──
+              // ── Pricing type ──
               _SectionLabel(
                 label: context.l10n.expertServicePrice,
                 isRequired: true,
               ),
               const SizedBox(height: 8),
-              CurrencySelector(
-                selected: _selectedCurrency,
-                onChanged: (v) => setState(() => _selectedCurrency = v),
+              SizedBox(
+                width: double.infinity,
+                child: SegmentedButton<String>(
+                  segments: [
+                    ButtonSegment<String>(
+                      value: 'fixed',
+                      label: Text(context.l10n.personalServicePricingFixed),
+                      icon: const Icon(Icons.attach_money, size: 18),
+                    ),
+                    ButtonSegment<String>(
+                      value: 'hourly',
+                      label: Text(context.l10n.personalServicePricingHourly),
+                      icon: const Icon(Icons.schedule, size: 18),
+                    ),
+                    ButtonSegment<String>(
+                      value: 'negotiable',
+                      label: Text(context.l10n.personalServicePricingNegotiable),
+                      icon: const Icon(Icons.handshake_outlined, size: 18),
+                    ),
+                  ],
+                  selected: {_pricingType},
+                  onSelectionChanged: (selected) {
+                    setState(() => _pricingType = selected.first);
+                  },
+                  showSelectedIcon: false,
+                ),
               ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _priceController,
-                decoration: _inputDecoration(
-                  hintText: '0.00',
-                ).copyWith(
-                  prefixIcon: Padding(
-                    padding: const EdgeInsets.only(left: 14, right: 4),
-                    child: Text(
-                      _currencySymbol,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.primary,
+              if (_pricingType != 'negotiable') ...[
+                const SizedBox(height: 12),
+                CurrencySelector(
+                  selected: _selectedCurrency,
+                  onChanged: (v) => setState(() => _selectedCurrency = v),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _priceController,
+                  decoration: _inputDecoration(
+                    hintText: '0.00',
+                  ).copyWith(
+                    prefixIcon: Padding(
+                      padding: const EdgeInsets.only(left: 14, right: 4),
+                      child: Text(
+                        Helpers.currencySymbolFor(_selectedCurrency),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primary,
+                        ),
                       ),
                     ),
+                    prefixIconConstraints: const BoxConstraints(),
+                    suffixText: _pricingType == 'hourly'
+                        ? context.l10n.personalServicePerHour
+                        : null,
                   ),
-                  prefixIconConstraints: const BoxConstraints(),
+                  keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(
+                        RegExp(r'^\d+\.?\d{0,2}')),
+                  ],
+                  style: const TextStyle(fontSize: 15),
+                  textInputAction: TextInputAction.done,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return context.l10n.validatorFieldRequired(
+                          context.l10n.expertServicePrice);
+                    }
+                    final parsed = double.tryParse(value.trim());
+                    if (parsed == null || parsed <= 0) {
+                      return context.l10n.validatorFieldRequired(
+                          context.l10n.expertServicePrice);
+                    }
+                    return null;
+                  },
                 ),
-                keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(
-                      RegExp(r'^\d+\.?\d{0,2}')),
-                ],
-                style: const TextStyle(fontSize: 15),
-                textInputAction: TextInputAction.done,
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return context.l10n.validatorFieldRequired(
-                        context.l10n.expertServicePrice);
-                  }
-                  final parsed = double.tryParse(value.trim());
-                  if (parsed == null || parsed <= 0) {
-                    return context.l10n.validatorFieldRequired(
-                        context.l10n.expertServicePrice);
-                  }
-                  return null;
-                },
+              ],
+              const SizedBox(height: 20),
+
+              // ── Location type ──
+              _SectionLabel(
+                label: context.l10n.personalServiceLocation,
+                isRequired: true,
               ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: SegmentedButton<String>(
+                  segments: [
+                    ButtonSegment<String>(
+                      value: 'online',
+                      label: Text(context.l10n.personalServiceLocationOnline),
+                      icon: const Icon(Icons.language, size: 18),
+                    ),
+                    ButtonSegment<String>(
+                      value: 'in_person',
+                      label: Text(context.l10n.personalServiceLocationInPerson),
+                      icon: const Icon(Icons.location_on_outlined, size: 18),
+                    ),
+                    ButtonSegment<String>(
+                      value: 'both',
+                      label: Text(context.l10n.personalServiceLocationBoth),
+                      icon: const Icon(Icons.swap_horiz, size: 18),
+                    ),
+                  ],
+                  selected: {_locationType},
+                  onSelectionChanged: (selected) {
+                    setState(() {
+                      _locationType = selected.first;
+                      if (_locationType == 'online') {
+                        _location = null;
+                        _latitude = null;
+                        _longitude = null;
+                      }
+                    });
+                  },
+                  showSelectedIcon: false,
+                ),
+              ),
+              if (_locationType == 'in_person' || _locationType == 'both') ...[
+                const SizedBox(height: 12),
+                LocationInputField(
+                  initialValue: _location,
+                  initialLatitude: _latitude,
+                  initialLongitude: _longitude,
+                  showOnlineOption: false,
+                  onChanged: (value) {
+                    _location = value;
+                  },
+                  onLocationPicked: (address, lat, lng) {
+                    _location = address;
+                    _latitude = lat;
+                    _longitude = lng;
+                  },
+                ),
+              ],
               const SizedBox(height: 24),
 
               // ── Submit button ──
@@ -845,22 +986,8 @@ class _ServiceFormSheetState extends State<_ServiceFormSheet> {
           ),
         ),
       ),
+      ),
     );
-  }
-
-  String get _currencySymbol {
-    switch (_selectedCurrency) {
-      case 'GBP':
-        return '\u00A3';
-      case 'USD':
-        return '\$';
-      case 'EUR':
-        return '\u20AC';
-      case 'CNY':
-        return '\u00A5';
-      default:
-        return _selectedCurrency;
-    }
   }
 
   Widget? _buildCharCounter(

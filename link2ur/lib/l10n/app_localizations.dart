@@ -20693,6 +20693,12 @@ abstract class AppLocalizations {
   /// **'Nearby Services'**
   String get nearbyServicesSection;
 
+  /// No description provided for @drawerTaskExpert.
+  ///
+  /// In en, this message translates to:
+  /// **'Task Expert'**
+  String get drawerTaskExpert;
+
   /// No description provided for @drawerMyTasks.
   ///
   /// In en, this message translates to:

@@ -392,6 +392,15 @@ class _HomeViewContentState extends State<_HomeViewContent> {
 
             // Menu items
             _DrawerMenuItem(
+              icon: Icons.workspace_premium_outlined,
+              label: context.l10n.drawerTaskExpert,
+              onTap: () {
+                Navigator.of(context).pop();
+                final isExpert = context.read<AuthBloc>().state.user?.isExpert ?? false;
+                context.push(isExpert ? '/expert-dashboard' : '/task-experts/intro');
+              },
+            ),
+            _DrawerMenuItem(
               icon: Icons.assignment_outlined,
               label: context.l10n.drawerMyTasks,
               onTap: () {

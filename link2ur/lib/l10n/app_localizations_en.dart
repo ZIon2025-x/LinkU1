@@ -11224,6 +11224,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get nearbyServicesSection => 'Nearby Services';
 
   @override
+  String get drawerTaskExpert => 'Task Expert';
+
+  @override
   String get drawerMyTasks => 'My Tasks';
 
   @override
