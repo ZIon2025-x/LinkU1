@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:stream_transform/stream_transform.dart';
 
 import '../../../core/utils/cache_manager.dart';
+import '../../../data/models/feed_item.dart';
 import '../../../data/models/forum.dart';
 import '../../../data/repositories/forum_repository.dart';
 import '../../../core/utils/logger.dart';
@@ -201,6 +202,23 @@ class ForumLikeReply extends ForumEvent {
   List<Object?> get props => [replyId];
 }
 
+class ForumLoadFeed extends ForumEvent {
+  const ForumLoadFeed({required this.categoryId, this.sortBy = 'weight'});
+  final int categoryId;
+  final String sortBy;
+
+  @override
+  List<Object?> get props => [categoryId, sortBy];
+}
+
+class ForumLoadMoreFeed extends ForumEvent {
+  const ForumLoadMoreFeed({required this.categoryId});
+  final int categoryId;
+
+  @override
+  List<Object?> get props => [categoryId];
+}
+
 // ==================== State ====================
 
 enum ForumStatus { initial, loading, loaded, error }
@@ -233,6 +251,11 @@ class ForumState extends Equatable {
     this.repliesHasMore = true,
     this.isLoadingMoreReplies = false,
     this.lastOfficialTaskReward,
+    this.feedItems = const [],
+    this.feedStatus = ForumStatus.initial,
+    this.feedHasMore = false,
+    this.feedPage = 1,
+    this.isLoadingMoreFeed = false,
   });
 
   final ForumStatus status;
@@ -266,6 +289,11 @@ class ForumState extends Equatable {
   /// 回复分页：是否正在加载更多回复
   final bool isLoadingMoreReplies;
   final Map<String, dynamic>? lastOfficialTaskReward;
+  final List<FeedItem> feedItems;
+  final ForumStatus feedStatus;
+  final bool feedHasMore;
+  final int feedPage;
+  final bool isLoadingMoreFeed;
 
   bool get isLoading => status == ForumStatus.loading;
 
@@ -298,6 +326,11 @@ class ForumState extends Equatable {
     bool? isLoadingMoreReplies,
     Map<String, dynamic>? lastOfficialTaskReward,
     bool clearOfficialTaskReward = false,
+    List<FeedItem>? feedItems,
+    ForumStatus? feedStatus,
+    bool? feedHasMore,
+    int? feedPage,
+    bool? isLoadingMoreFeed,
   }) {
     return ForumState(
       status: status ?? this.status,
@@ -328,6 +361,11 @@ class ForumState extends Equatable {
       repliesHasMore: repliesHasMore ?? this.repliesHasMore,
       isLoadingMoreReplies: isLoadingMoreReplies ?? this.isLoadingMoreReplies,
       lastOfficialTaskReward: clearOfficialTaskReward ? null : (lastOfficialTaskReward ?? this.lastOfficialTaskReward),
+      feedItems: feedItems ?? this.feedItems,
+      feedStatus: feedStatus ?? this.feedStatus,
+      feedHasMore: feedHasMore ?? this.feedHasMore,
+      feedPage: feedPage ?? this.feedPage,
+      isLoadingMoreFeed: isLoadingMoreFeed ?? this.isLoadingMoreFeed,
     );
   }
 
@@ -359,6 +397,11 @@ class ForumState extends Equatable {
         repliesHasMore,
         isLoadingMoreReplies,
         lastOfficialTaskReward,
+        feedItems,
+        feedStatus,
+        feedHasMore,
+        feedPage,
+        isLoadingMoreFeed,
       ];
 }
 
@@ -391,6 +434,8 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
     on<ForumLikeReply>(_onLikeReply);
     on<ForumLoadMyPosts>(_onLoadMyPosts);
     on<ForumLoadFavoritedPosts>(_onLoadFavoritedPosts);
+    on<ForumLoadFeed>(_onLoadFeed);
+    on<ForumLoadMoreFeed>(_onLoadMoreFeed);
   }
 
   final ForumRepository _forumRepository;
@@ -1086,6 +1131,52 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
       emit(state.copyWith(
         replies: previousReplies,
         errorMessage: e is AppException ? e.message : e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onLoadFeed(ForumLoadFeed event, Emitter<ForumState> emit) async {
+    emit(state.copyWith(feedStatus: ForumStatus.loading, feedItems: const []));
+    try {
+      final response = await _forumRepository.getSkillFeed(
+        categoryId: event.categoryId,
+        page: 1,
+        pageSize: 20,
+        sortBy: event.sortBy,
+      );
+      emit(state.copyWith(
+        feedStatus: ForumStatus.loaded,
+        feedItems: response.items,
+        feedHasMore: response.hasMore,
+        feedPage: 1,
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        feedStatus: ForumStatus.error,
+        errorMessage: e is AppException ? e.message : 'skill_feed_load_failed',
+      ));
+    }
+  }
+
+  Future<void> _onLoadMoreFeed(ForumLoadMoreFeed event, Emitter<ForumState> emit) async {
+    if (state.isLoadingMoreFeed || !state.feedHasMore) return;
+    emit(state.copyWith(isLoadingMoreFeed: true));
+    try {
+      final nextPage = state.feedPage + 1;
+      final response = await _forumRepository.getSkillFeed(
+        categoryId: event.categoryId,
+        page: nextPage,
+      );
+      emit(state.copyWith(
+        feedItems: [...state.feedItems, ...response.items],
+        feedHasMore: response.hasMore,
+        feedPage: nextPage,
+        isLoadingMoreFeed: false,
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        isLoadingMoreFeed: false,
+        errorMessage: e is AppException ? e.message : 'skill_feed_load_more_failed',
       ));
     }
   }
