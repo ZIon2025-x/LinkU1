@@ -4692,6 +4692,7 @@ class OfficialTaskSubmit(BaseModel):
 # ============ Skill Leaderboard ============
 
 class SkillCategoryCreate(BaseModel):
+    task_type: str
     name_zh: str
     name_en: str
     icon: str = ""
