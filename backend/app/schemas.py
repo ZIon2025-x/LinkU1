@@ -1,4 +1,5 @@
 import datetime
+from enum import Enum
 from typing import List, Literal, Optional, Dict, Any
 from decimal import Decimal
 
@@ -4758,3 +4759,23 @@ class AdminRewardLogOut(BaseModel):
     created_at: Optional[datetime.datetime] = None
     class Config:
         from_attributes = True
+
+# ============ Skill Feed ============
+
+class FeedItemType(str, Enum):
+    post = "post"
+    task = "task"
+    service = "service"
+
+class FeedItem(BaseModel):
+    item_type: FeedItemType
+    data: dict
+    sort_score: float
+    created_at: datetime.datetime
+
+class SkillFeedResponse(BaseModel):
+    items: List[FeedItem]
+    total: int
+    page: int
+    page_size: int
+    has_more: bool
