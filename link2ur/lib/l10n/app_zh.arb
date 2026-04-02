@@ -5234,5 +5234,6 @@
   "skillFeedLoadMoreFailed": "加载更多内容失败",
   "skillFeedTaskLabel": "任务",
   "skillFeedServiceLabel": "服务",
-  "skillFeedDiscussionLabel": "讨论"
+  "skillFeedDiscussionLabel": "讨论",
+  "trendingSearchTitle": "热搜榜"
 }

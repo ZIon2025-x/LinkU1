@@ -11949,4 +11949,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get skillFeedDiscussionLabel => 'Discussion';
+
+  @override
+  String get trendingSearchTitle => 'Trending Searches';
 }

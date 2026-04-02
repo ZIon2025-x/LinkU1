@@ -5342,5 +5342,6 @@
   "skillFeedLoadMoreFailed": "Failed to load more content",
   "skillFeedTaskLabel": "Task",
   "skillFeedServiceLabel": "Service",
-  "skillFeedDiscussionLabel": "Discussion"
+  "skillFeedDiscussionLabel": "Discussion",
+  "trendingSearchTitle": "Trending Searches"
 }

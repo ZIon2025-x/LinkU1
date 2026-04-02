@@ -11477,6 +11477,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get skillFeedDiscussionLabel => '讨论';
+
+  @override
+  String get trendingSearchTitle => '热搜榜';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -22952,4 +22955,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get skillFeedDiscussionLabel => '討論';
+
+  @override
+  String get trendingSearchTitle => '熱搜榜';
 }

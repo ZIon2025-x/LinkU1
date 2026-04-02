@@ -25,8 +25,11 @@ import '../../../core/widgets/glass_container.dart';
 import '../../../core/widgets/decorative_background.dart';
 import '../../../data/models/forum.dart';
 import '../../../data/models/leaderboard.dart';
+import '../../../data/models/trending_search.dart';
 import '../bloc/forum_bloc.dart';
 import '../../auth/bloc/auth_bloc.dart';
+import '../../home/bloc/home_bloc.dart';
+import '../../home/bloc/home_state.dart';
 import '../../leaderboard/bloc/leaderboard_bloc.dart';
 
 /// 社区页 (论坛 + 排行榜)
@@ -619,6 +622,9 @@ class _ForumTabState extends State<_ForumTab> {
                       onChanged: (_) => setState(() {}),
                     ),
                   ),
+                ),
+                const SliverToBoxAdapter(
+                  child: _TrendingSearchSection(),
                 ),
                 SliverPadding(
                   padding: EdgeInsets.only(
@@ -1377,6 +1383,171 @@ class _StatItem extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// 热搜榜区域
+class _TrendingSearchSection extends StatelessWidget {
+  const _TrendingSearchSection();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return BlocBuilder<HomeBloc, HomeState>(
+      buildWhen: (prev, curr) =>
+          prev.trendingSearches != curr.trendingSearches,
+      builder: (context, state) {
+        final items = state.trendingSearches;
+        if (items.isEmpty) return const SizedBox.shrink();
+
+        return Container(
+          color: isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight,
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Text('\u{1F525} ',
+                      style: TextStyle(fontSize: 17)),
+                  Text(
+                    context.l10n.trendingSearchTitle,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              ...items.map((item) => _TrendingItem(item: item)),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// 热搜列表中的单条
+class _TrendingItem extends StatelessWidget {
+  const _TrendingItem({required this.item});
+
+  final TrendingSearchItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return InkWell(
+      onTap: () => context.push('/search'),
+      borderRadius: BorderRadius.circular(AppRadius.small),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          children: [
+            // Rank number
+            SizedBox(
+              width: 28,
+              child: Text(
+                '${item.rank}',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: item.rank <= 3
+                      ? FontWeight.w800
+                      : FontWeight.w600,
+                  color: item.rank <= 3
+                      ? const Color(0xFFFF2D55)
+                      : const Color(0xFF8E8E93),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            // Keyword
+            Expanded(
+              child: Text(
+                item.keyword,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w500,
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimaryLight,
+                ),
+              ),
+            ),
+            // Tag badge
+            if (item.tag != null) ...[
+              const SizedBox(width: 8),
+              _TagBadge(tag: item.tag!),
+            ],
+            const SizedBox(width: 8),
+            // Heat display
+            Text(
+              item.heatDisplay,
+              style: AppTypography.caption.copyWith(
+                color: isDark
+                    ? AppColors.textTertiaryDark
+                    : AppColors.textTertiaryLight,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 热搜标签 (hot / new / up)
+class _TagBadge extends StatelessWidget {
+  const _TagBadge({required this.tag});
+
+  final String tag;
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, bgColor, textColor) = switch (tag) {
+      'hot' => (
+        '\u{1F525} \u70ED',
+        const Color(0xFFFFF0F0),
+        const Color(0xFFFF2D55),
+      ),
+      'new' => (
+        'NEW',
+        const Color(0xFFEBF2FF),
+        const Color(0xFF007AFF),
+      ),
+      'up' => (
+        '\u2191 \u5347',
+        const Color(0xFFE8F8EF),
+        const Color(0xFF26BF73),
+      ),
+      _ => (
+        tag,
+        const Color(0xFFF0F0F0),
+        const Color(0xFF8E8E93),
+      ),
+    };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: textColor,
+        ),
+      ),
     );
   }
 }

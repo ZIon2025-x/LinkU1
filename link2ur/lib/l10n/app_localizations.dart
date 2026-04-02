@@ -22060,6 +22060,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Discussion'**
   String get skillFeedDiscussionLabel;
+
+  /// No description provided for @trendingSearchTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Trending Searches'**
+  String get trendingSearchTitle;
 }
 
 class _AppLocalizationsDelegate
