@@ -457,6 +457,10 @@ app.include_router(multi_participant_router)
 from app.forum_routes import router as forum_router
 app.include_router(forum_router)
 
+# 热搜榜路由
+from app.trending_routes import router as trending_router
+app.include_router(trending_router)
+
 # Discovery Feed 路由
 from app.discovery_routes import router as discovery_router
 app.include_router(discovery_router)
