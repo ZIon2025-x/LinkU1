@@ -5172,5 +5172,9 @@
   "skillFeedTaskLabel": "任務",
   "skillFeedServiceLabel": "服務",
   "skillFeedDiscussionLabel": "討論",
-  "trendingSearchTitle": "熱搜榜"
+  "trendingSearchTitle": "熱搜榜",
+  "trendingTagHot": "🔥 熱",
+  "trendingTagNew": "NEW",
+  "trendingTagUp": "↑ 升",
+  "trendingHeatSuffix": "瀏覽"
 }

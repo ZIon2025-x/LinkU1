@@ -22066,6 +22066,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Trending Searches'**
   String get trendingSearchTitle;
+
+  /// No description provided for @trendingTagHot.
+  ///
+  /// In en, this message translates to:
+  /// **'🔥 Hot'**
+  String get trendingTagHot;
+
+  /// No description provided for @trendingTagNew.
+  ///
+  /// In en, this message translates to:
+  /// **'NEW'**
+  String get trendingTagNew;
+
+  /// No description provided for @trendingTagUp.
+  ///
+  /// In en, this message translates to:
+  /// **'↑ Up'**
+  String get trendingTagUp;
+
+  /// No description provided for @trendingHeatSuffix.
+  ///
+  /// In en, this message translates to:
+  /// **'views'**
+  String get trendingHeatSuffix;
 }
 
 class _AppLocalizationsDelegate

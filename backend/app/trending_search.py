@@ -297,13 +297,15 @@ def compute_trending(db: Session) -> List[Dict[str, Any]]:
     # ------------------------------------------------------------------
     # Step 6: 与上期 Top10 比较, 生成 tag
     # ------------------------------------------------------------------
+    from app.redis_pool import get_client
+    redis_client = get_client(decode_responses=True)
+
     previous_top10: List[Dict[str, Any]] = []
     try:
-        from app.redis_pool import get_client
-        redis_client = get_client(decode_responses=True)
-        prev_json = redis_client.get("trending:previous")
-        if prev_json:
-            previous_top10 = json.loads(prev_json)
+        if redis_client:
+            prev_json = redis_client.get("trending:previous")
+            if prev_json:
+                previous_top10 = json.loads(prev_json)
     except Exception as e:
         logger.warning(f"compute_trending: 读取 Redis previous 失败: {e}")
 
@@ -383,10 +385,11 @@ def compute_trending(db: Session) -> List[Dict[str, Any]]:
     for i, item in enumerate(results):
         item["rank"] = i + 1
 
-    # 写入 Redis
+    # 写入 Redis (redis_client 已在 Step 6 获取)
     try:
-        from app.redis_pool import get_client
-        redis_client = get_client(decode_responses=True)
+        if not redis_client:
+            logger.warning("compute_trending: Redis 不可用，跳过缓存写入")
+            return results
 
         # 保存旧 current → previous
         current_json = redis_client.get("trending:current")

@@ -4789,6 +4789,7 @@ class TrendingSearchItem(BaseModel):
     rank: int
     keyword: str
     heat_display: str  # e.g. "2.3w浏览"
+    view_count: int = 0  # 原始浏览量，供前端本地化格式化
     tag: Optional[str] = None  # "hot", "new", "up", or null
 
 class TrendingSearchResponse(BaseModel):
@@ -4804,6 +4805,7 @@ class TrendingBlacklistItem(BaseModel):
     """黑名单项"""
     id: int
     keyword: str
+    created_by: Optional[str] = None
     created_at: Optional[datetime.datetime] = None
 
     class Config:

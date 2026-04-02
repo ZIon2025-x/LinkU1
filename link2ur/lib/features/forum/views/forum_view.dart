@@ -1487,9 +1487,11 @@ class _TrendingItem extends StatelessWidget {
               _TagBadge(tag: item.tag!),
             ],
             const SizedBox(width: 8),
-            // Heat display
+            // Heat display (localized)
             Text(
-              item.heatDisplay,
+              item.viewCount > 0
+                  ? item.localizedHeatDisplay(context.l10n.trendingHeatSuffix)
+                  : item.heatDisplay,
               style: AppTypography.caption.copyWith(
                 color: isDark
                     ? AppColors.textTertiaryDark
@@ -1511,19 +1513,20 @@ class _TagBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final (label, bgColor, textColor) = switch (tag) {
       'hot' => (
-        '\u{1F525} \u70ED',
+        l10n.trendingTagHot,
         const Color(0xFFFFF0F0),
         const Color(0xFFFF2D55),
       ),
       'new' => (
-        'NEW',
+        l10n.trendingTagNew,
         const Color(0xFFEBF2FF),
         const Color(0xFF007AFF),
       ),
       'up' => (
-        '\u2191 \u5347',
+        l10n.trendingTagUp,
         const Color(0xFFE8F8EF),
         const Color(0xFF26BF73),
       ),

@@ -38,6 +38,7 @@ async def get_trending_searches():
             rank=item["rank"],
             keyword=item["keyword"],
             heat_display=item["heat_display"],
+            view_count=item.get("view_count", 0),
             tag=item.get("tag"),
         )
         for item in items_raw
