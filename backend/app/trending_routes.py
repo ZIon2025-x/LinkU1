@@ -32,17 +32,21 @@ async def get_trending_searches():
     if not data:
         return schemas.TrendingSearchResponse(items=[], updated_at=updated_at)
 
-    items_raw = json.loads(data)
-    items = [
-        schemas.TrendingSearchItem(
-            rank=item["rank"],
-            keyword=item["keyword"],
-            heat_display=item["heat_display"],
-            view_count=item.get("view_count", 0),
-            tag=item.get("tag"),
-        )
-        for item in items_raw
-    ]
+    try:
+        items_raw = json.loads(data)
+        items = [
+            schemas.TrendingSearchItem(
+                rank=item["rank"],
+                keyword=item["keyword"],
+                heat_display=item["heat_display"],
+                view_count=item.get("view_count", 0),
+                tag=item.get("tag"),
+            )
+            for item in items_raw
+        ]
+    except (json.JSONDecodeError, KeyError, TypeError) as e:
+        logger.warning(f"trending cache data corrupted: {e}")
+        items = []
 
     return schemas.TrendingSearchResponse(items=items, updated_at=updated_at)
 

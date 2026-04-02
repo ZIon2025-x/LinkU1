@@ -19,18 +19,21 @@ class TrendingSearchItem extends Equatable {
   String localizedHeatDisplay(String suffix) {
     if (viewCount >= 10000) {
       final val = viewCount / 10000;
-      final formatted = val == val.truncateToDouble()
-          ? '${val.toInt()}w'
-          : '${val.toStringAsFixed(1)}w';
-      return '$formatted$suffix';
+      return '${_formatNum(val)}w$suffix';
     } else if (viewCount >= 1000) {
       final val = viewCount / 1000;
-      final formatted = val == val.truncateToDouble()
-          ? '${val.toInt()}k'
-          : '${val.toStringAsFixed(1)}k';
-      return '$formatted$suffix';
+      return '${_formatNum(val)}k$suffix';
     }
     return '$viewCount$suffix';
+  }
+
+  /// 格式化数字：去除尾部多余的 0 和小数点（与后端 Python rstrip 逻辑一致）
+  static String _formatNum(double val) {
+    if (val == val.truncateToDouble()) return val.toInt().toString();
+    var s = val.toStringAsFixed(1);
+    if (s.endsWith('0')) s = s.substring(0, s.length - 1);
+    if (s.endsWith('.')) s = s.substring(0, s.length - 1);
+    return s;
   }
 
   factory TrendingSearchItem.fromJson(Map<String, dynamic> json) {
