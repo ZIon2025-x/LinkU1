@@ -11952,4 +11952,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get trendingSearchTitle => 'Trending Searches';
+
+  @override
+  String get trendingTagHot => '🔥 Hot';
+
+  @override
+  String get trendingTagNew => 'NEW';
+
+  @override
+  String get trendingTagUp => '↑ Up';
+
+  @override
+  String get trendingHeatSuffix => 'views';
 }

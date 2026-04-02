@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/utils/auth_guard.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/utils/l10n_extension.dart';
@@ -1188,7 +1189,8 @@ class _LeaderboardCard extends StatelessWidget {
                 leaderboard.coverImage != null &&
                         leaderboard.coverImage!.isNotEmpty
                     ? AsyncImageView(
-                        imageUrl: leaderboard.coverImage,
+                        imageUrl: Helpers.getThumbnailUrl(leaderboard.coverImage, size: 'medium'),
+                        fallbackUrl: Helpers.getImageUrl(leaderboard.coverImage),
                         width: 90,
                         height: 90,
                         borderRadius: BorderRadius.circular(14),
@@ -1487,9 +1489,11 @@ class _TrendingItem extends StatelessWidget {
               _TagBadge(tag: item.tag!),
             ],
             const SizedBox(width: 8),
-            // Heat display
+            // Heat display (localized)
             Text(
-              item.heatDisplay,
+              item.viewCount > 0
+                  ? item.localizedHeatDisplay(context.l10n.trendingHeatSuffix)
+                  : item.heatDisplay,
               style: AppTypography.caption.copyWith(
                 color: isDark
                     ? AppColors.textTertiaryDark
@@ -1511,19 +1515,20 @@ class _TagBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final (label, bgColor, textColor) = switch (tag) {
       'hot' => (
-        '\u{1F525} \u70ED',
+        l10n.trendingTagHot,
         const Color(0xFFFFF0F0),
         const Color(0xFFFF2D55),
       ),
       'new' => (
-        'NEW',
+        l10n.trendingTagNew,
         const Color(0xFFEBF2FF),
         const Color(0xFF007AFF),
       ),
       'up' => (
-        '\u2191 \u5347',
+        l10n.trendingTagUp,
         const Color(0xFFE8F8EF),
         const Color(0xFF26BF73),
       ),

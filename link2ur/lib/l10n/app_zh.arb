@@ -5235,5 +5235,9 @@
   "skillFeedTaskLabel": "任务",
   "skillFeedServiceLabel": "服务",
   "skillFeedDiscussionLabel": "讨论",
-  "trendingSearchTitle": "热搜榜"
+  "trendingSearchTitle": "热搜榜",
+  "trendingTagHot": "🔥 热",
+  "trendingTagNew": "NEW",
+  "trendingTagUp": "↑ 升",
+  "trendingHeatSuffix": "浏览"
 }

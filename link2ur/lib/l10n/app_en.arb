@@ -5343,5 +5343,9 @@
   "skillFeedTaskLabel": "Task",
   "skillFeedServiceLabel": "Service",
   "skillFeedDiscussionLabel": "Discussion",
-  "trendingSearchTitle": "Trending Searches"
+  "trendingSearchTitle": "Trending Searches",
+  "trendingTagHot": "🔥 Hot",
+  "trendingTagNew": "NEW",
+  "trendingTagUp": "↑ Up",
+  "trendingHeatSuffix": "views"
 }

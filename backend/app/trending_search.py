@@ -169,56 +169,65 @@ def compute_trending(db: Session) -> List[Dict[str, Any]]:
     seven_days_ago = now - timedelta(days=7)
 
     # ------------------------------------------------------------------
-    # Step 1 & 2: 查搜索日志, 分天加权
+    # Step 1 & 2: SQL 聚合 — 按 raw_query 分组，计算加权值，过滤 ≥3 用户
+    # 将聚合逻辑下推到 SQL，避免全量拉取到 Python 内存
     # ------------------------------------------------------------------
-    rows = (
-        db.execute(
-            select(
-                models.SearchLog.raw_query,
-                models.SearchLog.tokens,
-                models.SearchLog.created_at,
-                models.SearchLog.user_id,
-            ).where(models.SearchLog.created_at >= seven_days_ago)
-        )
-        .fetchall()
+    day_weight = func.greatest(
+        1,
+        7 - func.extract("day", now - models.SearchLog.created_at).cast(Float),
     )
 
-    if not rows:
-        logger.info("compute_trending: 无搜索日志，跳过")
+    agg_query = (
+        select(
+            models.SearchLog.raw_query,
+            func.count(distinct(models.SearchLog.user_id)).label("user_count"),
+            func.sum(day_weight).label("weighted_count"),
+        )
+        .where(models.SearchLog.created_at >= seven_days_ago)
+        .group_by(models.SearchLog.raw_query)
+        .having(func.count(distinct(models.SearchLog.user_id)) >= 3)
+    )
+    agg_rows = db.execute(agg_query).fetchall()
+
+    if not agg_rows:
+        logger.info("compute_trending: 无满足条件的搜索词 (≥3 users)")
         return []
 
-    # 按 raw_query 聚合，统计不同用户 & 加权计数
-    query_agg: Dict[str, Dict[str, Any]] = defaultdict(
-        lambda: {"tokens": set(), "users": set(), "weighted_count": 0.0}
-    )
-    for row in rows:
-        raw_query = row.raw_query
+    # 只对满足条件的 raw_query 取 tokens（去重后的第一条即可）
+    qualified_queries = {row.raw_query for row in agg_rows}
+    weighted_map = {row.raw_query: float(row.weighted_count) for row in agg_rows}
+
+    # 批量取 tokens：每个 raw_query 只取一条的 tokens
+    token_rows = db.execute(
+        select(
+            models.SearchLog.raw_query,
+            models.SearchLog.tokens,
+        )
+        .where(models.SearchLog.raw_query.in_(qualified_queries))
+        .distinct(models.SearchLog.raw_query)
+    ).fetchall()
+
+    token_map: Dict[str, set] = {}
+    for row in token_rows:
+        rq = row.raw_query
         tokens = row.tokens if isinstance(row.tokens, (list, set)) else []
-        created_at = row.created_at
-        user_id = row.user_id or "anonymous"
+        if rq not in token_map:
+            token_map[rq] = set(tokens)
+        else:
+            token_map[rq].update(tokens)
 
-        # 天数权重: today=7, yesterday=6, ... day7=1
-        days_ago = (now - created_at).days
-        weight = max(1, 7 - days_ago)
-
-        agg = query_agg[raw_query]
-        agg["tokens"].update(tokens)
-        agg["users"].add(user_id)
-        agg["weighted_count"] += weight
-
-    # 过滤: ≥3 个不同用户
     query_data = [
         {
             "raw_query": rq,
-            "tokens": agg["tokens"],
-            "weighted_count": agg["weighted_count"],
+            "tokens": token_map.get(rq, set()),
+            "weighted_count": weighted_map[rq],
         }
-        for rq, agg in query_agg.items()
-        if len(agg["users"]) >= 3
+        for rq in qualified_queries
+        if token_map.get(rq)
     ]
 
     if not query_data:
-        logger.info("compute_trending: 无满足条件的搜索词 (≥3 users)")
+        logger.info("compute_trending: 无有效 token 的搜索词")
         return []
 
     # ------------------------------------------------------------------
@@ -239,10 +248,14 @@ def compute_trending(db: Session) -> List[Dict[str, Any]]:
         if not any(bw in c["keyword"].lower() for bw in blacklist)
     ]
 
+    # 先按 weighted_count 排序，只对 Top 15 计算浏览量（减少 SQL 查询数）
+    clusters.sort(key=lambda c: c["weighted_count"], reverse=True)
+
     # ------------------------------------------------------------------
-    # Step 5: 计算浏览量 (forum_posts + tasks 标题匹配)
+    # Step 5: 计算浏览量 (仅 Top 15，forum_posts + tasks 标题匹配)
     # ------------------------------------------------------------------
-    for cluster in clusters:
+    TOP_N_VIEW_COUNT = 15  # 只查前15，最终取10，留5的余量给黑名单过滤后补位
+    for cluster in clusters[:TOP_N_VIEW_COUNT]:
         tokens = cluster["tokens"]
         if not tokens:
             cluster["view_count"] = 0
@@ -269,7 +282,7 @@ def compute_trending(db: Session) -> List[Dict[str, Any]]:
                 )
             )
 
-        # ForumPost 浏览量
+        # 单次查询同时取 ForumPost + Task 浏览量
         forum_views = db.execute(
             select(func.coalesce(func.sum(models.ForumPost.view_count), 0)).where(
                 and_(
@@ -279,7 +292,6 @@ def compute_trending(db: Session) -> List[Dict[str, Any]]:
             )
         ).scalar() or 0
 
-        # Task 浏览量（排除已取消的任务）
         task_views = db.execute(
             select(func.coalesce(func.sum(models.Task.view_count), 0)).where(
                 and_(
@@ -291,19 +303,22 @@ def compute_trending(db: Session) -> List[Dict[str, Any]]:
 
         cluster["view_count"] = int(forum_views) + int(task_views)
 
-    # 按 weighted_count 排序
-    clusters.sort(key=lambda c: c["weighted_count"], reverse=True)
+    # 超出 Top 15 的 cluster 不查浏览量，设为 0
+    for cluster in clusters[TOP_N_VIEW_COUNT:]:
+        cluster["view_count"] = 0
 
     # ------------------------------------------------------------------
     # Step 6: 与上期 Top10 比较, 生成 tag
     # ------------------------------------------------------------------
+    from app.redis_pool import get_client
+    redis_client = get_client(decode_responses=True)
+
     previous_top10: List[Dict[str, Any]] = []
     try:
-        from app.redis_pool import get_client
-        redis_client = get_client(decode_responses=True)
-        prev_json = redis_client.get("trending:previous")
-        if prev_json:
-            previous_top10 = json.loads(prev_json)
+        if redis_client:
+            prev_json = redis_client.get("trending:previous")
+            if prev_json:
+                previous_top10 = json.loads(prev_json)
     except Exception as e:
         logger.warning(f"compute_trending: 读取 Redis previous 失败: {e}")
 
@@ -383,10 +398,11 @@ def compute_trending(db: Session) -> List[Dict[str, Any]]:
     for i, item in enumerate(results):
         item["rank"] = i + 1
 
-    # 写入 Redis
+    # 写入 Redis (redis_client 已在 Step 6 获取)
     try:
-        from app.redis_pool import get_client
-        redis_client = get_client(decode_responses=True)
+        if not redis_client:
+            logger.warning("compute_trending: Redis 不可用，跳过缓存写入")
+            return results
 
         # 保存旧 current → previous
         current_json = redis_client.get("trending:current")

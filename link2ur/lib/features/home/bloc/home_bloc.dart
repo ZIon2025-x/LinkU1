@@ -564,7 +564,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       emit(state.copyWith(trendingSearches: response.items));
     } catch (e) {
       // 热搜加载失败不影响主页其他内容
-      AppLogger.info('Trending searches load failed, will be hidden');
+      AppLogger.error('Trending searches load failed', e);
     }
   }
 }

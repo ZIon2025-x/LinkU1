@@ -11480,6 +11480,18 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get trendingSearchTitle => '热搜榜';
+
+  @override
+  String get trendingTagHot => '🔥 热';
+
+  @override
+  String get trendingTagNew => 'NEW';
+
+  @override
+  String get trendingTagUp => '↑ 升';
+
+  @override
+  String get trendingHeatSuffix => '浏览';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -22958,4 +22970,16 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get trendingSearchTitle => '熱搜榜';
+
+  @override
+  String get trendingTagHot => '🔥 熱';
+
+  @override
+  String get trendingTagNew => 'NEW';
+
+  @override
+  String get trendingTagUp => '↑ 升';
+
+  @override
+  String get trendingHeatSuffix => '瀏覽';
 }

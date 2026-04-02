@@ -1351,7 +1351,8 @@ class _PostImageCarouselState extends State<_PostImageCarousel> {
                   child: GestureDetector(
                     onTap: () => _openFullScreen(context, index),
                     child: AsyncImageView(
-                      imageUrl: widget.images[index],
+                      imageUrl: Helpers.getThumbnailUrl(widget.images[index], size: 'large'),
+                      fallbackUrl: Helpers.getImageUrl(widget.images[index]),
                       width: double.infinity,
                       height: double.infinity,
                       fit: BoxFit.contain,

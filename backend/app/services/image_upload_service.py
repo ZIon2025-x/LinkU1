@@ -54,6 +54,7 @@ class UploadConfig:
     """上传配置"""
     max_size: int = 5 * 1024 * 1024  # 最大文件大小（5MB）
     allowed_extensions: Tuple[str, ...] = ('.jpg', '.jpeg', '.png', '.gif', '.webp')
+    store_original: bool = False  # True: 存原图(只剥离EXIF)，不压缩不缩小; False: 传统压缩流程
     compress: bool = True  # 是否压缩
     compress_quality: int = 85  # 压缩质量
     convert_to_webp: bool = False  # 是否转换为 WebP
@@ -68,61 +69,51 @@ class UploadConfig:
 CATEGORY_CONFIGS: Dict[ImageCategory, UploadConfig] = {
     ImageCategory.TASK: UploadConfig(
         max_size=10 * 1024 * 1024,
-        compress=True,
-        compress_quality=85,
-        max_dimension=2048
+        store_original=True,
+        generate_thumbnails=True,
+        thumbnail_presets=('medium', 'large'),
     ),
     ImageCategory.BANNER: UploadConfig(
         max_size=5 * 1024 * 1024,
-        compress=True,
-        compress_quality=90,
-        max_dimension=1920
+        store_original=True,
     ),
     ImageCategory.ACTIVITY: UploadConfig(
         max_size=10 * 1024 * 1024,
-        compress=True,
-        compress_quality=85,
-        max_dimension=1920
+        store_original=True,
+        generate_thumbnails=True,
+        thumbnail_presets=('medium',),
     ),
     ImageCategory.LEADERBOARD_COVER: UploadConfig(
         max_size=5 * 1024 * 1024,
-        compress=True,
-        compress_quality=85,
-        max_dimension=1280
+        store_original=True,
     ),
     ImageCategory.LEADERBOARD_ITEM: UploadConfig(
         max_size=5 * 1024 * 1024,
-        compress=True,
-        compress_quality=85,
+        store_original=True,
         generate_thumbnails=True,
         thumbnail_presets=('thumb',),
-        max_dimension=1280
     ),
     ImageCategory.EXPERT_AVATAR: UploadConfig(
         max_size=2 * 1024 * 1024,
-        compress=True,
-        compress_quality=85,
-        max_dimension=512
+        store_original=True,
     ),
     ImageCategory.SERVICE_IMAGE: UploadConfig(
         max_size=5 * 1024 * 1024,
-        compress=True,
-        compress_quality=85,
-        max_dimension=1280
+        store_original=True,
+        generate_thumbnails=True,
+        thumbnail_presets=('medium',),
     ),
     ImageCategory.FORUM_POST: UploadConfig(
         max_size=5 * 1024 * 1024,
-        compress=True,
-        compress_quality=85,
-        max_dimension=1920
+        store_original=True,
+        generate_thumbnails=True,
+        thumbnail_presets=('medium', 'large'),
     ),
     ImageCategory.FLEA_MARKET: UploadConfig(
         max_size=10 * 1024 * 1024,
-        compress=True,
-        compress_quality=85,
+        store_original=True,
         generate_thumbnails=True,
-        thumbnail_presets=('thumb', 'medium'),
-        max_dimension=1920
+        thumbnail_presets=('thumb', 'medium', 'large'),
     ),
     ImageCategory.PRIVATE_TASK_CHAT: UploadConfig(
         max_size=5 * 1024 * 1024,
@@ -240,43 +231,64 @@ class ImageUploadService:
             # 图片处理
             processed_content = content
 
-            # 自动旋转
-            if cfg.auto_orient:
-                processed_content = self.processor.auto_orient(processed_content)
+            if cfg.store_original:
+                # === 新管道：存原图，只处理 orientation 和 EXIF ===
 
-            # 移除元数据
-            if cfg.strip_metadata:
-                processed_content, _ = self.processor.strip_metadata(processed_content)
+                # 1. 检查是否需要旋转（仅需要时才编码一次）
+                if cfg.auto_orient:
+                    processed_content, was_rotated = self.processor.orient_if_needed(processed_content)
 
-            # 获取处理后的实际尺寸（auto_orient 可能旋转了图片）
-            processed_info = self.processor.get_image_info(processed_content)
-            width = processed_info.get('width') if processed_info else None
-            height = processed_info.get('height') if processed_info else None
+                # 2. 无损剥离 EXIF 元数据（不解码像素）
+                if cfg.strip_metadata:
+                    processed_content = self.processor.strip_exif_lossless(processed_content)
 
-            # 调整尺寸
-            if cfg.max_dimension and width and height:
-                if width > cfg.max_dimension or height > cfg.max_dimension:
-                    processed_content, ext, new_size = self.processor.resize(
+                # 获取图片尺寸信息
+                processed_info = self.processor.get_image_info(processed_content)
+                width = processed_info.get('width') if processed_info else None
+                height = processed_info.get('height') if processed_info else None
+
+                # 保持原始扩展名
+                ext = self._detect_extension(processed_content, filename)
+            else:
+                # === 传统管道：压缩+缩小（私密图片等） ===
+
+                # 自动旋转
+                if cfg.auto_orient:
+                    processed_content = self.processor.auto_orient(processed_content)
+
+                # 移除元数据
+                if cfg.strip_metadata:
+                    processed_content, _ = self.processor.strip_metadata(processed_content)
+
+                # 获取处理后的实际尺寸
+                processed_info = self.processor.get_image_info(processed_content)
+                width = processed_info.get('width') if processed_info else None
+                height = processed_info.get('height') if processed_info else None
+
+                # 调整尺寸
+                if cfg.max_dimension and width and height:
+                    if width > cfg.max_dimension or height > cfg.max_dimension:
+                        processed_content, ext, new_size = self.processor.resize(
+                            processed_content,
+                            max_width=cfg.max_dimension,
+                            max_height=cfg.max_dimension,
+                            quality=cfg.compress_quality
+                        )
+                        width = new_size.width
+                        height = new_size.height
+
+                # 转换为 WebP
+                if cfg.convert_to_webp:
+                    processed_content, ext = self.processor.convert_to_webp(
                         processed_content,
-                        max_width=cfg.max_dimension,
-                        max_height=cfg.max_dimension,
                         quality=cfg.compress_quality
                     )
-                    width = new_size.width
-                    height = new_size.height
-            
-            # 转换为 WebP
-            if cfg.convert_to_webp:
-                processed_content, ext = self.processor.convert_to_webp(
-                    processed_content,
-                    quality=cfg.compress_quality
-                )
-            # 或者压缩
-            elif cfg.compress:
-                processed_content, ext = self.processor.compress(
-                    processed_content,
-                    quality=cfg.compress_quality
-                )
+                # 或者压缩
+                elif cfg.compress:
+                    processed_content, ext = self.processor.compress(
+                        processed_content,
+                        quality=cfg.compress_quality
+                    )
             
             # 生成文件名
             file_id = str(uuid.uuid4())
