@@ -4780,4 +4780,51 @@ class SkillFeedResponse(BaseModel):
     total: int
     page: int
     page_size: int
+
+
+# ==================== 热搜榜 Schemas ====================
+
+class TrendingSearchItem(BaseModel):
+    """热搜榜单项"""
+    rank: int
+    keyword: str
+    heat_display: str  # e.g. "2.3w浏览"
+    tag: Optional[str] = None  # "hot", "new", "up", or null
+
+class TrendingSearchResponse(BaseModel):
+    """热搜榜响应"""
+    items: List[TrendingSearchItem]
+    updated_at: Optional[str] = None
+
+class TrendingBlacklistCreate(BaseModel):
+    """添加黑名单"""
+    keyword: str = Field(..., min_length=1, max_length=100)
+
+class TrendingBlacklistItem(BaseModel):
+    """黑名单项"""
+    id: int
+    keyword: str
+    created_at: Optional[datetime.datetime] = None
+
+    class Config:
+        from_attributes = True
+
+class TrendingPinnedCreate(BaseModel):
+    """添加置顶词"""
+    keyword: str = Field(..., min_length=1, max_length=200)
+    display_heat: str = Field(default="", max_length=50)
+    sort_order: int = Field(default=0)
+    expires_at: Optional[datetime.datetime] = None
+
+class TrendingPinnedItem(BaseModel):
+    """置顶词项"""
+    id: int
+    keyword: str
+    display_heat: str
+    sort_order: int
+    expires_at: Optional[datetime.datetime] = None
+    created_at: Optional[datetime.datetime] = None
+
+    class Config:
+        from_attributes = True
     has_more: bool
