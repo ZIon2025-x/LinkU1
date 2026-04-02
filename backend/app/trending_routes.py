@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models, schemas
-from app.database import get_async_db_dependency
+from app.database import get_async_db
 from app.redis_pool import get_client
 
 logger = logging.getLogger(__name__)
@@ -57,7 +57,7 @@ async def _get_admin(request: Request, db: AsyncSession):
 @router.get("/admin/blacklist", response_model=List[schemas.TrendingBlacklistItem])
 async def list_blacklist(
     request: Request,
-    db: AsyncSession = Depends(get_async_db_dependency),
+    db: AsyncSession = Depends(get_async_db),
 ):
     """查看所有黑名单词"""
     await _get_admin(request, db)
@@ -71,7 +71,7 @@ async def list_blacklist(
 async def add_blacklist(
     body: schemas.TrendingBlacklistCreate,
     request: Request,
-    db: AsyncSession = Depends(get_async_db_dependency),
+    db: AsyncSession = Depends(get_async_db),
 ):
     """添加黑名单词"""
     admin = await _get_admin(request, db)
@@ -94,7 +94,7 @@ async def add_blacklist(
 async def remove_blacklist(
     item_id: int,
     request: Request,
-    db: AsyncSession = Depends(get_async_db_dependency),
+    db: AsyncSession = Depends(get_async_db),
 ):
     """删除黑名单词"""
     await _get_admin(request, db)
@@ -111,7 +111,7 @@ async def remove_blacklist(
 @router.get("/admin/pinned", response_model=List[schemas.TrendingPinnedItem])
 async def list_pinned(
     request: Request,
-    db: AsyncSession = Depends(get_async_db_dependency),
+    db: AsyncSession = Depends(get_async_db),
 ):
     """查看所有置顶词"""
     await _get_admin(request, db)
@@ -125,7 +125,7 @@ async def list_pinned(
 async def add_pinned(
     body: schemas.TrendingPinnedCreate,
     request: Request,
-    db: AsyncSession = Depends(get_async_db_dependency),
+    db: AsyncSession = Depends(get_async_db),
 ):
     """添加置顶词"""
     admin = await _get_admin(request, db)
@@ -146,7 +146,7 @@ async def add_pinned(
 async def remove_pinned(
     item_id: int,
     request: Request,
-    db: AsyncSession = Depends(get_async_db_dependency),
+    db: AsyncSession = Depends(get_async_db),
 ):
     """删除置顶词"""
     await _get_admin(request, db)

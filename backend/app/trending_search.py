@@ -80,12 +80,14 @@ async def log_search(
 # 热搜计算 (同步, 供 TaskScheduler 调用)
 # ---------------------------------------------------------------------------
 
-def jaccard_similarity(tokens_a: Set[str], tokens_b: Set[str]) -> float:
+def jaccard_similarity(tokens_a, tokens_b) -> float:
     """计算两组 token 的 Jaccard 相似度: |交集| / |并集|"""
     if not tokens_a or not tokens_b:
         return 0.0
-    intersection = tokens_a & tokens_b
-    union = tokens_a | tokens_b
+    set_a = set(tokens_a) if not isinstance(tokens_a, set) else tokens_a
+    set_b = set(tokens_b) if not isinstance(tokens_b, set) else tokens_b
+    intersection = set_a & set_b
+    union = set_a | set_b
     return len(intersection) / len(union)
 
 
@@ -134,9 +136,13 @@ def cluster_queries(
 def format_heat_display(view_count: int) -> str:
     """格式化热度显示: 2.3w浏览 / 8.6k浏览 / 120浏览"""
     if view_count >= 10000:
-        return f"{view_count / 10000:.1f}w浏览"
+        val = view_count / 10000
+        formatted = f"{val:.1f}".rstrip("0").rstrip(".")
+        return f"{formatted}w浏览"
     elif view_count >= 1000:
-        return f"{view_count / 1000:.1f}k浏览"
+        val = view_count / 1000
+        formatted = f"{val:.1f}".rstrip("0").rstrip(".")
+        return f"{formatted}k浏览"
     else:
         return f"{view_count}浏览"
 
