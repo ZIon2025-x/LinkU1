@@ -18,7 +18,7 @@ CREATE INDEX IF NOT EXISTS idx_search_logs_raw_query ON search_logs(raw_query);
 CREATE TABLE IF NOT EXISTS trending_blacklist (
     id SERIAL PRIMARY KEY,
     keyword VARCHAR(100) NOT NULL UNIQUE,
-    created_by INTEGER REFERENCES admin_users(id) ON DELETE SET NULL,
+    created_by VARCHAR(5) REFERENCES admin_users(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS trending_pinned (
     keyword VARCHAR(200) NOT NULL,
     display_heat VARCHAR(50) NOT NULL DEFAULT '',
     sort_order INTEGER NOT NULL DEFAULT 0,
-    created_by INTEGER REFERENCES admin_users(id) ON DELETE SET NULL,
+    created_by VARCHAR(5) REFERENCES admin_users(id) ON DELETE SET NULL,
     expires_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

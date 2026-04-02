@@ -3826,7 +3826,7 @@ class TrendingBlacklist(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     keyword = Column(String(100), nullable=False, unique=True)
-    created_by = Column(Integer, ForeignKey("admin_users.id", ondelete="SET NULL"), nullable=True)
+    created_by = Column(String(5), ForeignKey("admin_users.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime(timezone=True), default=get_utc_time)
 
 
@@ -3838,7 +3838,7 @@ class TrendingPinned(Base):
     keyword = Column(String(200), nullable=False)
     display_heat = Column(String(50), nullable=False, default="")
     sort_order = Column(Integer, nullable=False, default=0)
-    created_by = Column(Integer, ForeignKey("admin_users.id", ondelete="SET NULL"), nullable=True)
+    created_by = Column(String(5), ForeignKey("admin_users.id", ondelete="SET NULL"), nullable=True)
     expires_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), default=get_utc_time)
 

@@ -4827,4 +4827,3 @@ class TrendingPinnedItem(BaseModel):
 
     class Config:
         from_attributes = True
-    has_more: bool
