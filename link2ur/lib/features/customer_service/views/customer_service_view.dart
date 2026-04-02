@@ -186,7 +186,7 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
           );
         },
       ),
-    ).then((_) => commentController.dispose());
+    );
   }
 
   void _showChatHistory() {

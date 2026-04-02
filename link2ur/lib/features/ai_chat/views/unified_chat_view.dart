@@ -414,7 +414,7 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
           );
         },
       ),
-    ).then((_) => commentController.dispose());
+    );
   }
 
   @override

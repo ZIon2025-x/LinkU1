@@ -324,7 +324,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
           ],
         ),
       ),
-    ).then((_) => priceController.dispose());
+    );
   }
 
   TaskApplication? _findApplication(TaskDetailState state) {

@@ -79,7 +79,7 @@ class FleaMarketConsultationActions extends ConsultationActions {
           ],
         ),
       ),
-    ).then((_) => priceController.dispose());
+    );
   }
 
   @override
@@ -210,7 +210,7 @@ class FleaMarketConsultationActions extends ConsultationActions {
           ],
         ),
       ),
-    ).then((_) => priceController.dispose());
+    );
   }
 
   void _showQuoteDialog(BuildContext context, String Function() getCurrencySymbol) {
@@ -272,10 +272,7 @@ class FleaMarketConsultationActions extends ConsultationActions {
           ],
         ),
       ),
-    ).then((_) {
-      priceController.dispose();
-      messageController.dispose();
-    });
+    );
   }
 
   void _showFormalApplyDialog(BuildContext context) {
