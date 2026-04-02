@@ -1103,12 +1103,12 @@ async def review_leaderboard(
         # 移动临时封面图片到正式目录并更新URL（使用图片上传服务）
         if leaderboard.cover_image:
             cover_image_url = leaderboard.cover_image
-            if "/uploads/images/leaderboard_covers/temp_" in cover_image_url:
+            if "/leaderboard_covers/temp_" in cover_image_url:
                 try:
                     from app.services import ImageCategory, get_image_upload_service
                     
                     # 从URL中提取用户ID
-                    url_parts = cover_image_url.split("/uploads/images/leaderboard_covers/temp_")
+                    url_parts = cover_image_url.split("/leaderboard_covers/temp_")
                     if len(url_parts) == 2:
                         temp_path = url_parts[1]
                         user_id = temp_path.split("/")[0]
@@ -1134,12 +1134,12 @@ async def review_leaderboard(
         # 如果拒绝申请，清理临时封面图片（使用图片上传服务）
         if leaderboard.cover_image:
             cover_image_url = leaderboard.cover_image
-            if "/uploads/images/leaderboard_covers/temp_" in cover_image_url:
+            if "/leaderboard_covers/temp_" in cover_image_url:
                 try:
                     from app.services import ImageCategory, get_image_upload_service
                     
                     # 从URL中提取用户ID
-                    url_parts = cover_image_url.split("/uploads/images/leaderboard_covers/temp_")
+                    url_parts = cover_image_url.split("/leaderboard_covers/temp_")
                     if len(url_parts) == 2:
                         temp_path = url_parts[1]
                         user_id = temp_path.split("/")[0]
