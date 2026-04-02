@@ -88,4 +88,7 @@ tiktoken>=0.8.0,<1.0.0
 # Content Filtering
 opencc-python-reimplemented>=0.1.7
 
+# 中文分词（热搜榜 tokenization）
+jieba>=0.42.1
+
 # 依赖更新日期: 2026-03-06 (添加内容过滤依赖)
