@@ -1398,7 +1398,16 @@ class _TrendingSearchSection extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
+    // HomeBloc may not be available when ForumView is used outside the main tab shell
+    HomeBloc? homeBloc;
+    try {
+      homeBloc = context.read<HomeBloc>();
+    } catch (_) {
+      return const SizedBox.shrink();
+    }
+
     return BlocBuilder<HomeBloc, HomeState>(
+      bloc: homeBloc,
       buildWhen: (prev, curr) =>
           prev.trendingSearches != curr.trendingSearches,
       builder: (context, state) {

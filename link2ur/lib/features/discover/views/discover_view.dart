@@ -115,9 +115,10 @@ class _SearchHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final topPadding = MediaQuery.of(context).padding.top;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.md, AppSpacing.md, AppSpacing.md, AppSpacing.sm,
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.md, topPadding + AppSpacing.md, AppSpacing.md, AppSpacing.sm,
       ),
       child: Row(
         children: [
@@ -157,27 +158,6 @@ class _SearchHeader extends StatelessWidget {
                     ),
                   ],
                 ),
-              ),
-            ),
-          ),
-          AppSpacing.hSm,
-          GestureDetector(
-            onTap: () => context.push('/notifications'),
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: isDark
-                    ? AppColors.secondaryBackgroundDark
-                    : AppColors.backgroundLight,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.notifications_outlined,
-                size: 24,
-                color: isDark
-                    ? AppColors.textPrimaryDark
-                    : AppColors.textPrimaryLight,
               ),
             ),
           ),
@@ -375,6 +355,7 @@ class _BoardsSection extends StatelessWidget {
               },
               child: Container(
                 width: 140,
+                clipBehavior: Clip.antiAlias,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: gradient,
@@ -383,26 +364,51 @@ class _BoardsSection extends StatelessWidget {
                   ),
                   borderRadius: AppRadius.allMedium,
                 ),
-                padding: AppSpacing.allSm,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Stack(
                   children: [
-                    Text(
-                      board.icon ?? '\u{1F4CC}',
-                      style: const TextStyle(fontSize: 28),
+                    // Centered emoji icon
+                    Center(
+                      child: Text(
+                        board.icon ?? '\u{1F4CC}',
+                        style: const TextStyle(fontSize: 36),
+                      ),
                     ),
-                    const Spacer(),
-                    Text(
-                      board.displayName(locale),
-                      style: AppTypography.subheadlineBold.copyWith(color: Colors.white),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    AppSpacing.vXs,
-                    Text(
-                      '${board.postCount} ${context.l10n.skillFeedDiscussionLabel}',
-                      style: AppTypography.caption.copyWith(
-                        color: Colors.white.withValues(alpha: 0.7),
+                    // Bottom overlay with name + count
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        padding: const EdgeInsets.fromLTRB(10, 24, 10, 10),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Colors.transparent, Colors.black.withValues(alpha: 0.6)],
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              board.displayName(locale),
+                              style: AppTypography.subheadlineBold.copyWith(
+                                color: Colors.white,
+                                fontSize: 13,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              '${board.postCount} ${context.l10n.skillFeedDiscussionLabel}',
+                              style: AppTypography.caption2.copyWith(
+                                color: Colors.white.withValues(alpha: 0.7),
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
@@ -439,61 +445,75 @@ class _LeaderboardsSection extends StatelessWidget {
           itemBuilder: (context, index) {
             final lb = leaderboards[index];
             final gradient = _gradientAt(index);
+            final hasCover = lb.coverImage != null && lb.coverImage!.isNotEmpty;
             return GestureDetector(
               onTap: () => context.push('/leaderboard/${lb.id}'),
               child: Container(
                 width: 200,
+                clipBehavior: Clip.antiAlias,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
+                  gradient: hasCover ? null : LinearGradient(
                     colors: gradient,
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: AppRadius.allMedium,
+                  image: hasCover ? DecorationImage(
+                    image: NetworkImage(lb.coverImage!),
+                    fit: BoxFit.cover,
+                  ) : null,
                 ),
-                padding: AppSpacing.allMd,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Text('\u{1F3C6}', style: TextStyle(fontSize: 24)),
-                        const Spacer(),
-                        if (lb.location.isNotEmpty)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.2),
-                              borderRadius: AppRadius.allTiny,
-                            ),
-                            child: Text(
-                              lb.location,
-                              style: AppTypography.caption2.copyWith(
-                                color: Colors.white,
-                                fontSize: 10,
+                child: Container(
+                  padding: AppSpacing.allMd,
+                  decoration: hasCover ? BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.black.withValues(alpha: 0.1), Colors.black.withValues(alpha: 0.7)],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
+                  ) : null,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Spacer(),
+                          if (lb.location.isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                borderRadius: AppRadius.allTiny,
+                              ),
+                              child: Text(
+                                lb.location,
+                                style: AppTypography.caption2.copyWith(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                ),
                               ),
                             ),
-                          ),
-                      ],
-                    ),
-                    const Spacer(),
-                    Text(
-                      lb.displayName(locale),
-                      style: AppTypography.subheadlineBold.copyWith(color: Colors.white),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    AppSpacing.vXs,
-                    Row(
-                      children: [
-                        _StatChip(icon: Icons.list, value: '${lb.itemCount}'),
-                        AppSpacing.hSm,
-                        _StatChip(icon: Icons.thumb_up_alt_outlined, value: '${lb.voteCount}'),
-                        AppSpacing.hSm,
-                        _StatChip(icon: Icons.visibility_outlined, value: '${lb.viewCount}'),
-                      ],
-                    ),
-                  ],
+                        ],
+                      ),
+                      const Spacer(),
+                      Text(
+                        lb.displayName(locale),
+                        style: AppTypography.subheadlineBold.copyWith(color: Colors.white),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      AppSpacing.vXs,
+                      Row(
+                        children: [
+                          _StatChip(icon: Icons.list, value: '${lb.itemCount}'),
+                          AppSpacing.hSm,
+                          _StatChip(icon: Icons.thumb_up_alt_outlined, value: '${lb.voteCount}'),
+                          AppSpacing.hSm,
+                          _StatChip(icon: Icons.visibility_outlined, value: '${lb.viewCount}'),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );
@@ -624,6 +644,8 @@ class _ExpertsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return _SectionContainer(
       title: '\u2728 ${context.l10n.discoverExperts}',
+      showViewAll: true,
+      onViewAll: () => context.push('/task-experts'),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
         child: Column(
@@ -754,10 +776,13 @@ class _ExpertRowState extends State<_ExpertRow> {
                       : null,
                 ),
                 child: _isLoading
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 14,
                         height: 14,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: _isFollowing ? AppColors.textSecondaryLight : Colors.white,
+                        ),
                       )
                     : Text(
                         _isFollowing
@@ -814,6 +839,8 @@ class _ActivitiesSection extends StatelessWidget {
     final locale = Localizations.localeOf(context);
     return _SectionContainer(
       title: '\u{1F3AA} ${context.l10n.discoverActivities}',
+      showViewAll: true,
+      onViewAll: () => context.push('/activities'),
       child: SizedBox(
         height: 180,
         child: ListView.separated(
@@ -824,68 +851,83 @@ class _ActivitiesSection extends StatelessWidget {
           itemBuilder: (context, index) {
             final activity = activities[index];
             final gradient = _gradientAt(index);
+            final hasImage = activity.firstImage != null;
             return GestureDetector(
               onTap: () => context.push('/activities/${activity.id}'),
               child: Container(
                 width: 220,
+                clipBehavior: Clip.antiAlias,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
+                  gradient: hasImage ? null : LinearGradient(
                     colors: gradient,
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: AppRadius.allMedium,
+                  image: hasImage ? DecorationImage(
+                    image: NetworkImage(activity.firstImage!),
+                    fit: BoxFit.cover,
+                  ) : null,
                 ),
-                padding: AppSpacing.allMd,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Emoji + title
-                    const Text('\u{1F389}', style: TextStyle(fontSize: 24)),
-                    AppSpacing.vSm,
-                    Text(
-                      activity.displayTitle(locale),
-                      style: AppTypography.subheadlineBold.copyWith(color: Colors.white),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                child: Container(
+                  padding: AppSpacing.allMd,
+                  decoration: hasImage ? BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.black.withValues(alpha: 0.1), Colors.black.withValues(alpha: 0.7)],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
                     ),
-                    const Spacer(),
-                    // Date
-                    if (activity.deadline != null) ...[
+                  ) : null,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (!hasImage)
+                        const Text('\u{1F389}', style: TextStyle(fontSize: 24)),
+                      if (!hasImage) AppSpacing.vSm,
                       Text(
-                        DateFormat('MM/dd').format(activity.deadline!),
-                        style: AppTypography.caption.copyWith(
-                          color: Colors.white.withValues(alpha: 0.7),
-                        ),
+                        activity.displayTitle(locale),
+                        style: AppTypography.subheadlineBold.copyWith(color: Colors.white),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      AppSpacing.vXs,
-                    ],
-                    // Bottom row: participants + price
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.people_outline,
-                              size: 14,
-                              color: Colors.white.withValues(alpha: 0.7),
-                            ),
-                            const SizedBox(width: 3),
-                            Text(
-                              '${activity.currentParticipants ?? 0}/${activity.maxParticipants}',
-                              style: AppTypography.caption2.copyWith(
-                                color: Colors.white.withValues(alpha: 0.7),
-                                fontSize: 10,
-                              ),
-                            ),
-                          ],
+                      const Spacer(),
+                      // Date
+                      if (activity.deadline != null) ...[
+                        Text(
+                          DateFormat('MM/dd').format(activity.deadline!),
+                          style: AppTypography.caption.copyWith(
+                            color: Colors.white.withValues(alpha: 0.7),
+                          ),
                         ),
-                        _PriceButton(activity: activity),
+                        AppSpacing.vXs,
                       ],
-                    ),
-                  ],
+                      // Bottom row: participants + price
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.people_outline,
+                                size: 14,
+                                color: Colors.white.withValues(alpha: 0.7),
+                              ),
+                              const SizedBox(width: 3),
+                              Text(
+                                '${activity.currentParticipants ?? 0}/${activity.maxParticipants}',
+                                style: AppTypography.caption2.copyWith(
+                                  color: Colors.white.withValues(alpha: 0.7),
+                                  fontSize: 10,
+                                ),
+                              ),
+                            ],
+                          ),
+                          _PriceButton(activity: activity),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );

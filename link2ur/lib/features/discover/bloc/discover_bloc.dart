@@ -140,7 +140,7 @@ class DiscoverBloc extends Bloc<DiscoverEvent, DiscoverState> {
   Future<List<Activity>> _loadActivities(String? city) async {
     try {
       final response = await _activityRepo.getActivities(
-        pageSize: 3, location: city, sortBy: 'view_count',
+        pageSize: 3, location: city, sortBy: 'view_count', status: 'open',
       );
       return response.activities;
     } catch (e) {
