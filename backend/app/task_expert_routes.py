@@ -191,7 +191,6 @@ async def get_experts_list(
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_async_db_dependency),
-    request: Request = None,
 ):
     """获取任务达人列表（公开接口，登录后返回 is_following）
 

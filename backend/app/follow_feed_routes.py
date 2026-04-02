@@ -335,12 +335,16 @@ async def _fetch_followed_flea_market(db: AsyncSession, following_ids: List[str]
 async def _fetch_followed_services(db: AsyncSession, following_ids: List[str], limit: int) -> list:
     """获取关注用户发布的达人服务（无时间限制，服务长期有效）"""
     from sqlalchemy import func as sa_func
+    from sqlalchemy.orm import aliased
 
     # Resolve owner: expert_id takes priority over user_id (avoids duplicate joins)
     owner_col = sa_func.coalesce(
         models.TaskExpertService.expert_id,
         models.TaskExpertService.user_id,
     ).label("owner_id")
+
+    # 优先使用 FeaturedTaskExpert 的名字和头像（达人展示名），回退到 User 表
+    FTE = aliased(models.FeaturedTaskExpert)
 
     query = (
         select(
@@ -357,6 +361,8 @@ async def _fetch_followed_services(db: AsyncSession, following_ids: List[str], l
             owner_col,
             models.User.name.label("user_name"),
             models.User.avatar.label("user_avatar"),
+            FTE.name.label("expert_name"),
+            FTE.avatar.label("expert_avatar"),
         )
         .join(
             models.User,
@@ -364,6 +370,13 @@ async def _fetch_followed_services(db: AsyncSession, following_ids: List[str], l
                 models.TaskExpertService.expert_id,
                 models.TaskExpertService.user_id,
             ) == models.User.id,
+        )
+        .outerjoin(
+            FTE,
+            sa_func.coalesce(
+                models.TaskExpertService.expert_id,
+                models.TaskExpertService.user_id,
+            ) == FTE.id,
         )
         .where(
             sa_func.coalesce(
@@ -383,6 +396,9 @@ async def _fetch_followed_services(db: AsyncSession, following_ids: List[str], l
     for row in rows:
         service_thumb = _first_image(row.service_images)
         owner_id = row.expert_id or row.user_id
+        # 达人展示名优先
+        display_name = row.expert_name or row.user_name
+        display_avatar = (row.expert_avatar if row.expert_avatar else None) or row.user_avatar
         items.append({
             "feed_type": "service",
             "id": f"service_{row.id}",
@@ -394,8 +410,8 @@ async def _fetch_followed_services(db: AsyncSession, following_ids: List[str], l
             "description_en": None,
             "images": [service_thumb] if service_thumb else None,
             "user_id": str(owner_id) if owner_id else None,
-            "user_name": row.user_name,
-            "user_avatar": row.user_avatar,
+            "user_name": display_name,
+            "user_avatar": display_avatar,
             "price": float(row.base_price) if row.base_price else None,
             "original_price": None,
             "discount_percentage": None,
@@ -421,9 +437,11 @@ async def _fetch_followed_services(db: AsyncSession, following_ids: List[str], l
 async def _fetch_followed_activities(db: AsyncSession, following_ids: List[str], limit: int) -> list:
     """获取关注用户创建的活动（无时间限制，open 状态未过期）"""
     from sqlalchemy import func, or_
+    from sqlalchemy.orm import aliased
     from app.utils.time_utils import get_utc_time
 
     now = get_utc_time()
+    FTE = aliased(models.FeaturedTaskExpert)
 
     participant_count = (
         select(func.count(models.OfficialActivityApplication.id))
@@ -459,8 +477,11 @@ async def _fetch_followed_activities(db: AsyncSession, following_ids: List[str],
             participant_count,
             models.User.name.label("user_name"),
             models.User.avatar.label("user_avatar"),
+            FTE.name.label("expert_name"),
+            FTE.avatar.label("expert_avatar"),
         )
         .join(models.User, models.Activity.expert_id == models.User.id)
+        .outerjoin(FTE, models.Activity.expert_id == FTE.id)
         .where(
             models.Activity.expert_id.in_(following_ids),
             models.Activity.status == "open",
@@ -486,6 +507,9 @@ async def _fetch_followed_activities(db: AsyncSession, following_ids: List[str],
         if original_price and price and original_price > 0 and price < original_price:
             discount_pct = round((1 - price / original_price) * 100)
 
+        # 达人展示名优先
+        display_name = row.expert_name or row.user_name
+        display_avatar = (row.expert_avatar if row.expert_avatar else None) or row.user_avatar
         items.append({
             "feed_type": "activity",
             "id": f"activity_{row.id}",
@@ -497,8 +521,8 @@ async def _fetch_followed_activities(db: AsyncSession, following_ids: List[str],
             "description_en": (row.description_en or "")[:100] if row.description_en else None,
             "images": [first_img] if first_img else None,
             "user_id": str(row.expert_id) if row.expert_id else None,
-            "user_name": row.user_name,
-            "user_avatar": row.user_avatar,
+            "user_name": display_name,
+            "user_avatar": display_avatar,
             "price": price,
             "original_price": original_price,
             "discount_percentage": discount_pct,

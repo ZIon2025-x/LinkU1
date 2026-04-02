@@ -149,7 +149,7 @@ class _DiscoverContent extends StatelessWidget {
                     SliverToBoxAdapter(child: _ExpertsSection(experts: state.experts)),
                   if (state.activities.isNotEmpty)
                     SliverToBoxAdapter(child: _ActivitiesSection(activities: state.activities)),
-                  SliverToBoxAdapter(child: SizedBox(height: MediaQuery.of(context).padding.bottom + 16)),
+                  SliverToBoxAdapter(child: SizedBox(height: MediaQuery.of(context).padding.bottom + AppSpacing.md)),
                 ],
               ),
             );
