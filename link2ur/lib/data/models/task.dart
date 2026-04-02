@@ -705,7 +705,7 @@ class CreateTaskRequest {
   final String? designatedTakerId;
   /// 是否灵活时间（无截止日期）
   final bool isFlexible;
-  /// 定价类型: fixed(固定价), hourly(时薪), negotiable(协商)
+  /// 定价类型: fixed(固定价), negotiable(协商)
   final String pricingType;
   /// 任务方式: online(线上), offline(线下), both(都可以)
   final String taskMode;

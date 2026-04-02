@@ -440,14 +440,6 @@ class _BrowseServiceCard extends StatelessWidget {
                                 fontWeight: FontWeight.w600,
                               ),
                         ),
-                        if (pricingType == 'hourly')
-                          Text(
-                            context.l10n.personalServicePerHour,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(color: AppColors.primary),
-                          ),
                         const Spacer(),
                         // Service type badge
                         Container(

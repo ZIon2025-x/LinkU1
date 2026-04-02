@@ -1929,8 +1929,8 @@ async def _get_expert_reviews(executor: ToolExecutor, input: dict) -> dict:
             },
             "pricing_type": {
                 "type": "string",
-                "enum": ["fixed", "hourly", "negotiable"],
-                "description": "定价方式: fixed=固定价, hourly=时薪, negotiable=协商定价。默认 fixed",
+                "enum": ["fixed", "negotiable"],
+                "description": "定价方式: fixed=固定价, negotiable=协商定价。默认 fixed",
             },
             "task_mode": {
                 "type": "string",
@@ -1980,7 +1980,7 @@ async def _prepare_task_draft(executor: ToolExecutor, input: dict) -> dict:
 
     # Pricing type
     pricing_type = (input.get("pricing_type") or "fixed").strip().lower()
-    if pricing_type not in ("fixed", "hourly", "negotiable"):
+    if pricing_type not in ("fixed", "negotiable"):
         pricing_type = "fixed"
 
     # Reward (optional when negotiable)
@@ -2041,7 +2041,7 @@ _VALID_SERVICE_CATEGORIES = [
     "handicraft", "gaming", "photography", "housekeeping",
 ]
 
-_VALID_PRICING_TYPES = ["fixed", "hourly", "negotiable"]
+_VALID_PRICING_TYPES = ["fixed", "negotiable"]
 _VALID_LOCATION_TYPES = ["online", "in_person", "both"]
 
 
@@ -2069,7 +2069,7 @@ _VALID_LOCATION_TYPES = ["online", "in_person", "both"]
             },
             "pricing_type": {
                 "type": "string",
-                "description": "定价方式: fixed（固定价格）, hourly（按小时）, negotiable（可协商）",
+                "description": "定价方式: fixed（固定价格）, negotiable（可协商）",
             },
             "base_price": {
                 "type": "number",

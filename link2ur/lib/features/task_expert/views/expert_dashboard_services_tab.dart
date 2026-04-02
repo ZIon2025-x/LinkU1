@@ -783,11 +783,6 @@ class _ServiceFormSheetState extends State<_ServiceFormSheet> {
                       icon: const Icon(Icons.attach_money, size: 18),
                     ),
                     ButtonSegment<String>(
-                      value: 'hourly',
-                      label: Text(context.l10n.personalServicePricingHourly),
-                      icon: const Icon(Icons.schedule, size: 18),
-                    ),
-                    ButtonSegment<String>(
                       value: 'negotiable',
                       label: Text(context.l10n.personalServicePricingNegotiable),
                       icon: const Icon(Icons.handshake_outlined, size: 18),
@@ -824,9 +819,6 @@ class _ServiceFormSheetState extends State<_ServiceFormSheet> {
                       ),
                     ),
                     prefixIconConstraints: const BoxConstraints(),
-                    suffixText: _pricingType == 'hourly'
-                        ? context.l10n.personalServicePerHour
-                        : null,
                   ),
                   keyboardType: const TextInputType.numberWithOptions(
                       decimal: true),

@@ -388,7 +388,7 @@ class TaskCreate(TaskBase):
     images: Optional[List[str]] = None  # 图片URL列表
     task_source: Optional[str] = "normal"  # normal / user_profile
     designated_taker_id: Optional[str] = None  # 指定接单人ID（来自用户资料页请求）
-    pricing_type: Optional[str] = "fixed"       # fixed / hourly / negotiable
+    pricing_type: Optional[str] = "fixed"       # fixed / negotiable
     task_mode: Optional[str] = "online"          # online / offline / both
     required_skills: Optional[List[str]] = []    # 技能标签列表
 
@@ -402,8 +402,8 @@ class TaskCreate(TaskBase):
     @field_validator('pricing_type')
     @classmethod
     def validate_pricing_type(cls, v):
-        if v and v not in ('fixed', 'hourly', 'negotiable'):
-            raise ValueError('pricing_type must be fixed, hourly, or negotiable')
+        if v and v not in ('fixed', 'negotiable'):
+            raise ValueError('pricing_type must be fixed or negotiable')
         return v or 'fixed'
 
     @field_validator('task_mode')
@@ -2363,7 +2363,7 @@ class PersonalServiceCreate(BaseModel):
     category: Optional[str] = Field(None, max_length=50)
     base_price: Optional[condecimal(ge=0, max_digits=12, decimal_places=2)] = None
     currency: str = Field(default="GBP", max_length=10)
-    pricing_type: str = Field(default="fixed", pattern="^(fixed|hourly|negotiable)$")
+    pricing_type: str = Field(default="fixed", pattern="^(fixed|negotiable)$")
     location_type: str = Field(default="online", pattern="^(online|in_person|both)$")
     location: Optional[str] = Field(None, max_length=100)
     latitude: Optional[condecimal(ge=-90, le=90, max_digits=10, decimal_places=8)] = None
@@ -2386,7 +2386,7 @@ class PersonalServiceUpdate(BaseModel):
     category: Optional[str] = Field(None, max_length=50)
     base_price: Optional[condecimal(ge=0, max_digits=12, decimal_places=2)] = None
     currency: Optional[str] = Field(None, max_length=10)
-    pricing_type: Optional[str] = Field(None, pattern="^(fixed|hourly|negotiable)$")
+    pricing_type: Optional[str] = Field(None, pattern="^(fixed|negotiable)$")
     location_type: Optional[str] = Field(None, pattern="^(online|in_person|both)$")
     location: Optional[str] = Field(None, max_length=100)
     latitude: Optional[condecimal(ge=-90, le=90, max_digits=10, decimal_places=8)] = None

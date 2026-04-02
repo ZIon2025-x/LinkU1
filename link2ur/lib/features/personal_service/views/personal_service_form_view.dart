@@ -474,11 +474,6 @@ class _FormContentState extends State<_FormContent> {
                               icon: const Icon(Icons.attach_money, size: 18),
                             ),
                             ButtonSegment<String>(
-                              value: 'hourly',
-                              label: Text(context.l10n.personalServicePricingHourly),
-                              icon: const Icon(Icons.schedule, size: 18),
-                            ),
-                            ButtonSegment<String>(
                               value: 'negotiable',
                               label: Text(context.l10n.personalServicePricingNegotiable),
                               icon: const Icon(Icons.handshake_outlined, size: 18),
@@ -507,7 +502,6 @@ class _FormContentState extends State<_FormContent> {
                           decoration: InputDecoration(
                             prefixText: '${Helpers.currencySymbolFor(_selectedCurrency)} ',
                             hintText: '0.00',
-                            suffixText: _pricingType == 'hourly' ? context.l10n.personalServicePerHour : null,
                             border: OutlineInputBorder(borderRadius: AppRadius.input),
                           ),
                           validator: (value) {

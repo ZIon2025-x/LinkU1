@@ -144,7 +144,7 @@ class PriceRow extends StatelessWidget {
   });
 
   final TextEditingController controller;
-  final String pricingType; // 'fixed', 'hourly', 'negotiable'
+  final String pricingType; // 'fixed', 'negotiable'
   final ValueChanged<String> onPricingTypeChanged;
   final String currency;
 
@@ -205,8 +205,6 @@ class PriceRow extends StatelessWidget {
           child: Row(
             children: [
               _buildTypeBtn(context, 'fixed', l10n.createTaskPricingFixed),
-              const SizedBox(width: 6),
-              _buildTypeBtn(context, 'hourly', l10n.createTaskPricingHourly),
               const SizedBox(width: 6),
               _buildTypeBtn(
                   context, 'negotiable', l10n.createTaskPricingNegotiable),

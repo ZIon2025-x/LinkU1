@@ -350,7 +350,7 @@ class TaskExpertService extends Equatable {
   final String description;
   final List<String>? images;
   final double basePrice;
-  final String pricingType; // 'fixed' | 'hourly' | 'negotiable'
+  final String pricingType; // 'fixed' | 'negotiable'
   final String locationType; // 'online' | 'in_person' | 'both'
   final String? location;
   final double? latitude;

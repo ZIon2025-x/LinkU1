@@ -1893,14 +1893,6 @@ class _TaskHeaderCard extends StatelessWidget {
             color: goldColor,
           ),
         ),
-        if (task.pricingType == 'hourly')
-          Text(
-            context.l10n.personalServicePerHour,
-            style: AppTypography.callout.copyWith(
-              color: goldColor.withValues(alpha: 0.7),
-              fontWeight: FontWeight.w500,
-            ),
-          ),
       ],
     );
   }

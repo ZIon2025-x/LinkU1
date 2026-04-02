@@ -254,7 +254,7 @@ class Task(Base):
     originating_user_id = Column(String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     # 任务来源：normal（普通任务）、expert_service（达人服务）、expert_activity（达人活动）、flea_market（跳蚤市场）
     task_source = Column(String(20), default="normal", nullable=False)
-    # 定价类型: fixed(固定价), hourly(时薪), negotiable(协商定价)
+    # 定价类型: fixed(固定价), negotiable(协商定价)
     pricing_type = Column(String(20), default='fixed', server_default='fixed')
     # 任务方式: online(线上), offline(线下), both(都可以)
     task_mode = Column(String(20), default='online', server_default='online')
@@ -1610,7 +1610,7 @@ class TaskExpertService(Base):
     expert_id = Column(String(8), ForeignKey("task_experts.id", ondelete="CASCADE"), nullable=True)
     service_type = Column(String(20), nullable=False, default="expert", server_default="expert")  # 'personal' | 'expert'
     user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=True)  # owner for personal services
-    pricing_type = Column(String(20), nullable=False, default="fixed", server_default="fixed")  # 'fixed' | 'hourly' | 'negotiable'
+    pricing_type = Column(String(20), nullable=False, default="fixed", server_default="fixed")  # 'fixed' | 'negotiable'
     location_type = Column(String(20), nullable=False, default="online", server_default="online")  # 'online' | 'in_person' | 'both'
     location = Column(String(255), nullable=True)  # city/address text for display
     latitude = Column(DECIMAL(10, 8), nullable=True)  # for distance calc

@@ -140,7 +140,6 @@ class TaskDraftCard extends StatelessWidget {
 
   static String _pricingLabel(AppLocalizations l10n, String type) {
     return switch (type) {
-      'hourly' => l10n.createTaskPricingHourly,
       'negotiable' => l10n.createTaskPricingNegotiable,
       _ => l10n.createTaskPricingFixed,
     };

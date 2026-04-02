@@ -36,9 +36,8 @@ class ServiceDraftCard extends StatelessWidget {
     if (pricingType == 'negotiable') {
       pricingDisplay = l10n.aiServiceDraftNegotiable;
     } else if (basePrice != null) {
-      final suffix = pricingType == 'hourly' ? '/${l10n.aiServiceDraftHour}' : '';
       pricingDisplay =
-          '$currencySymbol${(basePrice is num ? basePrice.toStringAsFixed(2) : basePrice)}$suffix';
+          '$currencySymbol${(basePrice is num ? basePrice.toStringAsFixed(2) : basePrice)}';
     }
 
     return Padding(

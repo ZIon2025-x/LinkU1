@@ -578,7 +578,6 @@ class _PricingTypeBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final label = switch (pricingType) {
       'fixed' => context.l10n.personalServicePricingFixed,
-      'hourly' => context.l10n.personalServicePricingHourly,
       'negotiable' => context.l10n.personalServicePricingNegotiable,
       _ => pricingType,
     };
