@@ -2001,7 +2001,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tabsHome => 'Home';
 
   @override
-  String get tabsCommunity => 'Discover';
+  String get tabsCommunity => 'Community';
 
   @override
   String get navDiscover => 'Discover';

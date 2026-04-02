@@ -1901,7 +1901,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get tabsHome => '首页';
 
   @override
-  String get tabsCommunity => '发现';
+  String get tabsCommunity => '社区';
 
   @override
   String get navDiscover => '发现';
@@ -13432,7 +13432,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get tabsHome => '首頁';
 
   @override
-  String get tabsCommunity => '發現';
+  String get tabsCommunity => '社區';
 
   @override
   String get navDiscover => '發現';

@@ -1276,37 +1276,24 @@ class _FollowButton extends StatefulWidget {
 }
 
 class _FollowButtonState extends State<_FollowButton> {
-  bool _isFollowing = false;
-  bool _isLoading = true; // 初始加载中
+  bool? _isFollowing; // null = use server state, non-null = user toggled
+  bool _isLoading = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _checkFollowStatus();
-  }
-
-  Future<void> _checkFollowStatus() async {
-    // 通过达人接口返回的 is_following 字段获取状态
-    // 这里简单用 getExperts 查单个达人太重，直接用 followUser 的幂等性：
-    // 先设为未关注，等 BLoC 加载达人详情后如果有 isFollowing 字段再更新
-    // 暂时默认未关注，后续可优化
-    if (mounted) setState(() => _isLoading = false);
-  }
-
-  Future<void> _onToggle() async {
+  Future<void> _onToggle(bool currentlyFollowing) async {
+    final newState = !currentlyFollowing;
     setState(() {
-      _isFollowing = !_isFollowing;
+      _isFollowing = newState;
       _isLoading = true;
     });
     try {
       final repo = context.read<FollowRepository>();
-      if (_isFollowing) {
+      if (newState) {
         await repo.followUser(widget.expertId);
       } else {
         await repo.unfollowUser(widget.expertId);
       }
     } catch (_) {
-      if (mounted) setState(() => _isFollowing = !_isFollowing);
+      if (mounted) setState(() => _isFollowing = currentlyFollowing);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -1314,30 +1301,37 @@ class _FollowButtonState extends State<_FollowButton> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 8),
-        child: SizedBox(
-          width: 20, height: 20,
-          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-        ),
-      );
-    }
-    return TextButton(
-      onPressed: _onToggle,
-      style: TextButton.styleFrom(
-        backgroundColor: _isFollowing
-            ? Colors.white.withValues(alpha: 0.2)
-            : AppColors.primary,
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        minimumSize: Size.zero,
-        shape: RoundedRectangleBorder(borderRadius: AppRadius.allPill),
-      ),
-      child: Text(
-        _isFollowing ? context.l10n.discoverFollowing : context.l10n.discoverFollow,
-        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-      ),
+    return BlocBuilder<TaskExpertBloc, TaskExpertState>(
+      buildWhen: (prev, curr) => prev.selectedExpert?.isFollowing != curr.selectedExpert?.isFollowing,
+      builder: (context, state) {
+        // User toggle overrides server state
+        final following = _isFollowing ?? state.selectedExpert?.isFollowing ?? false;
+        if (_isLoading) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 8),
+            child: SizedBox(
+              width: 20, height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+            ),
+          );
+        }
+        return TextButton(
+          onPressed: () => _onToggle(following),
+          style: TextButton.styleFrom(
+            backgroundColor: following
+                ? Colors.white.withValues(alpha: 0.2)
+                : AppColors.primary,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            minimumSize: Size.zero,
+            shape: RoundedRectangleBorder(borderRadius: AppRadius.allPill),
+          ),
+          child: Text(
+            following ? context.l10n.discoverFollowing : context.l10n.discoverFollow,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          ),
+        );
+      },
     );
   }
 }

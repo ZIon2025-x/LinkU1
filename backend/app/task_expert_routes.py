@@ -23,7 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 
 from app import models, schemas
-from app.deps import get_async_db_dependency, get_current_user_optional
+from app.deps import get_async_db_dependency
 from app.separate_auth_deps import get_current_admin
 from app.async_routers import get_current_user_optional
 from app.utils.time_utils import get_utc_time, format_iso_utc
@@ -190,8 +190,8 @@ async def get_experts_list(
     status_filter: Optional[str] = Query("active", alias="status"),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
-    current_user: Optional[models.User] = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_async_db_dependency),
+    request: Request = None,
 ):
     """获取任务达人列表（公开接口，登录后返回 is_following）
 
@@ -324,7 +324,7 @@ async def get_experts_list(
                 "response_time_zh": expert.response_time or "",
             }
             items.append(expert_dict)
-        return await _attach_is_following(items, current_user, db)
+        return await _attach_is_following(items, request, db)
 
     # 如果没有精选任务达人，从 TaskExpert 表获取
     query = select(models.TaskExpert).where(
@@ -438,12 +438,25 @@ async def get_experts_list(
         
         items.append(expert_dict)
 
-    return await _attach_is_following(items, current_user, db)
+    return await _attach_is_following(items, request, db)
 
 
-async def _attach_is_following(items: list, current_user, db) -> list:
+async def _attach_is_following(items: list, request, db) -> list:
     """批量查询当前用户是否关注了列表中的达人"""
-    if not current_user or not items:
+    if not items:
+        return items
+
+    # 可选鉴权：尝试从 request 获取当前用户 ID
+    current_user_id = None
+    try:
+        from app.secure_auth import validate_session
+        session = validate_session(request)
+        if session:
+            current_user_id = session.user_id
+    except Exception:
+        pass
+
+    if not current_user_id:
         for item in items:
             item['is_following'] = False
         return items
@@ -452,7 +465,7 @@ async def _attach_is_following(items: list, current_user, db) -> list:
     from sqlalchemy import select as sa_select
     result = await db.execute(
         sa_select(models.UserFollow.following_id).where(
-            models.UserFollow.follower_id == current_user.id,
+            models.UserFollow.follower_id == current_user_id,
             models.UserFollow.following_id.in_(expert_ids),
         )
     )
@@ -545,10 +558,12 @@ async def get_expert(
             "response_time_en": featured_expert.response_time_en or "",
             "response_time_zh": featured_expert.response_time or "",
         }
-    
+        result = await _attach_is_following([result_dict], request, db)
+        return result[0]
+
     # 如果没有 FeaturedTaskExpert，使用 TaskExpert 的基础数据
     if expert:
-        return {
+        result_dict = {
             "id": expert.id,
             "name": expert.expert_name or (user.name if user else ""),
             "avatar": expert.avatar or (user.avatar if user else "") or "",
@@ -570,7 +585,9 @@ async def get_expert(
             "created_at": format_iso_utc(expert.created_at),
             "updated_at": format_iso_utc(expert.updated_at) if expert.updated_at else None,
         }
-    
+        result = await _attach_is_following([result_dict], request, db)
+        return result[0]
+
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND, detail="任务达人不存在"
     )
