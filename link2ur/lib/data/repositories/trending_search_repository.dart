@@ -17,4 +17,16 @@ class TrendingSearchRepository {
     );
     return TrendingSearchResponse.fromJson(response.data!);
   }
+
+  /// 记录搜索行为（fire-and-forget，失败不影响搜索）
+  Future<void> logSearch(String query) async {
+    try {
+      await _apiService.post(
+        ApiEndpoints.trendingLogSearch,
+        data: {'query': query},
+      );
+    } catch (_) {
+      // 静默失败
+    }
+  }
 }

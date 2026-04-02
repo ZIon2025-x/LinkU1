@@ -11,6 +11,7 @@ import '../../../data/repositories/task_expert_repository.dart';
 import '../../../data/repositories/activity_repository.dart';
 import '../../../data/repositories/leaderboard_repository.dart';
 import '../../../data/repositories/personal_service_repository.dart';
+import '../../../data/repositories/trending_search_repository.dart';
 import '../../../data/services/storage_service.dart';
 import '../../../core/utils/logger.dart';
 
@@ -198,7 +199,9 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     required ActivityRepository activityRepository,
     required LeaderboardRepository leaderboardRepository,
     required PersonalServiceRepository personalServiceRepository,
+    TrendingSearchRepository? trendingSearchRepository,
   })  : _taskRepository = taskRepository,
+        _trendingSearchRepository = trendingSearchRepository,
         _forumRepository = forumRepository,
         _fleaMarketRepository = fleaMarketRepository,
         _taskExpertRepository = taskExpertRepository,
@@ -223,6 +226,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
   final ActivityRepository _activityRepository;
   final LeaderboardRepository _leaderboardRepository;
   final PersonalServiceRepository _personalServiceRepository;
+  final TrendingSearchRepository? _trendingSearchRepository;
 
   Future<void> _onSubmitted(
     SearchSubmitted event,
@@ -237,6 +241,9 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     ));
 
     try {
+      // 记录搜索行为（fire-and-forget，不阻塞搜索）
+      _trendingSearchRepository?.logSearch(query);
+
       // 并行搜索八个模块（含排行榜竞品、论坛板块）
       final locale = event.locale;
       final results = await Future.wait([

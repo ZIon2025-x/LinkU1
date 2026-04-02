@@ -51,6 +51,29 @@ async def get_trending_searches():
     return schemas.TrendingSearchResponse(items=items, updated_at=updated_at)
 
 
+# ==================== 搜索日志 ====================
+
+class _LogSearchBody(schemas.BaseModel):
+    query: str = schemas.Field(..., min_length=2, max_length=200)
+
+
+@router.post("/log-search", status_code=204)
+async def log_search_endpoint(
+    body: _LogSearchBody,
+    request: Request,
+    db: AsyncSession = Depends(get_async_db),
+):
+    """记录搜索行为（供前端统一调用，不依赖具体搜索模块）"""
+    from app.trending_search import log_search
+    from app.forum_routes import get_current_user_optional
+    user = await get_current_user_optional(request, db)
+    try:
+        await log_search(db=db, raw_query=body.query, user_id=user.id if user else None)
+        await db.commit()
+    except Exception:
+        pass  # 日志失败不影响用户
+
+
 # ==================== 管理员接口 ====================
 
 async def _get_admin(request: Request, db: AsyncSession):

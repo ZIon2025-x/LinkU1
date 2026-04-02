@@ -18,6 +18,7 @@ import '../../../data/repositories/task_expert_repository.dart';
 import '../../../data/repositories/activity_repository.dart';
 import '../../../data/repositories/leaderboard_repository.dart';
 import '../../../data/repositories/personal_service_repository.dart';
+import '../../../data/repositories/trending_search_repository.dart';
 import '../bloc/search_bloc.dart';
 
 /// 全局搜索视图
@@ -38,6 +39,7 @@ class SearchView extends StatelessWidget {
         activityRepository: context.read<ActivityRepository>(),
         leaderboardRepository: context.read<LeaderboardRepository>(),
         personalServiceRepository: context.read<PersonalServiceRepository>(),
+        trendingSearchRepository: context.read<TrendingSearchRepository>(),
       ),
       child: _SearchContent(initialQuery: initialQuery),
     );
