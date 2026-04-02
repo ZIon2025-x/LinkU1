@@ -1542,7 +1542,8 @@ class _TaskImageCarouselState extends State<_TaskImageCarousel> {
             },
             itemBuilder: (context, index) {
               final imageWidget = AsyncImageView(
-                imageUrl: images[index],
+                imageUrl: Helpers.getThumbnailUrl(images[index], size: 'large'),
+                fallbackUrl: Helpers.getImageUrl(images[index]),
                 width: double.infinity,
                 height: 300,
               );
@@ -3051,7 +3052,8 @@ class _TimelineItemTile extends StatelessWidget {
                                 );
                               },
                               child: AsyncImageView(
-                                imageUrl: url,
+                                imageUrl: Helpers.getThumbnailUrl(url, size: 'medium'),
+                                fallbackUrl: Helpers.getImageUrl(url),
                                 width: 80,
                                 height: 80,
                                 borderRadius:
