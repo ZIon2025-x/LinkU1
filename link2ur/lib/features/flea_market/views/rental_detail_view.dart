@@ -321,7 +321,8 @@ class _ItemInfoSection extends StatelessWidget {
             ClipRRect(
               borderRadius: BorderRadius.circular(AppRadius.small),
               child: AsyncImageView(
-                imageUrl: rental.itemImage!,
+                imageUrl: Helpers.getThumbnailUrl(rental.itemImage!, size: 'large'),
+                fallbackUrl: Helpers.getImageUrl(rental.itemImage!),
                 width: 64,
                 height: 64,
                 fit: BoxFit.cover,

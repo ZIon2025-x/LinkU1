@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/utils/auth_guard.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/utils/system_context_menu.dart';
 import '../../../core/design/app_spacing.dart';
@@ -1295,7 +1296,8 @@ class _ImageSectionState extends State<_ImageSection> {
                   );
                 },
                 child: AsyncImageView(
-                  imageUrl: widget.images[index],
+                  imageUrl: Helpers.getThumbnailUrl(widget.images[index], size: 'large'),
+                  fallbackUrl: Helpers.getImageUrl(widget.images[index]),
                   width: double.infinity,
                   height: double.infinity,
                 ),

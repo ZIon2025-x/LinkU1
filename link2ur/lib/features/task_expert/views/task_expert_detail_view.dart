@@ -11,6 +11,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/utils/haptic_feedback.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
@@ -617,7 +618,8 @@ class _ExpertActivityCard extends StatelessWidget {
           children: [
             if (activity.firstImage != null)
               AsyncImageView(
-                imageUrl: activity.firstImage!,
+                imageUrl: Helpers.getThumbnailUrl(activity.firstImage!, size: 'medium'),
+                fallbackUrl: Helpers.getImageUrl(activity.firstImage!),
                 width: double.infinity,
                 height: 160,
               )
@@ -1065,7 +1067,8 @@ class _ServiceCard extends StatelessWidget {
                 ClipRRect(
                   borderRadius: AppRadius.allMedium,
                   child: AsyncImageView(
-                    imageUrl: service.firstImage,
+                    imageUrl: Helpers.getThumbnailUrl(service.firstImage, size: 'medium'),
+                    fallbackUrl: Helpers.getImageUrl(service.firstImage),
                     width: 100,
                     height: 100,
                     errorWidget: _buildPlaceholder(isDark),

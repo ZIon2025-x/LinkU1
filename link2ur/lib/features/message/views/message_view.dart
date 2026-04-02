@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/haptic_feedback.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
@@ -695,7 +696,8 @@ class _TaskChatItem extends StatelessWidget {
         // 有图片: 显示第一张任务图片 (对齐iOS AsyncImageView)
         if (taskChat.images.isNotEmpty)
           AsyncImageView(
-            imageUrl: taskChat.images.first,
+            imageUrl: Helpers.getThumbnailUrl(taskChat.images.first, size: 'medium'),
+            fallbackUrl: Helpers.getImageUrl(taskChat.images.first),
             width: imageSize,
             height: imageSize,
             borderRadius: BorderRadius.circular(16),

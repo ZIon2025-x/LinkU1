@@ -181,7 +181,8 @@ class _RentalCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(AppRadius.small),
                 child: rental.itemImage != null && rental.itemImage!.isNotEmpty
                     ? AsyncImageView(
-                        imageUrl: rental.itemImage!,
+                        imageUrl: Helpers.getThumbnailUrl(rental.itemImage!, size: 'medium'),
+                        fallbackUrl: Helpers.getImageUrl(rental.itemImage!),
                         width: 72,
                         height: 72,
                         fit: BoxFit.cover,

@@ -725,7 +725,8 @@ class _TaskCard extends StatelessWidget {
                   Positioned.fill(
                     child: task.firstImage != null
                         ? AsyncImageView(
-                              imageUrl: task.firstImage!,
+                              imageUrl: Helpers.getThumbnailUrl(task.firstImage!, size: 'medium'),
+                              fallbackUrl: Helpers.getImageUrl(task.firstImage!),
                               width: 280,
                               height: 140,
                             )

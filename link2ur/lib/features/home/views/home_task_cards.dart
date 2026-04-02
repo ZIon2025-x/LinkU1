@@ -708,7 +708,8 @@ class _NearbyWaterfallCard extends StatelessWidget {
       children: [
         if (hasImage)
           AsyncImageView(
-            imageUrl: imageUrl!,
+            imageUrl: Helpers.getThumbnailUrl(imageUrl!, size: 'medium'),
+            fallbackUrl: Helpers.getImageUrl(imageUrl!),
             width: double.infinity,
             height: height,
           )
