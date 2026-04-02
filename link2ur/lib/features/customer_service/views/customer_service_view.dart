@@ -90,6 +90,7 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
   void _showRatingDialog() {
     int selectedRating = 5;
     final commentController = TextEditingController();
+    final bloc = context.read<CustomerServiceBloc>();
     final isIOS = !kIsWeb && Platform.isIOS;
 
     showDialog(
@@ -144,14 +145,13 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
                 CupertinoDialogAction(
                   isDefaultAction: true,
                   onPressed: () {
-                    context.read<CustomerServiceBloc>().add(
-                          CustomerServiceRateChat(
-                            rating: selectedRating,
-                            comment: commentController.text.trim().isNotEmpty
-                                ? commentController.text.trim()
-                                : null,
-                          ),
-                        );
+                    final comment = commentController.text.trim();
+                    bloc.add(
+                      CustomerServiceRateChat(
+                        rating: selectedRating,
+                        comment: comment.isNotEmpty ? comment : null,
+                      ),
+                    );
                     Navigator.pop(ctx);
                   },
                   child: Text(context.l10n.commonSubmit),
@@ -170,14 +170,13 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
               ),
               TextButton(
                 onPressed: () {
-                  context.read<CustomerServiceBloc>().add(
-                        CustomerServiceRateChat(
-                          rating: selectedRating,
-                          comment: commentController.text.trim().isNotEmpty
-                              ? commentController.text.trim()
-                              : null,
-                        ),
-                      );
+                  final comment = commentController.text.trim();
+                  bloc.add(
+                    CustomerServiceRateChat(
+                      rating: selectedRating,
+                      comment: comment.isNotEmpty ? comment : null,
+                    ),
+                  );
                   Navigator.pop(ctx);
                 },
                 child: Text(context.l10n.commonSubmit),
@@ -186,7 +185,7 @@ class _CustomerServiceContentState extends State<_CustomerServiceContent> {
           );
         },
       ),
-    );
+    ).whenComplete(() => commentController.dispose());
   }
 
   void _showChatHistory() {

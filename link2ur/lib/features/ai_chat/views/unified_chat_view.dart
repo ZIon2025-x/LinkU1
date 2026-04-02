@@ -318,6 +318,7 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
   void _showRatingDialog() {
     int selectedRating = 5;
     final commentController = TextEditingController();
+    final bloc = context.read<UnifiedChatBloc>();
     final isIOS = !kIsWeb && Platform.isIOS;
 
     showDialog(
@@ -372,14 +373,13 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
                 CupertinoDialogAction(
                   isDefaultAction: true,
                   onPressed: () {
-                    context.read<UnifiedChatBloc>().add(
-                          UnifiedChatCSRateChat(
-                            rating: selectedRating,
-                            comment: commentController.text.trim().isNotEmpty
-                                ? commentController.text.trim()
-                                : null,
-                          ),
-                        );
+                    final comment = commentController.text.trim();
+                    bloc.add(
+                      UnifiedChatCSRateChat(
+                        rating: selectedRating,
+                        comment: comment.isNotEmpty ? comment : null,
+                      ),
+                    );
                     Navigator.pop(ctx);
                   },
                   child: Text(context.l10n.commonSubmit),
@@ -398,14 +398,13 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
               ),
               TextButton(
                 onPressed: () {
-                  context.read<UnifiedChatBloc>().add(
-                        UnifiedChatCSRateChat(
-                          rating: selectedRating,
-                          comment: commentController.text.trim().isNotEmpty
-                              ? commentController.text.trim()
-                              : null,
-                        ),
-                      );
+                  final comment = commentController.text.trim();
+                  bloc.add(
+                    UnifiedChatCSRateChat(
+                      rating: selectedRating,
+                      comment: comment.isNotEmpty ? comment : null,
+                    ),
+                  );
                   Navigator.pop(ctx);
                 },
                 child: Text(context.l10n.commonSubmit),
@@ -414,7 +413,7 @@ class _UnifiedChatContentState extends State<_UnifiedChatContent> {
           );
         },
       ),
-    );
+    ).whenComplete(() => commentController.dispose());
   }
 
   @override

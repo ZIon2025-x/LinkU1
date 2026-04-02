@@ -58,7 +58,9 @@
       "Bash(ls -la /f/python_work/LinkU/link2ur/lib/l10n/app_localizations*.dart)",
       "Bash(2)",
       "Bash(for file:*)",
-      "Bash(while read:*)"
+      "Bash(while read:*)",
+      "Bash(do echo:*)",
+      "Read(//f/python_work/LinkU/**)"
     ]
   }
 }

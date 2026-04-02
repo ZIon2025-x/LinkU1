@@ -84,6 +84,7 @@ class _ExpertDashboardScheduleTabState
 
   void _showMarkClosedDialog(BuildContext context, DateTime day) {
     final dateStr = _toDateStr(day);
+    final bloc = context.read<ExpertDashboardBloc>();
     _reasonController.clear();
 
     showDialog<void>(
@@ -122,14 +123,12 @@ class _ExpertDashboardScheduleTabState
               onPressed: () {
                 final reason = _reasonController.text.trim();
                 Navigator.pop(dialogContext);
-                if (context.mounted) {
-                  context.read<ExpertDashboardBloc>().add(
-                        ExpertDashboardCreateClosedDate(
-                          dateStr,
-                          reason: reason.isEmpty ? null : reason,
-                        ),
-                      );
-                }
+                bloc.add(
+                  ExpertDashboardCreateClosedDate(
+                    dateStr,
+                    reason: reason.isEmpty ? null : reason,
+                  ),
+                );
                 _reasonController.clear();
               },
               child: Text(context.l10n.commonConfirm),

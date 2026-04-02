@@ -1727,12 +1727,14 @@ async def get_categories(
             university_code=getattr(category, 'university_code', None),
             skill_type=getattr(category, 'skill_type', None),
             post_count=category.post_count,
+            service_count=getattr(category, 'service_count', 0),
+            task_count=getattr(category, 'task_count', 0),
             last_post_at=category.last_post_at,
             created_at=category.created_at,
             updated_at=category.updated_at
         )
         category_list.append(category_out)
-    
+
     return {"categories": category_list}
 
 
@@ -2235,6 +2237,8 @@ async def get_category(
         university_code=getattr(category, 'university_code', None),
         skill_type=getattr(category, 'skill_type', None),
         post_count=category.post_count,
+        service_count=getattr(category, 'service_count', 0),
+        task_count=getattr(category, 'task_count', 0),
         last_post_at=category.last_post_at,
         created_at=category.created_at,
         updated_at=category.updated_at
@@ -6746,6 +6750,8 @@ async def get_admin_categories(
             university_code=getattr(category, 'university_code', None),
             skill_type=getattr(category, 'skill_type', None),
             post_count=category.post_count,
+            service_count=getattr(category, 'service_count', 0),
+            task_count=getattr(category, 'task_count', 0),
             last_post_at=category.last_post_at,
             created_at=category.created_at,
             updated_at=category.updated_at
