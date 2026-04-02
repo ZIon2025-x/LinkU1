@@ -3809,4 +3809,38 @@ class UserFollow(Base):
     )
 
 
+class SearchLog(Base):
+    """搜索日志 - 记录用户搜索行为"""
+    __tablename__ = "search_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    raw_query = Column(String(200), nullable=False)
+    tokens = Column(JSONB, nullable=False, default=list)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+
+
+class TrendingBlacklist(Base):
+    """热搜黑名单"""
+    __tablename__ = "trending_blacklist"
+
+    id = Column(Integer, primary_key=True, index=True)
+    keyword = Column(String(100), nullable=False, unique=True)
+    created_by = Column(Integer, ForeignKey("admin_users.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+
+
+class TrendingPinned(Base):
+    """热搜置顶词"""
+    __tablename__ = "trending_pinned"
+
+    id = Column(Integer, primary_key=True, index=True)
+    keyword = Column(String(200), nullable=False)
+    display_heat = Column(String(50), nullable=False, default="")
+    sort_order = Column(Integer, nullable=False, default=0)
+    created_by = Column(Integer, ForeignKey("admin_users.id", ondelete="SET NULL"), nullable=True)
+    expires_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+
+
 from app.wallet_models import WalletAccount, WalletTransaction  # noqa: F401, E402
