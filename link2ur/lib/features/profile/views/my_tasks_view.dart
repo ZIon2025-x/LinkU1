@@ -454,7 +454,8 @@ class _TaskCard extends StatelessWidget {
             ClipRRect(
               borderRadius: AppRadius.allMedium,
               child: AsyncImageView(
-                imageUrl: task.firstImage!,
+                imageUrl: Helpers.getThumbnailUrl(task.firstImage!, size: 'large'),
+                fallbackUrl: Helpers.getImageUrl(task.firstImage!),
                 width: double.infinity,
                 height: 200,
               ),

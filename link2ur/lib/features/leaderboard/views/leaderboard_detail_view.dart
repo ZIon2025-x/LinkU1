@@ -17,6 +17,7 @@ import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/utils/share_util.dart';
 import '../../../core/widgets/vote_comparison_bar.dart';
 import '../../../core/widgets/gradient_text.dart';
@@ -619,7 +620,8 @@ class _HeroSection extends StatelessWidget {
           Positioned.fill(
             child: leaderboard.coverImage != null
                 ? AsyncImageView(
-                    imageUrl: leaderboard.coverImage!,
+                    imageUrl: Helpers.getThumbnailUrl(leaderboard.coverImage!, size: 'medium'),
+                    fallbackUrl: Helpers.getImageUrl(leaderboard.coverImage!),
                     width: 400,
                     height: 240,
                   )
@@ -867,7 +869,8 @@ class _RankItemCard extends StatelessWidget {
                 ? ClipRRect(
                     borderRadius: AppRadius.allMedium,
                     child: AsyncImageView(
-                      imageUrl: item.firstImage!,
+                      imageUrl: Helpers.getThumbnailUrl(item.firstImage!, size: 'medium'),
+                      fallbackUrl: Helpers.getImageUrl(item.firstImage!),
                       width: 64,
                       height: 64,
                     ),

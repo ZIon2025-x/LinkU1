@@ -294,7 +294,8 @@ class _ImageGalleryState extends State<_ImageGallery> {
                   setState(() => _currentIndex = index),
               itemBuilder: (context, index) {
                 return AsyncImageView(
-                  imageUrl: images[index],
+                  imageUrl: Helpers.getThumbnailUrl(images[index], size: 'large'),
+                  fallbackUrl: Helpers.getImageUrl(images[index]),
                   width: double.infinity,
                   height: double.infinity,
                 );
@@ -1126,7 +1127,8 @@ class _RelatedActivityMiniCard extends StatelessWidget {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(10),
                   child: AsyncImageView(
-                    imageUrl: activity.firstImage!,
+                    imageUrl: Helpers.getThumbnailUrl(activity.firstImage!, size: 'medium'),
+                    fallbackUrl: Helpers.getImageUrl(activity.firstImage!),
                     width: 72,
                     height: 72,
                   ),

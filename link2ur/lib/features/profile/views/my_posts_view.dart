@@ -13,6 +13,7 @@ import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/animated_list_item.dart';
 import '../../../core/widgets/async_image_view.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../data/models/flea_market.dart';
 import '../../../data/repositories/flea_market_repository.dart';
@@ -356,7 +357,8 @@ class _FleaMarketItemCard extends StatelessWidget {
                   ),
                   child: item.hasImages
                       ? AsyncImageView(
-                          imageUrl: item.firstImage!,
+                          imageUrl: Helpers.getThumbnailUrl(item.firstImage!, size: 'large'),
+                          fallbackUrl: Helpers.getImageUrl(item.firstImage!),
                           width: double.infinity,
                           height: 200,
                         )

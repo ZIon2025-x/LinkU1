@@ -1095,7 +1095,8 @@ class _ActivityImageCarouselState extends State<_ActivityImageCarousel> {
                   );
                 },
                 child: AsyncImageView(
-                  imageUrl: images[index],
+                  imageUrl: Helpers.getThumbnailUrl(images[index], size: 'large'),
+                  fallbackUrl: Helpers.getImageUrl(images[index]),
                   width: double.infinity,
                   height: 300,
                 ),
