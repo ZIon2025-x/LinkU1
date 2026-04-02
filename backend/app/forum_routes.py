@@ -24,6 +24,7 @@ from app.performance_monitor import measure_api_performance
 from app.cache import cache_response
 from app.push_notification_service import send_push_notification_async_safe
 from app.content_filter.filter_service import check_content, create_review, create_mask_record
+from app.trending_search import log_search
 
 logger = logging.getLogger(__name__)
 
@@ -5363,8 +5364,18 @@ async def search_posts(
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """搜索帖子（使用 pg_trgm 相似度搜索，支持中文）"""
+    # 记录搜索日志（热搜榜数据源）
+    try:
+        await log_search(
+            db=db,
+            raw_query=q,
+            user_id=current_user.id if current_user else None,
+        )
+    except Exception:
+        pass  # 日志记录失败不影响搜索
+
     from app.config import Config
-    
+
     # 检查是否为管理员
     is_admin = False
     try:
