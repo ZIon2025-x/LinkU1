@@ -800,6 +800,16 @@ def init_scheduler():
         description="撤销超时未支付的申请批准（pending_payment 超过24小时）"
     )
     
+    # 热搜榜 - 每小时计算
+    from app.trending_search import compute_trending
+
+    scheduler.register_task(
+        'compute_trending_searches',
+        with_db(compute_trending),
+        interval_seconds=3600,
+        description="计算热搜榜",
+    )
+
     # ========== 推荐系统任务 ==========
     
     # 更新热门任务列表 - 每30分钟
