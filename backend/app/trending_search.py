@@ -261,47 +261,93 @@ def compute_trending(db: Session) -> List[Dict[str, Any]]:
             cluster["view_count"] = 0
             continue
 
-        # 构建 LIKE 条件: 标题包含任一 token
-        like_conditions_forum = []
-        like_conditions_task = []
+        # 构建 LIKE 条件: 标题/名称包含任一 token
+        like_forum = []
+        like_task = []
+        like_flea = []
+        like_service = []
+        like_leaderboard = []
         for token in tokens:
             safe_token = token.replace('%', r'\%').replace('_', r'\_')
             pattern = f"%{safe_token}%"
-            like_conditions_forum.append(
-                or_(
-                    models.ForumPost.title.ilike(pattern),
-                    models.ForumPost.title_zh.ilike(pattern),
-                    models.ForumPost.title_en.ilike(pattern),
-                )
+            like_forum.append(or_(
+                models.ForumPost.title.ilike(pattern),
+                models.ForumPost.title_zh.ilike(pattern),
+                models.ForumPost.title_en.ilike(pattern),
+            ))
+            like_task.append(or_(
+                models.Task.title.ilike(pattern),
+                models.Task.title_zh.ilike(pattern),
+                models.Task.title_en.ilike(pattern),
+            ))
+            like_flea.append(
+                models.FleaMarketItem.title.ilike(pattern),
             )
-            like_conditions_task.append(
-                or_(
-                    models.Task.title.ilike(pattern),
-                    models.Task.title_zh.ilike(pattern),
-                    models.Task.title_en.ilike(pattern),
-                )
-            )
+            like_service.append(or_(
+                models.TaskExpertService.service_name.ilike(pattern),
+                models.TaskExpertService.service_name_en.ilike(pattern),
+            ))
+            like_leaderboard.append(or_(
+                models.CustomLeaderboard.name.ilike(pattern),
+                models.CustomLeaderboard.name_en.ilike(pattern),
+                models.CustomLeaderboard.name_zh.ilike(pattern),
+            ))
 
-        # 单次查询同时取 ForumPost + Task 浏览量
+        # ForumPost 浏览量
         forum_views = db.execute(
             select(func.coalesce(func.sum(models.ForumPost.view_count), 0)).where(
                 and_(
                     models.ForumPost.is_deleted == False,  # noqa: E712
-                    or_(*like_conditions_forum),
+                    or_(*like_forum),
                 )
             )
         ).scalar() or 0
 
+        # Task 浏览量（排除已取消）
         task_views = db.execute(
             select(func.coalesce(func.sum(models.Task.view_count), 0)).where(
                 and_(
                     models.Task.status != "cancelled",
-                    or_(*like_conditions_task),
+                    or_(*like_task),
                 )
             )
         ).scalar() or 0
 
-        cluster["view_count"] = int(forum_views) + int(task_views)
+        # FleaMarketItem 浏览量（排除已删除/隐藏）
+        flea_views = db.execute(
+            select(func.coalesce(func.sum(models.FleaMarketItem.view_count), 0)).where(
+                and_(
+                    models.FleaMarketItem.status != "deleted",
+                    models.FleaMarketItem.is_visible == True,  # noqa: E712
+                    or_(*like_flea),
+                )
+            )
+        ).scalar() or 0
+
+        # TaskExpertService 浏览量（仅 active）
+        service_views = db.execute(
+            select(func.coalesce(func.sum(models.TaskExpertService.view_count), 0)).where(
+                and_(
+                    models.TaskExpertService.status == "active",
+                    or_(*like_service),
+                )
+            )
+        ).scalar() or 0
+
+        # CustomLeaderboard 浏览量（仅 active）
+        lb_views = db.execute(
+            select(func.coalesce(func.sum(models.CustomLeaderboard.view_count), 0)).where(
+                and_(
+                    models.CustomLeaderboard.status == "active",
+                    or_(*like_leaderboard),
+                )
+            )
+        ).scalar() or 0
+
+        cluster["view_count"] = (
+            int(forum_views) + int(task_views) + int(flea_views)
+            + int(service_views) + int(lb_views)
+        )
 
     # 超出 Top 15 的 cluster 不查浏览量，设为 0
     for cluster in clusters[TOP_N_VIEW_COUNT:]:
