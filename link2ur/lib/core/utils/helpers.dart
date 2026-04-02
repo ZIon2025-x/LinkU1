@@ -177,6 +177,36 @@ class Helpers {
     return '$base$path';
   }
 
+  /// 根据原图 URL 获取缩略图 URL。
+  ///
+  /// 缩略图命名规则：`{uuid}_medium.webp`、`{uuid}_large.webp` 等，
+  /// 与后端 `ThumbnailConfig.name` 一致。
+  ///
+  /// [size] 可选值: 'thumb'(150px), 'small'(320px), 'medium'(640px), 'large'(1280px)
+  ///
+  /// 对于无法识别的 URL 格式（旧图、本地路径等），直接返回原图 URL。
+  static String getThumbnailUrl(String? url, {String size = 'medium'}) {
+    if (url == null || url.isEmpty) return '';
+
+    // 先获取完整 URL
+    final fullUrl = getImageUrl(url);
+    if (fullUrl.isEmpty) return '';
+
+    // 只处理 CDN URL（包含 cdn.link2ur.com 或 .r2.dev）
+    // 旧的本地路径图片没有缩略图，直接返回原图
+    if (!fullUrl.contains('cdn.link2ur.com') && !fullUrl.contains('.r2.dev')) {
+      return fullUrl;
+    }
+
+    // 找到最后一个 '.' 分割文件名和扩展名
+    final lastDot = fullUrl.lastIndexOf('.');
+    if (lastDot < 0) return fullUrl;
+
+    final basePath = fullUrl.substring(0, lastDot);
+    // 缩略图格式固定为 .webp（与后端 ThumbnailConfig 一致）
+    return '${basePath}_$size.webp';
+  }
+
   /// 获取文件/资源完整 URL（下载、PDF 等）。
   static String getResourceUrl(String? path, {String? baseUrl}) {
     if (path == null || path.isEmpty) return '';
