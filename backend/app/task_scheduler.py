@@ -860,7 +860,7 @@ def init_scheduler():
 
     # 技能板块服务数/任务数统计 - 每小时
     def compute_skill_category_counts(db):
-        """统计每个 skill 板块对应的活跃服务数和任务数"""
+        """统计每个 skill 板块对应的活跃服务数和任务数（2 次聚合查询）"""
         from sqlalchemy import func as sa_func
 
         # 获取所有 skill 板块
@@ -872,23 +872,31 @@ def init_scheduler():
         if not skill_categories:
             return
 
+        skill_types = [cat.skill_type for cat in skill_categories]
+
+        # 1 次查询：按 category GROUP BY 统计活跃服务数
+        svc_rows = db.query(
+            models.TaskExpertService.category,
+            sa_func.count(models.TaskExpertService.id),
+        ).filter(
+            models.TaskExpertService.category.in_(skill_types),
+            models.TaskExpertService.status == 'active',
+        ).group_by(models.TaskExpertService.category).all()
+        svc_map = {row[0]: row[1] for row in svc_rows}
+
+        # 1 次查询：按 task_type GROUP BY 统计活跃任务数
+        tsk_rows = db.query(
+            models.Task.task_type,
+            sa_func.count(models.Task.id),
+        ).filter(
+            models.Task.task_type.in_(skill_types),
+            models.Task.status == 'open',
+        ).group_by(models.Task.task_type).all()
+        tsk_map = {row[0]: row[1] for row in tsk_rows}
+
         for cat in skill_categories:
-            st = cat.skill_type
-
-            # 统计活跃服务数（status=active 的服务）
-            svc_count = db.query(sa_func.count(models.TaskExpertService.id)).filter(
-                models.TaskExpertService.category == st,
-                models.TaskExpertService.status == 'active',
-            ).scalar() or 0
-
-            # 统计活跃任务数（open 状态的任务）
-            tsk_count = db.query(sa_func.count(models.Task.id)).filter(
-                models.Task.task_type == st,
-                models.Task.status == 'open',
-            ).scalar() or 0
-
-            cat.service_count = svc_count
-            cat.task_count = tsk_count
+            cat.service_count = svc_map.get(cat.skill_type, 0)
+            cat.task_count = tsk_map.get(cat.skill_type, 0)
 
         db.commit()
         logger.info(f"技能板块统计完成: {len(skill_categories)} 个板块已更新")

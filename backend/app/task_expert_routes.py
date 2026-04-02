@@ -200,7 +200,7 @@ async def get_experts_list(
     sort=random 时随机排序，offset 被忽略（随机排序无法稳定分页）。
     """
     import json
-    from app.utils.city_filter_utils import CITY_NAME_MAPPING, CITY_NAME_REVERSE_MAPPING
+    from app.utils.city_filter_utils import build_city_location_filter
     
     # 获取用户语言偏好（从 Accept-Language 请求头）
     user_lang = _get_language_from_request(request)
@@ -216,15 +216,10 @@ async def get_experts_list(
         )
     
     if location:
-        # 支持中英文城市名匹配
-        location_variants = {location}
-        if location in CITY_NAME_MAPPING:
-            location_variants.add(CITY_NAME_MAPPING[location])
-        elif location in CITY_NAME_REVERSE_MAPPING:
-            location_variants.add(CITY_NAME_REVERSE_MAPPING[location])
-        featured_query = featured_query.where(
-            models.FeaturedTaskExpert.location.in_(location_variants)
-        )
+        # 使用 build_city_location_filter 进行大小写不敏感的城市匹配
+        location_filter = build_city_location_filter(models.FeaturedTaskExpert.location, location.strip())
+        if location_filter is not None:
+            featured_query = featured_query.where(location_filter)
 
     if keyword and keyword.strip():
         kw = f"%{keyword.strip()}%"
