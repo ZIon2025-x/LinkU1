@@ -10,6 +10,7 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/widgets/decorative_background.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../data/models/activity.dart';
 import '../../../data/models/forum.dart';
@@ -110,7 +111,10 @@ class _DiscoverContent extends StatelessWidget {
           ),
         ),
       ),
-      body: BlocBuilder<DiscoverBloc, DiscoverState>(
+      body: Stack(
+        children: [
+          const RepaintBoundary(child: DecorativeBackground()),
+          BlocBuilder<DiscoverBloc, DiscoverState>(
       builder: (context, state) {
         switch (state.status) {
           case DiscoverStatus.initial:
@@ -150,6 +154,8 @@ class _DiscoverContent extends StatelessWidget {
         }
       },
     ),
+        ],
+      ),
     );
   }
 }

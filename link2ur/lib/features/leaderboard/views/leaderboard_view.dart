@@ -15,6 +15,7 @@ import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
+import '../../../core/widgets/decorative_background.dart';
 import '../../../data/models/leaderboard.dart';
 import '../../../data/repositories/leaderboard_repository.dart';
 import '../bloc/leaderboard_bloc.dart';
@@ -72,10 +73,23 @@ class _LeaderboardContentState extends State<_LeaderboardContent> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.backgroundFor(Theme.of(context).brightness),
       appBar: AppBar(
         title: Text(context.l10n.leaderboardLeaderboard),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add_circle_outline),
+            tooltip: context.l10n.leaderboardApply,
+            onPressed: () => requireAuth(context, () {
+              context.push('/leaderboard/apply');
+            }),
+          ),
+        ],
       ),
-      body: BlocBuilder<LeaderboardBloc, LeaderboardState>(
+      body: Stack(
+        children: [
+          const RepaintBoundary(child: DecorativeBackground()),
+          BlocBuilder<LeaderboardBloc, LeaderboardState>(
         buildWhen: (prev, curr) =>
             prev.status != curr.status ||
             prev.leaderboards != curr.leaderboards ||
@@ -140,6 +154,8 @@ class _LeaderboardContentState extends State<_LeaderboardContent> {
             ),
           );
         },
+      ),
+        ],
       ),
     );
   }
@@ -300,35 +316,6 @@ class _LeaderboardCard extends StatelessWidget {
                     .withValues(alpha: 0.3),
               ),
             ),
-
-            // 创建者信息
-            if (leaderboard.applicant != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(
-                  children: [
-                    AvatarView(
-                      imageUrl: leaderboard.applicant!.avatar,
-                      name: leaderboard.applicant!.name,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        leaderboard.applicant!.name,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isDark
-                              ? AppColors.textSecondaryDark
-                              : AppColors.textSecondaryLight,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
 
             // 统计行 (对标iOS CompactStatItem: items + votes + views)
             Row(

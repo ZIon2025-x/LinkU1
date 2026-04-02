@@ -101,14 +101,22 @@ class DiscoverBloc extends Bloc<DiscoverEvent, DiscoverState> {
         return 0;
       });
 
+      final experts = results[3] as List<TaskExpert>;
+      // 从后端返回的 is_following 初始化关注状态
+      final followedIds = experts
+          .where((e) => e.isFollowing)
+          .map((e) => e.id)
+          .toSet();
+
       emit(state.copyWith(
         status: DiscoverStatus.loaded,
         trendingSearches: results[0] as List<TrendingSearchItem>,
         boards: boards.take(5).toList(),
         leaderboards: leaderboards.take(4).toList(),
         skillCategories: skillCats.take(6).toList(),
-        experts: results[3] as List<TaskExpert>,
+        experts: experts,
         activities: results[4] as List<Activity>,
+        followedExpertIds: followedIds,
         userCity: city,
       ));
     } catch (e) {

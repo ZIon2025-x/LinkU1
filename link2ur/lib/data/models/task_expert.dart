@@ -45,6 +45,7 @@ class TaskExpert extends Equatable {
     this.createdAt,
     this.isOfficial = false,
     this.officialBadge,
+    this.isFollowing = false,
   });
 
   final String id;
@@ -86,6 +87,7 @@ class TaskExpert extends Equatable {
   // 官方账号字段
   final bool isOfficial;
   final String? officialBadge;
+  final bool isFollowing;
 
   // ==================== 双语 display 访问器 ====================
   // 模式：zh → en → 默认字段（与 ForumCategory.displayName 一致）
@@ -178,6 +180,7 @@ class TaskExpert extends Equatable {
       // 官方账号字段
       isOfficial: parseBool(json['is_official']),
       officialBadge: json['official_badge'] as String?,
+      isFollowing: parseBool(json['is_following']),
     );
   }
 
@@ -298,7 +301,7 @@ class TaskExpert extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, expertName, rating, status, bio, specialties, isOfficial, officialBadge];
+  List<Object?> get props => [id, expertName, rating, status, bio, specialties, isOfficial, officialBadge, isFollowing];
 }
 
 /// 任务达人服务模型

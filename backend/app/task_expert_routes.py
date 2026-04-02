@@ -23,7 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 
 from app import models, schemas
-from app.deps import get_async_db_dependency
+from app.deps import get_async_db_dependency, get_current_user_optional
 from app.separate_auth_deps import get_current_admin
 from app.async_routers import get_current_user_optional
 from app.utils.time_utils import get_utc_time, format_iso_utc
@@ -190,10 +190,11 @@ async def get_experts_list(
     status_filter: Optional[str] = Query("active", alias="status"),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
+    current_user: Optional[models.User] = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    """获取任务达人列表（公开接口）
-    
+    """获取任务达人列表（公开接口，登录后返回 is_following）
+
     优先从 FeaturedTaskExpert 表获取精选任务达人，如果没有则从 TaskExpert 表获取。
     根据 Accept-Language 请求头自动返回对应语言的双语字段。
     支持 category 和 location 筛选。location 支持中英文城市名（如 London / 伦敦）。
@@ -323,8 +324,8 @@ async def get_experts_list(
                 "response_time_zh": expert.response_time or "",
             }
             items.append(expert_dict)
-        return items
-    
+        return await _attach_is_following(items, current_user, db)
+
     # 如果没有精选任务达人，从 TaskExpert 表获取
     query = select(models.TaskExpert).where(
         models.TaskExpert.status == status_filter
@@ -436,7 +437,28 @@ async def get_experts_list(
             expert_dict["response_time_zh"] = featured_expert.response_time or ""
         
         items.append(expert_dict)
-    
+
+    return await _attach_is_following(items, current_user, db)
+
+
+async def _attach_is_following(items: list, current_user, db) -> list:
+    """批量查询当前用户是否关注了列表中的达人"""
+    if not current_user or not items:
+        for item in items:
+            item['is_following'] = False
+        return items
+
+    expert_ids = [item['id'] for item in items]
+    from sqlalchemy import select as sa_select
+    result = await db.execute(
+        sa_select(models.UserFollow.following_id).where(
+            models.UserFollow.follower_id == current_user.id,
+            models.UserFollow.following_id.in_(expert_ids),
+        )
+    )
+    following_ids = set(result.scalars().all())
+    for item in items:
+        item['is_following'] = item['id'] in following_ids
     return items
 
 

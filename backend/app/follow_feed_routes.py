@@ -333,11 +333,8 @@ async def _fetch_followed_flea_market(db: AsyncSession, following_ids: List[str]
 
 
 async def _fetch_followed_services(db: AsyncSession, following_ids: List[str], limit: int) -> list:
-    """获取关注用户发布的达人服务（30天内）"""
+    """获取关注用户发布的达人服务（无时间限制，服务长期有效）"""
     from sqlalchemy import func as sa_func
-    from app.utils.time_utils import get_utc_time
-
-    cutoff = get_utc_time() - timedelta(days=30)
 
     # Resolve owner: expert_id takes priority over user_id (avoids duplicate joins)
     owner_col = sa_func.coalesce(
@@ -374,7 +371,6 @@ async def _fetch_followed_services(db: AsyncSession, following_ids: List[str], l
                 models.TaskExpertService.user_id,
             ).in_(following_ids),
             models.TaskExpertService.status == "active",
-            models.TaskExpertService.created_at >= cutoff,
         )
         .order_by(desc(models.TaskExpertService.created_at))
         .limit(limit)
@@ -423,11 +419,10 @@ async def _fetch_followed_services(db: AsyncSession, following_ids: List[str], l
 
 
 async def _fetch_followed_activities(db: AsyncSession, following_ids: List[str], limit: int) -> list:
-    """获取关注用户创建的活动（30天内，open 状态）"""
+    """获取关注用户创建的活动（无时间限制，open 状态未过期）"""
     from sqlalchemy import func, or_
     from app.utils.time_utils import get_utc_time
 
-    cutoff = get_utc_time() - timedelta(days=30)
     now = get_utc_time()
 
     participant_count = (
@@ -470,7 +465,6 @@ async def _fetch_followed_activities(db: AsyncSession, following_ids: List[str],
             models.Activity.expert_id.in_(following_ids),
             models.Activity.status == "open",
             models.Activity.visibility == "public",
-            models.Activity.created_at >= cutoff,
             or_(
                 models.Activity.deadline > now,
                 models.Activity.deadline.is_(None),
@@ -823,10 +817,7 @@ async def _fetch_followed_service_reviews(
 async def _fetch_followed_rankings(
     db: AsyncSession, following_ids: List[str], limit: int
 ) -> list:
-    """获取关注用户申请的排行榜（30天内，含 TOP 3）"""
-    from app.utils.time_utils import get_utc_time
-
-    cutoff = get_utc_time() - timedelta(days=30)
+    """获取关注用户申请的排行榜（无时间限制，含 TOP 3）"""
 
     query = (
         select(
@@ -847,7 +838,6 @@ async def _fetch_followed_rankings(
         .where(
             models.CustomLeaderboard.applicant_id.in_(following_ids),
             models.CustomLeaderboard.status == "active",
-            models.CustomLeaderboard.created_at >= cutoff,
         )
         .order_by(desc(models.CustomLeaderboard.created_at))
         .limit(limit)

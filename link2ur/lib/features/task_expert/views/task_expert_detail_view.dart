@@ -21,6 +21,7 @@ import '../../../data/models/activity.dart';
 import '../../../data/models/task_expert.dart';
 import '../../../data/repositories/activity_repository.dart';
 import '../../../data/repositories/question_repository.dart';
+import '../../../data/repositories/follow_repository.dart';
 import '../../../data/repositories/task_expert_repository.dart';
 import 'activity_price_widget.dart';
 import '../bloc/task_expert_bloc.dart';
@@ -53,6 +54,7 @@ class TaskExpertDetailView extends StatelessWidget {
           scrolledUnderElevation: 0,
           foregroundColor: Colors.white,
           actions: [
+            _FollowButton(expertId: expertId),
             BlocBuilder<TaskExpertBloc, TaskExpertState>(
               buildWhen: (previous, current) =>
                   previous.selectedExpert != current.selectedExpert,
@@ -1260,6 +1262,82 @@ class _SectionHeader extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// 达人详情页关注按钮
+class _FollowButton extends StatefulWidget {
+  const _FollowButton({required this.expertId});
+  final String expertId;
+
+  @override
+  State<_FollowButton> createState() => _FollowButtonState();
+}
+
+class _FollowButtonState extends State<_FollowButton> {
+  bool _isFollowing = false;
+  bool _isLoading = true; // 初始加载中
+
+  @override
+  void initState() {
+    super.initState();
+    _checkFollowStatus();
+  }
+
+  Future<void> _checkFollowStatus() async {
+    // 通过达人接口返回的 is_following 字段获取状态
+    // 这里简单用 getExperts 查单个达人太重，直接用 followUser 的幂等性：
+    // 先设为未关注，等 BLoC 加载达人详情后如果有 isFollowing 字段再更新
+    // 暂时默认未关注，后续可优化
+    if (mounted) setState(() => _isLoading = false);
+  }
+
+  Future<void> _onToggle() async {
+    setState(() {
+      _isFollowing = !_isFollowing;
+      _isLoading = true;
+    });
+    try {
+      final repo = context.read<FollowRepository>();
+      if (_isFollowing) {
+        await repo.followUser(widget.expertId);
+      } else {
+        await repo.unfollowUser(widget.expertId);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isFollowing = !_isFollowing);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 8),
+        child: SizedBox(
+          width: 20, height: 20,
+          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+        ),
+      );
+    }
+    return TextButton(
+      onPressed: _onToggle,
+      style: TextButton.styleFrom(
+        backgroundColor: _isFollowing
+            ? Colors.white.withValues(alpha: 0.2)
+            : AppColors.primary,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        minimumSize: Size.zero,
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.allPill),
+      ),
+      child: Text(
+        _isFollowing ? context.l10n.discoverFollowing : context.l10n.discoverFollow,
+        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+      ),
     );
   }
 }

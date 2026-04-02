@@ -862,6 +862,7 @@ def init_scheduler():
     def compute_skill_category_counts(db):
         """统计每个 skill 板块对应的活跃服务数和任务数（2 次聚合查询）"""
         from sqlalchemy import func as sa_func
+        from app import models
 
         # 获取所有 skill 板块
         skill_categories = db.query(models.ForumCategory).filter(
