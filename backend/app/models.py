@@ -773,7 +773,7 @@ class TaskApplication(Base):
     id = Column(Integer, primary_key=True, index=True)
     task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
     applicant_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    status = Column(String(20), default="pending")  # pending, chatting, approved, rejected
+    status = Column(String(20), default="pending")  # consulting, negotiating, price_agreed, pending, chatting, approved, rejected, cancelled
     created_at = Column(DateTime(timezone=True), default=get_utc_time)
     message = Column(Text, nullable=True)  # 申请时的留言
     negotiated_price = Column(DECIMAL(12, 2), nullable=True)  # 议价价格
@@ -1752,7 +1752,7 @@ class ServiceApplication(Base):
     negotiated_price = Column(DECIMAL(12, 2), nullable=True)  # 用户提出的议价价格
     expert_counter_price = Column(DECIMAL(12, 2), nullable=True)  # 任务达人提出的再次议价价格
     currency = Column(String(3), default="GBP")
-    status = Column(String(20), default="pending")  # pending, negotiating, price_agreed, approved, rejected, cancelled
+    status = Column(String(20), default="pending")  # consulting, negotiating, price_agreed, pending, approved, rejected, cancelled
     final_price = Column(DECIMAL(12, 2), nullable=True)
     task_id = Column(Integer, ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True)
     deadline = Column(DateTime(timezone=True), nullable=True)  # 任务截至日期（如果is_flexible为False）
