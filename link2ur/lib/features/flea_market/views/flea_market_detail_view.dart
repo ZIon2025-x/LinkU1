@@ -1551,7 +1551,8 @@ class _FleaMarketPurchaseSheetState extends State<_FleaMarketPurchaseSheet> {
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(12),
                                 child: AsyncImageView(
-                                  imageUrl: widget.item.firstImage!,
+                                  imageUrl: Helpers.getThumbnailUrl(widget.item.firstImage!, size: 'medium'),
+                                  fallbackUrl: Helpers.getImageUrl(widget.item.firstImage!),
                                   width: 90,
                                   height: 90,
                                 ),
@@ -1925,13 +1926,15 @@ class _ImageGalleryState extends State<_ImageGallery> {
                       ? Hero(
                           tag: 'flea_market_image_${widget.item.id}',
                           child: AsyncImageView(
-                            imageUrl: images[index],
+                            imageUrl: Helpers.getThumbnailUrl(images[index], size: 'large'),
+                            fallbackUrl: Helpers.getImageUrl(images[index]),
                             width: double.infinity,
                             height: double.infinity,
                           ),
                         )
                       : AsyncImageView(
-                          imageUrl: images[index],
+                          imageUrl: Helpers.getThumbnailUrl(images[index], size: 'large'),
+                          fallbackUrl: Helpers.getImageUrl(images[index]),
                           width: double.infinity,
                           height: double.infinity,
                         ),

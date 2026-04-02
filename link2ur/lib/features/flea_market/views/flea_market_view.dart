@@ -483,7 +483,8 @@ class _FleaMarketItemCard extends StatelessWidget {
                             ? Hero(
                                 tag: 'flea_market_image_${item.id}',
                                 child: AsyncImageView(
-                                  imageUrl: item.firstImage!,
+                                  imageUrl: Helpers.getThumbnailUrl(item.firstImage!, size: 'medium'),
+                                  fallbackUrl: Helpers.getImageUrl(item.firstImage!),
                                   width: cardWidth,
                                   height: imageHeight,
                                 ),

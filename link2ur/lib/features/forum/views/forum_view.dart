@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/utils/auth_guard.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/utils/l10n_extension.dart';
@@ -1188,7 +1189,8 @@ class _LeaderboardCard extends StatelessWidget {
                 leaderboard.coverImage != null &&
                         leaderboard.coverImage!.isNotEmpty
                     ? AsyncImageView(
-                        imageUrl: leaderboard.coverImage,
+                        imageUrl: Helpers.getThumbnailUrl(leaderboard.coverImage, size: 'medium'),
+                        fallbackUrl: Helpers.getImageUrl(leaderboard.coverImage),
                         width: 90,
                         height: 90,
                         borderRadius: BorderRadius.circular(14),
