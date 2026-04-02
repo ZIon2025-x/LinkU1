@@ -4,6 +4,7 @@ import '../../../data/models/banner.dart' as app;
 import '../../../data/models/task.dart';
 import '../../../data/models/activity.dart';
 import '../../../data/models/discovery_feed.dart';
+import '../../../data/models/trending_search.dart';
 import '../../../data/repositories/ticker_repository.dart';
 
 /// 首页状态
@@ -45,6 +46,7 @@ class HomeState extends Equatable {
     this.nearbyServices = const [],
     this.nearbyRadius = 5,
     this.isLoadingNearby = false,
+    this.trendingSearches = const [],
   });
 
   final HomeStatus status;
@@ -105,6 +107,9 @@ class HomeState extends Equatable {
   /// 附近数据加载中（切换半径时不清空已有数据）
   final bool isLoadingNearby;
 
+  /// 热搜榜数据
+  final List<TrendingSearchItem> trendingSearches;
+
   bool get isLoading => status == HomeStatus.loading;
   bool get isLoaded => status == HomeStatus.loaded;
   bool get hasError => status == HomeStatus.error;
@@ -146,6 +151,7 @@ class HomeState extends Equatable {
     List<Map<String, dynamic>>? nearbyServices,
     int? nearbyRadius,
     bool? isLoadingNearby,
+    List<TrendingSearchItem>? trendingSearches,
   }) {
     return HomeState(
       status: status ?? this.status,
@@ -184,6 +190,7 @@ class HomeState extends Equatable {
       nearbyServices: nearbyServices ?? this.nearbyServices,
       nearbyRadius: nearbyRadius ?? this.nearbyRadius,
       isLoadingNearby: isLoadingNearby ?? this.isLoadingNearby,
+      trendingSearches: trendingSearches ?? this.trendingSearches,
     );
   }
 
@@ -223,5 +230,6 @@ class HomeState extends Equatable {
         nearbyServices,
         nearbyRadius,
         isLoadingNearby,
+        trendingSearches,
       ];
 }

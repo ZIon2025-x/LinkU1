@@ -13,6 +13,7 @@ import '../../../data/repositories/discovery_repository.dart';
 import '../../../data/repositories/follow_repository.dart';
 import '../../../data/repositories/ticker_repository.dart';
 import '../../../data/repositories/personal_service_repository.dart';
+import '../../../data/repositories/trending_search_repository.dart';
 import '../../../core/utils/cache_manager.dart';
 import '../../../core/utils/logger.dart';
 import 'home_event.dart';
@@ -28,6 +29,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     FollowRepository? followRepository,
     TickerRepository? tickerRepository,
     PersonalServiceRepository? personalServiceRepository,
+    TrendingSearchRepository? trendingSearchRepository,
   })  : _taskRepository = taskRepository,
         _activityRepository = activityRepository,
         _commonRepository = commonRepository,
@@ -35,6 +37,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         _followRepository = followRepository,
         _tickerRepository = tickerRepository,
         _personalServiceRepository = personalServiceRepository,
+        _trendingSearchRepository = trendingSearchRepository,
         super(const HomeState()) {
     on<HomeLoadRequested>(_onLoadRequested);
     on<HomeRefreshRequested>(_onRefreshRequested);
@@ -50,6 +53,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     on<HomeLocationCityUpdated>(_onLocationCityUpdated);
     on<HomeLoadNearbyServices>(_onLoadNearbyServices);
     on<HomeChangeNearbyRadius>(_onChangeNearbyRadius);
+    on<HomeLoadTrendingSearches>(_onLoadTrendingSearches);
   }
 
   final TaskRepository _taskRepository;
@@ -59,6 +63,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   final FollowRepository? _followRepository;
   final TickerRepository? _tickerRepository;
   final PersonalServiceRepository? _personalServiceRepository;
+  final TrendingSearchRepository? _trendingSearchRepository;
 
   /// 当前用户（由外部设置，用于权限过滤）
   User? currentUser;
@@ -139,6 +144,9 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         isLoadingOpenActivities: false,
         banners: bannerList,
       ));
+
+      // 非阻塞加载热搜
+      add(const HomeLoadTrendingSearches());
     } catch (e) {
       AppLogger.error('Failed to load home data', e);
       emit(state.copyWith(isLoadingOpenActivities: false));
@@ -216,6 +224,9 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         isLoadingOpenActivities: false,
         banners: bannerList,
       ));
+
+      // 刷新时也重新加载热搜
+      add(const HomeLoadTrendingSearches());
     } catch (e) {
       AppLogger.error('Failed to refresh home data', e);
       // 刷新失败：通知 UI 层显示 Toast，保持现有数据不变
@@ -539,5 +550,21 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     Emitter<HomeState> emit,
   ) {
     emit(state.copyWith(nearbyRadius: event.radius));
+  }
+
+  // ==================== Trending Searches ====================
+
+  Future<void> _onLoadTrendingSearches(
+    HomeLoadTrendingSearches event,
+    Emitter<HomeState> emit,
+  ) async {
+    if (_trendingSearchRepository == null) return;
+    try {
+      final response = await _trendingSearchRepository.getTrendingSearches();
+      emit(state.copyWith(trendingSearches: response.items));
+    } catch (e) {
+      // 热搜加载失败不影响主页其他内容
+      AppLogger.info('Trending searches load failed, will be hidden');
+    }
   }
 }

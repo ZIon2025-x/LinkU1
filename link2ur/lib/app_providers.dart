@@ -25,6 +25,7 @@ import 'data/repositories/user_profile_repository.dart';
 import 'data/repositories/personal_service_repository.dart';
 import 'data/repositories/follow_repository.dart';
 import 'data/repositories/ticker_repository.dart';
+import 'data/repositories/trending_search_repository.dart';
 import 'data/repositories/question_repository.dart';
 import 'data/services/ai_chat_service.dart';
 import 'data/services/api_service.dart';
@@ -136,6 +137,9 @@ class AppProviders extends StatelessWidget {
         ),
         RepositoryProvider<TickerRepository>(
           create: (_) => TickerRepository(apiService: apiService),
+        ),
+        RepositoryProvider<TrendingSearchRepository>(
+          create: (_) => TrendingSearchRepository(apiService: apiService),
         ),
       ],
       child: MultiBlocProvider(

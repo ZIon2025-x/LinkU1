@@ -22,6 +22,7 @@ import '../../data/repositories/message_repository.dart';
 import '../../data/repositories/task_repository.dart';
 import '../../data/repositories/personal_service_repository.dart';
 import '../../data/repositories/ticker_repository.dart';
+import '../../data/repositories/trending_search_repository.dart';
 import '../auth/bloc/auth_bloc.dart';
 import '../forum/bloc/forum_bloc.dart';
 import '../home/bloc/home_bloc.dart';
@@ -125,6 +126,7 @@ class _MainTabViewState extends State<MainTabView>
         followRepository: context.read<FollowRepository>(),
         tickerRepository: context.read<TickerRepository>(),
         personalServiceRepository: context.read<PersonalServiceRepository>(),
+        trendingSearchRepository: context.read<TrendingSearchRepository>(),
       )
         ..currentUser = authState.isAuthenticated ? authState.user : null
         ..add(const HomeLoadRequested())

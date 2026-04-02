@@ -141,3 +141,8 @@ class HomeChangeNearbyRadius extends HomeEvent {
   @override
   List<Object?> get props => [radius];
 }
+
+/// 加载热搜榜
+class HomeLoadTrendingSearches extends HomeEvent {
+  const HomeLoadTrendingSearches();
+}
