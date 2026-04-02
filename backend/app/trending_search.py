@@ -267,6 +267,8 @@ def compute_trending(db: Session) -> List[Dict[str, Any]]:
         like_flea = []
         like_service = []
         like_leaderboard = []
+        like_activity = []
+        like_category = []
         for token in tokens:
             safe_token = token.replace('%', r'\%').replace('_', r'\_')
             pattern = f"%{safe_token}%"
@@ -291,6 +293,16 @@ def compute_trending(db: Session) -> List[Dict[str, Any]]:
                 models.CustomLeaderboard.name.ilike(pattern),
                 models.CustomLeaderboard.name_en.ilike(pattern),
                 models.CustomLeaderboard.name_zh.ilike(pattern),
+            ))
+            like_activity.append(or_(
+                models.Activity.title.ilike(pattern),
+                models.Activity.title_zh.ilike(pattern),
+                models.Activity.title_en.ilike(pattern),
+            ))
+            like_category.append(or_(
+                models.ForumCategory.name.ilike(pattern),
+                models.ForumCategory.name_en.ilike(pattern),
+                models.ForumCategory.name_zh.ilike(pattern),
             ))
 
         # ForumPost 浏览量
@@ -344,9 +356,30 @@ def compute_trending(db: Session) -> List[Dict[str, Any]]:
             )
         ).scalar() or 0
 
+        # Activity 浏览量（排除已取消）
+        activity_views = db.execute(
+            select(func.coalesce(func.sum(models.Activity.view_count), 0)).where(
+                and_(
+                    models.Activity.status != "cancelled",
+                    or_(*like_activity),
+                )
+            )
+        ).scalar() or 0
+
+        # ForumCategory 浏览量（仅可见）
+        category_views = db.execute(
+            select(func.coalesce(func.sum(models.ForumCategory.view_count), 0)).where(
+                and_(
+                    models.ForumCategory.is_visible == True,  # noqa: E712
+                    or_(*like_category),
+                )
+            )
+        ).scalar() or 0
+
         cluster["view_count"] = (
             int(forum_views) + int(task_views) + int(flea_views)
             + int(service_views) + int(lb_views)
+            + int(activity_views) + int(category_views)
         )
 
     # 超出 Top 15 的 cluster 不查浏览量，设为 0

@@ -1534,6 +1534,21 @@ def get_activity_detail(
                 else:
                     user_task_has_negotiation = False
     
+    # 记录浏览量（Redis 累加，定时同步到 DB）
+    try:
+        from app.redis_cache import get_redis_client
+        _rc = get_redis_client()
+        if _rc:
+            _rk = f"activity:view_count:{activity_id}"
+            _rc.incr(_rk)
+            _rc.expire(_rk, 7 * 24 * 3600)
+        else:
+            activity.view_count += 1
+            db.flush()
+    except Exception:
+        activity.view_count += 1
+        db.flush()
+
     # 使用 from_orm_with_participants 方法创建输出对象
     from app import schemas
     activity_out = schemas.ActivityOut.from_orm_with_participants(

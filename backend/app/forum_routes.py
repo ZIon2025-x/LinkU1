@@ -2188,6 +2188,21 @@ async def get_category(
     if not is_admin:
         await assert_forum_visible(current_user, category_id, db, raise_exception=True)
     
+    # 记录浏览量（Redis 累加，定时同步到 DB）
+    try:
+        from app.redis_cache import get_redis_client
+        _rc = get_redis_client()
+        if _rc:
+            _rk = f"forum:category:view_count:{category_id}"
+            _rc.incr(_rk)
+            _rc.expire(_rk, 7 * 24 * 3600)
+        else:
+            category.view_count += 1
+            await db.flush()
+    except Exception:
+        category.view_count += 1
+        await db.flush()
+
     # 显式创建 ForumCategoryOut 对象，确保包含双语字段
     return schemas.ForumCategoryOut(
         id=category.id,
