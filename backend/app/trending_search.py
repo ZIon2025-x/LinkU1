@@ -73,7 +73,8 @@ async def log_search(
         await db.flush()
     except Exception as e:
         logger.warning(f"Failed to log search: {e}")
-        await db.rollback()
+        # 不 rollback — 避免回滚调用方的事务；expunge 失败的对象即可
+        db.expunge(log_entry)
 
 
 # ---------------------------------------------------------------------------
@@ -278,10 +279,13 @@ def compute_trending(db: Session) -> List[Dict[str, Any]]:
             )
         ).scalar() or 0
 
-        # Task 浏览量
+        # Task 浏览量（排除已取消的任务）
         task_views = db.execute(
             select(func.coalesce(func.sum(models.Task.view_count), 0)).where(
-                or_(*like_conditions_task)
+                and_(
+                    models.Task.status != "cancelled",
+                    or_(*like_conditions_task),
+                )
             )
         ).scalar() or 0
 
