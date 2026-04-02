@@ -23,6 +23,7 @@ class AsyncImageView extends StatelessWidget {
     this.memCacheWidth,
     this.memCacheHeight,
     this.semanticLabel,
+    this.fallbackUrl,
   });
 
   final String? imageUrl;
@@ -45,6 +46,10 @@ class AsyncImageView extends StatelessWidget {
 
   /// Semantic label for accessibility.
   final String? semanticLabel;
+
+  /// 备用图片 URL。当 [imageUrl] 加载失败时（如缩略图 404），自动尝试加载此 URL。
+  /// 典型用法：imageUrl 传缩略图，fallbackUrl 传原图，兼容没有缩略图的旧图片。
+  final String? fallbackUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -89,7 +94,24 @@ class AsyncImageView extends StatelessWidget {
       memCacheWidth: effectiveMemCacheWidth,
       memCacheHeight: effectiveMemCacheHeight,
       placeholder: (context, url) => placeholder ?? _buildPlaceholder(context),
-      errorWidget: (context, url, error) => errorWidget ?? _buildError(context),
+      errorWidget: (context, failedUrl, error) {
+        // 如果有 fallbackUrl 且与主 URL 不同，尝试加载 fallback
+        final fb = fallbackUrl;
+        if (fb != null && fb.isNotEmpty && fb != url) {
+          return CachedNetworkImage(
+            imageUrl: fb,
+            width: width,
+            height: height,
+            fit: fit,
+            fadeInDuration: fadeInDuration,
+            memCacheWidth: effectiveMemCacheWidth,
+            memCacheHeight: effectiveMemCacheHeight,
+            placeholder: (context, url) => placeholder ?? _buildPlaceholder(context),
+            errorWidget: (context, url, error) => errorWidget ?? _buildError(context),
+          );
+        }
+        return errorWidget ?? _buildError(context);
+      },
     );
 
     if (borderRadius != null) {
