@@ -70,8 +70,9 @@ async def log_search_endpoint(
     try:
         await log_search(db=db, raw_query=body.query, user_id=user.id if user else None)
         await db.commit()
-    except Exception:
-        pass  # 日志失败不影响用户
+    except Exception as e:
+        logger.debug(f"log-search failed: {e}")
+        await db.rollback()
 
 
 # ==================== 管理员接口 ====================
