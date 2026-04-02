@@ -23,7 +23,9 @@ import '../bloc/search_bloc.dart';
 /// 全局搜索视图
 /// 参考iOS SearchViewModel
 class SearchView extends StatelessWidget {
-  const SearchView({super.key});
+  const SearchView({super.key, this.initialQuery});
+
+  final String? initialQuery;
 
   @override
   Widget build(BuildContext context) {
@@ -37,13 +39,15 @@ class SearchView extends StatelessWidget {
         leaderboardRepository: context.read<LeaderboardRepository>(),
         personalServiceRepository: context.read<PersonalServiceRepository>(),
       ),
-      child: const _SearchContent(),
+      child: _SearchContent(initialQuery: initialQuery),
     );
   }
 }
 
 class _SearchContent extends StatefulWidget {
-  const _SearchContent();
+  const _SearchContent({this.initialQuery});
+
+  final String? initialQuery;
 
   @override
   State<_SearchContent> createState() => _SearchContentState();
@@ -57,8 +61,15 @@ class _SearchContentState extends State<_SearchContent> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _focusNode.requestFocus();
-      context.read<SearchBloc>().add(const LoadRecentSearches());
+      if (widget.initialQuery != null && widget.initialQuery!.isNotEmpty) {
+        _searchController.text = widget.initialQuery!;
+        context.read<SearchBloc>().add(
+          SearchSubmitted(widget.initialQuery!, Localizations.localeOf(context)),
+        );
+      } else {
+        _focusNode.requestFocus();
+        context.read<SearchBloc>().add(const LoadRecentSearches());
+      }
     });
   }
 

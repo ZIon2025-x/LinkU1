@@ -1443,7 +1443,7 @@ class _TrendingItem extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
 
     return InkWell(
-      onTap: () => context.push('/search'),
+      onTap: () => context.push(Uri(path: '/search', queryParameters: {'q': item.keyword}).toString()),
       borderRadius: BorderRadius.circular(AppRadius.small),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),

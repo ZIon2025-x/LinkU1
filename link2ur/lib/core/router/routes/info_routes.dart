@@ -52,6 +52,8 @@ List<RouteBase> get infoRoutes => [
       GoRoute(
         path: AppRoutes.search,
         name: 'search',
-        builder: (context, state) => const SearchView(),
+        builder: (context, state) => SearchView(
+          initialQuery: state.uri.queryParameters['q'],
+        ),
       ),
     ];

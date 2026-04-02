@@ -112,6 +112,7 @@ def cluster_queries(
         if used[i]:
             continue
         # 新建聚类，以当前项为代表
+        center_tokens = set(item["tokens"])  # 固定聚类中心 tokens
         cluster = {
             "keyword": item["raw_query"],
             "tokens": set(item["tokens"]),
@@ -122,7 +123,8 @@ def cluster_queries(
         for j in range(i + 1, len(sorted_data)):
             if used[j]:
                 continue
-            sim = jaccard_similarity(cluster["tokens"], sorted_data[j]["tokens"])
+            # 只与聚类中心比较，防止 token 集合膨胀导致无关合并
+            sim = jaccard_similarity(center_tokens, sorted_data[j]["tokens"])
             if sim > threshold:
                 cluster["weighted_count"] += sorted_data[j]["weighted_count"]
                 cluster["tokens"] |= sorted_data[j]["tokens"]
@@ -233,7 +235,7 @@ def compute_trending(db: Session) -> List[Dict[str, Any]]:
 
     clusters = [
         c for c in clusters
-        if c["keyword"].lower() not in blacklist
+        if not any(bw in c["keyword"].lower() for bw in blacklist)
     ]
 
     # ------------------------------------------------------------------
@@ -249,7 +251,8 @@ def compute_trending(db: Session) -> List[Dict[str, Any]]:
         like_conditions_forum = []
         like_conditions_task = []
         for token in tokens:
-            pattern = f"%{token}%"
+            safe_token = token.replace('%', r'\%').replace('_', r'\_')
+            pattern = f"%{safe_token}%"
             like_conditions_forum.append(
                 or_(
                     models.ForumPost.title.ilike(pattern),
@@ -336,7 +339,7 @@ def compute_trending(db: Session) -> List[Dict[str, Any]]:
             "keyword": p.keyword,
             "view_count": 0,
             "heat_display": p.display_heat or "",
-            "tag": "pinned",
+            "tag": None,
             "weighted_count": 0,
             "is_pinned": True,
         }
@@ -372,6 +375,10 @@ def compute_trending(db: Session) -> List[Dict[str, Any]]:
         })
         seen_keywords.add(cluster["keyword"].lower())
 
+    # 添加排名号
+    for i, item in enumerate(results):
+        item["rank"] = i + 1
+
     # 写入 Redis
     try:
         from app.redis_pool import get_client
@@ -380,7 +387,7 @@ def compute_trending(db: Session) -> List[Dict[str, Any]]:
         # 保存旧 current → previous
         current_json = redis_client.get("trending:current")
         if current_json:
-            redis_client.set("trending:previous", current_json, ex=7200)  # 2h TTL
+            redis_client.set("trending:previous", current_json, ex=14400)  # 4h TTL
 
         # 写入新 current (TTL 70 min)
         redis_client.set(
@@ -388,6 +395,8 @@ def compute_trending(db: Session) -> List[Dict[str, Any]]:
             json.dumps(results, ensure_ascii=False),
             ex=4200,
         )
+        # 记录更新时间
+        redis_client.set("trending:updated_at", now.isoformat(), ex=4200)
         logger.info(f"compute_trending: 已更新热搜榜, {len(results)} 条")
     except Exception as e:
         logger.warning(f"compute_trending: 写入 Redis 失败: {e}")
