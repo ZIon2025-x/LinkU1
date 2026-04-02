@@ -710,6 +710,30 @@ def init_scheduler():
         description="同步论坛板块浏览数（Redis → DB）"
     )
 
+    # 同步跳蚤市场浏览数（Redis → DB）- 每5分钟
+    scheduler.register_task(
+        'sync_flea_market_view_counts',
+        lambda: sync_redis_view_counts(
+            "flea_market:view_count:*",
+            __import__('app.models', fromlist=['FleaMarketItem']).FleaMarketItem,
+            "跳蚤市场"
+        ),
+        interval_seconds=300,
+        description="同步跳蚤市场浏览数（Redis → DB）"
+    )
+
+    # 同步达人服务浏览数（Redis → DB）- 每5分钟
+    scheduler.register_task(
+        'sync_service_view_counts',
+        lambda: sync_redis_view_counts(
+            "service:view_count:*",
+            __import__('app.models', fromlist=['TaskExpertService']).TaskExpertService,
+            "达人服务"
+        ),
+        interval_seconds=300,
+        description="同步达人服务浏览数（Redis → DB）"
+    )
+
     # 检查过期优惠券 - 每15分钟
     scheduler.register_task(
         'check_expired_coupons',
@@ -838,40 +862,36 @@ def init_scheduler():
     def compute_skill_category_counts(db):
         """统计每个 skill 板块对应的活跃服务数和任务数"""
         from sqlalchemy import func as sa_func
-        try:
-            # 获取所有 skill 板块
-            skill_categories = db.query(models.ForumCategory).filter(
-                models.ForumCategory.skill_type.isnot(None),
-                models.ForumCategory.skill_type != '',
-            ).all()
 
-            if not skill_categories:
-                return
+        # 获取所有 skill 板块
+        skill_categories = db.query(models.ForumCategory).filter(
+            models.ForumCategory.skill_type.isnot(None),
+            models.ForumCategory.skill_type != '',
+        ).all()
 
-            for cat in skill_categories:
-                st = cat.skill_type
+        if not skill_categories:
+            return
 
-                # 统计活跃服务数（status=active 的服务）
-                svc_count = db.query(sa_func.count(models.TaskExpertService.id)).filter(
-                    models.TaskExpertService.category == st,
-                    models.TaskExpertService.status == 'active',
-                ).scalar() or 0
+        for cat in skill_categories:
+            st = cat.skill_type
 
-                # 统计活跃任务数（open 状态的任务）
-                tsk_count = db.query(sa_func.count(models.Task.id)).filter(
-                    models.Task.task_type == st,
-                    models.Task.status == 'open',
-                ).scalar() or 0
+            # 统计活跃服务数（status=active 的服务）
+            svc_count = db.query(sa_func.count(models.TaskExpertService.id)).filter(
+                models.TaskExpertService.category == st,
+                models.TaskExpertService.status == 'active',
+            ).scalar() or 0
 
-                cat.service_count = svc_count
-                cat.task_count = tsk_count
+            # 统计活跃任务数（open 状态的任务）
+            tsk_count = db.query(sa_func.count(models.Task.id)).filter(
+                models.Task.task_type == st,
+                models.Task.status == 'open',
+            ).scalar() or 0
 
-            db.commit()
-            logger.info(f"技能板块统计完成: {len(skill_categories)} 个板块已更新")
-        except Exception as e:
-            db.rollback()
-            logger.error(f"技能板块统计失败: {e}", exc_info=True)
-            raise
+            cat.service_count = svc_count
+            cat.task_count = tsk_count
+
+        db.commit()
+        logger.info(f"技能板块统计完成: {len(skill_categories)} 个板块已更新")
 
     scheduler.register_task(
         'compute_skill_category_counts',

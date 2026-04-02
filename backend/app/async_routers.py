@@ -488,19 +488,28 @@ async def get_task_by_id(
             task.poster_id = None
         return schemas.TaskOut.from_orm(task, full_location_access=True)
 
-    # view_count 移到后台任务，不阻塞响应
-    def _bg_view_count(t_id: int):
-        from app.database import SessionLocal
-        bg_db = SessionLocal()
-        try:
-            bg_db.execute(update(models.Task).where(models.Task.id == t_id).values(view_count=models.Task.view_count + 1))
-            bg_db.commit()
-        except Exception as e:
-            logger.warning("增加任务浏览量失败: %s", e)
-            bg_db.rollback()
-        finally:
-            bg_db.close()
-    background_tasks.add_task(_bg_view_count, task_id)
+    # view_count: Redis 累加，由 sync_task_view_counts 定时同步到 DB
+    try:
+        from app.redis_cache import get_redis_client
+        _rc = get_redis_client()
+        if _rc:
+            _rk = f"task:view_count:{task_id}"
+            _rc.incr(_rk)
+            _rc.expire(_rk, 7 * 24 * 3600)
+        else:
+            def _bg_view_count(t_id: int):
+                from app.database import SessionLocal
+                bg_db = SessionLocal()
+                try:
+                    bg_db.execute(update(models.Task).where(models.Task.id == t_id).values(view_count=models.Task.view_count + 1))
+                    bg_db.commit()
+                except Exception:
+                    bg_db.rollback()
+                finally:
+                    bg_db.close()
+            background_tasks.add_task(_bg_view_count, task_id)
+    except Exception:
+        pass
     
     # 按请求语言确保标题/描述有对应语种（缺则翻译并写入任务表列）；游客用 query lang 或 Accept-Language
     from app.utils.task_activity_display import (

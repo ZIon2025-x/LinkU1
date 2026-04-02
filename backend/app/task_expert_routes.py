@@ -197,6 +197,7 @@ async def get_experts_list(
     优先从 FeaturedTaskExpert 表获取精选任务达人，如果没有则从 TaskExpert 表获取。
     根据 Accept-Language 请求头自动返回对应语言的双语字段。
     支持 category 和 location 筛选。location 支持中英文城市名（如 London / 伦敦）。
+    sort=random 时随机排序，offset 被忽略（随机排序无法稳定分页）。
     """
     import json
     from app.utils.city_filter_utils import CITY_NAME_MAPPING, CITY_NAME_REVERSE_MAPPING
@@ -2327,15 +2328,24 @@ async def get_service_detail(
             status_code=status.HTTP_404_NOT_FOUND, detail="服务不存在或未上架"
         )
     
-    # 增加浏览次数（仅已登录用户，避免 bot/爬虫虚增）
-    if current_user:
-        await db.execute(
-            update(models.TaskExpertService)
-            .where(models.TaskExpertService.id == service_id)
-            .values(view_count=models.TaskExpertService.view_count + 1)
-        )
-        await db.commit()
-        await db.refresh(service)
+    # 增加浏览次数（Redis 累加，定时同步到 DB）
+    try:
+        from app.redis_cache import get_redis_client
+        _rc = get_redis_client()
+        if _rc:
+            _rk = f"service:view_count:{service_id}"
+            _rc.incr(_rk)
+            _rc.expire(_rk, 7 * 24 * 3600)
+        else:
+            await db.execute(
+                update(models.TaskExpertService)
+                .where(models.TaskExpertService.id == service_id)
+                .values(view_count=models.TaskExpertService.view_count + 1)
+            )
+            await db.commit()
+            await db.refresh(service)
+    except Exception:
+        pass
 
     
     # 查询用户申请的服务申请信息（如果用户已登录）

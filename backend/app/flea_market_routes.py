@@ -579,19 +579,27 @@ async def get_flea_market_item(
                 detail="商品已被删除"
             )
 
-        # 自动增加浏览量
-        await db.execute(
-            update(models.FleaMarketItem)
-            .where(models.FleaMarketItem.id == db_id)
-            .values(view_count=models.FleaMarketItem.view_count + 1)
-        )
-        await db.commit()
-        
-        # 重新查询以获取更新后的view_count
-        result = await db.execute(
-            select(models.FleaMarketItem).where(models.FleaMarketItem.id == db_id)
-        )
-        item = result.scalar_one()
+        # 自动增加浏览量（Redis 累加，定时同步到 DB）
+        try:
+            from app.redis_cache import get_redis_client
+            _rc = get_redis_client()
+            if _rc:
+                _rk = f"flea_market:view_count:{db_id}"
+                _rc.incr(_rk)
+                _rc.expire(_rk, 7 * 24 * 3600)
+            else:
+                await db.execute(
+                    update(models.FleaMarketItem)
+                    .where(models.FleaMarketItem.id == db_id)
+                    .values(view_count=models.FleaMarketItem.view_count + 1)
+                )
+                await db.commit()
+                result = await db.execute(
+                    select(models.FleaMarketItem).where(models.FleaMarketItem.id == db_id)
+                )
+                item = result.scalar_one()
+        except Exception:
+            pass
         
         # 解析images JSON
         images = []
