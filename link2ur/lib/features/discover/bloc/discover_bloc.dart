@@ -7,6 +7,7 @@ import 'package:link2ur/data/models/leaderboard.dart';
 import 'package:link2ur/data/models/task_expert.dart';
 import 'package:link2ur/data/models/trending_search.dart';
 import 'package:link2ur/data/repositories/activity_repository.dart';
+import 'package:link2ur/data/repositories/follow_repository.dart';
 import 'package:link2ur/data/repositories/forum_repository.dart';
 import 'package:link2ur/data/repositories/leaderboard_repository.dart';
 import 'package:link2ur/data/repositories/task_expert_repository.dart';
@@ -23,14 +24,17 @@ class DiscoverBloc extends Bloc<DiscoverEvent, DiscoverState> {
     required LeaderboardRepository leaderboardRepository,
     required TaskExpertRepository taskExpertRepository,
     required ActivityRepository activityRepository,
+    required FollowRepository followRepository,
   })  : _trendingRepo = trendingSearchRepository,
         _forumRepo = forumRepository,
         _leaderboardRepo = leaderboardRepository,
         _expertRepo = taskExpertRepository,
         _activityRepo = activityRepository,
+        _followRepo = followRepository,
         super(const DiscoverState()) {
     on<DiscoverLoadRequested>(_onLoad);
     on<DiscoverRefreshRequested>(_onRefresh);
+    on<DiscoverToggleFollowExpert>(_onToggleFollow);
   }
 
   final TrendingSearchRepository _trendingRepo;
@@ -38,6 +42,7 @@ class DiscoverBloc extends Bloc<DiscoverEvent, DiscoverState> {
   final LeaderboardRepository _leaderboardRepo;
   final TaskExpertRepository _expertRepo;
   final ActivityRepository _activityRepo;
+  final FollowRepository _followRepo;
 
   Future<void> _onLoad(DiscoverLoadRequested event, Emitter<DiscoverState> emit) async {
     if (state.status == DiscoverStatus.loading) return;
@@ -67,19 +72,40 @@ class DiscoverBloc extends Bloc<DiscoverEvent, DiscoverState> {
       ]);
 
       final allCategories = results[1] as List<ForumCategory>;
+      // 板块：收藏优先
       final boards = allCategories
           .where((c) => c.skillType == null || c.skillType!.isEmpty)
-          .toList();
+          .toList()
+        ..sort((a, b) {
+          final aFav = a.isFavorited ? 0 : 1;
+          final bFav = b.isFavorited ? 0 : 1;
+          return aFav.compareTo(bFav);
+        });
       final skillCats = allCategories
           .where((c) => c.skillType != null && c.skillType!.isNotEmpty)
           .toList()
         ..sort((a, b) => b.viewCount.compareTo(a.viewCount));
 
+      // 榜单：收藏优先 > 同城优先
+      final leaderboards = results[2] as List<Leaderboard>;
+      final cityLower = (city != null && city.isNotEmpty) ? city.toLowerCase() : null;
+      leaderboards.sort((a, b) {
+        final aFav = a.isFavorited ? 0 : 1;
+        final bFav = b.isFavorited ? 0 : 1;
+        if (aFav != bFav) return aFav.compareTo(bFav);
+        if (cityLower != null) {
+          final aLocal = a.location.toLowerCase().contains(cityLower) ? 0 : 1;
+          final bLocal = b.location.toLowerCase().contains(cityLower) ? 0 : 1;
+          if (aLocal != bLocal) return aLocal.compareTo(bLocal);
+        }
+        return 0;
+      });
+
       emit(state.copyWith(
         status: DiscoverStatus.loaded,
         trendingSearches: results[0] as List<TrendingSearchItem>,
-        boards: boards,
-        leaderboards: results[2] as List<Leaderboard>,
+        boards: boards.take(5).toList(),
+        leaderboards: leaderboards.take(4).toList(),
         skillCategories: skillCats.take(6).toList(),
         experts: results[3] as List<TaskExpert>,
         activities: results[4] as List<Activity>,
@@ -146,6 +172,38 @@ class DiscoverBloc extends Bloc<DiscoverEvent, DiscoverState> {
     } catch (e) {
       AppLogger.error('Activities load failed', e);
       return [];
+    }
+  }
+
+  Future<void> _onToggleFollow(DiscoverToggleFollowExpert event, Emitter<DiscoverState> emit) async {
+    final id = event.expertId;
+    final wasFollowing = state.followedExpertIds.contains(id);
+
+    // Optimistic update
+    final newIds = Set<String>.from(state.followedExpertIds);
+    if (wasFollowing) {
+      newIds.remove(id);
+    } else {
+      newIds.add(id);
+    }
+    emit(state.copyWith(followedExpertIds: newIds));
+
+    try {
+      if (wasFollowing) {
+        await _followRepo.unfollowUser(id);
+      } else {
+        await _followRepo.followUser(id);
+      }
+    } catch (e) {
+      // Revert on failure
+      final revertIds = Set<String>.from(state.followedExpertIds);
+      if (wasFollowing) {
+        revertIds.add(id);
+      } else {
+        revertIds.remove(id);
+      }
+      emit(state.copyWith(followedExpertIds: revertIds));
+      AppLogger.error('Follow toggle failed', e);
     }
   }
 }

@@ -51,6 +51,7 @@ class DiscoverView extends StatelessWidget {
         leaderboardRepository: ctx.read<LeaderboardRepository>(),
         taskExpertRepository: ctx.read<TaskExpertRepository>(),
         activityRepository: ctx.read<ActivityRepository>(),
+        followRepository: ctx.read<FollowRepository>(),
       )..add(const DiscoverLoadRequested()),
       child: const _DiscoverContent(),
     );
@@ -62,7 +63,54 @@ class _DiscoverContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<DiscoverBloc, DiscoverState>(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Scaffold(
+      backgroundColor: AppColors.backgroundFor(Theme.of(context).brightness),
+      appBar: AppBar(
+        backgroundColor: isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight,
+        elevation: 0,
+        scrolledUnderElevation: 0.5,
+        toolbarHeight: 56,
+        titleSpacing: AppSpacing.md,
+        title: GestureDetector(
+          onTap: () => context.push('/search'),
+          child: Container(
+            height: 40,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? AppColors.secondaryBackgroundDark
+                  : AppColors.backgroundLight,
+              borderRadius: AppRadius.allPill,
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.search,
+                  size: 20,
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondaryLight,
+                ),
+                AppSpacing.hSm,
+                Expanded(
+                  child: Text(
+                    context.l10n.discoverSearchHint,
+                    style: AppTypography.subheadline.copyWith(
+                      color: isDark
+                          ? AppColors.textPlaceholderDark
+                          : AppColors.textPlaceholderLight,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      body: BlocBuilder<DiscoverBloc, DiscoverState>(
       builder: (context, state) {
         switch (state.status) {
           case DiscoverStatus.initial:
@@ -78,15 +126,12 @@ class _DiscoverContent extends StatelessWidget {
               onRefresh: () async {
                 final bloc = context.read<DiscoverBloc>();
                 bloc.add(const DiscoverRefreshRequested());
-                // Wait for loaded/error state, with timeout to prevent hang
-                // when data is unchanged (Equatable suppresses duplicate emit)
                 await bloc.stream
                     .firstWhere((s) => s.status == DiscoverStatus.loaded || s.status == DiscoverStatus.error)
                     .timeout(const Duration(seconds: 10), onTimeout: () => bloc.state);
               },
               child: CustomScrollView(
                 slivers: [
-                  const SliverToBoxAdapter(child: _SearchHeader()),
                   SliverToBoxAdapter(child: _TrendingSection(items: state.trendingSearches)),
                   if (state.boards.isNotEmpty)
                     SliverToBoxAdapter(child: _BoardsSection(boards: state.boards)),
@@ -104,65 +149,7 @@ class _DiscoverContent extends StatelessWidget {
             );
         }
       },
-    );
-  }
-}
-
-// ==================== 1. Search Header ====================
-
-class _SearchHeader extends StatelessWidget {
-  const _SearchHeader();
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final topPadding = MediaQuery.of(context).padding.top;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        AppSpacing.md, topPadding + AppSpacing.md, AppSpacing.md, AppSpacing.sm,
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: GestureDetector(
-              onTap: () => context.push('/search'),
-              child: Container(
-                height: 44,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? AppColors.secondaryBackgroundDark
-                      : AppColors.backgroundLight,
-                  borderRadius: AppRadius.allPill,
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.search,
-                      size: 20,
-                      color: isDark
-                          ? AppColors.textSecondaryDark
-                          : AppColors.textSecondaryLight,
-                    ),
-                    AppSpacing.hSm,
-                    Expanded(
-                      child: Text(
-                        context.l10n.discoverSearchHint,
-                        style: AppTypography.subheadline.copyWith(
-                          color: isDark
-                              ? AppColors.textPlaceholderDark
-                              : AppColors.textPlaceholderLight,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+    ),
     );
   }
 }
@@ -659,27 +646,22 @@ class _ExpertsSection extends StatelessWidget {
   }
 }
 
-class _ExpertRow extends StatefulWidget {
+class _ExpertRow extends StatelessWidget {
   const _ExpertRow({required this.expert});
   final TaskExpert expert;
-
-  @override
-  State<_ExpertRow> createState() => _ExpertRowState();
-}
-
-class _ExpertRowState extends State<_ExpertRow> {
-  bool _isFollowing = false;
-  bool _isLoading = false;
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final locale = Localizations.localeOf(context);
-    final bio = widget.expert.displayBio(locale);
-    final skills = widget.expert.displayFeaturedSkills(locale);
+    final bio = expert.displayBio(locale);
+    final skills = expert.displayFeaturedSkills(locale);
+    final isFollowing = context.select<DiscoverBloc, bool>(
+      (bloc) => bloc.state.followedExpertIds.contains(expert.id),
+    );
 
     return GestureDetector(
-      onTap: () => context.push('/task-experts/${widget.expert.id}'),
+      onTap: () => context.push('/task-experts/${expert.id}'),
       child: Container(
         margin: const EdgeInsets.only(bottom: AppSpacing.sm),
         padding: AppSpacing.allMd,
@@ -694,10 +676,10 @@ class _ExpertRowState extends State<_ExpertRow> {
             CircleAvatar(
               radius: 24,
               backgroundColor: AppColors.backgroundLight,
-              backgroundImage: widget.expert.avatar != null && widget.expert.avatar!.isNotEmpty
-                  ? CachedNetworkImageProvider(widget.expert.avatar!)
+              backgroundImage: expert.avatar != null && expert.avatar!.isNotEmpty
+                  ? CachedNetworkImageProvider(expert.avatar!)
                   : null,
-              child: widget.expert.avatar == null || widget.expert.avatar!.isEmpty
+              child: expert.avatar == null || expert.avatar!.isEmpty
                   ? const Icon(Icons.person, size: 24, color: AppColors.textSecondaryLight)
                   : null,
             ),
@@ -711,7 +693,7 @@ class _ExpertRowState extends State<_ExpertRow> {
                     children: [
                       Flexible(
                         child: Text(
-                          widget.expert.displayName,
+                          expert.displayName,
                           style: AppTypography.subheadlineBold.copyWith(
                             color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
                           ),
@@ -719,7 +701,7 @@ class _ExpertRowState extends State<_ExpertRow> {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      if (widget.expert.isVerified) ...[
+                      if (expert.isVerified) ...[
                         AppSpacing.hXs,
                         const Icon(Icons.verified, size: 16, color: AppColors.primary),
                       ],
@@ -763,68 +745,37 @@ class _ExpertRowState extends State<_ExpertRow> {
             AppSpacing.hSm,
             // Follow button
             GestureDetector(
-              onTap: _isLoading ? null : _onFollow,
+              onTap: () => context.read<DiscoverBloc>().add(
+                DiscoverToggleFollowExpert(expert.id),
+              ),
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                 decoration: BoxDecoration(
-                  color: _isFollowing
+                  color: isFollowing
                       ? AppColors.backgroundLight
                       : AppColors.primary,
                   borderRadius: AppRadius.allPill,
-                  border: _isFollowing
+                  border: isFollowing
                       ? Border.all(color: AppColors.dividerLight)
                       : null,
                 ),
-                child: _isLoading
-                    ? SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: _isFollowing ? AppColors.textSecondaryLight : Colors.white,
-                        ),
-                      )
-                    : Text(
-                        _isFollowing
-                            ? context.l10n.discoverFollowing
-                            : context.l10n.discoverFollow,
-                        style: AppTypography.caption.copyWith(
-                          color: _isFollowing
-                              ? AppColors.textSecondaryLight
-                              : Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                child: Text(
+                  isFollowing
+                      ? context.l10n.discoverFollowing
+                      : context.l10n.discoverFollow,
+                  style: AppTypography.caption.copyWith(
+                    color: isFollowing
+                        ? AppColors.textSecondaryLight
+                        : Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ),
           ],
         ),
       ),
     );
-  }
-
-  Future<void> _onFollow() async {
-    setState(() {
-      _isFollowing = !_isFollowing;
-      _isLoading = true;
-    });
-    try {
-      final repo = context.read<FollowRepository>();
-      if (_isFollowing) {
-        await repo.followUser(widget.expert.id);
-      } else {
-        await repo.unfollowUser(widget.expert.id);
-      }
-    } catch (_) {
-      // Revert on failure
-      if (mounted) {
-        setState(() => _isFollowing = !_isFollowing);
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
   }
 }
 

@@ -13,3 +13,11 @@ class DiscoverLoadRequested extends DiscoverEvent {
 class DiscoverRefreshRequested extends DiscoverEvent {
   const DiscoverRefreshRequested();
 }
+
+class DiscoverToggleFollowExpert extends DiscoverEvent {
+  const DiscoverToggleFollowExpert(this.expertId);
+  final String expertId;
+
+  @override
+  List<Object?> get props => [expertId];
+}
