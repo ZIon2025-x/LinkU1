@@ -963,7 +963,7 @@
   "timeWan": "k",
   "timeWanPlus": "+",
   "tabsHome": "Home",
-  "tabsCommunity": "Community",
+  "tabsCommunity": "Discover",
   "navDiscover": "Discover",
   "tabsCreate": "Create",
   "tabsMessages": "Messages",
@@ -5347,5 +5347,25 @@
   "trendingTagHot": "🔥 Hot",
   "trendingTagNew": "NEW",
   "trendingTagUp": "↑ Up",
-  "trendingHeatSuffix": "views"
+  "trendingHeatSuffix": "views",
+  "discoverSearchHint": "Search skills, experts, topics...",
+  "discoverNoTrending": "No trending searches",
+  "discoverBoards": "Popular Boards",
+  "discoverLeaderboards": "Leaderboards",
+  "discoverSkillCategories": "Skill Categories",
+  "discoverExperts": "Recommended Experts",
+  "discoverActivities": "Popular Activities",
+  "discoverViewAll": "View All",
+  "discoverFollow": "Follow",
+  "discoverFollowing": "Following",
+  "discoverFree": "Free",
+  "discoverTrending": "Trending",
+  "discoverNPosts": "{count} posts",
+  "@discoverNPosts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

@@ -2001,7 +2001,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tabsHome => 'Home';
 
   @override
-  String get tabsCommunity => 'Community';
+  String get tabsCommunity => 'Discover';
 
   @override
   String get navDiscover => 'Discover';
@@ -11964,4 +11964,45 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get trendingHeatSuffix => 'views';
+
+  @override
+  String get discoverSearchHint => 'Search skills, experts, topics...';
+
+  @override
+  String get discoverNoTrending => 'No trending searches';
+
+  @override
+  String get discoverBoards => 'Popular Boards';
+
+  @override
+  String get discoverLeaderboards => 'Leaderboards';
+
+  @override
+  String get discoverSkillCategories => 'Skill Categories';
+
+  @override
+  String get discoverExperts => 'Recommended Experts';
+
+  @override
+  String get discoverActivities => 'Popular Activities';
+
+  @override
+  String get discoverViewAll => 'View All';
+
+  @override
+  String get discoverFollow => 'Follow';
+
+  @override
+  String get discoverFollowing => 'Following';
+
+  @override
+  String get discoverFree => 'Free';
+
+  @override
+  String get discoverTrending => 'Trending';
+
+  @override
+  String discoverNPosts(int count) {
+    return '$count posts';
+  }
 }

@@ -1901,7 +1901,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get tabsHome => '首页';
 
   @override
-  String get tabsCommunity => '社区';
+  String get tabsCommunity => '发现';
 
   @override
   String get navDiscover => '发现';
@@ -11492,6 +11492,47 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get trendingHeatSuffix => '浏览';
+
+  @override
+  String get discoverSearchHint => '搜索技能、达人、话题...';
+
+  @override
+  String get discoverNoTrending => '暂无热搜';
+
+  @override
+  String get discoverBoards => '热门板块';
+
+  @override
+  String get discoverLeaderboards => '热门榜单';
+
+  @override
+  String get discoverSkillCategories => '技能分类';
+
+  @override
+  String get discoverExperts => '推荐达人';
+
+  @override
+  String get discoverActivities => '热门活动';
+
+  @override
+  String get discoverViewAll => '全部';
+
+  @override
+  String get discoverFollow => '关注';
+
+  @override
+  String get discoverFollowing => '已关注';
+
+  @override
+  String get discoverFree => '免费参加';
+
+  @override
+  String get discoverTrending => '热搜榜';
+
+  @override
+  String discoverNPosts(int count) {
+    return '$count 帖子';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -13391,7 +13432,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get tabsHome => '首頁';
 
   @override
-  String get tabsCommunity => '社區';
+  String get tabsCommunity => '發現';
 
   @override
   String get navDiscover => '發現';
@@ -22982,4 +23023,45 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get trendingHeatSuffix => '瀏覽';
+
+  @override
+  String get discoverSearchHint => '搜尋技能、達人、話題...';
+
+  @override
+  String get discoverNoTrending => '暫無熱搜';
+
+  @override
+  String get discoverBoards => '熱門板塊';
+
+  @override
+  String get discoverLeaderboards => '熱門榜單';
+
+  @override
+  String get discoverSkillCategories => '技能分類';
+
+  @override
+  String get discoverExperts => '推薦達人';
+
+  @override
+  String get discoverActivities => '熱門活動';
+
+  @override
+  String get discoverViewAll => '全部';
+
+  @override
+  String get discoverFollow => '關注';
+
+  @override
+  String get discoverFollowing => '已關注';
+
+  @override
+  String get discoverFree => '免費參加';
+
+  @override
+  String get discoverTrending => '熱搜榜';
+
+  @override
+  String discoverNPosts(int count) {
+    return '$count 帖子';
+  }
 }

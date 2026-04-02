@@ -753,7 +753,7 @@
   "timeWan": "万",
   "timeWanPlus": "+",
   "tabsHome": "首页",
-  "tabsCommunity": "社区",
+  "tabsCommunity": "发现",
   "navDiscover": "发现",
   "tabsCreate": "发布",
   "tabsMessages": "消息",
@@ -5239,5 +5239,25 @@
   "trendingTagHot": "🔥 热",
   "trendingTagNew": "NEW",
   "trendingTagUp": "↑ 升",
-  "trendingHeatSuffix": "浏览"
+  "trendingHeatSuffix": "浏览",
+  "discoverSearchHint": "搜索技能、达人、话题...",
+  "discoverNoTrending": "暂无热搜",
+  "discoverBoards": "热门板块",
+  "discoverLeaderboards": "热门榜单",
+  "discoverSkillCategories": "技能分类",
+  "discoverExperts": "推荐达人",
+  "discoverActivities": "热门活动",
+  "discoverViewAll": "全部",
+  "discoverFollow": "关注",
+  "discoverFollowing": "已关注",
+  "discoverFree": "免费参加",
+  "discoverTrending": "热搜榜",
+  "discoverNPosts": "{count} 帖子",
+  "@discoverNPosts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

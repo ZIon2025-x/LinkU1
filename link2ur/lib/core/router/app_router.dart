@@ -24,7 +24,7 @@ import '../../features/auth/bloc/auth_bloc.dart';
 
 import '../../features/main/main_tab_view.dart';
 import '../../features/home/views/home_view.dart';
-import '../../features/forum/views/forum_view.dart';
+import '../../features/discover/views/discover_view.dart';
 import '../../features/message/views/message_view.dart';
 import '../../features/profile/views/profile_view.dart';
 
@@ -130,14 +130,14 @@ class AppRouter {
               ),
             ],
           ),
-          // Branch 1: 社区
+          // Branch 1: 发现
           StatefulShellBranch(
             routes: [
               GoRoute(
                 path: '/community',
                 name: 'community',
                 pageBuilder: (context, state) => const NoTransitionPage(
-                  child: ForumView(),
+                  child: DiscoverView(),
                 ),
               ),
             ],

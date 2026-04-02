@@ -28,6 +28,8 @@ class ActivityRepository {
     String? keyword,
     bool? hasTimeSlots,
     String? expertId,
+    String? location,
+    String? sortBy,
     CancelToken? cancelToken,
   }) async {
     final offset = (page - 1) * pageSize;
@@ -38,6 +40,8 @@ class ActivityRepository {
       if (keyword != null) 'keyword': keyword,
       if (hasTimeSlots != null) 'has_time_slots': hasTimeSlots,
       if (expertId != null) 'expert_id': expertId,
+      if (location != null && location.isNotEmpty) 'location': location,
+      if (sortBy != null && sortBy.isNotEmpty) 'sort_by': sortBy,
     };
 
     final cacheKey = (keyword == null && expertId == null)

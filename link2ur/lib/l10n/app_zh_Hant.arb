@@ -753,7 +753,7 @@
   "timeWan": "萬",
   "timeWanPlus": "+",
   "tabsHome": "首頁",
-  "tabsCommunity": "社區",
+  "tabsCommunity": "發現",
   "navDiscover": "發現",
   "tabsCreate": "發布",
   "tabsMessages": "訊息",
@@ -5176,5 +5176,25 @@
   "trendingTagHot": "🔥 熱",
   "trendingTagNew": "NEW",
   "trendingTagUp": "↑ 升",
-  "trendingHeatSuffix": "瀏覽"
+  "trendingHeatSuffix": "瀏覽",
+  "discoverSearchHint": "搜尋技能、達人、話題...",
+  "discoverNoTrending": "暫無熱搜",
+  "discoverBoards": "熱門板塊",
+  "discoverLeaderboards": "熱門榜單",
+  "discoverSkillCategories": "技能分類",
+  "discoverExperts": "推薦達人",
+  "discoverActivities": "熱門活動",
+  "discoverViewAll": "全部",
+  "discoverFollow": "關注",
+  "discoverFollowing": "已關注",
+  "discoverFree": "免費參加",
+  "discoverTrending": "熱搜榜",
+  "discoverNPosts": "{count} 帖子",
+  "@discoverNPosts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

@@ -34,6 +34,9 @@ class ForumCategory extends Equatable {
     this.latestPost,
     this.isAdminOnly = false,
     this.skillType,
+    this.serviceCount = 0,
+    this.taskCount = 0,
+    this.viewCount = 0,
   });
 
   // ==================== 板块类型常量 ====================
@@ -82,6 +85,9 @@ class ForumCategory extends Equatable {
   /// 是否仅管理员可发帖（普通用户不可在此板块发帖）
   final bool isAdminOnly;
   final String? skillType;
+  final int serviceCount;
+  final int taskCount;
+  final int viewCount;
 
   // ==================== 权限辅助 ====================
 
@@ -134,10 +140,13 @@ class ForumCategory extends Equatable {
           : null,
       isAdminOnly: parseBool(json['is_admin_only']),
       skillType: json['skill_type'] as String?,
+      serviceCount: json['service_count'] as int? ?? 0,
+      taskCount: json['task_count'] as int? ?? 0,
+      viewCount: json['view_count'] as int? ?? 0,
     );
   }
 
-  ForumCategory copyWith({bool? isFavorited, String? skillType}) {
+  ForumCategory copyWith({bool? isFavorited, String? skillType, int? serviceCount, int? taskCount, int? viewCount}) {
     return ForumCategory(
       id: id,
       name: name,
@@ -157,11 +166,14 @@ class ForumCategory extends Equatable {
       latestPost: latestPost,
       isAdminOnly: isAdminOnly,
       skillType: skillType ?? this.skillType,
+      serviceCount: serviceCount ?? this.serviceCount,
+      taskCount: taskCount ?? this.taskCount,
+      viewCount: viewCount ?? this.viewCount,
     );
   }
 
   @override
-  List<Object?> get props => [id, name, type, isFavorited, skillType];
+  List<Object?> get props => [id, name, type, isFavorited, skillType, serviceCount, taskCount, viewCount];
 }
 
 /// 板块最新帖子摘要（对标iOS LatestPostInfo）

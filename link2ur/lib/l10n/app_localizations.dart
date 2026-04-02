@@ -3672,7 +3672,7 @@ abstract class AppLocalizations {
   /// No description provided for @tabsCommunity.
   ///
   /// In en, this message translates to:
-  /// **'Community'**
+  /// **'Discover'**
   String get tabsCommunity;
 
   /// No description provided for @navDiscover.
@@ -22090,6 +22090,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'views'**
   String get trendingHeatSuffix;
+
+  /// No description provided for @discoverSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search skills, experts, topics...'**
+  String get discoverSearchHint;
+
+  /// No description provided for @discoverNoTrending.
+  ///
+  /// In en, this message translates to:
+  /// **'No trending searches'**
+  String get discoverNoTrending;
+
+  /// No description provided for @discoverBoards.
+  ///
+  /// In en, this message translates to:
+  /// **'Popular Boards'**
+  String get discoverBoards;
+
+  /// No description provided for @discoverLeaderboards.
+  ///
+  /// In en, this message translates to:
+  /// **'Leaderboards'**
+  String get discoverLeaderboards;
+
+  /// No description provided for @discoverSkillCategories.
+  ///
+  /// In en, this message translates to:
+  /// **'Skill Categories'**
+  String get discoverSkillCategories;
+
+  /// No description provided for @discoverExperts.
+  ///
+  /// In en, this message translates to:
+  /// **'Recommended Experts'**
+  String get discoverExperts;
+
+  /// No description provided for @discoverActivities.
+  ///
+  /// In en, this message translates to:
+  /// **'Popular Activities'**
+  String get discoverActivities;
+
+  /// No description provided for @discoverViewAll.
+  ///
+  /// In en, this message translates to:
+  /// **'View All'**
+  String get discoverViewAll;
+
+  /// No description provided for @discoverFollow.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow'**
+  String get discoverFollow;
+
+  /// No description provided for @discoverFollowing.
+  ///
+  /// In en, this message translates to:
+  /// **'Following'**
+  String get discoverFollowing;
+
+  /// No description provided for @discoverFree.
+  ///
+  /// In en, this message translates to:
+  /// **'Free'**
+  String get discoverFree;
+
+  /// No description provided for @discoverTrending.
+  ///
+  /// In en, this message translates to:
+  /// **'Trending'**
+  String get discoverTrending;
+
+  /// No description provided for @discoverNPosts.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} posts'**
+  String discoverNPosts(int count);
 }
 
 class _AppLocalizationsDelegate
