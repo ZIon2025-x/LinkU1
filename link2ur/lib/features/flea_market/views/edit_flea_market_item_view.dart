@@ -138,10 +138,7 @@ class _EditFleaMarketItemViewContentState
     if (maxNew <= 0) return;
 
     try {
-      final picked = await picker.pickMultiImage(
-        maxWidth: 1200,
-        imageQuality: 80,
-      );
+      final picked = await picker.pickMultiImage();
       if (!mounted) return;
       if (picked.isNotEmpty) {
         setState(() {

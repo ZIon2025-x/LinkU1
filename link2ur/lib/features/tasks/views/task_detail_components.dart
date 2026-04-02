@@ -2755,7 +2755,7 @@ class _EvidenceCollectionSheetState extends State<_EvidenceCollectionSheet> {
   Future<void> _pickImages() async {
     final remaining = 5 - _images.length;
     if (remaining <= 0) return;
-    final picked = await _imagePicker.pickMultiImage(imageQuality: 80, maxWidth: 1920);
+    final picked = await _imagePicker.pickMultiImage();
     if (picked.isNotEmpty && mounted) {
       setState(() => _images.addAll(picked.take(remaining)));
     }

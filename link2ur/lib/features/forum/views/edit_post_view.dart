@@ -85,10 +85,7 @@ class _EditPostViewState extends State<EditPostView> {
   Future<void> _pickImages() async {
     if (_totalImageCount >= _kMaxImages) return;
     try {
-      final files = await _imagePicker.pickMultiImage(
-        maxWidth: 1024,
-        imageQuality: 85,
-      );
+      final files = await _imagePicker.pickMultiImage();
       if (files.isNotEmpty && mounted) {
         setState(() {
           for (final f in files) {

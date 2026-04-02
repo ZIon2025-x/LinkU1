@@ -3103,10 +3103,7 @@ class _CompleteTaskSheetContentState extends State<_CompleteTaskSheetContent> {
   Future<void> _pickImages() async {
     final remaining = 5 - _selectedImages.length;
     if (remaining <= 0) return;
-    final picked = await _imagePicker.pickMultiImage(
-      imageQuality: 80,
-      maxWidth: 1920,
-    );
+    final picked = await _imagePicker.pickMultiImage();
     if (picked.isNotEmpty && mounted) {
       setState(() {
         _selectedImages.addAll(picked.take(remaining));

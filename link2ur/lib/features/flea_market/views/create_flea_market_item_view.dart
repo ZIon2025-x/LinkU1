@@ -97,10 +97,7 @@ class _CreateFleaMarketItemContentState
 
   Future<void> _pickImages() async {
     try {
-      final pickedFiles = await _imagePicker.pickMultiImage(
-        maxWidth: 1024,
-        imageQuality: 85,
-      );
+      final pickedFiles = await _imagePicker.pickMultiImage();
 
       if (!mounted) return;
       if (pickedFiles.isNotEmpty) {

@@ -157,10 +157,7 @@ class _CreatePostViewState extends State<CreatePostView> {
   // ── 图片选择 ──
   Future<void> _pickImages() async {
     try {
-      final files = await _imagePicker.pickMultiImage(
-        maxWidth: 1024,
-        imageQuality: 85,
-      );
+      final files = await _imagePicker.pickMultiImage();
       if (files.isNotEmpty && mounted) {
         setState(() {
           for (final f in files) {
