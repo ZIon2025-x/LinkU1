@@ -5,6 +5,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/error_localizer.dart';
+import '../../../core/utils/l10n_extension.dart';
 import '../../../data/models/badge.dart';
 import '../../../data/repositories/badges_repository.dart';
 import '../bloc/badges_bloc.dart';
@@ -101,7 +102,7 @@ class _BadgesDisplayBody extends StatelessWidget {
           AppSpacing.hSm,
           Expanded(
             child: Text(
-              'No badges earned yet',
+              context.l10n.badgesEmptyState,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurface.withAlpha(140),
               ),
@@ -121,7 +122,7 @@ class _BadgesDisplayBody extends StatelessWidget {
         children: badges.map((badge) {
           return Semantics(
             button: true,
-            label: 'View badge details',
+            label: context.l10n.badgeViewDetails,
             child: GestureDetector(
               onTap: onBadgeTap,
               child: _BadgeChip(badge: badge),

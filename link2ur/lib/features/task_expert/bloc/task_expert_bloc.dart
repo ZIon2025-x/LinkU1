@@ -364,6 +364,13 @@ class TaskExpertFleaMarketFormalBuy extends TaskExpertEvent {
   List<Object?> get props => [requestId];
 }
 
+class TaskExpertApproveFleaMarketPurchase extends TaskExpertEvent {
+  const TaskExpertApproveFleaMarketPurchase(this.requestId);
+  final int requestId;
+  @override
+  List<Object?> get props => [requestId];
+}
+
 class TaskExpertCloseFleaMarketConsultation extends TaskExpertEvent {
   const TaskExpertCloseFleaMarketConsultation(this.requestId);
   final int requestId;
@@ -717,6 +724,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     on<TaskExpertFleaMarketQuote>(_onFleaMarketQuote);
     on<TaskExpertFleaMarketNegotiateResponse>(_onFleaMarketNegotiateResponse);
     on<TaskExpertFleaMarketFormalBuy>(_onFleaMarketFormalBuy);
+    on<TaskExpertApproveFleaMarketPurchase>(_onApproveFleaMarketPurchase);
     on<TaskExpertCloseFleaMarketConsultation>(_onCloseFleaMarketConsultation);
   }
 
@@ -1745,6 +1753,21 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     try {
       await _taskExpertRepository.formalBuyFleaMarket(event.requestId);
       emit(state.copyWith(isSubmitting: false, actionMessage: 'formal_apply_submitted'));
+    } on TaskExpertException catch (e) {
+      emit(state.copyWith(isSubmitting: false, errorMessage: e.message));
+    } catch (e) {
+      emit(state.copyWith(isSubmitting: false, errorMessage: e.toString()));
+    }
+  }
+
+  Future<void> _onApproveFleaMarketPurchase(
+    TaskExpertApproveFleaMarketPurchase event,
+    Emitter<TaskExpertState> emit,
+  ) async {
+    emit(state.copyWith(isSubmitting: true, errorMessage: null, actionMessage: null));
+    try {
+      await _taskExpertRepository.approveFleaMarketPurchase(event.requestId);
+      emit(state.copyWith(isSubmitting: false, actionMessage: 'application_approved'));
     } on TaskExpertException catch (e) {
       emit(state.copyWith(isSubmitting: false, errorMessage: e.message));
     } catch (e) {

@@ -7203,6 +7203,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatGroupChat => 'Group Chat';
 
   @override
+  String get chatViewProfile => 'View profile';
+
+  @override
+  String get chatAttachments => 'Attachments';
+
+  @override
+  String get chatSendMessage => 'Send message';
+
+  @override
+  String get chatMoreActions => 'More actions';
+
+  @override
+  String get chatViewImage => 'View image';
+
+  @override
+  String get chatSelectMessage => 'Select message';
+
+  @override
+  String get chatHideTranslation => 'Hide translation';
+
+  @override
+  String get chatQuickAction => 'Quick action';
+
+  @override
   String chatParticipantCount(int count) {
     return '$count participants';
   }
@@ -10405,6 +10429,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String badgeTop(String rank) {
     return 'Top $rank';
   }
+
+  @override
+  String get badgesEmptyState => 'No badges earned yet';
+
+  @override
+  String get badgeSelectorEmpty => 'No badges available';
+
+  @override
+  String get badgeNoClearDescription => 'Do not display any badge';
+
+  @override
+  String get badgeViewDetails => 'View badge details';
 
   @override
   String get profileViews => 'Profile Views';

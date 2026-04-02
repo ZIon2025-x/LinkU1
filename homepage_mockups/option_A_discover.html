@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Link2Ur - 首页（推荐）</title>
+<title>方案A - 发现页</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
@@ -13,236 +13,42 @@
     margin: 0 auto;
     min-height: 100vh;
     overflow-x: hidden;
-    color: #000;
   }
 
-  /* ===== Header & Greeting ===== */
+  /* Header */
   .header {
     background: #fff;
-    padding: 48px 16px 0;
+    padding: 44px 16px 0;
     position: sticky;
     top: 0;
     z-index: 200;
   }
-  .greeting-row {
+  .header-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding-bottom: 6px;
+    gap: 10px;
+    padding-bottom: 10px;
   }
-  .greeting-text {
-    font-size: 22px;
-    font-weight: 700;
-    color: #000;
-  }
-  .greeting-sub {
-    font-size: 13px;
-    color: #8E8E93;
-    margin-top: 2px;
-    font-style: italic;
-  }
-  .linker-btn {
-    width: 40px; height: 40px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #007AFF, #5AC8FA);
-    display: flex; align-items: center; justify-content: center;
-    color: #fff; font-size: 18px; font-weight: 700;
-    box-shadow: 0 2px 8px rgba(0,122,255,0.3);
-  }
-
-  /* ===== Top Tabs ===== */
-  .top-tabs {
-    display: flex;
-    gap: 0;
-    padding: 12px 16px 0;
-    background: #fff;
-  }
-  .top-tab {
+  .search-box {
     flex: 1;
-    text-align: center;
-    padding: 8px 0;
-    font-size: 15px;
-    font-weight: 500;
-    color: #8E8E93;
-    position: relative;
-    cursor: pointer;
-  }
-  .top-tab.active {
-    color: #000;
-    font-weight: 700;
-  }
-  .top-tab.active::after {
-    content: '';
-    position: absolute;
-    bottom: 0; left: 50%; transform: translateX(-50%);
-    width: 24px; height: 3px;
-    background: #007AFF;
-    border-radius: 2px;
-  }
-
-  /* ===== Story Row ===== */
-  .story-row {
-    background: #fff;
-    padding: 14px 16px 16px;
-    display: flex;
-    gap: 16px;
-    overflow-x: auto;
-    scrollbar-width: none;
-    border-bottom: 0.5px solid rgba(0,0,0,0.05);
-  }
-  .story-row::-webkit-scrollbar { display: none; }
-  .story-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    flex-shrink: 0;
-    min-width: 60px;
-  }
-  .story-circle {
-    width: 56px; height: 56px;
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 24px;
-    position: relative;
-  }
-  .story-circle.gradient-border {
-    background: linear-gradient(135deg, #FF6B8A, #FF2D55) padding-box,
-                linear-gradient(135deg, #FF6B8A, #FF2D55) border-box;
-    border: 2.5px solid transparent;
-  }
-  .story-circle .inner {
-    width: 50px; height: 50px;
-    border-radius: 50%;
-    background: #fff;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 22px;
-  }
-  .story-circle.ai {
-    background: linear-gradient(135deg, #007AFF, #5AC8FA);
-    color: #fff;
-    font-size: 14px;
-    font-weight: 800;
-    letter-spacing: -0.5px;
-  }
-  .story-label {
-    font-size: 11px;
-    color: #333;
-    font-weight: 500;
-    white-space: nowrap;
-  }
-
-  /* ===== Platform Flow Banner ===== */
-  .flow-banner {
-    margin: 8px 16px;
-    border-radius: 16px;
-    background: linear-gradient(135deg, #007AFF, #409CFF, #5AC8FA);
-    padding: 18px 16px 14px;
-    color: #fff;
-    position: relative;
-    overflow: hidden;
-  }
-  .flow-banner::after {
-    content: '';
-    position: absolute;
-    right: -30px; top: -30px;
-    width: 100px; height: 100px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.1);
-  }
-  .flow-title {
-    font-size: 17px;
-    font-weight: 700;
-    margin-bottom: 2px;
-  }
-  .flow-subtitle {
-    font-size: 11px;
-    color: rgba(255,255,255,0.8);
-    margin-bottom: 16px;
-  }
-  .flow-steps {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 14px;
-    position: relative;
-  }
-  .flow-steps::before {
-    content: '';
-    position: absolute;
-    top: 14px; left: 24px; right: 24px;
-    height: 2px;
-    background: rgba(255,255,255,0.3);
-  }
-  .flow-step {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    position: relative;
-    z-index: 1;
-  }
-  .step-dot {
-    width: 28px; height: 28px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.25);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 13px;
-  }
-  .step-label {
-    font-size: 9px;
-    white-space: nowrap;
-    color: rgba(255,255,255,0.9);
-    font-weight: 500;
-  }
-  .flow-guarantees {
-    display: flex;
-    justify-content: center;
-    gap: 16px;
-    background: rgba(255,255,255,0.15);
-    border-radius: 10px;
-    padding: 8px 10px;
-  }
-  .guarantee {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 10px;
-    color: rgba(255,255,255,0.9);
-    font-weight: 500;
-  }
-
-  /* ===== Ticker Banner ===== */
-  .ticker-bar {
-    background: #fff;
-    margin: 0 16px 8px;
-    border-radius: 10px;
-    padding: 10px 14px;
+    background: #f2f2f2;
+    border-radius: 20px;
+    padding: 10px 16px;
     display: flex;
     align-items: center;
     gap: 8px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    font-size: 14px;
+    color: #8E8E93;
   }
-  .ticker-badge {
-    background: linear-gradient(135deg, #007AFF, #409CFF);
-    color: #fff;
-    font-size: 10px;
-    font-weight: 700;
-    padding: 2px 8px;
-    border-radius: 6px;
-    flex-shrink: 0;
-  }
-  .ticker-text {
-    font-size: 13px;
-    color: #333;
-    flex: 1;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
+  .header-icon {
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
   }
 
-  /* ===== Section Common ===== */
-  .section {
+
+  /* Trending Section */
+  .trending {
     background: #fff;
     margin-top: 8px;
     padding: 16px;
@@ -254,16 +60,59 @@
     margin-bottom: 14px;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    gap: 6px;
   }
-  .sec-title .more {
+  .sec-title .sec-all {
+    margin-left: auto;
     font-size: 13px;
+    font-weight: 500;
     color: #007AFF;
+  }
+  .trending-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .trending-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .trending-rank {
+    width: 24px;
+    font-size: 16px;
+    font-weight: 800;
+    text-align: center;
+  }
+  .trending-rank.top { color: #FF2D55; }
+  .trending-rank.normal { color: #ccc; }
+  .trending-text {
+    flex: 1;
+    font-size: 14px;
+    color: #000;
     font-weight: 500;
   }
+  .trending-hot {
+    font-size: 11px;
+    color: #8E8E93;
+  }
+  .trending-tag {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+  }
+  .trending-tag.hot { background: #FFF0F0; color: #FF2D55; }
+  .trending-tag.new { background: #EBF2FF; color: #007AFF; }
+  .trending-tag.up { background: #E8F8EF; color: #26BF73; }
 
-  /* ===== Hot Categories (热门板块) ===== */
-  .cat-scroll {
+  /* Hot Categories (热门板块) */
+  .topics {
+    background: #fff;
+    margin-top: 8px;
+    padding: 16px;
+  }
+  .topic-scroll {
     display: flex;
     gap: 10px;
     overflow-x: auto;
@@ -271,39 +120,159 @@
     margin: 0 -16px;
     padding: 0 16px;
   }
-  .cat-scroll::-webkit-scrollbar { display: none; }
-  .cat-chip {
+  .topic-scroll::-webkit-scrollbar { display: none; }
+  .topic-card {
     flex-shrink: 0;
+    width: 140px;
     border-radius: 14px;
-    padding: 14px 18px;
+    overflow: hidden;
+    position: relative;
+  }
+  .topic-bg {
+    height: 100px;
     display: flex;
     align-items: center;
+    justify-content: center;
+    font-size: 36px;
+  }
+  .topic-overlay {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: linear-gradient(transparent, rgba(0,0,0,0.6));
+    padding: 24px 10px 10px;
+  }
+  .topic-name {
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .topic-count {
+    color: rgba(255,255,255,0.7);
+    font-size: 11px;
+  }
+
+  /* Leaderboard Section */
+  .leaderboard-section {
+    background: #fff;
+    margin-top: 8px;
+    padding: 16px;
+  }
+  .lb-scroll {
+    display: flex;
     gap: 10px;
-    min-width: 150px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin: 0 -16px;
+    padding: 0 16px;
+  }
+  .lb-scroll::-webkit-scrollbar { display: none; }
+  .lb-card {
+    flex-shrink: 0;
+    width: 200px;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid rgba(0,0,0,0.06);
+    background: #fff;
+  }
+  .lb-cover {
+    height: 90px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    color: #fff;
+    position: relative;
+  }
+  .lb-rank-badge {
+    position: absolute;
+    top: 8px; right: 8px;
+    background: rgba(255,255,255,0.9);
+    color: #FF8033;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 8px;
+  }
+  .lb-body {
+    padding: 10px 12px;
+  }
+  .lb-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #000;
+    margin-bottom: 2px;
+  }
+  .lb-location {
+    font-size: 11px;
+    color: #8E8E93;
+    margin-bottom: 6px;
+  }
+  .lb-stats {
+    display: flex;
+    gap: 10px;
+    font-size: 10px;
+    color: #8E8E93;
+  }
+  .lb-stats span {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  /* Category Grid */
+  .cat-grid {
+    background: #fff;
+    margin-top: 8px;
+    padding: 16px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  .grid-card {
+    border-radius: 14px;
+    padding: 18px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
     position: relative;
     overflow: hidden;
   }
-  .cat-chip::after {
+  .grid-card::after {
     content: '';
     position: absolute;
-    right: -15px; bottom: -15px;
-    width: 60px; height: 60px;
+    right: -20px; bottom: -20px;
+    width: 80px; height: 80px;
     border-radius: 50%;
     background: rgba(255,255,255,0.15);
   }
-  .cat-icon { font-size: 24px; position: relative; z-index: 1; }
-  .cat-info { position: relative; z-index: 1; }
-  .cat-name {
+  .gc-icon {
+    font-size: 28px;
+    position: relative;
+    z-index: 1;
+  }
+  .gc-info {
+    position: relative;
+    z-index: 1;
+  }
+  .gc-name {
     font-size: 14px;
     font-weight: 700;
     color: #fff;
+    margin-bottom: 1px;
   }
-  .cat-count {
+  .gc-count {
     font-size: 11px;
     color: rgba(255,255,255,0.7);
   }
 
-  /* ===== Recommended Experts ===== */
+  /* Recommended Experts */
+  .expert-section {
+    background: #fff;
+    margin-top: 8px;
+    padding: 16px;
+  }
   .expert-list {
     display: flex;
     flex-direction: column;
@@ -315,13 +284,15 @@
     gap: 12px;
   }
   .er-avatar {
-    width: 48px; height: 48px;
+    width: 50px; height: 50px;
     border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    font-size: 22px;
+    font-size: 24px;
     flex-shrink: 0;
   }
-  .er-info { flex: 1; }
+  .er-info {
+    flex: 1;
+  }
   .er-name {
     font-size: 15px;
     font-weight: 700;
@@ -330,7 +301,7 @@
     align-items: center;
     gap: 6px;
   }
-  .er-badge {
+  .er-verified {
     background: #007AFF;
     color: #fff;
     font-size: 9px;
@@ -352,21 +323,25 @@
     font-size: 10px;
     padding: 2px 6px;
     border-radius: 6px;
-    background: #F5F5F5;
+    background: #f5f5f5;
     color: #666;
   }
-  .er-btn {
-    padding: 6px 16px;
+  .er-follow {
+    padding: 6px 18px;
     border-radius: 18px;
-    background: #007AFF;
-    color: #fff;
+    border: 1.5px solid #007AFF;
+    color: #007AFF;
     font-size: 13px;
     font-weight: 600;
     flex-shrink: 0;
-    border: none;
   }
 
-  /* ===== Activities ===== */
+  /* Activity Feed */
+  .activity-section {
+    background: #fff;
+    margin-top: 8px;
+    padding: 16px 16px 100px;
+  }
   .act-scroll {
     display: flex;
     gap: 10px;
@@ -378,20 +353,20 @@
   .act-scroll::-webkit-scrollbar { display: none; }
   .act-card {
     flex-shrink: 0;
-    width: 210px;
+    width: 220px;
     border-radius: 14px;
     overflow: hidden;
-    border: 1px solid rgba(0,0,0,0.06);
-    background: #fff;
+    border: 1px solid #f0f0f0;
   }
   .act-img {
-    height: 105px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 34px;
+    height: 110px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
     position: relative;
-    color: #fff;
   }
-  .act-badge {
+  .act-img .live-badge {
     position: absolute;
     top: 8px; left: 8px;
     background: rgba(255,45,85,0.9);
@@ -411,7 +386,9 @@
     animation: blink 1s ease-in-out infinite;
   }
   @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
-  .act-body { padding: 10px 12px; }
+  .act-body {
+    padding: 10px 12px;
+  }
   .act-title {
     font-size: 13px;
     font-weight: 700;
@@ -435,92 +412,12 @@
     font-weight: 600;
   }
 
-  /* ===== Discovery Feed (2-column masonry) ===== */
-  .feed-header {
-    background: #fff;
-    margin-top: 8px;
-    padding: 16px 16px 8px;
-  }
-  .feed-grid {
-    padding: 0 16px 120px;
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-  }
-  .feed-card {
-    background: #fff;
-    border-radius: 14px;
-    overflow: hidden;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-  }
-  .feed-img {
-    width: 100%;
-    aspect-ratio: 4/3;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 32px;
-    position: relative;
-  }
-  .feed-type-badge {
-    position: absolute;
-    top: 8px; left: 8px;
-    background: rgba(0,0,0,0.5);
-    color: #fff;
-    font-size: 9px;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-weight: 600;
-  }
-  .feed-body { padding: 10px; }
-  .feed-title {
-    font-size: 13px;
-    font-weight: 700;
-    color: #000;
-    margin-bottom: 4px;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-  .feed-desc {
-    font-size: 11px;
-    color: #8E8E93;
-    margin-bottom: 6px;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-  .feed-user-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-bottom: 6px;
-  }
-  .feed-avatar {
-    width: 18px; height: 18px;
-    border-radius: 50%;
-    background: #E0E0E0;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 10px;
-  }
-  .feed-username {
-    font-size: 11px;
-    color: #8E8E93;
-  }
-  .feed-stats {
-    display: flex;
-    gap: 12px;
-    font-size: 11px;
-    color: #8E8E93;
-  }
-
-  /* ===== Bottom Nav ===== */
+  /* Bottom Nav */
   .bottom-nav {
     position: fixed;
     bottom: 0;
-    left: 50%; transform: translateX(-50%);
+    left: 50%;
+    transform: translateX(-50%);
     width: 100%;
     max-width: 430px;
     background: #fff;
@@ -539,11 +436,7 @@
     color: #8E8E93;
   }
   .nav-item.active { color: #000; font-weight: 600; }
-  .nav-item .icon {
-    font-size: 22px;
-    height: 24px;
-    display: flex; align-items: center; justify-content: center;
-  }
+  .nav-item .icon { font-size: 22px; height: 24px; display: flex; align-items: center; justify-content: center; }
   .nav-center {
     flex: 1;
     display: flex;
@@ -562,203 +455,266 @@
 </head>
 <body>
 
-<!-- Header with Greeting -->
+<!-- Header -->
 <div class="header">
-  <div class="greeting-row">
-    <div>
-      <div class="greeting-text">Hi, Ryan 👋</div>
-      <div class="greeting-sub">"发现你身边的技能达人"</div>
+  <div class="header-row">
+    <div class="search-box">
+      🔍 搜索技能、达人、话题...
     </div>
-    <div class="linker-btn">AI</div>
-  </div>
-  <!-- Tabs: 关注 | 推荐 | 附近 -->
-  <div class="top-tabs">
-    <div class="top-tab">关注</div>
-    <div class="top-tab active">推荐</div>
-    <div class="top-tab">附近</div>
+    <div class="header-icon">📷</div>
   </div>
 </div>
 
-<!-- Story Row: Quick Entry Points -->
-<div class="story-row">
-  <div class="story-item">
-    <div class="story-circle ai">AI</div>
-    <span class="story-label">Linker AI</span>
-  </div>
-  <div class="story-item">
-    <div class="story-circle gradient-border"><div class="inner">📋</div></div>
-    <span class="story-label">任务大厅</span>
-  </div>
-  <div class="story-item">
-    <div class="story-circle gradient-border"><div class="inner">🎉</div></div>
-    <span class="story-label">活动</span>
-  </div>
-  <div class="story-item">
-    <div class="story-circle gradient-border"><div class="inner">⭐</div></div>
-    <span class="story-label">达人</span>
-  </div>
-  <div class="story-item">
-    <div class="story-circle gradient-border"><div class="inner">🛒</div></div>
-    <span class="story-label">二手市场</span>
+<!-- Trending -->
+<div class="trending">
+  <div class="sec-title">🔥 热搜榜</div>
+  <div class="trending-list">
+    <div class="trending-item">
+      <span class="trending-rank top">1</span>
+      <span class="trending-text">毕业照跟拍 伦敦</span>
+      <span class="trending-tag hot">🔥 热</span>
+      <span class="trending-hot">2.3w浏览</span>
+    </div>
+    <div class="trending-item">
+      <span class="trending-rank top">2</span>
+      <span class="trending-text">Python 数据分析辅导</span>
+      <span class="trending-tag up">↑ 升</span>
+      <span class="trending-hot">1.8w浏览</span>
+    </div>
+    <div class="trending-item">
+      <span class="trending-rank top">3</span>
+      <span class="trending-text">留学生求职简历优化</span>
+      <span class="trending-tag new">NEW</span>
+      <span class="trending-hot">1.2w浏览</span>
+    </div>
+    <div class="trending-item">
+      <span class="trending-rank normal">4</span>
+      <span class="trending-text">Logo/品牌设计</span>
+      <span class="trending-hot">8.6k浏览</span>
+    </div>
+    <div class="trending-item">
+      <span class="trending-rank normal">5</span>
+      <span class="trending-text">英文Essay润色</span>
+      <span class="trending-hot">7.2k浏览</span>
+    </div>
   </div>
 </div>
 
-<!-- Platform Flow Banner -->
-<div class="flow-banner">
-  <div class="flow-title">安全交易，轻松互助</div>
-  <div class="flow-subtitle">平台托管资金 · 全程保障 · 争议可退</div>
-  <div class="flow-steps">
-    <div class="flow-step">
-      <div class="step-dot">📝</div>
-      <span class="step-label">发布任务</span>
+<!-- 热门板块 (replacing 热门话题) -->
+<div class="topics">
+  <div class="sec-title">🏷️ 热门板块 <span class="sec-all">全部 ›</span></div>
+  <div class="topic-scroll">
+    <div class="topic-card">
+      <div class="topic-bg" style="background: linear-gradient(135deg, #007AFF, #409CFF);">🎓</div>
+      <div class="topic-overlay">
+        <div class="topic-name">留学生互助</div>
+        <div class="topic-count">3.2k 帖子</div>
+      </div>
     </div>
-    <div class="flow-step">
-      <div class="step-dot">👤</div>
-      <span class="step-label">申请批准</span>
+    <div class="topic-card">
+      <div class="topic-bg" style="background: linear-gradient(135deg, #FF2D55, #FF6B8A);">💼</div>
+      <div class="topic-overlay">
+        <div class="topic-name">求职经验</div>
+        <div class="topic-count">2.8k 帖子</div>
+      </div>
     </div>
-    <div class="flow-step">
-      <div class="step-dot">💰</div>
-      <span class="step-label">支付托管</span>
+    <div class="topic-card">
+      <div class="topic-bg" style="background: linear-gradient(135deg, #26BF73, #5ED99F);">📷</div>
+      <div class="topic-overlay">
+        <div class="topic-name">摄影交流</div>
+        <div class="topic-count">5.1k 帖子</div>
+      </div>
     </div>
-    <div class="flow-step">
-      <div class="step-dot">🤝</div>
-      <span class="step-label">确认完成</span>
+    <div class="topic-card">
+      <div class="topic-bg" style="background: linear-gradient(135deg, #FF8033, #FFA600);">🏠</div>
+      <div class="topic-overlay">
+        <div class="topic-name">英国生活</div>
+        <div class="topic-count">4.5k 帖子</div>
+      </div>
     </div>
-    <div class="flow-step">
-      <div class="step-dot">💸</div>
-      <span class="step-label">平台放款</span>
-    </div>
-  </div>
-  <div class="flow-guarantees">
-    <div class="guarantee">🏦 资金托管</div>
-    <div class="guarantee">🛡️ 全额退款保障</div>
-    <div class="guarantee">⚖️ 争议平台介入</div>
   </div>
 </div>
 
-<!-- Ticker -->
-<div class="ticker-bar">
-  <span class="ticker-badge">动态</span>
-  <span class="ticker-text">🎉 用户 Alex 刚完成了一单"Python数据分析辅导"，好评 ⭐⭐⭐⭐⭐</span>
+<!-- 热门榜单 -->
+<div class="leaderboard-section">
+  <div class="sec-title">🏆 热门榜单 <span class="sec-all">全部 ›</span></div>
+  <div class="lb-scroll">
+    <div class="lb-card">
+      <div class="lb-cover" style="background: linear-gradient(135deg, #FF8033, #FFA600);">
+        🍜
+        <span class="lb-rank-badge">🔥 热门</span>
+      </div>
+      <div class="lb-body">
+        <div class="lb-title">伦敦最佳中餐厅</div>
+        <div class="lb-location">📍 London</div>
+        <div class="lb-stats">
+          <span>📊 56 项目</span>
+          <span>👍 1.2k</span>
+          <span>👁 3.8k</span>
+        </div>
+      </div>
+    </div>
+    <div class="lb-card">
+      <div class="lb-cover" style="background: linear-gradient(135deg, #7359F2, #A78BFA);">
+        💇
+        <span class="lb-rank-badge">🔥 热门</span>
+      </div>
+      <div class="lb-body">
+        <div class="lb-title">曼城华人理发店</div>
+        <div class="lb-location">📍 Manchester</div>
+        <div class="lb-stats">
+          <span>📊 23 项目</span>
+          <span>👍 856</span>
+          <span>👁 2.1k</span>
+        </div>
+      </div>
+    </div>
+    <div class="lb-card">
+      <div class="lb-cover" style="background: linear-gradient(135deg, #007AFF, #409CFF);">
+        📸
+      </div>
+      <div class="lb-body">
+        <div class="lb-title">伯明翰毕业照摄影师</div>
+        <div class="lb-location">📍 Birmingham</div>
+        <div class="lb-stats">
+          <span>📊 18 项目</span>
+          <span>👍 632</span>
+          <span>👁 1.5k</span>
+        </div>
+      </div>
+    </div>
+    <div class="lb-card">
+      <div class="lb-cover" style="background: linear-gradient(135deg, #26BF73, #5ED99F);">
+        🏋️
+      </div>
+      <div class="lb-body">
+        <div class="lb-title">爱丁堡健身房推荐</div>
+        <div class="lb-location">📍 Edinburgh</div>
+        <div class="lb-stats">
+          <span>📊 31 项目</span>
+          <span>👍 945</span>
+          <span>👁 2.6k</span>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
-<!-- 热门板块 (replaces 热门话题) -->
-<div class="section">
-  <div class="sec-title">
-    🔥 热门板块
-    <span class="more">更多 ›</span>
-  </div>
-  <div class="cat-scroll">
-    <div class="cat-chip" style="background: linear-gradient(135deg, #007AFF, #409CFF);">
-      <span class="cat-icon">🎨</span>
-      <div class="cat-info">
-        <div class="cat-name">设计创意</div>
-        <div class="cat-count">326 帖子</div>
+<!-- Category Grid -->
+<div class="cat-grid">
+  <div class="sec-title">📂 技能分类 <span class="sec-all">全部 ›</span></div>
+  <div class="grid">
+    <div class="grid-card" style="background: linear-gradient(135deg, #007AFF, #409CFF);">
+      <span class="gc-icon">🎨</span>
+      <div class="gc-info">
+        <div class="gc-name">设计创意</div>
+        <div class="gc-count">326 达人</div>
       </div>
     </div>
-    <div class="cat-chip" style="background: linear-gradient(135deg, #FF2D55, #FF6B8A);">
-      <span class="cat-icon">💻</span>
-      <div class="cat-info">
-        <div class="cat-name">编程开发</div>
-        <div class="cat-count">218 帖子</div>
+    <div class="grid-card" style="background: linear-gradient(135deg, #FF2D55, #FF6B8A);">
+      <span class="gc-icon">💻</span>
+      <div class="gc-info">
+        <div class="gc-name">编程开发</div>
+        <div class="gc-count">218 达人</div>
       </div>
     </div>
-    <div class="cat-chip" style="background: linear-gradient(135deg, #26BF73, #5ED99F);">
-      <span class="cat-icon">📷</span>
-      <div class="cat-info">
-        <div class="cat-name">摄影摄像</div>
-        <div class="cat-count">186 帖子</div>
+    <div class="grid-card" style="background: linear-gradient(135deg, #26BF73, #5ED99F);">
+      <span class="gc-icon">📷</span>
+      <div class="gc-info">
+        <div class="gc-name">摄影摄像</div>
+        <div class="gc-count">186 达人</div>
       </div>
     </div>
-    <div class="cat-chip" style="background: linear-gradient(135deg, #7359F2, #A78BFA);">
-      <span class="cat-icon">📝</span>
-      <div class="cat-info">
-        <div class="cat-name">文案翻译</div>
-        <div class="cat-count">432 帖子</div>
+    <div class="grid-card" style="background: linear-gradient(135deg, #7359F2, #A78BFA);">
+      <span class="gc-icon">📝</span>
+      <div class="gc-info">
+        <div class="gc-name">文案翻译</div>
+        <div class="gc-count">432 达人</div>
       </div>
     </div>
-    <div class="cat-chip" style="background: linear-gradient(135deg, #FF8033, #FFA600);">
-      <span class="cat-icon">📚</span>
-      <div class="cat-info">
-        <div class="cat-name">学业辅导</div>
-        <div class="cat-count">567 帖子</div>
+    <div class="grid-card" style="background: linear-gradient(135deg, #FF8033, #FFA600);">
+      <span class="gc-icon">🎵</span>
+      <div class="gc-info">
+        <div class="gc-name">音乐教学</div>
+        <div class="gc-count">95 达人</div>
+      </div>
+    </div>
+    <div class="grid-card" style="background: linear-gradient(135deg, #1C1C1E, #3A3A3C);">
+      <span class="gc-icon">📚</span>
+      <div class="gc-info">
+        <div class="gc-name">学业辅导</div>
+        <div class="gc-count">567 达人</div>
       </div>
     </div>
   </div>
 </div>
 
 <!-- Recommended Experts -->
-<div class="section">
-  <div class="sec-title">
-    ✨ 推荐达人
-    <span class="more">更多 ›</span>
-  </div>
+<div class="expert-section">
+  <div class="sec-title">✨ 推荐达人</div>
   <div class="expert-list">
     <div class="expert-row">
-      <div class="er-avatar" style="background: linear-gradient(135deg, #E0F0FF, #B3D9FF);">👩‍🎨</div>
+      <div class="er-avatar" style="background: linear-gradient(135deg, #FFF3E0, #FFE0B2);">👩‍🎨</div>
       <div class="er-info">
-        <div class="er-name">Lisa Chen <span class="er-badge">认证达人</span></div>
-        <div class="er-desc">UI/UX设计师 · ⭐ 5.0 · 完成78单</div>
+        <div class="er-name">Lisa Chen <span class="er-verified">认证</span></div>
+        <div class="er-desc">UI/UX设计师 · ⭐ 5.0 · 78单</div>
         <div class="er-tags">
           <span class="er-tag">UI设计</span>
           <span class="er-tag">品牌</span>
           <span class="er-tag">Figma</span>
         </div>
       </div>
-      <button class="er-btn">关注</button>
+      <div class="er-follow">+ 关注</div>
     </div>
     <div class="expert-row">
-      <div class="er-avatar" style="background: linear-gradient(135deg, #E8F5E9, #C8E6C9);">👨‍💻</div>
+      <div class="er-avatar" style="background: linear-gradient(135deg, #E0F2F1, #B2DFDB);">👨‍💻</div>
       <div class="er-info">
-        <div class="er-name">David Wu <span class="er-badge">认证达人</span></div>
-        <div class="er-desc">全栈工程师 · ⭐ 5.0 · 完成156单</div>
+        <div class="er-name">David Wu <span class="er-verified">认证</span></div>
+        <div class="er-desc">全栈工程师 · ⭐ 5.0 · 156单</div>
         <div class="er-tags">
           <span class="er-tag">Python</span>
           <span class="er-tag">React</span>
           <span class="er-tag">数据分析</span>
         </div>
       </div>
-      <button class="er-btn">关注</button>
+      <div class="er-follow">+ 关注</div>
     </div>
     <div class="expert-row">
-      <div class="er-avatar" style="background: linear-gradient(135deg, #FFF3E0, #FFE0B2);">📸</div>
+      <div class="er-avatar" style="background: linear-gradient(135deg, #F3E5F5, #E1BEE7);">📸</div>
       <div class="er-info">
-        <div class="er-name">Emma Liu <span class="er-badge">认证达人</span></div>
-        <div class="er-desc">专业摄影师 · ⭐ 4.8 · 完成92单</div>
+        <div class="er-name">Emma Liu <span class="er-verified">认证</span></div>
+        <div class="er-desc">专业摄影师 · ⭐ 4.8 · 92单</div>
         <div class="er-tags">
           <span class="er-tag">人像</span>
           <span class="er-tag">毕业照</span>
           <span class="er-tag">产品</span>
         </div>
       </div>
-      <button class="er-btn">关注</button>
+      <div class="er-follow">+ 关注</div>
     </div>
   </div>
 </div>
 
 <!-- Activities -->
-<div class="section">
-  <div class="sec-title">
-    🎪 热门活动
-    <span class="more">更多 ›</span>
-  </div>
+<div class="activity-section">
+  <div class="sec-title">🎪 热门活动</div>
   <div class="act-scroll">
     <div class="act-card">
-      <div class="act-img" style="background: linear-gradient(135deg, #007AFF, #409CFF);">
+      <div class="act-img" style="background: linear-gradient(135deg, #007AFF, #409CFF); color: #fff;">
         🎓
-        <div class="act-badge"><span class="live-dot"></span> 热门</div>
+        <div class="live-badge"><span class="live-dot"></span> 热门</div>
       </div>
       <div class="act-body">
         <div class="act-title">留学生求职分享会</div>
         <div class="act-meta">
           <span>📅 本周六</span>
-          <span>👥 32人报名</span>
+          <span>👥 32人</span>
         </div>
         <div class="act-join">免费参加 →</div>
       </div>
     </div>
     <div class="act-card">
-      <div class="act-img" style="background: linear-gradient(135deg, #FF2D55, #FF6B8A);">
+      <div class="act-img" style="background: linear-gradient(135deg, #FF2D55, #FF6B8A); color: #fff;">
         📷
       </div>
       <div class="act-body">
@@ -771,7 +727,7 @@
       </div>
     </div>
     <div class="act-card">
-      <div class="act-img" style="background: linear-gradient(135deg, #26BF73, #5ED99F);">
+      <div class="act-img" style="background: linear-gradient(135deg, #26BF73, #5ED99F); color: #fff;">
         💻
       </div>
       <div class="act-body">
@@ -786,131 +742,14 @@
   </div>
 </div>
 
-<!-- Discovery Feed -->
-<div class="feed-header">
-  <div class="sec-title">📰 发现更多</div>
-</div>
-<div class="feed-grid">
-  <!-- Card 1 -->
-  <div class="feed-card">
-    <div class="feed-img" style="background: linear-gradient(135deg, #E0F0FF, #B3D9FF);">
-      🎨
-      <span class="feed-type-badge">论坛帖</span>
-    </div>
-    <div class="feed-body">
-      <div class="feed-title">分享｜如何做出好看的品牌 VI</div>
-      <div class="feed-user-row">
-        <div class="feed-avatar">L</div>
-        <span class="feed-username">Lisa Chen</span>
-      </div>
-      <div class="feed-stats">
-        <span>❤️ 128</span>
-        <span>💬 32</span>
-      </div>
-    </div>
-  </div>
-  <!-- Card 2 -->
-  <div class="feed-card">
-    <div class="feed-img" style="background: linear-gradient(135deg, #FFF3E0, #FFE0B2);">
-      📷
-      <span class="feed-type-badge">论坛帖</span>
-    </div>
-    <div class="feed-body">
-      <div class="feed-title">伦敦毕业照拍摄地点推荐 TOP10</div>
-      <div class="feed-user-row">
-        <div class="feed-avatar">E</div>
-        <span class="feed-username">Emma Liu</span>
-      </div>
-      <div class="feed-stats">
-        <span>❤️ 256</span>
-        <span>💬 48</span>
-      </div>
-    </div>
-  </div>
-  <!-- Card 3 -->
-  <div class="feed-card">
-    <div class="feed-img" style="background: linear-gradient(135deg, #E8F5E9, #C8E6C9);">
-      💻
-      <span class="feed-type-badge">技能展示</span>
-    </div>
-    <div class="feed-body">
-      <div class="feed-title">Python数据可视化作品集分享</div>
-      <div class="feed-desc">用 Matplotlib 和 Plotly 做的几个项目...</div>
-      <div class="feed-user-row">
-        <div class="feed-avatar">D</div>
-        <span class="feed-username">David Wu</span>
-      </div>
-      <div class="feed-stats">
-        <span>❤️ 89</span>
-        <span>💬 15</span>
-      </div>
-    </div>
-  </div>
-  <!-- Card 4 -->
-  <div class="feed-card">
-    <div class="feed-img" style="background: linear-gradient(135deg, #F3E5F5, #E1BEE7);">
-      📝
-      <span class="feed-type-badge">论坛帖</span>
-    </div>
-    <div class="feed-body">
-      <div class="feed-title">英文Essay润色经验：避开这些雷区</div>
-      <div class="feed-user-row">
-        <div class="feed-avatar">S</div>
-        <span class="feed-username">Sophie Wang</span>
-      </div>
-      <div class="feed-stats">
-        <span>❤️ 167</span>
-        <span>💬 42</span>
-      </div>
-    </div>
-  </div>
-  <!-- Card 5 -->
-  <div class="feed-card">
-    <div class="feed-img" style="background: linear-gradient(135deg, #FCE4EC, #F8BBD0);">
-      🎵
-      <span class="feed-type-badge">活动</span>
-    </div>
-    <div class="feed-body">
-      <div class="feed-title">🎸 吉他入门体验课·伦敦</div>
-      <div class="feed-desc">零基础也能弹一首完整的歌！</div>
-      <div class="feed-user-row">
-        <div class="feed-avatar">M</div>
-        <span class="feed-username">Mike Zhang</span>
-      </div>
-      <div class="feed-stats">
-        <span>❤️ 56</span>
-        <span>💬 8</span>
-      </div>
-    </div>
-  </div>
-  <!-- Card 6 -->
-  <div class="feed-card">
-    <div class="feed-img" style="background: linear-gradient(135deg, #E0F2F1, #B2DFDB);">
-      🏠
-      <span class="feed-type-badge">论坛帖</span>
-    </div>
-    <div class="feed-body">
-      <div class="feed-title">英国租房避坑指南（留学生必看）</div>
-      <div class="feed-user-row">
-        <div class="feed-avatar">J</div>
-        <span class="feed-username">Jenny Li</span>
-      </div>
-      <div class="feed-stats">
-        <span>❤️ 312</span>
-        <span>💬 87</span>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- Bottom Nav -->
 <div class="bottom-nav">
-  <div class="nav-item active">
+  <div class="nav-item">
     <span class="icon">🏠</span>
     <span>首页</span>
   </div>
-  <div class="nav-item">
-    <span class="icon">🧭</span>
+  <div class="nav-item active">
+    <span class="icon">🔍</span>
     <span>发现</span>
   </div>
   <div class="nav-center">

@@ -3407,6 +3407,14 @@
   "chatTaskDetailLabel": "Task Details",
   "chatAddressLabel": "Address",
   "chatGroupChat": "Group Chat",
+  "chatViewProfile": "View profile",
+  "chatAttachments": "Attachments",
+  "chatSendMessage": "Send message",
+  "chatMoreActions": "More actions",
+  "chatViewImage": "View image",
+  "chatSelectMessage": "Select message",
+  "chatHideTranslation": "Hide translation",
+  "chatQuickAction": "Quick action",
   "chatParticipantCount": "{count} participants",
   "@chatParticipantCount": {
     "placeholders": {
@@ -4813,6 +4821,11 @@
       }
     }
   },
+
+  "badgesEmptyState": "No badges earned yet",
+  "badgeSelectorEmpty": "No badges available",
+  "badgeNoClearDescription": "Do not display any badge",
+  "badgeViewDetails": "View badge details",
 
   "profileViews": "Profile Views",
   "editBio": "Edit Bio",

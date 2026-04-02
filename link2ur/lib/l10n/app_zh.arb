@@ -3385,6 +3385,14 @@
   "chatTaskDetailLabel": "任务详情",
   "chatAddressLabel": "详细地址",
   "chatGroupChat": "群聊",
+  "chatViewProfile": "查看资料",
+  "chatAttachments": "附件",
+  "chatSendMessage": "发送消息",
+  "chatMoreActions": "更多操作",
+  "chatViewImage": "查看图片",
+  "chatSelectMessage": "选择消息",
+  "chatHideTranslation": "隐藏翻译",
+  "chatQuickAction": "快捷操作",
   "chatParticipantCount": "{count}人参与",
   "@chatParticipantCount": {
     "placeholders": {
@@ -4705,6 +4713,11 @@
       }
     }
   },
+
+  "badgesEmptyState": "还没有获得任何徽章",
+  "badgeSelectorEmpty": "暂无可用徽章",
+  "badgeNoClearDescription": "不展示任何徽章",
+  "badgeViewDetails": "查看徽章详情",
 
   "profileViews": "主页浏览量",
   "editBio": "编辑简介",

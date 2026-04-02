@@ -324,7 +324,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
           ],
         ),
       ),
-    );
+    ).then((_) => priceController.dispose());
   }
 
   TaskApplication? _findApplication(TaskDetailState state) {
@@ -1178,8 +1178,9 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
                     ),
                   ),
                 ),
-              // Action buttons for incoming negotiation (only on latest, consultation mode only)
-              if (!isMe && isLatestNegotiation && _consultationActions != null) ...[
+              // Action buttons for incoming negotiation (only on latest, consultation mode, and active negotiation status)
+              if (!isMe && isLatestNegotiation && _consultationActions != null &&
+                  (_consultationApp?['status'] == 'consulting' || _consultationApp?['status'] == 'negotiating')) ...[
                 const SizedBox(height: 12),
                 Row(
                   mainAxisSize: MainAxisSize.min,

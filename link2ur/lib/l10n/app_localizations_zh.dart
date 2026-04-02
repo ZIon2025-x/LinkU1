@@ -6885,6 +6885,30 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatGroupChat => '群聊';
 
   @override
+  String get chatViewProfile => '查看资料';
+
+  @override
+  String get chatAttachments => '附件';
+
+  @override
+  String get chatSendMessage => '发送消息';
+
+  @override
+  String get chatMoreActions => '更多操作';
+
+  @override
+  String get chatViewImage => '查看图片';
+
+  @override
+  String get chatSelectMessage => '选择消息';
+
+  @override
+  String get chatHideTranslation => '隐藏翻译';
+
+  @override
+  String get chatQuickAction => '快捷操作';
+
+  @override
   String chatParticipantCount(int count) {
     return '$count人参与';
   }
@@ -9984,6 +10008,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String badgeTop(String rank) {
     return '前 $rank 名';
   }
+
+  @override
+  String get badgesEmptyState => '还没有获得任何徽章';
+
+  @override
+  String get badgeSelectorEmpty => '暂无可用徽章';
+
+  @override
+  String get badgeNoClearDescription => '不展示任何徽章';
+
+  @override
+  String get badgeViewDetails => '查看徽章详情';
 
   @override
   String get profileViews => '主页浏览量';
@@ -18324,6 +18360,30 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get chatGroupChat => '群聊';
 
   @override
+  String get chatViewProfile => '查看資料';
+
+  @override
+  String get chatAttachments => '附件';
+
+  @override
+  String get chatSendMessage => '傳送訊息';
+
+  @override
+  String get chatMoreActions => '更多操作';
+
+  @override
+  String get chatViewImage => '查看圖片';
+
+  @override
+  String get chatSelectMessage => '選擇訊息';
+
+  @override
+  String get chatHideTranslation => '隱藏翻譯';
+
+  @override
+  String get chatQuickAction => '快捷操作';
+
+  @override
   String chatParticipantCount(int count) {
     return '$count人參與';
   }
@@ -21423,6 +21483,18 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String badgeTop(String rank) {
     return '前 $rank 名';
   }
+
+  @override
+  String get badgesEmptyState => '還沒有獲得任何徽章';
+
+  @override
+  String get badgeSelectorEmpty => '暫無可用徽章';
+
+  @override
+  String get badgeNoClearDescription => '不展示任何徽章';
+
+  @override
+  String get badgeViewDetails => '查看徽章詳情';
 
   @override
   String get profileViews => '主頁瀏覽量';

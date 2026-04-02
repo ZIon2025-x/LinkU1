@@ -1033,6 +1033,17 @@ class TaskExpertRepository {
     return response.data!;
   }
 
+  /// 卖家批准跳蚤市场购买请求
+  Future<Map<String, dynamic>> approveFleaMarketPurchase(int requestId) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.fleaMarketApprovePurchaseRequest(requestId.toString()),
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw TaskExpertException(response.message ?? '审批失败');
+    }
+    return response.data!;
+  }
+
   /// 关闭跳蚤市场咨询
   Future<void> closeFleaMarketConsultation(int requestId) async {
     final response = await _apiService.post(

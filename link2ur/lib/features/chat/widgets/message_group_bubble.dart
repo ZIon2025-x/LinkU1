@@ -158,7 +158,7 @@ class MessageGroupBubbleView extends StatelessWidget {
           if (!isOutgoing) ...[
             Semantics(
               button: true,
-              label: 'View profile',
+              label: context.l10n.chatViewProfile,
               child: GestureDetector(
                 onTap: onAvatarTap,
                 child: AvatarView(
@@ -303,7 +303,7 @@ class _SystemMessageBubble extends StatelessWidget {
           // 附件图片（证据）
           if (message.hasImageAttachments) ...[
             const SizedBox(height: 6),
-            _buildAttachmentImages(),
+            _buildAttachmentImages(context),
           ],
         ],
       ),
@@ -384,7 +384,7 @@ class _SystemMessageBubble extends StatelessWidget {
   }
 
   /// 附件图片（证据）
-  Widget _buildAttachmentImages() {
+  Widget _buildAttachmentImages(BuildContext context) {
     final imageUrls = message.allImageUrls;
     return Wrap(
       spacing: 6,
@@ -393,7 +393,7 @@ class _SystemMessageBubble extends StatelessWidget {
       children: imageUrls.map((url) {
         return Semantics(
           button: true,
-          label: 'View image',
+          label: context.l10n.chatViewImage,
           child: GestureDetector(
             onTap: () => onImageTap?.call(url),
             child: ClipRRect(
@@ -576,7 +576,7 @@ class _GroupBubbleItemState extends State<_GroupBubbleItem>
           isDark: isDark,
           child: Semantics(
             button: true,
-            label: 'View image',
+            label: context.l10n.chatViewImage,
             child: GestureDetector(
               onTap: _isSelected ? _dismiss : () => widget.onImageTap?.call(displayUrl),
               child: AsyncImageView(
@@ -640,7 +640,7 @@ class _GroupBubbleItemState extends State<_GroupBubbleItem>
           // ── 气泡主体（缩放 + 高亮） ──
           Semantics(
             button: true,
-            label: 'Select message',
+            label: context.l10n.chatSelectMessage,
             child: GestureDetector(
               onLongPressStart: _onLongPressStart,
               onLongPress: _onLongPress,
@@ -729,7 +729,7 @@ class _GroupBubbleItemState extends State<_GroupBubbleItem>
               padding: const EdgeInsets.only(top: 4),
               child: Semantics(
                 button: true,
-                label: 'Hide translation',
+                label: context.l10n.chatHideTranslation,
                 child: GestureDetector(
                   onTap: () => setState(() => _showTranslation = false),
                   child: Container(

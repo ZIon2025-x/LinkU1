@@ -3,9 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/design/app_colors.dart';
 import '../../../../core/constants/api_endpoints.dart';
-import '../../../../core/utils/error_localizer.dart';
 import '../../../../core/utils/l10n_extension.dart';
-import '../../../../data/services/api_service.dart';
 import '../../../task_expert/bloc/task_expert_bloc.dart';
 import 'consultation_base.dart';
 
@@ -81,7 +79,7 @@ class FleaMarketConsultationActions extends ConsultationActions {
           ],
         ),
       ),
-    );
+    ).then((_) => priceController.dispose());
   }
 
   @override
@@ -153,7 +151,7 @@ class FleaMarketConsultationActions extends ConsultationActions {
                 color: AppColors.success,
                 onTap: isSubmitting
                     ? null
-                    : () => _showApproveConfirmation(context, onActionCompleted),
+                    : () => _showApproveConfirmation(context),
               ),
               const SizedBox(width: 8),
             ],
@@ -212,7 +210,7 @@ class FleaMarketConsultationActions extends ConsultationActions {
           ],
         ),
       ),
-    );
+    ).then((_) => priceController.dispose());
   }
 
   void _showQuoteDialog(BuildContext context, String Function() getCurrencySymbol) {
@@ -274,7 +272,10 @@ class FleaMarketConsultationActions extends ConsultationActions {
           ],
         ),
       ),
-    );
+    ).then((_) {
+      priceController.dispose();
+      messageController.dispose();
+    });
   }
 
   void _showFormalApplyDialog(BuildContext context) {
@@ -302,7 +303,7 @@ class FleaMarketConsultationActions extends ConsultationActions {
     );
   }
 
-  void _showApproveConfirmation(BuildContext context, VoidCallback onActionCompleted) {
+  void _showApproveConfirmation(BuildContext context) {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -316,7 +317,9 @@ class FleaMarketConsultationActions extends ConsultationActions {
           TextButton(
             onPressed: () {
               Navigator.pop(dialogContext);
-              _approveFleaMarketPurchase(context, onActionCompleted);
+              context.read<TaskExpertBloc>().add(
+                TaskExpertApproveFleaMarketPurchase(applicationId),
+              );
             },
             style: TextButton.styleFrom(foregroundColor: AppColors.success),
             child: Text(context.l10n.expertApplicationConfirmApprove),
@@ -324,31 +327,6 @@ class FleaMarketConsultationActions extends ConsultationActions {
         ],
       ),
     );
-  }
-
-  Future<void> _approveFleaMarketPurchase(BuildContext context, VoidCallback onActionCompleted) async {
-    try {
-      final apiService = context.read<ApiService>();
-      final response = await apiService.post<Map<String, dynamic>>(
-        ApiEndpoints.fleaMarketApprovePurchaseRequest(applicationId.toString()),
-      );
-      if (!context.mounted) return;
-      if (response.isSuccess) {
-        onActionCompleted();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.l10n.expertApplicationApproved)),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.localizeError(response.message ?? 'unknown_error'))),
-        );
-      }
-    } catch (e) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.localizeError(e.toString()))),
-      );
-    }
   }
 
   void _showCloseConfirmation(BuildContext context) {

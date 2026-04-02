@@ -5,6 +5,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/error_localizer.dart';
+import '../../../core/utils/l10n_extension.dart';
 import '../../../data/models/badge.dart';
 import '../bloc/badges_bloc.dart';
 
@@ -59,7 +60,7 @@ class BadgeSelectorDialog extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      'Select Display Badge',
+                      context.l10n.badgeSelector,
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
@@ -67,7 +68,7 @@ class BadgeSelectorDialog extends StatelessWidget {
                   ),
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    tooltip: 'Close',
+                    tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
                     icon: const Icon(Icons.close, size: 20),
                   ),
                 ],
@@ -96,7 +97,7 @@ class BadgeSelectorDialog extends StatelessWidget {
                             ),
                             AppSpacing.vSm,
                             Text(
-                              'No badges available',
+                              context.l10n.badgeSelectorEmpty,
                               style: theme.textTheme.bodyMedium?.copyWith(
                                 color: theme.colorScheme.onSurface
                                     .withAlpha(140),
@@ -201,13 +202,13 @@ class _ClearBadgeItem extends StatelessWidget {
         ),
       ),
       title: Text(
-        'No Badge',
+        context.l10n.badgeNone,
         style: theme.textTheme.bodyMedium?.copyWith(
           fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
         ),
       ),
       subtitle: Text(
-        'Do not display any badge',
+        context.l10n.badgeNoClearDescription,
         style: theme.textTheme.bodySmall?.copyWith(
           color: theme.colorScheme.onSurface.withAlpha(120),
         ),

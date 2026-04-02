@@ -13157,6 +13157,54 @@ abstract class AppLocalizations {
   /// **'Group Chat'**
   String get chatGroupChat;
 
+  /// No description provided for @chatViewProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'View profile'**
+  String get chatViewProfile;
+
+  /// No description provided for @chatAttachments.
+  ///
+  /// In en, this message translates to:
+  /// **'Attachments'**
+  String get chatAttachments;
+
+  /// No description provided for @chatSendMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Send message'**
+  String get chatSendMessage;
+
+  /// No description provided for @chatMoreActions.
+  ///
+  /// In en, this message translates to:
+  /// **'More actions'**
+  String get chatMoreActions;
+
+  /// No description provided for @chatViewImage.
+  ///
+  /// In en, this message translates to:
+  /// **'View image'**
+  String get chatViewImage;
+
+  /// No description provided for @chatSelectMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Select message'**
+  String get chatSelectMessage;
+
+  /// No description provided for @chatHideTranslation.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide translation'**
+  String get chatHideTranslation;
+
+  /// No description provided for @chatQuickAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick action'**
+  String get chatQuickAction;
+
   /// No description provided for @chatParticipantCount.
   ///
   /// In en, this message translates to:
@@ -19114,6 +19162,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Top {rank}'**
   String badgeTop(String rank);
+
+  /// No description provided for @badgesEmptyState.
+  ///
+  /// In en, this message translates to:
+  /// **'No badges earned yet'**
+  String get badgesEmptyState;
+
+  /// No description provided for @badgeSelectorEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No badges available'**
+  String get badgeSelectorEmpty;
+
+  /// No description provided for @badgeNoClearDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Do not display any badge'**
+  String get badgeNoClearDescription;
+
+  /// No description provided for @badgeViewDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'View badge details'**
+  String get badgeViewDetails;
 
   /// No description provided for @profileViews.
   ///

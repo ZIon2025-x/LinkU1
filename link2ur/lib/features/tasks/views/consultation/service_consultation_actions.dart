@@ -79,7 +79,7 @@ class ServiceConsultationActions extends ConsultationActions {
           ],
         ),
       ),
-    );
+    ).then((_) => priceController.dispose());
   }
 
   @override
@@ -141,17 +141,6 @@ class ServiceConsultationActions extends ConsultationActions {
                 onTap: isSubmitting
                     ? null
                     : () => _showFormalApplyDialog(context, getCurrencySymbol),
-              ),
-              const SizedBox(width: 8),
-            ],
-            if (isPriceAgreed && !isApplicant) ...[
-              ActionPill(
-                icon: Icons.check_circle,
-                label: context.l10n.expertApplicationConfirmApprove,
-                color: AppColors.success,
-                onTap: isSubmitting
-                    ? null
-                    : () => _showApproveConfirmation(context, consultationApp),
               ),
               const SizedBox(width: 8),
             ],
@@ -221,7 +210,7 @@ class ServiceConsultationActions extends ConsultationActions {
           ],
         ),
       ),
-    );
+    ).then((_) => priceController.dispose());
   }
 
   void _showQuoteDialog(BuildContext context, String Function() getCurrencySymbol) {
@@ -283,7 +272,10 @@ class ServiceConsultationActions extends ConsultationActions {
           ],
         ),
       ),
-    );
+    ).then((_) {
+      priceController.dispose();
+      messageController.dispose();
+    });
   }
 
   void _showFormalApplyDialog(BuildContext context, String Function() getCurrencySymbol) {
@@ -345,7 +337,10 @@ class ServiceConsultationActions extends ConsultationActions {
           ],
         ),
       ),
-    );
+    ).then((_) {
+      priceController.dispose();
+      messageController.dispose();
+    });
   }
 
   void _showApproveConfirmation(BuildContext context, Map<String, dynamic>? consultationApp) {

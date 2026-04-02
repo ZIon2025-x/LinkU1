@@ -179,7 +179,7 @@ class _ChatContentState extends State<_ChatContent> {
             actions: [
               IconButton(
                 icon: const Icon(Icons.person_outline),
-                tooltip: 'View profile',
+                tooltip: context.l10n.chatViewProfile,
                 onPressed: () => context.push('/user/${widget.userId}'),
               ),
             ],
@@ -328,7 +328,7 @@ class _ChatContentState extends State<_ChatContent> {
                 duration: const Duration(milliseconds: 200),
                 child: const Icon(Icons.add_circle_outline),
               ),
-              tooltip: 'Attachments',
+              tooltip: context.l10n.chatAttachments,
               onPressed: () {
                 setState(() => _showAttachMenu = !_showAttachMenu);
               },
@@ -372,7 +372,7 @@ class _ChatContentState extends State<_ChatContent> {
               // 渐变发送按钮 - 与iOS对齐
               Semantics(
                 button: true,
-                label: 'Send message',
+                label: context.l10n.chatSendMessage,
                 child: GestureDetector(
                   onTap: _sendMessage,
                   child: Container(

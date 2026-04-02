@@ -342,7 +342,7 @@ class _QuickActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      label: 'Quick action',
+      label: context.l10n.chatQuickAction,
       child: GestureDetector(
       onTap: onTap,
       child: SizedBox(
@@ -559,7 +559,7 @@ class _TaskChatItem extends StatelessWidget {
 
     return Semantics(
       button: true,
-      label: 'View details',
+      label: l10n.chatViewDetail,
       excludeSemantics: true,
       child: GestureDetector(
       onTap: () {

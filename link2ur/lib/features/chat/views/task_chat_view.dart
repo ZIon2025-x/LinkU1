@@ -542,7 +542,7 @@ class _TaskChatContentState extends State<_TaskChatContent> {
                     duration: const Duration(milliseconds: 200),
                     child: const Icon(Icons.add_circle_outline),
                   ),
-                  tooltip: 'More actions',
+                  tooltip: context.l10n.chatMoreActions,
                   onPressed: _toggleActionMenu,
                   color: _showActionMenu
                       ? AppColors.primary
@@ -602,7 +602,7 @@ class _TaskChatContentState extends State<_TaskChatContent> {
                     builder: (context, value, child) {
                       return IconButton(
                         icon: const Icon(Icons.send),
-                        tooltip: 'Send',
+                        tooltip: context.l10n.chatSendMessage,
                         onPressed: value.text.trim().isEmpty
                             ? null
                             : _sendMessage,

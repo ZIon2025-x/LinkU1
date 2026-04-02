@@ -80,7 +80,7 @@ class TaskConsultationActions extends ConsultationActions {
           ],
         ),
       ),
-    );
+    ).then((_) => priceController.dispose());
   }
 
   @override
@@ -132,16 +132,6 @@ class TaskConsultationActions extends ConsultationActions {
                 onTap: isSubmitting
                     ? null
                     : () => _showQuoteDialog(context, getCurrencySymbol),
-              ),
-              const SizedBox(width: 8),
-            ],
-            if (isPriceAgreed && isApplicant) ...[
-              ActionPill(
-                icon: Icons.assignment,
-                label: context.l10n.formalApply,
-                onTap: isSubmitting
-                    ? null
-                    : () => _showFormalApplyDialog(context, getCurrencySymbol),
               ),
               const SizedBox(width: 8),
             ],
@@ -223,7 +213,7 @@ class TaskConsultationActions extends ConsultationActions {
           ],
         ),
       ),
-    );
+    ).then((_) => priceController.dispose());
   }
 
   void _showQuoteDialog(BuildContext context, String Function() getCurrencySymbol) {
@@ -285,7 +275,10 @@ class TaskConsultationActions extends ConsultationActions {
           ],
         ),
       ),
-    );
+    ).then((_) {
+      priceController.dispose();
+      messageController.dispose();
+    });
   }
 
   void _showFormalApplyDialog(BuildContext context, String Function() getCurrencySymbol) {
@@ -347,7 +340,10 @@ class TaskConsultationActions extends ConsultationActions {
           ],
         ),
       ),
-    );
+    ).then((_) {
+      priceController.dispose();
+      messageController.dispose();
+    });
   }
 
   void _showApproveConfirmation(BuildContext context) {
