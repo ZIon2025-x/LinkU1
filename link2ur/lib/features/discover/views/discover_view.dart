@@ -67,54 +67,56 @@ class _DiscoverContent extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       backgroundColor: AppColors.backgroundFor(Theme.of(context).brightness),
-      appBar: AppBar(
-        backgroundColor: isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight,
-        elevation: 0,
-        scrolledUnderElevation: 0.5,
-        toolbarHeight: 56,
-        titleSpacing: AppSpacing.md,
-        title: GestureDetector(
-          onTap: () => context.push('/search'),
-          child: Container(
-            height: 40,
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            decoration: BoxDecoration(
-              color: isDark
-                  ? AppColors.secondaryBackgroundDark
-                  : AppColors.backgroundLight,
-              borderRadius: AppRadius.allPill,
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.search,
-                  size: 20,
-                  color: isDark
-                      ? AppColors.textSecondaryDark
-                      : AppColors.textSecondaryLight,
-                ),
-                AppSpacing.hSm,
-                Expanded(
-                  child: Text(
-                    context.l10n.discoverSearchHint,
-                    style: AppTypography.subheadline.copyWith(
-                      color: isDark
-                          ? AppColors.textPlaceholderDark
-                          : AppColors.textPlaceholderLight,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
       body: Stack(
         children: [
           const RepaintBoundary(child: DecorativeBackground()),
-          BlocBuilder<DiscoverBloc, DiscoverState>(
+          SafeArea(
+            child: Column(
+              children: [
+                // 搜索栏
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.sm),
+                  child: GestureDetector(
+                    onTap: () => context.push('/search'),
+                    child: Container(
+                      height: 40,
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? AppColors.secondaryBackgroundDark
+                            : AppColors.backgroundLight,
+                        borderRadius: AppRadius.allPill,
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.search,
+                            size: 20,
+                            color: isDark
+                                ? AppColors.textSecondaryDark
+                                : AppColors.textSecondaryLight,
+                          ),
+                          AppSpacing.hSm,
+                          Expanded(
+                            child: Text(
+                              context.l10n.discoverSearchHint,
+                              style: AppTypography.subheadline.copyWith(
+                                color: isDark
+                                    ? AppColors.textPlaceholderDark
+                                    : AppColors.textPlaceholderLight,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                // 内容区
+                Expanded(
+                  child: BlocBuilder<DiscoverBloc, DiscoverState>(
       builder: (context, state) {
         switch (state.status) {
           case DiscoverStatus.initial:
@@ -154,6 +156,10 @@ class _DiscoverContent extends StatelessWidget {
         }
       },
     ),
+              ),
+              ],
+            ),
+          ),
         ],
       ),
     );

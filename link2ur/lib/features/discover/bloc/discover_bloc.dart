@@ -72,8 +72,26 @@ class DiscoverBloc extends Bloc<DiscoverEvent, DiscoverState> {
       ]);
 
       final allCategories = results[1] as List<ForumCategory>;
+      final leaderboards = results[2] as List<Leaderboard>;
+
+      // 批量查询收藏状态
+      final catIds = allCategories.map((c) => c.id).toList();
+      final lbIds = leaderboards.map((lb) => lb.id).toList();
+      final favResults = await Future.wait<Map<int, bool>>([
+        catIds.isNotEmpty ? _forumRepo.getCategoryFavoritesBatch(catIds) : Future.value({}),
+        lbIds.isNotEmpty ? _leaderboardRepo.getFavoritesBatch(lbIds) : Future.value({}),
+      ]);
+      final catFavMap = favResults[0];
+      final lbFavMap = favResults[1];
+
+      // 合并收藏状态到分类
+      final categoriesWithFav = allCategories.map((c) {
+        final fav = catFavMap[c.id] ?? false;
+        return fav ? c.copyWith(isFavorited: true) : c;
+      }).toList();
+
       // 板块：收藏优先
-      final boards = allCategories
+      final boards = categoriesWithFav
           .where((c) => c.skillType == null || c.skillType!.isEmpty)
           .toList()
         ..sort((a, b) {
@@ -81,15 +99,20 @@ class DiscoverBloc extends Bloc<DiscoverEvent, DiscoverState> {
           final bFav = b.isFavorited ? 0 : 1;
           return aFav.compareTo(bFav);
         });
-      final skillCats = allCategories
+      final skillCats = categoriesWithFav
           .where((c) => c.skillType != null && c.skillType!.isNotEmpty)
           .toList()
         ..sort((a, b) => b.viewCount.compareTo(a.viewCount));
 
+      // 合并收藏状态到榜单
+      final leaderboardsWithFav = leaderboards.map((lb) {
+        final fav = lbFavMap[lb.id] ?? false;
+        return fav ? lb.copyWith(isFavorited: true) : lb;
+      }).toList();
+
       // 榜单：收藏优先 > 同城优先
-      final leaderboards = results[2] as List<Leaderboard>;
       final cityLower = (city != null && city.isNotEmpty) ? city.toLowerCase() : null;
-      leaderboards.sort((a, b) {
+      leaderboardsWithFav.sort((a, b) {
         final aFav = a.isFavorited ? 0 : 1;
         final bFav = b.isFavorited ? 0 : 1;
         if (aFav != bFav) return aFav.compareTo(bFav);
@@ -112,7 +135,7 @@ class DiscoverBloc extends Bloc<DiscoverEvent, DiscoverState> {
         status: DiscoverStatus.loaded,
         trendingSearches: results[0] as List<TrendingSearchItem>,
         boards: boards.take(5).toList(),
-        leaderboards: leaderboards.take(4).toList(),
+        leaderboards: leaderboardsWithFav.take(4).toList(),
         skillCategories: skillCats.take(6).toList(),
         experts: experts,
         activities: results[4] as List<Activity>,
