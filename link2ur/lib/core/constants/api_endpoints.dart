@@ -339,6 +339,7 @@ class ApiEndpoints {
   static const String forumNotificationsUnreadCount =
       '/api/forum/notifications/unread-count';
   static const String forumSearch = '/api/forum/search';
+  static const String trendingSearches = '/api/trending/searches';
   static const String forumReports = '/api/forum/reports';
   static const String forumHotPosts = '/api/forum/hot-posts';
 
