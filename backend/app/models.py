@@ -2363,6 +2363,8 @@ class ForumCategory(Base):
     university_code = Column(String(50), nullable=True)  # 大学编码（如 UOB），仅 type=university 时使用
     skill_type = Column(String(50), nullable=True, index=True)  # Links to task_type for skill sections
     view_count = Column(Integer, default=0, nullable=False)
+    service_count = Column(Integer, default=0, nullable=False)
+    task_count = Column(Integer, default=0, nullable=False)
     created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
 

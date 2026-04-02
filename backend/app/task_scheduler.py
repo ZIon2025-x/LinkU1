@@ -834,8 +834,54 @@ def init_scheduler():
         description="计算热搜榜",
     )
 
+    # 技能板块服务数/任务数统计 - 每小时
+    def compute_skill_category_counts(db):
+        """统计每个 skill 板块对应的活跃服务数和任务数"""
+        from sqlalchemy import func as sa_func
+        try:
+            # 获取所有 skill 板块
+            skill_categories = db.query(models.ForumCategory).filter(
+                models.ForumCategory.skill_type.isnot(None),
+                models.ForumCategory.skill_type != '',
+            ).all()
+
+            if not skill_categories:
+                return
+
+            for cat in skill_categories:
+                st = cat.skill_type
+
+                # 统计活跃服务数（status=active 的服务）
+                svc_count = db.query(sa_func.count(models.TaskExpertService.id)).filter(
+                    models.TaskExpertService.category == st,
+                    models.TaskExpertService.status == 'active',
+                ).scalar() or 0
+
+                # 统计活跃任务数（open 状态的任务）
+                tsk_count = db.query(sa_func.count(models.Task.id)).filter(
+                    models.Task.task_type == st,
+                    models.Task.status == 'open',
+                ).scalar() or 0
+
+                cat.service_count = svc_count
+                cat.task_count = tsk_count
+
+            db.commit()
+            logger.info(f"技能板块统计完成: {len(skill_categories)} 个板块已更新")
+        except Exception as e:
+            db.rollback()
+            logger.error(f"技能板块统计失败: {e}", exc_info=True)
+            raise
+
+    scheduler.register_task(
+        'compute_skill_category_counts',
+        with_db(compute_skill_category_counts),
+        interval_seconds=3600,
+        description="统计技能板块服务数/任务数",
+    )
+
     # ========== 推荐系统任务 ==========
-    
+
     # 更新热门任务列表 - 每30分钟
     def update_popular_tasks():
         import json

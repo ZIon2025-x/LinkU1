@@ -39,6 +39,7 @@ class TaskConsultationActions extends ConsultationActions {
     required String Function() getCurrencySymbol,
   }) {
     final priceController = TextEditingController();
+    final bloc = context.read<TaskExpertBloc>();
     String? errorText;
     showDialog(
       context: context,
@@ -67,7 +68,7 @@ class TaskConsultationActions extends ConsultationActions {
                   return;
                 }
                 Navigator.pop(dialogContext);
-                context.read<TaskExpertBloc>().add(
+                bloc.add(
                   TaskExpertTaskNegotiateResponse(
                     taskId, applicationId,
                     action: 'counter',
@@ -80,7 +81,7 @@ class TaskConsultationActions extends ConsultationActions {
           ],
         ),
       ),
-    );
+    ).whenComplete(() => priceController.dispose());
   }
 
   @override
@@ -176,6 +177,7 @@ class TaskConsultationActions extends ConsultationActions {
 
   void _showNegotiateDialog(BuildContext context, String Function() getCurrencySymbol) {
     final priceController = TextEditingController();
+    final bloc = context.read<TaskExpertBloc>();
     String? errorText;
     showDialog(
       context: context,
@@ -204,7 +206,7 @@ class TaskConsultationActions extends ConsultationActions {
                   return;
                 }
                 Navigator.pop(dialogContext);
-                context.read<TaskExpertBloc>().add(
+                bloc.add(
                   TaskExpertTaskNegotiate(taskId, applicationId, price: price),
                 );
               },
@@ -213,12 +215,13 @@ class TaskConsultationActions extends ConsultationActions {
           ],
         ),
       ),
-    );
+    ).whenComplete(() => priceController.dispose());
   }
 
   void _showQuoteDialog(BuildContext context, String Function() getCurrencySymbol) {
     final priceController = TextEditingController();
     final messageController = TextEditingController();
+    final bloc = context.read<TaskExpertBloc>();
     String? errorText;
     showDialog(
       context: context,
@@ -260,9 +263,9 @@ class TaskConsultationActions extends ConsultationActions {
                   setDialogState(() => errorText = context.l10n.quotePriceHint);
                   return;
                 }
-                Navigator.pop(dialogContext);
                 final msg = messageController.text.trim();
-                context.read<TaskExpertBloc>().add(
+                Navigator.pop(dialogContext);
+                bloc.add(
                   TaskExpertTaskQuote(
                     taskId, applicationId,
                     price: price,
@@ -275,12 +278,16 @@ class TaskConsultationActions extends ConsultationActions {
           ],
         ),
       ),
-    );
+    ).whenComplete(() {
+      priceController.dispose();
+      messageController.dispose();
+    });
   }
 
   void _showFormalApplyDialog(BuildContext context, String Function() getCurrencySymbol) {
     final priceController = TextEditingController();
     final messageController = TextEditingController();
+    final bloc = context.read<TaskExpertBloc>();
     String? errorText;
     showDialog(
       context: context,
@@ -322,9 +329,9 @@ class TaskConsultationActions extends ConsultationActions {
                   setDialogState(() => errorText = context.l10n.negotiatePriceHint);
                   return;
                 }
-                Navigator.pop(dialogContext);
                 final msg = messageController.text.trim();
-                context.read<TaskExpertBloc>().add(
+                Navigator.pop(dialogContext);
+                bloc.add(
                   TaskExpertTaskFormalApply(
                     taskId, applicationId,
                     proposedPrice: price,
@@ -337,10 +344,14 @@ class TaskConsultationActions extends ConsultationActions {
           ],
         ),
       ),
-    );
+    ).whenComplete(() {
+      priceController.dispose();
+      messageController.dispose();
+    });
   }
 
   void _showApproveConfirmation(BuildContext context) {
+    final bloc = context.read<TaskDetailBloc>();
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -354,9 +365,7 @@ class TaskConsultationActions extends ConsultationActions {
           TextButton(
             onPressed: () {
               Navigator.pop(dialogContext);
-              context.read<TaskDetailBloc>().add(
-                TaskDetailAcceptApplicant(applicationId),
-              );
+              bloc.add(TaskDetailAcceptApplicant(applicationId));
             },
             style: TextButton.styleFrom(foregroundColor: AppColors.success),
             child: Text(context.l10n.expertApplicationConfirmApprove),
@@ -367,6 +376,7 @@ class TaskConsultationActions extends ConsultationActions {
   }
 
   void _showCloseConfirmation(BuildContext context) {
+    final bloc = context.read<TaskExpertBloc>();
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -380,9 +390,7 @@ class TaskConsultationActions extends ConsultationActions {
           TextButton(
             onPressed: () {
               Navigator.pop(dialogContext);
-              context.read<TaskExpertBloc>().add(
-                TaskExpertCloseTaskConsultation(taskId, applicationId),
-              );
+              bloc.add(TaskExpertCloseTaskConsultation(taskId, applicationId));
             },
             style: TextButton.styleFrom(foregroundColor: AppColors.error),
             child: Text(MaterialLocalizations.of(context).okButtonLabel),

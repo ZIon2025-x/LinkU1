@@ -276,6 +276,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
 
   void _showProposePriceDialog() {
     final priceController = TextEditingController();
+    final bloc = context.read<TaskDetailBloc>();
     String? errorText;
     showDialog(
       context: context,
@@ -310,21 +311,21 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
                 }
                 if (price > 50000) {
                   setDialogState(() {
-                    errorText = context.l10n.priceExceedsMaximum(Helpers.currencySymbolFor(context.read<TaskDetailBloc>().state.task?.currency ?? 'GBP'));
+                    errorText = context.l10n.priceExceedsMaximum(Helpers.currencySymbolFor(bloc.state.task?.currency ?? 'GBP'));
                   });
                   return;
                 }
                 Navigator.pop(dialogContext);
-                context.read<TaskDetailBloc>().add(
-                      TaskDetailProposePrice(widget.applicationId, price),
-                    );
+                bloc.add(
+                  TaskDetailProposePrice(widget.applicationId, price),
+                );
               },
               child: Text(MaterialLocalizations.of(context).okButtonLabel),
             ),
           ],
         ),
       ),
-    );
+    ).whenComplete(() => priceController.dispose());
   }
 
   TaskApplication? _findApplication(TaskDetailState state) {

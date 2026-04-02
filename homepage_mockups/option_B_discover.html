@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>方案B - 发现页（优化版）</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'PingFang SC', 'Helvetica Neue', sans-serif;
+    background: #F5F5F5;
+    max-width: 430px;
+    margin: 0 auto;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Header */
+  .header {
+    background: #fff;
+    padding: 44px 16px 0;
+    position: sticky;
+    top: 0;
+    z-index: 200;
+  }
+  .header-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 10px;
+  }
+  .search-box {
+    flex: 1;
+    background: #f2f2f2;
+    border-radius: 20px;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: #8E8E93;
+  }
+  .header-icon {
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+
+  /* Tab Bar */
+  .tab-bar {
+    background: #fff;
+    display: flex;
+    padding: 0 16px;
+    gap: 24px;
+    border-bottom: 0.5px solid rgba(0,0,0,0.06);
+  }
+  .tab-item {
+    padding: 10px 0;
+    font-size: 15px;
+    color: #8E8E93;
+    font-weight: 500;
+    position: relative;
+    white-space: nowrap;
+  }
+  .tab-item.active {
+    color: #000;
+    font-weight: 700;
+  }
+  .tab-item.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 20px; height: 3px;
+    background: #007AFF;
+    border-radius: 2px;
+  }
+
+  /* Section */
+  .section {
+    background: #fff;
+    margin-top: 8px;
+    padding: 16px;
+  }
+  .sec-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #000;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .sec-all {
+    margin-left: auto;
+    font-size: 13px;
+    font-weight: 500;
+    color: #8E8E93;
+  }
+
+  /* ========== 热搜 - 紧凑横向标签 ========== */
+  .hot-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .hot-tag {
+    padding: 6px 14px;
+    border-radius: 18px;
+    background: #f5f5f5;
+    font-size: 13px;
+    color: #333;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+  }
+  .hot-tag.top {
+    background: linear-gradient(135deg, #FFF0F0, #FFF5F5);
+    color: #FF2D55;
+    font-weight: 600;
+  }
+  .hot-tag .rank {
+    font-size: 11px;
+    font-weight: 800;
+  }
+
+  /* ========== 帖子流 - 核心内容 ========== */
+  .post-card {
+    display: flex;
+    gap: 12px;
+    padding: 14px 0;
+    border-bottom: 0.5px solid rgba(0,0,0,0.06);
+  }
+  .post-card:last-child { border-bottom: none; }
+  .post-content { flex: 1; }
+  .post-cat {
+    font-size: 11px;
+    color: #007AFF;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .post-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #000;
+    line-height: 1.4;
+    margin-bottom: 4px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .post-preview {
+    font-size: 13px;
+    color: #8E8E93;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .post-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 11px;
+    color: #8E8E93;
+  }
+  .post-author {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .post-author-avatar {
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: #f0f0f0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 8px;
+  }
+  .post-thumb {
+    width: 90px; height: 70px;
+    border-radius: 10px;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px;
+  }
+  .post-pinned {
+    font-size: 10px;
+    color: #FF2D55;
+    font-weight: 700;
+    background: #FFF0F4;
+    padding: 1px 6px;
+    border-radius: 4px;
+    margin-right: 4px;
+  }
+
+  /* ========== 板块 - 紧凑 pill 横滑 ========== */
+  .cat-pills {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin: 0 -16px;
+    padding: 0 16px;
+  }
+  .cat-pills::-webkit-scrollbar { display: none; }
+  .cat-pill {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: #fff;
+    border: 1px solid #f0f0f0;
+    border-radius: 14px;
+  }
+  .cat-pill-icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    color: #fff;
+  }
+  .cat-pill-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #000;
+  }
+  .cat-pill-count {
+    font-size: 11px;
+    color: #8E8E93;
+  }
+
+  /* ========== 推荐达人 - 横滑精简卡片 ========== */
+  .expert-scroll {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin: 0 -16px;
+    padding: 0 16px;
+  }
+  .expert-scroll::-webkit-scrollbar { display: none; }
+  .expert-card {
+    flex-shrink: 0;
+    width: 140px;
+    border-radius: 14px;
+    border: 1px solid #f0f0f0;
+    padding: 16px 12px;
+    text-align: center;
+    background: #fff;
+  }
+  .ec-avatar {
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    margin: 0 auto 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px;
+  }
+  .ec-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: #000;
+    margin-bottom: 2px;
+  }
+  .ec-desc {
+    font-size: 11px;
+    color: #8E8E93;
+    margin-bottom: 4px;
+  }
+  .ec-rating {
+    font-size: 11px;
+    color: #FF8033;
+    margin-bottom: 10px;
+  }
+  .ec-follow {
+    padding: 5px 0;
+    border-radius: 14px;
+    background: #007AFF;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    width: 100%;
+    text-align: center;
+  }
+
+  /* ========== 热门活动 - 单条横幅 ========== */
+  .activity-banner {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #EBF2FF, #F5F0FF);
+    margin-bottom: 10px;
+  }
+  .activity-banner:last-child { margin-bottom: 0; }
+  .ab-icon {
+    width: 48px; height: 48px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    color: #fff;
+    flex-shrink: 0;
+  }
+  .ab-info { flex: 1; }
+  .ab-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #000;
+    margin-bottom: 2px;
+  }
+  .ab-meta {
+    font-size: 12px;
+    color: #8E8E93;
+  }
+  .ab-action {
+    padding: 6px 14px;
+    border-radius: 14px;
+    background: #007AFF;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  /* ========== 排行榜入口 - 紧凑卡片 ========== */
+  .rank-entry {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin: 0 -16px;
+    padding: 0 16px;
+  }
+  .rank-entry::-webkit-scrollbar { display: none; }
+  .rank-card {
+    flex-shrink: 0;
+    width: 160px;
+    border-radius: 14px;
+    padding: 14px;
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+  }
+  .rank-card::after {
+    content: '';
+    position: absolute;
+    right: -15px; top: -15px;
+    width: 60px; height: 60px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.12);
+  }
+  .rc-icon {
+    font-size: 24px;
+    margin-bottom: 8px;
+  }
+  .rc-title {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 2px;
+    position: relative;
+    z-index: 1;
+  }
+  .rc-count {
+    font-size: 11px;
+    opacity: 0.75;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Bottom padding */
+  .bottom-spacer { height: 90px; }
+
+  /* Bottom Nav */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 430px;
+    background: #fff;
+    border-top: 0.5px solid rgba(0,0,0,0.08);
+    display: flex;
+    padding: 6px 0 24px;
+    z-index: 300;
+  }
+  .nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    font-size: 10px;
+    color: #8E8E93;
+  }
+  .nav-item.active { color: #000; font-weight: 600; }
+  .nav-item .icon { font-size: 22px; height: 24px; display: flex; align-items: center; justify-content: center; }
+  .nav-center {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .nav-center-btn {
+    width: 44px; height: 32px;
+    background: linear-gradient(135deg, #007AFF, #409CFF);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 22px; font-weight: 300;
+    box-shadow: 0 2px 10px rgba(0,122,255,0.3);
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-row">
+    <div class="search-box">
+      🔍 搜索技能、达人、帖子...
+    </div>
+    <div class="header-icon">📷</div>
+  </div>
+</div>
+
+<!-- Tab Bar — 给内容分层 -->
+<div class="tab-bar">
+  <div class="tab-item active">推荐</div>
+  <div class="tab-item">关注</div>
+  <div class="tab-item">热搜</div>
+  <div class="tab-item">排行榜</div>
+</div>
+
+<!-- ====== 推荐 Tab 内容 ====== -->
+
+<!-- 热搜 — 紧凑标签形式，不占大面积 -->
+<div class="section">
+  <div class="hot-tags">
+    <span class="hot-tag top"><span class="rank">1</span> 毕业照跟拍</span>
+    <span class="hot-tag top"><span class="rank">2</span> Python辅导</span>
+    <span class="hot-tag top"><span class="rank">3</span> 简历优化</span>
+    <span class="hot-tag"><span class="rank">4</span> Logo设计</span>
+    <span class="hot-tag"><span class="rank">5</span> Essay润色</span>
+    <span class="hot-tag"><span class="rank">6</span> 搬家服务</span>
+  </div>
+</div>
+
+<!-- 帖子流 — 页面核心，直接展示内容 -->
+<div class="section" style="padding-bottom: 4px;">
+  <div class="sec-title">💬 热门帖子</div>
+
+  <div class="post-card">
+    <div class="post-content">
+      <div class="post-cat">📷 摄影交流</div>
+      <div class="post-title"><span class="post-pinned">置顶</span>伦敦毕业季拍摄点推荐合集！亲测 10 个绝美机位</div>
+      <div class="post-preview">Tower Bridge、Greenwich Park、Regent's Park 这几个经典位置怎么拍最好看？分享一下我的经验...</div>
+      <div class="post-meta">
+        <span class="post-author"><span class="post-author-avatar">📸</span> Emma Liu</span>
+        <span>❤️ 326</span>
+        <span>💬 48</span>
+        <span>👁 2.1k</span>
+      </div>
+    </div>
+    <div class="post-thumb" style="background: linear-gradient(135deg, #FFE0B2, #FFCC80);">🌉</div>
+  </div>
+
+  <div class="post-card">
+    <div class="post-content">
+      <div class="post-cat">💼 求职经验</div>
+      <div class="post-title">拿到 Google 伦敦 offer 的全过程分享</div>
+      <div class="post-preview">从投递到 final round 用了三个月，每一轮面试都踩了坑，希望能帮到大家...</div>
+      <div class="post-meta">
+        <span class="post-author"><span class="post-author-avatar">👨‍💻</span> David Wu</span>
+        <span>❤️ 582</span>
+        <span>💬 93</span>
+        <span>👁 5.6k</span>
+      </div>
+    </div>
+    <div class="post-thumb" style="background: linear-gradient(135deg, #E0F2F1, #B2DFDB);">💼</div>
+  </div>
+
+  <div class="post-card">
+    <div class="post-content">
+      <div class="post-cat">🎓 留学生互助</div>
+      <div class="post-title">英国租房避坑指南 2026 版</div>
+      <div class="post-preview">签合同之前一定要注意这几点！已经帮三个朋友避开了黑中介...</div>
+      <div class="post-meta">
+        <span class="post-author"><span class="post-author-avatar">🏠</span> Amy Zhang</span>
+        <span>❤️ 215</span>
+        <span>💬 67</span>
+        <span>👁 3.2k</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="post-card">
+    <div class="post-content">
+      <div class="post-cat">🎨 设计创意</div>
+      <div class="post-title">接了 50 单 Logo 设计后的定价心得</div>
+      <div class="post-preview">从 £20 一单到 £200 一单，分享我是怎么一步步提价的...</div>
+      <div class="post-meta">
+        <span class="post-author"><span class="post-author-avatar">👩‍🎨</span> Lisa Chen</span>
+        <span>❤️ 178</span>
+        <span>💬 31</span>
+        <span>👁 1.8k</span>
+      </div>
+    </div>
+    <div class="post-thumb" style="background: linear-gradient(135deg, #F3E5F5, #E1BEE7);">🎨</div>
+  </div>
+</div>
+
+<!-- 板块快捷入口 — pill 横滑 -->
+<div class="section">
+  <div class="sec-title">🏷️ 板块 <span class="sec-all">全部 ›</span></div>
+  <div class="cat-pills">
+    <div class="cat-pill">
+      <div class="cat-pill-icon" style="background: linear-gradient(135deg, #007AFF, #409CFF);">🎓</div>
+      <div>
+        <div class="cat-pill-name">留学生互助</div>
+        <div class="cat-pill-count">3.2k 帖子</div>
+      </div>
+    </div>
+    <div class="cat-pill">
+      <div class="cat-pill-icon" style="background: linear-gradient(135deg, #FF2D55, #FF6B8A);">💼</div>
+      <div>
+        <div class="cat-pill-name">求职经验</div>
+        <div class="cat-pill-count">2.8k 帖子</div>
+      </div>
+    </div>
+    <div class="cat-pill">
+      <div class="cat-pill-icon" style="background: linear-gradient(135deg, #26BF73, #5ED99F);">📷</div>
+      <div>
+        <div class="cat-pill-name">摄影交流</div>
+        <div class="cat-pill-count">5.1k 帖子</div>
+      </div>
+    </div>
+    <div class="cat-pill">
+      <div class="cat-pill-icon" style="background: linear-gradient(135deg, #FF8033, #FFA600);">🏠</div>
+      <div>
+        <div class="cat-pill-name">英国生活</div>
+        <div class="cat-pill-count">4.5k 帖子</div>
+      </div>
+    </div>
+    <div class="cat-pill">
+      <div class="cat-pill-icon" style="background: linear-gradient(135deg, #7359F2, #A78BFA);">🎵</div>
+      <div>
+        <div class="cat-pill-name">音乐教学</div>
+        <div class="cat-pill-count">1.2k 帖子</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 推荐达人 — 横滑小卡片 -->
+<div class="section">
+  <div class="sec-title">✨ 推荐达人 <span class="sec-all">更多 ›</span></div>
+  <div class="expert-scroll">
+    <div class="expert-card">
+      <div class="ec-avatar" style="background: linear-gradient(135deg, #FFF3E0, #FFE0B2);">👩‍🎨</div>
+      <div class="ec-name">Lisa Chen</div>
+      <div class="ec-desc">UI/UX 设计师</div>
+      <div class="ec-rating">⭐ 5.0 · 78单</div>
+      <div class="ec-follow">+ 关注</div>
+    </div>
+    <div class="expert-card">
+      <div class="ec-avatar" style="background: linear-gradient(135deg, #E0F2F1, #B2DFDB);">👨‍💻</div>
+      <div class="ec-name">David Wu</div>
+      <div class="ec-desc">全栈工程师</div>
+      <div class="ec-rating">⭐ 5.0 · 156单</div>
+      <div class="ec-follow">+ 关注</div>
+    </div>
+    <div class="expert-card">
+      <div class="ec-avatar" style="background: linear-gradient(135deg, #F3E5F5, #E1BEE7);">📸</div>
+      <div class="ec-name">Emma Liu</div>
+      <div class="ec-desc">专业摄影师</div>
+      <div class="ec-rating">⭐ 4.8 · 92单</div>
+      <div class="ec-follow">+ 关注</div>
+    </div>
+    <div class="expert-card">
+      <div class="ec-avatar" style="background: linear-gradient(135deg, #E8F5E9, #C8E6C9);">📝</div>
+      <div class="ec-name">Sarah Wang</div>
+      <div class="ec-desc">英文润色专家</div>
+      <div class="ec-rating">⭐ 4.9 · 210单</div>
+      <div class="ec-follow">+ 关注</div>
+    </div>
+  </div>
+</div>
+
+<!-- 排行榜快捷入口 -->
+<div class="section">
+  <div class="sec-title">🏆 排行榜 <span class="sec-all">全部 ›</span></div>
+  <div class="rank-entry">
+    <div class="rank-card" style="background: linear-gradient(135deg, #FF8033, #FFA600);">
+      <div class="rc-icon">🍜</div>
+      <div class="rc-title">伦敦最佳中餐厅</div>
+      <div class="rc-count">56 项目 · 3.8k 浏览</div>
+    </div>
+    <div class="rank-card" style="background: linear-gradient(135deg, #7359F2, #A78BFA);">
+      <div class="rc-icon">💇</div>
+      <div class="rc-title">曼城华人理发店</div>
+      <div class="rc-count">23 项目 · 2.1k 浏览</div>
+    </div>
+    <div class="rank-card" style="background: linear-gradient(135deg, #007AFF, #409CFF);">
+      <div class="rc-icon">📸</div>
+      <div class="rc-title">毕业照摄影师</div>
+      <div class="rc-count">18 项目 · 1.5k 浏览</div>
+    </div>
+    <div class="rank-card" style="background: linear-gradient(135deg, #26BF73, #5ED99F);">
+      <div class="rc-icon">🏋️</div>
+      <div class="rc-title">健身房推荐</div>
+      <div class="rc-count">31 项目 · 2.6k 浏览</div>
+    </div>
+  </div>
+</div>
+
+<!-- 热门活动 — 横幅式，最多展示2条 -->
+<div class="section">
+  <div class="sec-title">🎪 近期活动 <span class="sec-all">更多 ›</span></div>
+  <div class="activity-banner">
+    <div class="ab-icon" style="background: linear-gradient(135deg, #007AFF, #409CFF);">🎓</div>
+    <div class="ab-info">
+      <div class="ab-title">留学生求职分享会</div>
+      <div class="ab-meta">本周六 · 32人参加 · 免费</div>
+    </div>
+    <div class="ab-action">报名</div>
+  </div>
+  <div class="activity-banner">
+    <div class="ab-icon" style="background: linear-gradient(135deg, #FF2D55, #FF6B8A);">📷</div>
+    <div class="ab-info">
+      <div class="ab-title">周末摄影工作坊</div>
+      <div class="ab-meta">下周日 · 32/50人 · £15</div>
+    </div>
+    <div class="ab-action">报名</div>
+  </div>
+</div>
+
+<div class="bottom-spacer"></div>
+
+<!-- Bottom Nav -->
+<div class="bottom-nav">
+  <div class="nav-item">
+    <span class="icon">🏠</span>
+    <span>首页</span>
+  </div>
+  <div class="nav-item active">
+    <span class="icon">🔍</span>
+    <span>发现</span>
+  </div>
+  <div class="nav-center">
+    <div class="nav-center-btn">+</div>
+  </div>
+  <div class="nav-item">
+    <span class="icon">💬</span>
+    <span>消息</span>
+  </div>
+  <div class="nav-item">
+    <span class="icon">👤</span>
+    <span>我的</span>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1331,6 +1331,8 @@ def get_activities(
     status: Optional[str] = None,
     has_time_slots: Optional[bool] = Query(None, description="是否时间段活动：false=单人活动，true=多人活动"),
     keyword: Optional[str] = Query(None, description="搜索关键词，匹配 title/description/location"),
+    location: Optional[str] = Query(None, description="城市位置筛选（支持中英文城市名）"),
+    sort_by: Optional[str] = Query(None, description="排序方式: view_count=按浏览量降序"),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
@@ -1360,6 +1362,12 @@ def get_activities(
     if has_time_slots is not None:
         query = query.filter(Activity.has_time_slots == has_time_slots)
     
+    if location and location.strip():
+        from app.utils.city_filter_utils import build_city_location_filter
+        location_filter = build_city_location_filter(Activity.location, location.strip())
+        if location_filter is not None:
+            query = query.filter(location_filter)
+
     if keyword and keyword.strip():
         kw = f"%{keyword.strip()}%"
         query = query.filter(
@@ -1384,8 +1392,9 @@ def get_activities(
             else_=0,
         )
         query = query.order_by(relevance.desc(), Activity.created_at.desc())
-    
-    if not (keyword and keyword.strip()):
+    elif sort_by == 'view_count':
+        query = query.order_by(Activity.view_count.desc(), Activity.created_at.desc())
+    else:
         query = query.order_by(Activity.created_at.desc())
     
     activities = query.offset(offset).limit(limit).all()

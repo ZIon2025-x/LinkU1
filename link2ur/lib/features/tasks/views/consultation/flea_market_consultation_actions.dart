@@ -38,6 +38,7 @@ class FleaMarketConsultationActions extends ConsultationActions {
     required String Function() getCurrencySymbol,
   }) {
     final priceController = TextEditingController();
+    final bloc = context.read<TaskExpertBloc>();
     String? errorText;
     showDialog(
       context: context,
@@ -66,7 +67,7 @@ class FleaMarketConsultationActions extends ConsultationActions {
                   return;
                 }
                 Navigator.pop(dialogContext);
-                context.read<TaskExpertBloc>().add(
+                bloc.add(
                   TaskExpertFleaMarketNegotiateResponse(
                     applicationId,
                     action: 'counter',
@@ -79,7 +80,7 @@ class FleaMarketConsultationActions extends ConsultationActions {
           ],
         ),
       ),
-    );
+    ).whenComplete(() => priceController.dispose());
   }
 
   @override
@@ -173,6 +174,7 @@ class FleaMarketConsultationActions extends ConsultationActions {
 
   void _showNegotiateDialog(BuildContext context, String Function() getCurrencySymbol) {
     final priceController = TextEditingController();
+    final bloc = context.read<TaskExpertBloc>();
     String? errorText;
     showDialog(
       context: context,
@@ -201,7 +203,7 @@ class FleaMarketConsultationActions extends ConsultationActions {
                   return;
                 }
                 Navigator.pop(dialogContext);
-                context.read<TaskExpertBloc>().add(
+                bloc.add(
                   TaskExpertFleaMarketNegotiate(applicationId, price: price),
                 );
               },
@@ -210,12 +212,13 @@ class FleaMarketConsultationActions extends ConsultationActions {
           ],
         ),
       ),
-    );
+    ).whenComplete(() => priceController.dispose());
   }
 
   void _showQuoteDialog(BuildContext context, String Function() getCurrencySymbol) {
     final priceController = TextEditingController();
     final messageController = TextEditingController();
+    final bloc = context.read<TaskExpertBloc>();
     String? errorText;
     showDialog(
       context: context,
@@ -257,9 +260,9 @@ class FleaMarketConsultationActions extends ConsultationActions {
                   setDialogState(() => errorText = context.l10n.quotePriceHint);
                   return;
                 }
-                Navigator.pop(dialogContext);
                 final msg = messageController.text.trim();
-                context.read<TaskExpertBloc>().add(
+                Navigator.pop(dialogContext);
+                bloc.add(
                   TaskExpertFleaMarketQuote(
                     applicationId,
                     price: price,
@@ -272,10 +275,14 @@ class FleaMarketConsultationActions extends ConsultationActions {
           ],
         ),
       ),
-    );
+    ).whenComplete(() {
+      priceController.dispose();
+      messageController.dispose();
+    });
   }
 
   void _showFormalApplyDialog(BuildContext context) {
+    final bloc = context.read<TaskExpertBloc>();
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -289,9 +296,7 @@ class FleaMarketConsultationActions extends ConsultationActions {
           TextButton(
             onPressed: () {
               Navigator.pop(dialogContext);
-              context.read<TaskExpertBloc>().add(
-                TaskExpertFleaMarketFormalBuy(applicationId),
-              );
+              bloc.add(TaskExpertFleaMarketFormalBuy(applicationId));
             },
             child: Text(MaterialLocalizations.of(context).okButtonLabel),
           ),
@@ -301,6 +306,7 @@ class FleaMarketConsultationActions extends ConsultationActions {
   }
 
   void _showApproveConfirmation(BuildContext context) {
+    final bloc = context.read<TaskExpertBloc>();
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -314,9 +320,7 @@ class FleaMarketConsultationActions extends ConsultationActions {
           TextButton(
             onPressed: () {
               Navigator.pop(dialogContext);
-              context.read<TaskExpertBloc>().add(
-                TaskExpertApproveFleaMarketPurchase(applicationId),
-              );
+              bloc.add(TaskExpertApproveFleaMarketPurchase(applicationId));
             },
             style: TextButton.styleFrom(foregroundColor: AppColors.success),
             child: Text(context.l10n.expertApplicationConfirmApprove),
@@ -327,6 +331,7 @@ class FleaMarketConsultationActions extends ConsultationActions {
   }
 
   void _showCloseConfirmation(BuildContext context) {
+    final bloc = context.read<TaskExpertBloc>();
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -340,9 +345,7 @@ class FleaMarketConsultationActions extends ConsultationActions {
           TextButton(
             onPressed: () {
               Navigator.pop(dialogContext);
-              context.read<TaskExpertBloc>().add(
-                TaskExpertCloseFleaMarketConsultation(applicationId),
-              );
+              bloc.add(TaskExpertCloseFleaMarketConsultation(applicationId));
             },
             style: TextButton.styleFrom(foregroundColor: AppColors.error),
             child: Text(MaterialLocalizations.of(context).okButtonLabel),

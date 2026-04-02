@@ -1318,6 +1318,8 @@ async def get_visible_forums(
                                 university_code=getattr(category, 'university_code', None),
                                 skill_type=getattr(category, 'skill_type', None),
                                 post_count=real_post_count,
+                                service_count=getattr(category, 'service_count', 0),
+                                task_count=getattr(category, 'task_count', 0),
                                 latest_post=latest_post_info,
                                 created_at=category.created_at,
                                 updated_at=category.updated_at
@@ -1380,12 +1382,14 @@ async def get_visible_forums(
                             university_code=getattr(category, 'university_code', None),
                             skill_type=getattr(category, 'skill_type', None),
                             post_count=real_post_count,
+                            service_count=getattr(category, 'service_count', 0),
+                            task_count=getattr(category, 'task_count', 0),
                             latest_post=latest_post_info,
                             created_at=category.created_at,
                             updated_at=category.updated_at
                         )
                         category_list.append(category_out)
-                    
+
                     return {"categories": category_list}
                 
                 return {"categories": [schemas.ForumCategoryOut.model_validate(f) for f in all_forums]}
@@ -1437,6 +1441,8 @@ async def get_visible_forums(
                             university_code=getattr(category, 'university_code', None),
                             skill_type=getattr(category, 'skill_type', None),
                             post_count=real_post_count,
+                            service_count=getattr(category, 'service_count', 0),
+                            task_count=getattr(category, 'task_count', 0),
                             latest_post=latest_post_info,
                             created_at=category.created_at,
                             updated_at=category.updated_at
@@ -1504,16 +1510,18 @@ async def get_visible_forums(
                     university_code=getattr(category, 'university_code', None),
                     skill_type=getattr(category, 'skill_type', None),
                     post_count=real_post_count,
+                    service_count=getattr(category, 'service_count', 0),
+                    task_count=getattr(category, 'task_count', 0),
                     latest_post=latest_post_info,
                     created_at=category.created_at,
                     updated_at=category.updated_at
                 )
                 category_list.append(category_out)
-            
+
             return {"categories": category_list}
-        
+
         return {"categories": [schemas.ForumCategoryOut.model_validate(f) for f in forums]}
-    
+
     # 检查是否为学生认证用户
     logger.info(f"get_visible_forums: current_user={current_user.id if current_user else None}")
     visible_ids = await visible_forums(current_user, db)
@@ -1563,16 +1571,18 @@ async def get_visible_forums(
                     university_code=getattr(category, 'university_code', None),
                     skill_type=getattr(category, 'skill_type', None),
                     post_count=real_post_count,
+                    service_count=getattr(category, 'service_count', 0),
+                    task_count=getattr(category, 'task_count', 0),
                     latest_post=latest_post_info,
                     created_at=category.created_at,
                     updated_at=category.updated_at
                 )
                 category_list.append(category_out)
-            
+
             return {"categories": category_list}
-        
+
         return {"categories": [schemas.ForumCategoryOut.model_validate(f) for f in forums]}
-    
+
     # 已认证学生：返回普通板块 + 技能板块 + 可见的学校板块（用户可以查看，但不能发帖）
     school_forums_result = await db.execute(
         select(models.ForumCategory).where(
@@ -1625,6 +1635,8 @@ async def get_visible_forums(
                 university_code=getattr(category, 'university_code', None),
                 skill_type=getattr(category, 'skill_type', None),
                 post_count=real_post_count,
+                service_count=getattr(category, 'service_count', 0),
+                task_count=getattr(category, 'task_count', 0),
                 latest_post=latest_post_info,
                 created_at=category.created_at,
                 updated_at=category.updated_at
@@ -1683,12 +1695,14 @@ async def get_categories(
                 is_visible=category.is_visible,
                 is_admin_only=getattr(category, 'is_admin_only', False),
                 post_count=real_post_count,
+                service_count=getattr(category, 'service_count', 0),
+                task_count=getattr(category, 'task_count', 0),
                 last_post_at=category.last_post_at,
                 created_at=category.created_at,
                 updated_at=category.updated_at,
                 latest_post=latest_post_info
             )
-            
+
             category_list.append(category_out)
         
         return {"categories": category_list}

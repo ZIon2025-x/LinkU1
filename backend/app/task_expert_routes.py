@@ -186,6 +186,7 @@ async def get_experts_list(
     category: Optional[str] = Query(None, description="分类筛选"),
     location: Optional[str] = Query(None, description="城市位置筛选"),
     keyword: Optional[str] = Query(None, description="关键词搜索（名称/简介/技能）"),
+    sort: Optional[str] = Query(None, description="排序方式: random=随机排序"),
     status_filter: Optional[str] = Query("active", alias="status"),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
@@ -240,10 +241,14 @@ async def get_experts_list(
             )
         )
     
-    featured_query = featured_query.order_by(
-        models.FeaturedTaskExpert.display_order,
-        models.FeaturedTaskExpert.created_at.desc()
-    ).offset(offset).limit(limit)
+    if sort == 'random':
+        from sqlalchemy.sql.expression import func as sql_func
+        featured_query = featured_query.order_by(sql_func.random()).limit(limit)
+    else:
+        featured_query = featured_query.order_by(
+            models.FeaturedTaskExpert.display_order,
+            models.FeaturedTaskExpert.created_at.desc()
+        ).offset(offset).limit(limit)
     
     featured_result = await db.execute(featured_query)
     featured_experts = featured_result.scalars().all()
@@ -340,10 +345,14 @@ async def get_experts_list(
         )
     
     # 分页查询
-    query = query.order_by(
-        models.TaskExpert.is_official.desc(),
-        models.TaskExpert.created_at.desc()
-    ).offset(offset).limit(limit)
+    if sort == 'random':
+        from sqlalchemy.sql.expression import func as sql_func
+        query = query.order_by(sql_func.random()).limit(limit)
+    else:
+        query = query.order_by(
+            models.TaskExpert.is_official.desc(),
+            models.TaskExpert.created_at.desc()
+        ).offset(offset).limit(limit)
     
     result = await db.execute(query)
     experts = result.scalars().all()

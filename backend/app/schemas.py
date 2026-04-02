@@ -3584,6 +3584,8 @@ class ForumCategoryRequestResponse(BaseModel):
 class ForumCategoryOut(ForumCategoryBase):
     id: int
     post_count: int
+    service_count: int = 0
+    task_count: int = 0
     last_post_at: Optional[datetime.datetime] = None
     created_at: datetime.datetime
     updated_at: datetime.datetime
