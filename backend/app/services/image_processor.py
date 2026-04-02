@@ -474,7 +474,124 @@ class ImageProcessor:
             logger.error(f"移除元数据失败: {e}")
             ext = self._detect_extension(content)
             return content, ext
-    
+
+    def strip_exif_lossless(self, content: bytes) -> bytes:
+        """
+        无损移除 JPEG EXIF 元数据（不解码像素，零质量损失）。
+        对于 PNG/WebP/GIF 等不含 EXIF 的格式，直接返回原内容。
+
+        原理：JPEG 文件由多个 segment 组成，EXIF 存储在 APP1 segment (marker 0xFFE1)。
+        直接跳过 APP1 segment 即可无损移除 EXIF，不触碰图像数据。
+        """
+        if len(content) < 4:
+            return content
+
+        # 只处理 JPEG（以 0xFFD8 开头）
+        if content[0:2] != b'\xff\xd8':
+            return content
+
+        # 遍历 JPEG segments，跳过所有 APP1 (EXIF) segments
+        result = bytearray(b'\xff\xd8')  # SOI marker
+        pos = 2
+
+        while pos < len(content) - 1:
+            if content[pos] != 0xFF:
+                result.extend(content[pos:])
+                break
+
+            marker = content[pos + 1]
+
+            # SOS (Start of Scan) marker — 之后是压缩图像数据，直接复制到结尾
+            if marker == 0xDA:
+                result.extend(content[pos:])
+                break
+
+            # 无长度的 marker (如 0xFF00 padding)
+            if marker == 0x00 or (0xD0 <= marker <= 0xD9):
+                result.extend(content[pos:pos + 2])
+                pos += 2
+                continue
+
+            # 读取 segment 长度
+            if pos + 3 >= len(content):
+                result.extend(content[pos:])
+                break
+
+            seg_length = (content[pos + 2] << 8) | content[pos + 3]
+            seg_end = pos + 2 + seg_length
+
+            # 跳过 APP1 segment (0xFFE1) — 这是 EXIF 数据
+            if marker == 0xE1:
+                pos = seg_end
+                continue
+
+            # 保留其他 segment
+            result.extend(content[pos:seg_end])
+            pos = seg_end
+
+        return bytes(result)
+
+    def orient_if_needed(self, content: bytes, quality: int = 95) -> tuple[bytes, bool]:
+        """
+        检查 EXIF orientation，仅在需要旋转时才解码和重新编码。
+
+        Returns:
+            (处理后的内容, 是否进行了旋转)
+            如果不需要旋转，返回原始 content 不做任何修改。
+        """
+        if not self.pillow_available:
+            return content, False
+
+        try:
+            from PIL import Image, ExifTags
+
+            with Image.open(io.BytesIO(content)) as img:
+                exif = img.getexif()
+                if not exif:
+                    return content, False
+
+                orientation_key = None
+                for key, val in ExifTags.TAGS.items():
+                    if val == 'Orientation':
+                        orientation_key = key
+                        break
+
+                if orientation_key is None or orientation_key not in exif:
+                    return content, False
+
+                orientation = exif[orientation_key]
+
+                if orientation == 1:
+                    return content, False
+
+                original_format = img.format or 'JPEG'
+
+                if orientation == 2:
+                    img = img.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+                elif orientation == 3:
+                    img = img.rotate(180)
+                elif orientation == 4:
+                    img = img.transpose(Image.Transpose.FLIP_TOP_BOTTOM)
+                elif orientation == 5:
+                    img = img.rotate(-90, expand=True).transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+                elif orientation == 6:
+                    img = img.rotate(-90, expand=True)
+                elif orientation == 7:
+                    img = img.rotate(90, expand=True).transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+                elif orientation == 8:
+                    img = img.rotate(90, expand=True)
+                else:
+                    return content, False
+
+                output = io.BytesIO()
+                save_kwargs = self._get_save_kwargs(original_format.lower(), quality)
+                img.save(output, format=original_format, **save_kwargs)
+                return output.getvalue(), True
+
+        except Exception as e:
+            logger.error(f"orient_if_needed 失败: {e}")
+            return content, False
+
     def _get_save_kwargs(self, format: str, quality: int) -> Dict[str, Any]:
         """获取不同格式的保存参数"""
         format = format.lower()
