@@ -448,40 +448,24 @@ class AsyncTaskCRUD:
             if status and status not in ['全部状态', '全部', 'all']:
                 query = query.where(models.Task.status == status)
             
-            # 添加关键词搜索（支持pg_trgm或全文搜索，根据配置选择）
+            # 添加关键词搜索（jieba 分词 + 双语扩展 + pg_trgm）
             has_keyword_sort = False
             if keyword:
                 keyword = keyword.strip()
-                from app.config import Config
-                
-                if Config.USE_PG_TRGM:
-                    # 方案1: pg_trgm（适合需要容错搜索的场景，中英文都适用）
-                    query = query.where(
-                        or_(
-                            func.similarity(models.Task.title, keyword) > 0.2,
-                            func.similarity(models.Task.description, keyword) > 0.2,
-                        )
-                    )
-                    # 如果使用关键词搜索，默认按相似度排序（除非指定了其他排序方式）
-                    if sort_by == "latest" or sort_by is None:
-                        query = query.order_by(
-                            func.similarity(models.Task.title, keyword).desc(),
-                            func.similarity(models.Task.description, keyword).desc(),
-                            # 添加稳定的 tie-breaker，避免相似度接近时顺序抖动
-                            models.Task.created_at.desc(),
-                            models.Task.id.desc()
-                        )
-                        has_keyword_sort = True
-                else:
-                    # 方案2: 全文搜索（适合精确搜索，主要针对英文）
-                    ts_vector = func.to_tsvector(
-                        Config.SEARCH_LANGUAGE,
-                        models.Task.title + ' ' + models.Task.description
-                    )
-                    ts_query = func.plainto_tsquery(Config.SEARCH_LANGUAGE, keyword)
-                    query = query.where(ts_vector.op('@@')(ts_query))
-                    # 可选：按相关性排序
-                    # query = query.order_by(func.ts_rank(ts_vector, ts_query).desc())
+                from app.utils.search_expander import build_keyword_filter
+                keyword_expr = build_keyword_filter(
+                    columns=[
+                        models.Task.title, models.Task.description,
+                        models.Task.title_zh, models.Task.title_en,
+                        models.Task.description_zh, models.Task.description_en,
+                        models.Task.task_type, models.Task.location,
+                    ],
+                    keyword=keyword,
+                    use_similarity=True,
+                )
+                if keyword_expr is not None:
+                    query = query.where(keyword_expr)
+                has_keyword_sort = True
 
             # 排序（如果关键词搜索已经设置了排序，则跳过）
             now_utc = get_utc_time()
@@ -624,31 +608,22 @@ class AsyncTaskCRUD:
                     if city_expr is not None:
                         base_query = base_query.where(city_expr)
             
-            # 关键词筛选（和 /tasks 的实现保持一致，支持双语字段）
+            # 关键词筛选（jieba 分词 + 双语扩展 + pg_trgm）
             if keyword:
                 keyword = keyword.strip()
-                from app.config import Config
-                
-                if Config.USE_PG_TRGM:
-                    # pg_trgm 相似度搜索（含双语）
-                    base_query = base_query.where(
-                        or_(
-                            func.similarity(models.Task.title, keyword) > 0.2,
-                            func.similarity(models.Task.description, keyword) > 0.2,
-                            func.similarity(models.Task.title_zh, keyword) > 0.2,
-                            func.similarity(models.Task.title_en, keyword) > 0.2,
-                            func.similarity(models.Task.description_zh, keyword) > 0.2,
-                            func.similarity(models.Task.description_en, keyword) > 0.2,
-                        )
-                    )
-                else:
-                    # 全文搜索
-                    ts_vector = func.to_tsvector(
-                        Config.SEARCH_LANGUAGE,
-                        models.Task.title + " " + models.Task.description,
-                    )
-                    ts_query = func.plainto_tsquery(Config.SEARCH_LANGUAGE, keyword)
-                    base_query = base_query.where(ts_vector.op("@@")(ts_query))
+                from app.utils.search_expander import build_keyword_filter
+                keyword_expr = build_keyword_filter(
+                    columns=[
+                        models.Task.title, models.Task.description,
+                        models.Task.title_zh, models.Task.title_en,
+                        models.Task.description_zh, models.Task.description_en,
+                        models.Task.task_type, models.Task.location,
+                    ],
+                    keyword=keyword,
+                    use_similarity=True,
+                )
+                if keyword_expr is not None:
+                    base_query = base_query.where(keyword_expr)
             
             # 达人创建者筛选
             if expert_creator_id:
@@ -731,28 +706,21 @@ class AsyncTaskCRUD:
             # 排序：有关键词时按相关性（契合度），否则按 sort_by
             use_distance_sorting = False
             if keyword and keyword.strip():
-                from app.config import Config
-                if Config.USE_PG_TRGM:
-                    # 按多字段相似度最大值排序（相关性）
-                    kw = keyword.strip()
-                    relevance = func.greatest(
-                        func.coalesce(func.similarity(models.Task.title, kw), 0),
-                        func.coalesce(func.similarity(models.Task.description, kw), 0),
-                        func.coalesce(func.similarity(models.Task.title_zh, kw), 0),
-                        func.coalesce(func.similarity(models.Task.title_en, kw), 0),
-                        func.coalesce(func.similarity(models.Task.description_zh, kw), 0),
-                        func.coalesce(func.similarity(models.Task.description_en, kw), 0),
-                    )
-                    list_query = list_query.order_by(
-                        relevance.desc(),
-                        models.Task.created_at.desc(),
-                        models.Task.id.desc(),
-                    )
-                else:
-                    # 无 pg_trgm 时按最新
-                    list_query = list_query.order_by(
-                        models.Task.created_at.desc(), models.Task.id.desc()
-                    )
+                # 按多字段相似度最大值排序（相关性）
+                kw = keyword.strip()
+                relevance = func.greatest(
+                    func.coalesce(func.similarity(models.Task.title, kw), 0),
+                    func.coalesce(func.similarity(models.Task.description, kw), 0),
+                    func.coalesce(func.similarity(models.Task.title_zh, kw), 0),
+                    func.coalesce(func.similarity(models.Task.title_en, kw), 0),
+                    func.coalesce(func.similarity(models.Task.description_zh, kw), 0),
+                    func.coalesce(func.similarity(models.Task.description_en, kw), 0),
+                )
+                list_query = list_query.order_by(
+                    relevance.desc(),
+                    models.Task.created_at.desc(),
+                    models.Task.id.desc(),
+                )
             elif user_latitude is not None and user_longitude is not None and sort_by in ("distance", "nearby"):
                 use_distance_sorting = True
                 
@@ -1141,22 +1109,19 @@ class AsyncTaskCRUD:
         
         if keyword:
             keyword = keyword.strip()
-            from app.config import Config
-            
-            if Config.USE_PG_TRGM:
-                query = query.where(
-                    or_(
-                        func.similarity(models.Task.title, keyword) > 0.2,
-                        func.similarity(models.Task.description, keyword) > 0.2,
-                    )
-                )
-            else:
-                ts_vector = func.to_tsvector(
-                    Config.SEARCH_LANGUAGE,
-                    models.Task.title + " " + models.Task.description,
-                )
-                ts_query = func.plainto_tsquery(Config.SEARCH_LANGUAGE, keyword)
-                query = query.where(ts_vector.op("@@")(ts_query))
+            from app.utils.search_expander import build_keyword_filter
+            keyword_expr = build_keyword_filter(
+                columns=[
+                    models.Task.title, models.Task.description,
+                    models.Task.title_zh, models.Task.title_en,
+                    models.Task.description_zh, models.Task.description_en,
+                    models.Task.task_type, models.Task.location,
+                ],
+                keyword=keyword,
+                use_similarity=True,
+            )
+            if keyword_expr is not None:
+                query = query.where(keyword_expr)
         
         # 达人创建者筛选
         if expert_creator_id:

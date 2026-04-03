@@ -197,6 +197,11 @@ def build_keyword_filter(columns, keyword: str, use_similarity: bool = True, thr
     """
     为多个字段构建双语扩展的关键词过滤条件。
 
+    搜索逻辑：
+    1. 先对 keyword 进行分词（jieba + 停用词过滤）
+    2. 若分出多个 token，每个 token 单独做双语扩展并生成 OR 条件（多列），各 token 之间用 AND 连接
+    3. 若只有一个 token（或分词失败），退化为对整个关键词做双语扩展的 OR 条件
+
     Args:
         columns: SQLAlchemy column 列表
         keyword: 原始搜索关键词
@@ -204,20 +209,86 @@ def build_keyword_filter(columns, keyword: str, use_similarity: bool = True, thr
         threshold: similarity 阈值（默认 0.2）
 
     Returns:
-        SQLAlchemy OR 表达式
+        SQLAlchemy 表达式（多 token 时为 AND，单 token 时为 OR），无有效关键词时返回 None
     """
-    from sqlalchemy import or_, func
+    from sqlalchemy import or_, and_, func
+    from app.utils.tokenizer import tokenize_query
 
-    keywords = expand_keyword(keyword)
-    conditions = []
+    if not keyword or not keyword.strip():
+        return None
 
-    for kw in keywords:
-        kw_clean = kw.strip()[:100]
-        kw_escaped = kw_clean.replace("%", r"\%").replace("_", r"\_")
+    tokens = tokenize_query(keyword)
 
-        for col in columns:
-            conditions.append(col.ilike(f"%{kw_escaped}%"))
-            if use_similarity:
-                conditions.append(func.similarity(col, kw_clean) > threshold)
+    # 分词失败或只有一个 token 时，退化为整体关键词扩展（保持向后兼容）
+    if len(tokens) <= 1:
+        search_term = tokens[0] if tokens else keyword.strip()
+        keywords = expand_keyword(search_term)
+        conditions = []
+        for kw in keywords:
+            kw_clean = kw.strip()[:100]
+            kw_escaped = kw_clean.replace("%", r"\%").replace("_", r"\_")
+            for col in columns:
+                conditions.append(col.ilike(f"%{kw_escaped}%"))
+                if use_similarity:
+                    conditions.append(func.similarity(col, kw_clean) > threshold)
+        return or_(*conditions) if conditions else None
 
-    return or_(*conditions) if conditions else None
+    # 多 token：每个 token 生成 OR（多列），各 token 之间 AND 连接
+    token_exprs = []
+    for token in tokens:
+        token_keywords = expand_keyword(token)
+        token_conditions = []
+        for kw in token_keywords:
+            kw_clean = kw.strip()[:100]
+            kw_escaped = kw_clean.replace("%", r"\%").replace("_", r"\_")
+            for col in columns:
+                token_conditions.append(col.ilike(f"%{kw_escaped}%"))
+                if use_similarity:
+                    token_conditions.append(func.similarity(col, kw_clean) > threshold)
+        if token_conditions:
+            token_exprs.append(or_(*token_conditions))
+
+    if not token_exprs:
+        return None
+    return and_(*token_exprs) if len(token_exprs) > 1 else token_exprs[0]
+
+
+def build_relevance_score(weighted_columns, keyword: str):
+    """
+    构建基于分词的相关性评分表达式。
+
+    Args:
+        weighted_columns: [(column, weight), ...] 列表，如 [(Task.title, 3), (Task.description, 1)]
+        keyword: 原始搜索关键词
+
+    Returns:
+        SQLAlchemy case 表达式，分值越高越相关
+    """
+    from sqlalchemy import case, literal
+    from app.utils.tokenizer import tokenize_query
+
+    keyword = keyword.strip()
+    if not keyword:
+        return literal(0)
+
+    tokens = tokenize_query(keyword)
+    if not tokens:
+        tokens = [keyword.lower()]
+
+    # 对每个词元做双语扩展，生成所有变体的 pattern
+    all_patterns = set()
+    for token in tokens:
+        for variant in expand_keyword(token):
+            v = variant.strip()[:100].replace("%", r"\%").replace("_", r"\_")
+            all_patterns.add(f"%{v}%")
+
+    # 累加每个 (列, 权重) 对的匹配分
+    whens = []
+    for col, weight in weighted_columns:
+        for pattern in all_patterns:
+            whens.append((col.ilike(pattern), weight))
+
+    if not whens:
+        return literal(0)
+
+    return case(*whens, else_=0)

@@ -1386,15 +1386,17 @@ def get_activities(
         if keyword_expr is not None:
             query = query.filter(keyword_expr)
         # 按相关性排序：标题匹配优先，其次描述
-        kw = f"%{keyword.strip()}%"
-        relevance = case(
-            (Activity.title.ilike(kw), 3),
-            (Activity.title_zh.ilike(kw), 2),
-            (Activity.title_en.ilike(kw), 2),
-            (Activity.description.ilike(kw), 1),
-            (Activity.description_zh.ilike(kw), 1),
-            (Activity.description_en.ilike(kw), 1),
-            else_=0,
+        from app.utils.search_expander import build_relevance_score
+        relevance = build_relevance_score(
+            weighted_columns=[
+                (Activity.title, 3),
+                (Activity.title_zh, 2),
+                (Activity.title_en, 2),
+                (Activity.description, 1),
+                (Activity.description_zh, 1),
+                (Activity.description_en, 1),
+            ],
+            keyword=keyword.strip(),
         )
         query = query.order_by(relevance.desc(), Activity.created_at.desc())
     elif sort_by == 'view_count':

@@ -873,15 +873,17 @@ async def get_leaderboards(
     
     # 有关键词时先按相关性排序
     if keyword and keyword.strip():
-        kp = f"%{keyword.strip()}%"
-        relevance = case(
-            (models.CustomLeaderboard.name.ilike(kp), 3),
-            (models.CustomLeaderboard.name_zh.ilike(kp), 2),
-            (models.CustomLeaderboard.name_en.ilike(kp), 2),
-            (models.CustomLeaderboard.description.ilike(kp), 1),
-            (models.CustomLeaderboard.description_zh.ilike(kp), 1),
-            (models.CustomLeaderboard.description_en.ilike(kp), 1),
-            else_=0,
+        from app.utils.search_expander import build_relevance_score
+        relevance = build_relevance_score(
+            weighted_columns=[
+                (models.CustomLeaderboard.name, 3),
+                (models.CustomLeaderboard.name_zh, 2),
+                (models.CustomLeaderboard.name_en, 2),
+                (models.CustomLeaderboard.description, 1),
+                (models.CustomLeaderboard.description_zh, 1),
+                (models.CustomLeaderboard.description_en, 1),
+            ],
+            keyword=keyword.strip(),
         )
         base_query = base_query.order_by(relevance.desc(), models.CustomLeaderboard.created_at.desc())
     

@@ -373,7 +373,6 @@ class Config:
     AI_SYSTEM_PROMPT_SOURCE = os.getenv("AI_SYSTEM_PROMPT_SOURCE", "config")
 
     # 搜索配置
-    USE_PG_TRGM = os.getenv("USE_PG_TRGM", "false").lower() == "true"  # 是否使用pg_trgm扩展
     SEARCH_LANGUAGE = os.getenv("SEARCH_LANGUAGE", "english")  # 全文搜索语言
 
     # ==================== App 版本检查 ====================

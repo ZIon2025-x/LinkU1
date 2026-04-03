@@ -5463,8 +5463,6 @@ async def search_posts(
 ):
     """搜索帖子（使用 pg_trgm 相似度搜索，支持中文）"""
 
-    from app.config import Config
-
     # 检查是否为管理员
     is_admin = False
     try:
@@ -5523,30 +5521,20 @@ async def search_posts(
         models.ForumPost.content_en,
         models.ForumPost.content_zh,
     ]
-    if Config.USE_PG_TRGM:
-        keyword_expr = build_keyword_filter(
-            columns=forum_columns,
-            keyword=q,
-            use_similarity=True,
-        )
-        if keyword_expr is not None:
-            query = query.where(keyword_expr)
+    keyword_expr = build_keyword_filter(
+        columns=forum_columns,
+        keyword=q,
+        use_similarity=True,
+    )
+    if keyword_expr is not None:
+        query = query.where(keyword_expr)
 
-        # 按相似度排序（标题相似度优先，然后是内容相似度）
-        query = query.order_by(
-            func.similarity(models.ForumPost.title, q).desc(),
-            func.similarity(models.ForumPost.content, q).desc(),
-            models.ForumPost.created_at.desc()  # 相似度相同时按时间倒序
-        )
-    else:
-        keyword_expr = build_keyword_filter(
-            columns=forum_columns,
-            keyword=q,
-            use_similarity=False,
-        )
-        if keyword_expr is not None:
-            query = query.where(keyword_expr)
-        query = query.order_by(models.ForumPost.created_at.desc())
+    # 按相似度排序（标题相似度优先，然后是内容相似度）
+    query = query.order_by(
+        func.similarity(models.ForumPost.title, q).desc(),
+        func.similarity(models.ForumPost.content, q).desc(),
+        models.ForumPost.created_at.desc()  # 相似度相同时按时间倒序
+    )
     
     # 获取总数
     count_query = select(func.count()).select_from(query.subquery())
