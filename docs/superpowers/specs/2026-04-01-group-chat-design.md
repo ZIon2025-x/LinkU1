@@ -80,6 +80,7 @@
 | attachments | JSON | 附件列表 `[{type, url, meta}]` |
 | meta | JSON | 扩展数据（分享卡片信息、投票 ID 等） |
 | is_pinned | BOOL DEFAULT false | 是否置顶 |
+| is_deleted | BOOL DEFAULT false | 软删除标记（删除后 reply_to 引用不断链） |
 | created_at | DATETIME | 发送时间 |
 | edited_at | DATETIME | 编辑时间（NULL 表示未编辑） |
 
@@ -103,11 +104,24 @@
 | message_id | INT FK → group_messages | 关联的消息 |
 | question | VARCHAR(200) | 投票问题 |
 | options | JSON | 选项列表 `["选项A","选项B"]` |
-| votes | JSON | 投票数据 `{"user1":"选项A","user2":"选项B"}` |
 | is_anonymous | BOOL DEFAULT false | 是否匿名投票 |
 | is_multiple | BOOL DEFAULT false | 是否多选 |
 | expires_at | DATETIME | 过期时间 |
 | created_by | VARCHAR FK → users | 创建者 |
+
+### group_poll_votes
+
+投票数据独立成表，避免大群并发更新同一 JSON 字段的冲突问题。
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | INT PK | 自增主键 |
+| poll_id | INT FK → group_polls | 所属投票 |
+| user_id | VARCHAR FK → users | 投票者 |
+| option_index | INT | 选项索引（对应 options 数组下标） |
+| created_at | DATETIME | 投票时间 |
+
+约束：`UNIQUE(poll_id, user_id, option_index)`（多选时同一用户可投多个选项，但不能重复投同一选项）
 
 ### group_join_requests
 
@@ -149,6 +163,10 @@ CREATE UNIQUE INDEX ux_group_reads ON group_message_reads(group_id, user_id);
 -- 群组发现
 CREATE INDEX ix_groups_category ON chat_groups(category) WHERE is_active = true;
 CREATE INDEX ix_groups_tags ON chat_groups USING gin(tags);
+
+-- 投票查询
+CREATE INDEX ix_poll_votes_poll ON group_poll_votes(poll_id);
+CREATE UNIQUE INDEX ux_poll_votes ON group_poll_votes(poll_id, user_id, option_index);
 ```
 
 ## API 设计
@@ -182,11 +200,12 @@ CREATE INDEX ix_groups_tags ON chat_groups USING gin(tags);
 
 | 方法 | 端点 | 说明 | 权限 |
 |------|------|------|------|
-| GET | `/api/groups/{id}/messages` | 消息列表（cursor 分页） | 群成员 |
+| GET | `/api/groups/{id}/messages` | 消息列表（cursor 分页，cursor = message_id） | 群成员 |
 | POST | `/api/groups/{id}/messages` | 发送消息 | 群成员（未禁言） |
 | POST | `/api/groups/{id}/messages/read` | 标记已读 | 群成员 |
 | PUT | `/api/groups/{id}/messages/{mid}/pin` | 置顶/取消置顶 | 群主/管理员 |
-| DELETE | `/api/groups/{id}/messages/{mid}` | 删除消息 | 发送者/管理员 |
+| PUT | `/api/groups/{id}/messages/{mid}` | 编辑消息（仅文字，5 分钟内） | 发送者 |
+| DELETE | `/api/groups/{id}/messages/{mid}` | 删除消息（软删除） | 发送者/管理员 |
 
 ### 投票 & 公告
 
@@ -216,6 +235,8 @@ CREATE INDEX ix_groups_tags ON chat_groups USING gin(tags);
 - `group_member_joined`：`{ type, group_id, user: {...} }`
 - `group_member_left`：`{ type, group_id, user_id }`
 - `group_updated`：`{ type, group_id, changes: {...} }`
+- `group_message_edited`：`{ type, group_id, message_id, content, edited_at }`
+- `group_message_deleted`：`{ type, group_id, message_id }`
 - `group_poll_vote`：`{ type, group_id, poll_id, voter_id, option }`
 
 ### 广播策略
@@ -281,7 +302,9 @@ lib/
 ### 消息列表整合
 
 现有 `MessageBloc` / `MessageView` 扩展：
-- 聚合查询：合并私聊 contacts + 任务聊天 + 群组，按 lastMessageTime 统一排序
+- **统一会话索引**：在 Redis 维护 `user_conversations:{userId}` sorted set（score = lastMessageTime），避免每次三路查询再排序
+  - 私聊/任务聊天/群聊有新消息时，同步更新该 sorted set
+  - 拉取列表时：`ZREVRANGE` 分页取出 conversation ID，再批量查详情
 - 置顶逻辑：置顶项排前面，其余按时间倒序
 - 不区分类型标记：群组用群名 + 群头像，自然可辨别
 
@@ -290,8 +313,8 @@ lib/
 | Box | 内容 | 策略 |
 |-----|------|------|
 | `group_list` | 我的群组 + 最后消息 + 未读数 | 打开 app 先显示缓存，后台刷新 |
-| `group_messages_{groupId}` | 每群最近 200 条消息 | 超过淘汰最旧的 |
-| `group_members_{groupId}` | 成员列表 | TTL 5 分钟 |
+| `group_messages` | 所有群的消息，key 为 `{groupId}_{messageId}` | 每群保留最近 200 条，超过淘汰最旧的。单 Box 避免群数多时 Box 数量爆炸 |
+| `group_members` | 所有群的成员列表，key 为 `{groupId}` | TTL 5 分钟 |
 
 ## 分阶段实施
 

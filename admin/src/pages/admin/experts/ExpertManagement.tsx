@@ -160,7 +160,7 @@ const ExpertManagement: React.FC = () => {
 
   // ==================== 申请列表 ====================
   const fetchApplications = useCallback(async () => {
-    const response = await getTaskExpertApplications({ status: 'pending' });
+    const response = await getTaskExpertApplications({});
     return {
       data: response.items || [],
       total: response.total || (response.items || []).length,
