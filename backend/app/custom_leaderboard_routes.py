@@ -855,17 +855,21 @@ async def get_leaderboards(
             )
         
         if keyword:
-            keyword_pattern = f"%{keyword}%"
-            base_query = base_query.where(
-                or_(
-                    models.CustomLeaderboard.name.ilike(keyword_pattern),
-                    models.CustomLeaderboard.description.ilike(keyword_pattern),
-                    models.CustomLeaderboard.name_zh.ilike(keyword_pattern),
-                    models.CustomLeaderboard.name_en.ilike(keyword_pattern),
-                    models.CustomLeaderboard.description_zh.ilike(keyword_pattern),
-                    models.CustomLeaderboard.description_en.ilike(keyword_pattern),
-                )
+            from app.utils.search_expander import build_keyword_filter
+            keyword_expr = build_keyword_filter(
+                columns=[
+                    models.CustomLeaderboard.name,
+                    models.CustomLeaderboard.description,
+                    models.CustomLeaderboard.name_zh,
+                    models.CustomLeaderboard.name_en,
+                    models.CustomLeaderboard.description_zh,
+                    models.CustomLeaderboard.description_en,
+                ],
+                keyword=keyword,
+                use_similarity=False,
             )
+            if keyword_expr is not None:
+                base_query = base_query.where(keyword_expr)
     
     # 有关键词时先按相关性排序
     if keyword and keyword.strip():

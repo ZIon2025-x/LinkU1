@@ -66,19 +66,16 @@ def admin_get_tasks(
             if city_expr is not None:
                 query = query.filter(city_expr)
 
-    # 添加关键词搜索（使用 pg_trgm 优化）
+    # 添加关键词搜索（使用 pg_trgm + 双语扩展优化）
     if keyword and keyword.strip():
-        keyword_clean = keyword.strip()
-        query = query.filter(
-            or_(
-                func.similarity(Task.title, keyword_clean) > 0.2,
-                func.similarity(Task.description, keyword_clean) > 0.2,
-                func.similarity(Task.task_type, keyword_clean) > 0.2,
-                func.similarity(Task.location, keyword_clean) > 0.2,
-                Task.title.ilike(f"%{keyword_clean}%"),
-                Task.description.ilike(f"%{keyword_clean}%")
-            )
+        from app.utils.search_expander import build_keyword_filter
+        keyword_expr = build_keyword_filter(
+            columns=[Task.title, Task.description, Task.task_type, Task.location],
+            keyword=keyword.strip(),
+            use_similarity=True,
         )
+        if keyword_expr is not None:
+            query = query.filter(keyword_expr)
 
     # 获取总数
     total = query.count()

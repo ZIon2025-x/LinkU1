@@ -33,19 +33,23 @@ async def browse_services(
     elif type == "personal":
         base_filter = base_filter.where(models.TaskExpertService.service_type == "personal")
 
-    # Text search
+    # Text search (bilingual keyword expansion)
     if q:
-        search = f"%{q}%"
-        base_filter = base_filter.where(
-            or_(
-                models.TaskExpertService.service_name.ilike(search),
-                models.TaskExpertService.service_name_en.ilike(search),
-                models.TaskExpertService.service_name_zh.ilike(search),
-                models.TaskExpertService.description.ilike(search),
-                models.TaskExpertService.description_en.ilike(search),
-                models.TaskExpertService.description_zh.ilike(search),
-            )
+        from app.utils.search_expander import build_keyword_filter
+        keyword_expr = build_keyword_filter(
+            columns=[
+                models.TaskExpertService.service_name,
+                models.TaskExpertService.service_name_en,
+                models.TaskExpertService.service_name_zh,
+                models.TaskExpertService.description,
+                models.TaskExpertService.description_en,
+                models.TaskExpertService.description_zh,
+            ],
+            keyword=q,
+            use_similarity=False,
         )
+        if keyword_expr is not None:
+            base_filter = base_filter.where(keyword_expr)
 
     # Apply filters (including nearby) before counting
     query = base_filter

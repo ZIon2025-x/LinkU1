@@ -1369,18 +1369,22 @@ def get_activities(
             query = query.filter(location_filter)
 
     if keyword and keyword.strip():
-        kw = f"%{keyword.strip()}%"
-        query = query.filter(
-            or_(
-                Activity.title.ilike(kw),
-                Activity.description.ilike(kw),
-                Activity.title_zh.ilike(kw),
-                Activity.title_en.ilike(kw),
-                Activity.description_zh.ilike(kw),
-                Activity.description_en.ilike(kw),
-                Activity.location.ilike(kw),
-            )
+        from app.utils.search_expander import build_keyword_filter
+        keyword_expr = build_keyword_filter(
+            columns=[
+                Activity.title,
+                Activity.description,
+                Activity.title_zh,
+                Activity.title_en,
+                Activity.description_zh,
+                Activity.description_en,
+                Activity.location,
+            ],
+            keyword=keyword.strip(),
+            use_similarity=False,
         )
+        if keyword_expr is not None:
+            query = query.filter(keyword_expr)
         # 按相关性排序：标题匹配优先，其次描述
         relevance = case(
             (Activity.title.ilike(kw), 3),

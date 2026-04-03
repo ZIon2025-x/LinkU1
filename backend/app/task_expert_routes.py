@@ -222,20 +222,23 @@ async def get_experts_list(
             featured_query = featured_query.where(location_filter)
 
     if keyword and keyword.strip():
-        kw = f"%{keyword.strip()}%"
-        from sqlalchemy import or_
-        featured_query = featured_query.where(
-            or_(
-                models.FeaturedTaskExpert.name.ilike(kw),
-                models.FeaturedTaskExpert.bio.ilike(kw),
-                models.FeaturedTaskExpert.bio_en.ilike(kw),
-                models.FeaturedTaskExpert.expertise_areas.ilike(kw),
-                models.FeaturedTaskExpert.expertise_areas_en.ilike(kw),
-                models.FeaturedTaskExpert.featured_skills.ilike(kw),
-                models.FeaturedTaskExpert.featured_skills_en.ilike(kw),
-                models.FeaturedTaskExpert.category.ilike(kw),
-            )
+        from app.utils.search_expander import build_keyword_filter
+        keyword_expr = build_keyword_filter(
+            columns=[
+                models.FeaturedTaskExpert.name,
+                models.FeaturedTaskExpert.bio,
+                models.FeaturedTaskExpert.bio_en,
+                models.FeaturedTaskExpert.expertise_areas,
+                models.FeaturedTaskExpert.expertise_areas_en,
+                models.FeaturedTaskExpert.featured_skills,
+                models.FeaturedTaskExpert.featured_skills_en,
+                models.FeaturedTaskExpert.category,
+            ],
+            keyword=keyword.strip(),
+            use_similarity=False,
         )
+        if keyword_expr is not None:
+            featured_query = featured_query.where(keyword_expr)
     
     if sort == 'random':
         from sqlalchemy.sql.expression import func as sql_func
@@ -331,14 +334,17 @@ async def get_experts_list(
     )
 
     if keyword and keyword.strip():
-        kw = f"%{keyword.strip()}%"
-        from sqlalchemy import or_
-        query = query.where(
-            or_(
-                models.TaskExpert.expert_name.ilike(kw),
-                models.TaskExpert.bio.ilike(kw),
-            )
+        from app.utils.search_expander import build_keyword_filter
+        keyword_expr = build_keyword_filter(
+            columns=[
+                models.TaskExpert.expert_name,
+                models.TaskExpert.bio,
+            ],
+            keyword=keyword.strip(),
+            use_similarity=False,
         )
+        if keyword_expr is not None:
+            query = query.where(keyword_expr)
     
     # 分页查询
     if sort == 'random':

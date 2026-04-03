@@ -365,19 +365,21 @@ async def get_flea_market_items(
         if listing_type and listing_type in ("sale", "rental"):
             query = query.where(models.FleaMarketItem.listing_type == listing_type)
 
-        # 关键词搜索（标题、描述、地址、分类，支持中英文）
+        # 关键词搜索（标题、描述、地址、分类，支持中英文双语扩展）
         if keyword:
-            # 安全：转义 LIKE 通配符并限制长度
-            keyword_safe = keyword.strip()[:100].replace('%', r'\%').replace('_', r'\_')
-            keyword_pattern = f"%{keyword_safe}%"
-            query = query.where(
-                or_(
-                    models.FleaMarketItem.title.ilike(keyword_pattern),
-                    models.FleaMarketItem.description.ilike(keyword_pattern),
-                    models.FleaMarketItem.location.ilike(keyword_pattern),
-                    models.FleaMarketItem.category.ilike(keyword_pattern),
-                )
+            from app.utils.search_expander import build_keyword_filter
+            keyword_expr = build_keyword_filter(
+                columns=[
+                    models.FleaMarketItem.title,
+                    models.FleaMarketItem.description,
+                    models.FleaMarketItem.location,
+                    models.FleaMarketItem.category,
+                ],
+                keyword=keyword,
+                use_similarity=False,
             )
+            if keyword_expr is not None:
+                query = query.where(keyword_expr)
             # 按相关性排序：标题匹配优先，其次描述、地点、分类
             relevance = case(
                 (models.FleaMarketItem.title.ilike(keyword_pattern), 3),
@@ -3649,21 +3651,23 @@ async def get_flea_market_items_admin(
         # 分类筛选（"all" 或空表示不过滤）
         if category and category.strip().lower() != "all":
             query = query.where(models.FleaMarketItem.category == category)
-        
-        # 关键词搜索（标题、描述、地址、分类，支持中英文）
+
+        # 关键词搜索（标题、描述、地址、分类，支持中英文双语扩展）
         if keyword:
-            # 安全：转义 LIKE 通配符并限制长度
-            keyword_safe = keyword.strip()[:100].replace('%', r'\%').replace('_', r'\_')
-            keyword_pattern = f"%{keyword_safe}%"
-            query = query.where(
-                or_(
-                    models.FleaMarketItem.title.ilike(keyword_pattern),
-                    models.FleaMarketItem.description.ilike(keyword_pattern),
-                    models.FleaMarketItem.location.ilike(keyword_pattern),
-                    models.FleaMarketItem.category.ilike(keyword_pattern),
-                )
+            from app.utils.search_expander import build_keyword_filter
+            keyword_expr = build_keyword_filter(
+                columns=[
+                    models.FleaMarketItem.title,
+                    models.FleaMarketItem.description,
+                    models.FleaMarketItem.location,
+                    models.FleaMarketItem.category,
+                ],
+                keyword=keyword,
+                use_similarity=False,
             )
-        
+            if keyword_expr is not None:
+                query = query.where(keyword_expr)
+
         # 排序：按created_at DESC
         query = query.order_by(
             models.FleaMarketItem.created_at.desc()

@@ -60,28 +60,19 @@ def list_tasks(
                 query = query.filter(city_expr)
 
     if keyword and keyword.strip():
-        keyword_clean = keyword.strip()[:100]
-        keyword_escaped = keyword_clean.replace("%", r"\%").replace(
-            "_", r"\_"
+        from app.utils.search_expander import build_keyword_filter
+
+        keyword_expr = build_keyword_filter(
+            columns=[
+                Task.title, Task.description,
+                Task.title_zh, Task.title_en,
+                Task.description_zh, Task.description_en,
+                Task.task_type, Task.location,
+            ],
+            keyword=keyword,
         )
-        query = query.filter(
-            or_(
-                func.similarity(Task.title, keyword_clean) > 0.2,
-                func.similarity(Task.description, keyword_clean) > 0.2,
-                func.similarity(Task.title_zh, keyword_clean) > 0.2,
-                func.similarity(Task.title_en, keyword_clean) > 0.2,
-                func.similarity(Task.description_zh, keyword_clean) > 0.2,
-                func.similarity(Task.description_en, keyword_clean) > 0.2,
-                func.similarity(Task.task_type, keyword_clean) > 0.2,
-                func.similarity(Task.location, keyword_clean) > 0.2,
-                Task.title.ilike(f"%{keyword_escaped}%"),
-                Task.description.ilike(f"%{keyword_escaped}%"),
-                Task.title_zh.ilike(f"%{keyword_escaped}%"),
-                Task.title_en.ilike(f"%{keyword_escaped}%"),
-                Task.description_zh.ilike(f"%{keyword_escaped}%"),
-                Task.description_en.ilike(f"%{keyword_escaped}%"),
-            )
-        )
+        if keyword_expr is not None:
+            query = query.filter(keyword_expr)
 
     if sort_by == "latest":
         recent_24h = now_utc - timedelta(hours=24)
@@ -202,25 +193,17 @@ def count_tasks(
                 query = query.filter(city_expr)
 
     if keyword and keyword.strip():
-        keyword_clean = keyword.strip()[:100]
-        keyword_escaped = keyword_clean.replace("%", r"\%").replace(
-            "_", r"\_"
+        from app.utils.search_expander import build_keyword_filter
+
+        keyword_expr = build_keyword_filter(
+            columns=[
+                Task.title, Task.description,
+                Task.title_zh, Task.title_en,
+                Task.description_zh, Task.description_en,
+            ],
+            keyword=keyword,
         )
-        query = query.filter(
-            or_(
-                func.similarity(Task.title, keyword_clean) > 0.2,
-                func.similarity(Task.description, keyword_clean) > 0.2,
-                func.similarity(Task.title_zh, keyword_clean) > 0.2,
-                func.similarity(Task.title_en, keyword_clean) > 0.2,
-                func.similarity(Task.description_zh, keyword_clean) > 0.2,
-                func.similarity(Task.description_en, keyword_clean) > 0.2,
-                Task.title.ilike(f"%{keyword_escaped}%"),
-                Task.description.ilike(f"%{keyword_escaped}%"),
-                Task.title_zh.ilike(f"%{keyword_escaped}%"),
-                Task.title_en.ilike(f"%{keyword_escaped}%"),
-                Task.description_zh.ilike(f"%{keyword_escaped}%"),
-                Task.description_en.ilike(f"%{keyword_escaped}%"),
-            )
-        )
+        if keyword_expr is not None:
+            query = query.filter(keyword_expr)
 
     return query.count()
