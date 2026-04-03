@@ -74,7 +74,7 @@ class _SkillFeedContent extends StatelessWidget {
             icon: const Icon(Icons.post_add, color: AppColors.primary),
             tooltip: context.l10n.forumCreatePostTitle,
             onPressed: () async {
-              await context.push('/forum/posts/create');
+              await context.push('/forum/posts/create?categoryId=$categoryId');
               if (context.mounted) {
                 context.read<ForumBloc>().add(ForumLoadFeed(categoryId: categoryId));
               }

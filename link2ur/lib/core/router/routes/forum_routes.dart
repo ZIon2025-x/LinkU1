@@ -42,11 +42,15 @@ List<RouteBase> get forumRoutes => [
           );
           final officialTaskTitle =
               state.uri.queryParameters['officialTaskTitle'];
+          final initialCategoryId = int.tryParse(
+            state.uri.queryParameters['categoryId'] ?? '',
+          );
           return SlideUpTransitionPage(
             key: state.pageKey,
             child: CreatePostView(
               officialTaskId: officialTaskId,
               officialTaskTitle: officialTaskTitle,
+              initialCategoryId: initialCategoryId,
             ),
           );
         },

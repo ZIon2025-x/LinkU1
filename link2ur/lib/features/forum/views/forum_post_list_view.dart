@@ -115,9 +115,13 @@ class _ForumPostListViewContentState
             icon: const Icon(Icons.post_add, color: AppColors.primary),
             tooltip: 'New post',
             onPressed: () async {
-              await context.push('/forum/posts/create');
+              final catId = widget.category?.id;
+              final uri = catId != null
+                  ? '/forum/posts/create?categoryId=$catId'
+                  : '/forum/posts/create';
+              await context.push(uri);
               if (context.mounted) {
-                context.read<ForumBloc>().add(ForumLoadPosts(categoryId: widget.category?.id));
+                context.read<ForumBloc>().add(ForumLoadPosts(categoryId: catId));
               }
             },
           ),

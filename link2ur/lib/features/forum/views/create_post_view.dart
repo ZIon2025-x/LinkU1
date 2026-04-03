@@ -32,10 +32,12 @@ class CreatePostView extends StatefulWidget {
     super.key,
     this.officialTaskId,
     this.officialTaskTitle,
+    this.initialCategoryId,
   });
 
   final int? officialTaskId;
   final String? officialTaskTitle;
+  final int? initialCategoryId;
 
   @override
   State<CreatePostView> createState() => _CreatePostViewState();
@@ -79,6 +81,7 @@ class _CreatePostViewState extends State<CreatePostView> {
   @override
   void initState() {
     super.initState();
+    _selectedCategoryId = widget.initialCategoryId;
     if (!_isOfficialTaskFlow) {
       _checkForDraft();
     }
