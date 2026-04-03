@@ -354,7 +354,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
                     : (t.descriptionZh ?? t.descriptionEn ?? ''),
                 'status': t.status,
                 'image': t.firstImage,
-                'price': t.reward > 0 ? Helpers.formatPrice(t.reward) : null,
+                'price': t.reward > 0 ? Helpers.formatPrice(t.reward, currency: t.currency) : null,
                 'subtitle': t.status,
               })
           .toList();
@@ -550,7 +550,6 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
                   ? (c.displayDescription(locale) ?? '')
                   : (descRaw ?? ''),
               'image': c.icon,
-              'is_icon_url': c.icon != null,
               'subtitle': '${c.postCount} posts',
             };
           })
