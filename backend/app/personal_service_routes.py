@@ -22,13 +22,15 @@ async def _auto_translate_service(
     name: str,
     description: str | None,
     name_en: str | None = None,
+    name_zh: str | None = None,
     description_en: str | None = None,
-) -> tuple[str | None, str | None]:
+    description_zh: str | None = None,
+) -> tuple[str | None, str | None, str | None, str | None]:
     """
-    Auto-detect language and translate service name/description.
-    - Chinese input → translate to English (fill *_en fields)
-    - English input → name_en = name as-is (already English)
-    Returns (name_en, description_en).
+    Auto-detect language and translate service name/description bidirectionally.
+    - Chinese input → fill _zh from input, translate to _en
+    - English input → fill _en from input, translate to _zh
+    Returns (name_en, name_zh, description_en, description_zh).
     """
     from app.utils.bilingual_helper import _translate_with_encoding_protection
     from app.translation_manager import get_translation_manager
@@ -36,25 +38,39 @@ async def _auto_translate_service(
     lang = detect_language_simple(name)
 
     if lang == 'zh':
-        # Input is Chinese — translate to English
+        if not name_zh:
+            name_zh = name
         if not name_en:
             tm = get_translation_manager()
             name_en = await _translate_with_encoding_protection(
                 tm, text=name, target_lang='en', source_lang='zh-CN', max_retries=2,
             )
-        if description and not description_en:
-            tm = get_translation_manager()
-            description_en = await _translate_with_encoding_protection(
-                tm, text=description, target_lang='en', source_lang='zh-CN', max_retries=2,
-            )
+        if description:
+            if not description_zh:
+                description_zh = description
+            if not description_en:
+                tm = get_translation_manager()
+                description_en = await _translate_with_encoding_protection(
+                    tm, text=description, target_lang='en', source_lang='zh-CN', max_retries=2,
+                )
     else:
-        # Input is English — use as-is for _en fields
         if not name_en:
             name_en = name
-        if description and not description_en:
-            description_en = description
+        if not name_zh:
+            tm = get_translation_manager()
+            name_zh = await _translate_with_encoding_protection(
+                tm, text=name, target_lang='zh-CN', source_lang='en', max_retries=2,
+            )
+        if description:
+            if not description_en:
+                description_en = description
+            if not description_zh:
+                tm = get_translation_manager()
+                description_zh = await _translate_with_encoding_protection(
+                    tm, text=description, target_lang='zh-CN', source_lang='en', max_retries=2,
+                )
 
-    return name_en, description_en
+    return name_en, name_zh, description_en, description_zh
 
 
 def _serialize_service(s: models.TaskExpertService) -> dict:
@@ -62,8 +78,10 @@ def _serialize_service(s: models.TaskExpertService) -> dict:
         "id": s.id,
         "service_name": s.service_name,
         "service_name_en": s.service_name_en,
+        "service_name_zh": s.service_name_zh,
         "description": s.description,
         "description_en": s.description_en,
+        "description_zh": s.description_zh,
         "category": s.category,
         "base_price": float(s.base_price) if s.base_price else 0,
         "currency": s.currency,
@@ -104,23 +122,27 @@ async def create_personal_service(
 
     # Auto-translate name and description
     service_name_en = data.service_name_en
+    service_name_zh = data.service_name_zh
     description_en = data.description_en
+    description_zh = data.description_zh
     try:
-        service_name_en, description_en = await _auto_translate_service(
-            data.service_name, data.description, service_name_en, description_en,
+        service_name_en, service_name_zh, description_en, description_zh = await _auto_translate_service(
+            data.service_name, data.description,
+            service_name_en, service_name_zh, description_en, description_zh,
         )
     except Exception as e:
         logger.warning(f"Service auto-translate failed: {e}")
 
-    # id is Integer auto-increment — do NOT set it manually
     new_service = models.TaskExpertService(
         service_type="personal",
         user_id=current_user.id,
         expert_id=None,
         service_name=data.service_name,
         service_name_en=service_name_en,
+        service_name_zh=service_name_zh,
         description=data.description,
         description_en=description_en,
+        description_zh=description_zh,
         category=data.category,
         base_price=data.base_price or 0,
         currency=data.currency,
@@ -201,13 +223,17 @@ async def update_personal_service(
     new_desc = update_data.get('description', service.description)
     if 'service_name' in update_data or 'description' in update_data:
         try:
-            name_en, desc_en = await _auto_translate_service(
+            name_en, name_zh, desc_en, desc_zh = await _auto_translate_service(
                 new_name, new_desc,
                 update_data.get('service_name_en'),
+                update_data.get('service_name_zh'),
                 update_data.get('description_en'),
+                update_data.get('description_zh'),
             )
             update_data['service_name_en'] = name_en
+            update_data['service_name_zh'] = name_zh
             update_data['description_en'] = desc_en
+            update_data['description_zh'] = desc_zh
         except Exception as e:
             logger.warning(f"Service auto-translate on update failed: {e}")
 
