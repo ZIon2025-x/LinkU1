@@ -203,9 +203,12 @@ class _NearbyTabState extends State<_NearbyTab> {
 
     // Services
     for (final service in state.nearbyServices) {
-      final name = (isEn
-              ? (service['service_name_en'] ?? service['service_name'])
-              : service['service_name']) as String? ?? '';
+      final name = localizedString(
+              service['service_name_zh'] as String?,
+              service['service_name_en'] as String?,
+              (service['service_name'] as String?) ?? '',
+              locale,
+            );
       final price = service['base_price'];
       final pricingType = service['pricing_type'] as String? ?? '';
       final priceStr = price != null

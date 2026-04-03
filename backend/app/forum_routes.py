@@ -2710,8 +2710,10 @@ def _service_to_feed_data(service: models.TaskExpertService) -> dict:
         "id": service.id,
         "service_name": service.service_name,
         "service_name_en": getattr(service, 'service_name_en', None),
+        "service_name_zh": getattr(service, 'service_name_zh', None),
         "description": (service.description or "")[:200],
         "description_en": ((service.description_en or "")[:200]) if getattr(service, 'description_en', None) else None,
+        "description_zh": ((service.description_zh or "")[:200]) if getattr(service, 'description_zh', None) else None,
         "base_price": float(service.base_price) if service.base_price else 0,
         "currency": service.currency or "GBP",
         "pricing_type": service.pricing_type,
@@ -2914,19 +2916,23 @@ async def get_posts(
         await assert_forum_visible(current_user, category_id, db, raise_exception=True)
         query = query.where(models.ForumPost.category_id == category_id)
     
-    # 搜索关键词（支持中英文字段）
+    # 搜索关键词（支持中英文字段，双语扩展）
     if q:
-        q_pattern = f"%{q}%"
-        query = query.where(
-            or_(
-                models.ForumPost.title.ilike(q_pattern),
-                models.ForumPost.content.ilike(q_pattern),
-                models.ForumPost.title_en.ilike(q_pattern),
-                models.ForumPost.title_zh.ilike(q_pattern),
-                models.ForumPost.content_en.ilike(q_pattern),
-                models.ForumPost.content_zh.ilike(q_pattern),
-            )
+        from app.utils.search_expander import build_keyword_filter
+        keyword_expr = build_keyword_filter(
+            columns=[
+                models.ForumPost.title,
+                models.ForumPost.content,
+                models.ForumPost.title_en,
+                models.ForumPost.title_zh,
+                models.ForumPost.content_en,
+                models.ForumPost.content_zh,
+            ],
+            keyword=q,
+            use_similarity=False,
         )
+        if keyword_expr is not None:
+            query = query.where(keyword_expr)
     
     # 排序
     # 注意：只有置顶帖子需要优先显示，加精帖子不改变排序顺序
@@ -5507,27 +5513,25 @@ async def search_posts(
                 # 如果用户没有任何可见板块（理论上不应该发生），返回空结果
                 query = query.where(models.ForumPost.category_id == -1)  # 不存在的ID
     
-    # 搜索条件（使用 pg_trgm 相似度搜索）
+    # 搜索条件（双语扩展 + pg_trgm 相似度搜索）
+    from app.utils.search_expander import build_keyword_filter
+    forum_columns = [
+        models.ForumPost.title,
+        models.ForumPost.content,
+        models.ForumPost.title_en,
+        models.ForumPost.title_zh,
+        models.ForumPost.content_en,
+        models.ForumPost.content_zh,
+    ]
     if Config.USE_PG_TRGM:
-        # 使用 pg_trgm 相似度搜索（对中文支持更好）
-        # similarity 阈值设为 0.2，可以根据需要调整（0.1-0.3 之间）
-        search_condition = or_(
-            func.similarity(models.ForumPost.title, q) > 0.2,
-            func.similarity(models.ForumPost.content, q) > 0.2,
-            func.similarity(models.ForumPost.title_en, q) > 0.2,
-            func.similarity(models.ForumPost.title_zh, q) > 0.2,
-            func.similarity(models.ForumPost.content_en, q) > 0.2,
-            func.similarity(models.ForumPost.content_zh, q) > 0.2,
-            # 同时保留 ILIKE 作为兜底，确保能匹配到结果
-            models.ForumPost.title.ilike(f"%{q}%"),
-            models.ForumPost.content.ilike(f"%{q}%"),
-            models.ForumPost.title_en.ilike(f"%{q}%"),
-            models.ForumPost.title_zh.ilike(f"%{q}%"),
-            models.ForumPost.content_en.ilike(f"%{q}%"),
-            models.ForumPost.content_zh.ilike(f"%{q}%"),
+        keyword_expr = build_keyword_filter(
+            columns=forum_columns,
+            keyword=q,
+            use_similarity=True,
         )
-        query = query.where(search_condition)
-        
+        if keyword_expr is not None:
+            query = query.where(keyword_expr)
+
         # 按相似度排序（标题相似度优先，然后是内容相似度）
         query = query.order_by(
             func.similarity(models.ForumPost.title, q).desc(),
@@ -5535,16 +5539,13 @@ async def search_posts(
             models.ForumPost.created_at.desc()  # 相似度相同时按时间倒序
         )
     else:
-        # 降级方案：使用 ILIKE 模糊搜索（如果未启用 pg_trgm，支持中英文字段）
-        search_condition = or_(
-            models.ForumPost.title.ilike(f"%{q}%"),
-            models.ForumPost.content.ilike(f"%{q}%"),
-            models.ForumPost.title_en.ilike(f"%{q}%"),
-            models.ForumPost.title_zh.ilike(f"%{q}%"),
-            models.ForumPost.content_en.ilike(f"%{q}%"),
-            models.ForumPost.content_zh.ilike(f"%{q}%"),
+        keyword_expr = build_keyword_filter(
+            columns=forum_columns,
+            keyword=q,
+            use_similarity=False,
         )
-        query = query.where(search_condition)
+        if keyword_expr is not None:
+            query = query.where(keyword_expr)
         query = query.order_by(models.ForumPost.created_at.desc())
     
     # 获取总数
@@ -7588,7 +7589,7 @@ async def search_linkable_content(
         pass
     
     results = []
-    search_term = f"%{q}%"
+    from app.utils.search_expander import build_keyword_filter
     limit_per_type = 5
     
     # 搜索达人服务
@@ -7606,11 +7607,20 @@ async def search_linkable_content(
             .join(models.User, models.TaskExpert.id == models.User.id)
             .where(
                 models.TaskExpertService.status == "active",
-                or_(
-                    models.TaskExpertService.service_name.ilike(search_term),
-                    models.TaskExpertService.description.ilike(search_term),
-                )
             )
+        )
+        svc_keyword_expr = build_keyword_filter(
+            columns=[
+                models.TaskExpertService.service_name,
+                models.TaskExpertService.description,
+            ],
+            keyword=q,
+            use_similarity=False,
+        )
+        if svc_keyword_expr is not None:
+            service_query = service_query.where(svc_keyword_expr)
+        service_query = (
+            service_query
             .limit(limit_per_type)
         )
         service_result = await db.execute(service_query)
@@ -7659,15 +7669,21 @@ async def search_linkable_content(
             .where(
                 models.FleaMarketItem.status == "active",
                 models.FleaMarketItem.is_visible == True,
-                or_(
-                    models.FleaMarketItem.title.ilike(search_term),
-                    models.FleaMarketItem.description.ilike(search_term),
-                    models.FleaMarketItem.location.ilike(search_term),
-                    models.FleaMarketItem.category.ilike(search_term),
-                )
             )
-            .limit(limit_per_type)
         )
+        prod_keyword_expr = build_keyword_filter(
+            columns=[
+                models.FleaMarketItem.title,
+                models.FleaMarketItem.description,
+                models.FleaMarketItem.location,
+                models.FleaMarketItem.category,
+            ],
+            keyword=q,
+            use_similarity=False,
+        )
+        if prod_keyword_expr is not None:
+            product_query = product_query.where(prod_keyword_expr)
+        product_query = product_query.limit(limit_per_type)
         product_result = await db.execute(product_query)
         for row in product_result:
             prod_images = row.images
@@ -7711,14 +7727,20 @@ async def search_linkable_content(
             .join(models.User, models.Activity.expert_id == models.User.id)
             .where(
                 models.Activity.status.in_(["published", "registration_open"]),
-                or_(
-                    models.Activity.title.ilike(search_term),
-                    models.Activity.description.ilike(search_term),
-                    models.Activity.location.ilike(search_term),
-                ),
             )
-            .limit(limit_per_type)
         )
+        act_keyword_expr = build_keyword_filter(
+            columns=[
+                models.Activity.title,
+                models.Activity.description,
+                models.Activity.location,
+            ],
+            keyword=q,
+            use_similarity=False,
+        )
+        if act_keyword_expr is not None:
+            activity_query = activity_query.where(act_keyword_expr)
+        activity_query = activity_query.limit(limit_per_type)
         activity_result = await db.execute(activity_query)
         for row in activity_result:
             is_experienced = False
@@ -7760,17 +7782,23 @@ async def search_linkable_content(
             )
             .where(
                 models.CustomLeaderboard.status == "active",
-                or_(
-                    models.CustomLeaderboard.name.ilike(search_term),
-                    models.CustomLeaderboard.name_en.ilike(search_term),
-                    models.CustomLeaderboard.name_zh.ilike(search_term),
-                    models.CustomLeaderboard.description.ilike(search_term),
-                    models.CustomLeaderboard.description_en.ilike(search_term),
-                    models.CustomLeaderboard.description_zh.ilike(search_term),
-                ),
             )
-            .limit(limit_per_type)
         )
+        rank_keyword_expr = build_keyword_filter(
+            columns=[
+                models.CustomLeaderboard.name,
+                models.CustomLeaderboard.name_en,
+                models.CustomLeaderboard.name_zh,
+                models.CustomLeaderboard.description,
+                models.CustomLeaderboard.description_en,
+                models.CustomLeaderboard.description_zh,
+            ],
+            keyword=q,
+            use_similarity=False,
+        )
+        if rank_keyword_expr is not None:
+            ranking_query = ranking_query.where(rank_keyword_expr)
+        ranking_query = ranking_query.limit(limit_per_type)
         ranking_result = await db.execute(ranking_query)
         for row in ranking_result:
             results.append({
@@ -7792,18 +7820,23 @@ async def search_linkable_content(
             .where(
                 models.ForumPost.is_deleted == False,
                 models.ForumPost.is_visible == True,
-                or_(
-                    models.ForumPost.title.ilike(search_term),
-                    models.ForumPost.title_en.ilike(search_term),
-                    models.ForumPost.title_zh.ilike(search_term),
-                    models.ForumPost.content.ilike(search_term),
-                    models.ForumPost.content_en.ilike(search_term),
-                    models.ForumPost.content_zh.ilike(search_term),
-                ),
             )
-            .order_by(desc(models.ForumPost.created_at))
-            .limit(limit_per_type)
         )
+        post_keyword_expr = build_keyword_filter(
+            columns=[
+                models.ForumPost.title,
+                models.ForumPost.title_en,
+                models.ForumPost.title_zh,
+                models.ForumPost.content,
+                models.ForumPost.content_en,
+                models.ForumPost.content_zh,
+            ],
+            keyword=q,
+            use_similarity=False,
+        )
+        if post_keyword_expr is not None:
+            post_query = post_query.where(post_keyword_expr)
+        post_query = post_query.order_by(desc(models.ForumPost.created_at)).limit(limit_per_type)
         post_result = await db.execute(post_query)
         for row in post_result:
             results.append({

@@ -17,6 +17,7 @@ import '../../../core/design/app_typography.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/localized_string.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/utils/sheet_adaptation.dart';

@@ -158,7 +158,14 @@ class _MyServicesBody extends StatelessWidget {
                         final id = service['id'];
                         context.push(
                           '/services/$id/reviews',
-                          extra: {'serviceName': service['service_name']},
+                          extra: {
+                            'serviceName': localizedString(
+                              service['service_name_zh'] as String?,
+                              service['service_name_en'] as String?,
+                              (service['service_name'] as String?) ?? '',
+                              Localizations.localeOf(context),
+                            ),
+                          },
                         );
                       },
                     ),

@@ -515,7 +515,7 @@ class TaskExpertService extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, expertId, serviceType, userId, serviceName, basePrice, pricingType, locationType, location, latitude, longitude, status, isExpertVerified, ownerName, ownerAvatar, ownerRating, skills];
+  List<Object?> get props => [id, expertId, serviceType, userId, serviceName, serviceNameEn, serviceNameZh, descriptionEn, descriptionZh, basePrice, pricingType, locationType, location, latitude, longitude, status, isExpertVerified, ownerName, ownerAvatar, ownerRating, skills];
 }
 
 /// 任务达人列表响应
