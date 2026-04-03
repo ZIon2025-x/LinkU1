@@ -313,7 +313,11 @@ class TaskExpertService extends Equatable {
     this.serviceType = 'expert',
     this.userId,
     required this.serviceName,
+    this.serviceNameEn,
+    this.serviceNameZh,
     this.description = '',
+    this.descriptionEn,
+    this.descriptionZh,
     this.images,
     required this.basePrice,
     this.pricingType = 'fixed',
@@ -350,7 +354,11 @@ class TaskExpertService extends Equatable {
   final String serviceType; // 'personal' | 'expert'
   final String? userId;
   final String serviceName;
+  final String? serviceNameEn;
+  final String? serviceNameZh;
   final String description;
+  final String? descriptionEn;
+  final String? descriptionZh;
   final List<String>? images;
   final double basePrice;
   final String pricingType; // 'fixed' | 'negotiable'
@@ -409,6 +417,14 @@ class TaskExpertService extends Equatable {
   /// 是否已申请
   bool get hasApplied => userApplicationId != null;
 
+  /// Locale-aware service name
+  String displayServiceName(Locale locale) =>
+      localizedString(serviceNameZh, serviceNameEn, serviceName, locale);
+
+  /// Locale-aware description
+  String displayDescription(Locale locale) =>
+      localizedString(descriptionZh, descriptionEn, description, locale);
+
   factory TaskExpertService.fromJson(Map<String, dynamic> json) {
     return TaskExpertService(
       id: json['id'] as int,
@@ -416,7 +432,11 @@ class TaskExpertService extends Equatable {
       serviceType: json['service_type']?.toString() ?? 'expert',
       userId: json['user_id']?.toString(),
       serviceName: json['service_name'] as String? ?? '',
+      serviceNameEn: json['service_name_en'] as String?,
+      serviceNameZh: json['service_name_zh'] as String?,
       description: json['description'] as String? ?? '',
+      descriptionEn: json['description_en'] as String?,
+      descriptionZh: json['description_zh'] as String?,
       images: (json['images'] as List<dynamic>?)
           ?.map((e) => e.toString())
           .toList(),
@@ -463,7 +483,11 @@ class TaskExpertService extends Equatable {
       'service_type': serviceType,
       'user_id': userId,
       'service_name': serviceName,
+      'service_name_en': serviceNameEn,
+      'service_name_zh': serviceNameZh,
       'description': description,
+      'description_en': descriptionEn,
+      'description_zh': descriptionZh,
       'images': images,
       'base_price': basePrice,
       'pricing_type': pricingType,
