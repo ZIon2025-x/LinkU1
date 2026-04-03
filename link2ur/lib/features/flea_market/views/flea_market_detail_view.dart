@@ -35,6 +35,7 @@ import '../../../data/repositories/task_expert_repository.dart';
 import '../../../data/repositories/activity_repository.dart';
 import '../../../data/repositories/question_repository.dart';
 import '../../task_expert/bloc/task_expert_bloc.dart';
+import '../../../core/widgets/user_identity_badges.dart';
 
 /// 跳蚤市场商品详情页 - 对标iOS FleaMarketDetailView.swift
 class FleaMarketDetailView extends StatelessWidget {
@@ -2401,6 +2402,10 @@ class _SellerCard extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                        if (item.sellerDisplayedBadge != null) ...[
+                          const SizedBox(width: 4),
+                          InlineBadgeTag(badge: item.sellerDisplayedBadge!),
+                        ],
                         const SizedBox(width: 6),
                         const Icon(
                           Icons.verified,
