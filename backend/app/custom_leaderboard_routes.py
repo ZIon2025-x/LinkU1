@@ -179,14 +179,17 @@ async def get_all_leaderboards_admin(
     result = await db.execute(query)
     leaderboards = result.scalars().all()
     
-    from app.forum_routes import build_user_info
-    
+    from app.forum_routes import build_user_info, preload_badge_cache
+
+    _applicant_ids = [lb.applicant_id for lb in leaderboards if lb.applicant_id]
+    _badge_cache = await preload_badge_cache(db, _applicant_ids)
+
     leaderboard_items = []
     for leaderboard in leaderboards:
         applicant_info = None
         if leaderboard.applicant:
-            applicant_info = await build_user_info(db, leaderboard.applicant)
-        
+            applicant_info = await build_user_info(db, leaderboard.applicant, _badge_cache=_badge_cache)
+
         leaderboard_dict = schemas.CustomLeaderboardOut(
             id=leaderboard.id,
             name=leaderboard.name,
@@ -245,10 +248,11 @@ async def update_leaderboard_admin(
         invalidate_cache(f"leaderboard:{leaderboard_id}*")
     except Exception as e:
         logger.warning("invalidate leaderboard cache: %s", e)
-    from app.forum_routes import build_user_info
+    from app.forum_routes import build_user_info, preload_badge_cache
     applicant_info = None
     if leaderboard.applicant:
-        applicant_info = await build_user_info(db, leaderboard.applicant)
+        _badge_cache = await preload_badge_cache(db, [leaderboard.applicant_id] if leaderboard.applicant_id else [])
+        applicant_info = await build_user_info(db, leaderboard.applicant, _badge_cache=_badge_cache)
     return schemas.CustomLeaderboardOut(
         id=leaderboard.id,
         name=leaderboard.name,
@@ -788,11 +792,12 @@ async def apply_leaderboard(
     new_leaderboard = result.scalar_one()
     
     # 构建申请者信息
-    from app.forum_routes import build_user_info
+    from app.forum_routes import build_user_info, preload_badge_cache
     applicant_info = None
     if new_leaderboard.applicant:
-        applicant_info = await build_user_info(db, new_leaderboard.applicant)
-    
+        _badge_cache = await preload_badge_cache(db, [new_leaderboard.applicant_id] if new_leaderboard.applicant_id else [])
+        applicant_info = await build_user_info(db, new_leaderboard.applicant, _badge_cache=_badge_cache)
+
     # 手动构建响应对象，避免 Pydantic 尝试访问未加载的关系
     return schemas.CustomLeaderboardOut(
         id=new_leaderboard.id,
@@ -919,15 +924,18 @@ async def get_leaderboards(
     leaderboards = result.scalars().all()
     
     # 计算每个榜单的浏览量（数据库值 + Redis增量）并构建返回数据
-    from app.forum_routes import build_user_info
-    
+    from app.forum_routes import build_user_info, preload_badge_cache
+
+    _applicant_ids = [lb.applicant_id for lb in leaderboards if lb.applicant_id]
+    _badge_cache = await preload_badge_cache(db, _applicant_ids)
+
     leaderboard_items = []
     for leaderboard in leaderboards:
         # 计算浏览量
         try:
             from app.redis_cache import get_redis_client
             redis_client = get_redis_client()
-            
+
             if redis_client:
                 redis_key = f"leaderboard:view_count:{leaderboard.id}"
                 redis_view_count = int(redis_client.get(redis_key) or 0)
@@ -942,11 +950,11 @@ async def get_leaderboards(
             logger = logging.getLogger(__name__)
             logger.debug(f"Redis view count query failed, using DB values: {e}")
             display_view_count = leaderboard.view_count
-        
+
         # 构建申请者信息
         applicant_info = None
         if leaderboard.applicant:
-            applicant_info = await build_user_info(db, leaderboard.applicant)
+            applicant_info = await build_user_info(db, leaderboard.applicant, _badge_cache=_badge_cache)
         
         # 创建返回对象
         leaderboard_dict = {
@@ -1046,11 +1054,12 @@ async def get_leaderboard_detail(
         display_view_count = leaderboard.view_count + redis_view_count
     
     # 构建申请者信息
-    from app.forum_routes import build_user_info
+    from app.forum_routes import build_user_info, preload_badge_cache
     applicant_info = None
     if leaderboard.applicant:
-        applicant_info = await build_user_info(db, leaderboard.applicant)
-    
+        _badge_cache = await preload_badge_cache(db, [leaderboard.applicant_id] if leaderboard.applicant_id else [])
+        applicant_info = await build_user_info(db, leaderboard.applicant, _badge_cache=_badge_cache)
+
     # 创建返回对象，使用计算后的浏览量（格式化显示）
     result = schemas.CustomLeaderboardOut(
         id=leaderboard.id,
