@@ -333,7 +333,7 @@ class _BoardsSection extends StatelessWidget {
     return _SectionContainer(
       title: '\u{1F3F7}\uFE0F ${context.l10n.discoverBoards}',
       showViewAll: true,
-      onViewAll: () => context.push('/forum'),
+      onViewAll: () => context.push('/forum?filter=boards'),
       child: SizedBox(
         height: 120,
         child: ListView.separated(
@@ -559,7 +559,7 @@ class _SkillCategoriesSection extends StatelessWidget {
     return _SectionContainer(
       title: '\u{1F4C2} ${context.l10n.discoverSkillCategories}',
       showViewAll: true,
-      onViewAll: () => context.push('/forum'),
+      onViewAll: () => context.push('/forum?filter=skills'),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
         child: GridView.builder(

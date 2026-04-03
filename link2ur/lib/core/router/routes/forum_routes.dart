@@ -22,16 +22,19 @@ List<RouteBase> get forumRoutes => [
       GoRoute(
         path: AppRoutes.forum,
         name: 'forum',
-        builder: (context, state) => BlocProvider<ForumBloc>(
-          create: (context) {
-            final bloc = ForumBloc(
-              forumRepository: context.read<ForumRepository>(),
-            );
-            bloc.add(const ForumLoadCategories());
-            return bloc;
-          },
-          child: const ForumView(showLeaderboardTab: false),
-        ),
+        builder: (context, state) {
+          final filter = state.uri.queryParameters['filter'];
+          return BlocProvider<ForumBloc>(
+            create: (context) {
+              final bloc = ForumBloc(
+                forumRepository: context.read<ForumRepository>(),
+              );
+              bloc.add(const ForumLoadCategories());
+              return bloc;
+            },
+            child: ForumView(showLeaderboardTab: false, categoryFilter: filter),
+          );
+        },
       ),
       GoRoute(
         path: AppRoutes.createPost,

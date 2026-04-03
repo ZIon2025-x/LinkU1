@@ -36,9 +36,12 @@ import '../../leaderboard/bloc/leaderboard_bloc.dart';
 /// 社区页 (论坛 + 排行榜)
 /// [showLeaderboardTab] 为 false 时仅显示论坛（用于独立路由 /forum，不显示排行榜按钮）
 class ForumView extends StatefulWidget {
-  const ForumView({super.key, this.showLeaderboardTab = true});
+  const ForumView({super.key, this.showLeaderboardTab = true, this.categoryFilter});
 
   final bool showLeaderboardTab;
+
+  /// 分类过滤：'boards' 仅普通板块，'skills' 仅技能分类，null 显示全部
+  final String? categoryFilter;
 
   @override
   State<ForumView> createState() => _ForumViewState();
@@ -96,12 +99,12 @@ class _ForumViewState extends State<ForumView> {
                 child: widget.showLeaderboardTab
                     ? IndexedStack(
                         index: _selectedTab,
-                        children: const [
-                          _ForumTab(),
-                          _LeaderboardTab(),
+                        children: [
+                          _ForumTab(categoryFilter: widget.categoryFilter),
+                          const _LeaderboardTab(),
                         ],
                       )
-                    : const _ForumTab(),
+                    : _ForumTab(categoryFilter: widget.categoryFilter),
               ),
             ],
           ),
@@ -188,12 +191,12 @@ class _ForumViewState extends State<ForumView> {
                           onPageChanged: (index) {
                             setState(() => _selectedTab = index);
                           },
-                          children: const [
-                            _ForumTab(),
-                            _LeaderboardTab(),
+                          children: [
+                            _ForumTab(categoryFilter: widget.categoryFilter),
+                            const _LeaderboardTab(),
                           ],
                         )
-                      : const _ForumTab(),
+                      : _ForumTab(categoryFilter: widget.categoryFilter),
                 ),
               ],
             ),
@@ -521,7 +524,10 @@ class _PinnedSearchBarDelegate extends SliverPersistentHeaderDelegate {
 
 /// 论坛Tab - 显示板块(分类)列表，顶部搜索框仅过滤板块
 class _ForumTab extends StatefulWidget {
-  const _ForumTab();
+  const _ForumTab({this.categoryFilter});
+
+  /// 'boards' = 仅普通板块, 'skills' = 仅技能分类, null = 全部
+  final String? categoryFilter;
 
   @override
   State<_ForumTab> createState() => _ForumTabState();
@@ -580,10 +586,17 @@ class _ForumTabState extends State<_ForumTab> {
             }
 
             final user = authState.isAuthenticated ? authState.user : null;
-            final visible = ForumPermissionHelper.filterVisibleCategories(
+            var visible = ForumPermissionHelper.filterVisibleCategories(
               state.categories,
               user,
             );
+
+            // 按 categoryFilter 过滤
+            if (widget.categoryFilter == 'boards') {
+              visible = visible.where((c) => c.skillType == null || c.skillType!.isEmpty).toList();
+            } else if (widget.categoryFilter == 'skills') {
+              visible = visible.where((c) => c.skillType != null && c.skillType!.isNotEmpty).toList();
+            }
 
             if (visible.isEmpty) {
               final body = EmptyStateView.noData(
