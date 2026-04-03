@@ -16328,14 +16328,26 @@ abstract class AppLocalizations {
   /// No description provided for @validatorUsernameMinLength.
   ///
   /// In en, this message translates to:
-  /// **'Username must be at least 2 characters'**
+  /// **'Username must be at least 1 character'**
   String get validatorUsernameMinLength;
 
   /// No description provided for @validatorUsernameMaxLength.
   ///
   /// In en, this message translates to:
-  /// **'Username must be at most 20 characters'**
+  /// **'Username must be at most 30 characters'**
   String get validatorUsernameMaxLength;
+
+  /// No description provided for @validatorUsernameNoDigitStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Username cannot start with a digit'**
+  String get validatorUsernameNoDigitStart;
+
+  /// No description provided for @validatorUsernameNoWhitespace.
+  ///
+  /// In en, this message translates to:
+  /// **'Username cannot contain spaces or newlines'**
+  String get validatorUsernameNoWhitespace;
 
   /// No description provided for @validatorTitleRequired.
   ///

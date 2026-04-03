@@ -12663,11 +12663,11 @@ def batch_create_service_time_slots_admin(
         raise HTTPException(status_code=500, detail=f"批量创建时间段失败: {str(e)}")
 
 
-# 公开 API - 获取任务达人列表（前端使用）
-@router.get("/task-experts")
-@measure_api_performance("get_task_experts")
-@cache_response(ttl=600, key_prefix="public_task_experts")  # 缓存10分钟
-def get_public_task_experts(
+# 公开 API - 获取任务达人列表（已迁移到 task_expert_routes.py）
+# @router.get("/task-experts")
+# @measure_api_performance("get_task_experts")
+# @cache_response(ttl=600, key_prefix="public_task_experts")
+def _deprecated_get_public_task_experts(
     category: Optional[str] = None,
     location: Optional[str] = Query(None, description="城市筛选"),
     keyword: Optional[str] = Query(None, max_length=200, description="关键词搜索（搜索名称、简介、技能）"),

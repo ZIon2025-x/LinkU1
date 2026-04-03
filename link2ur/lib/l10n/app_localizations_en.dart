@@ -8887,11 +8887,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get validatorUsernameMinLength =>
-      'Username must be at least 2 characters';
+      'Username must be at least 1 character';
 
   @override
   String get validatorUsernameMaxLength =>
-      'Username must be at most 20 characters';
+      'Username must be at most 30 characters';
+
+  @override
+  String get validatorUsernameNoDigitStart =>
+      'Username cannot start with a digit';
+
+  @override
+  String get validatorUsernameNoWhitespace =>
+      'Username cannot contain spaces or newlines';
 
   @override
   String get validatorTitleRequired => 'Please enter title';

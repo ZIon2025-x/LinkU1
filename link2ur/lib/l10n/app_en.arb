@@ -4076,8 +4076,10 @@
   },
   "validatorCodeDigitsOnly": "Verification code must contain only digits",
   "validatorUsernameRequired": "Please enter username",
-  "validatorUsernameMinLength": "Username must be at least 2 characters",
-  "validatorUsernameMaxLength": "Username must be at most 20 characters",
+  "validatorUsernameMinLength": "Username must be at least 1 character",
+  "validatorUsernameMaxLength": "Username must be at most 30 characters",
+  "validatorUsernameNoDigitStart": "Username cannot start with a digit",
+  "validatorUsernameNoWhitespace": "Username cannot contain spaces or newlines",
   "validatorTitleRequired": "Please enter title",
   "validatorTitleMaxLength": "Title must be at most {maxLength} characters",
   "@validatorTitleMaxLength": {

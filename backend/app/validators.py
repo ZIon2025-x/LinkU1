@@ -95,10 +95,10 @@ class StringValidator(BaseValidator):
     def validate_username(username: str) -> str:
         """验证用户名"""
         username = username.strip()
-        
-        if len(username) < 3:
-            raise ValueError("用户名至少3个字符")
-        
+
+        if len(username) < 1:
+            raise ValueError("用户名至少1个字符")
+
         if len(username) > 30:
             raise ValueError("用户名不能超过30个字符")
         
@@ -204,7 +204,7 @@ class TaskValidator(BaseValidator):
 class UserValidator(BaseValidator):
     """用户验证器"""
     
-    name: str = Field(..., min_length=2, max_length=50)
+    name: str = Field(..., min_length=1, max_length=30)
     email: str = Field(..., max_length=254)
     password: str = Field(..., min_length=12, max_length=128)
     phone: Optional[str] = Field(None, max_length=20)
@@ -215,7 +215,7 @@ class UserValidator(BaseValidator):
     @field_validator('name')
     @classmethod
     def validate_name(cls, v):
-        return StringValidator.sanitize_string(v, 50)
+        return StringValidator.validate_username(v)
 
     @field_validator('email')
     @classmethod

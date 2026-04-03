@@ -8523,10 +8523,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get validatorUsernameRequired => '请输入用户名';
 
   @override
-  String get validatorUsernameMinLength => '用户名至少2个字符';
+  String get validatorUsernameMinLength => '用户名至少1个字符';
 
   @override
-  String get validatorUsernameMaxLength => '用户名最多20个字符';
+  String get validatorUsernameMaxLength => '用户名最多30个字符';
+
+  @override
+  String get validatorUsernameNoDigitStart => '用户名不能以数字开头';
+
+  @override
+  String get validatorUsernameNoWhitespace => '用户名不能包含空格或换行符';
 
   @override
   String get validatorTitleRequired => '请输入标题';
@@ -20054,10 +20060,16 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get validatorUsernameRequired => '請輸入使用者名稱';
 
   @override
-  String get validatorUsernameMinLength => '使用者名稱至少2個字元';
+  String get validatorUsernameMinLength => '使用者名稱至少1個字元';
 
   @override
-  String get validatorUsernameMaxLength => '使用者名稱最多20個字元';
+  String get validatorUsernameMaxLength => '使用者名稱最多30個字元';
+
+  @override
+  String get validatorUsernameNoDigitStart => '使用者名稱不能以數字開頭';
+
+  @override
+  String get validatorUsernameNoWhitespace => '使用者名稱不能包含空格或換行符';
 
   @override
   String get validatorTitleRequired => '請輸入標題';

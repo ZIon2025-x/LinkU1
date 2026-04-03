@@ -132,13 +132,21 @@ class Validators {
     if (value == null || value.isEmpty) {
       return l10n?.validatorUsernameRequired ?? 'Please enter username';
     }
-    if (value.length < 2) {
+    if (value.length < 1) {
       return l10n?.validatorUsernameMinLength ??
-          'Username must be at least 2 characters';
+          'Username must be at least 1 character';
     }
-    if (value.length > 20) {
+    if (value.length > 30) {
       return l10n?.validatorUsernameMaxLength ??
-          'Username must be at most 20 characters';
+          'Username must be at most 30 characters';
+    }
+    if (value[0].contains(RegExp(r'[0-9]'))) {
+      return l10n?.validatorUsernameNoDigitStart ??
+          'Username cannot start with a digit';
+    }
+    if (value.contains(RegExp(r'[\s\n\r\t]'))) {
+      return l10n?.validatorUsernameNoWhitespace ??
+          'Username cannot contain spaces or newlines';
     }
     return null;
   }
