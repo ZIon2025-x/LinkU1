@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/design/app_colors.dart';
+import '../../../core/widgets/user_identity_badges.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/error_localizer.dart';
@@ -181,7 +182,7 @@ class _BadgeChip extends StatelessWidget {
           const SizedBox(width: 6),
           Flexible(
             child: Text(
-              _buildBadgeLabel(badge),
+              buildBadgeLabel(context, badge),
               style: theme.textTheme.labelSmall?.copyWith(
                 fontWeight: FontWeight.w600,
                 color: isDisplayed
@@ -194,23 +195,6 @@ class _BadgeChip extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  String _buildBadgeLabel(UserBadge badge) {
-    final parts = <String>[];
-    final city = badge.city;
-    if (city != null && city.isNotEmpty && city != 'all') {
-      parts.add(city);
-    }
-    if (badge.skillCategory != null && badge.skillCategory!.isNotEmpty) {
-      parts.add(badge.skillCategory!);
-    }
-    final rankStr = badge.rank;
-    if (rankStr != null && rankStr.isNotEmpty) {
-      final rankNum = int.tryParse(rankStr);
-      parts.add(rankNum != null ? '#$rankNum' : rankStr);
-    }
-    return parts.isNotEmpty ? parts.join(' · ') : badge.badgeType;
   }
 
   Color _getBadgeColor(String? rank) {

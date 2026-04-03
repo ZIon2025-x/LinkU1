@@ -3,6 +3,34 @@ import '../../data/models/badge.dart';
 import '../design/app_colors.dart';
 import '../utils/l10n_extension.dart';
 
+/// 构建勋章显示文本，如 "伦敦 · 翻译 · 前1名" (zh) / "London · Translation · Top 1" (en)
+String buildBadgeLabel(BuildContext context, UserBadge badge) {
+  final locale = Localizations.localeOf(context);
+  final parts = <String>[];
+
+  final city = badge.city;
+  if (city != null && city.isNotEmpty && city != 'all') {
+    parts.add(city);
+  }
+
+  final skillName = badge.displaySkillName(locale);
+  if (skillName != null && skillName.isNotEmpty) {
+    parts.add(skillName);
+  }
+
+  final rankStr = badge.rank;
+  if (rankStr != null && rankStr.isNotEmpty) {
+    final rankNum = int.tryParse(rankStr);
+    if (rankNum != null) {
+      parts.add(context.l10n.badgeTop(rankNum.toString()));
+    } else {
+      parts.add(rankStr);
+    }
+  }
+
+  return parts.isNotEmpty ? parts.join('·') : badge.badgeType;
+}
+
 /// 用户身份标识组件 - 显示VIP、super、达人、学生等标识
 /// 参考iOS UserIdentityBadges.swift
 class UserIdentityBadges extends StatelessWidget {
@@ -196,26 +224,10 @@ class DisplayedBadgeLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final parts = <String>[];
-    final city = badge.city;
-    if (city != null && city.isNotEmpty && city != 'all') {
-      parts.add(city);
+    final label = buildBadgeLabel(context, badge);
+    if (label == badge.badgeType && badge.badgeType.isEmpty) {
+      return const SizedBox.shrink();
     }
-    if (badge.skillCategory != null && badge.skillCategory!.isNotEmpty) {
-      parts.add(badge.skillCategory!);
-    }
-    final rankStr = badge.rank;
-    if (rankStr != null && rankStr.isNotEmpty) {
-      final rankNum = int.tryParse(rankStr);
-      if (rankNum != null) {
-        parts.add('#$rankNum');
-      } else {
-        parts.add(rankStr);
-      }
-    }
-    if (parts.isEmpty) return const SizedBox.shrink();
-
-    final label = parts.join(' · ');
     final fontSize = compact ? 10.0 : 12.0;
 
     final Color badgeColor = _rankColor(badge.rank);
@@ -272,20 +284,10 @@ class InlineBadgeTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final parts = <String>[];
-    final city = badge.city;
-    if (city != null && city.isNotEmpty && city != 'all') {
-      parts.add(city);
+    final label = buildBadgeLabel(context, badge);
+    if (label == badge.badgeType && badge.badgeType.isEmpty) {
+      return const SizedBox.shrink();
     }
-    if (badge.skillCategory != null && badge.skillCategory!.isNotEmpty) {
-      parts.add(badge.skillCategory!);
-    }
-    final rankStr = badge.rank;
-    if (rankStr != null && rankStr.isNotEmpty) {
-      final rankNum = int.tryParse(rankStr);
-      parts.add(rankNum != null ? '#$rankNum' : rankStr);
-    }
-    if (parts.isEmpty) return const SizedBox.shrink();
 
     final Color color = DisplayedBadgeLabel._rankColor(badge.rank);
 
@@ -301,7 +303,7 @@ class InlineBadgeTag extends StatelessWidget {
           Icon(Icons.military_tech, size: 12, color: color),
           const SizedBox(width: 2),
           Text(
-            parts.join(' · '),
+            label,
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w600,

@@ -697,10 +697,27 @@ async def build_user_info(
         )
         badge = badge_result.scalar_one_or_none()
         if badge:
+            # 查询技能分类的中英文名称
+            skill_name_zh = badge.skill_category
+            skill_name_en = badge.skill_category
+            try:
+                cat_result = await db.execute(
+                    sa_select(models.SkillCategory.name_zh, models.SkillCategory.name_en).where(
+                        models.SkillCategory.task_type == badge.skill_category,
+                    )
+                )
+                cat_row = cat_result.first()
+                if cat_row:
+                    skill_name_zh = cat_row.name_zh or badge.skill_category
+                    skill_name_en = cat_row.name_en or badge.skill_category
+            except Exception:
+                pass
             displayed_badge_dict = {
                 "id": badge.id,
                 "badge_type": badge.badge_type,
                 "skill_category": badge.skill_category,
+                "skill_name_zh": skill_name_zh,
+                "skill_name_en": skill_name_en,
                 "city": badge.city,
                 "rank": badge.rank,
                 "is_displayed": True,
