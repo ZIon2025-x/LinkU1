@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/design/app_colors.dart';
+import '../../../core/widgets/user_identity_badges.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/utils/error_localizer.dart';
@@ -195,11 +196,21 @@ class _ForumPostDetailViewState extends State<ForumPostDetailView> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            post.author?.name ?? context.l10n.forumUserFallback(post.authorId),
-                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  post.author?.name ?? context.l10n.forumUserFallback(post.authorId),
+                                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (post.author?.displayedBadge != null) ...[
+                                const SizedBox(width: 4),
+                                InlineBadgeTag(badge: post.author!.displayedBadge!),
+                              ],
+                            ],
                           ),
                           Text(
                             _PostHeader.formatTime(context, post.createdAt),

@@ -262,3 +262,54 @@ class DisplayedBadgeLabel extends StatelessWidget {
     return AppColors.primary;
   }
 }
+
+/// 内联勋章标签 — 显示在名字后面，紧凑亮色
+/// 格式: "🏅 城市 · 类型 · #N"
+class InlineBadgeTag extends StatelessWidget {
+  const InlineBadgeTag({super.key, required this.badge});
+
+  final UserBadge badge;
+
+  @override
+  Widget build(BuildContext context) {
+    final parts = <String>[];
+    final city = badge.city;
+    if (city != null && city.isNotEmpty && city != 'all') {
+      parts.add(city);
+    }
+    if (badge.skillCategory != null && badge.skillCategory!.isNotEmpty) {
+      parts.add(badge.skillCategory!);
+    }
+    final rankStr = badge.rank;
+    if (rankStr != null && rankStr.isNotEmpty) {
+      final rankNum = int.tryParse(rankStr);
+      parts.add(rankNum != null ? '#$rankNum' : rankStr);
+    }
+    if (parts.isEmpty) return const SizedBox.shrink();
+
+    final Color color = DisplayedBadgeLabel._rankColor(badge.rank);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.military_tech, size: 12, color: color),
+          const SizedBox(width: 2),
+          Text(
+            parts.join(' · '),
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

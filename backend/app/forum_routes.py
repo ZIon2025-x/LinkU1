@@ -684,13 +684,37 @@ async def build_user_info(
     # 注意：普通用户永远不是管理员
     # 只有通过 build_admin_user_info 或 force_admin=True 才会标记为管理员
     # 这里不再检查管理员会话，因为普通用户和管理员是独立的身份系统
-    
+
+    # 查询展示勋章
+    displayed_badge_dict = None
+    try:
+        from sqlalchemy import select as sa_select
+        badge_result = await db.execute(
+            sa_select(models.UserBadge).where(
+                models.UserBadge.user_id == user.id,
+                models.UserBadge.is_displayed == True,
+            ).limit(1)
+        )
+        badge = badge_result.scalar_one_or_none()
+        if badge:
+            displayed_badge_dict = {
+                "id": badge.id,
+                "badge_type": badge.badge_type,
+                "skill_category": badge.skill_category,
+                "city": badge.city,
+                "rank": badge.rank,
+                "is_displayed": True,
+            }
+    except Exception:
+        pass
+
     return schemas.UserInfo(
         id=user.id,
         name=user.name,
         avatar=user.avatar or None,
         is_admin=False,
         user_level=getattr(user, "user_level", None),
+        displayed_badge=displayed_badge_dict,
     )
 
 

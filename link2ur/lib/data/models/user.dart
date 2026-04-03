@@ -561,6 +561,7 @@ class UserBrief {
     this.avatar,
     this.isVerified = false,
     this.isAdmin = false,
+    this.displayedBadge,
   });
 
   final String id;
@@ -568,6 +569,7 @@ class UserBrief {
   final String? avatar;
   final bool isVerified;
   final bool isAdmin;
+  final UserBadge? displayedBadge;
 
   factory UserBrief.fromJson(Map<String, dynamic> json) {
     return UserBrief(
@@ -576,6 +578,9 @@ class UserBrief {
       avatar: json['avatar'] as String?,
       isVerified: parseBool(json['is_verified']),
       isAdmin: parseBool(json['is_admin']),
+      displayedBadge: json['displayed_badge'] != null
+          ? UserBadge.fromJson(json['displayed_badge'] as Map<String, dynamic>)
+          : null,
     );
   }
 
@@ -586,6 +591,7 @@ class UserBrief {
       avatar: user.avatar,
       isVerified: user.isVerified,
       isAdmin: user.isAdmin,
+      displayedBadge: user.displayedBadge,
     );
   }
 }

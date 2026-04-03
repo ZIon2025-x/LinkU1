@@ -3676,7 +3676,8 @@ class UserInfo(BaseModel):
     avatar: Optional[str] = None
     is_admin: Optional[bool] = False  # 是否为管理员
     user_level: Optional[str] = None  # 会员等级：normal, vip, super（用于论坛/排行榜等展示会员徽章）
-    
+    displayed_badge: Optional[dict] = None  # 展示的勋章信息
+
     class Config:
         from_attributes = True
 

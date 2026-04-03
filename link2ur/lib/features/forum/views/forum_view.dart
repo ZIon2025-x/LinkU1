@@ -23,6 +23,7 @@ import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/content_constraint.dart';
 import '../../../core/widgets/glass_container.dart';
+import '../../../core/widgets/user_identity_badges.dart';
 import '../../../core/widgets/decorative_background.dart';
 import '../../../data/models/forum.dart';
 import '../../../data/models/leaderboard.dart';
@@ -1082,6 +1083,10 @@ class _CategoryCard extends StatelessWidget {
                       : AppColors.textSecondaryLight,
                 ),
               ),
+              if (post.author!.displayedBadge != null) ...[
+                const SizedBox(width: 3),
+                InlineBadgeTag(badge: post.author!.displayedBadge!),
+              ],
               const SizedBox(width: 8),
             ],
             Icon(Icons.chat_bubble, size: 10,

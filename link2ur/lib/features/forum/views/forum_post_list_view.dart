@@ -16,6 +16,7 @@ import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/animated_list_item.dart';
 import '../../../core/widgets/async_image_view.dart';
+import '../../../core/widgets/user_identity_badges.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/utils/app_exception.dart';
 import '../../../data/models/forum.dart';
@@ -337,6 +338,10 @@ class _PostCard extends StatelessWidget {
                         fontSize: 12,
                         color: AppColors.textSecondary),
                   ),
+                  if (post.author!.displayedBadge != null) ...[
+                    const SizedBox(width: 4),
+                    InlineBadgeTag(badge: post.author!.displayedBadge!),
+                  ],
                 ],
                 const Spacer(),
                 // 统计
