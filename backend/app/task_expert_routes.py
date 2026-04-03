@@ -752,10 +752,28 @@ async def create_service(
                 detail="时间段配置（统一时间或按周几设置）只能由管理员在任务达人管理中设置"
             )
     
+    # Auto-translate name and description
+    service_name_en = service_data.service_name_en
+    service_name_zh = service_data.service_name_zh
+    description_en = service_data.description_en
+    description_zh = service_data.description_zh
+    try:
+        from app.personal_service_routes import _auto_translate_service
+        service_name_en, service_name_zh, description_en, description_zh = await _auto_translate_service(
+            service_data.service_name, service_data.description,
+            service_name_en, service_name_zh, description_en, description_zh,
+        )
+    except Exception as e:
+        logger.warning(f"Expert service auto-translate failed: {e}")
+
     new_service = models.TaskExpertService(
         expert_id=current_expert.id,
         service_name=service_data.service_name,
         description=service_data.description,
+        service_name_en=service_name_en,
+        service_name_zh=service_name_zh,
+        description_en=description_en,
+        description_zh=description_zh,
         images=service_data.images,
         base_price=service_data.base_price,
         currency=service_data.currency,
@@ -867,6 +885,25 @@ async def update_service(
         service.service_name = service_data.service_name
     if service_data.description is not None:
         service.description = service_data.description
+
+    # Auto-translate if name or description changed
+    if service_data.service_name is not None or service_data.description is not None:
+        try:
+            from app.personal_service_routes import _auto_translate_service
+            name_en, name_zh, desc_en, desc_zh = await _auto_translate_service(
+                service.service_name, service.description,
+                service_data.service_name_en,
+                service_data.service_name_zh,
+                service_data.description_en,
+                service_data.description_zh,
+            )
+            service.service_name_en = name_en
+            service.service_name_zh = name_zh
+            service.description_en = desc_en
+            service.description_zh = desc_zh
+        except Exception as e:
+            logger.warning(f"Expert service auto-translate on update failed: {e}")
+
     if service_data.images is not None:
         service.images = service_data.images
         
