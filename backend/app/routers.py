@@ -4603,6 +4603,9 @@ def get_my_profile(
         ).order_by(StudentVerification.created_at.desc()).first()
         is_student_verified = student_verification is not None
 
+        from app.utils.badge_helpers import enrich_displayed_badges_sync
+        _badge_cache = enrich_displayed_badges_sync(db, [current_user.id])
+
         formatted_user = {
             "id": current_user.id,
             "name": getattr(current_user, 'name', ''),
@@ -4622,7 +4625,8 @@ def get_my_profile(
             "language_preference": language_preference,
             "name_updated_at": getattr(current_user, 'name_updated_at', None),
             "flea_market_notice_agreed_at": getattr(current_user, 'flea_market_notice_agreed_at', None),  # 跳蚤市场须知同意时间
-            "onboarding_completed": getattr(current_user, 'onboarding_completed', False)
+            "onboarding_completed": getattr(current_user, 'onboarding_completed', False),
+            "displayed_badge": _badge_cache.get(current_user.id),
         }
         
         # ⚠️ 处理datetime对象，使其可JSON序列化（用于ETag生成和响应）
@@ -4880,6 +4884,9 @@ def user_profile(
         ).first() is not None
 
     # 安全：只返回公开信息，不返回敏感信息（email, phone）
+    from app.utils.badge_helpers import enrich_displayed_badges_sync
+    _badge_cache = enrich_displayed_badges_sync(db, [user.id])
+
     user_data = {
         "id": user.id,  # 数据库已经存储格式化ID
         "name": user.name,
@@ -4899,6 +4906,7 @@ def user_profile(
         "followers_count": followers_count,
         "following_count": following_count,
         "is_following": is_following,
+        "displayed_badge": _badge_cache.get(user.id),
     }
 
     # 获取用户近期论坛帖子（已发布的，最多5条）
