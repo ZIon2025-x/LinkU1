@@ -1386,6 +1386,7 @@ def get_activities(
         if keyword_expr is not None:
             query = query.filter(keyword_expr)
         # 按相关性排序：标题匹配优先，其次描述
+        kw = f"%{keyword.strip()}%"
         relevance = case(
             (Activity.title.ilike(kw), 3),
             (Activity.title_zh.ilike(kw), 2),

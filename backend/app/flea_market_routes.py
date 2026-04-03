@@ -381,6 +381,7 @@ async def get_flea_market_items(
             if keyword_expr is not None:
                 query = query.where(keyword_expr)
             # 按相关性排序：标题匹配优先，其次描述、地点、分类
+            keyword_pattern = f"%{keyword.strip()}%"
             relevance = case(
                 (models.FleaMarketItem.title.ilike(keyword_pattern), 3),
                 (models.FleaMarketItem.description.ilike(keyword_pattern), 2),
