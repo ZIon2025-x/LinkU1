@@ -13,6 +13,7 @@ import '../../../data/repositories/leaderboard_repository.dart';
 import '../../../data/repositories/personal_service_repository.dart';
 import '../../../data/repositories/trending_search_repository.dart';
 import '../../../data/services/storage_service.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/utils/logger.dart';
 
 EventTransformer<E> _debounce<E>(Duration duration) {
@@ -255,7 +256,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
         _searchLeaderboards(query, locale),
         _searchLeaderboardItems(query, locale),
         _searchForumCategories(query, locale),
-        _searchServices(query),
+        _searchServices(query, locale),
       ]);
 
       emit(state.copyWith(
@@ -352,6 +353,9 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
                     ? (t.displayDescription(locale) ?? '')
                     : (t.descriptionZh ?? t.descriptionEn ?? ''),
                 'status': t.status,
+                'image': t.firstImage,
+                'price': t.reward > 0 ? Helpers.formatPrice(t.reward) : null,
+                'subtitle': t.status,
               })
           .toList();
     } catch (_) {
@@ -376,6 +380,8 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
                 'description': locale != null
                     ? (p.displayContent(locale) ?? '')
                     : (p.content ?? ''),
+                'image': p.firstImage,
+                'subtitle': '${p.likeCount}\u2764 ${p.replyCount}\uD83D\uDCAC',
               })
           .toList();
     } catch (_) {
@@ -396,6 +402,8 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
                 'type': 'flea_market',
                 'description': item.description ?? '',
                 'price': item.priceDisplay,
+                'image': item.firstImage,
+                'subtitle': item.category,
               })
           .toList();
     } catch (_) {
@@ -415,6 +423,9 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
                 'title': e.expertName ?? e.displayName,
                 'type': 'expert',
                 'description': e.bio ?? e.bioZh ?? e.bioEn ?? '',
+                'image': e.avatar,
+                'is_avatar': true,
+                'subtitle': e.rating > 0 ? '\u2B50 ${e.ratingDisplay}' : null,
               })
           .toList();
     } catch (_) {
@@ -438,6 +449,9 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
                 'description': locale != null
                     ? a.displayDescription(locale)
                     : a.description,
+                'image': a.firstImage,
+                'price': a.priceDisplay,
+                'subtitle': '${a.currentParticipants ?? 0}/${a.maxParticipants}',
               })
           .toList();
     } catch (_) {
@@ -462,6 +476,8 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
                 'description': locale != null
                     ? (lb.displayDescription(locale) ?? lb.location)
                     : (lb.description ?? lb.location),
+                'image': lb.coverImage,
+                'subtitle': '${lb.itemCount} items',
               })
           .toList();
     } catch (_) {
@@ -495,6 +511,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
             'leaderboard_name': locale != null
                 ? lb.displayName(locale)
                 : lb.name,
+            'image': item.firstImage,
           });
         }
       }
@@ -532,6 +549,9 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
               'description': locale != null
                   ? (c.displayDescription(locale) ?? '')
                   : (descRaw ?? ''),
+              'image': c.icon,
+              'is_icon_url': c.icon != null,
+              'subtitle': '${c.postCount} posts',
             };
           })
           .toList();
@@ -541,7 +561,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
   }
 
   /// 搜索个人服务
-  Future<List<Map<String, dynamic>>> _searchServices(String query) async {
+  Future<List<Map<String, dynamic>>> _searchServices(String query, Locale? locale) async {
     try {
       final response = await _personalServiceRepository.browseServices(
         query: query,
@@ -552,25 +572,50 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
           .take(10)
           .map((s) {
             final item = Map<String, dynamic>.from(s as Map);
+            final nameZh = item['service_name_zh'] as String?;
+            final nameEn = item['service_name_en'] as String?;
+            final nameFallback = (item['service_name'] as String?) ?? '';
+            final descZh = item['description_zh'] as String?;
+            final descEn = item['description_en'] as String?;
+            final descFallback = (item['description'] as String?) ?? '';
+
+            String title = nameFallback;
+            String desc = descFallback;
+            if (locale != null) {
+              final preferZh = locale.languageCode.startsWith('zh');
+              title = preferZh ? (nameZh ?? nameEn ?? nameFallback) : (nameEn ?? nameZh ?? nameFallback);
+              desc = preferZh ? (descZh ?? descEn ?? descFallback) : (descEn ?? descZh ?? descFallback);
+            }
+
+            // Price display
+            final basePrice = (item['base_price'] as num?)?.toDouble();
+            final currency = (item['currency'] as String?) ?? 'GBP';
+            final pricingType = (item['pricing_type'] as String?) ?? 'fixed';
+            String? priceStr;
+            if (basePrice != null) {
+              priceStr = Helpers.formatPrice(basePrice, currency: currency);
+              if (pricingType == 'negotiable') priceStr = '$priceStr~';
+            }
+
+            final serviceType = (item['service_type'] as String?) ?? 'personal';
+            final ownerName = item['owner_name'] as String?;
+            final ownerRating = (item['owner_rating'] as num?)?.toDouble();
+            String subtitleParts = ownerName ?? '';
+            if (ownerRating != null && ownerRating > 0) {
+              subtitleParts = '$subtitleParts \u2B50 ${ownerRating.toStringAsFixed(1)}';
+            }
+            if (serviceType == 'expert') {
+              subtitleParts = '$subtitleParts \u00B7 Expert';
+            }
+
             return {
               'id': item['id'],
-              'title': item['service_name'] ?? '',
+              'title': title,
               'type': 'service',
-              'description': item['description'] ?? '',
-              // Rich card data
+              'description': desc,
               'images': item['images'],
-              'base_price': item['base_price'],
-              'currency': item['currency'],
-              'pricing_type': item['pricing_type'],
-              'service_type': item['service_type'],
-              'owner_name': item['owner_name'],
-              'owner_avatar': item['owner_avatar'],
-              'owner_rating': item['owner_rating'],
-              // Bilingual fields
-              'service_name_en': item['service_name_en'],
-              'service_name_zh': item['service_name_zh'],
-              'description_en': item['description_en'],
-              'description_zh': item['description_zh'],
+              'price': priceStr,
+              'subtitle': subtitleParts,
             };
           })
           .toList();

@@ -6,9 +6,7 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/error_localizer.dart';
-import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
-import '../../../core/utils/localized_string.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/error_state_view.dart';
@@ -391,7 +389,7 @@ class _SearchContentState extends State<_SearchContent> {
               color: AppColors.primary,
             ),
             AppSpacing.vSm,
-            ...state.serviceResults.map((result) => _SearchServiceCard(
+            ...state.serviceResults.map((result) => _SearchResultCard(
                   result: result,
                   onTap: () {
                     final id = result['id'];
@@ -520,113 +518,36 @@ class _SearchResultCard extends StatelessWidget {
   final Map<String, dynamic> result;
   final VoidCallback onTap;
 
+  /// Type-specific fallback icon
+  static const _typeIcons = <String, IconData>{
+    'task': Icons.task_alt,
+    'forum': Icons.forum,
+    'flea_market': Icons.store,
+    'expert': Icons.person,
+    'activity': Icons.event,
+    'leaderboard': Icons.leaderboard,
+    'leaderboard_item': Icons.emoji_events,
+    'forum_category': Icons.category,
+    'service': Icons.handyman_outlined,
+  };
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final title = result['title'] as String? ?? '';
     final description = result['description'] as String? ?? '';
+    final type = result['type'] as String? ?? '';
+    final price = result['price'] as String?;
+    final subtitle = result['subtitle'] as String?;
+
+    // Image handling
+    final imageUrl = _resolveImage();
+    final isAvatar = result['is_avatar'] == true;
+    final fallbackIcon = _typeIcons[type] ?? Icons.article;
 
     return Semantics(
       button: true,
       label: 'View details',
-      excludeSemantics: true,
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-          padding: AppSpacing.allMd,
-          decoration: BoxDecoration(
-            color: isDark
-                ? AppColors.cardBackgroundDark
-                : AppColors.cardBackgroundLight,
-            borderRadius: AppRadius.allMedium,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: AppTypography.bodyBold.copyWith(
-                color: isDark
-                    ? AppColors.textPrimaryDark
-                    : AppColors.textPrimaryLight,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            if (description.isNotEmpty) ...[
-              const SizedBox(height: 4),
-              Text(
-                description,
-                style: AppTypography.caption.copyWith(
-                  color: isDark
-                      ? AppColors.textSecondaryDark
-                      : AppColors.textSecondaryLight,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ],
-        ),
-      ),
-      ),
-    );
-  }
-}
-
-/// 服务搜索结果卡片 — 水平布局（左图右文）
-class _SearchServiceCard extends StatelessWidget {
-  const _SearchServiceCard({
-    required this.result,
-    required this.onTap,
-  });
-
-  final Map<String, dynamic> result;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final locale = Localizations.localeOf(context);
-
-    // Locale-aware name/description
-    final name = localizedString(
-      result['service_name_zh'] as String?,
-      result['service_name_en'] as String?,
-      (result['title'] as String?) ?? '',
-      locale,
-    );
-    final description = localizedString(
-      result['description_zh'] as String?,
-      result['description_en'] as String?,
-      (result['description'] as String?) ?? '',
-      locale,
-    );
-
-    // Price
-    final price = (result['base_price'] as num?)?.toDouble();
-    final currency = (result['currency'] as String?) ?? 'GBP';
-    final pricingType = (result['pricing_type'] as String?) ?? 'fixed';
-
-    // Owner
-    final ownerName = result['owner_name'] as String?;
-    final ownerRating = (result['owner_rating'] as num?)?.toDouble();
-
-    // Image
-    final images = result['images'];
-    String? firstImage;
-    if (images is List && images.isNotEmpty) {
-      firstImage = images.first?.toString();
-    }
-
-    // Service type
-    final serviceType = (result['service_type'] as String?) ?? 'personal';
-    final isExpert = serviceType == 'expert';
-
-    return Semantics(
-      button: true,
-      label: 'View service details',
       excludeSemantics: true,
       child: GestureDetector(
         onTap: onTap,
@@ -642,25 +563,28 @@ class _SearchServiceCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Thumbnail
+              // Thumbnail / Avatar
               ClipRRect(
-                borderRadius: AppRadius.allSmall,
+                borderRadius: isAvatar
+                    ? BorderRadius.circular(32)
+                    : AppRadius.allSmall,
                 child: Container(
-                  width: 80,
-                  height: 80,
+                  width: 64,
+                  height: 64,
                   color: isDark ? Colors.grey[800] : Colors.grey[200],
-                  child: firstImage != null
+                  child: imageUrl != null
                       ? Image.network(
-                          firstImage,
+                          imageUrl,
                           fit: BoxFit.cover,
                           errorBuilder: (_, __, ___) => Icon(
-                            Icons.handyman_outlined,
+                            fallbackIcon,
+                            size: 28,
                             color: isDark ? Colors.grey[600] : Colors.grey[400],
                           ),
                         )
                       : Icon(
-                          Icons.handyman_outlined,
-                          size: 32,
+                          fallbackIcon,
+                          size: 28,
                           color: isDark ? Colors.grey[600] : Colors.grey[400],
                         ),
                 ),
@@ -671,9 +595,9 @@ class _SearchServiceCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Service name
+                    // Title
                     Text(
-                      name,
+                      title,
                       style: AppTypography.bodyBold.copyWith(
                         color: isDark
                             ? AppColors.textPrimaryDark
@@ -695,62 +619,24 @@ class _SearchServiceCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ],
-                    const SizedBox(height: 6),
-                    // Price + badge row
+                    const SizedBox(height: 4),
+                    // Bottom row: price + subtitle
                     Row(
                       children: [
-                        if (price != null) ...[
+                        if (price != null && price.isNotEmpty) ...[
                           Text(
-                            pricingType == 'negotiable'
-                                ? '${Helpers.formatPrice(price, currency: currency)}~'
-                                : Helpers.formatPrice(price, currency: currency),
+                            price,
                             style: AppTypography.bodyBold.copyWith(
                               color: Colors.redAccent,
-                              fontSize: 14,
+                              fontSize: 13,
                             ),
                           ),
                           const SizedBox(width: 8),
                         ],
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 1,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isExpert
-                                ? const Color(0xFFE8F4FD)
-                                : const Color(0xFFFEF3E2),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            isExpert ? 'Expert' : 'Personal',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: isExpert
-                                  ? const Color(0xFF1A73E8)
-                                  : const Color(0xFFE67E22),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    // Owner row
-                    if (ownerName != null && ownerName.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.person_outline,
-                            size: 14,
-                            color: isDark
-                                ? AppColors.textTertiaryDark
-                                : AppColors.textTertiaryLight,
-                          ),
-                          const SizedBox(width: 4),
+                        if (subtitle != null && subtitle.isNotEmpty)
                           Flexible(
                             child: Text(
-                              ownerName,
+                              subtitle,
                               style: AppTypography.caption.copyWith(
                                 color: isDark
                                     ? AppColors.textTertiaryDark
@@ -760,25 +646,8 @@ class _SearchServiceCard extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          if (ownerRating != null && ownerRating > 0) ...[
-                            const SizedBox(width: 6),
-                            Icon(
-                              Icons.star,
-                              size: 13,
-                              color: Colors.amber[600],
-                            ),
-                            const SizedBox(width: 2),
-                            Text(
-                              ownerRating.toStringAsFixed(1),
-                              style: AppTypography.caption.copyWith(
-                                color: Colors.amber[700],
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ],
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -787,5 +656,20 @@ class _SearchServiceCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String? _resolveImage() {
+    // Direct image URL (avatar, cover image, icon URL)
+    final image = result['image'];
+    if (image is String && image.isNotEmpty) return image;
+
+    // Images array (services, flea market, etc.)
+    final images = result['images'];
+    if (images is List && images.isNotEmpty) {
+      final first = images.first;
+      if (first is String && first.isNotEmpty) return first;
+    }
+
+    return null;
   }
 }
