@@ -39,7 +39,11 @@ async def browse_services(
         base_filter = base_filter.where(
             or_(
                 models.TaskExpertService.service_name.ilike(search),
+                models.TaskExpertService.service_name_en.ilike(search),
+                models.TaskExpertService.service_name_zh.ilike(search),
                 models.TaskExpertService.description.ilike(search),
+                models.TaskExpertService.description_en.ilike(search),
+                models.TaskExpertService.description_zh.ilike(search),
             )
         )
 
@@ -113,7 +117,11 @@ async def browse_services(
         item = {
             "id": s.id,
             "service_name": s.service_name,
+            "service_name_en": s.service_name_en,
+            "service_name_zh": s.service_name_zh,
             "description": s.description,
+            "description_en": s.description_en,
+            "description_zh": s.description_zh,
             "base_price": float(s.base_price) if s.base_price else 0,
             "currency": s.currency or "GBP",
             "pricing_type": s.pricing_type or "fixed",
