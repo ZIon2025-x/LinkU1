@@ -1620,6 +1620,8 @@ class TaskExpertService(Base):
     service_name_en = Column(String(200), nullable=True)  # English name
     description = Column(Text, nullable=False)
     description_en = Column(Text, nullable=True)  # English description
+    service_name_zh = Column(String(200), nullable=True)  # Chinese name
+    description_zh = Column(Text, nullable=True)  # Chinese description
     images = Column(JSONB, nullable=True)  # JSON数组（使用PostgreSQL JSONB类型）
     base_price = Column(DECIMAL(12, 2), nullable=False)
     currency = Column(String(3), default="GBP")
