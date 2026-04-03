@@ -16,6 +16,7 @@ class UserBrief(BaseModel):
     name: str
     avatar: Optional[str] = None
     is_verified: Optional[int] = 0
+    displayed_badge: Optional[dict] = None
 
     class Config:
         from_attributes = True
