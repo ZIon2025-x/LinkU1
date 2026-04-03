@@ -2725,6 +2725,7 @@ async def get_skill_feed(
     # 2. Query posts for this category
     posts_query = (
         select(models.ForumPost)
+        .options(selectinload(models.ForumPost.author))
         .where(
             models.ForumPost.category_id == category_id,
             models.ForumPost.is_deleted == False,
@@ -2737,6 +2738,7 @@ async def get_skill_feed(
     # 3. Query open tasks matching skill_type
     tasks_query = (
         select(models.Task)
+        .options(selectinload(models.Task.poster))
         .where(
             models.Task.task_type == skill_type,
             models.Task.status == "open",

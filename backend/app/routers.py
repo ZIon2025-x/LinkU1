@@ -1516,11 +1516,23 @@ def _get_task_detail_legacy(
     # 使用 TaskOut.from_orm 确保所有字段（包括 task_source）都被正确序列化
     # full_location_access=True: 地址不再隐藏，所有人可见完整地址
     task_dict = schemas.TaskOut.from_orm(task, full_location_access=True).model_dump()
+
+    # 注入展示勋章
+    from app.utils.badge_helpers import enrich_displayed_badges_sync
+    _badge_user_ids = []
+    if task.poster is not None:
+        _badge_user_ids.append(task.poster.id)
+    if task.taker is not None:
+        _badge_user_ids.append(task.taker.id)
+    _badge_cache = enrich_displayed_badges_sync(db, _badge_user_ids)
+
     # 任务相关方可以看到 poster/taker 信息
     if task.poster is not None:
         task_dict["poster"] = schemas.UserBrief.model_validate(task.poster).model_dump()
+        task_dict["poster"]["displayed_badge"] = _badge_cache.get(task.poster.id)
     if task.taker is not None:
         task_dict["taker"] = schemas.UserBrief.model_validate(task.taker).model_dump()
+        task_dict["taker"]["displayed_badge"] = _badge_cache.get(task.taker.id)
     return task_dict
 
 
@@ -4723,14 +4735,26 @@ def get_my_tasks(
             label="后台翻译任务",
         )
 
+    # 批量加载展示勋章
+    from app.utils.badge_helpers import enrich_displayed_badges_sync
+    _badge_user_ids = set()
+    for t in tasks:
+        if t.poster is not None:
+            _badge_user_ids.add(t.poster.id)
+        if t.taker is not None:
+            _badge_user_ids.add(t.taker.id)
+    _badge_cache = enrich_displayed_badges_sync(db, list(_badge_user_ids))
+
     # 序列化任务，并附带相关用户简要信息（当前用户是任务相关方）
     task_list = []
     for t in tasks:
         task_dict = schemas.TaskOut.model_validate(t).model_dump()
         if t.poster is not None:
             task_dict["poster"] = schemas.UserBrief.model_validate(t.poster).model_dump()
+            task_dict["poster"]["displayed_badge"] = _badge_cache.get(t.poster.id)
         if t.taker is not None:
             task_dict["taker"] = schemas.UserBrief.model_validate(t.taker).model_dump()
+            task_dict["taker"]["displayed_badge"] = _badge_cache.get(t.taker.id)
         task_list.append(task_dict)
 
     return {

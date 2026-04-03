@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>搜索结果页 — 当前样式预览</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; padding: 20px; display: flex; justify-content: center; }
+
+  .phone {
+    width: 390px; background: #fff; border-radius: 24px;
+    box-shadow: 0 4px 30px rgba(0,0,0,0.1);
+    overflow: hidden; position: relative;
+  }
+
+  /* Status bar */
+  .status-bar { height: 44px; background: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; }
+
+  /* App bar */
+  .app-bar {
+    display: flex; align-items: center; padding: 0 12px 10px; background: #fff;
+  }
+  .back-btn { font-size: 22px; color: #333; padding: 4px 8px 4px 0; cursor: pointer; }
+  .search-bar {
+    flex: 1; display: flex; align-items: center; gap: 8px;
+    background: #f2f2f7; border-radius: 10px; padding: 9px 12px;
+  }
+  .search-bar .icon { color: #4A90D9; font-size: 15px; }
+  .search-bar input { border: none; background: none; font-size: 15px; outline: none; flex: 1; color: #333; }
+  .cancel-btn { color: #4A90D9; font-size: 15px; padding: 4px 8px; white-space: nowrap; cursor: pointer; }
+
+  /* Content scroll area */
+  .content { padding: 12px 16px; max-height: 700px; overflow-y: auto; background: #fff; }
+
+  /* Result count */
+  .result-count { font-size: 12px; color: #999; margin-bottom: 12px; }
+
+  /* Section header */
+  .section-header {
+    display: flex; align-items: center; gap: 6px; margin-bottom: 8px; margin-top: 4px;
+  }
+  .section-icon { font-size: 18px; }
+  .section-title { font-size: 16px; font-weight: 600; color: #222; }
+
+  /* ===== Card A style (horizontal) ===== */
+  .card {
+    display: flex; gap: 12px; padding: 12px;
+    border-radius: 12px; background: #fff;
+    border: 1px solid #f0f0f0; margin-bottom: 8px;
+    cursor: pointer; transition: background 0.15s;
+  }
+  .card:hover { background: #fafafa; }
+  .card:active { background: #f2f2f2; }
+
+  /* Thumbnail */
+  .thumb {
+    width: 64px; height: 64px; border-radius: 8px; overflow: hidden; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .thumb.avatar { border-radius: 32px; }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .thumb .placeholder {
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; color: rgba(255,255,255,0.8);
+  }
+
+  /* Info */
+  .info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 2px; }
+  .info .title { font-size: 15px; font-weight: 600; color: #222; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .info .desc { font-size: 12px; color: #888; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .info .bottom { display: flex; align-items: center; gap: 6px; margin-top: 2px; flex-wrap: wrap; }
+  .info .price { color: #e74c3c; font-weight: 700; font-size: 13px; }
+  .info .sub { font-size: 11px; color: #aaa; }
+
+  /* Color themes */
+  .bg-blue { background: linear-gradient(135deg, #667eea, #764ba2); }
+  .bg-pink { background: linear-gradient(135deg, #f093fb, #f5576c); }
+  .bg-cyan { background: linear-gradient(135deg, #4facfe, #00f2fe); }
+  .bg-orange { background: linear-gradient(135deg, #ffecd2, #fcb69f); }
+  .bg-green { background: linear-gradient(135deg, #a8edea, #fed6e3); }
+  .bg-purple { background: linear-gradient(135deg, #a18cd1, #fbc2eb); }
+  .bg-teal { background: linear-gradient(135deg, #0ba360, #3cba92); }
+  .bg-gold { background: linear-gradient(135deg, #f5af19, #f12711); }
+  .bg-gray { background: #e8e8e8; }
+
+  .section-gap { height: 16px; }
+</style>
+</head>
+<body>
+
+<div class="phone">
+  <div class="status-bar">9:41</div>
+
+  <!-- App bar -->
+  <div class="app-bar">
+    <span class="back-btn">‹</span>
+    <div class="search-bar">
+      <span class="icon">🔍</span>
+      <input type="text" value="Python" readonly>
+    </div>
+    <span class="cancel-btn">取消</span>
+  </div>
+
+  <!-- Content -->
+  <div class="content">
+    <div class="result-count">找到 18 个结果</div>
+
+    <!-- ====== 达人 ====== -->
+    <div class="section-header">
+      <span class="section-icon" style="color:#FF6B6B;">🔍</span>
+      <span class="section-title">达人 (2)</span>
+    </div>
+
+    <div class="card">
+      <div class="thumb avatar">
+        <div class="placeholder bg-blue">👤</div>
+      </div>
+      <div class="info">
+        <div class="title">李教授</div>
+        <div class="desc">Python 全栈开发专家，10 年教学经验，擅长算法与数据结构</div>
+        <div class="bottom">
+          <span class="sub">⭐ 4.9</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="thumb avatar">
+        <div class="placeholder bg-purple">👤</div>
+      </div>
+      <div class="info">
+        <div class="title">张博士</div>
+        <div class="desc">数据科学 & 机器学习方向，熟悉 Pandas, TensorFlow</div>
+        <div class="bottom">
+          <span class="sub">⭐ 5.0</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-gap"></div>
+
+    <!-- ====== 任务 ====== -->
+    <div class="section-header">
+      <span class="section-icon" style="color:#4A90D9;">✅</span>
+      <span class="section-title">任务 (3)</span>
+    </div>
+
+    <div class="card">
+      <div class="thumb">
+        <div class="placeholder bg-cyan">📄</div>
+      </div>
+      <div class="info">
+        <div class="title">帮我写一个 Python 爬虫脚本</div>
+        <div class="desc">需要爬取某电商网站的商品数据，存入 CSV</div>
+        <div class="bottom">
+          <span class="price">£25.00</span>
+          <span class="sub">open</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="thumb">
+        <div class="placeholder bg-pink">📄</div>
+      </div>
+      <div class="info">
+        <div class="title">Python 作业辅导 — 数据结构</div>
+        <div class="desc">Binary tree 和 sorting algorithm 的实现，deadline 周五</div>
+        <div class="bottom">
+          <span class="price">£15.00</span>
+          <span class="sub">open</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="thumb">
+        <div class="placeholder bg-gray" style="color:#999;">📄</div>
+      </div>
+      <div class="info">
+        <div class="title">Flask API 开发协助</div>
+        <div class="desc">需要帮忙搭建 RESTful API 框架，PostgreSQL 数据库对接</div>
+        <div class="bottom">
+          <span class="price">£40.00</span>
+          <span class="sub">in_progress</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-gap"></div>
+
+    <!-- ====== 帖子 ====== -->
+    <div class="section-header">
+      <span class="section-icon" style="color:#FF6B6B;">💬</span>
+      <span class="section-title">帖子 (2)</span>
+    </div>
+
+    <div class="card">
+      <div class="thumb">
+        <div class="placeholder bg-orange" style="color:#c0392b;">💬</div>
+      </div>
+      <div class="info">
+        <div class="title">Python 初学者求助 — 环境搭建问题</div>
+        <div class="desc">装了 Anaconda 但是 pip install 总是报错，有人遇到过吗？</div>
+        <div class="bottom">
+          <span class="sub">12❤ 8💬</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="thumb">
+        <div class="placeholder bg-green" style="font-size:20px;">🐍</div>
+      </div>
+      <div class="info">
+        <div class="title">分享：Python 学习路线图 2026</div>
+        <div class="desc">从零到就业，整理了一份完整的 Python 学习路线</div>
+        <div class="bottom">
+          <span class="sub">45❤ 23💬</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-gap"></div>
+
+    <!-- ====== 活动 ====== -->
+    <div class="section-header">
+      <span class="section-icon" style="color:#5DADE2;">📅</span>
+      <span class="section-title">活动 (1)</span>
+    </div>
+
+    <div class="card">
+      <div class="thumb">
+        <div class="placeholder bg-teal" style="color:#fff;">📅</div>
+      </div>
+      <div class="info">
+        <div class="title">Python 编程工作坊 — 周末班</div>
+        <div class="desc">两天集中学习，从基础语法到实战项目</div>
+        <div class="bottom">
+          <span class="price">£18.00</span>
+          <span class="sub">8/20</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-gap"></div>
+
+    <!-- ====== 服务 ====== -->
+    <div class="section-header">
+      <span class="section-icon" style="color:#4A90D9;">🔧</span>
+      <span class="section-title">服务 (3)</span>
+    </div>
+
+    <div class="card">
+      <div class="thumb">
+        <div class="placeholder bg-blue">🐍</div>
+      </div>
+      <div class="info">
+        <div class="title">Python 编程一对一辅导</div>
+        <div class="desc">从基础语法到高级项目，帮你快速掌握编程技能</div>
+        <div class="bottom">
+          <span class="price">£35.00</span>
+          <span class="sub">李教授 ⭐ 4.9 · Expert</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="thumb">
+        <div class="placeholder bg-pink">🌐</div>
+      </div>
+      <div class="info">
+        <div class="title">Flask Web 开发指导</div>
+        <div class="desc">手把手教你搭建 Web 应用，RESTful API 设计</div>
+        <div class="bottom">
+          <span class="price">£45.00~</span>
+          <span class="sub">王同学 ⭐ 4.7</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="thumb">
+        <div class="placeholder bg-cyan">📊</div>
+      </div>
+      <div class="info">
+        <div class="title">数据分析与可视化课程</div>
+        <div class="desc">Pandas, Matplotlib 数据处理全流程</div>
+        <div class="bottom">
+          <span class="price">£28.00</span>
+          <span class="sub">张博士 ⭐ 5.0 · Expert</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-gap"></div>
+
+    <!-- ====== 排行榜 ====== -->
+    <div class="section-header">
+      <span class="section-icon" style="color:#2ECC71;">📊</span>
+      <span class="section-title">排行榜 (1)</span>
+    </div>
+
+    <div class="card">
+      <div class="thumb">
+        <div class="placeholder bg-gold" style="color:#fff;">🏆</div>
+      </div>
+      <div class="info">
+        <div class="title">最佳 Python 学习资源</div>
+        <div class="desc">社区投票选出的 Python 学习工具和教程</div>
+        <div class="bottom">
+          <span class="sub">24 items</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-gap"></div>
+
+    <!-- ====== 跳蚤市场 ====== -->
+    <div class="section-header">
+      <span class="section-icon" style="color:#F39C12;">🏪</span>
+      <span class="section-title">跳蚤市场 (2)</span>
+    </div>
+
+    <div class="card">
+      <div class="thumb">
+        <div class="placeholder bg-orange" style="font-size:20px;">📚</div>
+      </div>
+      <div class="info">
+        <div class="title">Python Crash Course 第3版</div>
+        <div class="desc">九成新，有少量笔记标注</div>
+        <div class="bottom">
+          <span class="price">£8.00</span>
+          <span class="sub">教材</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="thumb">
+        <div class="placeholder bg-green" style="font-size:20px;">📗</div>
+      </div>
+      <div class="info">
+        <div class="title">Fluent Python 中文版</div>
+        <div class="desc">全新未拆封，买多了一本</div>
+        <div class="bottom">
+          <span class="price">£12.00</span>
+          <span class="sub">教材</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="height:30px;"></div>
+  </div>
+</div>
+
+</body>
+</html>
