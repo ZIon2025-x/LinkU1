@@ -649,13 +649,14 @@ async def check_forum_visibility(
 # ==================== 工具函数 ====================
 
 async def build_user_info(
-    db: AsyncSession, 
-    user: Optional[models.User], 
+    db: AsyncSession,
+    user: Optional[models.User],
     request: Optional[Request] = None,
-    force_admin: bool = False
+    force_admin: bool = False,
+    _badge_cache: Optional[dict] = None,
 ) -> schemas.UserInfo:
     """构建用户信息（包含管理员标识）
-    
+
     Args:
         db: 数据库会话
         user: 用户对象（可为None）
@@ -685,45 +686,10 @@ async def build_user_info(
     # 只有通过 build_admin_user_info 或 force_admin=True 才会标记为管理员
     # 这里不再检查管理员会话，因为普通用户和管理员是独立的身份系统
 
-    # 查询展示勋章
+    # 展示勋章：优先使用预加载数据，否则不查询（避免 N+1）
     displayed_badge_dict = None
-    try:
-        from sqlalchemy import select as sa_select
-        badge_result = await db.execute(
-            sa_select(models.UserBadge).where(
-                models.UserBadge.user_id == user.id,
-                models.UserBadge.is_displayed == True,
-            ).limit(1)
-        )
-        badge = badge_result.scalar_one_or_none()
-        if badge:
-            # 查询技能分类的中英文名称
-            skill_name_zh = badge.skill_category
-            skill_name_en = badge.skill_category
-            try:
-                cat_result = await db.execute(
-                    sa_select(models.SkillCategory.name_zh, models.SkillCategory.name_en).where(
-                        models.SkillCategory.task_type == badge.skill_category,
-                    )
-                )
-                cat_row = cat_result.first()
-                if cat_row:
-                    skill_name_zh = cat_row.name_zh or badge.skill_category
-                    skill_name_en = cat_row.name_en or badge.skill_category
-            except Exception:
-                pass
-            displayed_badge_dict = {
-                "id": badge.id,
-                "badge_type": badge.badge_type,
-                "skill_category": badge.skill_category,
-                "skill_name_zh": skill_name_zh,
-                "skill_name_en": skill_name_en,
-                "city": badge.city,
-                "rank": badge.rank,
-                "is_displayed": True,
-            }
-    except Exception:
-        pass
+    if _badge_cache is not None:
+        displayed_badge_dict = _badge_cache.get(user.id)
 
     return schemas.UserInfo(
         id=user.id,
@@ -733,6 +699,56 @@ async def build_user_info(
         user_level=getattr(user, "user_level", None),
         displayed_badge=displayed_badge_dict,
     )
+
+
+async def preload_badge_cache(db: AsyncSession, user_ids: list[str]) -> dict:
+    """预加载一批用户的展示勋章，返回 {user_id: badge_dict} 映射。
+    供列表端点在构建 UserInfo 前调用，传给 build_user_info._badge_cache。
+    """
+    if not user_ids:
+        return {}
+    try:
+        badge_result = await db.execute(
+            select(models.UserBadge).where(
+                models.UserBadge.user_id.in_(user_ids),
+                models.UserBadge.is_displayed == True,
+            )
+        )
+        badges = badge_result.scalars().all()
+        if not badges:
+            return {}
+
+        skill_cats = {b.skill_category for b in badges}
+        cat_map = {}
+        if skill_cats:
+            cat_result = await db.execute(
+                select(
+                    models.SkillCategory.task_type,
+                    models.SkillCategory.name_zh,
+                    models.SkillCategory.name_en,
+                ).where(models.SkillCategory.task_type.in_(skill_cats))
+            )
+            for row in cat_result.all():
+                cat_map[row.task_type] = (row.name_zh, row.name_en)
+
+        cache = {}
+        for badge in badges:
+            names = cat_map.get(badge.skill_category, (badge.skill_category, badge.skill_category))
+            cache[badge.user_id] = {
+                "id": badge.id,
+                "badge_type": badge.badge_type,
+                "skill_category": badge.skill_category,
+                "skill_name_zh": names[0] or badge.skill_category,
+                "skill_name_en": names[1] or badge.skill_category,
+                "city": badge.city,
+                "rank": badge.rank,
+                "is_displayed": True,
+            }
+        return cache
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Failed to preload badge cache: {e}")
+        return {}
 
 
 async def build_admin_user_info(admin_user: models.AdminUser) -> schemas.UserInfo:
@@ -753,14 +769,16 @@ async def build_admin_user_info(admin_user: models.AdminUser) -> schemas.UserInf
 async def get_post_author_info(
     db: AsyncSession,
     post: models.ForumPost,
-    request: Optional[Request] = None
+    request: Optional[Request] = None,
+    _badge_cache: Optional[dict] = None,
 ) -> schemas.UserInfo:
     """获取帖子作者信息（支持普通用户和管理员）
-    
+
     Args:
         db: 数据库会话
         post: 帖子对象
         request: 请求对象（可选）
+        _badge_cache: 预加载的勋章缓存（避免 N+1）
     """
     # 如果是管理员发帖
     if post.admin_author_id:
@@ -792,7 +810,7 @@ async def get_post_author_info(
         if author_attr.loaded_value is not NO_VALUE:
             author = author_attr.loaded_value
             if author:
-                return await build_user_info(db, author, request, force_admin=False)
+                return await build_user_info(db, author, request, force_admin=False, _badge_cache=_badge_cache)
         else:
             # 如果关系未加载，从数据库查询
             author_result = await db.execute(
@@ -800,8 +818,8 @@ async def get_post_author_info(
             )
             author = author_result.scalar_one_or_none()
             if author:
-                return await build_user_info(db, author, request, force_admin=False)
-    
+                return await build_user_info(db, author, request, force_admin=False, _badge_cache=_badge_cache)
+
     # 作者不存在
     return schemas.UserInfo(
         id="unknown",
@@ -815,7 +833,8 @@ async def get_post_author_info(
 async def get_reply_author_info(
     db: AsyncSession,
     reply: models.ForumReply,
-    request: Optional[Request] = None
+    request: Optional[Request] = None,
+    _badge_cache: Optional[dict] = None,
 ) -> schemas.UserInfo:
     """获取回复作者信息（支持管理员回复）"""
     # 管理员回复
@@ -841,14 +860,14 @@ async def get_reply_author_info(
         if author_attr.loaded_value is not NO_VALUE:
             author = author_attr.loaded_value
             if author:
-                return await build_user_info(db, author, request, force_admin=False)
+                return await build_user_info(db, author, request, force_admin=False, _badge_cache=_badge_cache)
         else:
             author_result = await db.execute(
                 select(models.User).where(models.User.id == reply.author_id)
             )
             author = author_result.scalar_one_or_none()
             if author:
-                return await build_user_info(db, author, request, force_admin=False)
+                return await build_user_info(db, author, request, force_admin=False, _badge_cache=_badge_cache)
     
     return schemas.UserInfo(
         id="unknown",
