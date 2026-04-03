@@ -21,6 +21,7 @@ import '../../../data/models/activity.dart';
 import '../../../data/models/task_expert.dart';
 import '../../../data/repositories/activity_repository.dart';
 import '../../../data/repositories/question_repository.dart';
+import '../../../core/utils/cache_manager.dart';
 import '../../../data/repositories/follow_repository.dart';
 import '../../../data/repositories/task_expert_repository.dart';
 import 'activity_price_widget.dart';
@@ -1292,6 +1293,8 @@ class _FollowButtonState extends State<_FollowButton> {
       } else {
         await repo.unfollowUser(widget.expertId);
       }
+      // 清除详情缓存，确保下次进入时获取最新关注状态
+      CacheManager.shared.remove('${CacheManager.prefixExpertDetail}${widget.expertId}');
     } catch (_) {
       if (mounted) setState(() => _isFollowing = currentlyFollowing);
     } finally {

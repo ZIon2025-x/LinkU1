@@ -79,12 +79,14 @@ class TaskExpertRepository {
   }
 
   /// 获取达人详情
-  Future<TaskExpert> getExpertById(String id, {CancelToken? cancelToken}) async {
+  Future<TaskExpert> getExpertById(String id, {CancelToken? cancelToken, bool forceRefresh = false}) async {
     final cacheKey = '${CacheManager.prefixExpertDetail}$id';
 
-    final cached = _cache.getWithOfflineFallback<Map<String, dynamic>>(cacheKey);
-    if (cached != null) {
-      return TaskExpert.fromJson(cached);
+    if (!forceRefresh) {
+      final cached = _cache.getWithOfflineFallback<Map<String, dynamic>>(cacheKey);
+      if (cached != null) {
+        return TaskExpert.fromJson(cached);
+      }
     }
 
     try {

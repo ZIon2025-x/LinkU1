@@ -878,7 +878,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
 
     try {
       final expert =
-          await _taskExpertRepository.getExpertById(event.expertId);
+          await _taskExpertRepository.getExpertById(event.expertId, forceRefresh: true);
       final services =
           await _taskExpertRepository.getExpertServices(event.expertId);
 
