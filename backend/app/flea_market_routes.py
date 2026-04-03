@@ -433,6 +433,10 @@ async def get_flea_market_items(
                     seller_avatars[sid] = row[2]
                     seller_levels[sid] = (row[3] if len(row) > 3 else None) or "normal"
         
+        # 批量查询卖家展示勋章
+        from app.utils.badge_helpers import enrich_displayed_badges_async
+        _badge_cache = await enrich_displayed_badges_async(db, seller_ids)
+
         # 🔒 性能修复：批量查询所有商品的收藏计数，避免 N+1 查询
         item_ids = [item.id for item in items]
         favorite_counts_map = {}
@@ -494,6 +498,7 @@ async def get_flea_market_items(
                 seller_name=seller_names.get(item.seller_id),
                 seller_avatar=seller_avatars.get(item.seller_id),
                 seller_user_level=seller_levels.get(item.seller_id),
+                seller_displayed_badge=_badge_cache.get(item.seller_id),
                 view_count=item.view_count or 0,
                 favorite_count=favorite_count,
                 is_favorited=item.id in user_favorited_ids,
@@ -719,6 +724,10 @@ async def get_flea_market_item(
                 seller_avatar = seller_row[1]
                 seller_user_level = seller_row[2]
         
+        # 批量查询卖家展示勋章
+        from app.utils.badge_helpers import enrich_displayed_badges_async
+        _badge_cache = await enrich_displayed_badges_async(db, [item.seller_id] if item.seller_id else [])
+
         # ==================== 租赁相关信息 ====================
         active_rentals = []
         user_rental_request_id = None
@@ -790,6 +799,7 @@ async def get_flea_market_item(
             seller_name=seller_name,
             seller_avatar=seller_avatar,
             seller_user_level=seller_user_level,
+            seller_displayed_badge=_badge_cache.get(item.seller_id),
             view_count=item.view_count or 0,
             favorite_count=favorite_count,
             refreshed_at=format_iso_utc(item.refreshed_at),
@@ -1530,6 +1540,10 @@ async def get_my_related_flea_items(
                     seller_avatars[row[0]] = row[2]
                     seller_levels[row[0]] = (row[3] if len(row) > 3 else None) or "normal"
 
+        # 批量查询卖家展示勋章
+        from app.utils.badge_helpers import enrich_displayed_badges_async
+        _badge_cache = await enrich_displayed_badges_async(db, seller_ids)
+
         favorite_counts_map = {}
         fav_result = await db.execute(
             select(
@@ -1625,6 +1639,7 @@ async def get_my_related_flea_items(
                 seller_name=seller_names.get(item.seller_id),
                 seller_avatar=seller_avatars.get(item.seller_id),
                 seller_user_level=seller_levels.get(item.seller_id),
+                seller_displayed_badge=_badge_cache.get(item.seller_id),
                 view_count=item.view_count or 0,
                 favorite_count=favorite_counts_map.get(item.id, 0),
                 refreshed_at=format_iso_utc(item.refreshed_at),
@@ -1718,6 +1733,10 @@ async def get_my_purchases(
                     purchase_seller_names[ps_row[0]] = ps_row[1]
                     purchase_seller_avatars[ps_row[0]] = ps_row[2]
 
+        # 批量查询卖家展示勋章
+        from app.utils.badge_helpers import enrich_displayed_badges_async
+        _badge_cache_purchases = await enrich_displayed_badges_async(db, purchase_seller_ids)
+
         # 格式化响应（含待支付信息，便于用户在「收的闲置」中继续支付）
         formatted_items = []
         for row in rows:
@@ -1787,6 +1806,7 @@ async def get_my_purchases(
                 seller_id=item.seller_id,
                 seller_name=purchase_seller_names.get(item.seller_id),
                 seller_avatar=purchase_seller_avatars.get(item.seller_id),
+                seller_displayed_badge=_badge_cache_purchases.get(item.seller_id),
                 view_count=item.view_count or 0,
                 refreshed_at=format_iso_utc(item.refreshed_at),
                 created_at=format_iso_utc(item.created_at),
@@ -2910,6 +2930,11 @@ async def get_purchase_requests(
         )
         purchase_requests = requests_result.scalars().all()
         
+        # 批量查询买家展示勋章
+        from app.utils.badge_helpers import enrich_displayed_badges_async
+        _buyer_ids = list({req.buyer_id for req in purchase_requests if req.buyer_id})
+        _badge_cache_buyers = await enrich_displayed_badges_async(db, _buyer_ids)
+
         # 格式化响应
         requests_list = []
         for req in purchase_requests:
@@ -2918,13 +2943,14 @@ async def get_purchase_requests(
                 select(models.User).where(models.User.id == req.buyer_id)
             )
             buyer = buyer_result.scalar_one_or_none()
-            
+
             requests_list.append({
                 "id": format_flea_market_id(req.id),
                 "item_id": format_flea_market_id(req.item_id),
                 "buyer_id": req.buyer_id,
                 "buyer_name": buyer.name if buyer else f"用户{req.buyer_id}",
                 "buyer_avatar": buyer.avatar if buyer else None,
+                "buyer_displayed_badge": _badge_cache_buyers.get(req.buyer_id),
                 "proposed_price": float(req.proposed_price) if req.proposed_price else None,
                 "seller_counter_price": float(req.seller_counter_price) if req.seller_counter_price else None,
                 "message": req.message,
@@ -3689,6 +3715,11 @@ async def get_flea_market_items_admin(
         result = await db.execute(query)
         items = result.scalars().all()
         
+        # 批量查询卖家展示勋章
+        from app.utils.badge_helpers import enrich_displayed_badges_async
+        _admin_seller_ids = list({item.seller_id for item in items if item.seller_id})
+        _badge_cache_admin = await enrich_displayed_badges_async(db, _admin_seller_ids)
+
         # 构建响应
         processed_items = []
         for item in items:
@@ -3704,7 +3735,7 @@ async def get_flea_market_items_admin(
                 select(models.User).where(models.User.id == item.seller_id)
             )
             seller = seller_result.scalar_one_or_none()
-            
+
             processed_items.append({
                 "id": format_flea_market_id(item.id),
                 "title": item.title,
@@ -3717,6 +3748,7 @@ async def get_flea_market_items_admin(
                 "status": item.status,
                 "seller_id": item.seller_id,
                 "seller_name": seller.name if seller else "未知用户",
+                "seller_displayed_badge": _badge_cache_admin.get(item.seller_id),
                 "view_count": item.view_count or 0,
                 "refreshed_at": format_iso_utc(item.refreshed_at) if item.refreshed_at else None,
                 "created_at": format_iso_utc(item.created_at),

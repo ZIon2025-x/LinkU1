@@ -2878,6 +2878,7 @@ class FleaMarketItemResponse(BaseModel):
     seller_name: Optional[str] = None  # 卖家昵称
     seller_avatar: Optional[str] = None  # 卖家头像URL
     seller_user_level: Optional[str] = None  # 卖家会员等级：normal, vip, super（用于「会员卖家」角标）
+    seller_displayed_badge: Optional[dict] = None  # 卖家展示勋章
     view_count: int
     favorite_count: int = 0  # 收藏数量
     is_favorited: bool = False  # 当前用户是否已收藏
