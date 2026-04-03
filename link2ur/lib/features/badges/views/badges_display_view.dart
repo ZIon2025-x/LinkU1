@@ -9,6 +9,7 @@ import '../../../core/utils/l10n_extension.dart';
 import '../../../data/models/badge.dart';
 import '../../../data/repositories/badges_repository.dart';
 import '../bloc/badges_bloc.dart';
+import 'badge_selector_dialog.dart';
 
 /// Badges display section for user profile page.
 ///
@@ -113,6 +114,10 @@ class _BadgesDisplayBody extends StatelessWidget {
     );
   }
 
+  void _openBadgeSelector(BuildContext context) {
+    BadgeSelectorDialog.show(context, context.read<BadgesBloc>());
+  }
+
   Widget _buildBadgesGrid(BuildContext context, List<UserBadge> badges) {
     return Padding(
       padding: AppSpacing.horizontalMd,
@@ -124,7 +129,7 @@ class _BadgesDisplayBody extends StatelessWidget {
             button: true,
             label: context.l10n.badgeViewDetails,
             child: GestureDetector(
-              onTap: onBadgeTap,
+              onTap: onBadgeTap ?? () => _openBadgeSelector(context),
               child: _BadgeChip(badge: badge),
             ),
           );
@@ -174,34 +179,38 @@ class _BadgeChip extends StatelessWidget {
             color: badgeColor,
           ),
           const SizedBox(width: 6),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (badge.skillCategory != null &&
-                  badge.skillCategory!.isNotEmpty)
-                Text(
-                  badge.skillCategory!,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: isDisplayed
-                        ? badgeColor
-                        : theme.colorScheme.onSurface.withAlpha(180),
-                  ),
-                ),
-              if (badge.rank != null && badge.rank!.isNotEmpty)
-                Text(
-                  badge.rank!,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    fontSize: 10,
-                    color: theme.colorScheme.onSurface.withAlpha(120),
-                  ),
-                ),
-            ],
+          Flexible(
+            child: Text(
+              _buildBadgeLabel(badge),
+              style: theme.textTheme.labelSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: isDisplayed
+                    ? badgeColor
+                    : theme.colorScheme.onSurface.withAlpha(180),
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ],
       ),
     );
+  }
+
+  String _buildBadgeLabel(UserBadge badge) {
+    final parts = <String>[];
+    final city = badge.city;
+    if (city != null && city.isNotEmpty && city != 'all') {
+      parts.add(city);
+    }
+    if (badge.skillCategory != null && badge.skillCategory!.isNotEmpty) {
+      parts.add(badge.skillCategory!);
+    }
+    final rankStr = badge.rank;
+    if (rankStr != null && rankStr.isNotEmpty) {
+      final rankNum = int.tryParse(rankStr);
+      parts.add(rankNum != null ? '#$rankNum' : rankStr);
+    }
+    return parts.isNotEmpty ? parts.join(' · ') : badge.badgeType;
   }
 
   Color _getBadgeColor(String? rank) {

@@ -228,6 +228,11 @@ class UserProfileView extends StatelessWidget {
               ],
             ],
           ),
+          // 勋章标签
+          if (user.displayedBadge != null) ...[
+            const SizedBox(height: 6),
+            DisplayedBadgeLabel(badge: user.displayedBadge!, compact: true),
+          ],
           const SizedBox(height: AppSpacing.md),
 
           // 关注按钮 + 粉丝/关注数

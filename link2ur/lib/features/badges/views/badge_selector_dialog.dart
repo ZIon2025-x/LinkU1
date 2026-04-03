@@ -256,19 +256,11 @@ class _BadgeSelectionItem extends StatelessWidget {
         ),
       ),
       title: Text(
-        badge.skillCategory ?? badge.badgeType,
+        _buildBadgeTitle(badge),
         style: theme.textTheme.bodyMedium?.copyWith(
           fontWeight: badge.isDisplayed ? FontWeight.w700 : FontWeight.w500,
         ),
       ),
-      subtitle: badge.rank != null
-          ? Text(
-              badge.rank!,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurface.withAlpha(120),
-              ),
-            )
-          : null,
       trailing: badge.isDisplayed
           ? const Icon(Icons.check_circle, color: AppColors.primary, size: 24)
           : Icon(
@@ -278,6 +270,23 @@ class _BadgeSelectionItem extends StatelessWidget {
             ),
       onTap: onTap,
     );
+  }
+
+  String _buildBadgeTitle(UserBadge badge) {
+    final parts = <String>[];
+    final city = badge.city;
+    if (city != null && city.isNotEmpty && city != 'all') {
+      parts.add(city);
+    }
+    if (badge.skillCategory != null && badge.skillCategory!.isNotEmpty) {
+      parts.add(badge.skillCategory!);
+    }
+    final rankStr = badge.rank;
+    if (rankStr != null && rankStr.isNotEmpty) {
+      final rankNum = int.tryParse(rankStr);
+      parts.add(rankNum != null ? '#$rankNum' : rankStr);
+    }
+    return parts.isNotEmpty ? parts.join(' · ') : badge.badgeType;
   }
 
   Color _getBadgeColor(String? rank) {

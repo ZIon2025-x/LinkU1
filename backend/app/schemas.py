@@ -4737,6 +4737,7 @@ class UserBadgeOut(BaseModel):
     id: int
     badge_type: str
     skill_category: str
+    city: str = "all"
     rank: int
     is_displayed: bool = False
     granted_at: Optional[datetime.datetime] = None

@@ -7,6 +7,7 @@ class UserBadge extends Equatable {
   final int id;
   final String badgeType;
   final String? skillCategory;
+  final String? city;
   final String? rank;
   final bool isDisplayed;
   final DateTime? grantedAt;
@@ -15,6 +16,7 @@ class UserBadge extends Equatable {
     required this.id,
     required this.badgeType,
     this.skillCategory,
+    this.city,
     this.rank,
     this.isDisplayed = false,
     this.grantedAt,
@@ -25,6 +27,7 @@ class UserBadge extends Equatable {
       id: json['id'] as int? ?? 0,
       badgeType: json['badge_type'] as String? ?? '',
       skillCategory: json['skill_category'] as String?,
+      city: json['city'] as String?,
       rank: json['rank']?.toString(),
       isDisplayed: parseBool(json['is_displayed']),
       grantedAt: json['granted_at'] != null
@@ -37,6 +40,7 @@ class UserBadge extends Equatable {
         'id': id,
         'badge_type': badgeType,
         'skill_category': skillCategory,
+        'city': city,
         'rank': rank,
         'is_displayed': isDisplayed,
         'granted_at': grantedAt?.toIso8601String(),
@@ -46,6 +50,7 @@ class UserBadge extends Equatable {
     int? id,
     String? badgeType,
     String? skillCategory,
+    String? city,
     String? rank,
     bool? isDisplayed,
     DateTime? grantedAt,
@@ -54,6 +59,7 @@ class UserBadge extends Equatable {
       id: id ?? this.id,
       badgeType: badgeType ?? this.badgeType,
       skillCategory: skillCategory ?? this.skillCategory,
+      city: city ?? this.city,
       rank: rank ?? this.rank,
       isDisplayed: isDisplayed ?? this.isDisplayed,
       grantedAt: grantedAt ?? this.grantedAt,
@@ -65,6 +71,7 @@ class UserBadge extends Equatable {
         id,
         badgeType,
         skillCategory,
+        city,
         rank,
         isDisplayed,
         grantedAt,

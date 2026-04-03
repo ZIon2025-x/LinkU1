@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../data/models/badge.dart';
 import '../design/app_colors.dart';
 import '../utils/l10n_extension.dart';
 
@@ -178,5 +179,86 @@ class IdentityBadge extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// 勋章文字标签 — 显示 "城市 · 类型 · 第N名"
+/// 用于名字下方单独一行展示
+class DisplayedBadgeLabel extends StatelessWidget {
+  const DisplayedBadgeLabel({
+    super.key,
+    required this.badge,
+    this.compact = false,
+  });
+
+  final UserBadge badge;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final parts = <String>[];
+    final city = badge.city;
+    if (city != null && city.isNotEmpty && city != 'all') {
+      parts.add(city);
+    }
+    if (badge.skillCategory != null && badge.skillCategory!.isNotEmpty) {
+      parts.add(badge.skillCategory!);
+    }
+    final rankStr = badge.rank;
+    if (rankStr != null && rankStr.isNotEmpty) {
+      final rankNum = int.tryParse(rankStr);
+      if (rankNum != null) {
+        parts.add('#$rankNum');
+      } else {
+        parts.add(rankStr);
+      }
+    }
+    if (parts.isEmpty) return const SizedBox.shrink();
+
+    final label = parts.join(' · ');
+    final fontSize = compact ? 10.0 : 12.0;
+
+    final Color badgeColor = _rankColor(badge.rank);
+
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 6 : 8,
+        vertical: compact ? 2 : 3,
+      ),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [badgeColor, badgeColor.withValues(alpha: 0.8)],
+        ),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.military_tech,
+            size: fontSize + 2,
+            color: Colors.white,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: fontSize,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static Color _rankColor(String? rank) {
+    if (rank == null) return AppColors.primary;
+    final n = int.tryParse(rank);
+    if (n == 1) return const Color(0xFFD4A017); // gold
+    if (n == 2) return const Color(0xFF8A8A8A); // silver
+    if (n == 3) return const Color(0xFFCD7F32); // bronze
+    return AppColors.primary;
   }
 }

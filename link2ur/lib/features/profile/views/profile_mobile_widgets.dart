@@ -18,11 +18,7 @@ Widget _buildMobileProfile(
             // 徽章展示区域
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-              child: BadgesDisplayView(
-                onBadgeTap: () {
-                  // Could open badge selector dialog in the future
-                },
-              ),
+              child: const BadgesDisplayView(),
             ),
             const SizedBox(height: 24),
             _buildMyContentSection(context, isDark),
@@ -130,6 +126,11 @@ Widget _buildUserInfoSection(
           isExpert: user.isExpert,
           isStudentVerified: user.isStudentVerified,
         ),
+        // 勋章标签（城市 · 类型 · 第N名）
+        if (user.displayedBadge != null) ...[
+          const SizedBox(height: 6),
+          DisplayedBadgeLabel(badge: user.displayedBadge!),
+        ],
         const SizedBox(height: 6),
 
         // 邮箱/手机号（带圆角背景）

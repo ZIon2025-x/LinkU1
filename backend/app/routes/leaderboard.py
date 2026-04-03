@@ -248,12 +248,14 @@ def recalculate_leaderboard(db: Session, category: Optional[str] = None) -> None
             )
             if existing_badge:
                 existing_badge.rank = rank_pos
+                existing_badge.city = entry["city"]
                 existing_badge.granted_at = now
             else:
                 new_badge = models.UserBadge(
                     user_id=entry["user_id"],
                     badge_type="skill_rank",
                     skill_category=cat,
+                    city=entry["city"],
                     rank=rank_pos,
                     is_displayed=False,
                     granted_at=now,

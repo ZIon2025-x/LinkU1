@@ -41,11 +41,7 @@ Widget _buildDesktopProfile(
         const SizedBox(height: 24),
 
         // 徽章展示区域
-        BadgesDisplayView(
-          onBadgeTap: () {
-            // Could open badge selector dialog in the future
-          },
-        ),
+        const BadgesDisplayView(),
         const SizedBox(height: 32),
 
         // 两列菜单
@@ -187,6 +183,10 @@ Widget _buildDesktopUserCard(
                 isExpert: user.isExpert,
                 isStudentVerified: user.isStudentVerified,
               ),
+              if (user.displayedBadge != null) ...[
+                const SizedBox(height: 4),
+                DisplayedBadgeLabel(badge: user.displayedBadge!),
+              ],
               const SizedBox(height: 4),
               Text(
                 user.email ?? user.phone ?? 'ID: ${user.id}',

@@ -3591,6 +3591,7 @@ class UserBadge(Base):
     user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     badge_type = Column(String(50), nullable=False, default="skill_rank")
     skill_category = Column(String(50), nullable=False)
+    city = Column(String(50), nullable=False, default="all", server_default=text("'all'"))
     rank = Column(Integer, nullable=False)
     is_displayed = Column(Boolean, default=False)
     granted_at = Column(DateTime(timezone=True), default=get_utc_time)
