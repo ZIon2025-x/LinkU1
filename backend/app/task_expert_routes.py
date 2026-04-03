@@ -518,7 +518,7 @@ async def get_expert(
         ach = json.loads(featured_expert.achievements) if featured_expert.achievements else []
         ach_en = json.loads(featured_expert.achievements_en) if featured_expert.achievements_en else []
         
-        return {
+        result_dict = {
             # 基础字段（与 React 前端一致）
             "id": featured_expert.id,
             "name": featured_expert.name,

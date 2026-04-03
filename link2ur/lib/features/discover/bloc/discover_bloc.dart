@@ -111,14 +111,16 @@ class DiscoverBloc extends Bloc<DiscoverEvent, DiscoverState> {
       }).toList();
 
       // 榜单：收藏优先 > 同城优先
-      final cityLower = (city != null && city.isNotEmpty) ? city.toLowerCase() : null;
+      final cityVariants = _getCityVariants(city);
       leaderboardsWithFav.sort((a, b) {
         final aFav = a.isFavorited ? 0 : 1;
         final bFav = b.isFavorited ? 0 : 1;
         if (aFav != bFav) return aFav.compareTo(bFav);
-        if (cityLower != null) {
-          final aLocal = a.location.toLowerCase().contains(cityLower) ? 0 : 1;
-          final bLocal = b.location.toLowerCase().contains(cityLower) ? 0 : 1;
+        if (cityVariants.isNotEmpty) {
+          final locA = a.location.toLowerCase();
+          final locB = b.location.toLowerCase();
+          final aLocal = cityVariants.any((v) => locA.contains(v)) ? 0 : 1;
+          final bLocal = cityVariants.any((v) => locB.contains(v)) ? 0 : 1;
           if (aLocal != bLocal) return aLocal.compareTo(bLocal);
         }
         return 0;
@@ -236,5 +238,35 @@ class DiscoverBloc extends Bloc<DiscoverEvent, DiscoverState> {
       emit(state.copyWith(followedExpertIds: revertIds));
       AppLogger.error('Follow toggle failed', e);
     }
+  }
+
+  /// 获取城市名的中英文变体（小写），用于本地排序匹配
+  static List<String> _getCityVariants(String? city) {
+    if (city == null || city.isEmpty) return [];
+    const mapping = {
+      'london': '伦敦', 'edinburgh': '爱丁堡', 'manchester': '曼彻斯特',
+      'birmingham': '伯明翰', 'glasgow': '格拉斯哥', 'bristol': '布里斯托',
+      'sheffield': '谢菲尔德', 'leeds': '利兹', 'nottingham': '诺丁汉',
+      'newcastle': '纽卡斯尔', 'southampton': '南安普顿', 'liverpool': '利物浦',
+      'cardiff': '卡迪夫', 'coventry': '考文垂', 'leicester': '莱斯特',
+      'york': '约克', 'aberdeen': '阿伯丁', 'bath': '巴斯',
+      'cambridge': '剑桥', 'oxford': '牛津', 'brighton': '布莱顿',
+      'reading': '雷丁', 'belfast': '贝尔法斯特',
+    };
+    const reverseMapping = {
+      '伦敦': 'london', '爱丁堡': 'edinburgh', '曼彻斯特': 'manchester',
+      '伯明翰': 'birmingham', '格拉斯哥': 'glasgow', '布里斯托': 'bristol',
+      '谢菲尔德': 'sheffield', '利兹': 'leeds', '诺丁汉': 'nottingham',
+      '纽卡斯尔': 'newcastle', '南安普顿': 'southampton', '利物浦': 'liverpool',
+      '卡迪夫': 'cardiff', '考文垂': 'coventry', '莱斯特': 'leicester',
+      '约克': 'york', '阿伯丁': 'aberdeen', '巴斯': 'bath',
+      '剑桥': 'cambridge', '牛津': 'oxford', '布莱顿': 'brighton',
+      '雷丁': 'reading', '贝尔法斯特': 'belfast',
+    };
+    final lower = city.toLowerCase().trim();
+    final variants = <String>{lower};
+    if (mapping.containsKey(lower)) variants.add(mapping[lower]!);
+    if (reverseMapping.containsKey(city.trim())) variants.add(reverseMapping[city.trim()]!);
+    return variants.toList();
   }
 }
