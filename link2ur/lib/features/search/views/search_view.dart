@@ -6,7 +6,9 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/error_localizer.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/localized_string.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/error_state_view.dart';
@@ -389,7 +391,7 @@ class _SearchContentState extends State<_SearchContent> {
               color: AppColors.primary,
             ),
             AppSpacing.vSm,
-            ...state.serviceResults.map((result) => _SearchResultCard(
+            ...state.serviceResults.map((result) => _SearchServiceCard(
                   result: result,
                   onTap: () {
                     final id = result['id'];
@@ -568,6 +570,221 @@ class _SearchResultCard extends StatelessWidget {
           ],
         ),
       ),
+      ),
+    );
+  }
+}
+
+/// 服务搜索结果卡片 — 水平布局（左图右文）
+class _SearchServiceCard extends StatelessWidget {
+  const _SearchServiceCard({
+    required this.result,
+    required this.onTap,
+  });
+
+  final Map<String, dynamic> result;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final locale = Localizations.localeOf(context);
+
+    // Locale-aware name/description
+    final name = localizedString(
+      result['service_name_zh'] as String?,
+      result['service_name_en'] as String?,
+      (result['title'] as String?) ?? '',
+      locale,
+    );
+    final description = localizedString(
+      result['description_zh'] as String?,
+      result['description_en'] as String?,
+      (result['description'] as String?) ?? '',
+      locale,
+    );
+
+    // Price
+    final price = (result['base_price'] as num?)?.toDouble();
+    final currency = (result['currency'] as String?) ?? 'GBP';
+    final pricingType = (result['pricing_type'] as String?) ?? 'fixed';
+
+    // Owner
+    final ownerName = result['owner_name'] as String?;
+    final ownerRating = (result['owner_rating'] as num?)?.toDouble();
+
+    // Image
+    final images = result['images'];
+    String? firstImage;
+    if (images is List && images.isNotEmpty) {
+      firstImage = images.first?.toString();
+    }
+
+    // Service type
+    final serviceType = (result['service_type'] as String?) ?? 'personal';
+    final isExpert = serviceType == 'expert';
+
+    return Semantics(
+      button: true,
+      label: 'View service details',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: isDark
+                ? AppColors.cardBackgroundDark
+                : AppColors.cardBackgroundLight,
+            borderRadius: AppRadius.allMedium,
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Thumbnail
+              ClipRRect(
+                borderRadius: AppRadius.allSmall,
+                child: Container(
+                  width: 80,
+                  height: 80,
+                  color: isDark ? Colors.grey[800] : Colors.grey[200],
+                  child: firstImage != null
+                      ? Image.network(
+                          firstImage,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Icon(
+                            Icons.handyman_outlined,
+                            color: isDark ? Colors.grey[600] : Colors.grey[400],
+                          ),
+                        )
+                      : Icon(
+                          Icons.handyman_outlined,
+                          size: 32,
+                          color: isDark ? Colors.grey[600] : Colors.grey[400],
+                        ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Info column
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Service name
+                    Text(
+                      name,
+                      style: AppTypography.bodyBold.copyWith(
+                        color: isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimaryLight,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (description.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        description,
+                        style: AppTypography.caption.copyWith(
+                          color: isDark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondaryLight,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                    const SizedBox(height: 6),
+                    // Price + badge row
+                    Row(
+                      children: [
+                        if (price != null) ...[
+                          Text(
+                            pricingType == 'negotiable'
+                                ? '${Helpers.formatPrice(price, currency: currency)}~'
+                                : Helpers.formatPrice(price, currency: currency),
+                            style: AppTypography.bodyBold.copyWith(
+                              color: Colors.redAccent,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 1,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isExpert
+                                ? const Color(0xFFE8F4FD)
+                                : const Color(0xFFFEF3E2),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            isExpert ? 'Expert' : 'Personal',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: isExpert
+                                  ? const Color(0xFF1A73E8)
+                                  : const Color(0xFFE67E22),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    // Owner row
+                    if (ownerName != null && ownerName.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.person_outline,
+                            size: 14,
+                            color: isDark
+                                ? AppColors.textTertiaryDark
+                                : AppColors.textTertiaryLight,
+                          ),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              ownerName,
+                              style: AppTypography.caption.copyWith(
+                                color: isDark
+                                    ? AppColors.textTertiaryDark
+                                    : AppColors.textTertiaryLight,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (ownerRating != null && ownerRating > 0) ...[
+                            const SizedBox(width: 6),
+                            Icon(
+                              Icons.star,
+                              size: 13,
+                              color: Colors.amber[600],
+                            ),
+                            const SizedBox(width: 2),
+                            Text(
+                              ownerRating.toStringAsFixed(1),
+                              style: AppTypography.caption.copyWith(
+                                color: Colors.amber[700],
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

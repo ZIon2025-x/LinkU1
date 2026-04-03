@@ -557,6 +557,20 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
               'title': item['service_name'] ?? '',
               'type': 'service',
               'description': item['description'] ?? '',
+              // Rich card data
+              'images': item['images'],
+              'base_price': item['base_price'],
+              'currency': item['currency'],
+              'pricing_type': item['pricing_type'],
+              'service_type': item['service_type'],
+              'owner_name': item['owner_name'],
+              'owner_avatar': item['owner_avatar'],
+              'owner_rating': item['owner_rating'],
+              // Bilingual fields
+              'service_name_en': item['service_name_en'],
+              'service_name_zh': item['service_name_zh'],
+              'description_en': item['description_en'],
+              'description_zh': item['description_zh'],
             };
           })
           .toList();
