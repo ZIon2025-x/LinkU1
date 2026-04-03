@@ -72,7 +72,7 @@ class SkillFeedResponse {
       total: json['total'] as int,
       page: json['page'] as int,
       pageSize: json['page_size'] as int,
-      hasMore: json['has_more'] as bool,
+      hasMore: json['has_more'] as bool? ?? false,
     );
   }
 }

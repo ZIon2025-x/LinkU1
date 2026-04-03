@@ -4782,6 +4782,7 @@ class SkillFeedResponse(BaseModel):
     total: int
     page: int
     page_size: int
+    has_more: bool = False
 
 
 # ==================== 热搜榜 Schemas ====================
