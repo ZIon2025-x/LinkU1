@@ -705,50 +705,8 @@ async def preload_badge_cache(db: AsyncSession, user_ids: list[str]) -> dict:
     """预加载一批用户的展示勋章，返回 {user_id: badge_dict} 映射。
     供列表端点在构建 UserInfo 前调用，传给 build_user_info._badge_cache。
     """
-    if not user_ids:
-        return {}
-    try:
-        badge_result = await db.execute(
-            select(models.UserBadge).where(
-                models.UserBadge.user_id.in_(user_ids),
-                models.UserBadge.is_displayed == True,
-            )
-        )
-        badges = badge_result.scalars().all()
-        if not badges:
-            return {}
-
-        skill_cats = {b.skill_category for b in badges}
-        cat_map = {}
-        if skill_cats:
-            cat_result = await db.execute(
-                select(
-                    models.SkillCategory.task_type,
-                    models.SkillCategory.name_zh,
-                    models.SkillCategory.name_en,
-                ).where(models.SkillCategory.task_type.in_(skill_cats))
-            )
-            for row in cat_result.all():
-                cat_map[row.task_type] = (row.name_zh, row.name_en)
-
-        cache = {}
-        for badge in badges:
-            names = cat_map.get(badge.skill_category, (badge.skill_category, badge.skill_category))
-            cache[badge.user_id] = {
-                "id": badge.id,
-                "badge_type": badge.badge_type,
-                "skill_category": badge.skill_category,
-                "skill_name_zh": names[0] or badge.skill_category,
-                "skill_name_en": names[1] or badge.skill_category,
-                "city": badge.city,
-                "rank": badge.rank,
-                "is_displayed": True,
-            }
-        return cache
-    except Exception as e:
-        import logging
-        logging.getLogger(__name__).warning(f"Failed to preload badge cache: {e}")
-        return {}
+    from app.utils.badge_helpers import enrich_displayed_badges_async
+    return await enrich_displayed_badges_async(db, user_ids)
 
 
 async def build_admin_user_info(admin_user: models.AdminUser) -> schemas.UserInfo:
@@ -922,7 +880,8 @@ async def create_latest_post_info(
     """
     创建最新帖子信息，根据用户语言选择正确的标题和预览内容
     """
-    author_info = await get_post_author_info(db, latest_post, request)
+    _badge_cache = await preload_badge_cache(db, [latest_post.author_id] if latest_post.author_id else [])
+    author_info = await get_post_author_info(db, latest_post, request, _badge_cache=_badge_cache)
     display_view_count = await get_post_display_view_count(latest_post.id, latest_post.view_count)
     
     # 获取用户语言偏好
@@ -3005,6 +2964,9 @@ async def get_posts(
     )
     view_counts = await _batch_get_post_display_view_counts(posts)
 
+    _author_ids = list({p.author_id for p in posts if p.author_id})
+    _badge_cache = await preload_badge_cache(db, _author_ids)
+
     post_items = []
     for post in posts:
         is_liked = post.id in liked_ids
@@ -3028,7 +2990,7 @@ async def get_posts(
             content_preview_en=content_preview_en,
             content_preview_zh=content_preview_zh,
             category=schemas.CategoryInfo(id=post.category.id, name=post.category.name),
-            author=await get_post_author_info(db, post, request),
+            author=await get_post_author_info(db, post, request, _badge_cache=_badge_cache),
             view_count=display_view_count,
             reply_count=post.reply_count,
             like_count=post.like_count,
@@ -3145,6 +3107,7 @@ async def get_post(
     
     linked_name = await _resolve_linked_item_name(db, post.linked_item_type, post.linked_item_id)
 
+    _badge_cache = await preload_badge_cache(db, [post.author_id] if post.author_id else [])
     return schemas.ForumPostOut(
         id=post.id,
         title=post.title,
@@ -3154,7 +3117,7 @@ async def get_post(
         content_en=getattr(post, 'content_en', None),
         content_zh=getattr(post, 'content_zh', None),
         category=schemas.CategoryInfo(id=post.category.id, name=post.category.name),
-        author=await get_post_author_info(db, post, request),
+        author=await get_post_author_info(db, post, request, _badge_cache=_badge_cache),
         view_count=display_view_count,  # 使用包含 Redis 增量的浏览量
         reply_count=post.reply_count,
         like_count=post.like_count,
@@ -3530,7 +3493,8 @@ async def create_post(
         await db.refresh(db_post, ["admin_author"])
     
     # 构建作者信息（使用统一的函数，支持管理员和普通用户）
-    author_info = await get_post_author_info(db, db_post, request)
+    _badge_cache = await preload_badge_cache(db, [db_post.author_id] if db_post.author_id else [])
+    author_info = await get_post_author_info(db, db_post, request, _badge_cache=_badge_cache)
     
     return schemas.ForumPostOut(
         id=db_post.id,
@@ -3825,6 +3789,7 @@ async def update_post(
         )
         is_favorited = favorite_result.scalar_one_or_none() is not None
     
+    _badge_cache = await preload_badge_cache(db, [db_post.author_id] if db_post.author_id else [])
     return schemas.ForumPostOut(
         id=db_post.id,
         title=db_post.title,
@@ -3834,7 +3799,7 @@ async def update_post(
         content_en=getattr(db_post, 'content_en', None),
         content_zh=getattr(db_post, 'content_zh', None),
         category=schemas.CategoryInfo(id=db_post.category.id, name=db_post.category.name),
-        author=await get_post_author_info(db, db_post, request),
+        author=await get_post_author_info(db, db_post, request, _badge_cache=_badge_cache),
         view_count=db_post.view_count,
         reply_count=db_post.reply_count,
         like_count=db_post.like_count,
@@ -4463,18 +4428,22 @@ async def get_replies(
         )
         user_liked_replies = {row[0] for row in like_result.all()}
     
+    # 预加载所有回复作者的勋章缓存
+    _reply_author_ids = list({r.author_id for r in replies if r.author_id})
+    _badge_cache = await preload_badge_cache(db, _reply_author_ids)
+
     async def convert_reply(reply_data, liked_set):
         """递归转换回复为输出格式"""
         reply = reply_data["reply"]
         is_liked = reply.id in liked_set
         parent_author = None
         if reply.parent_reply_id and getattr(reply, "parent_reply", None):
-            parent_author = await get_reply_author_info(db, reply.parent_reply, request)
+            parent_author = await get_reply_author_info(db, reply.parent_reply, request, _badge_cache=_badge_cache)
 
         reply_out = schemas.ForumReplyOut(
             id=reply.id,
             content=reply.content,
-            author=await get_reply_author_info(db, reply, request),
+            author=await get_reply_author_info(db, reply, request, _badge_cache=_badge_cache),
             parent_reply_id=reply.parent_reply_id,
             parent_reply_author=parent_author,
             reply_level=reply.reply_level,
@@ -4744,6 +4713,8 @@ async def create_reply(
                 logger.warning(f"发送论坛回复推送通知失败: {e}")
                 # 推送通知失败不影响主流程
 
+    # 预加载勋章缓存（包含当前回复作者和可能的父回复作者）
+    _reply_badge_ids = [db_reply.author_id] if db_reply.author_id else []
     parent_reply_author = None
     if db_reply.parent_reply_id:
         parent_result = await db.execute(
@@ -4756,12 +4727,19 @@ async def create_reply(
         )
         parent_reply = parent_result.scalar_one_or_none()
         if parent_reply:
-            parent_reply_author = await get_reply_author_info(db, parent_reply, request)
+            if parent_reply.author_id:
+                _reply_badge_ids.append(parent_reply.author_id)
+            _badge_cache = await preload_badge_cache(db, list(set(_reply_badge_ids)))
+            parent_reply_author = await get_reply_author_info(db, parent_reply, request, _badge_cache=_badge_cache)
+        else:
+            _badge_cache = await preload_badge_cache(db, _reply_badge_ids)
+    else:
+        _badge_cache = await preload_badge_cache(db, _reply_badge_ids)
 
     return schemas.ForumReplyOut(
         id=db_reply.id,
         content=db_reply.content,
-        author=await get_reply_author_info(db, db_reply, request),
+        author=await get_reply_author_info(db, db_reply, request, _badge_cache=_badge_cache),
         parent_reply_id=db_reply.parent_reply_id,
         parent_reply_author=parent_reply_author,
         reply_level=db_reply.reply_level,
@@ -4858,10 +4836,11 @@ async def update_reply(
         )
         is_liked = like_result.scalar_one_or_none() is not None
     
+    _badge_cache = await preload_badge_cache(db, [db_reply.author_id] if db_reply.author_id else [])
     return schemas.ForumReplyOut(
         id=db_reply.id,
         content=db_reply.content,
-        author=await get_reply_author_info(db, db_reply, request),
+        author=await get_reply_author_info(db, db_reply, request, _badge_cache=_badge_cache),
         parent_reply_id=db_reply.parent_reply_id,
         reply_level=db_reply.reply_level,
         like_count=db_reply.like_count,
@@ -5561,6 +5540,9 @@ async def search_posts(
     )
     view_counts = await _batch_get_post_display_view_counts(posts)
 
+    _author_ids = list({p.author_id for p in posts if p.author_id})
+    _badge_cache = await preload_badge_cache(db, _author_ids)
+
     post_items = []
     for post in posts:
         display_view_count = view_counts.get(post.id, post.view_count or 0)
@@ -5569,7 +5551,7 @@ async def search_posts(
             title=post.title,
             content_preview=strip_markdown(post.content),
             category=schemas.CategoryInfo(id=post.category.id, name=post.category.name),
-            author=await get_post_author_info(db, post, request),
+            author=await get_post_author_info(db, post, request, _badge_cache=_badge_cache),
             view_count=display_view_count,
             reply_count=post.reply_count,
             like_count=post.like_count,
@@ -5585,7 +5567,7 @@ async def search_posts(
             created_at=post.created_at,
             last_reply_at=post.last_reply_at
         ))
-    
+
     return {
         "posts": post_items,
         "total": total,
@@ -6171,6 +6153,9 @@ async def get_my_posts(
     posts = result.scalars().all()
     
     # 转换为列表项格式，并过滤掉用户无权限访问的学校板块
+    _author_ids = list({p.author_id for p in posts if p.author_id})
+    _badge_cache = await preload_badge_cache(db, _author_ids)
+
     post_items = []
     # 获取用户可见的板块ID列表（用于过滤）
     visible_category_ids = None
@@ -6187,24 +6172,24 @@ async def get_my_posts(
         )
         general_ids = [row[0] for row in general_forums_result.all()]
         visible_category_ids.extend(general_ids)
-        
+
         # 如果用户已登录，添加可见的学校板块
         if current_user:
             school_ids = await visible_forums(current_user, db)
             visible_category_ids.extend(school_ids)
-    
+
     for post in posts:
         # 如果不是管理员，过滤掉无权限访问的学校板块
         if not is_admin_user and visible_category_ids is not None:
             if post.category_id not in visible_category_ids:
                 continue
-        
+
         post_items.append(schemas.ForumPostListItem(
             id=post.id,
             title=post.title,
             content_preview=strip_markdown(post.content),
             category=schemas.CategoryInfo(id=post.category.id, name=post.category.name),
-            author=await get_post_author_info(db, post, request),
+            author=await get_post_author_info(db, post, request, _badge_cache=_badge_cache),
             view_count=post.view_count,
             reply_count=post.reply_count,
             like_count=post.like_count,
@@ -6297,17 +6282,21 @@ async def get_my_replies(
     school_ids = await visible_forums(current_user, db)
     visible_category_ids.extend(school_ids)
     
+    # 预加载勋章缓存
+    _reply_author_ids = list({r.author_id for r in replies if r.author_id})
+    _badge_cache = await preload_badge_cache(db, _reply_author_ids)
+
     # 转换为输出格式，并过滤掉用户无权限访问的学校板块的回复
     reply_list = []
     for reply in replies:
         # 检查回复所属帖子所属板块是否有权限访问
         if reply.post.category_id not in visible_category_ids:
             continue
-        
+
         reply_list.append(schemas.ForumReplyOut(
             id=reply.id,
             content=reply.content,
-            author=await get_reply_author_info(db, reply),
+            author=await get_reply_author_info(db, reply, _badge_cache=_badge_cache),
             parent_reply_id=reply.parent_reply_id,
             reply_level=reply.reply_level,
             like_count=reply.like_count,
@@ -6374,13 +6363,17 @@ async def get_my_favorites(
     school_ids = await visible_forums(current_user, db)
     visible_category_ids.extend(school_ids)
     
+    # 预加载勋章缓存
+    _fav_author_ids = list({f.post.author_id for f in favorites if f.post and f.post.author_id})
+    _badge_cache = await preload_badge_cache(db, _fav_author_ids)
+
     # 转换为输出格式，并过滤掉用户无权限访问的学校板块
     favorite_list = []
     for favorite in favorites:
         post = favorite.post
         # 只返回可见的帖子，且用户有权限访问的板块
-        if (post.is_deleted == False and 
-            post.is_visible == True and 
+        if (post.is_deleted == False and
+            post.is_visible == True and
             post.category_id in visible_category_ids):
             favorite_list.append(schemas.ForumFavoriteOut(
                 id=favorite.id,
@@ -6389,7 +6382,7 @@ async def get_my_favorites(
                     title=post.title,
                     content_preview=strip_markdown(post.content),
                     category=schemas.CategoryInfo(id=post.category.id, name=post.category.name),
-                    author=await get_post_author_info(db, post, request),
+                    author=await get_post_author_info(db, post, request, _badge_cache=_badge_cache),
                     view_count=post.view_count,
                     reply_count=post.reply_count,
                     like_count=post.like_count,
@@ -6478,13 +6471,20 @@ async def get_my_likes(
         )
         reply_map = {r.id: r for r in replies_result.scalars().all()}
 
+    # 预加载勋章缓存（帖子作者 + 回复作者）
+    _like_author_ids = list(
+        {p.author_id for p in post_map.values() if p.author_id}
+        | {r.author_id for r in reply_map.values() if r.author_id}
+    )
+    _badge_cache = await preload_badge_cache(db, _like_author_ids)
+
     like_list = []
     for like in likes:
         if like.target_type == "post":
             post = post_map.get(like.target_id)
             if post:
                 # 使用统一的作者信息获取函数（支持管理员和普通用户）
-                author_info = await get_post_author_info(db, post, request)
+                author_info = await get_post_author_info(db, post, request, _badge_cache=_badge_cache)
                 
                 like_list.append({
                     "target_type": "post",
@@ -6998,6 +6998,9 @@ async def get_hot_posts(
     )
     view_counts = await _batch_get_post_display_view_counts(posts)
 
+    _author_ids = list({p.author_id for p in posts if p.author_id})
+    _badge_cache = await preload_badge_cache(db, _author_ids)
+
     post_items = []
     for post in posts:
         is_liked = post.id in liked_ids
@@ -7021,7 +7024,7 @@ async def get_hot_posts(
             content_preview_en=content_preview_en,
             content_preview_zh=content_preview_zh,
             category=schemas.CategoryInfo(id=post.category.id, name=post.category.name),
-            author=await get_post_author_info(db, post, request),
+            author=await get_post_author_info(db, post, request, _badge_cache=_badge_cache),
             view_count=display_view_count,
             reply_count=post.reply_count,
             like_count=post.like_count,
@@ -7204,6 +7207,9 @@ async def get_user_hot_posts(
     )
     view_counts = await _batch_get_post_display_view_counts(posts)
 
+    _author_ids = list({p.author_id for p in posts if p.author_id})
+    _badge_cache = await preload_badge_cache(db, _author_ids)
+
     post_items = []
     for post in posts:
         is_liked = post.id in liked_ids
@@ -7227,7 +7233,7 @@ async def get_user_hot_posts(
             content_preview_en=content_preview_en,
             content_preview_zh=content_preview_zh,
             category=schemas.CategoryInfo(id=post.category.id, name=post.category.name),
-            author=await get_post_author_info(db, post, request),
+            author=await get_post_author_info(db, post, request, _badge_cache=_badge_cache),
             view_count=display_view_count,
             reply_count=post.reply_count,
             like_count=post.like_count,
