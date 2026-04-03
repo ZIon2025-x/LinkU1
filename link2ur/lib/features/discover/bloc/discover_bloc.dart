@@ -174,8 +174,9 @@ class DiscoverBloc extends Bloc<DiscoverEvent, DiscoverState> {
 
   Future<List<Leaderboard>> _loadLeaderboards(String? city) async {
     try {
+      // 不传 location，获取所有榜单；同城排序由前端 _getCityVariants 处理
       final response = await _leaderboardRepo.getLeaderboards(
-        pageSize: 10, location: city,
+        pageSize: 10,
       );
       return response.leaderboards;
     } catch (e) {
