@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/helpers.dart';
+import 'badge.dart';
 
 /// 跳蚤市场商品模型
 /// 参考后端 FleaMarketItemResponse
@@ -21,6 +22,7 @@ class FleaMarketItem extends Equatable {
     this.sellerName,
     this.sellerAvatar,
     this.sellerUserLevel,
+    this.sellerDisplayedBadge,
     this.viewCount = 0,
     this.favoriteCount = 0,
     this.isFavorited,
@@ -74,6 +76,7 @@ class FleaMarketItem extends Equatable {
   final String? sellerName;
   final String? sellerAvatar;
   final String? sellerUserLevel; // normal, vip, super
+  final UserBadge? sellerDisplayedBadge;
   final int viewCount;
   final int favoriteCount;
   final bool? isFavorited;
@@ -165,6 +168,9 @@ class FleaMarketItem extends Equatable {
       sellerName: _toStringNullable(json['seller_name']),
       sellerAvatar: _toStringNullable(json['seller_avatar']),
       sellerUserLevel: _toStringNullable(json['seller_user_level']),
+      sellerDisplayedBadge: json['seller_displayed_badge'] != null
+          ? UserBadge.fromJson(json['seller_displayed_badge'] as Map<String, dynamic>)
+          : null,
       viewCount: _toInt(json['view_count']),
       favoriteCount: _toInt(json['favorite_count']),
       isFavorited: _toBoolNullable(json['is_favorited']),
@@ -225,6 +231,7 @@ class FleaMarketItem extends Equatable {
       'seller_name': sellerName,
       'seller_avatar': sellerAvatar,
       'seller_user_level': sellerUserLevel,
+      'seller_displayed_badge': sellerDisplayedBadge?.toJson(),
       'view_count': viewCount,
       'favorite_count': favoriteCount,
       'is_favorited': isFavorited,
@@ -272,6 +279,7 @@ class FleaMarketItem extends Equatable {
     String? sellerName,
     String? sellerAvatar,
     String? sellerUserLevel,
+    UserBadge? sellerDisplayedBadge,
     int? viewCount,
     int? favoriteCount,
     bool? isFavorited,
@@ -318,6 +326,7 @@ class FleaMarketItem extends Equatable {
       sellerName: sellerName ?? this.sellerName,
       sellerAvatar: sellerAvatar ?? this.sellerAvatar,
       sellerUserLevel: sellerUserLevel ?? this.sellerUserLevel,
+      sellerDisplayedBadge: sellerDisplayedBadge ?? this.sellerDisplayedBadge,
       viewCount: viewCount ?? this.viewCount,
       favoriteCount: favoriteCount ?? this.favoriteCount,
       isFavorited: isFavorited ?? this.isFavorited,
@@ -351,7 +360,7 @@ class FleaMarketItem extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, title, status, price, listingType, updatedAt];
+  List<Object?> get props => [id, title, status, price, listingType, updatedAt, sellerDisplayedBadge];
 }
 
 /// 我的购买列表响应（含待支付 + 已购）
@@ -419,6 +428,7 @@ class PurchaseRequest extends Equatable {
     required this.buyerId,
     this.buyerName,
     this.buyerAvatar,
+    this.buyerDisplayedBadge,
     this.proposedPrice,
     this.message,
     this.status = 'pending',
@@ -430,6 +440,7 @@ class PurchaseRequest extends Equatable {
   final String buyerId;
   final String? buyerName;
   final String? buyerAvatar;
+  final UserBadge? buyerDisplayedBadge;
   final double? proposedPrice;
   final String? message;
   final String status; // pending, seller_negotiating, accepted, rejected
@@ -444,6 +455,9 @@ class PurchaseRequest extends Equatable {
           json['buyer']?['name'] as String?,
       buyerAvatar: json['buyer_avatar'] as String? ??
           json['buyer']?['avatar'] as String?,
+      buyerDisplayedBadge: json['buyer_displayed_badge'] != null
+          ? UserBadge.fromJson(json['buyer_displayed_badge'] as Map<String, dynamic>)
+          : null,
       proposedPrice: _toDoubleNullable(json['proposed_price']),
       message: json['message'] as String?,
       status: json['status'] as String? ?? 'pending',
@@ -455,7 +469,7 @@ class PurchaseRequest extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, status, sellerCounterPrice];
+  List<Object?> get props => [id, status, sellerCounterPrice, buyerDisplayedBadge];
 }
 
 /// 创建跳蚤市场商品请求
