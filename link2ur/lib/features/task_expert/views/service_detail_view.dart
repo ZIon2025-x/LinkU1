@@ -465,7 +465,7 @@ class _PriceAndTitleCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            service.serviceName,
+            service.displayServiceName(Localizations.localeOf(context)),
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.bold,
@@ -498,6 +498,8 @@ class _DescriptionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final locale = Localizations.localeOf(context);
+    final displayDesc = service.displayDescription(locale);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -518,12 +520,12 @@ class _DescriptionCard extends StatelessWidget {
           _SectionHeader(title: context.l10n.serviceDetail),
           const SizedBox(height: 16),
           Text(
-            service.description.isNotEmpty
-                ? Helpers.normalizeContentNewlines(service.description)
+            displayDesc.isNotEmpty
+                ? Helpers.normalizeContentNewlines(displayDesc)
                 : context.l10n.serviceNoDescription,
             style: TextStyle(
               fontSize: 15,
-              color: service.description.isNotEmpty
+              color: displayDesc.isNotEmpty
                   ? (isDark
                       ? AppColors.textSecondaryDark
                       : AppColors.textSecondaryLight)
@@ -531,7 +533,7 @@ class _DescriptionCard extends StatelessWidget {
                       ? AppColors.textTertiaryDark
                       : AppColors.textTertiaryLight),
               height: 1.6,
-              fontStyle: service.description.isNotEmpty
+              fontStyle: displayDesc.isNotEmpty
                   ? FontStyle.normal
                   : FontStyle.italic,
             ),

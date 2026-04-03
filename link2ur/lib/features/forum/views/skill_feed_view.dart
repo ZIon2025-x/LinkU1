@@ -401,7 +401,7 @@ class _ServiceFeedCard extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(
-              service.serviceName,
+              service.displayServiceName(Localizations.localeOf(context)),
               style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
@@ -409,7 +409,7 @@ class _ServiceFeedCard extends StatelessWidget {
             if (service.description.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.xs),
               Text(
-                service.description,
+                service.displayDescription(Localizations.localeOf(context)),
                 style: const TextStyle(
                     fontSize: 13, color: AppColors.textSecondary),
                 maxLines: 2,

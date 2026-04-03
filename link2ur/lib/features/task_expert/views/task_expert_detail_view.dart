@@ -1090,7 +1090,7 @@ class _ServiceCard extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            service.serviceName,
+                            service.displayServiceName(Localizations.localeOf(context)),
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
@@ -1129,7 +1129,7 @@ class _ServiceCard extends StatelessWidget {
                     if (service.description.isNotEmpty) ...[
                       const SizedBox(height: 4),
                       Text(
-                        service.description,
+                        service.displayDescription(Localizations.localeOf(context)),
                         style: TextStyle(
                           fontSize: 13,
                           color: isDark

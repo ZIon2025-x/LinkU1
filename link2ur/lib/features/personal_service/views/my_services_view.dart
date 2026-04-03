@@ -8,6 +8,7 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/utils/adaptive_dialogs.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/localized_string.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../data/repositories/personal_service_repository.dart';
 import '../bloc/personal_service_bloc.dart';
@@ -360,7 +361,13 @@ class _ServiceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final name = (service['service_name'] as String?) ?? '';
+    final locale = Localizations.localeOf(context);
+    final name = localizedString(
+      service['service_name_zh'] as String?,
+      service['service_name_en'] as String?,
+      (service['service_name'] as String?) ?? '',
+      locale,
+    );
     final price = (service['base_price'] as num?)?.toDouble() ?? 0.0;
     final currency = (service['currency'] as String?) ?? 'GBP';
     final pricingType = (service['pricing_type'] as String?) ?? 'fixed';

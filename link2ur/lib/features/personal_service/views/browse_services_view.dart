@@ -7,6 +7,7 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
+import '../../../core/utils/localized_string.dart';
 import '../../../core/widgets/app_select_sheet.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
@@ -340,8 +341,19 @@ class _BrowseServiceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final name = (service['service_name'] as String?) ?? '';
-    final description = (service['description'] as String?) ?? '';
+    final locale = Localizations.localeOf(context);
+    final name = localizedString(
+      service['service_name_zh'] as String?,
+      service['service_name_en'] as String?,
+      (service['service_name'] as String?) ?? '',
+      locale,
+    );
+    final description = localizedString(
+      service['description_zh'] as String?,
+      service['description_en'] as String?,
+      (service['description'] as String?) ?? '',
+      locale,
+    );
     final price = (service['base_price'] as num?)?.toDouble() ?? 0.0;
     final currency = (service['currency'] as String?) ?? 'GBP';
     final pricingType = (service['pricing_type'] as String?) ?? 'fixed';
