@@ -605,7 +605,7 @@ class _MainTabViewState extends State<MainTabView>
       case 'home':
         return l10n.tabsHome;
       case 'discover':
-        return l10n.navDiscover;
+        return l10n.tabsCommunity;
       case 'messages':
         return l10n.tabsMessages;
       case 'profile':
