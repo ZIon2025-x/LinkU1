@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_spacing.dart';
+import '../../../core/widgets/user_identity_badges.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/empty_state_view.dart';
@@ -238,6 +239,10 @@ class _PostFeedCard extends StatelessWidget {
                     style: const TextStyle(
                         fontSize: 12, color: AppColors.textSecondary),
                   ),
+                  if (post.author?.displayedBadge != null) ...[
+                    const SizedBox(width: 4),
+                    InlineBadgeTag(badge: post.author!.displayedBadge!),
+                  ],
                   const SizedBox(width: AppSpacing.md),
                 ],
                 Icon(Icons.visibility, size: 14, color: Colors.grey[500]),

@@ -1129,6 +1129,10 @@ class _ReplyCard extends StatelessWidget {
                       ),
                     ),
                     ),
+                    if (reply.author?.displayedBadge != null) ...[
+                      const SizedBox(width: 4),
+                      InlineBadgeTag(badge: reply.author!.displayedBadge!),
+                    ],
                     const Spacer(),
                     Text(
                       _formatTime(context, reply.createdAt),
@@ -1664,13 +1668,24 @@ class _ReplyQuoteBlock extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              '↩ $authorName',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: textColor,
-              ),
+            Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    '↩ $authorName',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: textColor,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (parentReply.author?.displayedBadge != null) ...[
+                  const SizedBox(width: 4),
+                  InlineBadgeTag(badge: parentReply.author!.displayedBadge!),
+                ],
+              ],
             ),
             const SizedBox(height: 2),
             Text(

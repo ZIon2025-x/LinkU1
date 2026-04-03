@@ -27,6 +27,7 @@ import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/full_screen_image_view.dart';
 import '../../../core/utils/share_util.dart';
 import '../../../core/widgets/user_identity_badges.dart';
+import '../../../data/models/badge.dart';
 import '../../../core/widgets/animated_list_item.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/router/page_transitions.dart';
@@ -2465,6 +2466,10 @@ class _CounterpartyCard extends StatelessWidget {
                         Icon(Icons.workspace_premium,
                             size: 16, color: AppColors.gradientGold[1]),
                       ],
+                      if (info.displayedBadge != null) ...[
+                        const SizedBox(width: 4),
+                        InlineBadgeTag(badge: info.displayedBadge!),
+                      ],
                     ],
                   ),
                   if (info.isVerified) ...[
@@ -2525,6 +2530,7 @@ class _CounterpartyCard extends StatelessWidget {
             name: task.taker!.name,
             avatar: task.taker!.avatar,
             isVerified: task.taker!.isVerified,
+            displayedBadge: task.taker!.displayedBadge,
             roleLabel: task.isExpertActivityTask
                 ? context.l10n.taskDetailParticipant
                 : context.l10n.taskDetailApplicant,
@@ -2552,6 +2558,7 @@ class _CounterpartyCard extends StatelessWidget {
           avatar: expertBrief?.avatar,
           isVerified: expertBrief?.isVerified ?? false,
           isExpert: true,
+          displayedBadge: expertBrief?.displayedBadge,
           roleLabel: context.l10n.taskSourceExpertService,
           onTap: () {
             AppHaptics.selection();
@@ -2570,6 +2577,7 @@ class _CounterpartyCard extends StatelessWidget {
           name: task.taker!.name,
           avatar: task.taker!.avatar,
           isVerified: task.taker!.isVerified,
+          displayedBadge: task.taker!.displayedBadge,
           roleLabel: context.l10n.taskDetailSeller,
           onTap: () {
             AppHaptics.selection();
@@ -2583,6 +2591,7 @@ class _CounterpartyCard extends StatelessWidget {
           name: task.poster!.name,
           avatar: task.poster!.avatar,
           isVerified: task.poster!.isVerified,
+          displayedBadge: task.poster!.displayedBadge,
           roleLabel: context.l10n.taskDetailBuyer,
           onTap: () {
             AppHaptics.selection();
@@ -2600,6 +2609,7 @@ class _CounterpartyCard extends StatelessWidget {
         name: task.taker!.name,
         avatar: task.taker!.avatar,
         isVerified: task.taker!.isVerified,
+        displayedBadge: task.taker!.displayedBadge,
         roleLabel: context.l10n.taskDetailRecipient,
         onTap: () {
           AppHaptics.selection();
@@ -2613,6 +2623,7 @@ class _CounterpartyCard extends StatelessWidget {
         name: task.poster!.name,
         avatar: task.poster!.avatar,
         isVerified: task.poster!.isVerified,
+        displayedBadge: task.poster!.displayedBadge,
         roleLabel: context.l10n.taskDetailPublisher,
         onTap: () {
           AppHaptics.selection();
@@ -2634,6 +2645,7 @@ class _CounterpartyInfo {
     this.isExpert = false,
     required this.roleLabel,
     this.onTap,
+    this.displayedBadge,
   });
   final String name;
   final String? avatar;
@@ -2641,6 +2653,7 @@ class _CounterpartyInfo {
   final bool isExpert;
   final String roleLabel;
   final VoidCallback? onTap;
+  final UserBadge? displayedBadge;
 }
 
 // ============================================================

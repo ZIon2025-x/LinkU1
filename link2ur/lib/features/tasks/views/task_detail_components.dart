@@ -18,6 +18,7 @@ import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/widgets/bouncing_widget.dart';
 import '../../../core/widgets/animated_star_rating.dart';
+import '../../../core/widgets/user_identity_badges.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/utils/adaptive_dialogs.dart';
 import '../../../core/utils/date_formatter.dart';
@@ -1374,14 +1375,25 @@ class _ReviewItem extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (reviewerName != null) ...[
-            Text(
-              reviewerName,
-              style: AppTypography.caption.copyWith(
-                fontWeight: FontWeight.w600,
-                color: isDark
-                    ? AppColors.textSecondaryDark
-                    : AppColors.textSecondaryLight,
-              ),
+            Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    reviewerName,
+                    style: AppTypography.caption.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondaryLight,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (!review.isAnonymous && review.reviewer?.displayedBadge != null) ...[
+                  const SizedBox(width: 4),
+                  InlineBadgeTag(badge: review.reviewer!.displayedBadge!),
+                ],
+              ],
             ),
             const SizedBox(height: 4),
           ],
