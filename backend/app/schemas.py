@@ -2319,8 +2319,10 @@ class TaskExpertOut(BaseModel):
 class TaskExpertServiceCreate(BaseModel):
     service_name: str
     service_name_en: Optional[str] = None
+    service_name_zh: Optional[str] = None
     description: str
     description_en: Optional[str] = None
+    description_zh: Optional[str] = None
     category: Optional[str] = None
     images: Optional[List[str]] = None
     base_price: condecimal(gt=0, max_digits=12, decimal_places=2)  # 使用condecimal与DB的DECIMAL一致
@@ -2338,8 +2340,10 @@ class TaskExpertServiceCreate(BaseModel):
 class TaskExpertServiceUpdate(BaseModel):
     service_name: Optional[str] = None
     service_name_en: Optional[str] = None
+    service_name_zh: Optional[str] = None
     description: Optional[str] = None
     description_en: Optional[str] = None
+    description_zh: Optional[str] = None
     category: Optional[str] = None
     images: Optional[List[str]] = None
     base_price: Optional[condecimal(gt=0, max_digits=12, decimal_places=2)] = None  # 使用condecimal与DB的DECIMAL一致，避免精度丢失
@@ -2358,8 +2362,10 @@ class TaskExpertServiceUpdate(BaseModel):
 class PersonalServiceCreate(BaseModel):
     service_name: str = Field(..., max_length=100)
     service_name_en: Optional[str] = Field(None, max_length=100)
+    service_name_zh: Optional[str] = Field(None, max_length=100)
     description: str = Field(..., max_length=2000)
     description_en: Optional[str] = Field(None, max_length=2000)
+    description_zh: Optional[str] = Field(None, max_length=2000)
     category: Optional[str] = Field(None, max_length=50)
     base_price: Optional[condecimal(ge=0, max_digits=12, decimal_places=2)] = None
     currency: str = Field(default="GBP", max_length=10)
@@ -2381,8 +2387,10 @@ class PersonalServiceCreate(BaseModel):
 class PersonalServiceUpdate(BaseModel):
     service_name: Optional[str] = Field(None, max_length=100)
     service_name_en: Optional[str] = Field(None, max_length=100)
+    service_name_zh: Optional[str] = Field(None, max_length=100)
     description: Optional[str] = Field(None, max_length=2000)
     description_en: Optional[str] = Field(None, max_length=2000)
+    description_zh: Optional[str] = Field(None, max_length=2000)
     category: Optional[str] = Field(None, max_length=50)
     base_price: Optional[condecimal(ge=0, max_digits=12, decimal_places=2)] = None
     currency: Optional[str] = Field(None, max_length=10)
@@ -2405,7 +2413,11 @@ class PersonalServiceUpdate(BaseModel):
 class ServiceBrowseItem(BaseModel):
     id: int
     service_name: str
+    service_name_en: Optional[str] = None
+    service_name_zh: Optional[str] = None
     description: str
+    description_en: Optional[str] = None
+    description_zh: Optional[str] = None
     base_price: float
     currency: str
     pricing_type: str
@@ -2429,7 +2441,11 @@ class TaskExpertServiceOut(BaseModel):
     service_type: str = "expert"  # "expert" or "personal"
     user_id: Optional[str] = None  # personal service owner user_id
     service_name: str
+    service_name_en: Optional[str] = None
+    service_name_zh: Optional[str] = None
     description: str
+    description_en: Optional[str] = None
+    description_zh: Optional[str] = None
     images: Optional[List[str]]
     base_price: float
     currency: Literal["GBP", "EUR"]  # 统一为Literal类型
@@ -2467,7 +2483,11 @@ class TaskExpertServiceOut(BaseModel):
             "service_type": getattr(obj, "service_type", "expert") or "expert",
             "user_id": getattr(obj, "user_id", None),
             "service_name": obj.service_name,
+            "service_name_en": getattr(obj, "service_name_en", None),
+            "service_name_zh": getattr(obj, "service_name_zh", None),
             "description": obj.description,
+            "description_en": getattr(obj, "description_en", None),
+            "description_zh": getattr(obj, "description_zh", None),
             "images": obj.images,
             "base_price": float(obj.base_price),
             "currency": obj.currency,
