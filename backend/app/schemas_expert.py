@@ -1,0 +1,183 @@
+"""达人团队体系 Pydantic Schemas"""
+import datetime
+from typing import Optional, List, Literal
+from pydantic import BaseModel, Field, model_validator
+
+
+# ==================== Expert ====================
+
+class ExpertOut(BaseModel):
+    id: str
+    name: str
+    name_en: Optional[str] = None
+    name_zh: Optional[str] = None
+    bio: Optional[str] = None
+    bio_en: Optional[str] = None
+    bio_zh: Optional[str] = None
+    avatar: Optional[str] = None
+    status: str
+    allow_applications: bool
+    member_count: int
+    rating: float
+    total_services: int
+    completed_tasks: int
+    completion_rate: float
+    is_official: bool = False
+    official_badge: Optional[str] = None
+    stripe_onboarding_complete: bool = False
+    created_at: datetime.datetime
+    is_following: bool = False  # 当前用户是否关注（接口层填充）
+
+    class Config:
+        from_attributes = True
+
+
+class ExpertDetailOut(ExpertOut):
+    members: List["ExpertMemberOut"] = []
+    is_featured: bool = False
+
+
+# ==================== ExpertMember ====================
+
+class ExpertMemberOut(BaseModel):
+    id: int
+    user_id: str
+    user_name: Optional[str] = None
+    user_avatar: Optional[str] = None
+    role: str
+    status: str
+    joined_at: datetime.datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ==================== ExpertApplication (创建达人) ====================
+
+class ExpertApplicationCreate(BaseModel):
+    expert_name: str = Field(..., max_length=100)
+    bio: Optional[str] = None
+    avatar: Optional[str] = None
+    application_message: Optional[str] = None
+
+
+class ExpertApplicationOut(BaseModel):
+    id: int
+    user_id: str
+    expert_name: str
+    bio: Optional[str] = None
+    avatar: Optional[str] = None
+    application_message: Optional[str] = None
+    status: str
+    reviewed_by: Optional[str] = None
+    reviewed_at: Optional[datetime.datetime] = None
+    review_comment: Optional[str] = None
+    created_at: datetime.datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ExpertApplicationReview(BaseModel):
+    action: Literal["approve", "reject"]
+    review_comment: Optional[str] = None
+
+
+# ==================== ExpertJoinRequest ====================
+
+class ExpertJoinRequestCreate(BaseModel):
+    message: Optional[str] = None
+
+
+class ExpertJoinRequestOut(BaseModel):
+    id: int
+    expert_id: str
+    user_id: str
+    user_name: Optional[str] = None
+    user_avatar: Optional[str] = None
+    message: Optional[str] = None
+    status: str
+    created_at: datetime.datetime
+    reviewed_at: Optional[datetime.datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ExpertJoinRequestReview(BaseModel):
+    action: Literal["approve", "reject"]
+
+
+# ==================== ExpertInvitation ====================
+
+class ExpertInvitationCreate(BaseModel):
+    invitee_id: str
+
+
+class ExpertInvitationOut(BaseModel):
+    id: int
+    expert_id: str
+    inviter_id: str
+    invitee_id: str
+    invitee_name: Optional[str] = None
+    invitee_avatar: Optional[str] = None
+    status: str
+    created_at: datetime.datetime
+    responded_at: Optional[datetime.datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ExpertInvitationResponse(BaseModel):
+    action: Literal["accept", "reject"]
+
+
+# ==================== Role Management ====================
+
+class ExpertRoleChange(BaseModel):
+    role: Literal["admin", "member"]
+
+
+class ExpertTransfer(BaseModel):
+    new_owner_id: str
+
+
+# ==================== ExpertProfileUpdateRequest ====================
+
+class ExpertProfileUpdateCreate(BaseModel):
+    new_name: Optional[str] = Field(None, max_length=100)
+    new_bio: Optional[str] = None
+    new_avatar: Optional[str] = None
+
+    @model_validator(mode='after')
+    def check_at_least_one_field(self):
+        if not any([self.new_name, self.new_bio, self.new_avatar]):
+            raise ValueError("至少需要修改一个字段")
+        return self
+
+
+class ExpertProfileUpdateOut(BaseModel):
+    id: int
+    expert_id: str
+    requester_id: str
+    new_name: Optional[str] = None
+    new_bio: Optional[str] = None
+    new_avatar: Optional[str] = None
+    status: str
+    reviewed_by: Optional[str] = None
+    reviewed_at: Optional[datetime.datetime] = None
+    review_comment: Optional[str] = None
+    created_at: datetime.datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ExpertProfileUpdateReview(BaseModel):
+    action: Literal["approve", "reject"]
+    review_comment: Optional[str] = None
+
+
+# Forward ref
+ExpertDetailOut.model_rebuild()
