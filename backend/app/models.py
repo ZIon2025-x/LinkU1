@@ -3852,3 +3852,11 @@ class TrendingPinned(Base):
 
 
 from app.wallet_models import WalletAccount, WalletTransaction  # noqa: F401, E402
+
+# 达人团队体系模型（独立文件，合并到同一 metadata）
+from app.models_expert import (  # noqa: E402, F401
+    Expert, ExpertMember, ExpertApplication,
+    ExpertJoinRequest, ExpertInvitation, ExpertFollow,
+    ExpertProfileUpdateRequest, FeaturedExpertV2,
+    generate_expert_id,
+)
