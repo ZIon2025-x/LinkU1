@@ -533,6 +533,13 @@ app.include_router(questions_router)
 from app.wallet_routes import router as wallet_router
 app.include_router(wallet_router, tags=["钱包系统"])
 
+# 达人团队路由
+from app.expert_routes import expert_router
+app.include_router(expert_router)
+
+from app.admin_expert_routes import admin_expert_router
+app.include_router(admin_expert_router)
+
 # 创建上传目录
 import os
 RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
