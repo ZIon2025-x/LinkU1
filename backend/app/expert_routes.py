@@ -328,9 +328,9 @@ async def list_members(
     expert_id: str,
     request: Request,
     db: AsyncSession = Depends(get_async_db_dependency),
-    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    current_user: Optional[models.User] = Depends(get_current_user_optional),
 ):
-    """查看团队成员列表"""
+    """查看团队成员列表（公开）"""
     await _get_expert_or_404(db, expert_id)
 
     result = await db.execute(

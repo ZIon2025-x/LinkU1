@@ -92,9 +92,9 @@ class ExpertMember(Base):
 
     __table_args__ = (
         UniqueConstraint("expert_id", "user_id", name="uq_expert_member"),
-        Index("ix_expert_members_expert_id", "expert_id"),
-        Index("ix_expert_members_user_id", "user_id"),
-        Index("ix_expert_members_status", "status"),
+        # 部分索引匹配 SQL migration 158
+        Index("ix_expert_members_user", "user_id", postgresql_where="status = 'active'"),
+        Index("ix_expert_members_expert_role", "expert_id", "role", postgresql_where="status = 'active'"),
     )
 
 

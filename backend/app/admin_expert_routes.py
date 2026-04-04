@@ -109,6 +109,8 @@ async def review_expert_application(
                 if existing.scalar_one_or_none() is None:
                     break
                 expert_id = generate_expert_id()
+            else:
+                raise HTTPException(status_code=500, detail="Failed to generate unique expert ID")
 
             # 创建达人团队记录
             expert = Expert(
