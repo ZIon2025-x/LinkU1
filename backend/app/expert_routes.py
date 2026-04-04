@@ -168,6 +168,7 @@ async def list_my_teams(
             and_(
                 ExpertMember.user_id == current_user.id,
                 ExpertMember.status == "active",
+                Expert.status.in_(["active", "inactive"]),
             )
         )
         .order_by(Expert.created_at.desc())
@@ -201,7 +202,7 @@ async def list_my_teams(
 async def list_experts(
     request: Request,
     keyword: Optional[str] = Query(None),
-    sort: Optional[str] = Query("created_at", regex="^(rating|created_at|completed_tasks)$"),
+    sort: Optional[str] = Query("created_at", pattern="^(rating|created_at|completed_tasks)$"),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_async_db_dependency),
@@ -340,12 +341,12 @@ async def toggle_follow(
     if existing:
         await db.delete(existing)
         await db.commit()
-        return {"followed": False}
+        return {"following": False}
     else:
         follow = ExpertFollow(user_id=current_user.id, expert_id=expert_id)
         db.add(follow)
         await db.commit()
-        return {"followed": True}
+        return {"following": True}
 
 
 # ==================== 7. GET /{expert_id}/members ====================

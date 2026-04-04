@@ -1,7 +1,7 @@
 """达人团队体系 Pydantic Schemas"""
 import datetime
 from typing import Optional, List, Literal
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 # ==================== Expert ====================
@@ -149,6 +149,12 @@ class ExpertProfileUpdateCreate(BaseModel):
     new_name: Optional[str] = Field(None, max_length=100)
     new_bio: Optional[str] = None
     new_avatar: Optional[str] = None
+
+    @model_validator(mode='after')
+    def check_at_least_one_field(self):
+        if not any([self.new_name, self.new_bio, self.new_avatar]):
+            raise ValueError("至少需要修改一个字段")
+        return self
 
 
 class ExpertProfileUpdateOut(BaseModel):

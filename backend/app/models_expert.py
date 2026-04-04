@@ -70,7 +70,7 @@ class Expert(Base):
 
     __table_args__ = (
         Index("ix_experts_status", "status"),
-        Index("ix_experts_is_official", "is_official"),
+        Index("ix_experts_rating", "rating"),
     )
 
 
