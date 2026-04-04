@@ -15,6 +15,7 @@ import 'routes/message_routes.dart';
 import 'routes/profile_routes.dart';
 import 'routes/activity_routes.dart';
 import 'routes/task_expert_routes.dart';
+import 'routes/expert_team_routes.dart';
 import 'routes/info_routes.dart';
 import 'routes/payment_routes.dart';
 import 'routes/misc_routes.dart';
@@ -178,6 +179,8 @@ class AppRouter {
       ...fleaMarketRoutes,
 
       ...taskExpertRoutes,
+
+      ...expertTeamRoutes,
 
       ...personalServiceRoutes,
 

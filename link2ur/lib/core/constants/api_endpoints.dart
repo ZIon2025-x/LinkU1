@@ -254,6 +254,30 @@ class ApiEndpoints {
   static String closeConsultation(int applicationId) =>
       '/api/task-experts/applications/$applicationId/close';
 
+  // ==================== Expert Team ====================
+  static const String expertTeams = '/api/experts';
+  static const String expertTeamApply = '/api/experts/apply';
+  static const String expertTeamMyApplications = '/api/experts/my-applications';
+  static const String expertTeamMyTeams = '/api/experts/my-teams';
+  static String expertTeamById(String id) => '/api/experts/$id';
+  static String expertTeamMembers(String id) => '/api/experts/$id/members';
+  static String expertTeamFollow(String id) => '/api/experts/$id/follow';
+  static String expertTeamInvite(String id) => '/api/experts/$id/invite';
+  static String expertTeamJoin(String id) => '/api/experts/$id/join';
+  static String expertTeamJoinRequests(String id) => '/api/experts/$id/join-requests';
+  static String expertTeamReviewJoinRequest(String expertId, int requestId) =>
+      '/api/experts/$expertId/join-requests/$requestId';
+  static String expertTeamMemberRole(String expertId, String userId) =>
+      '/api/experts/$expertId/members/$userId/role';
+  static String expertTeamTransfer(String id) => '/api/experts/$id/transfer';
+  static String expertTeamRemoveMember(String expertId, String userId) =>
+      '/api/experts/$expertId/members/$userId';
+  static String expertTeamLeave(String id) => '/api/experts/$id/leave';
+  static String expertTeamProfileUpdateRequest(String id) =>
+      '/api/experts/$id/profile-update-request';
+  static String expertTeamRespondInvitation(int invitationId) =>
+      '/api/experts/invitations/$invitationId/respond';
+
   // Task consultation endpoints
   static String consultTask(int taskId) => '/api/tasks/$taskId/consult';
   static String taskConsultNegotiate(int taskId, int applicationId) =>

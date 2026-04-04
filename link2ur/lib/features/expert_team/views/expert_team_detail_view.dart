@@ -1,0 +1,412 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
+import 'package:link2ur/data/models/expert_team.dart';
+import 'package:link2ur/data/repositories/expert_team_repository.dart';
+import 'package:link2ur/data/services/storage_service.dart';
+import 'package:link2ur/features/expert_team/bloc/expert_team_bloc.dart';
+
+class ExpertTeamDetailView extends StatelessWidget {
+  final String expertId;
+
+  const ExpertTeamDetailView({super.key, required this.expertId});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => ExpertTeamBloc(
+        repository: context.read<ExpertTeamRepository>(),
+      )..add(ExpertTeamLoadDetail(expertId)),
+      child: _ExpertTeamDetailBody(expertId: expertId),
+    );
+  }
+}
+
+class _ExpertTeamDetailBody extends StatelessWidget {
+  final String expertId;
+
+  const _ExpertTeamDetailBody({required this.expertId});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocListener<ExpertTeamBloc, ExpertTeamState>(
+      listenWhen: (prev, curr) =>
+          curr.actionMessage != prev.actionMessage ||
+          curr.errorMessage != prev.errorMessage,
+      listener: (context, state) {
+        final msg = state.actionMessage ?? state.errorMessage;
+        if (msg != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(msg)),
+          );
+        }
+      },
+      child: BlocBuilder<ExpertTeamBloc, ExpertTeamState>(
+        builder: (context, state) {
+          return Scaffold(
+            appBar: AppBar(
+              title: Text(state.currentTeam?.name ?? '团队详情'),
+            ),
+            body: _buildBody(context, state),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildBody(BuildContext context, ExpertTeamState state) {
+    if (state.status == ExpertTeamStatus.loading && state.currentTeam == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (state.status == ExpertTeamStatus.error && state.currentTeam == null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(state.errorMessage ?? '加载失败'),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () =>
+                  context.read<ExpertTeamBloc>().add(ExpertTeamLoadDetail(expertId)),
+              child: const Text('重试'),
+            ),
+          ],
+        ),
+      );
+    }
+    final team = state.currentTeam;
+    if (team == null) {
+      return const Center(child: Text('未找到团队信息'));
+    }
+    return _ExpertTeamDetailContent(team: team, expertId: expertId);
+  }
+}
+
+class _ExpertTeamDetailContent extends StatelessWidget {
+  final ExpertTeam team;
+  final String expertId;
+
+  const _ExpertTeamDetailContent({required this.team, required this.expertId});
+
+  @override
+  Widget build(BuildContext context) {
+    final currentUserId = StorageService.instance.getUserId();
+    final members = team.members ?? [];
+    final currentMember = members.firstWhere(
+      (m) => m.userId == currentUserId,
+      orElse: () => const ExpertMember(id: -1, userId: '', role: ''),
+    );
+    final isInTeam = currentMember.id != -1;
+    final isOwner = isInTeam && currentMember.isOwner;
+    final canManage = isInTeam && currentMember.canManage;
+    final previewMembers = members.take(5).toList();
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildHeader(context, team),
+          const SizedBox(height: 16),
+          _buildStatsRow(context, team),
+          const SizedBox(height: 16),
+          if (previewMembers.isNotEmpty) ...[
+            _buildMembersSection(context, previewMembers, team),
+            const SizedBox(height: 16),
+          ],
+          _buildActionButtons(context, team, isInTeam, canManage, currentMember),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context, ExpertTeam team) {
+    final statusColor = team.status == 'active' ? Colors.green : Colors.grey;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        CircleAvatar(
+          radius: 40,
+          backgroundImage: team.avatar != null ? NetworkImage(team.avatar!) : null,
+          child: team.avatar == null
+              ? Text(
+                  team.name.isNotEmpty ? team.name[0].toUpperCase() : '?',
+                  style: const TextStyle(fontSize: 28),
+                )
+              : null,
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      team.name,
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                  ),
+                  if (team.isOfficial)
+                    Container(
+                      margin: const EdgeInsets.only(left: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.blue,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text(
+                        '官方',
+                        style: TextStyle(color: Colors.white, fontSize: 11),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: statusColor.withAlpha(30),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  team.status == 'active' ? '运营中' : '已停止',
+                  style: TextStyle(color: statusColor, fontSize: 12),
+                ),
+              ),
+              if (team.bio != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  team.bio!,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatsRow(BuildContext context, ExpertTeam team) {
+    return Row(
+      children: [
+        _StatItem(label: '成员', value: team.memberCount.toString()),
+        _StatItem(label: '服务', value: team.totalServices.toString()),
+        _StatItem(label: '完成', value: team.completedTasks.toString()),
+        _StatItem(
+          label: '评分',
+          value: team.rating.toStringAsFixed(1),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMembersSection(
+    BuildContext context,
+    List<ExpertMember> previewMembers,
+    ExpertTeam team,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              '成员 (${team.memberCount})',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            if (team.memberCount > 5)
+              TextButton(
+                onPressed: () => context.push('/expert-teams/$expertId/members'),
+                child: const Text('查看全部'),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 12,
+          runSpacing: 8,
+          children: previewMembers.map((m) => _MemberChip(member: m)).toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionButtons(
+    BuildContext context,
+    ExpertTeam team,
+    bool isInTeam,
+    bool canManage,
+    ExpertMember currentMember,
+  ) {
+    final bloc = context.read<ExpertTeamBloc>();
+
+    if (canManage) {
+      return SizedBox(
+        width: double.infinity,
+        child: ElevatedButton(
+          onPressed: () => context.push('/expert-teams/$expertId/members'),
+          child: const Text('管理成员'),
+        ),
+      );
+    }
+
+    if (isInTeam) {
+      return SizedBox(
+        width: double.infinity,
+        child: OutlinedButton(
+          style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+          onPressed: () => _confirmLeave(context, bloc),
+          child: const Text('退出团队'),
+        ),
+      );
+    }
+
+    // Visitor
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ElevatedButton(
+          onPressed: () => bloc.add(ExpertTeamToggleFollow(expertId)),
+          child: Text(team.isFollowing ? '取消关注' : '关注'),
+        ),
+        if (team.allowApplications) ...[
+          const SizedBox(height: 8),
+          OutlinedButton(
+            onPressed: () => bloc.add(ExpertTeamRequestJoin(expertId: expertId)),
+            child: const Text('申请加入'),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Future<void> _confirmLeave(BuildContext context, ExpertTeamBloc bloc) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('退出团队'),
+        content: const Text('确认退出该团队？此操作无法撤销。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('确认退出', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      bloc.add(ExpertTeamLeave(expertId));
+    }
+  }
+}
+
+class _StatItem extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _StatItem({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: Theme.of(context)
+                .textTheme
+                .titleMedium
+                ?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          Text(label, style: Theme.of(context).textTheme.bodySmall),
+        ],
+      ),
+    );
+  }
+}
+
+class _MemberChip extends StatelessWidget {
+  final ExpertMember member;
+
+  const _MemberChip({required this.member});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        CircleAvatar(
+          radius: 24,
+          backgroundImage:
+              member.userAvatar != null ? NetworkImage(member.userAvatar!) : null,
+          child: member.userAvatar == null
+              ? Text(
+                  (member.userName ?? '?').isNotEmpty
+                      ? (member.userName ?? '?')[0].toUpperCase()
+                      : '?',
+                )
+              : null,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          member.userName ?? member.userId,
+          style: const TextStyle(fontSize: 12),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        _RoleBadge(role: member.role),
+      ],
+    );
+  }
+}
+
+class _RoleBadge extends StatelessWidget {
+  final String role;
+
+  const _RoleBadge({required this.role});
+
+  @override
+  Widget build(BuildContext context) {
+    Color bgColor;
+    Color textColor;
+    String label;
+
+    switch (role) {
+      case 'owner':
+        bgColor = Colors.blue;
+        textColor = Colors.white;
+        label = '所有者';
+        break;
+      case 'admin':
+        bgColor = Colors.orange;
+        textColor = Colors.white;
+        label = '管理员';
+        break;
+      default:
+        bgColor = Colors.grey.shade200;
+        textColor = Colors.black87;
+        label = '成员';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(color: textColor, fontSize: 10),
+      ),
+    );
+  }
+}
