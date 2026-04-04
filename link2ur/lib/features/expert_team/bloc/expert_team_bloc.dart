@@ -145,7 +145,7 @@ class ExpertTeamState extends Equatable {
   ExpertTeamState copyWith({
     ExpertTeamStatus? status,
     List<ExpertTeam>? myTeams,
-    ExpertTeam? currentTeam,
+    ExpertTeam? Function()? currentTeam,
     List<ExpertMember>? members,
     List<ExpertTeamApplication>? myApplications,
     List<ExpertJoinRequest>? joinRequests,
@@ -155,7 +155,7 @@ class ExpertTeamState extends Equatable {
     return ExpertTeamState(
       status: status ?? this.status,
       myTeams: myTeams ?? this.myTeams,
-      currentTeam: currentTeam ?? this.currentTeam,
+      currentTeam: currentTeam != null ? currentTeam() : this.currentTeam,
       members: members ?? this.members,
       myApplications: myApplications ?? this.myApplications,
       joinRequests: joinRequests ?? this.joinRequests,
@@ -207,7 +207,7 @@ class ExpertTeamBloc extends Bloc<ExpertTeamEvent, ExpertTeamState> {
     emit(state.copyWith(status: ExpertTeamStatus.loading));
     try {
       final team = await _repository.getExpertById(event.expertId);
-      emit(state.copyWith(status: ExpertTeamStatus.loaded, currentTeam: team));
+      emit(state.copyWith(status: ExpertTeamStatus.loaded, currentTeam: () => team));
     } catch (e) {
       emit(state.copyWith(status: ExpertTeamStatus.error, errorMessage: e.toString()));
     }

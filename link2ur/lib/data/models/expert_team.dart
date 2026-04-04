@@ -90,7 +90,13 @@ class ExpertTeam extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, name, status, memberCount, rating, isFollowing];
+  List<Object?> get props => [
+        id, name, nameEn, nameZh, bio, bioEn, bioZh, avatar,
+        status, allowApplications, memberCount, rating,
+        totalServices, completedTasks, completionRate,
+        isOfficial, officialBadge, stripeOnboardingComplete,
+        createdAt, isFollowing, members, isFeatured,
+      ];
 }
 
 /// 达人团队成员

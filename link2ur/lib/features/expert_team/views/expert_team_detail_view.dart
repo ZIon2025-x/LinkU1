@@ -98,6 +98,7 @@ class _ExpertTeamDetailContent extends StatelessWidget {
     );
     final isInTeam = currentMember.id != -1;
     final isOwner = isInTeam && currentMember.isOwner;
+    final canManage = isInTeam && currentMember.canManage;
     final previewMembers = members.take(5).toList();
 
     return SingleChildScrollView(
@@ -113,7 +114,7 @@ class _ExpertTeamDetailContent extends StatelessWidget {
             _buildMembersSection(context, previewMembers, team),
             const SizedBox(height: 16),
           ],
-          _buildActionButtons(context, team, isInTeam, isOwner, currentMember),
+          _buildActionButtons(context, team, isInTeam, canManage, currentMember),
         ],
       ),
     );
@@ -240,12 +241,12 @@ class _ExpertTeamDetailContent extends StatelessWidget {
     BuildContext context,
     ExpertTeam team,
     bool isInTeam,
-    bool isOwner,
+    bool canManage,
     ExpertMember currentMember,
   ) {
     final bloc = context.read<ExpertTeamBloc>();
 
-    if (isOwner) {
+    if (canManage) {
       return SizedBox(
         width: double.infinity,
         child: ElevatedButton(

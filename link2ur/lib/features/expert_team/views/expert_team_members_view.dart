@@ -51,22 +51,24 @@ class _ExpertTeamMembersBody extends StatelessWidget {
             (m) => m.userId == currentUserId,
             orElse: () => const ExpertMember(id: -1, userId: '', role: ''),
           );
+          final canManage = currentMember.id != -1 && currentMember.canManage;
           final isOwner = currentMember.id != -1 && currentMember.isOwner;
 
           return Scaffold(
             appBar: AppBar(
               title: const Text('成员管理'),
               actions: [
-                IconButton(
-                  icon: const Icon(Icons.assignment_ind_outlined),
-                  tooltip: '加入申请',
-                  onPressed: () =>
-                      context.push('/expert-teams/$expertId/join-requests'),
-                ),
+                if (canManage)
+                  IconButton(
+                    icon: const Icon(Icons.assignment_ind_outlined),
+                    tooltip: '加入申请',
+                    onPressed: () =>
+                        context.push('/expert-teams/$expertId/join-requests'),
+                  ),
               ],
             ),
-            body: _buildBody(context, state, members, isOwner),
-            floatingActionButton: isOwner
+            body: _buildBody(context, state, members, canManage, isOwner),
+            floatingActionButton: canManage
                 ? FloatingActionButton(
                     onPressed: () => _showInviteDialog(context),
                     child: const Icon(Icons.person_add),
@@ -82,6 +84,7 @@ class _ExpertTeamMembersBody extends StatelessWidget {
     BuildContext context,
     ExpertTeamState state,
     List<ExpertMember> members,
+    bool canManage,
     bool isOwner,
   ) {
     if (state.status == ExpertTeamStatus.loading && members.isEmpty) {
@@ -98,6 +101,7 @@ class _ExpertTeamMembersBody extends StatelessWidget {
         return _MemberListItem(
           member: member,
           expertId: expertId,
+          canManage: canManage,
           isOwner: isOwner,
         );
       },
@@ -148,17 +152,20 @@ class _ExpertTeamMembersBody extends StatelessWidget {
 class _MemberListItem extends StatelessWidget {
   final ExpertMember member;
   final String expertId;
+  final bool canManage;
   final bool isOwner;
 
   const _MemberListItem({
     required this.member,
     required this.expertId,
+    required this.canManage,
     required this.isOwner,
   });
 
   @override
   Widget build(BuildContext context) {
-    final showMenu = isOwner && !member.isOwner;
+    // Admin 可以看到非 owner 的菜单；只有 Owner 能看到转让/角色变更
+    final showMenu = canManage && !member.isOwner;
 
     return ListTile(
       leading: CircleAvatar(
@@ -178,7 +185,7 @@ class _MemberListItem extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           _RoleBadge(role: member.role),
-          if (showMenu) _MemberMenuButton(member: member, expertId: expertId),
+          if (showMenu) _MemberMenuButton(member: member, expertId: expertId, isOwner: isOwner),
         ],
       ),
     );
@@ -188,8 +195,9 @@ class _MemberListItem extends StatelessWidget {
 class _MemberMenuButton extends StatelessWidget {
   final ExpertMember member;
   final String expertId;
+  final bool isOwner;
 
-  const _MemberMenuButton({required this.member, required this.expertId});
+  const _MemberMenuButton({required this.member, required this.expertId, required this.isOwner});
 
   @override
   Widget build(BuildContext context) {
@@ -198,18 +206,23 @@ class _MemberMenuButton extends StatelessWidget {
     return PopupMenuButton<String>(
       onSelected: (action) => _handleAction(context, action, bloc),
       itemBuilder: (context) => [
-        PopupMenuItem(
-          value: 'toggle_role',
-          child: Text(member.isAdmin ? '设为成员' : '设为管理员'),
-        ),
+        // 只有 Owner 可以修改角色
+        if (isOwner)
+          PopupMenuItem(
+            value: 'toggle_role',
+            child: Text(member.isAdmin ? '设为成员' : '设为管理员'),
+          ),
+        // Owner 和 Admin 都可以移除成员（但只能移除比自己角色低的）
         const PopupMenuItem(
           value: 'remove',
           child: Text('移除成员', style: TextStyle(color: Colors.red)),
         ),
-        const PopupMenuItem(
-          value: 'transfer',
-          child: Text('转让所有权', style: TextStyle(color: Colors.orange)),
-        ),
+        // 只有 Owner 可以转让
+        if (isOwner)
+          const PopupMenuItem(
+            value: 'transfer',
+            child: Text('转让所有权', style: TextStyle(color: Colors.orange)),
+          ),
       ],
     );
   }
