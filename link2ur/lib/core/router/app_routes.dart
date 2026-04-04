@@ -41,6 +41,14 @@ class AppRoutes {
   static const String expertDashboard = '/expert-dashboard';
   static const String expertProfileEdit = '/expert-profile-edit';
 
+  // 达人团队管理
+  static const String expertTeamMyTeams = '/expert-teams';
+  static const String expertTeamDetail = '/expert-teams/:id';
+  static const String expertTeamMembers = '/expert-teams/:id/members';
+  static const String expertTeamCreate = '/expert-teams/create';
+  static const String expertTeamJoinRequests = '/expert-teams/:id/join-requests';
+  static const String expertTeamInvitations = '/expert-teams/invitations';
+
   // 论坛
   static const String forum = '/forum';
   static const String forumPostDetail = '/forum/posts/:id';
