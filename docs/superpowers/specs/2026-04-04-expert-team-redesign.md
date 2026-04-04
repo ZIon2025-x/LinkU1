@@ -51,6 +51,11 @@
 | 41 | 员工分配 | 不做系统级分配，咨询时自行协商 |
 | 42 | 评价回复 | reviews 表加 reply_content/reply_at/reply_by 字段 |
 | 43 | 达人优惠券 | coupons 表加 expert_id 字段，达人自行创建管理，免审核 |
+| 44 | 达人多语言 | experts 表支持 name/bio 的中英文字段 |
+| 45 | 达人板块展示 | 论坛独立"达人"Tab，不和其他板块混排 |
+| 46 | 关注 feed 联动 | 关注达人后，动态流推送该达人新帖 |
+| 47 | 达人搜索 | 独立达人搜索 + 服务搜索间接发现 |
+| 48 | 达人板块命名 | 达人可自由编辑板块名称和描述，无需审核 |
 
 ## 现有架构问题
 
@@ -117,9 +122,16 @@ experts (1) → (0..1) featured_experts [展示控制]
 |------|------|------|
 | id | VARCHAR(8) PK | 随机字符串，独立于用户 ID |
 | name | VARCHAR(100) NOT NULL | 团队品牌名称 |
+| name_en | VARCHAR(100) | 英文名称 |
+| name_zh | VARCHAR(100) | 中文名称 |
 | bio | TEXT | 团队简介 |
+| bio_en | TEXT | 英文简介 |
+| bio_zh | TEXT | 中文简介 |
 | avatar | TEXT | 团队头像 URL |
-| status | VARCHAR(20) DEFAULT 'active' | active / inactive / suspended |
+| status | VARCHAR(20) DEFAULT 'active' | active / inactive / suspended / dissolved |
+| stripe_account_id | VARCHAR(255), nullable | Stripe Connect 账户 ID |
+| stripe_connect_country | VARCHAR(10), nullable | Stripe Connect 国家 |
+| stripe_onboarding_complete | BOOL DEFAULT false | Stripe 入驻是否完成 |
 | allow_applications | BOOL DEFAULT true | 是否开放申请加入团队 |
 | max_members | INT DEFAULT 20 | 成员上限 |
 | member_count | INT DEFAULT 1 | 当前成员数（冗余，事件更新） |
@@ -424,10 +436,12 @@ experts (1) → (0..1) featured_experts [展示控制]
 
 达人板块创建时自动设置：
 - `type = 'expert'`
-- `name = 达人团队名称`
+- `name = 达人团队名称`（初始值，达人可自由修改）
 - `expert_id = 达人 ID`
 - `is_visible = true`
 - `is_admin_only = false`
+
+达人 Owner/Admin 可以自由编辑板块名称和描述，无需审核。板块名称不强制和达人团队名一致。
 
 ### 帖子身份标识
 
@@ -449,6 +463,22 @@ experts (1) → (0..1) featured_experts [展示控制]
 1. 如果板块 `type = 'expert'`，检查操作者是否为该达人的 Owner 或 Admin
 2. 如果板块是其他类型，走现有的平台管理员权限逻辑
 3. 平台管理员对所有板块始终有权限（兜底）
+
+### 论坛展示方式
+
+达人板块在论坛页使用独立的"达人"Tab，不和通用/技能/地区等板块混排。
+
+- 论坛页顶部 Tab：`全部` / `通用` / `技能` / `地区` / **`达人`**
+- "达人"Tab 内展示所有达人板块列表，支持搜索/分类筛选
+- 其他 Tab 不显示达人板块
+
+### 关注 feed 联动
+
+用户关注达人后，该达人板块的新帖子会推送到用户的动态流：
+
+- 达人成员发帖时，查 `expert_follows` 获取所有关注者
+- 向关注者的 feed 插入一条动态（复用现有 follow feed 机制）
+- 推送内容："[达人名] 发布了新帖子：[帖子标题]"
 
 ### 发帖权限
 
@@ -556,7 +586,9 @@ experts (1) → (0..1) featured_experts [展示控制]
    - 其他字段直接映射
 
 6. **更新 FK 引用**：
-   - `service_applications.expert_id` → 使用新 expert_id
+   - `service_applications.expert_id` → 改 FK 指向 `experts.id`，使用新 expert_id
+   - `service_applications.service_owner_id` → 保留不变（个人服务时有值）
+   - `activities.expert_id` → 改 FK 从 `users.id` 指向 `experts.id`，使用新 expert_id
    - `service_time_slots` 的 service_id 不变（services 表 ID 保持一致或重新映射）
    - `expert_closed_dates.expert_id` → 新 expert_id
 
@@ -594,6 +626,38 @@ experts (1) → (0..1) featured_experts [展示控制]
 **任务聊天多人化：**
 - `POST /api/chat/tasks/{task_id}/invite` — 邀请团队成员进入聊天
 - `GET /api/chat/tasks/{task_id}/participants` — 获取聊天参与者列表
+
+**个人服务：**
+- `POST /api/services/personal` — 创建个人服务
+- `GET /api/services/personal/me` — 我的个人服务列表
+- `PUT /api/services/personal/{id}` — 编辑个人服务
+- `DELETE /api/services/personal/{id}` — 删除个人服务
+
+**达人搜索/发现：**
+- `GET /api/experts/search` — 搜索达人（按名称/分类/技能）
+- `GET /api/experts/featured` — 精选达人列表
+
+**达人关注：**
+- `POST /api/experts/{id}/follow` — 关注/取消关注达人
+- `GET /api/experts/{id}/follow/status` — 关注状态
+- `GET /api/my/following-experts` — 我关注的达人列表
+
+**达人优惠券：**
+- `POST /api/experts/{id}/coupons` — 创建达人优惠券
+- `GET /api/experts/{id}/coupons` — 达人优惠券列表
+- `PUT /api/experts/{id}/coupons/{cid}` — 编辑优惠券
+- `DELETE /api/experts/{id}/coupons/{cid}` — 停用优惠券
+
+**套餐/次卡：**
+- `POST /api/services/{id}/packages/purchase` — 购买套餐
+- `GET /api/my/packages` — 我的套餐列表
+- `POST /api/experts/{id}/packages/{pid}/use` — 核销一次
+
+**评价回复：**
+- `POST /api/reviews/{id}/reply` — 达人回复评价
+
+**达人板块管理：**
+- `PUT /api/experts/{id}/board` — 编辑达人板块名称和描述
 
 ### 改造端点
 
