@@ -29,6 +29,28 @@
 | 19 | 板块发帖权 | 仅团队成员可发帖，所有人可评论/回复 |
 | 20 | 帖子作者显示 | "团队名 · 个人名" |
 | 21 | 达人内部群聊 | 纯内部，成员自动同步，私密 |
+| 22 | 服务咨询回复 | Owner/Admin 都能回复，需要 Member 协助时邀请进聊天 |
+| 23 | 咨询通知 | 通知所有 Owner + Admin |
+| 24 | 关注体系 | 关注达人和关注用户分开，新增 expert_follows 表 |
+| 25 | 评价体系 | reviews 表新增 expert_id 字段，达人评价和普通评价共表区分 |
+| 26 | 达人服务审核 | 不需要审核，Owner/Admin 可自行创建和编辑 |
+| 27 | 达人活动审核 | 需要管理员审核 |
+| 28 | 拼单模式 | 活动支持拼单，N 人成单，在 activities 表上扩展字段 |
+| 29 | 拼单付款 | Stripe 预授权，成单后扣款，未成单自动释放 |
+| 30 | 拼单进度 | 完全公开，显示"已拼 X/N 人" |
+| 31 | 拼单成单后任务 | 达人自选：每人独立任务 或 一个多人任务 |
+| 32 | 拼单轮次 | 达人自选：单轮 或 多轮自动开 |
+| 33 | 拼单截止 | 达人自选：设截止日期 或 不设时间限制 |
+| 34 | 拼单取消 | 成单前用户可随时取消，预授权自动释放 |
+| 35 | 活动奖励 | 暂停现金返现，只保留积分奖励 |
+| 36 | 达人收款 | 达人团队独立 Stripe Connect 账户，不用 Owner 个人账户 |
+| 37 | 达人注销 | 有进行中任务不可注销；注销时服务自动下架，板块帖子隐藏 |
+| 38 | 成员退出 | 自动移出内部群聊和所有任务聊天；Owner 始终保留在每个达人任务聊天中 |
+| 39 | 活动关联服务 | 不强制；不关联服务的活动可用 lottery/first_come 类型 |
+| 40 | 套餐/次卡 | services 表加 package_type 字段，支持单次/次卡/组合套餐 |
+| 41 | 员工分配 | 不做系统级分配，咨询时自行协商 |
+| 42 | 评价回复 | reviews 表加 reply_content/reply_at/reply_by 字段 |
+| 43 | 达人优惠券 | coupons 表加 expert_id 字段，达人自行创建管理，免审核 |
 
 ## 现有架构问题
 
@@ -204,6 +226,24 @@ experts (1) → (0..1) featured_experts [展示控制]
 约束：
 - Partial unique: `UNIQUE(expert_id, invitee_id)` WHERE status = 'pending'
 
+### `expert_follows`（新表：关注达人）
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | INT PK AUTO | 自增 |
+| user_id | VARCHAR(8) FK → users ON DELETE CASCADE | 关注者 |
+| expert_id | VARCHAR(8) FK → experts ON DELETE CASCADE | 被关注的达人 |
+| created_at | DATETIME | 关注时间 |
+
+约束：
+- `UNIQUE(user_id, expert_id)`
+
+索引：
+- `ix_expert_follows_user` (user_id)
+- `ix_expert_follows_expert` (expert_id)
+
+与现有 `user_follows`（用户关注用户）完全独立，互不影响。
+
 ### `expert_profile_update_requests`（保留，改关联）
 
 | 字段 | 类型 | 说明 |
@@ -282,6 +322,22 @@ experts (1) → (0..1) featured_experts [展示控制]
 
 `service_applications` 和 `service_time_slots` 结构基本不变，FK 指向 `services.id`。
 
+### `reviews` 表变更（现有表扩展）
+
+新增字段：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| expert_id | VARCHAR(8) FK → experts ON DELETE SET NULL, nullable | 被评价的达人团队 |
+
+- `expert_id` 为 NULL → 普通任务评价（用户 ↔ 用户）
+- `expert_id` 不为 NULL → 达人服务评价（用户 → 达人团队）
+- 当任务来源于达人服务时，创建评价时自动填入 `expert_id`
+- 达人的 `experts.rating` 从 `reviews WHERE expert_id = ?` 聚合计算并事件更新
+
+索引：
+- `ix_reviews_expert_id` (expert_id) WHERE expert_id IS NOT NULL
+
 ## 角色权限矩阵
 
 ### 达人团队管理
@@ -300,11 +356,22 @@ experts (1) → (0..1) featured_experts [展示控制]
 
 | 操作 | Owner | Admin | Member |
 |------|-------|-------|--------|
-| 创建/编辑/删除服务 | ✅ | ✅ | ❌ |
-| 创建/编辑/删除活动 | ✅ | ✅ | ❌ |
+| 创建/编辑/删除服务（无需审核） | ✅ | ✅ | ❌ |
+| 创建/编辑活动（需管理员审核） | ✅ | ✅ | ❌ |
+| 删除活动 | ✅ | ✅ | ❌ |
 | 管理时间段 | ✅ | ✅ | ❌ |
 | 处理服务申请（审批/拒绝/协商） | ✅ | ✅ | ❌ |
 | 管理关门日期 | ✅ | ✅ | ❌ |
+
+### 服务咨询
+
+| 操作 | Owner | Admin | Member |
+|------|-------|-------|--------|
+| 查看/回复用户咨询 | ✅ | ✅ | ❌ |
+| 接收咨询通知 | ✅ | ✅ | ❌ |
+| 被邀请进咨询聊天协助 | ✅ | ✅ | ✅ |
+
+用户对达人服务发起咨询时，所有 Owner 和 Admin 收到通知，谁有空谁回复。如果需要 Member 协助，Owner/Admin 可以通过邀请进聊天的方式拉人（走任务聊天多人化流程）。
 
 ### 任务聊天
 
@@ -543,6 +610,232 @@ experts (1) → (0..1) featured_experts [展示控制]
 - `POST /api/forums/posts/{id}/feature` — 达人板块内 Owner/Admin 可操作
 - `DELETE /api/forums/posts/{id}` — 达人板块内 Owner/Admin 可操作
 
+## 套餐/次卡
+
+### `services` 表新增字段
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| package_type | VARCHAR(20) DEFAULT 'single' | single（单次）/ multi_session（次卡）/ bundle（组合套餐） |
+| total_sessions | INT, nullable | 次卡总次数（仅 multi_session 时有值） |
+| bundle_service_ids | JSONB, nullable | 包含的子服务 ID 列表（仅 bundle 时有值） |
+
+### 用户购买记录：`user_service_packages`（新表）
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | INT PK AUTO | 自增 |
+| user_id | VARCHAR(8) FK → users | 购买者 |
+| service_id | INT FK → services | 套餐服务 |
+| expert_id | VARCHAR(8) FK → experts | 达人团队 |
+| total_sessions | INT | 总次数 |
+| used_sessions | INT DEFAULT 0 | 已用次数 |
+| status | VARCHAR(20) DEFAULT 'active' | active / exhausted / expired / refunded |
+| purchased_at | DATETIME | 购买时间 |
+| expires_at | DATETIME, nullable | 过期时间（NULL = 不过期） |
+| task_id | INT FK → tasks, nullable | 关联的支付任务 |
+
+约束：
+- `UNIQUE(user_id, service_id, task_id)`
+
+### 核销记录：`package_usage_logs`（新表）
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | INT PK AUTO | 自增 |
+| package_id | INT FK → user_service_packages | 套餐记录 |
+| used_at | DATETIME | 核销时间 |
+| used_by | VARCHAR(8) FK → users | 核销操作人（Owner/Admin） |
+| note | TEXT, nullable | 备注 |
+
+### 流程
+
+- **次卡购买**：用户购买次卡 → 创建支付任务 → 支付完成 → 创建 `user_service_packages` 记录
+- **次卡核销**：每次使用服务时，Owner/Admin 在聊天/服务管理中核销一次 → `used_sessions + 1`
+- **次卡用完**：`used_sessions = total_sessions` 时 status → 'exhausted'
+- **组合套餐**：购买后按 `bundle_service_ids` 中的子服务逐一预约使用，每个子服务各自独立核销
+
+## 达人回复评价
+
+### `reviews` 表新增字段
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| reply_content | TEXT, nullable | 达人回复内容 |
+| reply_at | DATETIME, nullable | 回复时间 |
+| reply_by | VARCHAR(8) FK → users, nullable | 回复人（Owner/Admin） |
+
+- 一条评价只能回复一次
+- Owner 和 Admin 都可以回复
+- 回复后不可编辑（防止篡改）
+
+## 达人优惠券
+
+### `coupons` 表新增字段
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| expert_id | VARCHAR(8) FK → experts, nullable | 归属达人（NULL = 平台券） |
+
+- `expert_id` 为 NULL → 平台优惠券（现有逻辑不变）
+- `expert_id` 不为 NULL → 达人专属券，只能用于该达人的服务
+- Owner/Admin 可创建/编辑/停用，免审核
+- 复用现有全部优惠券能力：`type`（fixed_amount/percentage）、`per_user_limit`、`valid_from/until`、`applicable_scenarios`、积分兑换等
+
+### 权限
+
+| 操作 | Owner | Admin | Member |
+|------|-------|-------|--------|
+| 创建/编辑/停用优惠券 | ✅ | ✅ | ❌ |
+| 查看优惠券使用数据 | ✅ | ✅ | ❌ |
+
+## 达人收款账户
+
+达人团队拥有独立的 Stripe Connect 账户，不复用 Owner 的个人 Stripe 账户。
+
+### `experts` 表新增字段
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| stripe_account_id | VARCHAR(255), nullable | Stripe Connect 账户 ID |
+| stripe_connect_country | VARCHAR(10), nullable | Stripe Connect 国家 |
+| stripe_onboarding_complete | BOOL DEFAULT false | Stripe 入驻是否完成 |
+
+### 流程
+
+1. 达人创建通过审核后，Owner 在达人管理页面发起 Stripe Connect 入驻
+2. 入驻完成后 `stripe_account_id` 写入 `experts` 表
+3. 达人服务产生的收款全部进入团队 Stripe 账户
+4. 团队内部的分账由 Owner 自行线下处理（平台不介入）
+
+## 达人注销/解散
+
+### 注销条件
+
+- 仅 Owner 可发起注销
+- **有进行中的任务时不可注销**（status 为 in_progress、pending_payment、pending_confirmation 的任务）
+- 系统自动检查，不满足条件时拒绝并提示原因
+
+### 注销流程
+
+1. Owner 发起注销请求
+2. 系统检查是否有进行中的任务
+3. 通过后执行：
+   - 达人状态 → `dissolved`
+   - 所有服务状态 → `inactive`（自动下架）
+   - 所有未完成的活动状态 → `cancelled`（拼单中的释放预授权）
+   - 达人板块 `is_visible` → false（帖子隐藏，不删除）
+   - 内部群聊解散
+   - `featured_experts` 中对应记录删除
+   - 所有成员的 `expert_members.status` → `left`
+   - 通知所有成员"达人团队已解散"
+
+### 数据保留
+
+- 历史任务、评价、帖子数据保留不删除（软隐藏）
+- 达人 ID 保留，不回收
+- Stripe Connect 账户不自动注销（可能有待结算款项）
+
+## 成员退出与任务聊天保障
+
+### 成员退出/移除时
+
+1. 自动移出内部团队群聊
+2. 自动移出该成员参与的**所有达人相关任务聊天**（从 `chat_participants` 中移除）
+3. 在被移出的聊天中发送系统消息："[成员名] 已退出团队"
+
+### Owner 保障机制
+
+- 每个达人任务聊天中，**Owner 始终自动在场**
+- 创建任务聊天时自动将 Owner 加入 `chat_participants`（role = 'expert_owner'）
+- Owner 不能被从任务聊天中移除（除非达人注销）
+- Owner 转让时，新 Owner 自动加入所有现有的达人任务聊天，原 Owner 保留（身份降为 expert_admin）
+
+## 活动与服务关联
+
+### 关联规则调整
+
+- 活动**不再强制关联服务**
+- 关联服务的活动：支持时间段模式、咨询定价等完整服务流程
+- 不关联服务的活动：可用 `lottery`（抽奖）和 `first_come`（先到先得）类型，适用于推广、福利活动等场景
+- 拼单活动可以关联或不关联服务
+
+## 拼单模式
+
+### 概述
+
+达人活动支持拼单模式：需要凑够 N 人才正式成单。未凑够则到期自动取消，预授权释放。
+
+### `activities` 表新增字段
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| is_group_buy | BOOL DEFAULT false | 是否拼单活动 |
+| group_buy_min | INT | 最少成单人数（拼单时必填） |
+| group_buy_deadline | DATETIME, nullable | 拼单截止时间（NULL = 不设时间限制） |
+| group_buy_task_mode | VARCHAR(20) | 成单后任务模式：'individual'（每人独立任务）/ 'shared'（一个多人任务） |
+| group_buy_multi_round | BOOL DEFAULT false | 是否多轮拼单（凑够一轮后自动开下一轮） |
+| group_buy_current_count | INT DEFAULT 0 | 当前轮已报名人数（冗余，事件更新） |
+| group_buy_round | INT DEFAULT 1 | 当前轮次 |
+
+### 拼单流程
+
+```
+用户报名 → Stripe 预授权（冻结金额，不扣款）
+    ↓
+拼单中（显示 "已拼 X/N 人"）
+    ↓
+├── 凑够 N 人 → 成单
+│   ├── Stripe capture（正式扣款）
+│   ├── 根据 group_buy_task_mode 创建任务
+│   │   ├── individual → 每人各创建一个单人任务
+│   │   └── shared → 创建一个多人任务，所有人在同一聊天
+│   ├── 通知所有参与者"拼单成功"
+│   └── 多轮模式？
+│       ├── 是 → round+1, current_count 归零，继续接受报名
+│       └── 否 → 活动状态变更
+│
+├── 到截止日期未凑够 → 拼单失败
+│   ├── 释放所有预授权
+│   └── 通知所有参与者"拼单未成功，已自动退款"
+│
+└── 用户主动取消（成单前）
+    ├── 释放该用户的预授权
+    ├── current_count - 1
+    └── 通知用户"已取消"
+```
+
+### 拼单报名记录
+
+复用现有 `official_activity_applications` 表或新增 `group_buy_participants` 表：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | INT PK AUTO | 自增 |
+| activity_id | INT FK → activities | 活动 |
+| user_id | VARCHAR(8) FK → users | 报名用户 |
+| round | INT DEFAULT 1 | 所属轮次 |
+| stripe_payment_intent_id | VARCHAR(255) | Stripe 预授权 ID |
+| status | VARCHAR(20) | pending（预授权中）/ confirmed（已成单扣款）/ cancelled（用户取消）/ expired（拼单失败释放） |
+| created_at | DATETIME | 报名时间 |
+| cancelled_at | DATETIME, nullable | 取消时间 |
+
+约束：
+- `UNIQUE(activity_id, user_id, round)`
+
+### Stripe 预授权技术方案
+
+1. 用户报名时：创建 `PaymentIntent` with `capture_method='manual'`，冻结金额
+2. 拼单成功时：对所有参与者的 PaymentIntent 调用 `capture()`，正式扣款
+3. 拼单失败/用户取消：调用 `cancel()` 释放预授权
+4. 预授权有效期：Stripe 默认 7 天，超过需要重新授权。对于无截止日期的拼单，需要定时任务在到期前重新授权或提醒用户
+
+### 定时任务
+
+- **拼单到期检查**：每分钟检查是否有到期未成单的拼单活动，触发退款流程
+- **预授权续期**：对于无截止日期的拼单，在 Stripe 预授权到期前（第 6 天）重新授权或通知用户
+- **多轮拼单清理**：达人手动关闭或活动到截止日期时，处理最后一轮未凑够的退款
+
 ## 分阶段实施建议
 
 ### Phase 1 — 团队基础
@@ -588,3 +881,23 @@ experts (1) → (0..1) featured_experts [展示控制]
 - 消息广播改造（双人 → 多人兼容）
 - WebSocket 推送适配
 - Flutter：任务聊天 UI 支持多人（成员列表、系统消息）
+
+### Phase 6 — 拼单模式
+
+- `activities` 表新增拼单字段
+- `group_buy_participants` 表
+- Stripe 预授权/capture/cancel 流程
+- 拼单成单 → 创建任务（individual / shared 两种模式）
+- 多轮拼单逻辑
+- 定时任务（到期检查、预授权续期）
+- Flutter：拼单活动 UI（进度展示、报名/取消）
+
+### Phase 7 — 套餐与营销
+
+- `services` 表新增 package_type 字段
+- `user_service_packages` + `package_usage_logs` 表
+- 套餐购买、核销流程
+- `reviews` 表新增回复字段
+- `coupons` 表新增 expert_id 字段
+- 达人优惠券创建/管理 API
+- Flutter：套餐购买/核销 UI、评价回复 UI、达人优惠券管理 UI
