@@ -12,6 +12,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models
 from app.deps import get_async_db_dependency
+from app.async_routers import (
+    get_current_user_secure_async_csrf,
+    get_current_user_optional,
+)
 from app.models_expert import (
     Expert, ExpertMember, ExpertApplication,
     ExpertJoinRequest, ExpertInvitation, ExpertFollow,
@@ -31,38 +35,6 @@ from app.utils.time_utils import get_utc_time
 logger = logging.getLogger(__name__)
 
 expert_router = APIRouter(prefix="/api/experts", tags=["experts"])
-
-
-# ==================== Auth ====================
-
-async def get_current_user_secure_async_csrf(
-    request: Request,
-    db: AsyncSession = Depends(get_async_db_dependency),
-) -> models.User:
-    """CSRF保护的安全用户认证（异步版本）"""
-    from app.secure_auth import validate_session
-    session = validate_session(request)
-    if session:
-        from app import async_crud
-        user = await async_crud.async_user_crud.get_user_by_id(db, session.user_id)
-        if user:
-            if hasattr(user, "is_suspended") and user.is_suspended:
-                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="账户已被暂停")
-            if hasattr(user, "is_banned") and user.is_banned:
-                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="账户已被封禁")
-            return user
-    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
-
-
-async def get_current_user_optional(
-    request: Request,
-    db: AsyncSession = Depends(get_async_db_dependency),
-) -> Optional[models.User]:
-    """可选用户认证（异步版本）"""
-    try:
-        return await get_current_user_secure_async_csrf(request, db)
-    except HTTPException:
-        return None
 
 
 # ==================== Helpers ====================
