@@ -230,7 +230,7 @@ class FeaturedExpertV2(Base):
     is_featured = Column(Boolean, nullable=False, default=True)
     display_order = Column(Integer, nullable=False, default=0)
     category = Column(String(50), nullable=True)
-    created_by = Column(String(5), ForeignKey("admin_users.id", ondelete="RESTRICT"), nullable=False)
+    created_by = Column(String(5), ForeignKey("admin_users.id", ondelete="RESTRICT"), nullable=True)
     created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
 
