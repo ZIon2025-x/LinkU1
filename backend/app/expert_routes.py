@@ -885,3 +885,46 @@ async def request_profile_update(
     await db.commit()
     await db.refresh(update_req)
     return update_req
+
+
+# ==================== 18. PUT /{expert_id}/board ====================
+
+@expert_router.put("/{expert_id}/board")
+async def update_expert_board(
+    expert_id: str,
+    body: dict,
+    request: Request,
+    db: AsyncSession = Depends(get_async_db_dependency),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+):
+    """编辑达人板块名称和描述（Owner/Admin，无需审核）"""
+    expert = await _get_expert_or_404(db, expert_id)
+    await _get_member_or_403(db, expert_id, current_user.id, required_roles=["owner", "admin"])
+
+    if not expert.forum_category_id:
+        raise HTTPException(status_code=404, detail="达人板块不存在")
+
+    from app.models import ForumCategory
+    result = await db.execute(
+        select(ForumCategory).where(ForumCategory.id == expert.forum_category_id)
+    )
+    board = result.scalar_one_or_none()
+    if not board:
+        raise HTTPException(status_code=404, detail="达人板块不存在")
+
+    if 'name' in body:
+        board.name_zh = body['name']
+    if 'name_en' in body:
+        board.name_en = body['name_en']
+    if 'name_zh' in body:
+        board.name_zh = body['name_zh']
+    if 'description' in body:
+        board.description = body['description']
+    if 'description_en' in body:
+        board.description_en = body['description_en']
+    if 'description_zh' in body:
+        board.description_zh = body['description_zh']
+    board.updated_at = get_utc_time()
+
+    await db.commit()
+    return {"detail": "板块已更新"}
