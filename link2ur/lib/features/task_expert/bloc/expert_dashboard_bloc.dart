@@ -7,8 +7,10 @@ part 'expert_dashboard_state.dart';
 
 class ExpertDashboardBloc
     extends Bloc<ExpertDashboardEvent, ExpertDashboardState> {
-  ExpertDashboardBloc({required TaskExpertRepository repository})
-      : _repository = repository,
+  ExpertDashboardBloc({
+    required TaskExpertRepository repository,
+    required this.expertId,
+  })  : _repository = repository,
         super(const ExpertDashboardState()) {
     on<ExpertDashboardLoadStats>(_onLoadStats);
     on<ExpertDashboardLoadMyServices>(_onLoadMyServices);
@@ -25,6 +27,7 @@ class ExpertDashboardBloc
   }
 
   final TaskExpertRepository _repository;
+  final String expertId;
 
   Future<void> _onLoadStats(
     ExpertDashboardLoadStats event,
@@ -32,7 +35,7 @@ class ExpertDashboardBloc
   ) async {
     emit(state.copyWith(status: ExpertDashboardStatus.loading));
     try {
-      final stats = await _repository.getMyExpertStats();
+      final stats = await _repository.getExpertStats(expertId);
       emit(state.copyWith(
         status: ExpertDashboardStatus.loaded,
         stats: stats,
@@ -51,7 +54,7 @@ class ExpertDashboardBloc
   ) async {
     emit(state.copyWith(status: ExpertDashboardStatus.loading));
     try {
-      final services = await _repository.getMyServices();
+      final services = await _repository.getExpertManagedServices(expertId);
       emit(state.copyWith(
         status: ExpertDashboardStatus.loaded,
         services: services,
@@ -70,8 +73,8 @@ class ExpertDashboardBloc
   ) async {
     emit(state.copyWith(status: ExpertDashboardStatus.submitting));
     try {
-      await _repository.createService(event.data);
-      final services = await _repository.getMyServices();
+      await _repository.createService(expertId, event.data);
+      final services = await _repository.getExpertManagedServices(expertId);
       emit(state.copyWith(
         status: ExpertDashboardStatus.loaded,
         services: services,
@@ -91,8 +94,9 @@ class ExpertDashboardBloc
   ) async {
     emit(state.copyWith(status: ExpertDashboardStatus.submitting));
     try {
-      await _repository.updateService(event.id, event.data);
-      final services = await _repository.getMyServices();
+      await _repository.updateService(
+          expertId, int.tryParse(event.id) ?? 0, event.data);
+      final services = await _repository.getExpertManagedServices(expertId);
       emit(state.copyWith(
         status: ExpertDashboardStatus.loaded,
         services: services,
@@ -112,8 +116,8 @@ class ExpertDashboardBloc
   ) async {
     emit(state.copyWith(status: ExpertDashboardStatus.submitting));
     try {
-      await _repository.deleteService(event.id);
-      final services = await _repository.getMyServices();
+      await _repository.deleteService(expertId, int.tryParse(event.id) ?? 0);
+      final services = await _repository.getExpertManagedServices(expertId);
       emit(state.copyWith(
         status: ExpertDashboardStatus.loaded,
         services: services,
@@ -136,8 +140,8 @@ class ExpertDashboardBloc
       selectedServiceId: event.serviceId,
     ));
     try {
-      final timeSlots =
-          await _repository.getMyExpertServiceTimeSlots(event.serviceId);
+      final timeSlots = await _repository.getExpertServiceTimeSlots(
+          expertId, int.tryParse(event.serviceId) ?? 0);
       emit(state.copyWith(
         status: ExpertDashboardStatus.loaded,
         timeSlots: timeSlots,
@@ -156,9 +160,10 @@ class ExpertDashboardBloc
   ) async {
     emit(state.copyWith(status: ExpertDashboardStatus.submitting));
     try {
-      await _repository.createServiceTimeSlot(event.serviceId, event.data);
+      final serviceId = int.tryParse(event.serviceId) ?? 0;
+      await _repository.createServiceTimeSlot(expertId, serviceId, event.data);
       final timeSlots =
-          await _repository.getMyExpertServiceTimeSlots(event.serviceId);
+          await _repository.getExpertServiceTimeSlots(expertId, serviceId);
       emit(state.copyWith(
         status: ExpertDashboardStatus.loaded,
         timeSlots: timeSlots,
@@ -179,9 +184,11 @@ class ExpertDashboardBloc
   ) async {
     emit(state.copyWith(status: ExpertDashboardStatus.submitting));
     try {
-      await _repository.deleteServiceTimeSlot(event.serviceId, event.slotId);
+      final serviceId = int.tryParse(event.serviceId) ?? 0;
+      final slotId = int.tryParse(event.slotId) ?? 0;
+      await _repository.deleteServiceTimeSlot(expertId, serviceId, slotId);
       final timeSlots =
-          await _repository.getMyExpertServiceTimeSlots(event.serviceId);
+          await _repository.getExpertServiceTimeSlots(expertId, serviceId);
       emit(state.copyWith(
         status: ExpertDashboardStatus.loaded,
         timeSlots: timeSlots,
@@ -202,7 +209,7 @@ class ExpertDashboardBloc
   ) async {
     emit(state.copyWith(status: ExpertDashboardStatus.loading));
     try {
-      final closedDates = await _repository.getMyClosedDates();
+      final closedDates = await _repository.getClosedDates(expertId);
       emit(state.copyWith(
         status: ExpertDashboardStatus.loaded,
         closedDates: closedDates,
@@ -221,8 +228,9 @@ class ExpertDashboardBloc
   ) async {
     emit(state.copyWith(status: ExpertDashboardStatus.submitting));
     try {
-      await _repository.createClosedDate(event.date, reason: event.reason);
-      final closedDates = await _repository.getMyClosedDates();
+      await _repository.createClosedDate(expertId, event.date,
+          reason: event.reason);
+      final closedDates = await _repository.getClosedDates(expertId);
       emit(state.copyWith(
         status: ExpertDashboardStatus.loaded,
         closedDates: closedDates,
@@ -242,8 +250,9 @@ class ExpertDashboardBloc
   ) async {
     emit(state.copyWith(status: ExpertDashboardStatus.submitting));
     try {
-      await _repository.deleteClosedDate(event.id);
-      final closedDates = await _repository.getMyClosedDates();
+      await _repository.deleteClosedDate(
+          expertId, int.tryParse(event.id) ?? 0);
+      final closedDates = await _repository.getClosedDates(expertId);
       emit(state.copyWith(
         status: ExpertDashboardStatus.loaded,
         closedDates: closedDates,
@@ -264,6 +273,7 @@ class ExpertDashboardBloc
     emit(state.copyWith(status: ExpertDashboardStatus.submitting));
     try {
       await _repository.submitProfileUpdateRequest(
+        expertId,
         name: event.name,
         bio: event.bio,
         avatarUrl: event.avatarUrl,
