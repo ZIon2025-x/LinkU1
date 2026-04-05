@@ -66,12 +66,14 @@ class _ExpertTeamDetailBody extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(state.errorMessage ?? '加载失败'),
+            Text(state.errorMessage != null
+                ? context.localizeError(state.errorMessage!)
+                : context.l10n.commonLoadFailed),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () =>
                   context.read<ExpertTeamBloc>().add(ExpertTeamLoadDetail(expertId)),
-              child: const Text('重试'),
+              child: Text(context.l10n.commonRetry),
             ),
           ],
         ),
@@ -79,7 +81,7 @@ class _ExpertTeamDetailBody extends StatelessWidget {
     }
     final team = state.currentTeam;
     if (team == null) {
-      return const Center(child: Text('未找到团队信息'));
+      return Center(child: Text(context.l10n.commonLoadFailed));
     }
     return _ExpertTeamDetailContent(team: team, expertId: expertId);
   }
