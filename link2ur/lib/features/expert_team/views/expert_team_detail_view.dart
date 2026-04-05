@@ -149,6 +149,11 @@ class _ExpertTeamDetailContent extends StatelessWidget {
             ),
             if (isOwner) ...[
               _ManagementTile(
+                icon: Icons.account_balance,
+                title: '收款账户设置',
+                onTap: () => _setupStripeConnect(context),
+              ),
+              _ManagementTile(
                 icon: Icons.toggle_on,
                 title: team.allowApplications ? context.l10n.expertTeamApplicationsDisabled : context.l10n.expertTeamApplicationsEnabled,
                 onTap: () {
@@ -198,6 +203,33 @@ class _ExpertTeamDetailContent extends StatelessWidget {
     );
     if (confirmed == true && context.mounted) {
       context.read<ExpertTeamBloc>().add(ExpertTeamDissolve(expertId));
+    }
+  }
+
+  Future<void> _setupStripeConnect(BuildContext context) async {
+    try {
+      final repo = context.read<ExpertTeamRepository>();
+      final result = await repo.createStripeConnect(expertId);
+      if (!context.mounted) return;
+
+      final url = result['onboarding_url'] as String?;
+      if (url != null) {
+        // Open in browser
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result['message'] ?? '请在浏览器中完成设置')),
+        );
+        // TODO: launch URL in browser (url_launcher)
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result['message'] ?? 'Stripe 账户已设置')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('设置失败: $e')),
+        );
+      }
     }
   }
 

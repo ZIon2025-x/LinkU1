@@ -1169,3 +1169,123 @@ async def update_expert_board(
 
     await db.commit()
     return {"detail": "板块已更新"}
+
+
+# ==================== 19. POST /{expert_id}/stripe-connect ====================
+
+@expert_router.post("/{expert_id}/stripe-connect")
+async def create_expert_stripe_connect(
+    expert_id: str,
+    request: Request,
+    country: str = Query("GB"),
+    db: AsyncSession = Depends(get_async_db_dependency),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+):
+    """为达人团队创建 Stripe Connect 账户（仅 Owner）"""
+    expert = await _get_expert_or_404(db, expert_id)
+    await _get_member_or_403(db, expert_id, current_user.id, required_roles=["owner"])
+
+    # 已有账户
+    if expert.stripe_account_id:
+        import stripe
+        try:
+            account = stripe.Account.retrieve(expert.stripe_account_id)
+            return {
+                "account_id": expert.stripe_account_id,
+                "details_submitted": account.details_submitted,
+                "charges_enabled": account.charges_enabled,
+                "message": "已有 Stripe 账户" if account.details_submitted else "请完成 Stripe 设置",
+            }
+        except Exception as e:
+            # 账户不存在，清空重建
+            expert.stripe_account_id = None
+            expert.stripe_onboarding_complete = False
+            await db.commit()
+
+    # 创建新账户
+    import stripe
+    from app.stripe_config import ensure_stripe_configured
+    ensure_stripe_configured()
+
+    try:
+        account = stripe.Account.create(
+            type="express",
+            country=country,
+            email=current_user.email or f"expert_{expert_id}@link2ur.com",
+            business_type="individual",
+            metadata={
+                "expert_id": expert_id,
+                "expert_name": expert.name,
+                "platform": "Link2Ur",
+            },
+            capabilities={
+                "card_payments": {"requested": True},
+                "transfers": {"requested": True},
+            },
+        )
+
+        expert.stripe_account_id = account.id
+        expert.stripe_connect_country = country
+        expert.stripe_onboarding_complete = False
+        expert.updated_at = get_utc_time()
+        await db.commit()
+
+        # 创建 onboarding link
+        account_link = stripe.AccountLink.create(
+            account=account.id,
+            refresh_url=f"https://api.link2ur.com/api/experts/{expert_id}/stripe-connect?country={country}",
+            return_url=f"https://www.link2ur.com/expert-teams/{expert_id}",
+            type="account_onboarding",
+        )
+
+        return {
+            "account_id": account.id,
+            "onboarding_url": account_link.url,
+            "message": "请在浏览器中完成 Stripe 账户设置",
+        }
+    except stripe.error.StripeError as e:
+        raise HTTPException(status_code=502, detail=f"Stripe 错误: {str(e)}")
+
+
+@expert_router.get("/{expert_id}/stripe-connect/status")
+async def get_expert_stripe_status(
+    expert_id: str,
+    request: Request,
+    db: AsyncSession = Depends(get_async_db_dependency),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+):
+    """获取达人团队 Stripe Connect 状态（Owner/Admin）"""
+    expert = await _get_expert_or_404(db, expert_id)
+    await _get_member_or_403(db, expert_id, current_user.id, required_roles=["owner", "admin"])
+
+    if not expert.stripe_account_id:
+        return {
+            "has_account": False,
+            "details_submitted": False,
+            "charges_enabled": False,
+        }
+
+    import stripe
+    from app.stripe_config import ensure_stripe_configured
+    ensure_stripe_configured()
+
+    try:
+        account = stripe.Account.retrieve(expert.stripe_account_id)
+        # 更新 onboarding 状态
+        if account.details_submitted and not expert.stripe_onboarding_complete:
+            expert.stripe_onboarding_complete = True
+            await db.commit()
+
+        return {
+            "has_account": True,
+            "account_id": expert.stripe_account_id,
+            "details_submitted": account.details_submitted,
+            "charges_enabled": account.charges_enabled,
+            "country": expert.stripe_connect_country,
+        }
+    except stripe.error.StripeError as e:
+        return {
+            "has_account": True,
+            "account_id": expert.stripe_account_id,
+            "error": str(e),
+        }

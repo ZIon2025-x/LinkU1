@@ -324,4 +324,18 @@ class ExpertTeamRepository {
   Future<void> updateExpertCoupon(String expertId, int couponId, Map<String, dynamic> data) async {
     await _apiService.put(ApiEndpoints.expertTeamCouponById(expertId, couponId), data: data);
   }
+
+  // ==================== Stripe Connect ====================
+
+  Future<Map<String, dynamic>> createStripeConnect(String expertId, {String country = 'GB'}) async {
+    final response = await _apiService.post(
+      '${ApiEndpoints.expertTeamStripeConnect(expertId)}?country=$country',
+    );
+    return response.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> getStripeConnectStatus(String expertId) async {
+    final response = await _apiService.get(ApiEndpoints.expertTeamStripeStatus(expertId));
+    return response.data as Map<String, dynamic>;
+  }
 }
