@@ -12043,4 +12043,192 @@ class AppLocalizationsEn extends AppLocalizations {
   String discoverNPosts(int count) {
     return '$count posts';
   }
+
+  @override
+  String get expertTeamApplySubmitted => 'Application submitted';
+
+  @override
+  String get expertTeamInviteSent => 'Invitation sent';
+
+  @override
+  String get expertTeamJoined => 'Joined team';
+
+  @override
+  String get expertTeamInviteRejected => 'Invitation rejected';
+
+  @override
+  String get expertTeamJoinRequested => 'Join request submitted';
+
+  @override
+  String get expertTeamJoinApproved => 'Request approved';
+
+  @override
+  String get expertTeamJoinRejected => 'Request rejected';
+
+  @override
+  String get expertTeamRoleUpdated => 'Role updated';
+
+  @override
+  String get expertTeamMemberRemoved => 'Member removed';
+
+  @override
+  String get expertTeamOwnershipTransferred => 'Ownership transferred';
+
+  @override
+  String get expertTeamLeft => 'Left team';
+
+  @override
+  String get expertTeamFollowed => 'Followed';
+
+  @override
+  String get expertTeamUnfollowed => 'Unfollowed';
+
+  @override
+  String get expertTeamServiceCreated => 'Service created';
+
+  @override
+  String get expertTeamServiceDeleted => 'Service deleted';
+
+  @override
+  String get expertTeamDissolved => 'Team dissolved';
+
+  @override
+  String get expertTeamApplicationsEnabled => 'Applications enabled';
+
+  @override
+  String get expertTeamApplicationsDisabled => 'Applications disabled';
+
+  @override
+  String get expertTeamGroupBuyJoined => 'Joined group buy';
+
+  @override
+  String get expertTeamGroupBuyCancelled => 'Group buy cancelled';
+
+  @override
+  String get expertTeamPackageUsed => 'Session used';
+
+  @override
+  String get expertTeamCouponCreated => 'Coupon created';
+
+  @override
+  String get expertTeamCouponDeactivated => 'Coupon deactivated';
+
+  @override
+  String get expertTeamReviewReplied => 'Reply posted';
+
+  @override
+  String get expertTeamMyTeams => 'My Teams';
+
+  @override
+  String get expertTeamCreateTeam => 'Create Team';
+
+  @override
+  String get expertTeamDetail => 'Team Detail';
+
+  @override
+  String get expertTeamMembers => 'Members';
+
+  @override
+  String get expertTeamJoinRequests => 'Join Requests';
+
+  @override
+  String get expertTeamInvitations => 'Team Invitations';
+
+  @override
+  String get expertTeamNoTeams => 'You haven\'t joined any team yet';
+
+  @override
+  String get expertTeamNoMembers => 'No members';
+
+  @override
+  String get expertTeamNoJoinRequests => 'No join requests';
+
+  @override
+  String get expertTeamNoInvitations => 'No invitations received';
+
+  @override
+  String get expertTeamTeamName => 'Team Name';
+
+  @override
+  String get expertTeamBio => 'Team Bio';
+
+  @override
+  String get expertTeamApplicationMessage => 'Application Message';
+
+  @override
+  String get expertTeamSubmit => 'Submit';
+
+  @override
+  String get expertTeamApprove => 'Approve';
+
+  @override
+  String get expertTeamReject => 'Reject';
+
+  @override
+  String get expertTeamAccept => 'Accept';
+
+  @override
+  String get expertTeamFollow => 'Follow';
+
+  @override
+  String get expertTeamUnfollow => 'Unfollow';
+
+  @override
+  String get expertTeamLeave => 'Leave Team';
+
+  @override
+  String get expertTeamManageMembers => 'Manage Members';
+
+  @override
+  String get expertTeamRequestJoin => 'Request to Join';
+
+  @override
+  String get expertTeamInviteMember => 'Invite Member';
+
+  @override
+  String get expertTeamSetAdmin => 'Set as Admin';
+
+  @override
+  String get expertTeamSetMember => 'Set as Member';
+
+  @override
+  String get expertTeamRemoveMember => 'Remove Member';
+
+  @override
+  String get expertTeamTransferOwnership => 'Transfer Ownership';
+
+  @override
+  String get expertTeamCoupons => 'Coupons';
+
+  @override
+  String get expertTeamNoCoupons => 'No coupons';
+
+  @override
+  String get expertTeamPackages => 'My Packages';
+
+  @override
+  String get expertTeamNoPackages => 'No packages';
+
+  @override
+  String get expertTeamGroupBuy => 'Group Buy';
+
+  @override
+  String get expertTeamConfirmLeave => 'Are you sure you want to leave?';
+
+  @override
+  String get expertTeamConfirmRemove =>
+      'Are you sure you want to remove this member?';
+
+  @override
+  String get expertTeamConfirmTransfer =>
+      'Transfer ownership? You will become Admin.';
+
+  @override
+  String get expertTeamOwner => 'Owner';
+
+  @override
+  String get expertTeamAdmin => 'Admin';
+
+  @override
+  String get expertTeamMember => 'Member';
 }

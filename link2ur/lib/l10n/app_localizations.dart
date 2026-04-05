@@ -22234,6 +22234,378 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count} posts'**
   String discoverNPosts(int count);
+
+  /// No description provided for @expertTeamApplySubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Application submitted'**
+  String get expertTeamApplySubmitted;
+
+  /// No description provided for @expertTeamInviteSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Invitation sent'**
+  String get expertTeamInviteSent;
+
+  /// No description provided for @expertTeamJoined.
+  ///
+  /// In en, this message translates to:
+  /// **'Joined team'**
+  String get expertTeamJoined;
+
+  /// No description provided for @expertTeamInviteRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Invitation rejected'**
+  String get expertTeamInviteRejected;
+
+  /// No description provided for @expertTeamJoinRequested.
+  ///
+  /// In en, this message translates to:
+  /// **'Join request submitted'**
+  String get expertTeamJoinRequested;
+
+  /// No description provided for @expertTeamJoinApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Request approved'**
+  String get expertTeamJoinApproved;
+
+  /// No description provided for @expertTeamJoinRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Request rejected'**
+  String get expertTeamJoinRejected;
+
+  /// No description provided for @expertTeamRoleUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Role updated'**
+  String get expertTeamRoleUpdated;
+
+  /// No description provided for @expertTeamMemberRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Member removed'**
+  String get expertTeamMemberRemoved;
+
+  /// No description provided for @expertTeamOwnershipTransferred.
+  ///
+  /// In en, this message translates to:
+  /// **'Ownership transferred'**
+  String get expertTeamOwnershipTransferred;
+
+  /// No description provided for @expertTeamLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'Left team'**
+  String get expertTeamLeft;
+
+  /// No description provided for @expertTeamFollowed.
+  ///
+  /// In en, this message translates to:
+  /// **'Followed'**
+  String get expertTeamFollowed;
+
+  /// No description provided for @expertTeamUnfollowed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unfollowed'**
+  String get expertTeamUnfollowed;
+
+  /// No description provided for @expertTeamServiceCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Service created'**
+  String get expertTeamServiceCreated;
+
+  /// No description provided for @expertTeamServiceDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Service deleted'**
+  String get expertTeamServiceDeleted;
+
+  /// No description provided for @expertTeamDissolved.
+  ///
+  /// In en, this message translates to:
+  /// **'Team dissolved'**
+  String get expertTeamDissolved;
+
+  /// No description provided for @expertTeamApplicationsEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Applications enabled'**
+  String get expertTeamApplicationsEnabled;
+
+  /// No description provided for @expertTeamApplicationsDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Applications disabled'**
+  String get expertTeamApplicationsDisabled;
+
+  /// No description provided for @expertTeamGroupBuyJoined.
+  ///
+  /// In en, this message translates to:
+  /// **'Joined group buy'**
+  String get expertTeamGroupBuyJoined;
+
+  /// No description provided for @expertTeamGroupBuyCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Group buy cancelled'**
+  String get expertTeamGroupBuyCancelled;
+
+  /// No description provided for @expertTeamPackageUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'Session used'**
+  String get expertTeamPackageUsed;
+
+  /// No description provided for @expertTeamCouponCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Coupon created'**
+  String get expertTeamCouponCreated;
+
+  /// No description provided for @expertTeamCouponDeactivated.
+  ///
+  /// In en, this message translates to:
+  /// **'Coupon deactivated'**
+  String get expertTeamCouponDeactivated;
+
+  /// No description provided for @expertTeamReviewReplied.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply posted'**
+  String get expertTeamReviewReplied;
+
+  /// No description provided for @expertTeamMyTeams.
+  ///
+  /// In en, this message translates to:
+  /// **'My Teams'**
+  String get expertTeamMyTeams;
+
+  /// No description provided for @expertTeamCreateTeam.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Team'**
+  String get expertTeamCreateTeam;
+
+  /// No description provided for @expertTeamDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Team Detail'**
+  String get expertTeamDetail;
+
+  /// No description provided for @expertTeamMembers.
+  ///
+  /// In en, this message translates to:
+  /// **'Members'**
+  String get expertTeamMembers;
+
+  /// No description provided for @expertTeamJoinRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'Join Requests'**
+  String get expertTeamJoinRequests;
+
+  /// No description provided for @expertTeamInvitations.
+  ///
+  /// In en, this message translates to:
+  /// **'Team Invitations'**
+  String get expertTeamInvitations;
+
+  /// No description provided for @expertTeamNoTeams.
+  ///
+  /// In en, this message translates to:
+  /// **'You haven\'t joined any team yet'**
+  String get expertTeamNoTeams;
+
+  /// No description provided for @expertTeamNoMembers.
+  ///
+  /// In en, this message translates to:
+  /// **'No members'**
+  String get expertTeamNoMembers;
+
+  /// No description provided for @expertTeamNoJoinRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'No join requests'**
+  String get expertTeamNoJoinRequests;
+
+  /// No description provided for @expertTeamNoInvitations.
+  ///
+  /// In en, this message translates to:
+  /// **'No invitations received'**
+  String get expertTeamNoInvitations;
+
+  /// No description provided for @expertTeamTeamName.
+  ///
+  /// In en, this message translates to:
+  /// **'Team Name'**
+  String get expertTeamTeamName;
+
+  /// No description provided for @expertTeamBio.
+  ///
+  /// In en, this message translates to:
+  /// **'Team Bio'**
+  String get expertTeamBio;
+
+  /// No description provided for @expertTeamApplicationMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Application Message'**
+  String get expertTeamApplicationMessage;
+
+  /// No description provided for @expertTeamSubmit.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit'**
+  String get expertTeamSubmit;
+
+  /// No description provided for @expertTeamApprove.
+  ///
+  /// In en, this message translates to:
+  /// **'Approve'**
+  String get expertTeamApprove;
+
+  /// No description provided for @expertTeamReject.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject'**
+  String get expertTeamReject;
+
+  /// No description provided for @expertTeamAccept.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept'**
+  String get expertTeamAccept;
+
+  /// No description provided for @expertTeamFollow.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow'**
+  String get expertTeamFollow;
+
+  /// No description provided for @expertTeamUnfollow.
+  ///
+  /// In en, this message translates to:
+  /// **'Unfollow'**
+  String get expertTeamUnfollow;
+
+  /// No description provided for @expertTeamLeave.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave Team'**
+  String get expertTeamLeave;
+
+  /// No description provided for @expertTeamManageMembers.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage Members'**
+  String get expertTeamManageMembers;
+
+  /// No description provided for @expertTeamRequestJoin.
+  ///
+  /// In en, this message translates to:
+  /// **'Request to Join'**
+  String get expertTeamRequestJoin;
+
+  /// No description provided for @expertTeamInviteMember.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite Member'**
+  String get expertTeamInviteMember;
+
+  /// No description provided for @expertTeamSetAdmin.
+  ///
+  /// In en, this message translates to:
+  /// **'Set as Admin'**
+  String get expertTeamSetAdmin;
+
+  /// No description provided for @expertTeamSetMember.
+  ///
+  /// In en, this message translates to:
+  /// **'Set as Member'**
+  String get expertTeamSetMember;
+
+  /// No description provided for @expertTeamRemoveMember.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove Member'**
+  String get expertTeamRemoveMember;
+
+  /// No description provided for @expertTeamTransferOwnership.
+  ///
+  /// In en, this message translates to:
+  /// **'Transfer Ownership'**
+  String get expertTeamTransferOwnership;
+
+  /// No description provided for @expertTeamCoupons.
+  ///
+  /// In en, this message translates to:
+  /// **'Coupons'**
+  String get expertTeamCoupons;
+
+  /// No description provided for @expertTeamNoCoupons.
+  ///
+  /// In en, this message translates to:
+  /// **'No coupons'**
+  String get expertTeamNoCoupons;
+
+  /// No description provided for @expertTeamPackages.
+  ///
+  /// In en, this message translates to:
+  /// **'My Packages'**
+  String get expertTeamPackages;
+
+  /// No description provided for @expertTeamNoPackages.
+  ///
+  /// In en, this message translates to:
+  /// **'No packages'**
+  String get expertTeamNoPackages;
+
+  /// No description provided for @expertTeamGroupBuy.
+  ///
+  /// In en, this message translates to:
+  /// **'Group Buy'**
+  String get expertTeamGroupBuy;
+
+  /// No description provided for @expertTeamConfirmLeave.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to leave?'**
+  String get expertTeamConfirmLeave;
+
+  /// No description provided for @expertTeamConfirmRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to remove this member?'**
+  String get expertTeamConfirmRemove;
+
+  /// No description provided for @expertTeamConfirmTransfer.
+  ///
+  /// In en, this message translates to:
+  /// **'Transfer ownership? You will become Admin.'**
+  String get expertTeamConfirmTransfer;
+
+  /// No description provided for @expertTeamOwner.
+  ///
+  /// In en, this message translates to:
+  /// **'Owner'**
+  String get expertTeamOwner;
+
+  /// No description provided for @expertTeamAdmin.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin'**
+  String get expertTeamAdmin;
+
+  /// No description provided for @expertTeamMember.
+  ///
+  /// In en, this message translates to:
+  /// **'Member'**
+  String get expertTeamMember;
 }
 
 class _AppLocalizationsDelegate

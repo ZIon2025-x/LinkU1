@@ -11566,6 +11566,192 @@ class AppLocalizationsZh extends AppLocalizations {
   String discoverNPosts(int count) {
     return '$count 帖子';
   }
+
+  @override
+  String get expertTeamApplySubmitted => '申请已提交';
+
+  @override
+  String get expertTeamInviteSent => '邀请已发送';
+
+  @override
+  String get expertTeamJoined => '已加入团队';
+
+  @override
+  String get expertTeamInviteRejected => '已拒绝邀请';
+
+  @override
+  String get expertTeamJoinRequested => '加入申请已提交';
+
+  @override
+  String get expertTeamJoinApproved => '已批准';
+
+  @override
+  String get expertTeamJoinRejected => '已拒绝';
+
+  @override
+  String get expertTeamRoleUpdated => '角色已更新';
+
+  @override
+  String get expertTeamMemberRemoved => '成员已移除';
+
+  @override
+  String get expertTeamOwnershipTransferred => '所有权已转让';
+
+  @override
+  String get expertTeamLeft => '已离开团队';
+
+  @override
+  String get expertTeamFollowed => '已关注';
+
+  @override
+  String get expertTeamUnfollowed => '已取消关注';
+
+  @override
+  String get expertTeamServiceCreated => '服务已创建';
+
+  @override
+  String get expertTeamServiceDeleted => '服务已删除';
+
+  @override
+  String get expertTeamDissolved => '达人团队已注销';
+
+  @override
+  String get expertTeamApplicationsEnabled => '已开启申请入口';
+
+  @override
+  String get expertTeamApplicationsDisabled => '已关闭申请入口';
+
+  @override
+  String get expertTeamGroupBuyJoined => '已报名拼单';
+
+  @override
+  String get expertTeamGroupBuyCancelled => '已取消拼单';
+
+  @override
+  String get expertTeamPackageUsed => '已核销一次';
+
+  @override
+  String get expertTeamCouponCreated => '优惠券已创建';
+
+  @override
+  String get expertTeamCouponDeactivated => '优惠券已停用';
+
+  @override
+  String get expertTeamReviewReplied => '回复成功';
+
+  @override
+  String get expertTeamMyTeams => '我的团队';
+
+  @override
+  String get expertTeamCreateTeam => '创建团队';
+
+  @override
+  String get expertTeamDetail => '团队详情';
+
+  @override
+  String get expertTeamMembers => '成员管理';
+
+  @override
+  String get expertTeamJoinRequests => '加入申请';
+
+  @override
+  String get expertTeamInvitations => '团队邀请';
+
+  @override
+  String get expertTeamNoTeams => '你还没有加入任何团队';
+
+  @override
+  String get expertTeamNoMembers => '暂无成员';
+
+  @override
+  String get expertTeamNoJoinRequests => '暂无加入申请';
+
+  @override
+  String get expertTeamNoInvitations => '暂无收到的邀请';
+
+  @override
+  String get expertTeamTeamName => '团队名称';
+
+  @override
+  String get expertTeamBio => '团队简介';
+
+  @override
+  String get expertTeamApplicationMessage => '申请理由';
+
+  @override
+  String get expertTeamSubmit => '提交';
+
+  @override
+  String get expertTeamApprove => '批准';
+
+  @override
+  String get expertTeamReject => '拒绝';
+
+  @override
+  String get expertTeamAccept => '接受';
+
+  @override
+  String get expertTeamFollow => '关注';
+
+  @override
+  String get expertTeamUnfollow => '取消关注';
+
+  @override
+  String get expertTeamLeave => '退出团队';
+
+  @override
+  String get expertTeamManageMembers => '管理成员';
+
+  @override
+  String get expertTeamRequestJoin => '申请加入';
+
+  @override
+  String get expertTeamInviteMember => '邀请成员';
+
+  @override
+  String get expertTeamSetAdmin => '设为管理员';
+
+  @override
+  String get expertTeamSetMember => '设为成员';
+
+  @override
+  String get expertTeamRemoveMember => '移除成员';
+
+  @override
+  String get expertTeamTransferOwnership => '转让所有权';
+
+  @override
+  String get expertTeamCoupons => '优惠券管理';
+
+  @override
+  String get expertTeamNoCoupons => '暂无优惠券';
+
+  @override
+  String get expertTeamPackages => '我的套餐';
+
+  @override
+  String get expertTeamNoPackages => '暂无套餐';
+
+  @override
+  String get expertTeamGroupBuy => '拼单';
+
+  @override
+  String get expertTeamConfirmLeave => '确定要退出团队吗？';
+
+  @override
+  String get expertTeamConfirmRemove => '确定要移除该成员吗？';
+
+  @override
+  String get expertTeamConfirmTransfer => '确定转让所有权吗？转让后您将成为管理员。';
+
+  @override
+  String get expertTeamOwner => '创始人';
+
+  @override
+  String get expertTeamAdmin => '管理员';
+
+  @override
+  String get expertTeamMember => '成员';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -23130,4 +23316,190 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String discoverNPosts(int count) {
     return '$count 帖子';
   }
+
+  @override
+  String get expertTeamApplySubmitted => '申請已提交';
+
+  @override
+  String get expertTeamInviteSent => '邀請已發送';
+
+  @override
+  String get expertTeamJoined => '已加入團隊';
+
+  @override
+  String get expertTeamInviteRejected => '已拒絕邀請';
+
+  @override
+  String get expertTeamJoinRequested => '加入申請已提交';
+
+  @override
+  String get expertTeamJoinApproved => '已批准';
+
+  @override
+  String get expertTeamJoinRejected => '已拒絕';
+
+  @override
+  String get expertTeamRoleUpdated => '角色已更新';
+
+  @override
+  String get expertTeamMemberRemoved => '成員已移除';
+
+  @override
+  String get expertTeamOwnershipTransferred => '所有權已轉讓';
+
+  @override
+  String get expertTeamLeft => '已離開團隊';
+
+  @override
+  String get expertTeamFollowed => '已關注';
+
+  @override
+  String get expertTeamUnfollowed => '已取消關注';
+
+  @override
+  String get expertTeamServiceCreated => '服務已創建';
+
+  @override
+  String get expertTeamServiceDeleted => '服務已刪除';
+
+  @override
+  String get expertTeamDissolved => '達人團隊已註銷';
+
+  @override
+  String get expertTeamApplicationsEnabled => '已開啟申請入口';
+
+  @override
+  String get expertTeamApplicationsDisabled => '已關閉申請入口';
+
+  @override
+  String get expertTeamGroupBuyJoined => '已報名拼單';
+
+  @override
+  String get expertTeamGroupBuyCancelled => '已取消拼單';
+
+  @override
+  String get expertTeamPackageUsed => '已核銷一次';
+
+  @override
+  String get expertTeamCouponCreated => '優惠券已創建';
+
+  @override
+  String get expertTeamCouponDeactivated => '優惠券已停用';
+
+  @override
+  String get expertTeamReviewReplied => '回覆成功';
+
+  @override
+  String get expertTeamMyTeams => '我的團隊';
+
+  @override
+  String get expertTeamCreateTeam => '創建團隊';
+
+  @override
+  String get expertTeamDetail => '團隊詳情';
+
+  @override
+  String get expertTeamMembers => '成員管理';
+
+  @override
+  String get expertTeamJoinRequests => '加入申請';
+
+  @override
+  String get expertTeamInvitations => '團隊邀請';
+
+  @override
+  String get expertTeamNoTeams => '你還沒有加入任何團隊';
+
+  @override
+  String get expertTeamNoMembers => '暫無成員';
+
+  @override
+  String get expertTeamNoJoinRequests => '暫無加入申請';
+
+  @override
+  String get expertTeamNoInvitations => '暫無收到的邀請';
+
+  @override
+  String get expertTeamTeamName => '團隊名稱';
+
+  @override
+  String get expertTeamBio => '團隊簡介';
+
+  @override
+  String get expertTeamApplicationMessage => '申請理由';
+
+  @override
+  String get expertTeamSubmit => '提交';
+
+  @override
+  String get expertTeamApprove => '批准';
+
+  @override
+  String get expertTeamReject => '拒絕';
+
+  @override
+  String get expertTeamAccept => '接受';
+
+  @override
+  String get expertTeamFollow => '關注';
+
+  @override
+  String get expertTeamUnfollow => '取消關注';
+
+  @override
+  String get expertTeamLeave => '退出團隊';
+
+  @override
+  String get expertTeamManageMembers => '管理成員';
+
+  @override
+  String get expertTeamRequestJoin => '申請加入';
+
+  @override
+  String get expertTeamInviteMember => '邀請成員';
+
+  @override
+  String get expertTeamSetAdmin => '設為管理員';
+
+  @override
+  String get expertTeamSetMember => '設為成員';
+
+  @override
+  String get expertTeamRemoveMember => '移除成員';
+
+  @override
+  String get expertTeamTransferOwnership => '轉讓所有權';
+
+  @override
+  String get expertTeamCoupons => '優惠券管理';
+
+  @override
+  String get expertTeamNoCoupons => '暫無優惠券';
+
+  @override
+  String get expertTeamPackages => '我的套餐';
+
+  @override
+  String get expertTeamNoPackages => '暫無套餐';
+
+  @override
+  String get expertTeamGroupBuy => '拼單';
+
+  @override
+  String get expertTeamConfirmLeave => '確定要退出團隊嗎？';
+
+  @override
+  String get expertTeamConfirmRemove => '確定要移除該成員嗎？';
+
+  @override
+  String get expertTeamConfirmTransfer => '確定轉讓所有權嗎？轉讓後您將成為管理員。';
+
+  @override
+  String get expertTeamOwner => '創始人';
+
+  @override
+  String get expertTeamAdmin => '管理員';
+
+  @override
+  String get expertTeamMember => '成員';
 }
