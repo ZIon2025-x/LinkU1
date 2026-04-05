@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:link2ur/core/utils/error_localizer.dart';
+import 'package:link2ur/core/utils/l10n_extension.dart';
 import 'package:link2ur/data/models/expert_team.dart';
 import 'package:link2ur/data/repositories/expert_team_repository.dart';
 import 'package:link2ur/features/expert_team/bloc/expert_team_bloc.dart';
@@ -32,13 +34,13 @@ class _JoinRequestsPage extends StatelessWidget {
       listener: (context, state) {
         if (state.actionMessage != null) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.actionMessage!)),
+            SnackBar(content: Text(context.localizeError(state.actionMessage!))),
           );
         }
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('加入申请'),
+          title: Text(context.l10n.expertTeamJoinRequests),
         ),
         body: BlocBuilder<ExpertTeamBloc, ExpertTeamState>(
           builder: (context, state) {
@@ -47,10 +49,10 @@ class _JoinRequestsPage extends StatelessWidget {
             }
 
             if (state.joinRequests.isEmpty) {
-              return const Center(
+              return Center(
                 child: Text(
-                  '暂无加入申请',
-                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                  context.l10n.expertTeamNoJoinRequests,
+                  style: const TextStyle(fontSize: 16, color: Colors.grey),
                 ),
               );
             }
@@ -157,7 +159,7 @@ class _JoinRequestCard extends StatelessWidget {
                             ),
                           );
                     },
-                    child: const Text('拒绝'),
+                    child: Text(context.l10n.expertTeamReject),
                   ),
                   const SizedBox(width: 10),
                   ElevatedButton(
@@ -174,7 +176,7 @@ class _JoinRequestCard extends StatelessWidget {
                             ),
                           );
                     },
-                    child: const Text('批准'),
+                    child: Text(context.l10n.expertTeamApprove),
                   ),
                 ],
               ),

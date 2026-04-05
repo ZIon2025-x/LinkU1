@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:link2ur/core/utils/error_localizer.dart';
+import 'package:link2ur/core/utils/l10n_extension.dart';
 import 'package:link2ur/data/models/expert_team.dart';
 import 'package:link2ur/data/repositories/expert_team_repository.dart';
 import 'package:link2ur/features/expert_team/bloc/expert_team_bloc.dart';
@@ -29,20 +31,20 @@ class _MyInvitationsPage extends StatelessWidget {
       listener: (context, state) {
         if (state.actionMessage != null) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.actionMessage!)),
+            SnackBar(content: Text(context.localizeError(state.actionMessage!))),
           );
         }
       },
       child: Scaffold(
-        appBar: AppBar(title: const Text('团队邀请')),
+        appBar: AppBar(title: Text(context.l10n.expertTeamInvitations)),
         body: BlocBuilder<ExpertTeamBloc, ExpertTeamState>(
           builder: (context, state) {
             final invitations = state.myInvitations;
 
             if (invitations.isEmpty) {
-              return const Center(
-                child: Text('暂无收到的邀请',
-                    style: TextStyle(fontSize: 16, color: Colors.grey)),
+              return Center(
+                child: Text(context.l10n.expertTeamNoInvitations,
+                    style: const TextStyle(fontSize: 16, color: Colors.grey)),
               );
             }
 
@@ -118,7 +120,7 @@ class _InvitationCard extends StatelessWidget {
                             ),
                           );
                     },
-                    child: const Text('拒绝'),
+                    child: Text(context.l10n.expertTeamReject),
                   ),
                   const SizedBox(width: 12),
                   ElevatedButton(
@@ -130,7 +132,7 @@ class _InvitationCard extends StatelessWidget {
                             ),
                           );
                     },
-                    child: const Text('接受'),
+                    child: Text(context.l10n.expertTeamAccept),
                   ),
                 ],
               ),

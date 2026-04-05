@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:link2ur/core/utils/error_localizer.dart';
+import 'package:link2ur/core/utils/l10n_extension.dart';
 import 'package:link2ur/data/models/expert_team.dart';
 import 'package:link2ur/data/repositories/expert_team_repository.dart';
 import 'package:link2ur/data/services/storage_service.dart';
@@ -37,7 +39,7 @@ class _ExpertTeamDetailBody extends StatelessWidget {
         final msg = state.actionMessage ?? state.errorMessage;
         if (msg != null) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(msg)),
+            SnackBar(content: Text(context.localizeError(msg))),
           );
         }
       },
@@ -45,7 +47,7 @@ class _ExpertTeamDetailBody extends StatelessWidget {
         builder: (context, state) {
           return Scaffold(
             appBar: AppBar(
-              title: Text(state.currentTeam?.name ?? '团队详情'),
+              title: Text(state.currentTeam?.name ?? context.l10n.expertTeamDetail),
             ),
             body: _buildBody(context, state),
           );
@@ -251,7 +253,7 @@ class _ExpertTeamDetailContent extends StatelessWidget {
         width: double.infinity,
         child: ElevatedButton(
           onPressed: () => context.push('/expert-teams/$expertId/members'),
-          child: const Text('管理成员'),
+          child: Text(context.l10n.expertTeamManageMembers),
         ),
       );
     }
@@ -262,7 +264,7 @@ class _ExpertTeamDetailContent extends StatelessWidget {
         child: OutlinedButton(
           style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
           onPressed: () => _confirmLeave(context, bloc),
-          child: const Text('退出团队'),
+          child: Text(context.l10n.expertTeamLeave),
         ),
       );
     }
@@ -273,13 +275,13 @@ class _ExpertTeamDetailContent extends StatelessWidget {
       children: [
         ElevatedButton(
           onPressed: () => bloc.add(ExpertTeamToggleFollow(expertId)),
-          child: Text(team.isFollowing ? '取消关注' : '关注'),
+          child: Text(team.isFollowing ? context.l10n.expertTeamUnfollow : context.l10n.expertTeamFollow),
         ),
         if (team.allowApplications) ...[
           const SizedBox(height: 8),
           OutlinedButton(
             onPressed: () => bloc.add(ExpertTeamRequestJoin(expertId: expertId)),
-            child: const Text('申请加入'),
+            child: Text(context.l10n.expertTeamRequestJoin),
           ),
         ],
       ],
@@ -287,19 +289,20 @@ class _ExpertTeamDetailContent extends StatelessWidget {
   }
 
   Future<void> _confirmLeave(BuildContext context, ExpertTeamBloc bloc) async {
+    final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('退出团队'),
-        content: const Text('确认退出该团队？此操作无法撤销。'),
+        title: Text(l10n.expertTeamLeave),
+        content: Text(l10n.expertTeamConfirmLeave),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('取消'),
+            child: Text(MaterialLocalizations.of(ctx).cancelButtonLabel),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('确认退出', style: TextStyle(color: Colors.red)),
+            child: Text(l10n.expertTeamLeave, style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -384,17 +387,17 @@ class _RoleBadge extends StatelessWidget {
       case 'owner':
         bgColor = Colors.blue;
         textColor = Colors.white;
-        label = '所有者';
+        label = context.l10n.expertTeamOwner;
         break;
       case 'admin':
         bgColor = Colors.orange;
         textColor = Colors.white;
-        label = '管理员';
+        label = context.l10n.expertTeamAdmin;
         break;
       default:
         bgColor = Colors.grey.shade200;
         textColor = Colors.black87;
-        label = '成员';
+        label = context.l10n.expertTeamMember;
     }
 
     return Container(

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:link2ur/core/utils/error_localizer.dart';
+import 'package:link2ur/core/utils/l10n_extension.dart';
 import 'package:link2ur/data/repositories/expert_team_repository.dart';
 import 'package:link2ur/features/expert_team/bloc/expert_team_bloc.dart';
 
@@ -28,16 +30,16 @@ class _PackagesBody extends StatelessWidget {
       listener: (context, state) {
         if (state.actionMessage != null) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.actionMessage!)),
+            SnackBar(content: Text(context.localizeError(state.actionMessage!))),
           );
         }
       },
       builder: (context, state) {
         final packages = state.packages;
         return Scaffold(
-          appBar: AppBar(title: const Text('我的套餐')),
+          appBar: AppBar(title: Text(context.l10n.expertTeamPackages)),
           body: packages.isEmpty
-              ? const Center(child: Text('暂无套餐'))
+              ? Center(child: Text(context.l10n.expertTeamNoPackages))
               : ListView.builder(
                   itemCount: packages.length,
                   itemBuilder: (context, index) {

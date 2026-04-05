@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:link2ur/core/utils/l10n_extension.dart';
 import 'package:link2ur/data/models/expert_team.dart';
 import 'package:link2ur/data/repositories/expert_team_repository.dart';
 import 'package:link2ur/features/expert_team/bloc/expert_team_bloc.dart';
@@ -27,11 +28,11 @@ class _MyTeamsContent extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('我的团队'),
+        title: Text(context.l10n.expertTeamMyTeams),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => context.push('/expert-teams/create'),
-        tooltip: '创建团队',
+        tooltip: context.l10n.expertTeamCreateTeam,
         child: const Icon(Icons.add),
       ),
       body: BlocBuilder<ExpertTeamBloc, ExpertTeamState>(
@@ -76,14 +77,14 @@ class _MyTeamsContent extends StatelessWidget {
                   children: [
                     const Icon(Icons.group_outlined, size: 64, color: Colors.grey),
                     const SizedBox(height: 16),
-                    const Text(
-                      '你还没有加入任何团队',
-                      style: TextStyle(fontSize: 16, color: Colors.grey),
+                    Text(
+                      context.l10n.expertTeamNoTeams,
+                      style: const TextStyle(fontSize: 16, color: Colors.grey),
                     ),
                     const SizedBox(height: 16),
                     ElevatedButton(
                       onPressed: () => context.push('/expert-teams/create'),
-                      child: const Text('创建团队'),
+                      child: Text(context.l10n.expertTeamCreateTeam),
                     ),
                   ],
                 ),
@@ -220,13 +221,13 @@ class _RoleBadge extends StatelessWidget {
     switch (role) {
       case 'owner':
         bgColor = Theme.of(context).colorScheme.primary;
-        label = '创始人';
+        label = context.l10n.expertTeamOwner;
       case 'admin':
         bgColor = Colors.orange;
-        label = '管理员';
+        label = context.l10n.expertTeamAdmin;
       default:
         bgColor = Colors.grey;
-        label = '成员';
+        label = context.l10n.expertTeamMember;
     }
 
     return Container(

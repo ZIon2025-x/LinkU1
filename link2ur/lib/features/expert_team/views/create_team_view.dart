@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:link2ur/core/utils/error_localizer.dart';
+import 'package:link2ur/core/utils/l10n_extension.dart';
 import 'package:link2ur/data/repositories/expert_team_repository.dart';
 import 'package:link2ur/features/expert_team/bloc/expert_team_bloc.dart';
 
@@ -61,14 +63,14 @@ class _CreateTeamContentState extends State<_CreateTeamContent> {
       listener: (context, state) {
         if (state.actionMessage != null) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.actionMessage!)),
+            SnackBar(content: Text(context.localizeError(state.actionMessage!))),
           );
           context.pop();
         } else if (state.status == ExpertTeamStatus.error &&
             state.errorMessage != null) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(state.errorMessage!),
+              content: Text(context.localizeError(state.errorMessage!)),
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
           );
@@ -76,7 +78,7 @@ class _CreateTeamContentState extends State<_CreateTeamContent> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('创建达人团队'),
+          title: Text(context.l10n.expertTeamCreateTeam),
         ),
         body: BlocBuilder<ExpertTeamBloc, ExpertTeamState>(
           builder: (context, state) {
@@ -133,7 +135,7 @@ class _CreateTeamContentState extends State<_CreateTeamContent> {
 
                     // Team name
                     Text(
-                      '团队名称',
+                      context.l10n.expertTeamTeamName,
                       style: Theme.of(context)
                           .textTheme
                           .labelLarge
@@ -143,14 +145,14 @@ class _CreateTeamContentState extends State<_CreateTeamContent> {
                     TextFormField(
                       controller: _nameController,
                       enabled: !isLoading,
-                      decoration: const InputDecoration(
-                        hintText: '请输入团队名称',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        hintText: context.l10n.expertTeamTeamName,
+                        border: const OutlineInputBorder(),
                       ),
                       textInputAction: TextInputAction.next,
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
-                          return '请输入团队名称';
+                          return context.l10n.expertTeamTeamName;
                         }
                         if (value.trim().length < 2) {
                           return '团队名称至少2个字符';
@@ -162,7 +164,7 @@ class _CreateTeamContentState extends State<_CreateTeamContent> {
 
                     // Bio
                     Text(
-                      '团队简介',
+                      context.l10n.expertTeamBio,
                       style: Theme.of(context)
                           .textTheme
                           .labelLarge
@@ -184,7 +186,7 @@ class _CreateTeamContentState extends State<_CreateTeamContent> {
 
                     // Application message
                     Text(
-                      '申请说明',
+                      context.l10n.expertTeamApplicationMessage,
                       style: Theme.of(context)
                           .textTheme
                           .labelLarge
@@ -218,9 +220,9 @@ class _CreateTeamContentState extends State<_CreateTeamContent> {
                                 width: 20,
                                 child: CircularProgressIndicator(strokeWidth: 2),
                               )
-                            : const Text(
-                                '提交申请',
-                                style: TextStyle(
+                            : Text(
+                                context.l10n.expertTeamSubmit,
+                                style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
                                 ),

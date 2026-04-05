@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:link2ur/core/utils/error_localizer.dart';
+import 'package:link2ur/core/utils/l10n_extension.dart';
 import 'package:link2ur/data/models/expert_team.dart';
 import 'package:link2ur/data/repositories/expert_team_repository.dart';
 import 'package:link2ur/data/services/storage_service.dart';
@@ -37,7 +39,7 @@ class _ExpertTeamMembersBody extends StatelessWidget {
         final msg = state.actionMessage ?? state.errorMessage;
         if (msg != null) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(msg)),
+            SnackBar(content: Text(context.localizeError(msg))),
           );
         }
       },
@@ -54,12 +56,12 @@ class _ExpertTeamMembersBody extends StatelessWidget {
 
           return Scaffold(
             appBar: AppBar(
-              title: const Text('成员管理'),
+              title: Text(context.l10n.expertTeamMembers),
               actions: [
                 if (canManage)
                   IconButton(
                     icon: const Icon(Icons.assignment_ind_outlined),
-                    tooltip: '加入申请',
+                    tooltip: context.l10n.expertTeamJoinRequests,
                     onPressed: () =>
                         context.push('/expert-teams/$expertId/join-requests'),
                   ),
@@ -89,7 +91,7 @@ class _ExpertTeamMembersBody extends StatelessWidget {
       return const Center(child: CircularProgressIndicator());
     }
     if (members.isEmpty) {
-      return const Center(child: Text('暂无成员'));
+      return Center(child: Text(context.l10n.expertTeamNoMembers));
     }
 
     return ListView.builder(
@@ -113,7 +115,7 @@ class _ExpertTeamMembersBody extends StatelessWidget {
     await showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('邀请成员'),
+        title: Text(context.l10n.expertTeamInviteMember),
         content: TextField(
           controller: controller,
           decoration: const InputDecoration(
@@ -208,19 +210,19 @@ class _MemberMenuButton extends StatelessWidget {
         if (isOwner)
           PopupMenuItem(
             value: 'toggle_role',
-            child: Text(member.isAdmin ? '设为成员' : '设为管理员'),
+            child: Text(member.isAdmin ? context.l10n.expertTeamSetMember : context.l10n.expertTeamSetAdmin),
           ),
         // 只有 Owner 可以移除成员
         if (isOwner)
-          const PopupMenuItem(
+          PopupMenuItem(
             value: 'remove',
-            child: Text('移除成员', style: TextStyle(color: Colors.red)),
+            child: Text(context.l10n.expertTeamRemoveMember, style: const TextStyle(color: Colors.red)),
           ),
         // 只有 Owner 可以转让
         if (isOwner)
-          const PopupMenuItem(
+          PopupMenuItem(
             value: 'transfer',
-            child: Text('转让所有权', style: TextStyle(color: Colors.orange)),
+            child: Text(context.l10n.expertTeamTransferOwnership, style: const TextStyle(color: Colors.orange)),
           ),
       ],
     );
@@ -244,17 +246,17 @@ class _MemberMenuButton extends StatelessWidget {
         final confirmed = await showDialog<bool>(
           context: context,
           builder: (ctx) => AlertDialog(
-            title: const Text('移除成员'),
-            content: Text('确认移除 ${member.userName ?? member.userId}？'),
+            title: Text(context.l10n.expertTeamRemoveMember),
+            content: Text(context.l10n.expertTeamConfirmRemove),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(ctx).pop(false),
-                child: const Text('取消'),
+                child: Text(MaterialLocalizations.of(ctx).cancelButtonLabel),
               ),
               TextButton(
                 onPressed: () => Navigator.of(ctx).pop(true),
-                child: const Text('确认移除',
-                    style: TextStyle(color: Colors.red)),
+                child: Text(context.l10n.expertTeamRemoveMember,
+                    style: const TextStyle(color: Colors.red)),
               ),
             ],
           ),
@@ -270,18 +272,17 @@ class _MemberMenuButton extends StatelessWidget {
         final confirmed = await showDialog<bool>(
           context: context,
           builder: (ctx) => AlertDialog(
-            title: const Text('转让所有权'),
-            content: Text(
-                '确认将所有权转让给 ${member.userName ?? member.userId}？转让后您将成为普通成员。'),
+            title: Text(context.l10n.expertTeamTransferOwnership),
+            content: Text(context.l10n.expertTeamConfirmTransfer),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(ctx).pop(false),
-                child: const Text('取消'),
+                child: Text(MaterialLocalizations.of(ctx).cancelButtonLabel),
               ),
               TextButton(
                 onPressed: () => Navigator.of(ctx).pop(true),
-                child: const Text('确认转让',
-                    style: TextStyle(color: Colors.orange)),
+                child: Text(context.l10n.expertTeamTransferOwnership,
+                    style: const TextStyle(color: Colors.orange)),
               ),
             ],
           ),
@@ -312,17 +313,17 @@ class _RoleBadge extends StatelessWidget {
       case 'owner':
         bgColor = Colors.blue;
         textColor = Colors.white;
-        label = '所有者';
+        label = context.l10n.expertTeamOwner;
         break;
       case 'admin':
         bgColor = Colors.orange;
         textColor = Colors.white;
-        label = '管理员';
+        label = context.l10n.expertTeamAdmin;
         break;
       default:
         bgColor = Colors.grey.shade200;
         textColor = Colors.black87;
-        label = '成员';
+        label = context.l10n.expertTeamMember;
     }
 
     return Container(
