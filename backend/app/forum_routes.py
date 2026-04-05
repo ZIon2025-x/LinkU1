@@ -572,8 +572,8 @@ async def assert_forum_visible(
             raise HTTPException(status_code=404, detail="Forum not found")
         return False
     
-    # 普通板块（type='general'）和技能板块（type='skill'）所有用户都可访问
-    if forum.type in ('general', 'skill'):
+    # 普通板块、技能板块、达人板块所有用户都可访问
+    if forum.type in ('general', 'skill', 'expert'):
         return True
     
     # 学校板块（type='root' 或 type='university'）需要权限校验
