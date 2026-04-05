@@ -23,6 +23,7 @@ class ExpertTeam extends Equatable {
   final DateTime? createdAt;
   final bool isFollowing;
   final String? myRole;
+  final int? forumCategoryId;
   final List<ExpertMember>? members;
   final bool? isFeatured;
 
@@ -48,6 +49,7 @@ class ExpertTeam extends Equatable {
     this.createdAt,
     this.isFollowing = false,
     this.myRole,
+    this.forumCategoryId,
     this.members,
     this.isFeatured,
   });
@@ -75,6 +77,7 @@ class ExpertTeam extends Equatable {
       createdAt: json['created_at'] != null ? DateTime.tryParse(json['created_at'].toString()) : null,
       isFollowing: json['is_following'] as bool? ?? false,
       myRole: json['my_role'] as String?,
+      forumCategoryId: json['forum_category_id'] as int?,
       members: json['members'] != null
           ? (json['members'] as List).map((e) => ExpertMember.fromJson(e as Map<String, dynamic>)).toList()
           : null,
@@ -98,7 +101,7 @@ class ExpertTeam extends Equatable {
         status, allowApplications, memberCount, rating,
         totalServices, completedTasks, completionRate,
         isOfficial, officialBadge, stripeOnboardingComplete,
-        createdAt, isFollowing, myRole, members, isFeatured,
+        createdAt, isFollowing, myRole, forumCategoryId, members, isFeatured,
       ];
 }
 

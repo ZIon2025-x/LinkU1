@@ -7,6 +7,9 @@ import '../../../features/expert_team/views/expert_team_detail_view.dart';
 import '../../../features/expert_team/views/expert_team_members_view.dart';
 import '../../../features/expert_team/views/join_requests_view.dart';
 import '../../../features/expert_team/views/my_invitations_view.dart';
+import '../../../features/expert_team/views/expert_coupons_view.dart';
+import '../../../features/expert_team/views/expert_packages_view.dart';
+import '../../../features/expert_team/views/group_buy_view.dart';
 
 /// 达人团队管理相关路由
 List<RouteBase> get expertTeamRoutes => [
@@ -47,6 +50,27 @@ List<RouteBase> get expertTeamRoutes => [
         builder: (context, state) {
           final id = state.pathParameters['id']!;
           return JoinRequestsView(expertId: id);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.expertTeamCoupons,
+        name: 'expertTeamCoupons',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return ExpertCouponsView(expertId: id);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.expertTeamPackages,
+        name: 'expertTeamPackages',
+        builder: (context, state) => const ExpertPackagesView(),
+      ),
+      GoRoute(
+        path: AppRoutes.groupBuy,
+        name: 'groupBuy',
+        builder: (context, state) {
+          final activityId = int.parse(state.pathParameters['activityId']!);
+          return GroupBuyView(activityId: activityId);
         },
       ),
     ];
