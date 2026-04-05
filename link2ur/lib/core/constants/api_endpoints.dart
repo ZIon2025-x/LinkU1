@@ -281,6 +281,20 @@ class ApiEndpoints {
   static String expertTeamServices(String expertId) => '/api/experts/$expertId/services';
   static String expertTeamServiceById(String expertId, int serviceId) =>
       '/api/experts/$expertId/services/$serviceId';
+  static const String expertTeamFeatured = '/api/experts/featured';
+  static const String expertTeamMyFollowing = '/api/experts/my-following';
+  static String expertTeamDissolve(String id) => '/api/experts/$id/dissolve';
+  static String expertTeamAllowApplications(String id) => '/api/experts/$id/allow-applications';
+  static String expertTeamCouponById(String expertId, int couponId) =>
+      '/api/experts/$expertId/coupons/$couponId';
+  static String groupBuyJoin(int activityId) => '/api/group-buy/activities/$activityId/join';
+  static String groupBuyCancel(int activityId) => '/api/group-buy/activities/$activityId/cancel';
+  static String groupBuyStatus(int activityId) => '/api/group-buy/activities/$activityId/status';
+  static const String myPackages = '/api/my/packages';
+  static String expertTeamPackageUse(String expertId, int packageId) =>
+      '/api/experts/$expertId/packages/$packageId/use';
+  static String expertTeamCoupons(String expertId) => '/api/experts/$expertId/coupons';
+  static String reviewReply(int reviewId) => '/api/reviews/$reviewId/reply';
 
   // Task consultation endpoints
   static String consultTask(int taskId) => '/api/tasks/$taskId/consult';

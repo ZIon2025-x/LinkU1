@@ -198,4 +198,107 @@ class ExpertTeamRepository {
       ApiEndpoints.expertTeamServiceById(expertId, serviceId),
     );
   }
+
+  // ==================== 精选达人 ====================
+
+  Future<List<ExpertTeam>> getFeaturedExperts({int limit = 20, int offset = 0}) async {
+    final response = await _apiService.get(
+      ApiEndpoints.expertTeamFeatured,
+      queryParameters: {'limit': limit, 'offset': offset},
+    );
+    final list = response.data as List;
+    return list.map((e) => ExpertTeam.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  // ==================== 关注列表 ====================
+
+  Future<List<ExpertTeam>> getMyFollowingExperts({int limit = 20, int offset = 0}) async {
+    final response = await _apiService.get(
+      ApiEndpoints.expertTeamMyFollowing,
+      queryParameters: {'limit': limit, 'offset': offset},
+    );
+    final list = response.data as List;
+    return list.map((e) => ExpertTeam.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  // ==================== 达人注销 ====================
+
+  Future<void> dissolveTeam(String expertId) async {
+    await _apiService.post(ApiEndpoints.expertTeamDissolve(expertId));
+  }
+
+  // ==================== 开关申请 ====================
+
+  Future<bool> toggleAllowApplications(String expertId, bool allow) async {
+    final response = await _apiService.put(
+      ApiEndpoints.expertTeamAllowApplications(expertId),
+      data: {'allow_applications': allow},
+    );
+    return response.data['allow_applications'] as bool;
+  }
+
+  // ==================== 我的邀请 ====================
+
+  Future<List<ExpertInvitation>> getMyInvitations() async {
+    final response = await _apiService.get(ApiEndpoints.expertTeamMyInvitations);
+    final list = response.data as List;
+    return list.map((e) => ExpertInvitation.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  // ==================== 拼单 ====================
+
+  Future<Map<String, dynamic>> joinGroupBuy(int activityId) async {
+    final response = await _apiService.post(ApiEndpoints.groupBuyJoin(activityId));
+    return response.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> cancelGroupBuy(int activityId) async {
+    final response = await _apiService.post(ApiEndpoints.groupBuyCancel(activityId));
+    return response.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> getGroupBuyStatus(int activityId) async {
+    final response = await _apiService.get(ApiEndpoints.groupBuyStatus(activityId));
+    return response.data as Map<String, dynamic>;
+  }
+
+  // ==================== 套餐 ====================
+
+  Future<List<Map<String, dynamic>>> getMyPackages() async {
+    final response = await _apiService.get(ApiEndpoints.myPackages);
+    return (response.data as List).cast<Map<String, dynamic>>();
+  }
+
+  Future<Map<String, dynamic>> usePackageSession(String expertId, int packageId, {String? note}) async {
+    final response = await _apiService.post(
+      ApiEndpoints.expertTeamPackageUse(expertId, packageId),
+      data: {if (note != null) 'note': note},
+    );
+    return response.data as Map<String, dynamic>;
+  }
+
+  // ==================== 优惠券 ====================
+
+  Future<List<Map<String, dynamic>>> getExpertCoupons(String expertId) async {
+    final response = await _apiService.get(ApiEndpoints.expertTeamCoupons(expertId));
+    return (response.data as List).cast<Map<String, dynamic>>();
+  }
+
+  Future<Map<String, dynamic>> createExpertCoupon(String expertId, Map<String, dynamic> data) async {
+    final response = await _apiService.post(
+      ApiEndpoints.expertTeamCoupons(expertId),
+      data: data,
+    );
+    return response.data as Map<String, dynamic>;
+  }
+
+  Future<void> deactivateExpertCoupon(String expertId, int couponId) async {
+    await _apiService.delete(ApiEndpoints.expertTeamCouponById(expertId, couponId));
+  }
+
+  // ==================== 评价回复 ====================
+
+  Future<void> replyToReview(int reviewId, String content) async {
+    await _apiService.post(ApiEndpoints.reviewReply(reviewId), data: {'content': content});
+  }
 }
