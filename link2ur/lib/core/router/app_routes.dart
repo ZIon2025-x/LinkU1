@@ -49,6 +49,8 @@ class AppRoutes {
   static const String expertTeamJoinRequests = '/expert-teams/:id/join-requests';
   static const String expertTeamInvitations = '/expert-teams/invitations';
   static const String expertTeamCoupons = '/expert-teams/:id/coupons';
+  static const String expertTeamServices = '/expert-teams/:id/services';
+  static const String expertTeamEditProfile = '/expert-teams/:id/edit';
   static const String expertTeamPackages = '/my-packages';
   static const String groupBuy = '/group-buy/:activityId';
 

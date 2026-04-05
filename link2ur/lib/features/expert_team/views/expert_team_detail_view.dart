@@ -128,9 +128,7 @@ class _ExpertTeamDetailContent extends StatelessWidget {
             _ManagementTile(
               icon: Icons.miscellaneous_services,
               title: '服务管理',
-              onTap: () {
-                // TODO: 跳转到达人服务管理页面
-              },
+              onTap: () => context.push('/expert-teams/$expertId/services'),
             ),
             _ManagementTile(
               icon: Icons.local_offer,
@@ -162,9 +160,7 @@ class _ExpertTeamDetailContent extends StatelessWidget {
               _ManagementTile(
                 icon: Icons.edit,
                 title: '编辑团队信息',
-                onTap: () {
-                  // TODO: 跳转到编辑页面或弹出编辑对话框
-                },
+                onTap: () => context.push('/expert-teams/$expertId/edit'),
               ),
               _ManagementTile(
                 icon: Icons.delete_forever,
