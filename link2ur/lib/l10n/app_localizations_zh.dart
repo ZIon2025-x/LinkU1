@@ -4388,6 +4388,33 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskStatusPendingAcceptance => '待接受';
 
   @override
+  String get taskStatusConsulting => '咨询中';
+
+  @override
+  String get taskStatusNegotiating => '议价中';
+
+  @override
+  String get taskStatusPriceAgreed => '已达成价格';
+
+  @override
+  String get applicationStatusConsulting => '咨询中';
+
+  @override
+  String get applicationStatusConsultingDesc => '您正在与对方咨询沟通中';
+
+  @override
+  String get applicationStatusNegotiating => '议价中';
+
+  @override
+  String get applicationStatusNegotiatingDesc => '已发送报价，等待对方回应';
+
+  @override
+  String get applicationStatusPriceAgreed => '已达成价格';
+
+  @override
+  String get applicationStatusPriceAgreedDesc => '双方已就价格达成一致，等待付款';
+
+  @override
   String get myPostsTitle => '我的帖子';
 
   @override
@@ -15923,6 +15950,33 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get taskStatusPendingAcceptance => '待接受';
+
+  @override
+  String get taskStatusConsulting => '諮詢中';
+
+  @override
+  String get taskStatusNegotiating => '議價中';
+
+  @override
+  String get taskStatusPriceAgreed => '已達成價格';
+
+  @override
+  String get applicationStatusConsulting => '諮詢中';
+
+  @override
+  String get applicationStatusConsultingDesc => '您正在與對方諮詢溝通中';
+
+  @override
+  String get applicationStatusNegotiating => '議價中';
+
+  @override
+  String get applicationStatusNegotiatingDesc => '已發送報價，等待對方回應';
+
+  @override
+  String get applicationStatusPriceAgreed => '已達成價格';
+
+  @override
+  String get applicationStatusPriceAgreedDesc => '雙方已就價格達成一致，等待付款';
 
   @override
   String get myPostsTitle => '我的帖子';

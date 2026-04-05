@@ -8457,6 +8457,60 @@ abstract class AppLocalizations {
   /// **'Pending Acceptance'**
   String get taskStatusPendingAcceptance;
 
+  /// No description provided for @taskStatusConsulting.
+  ///
+  /// In en, this message translates to:
+  /// **'Consulting'**
+  String get taskStatusConsulting;
+
+  /// No description provided for @taskStatusNegotiating.
+  ///
+  /// In en, this message translates to:
+  /// **'Negotiating'**
+  String get taskStatusNegotiating;
+
+  /// No description provided for @taskStatusPriceAgreed.
+  ///
+  /// In en, this message translates to:
+  /// **'Price Agreed'**
+  String get taskStatusPriceAgreed;
+
+  /// No description provided for @applicationStatusConsulting.
+  ///
+  /// In en, this message translates to:
+  /// **'Consulting'**
+  String get applicationStatusConsulting;
+
+  /// No description provided for @applicationStatusConsultingDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'You are in a consultation with the other party'**
+  String get applicationStatusConsultingDesc;
+
+  /// No description provided for @applicationStatusNegotiating.
+  ///
+  /// In en, this message translates to:
+  /// **'Negotiating Price'**
+  String get applicationStatusNegotiating;
+
+  /// No description provided for @applicationStatusNegotiatingDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'A quote has been sent, waiting for response'**
+  String get applicationStatusNegotiatingDesc;
+
+  /// No description provided for @applicationStatusPriceAgreed.
+  ///
+  /// In en, this message translates to:
+  /// **'Price Agreed'**
+  String get applicationStatusPriceAgreed;
+
+  /// No description provided for @applicationStatusPriceAgreedDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Both parties have agreed on the price, awaiting payment'**
+  String get applicationStatusPriceAgreedDesc;
+
   /// No description provided for @myPostsTitle.
   ///
   /// In en, this message translates to:

@@ -819,6 +819,27 @@ class ApplicationStatusCard extends StatelessWidget {
           context.l10n.taskDetailApplicationRejected,
           context.l10n.taskDetailApplicationRejectedMessage,
         );
+      case 'consulting':
+        return (
+          AppColors.primary,
+          Icons.question_answer,
+          context.l10n.applicationStatusConsulting,
+          context.l10n.applicationStatusConsultingDesc,
+        );
+      case 'negotiating':
+        return (
+          AppColors.warning,
+          Icons.price_change,
+          context.l10n.applicationStatusNegotiating,
+          context.l10n.applicationStatusNegotiatingDesc,
+        );
+      case 'price_agreed':
+        return (
+          AppColors.success,
+          Icons.handshake,
+          context.l10n.applicationStatusPriceAgreed,
+          context.l10n.applicationStatusPriceAgreedDesc,
+        );
       default:
         return (
           AppColors.textSecondaryLight,

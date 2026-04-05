@@ -5,6 +5,7 @@ import 'package:equatable/equatable.dart';
 
 import '../../core/utils/json_utils.dart';
 import '../../core/utils/localized_string.dart';
+import '../../core/utils/logger.dart';
 import 'user.dart';
 
 /// 聊天联系人
@@ -26,9 +27,14 @@ class ChatContact extends Equatable {
   final bool isOnline;
 
   factory ChatContact.fromJson(Map<String, dynamic> json) {
+    if (json['user'] is! Map<String, dynamic>) {
+      AppLogger.error('ChatContact.fromJson: user is ${json['user']?.runtimeType} for id=${json['id']}');
+    }
     return ChatContact(
       id: json['id']?.toString() ?? '',
-      user: UserBrief.fromJson(json['user'] as Map<String, dynamic>),
+      user: json['user'] is Map<String, dynamic>
+          ? UserBrief.fromJson(json['user'] as Map<String, dynamic>)
+          : const UserBrief(id: '', name: ''),
       lastMessage: json['last_message'] as String?,
       lastMessageTime: json['last_message_time'] != null
           ? DateTime.tryParse(json['last_message_time'])
@@ -165,8 +171,8 @@ class Message extends Equatable {
           ? DateTime.tryParse(json['created_at'].toString())
           : null,
       attachments: (json['attachments'] as List<dynamic>?)
-              ?.map((e) =>
-                  MessageAttachment.fromJson(e as Map<String, dynamic>))
+              ?.cast<Map<String, dynamic>>()
+              .map((e) => MessageAttachment.fromJson(e))
               .toList() ??
           const [],
       negotiationPrice: metaMap?['price'] != null
@@ -361,7 +367,8 @@ class TaskChat extends Equatable {
       images: images,
       isMultiParticipant: parseBool(json['is_multi_participant']),
       participants: (json['participants'] as List<dynamic>?)
-              ?.map((e) => UserBrief.fromJson(e as Map<String, dynamic>))
+              ?.cast<Map<String, dynamic>>()
+              .map((e) => UserBrief.fromJson(e))
               .toList() ??
           [],
       lastMessage: lastMessageText,

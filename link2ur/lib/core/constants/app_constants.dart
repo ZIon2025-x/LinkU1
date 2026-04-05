@@ -48,6 +48,10 @@ class AppConstants {
   static const String taskStatusDisputed = 'disputed';
   static const String taskStatusPendingAcceptance = 'pending_acceptance';
 
+  static const String taskStatusConsulting = 'consulting';
+  static const String taskStatusNegotiating = 'negotiating';
+  static const String taskStatusPriceAgreed = 'price_agreed';
+
   /// 以下状态后端不会主动返回，仅用于前端防御性处理（聊天页判断任务关闭等）
   static const String taskStatusExpired = 'expired';
   static const String taskStatusClosed = 'closed';
@@ -57,12 +61,16 @@ class AppConstants {
   static const String applicationStatusChatting = 'chatting';
   static const String applicationStatusApproved = 'approved';
   static const String applicationStatusRejected = 'rejected';
+  static const String applicationStatusConsulting = 'consulting';
+  static const String applicationStatusNegotiating = 'negotiating';
+  static const String applicationStatusPriceAgreed = 'price_agreed';
 
   /// 任务来源
   static const String taskSourceNormal = 'normal';
   static const String taskSourceFleaMarket = 'flea_market';
   static const String taskSourceExpertService = 'expert_service';
   static const String taskSourceExpertActivity = 'expert_activity';
+  static const String taskSourceFleaMarketConsultation = 'flea_market_consultation';
 
   /// 跳蚤市场商品状态
   static const String fleaMarketStatusActive = 'active';

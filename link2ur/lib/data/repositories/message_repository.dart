@@ -18,6 +18,24 @@ class MessageRepository {
   final ApiService _apiService;
   final CacheManager _cache = CacheManager.shared;
 
+  /// 安全地将 List<dynamic> 转为 List<Map<String, dynamic>>
+  /// 遇到 null 或非 Map 元素时记录警告（帮助定位后端/缓存数据异常），而非静默丢弃
+  List<Map<String, dynamic>> _castList(List<dynamic> items, String context) {
+    final result = <Map<String, dynamic>>[];
+    for (var i = 0; i < items.length; i++) {
+      final e = items[i];
+      if (e is Map<String, dynamic>) {
+        result.add(e);
+      } else {
+        AppLogger.error(
+          '$context: item[$i] expected Map<String,dynamic> '
+          'but got ${e.runtimeType}: $e',
+        );
+      }
+    }
+    return result;
+  }
+
   /// 从 API 响应中提取列表数据
   /// 后端可能返回 List 或 Map（带包装键如 contacts, task_chats, items 等）
   List<dynamic> _extractList(dynamic data, List<String> possibleKeys) {
@@ -51,8 +69,8 @@ class MessageRepository {
     // 1. 检查缓存
     final cached = _cache.getWithOfflineFallback<List<dynamic>>(cacheKey);
     if (cached != null) {
-      return cached
-          .map((e) => ChatContact.fromJson(e as Map<String, dynamic>))
+      return _castList(cached, 'getContacts.cache')
+          .map((e) => ChatContact.fromJson(e))
           .toList();
     }
 
@@ -72,15 +90,15 @@ class MessageRepository {
 
       final items = _extractList(response.data, ['contacts', 'items', 'data']);
       await _cache.set(cacheKey, items, ttl: CacheManager.shortTTL);
-      return items
-          .map((e) => ChatContact.fromJson(e as Map<String, dynamic>))
+      return _castList(items, 'getContacts.api')
+          .map((e) => ChatContact.fromJson(e))
           .toList();
     } catch (e) {
       // 3. 离线回退
       final stale = _cache.getStale<List<dynamic>>(cacheKey);
       if (stale != null) {
-        return stale
-            .map((e) => ChatContact.fromJson(e as Map<String, dynamic>))
+        return _castList(stale, 'getContacts.stale')
+            .map((e) => ChatContact.fromJson(e))
             .toList();
       }
       rethrow;
@@ -101,8 +119,8 @@ class MessageRepository {
     // 1. 检查缓存
     final cached = _cache.getWithOfflineFallback<List<dynamic>>(cacheKey);
     if (cached != null) {
-      return cached
-          .map((e) => Message.fromJson(e as Map<String, dynamic>))
+      return _castList(cached, 'getMessageHistory.cache')
+          .map((e) => Message.fromJson(e))
           .toList();
     }
 
@@ -123,15 +141,15 @@ class MessageRepository {
       final items = _extractList(
           response.data, ['items', 'messages', 'data']);
       await _cache.set(cacheKey, items, ttl: CacheManager.defaultTTL);
-      return items
-          .map((e) => Message.fromJson(e as Map<String, dynamic>))
+      return _castList(items, 'getMessageHistory.api')
+          .map((e) => Message.fromJson(e))
           .toList();
     } catch (e) {
       // 3. 离线回退
       final stale = _cache.getStale<List<dynamic>>(cacheKey);
       if (stale != null) {
-        return stale
-            .map((e) => Message.fromJson(e as Map<String, dynamic>))
+        return _castList(stale, 'getMessageHistory.stale')
+            .map((e) => Message.fromJson(e))
             .toList();
       }
       rethrow;
@@ -208,8 +226,8 @@ class MessageRepository {
 
     final items = _extractList(
         response.data, ['messages', 'items', 'data']);
-    return items
-        .map((e) => Message.fromJson(e as Map<String, dynamic>))
+    return _castList(items, 'getUnreadMessages.api')
+        .map((e) => Message.fromJson(e))
         .toList();
   }
 
@@ -244,8 +262,8 @@ class MessageRepository {
     // 1. 检查缓存
     final cached = _cache.getWithOfflineFallback<List<dynamic>>(cacheKey);
     if (cached != null) {
-      return cached
-          .map((e) => TaskChat.fromJson(e as Map<String, dynamic>))
+      return _castList(cached, 'getTaskChats.cache')
+          .map((e) => TaskChat.fromJson(e))
           .toList();
     }
 
@@ -266,15 +284,15 @@ class MessageRepository {
       final items = _extractList(
           response.data, ['task_chats', 'tasks', 'items', 'data']);
       await _cache.set(cacheKey, items, ttl: CacheManager.shortTTL);
-      return items
-          .map((e) => TaskChat.fromJson(e as Map<String, dynamic>))
+      return _castList(items, 'getTaskChats.api')
+          .map((e) => TaskChat.fromJson(e))
           .toList();
     } catch (e) {
       // 3. 离线回退
       final stale = _cache.getStale<List<dynamic>>(cacheKey);
       if (stale != null) {
-        return stale
-            .map((e) => TaskChat.fromJson(e as Map<String, dynamic>))
+        return _castList(stale, 'getTaskChats.stale')
+            .map((e) => TaskChat.fromJson(e))
             .toList();
       }
       rethrow;
@@ -302,7 +320,8 @@ class MessageRepository {
   static List<Message> parseTaskChatMessagesResponse(Map<String, dynamic> data) {
     final items = (data['messages'] as List<dynamic>?) ?? const [];
     return items
-        .map((e) => Message.fromJson(e as Map<String, dynamic>))
+        .cast<Map<String, dynamic>>()
+        .map((e) => Message.fromJson(e))
         .toList();
   }
 
@@ -374,7 +393,8 @@ class MessageRepository {
           final staleTaskStatus = stale['task_status'] as String?;
           return (
             messages: list
-                .map((e) => Message.fromJson(e as Map<String, dynamic>))
+                .cast<Map<String, dynamic>>()
+                .map((e) => Message.fromJson(e))
                 .toList(),
             nextCursor: stale['next_cursor'] as String?,
             hasMore: stale['has_more'] as bool? ?? false,

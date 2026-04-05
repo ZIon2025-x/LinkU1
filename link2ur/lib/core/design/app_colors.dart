@@ -269,6 +269,12 @@ class AppColors {
         return error;
       case AppConstants.taskStatusDisputed:
         return accentPink;
+      case AppConstants.taskStatusConsulting:
+        return primary;
+      case AppConstants.taskStatusNegotiating:
+        return warning;
+      case AppConstants.taskStatusPriceAgreed:
+        return success;
       default:
         return textSecondaryLight;
     }

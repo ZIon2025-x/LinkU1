@@ -4569,6 +4569,36 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskStatusPendingAcceptance => 'Pending Acceptance';
 
   @override
+  String get taskStatusConsulting => 'Consulting';
+
+  @override
+  String get taskStatusNegotiating => 'Negotiating';
+
+  @override
+  String get taskStatusPriceAgreed => 'Price Agreed';
+
+  @override
+  String get applicationStatusConsulting => 'Consulting';
+
+  @override
+  String get applicationStatusConsultingDesc =>
+      'You are in a consultation with the other party';
+
+  @override
+  String get applicationStatusNegotiating => 'Negotiating Price';
+
+  @override
+  String get applicationStatusNegotiatingDesc =>
+      'A quote has been sent, waiting for response';
+
+  @override
+  String get applicationStatusPriceAgreed => 'Price Agreed';
+
+  @override
+  String get applicationStatusPriceAgreedDesc =>
+      'Both parties have agreed on the price, awaiting payment';
+
+  @override
   String get myPostsTitle => 'My Posts';
 
   @override
