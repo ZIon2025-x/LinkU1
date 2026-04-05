@@ -59,8 +59,10 @@ async def list_expert_services(
         )
         is_team_manager = mgr_check.scalar_one_or_none() is not None
 
-    if status_filter and is_team_manager:
-        query = query.where(models.TaskExpertService.status == status_filter)
+    if is_team_manager:
+        if status_filter:
+            query = query.where(models.TaskExpertService.status == status_filter)
+        # manager 无 filter 时看全部
     else:
         query = query.where(models.TaskExpertService.status == "active")
 

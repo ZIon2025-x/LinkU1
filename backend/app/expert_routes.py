@@ -269,10 +269,12 @@ async def list_my_following_experts(
         .offset(offset).limit(limit)
     )
     experts = result.scalars().all()
-    return [
-        ExpertOut(**{c.name: getattr(e, c.name) for c in Expert.__table__.columns}, is_following=True)
-        for e in experts
-    ]
+    out = []
+    for e in experts:
+        d = ExpertOut.model_validate(e)
+        d.is_following = True
+        out.append(d)
+    return out
 
 
 # ==================== 5. GET / (list/search) — placed before /{expert_id} ====================
@@ -898,18 +900,24 @@ async def remove_member(
     expert.member_count = max(expert.member_count - 1, 0)
 
     # 清理该成员在此达人团队相关任务聊天中的参与记录
+    # Task.expert_creator_id 存 user_id（旧系统），通过团队成员 user_ids 关联
     from app.models_expert import ChatParticipant
     from sqlalchemy import delete
-    await db.execute(
-        delete(ChatParticipant).where(
-            and_(
-                ChatParticipant.user_id == user_id,
-                ChatParticipant.task_id.in_(
-                    select(models.Task.id).where(models.Task.expert_creator_id == expert_id)
+    team_member_ids_result = await db.execute(
+        select(ExpertMember.user_id).where(ExpertMember.expert_id == expert_id)
+    )
+    team_member_ids = [row[0] for row in team_member_ids_result.all()]
+    if team_member_ids:
+        await db.execute(
+            delete(ChatParticipant).where(
+                and_(
+                    ChatParticipant.user_id == user_id,
+                    ChatParticipant.task_id.in_(
+                        select(models.Task.id).where(models.Task.expert_creator_id.in_(team_member_ids))
+                    )
                 )
             )
         )
-    )
 
     await db.commit()
     return {"detail": "成员已移除"}
@@ -939,16 +947,21 @@ async def leave_team(
     # 清理该成员在此达人团队相关任务聊天中的参与记录
     from app.models_expert import ChatParticipant
     from sqlalchemy import delete
-    await db.execute(
-        delete(ChatParticipant).where(
-            and_(
-                ChatParticipant.user_id == current_user.id,
-                ChatParticipant.task_id.in_(
-                    select(models.Task.id).where(models.Task.expert_creator_id == expert_id)
+    team_member_ids_result = await db.execute(
+        select(ExpertMember.user_id).where(ExpertMember.expert_id == expert_id)
+    )
+    team_member_ids = [row[0] for row in team_member_ids_result.all()]
+    if team_member_ids:
+        await db.execute(
+            delete(ChatParticipant).where(
+                and_(
+                    ChatParticipant.user_id == current_user.id,
+                    ChatParticipant.task_id.in_(
+                        select(models.Task.id).where(models.Task.expert_creator_id.in_(team_member_ids))
+                    )
                 )
             )
         )
-    )
 
     await db.commit()
     return {"detail": "已离开团队"}
@@ -968,12 +981,22 @@ async def dissolve_expert_team(
     await _get_member_or_403(db, expert_id, current_user.id, required_roles=["owner"])
 
     # 检查是否有进行中的任务
+    # 注意：Task.expert_creator_id 存的是 user_id（旧系统），不是 expert team id
+    # 通过 expert_members 找到所有团队成员，用他们的 user_id 查任务
     from app.models import ForumCategory
+    member_user_ids = await db.execute(
+        select(ExpertMember.user_id).where(ExpertMember.expert_id == expert_id)
+    )
+    member_ids = [row[0] for row in member_user_ids.all()]
+
+    # 同时查新旧两种关联方式
+    # 新方式：通过 services.owner_id = expert_id 关联的 service_applications.task_id
+    # 旧方式：Task.expert_creator_id in member_user_ids
     task_result = await db.execute(
         select(func.count()).select_from(models.Task).where(
             and_(
-                models.Task.expert_creator_id == expert_id,
                 models.Task.status.in_(["in_progress", "pending_payment", "pending_confirmation"]),
+                models.Task.expert_creator_id.in_(member_ids) if member_ids else False,
             )
         )
     )
@@ -999,17 +1022,18 @@ async def dissolve_expert_team(
         .values(status="inactive")
     )
 
-    # 所有未完成活动取消
-    await db.execute(
-        models.Activity.__table__.update()
-        .where(
-            and_(
-                models.Activity.expert_id == expert_id,
-                models.Activity.status == "open",
+    # 所有未完成活动取消（Activity.expert_id 存 user_id，用团队成员 ID 匹配）
+    if member_ids:
+        await db.execute(
+            models.Activity.__table__.update()
+            .where(
+                and_(
+                    models.Activity.expert_id.in_(member_ids),
+                    models.Activity.status == "open",
+                )
             )
+            .values(status="cancelled")
         )
-        .values(status="cancelled")
-    )
 
     # 达人板块隐藏
     if expert.forum_category_id:

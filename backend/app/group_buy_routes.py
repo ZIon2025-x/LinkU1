@@ -27,7 +27,7 @@ async def join_group_buy(
 ):
     """报名拼单活动"""
     result = await db.execute(
-        select(models.Activity).where(models.Activity.id == activity_id)
+        select(models.Activity).where(models.Activity.id == activity_id).with_for_update()
     )
     activity = result.scalar_one_or_none()
     if not activity:

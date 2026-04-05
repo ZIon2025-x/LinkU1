@@ -76,7 +76,23 @@ async def use_package_session(
     if package.used_sessions >= package.total_sessions:
         raise HTTPException(status_code=400, detail="套餐次数已用完")
 
-    package.used_sessions += 1
+    # 原子递增，防止并发丢失
+    from sqlalchemy import update as sql_update
+    rows = await db.execute(
+        sql_update(UserServicePackage)
+        .where(
+            and_(
+                UserServicePackage.id == package_id,
+                UserServicePackage.used_sessions < UserServicePackage.total_sessions,
+            )
+        )
+        .values(used_sessions=UserServicePackage.used_sessions + 1)
+    )
+    if rows.rowcount == 0:
+        raise HTTPException(status_code=400, detail="套餐次数已用完（并发冲突）")
+
+    # 刷新检查是否用完
+    await db.refresh(package)
     if package.used_sessions >= package.total_sessions:
         package.status = "exhausted"
 
