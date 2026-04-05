@@ -25,4 +25,4 @@ USER appuser
 
 EXPOSE 8000
 
-CMD ["python", "main.py"]
+CMD ["gunicorn", "-c", "gunicorn.conf.py", "app.main:app"]

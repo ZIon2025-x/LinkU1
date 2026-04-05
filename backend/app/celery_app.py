@@ -110,9 +110,9 @@ celery_app.conf.beat_schedule = {
     # 自动完成已过期时间段的任务 - 每1分钟执行一次
     'auto-complete-expired-time-slot-tasks': {
         'task': 'app.celery_tasks.auto_complete_expired_time_slot_tasks_task',
-        'schedule': 60.0,  # 1分钟
+        'schedule': 900.0,  # 15分钟
     },
-    
+
     # 处理待处理的支付转账 - 每5分钟执行一次（重试失败的转账）
     'process-pending-payment-transfers': {
         'task': 'app.celery_tasks.process_pending_payment_transfers_task',
@@ -152,13 +152,6 @@ celery_app.conf.beat_schedule = {
     },
     
     # ========== 推荐系统相关任务 ==========
-    
-    # 预计算推荐 - 每小时执行一次（优化版：批量处理）
-    'precompute-recommendations-hourly': {
-        'task': 'app.recommendation_tasks.precompute_recommendations_for_active_users_task',
-        'schedule': 3600.0,  # 1小时
-        'args': (100, 10)  # 预计算前100个活跃用户，每批10个
-    },
     
     # 推荐数据清理 - 每天执行一次（凌晨2点）
     'cleanup-recommendation-data': {
@@ -312,6 +305,100 @@ celery_app.conf.beat_schedule = {
     'reconcile-pending-withdrawals': {
         'task': 'app.celery_tasks.reconcile_pending_withdrawals_task',
         'schedule': 600.0,  # 每10分钟
+    },
+
+    # ========== 自动转账/确认相关任务 ==========
+
+    # 自动转账确认提醒 - 每1小时
+    'send-auto-transfer-reminders': {
+        'task': 'app.celery_tasks.send_auto_transfer_reminders_task',
+        'schedule': 3600.0,
+    },
+
+    # 自动转账（已完成付费任务 deadline 过期后自动确认并转账）- 每15分钟
+    'auto-transfer-expired-tasks': {
+        'task': 'app.celery_tasks.auto_transfer_expired_tasks_task',
+        'schedule': 900.0,
+    },
+
+    # 自动确认过期未确认的任务 - 每15分钟
+    'auto-confirm-expired-tasks': {
+        'task': 'app.celery_tasks.auto_confirm_expired_tasks_task',
+        'schedule': 900.0,
+    },
+
+    # 发送确认提醒通知 - 每15分钟
+    'send-confirmation-reminders': {
+        'task': 'app.celery_tasks.send_confirmation_reminders_task',
+        'schedule': 900.0,
+    },
+
+    # ========== 额外浏览数同步任务 ==========
+
+    # 同步活动浏览数 - 每5分钟
+    'sync-activity-view-counts': {
+        'task': 'app.celery_tasks.sync_activity_view_counts_task',
+        'schedule': 300.0,
+    },
+
+    # 同步论坛板块浏览数 - 每5分钟
+    'sync-forum-category-view-counts': {
+        'task': 'app.celery_tasks.sync_forum_category_view_counts_task',
+        'schedule': 300.0,
+    },
+
+    # 同步跳蚤市场浏览数 - 每5分钟
+    'sync-flea-market-view-counts': {
+        'task': 'app.celery_tasks.sync_flea_market_view_counts_task',
+        'schedule': 300.0,
+    },
+
+    # 同步达人服务浏览数 - 每5分钟
+    'sync-service-view-counts': {
+        'task': 'app.celery_tasks.sync_service_view_counts_task',
+        'schedule': 300.0,
+    },
+
+    # ========== 统计/推荐任务 ==========
+
+    # 计算热搜榜 - 每1小时
+    'compute-trending-searches': {
+        'task': 'app.celery_tasks.compute_trending_searches_task',
+        'schedule': 3600.0,
+    },
+
+    # 统计技能板块服务数/任务数 - 每1小时
+    'compute-skill-category-counts': {
+        'task': 'app.celery_tasks.compute_skill_category_counts_task',
+        'schedule': 3600.0,
+    },
+
+    # ========== 官方活动 ==========
+
+    # 官方抽奖活动自动开奖 - 每1分钟
+    'official-activity-auto-draw': {
+        'task': 'app.celery_tasks.official_activity_auto_draw_task',
+        'schedule': 60.0,
+    },
+
+    # ========== 租赁相关任务 ==========
+
+    # 检查逾期租赁并通知 - 每1小时
+    'check-overdue-rentals': {
+        'task': 'app.celery_tasks.check_overdue_rentals_task',
+        'schedule': 3600.0,
+    },
+
+    # 检查租赁归还确认超时 - 每6小时
+    'check-pending-return-timeout': {
+        'task': 'app.celery_tasks.check_pending_return_timeout_task',
+        'schedule': 21600.0,
+    },
+
+    # 检查租赁申请支付过期 - 每30分钟
+    'check-expired-rental-approvals': {
+        'task': 'app.celery_tasks.check_expired_rental_approvals_task',
+        'schedule': 1800.0,
     },
 }
 

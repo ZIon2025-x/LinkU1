@@ -1241,3 +1241,408 @@ def weekly_reliability_calibration_task(self):
             db.close()
             release_redis_distributed_lock(lock_key)
 
+    # ═══════════════════════════════════════════════════════════════════
+    # 通用 Redis → DB 浏览数同步辅助函数（DECRBY 模式，防数据丢失）
+    # ═══════════════════════════════════════════════════════════════════
+    def _sync_view_counts_generic(model_class, key_pattern: str, entity_name: str, lock_key: str, self_task):
+        """
+        通用浏览数同步：Redis 增量 → DB view_count，使用 DECRBY 而非 DELETE。
+        """
+        if not get_redis_distributed_lock(lock_key, lock_ttl=600):
+            return {"status": "skipped", "message": "Task already running"}
+
+        start_time = time.time()
+        task_name = f'sync_{entity_name}_view_counts_task'
+        try:
+            from app.redis_cache import get_redis_client
+            from app.redis_utils import scan_keys
+            from sqlalchemy import update
+
+            redis_client = get_redis_client()
+            if not redis_client:
+                return {"status": "skipped", "message": "Redis not available"}
+
+            keys = scan_keys(redis_client, key_pattern)
+            if not keys:
+                return {"status": "success", "synced_count": 0}
+
+            db = SessionLocal()
+            try:
+                synced_count = 0
+                increments = []
+                for key in keys:
+                    try:
+                        key_str = key.decode('utf-8') if isinstance(key, bytes) else str(key)
+                        entity_id = int(key_str.split(":")[-1])
+                        raw = redis_client.get(key)
+                        if raw:
+                            increment = int(raw.decode('utf-8') if isinstance(raw, bytes) else raw)
+                            if increment > 0:
+                                increments.append((key, entity_id, increment))
+                    except (ValueError, TypeError) as e:
+                        logger.warning(f"处理{entity_name}浏览数 key {key} 时出错: {e}")
+                        continue
+
+                for key, entity_id, increment in increments:
+                    db.execute(
+                        update(model_class)
+                        .where(model_class.id == entity_id)
+                        .values(view_count=model_class.view_count + increment)
+                    )
+                    synced_count += 1
+
+                db.commit()
+
+                # DECRBY 减去已同步增量，剩余 <=0 则删 key
+                for key, entity_id, increment in increments:
+                    try:
+                        remaining = redis_client.decrby(key, increment)
+                        if remaining is not None and remaining <= 0:
+                            redis_client.delete(key)
+                    except Exception:
+                        pass
+
+                duration = time.time() - start_time
+                _record_task_metrics(task_name, "success", duration)
+                if synced_count > 0:
+                    logger.info(f"同步{entity_name}浏览数完成，同步了 {synced_count} 个 (耗时: {duration:.2f}秒)")
+                return {"status": "success", "synced_count": synced_count}
+            finally:
+                db.close()
+        except Exception as e:
+            duration = time.time() - start_time
+            logger.error(f"同步{entity_name}浏览数失败: {e}", exc_info=True)
+            _record_task_metrics(task_name, "error", duration)
+            if self_task.request.retries < self_task.max_retries:
+                raise self_task.retry(exc=e)
+            raise
+        finally:
+            release_redis_distributed_lock(lock_key)
+
+    # ═══════════════════════════════════════════════════════════════════
+    # 14 个新增 Celery 定时任务
+    # ═══════════════════════════════════════════════════════════════════
+
+    # ── 1. send_auto_transfer_reminders_task (每1小时) ──
+    @celery_app.task(name='app.celery_tasks.send_auto_transfer_reminders_task', bind=True, max_retries=2, default_retry_delay=60)
+    def send_auto_transfer_reminders_task(self):
+        """发送自动转账提醒 - 每1小时"""
+        task_name = 'send_auto_transfer_reminders_task'
+        lock_key = f"celery_lock:{task_name}"
+        if not get_redis_distributed_lock(lock_key, lock_ttl=3600):
+            return {"status": "skipped"}
+        db = SessionLocal()
+        try:
+            from app.scheduled_tasks import send_auto_transfer_reminders
+            send_auto_transfer_reminders(db)
+            db.commit()
+            return {"status": "success"}
+        except Exception as e:
+            db.rollback()
+            logger.error(f"发送自动转账提醒失败: {e}", exc_info=True)
+            if self.request.retries < self.max_retries:
+                raise self.retry(exc=e)
+            raise
+        finally:
+            db.close()
+            release_redis_distributed_lock(lock_key)
+
+    # ── 2. auto_transfer_expired_tasks_task (每15分钟) ──
+    @celery_app.task(name='app.celery_tasks.auto_transfer_expired_tasks_task', bind=True, max_retries=2, default_retry_delay=60)
+    def auto_transfer_expired_tasks_task(self):
+        """自动转账过期任务 - 每15分钟"""
+        task_name = 'auto_transfer_expired_tasks_task'
+        lock_key = f"celery_lock:{task_name}"
+        if not get_redis_distributed_lock(lock_key, lock_ttl=1800):
+            return {"status": "skipped"}
+        db = SessionLocal()
+        try:
+            from app.scheduled_tasks import auto_transfer_expired_tasks
+            auto_transfer_expired_tasks(db)
+            db.commit()
+            return {"status": "success"}
+        except Exception as e:
+            db.rollback()
+            logger.error(f"自动转账过期任务失败: {e}", exc_info=True)
+            if self.request.retries < self.max_retries:
+                raise self.retry(exc=e)
+            raise
+        finally:
+            db.close()
+            release_redis_distributed_lock(lock_key)
+
+    # ── 3. auto_confirm_expired_tasks_task (每15分钟) ──
+    @celery_app.task(name='app.celery_tasks.auto_confirm_expired_tasks_task', bind=True, max_retries=2, default_retry_delay=60)
+    def auto_confirm_expired_tasks_task(self):
+        """自动确认过期任务 - 每15分钟"""
+        task_name = 'auto_confirm_expired_tasks_task'
+        lock_key = f"celery_lock:{task_name}"
+        if not get_redis_distributed_lock(lock_key, lock_ttl=1800):
+            return {"status": "skipped"}
+        db = SessionLocal()
+        try:
+            from app.scheduled_tasks import auto_confirm_expired_tasks
+            auto_confirm_expired_tasks(db)
+            db.commit()
+            return {"status": "success"}
+        except Exception as e:
+            db.rollback()
+            logger.error(f"自动确认过期任务失败: {e}", exc_info=True)
+            if self.request.retries < self.max_retries:
+                raise self.retry(exc=e)
+            raise
+        finally:
+            db.close()
+            release_redis_distributed_lock(lock_key)
+
+    # ── 4. send_confirmation_reminders_task (每15分钟) ──
+    @celery_app.task(name='app.celery_tasks.send_confirmation_reminders_task', bind=True, max_retries=2, default_retry_delay=60)
+    def send_confirmation_reminders_task(self):
+        """发送确认提醒 - 每15分钟"""
+        task_name = 'send_confirmation_reminders_task'
+        lock_key = f"celery_lock:{task_name}"
+        if not get_redis_distributed_lock(lock_key, lock_ttl=1800):
+            return {"status": "skipped"}
+        db = SessionLocal()
+        try:
+            from app.scheduled_tasks import send_confirmation_reminders
+            send_confirmation_reminders(db)
+            db.commit()
+            return {"status": "success"}
+        except Exception as e:
+            db.rollback()
+            logger.error(f"发送确认提醒失败: {e}", exc_info=True)
+            if self.request.retries < self.max_retries:
+                raise self.retry(exc=e)
+            raise
+        finally:
+            db.close()
+            release_redis_distributed_lock(lock_key)
+
+    # ── 5. sync_activity_view_counts_task (每5分钟) ──
+    @celery_app.task(name='app.celery_tasks.sync_activity_view_counts_task', bind=True, max_retries=2, default_retry_delay=300)
+    def sync_activity_view_counts_task(self):
+        """同步活动浏览数从 Redis 到数据库 - 每5分钟"""
+        from app.models import Activity
+        return _sync_view_counts_generic(
+            model_class=Activity,
+            key_pattern="activity:view_count:*",
+            entity_name="activity",
+            lock_key='activity:sync_view_counts:lock',
+            self_task=self,
+        )
+
+    # ── 6. sync_forum_category_view_counts_task (每5分钟) ──
+    @celery_app.task(name='app.celery_tasks.sync_forum_category_view_counts_task', bind=True, max_retries=2, default_retry_delay=300)
+    def sync_forum_category_view_counts_task(self):
+        """同步论坛分类浏览数从 Redis 到数据库 - 每5分钟"""
+        from app.models import ForumCategory
+        return _sync_view_counts_generic(
+            model_class=ForumCategory,
+            key_pattern="forum:category:view_count:*",
+            entity_name="forum_category",
+            lock_key='forum_category:sync_view_counts:lock',
+            self_task=self,
+        )
+
+    # ── 7. sync_flea_market_view_counts_task (每5分钟) ──
+    @celery_app.task(name='app.celery_tasks.sync_flea_market_view_counts_task', bind=True, max_retries=2, default_retry_delay=300)
+    def sync_flea_market_view_counts_task(self):
+        """同步跳蚤市场浏览数从 Redis 到数据库 - 每5分钟"""
+        from app.models import FleaMarketItem
+        return _sync_view_counts_generic(
+            model_class=FleaMarketItem,
+            key_pattern="flea_market:view_count:*",
+            entity_name="flea_market",
+            lock_key='flea_market:sync_view_counts:lock',
+            self_task=self,
+        )
+
+    # ── 8. sync_service_view_counts_task (每5分钟) ──
+    @celery_app.task(name='app.celery_tasks.sync_service_view_counts_task', bind=True, max_retries=2, default_retry_delay=300)
+    def sync_service_view_counts_task(self):
+        """同步服务浏览数从 Redis 到数据库 - 每5分钟"""
+        from app.models import TaskExpertService
+        return _sync_view_counts_generic(
+            model_class=TaskExpertService,
+            key_pattern="service:view_count:*",
+            entity_name="service",
+            lock_key='service:sync_view_counts:lock',
+            self_task=self,
+        )
+
+    # ── 9. compute_trending_searches_task (每1小时) ──
+    @celery_app.task(name='app.celery_tasks.compute_trending_searches_task', bind=True, max_retries=2, default_retry_delay=60)
+    def compute_trending_searches_task(self):
+        """计算热门搜索 - 每1小时"""
+        task_name = 'compute_trending_searches_task'
+        lock_key = f"celery_lock:{task_name}"
+        if not get_redis_distributed_lock(lock_key, lock_ttl=3600):
+            return {"status": "skipped"}
+        db = SessionLocal()
+        try:
+            from app.trending_search import compute_trending
+            compute_trending(db)
+            db.commit()
+            return {"status": "success"}
+        except Exception as e:
+            db.rollback()
+            logger.error(f"计算热门搜索失败: {e}", exc_info=True)
+            if self.request.retries < self.max_retries:
+                raise self.retry(exc=e)
+            raise
+        finally:
+            db.close()
+            release_redis_distributed_lock(lock_key)
+
+    # ── 10. compute_skill_category_counts_task (每1小时) ──
+    @celery_app.task(name='app.celery_tasks.compute_skill_category_counts_task', bind=True, max_retries=2, default_retry_delay=60)
+    def compute_skill_category_counts_task(self):
+        """计算技能分类计数 - 每1小时"""
+        task_name = 'compute_skill_category_counts_task'
+        lock_key = f"celery_lock:{task_name}"
+        if not get_redis_distributed_lock(lock_key, lock_ttl=3600):
+            return {"status": "skipped"}
+        db = SessionLocal()
+        try:
+            from sqlalchemy import func as sa_func
+            from app import models
+
+            skill_categories = db.query(models.ForumCategory).filter(
+                models.ForumCategory.skill_type.isnot(None),
+                models.ForumCategory.skill_type != '',
+            ).all()
+            if not skill_categories:
+                return {"status": "success", "message": "No skill categories"}
+
+            skill_types = [cat.skill_type for cat in skill_categories]
+
+            svc_rows = db.query(
+                models.TaskExpertService.category,
+                sa_func.count(models.TaskExpertService.id),
+            ).filter(
+                models.TaskExpertService.category.in_(skill_types),
+                models.TaskExpertService.status == 'active',
+            ).group_by(models.TaskExpertService.category).all()
+            svc_map = {row[0]: row[1] for row in svc_rows}
+
+            tsk_rows = db.query(
+                models.Task.task_type,
+                sa_func.count(models.Task.id),
+            ).filter(
+                models.Task.task_type.in_(skill_types),
+                models.Task.status == 'open',
+            ).group_by(models.Task.task_type).all()
+            tsk_map = {row[0]: row[1] for row in tsk_rows}
+
+            for cat in skill_categories:
+                cat.service_count = svc_map.get(cat.skill_type, 0)
+                cat.task_count = tsk_map.get(cat.skill_type, 0)
+            db.commit()
+            return {"status": "success", "updated": len(skill_categories)}
+        except Exception as e:
+            db.rollback()
+            logger.error(f"计算技能分类计数失败: {e}", exc_info=True)
+            if self.request.retries < self.max_retries:
+                raise self.retry(exc=e)
+            raise
+        finally:
+            db.close()
+            release_redis_distributed_lock(lock_key)
+
+    # ── 11. official_activity_auto_draw_task (每60秒) ──
+    @celery_app.task(name='app.celery_tasks.official_activity_auto_draw_task', bind=True, max_retries=2, default_retry_delay=60)
+    def official_activity_auto_draw_task(self):
+        """官方活动自动抽奖 - 每60秒"""
+        task_name = 'official_activity_auto_draw_task'
+        lock_key = f"celery_lock:{task_name}"
+        if not get_redis_distributed_lock(lock_key, lock_ttl=120):
+            return {"status": "skipped"}
+        db = SessionLocal()
+        try:
+            from app.official_draw_task import run_auto_draws
+            run_auto_draws(db)
+            db.commit()
+            return {"status": "success"}
+        except Exception as e:
+            db.rollback()
+            logger.error(f"官方活动自动抽奖失败: {e}", exc_info=True)
+            if self.request.retries < self.max_retries:
+                raise self.retry(exc=e)
+            raise
+        finally:
+            db.close()
+            release_redis_distributed_lock(lock_key)
+
+    # ── 12. check_overdue_rentals_task (每1小时) ──
+    @celery_app.task(name='app.celery_tasks.check_overdue_rentals_task', bind=True, max_retries=2, default_retry_delay=60)
+    def check_overdue_rentals_task(self):
+        """检查逾期租赁 - 每1小时"""
+        task_name = 'check_overdue_rentals_task'
+        lock_key = f"celery_lock:{task_name}"
+        if not get_redis_distributed_lock(lock_key, lock_ttl=3600):
+            return {"status": "skipped"}
+        db = SessionLocal()
+        try:
+            from app.rental_scheduled_tasks import check_overdue_rentals
+            check_overdue_rentals(db)
+            db.commit()
+            return {"status": "success"}
+        except Exception as e:
+            db.rollback()
+            logger.error(f"检查逾期租赁失败: {e}", exc_info=True)
+            if self.request.retries < self.max_retries:
+                raise self.retry(exc=e)
+            raise
+        finally:
+            db.close()
+            release_redis_distributed_lock(lock_key)
+
+    # ── 13. check_pending_return_timeout_task (每6小时) ──
+    @celery_app.task(name='app.celery_tasks.check_pending_return_timeout_task', bind=True, max_retries=2, default_retry_delay=60)
+    def check_pending_return_timeout_task(self):
+        """检查待归还超时 - 每6小时"""
+        task_name = 'check_pending_return_timeout_task'
+        lock_key = f"celery_lock:{task_name}"
+        if not get_redis_distributed_lock(lock_key, lock_ttl=21600):
+            return {"status": "skipped"}
+        db = SessionLocal()
+        try:
+            from app.rental_scheduled_tasks import check_pending_return_timeout
+            check_pending_return_timeout(db)
+            db.commit()
+            return {"status": "success"}
+        except Exception as e:
+            db.rollback()
+            logger.error(f"检查待归还超时失败: {e}", exc_info=True)
+            if self.request.retries < self.max_retries:
+                raise self.retry(exc=e)
+            raise
+        finally:
+            db.close()
+            release_redis_distributed_lock(lock_key)
+
+    # ── 14. check_expired_rental_approvals_task (每30分钟) ──
+    @celery_app.task(name='app.celery_tasks.check_expired_rental_approvals_task', bind=True, max_retries=2, default_retry_delay=60)
+    def check_expired_rental_approvals_task(self):
+        """检查过期租赁审批 - 每30分钟"""
+        task_name = 'check_expired_rental_approvals_task'
+        lock_key = f"celery_lock:{task_name}"
+        if not get_redis_distributed_lock(lock_key, lock_ttl=1800):
+            return {"status": "skipped"}
+        db = SessionLocal()
+        try:
+            from app.rental_scheduled_tasks import check_expired_rental_approvals
+            check_expired_rental_approvals(db)
+            db.commit()
+            return {"status": "success"}
+        except Exception as e:
+            db.rollback()
+            logger.error(f"检查过期租赁审批失败: {e}", exc_info=True)
+            if self.request.retries < self.max_retries:
+                raise self.retry(exc=e)
+            raise
+        finally:
+            db.close()
+            release_redis_distributed_lock(lock_key)
+

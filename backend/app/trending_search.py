@@ -127,7 +127,7 @@ def compute_trending(db: Session) -> List[Dict[str, Any]]:
     2. 按天衰减加权
     3. Jaccard 聚类
     4. 黑名单过滤
-    5. 计算浏览量 (forum_posts + tasks 标题匹配)
+    5. 计算浏览量 (多 token AND 匹配标题+内容/描述，与搜索逻辑一致)
     6. 与上期 Top10 比较生成 tag
     7. 插入置顶词
     8. 写入 Redis
@@ -220,7 +220,7 @@ def compute_trending(db: Session) -> List[Dict[str, Any]]:
     clusters.sort(key=lambda c: c["weighted_count"], reverse=True)
 
     # ------------------------------------------------------------------
-    # Step 5: 计算浏览量 (仅 Top 15，forum_posts + tasks 标题匹配)
+    # Step 5: 计算浏览量 (仅 Top 15，多 token AND 匹配标题+内容/描述)
     # ------------------------------------------------------------------
     TOP_N_VIEW_COUNT = 15  # 只查前15，最终取10，留5的余量给黑名单过滤后补位
     for cluster in clusters[:TOP_N_VIEW_COUNT]:
@@ -229,117 +229,108 @@ def compute_trending(db: Session) -> List[Dict[str, Any]]:
             cluster["view_count"] = 0
             continue
 
-        # 构建 LIKE 条件: 标题/名称包含任一 token
-        like_forum = []
-        like_task = []
-        like_flea = []
-        like_service = []
-        like_leaderboard = []
-        like_activity = []
-        like_category = []
-        for token in tokens:
-            safe_token = token.replace('%', r'\%').replace('_', r'\_')
-            pattern = f"%{safe_token}%"
-            like_forum.append(or_(
-                models.ForumPost.title.ilike(pattern),
-                models.ForumPost.title_zh.ilike(pattern),
-                models.ForumPost.title_en.ilike(pattern),
-            ))
-            like_task.append(or_(
-                models.Task.title.ilike(pattern),
-                models.Task.title_zh.ilike(pattern),
-                models.Task.title_en.ilike(pattern),
-            ))
-            like_flea.append(
-                models.FleaMarketItem.title.ilike(pattern),
-            )
-            like_service.append(or_(
-                models.TaskExpertService.service_name.ilike(pattern),
-                models.TaskExpertService.service_name_en.ilike(pattern),
-            ))
-            like_leaderboard.append(or_(
-                models.CustomLeaderboard.name.ilike(pattern),
-                models.CustomLeaderboard.name_en.ilike(pattern),
-                models.CustomLeaderboard.name_zh.ilike(pattern),
-            ))
-            like_activity.append(or_(
-                models.Activity.title.ilike(pattern),
-                models.Activity.title_zh.ilike(pattern),
-                models.Activity.title_en.ilike(pattern),
-            ))
-            like_category.append(or_(
-                models.ForumCategory.name.ilike(pattern),
-                models.ForumCategory.name_en.ilike(pattern),
-                models.ForumCategory.name_zh.ilike(pattern),
-            ))
+        # 构建 LIKE 条件: 每个 token 必须在标题或内容中命中（AND 逻辑）
+        # 与实际搜索 build_keyword_filter 保持一致
+        def _build_and_filter(columns):
+            """为一组字段构建多 token AND 过滤: 每个 token 至少命中一个字段"""
+            token_exprs = []
+            for token in tokens:
+                safe_token = token.replace('%', r'\%').replace('_', r'\_')
+                pattern = f"%{safe_token}%"
+                token_exprs.append(or_(*[col.ilike(pattern) for col in columns]))
+            return and_(*token_exprs) if len(token_exprs) > 1 else token_exprs[0]
 
-        # ForumPost 浏览量
+        # ForumPost 浏览量（标题 + 内容）
         forum_views = db.execute(
             select(func.coalesce(func.sum(models.ForumPost.view_count), 0)).where(
                 and_(
                     models.ForumPost.is_deleted == False,  # noqa: E712
-                    or_(*like_forum),
+                    _build_and_filter([
+                        models.ForumPost.title, models.ForumPost.title_zh, models.ForumPost.title_en,
+                        models.ForumPost.content, models.ForumPost.content_zh, models.ForumPost.content_en,
+                    ]),
                 )
             )
         ).scalar() or 0
 
-        # Task 浏览量（排除已取消）
+        # Task 浏览量（标题 + 描述）
         task_views = db.execute(
             select(func.coalesce(func.sum(models.Task.view_count), 0)).where(
                 and_(
                     models.Task.status != "cancelled",
-                    or_(*like_task),
+                    _build_and_filter([
+                        models.Task.title, models.Task.title_zh, models.Task.title_en,
+                        models.Task.description, models.Task.description_zh, models.Task.description_en,
+                    ]),
                 )
             )
         ).scalar() or 0
 
-        # FleaMarketItem 浏览量（排除已删除/隐藏）
+        # FleaMarketItem 浏览量（标题 + 描述）
         flea_views = db.execute(
             select(func.coalesce(func.sum(models.FleaMarketItem.view_count), 0)).where(
                 and_(
                     models.FleaMarketItem.status != "deleted",
                     models.FleaMarketItem.is_visible == True,  # noqa: E712
-                    or_(*like_flea),
+                    _build_and_filter([
+                        models.FleaMarketItem.title,
+                        models.FleaMarketItem.description,
+                    ]),
                 )
             )
         ).scalar() or 0
 
-        # TaskExpertService 浏览量（仅 active）
+        # TaskExpertService 浏览量（名称 + 描述）
         service_views = db.execute(
             select(func.coalesce(func.sum(models.TaskExpertService.view_count), 0)).where(
                 and_(
                     models.TaskExpertService.status == "active",
-                    or_(*like_service),
+                    _build_and_filter([
+                        models.TaskExpertService.service_name, models.TaskExpertService.service_name_en,
+                        models.TaskExpertService.description, models.TaskExpertService.description_en,
+                        models.TaskExpertService.description_zh,
+                    ]),
                 )
             )
         ).scalar() or 0
 
-        # CustomLeaderboard 浏览量（仅 active）
+        # CustomLeaderboard 浏览量（名称 + 描述）
         lb_views = db.execute(
             select(func.coalesce(func.sum(models.CustomLeaderboard.view_count), 0)).where(
                 and_(
                     models.CustomLeaderboard.status == "active",
-                    or_(*like_leaderboard),
+                    _build_and_filter([
+                        models.CustomLeaderboard.name, models.CustomLeaderboard.name_en, models.CustomLeaderboard.name_zh,
+                        models.CustomLeaderboard.description, models.CustomLeaderboard.description_en,
+                        models.CustomLeaderboard.description_zh,
+                    ]),
                 )
             )
         ).scalar() or 0
 
-        # Activity 浏览量（排除已取消）
+        # Activity 浏览量（标题 + 描述）
         activity_views = db.execute(
             select(func.coalesce(func.sum(models.Activity.view_count), 0)).where(
                 and_(
                     models.Activity.status != "cancelled",
-                    or_(*like_activity),
+                    _build_and_filter([
+                        models.Activity.title, models.Activity.title_zh, models.Activity.title_en,
+                        models.Activity.description, models.Activity.description_zh, models.Activity.description_en,
+                    ]),
                 )
             )
         ).scalar() or 0
 
-        # ForumCategory 浏览量（仅可见）
+        # ForumCategory 浏览量（名称 + 描述）
         category_views = db.execute(
             select(func.coalesce(func.sum(models.ForumCategory.view_count), 0)).where(
                 and_(
                     models.ForumCategory.is_visible == True,  # noqa: E712
-                    or_(*like_category),
+                    _build_and_filter([
+                        models.ForumCategory.name, models.ForumCategory.name_en, models.ForumCategory.name_zh,
+                        models.ForumCategory.description, models.ForumCategory.description_en,
+                        models.ForumCategory.description_zh,
+                    ]),
                 )
             )
         ).scalar() or 0

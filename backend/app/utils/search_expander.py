@@ -199,7 +199,8 @@ def build_keyword_filter(columns, keyword: str, use_similarity: bool = True, thr
 
     搜索逻辑：
     1. 先对 keyword 进行分词（jieba + 停用词过滤）
-    2. 若分出多个 token，每个 token 单独做双语扩展并生成 OR 条件（多列），各 token 之间用 AND 连接
+    2. 若分出多个 token，优先 AND（全部命中），同时降级允许 OR（任一命中）
+       — 配合 build_relevance_score 排序，AND 结果排前面，OR 结果兜底
     3. 若只有一个 token（或分词失败），退化为对整个关键词做双语扩展的 OR 条件
 
     Args:
@@ -209,7 +210,7 @@ def build_keyword_filter(columns, keyword: str, use_similarity: bool = True, thr
         threshold: similarity 阈值（默认 0.2）
 
     Returns:
-        SQLAlchemy 表达式（多 token 时为 AND，单 token 时为 OR），无有效关键词时返回 None
+        SQLAlchemy 表达式，无有效关键词时返回 None
     """
     from sqlalchemy import or_, and_, func
     from app.utils.tokenizer import tokenize_query
@@ -233,7 +234,7 @@ def build_keyword_filter(columns, keyword: str, use_similarity: bool = True, thr
                     conditions.append(func.similarity(col, kw_clean) > threshold)
         return or_(*conditions) if conditions else None
 
-    # 多 token：每个 token 生成 OR（多列），各 token 之间 AND 连接
+    # 多 token：每个 token 生成 OR（多列）条件
     token_exprs = []
     for token in tokens:
         token_keywords = expand_keyword(token)
@@ -250,7 +251,10 @@ def build_keyword_filter(columns, keyword: str, use_similarity: bool = True, thr
 
     if not token_exprs:
         return None
-    return and_(*token_exprs) if len(token_exprs) > 1 else token_exprs[0]
+
+    # 降级策略：匹配任一 token 即可入选，排序由 build_relevance_score 决定
+    # （全部 token 命中的结果自然得分更高，排在前面）
+    return or_(*token_exprs)
 
 
 def build_relevance_score(weighted_columns, keyword: str):

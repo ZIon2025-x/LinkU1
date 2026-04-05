@@ -31,11 +31,14 @@ ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 IS_PRODUCTION = ENVIRONMENT == "production"
 
 # ⚠️ 由于混合使用同步/异步操作，增加了连接池大小
+# 多进程部署（gunicorn）时，每个 worker 独立持有连接池
+# 总 DB 连接数 = workers × (POOL_SIZE + MAX_OVERFLOW)
+# 例：3 workers × (15 + 15) = 最多 90 连接，需确认 PostgreSQL max_connections 够用
 if IS_PRODUCTION:
-    # 生产环境配置 - 增加以支持混合使用
+    # 生产环境配置 — 适配 gunicorn 多 worker
     # POOL_RECYCLE 建议小于 Railway/代理的空闲超时，避免使用已被代理关闭的连接（默认 10 分钟）
-    POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "30"))  # 从20增加到30
-    MAX_OVERFLOW = int(os.getenv("DB_MAX_OVERFLOW", "40"))  # 从30增加到40
+    POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "15"))  # 每 worker 15，3 workers = 45 基础连接
+    MAX_OVERFLOW = int(os.getenv("DB_MAX_OVERFLOW", "15"))  # 每 worker 溢出 15，3 workers 峰值 = 90
     POOL_TIMEOUT = int(os.getenv("DB_POOL_TIMEOUT", "30"))
     POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", "600"))  # 10 分钟，适配代理空闲断开
     POOL_PRE_PING = os.getenv("DB_POOL_PRE_PING", "true").lower() == "true"

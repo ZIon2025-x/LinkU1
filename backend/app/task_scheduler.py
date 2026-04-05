@@ -1318,5 +1318,130 @@ def init_scheduler():
         description="检查租赁申请支付过期"
     )
 
+    # ========== 钱包安全任务 ==========
+
+    # 🔒 钱包 pending 交易超时清理 - 每15分钟
+    # 防止因 PI 创建失败或用户切换支付方式导致 pending wallet tx 永远悬挂
+    def cleanup_stale_pending_wallet_txs():
+        try:
+            from datetime import timezone
+            from app.wallet_models import WalletTransaction
+            from app.wallet_service import reverse_debit
+
+            db = SessionLocal()
+            try:
+                cutoff = get_utc_time() - timedelta(minutes=30)
+                stale_rows = (
+                    db.query(
+                        WalletTransaction.id,
+                        WalletTransaction.user_id,
+                        WalletTransaction.amount,
+                        WalletTransaction.currency,
+                        WalletTransaction.created_at,
+                    )
+                    .filter(
+                        WalletTransaction.type == "payment",
+                        WalletTransaction.status == "pending",
+                        WalletTransaction.created_at < cutoff,
+                    )
+                    .limit(100)
+                    .all()
+                )
+
+                reversed_count = 0
+                for row in stale_rows:
+                    try:
+                        reverse_debit(db, row.id)
+                        db.commit()
+                        reversed_count += 1
+                    except Exception as e:
+                        db.rollback()
+                        logger.error(f"清理 pending wallet tx 失败: tx_id={row.id}, error={e}")
+
+                if reversed_count > 0:
+                    logger.info(f"清理 pending wallet tx 完成: reversed={reversed_count}/{len(stale_rows)}")
+            finally:
+                db.close()
+        except Exception as e:
+            logger.error(f"钱包 pending 清理任务失败: {e}", exc_info=True)
+
+    scheduler.register_task(
+        'cleanup_stale_pending_wallet_txs',
+        cleanup_stale_pending_wallet_txs,
+        interval_seconds=900,
+        description="钱包 pending 交易超时清理（防止余额被永久锁定）"
+    )
+
+    # 🔒 钱包提现对账 - 每10分钟
+    # 对账 Stripe Transfer 状态，处理 DB 更新失败或 webhook 遗漏的提现
+    def reconcile_pending_withdrawals():
+        try:
+            import stripe
+            from datetime import timezone
+            from app.wallet_models import WalletTransaction
+            from app.wallet_service import complete_withdrawal, fail_withdrawal
+
+            db = SessionLocal()
+            try:
+                cutoff = get_utc_time() - timedelta(minutes=15)
+                pending_rows = (
+                    db.query(
+                        WalletTransaction.id,
+                        WalletTransaction.user_id,
+                        WalletTransaction.amount,
+                        WalletTransaction.currency,
+                        WalletTransaction.related_id,
+                        WalletTransaction.created_at,
+                    )
+                    .filter(
+                        WalletTransaction.type == "withdrawal",
+                        WalletTransaction.status == "pending",
+                        WalletTransaction.created_at < cutoff,
+                    )
+                    .limit(50)
+                    .all()
+                )
+
+                completed_count = 0
+                failed_count = 0
+                for row in pending_rows:
+                    try:
+                        transfer = None
+                        if row.related_id:
+                            try:
+                                transfer = stripe.Transfer.retrieve(row.related_id)
+                            except Exception:
+                                pass
+
+                        if transfer and not transfer.get("reversed", False):
+                            fresh = db.query(WalletTransaction).filter(WalletTransaction.id == row.id).first()
+                            if fresh and fresh.status == "pending":
+                                complete_withdrawal(db, row.id, transfer.id)
+                                db.commit()
+                                completed_count += 1
+                        else:
+                            if row.created_at < get_utc_time() - timedelta(minutes=30):
+                                refund_amount = abs(row.amount)
+                                fail_withdrawal(db, row.id, row.user_id, refund_amount, currency=row.currency)
+                                db.commit()
+                                failed_count += 1
+                    except Exception as e:
+                        db.rollback()
+                        logger.error(f"对账提现失败: tx_id={row.id}, error={e}")
+
+                if completed_count > 0 or failed_count > 0:
+                    logger.info(f"提现对账完成: completed={completed_count}, failed={failed_count}")
+            finally:
+                db.close()
+        except Exception as e:
+            logger.error(f"提现对账任务失败: {e}", exc_info=True)
+
+    scheduler.register_task(
+        'reconcile_pending_withdrawals',
+        reconcile_pending_withdrawals,
+        interval_seconds=600,
+        description="钱包提现对账（Stripe Transfer 状态校验）"
+    )
+
     logger.info(f"已注册 {len(scheduler.tasks)} 个定时任务")
     return scheduler

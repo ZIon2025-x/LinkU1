@@ -35,7 +35,7 @@ def get_shared_pool():
         return None
 
     try:
-        max_connections = int(os.getenv("REDIS_MAX_CONNECTIONS", "50"))
+        max_connections = int(os.getenv("REDIS_MAX_CONNECTIONS", "200"))
         _pool = redis.ConnectionPool.from_url(
             settings.REDIS_URL,
             max_connections=max_connections,
