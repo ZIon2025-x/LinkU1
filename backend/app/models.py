@@ -176,7 +176,7 @@ class User(Base):
     tasks_taken = relationship(
         "Task", back_populates="taker", foreign_keys="Task.taker_id"
     )
-    reviews = relationship("Review", back_populates="user")
+    reviews = relationship("Review", back_populates="user", foreign_keys="Review.user_id")
 
 
 class Task(Base):
@@ -303,7 +303,7 @@ class Review(Base):
     expert_id = Column(String(8), ForeignKey("experts.id", ondelete="SET NULL"), nullable=True)
     # 关系
     task = relationship("Task", back_populates="reviews")
-    user = relationship("User", back_populates="reviews")
+    user = relationship("User", back_populates="reviews", foreign_keys=[user_id])
 
 
 class TaskHistory(Base):
