@@ -18,7 +18,7 @@ async def browse_services(
     sort: str = Query("recommended", pattern="^(recommended|newest|price_asc|price_desc|nearby)$"),
     lat: float = Query(None),
     lng: float = Query(None),
-    radius: int = Query(25, ge=5, le=100),
+    radius: int = Query(25, ge=1, le=100),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=50),
     db: AsyncSession = Depends(get_async_db_dependency),
