@@ -443,12 +443,13 @@ export const getTaskExperts = async (params?: {
   category?: string;
   is_active?: number;
 }) => {
-  const res = await api.get('/api/admin/task-experts', { params });
-  return res.data;
+  const res = await api.get('/api/admin/experts', { params: { page: params?.page, page_size: params?.size, status_filter: params?.category } });
+  // New endpoint returns { total, page, page_size, items }
+  return { task_experts: res.data.items || [], total: res.data.total || 0 };
 };
 
 export const getTaskExpertForAdmin = async (expertId: string) => {
-  const res = await api.get(`/api/admin/task-expert/${expertId}`);
+  const res = await api.get(`/api/admin/experts/${expertId}`);
   return res.data;
 };
 
@@ -458,12 +459,12 @@ export const createTaskExpert = async (expertData: any) => {
 };
 
 export const updateTaskExpert = async (expertId: string, expertData: any) => {
-  const res = await api.put(`/api/admin/task-expert/${expertId}`, expertData);
+  const res = await api.put(`/api/admin/experts/${expertId}`, expertData);
   return res.data;
 };
 
 export const deleteTaskExpert = async (expertId: string) => {
-  const res = await api.delete(`/api/admin/task-expert/${expertId}`);
+  const res = await api.delete(`/api/admin/experts/${expertId}`);
   return res.data;
 };
 
@@ -520,27 +521,28 @@ export const reviewExpertActivityAdmin = async (activityId: number, data: { acti
 };
 
 export const getTaskExpertApplications = async (params?: { status?: string; limit?: number; offset?: number }) => {
-  const res = await api.get('/api/admin/task-expert-applications', { params });
+  const res = await api.get('/api/admin/experts/applications', { params });
   return res.data;
 };
 
 export const reviewTaskExpertApplication = async (applicationId: number, data: { action: 'approve' | 'reject'; review_comment?: string }) => {
-  const res = await api.post(`/api/admin/task-expert-applications/${applicationId}/review`, data);
+  const res = await api.post(`/api/admin/experts/applications/${applicationId}/review`, data);
   return res.data;
 };
 
 export const createExpertFromApplication = async (applicationId: number) => {
+  // This still uses old endpoint — expert feature toggle uses expert_id, not application_id
   const res = await api.post(`/api/admin/task-expert-applications/${applicationId}/create-featured-expert`);
   return res.data;
 };
 
 export const getProfileUpdateRequests = async (params?: { status?: string; limit?: number; offset?: number }) => {
-  const res = await api.get('/api/admin/task-expert-profile-update-requests', { params });
+  const res = await api.get('/api/admin/experts/profile-update-requests', { params });
   return res.data;
 };
 
 export const reviewProfileUpdateRequest = async (requestId: number, data: { action: 'approve' | 'reject'; review_comment?: string }) => {
-  const res = await api.post(`/api/admin/task-expert-profile-update-requests/${requestId}/review`, data);
+  const res = await api.post(`/api/admin/experts/profile-update-requests/${requestId}/review`, data);
   return res.data;
 };
 

@@ -7,7 +7,7 @@ import logging
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from sqlalchemy import select, func, or_
+from sqlalchemy import and_, select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.deps import get_async_db_dependency
@@ -316,6 +316,123 @@ async def list_experts(
     except Exception as e:
         logger.error("list_experts error: %s", e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+# ==================== 达人详情/编辑/注销 ====================
+
+@admin_expert_router.get("/{expert_id}")
+async def get_expert_detail_admin(
+    expert_id: str,
+    current_admin: models.AdminUser = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """管理员：获取达人详情"""
+    result = await db.execute(select(Expert).where(Expert.id == expert_id))
+    expert = result.scalar_one_or_none()
+    if not expert:
+        raise HTTPException(status_code=404, detail="达人不存在")
+
+    # 获取成员列表
+    members_result = await db.execute(
+        select(ExpertMember).where(
+            and_(ExpertMember.expert_id == expert_id, ExpertMember.status == "active")
+        )
+    )
+    members = members_result.scalars().all()
+
+    return {
+        "id": expert.id,
+        "name": expert.name,
+        "name_en": expert.name_en,
+        "name_zh": expert.name_zh,
+        "bio": expert.bio,
+        "bio_en": expert.bio_en,
+        "avatar": expert.avatar,
+        "status": expert.status,
+        "rating": float(expert.rating) if expert.rating else 0,
+        "total_services": expert.total_services,
+        "completed_tasks": expert.completed_tasks,
+        "member_count": expert.member_count,
+        "is_official": expert.is_official,
+        "official_badge": expert.official_badge,
+        "allow_applications": expert.allow_applications,
+        "stripe_onboarding_complete": expert.stripe_onboarding_complete,
+        "forum_category_id": expert.forum_category_id,
+        "created_at": expert.created_at.isoformat() if expert.created_at else None,
+        "members": [
+            {"user_id": m.user_id, "role": m.role, "joined_at": m.joined_at.isoformat() if m.joined_at else None}
+            for m in members
+        ],
+    }
+
+
+@admin_expert_router.put("/{expert_id}")
+async def update_expert_admin(
+    expert_id: str,
+    body: dict,
+    current_admin: models.AdminUser = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """管理员：直接编辑达人信息"""
+    result = await db.execute(select(Expert).where(Expert.id == expert_id))
+    expert = result.scalar_one_or_none()
+    if not expert:
+        raise HTTPException(status_code=404, detail="达人不存在")
+
+    # 允许更新的字段
+    allowed_fields = [
+        'name', 'name_en', 'name_zh', 'bio', 'bio_en', 'bio_zh',
+        'avatar', 'status', 'is_official', 'official_badge',
+        'allow_applications',
+    ]
+    for field in allowed_fields:
+        if field in body:
+            setattr(expert, field, body[field])
+
+    expert.updated_at = get_utc_time()
+    await db.commit()
+    return {"detail": "更新成功", "expert_id": expert_id}
+
+
+@admin_expert_router.delete("/{expert_id}")
+async def delete_expert_admin(
+    expert_id: str,
+    current_admin: models.AdminUser = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """管理员：注销达人团队"""
+    result = await db.execute(select(Expert).where(Expert.id == expert_id))
+    expert = result.scalar_one_or_none()
+    if not expert:
+        raise HTTPException(status_code=404, detail="达人不存在")
+
+    now = get_utc_time()
+    expert.status = "dissolved"
+    expert.updated_at = now
+
+    # 下架所有服务
+    from app.models import TaskExpertService
+    await db.execute(
+        TaskExpertService.__table__.update()
+        .where(and_(TaskExpertService.owner_type == "expert", TaskExpertService.owner_id == expert_id))
+        .values(status="inactive")
+    )
+
+    # 所有成员离开
+    await db.execute(
+        ExpertMember.__table__.update()
+        .where(ExpertMember.expert_id == expert_id)
+        .values(status="left", updated_at=now)
+    )
+
+    # 删除精选
+    await db.execute(
+        FeaturedExpertV2.__table__.delete()
+        .where(FeaturedExpertV2.expert_id == expert_id)
+    )
+
+    await db.commit()
+    return {"detail": "达人已注销"}
 
 
 # ==================== 精选达人管理 ====================
