@@ -150,4 +150,52 @@ class ExpertTeamRepository {
       if (newAvatar != null) 'new_avatar': newAvatar,
     });
   }
+
+  // ==================== 达人服务管理 ====================
+
+  Future<List<Map<String, dynamic>>> getExpertServices(String expertId, {
+    String? status,
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    final params = <String, dynamic>{
+      'limit': limit,
+      'offset': offset,
+    };
+    if (status != null) params['status'] = status;
+
+    final response = await _apiService.get(
+      ApiEndpoints.expertTeamServices(expertId),
+      queryParameters: params,
+    );
+    return (response.data as List).cast<Map<String, dynamic>>();
+  }
+
+  Future<Map<String, dynamic>> createService(String expertId, Map<String, dynamic> data) async {
+    final response = await _apiService.post(
+      ApiEndpoints.expertTeamServices(expertId),
+      data: data,
+    );
+    return response.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> getServiceDetail(String expertId, int serviceId) async {
+    final response = await _apiService.get(
+      ApiEndpoints.expertTeamServiceById(expertId, serviceId),
+    );
+    return response.data as Map<String, dynamic>;
+  }
+
+  Future<void> updateService(String expertId, int serviceId, Map<String, dynamic> data) async {
+    await _apiService.put(
+      ApiEndpoints.expertTeamServiceById(expertId, serviceId),
+      data: data,
+    );
+  }
+
+  Future<void> deleteService(String expertId, int serviceId) async {
+    await _apiService.delete(
+      ApiEndpoints.expertTeamServiceById(expertId, serviceId),
+    );
+  }
 }

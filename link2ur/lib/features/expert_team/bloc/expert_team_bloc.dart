@@ -117,6 +117,29 @@ class ExpertTeamToggleFollow extends ExpertTeamEvent {
   List<Object?> get props => [expertId];
 }
 
+class ExpertTeamLoadServices extends ExpertTeamEvent {
+  final String expertId;
+  ExpertTeamLoadServices(this.expertId);
+  @override
+  List<Object?> get props => [expertId];
+}
+
+class ExpertTeamCreateService extends ExpertTeamEvent {
+  final String expertId;
+  final Map<String, dynamic> data;
+  ExpertTeamCreateService({required this.expertId, required this.data});
+  @override
+  List<Object?> get props => [expertId];
+}
+
+class ExpertTeamDeleteService extends ExpertTeamEvent {
+  final String expertId;
+  final int serviceId;
+  ExpertTeamDeleteService({required this.expertId, required this.serviceId});
+  @override
+  List<Object?> get props => [expertId, serviceId];
+}
+
 // ==================== State ====================
 
 enum ExpertTeamStatus { initial, loading, loaded, error }
@@ -128,6 +151,7 @@ class ExpertTeamState extends Equatable {
   final List<ExpertMember> members;
   final List<ExpertTeamApplication> myApplications;
   final List<ExpertJoinRequest> joinRequests;
+  final List<Map<String, dynamic>> services;
   final String? errorMessage;
   final String? actionMessage;
 
@@ -138,6 +162,7 @@ class ExpertTeamState extends Equatable {
     this.members = const [],
     this.myApplications = const [],
     this.joinRequests = const [],
+    this.services = const [],
     this.errorMessage,
     this.actionMessage,
   });
@@ -149,6 +174,7 @@ class ExpertTeamState extends Equatable {
     List<ExpertMember>? members,
     List<ExpertTeamApplication>? myApplications,
     List<ExpertJoinRequest>? joinRequests,
+    List<Map<String, dynamic>>? services,
     String? errorMessage,
     String? actionMessage,
   }) {
@@ -159,13 +185,14 @@ class ExpertTeamState extends Equatable {
       members: members ?? this.members,
       myApplications: myApplications ?? this.myApplications,
       joinRequests: joinRequests ?? this.joinRequests,
+      services: services ?? this.services,
       errorMessage: errorMessage,
       actionMessage: actionMessage,
     );
   }
 
   @override
-  List<Object?> get props => [status, myTeams, currentTeam, members, myApplications, joinRequests, errorMessage, actionMessage];
+  List<Object?> get props => [status, myTeams, currentTeam, members, myApplications, joinRequests, services, errorMessage, actionMessage];
 }
 
 // ==================== BLoC ====================
@@ -191,6 +218,9 @@ class ExpertTeamBloc extends Bloc<ExpertTeamEvent, ExpertTeamState> {
     on<ExpertTeamTransferOwnership>(_onTransferOwnership);
     on<ExpertTeamLeave>(_onLeave);
     on<ExpertTeamToggleFollow>(_onToggleFollow);
+    on<ExpertTeamLoadServices>(_onLoadServices);
+    on<ExpertTeamCreateService>(_onCreateService);
+    on<ExpertTeamDeleteService>(_onDeleteService);
   }
 
   Future<void> _onLoadMyTeams(ExpertTeamLoadMyTeams event, Emitter<ExpertTeamState> emit) async {
@@ -337,6 +367,35 @@ class ExpertTeamBloc extends Bloc<ExpertTeamEvent, ExpertTeamState> {
       final following = await _repository.toggleFollow(event.expertId);
       final msg = following ? '已关注' : '已取消关注';
       emit(state.copyWith(actionMessage: msg));
+    } catch (e) {
+      emit(state.copyWith(errorMessage: e.toString()));
+    }
+  }
+
+  Future<void> _onLoadServices(ExpertTeamLoadServices event, Emitter<ExpertTeamState> emit) async {
+    try {
+      final services = await _repository.getExpertServices(event.expertId);
+      emit(state.copyWith(services: services));
+    } catch (e) {
+      emit(state.copyWith(errorMessage: e.toString()));
+    }
+  }
+
+  Future<void> _onCreateService(ExpertTeamCreateService event, Emitter<ExpertTeamState> emit) async {
+    try {
+      await _repository.createService(event.expertId, event.data);
+      final services = await _repository.getExpertServices(event.expertId);
+      emit(state.copyWith(services: services, actionMessage: '服务已创建'));
+    } catch (e) {
+      emit(state.copyWith(errorMessage: e.toString()));
+    }
+  }
+
+  Future<void> _onDeleteService(ExpertTeamDeleteService event, Emitter<ExpertTeamState> emit) async {
+    try {
+      await _repository.deleteService(event.expertId, event.serviceId);
+      final services = await _repository.getExpertServices(event.expertId);
+      emit(state.copyWith(services: services, actionMessage: '服务已删除'));
     } catch (e) {
       emit(state.copyWith(errorMessage: e.toString()));
     }
