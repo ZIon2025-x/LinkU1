@@ -545,6 +545,12 @@ app.include_router(expert_service_router)
 from app.chat_participant_routes import chat_participant_router
 app.include_router(chat_participant_router)
 
+from app.expert_package_routes import expert_package_router
+app.include_router(expert_package_router)
+
+from app.expert_marketing_routes import expert_marketing_router
+app.include_router(expert_marketing_router)
+
 # 创建上传目录
 import os
 RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
