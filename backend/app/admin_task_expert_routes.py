@@ -513,7 +513,31 @@ async def create_featured_expert_from_application(
         sync_db.refresh(new_featured_expert)
         
         logger.info(f"管理员 {current_admin.id} 为申请 {application_id} 创建了特色任务达人 {new_featured_expert.id}")
-        
+
+        # 同步到新 featured_experts_v2 表
+        try:
+            from sqlalchemy import text as sa_text
+            map_result = sync_db.execute(
+                sa_text("SELECT new_id FROM _expert_id_migration_map WHERE old_id = :old_id"),
+                {"old_id": application.user_id}
+            ).first()
+            if map_result:
+                from app.models_expert import FeaturedExpertV2
+                existing_fv2 = sync_db.query(FeaturedExpertV2).filter(
+                    FeaturedExpertV2.expert_id == map_result[0]
+                ).first()
+                if not existing_fv2:
+                    sync_db.add(FeaturedExpertV2(
+                        expert_id=map_result[0],
+                        is_featured=True,
+                        display_order=0,
+                        created_by=current_admin.id,
+                    ))
+                    sync_db.commit()
+                    logger.info(f"同步创建 featured_experts_v2: {map_result[0]}")
+        except Exception as sync_err:
+            logger.warning(f"同步 featured_experts_v2 失败: {sync_err}")
+
         return {
             "message": "特色任务达人创建成功",
             "featured_expert_id": new_featured_expert.id,
@@ -674,16 +698,39 @@ async def review_profile_update_request(
             finally:
                 sync_db.close()
             
-            # 5. 更新修改请求状态
+            # 5. 同步到新 experts 表
+            try:
+                from sqlalchemy import text as sa_text
+                map_result = sync_db.execute(
+                    sa_text("SELECT new_id FROM _expert_id_migration_map WHERE old_id = :old_id"),
+                    {"old_id": expert_id_value}
+                ).first()
+                if map_result:
+                    from app.models_expert import Expert as NewExpert
+                    new_expert = sync_db.query(NewExpert).filter(NewExpert.id == map_result[0]).first()
+                    if new_expert:
+                        if update_request.new_expert_name is not None:
+                            new_expert.name = update_request.new_expert_name
+                        if update_request.new_bio is not None:
+                            new_expert.bio = update_request.new_bio
+                        if update_request.new_avatar is not None:
+                            new_expert.avatar = update_request.new_avatar
+                        new_expert.updated_at = get_utc_time()
+                        sync_db.commit()
+                        logger.info(f"同步更新新 experts 表: {map_result[0]}")
+            except Exception as sync_err:
+                logger.warning(f"同步更新新 experts 表失败: {sync_err}")
+
+            # 6. 更新修改请求状态
             update_request.status = "approved"
             update_request.reviewed_by = current_admin.id
             update_request.reviewed_at = get_utc_time()
             update_request.review_comment = review_data.review_comment
             update_request.updated_at = get_utc_time()
-            
+
             await db.commit()
-            
-            # 6. 发送通知给任务达人
+
+            # 7. 发送通知给任务达人
             from app.task_notifications import send_expert_profile_update_approved_notification
             try:
                 await send_expert_profile_update_approved_notification(db, expert_id_value, request_id)
