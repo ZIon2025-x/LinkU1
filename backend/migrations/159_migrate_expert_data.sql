@@ -21,16 +21,16 @@ CREATE TEMP TABLE expert_id_map (
 DO $$
 DECLARE
     rec RECORD;
-    new_id VARCHAR(8);
-    id_exists BOOLEAN;
+    v_new_id VARCHAR(8);
+    v_id_exists BOOLEAN;
 BEGIN
     FOR rec IN SELECT id FROM task_experts LOOP
         LOOP
-            new_id := LPAD(FLOOR(RANDOM() * 100000000)::TEXT, 8, '0');
-            SELECT EXISTS(SELECT 1 FROM expert_id_map WHERE expert_id_map.new_id = new_id) INTO id_exists;
-            EXIT WHEN NOT id_exists;
+            v_new_id := LPAD(FLOOR(RANDOM() * 100000000)::TEXT, 8, '0');
+            SELECT EXISTS(SELECT 1 FROM expert_id_map WHERE expert_id_map.new_id = v_new_id) INTO v_id_exists;
+            EXIT WHEN NOT v_id_exists;
         END LOOP;
-        INSERT INTO expert_id_map (old_id, new_id) VALUES (rec.id, new_id);
+        INSERT INTO expert_id_map (old_id, new_id) VALUES (rec.id, v_new_id);
     END LOOP;
 END $$;
 
