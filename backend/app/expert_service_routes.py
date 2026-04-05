@@ -43,9 +43,25 @@ async def list_expert_services(
             models.TaskExpertService.owner_id == expert_id,
         )
     )
-    if status_filter:
+    # 只有团队 Owner/Admin 可以看到非 active 服务
+    is_team_manager = False
+    if current_user:
+        from app.models_expert import ExpertMember
+        mgr_check = await db.execute(
+            select(ExpertMember).where(
+                and_(
+                    ExpertMember.expert_id == expert_id,
+                    ExpertMember.user_id == current_user.id,
+                    ExpertMember.status == "active",
+                    ExpertMember.role.in_(["owner", "admin"]),
+                )
+            )
+        )
+        is_team_manager = mgr_check.scalar_one_or_none() is not None
+
+    if status_filter and is_team_manager:
         query = query.where(models.TaskExpertService.status == status_filter)
-    elif not current_user:
+    else:
         query = query.where(models.TaskExpertService.status == "active")
 
     query = query.order_by(

@@ -897,15 +897,18 @@ async def remove_member(
     target.updated_at = now
     expert.member_count = max(expert.member_count - 1, 0)
 
-    # 清理该成员的所有达人相关聊天参与记录
+    # 清理该成员在此达人团队相关任务聊天中的参与记录
     from app.models_expert import ChatParticipant
-    await db.execute(
-        select(ChatParticipant).where(ChatParticipant.user_id == user_id)
-    )
-    # 删除该用户在所有相关任务聊天中的记录
     from sqlalchemy import delete
     await db.execute(
-        delete(ChatParticipant).where(ChatParticipant.user_id == user_id)
+        delete(ChatParticipant).where(
+            and_(
+                ChatParticipant.user_id == user_id,
+                ChatParticipant.task_id.in_(
+                    select(models.Task.id).where(models.Task.expert_creator_id == expert_id)
+                )
+            )
+        )
     )
 
     await db.commit()
@@ -933,11 +936,18 @@ async def leave_team(
     member.updated_at = now
     expert.member_count = max(expert.member_count - 1, 0)
 
-    # 清理该成员的聊天参与记录
+    # 清理该成员在此达人团队相关任务聊天中的参与记录
     from app.models_expert import ChatParticipant
     from sqlalchemy import delete
     await db.execute(
-        delete(ChatParticipant).where(ChatParticipant.user_id == current_user.id)
+        delete(ChatParticipant).where(
+            and_(
+                ChatParticipant.user_id == current_user.id,
+                ChatParticipant.task_id.in_(
+                    select(models.Task.id).where(models.Task.expert_creator_id == expert_id)
+                )
+            )
+        )
     )
 
     await db.commit()
@@ -987,6 +997,18 @@ async def dissolve_expert_team(
             )
         )
         .values(status="inactive")
+    )
+
+    # 所有未完成活动取消
+    await db.execute(
+        models.Activity.__table__.update()
+        .where(
+            and_(
+                models.Activity.expert_id == expert_id,
+                models.Activity.status == "open",
+            )
+        )
+        .values(status="cancelled")
     )
 
     # 达人板块隐藏
@@ -1108,7 +1130,7 @@ async def update_expert_board(
         raise HTTPException(status_code=404, detail="达人板块不存在")
 
     if 'name' in body:
-        board.name_zh = body['name']
+        board.name = body['name']
     if 'name_en' in body:
         board.name_en = body['name_en']
     if 'name_zh' in body:

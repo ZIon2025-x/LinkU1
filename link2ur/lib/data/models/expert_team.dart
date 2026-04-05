@@ -98,7 +98,7 @@ class ExpertTeam extends Equatable {
         status, allowApplications, memberCount, rating,
         totalServices, completedTasks, completionRate,
         isOfficial, officialBadge, stripeOnboardingComplete,
-        createdAt, isFollowing, members, isFeatured,
+        createdAt, isFollowing, myRole, members, isFeatured,
       ];
 }
 

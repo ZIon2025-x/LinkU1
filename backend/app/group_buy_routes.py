@@ -56,6 +56,14 @@ async def join_group_buy(
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="你已报名本轮拼单")
 
+    # 检查是否已成单（当前轮已满，非多轮模式）
+    if activity.group_buy_current_count >= (activity.group_buy_min or 1) and not activity.group_buy_multi_round:
+        raise HTTPException(status_code=400, detail="本轮拼单已成单")
+
+    # 多轮模式下检查当前轮是否已满
+    if activity.group_buy_multi_round and activity.group_buy_current_count >= (activity.group_buy_min or 1):
+        raise HTTPException(status_code=400, detail="本轮拼单已满，请等待下一轮")
+
     # 报名
     participant = GroupBuyParticipant(
         activity_id=activity_id,
