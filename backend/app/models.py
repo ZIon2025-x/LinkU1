@@ -1663,7 +1663,9 @@ class TaskExpertService(Base):
         if self.owner_type == 'user':
             return self.owner_id
         if self.owner_type == 'expert':
-            return self.expert_id  # 保持旧行为兼容
+            # 返回旧 expert_id（task_experts.id）以兼容现有路由
+            # 新代码应直接使用 self.owner_id（experts.id）
+            return self.expert_id
         # 旧列兜底
         if self.service_type == "personal":
             return self.user_id
@@ -1673,7 +1675,8 @@ class TaskExpertService(Base):
         Index("ix_task_expert_services_expert_id", expert_id),
         Index("ix_task_expert_services_status", status),
         Index("ix_task_expert_services_expert_status", expert_id, status),
-        Index("ix_services_owner", "owner_type", "owner_id"),
+        Index("ix_services_owner", "owner_type", "owner_id",
+              postgresql_where=text("owner_type IS NOT NULL")),
     )
 
 

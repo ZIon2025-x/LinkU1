@@ -196,6 +196,8 @@ async def list_my_invitations(
         d = ExpertInvitationOut.model_validate(invitation)
         d.expert_name = expert.name
         d.expert_avatar = expert.avatar
+        d.invitee_name = current_user.name
+        d.invitee_avatar = getattr(current_user, 'avatar', None)
         out.append(d)
     return out
 
