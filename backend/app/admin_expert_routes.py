@@ -135,6 +135,21 @@ async def review_expert_application(
             )
             db.add(member)
 
+            # 创建达人板块（type='expert'）
+            from app.models import ForumCategory
+            board = ForumCategory(
+                name=f"expert_{expert_id}",
+                name_zh=application.expert_name,
+                name_en=application.expert_name,
+                type="expert",
+                expert_id=expert_id,
+                is_visible=True,
+                is_admin_only=False,
+            )
+            db.add(board)
+            await db.flush()
+            expert.forum_category_id = board.id
+
             await db.commit()
             return {"status": "approved", "expert_id": expert_id}
         else:

@@ -2377,6 +2377,7 @@ class ForumCategory(Base):
     country = Column(String(10), nullable=True)  # 国家代码（如 UK），仅 type=root 时使用
     university_code = Column(String(50), nullable=True)  # 大学编码（如 UOB），仅 type=university 时使用
     skill_type = Column(String(50), nullable=True, index=True)  # Links to task_type for skill sections
+    expert_id = Column(String(8), ForeignKey("experts.id", ondelete="SET NULL"), nullable=True)  # 达人板块关联达人团队
     view_count = Column(Integer, default=0, nullable=False)
     service_count = Column(Integer, default=0, nullable=False)
     task_count = Column(Integer, default=0, nullable=False)
@@ -2443,6 +2444,7 @@ class ForumPost(Base):
     category_id = Column(Integer, ForeignKey("forum_categories.id", ondelete="CASCADE"), nullable=False)
     author_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=True)  # 改为可空，支持管理员发帖
     admin_author_id = Column(String(5), ForeignKey("admin_users.id", ondelete="SET NULL"), nullable=True)  # 管理员作者ID
+    expert_id = Column(String(8), ForeignKey("experts.id", ondelete="SET NULL"), nullable=True)  # 以达人团队身份发帖
     view_count = Column(Integer, default=0, server_default=text('0'))
     reply_count = Column(Integer, default=0, server_default=text('0'))
     like_count = Column(Integer, default=0, server_default=text('0'))
