@@ -25,6 +25,7 @@ class ExpertOut(BaseModel):
     is_official: bool = False
     official_badge: Optional[str] = None
     stripe_onboarding_complete: bool = False
+    forum_category_id: Optional[int] = None
     created_at: datetime.datetime
     is_following: bool = False  # 当前用户是否关注（接口层填充）
     my_role: Optional[str] = None  # 当前用户在此团队中的角色（接口层填充）

@@ -278,6 +278,10 @@ class ApiEndpoints {
       '/api/experts/$id/profile-update-request';
   static String expertTeamRespondInvitation(int invitationId) =>
       '/api/experts/invitations/$invitationId/respond';
+  // Chat participants
+  static String chatInviteToTask(int taskId) => '/api/chat/tasks/$taskId/invite';
+  static String chatTaskParticipants(int taskId) => '/api/chat/tasks/$taskId/participants';
+
   static String expertTeamServices(String expertId) => '/api/experts/$expertId/services';
   static String expertTeamServiceById(String expertId, int serviceId) =>
       '/api/experts/$expertId/services/$serviceId';

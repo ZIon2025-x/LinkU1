@@ -301,4 +301,27 @@ class ExpertTeamRepository {
   Future<void> replyToReview(int reviewId, String content) async {
     await _apiService.post(ApiEndpoints.reviewReply(reviewId), data: {'content': content});
   }
+
+  // ==================== 聊天参与者 ====================
+
+  Future<void> inviteToTaskChat(int taskId, String userId) async {
+    await _apiService.post(ApiEndpoints.chatInviteToTask(taskId), data: {'user_id': userId});
+  }
+
+  Future<Map<String, dynamic>> getTaskChatParticipants(int taskId) async {
+    final response = await _apiService.get(ApiEndpoints.chatTaskParticipants(taskId));
+    return response.data as Map<String, dynamic>;
+  }
+
+  // ==================== 板块编辑 ====================
+
+  Future<void> updateExpertBoard(String expertId, Map<String, dynamic> data) async {
+    await _apiService.put('/api/experts/$expertId/board', data: data);
+  }
+
+  // ==================== 优惠券编辑 ====================
+
+  Future<void> updateExpertCoupon(String expertId, int couponId, Map<String, dynamic> data) async {
+    await _apiService.put(ApiEndpoints.expertTeamCouponById(expertId, couponId), data: data);
+  }
 }
