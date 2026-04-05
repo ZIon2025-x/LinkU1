@@ -79,12 +79,93 @@ async def join_group_buy(
     if activity.group_buy_current_count >= (activity.group_buy_min or 1):
         group_formed = True
 
-    await db.commit()
-
     if group_formed:
-        # 异步处理成单逻辑（创建任务等）
-        # TODO: 调用成单处理函数
-        pass
+        # 成单：更新所有参与者状态为 confirmed
+        from sqlalchemy import update as sql_update
+        await db.execute(
+            sql_update(GroupBuyParticipant)
+            .where(
+                and_(
+                    GroupBuyParticipant.activity_id == activity_id,
+                    GroupBuyParticipant.round == activity.group_buy_round,
+                    GroupBuyParticipant.status == "joined",
+                )
+            )
+            .values(status="confirmed")
+        )
+
+        # 获取所有确认参与者
+        confirmed_result = await db.execute(
+            select(GroupBuyParticipant).where(
+                and_(
+                    GroupBuyParticipant.activity_id == activity_id,
+                    GroupBuyParticipant.round == activity.group_buy_round,
+                    GroupBuyParticipant.status == "confirmed",
+                )
+            )
+        )
+        confirmed_participants = confirmed_result.scalars().all()
+
+        if activity.group_buy_task_mode == "shared":
+            # 共享模式：创建一个多人任务，所有参与者在同一个任务
+            price = float(activity.discounted_price_per_participant or activity.original_price_per_participant or 0)
+            new_task = models.Task(
+                title=activity.title,
+                description=activity.description,
+                reward=price,
+                base_reward=price,
+                currency=activity.currency or "GBP",
+                location=activity.location,
+                task_type=activity.task_type,
+                status="pending_payment",
+                is_multi_participant=True,
+                max_participants=len(confirmed_participants),
+                min_participants=len(confirmed_participants),
+                parent_activity_id=activity_id,
+                expert_creator_id=activity.expert_id,
+                created_by_expert=True,
+            )
+            db.add(new_task)
+            await db.flush()
+
+            # 为每个参与者创建 TaskParticipant
+            for p in confirmed_participants:
+                db.add(models.TaskParticipant(
+                    task_id=new_task.id,
+                    user_id=p.user_id,
+                    activity_id=activity_id,
+                    status="pending",
+                    is_expert_task=True,
+                    expert_creator_id=activity.expert_id,
+                ))
+        else:
+            # individual 模式：为每个参与者创建独立任务
+            price = float(activity.discounted_price_per_participant or activity.original_price_per_participant or 0)
+            for p in confirmed_participants:
+                new_task = models.Task(
+                    title=activity.title,
+                    description=activity.description,
+                    reward=price,
+                    base_reward=price,
+                    currency=activity.currency or "GBP",
+                    location=activity.location,
+                    task_type=activity.task_type,
+                    status="pending_payment",
+                    poster_id=p.user_id,
+                    parent_activity_id=activity_id,
+                    expert_creator_id=activity.expert_id,
+                    created_by_expert=True,
+                )
+                db.add(new_task)
+
+        # 多轮模式：开启下一轮
+        if activity.group_buy_multi_round:
+            activity.group_buy_round += 1
+            activity.group_buy_current_count = 0
+        else:
+            activity.status = "closed"
+
+    await db.commit()
 
     return {
         "joined": True,
