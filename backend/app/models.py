@@ -1528,8 +1528,8 @@ class TaskExpertApplication(Base):
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
     
     # 关系
-    user = relationship("User", backref="expert_applications")  # 修复：改为复数，表示一对多关系
-    reviewer = relationship("AdminUser", backref="reviewed_expert_applications")
+    user = relationship("User", backref="task_expert_applications")
+    reviewer = relationship("AdminUser", backref="reviewed_task_expert_applications")
     
     __table_args__ = (
         Index("ix_task_expert_applications_user_id", user_id),
