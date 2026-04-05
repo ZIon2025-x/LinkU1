@@ -1,0 +1,28 @@
+-- ===========================================
+-- 迁移 174: 清理文档 — 标记废弃的迁移文件
+-- ===========================================
+--
+-- 以下迁移文件是达人数据迁移过程中的失败重试，已被后续迁移替代：
+--
+-- 159_migrate_expert_data.sql       → 被 170 替代（PL/pgSQL 变量冲突 bug）
+-- 168_redo_expert_data_migration.sql → 被 170 替代（事务回滚导致 experts 为空）
+-- 169_fix_expert_migration.sql      → 被 170 替代（NOT NULL 字段缺默认值）
+--
+-- 最终生效的迁移链：
+-- 158: 创建新表
+-- 160: task_expert_services 加 owner_type/owner_id
+-- 161: 回填 owner_type/owner_id（依赖 170 的映射表）
+-- 162: forum 表加 expert_id
+-- 163: chat_participants 表
+-- 164: 套餐/评价回复/优惠券
+-- 165: 拼单
+-- 166: user_service_packages UNIQUE 约束
+-- 170: 达人数据迁移（最终版）
+-- 171: forum_categories CHECK 约束加 'expert'
+-- 172: 创建达人板块（被 173 替代）
+-- 173: 修复第二个 CHECK 约束 + 重新创建板块
+--
+-- 本迁移不执行任何 SQL，仅作为文档。
+-- ===========================================
+
+SELECT 1; -- no-op
