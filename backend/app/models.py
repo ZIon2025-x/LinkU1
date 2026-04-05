@@ -2198,6 +2198,14 @@ class Activity(Base):
     distributed_points_total = Column(BigInteger, nullable=True, default=0)
     # 浏览量
     view_count = Column(Integer, default=0, nullable=False)
+    # 拼单字段（Phase 6）
+    is_group_buy = Column(Boolean, default=False, nullable=False)
+    group_buy_min = Column(Integer, nullable=True)
+    group_buy_deadline = Column(DateTime(timezone=True), nullable=True)
+    group_buy_task_mode = Column(String(20), default="individual", nullable=True)
+    group_buy_multi_round = Column(Boolean, default=False, nullable=False)
+    group_buy_current_count = Column(Integer, default=0, nullable=False)
+    group_buy_round = Column(Integer, default=1, nullable=False)
     # 创建时间
     created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
@@ -3887,5 +3895,6 @@ from app.models_expert import (  # noqa: E402, F401
     ExpertProfileUpdateRequest, FeaturedExpertV2,
     ChatParticipant,
     UserServicePackage, PackageUsageLog,
+    GroupBuyParticipant,
     generate_expert_id,
 )

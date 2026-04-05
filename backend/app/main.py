@@ -551,6 +551,9 @@ app.include_router(expert_package_router)
 from app.expert_marketing_routes import expert_marketing_router
 app.include_router(expert_marketing_router)
 
+from app.group_buy_routes import group_buy_router
+app.include_router(group_buy_router)
+
 # 创建上传目录
 import os
 RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")

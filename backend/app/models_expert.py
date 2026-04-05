@@ -303,3 +303,24 @@ class PackageUsageLog(Base):
     __table_args__ = (
         Index("ix_package_usage_package", "package_id"),
     )
+
+
+class GroupBuyParticipant(Base):
+    """拼单参与者"""
+    __tablename__ = "group_buy_participants"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    activity_id = Column(Integer, ForeignKey("activities.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    round = Column(Integer, nullable=False, default=1)
+    status = Column(String(20), nullable=False, default="joined")
+    created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
+    cancelled_at = Column(DateTime(timezone=True), nullable=True)
+
+    user = relationship("User", backref="group_buy_participations")
+
+    __table_args__ = (
+        UniqueConstraint("activity_id", "user_id", "round", name="uq_gbp_activity_user_round"),
+        Index("ix_gbp_activity", "activity_id", "round"),
+        Index("ix_gbp_user", "user_id"),
+    )
