@@ -174,85 +174,109 @@ class ApiEndpoints {
   static const String fleaMarketMyRentals = '/api/flea-market/my-rentals';
 
   // ==================== 任务达人 ====================
-  // 后端: task_expert_routes.py (prefix: /api/task-experts)
-  static const String taskExperts = '/api/task-experts';
-  static String taskExpertById(String id) => '/api/task-experts/$id';
+  // 后端: 新达人路由 (已迁移到 /api/experts/*)
+  // 公开查询
+  static const String taskExperts = '/api/experts';
+  static String taskExpertById(String id) => '/api/experts/$id';
   static String taskExpertServices(String expertId) =>
-      '/api/task-experts/$expertId/services';
+      '/api/experts/$expertId/services';
+  static String taskExpertReviews(String expertId) =>
+      '/api/experts/$expertId/reviews';
+
+  // 达人申请（旧流程保留兼容）
+  static const String applyToBeExpert = '/api/experts/apply';
+  static const String myExpertApplication = '/api/experts/my-applications';
+
+  // 达人面板（需要 expertId）
+  static String expertDashboardStats(String expertId) =>
+      '/api/experts/$expertId/dashboard/stats';
+  static String expertClosedDates(String expertId) =>
+      '/api/experts/$expertId/closed-dates';
+  static String expertClosedDateById(String expertId, int id) =>
+      '/api/experts/$expertId/closed-dates/$id';
+
+  // 服务管理（需要 expertId）
+  static String expertServiceById(String expertId, int serviceId) =>
+      '/api/experts/$expertId/services/$serviceId';
+
+  // 服务时间段（需要 expertId）
+  static String expertServiceTimeSlots(String expertId, int serviceId) =>
+      '/api/experts/$expertId/services/$serviceId/time-slots';
+  static String expertServiceTimeSlotById(String expertId, int serviceId, int slotId) =>
+      '/api/experts/$expertId/services/$serviceId/time-slots/$slotId';
+
+  // 公开服务查询
+  static String publicServiceTimeSlots(int serviceId) =>
+      '/api/services/$serviceId/time-slots';
+  static String publicServiceDetail(int serviceId) =>
+      '/api/experts/services/$serviceId'; // legacy compatibility
+
+  // 服务申请/咨询（不需要 expertId，用 serviceId/applicationId）
   static String applyForService(int serviceId) =>
-      '/api/task-experts/services/$serviceId/apply';
-  static String taskExpertServiceDetail(int serviceId) =>
-      '/api/task-experts/services/$serviceId';
+      '/api/services/$serviceId/apply';
+  static String consultService(int serviceId) =>
+      '/api/services/$serviceId/consult';
+  static String negotiateConsultation(int applicationId) =>
+      '/api/applications/$applicationId/negotiate';
+  static String quoteApplication(int applicationId) =>
+      '/api/applications/$applicationId/quote';
+  static String negotiateResponse(int applicationId) =>
+      '/api/applications/$applicationId/negotiate-response';
+  static String formalApply(int applicationId) =>
+      '/api/applications/$applicationId/formal-apply';
+  static String closeConsultation(int applicationId) =>
+      '/api/applications/$applicationId/close';
+  static String approveServiceApplication(int applicationId) =>
+      '/api/applications/$applicationId/approve';
+  static String rejectServiceApplication(int applicationId) =>
+      '/api/applications/$applicationId/reject';
+  static String counterOfferServiceApplication(int applicationId) =>
+      '/api/applications/$applicationId/counter-offer';
+  static String consultationStatus(int applicationId) =>
+      '/api/applications/$applicationId/status';
+
+  // 我的申请
+  static const String myServiceApplications = '/api/my/service-applications';
+  static String expertApplicationsList(String expertId) =>
+      '/api/experts/$expertId/applications';
+
+  // 服务公开申请列表/回复（保留旧路径，旧路由仍运行）
+  static String serviceApplications(int serviceId) =>
+      '/api/task-experts/services/$serviceId/applications';
+  static String replyServiceApplication(int serviceId, int applicationId) =>
+      '/api/task-experts/services/$serviceId/applications/$applicationId/reply';
+
+  // 服务评价
   static String taskExpertServiceReviews(int serviceId) =>
       '/api/task-experts/services/$serviceId/reviews';
-  static String taskExpertReviews(String expertId) =>
-      '/api/task-experts/$expertId/reviews';
-  static const String applyToBeExpert = '/api/task-experts/apply';
-  static const String myExpertApplication = '/api/task-experts/my-application';
+
+  // 旧兼容（Flutter 旧代码可能引用这些，逐步废弃）
   static const String myExpertProfile = '/api/task-experts/me';
   static const String myExpertServices = '/api/task-experts/me/services';
   static const String myExpertApplications = '/api/task-experts/me/applications';
-  static const String myExpertDashboardStats =
-      '/api/task-experts/me/dashboard/stats';
+  static const String myExpertDashboardStats = '/api/task-experts/me/dashboard/stats';
   static const String myExpertSchedule = '/api/task-experts/me/schedule';
   static const String myExpertClosedDates = '/api/task-experts/me/closed-dates';
-  static const String myServiceApplications =
-      '/api/users/me/service-applications';
-  // --- 达人服务时间段 ---
-  // Legacy int-ID variants used by getServiceTimeSlots()/getMyServiceTimeSlots().
-  // Prefer myExpertServiceTimeSlots(String) for expert-dashboard operations.
-  static String serviceTimeSlots(int serviceId) =>
-      '/api/task-experts/services/$serviceId/time-slots';
-  static String myServiceTimeSlots(int serviceId) =>
-      '/api/task-experts/me/services/$serviceId/time-slots';
   static const String myExpertStats = '/api/task-experts/me/dashboard/stats';
-  static String myExpertServiceById(String id) =>
-      '/api/task-experts/me/services/$id';
+  static String myExpertServiceById(String id) => '/api/task-experts/me/services/$id';
   static String myExpertServiceTimeSlots(String serviceId) =>
       '/api/task-experts/me/services/$serviceId/time-slots';
   static String myExpertServiceTimeSlotById(String serviceId, String slotId) =>
       '/api/task-experts/me/services/$serviceId/time-slots/$slotId';
   static String myExpertClosedDateById(String id) =>
       '/api/task-experts/me/closed-dates/$id';
-  // --- 达人资料更新请求 ---
-  // Used by submitProfileUpdateRequest() (and the deprecated requestExpertProfileUpdate()).
   static const String myExpertProfileUpdateRequest =
       '/api/task-experts/me/profile-update-request';
-  // --- 达人审核申请操作 ---
-  static String approveServiceApplication(int applicationId) =>
-      '/api/task-experts/applications/$applicationId/approve';
-  static String rejectServiceApplication(int applicationId) =>
-      '/api/task-experts/applications/$applicationId/reject';
-  static String counterOfferServiceApplication(int applicationId) =>
-      '/api/task-experts/applications/$applicationId/counter-offer';
-  // --- 用户服务申请操作 ---
+  static String serviceTimeSlots(int serviceId) =>
+      '/api/task-experts/services/$serviceId/time-slots';
+  static String myServiceTimeSlots(int serviceId) =>
+      '/api/task-experts/me/services/$serviceId/time-slots';
+  static String taskExpertServiceDetail(int serviceId) =>
+      '/api/task-experts/services/$serviceId';
   static String respondServiceCounterOffer(int applicationId) =>
       '/api/users/me/service-applications/$applicationId/respond-counter-offer';
   static String cancelServiceApplication(int applicationId) =>
       '/api/users/me/service-applications/$applicationId/cancel';
-  // --- 服务公开申请（留言墙） ---
-  static String serviceApplications(int serviceId) =>
-      '/api/task-experts/services/$serviceId/applications';
-  static String replyServiceApplication(int serviceId, int applicationId) =>
-      '/api/task-experts/services/$serviceId/applications/$applicationId/reply';
-
-  // Consultation status
-  static String consultationStatus(int applicationId) =>
-      '/api/task-experts/applications/$applicationId/status';
-
-  // Consultation endpoints
-  static String consultService(int serviceId) =>
-      '/api/task-experts/services/$serviceId/consult';
-  static String negotiateConsultation(int applicationId) =>
-      '/api/task-experts/applications/$applicationId/negotiate';
-  static String quoteApplication(int applicationId) =>
-      '/api/task-experts/applications/$applicationId/quote';
-  static String negotiateResponse(int applicationId) =>
-      '/api/task-experts/applications/$applicationId/negotiate-response';
-  static String formalApply(int applicationId) =>
-      '/api/task-experts/applications/$applicationId/formal-apply';
-  static String closeConsultation(int applicationId) =>
-      '/api/task-experts/applications/$applicationId/close';
 
   // ==================== Expert Team ====================
   static const String expertTeams = '/api/experts';
