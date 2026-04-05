@@ -539,6 +539,8 @@ app.include_router(expert_router)
 
 from app.admin_expert_routes import admin_expert_router
 app.include_router(admin_expert_router)
+from app.expert_service_routes import expert_service_router
+app.include_router(expert_service_router)
 
 # 创建上传目录
 import os
