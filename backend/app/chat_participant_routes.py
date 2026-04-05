@@ -80,6 +80,23 @@ async def invite_to_task_chat(
     if existing_cp.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="该用户已在聊天中")
 
+    # 检查被邀请人是否为达人团队的活跃成员
+    # 查找任务关联的达人团队（通过 owner_type/owner_id 或 expert_creator_id）
+    expert_id_for_check = getattr(task, 'expert_creator_id', None)
+    if expert_id_for_check:
+        # 检查 invitee 是否为该达人团队成员
+        member_check = await db.execute(
+            select(ExpertMember).where(
+                and_(
+                    ExpertMember.expert_id == expert_id_for_check,
+                    ExpertMember.user_id == invitee_id,
+                    ExpertMember.status == "active",
+                )
+            )
+        )
+        if not member_check.scalar_one_or_none():
+            raise HTTPException(status_code=400, detail="被邀请人不是达人团队成员")
+
     # 第一次邀请时，把原有参与者也加入 chat_participants
     existing_count = await db.execute(
         select(ChatParticipant).where(ChatParticipant.task_id == task_id).limit(1)

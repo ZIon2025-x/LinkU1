@@ -22,6 +22,7 @@ class ExpertTeam extends Equatable {
   final bool stripeOnboardingComplete;
   final DateTime? createdAt;
   final bool isFollowing;
+  final String? myRole;
   final List<ExpertMember>? members;
   final bool? isFeatured;
 
@@ -46,6 +47,7 @@ class ExpertTeam extends Equatable {
     this.stripeOnboardingComplete = false,
     this.createdAt,
     this.isFollowing = false,
+    this.myRole,
     this.members,
     this.isFeatured,
   });
@@ -72,6 +74,7 @@ class ExpertTeam extends Equatable {
       stripeOnboardingComplete: json['stripe_onboarding_complete'] as bool? ?? false,
       createdAt: json['created_at'] != null ? DateTime.tryParse(json['created_at'].toString()) : null,
       isFollowing: json['is_following'] as bool? ?? false,
+      myRole: json['my_role'] as String?,
       members: json['members'] != null
           ? (json['members'] as List).map((e) => ExpertMember.fromJson(e as Map<String, dynamic>)).toList()
           : null,

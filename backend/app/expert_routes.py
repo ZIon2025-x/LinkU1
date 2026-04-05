@@ -815,6 +815,17 @@ async def remove_member(
     target.updated_at = now
     expert.member_count = max(expert.member_count - 1, 0)
 
+    # 清理该成员的所有达人相关聊天参与记录
+    from app.models_expert import ChatParticipant
+    await db.execute(
+        select(ChatParticipant).where(ChatParticipant.user_id == user_id)
+    )
+    # 删除该用户在所有相关任务聊天中的记录
+    from sqlalchemy import delete
+    await db.execute(
+        delete(ChatParticipant).where(ChatParticipant.user_id == user_id)
+    )
+
     await db.commit()
     return {"detail": "成员已移除"}
 
@@ -839,6 +850,13 @@ async def leave_team(
     member.status = "left"
     member.updated_at = now
     expert.member_count = max(expert.member_count - 1, 0)
+
+    # 清理该成员的聊天参与记录
+    from app.models_expert import ChatParticipant
+    from sqlalchemy import delete
+    await db.execute(
+        delete(ChatParticipant).where(ChatParticipant.user_id == current_user.id)
+    )
 
     await db.commit()
     return {"detail": "已离开团队"}
