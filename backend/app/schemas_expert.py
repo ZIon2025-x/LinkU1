@@ -27,6 +27,7 @@ class ExpertOut(BaseModel):
     stripe_onboarding_complete: bool = False
     created_at: datetime.datetime
     is_following: bool = False  # 当前用户是否关注（接口层填充）
+    my_role: Optional[str] = None  # 当前用户在此团队中的角色（接口层填充）
 
     class Config:
         from_attributes = True
@@ -124,6 +125,8 @@ class ExpertInvitationOut(BaseModel):
     status: str
     created_at: datetime.datetime
     responded_at: Optional[datetime.datetime] = None
+    expert_name: Optional[str] = None
+    expert_avatar: Optional[str] = None
 
     class Config:
         from_attributes = True
