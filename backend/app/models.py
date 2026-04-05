@@ -296,6 +296,11 @@ class Review(Base):
     comment = Column(Text, nullable=True)
     is_anonymous = Column(Integer, default=0)  # 0=实名, 1=匿名
     created_at = Column(DateTime(timezone=True), default=get_utc_time)
+    # 达人回复（Phase 7）
+    reply_content = Column(Text, nullable=True)
+    reply_at = Column(DateTime(timezone=True), nullable=True)
+    reply_by = Column(String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    expert_id = Column(String(8), ForeignKey("experts.id", ondelete="SET NULL"), nullable=True)
     # 关系
     task = relationship("Task", back_populates="reviews")
     user = relationship("User", back_populates="reviews")
@@ -1028,6 +1033,8 @@ class Coupon(Base):
     points_required = Column(Integer, default=0, nullable=False)  # 积分兑换所需积分（0表示不支持积分兑换）
     applicable_scenarios = Column(JSONB, nullable=True)  # 适用场景列表（如 ["task", "activity", "service", "flea_market"]）
     distribution_type = Column(String(20), default="public")  # public, code_only
+    # 达人优惠券（Phase 7）
+    expert_id = Column(String(8), ForeignKey("experts.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime(timezone=True), default=get_utc_time)
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
     
@@ -1643,7 +1650,12 @@ class TaskExpertService(Base):
     time_slot_end_time = Column(Time, nullable=True)  # 时间段结束时间（每天，向后兼容）
     participants_per_slot = Column(Integer, nullable=True)  # 每个时间段最多参与者数量
     weekly_time_slot_config = Column(JSONB, nullable=True)  # 按周几设置时间段配置（JSON格式）
-    
+
+    # 套餐字段（Phase 7）
+    package_type = Column(String(20), nullable=False, default="single", server_default=text("'single'"))
+    total_sessions = Column(Integer, nullable=True)
+    bundle_service_ids = Column(JSONB, nullable=True)
+
     # 关系
     expert = relationship("TaskExpert", back_populates="services")
     applications = relationship("ServiceApplication", back_populates="service", cascade="all, delete-orphan")
@@ -3874,5 +3886,6 @@ from app.models_expert import (  # noqa: E402, F401
     ExpertJoinRequest, ExpertInvitation, ExpertFollow,
     ExpertProfileUpdateRequest, FeaturedExpertV2,
     ChatParticipant,
+    UserServicePackage, PackageUsageLog,
     generate_expert_id,
 )

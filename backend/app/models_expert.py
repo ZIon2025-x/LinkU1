@@ -264,3 +264,42 @@ class ChatParticipant(Base):
         Index("ix_chat_participants_task", "task_id"),
         Index("ix_chat_participants_user", "user_id"),
     )
+
+
+class UserServicePackage(Base):
+    """用户购买的服务套餐"""
+    __tablename__ = "user_service_packages"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    service_id = Column(Integer, ForeignKey("task_expert_services.id", ondelete="CASCADE"), nullable=False)
+    expert_id = Column(String(8), ForeignKey("experts.id", ondelete="SET NULL"), nullable=True)
+    total_sessions = Column(Integer, nullable=False)
+    used_sessions = Column(Integer, nullable=False, default=0)
+    status = Column(String(20), nullable=False, default="active")
+    purchased_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
+    expires_at = Column(DateTime(timezone=True), nullable=True)
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True)
+
+    user = relationship("User", backref="service_packages")
+
+    __table_args__ = (
+        Index("ix_user_packages_user", "user_id"),
+        Index("ix_user_packages_service", "service_id"),
+        Index("ix_user_packages_expert", "expert_id"),
+    )
+
+
+class PackageUsageLog(Base):
+    """套餐核销记录"""
+    __tablename__ = "package_usage_logs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    package_id = Column(Integer, ForeignKey("user_service_packages.id", ondelete="CASCADE"), nullable=False)
+    used_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
+    used_by = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    note = Column(Text, nullable=True)
+
+    __table_args__ = (
+        Index("ix_package_usage_package", "package_id"),
+    )
