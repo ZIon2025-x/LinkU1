@@ -4806,15 +4806,20 @@ async def consult_quote(
     try:
         from decimal import Decimal
 
-        # 验证发布者身份
+        # 验证报价权限
         task_result = await db.execute(
             select(models.Task).where(models.Task.id == task_id)
         )
         task = task_result.scalar_one_or_none()
         if not task:
             raise HTTPException(status_code=404, detail="任务不存在")
-        if str(task.poster_id) != str(current_user.id):
-            raise HTTPException(status_code=403, detail="只有发布者可以报价")
+        # 咨询类任务：卖家/服务者(taker)报价；普通任务：发布者(poster)报价
+        if task.status == "consulting" or getattr(task, "task_source", "") == "flea_market_consultation":
+            if str(task.taker_id) != str(current_user.id):
+                raise HTTPException(status_code=403, detail="只有卖家/服务者可以报价")
+        else:
+            if str(task.poster_id) != str(current_user.id):
+                raise HTTPException(status_code=403, detail="只有发布者可以报价")
 
         # 行锁查询申请
         app_result = await db.execute(

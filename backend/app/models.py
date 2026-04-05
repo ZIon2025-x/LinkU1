@@ -253,7 +253,7 @@ class Task(Base):
     # 记录实际申请人（如果任务是从活动申请创建的）
     originating_user_id = Column(String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     # 任务来源：normal（普通任务）、expert_service（达人服务）、expert_activity（达人活动）、flea_market（跳蚤市场）
-    task_source = Column(String(20), default="normal", nullable=False)
+    task_source = Column(String(50), default="normal", nullable=False)
     # 定价类型: fixed(固定价), negotiable(协商定价)
     pricing_type = Column(String(20), default='fixed', server_default='fixed')
     # 任务方式: online(线上), offline(线下), both(都可以)

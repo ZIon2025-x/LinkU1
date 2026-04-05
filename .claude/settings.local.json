@@ -60,7 +60,8 @@
       "Bash(for file:*)",
       "Bash(while read:*)",
       "Bash(do echo:*)",
-      "Read(//f/python_work/LinkU/**)"
+      "Read(//f/python_work/LinkU/**)",
+      "Bash(ls -la backend/migrations/15*.sql backend/migrations/16*.sql backend/migrations/17*.sql)"
     ]
   }
 }
