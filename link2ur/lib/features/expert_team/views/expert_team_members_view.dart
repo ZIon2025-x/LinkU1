@@ -16,9 +16,7 @@ class ExpertTeamMembersView extends StatelessWidget {
     return BlocProvider(
       create: (context) => ExpertTeamBloc(
         repository: context.read<ExpertTeamRepository>(),
-      )
-        ..add(ExpertTeamLoadMembers(expertId))
-        ..add(ExpertTeamLoadDetail(expertId)),
+      )..add(ExpertTeamLoadMembers(expertId)),
       child: _ExpertTeamMembersBody(expertId: expertId),
     );
   }
@@ -46,7 +44,7 @@ class _ExpertTeamMembersBody extends StatelessWidget {
       child: BlocBuilder<ExpertTeamBloc, ExpertTeamState>(
         builder: (context, state) {
           final currentUserId = StorageService.instance.getUserId();
-          final members = state.currentTeam?.members ?? state.members;
+          final members = state.members;
           final currentMember = members.firstWhere(
             (m) => m.userId == currentUserId,
             orElse: () => const ExpertMember(id: -1, userId: '', role: ''),

@@ -104,35 +104,37 @@ class _InvitationCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                OutlinedButton(
-                  onPressed: () {
-                    context.read<ExpertTeamBloc>().add(
-                          ExpertTeamRespondInvitation(
-                            invitationId: invitation.id,
-                            action: 'reject',
-                          ),
-                        );
-                  },
-                  child: const Text('拒绝'),
-                ),
-                const SizedBox(width: 12),
-                ElevatedButton(
-                  onPressed: () {
-                    context.read<ExpertTeamBloc>().add(
-                          ExpertTeamRespondInvitation(
-                            invitationId: invitation.id,
-                            action: 'accept',
-                          ),
-                        );
-                  },
-                  child: const Text('接受'),
-                ),
-              ],
-            ),
+            if (invitation.isPending) ...[
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  OutlinedButton(
+                    onPressed: () {
+                      context.read<ExpertTeamBloc>().add(
+                            ExpertTeamRespondInvitation(
+                              invitationId: invitation.id,
+                              action: 'reject',
+                            ),
+                          );
+                    },
+                    child: const Text('拒绝'),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton(
+                    onPressed: () {
+                      context.read<ExpertTeamBloc>().add(
+                            ExpertTeamRespondInvitation(
+                              invitationId: invitation.id,
+                              action: 'accept',
+                            ),
+                          );
+                    },
+                    child: const Text('接受'),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),

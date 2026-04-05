@@ -286,7 +286,7 @@ class ExpertTeamState extends Equatable {
       myInvitations: myInvitations ?? this.myInvitations,
       packages: packages ?? this.packages,
       coupons: coupons ?? this.coupons,
-      groupBuyStatus: groupBuyStatus,
+      groupBuyStatus: groupBuyStatus ?? this.groupBuyStatus,
       errorMessage: errorMessage,
       actionMessage: actionMessage,
     );
@@ -375,7 +375,8 @@ class ExpertTeamBloc extends Bloc<ExpertTeamEvent, ExpertTeamState> {
         avatar: event.avatar,
         applicationMessage: event.message,
       );
-      emit(state.copyWith(status: ExpertTeamStatus.loaded, actionMessage: '申请已提交'));
+      final apps = await _repository.getMyApplications();
+      emit(state.copyWith(status: ExpertTeamStatus.loaded, myApplications: apps, actionMessage: '申请已提交'));
     } catch (e) {
       emit(state.copyWith(status: ExpertTeamStatus.error, errorMessage: e.toString()));
     }
@@ -402,8 +403,9 @@ class ExpertTeamBloc extends Bloc<ExpertTeamEvent, ExpertTeamState> {
   Future<void> _onRespondInvitation(ExpertTeamRespondInvitation event, Emitter<ExpertTeamState> emit) async {
     try {
       await _repository.respondToInvitation(event.invitationId, event.action);
+      final invitations = await _repository.getMyInvitations();
       final msg = event.action == 'accept' ? '已加入团队' : '已拒绝邀请';
-      emit(state.copyWith(actionMessage: msg));
+      emit(state.copyWith(myInvitations: invitations, actionMessage: msg));
     } catch (e) {
       emit(state.copyWith(errorMessage: e.toString()));
     }
@@ -479,6 +481,11 @@ class ExpertTeamBloc extends Bloc<ExpertTeamEvent, ExpertTeamState> {
   Future<void> _onToggleFollow(ExpertTeamToggleFollow event, Emitter<ExpertTeamState> emit) async {
     try {
       final following = await _repository.toggleFollow(event.expertId);
+      // 刷新 detail 以更新 isFollowing 状态
+      try {
+        final team = await _repository.getExpertById(event.expertId);
+        emit(state.copyWith(currentTeam: () => team));
+      } catch (_) {}
       final msg = following ? '已关注' : '已取消关注';
       emit(state.copyWith(actionMessage: msg));
     } catch (e) {
@@ -546,6 +553,11 @@ class ExpertTeamBloc extends Bloc<ExpertTeamEvent, ExpertTeamState> {
   Future<void> _onToggleAllowApplications(ExpertTeamToggleAllowApplications event, Emitter<ExpertTeamState> emit) async {
     try {
       final allow = await _repository.toggleAllowApplications(event.expertId, event.allow);
+      // 刷新 team detail 以更新 allowApplications
+      try {
+        final team = await _repository.getExpertById(event.expertId);
+        emit(state.copyWith(currentTeam: () => team));
+      } catch (_) {}
       emit(state.copyWith(actionMessage: allow ? '已开启申请入口' : '已关闭申请入口'));
     } catch (e) {
       emit(state.copyWith(errorMessage: e.toString()));
