@@ -259,6 +259,7 @@ class ApiEndpoints {
   static const String expertTeamApply = '/api/experts/apply';
   static const String expertTeamMyApplications = '/api/experts/my-applications';
   static const String expertTeamMyTeams = '/api/experts/my-teams';
+  static const String expertTeamMyInvitations = '/api/experts/my-invitations';
   static String expertTeamById(String id) => '/api/experts/$id';
   static String expertTeamMembers(String id) => '/api/experts/$id/members';
   static String expertTeamFollow(String id) => '/api/experts/$id/follow';

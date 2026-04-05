@@ -134,7 +134,7 @@ async def list_my_teams(
 ):
     """查看我加入的团队"""
     result = await db.execute(
-        select(Expert)
+        select(Expert, ExpertMember.role)
         .join(ExpertMember, ExpertMember.expert_id == Expert.id)
         .where(
             and_(
@@ -145,11 +145,12 @@ async def list_my_teams(
         )
         .order_by(Expert.created_at.desc())
     )
-    experts = result.scalars().all()
+    rows = result.all()
 
     # 批量查询关注状态
-    if experts:
-        expert_ids = [e.id for e in experts]
+    expert_ids = [e.id for e, _ in rows]
+    followed_ids: set = set()
+    if expert_ids:
         follow_result = await db.execute(
             select(ExpertFollow.expert_id).where(
                 and_(
@@ -159,13 +160,46 @@ async def list_my_teams(
             )
         )
         followed_ids = set(follow_result.scalars().all())
-        out = []
-        for e in experts:
-            d = ExpertOut.model_validate(e)
-            d.is_following = e.id in followed_ids
-            out.append(d)
-        return out
-    return []
+
+    out = []
+    for expert, role in rows:
+        d = ExpertOut.model_validate(expert)
+        d.is_following = expert.id in followed_ids
+        d.my_role = role
+        out.append(d)
+    return out
+
+
+# ==================== GET /my-invitations ====================
+
+@expert_router.get("/my-invitations", response_model=List[ExpertInvitationOut])
+async def list_my_invitations(
+    request: Request,
+    db: AsyncSession = Depends(get_async_db_dependency),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+):
+    """查看我收到的团队邀请"""
+    result = await db.execute(
+        select(ExpertInvitation, Expert)
+        .join(Expert, Expert.id == ExpertInvitation.expert_id)
+        .where(
+            and_(
+                ExpertInvitation.invitee_id == current_user.id,
+                ExpertInvitation.status == "pending",
+            )
+        )
+        .order_by(ExpertInvitation.created_at.desc())
+    )
+    rows = result.all()
+    out = []
+    for invitation, expert in rows:
+        d = ExpertInvitationOut.model_validate(invitation)
+        d.expert_name = expert.name
+        d.expert_avatar = expert.avatar
+        d.invitee_name = current_user.name
+        d.invitee_avatar = getattr(current_user, 'avatar', None)
+        out.append(d)
+    return out
 
 
 # ==================== 5. GET / (list/search) — placed before /{expert_id} ====================
