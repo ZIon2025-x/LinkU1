@@ -3280,9 +3280,19 @@ async def create_post(
                 headers={"X-Error-Code": "ADMIN_ONLY_CATEGORY"}
             )
     
+    # 达人板块发帖权限检查
+    from app.expert_forum_helpers import is_expert_board, check_expert_board_post_permission
+    is_expert, expert_id = await is_expert_board(db, post.category_id)
+    if is_expert:
+        if not current_user:
+            raise HTTPException(status_code=401, detail="达人板块需要登录后发帖")
+        can_post = await check_expert_board_post_permission(db, expert_id, current_user.id)
+        if not can_post:
+            raise HTTPException(status_code=403, detail="只有达人团队成员才能在此板块发帖")
+
     # 自动填充双语字段
     from app.utils.bilingual_helper import auto_fill_bilingual_fields
-    
+
     # 内容已经是编码格式（\n 和 \c 标记），只移除首尾空白，保留编码标记
     # 注意：strip() 不会影响 \n 和 \c 标记，因为它们不是空白字符
     normalized_content = post.content.strip() if post.content else None
@@ -3910,36 +3920,64 @@ async def delete_post(
 async def pin_post(
     post_id: int,
     request: Request,
-    current_admin: models.AdminUser = Depends(get_current_admin_async),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    """置顶帖子（管理员）"""
+    """置顶帖子（管理员或达人板块 Owner/Admin）"""
+    # 尝试获取管理员会话
+    current_admin = None
+    try:
+        current_admin = await get_current_admin_async(request, db)
+    except HTTPException:
+        pass
+
+    # 达人板块管理权限：Owner/Admin 也可以操作
+    current_user = None
+    if not current_admin:
+        try:
+            current_user = await get_current_user_secure_async_csrf(request, db)
+        except HTTPException:
+            pass
+        from app.expert_forum_helpers import is_expert_board, check_expert_board_manage_permission
+        post_result = await db.execute(select(models.ForumPost).where(models.ForumPost.id == post_id))
+        post = post_result.scalar_one_or_none()
+        if post:
+            is_expert, expert_id = await is_expert_board(db, post.category_id)
+            if is_expert and current_user:
+                can_manage = await check_expert_board_manage_permission(db, expert_id, current_user.id)
+                if not can_manage:
+                    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="无权限操作此板块")
+            elif not is_expert:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="需要管理员权限")
+        if not current_admin and not current_user:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未提供有效的认证信息")
+
     result = await db.execute(
         select(models.ForumPost).where(models.ForumPost.id == post_id)
     )
     post = result.scalar_one_or_none()
-    
+
     if not post:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="帖子不存在"
         )
-    
+
     post.is_pinned = True
     post.updated_at = get_utc_time()
     await db.flush()
-    
-    # 记录管理员操作日志
-    await log_admin_operation(
-        operator_id=current_admin.id,
-        operation_type="pin_post",
-        target_type="post",
-        target_id=post_id,
-        action="pin",
-        request=request,
-        db=db
-    )
-    
+
+    # 记录管理员操作日志（仅管理员操作时记录）
+    if current_admin:
+        await log_admin_operation(
+            operator_id=current_admin.id,
+            operation_type="pin_post",
+            target_type="post",
+            target_id=post_id,
+            action="pin",
+            request=request,
+            db=db
+        )
+
     # 发送通知给帖子作者（只通知普通用户作者，管理员作者不接收通知）
     if post.author_id:
         notification = models.ForumNotification(
@@ -3960,38 +3998,66 @@ async def pin_post(
 async def unpin_post(
     post_id: int,
     request: Request,
-    current_admin: models.AdminUser = Depends(get_current_admin_async),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    """取消置顶（管理员）"""
+    """取消置顶（管理员或达人板块 Owner/Admin）"""
+    # 尝试获取管理员会话
+    current_admin = None
+    try:
+        current_admin = await get_current_admin_async(request, db)
+    except HTTPException:
+        pass
+
+    # 达人板块管理权限：Owner/Admin 也可以操作
+    current_user = None
+    if not current_admin:
+        try:
+            current_user = await get_current_user_secure_async_csrf(request, db)
+        except HTTPException:
+            pass
+        from app.expert_forum_helpers import is_expert_board, check_expert_board_manage_permission
+        post_result = await db.execute(select(models.ForumPost).where(models.ForumPost.id == post_id))
+        post = post_result.scalar_one_or_none()
+        if post:
+            is_expert, expert_id = await is_expert_board(db, post.category_id)
+            if is_expert and current_user:
+                can_manage = await check_expert_board_manage_permission(db, expert_id, current_user.id)
+                if not can_manage:
+                    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="无权限操作此板块")
+            elif not is_expert:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="需要管理员权限")
+        if not current_admin and not current_user:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未提供有效的认证信息")
+
     result = await db.execute(
         select(models.ForumPost).where(models.ForumPost.id == post_id)
     )
     post = result.scalar_one_or_none()
-    
+
     if not post:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="帖子不存在"
         )
-    
+
     post.is_pinned = False
     post.updated_at = get_utc_time()
     await db.flush()
-    
-    # 记录管理员操作日志
-    await log_admin_operation(
-        operator_id=current_admin.id,
-        operation_type="unpin_post",
-        target_type="post",
-        target_id=post_id,
-        action="unpin",
-        request=request,
-        db=db
-    )
-    
+
+    # 记录管理员操作日志（仅管理员操作时记录）
+    if current_admin:
+        await log_admin_operation(
+            operator_id=current_admin.id,
+            operation_type="unpin_post",
+            target_type="post",
+            target_id=post_id,
+            action="unpin",
+            request=request,
+            db=db
+        )
+
     await db.commit()
-    
+
     return {"id": post.id, "is_pinned": False, "message": "已取消置顶"}
 
 
@@ -3999,36 +4065,64 @@ async def unpin_post(
 async def feature_post(
     post_id: int,
     request: Request,
-    current_admin: models.AdminUser = Depends(get_current_admin_async),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    """加精帖子（管理员）"""
+    """加精帖子（管理员或达人板块 Owner/Admin）"""
+    # 尝试获取管理员会话
+    current_admin = None
+    try:
+        current_admin = await get_current_admin_async(request, db)
+    except HTTPException:
+        pass
+
+    # 达人板块管理权限：Owner/Admin 也可以操作
+    current_user = None
+    if not current_admin:
+        try:
+            current_user = await get_current_user_secure_async_csrf(request, db)
+        except HTTPException:
+            pass
+        from app.expert_forum_helpers import is_expert_board, check_expert_board_manage_permission
+        post_result = await db.execute(select(models.ForumPost).where(models.ForumPost.id == post_id))
+        post = post_result.scalar_one_or_none()
+        if post:
+            is_expert, expert_id = await is_expert_board(db, post.category_id)
+            if is_expert and current_user:
+                can_manage = await check_expert_board_manage_permission(db, expert_id, current_user.id)
+                if not can_manage:
+                    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="无权限操作此板块")
+            elif not is_expert:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="需要管理员权限")
+        if not current_admin and not current_user:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未提供有效的认证信息")
+
     result = await db.execute(
         select(models.ForumPost).where(models.ForumPost.id == post_id)
     )
     post = result.scalar_one_or_none()
-    
+
     if not post:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="帖子不存在"
         )
-    
+
     post.is_featured = True
     post.updated_at = get_utc_time()
     await db.flush()
-    
-    # 记录管理员操作日志
-    await log_admin_operation(
-        operator_id=current_admin.id,
-        operation_type="feature_post",
-        target_type="post",
-        target_id=post_id,
-        action="feature",
-        request=request,
-        db=db
-    )
-    
+
+    # 记录管理员操作日志（仅管理员操作时记录）
+    if current_admin:
+        await log_admin_operation(
+            operator_id=current_admin.id,
+            operation_type="feature_post",
+            target_type="post",
+            target_id=post_id,
+            action="feature",
+            request=request,
+            db=db
+        )
+
     # 发送通知给帖子作者
     if post.author_id:
         notification = models.ForumNotification(
@@ -4039,9 +4133,9 @@ async def feature_post(
             to_user_id=post.author_id
         )
         db.add(notification)
-    
+
     await db.commit()
-    
+
     return {"id": post.id, "is_featured": True, "message": "帖子已加精"}
 
 
@@ -4049,38 +4143,66 @@ async def feature_post(
 async def unfeature_post(
     post_id: int,
     request: Request,
-    current_admin: models.AdminUser = Depends(get_current_admin_async),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    """取消加精（管理员）"""
+    """取消加精（管理员或达人板块 Owner/Admin）"""
+    # 尝试获取管理员会话
+    current_admin = None
+    try:
+        current_admin = await get_current_admin_async(request, db)
+    except HTTPException:
+        pass
+
+    # 达人板块管理权限：Owner/Admin 也可以操作
+    current_user = None
+    if not current_admin:
+        try:
+            current_user = await get_current_user_secure_async_csrf(request, db)
+        except HTTPException:
+            pass
+        from app.expert_forum_helpers import is_expert_board, check_expert_board_manage_permission
+        post_result = await db.execute(select(models.ForumPost).where(models.ForumPost.id == post_id))
+        post = post_result.scalar_one_or_none()
+        if post:
+            is_expert, expert_id = await is_expert_board(db, post.category_id)
+            if is_expert and current_user:
+                can_manage = await check_expert_board_manage_permission(db, expert_id, current_user.id)
+                if not can_manage:
+                    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="无权限操作此板块")
+            elif not is_expert:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="需要管理员权限")
+        if not current_admin and not current_user:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未提供有效的认证信息")
+
     result = await db.execute(
         select(models.ForumPost).where(models.ForumPost.id == post_id)
     )
     post = result.scalar_one_or_none()
-    
+
     if not post:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="帖子不存在"
         )
-    
+
     post.is_featured = False
     post.updated_at = get_utc_time()
     await db.flush()
-    
-    # 记录管理员操作日志
-    await log_admin_operation(
-        operator_id=current_admin.id,
-        operation_type="unfeature_post",
-        target_type="post",
-        target_id=post_id,
-        action="unfeature",
-        request=request,
-        db=db
-    )
-    
+
+    # 记录管理员操作日志（仅管理员操作时记录）
+    if current_admin:
+        await log_admin_operation(
+            operator_id=current_admin.id,
+            operation_type="unfeature_post",
+            target_type="post",
+            target_id=post_id,
+            action="unfeature",
+            request=request,
+            db=db
+        )
+
     await db.commit()
-    
+
     return {"id": post.id, "is_featured": False, "message": "已取消加精"}
 
 
@@ -4088,38 +4210,66 @@ async def unfeature_post(
 async def lock_post(
     post_id: int,
     request: Request,
-    current_admin: models.AdminUser = Depends(get_current_admin_async),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    """锁定帖子（管理员）"""
+    """锁定帖子（管理员或达人板块 Owner/Admin）"""
+    # 尝试获取管理员会话
+    current_admin = None
+    try:
+        current_admin = await get_current_admin_async(request, db)
+    except HTTPException:
+        pass
+
+    # 达人板块管理权限：Owner/Admin 也可以操作
+    current_user = None
+    if not current_admin:
+        try:
+            current_user = await get_current_user_secure_async_csrf(request, db)
+        except HTTPException:
+            pass
+        from app.expert_forum_helpers import is_expert_board, check_expert_board_manage_permission
+        post_result = await db.execute(select(models.ForumPost).where(models.ForumPost.id == post_id))
+        post = post_result.scalar_one_or_none()
+        if post:
+            is_expert, expert_id = await is_expert_board(db, post.category_id)
+            if is_expert and current_user:
+                can_manage = await check_expert_board_manage_permission(db, expert_id, current_user.id)
+                if not can_manage:
+                    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="无权限操作此板块")
+            elif not is_expert:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="需要管理员权限")
+        if not current_admin and not current_user:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未提供有效的认证信息")
+
     result = await db.execute(
         select(models.ForumPost).where(models.ForumPost.id == post_id)
     )
     post = result.scalar_one_or_none()
-    
+
     if not post:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="帖子不存在"
         )
-    
+
     post.is_locked = True
     post.updated_at = get_utc_time()
     await db.flush()
-    
-    # 记录管理员操作日志
-    await log_admin_operation(
-        operator_id=current_admin.id,
-        operation_type="lock_post",
-        target_type="post",
-        target_id=post_id,
-        action="lock",
-        request=request,
-        db=db
-    )
-    
+
+    # 记录管理员操作日志（仅管理员操作时记录）
+    if current_admin:
+        await log_admin_operation(
+            operator_id=current_admin.id,
+            operation_type="lock_post",
+            target_type="post",
+            target_id=post_id,
+            action="lock",
+            request=request,
+            db=db
+        )
+
     await db.commit()
-    
+
     return {"id": post.id, "is_locked": True, "message": "帖子已锁定"}
 
 
@@ -4127,38 +4277,66 @@ async def lock_post(
 async def unlock_post(
     post_id: int,
     request: Request,
-    current_admin: models.AdminUser = Depends(get_current_admin_async),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    """解锁帖子（管理员）"""
+    """解锁帖子（管理员或达人板块 Owner/Admin）"""
+    # 尝试获取管理员会话
+    current_admin = None
+    try:
+        current_admin = await get_current_admin_async(request, db)
+    except HTTPException:
+        pass
+
+    # 达人板块管理权限：Owner/Admin 也可以操作
+    current_user = None
+    if not current_admin:
+        try:
+            current_user = await get_current_user_secure_async_csrf(request, db)
+        except HTTPException:
+            pass
+        from app.expert_forum_helpers import is_expert_board, check_expert_board_manage_permission
+        post_result = await db.execute(select(models.ForumPost).where(models.ForumPost.id == post_id))
+        post = post_result.scalar_one_or_none()
+        if post:
+            is_expert, expert_id = await is_expert_board(db, post.category_id)
+            if is_expert and current_user:
+                can_manage = await check_expert_board_manage_permission(db, expert_id, current_user.id)
+                if not can_manage:
+                    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="无权限操作此板块")
+            elif not is_expert:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="需要管理员权限")
+        if not current_admin and not current_user:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未提供有效的认证信息")
+
     result = await db.execute(
         select(models.ForumPost).where(models.ForumPost.id == post_id)
     )
     post = result.scalar_one_or_none()
-    
+
     if not post:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="帖子不存在"
         )
-    
+
     post.is_locked = False
     post.updated_at = get_utc_time()
     await db.flush()
-    
-    # 记录管理员操作日志
-    await log_admin_operation(
-        operator_id=current_admin.id,
-        operation_type="unlock_post",
-        target_type="post",
-        target_id=post_id,
-        action="unlock",
-        request=request,
-        db=db
-    )
-    
+
+    # 记录管理员操作日志（仅管理员操作时记录）
+    if current_admin:
+        await log_admin_operation(
+            operator_id=current_admin.id,
+            operation_type="unlock_post",
+            target_type="post",
+            target_id=post_id,
+            action="unlock",
+            request=request,
+            db=db
+        )
+
     await db.commit()
-    
+
     return {"id": post.id, "is_locked": False, "message": "帖子已解锁"}
 
 
