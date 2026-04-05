@@ -1610,6 +1610,9 @@ class TaskExpertService(Base):
     expert_id = Column(String(8), ForeignKey("task_experts.id", ondelete="CASCADE"), nullable=True)
     service_type = Column(String(20), nullable=False, default="expert", server_default="expert")  # 'personal' | 'expert'
     user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=True)  # owner for personal services
+    # 新多态 owner 列（Phase 2a）——与旧列共存，新代码用新列
+    owner_type = Column(String(20), nullable=True)  # 'expert' | 'user'，回填后为 NOT NULL
+    owner_id = Column(String(8), nullable=True)  # experts.id 或 users.id，回填后为 NOT NULL
     pricing_type = Column(String(20), nullable=False, default="fixed", server_default="fixed")  # 'fixed' | 'negotiable'
     location_type = Column(String(20), nullable=False, default="online", server_default="online")  # 'online' | 'in_person' | 'both'
     location = Column(String(255), nullable=True)  # city/address text for display
@@ -1654,10 +1657,14 @@ class TaskExpertService(Base):
     def owner_user_id(self):
         """Resolve owner user ID regardless of service type.
 
-        For expert services: expert_id is used, which equals users.id because
-        TaskExpert.id is set to user.id on expert approval (see admin_task_expert_routes.py).
-        For personal services: user_id is the direct FK to users.id.
+        New path (Phase 2a+): use owner_type + owner_id
+        Legacy path: use service_type + expert_id/user_id
         """
+        if self.owner_type == 'user':
+            return self.owner_id
+        if self.owner_type == 'expert':
+            return self.expert_id  # 保持旧行为兼容
+        # 旧列兜底
         if self.service_type == "personal":
             return self.user_id
         return self.expert_id
@@ -1666,6 +1673,7 @@ class TaskExpertService(Base):
         Index("ix_task_expert_services_expert_id", expert_id),
         Index("ix_task_expert_services_status", status),
         Index("ix_task_expert_services_expert_status", expert_id, status),
+        Index("ix_services_owner", "owner_type", "owner_id"),
     )
 
 
@@ -1748,6 +1756,8 @@ class ServiceApplication(Base):
     service_id = Column(Integer, ForeignKey("task_expert_services.id", ondelete="CASCADE"), nullable=False)
     applicant_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     expert_id = Column(String(8), ForeignKey("task_experts.id", ondelete="CASCADE"), nullable=True)
+    # 指向新 experts 表的 ID（Phase 2a）——与旧 expert_id 共存
+    new_expert_id = Column(String(8), nullable=True)  # 指向 experts.id（新表）
     service_owner_id = Column(String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     time_slot_id = Column(Integer, ForeignKey("service_time_slots.id", ondelete="SET NULL"), nullable=True)  # 选择的时间段ID
     application_message = Column(Text, nullable=True)
