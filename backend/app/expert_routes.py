@@ -202,6 +202,79 @@ async def list_my_invitations(
     return out
 
 
+# ==================== GET /featured ====================
+
+@expert_router.get("/featured", response_model=List[ExpertOut])
+async def list_featured_experts(
+    request: Request,
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: AsyncSession = Depends(get_async_db_dependency),
+    current_user: Optional[models.User] = Depends(get_current_user_optional),
+):
+    """获取精选达人列表"""
+    result = await db.execute(
+        select(Expert, FeaturedExpertV2)
+        .join(FeaturedExpertV2, FeaturedExpertV2.expert_id == Expert.id)
+        .where(
+            and_(
+                FeaturedExpertV2.is_featured == True,
+                Expert.status == "active",
+            )
+        )
+        .order_by(FeaturedExpertV2.display_order.asc())
+        .offset(offset).limit(limit)
+    )
+    rows = result.all()
+
+    followed_ids: set = set()
+    if current_user and rows:
+        expert_ids = [e.id for e, _ in rows]
+        fr = await db.execute(
+            select(ExpertFollow.expert_id).where(
+                and_(ExpertFollow.user_id == current_user.id, ExpertFollow.expert_id.in_(expert_ids))
+            )
+        )
+        followed_ids = set(fr.scalars().all())
+
+    out = []
+    for expert, featured in rows:
+        d = ExpertOut.model_validate(expert)
+        d.is_following = expert.id in followed_ids
+        out.append(d)
+    return out
+
+
+# ==================== GET /my-following ====================
+
+@expert_router.get("/my-following", response_model=List[ExpertOut])
+async def list_my_following_experts(
+    request: Request,
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: AsyncSession = Depends(get_async_db_dependency),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+):
+    """获取我关注的达人列表"""
+    result = await db.execute(
+        select(Expert)
+        .join(ExpertFollow, ExpertFollow.expert_id == Expert.id)
+        .where(
+            and_(
+                ExpertFollow.user_id == current_user.id,
+                Expert.status == "active",
+            )
+        )
+        .order_by(ExpertFollow.created_at.desc())
+        .offset(offset).limit(limit)
+    )
+    experts = result.scalars().all()
+    return [
+        ExpertOut(**{c.name: getattr(e, c.name) for c in Expert.__table__.columns}, is_following=True)
+        for e in experts
+    ]
+
+
 # ==================== 5. GET / (list/search) — placed before /{expert_id} ====================
 
 @expert_router.get("", response_model=List[ExpertOut])
@@ -315,10 +388,19 @@ async def get_expert_detail(
     )
     is_featured = featured_result.scalar_one_or_none() is not None
 
+    # 当前用户的角色
+    my_role = None
+    if current_user:
+        for m in members_out:
+            if m.user_id == current_user.id:
+                my_role = m.role
+                break
+
     detail = ExpertDetailOut.model_validate(expert)
     detail.members = members_out
     detail.is_following = is_following
     detail.is_featured = is_featured
+    detail.my_role = my_role
     return detail
 
 
@@ -860,6 +942,101 @@ async def leave_team(
 
     await db.commit()
     return {"detail": "已离开团队"}
+
+
+# ==================== POST /{expert_id}/dissolve ====================
+
+@expert_router.post("/{expert_id}/dissolve")
+async def dissolve_expert_team(
+    expert_id: str,
+    request: Request,
+    db: AsyncSession = Depends(get_async_db_dependency),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+):
+    """注销达人团队（仅 Owner）"""
+    expert = await _get_expert_or_404(db, expert_id)
+    await _get_member_or_403(db, expert_id, current_user.id, required_roles=["owner"])
+
+    # 检查是否有进行中的任务
+    from app.models import ForumCategory
+    task_result = await db.execute(
+        select(func.count()).select_from(models.Task).where(
+            and_(
+                models.Task.expert_creator_id == expert_id,
+                models.Task.status.in_(["in_progress", "pending_payment", "pending_confirmation"]),
+            )
+        )
+    )
+    active_tasks = task_result.scalar_one()
+    if active_tasks > 0:
+        raise HTTPException(status_code=400, detail=f"有 {active_tasks} 个进行中的任务，无法注销")
+
+    now = get_utc_time()
+
+    # 达人状态 → dissolved
+    expert.status = "dissolved"
+    expert.updated_at = now
+
+    # 所有服务下架
+    await db.execute(
+        models.TaskExpertService.__table__.update()
+        .where(
+            and_(
+                models.TaskExpertService.owner_type == "expert",
+                models.TaskExpertService.owner_id == expert_id,
+            )
+        )
+        .values(status="inactive")
+    )
+
+    # 达人板块隐藏
+    if expert.forum_category_id:
+        board_result = await db.execute(
+            select(ForumCategory).where(ForumCategory.id == expert.forum_category_id)
+        )
+        board = board_result.scalar_one_or_none()
+        if board:
+            board.is_visible = False
+
+    # 所有成员状态 → left
+    await db.execute(
+        ExpertMember.__table__.update()
+        .where(ExpertMember.expert_id == expert_id)
+        .values(status="left", updated_at=now)
+    )
+
+    # 删除精选记录
+    await db.execute(
+        FeaturedExpertV2.__table__.delete()
+        .where(FeaturedExpertV2.expert_id == expert_id)
+    )
+
+    await db.commit()
+    return {"detail": "达人团队已注销"}
+
+
+# ==================== PUT /{expert_id}/allow-applications ====================
+
+@expert_router.put("/{expert_id}/allow-applications")
+async def toggle_allow_applications(
+    expert_id: str,
+    body: dict,
+    request: Request,
+    db: AsyncSession = Depends(get_async_db_dependency),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+):
+    """开关团队申请入口（仅 Owner）"""
+    expert = await _get_expert_or_404(db, expert_id)
+    await _get_member_or_403(db, expert_id, current_user.id, required_roles=["owner"])
+
+    allow = body.get("allow_applications")
+    if allow is None:
+        raise HTTPException(status_code=400, detail="缺少 allow_applications 字段")
+
+    expert.allow_applications = bool(allow)
+    expert.updated_at = get_utc_time()
+    await db.commit()
+    return {"allow_applications": expert.allow_applications}
 
 
 # ==================== 17. POST /{expert_id}/profile-update-request ====================

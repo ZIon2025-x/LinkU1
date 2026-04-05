@@ -124,6 +124,36 @@ async def invite_to_task_chat(
                     role="expert_owner",
                 ))
 
+    # 确保达人 Owner 始终在聊天中
+    expert_creator_id = getattr(task, 'expert_creator_id', None)
+    if expert_creator_id:
+        # 查找达人团队的 Owner
+        owner_result = await db.execute(
+            select(ExpertMember.user_id).where(
+                and_(
+                    ExpertMember.expert_id == expert_creator_id,
+                    ExpertMember.role == "owner",
+                    ExpertMember.status == "active",
+                )
+            )
+        )
+        owner_user_id = owner_result.scalar_one_or_none()
+        if owner_user_id:
+            existing_owner_cp = await db.execute(
+                select(ChatParticipant).where(
+                    and_(
+                        ChatParticipant.task_id == task_id,
+                        ChatParticipant.user_id == owner_user_id,
+                    )
+                )
+            )
+            if not existing_owner_cp.scalar_one_or_none():
+                db.add(ChatParticipant(
+                    task_id=task_id,
+                    user_id=owner_user_id,
+                    role="expert_owner",
+                ))
+
     # 添加被邀请人
     db.add(ChatParticipant(
         task_id=task_id,

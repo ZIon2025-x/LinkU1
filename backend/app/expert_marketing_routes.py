@@ -174,3 +174,30 @@ async def update_expert_coupon(
     coupon.updated_at = get_utc_time()
     await db.commit()
     return {"detail": "优惠券已更新"}
+
+
+@expert_marketing_router.delete("/api/experts/{expert_id}/coupons/{coupon_id}")
+async def deactivate_expert_coupon(
+    expert_id: str,
+    coupon_id: int,
+    request: Request,
+    db: AsyncSession = Depends(get_async_db_dependency),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+):
+    """停用达人优惠券（Owner/Admin）"""
+    await _get_expert_or_404(db, expert_id)
+    await _get_member_or_403(db, expert_id, current_user.id, required_roles=["owner", "admin"])
+
+    result = await db.execute(
+        select(models.Coupon).where(
+            and_(models.Coupon.id == coupon_id, models.Coupon.expert_id == expert_id)
+        )
+    )
+    coupon = result.scalar_one_or_none()
+    if not coupon:
+        raise HTTPException(status_code=404, detail="优惠券不存在")
+
+    coupon.status = "inactive"
+    coupon.updated_at = get_utc_time()
+    await db.commit()
+    return {"detail": "优惠券已停用"}

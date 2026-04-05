@@ -97,31 +97,15 @@ async def create_expert_service(
     expert = await _get_expert_or_404(db, expert_id)
     await _get_member_or_403(db, expert_id, current_user.id, required_roles=["owner", "admin"])
 
+    data = body.model_dump(exclude_unset=True)
     service = models.TaskExpertService(
         owner_type="expert",
         owner_id=expert_id,
         expert_id=None,
         service_type="expert",
         user_id=None,
-        service_name=body.service_name,
-        service_name_en=getattr(body, 'service_name_en', None),
-        service_name_zh=getattr(body, 'service_name_zh', None),
-        description=body.description,
-        description_en=getattr(body, 'description_en', None),
-        description_zh=getattr(body, 'description_zh', None),
-        category=getattr(body, 'category', None),
-        images=getattr(body, 'images', None),
-        base_price=body.base_price,
-        currency=getattr(body, 'currency', 'GBP'),
-        pricing_type=getattr(body, 'pricing_type', 'fixed'),
-        location_type=getattr(body, 'location_type', 'online'),
-        location=getattr(body, 'location', None),
-        skills=getattr(body, 'skills', None),
         status="active",
-        has_time_slots=getattr(body, 'has_time_slots', False),
-        time_slot_duration_minutes=getattr(body, 'time_slot_duration_minutes', None),
-        participants_per_slot=getattr(body, 'participants_per_slot', None),
-        weekly_time_slot_config=getattr(body, 'weekly_time_slot_config', None),
+        **data,
     )
     db.add(service)
     expert.total_services = (expert.total_services or 0) + 1
