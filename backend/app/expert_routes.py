@@ -989,18 +989,18 @@ async def dissolve_expert_team(
     )
     member_ids = [row[0] for row in member_user_ids.all()]
 
-    # 同时查新旧两种关联方式
-    # 新方式：通过 services.owner_id = expert_id 关联的 service_applications.task_id
-    # 旧方式：Task.expert_creator_id in member_user_ids
-    task_result = await db.execute(
-        select(func.count()).select_from(models.Task).where(
-            and_(
-                models.Task.status.in_(["in_progress", "pending_payment", "pending_confirmation"]),
-                models.Task.expert_creator_id.in_(member_ids) if member_ids else False,
+    # 通过团队成员 user_ids 查关联任务（旧系统 expert_creator_id = user_id）
+    active_tasks = 0
+    if member_ids:
+        task_result = await db.execute(
+            select(func.count()).select_from(models.Task).where(
+                and_(
+                    models.Task.status.in_(["in_progress", "pending_payment", "pending_confirmation"]),
+                    models.Task.expert_creator_id.in_(member_ids),
+                )
             )
         )
-    )
-    active_tasks = task_result.scalar_one()
+        active_tasks = task_result.scalar_one()
     if active_tasks > 0:
         raise HTTPException(status_code=400, detail=f"有 {active_tasks} 个进行中的任务，无法注销")
 

@@ -123,9 +123,8 @@ class _TeamCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    // Find the current user's role in this team
-    final myMember = team.members?.isNotEmpty == true ? team.members!.first : null;
-    final role = myMember?.role;
+    // 使用后端返回的 my_role 字段
+    final role = team.myRole;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),

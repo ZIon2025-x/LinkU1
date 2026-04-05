@@ -286,7 +286,7 @@ class ExpertTeamState extends Equatable {
       myInvitations: myInvitations ?? this.myInvitations,
       packages: packages ?? this.packages,
       coupons: coupons ?? this.coupons,
-      groupBuyStatus: groupBuyStatus ?? this.groupBuyStatus,
+      groupBuyStatus: groupBuyStatus,
       errorMessage: errorMessage,
       actionMessage: actionMessage,
     );

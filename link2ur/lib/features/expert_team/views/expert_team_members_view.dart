@@ -212,11 +212,12 @@ class _MemberMenuButton extends StatelessWidget {
             value: 'toggle_role',
             child: Text(member.isAdmin ? '设为成员' : '设为管理员'),
           ),
-        // Owner 和 Admin 都可以移除成员（但只能移除比自己角色低的）
-        const PopupMenuItem(
-          value: 'remove',
-          child: Text('移除成员', style: TextStyle(color: Colors.red)),
-        ),
+        // 只有 Owner 可以移除成员
+        if (isOwner)
+          const PopupMenuItem(
+            value: 'remove',
+            child: Text('移除成员', style: TextStyle(color: Colors.red)),
+          ),
         // 只有 Owner 可以转让
         if (isOwner)
           const PopupMenuItem(
