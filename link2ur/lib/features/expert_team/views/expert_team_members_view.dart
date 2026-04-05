@@ -7,6 +7,7 @@ import 'package:link2ur/data/models/expert_team.dart';
 import 'package:link2ur/data/repositories/expert_team_repository.dart';
 import 'package:link2ur/data/services/storage_service.dart';
 import 'package:link2ur/features/expert_team/bloc/expert_team_bloc.dart';
+import 'package:link2ur/features/expert_team/widgets/role_badge.dart';
 
 class ExpertTeamMembersView extends StatelessWidget {
   final String expertId;
@@ -94,17 +95,22 @@ class _ExpertTeamMembersBody extends StatelessWidget {
       return Center(child: Text(context.l10n.expertTeamNoMembers));
     }
 
-    return ListView.builder(
-      itemCount: members.length,
-      itemBuilder: (context, index) {
-        final member = members[index];
-        return _MemberListItem(
-          member: member,
-          expertId: expertId,
-          canManage: canManage,
-          isOwner: isOwner,
-        );
+    return RefreshIndicator(
+      onRefresh: () async {
+        context.read<ExpertTeamBloc>().add(ExpertTeamLoadMembers(expertId));
       },
+      child: ListView.builder(
+        itemCount: members.length,
+        itemBuilder: (context, index) {
+          final member = members[index];
+          return _MemberListItem(
+            member: member,
+            expertId: expertId,
+            canManage: canManage,
+            isOwner: isOwner,
+          );
+        },
+      ),
     );
   }
 
@@ -184,7 +190,7 @@ class _MemberListItem extends StatelessWidget {
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _RoleBadge(role: member.role),
+          ExpertRoleBadge(role: member.role),
           if (showMenu) _MemberMenuButton(member: member, expertId: expertId, isOwner: isOwner),
         ],
       ),
@@ -298,44 +304,3 @@ class _MemberMenuButton extends StatelessWidget {
   }
 }
 
-class _RoleBadge extends StatelessWidget {
-  final String role;
-
-  const _RoleBadge({required this.role});
-
-  @override
-  Widget build(BuildContext context) {
-    Color bgColor;
-    Color textColor;
-    String label;
-
-    switch (role) {
-      case 'owner':
-        bgColor = Colors.blue;
-        textColor = Colors.white;
-        label = context.l10n.expertTeamOwner;
-        break;
-      case 'admin':
-        bgColor = Colors.orange;
-        textColor = Colors.white;
-        label = context.l10n.expertTeamAdmin;
-        break;
-      default:
-        bgColor = Colors.grey.shade200;
-        textColor = Colors.black87;
-        label = context.l10n.expertTeamMember;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(color: textColor, fontSize: 12),
-      ),
-    );
-  }
-}

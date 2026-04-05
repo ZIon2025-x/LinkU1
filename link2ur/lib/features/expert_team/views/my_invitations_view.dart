@@ -48,12 +48,17 @@ class _MyInvitationsPage extends StatelessWidget {
               );
             }
 
-            return ListView.builder(
-              itemCount: invitations.length,
-              itemBuilder: (context, index) {
-                final inv = invitations[index];
-                return _InvitationCard(invitation: inv);
+            return RefreshIndicator(
+              onRefresh: () async {
+                context.read<ExpertTeamBloc>().add(ExpertTeamLoadMyInvitations());
               },
+              child: ListView.builder(
+                itemCount: invitations.length,
+                itemBuilder: (context, index) {
+                  final inv = invitations[index];
+                  return _InvitationCard(invitation: inv);
+                },
+              ),
             );
           },
         ),

@@ -57,16 +57,21 @@ class _JoinRequestsPage extends StatelessWidget {
               );
             }
 
-            return ListView.builder(
-              padding: const EdgeInsets.all(12),
-              itemCount: state.joinRequests.length,
-              itemBuilder: (context, index) {
-                final req = state.joinRequests[index];
-                return _JoinRequestCard(
-                  request: req,
-                  expertId: expertId,
-                );
+            return RefreshIndicator(
+              onRefresh: () async {
+                context.read<ExpertTeamBloc>().add(ExpertTeamLoadJoinRequests(expertId));
               },
+              child: ListView.builder(
+                padding: const EdgeInsets.all(12),
+                itemCount: state.joinRequests.length,
+                itemBuilder: (context, index) {
+                  final req = state.joinRequests[index];
+                  return _JoinRequestCard(
+                    request: req,
+                    expertId: expertId,
+                  );
+                },
+              ),
             );
           },
         ),

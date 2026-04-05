@@ -7,6 +7,7 @@ import 'package:link2ur/data/models/expert_team.dart';
 import 'package:link2ur/data/repositories/expert_team_repository.dart';
 import 'package:link2ur/data/services/storage_service.dart';
 import 'package:link2ur/features/expert_team/bloc/expert_team_bloc.dart';
+import 'package:link2ur/features/expert_team/widgets/role_badge.dart';
 
 class ExpertTeamDetailView extends StatelessWidget {
   final String expertId;
@@ -468,50 +469,9 @@ class _MemberChip extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
-        _RoleBadge(role: member.role),
+        ExpertRoleBadge(role: member.role),
       ],
     );
   }
 }
 
-class _RoleBadge extends StatelessWidget {
-  final String role;
-
-  const _RoleBadge({required this.role});
-
-  @override
-  Widget build(BuildContext context) {
-    Color bgColor;
-    Color textColor;
-    String label;
-
-    switch (role) {
-      case 'owner':
-        bgColor = Colors.blue;
-        textColor = Colors.white;
-        label = context.l10n.expertTeamOwner;
-        break;
-      case 'admin':
-        bgColor = Colors.orange;
-        textColor = Colors.white;
-        label = context.l10n.expertTeamAdmin;
-        break;
-      default:
-        bgColor = Colors.grey.shade200;
-        textColor = Colors.black87;
-        label = context.l10n.expertTeamMember;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(color: textColor, fontSize: 10),
-      ),
-    );
-  }
-}

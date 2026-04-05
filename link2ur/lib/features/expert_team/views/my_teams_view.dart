@@ -5,6 +5,7 @@ import 'package:link2ur/core/utils/l10n_extension.dart';
 import 'package:link2ur/data/models/expert_team.dart';
 import 'package:link2ur/data/repositories/expert_team_repository.dart';
 import 'package:link2ur/features/expert_team/bloc/expert_team_bloc.dart';
+import 'package:link2ur/features/expert_team/widgets/role_badge.dart';
 
 /// 我的团队页
 class MyTeamsView extends StatelessWidget {
@@ -92,17 +93,22 @@ class _MyTeamsContent extends StatelessWidget {
             );
           }
 
-          return ListView.builder(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            itemCount: teams.length,
-            itemBuilder: (context, index) {
-              final team = teams[index];
-              return _TeamCard(
-                key: ValueKey(team.id),
-                team: team,
-                onTap: () => context.push('/expert-teams/${team.id}'),
-              );
+          return RefreshIndicator(
+            onRefresh: () async {
+              context.read<ExpertTeamBloc>().add(ExpertTeamLoadMyTeams());
             },
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: teams.length,
+              itemBuilder: (context, index) {
+                final team = teams[index];
+                return _TeamCard(
+                  key: ValueKey(team.id),
+                  team: team,
+                  onTap: () => context.push('/expert-teams/${team.id}'),
+                );
+              },
+            ),
           );
         },
       ),
@@ -168,7 +174,7 @@ class _TeamCard extends StatelessWidget {
                         ),
                         if (role != null) ...[
                           const SizedBox(width: 8),
-                          _RoleBadge(role: role),
+                          ExpertRoleBadge(role: role),
                         ],
                       ],
                     ),
@@ -208,42 +214,3 @@ class _TeamCard extends StatelessWidget {
   }
 }
 
-class _RoleBadge extends StatelessWidget {
-  const _RoleBadge({required this.role});
-
-  final String role;
-
-  @override
-  Widget build(BuildContext context) {
-    final Color bgColor;
-    final String label;
-
-    switch (role) {
-      case 'owner':
-        bgColor = Theme.of(context).colorScheme.primary;
-        label = context.l10n.expertTeamOwner;
-      case 'admin':
-        bgColor = Colors.orange;
-        label = context.l10n.expertTeamAdmin;
-      default:
-        bgColor = Colors.grey;
-        label = context.l10n.expertTeamMember;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 11,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
-  }
-}
