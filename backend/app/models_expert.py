@@ -242,3 +242,25 @@ class FeaturedExpertV2(Base):
         Index("ix_featured_experts_v2_is_featured", "is_featured"),
         Index("ix_featured_experts_v2_display_order", "display_order"),
     )
+
+
+class ChatParticipant(Base):
+    """任务聊天参与者（多人聊天扩展）"""
+    __tablename__ = "chat_participants"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    role = Column(String(20), nullable=False, default="expert_member")
+    invited_by = Column(String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    joined_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
+
+    # Relationships
+    user = relationship("User", foreign_keys=[user_id], backref="chat_participations")
+    inviter = relationship("User", foreign_keys=[invited_by])
+
+    __table_args__ = (
+        UniqueConstraint("task_id", "user_id", name="uq_chat_participant"),
+        Index("ix_chat_participants_task", "task_id"),
+        Index("ix_chat_participants_user", "user_id"),
+    )

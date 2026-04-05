@@ -803,6 +803,18 @@ async def get_task_messages(
                     uid = str(p.user_id)
                     if uid not in participants:
                         participants.append(uid)
+        # 额外查 chat_participants 表（多人聊天扩展）
+        try:
+            from app.models_expert import ChatParticipant
+            cp_query = select(ChatParticipant.user_id).where(ChatParticipant.task_id == task_id)
+            cp_result = await db.execute(cp_query)
+            for uid_row in cp_result.scalars().all():
+                uid = str(uid_row)
+                if uid not in participants:
+                    participants.append(uid)
+        except Exception:
+            pass  # chat_participants 表不存在时静默跳过
+
         cuid = str(current_user.id)
         if cuid not in participants:
             participants.append(cuid)
@@ -1238,7 +1250,17 @@ async def send_task_message(
                     for participant in participants:
                         if participant.user_id:
                             participant_ids.add(participant.user_id)
-            
+
+                # 额外查 chat_participants 表（多人聊天扩展）
+                try:
+                    from app.models_expert import ChatParticipant
+                    cp_query = select(ChatParticipant.user_id).where(ChatParticipant.task_id == task_id)
+                    cp_result = await db.execute(cp_query)
+                    for uid_row in cp_result.scalars().all():
+                        participant_ids.add(str(uid_row))
+                except Exception:
+                    pass
+
             # 构建消息响应
             message_response = {
                 "type": "task_message",

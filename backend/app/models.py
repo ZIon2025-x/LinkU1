@@ -3873,5 +3873,6 @@ from app.models_expert import (  # noqa: E402, F401
     Expert, ExpertMember, ExpertApplication,
     ExpertJoinRequest, ExpertInvitation, ExpertFollow,
     ExpertProfileUpdateRequest, FeaturedExpertV2,
+    ChatParticipant,
     generate_expert_id,
 )
