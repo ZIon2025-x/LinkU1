@@ -376,7 +376,7 @@ class ExpertTeamBloc extends Bloc<ExpertTeamEvent, ExpertTeamState> {
         applicationMessage: event.message,
       );
       final apps = await _repository.getMyApplications();
-      emit(state.copyWith(status: ExpertTeamStatus.loaded, myApplications: apps, actionMessage: '申请已提交'));
+      emit(state.copyWith(status: ExpertTeamStatus.loaded, myApplications: apps, actionMessage: 'expert_team_apply_submitted'));
     } catch (e) {
       emit(state.copyWith(status: ExpertTeamStatus.error, errorMessage: e.toString()));
     }
@@ -394,7 +394,7 @@ class ExpertTeamBloc extends Bloc<ExpertTeamEvent, ExpertTeamState> {
   Future<void> _onInviteMember(ExpertTeamInviteMember event, Emitter<ExpertTeamState> emit) async {
     try {
       await _repository.inviteMember(event.expertId, event.inviteeId);
-      emit(state.copyWith(actionMessage: '邀请已发送'));
+      emit(state.copyWith(actionMessage: 'expert_team_invite_sent'));
     } catch (e) {
       emit(state.copyWith(errorMessage: e.toString()));
     }
@@ -404,7 +404,7 @@ class ExpertTeamBloc extends Bloc<ExpertTeamEvent, ExpertTeamState> {
     try {
       await _repository.respondToInvitation(event.invitationId, event.action);
       final invitations = await _repository.getMyInvitations();
-      final msg = event.action == 'accept' ? '已加入团队' : '已拒绝邀请';
+      final msg = event.action == 'accept' ? 'expert_team_joined' : 'expert_team_invite_rejected';
       emit(state.copyWith(myInvitations: invitations, actionMessage: msg));
     } catch (e) {
       emit(state.copyWith(errorMessage: e.toString()));
@@ -414,7 +414,7 @@ class ExpertTeamBloc extends Bloc<ExpertTeamEvent, ExpertTeamState> {
   Future<void> _onRequestJoin(ExpertTeamRequestJoin event, Emitter<ExpertTeamState> emit) async {
     try {
       await _repository.requestToJoin(event.expertId, message: event.message);
-      emit(state.copyWith(actionMessage: '申请已提交'));
+      emit(state.copyWith(actionMessage: 'expert_team_join_requested'));
     } catch (e) {
       emit(state.copyWith(errorMessage: e.toString()));
     }
@@ -433,7 +433,7 @@ class ExpertTeamBloc extends Bloc<ExpertTeamEvent, ExpertTeamState> {
     try {
       await _repository.reviewJoinRequest(event.expertId, event.requestId, event.action);
       final requests = await _repository.getJoinRequests(event.expertId);
-      emit(state.copyWith(joinRequests: requests, actionMessage: event.action == 'approve' ? '已批准' : '已拒绝'));
+      emit(state.copyWith(joinRequests: requests, actionMessage: event.action == 'approve' ? 'expert_team_join_approved' : 'expert_team_join_rejected'));
     } catch (e) {
       emit(state.copyWith(errorMessage: e.toString()));
     }
@@ -443,7 +443,7 @@ class ExpertTeamBloc extends Bloc<ExpertTeamEvent, ExpertTeamState> {
     try {
       await _repository.changeMemberRole(event.expertId, event.userId, event.role);
       final members = await _repository.getMembers(event.expertId);
-      emit(state.copyWith(members: members, actionMessage: '角色已更新'));
+      emit(state.copyWith(members: members, actionMessage: 'expert_team_role_updated'));
     } catch (e) {
       emit(state.copyWith(errorMessage: e.toString()));
     }
@@ -453,7 +453,7 @@ class ExpertTeamBloc extends Bloc<ExpertTeamEvent, ExpertTeamState> {
     try {
       await _repository.removeMember(event.expertId, event.userId);
       final members = await _repository.getMembers(event.expertId);
-      emit(state.copyWith(members: members, actionMessage: '成员已移除'));
+      emit(state.copyWith(members: members, actionMessage: 'expert_team_member_removed'));
     } catch (e) {
       emit(state.copyWith(errorMessage: e.toString()));
     }
@@ -462,7 +462,7 @@ class ExpertTeamBloc extends Bloc<ExpertTeamEvent, ExpertTeamState> {
   Future<void> _onTransferOwnership(ExpertTeamTransferOwnership event, Emitter<ExpertTeamState> emit) async {
     try {
       await _repository.transferOwnership(event.expertId, event.newOwnerId);
-      emit(state.copyWith(actionMessage: '所有权已转让'));
+      emit(state.copyWith(actionMessage: 'expert_team_ownership_transferred'));
     } catch (e) {
       emit(state.copyWith(errorMessage: e.toString()));
     }
@@ -472,7 +472,7 @@ class ExpertTeamBloc extends Bloc<ExpertTeamEvent, ExpertTeamState> {
     try {
       await _repository.leaveTeam(event.expertId);
       final teams = await _repository.getMyTeams();
-      emit(state.copyWith(myTeams: teams, actionMessage: '已离开团队'));
+      emit(state.copyWith(myTeams: teams, actionMessage: 'expert_team_left'));
     } catch (e) {
       emit(state.copyWith(errorMessage: e.toString()));
     }
@@ -486,7 +486,7 @@ class ExpertTeamBloc extends Bloc<ExpertTeamEvent, ExpertTeamState> {
         final team = await _repository.getExpertById(event.expertId);
         emit(state.copyWith(currentTeam: () => team));
       } catch (_) {}
-      final msg = following ? '已关注' : '已取消关注';
+      final msg = following ? 'expert_team_followed' : 'expert_team_unfollowed';
       emit(state.copyWith(actionMessage: msg));
     } catch (e) {
       emit(state.copyWith(errorMessage: e.toString()));
@@ -506,7 +506,7 @@ class ExpertTeamBloc extends Bloc<ExpertTeamEvent, ExpertTeamState> {
     try {
       await _repository.createService(event.expertId, event.data);
       final services = await _repository.getExpertServices(event.expertId);
-      emit(state.copyWith(services: services, actionMessage: '服务已创建'));
+      emit(state.copyWith(services: services, actionMessage: 'expert_team_service_created'));
     } catch (e) {
       emit(state.copyWith(errorMessage: e.toString()));
     }
@@ -516,7 +516,7 @@ class ExpertTeamBloc extends Bloc<ExpertTeamEvent, ExpertTeamState> {
     try {
       await _repository.deleteService(event.expertId, event.serviceId);
       final services = await _repository.getExpertServices(event.expertId);
-      emit(state.copyWith(services: services, actionMessage: '服务已删除'));
+      emit(state.copyWith(services: services, actionMessage: 'expert_team_service_deleted'));
     } catch (e) {
       emit(state.copyWith(errorMessage: e.toString()));
     }
@@ -544,7 +544,7 @@ class ExpertTeamBloc extends Bloc<ExpertTeamEvent, ExpertTeamState> {
     try {
       await _repository.dissolveTeam(event.expertId);
       final teams = await _repository.getMyTeams();
-      emit(state.copyWith(myTeams: teams, actionMessage: '达人团队已注销'));
+      emit(state.copyWith(myTeams: teams, actionMessage: 'expert_team_dissolved'));
     } catch (e) {
       emit(state.copyWith(errorMessage: e.toString()));
     }
@@ -558,7 +558,7 @@ class ExpertTeamBloc extends Bloc<ExpertTeamEvent, ExpertTeamState> {
         final team = await _repository.getExpertById(event.expertId);
         emit(state.copyWith(currentTeam: () => team));
       } catch (_) {}
-      emit(state.copyWith(actionMessage: allow ? '已开启申请入口' : '已关闭申请入口'));
+      emit(state.copyWith(actionMessage: allow ? 'expert_team_applications_enabled' : 'expert_team_applications_disabled'));
     } catch (e) {
       emit(state.copyWith(errorMessage: e.toString()));
     }
@@ -576,7 +576,7 @@ class ExpertTeamBloc extends Bloc<ExpertTeamEvent, ExpertTeamState> {
   Future<void> _onJoinGroupBuy(ExpertTeamJoinGroupBuy event, Emitter<ExpertTeamState> emit) async {
     try {
       final result = await _repository.joinGroupBuy(event.activityId);
-      emit(state.copyWith(groupBuyStatus: result, actionMessage: '已报名拼单'));
+      emit(state.copyWith(groupBuyStatus: result, actionMessage: 'expert_team_group_buy_joined'));
     } catch (e) {
       emit(state.copyWith(errorMessage: e.toString()));
     }
@@ -585,7 +585,7 @@ class ExpertTeamBloc extends Bloc<ExpertTeamEvent, ExpertTeamState> {
   Future<void> _onCancelGroupBuy(ExpertTeamCancelGroupBuy event, Emitter<ExpertTeamState> emit) async {
     try {
       final result = await _repository.cancelGroupBuy(event.activityId);
-      emit(state.copyWith(groupBuyStatus: result, actionMessage: '已取消拼单'));
+      emit(state.copyWith(groupBuyStatus: result, actionMessage: 'expert_team_group_buy_cancelled'));
     } catch (e) {
       emit(state.copyWith(errorMessage: e.toString()));
     }
@@ -604,7 +604,7 @@ class ExpertTeamBloc extends Bloc<ExpertTeamEvent, ExpertTeamState> {
     try {
       await _repository.usePackageSession(event.expertId, event.packageId, note: event.note);
       final packages = await _repository.getMyPackages();
-      emit(state.copyWith(packages: packages, actionMessage: '已核销一次'));
+      emit(state.copyWith(packages: packages, actionMessage: 'expert_team_package_used'));
     } catch (e) {
       emit(state.copyWith(errorMessage: e.toString()));
     }
@@ -623,7 +623,7 @@ class ExpertTeamBloc extends Bloc<ExpertTeamEvent, ExpertTeamState> {
     try {
       await _repository.createExpertCoupon(event.expertId, event.data);
       final coupons = await _repository.getExpertCoupons(event.expertId);
-      emit(state.copyWith(coupons: coupons, actionMessage: '优惠券已创建'));
+      emit(state.copyWith(coupons: coupons, actionMessage: 'expert_team_coupon_created'));
     } catch (e) {
       emit(state.copyWith(errorMessage: e.toString()));
     }
@@ -633,7 +633,7 @@ class ExpertTeamBloc extends Bloc<ExpertTeamEvent, ExpertTeamState> {
     try {
       await _repository.deactivateExpertCoupon(event.expertId, event.couponId);
       final coupons = await _repository.getExpertCoupons(event.expertId);
-      emit(state.copyWith(coupons: coupons, actionMessage: '优惠券已停用'));
+      emit(state.copyWith(coupons: coupons, actionMessage: 'expert_team_coupon_deactivated'));
     } catch (e) {
       emit(state.copyWith(errorMessage: e.toString()));
     }
@@ -642,7 +642,7 @@ class ExpertTeamBloc extends Bloc<ExpertTeamEvent, ExpertTeamState> {
   Future<void> _onReplyReview(ExpertTeamReplyReview event, Emitter<ExpertTeamState> emit) async {
     try {
       await _repository.replyToReview(event.reviewId, event.content);
-      emit(state.copyWith(actionMessage: '回复成功'));
+      emit(state.copyWith(actionMessage: 'expert_team_review_replied'));
     } catch (e) {
       emit(state.copyWith(errorMessage: e.toString()));
     }
