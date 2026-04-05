@@ -140,6 +140,83 @@ class ExpertTeamDeleteService extends ExpertTeamEvent {
   List<Object?> get props => [expertId, serviceId];
 }
 
+class ExpertTeamLoadFeatured extends ExpertTeamEvent {}
+
+class ExpertTeamLoadMyFollowing extends ExpertTeamEvent {}
+
+class ExpertTeamDissolve extends ExpertTeamEvent {
+  final String expertId;
+  ExpertTeamDissolve(this.expertId);
+  @override
+  List<Object?> get props => [expertId];
+}
+
+class ExpertTeamToggleAllowApplications extends ExpertTeamEvent {
+  final String expertId;
+  final bool allow;
+  ExpertTeamToggleAllowApplications({required this.expertId, required this.allow});
+  @override
+  List<Object?> get props => [expertId, allow];
+}
+
+class ExpertTeamLoadMyInvitations extends ExpertTeamEvent {}
+
+class ExpertTeamJoinGroupBuy extends ExpertTeamEvent {
+  final int activityId;
+  ExpertTeamJoinGroupBuy(this.activityId);
+  @override
+  List<Object?> get props => [activityId];
+}
+
+class ExpertTeamCancelGroupBuy extends ExpertTeamEvent {
+  final int activityId;
+  ExpertTeamCancelGroupBuy(this.activityId);
+  @override
+  List<Object?> get props => [activityId];
+}
+
+class ExpertTeamLoadMyPackages extends ExpertTeamEvent {}
+
+class ExpertTeamUsePackage extends ExpertTeamEvent {
+  final String expertId;
+  final int packageId;
+  final String? note;
+  ExpertTeamUsePackage({required this.expertId, required this.packageId, this.note});
+  @override
+  List<Object?> get props => [expertId, packageId];
+}
+
+class ExpertTeamLoadCoupons extends ExpertTeamEvent {
+  final String expertId;
+  ExpertTeamLoadCoupons(this.expertId);
+  @override
+  List<Object?> get props => [expertId];
+}
+
+class ExpertTeamCreateCoupon extends ExpertTeamEvent {
+  final String expertId;
+  final Map<String, dynamic> data;
+  ExpertTeamCreateCoupon({required this.expertId, required this.data});
+  @override
+  List<Object?> get props => [expertId];
+}
+
+class ExpertTeamDeactivateCoupon extends ExpertTeamEvent {
+  final String expertId;
+  final int couponId;
+  ExpertTeamDeactivateCoupon({required this.expertId, required this.couponId});
+  @override
+  List<Object?> get props => [expertId, couponId];
+}
+
+class ExpertTeamReplyReview extends ExpertTeamEvent {
+  final int reviewId;
+  final String content;
+  ExpertTeamReplyReview({required this.reviewId, required this.content});
+  @override
+  List<Object?> get props => [reviewId, content];
+}
+
 // ==================== State ====================
 
 enum ExpertTeamStatus { initial, loading, loaded, error }
@@ -152,6 +229,12 @@ class ExpertTeamState extends Equatable {
   final List<ExpertTeamApplication> myApplications;
   final List<ExpertJoinRequest> joinRequests;
   final List<Map<String, dynamic>> services;
+  final List<ExpertTeam> featuredExperts;
+  final List<ExpertTeam> followingExperts;
+  final List<ExpertInvitation> myInvitations;
+  final List<Map<String, dynamic>> packages;
+  final List<Map<String, dynamic>> coupons;
+  final Map<String, dynamic>? groupBuyStatus;
   final String? errorMessage;
   final String? actionMessage;
 
@@ -163,6 +246,12 @@ class ExpertTeamState extends Equatable {
     this.myApplications = const [],
     this.joinRequests = const [],
     this.services = const [],
+    this.featuredExperts = const [],
+    this.followingExperts = const [],
+    this.myInvitations = const [],
+    this.packages = const [],
+    this.coupons = const [],
+    this.groupBuyStatus,
     this.errorMessage,
     this.actionMessage,
   });
@@ -175,6 +264,12 @@ class ExpertTeamState extends Equatable {
     List<ExpertTeamApplication>? myApplications,
     List<ExpertJoinRequest>? joinRequests,
     List<Map<String, dynamic>>? services,
+    List<ExpertTeam>? featuredExperts,
+    List<ExpertTeam>? followingExperts,
+    List<ExpertInvitation>? myInvitations,
+    List<Map<String, dynamic>>? packages,
+    List<Map<String, dynamic>>? coupons,
+    Map<String, dynamic>? groupBuyStatus,
     String? errorMessage,
     String? actionMessage,
   }) {
@@ -186,13 +281,19 @@ class ExpertTeamState extends Equatable {
       myApplications: myApplications ?? this.myApplications,
       joinRequests: joinRequests ?? this.joinRequests,
       services: services ?? this.services,
+      featuredExperts: featuredExperts ?? this.featuredExperts,
+      followingExperts: followingExperts ?? this.followingExperts,
+      myInvitations: myInvitations ?? this.myInvitations,
+      packages: packages ?? this.packages,
+      coupons: coupons ?? this.coupons,
+      groupBuyStatus: groupBuyStatus ?? this.groupBuyStatus,
       errorMessage: errorMessage,
       actionMessage: actionMessage,
     );
   }
 
   @override
-  List<Object?> get props => [status, myTeams, currentTeam, members, myApplications, joinRequests, services, errorMessage, actionMessage];
+  List<Object?> get props => [status, myTeams, currentTeam, members, myApplications, joinRequests, services, featuredExperts, followingExperts, myInvitations, packages, coupons, groupBuyStatus, errorMessage, actionMessage];
 }
 
 // ==================== BLoC ====================
@@ -221,6 +322,19 @@ class ExpertTeamBloc extends Bloc<ExpertTeamEvent, ExpertTeamState> {
     on<ExpertTeamLoadServices>(_onLoadServices);
     on<ExpertTeamCreateService>(_onCreateService);
     on<ExpertTeamDeleteService>(_onDeleteService);
+    on<ExpertTeamLoadFeatured>(_onLoadFeatured);
+    on<ExpertTeamLoadMyFollowing>(_onLoadMyFollowing);
+    on<ExpertTeamDissolve>(_onDissolve);
+    on<ExpertTeamToggleAllowApplications>(_onToggleAllowApplications);
+    on<ExpertTeamLoadMyInvitations>(_onLoadMyInvitations);
+    on<ExpertTeamJoinGroupBuy>(_onJoinGroupBuy);
+    on<ExpertTeamCancelGroupBuy>(_onCancelGroupBuy);
+    on<ExpertTeamLoadMyPackages>(_onLoadMyPackages);
+    on<ExpertTeamUsePackage>(_onUsePackage);
+    on<ExpertTeamLoadCoupons>(_onLoadCoupons);
+    on<ExpertTeamCreateCoupon>(_onCreateCoupon);
+    on<ExpertTeamDeactivateCoupon>(_onDeactivateCoupon);
+    on<ExpertTeamReplyReview>(_onReplyReview);
   }
 
   Future<void> _onLoadMyTeams(ExpertTeamLoadMyTeams event, Emitter<ExpertTeamState> emit) async {
@@ -396,6 +510,127 @@ class ExpertTeamBloc extends Bloc<ExpertTeamEvent, ExpertTeamState> {
       await _repository.deleteService(event.expertId, event.serviceId);
       final services = await _repository.getExpertServices(event.expertId);
       emit(state.copyWith(services: services, actionMessage: '服务已删除'));
+    } catch (e) {
+      emit(state.copyWith(errorMessage: e.toString()));
+    }
+  }
+
+  Future<void> _onLoadFeatured(ExpertTeamLoadFeatured event, Emitter<ExpertTeamState> emit) async {
+    try {
+      final experts = await _repository.getFeaturedExperts();
+      emit(state.copyWith(featuredExperts: experts));
+    } catch (e) {
+      emit(state.copyWith(errorMessage: e.toString()));
+    }
+  }
+
+  Future<void> _onLoadMyFollowing(ExpertTeamLoadMyFollowing event, Emitter<ExpertTeamState> emit) async {
+    try {
+      final experts = await _repository.getMyFollowingExperts();
+      emit(state.copyWith(followingExperts: experts));
+    } catch (e) {
+      emit(state.copyWith(errorMessage: e.toString()));
+    }
+  }
+
+  Future<void> _onDissolve(ExpertTeamDissolve event, Emitter<ExpertTeamState> emit) async {
+    try {
+      await _repository.dissolveTeam(event.expertId);
+      final teams = await _repository.getMyTeams();
+      emit(state.copyWith(myTeams: teams, actionMessage: '达人团队已注销'));
+    } catch (e) {
+      emit(state.copyWith(errorMessage: e.toString()));
+    }
+  }
+
+  Future<void> _onToggleAllowApplications(ExpertTeamToggleAllowApplications event, Emitter<ExpertTeamState> emit) async {
+    try {
+      final allow = await _repository.toggleAllowApplications(event.expertId, event.allow);
+      emit(state.copyWith(actionMessage: allow ? '已开启申请入口' : '已关闭申请入口'));
+    } catch (e) {
+      emit(state.copyWith(errorMessage: e.toString()));
+    }
+  }
+
+  Future<void> _onLoadMyInvitations(ExpertTeamLoadMyInvitations event, Emitter<ExpertTeamState> emit) async {
+    try {
+      final invitations = await _repository.getMyInvitations();
+      emit(state.copyWith(myInvitations: invitations));
+    } catch (e) {
+      emit(state.copyWith(errorMessage: e.toString()));
+    }
+  }
+
+  Future<void> _onJoinGroupBuy(ExpertTeamJoinGroupBuy event, Emitter<ExpertTeamState> emit) async {
+    try {
+      final result = await _repository.joinGroupBuy(event.activityId);
+      emit(state.copyWith(groupBuyStatus: result, actionMessage: '已报名拼单'));
+    } catch (e) {
+      emit(state.copyWith(errorMessage: e.toString()));
+    }
+  }
+
+  Future<void> _onCancelGroupBuy(ExpertTeamCancelGroupBuy event, Emitter<ExpertTeamState> emit) async {
+    try {
+      final result = await _repository.cancelGroupBuy(event.activityId);
+      emit(state.copyWith(groupBuyStatus: result, actionMessage: '已取消拼单'));
+    } catch (e) {
+      emit(state.copyWith(errorMessage: e.toString()));
+    }
+  }
+
+  Future<void> _onLoadMyPackages(ExpertTeamLoadMyPackages event, Emitter<ExpertTeamState> emit) async {
+    try {
+      final packages = await _repository.getMyPackages();
+      emit(state.copyWith(packages: packages));
+    } catch (e) {
+      emit(state.copyWith(errorMessage: e.toString()));
+    }
+  }
+
+  Future<void> _onUsePackage(ExpertTeamUsePackage event, Emitter<ExpertTeamState> emit) async {
+    try {
+      await _repository.usePackageSession(event.expertId, event.packageId, note: event.note);
+      final packages = await _repository.getMyPackages();
+      emit(state.copyWith(packages: packages, actionMessage: '已核销一次'));
+    } catch (e) {
+      emit(state.copyWith(errorMessage: e.toString()));
+    }
+  }
+
+  Future<void> _onLoadCoupons(ExpertTeamLoadCoupons event, Emitter<ExpertTeamState> emit) async {
+    try {
+      final coupons = await _repository.getExpertCoupons(event.expertId);
+      emit(state.copyWith(coupons: coupons));
+    } catch (e) {
+      emit(state.copyWith(errorMessage: e.toString()));
+    }
+  }
+
+  Future<void> _onCreateCoupon(ExpertTeamCreateCoupon event, Emitter<ExpertTeamState> emit) async {
+    try {
+      await _repository.createExpertCoupon(event.expertId, event.data);
+      final coupons = await _repository.getExpertCoupons(event.expertId);
+      emit(state.copyWith(coupons: coupons, actionMessage: '优惠券已创建'));
+    } catch (e) {
+      emit(state.copyWith(errorMessage: e.toString()));
+    }
+  }
+
+  Future<void> _onDeactivateCoupon(ExpertTeamDeactivateCoupon event, Emitter<ExpertTeamState> emit) async {
+    try {
+      await _repository.deactivateExpertCoupon(event.expertId, event.couponId);
+      final coupons = await _repository.getExpertCoupons(event.expertId);
+      emit(state.copyWith(coupons: coupons, actionMessage: '优惠券已停用'));
+    } catch (e) {
+      emit(state.copyWith(errorMessage: e.toString()));
+    }
+  }
+
+  Future<void> _onReplyReview(ExpertTeamReplyReview event, Emitter<ExpertTeamState> emit) async {
+    try {
+      await _repository.replyToReview(event.reviewId, event.content);
+      emit(state.copyWith(actionMessage: '回复成功'));
     } catch (e) {
       emit(state.copyWith(errorMessage: e.toString()));
     }
