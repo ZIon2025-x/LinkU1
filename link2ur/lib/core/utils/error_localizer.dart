@@ -399,6 +399,31 @@ class ErrorLocalizer {
         return context.l10n.personalServiceDeleted;
       case 'ai_optimize_failed':
         return context.l10n.errorAiOptimizeFailed;
+      // Expert Team
+      case 'expert_team_apply_submitted': return context.l10n.expertTeamApplySubmitted;
+      case 'expert_team_invite_sent': return context.l10n.expertTeamInviteSent;
+      case 'expert_team_joined': return context.l10n.expertTeamJoined;
+      case 'expert_team_invite_rejected': return context.l10n.expertTeamInviteRejected;
+      case 'expert_team_join_requested': return context.l10n.expertTeamJoinRequested;
+      case 'expert_team_join_approved': return context.l10n.expertTeamJoinApproved;
+      case 'expert_team_join_rejected': return context.l10n.expertTeamJoinRejected;
+      case 'expert_team_role_updated': return context.l10n.expertTeamRoleUpdated;
+      case 'expert_team_member_removed': return context.l10n.expertTeamMemberRemoved;
+      case 'expert_team_ownership_transferred': return context.l10n.expertTeamOwnershipTransferred;
+      case 'expert_team_left': return context.l10n.expertTeamLeft;
+      case 'expert_team_followed': return context.l10n.expertTeamFollowed;
+      case 'expert_team_unfollowed': return context.l10n.expertTeamUnfollowed;
+      case 'expert_team_service_created': return context.l10n.expertTeamServiceCreated;
+      case 'expert_team_service_deleted': return context.l10n.expertTeamServiceDeleted;
+      case 'expert_team_dissolved': return context.l10n.expertTeamDissolved;
+      case 'expert_team_applications_enabled': return context.l10n.expertTeamApplicationsEnabled;
+      case 'expert_team_applications_disabled': return context.l10n.expertTeamApplicationsDisabled;
+      case 'expert_team_group_buy_joined': return context.l10n.expertTeamGroupBuyJoined;
+      case 'expert_team_group_buy_cancelled': return context.l10n.expertTeamGroupBuyCancelled;
+      case 'expert_team_package_used': return context.l10n.expertTeamPackageUsed;
+      case 'expert_team_coupon_created': return context.l10n.expertTeamCouponCreated;
+      case 'expert_team_coupon_deactivated': return context.l10n.expertTeamCouponDeactivated;
+      case 'expert_team_review_replied': return context.l10n.expertTeamReviewReplied;
       default:
         // 服务端返回的已翻译消息，直接使用
         return errorMessage;
