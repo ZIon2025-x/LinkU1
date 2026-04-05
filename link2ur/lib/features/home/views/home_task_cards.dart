@@ -112,13 +112,15 @@ class _NearbyTabState extends State<_NearbyTab> {
 
       if (!mounted) return;
 
-      // 计算距离差异，超过 500m 才刷新
+      // 始终用精确位置更新城市名（城市可能和缓存位置不同）
+      await _resolveCity(position.latitude, position.longitude);
+      if (!mounted) return;
+
+      // 计算距离差异，超过 500m 才刷新数据
       final distance = Geolocator.distanceBetween(
         quickLat, quickLng, position.latitude, position.longitude,
       );
       if (distance > 500) {
-        await _resolveCity(position.latitude, position.longitude);
-        if (!mounted) return;
         _currentLat = position.latitude;
         _currentLng = position.longitude;
         final bloc = context.read<HomeBloc>();
