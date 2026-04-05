@@ -18,6 +18,7 @@ import '../../../core/widgets/error_state_view.dart';
 import '../../../data/models/task.dart';
 import '../../../data/repositories/message_repository.dart';
 import '../../../data/repositories/task_repository.dart';
+import '../../../data/repositories/expert_team_repository.dart';
 import '../../../data/services/storage_service.dart';
 import '../bloc/chat_bloc.dart';
 import '../widgets/image_send_confirm_dialog.dart';
@@ -104,6 +105,54 @@ class _TaskChatContentState extends State<_TaskChatContent> {
     if (pos.pixels >= pos.maxScrollExtent - 50) {
       context.read<ChatBloc>().add(const ChatLoadMore());
     }
+  }
+
+  Future<void> _showInviteMemberDialog(BuildContext context) async {
+    final controller = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(context.l10n.expertTeamInviteMember),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: '用户 ID',
+            hintText: '输入要邀请的团队成员 ID',
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(MaterialLocalizations.of(ctx).cancelButtonLabel),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(context.l10n.expertTeamInviteMember),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && controller.text.trim().isNotEmpty && mounted) {
+      try {
+        await context.read<ExpertTeamRepository>().inviteToTaskChat(
+              widget.taskId,
+              controller.text.trim(),
+            );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('已邀请成员加入聊天')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('邀请失败: $e')),
+          );
+        }
+      }
+    }
+    controller.dispose();
   }
 
   void _sendMessage() {
@@ -216,6 +265,8 @@ class _TaskChatContentState extends State<_TaskChatContent> {
                 onSelected: (value) {
                   if (value == 'task_detail') {
                     context.safePush('/tasks/${widget.taskId}');
+                  } else if (value == 'invite_member') {
+                    _showInviteMemberDialog(context);
                   }
                 },
                 itemBuilder: (context) => [
@@ -226,6 +277,17 @@ class _TaskChatContentState extends State<_TaskChatContent> {
                         const Icon(Icons.assignment_outlined, size: 20),
                         const SizedBox(width: 8),
                         Text(context.l10n.chatViewDetail),
+                      ],
+                    ),
+                  ),
+                  // 邀请团队成员（达人任务才显示）
+                  PopupMenuItem(
+                    value: 'invite_member',
+                    child: Row(
+                      children: [
+                        const Icon(Icons.person_add_outlined, size: 20),
+                        const SizedBox(width: 8),
+                        Text(context.l10n.expertTeamInviteMember),
                       ],
                     ),
                   ),
