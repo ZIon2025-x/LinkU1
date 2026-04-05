@@ -5,21 +5,30 @@
 -- 本迁移利用已有的映射表重新插入数据，不依赖临时表
 -- ===========================================
 
--- 步骤 1: 插入 experts（利用已有映射）
-INSERT INTO experts (id, name, bio, avatar, status, rating, total_services, completed_tasks, is_official, official_badge, created_at, updated_at)
+-- 步骤 1: 插入 experts（利用已有映射，补全所有 NOT NULL 字段的默认值）
+INSERT INTO experts (id, name, bio, avatar, status,
+    allow_applications, max_members, member_count,
+    rating, total_services, completed_tasks, completion_rate,
+    is_official, official_badge, stripe_onboarding_complete,
+    created_at, updated_at)
 SELECT
     m.new_id,
     COALESCE(te.expert_name, u.name, 'Unnamed'),
     te.bio,
     te.avatar,
-    te.status,
-    te.rating,
-    te.total_services,
-    te.completed_tasks,
-    te.is_official,
+    COALESCE(te.status, 'active'),
+    true,           -- allow_applications
+    20,             -- max_members
+    1,              -- member_count (owner)
+    COALESCE(te.rating, 0.00),
+    COALESCE(te.total_services, 0),
+    COALESCE(te.completed_tasks, 0),
+    0.0,            -- completion_rate
+    COALESCE(te.is_official, false),
     te.official_badge,
-    te.created_at,
-    te.updated_at
+    false,          -- stripe_onboarding_complete
+    COALESCE(te.created_at, NOW()),
+    COALESCE(te.updated_at, NOW())
 FROM task_experts te
 JOIN _expert_id_migration_map m ON m.old_id = te.id
 LEFT JOIN users u ON u.id = te.id

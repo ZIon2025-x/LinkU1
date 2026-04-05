@@ -12024,7 +12024,37 @@ def update_task_expert(
                 logger.warning(f"删除旧头像失败: {e}")
         
         logger.info(f"更新任务达人成功: {expert_id}")
-        
+
+        # 同步更新到新 experts 表（Phase 2a 兼容）
+        try:
+            from app.models_expert import Expert
+            from sqlalchemy import text as sa_text
+            map_result = db.execute(
+                sa_text("SELECT new_id FROM _expert_id_migration_map WHERE old_id = :old_id"),
+                {"old_id": expert.user_id}
+            ).first()
+            if map_result:
+                new_expert_id = map_result[0]
+                new_expert = db.query(Expert).filter(Expert.id == new_expert_id).first()
+                if new_expert:
+                    if 'name' in expert_data:
+                        new_expert.name = expert.name
+                    if 'bio' in expert_data:
+                        new_expert.bio = expert.bio
+                    if 'bio_en' in expert_data:
+                        new_expert.bio_en = expert.bio_en
+                    if 'avatar' in expert_data and expert.avatar:
+                        new_expert.avatar = expert.avatar
+                    if 'is_official' in expert_data:
+                        new_expert.is_official = bool(expert_data.get('is_official'))
+                    if hasattr(expert, 'category') and 'category' in expert_data:
+                        pass  # experts 表没有 category 字段，category 在 featured_experts_v2
+                    new_expert.updated_at = get_utc_time()
+                    db.commit()
+                    logger.info(f"同步更新新 experts 表: {new_expert_id}")
+        except Exception as sync_err:
+            logger.warning(f"同步更新新 experts 表失败（不影响主流程）: {sync_err}")
+
         return {
             "message": "更新任务达人成功",
             "task_expert": {"id": expert.id, "name": expert.name}
