@@ -381,6 +381,8 @@ class ErrorLocalizer {
         return context.l10n.expertScheduleClosedRemoved;
       case 'expertProfileUpdateSubmitted':
         return context.l10n.expertProfileEditSubmitted;
+      case 'expert_dashboard_no_team':
+        return context.l10n.expertDashboardNoTeam;
       case 'user_profile_load_failed':
         return context.l10n.userProfileLoadFailed;
       case 'user_profile_update_failed':

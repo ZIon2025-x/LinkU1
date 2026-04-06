@@ -10530,6 +10530,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get expertDashboardTitle => 'Expert Centre';
 
   @override
+  String get expertDashboardManagement => 'Management';
+
+  @override
+  String get expertDashboardNoTeam => 'You are not part of any expert team.';
+
+  @override
   String get expertDashboardTabStats => 'Dashboard';
 
   @override

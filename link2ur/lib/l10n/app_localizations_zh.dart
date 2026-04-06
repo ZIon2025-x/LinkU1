@@ -10103,6 +10103,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get expertDashboardTitle => '达人中心';
 
   @override
+  String get expertDashboardManagement => '管理中心';
+
+  @override
+  String get expertDashboardNoTeam => '你还不在任何达人团队中';
+
+  @override
   String get expertDashboardTabStats => '看板';
 
   @override
@@ -21851,6 +21857,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get expertDashboardTitle => '達人中心';
+
+  @override
+  String get expertDashboardManagement => '管理中心';
+
+  @override
+  String get expertDashboardNoTeam => '你還不在任何達人團隊中';
 
   @override
   String get expertDashboardTabStats => '看板';

@@ -4857,6 +4857,8 @@
 
   "expertOfficialBadge": "Official",
   "expertDashboardTitle": "Expert Centre",
+  "expertDashboardManagement": "Management",
+  "expertDashboardNoTeam": "You are not part of any expert team.",
   "expertDashboardTabStats": "Dashboard",
   "expertDashboardTabServices": "Skills",
   "expertDashboardTabApplications": "Applications",

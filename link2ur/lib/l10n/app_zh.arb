@@ -4749,6 +4749,8 @@
 
   "expertOfficialBadge": "官方",
   "expertDashboardTitle": "达人中心",
+  "expertDashboardManagement": "管理中心",
+  "expertDashboardNoTeam": "你还不在任何达人团队中",
   "expertDashboardTabStats": "看板",
   "expertDashboardTabServices": "我的技能",
   "expertDashboardTabApplications": "申请管理",

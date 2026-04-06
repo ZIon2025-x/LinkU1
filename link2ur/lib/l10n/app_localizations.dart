@@ -19349,6 +19349,18 @@ abstract class AppLocalizations {
   /// **'Expert Centre'**
   String get expertDashboardTitle;
 
+  /// No description provided for @expertDashboardManagement.
+  ///
+  /// In en, this message translates to:
+  /// **'Management'**
+  String get expertDashboardManagement;
+
+  /// No description provided for @expertDashboardNoTeam.
+  ///
+  /// In en, this message translates to:
+  /// **'You are not part of any expert team.'**
+  String get expertDashboardNoTeam;
+
   /// No description provided for @expertDashboardTabStats.
   ///
   /// In en, this message translates to:
