@@ -267,7 +267,7 @@ class _NotificationListViewContentState
     }
     // 新服务申请：跳转到服务申请管理页面
     if (type == 'service_application') {
-      context.push('/expert-applications-management');
+      context.push('/expert-dashboard');
       return;
     }
     // 服务申请 / 议价类：related_id 是 service_id

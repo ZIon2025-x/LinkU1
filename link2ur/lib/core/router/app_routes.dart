@@ -37,23 +37,16 @@ class AppRoutes {
   static const String createService = '/services/create';
   static const String editService = '/services/edit/:id';
   static const String myReceivedServiceApplications = '/services/my/applications';
-  static const String expertApplicationsManagement = '/expert-applications-management';
   static const String expertDashboard = '/expert-dashboard';
   static const String expertDashboardWithId = '/expert-dashboard/:expertId';
   static const String expertDashboardManagement =
       '/expert-dashboard/:expertId/management';
-  static const String expertProfileEdit = '/expert-profile-edit';
 
   // 达人团队管理
   static const String expertTeamMyTeams = '/expert-teams';
   static const String expertTeamDetail = '/expert-teams/:id';
-  static const String expertTeamMembers = '/expert-teams/:id/members';
   static const String expertTeamCreate = '/expert-teams/create';
-  static const String expertTeamJoinRequests = '/expert-teams/:id/join-requests';
   static const String expertTeamInvitations = '/expert-teams/invitations';
-  static const String expertTeamCoupons = '/expert-teams/:id/coupons';
-  static const String expertTeamServices = '/expert-teams/:id/services';
-  static const String expertTeamEditProfile = '/expert-teams/:id/edit';
   static const String expertTeamPackages = '/my-packages';
   static const String groupBuy = '/group-buy/:activityId';
 
@@ -168,9 +161,7 @@ const authRequiredRoutes = <String>{
   AppRoutes.createService,
   AppRoutes.editService,
   AppRoutes.myReceivedServiceApplications,
-  AppRoutes.expertApplicationsManagement,
   AppRoutes.expertDashboard,
-  AppRoutes.expertProfileEdit,
   AppRoutes.applyLeaderboard,
   AppRoutes.submitLeaderboardItem,
   AppRoutes.fleaMarketRentalDetail,

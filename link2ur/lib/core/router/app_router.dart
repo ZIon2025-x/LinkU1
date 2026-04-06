@@ -103,8 +103,7 @@ class AppRouter {
       }
 
       // 达人专属路由：非达人用户重定向到达人介绍页
-      if (location.startsWith(AppRoutes.expertDashboard) ||
-          location.startsWith(AppRoutes.expertProfileEdit)) {
+      if (location.startsWith(AppRoutes.expertDashboard)) {
         final isExpert = authState.user?.isExpert ?? false;
         if (!isExpert) {
           return AppRoutes.taskExpertsIntro;
