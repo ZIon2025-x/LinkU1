@@ -50,9 +50,10 @@ COMMIT;
 
 **语义铁律(强制写进代码注释):**
 - `taker_expert_id IS NOT NULL` → 团队任务,任务完成时走 Stripe Transfer 到团队 Connect 账户
-- `taker_expert_id IS NULL` → 个人任务,按现有流程走
-- `taker_id` **始终非 NULL**,团队任务时填 owner 的 user_id(Y 方案)
+- `taker_expert_id IS NULL` → 个人任务 / 未认领任务,按现有流程走
+- 团队任务创建时 `taker_id` **必须填** owner 的 user_id(Y 方案);**不要因为是团队任务就把 `taker_id` 置 NULL**。`tasks.taker_id` 列本身在数据库层仍然是 nullable(未认领的普通任务可能为 NULL),Y 方案的约束是"业务层在创建团队任务时不准 NULL"
 - `ON DELETE RESTRICT`:团队不允许被硬删除,必须通过 `experts.status` 软删除
+- **币种约束:** 团队任务强制 GBP(见 §1.4)
 
 ### 1.2 `activities` 表 —— 加多态所有权列
 
@@ -135,6 +136,21 @@ COMMIT;
 - `UNIQUE(task_id)`:一个任务最多一条 transfer 记录。反向(dispute / refund)通过 **in-place update** 同一行的 `status='reversed'` + 填 `stripe_reversal_id` 实现,**不另开新行**。
 - `UNIQUE(idempotency_key)`:第二次 INSERT 尝试会失败,配合 `SELECT ... FOR UPDATE SKIP LOCKED` 处理并发 worker。
 - 这张表**不是钱包** —— 没有余额字段。团队真实可用余额的事实来源是 Stripe Dashboard。
+
+### 1.4 币种约束 —— 团队任务强制 GBP
+
+本 spec 范围内,**所有涉及 `taker_expert_id` 的任务、服务、活动强制使用 GBP**。理由:Link2Ur 主战场是英国,无多币种业务诉求;真要做国际化是另一个 Phase 的事。
+
+**强制点:**
+
+1. `POST /api/experts/{id}/services`(§2.1)收到 body 时校验 `currency == 'GBP'`,否则 422
+2. `POST /api/experts/{id}/activities`(§2.2)同上
+3. `resolve_task_taker_from_service()`(§4.2)在 `owner_type='expert'` 分支额外校验 `service.currency == 'GBP'`,否则抛 409 `error_code='expert_currency_unsupported'`
+4. `enqueue_expert_transfer` Celery 任务(§3.2)在创建 `expert_stripe_transfers` 行前断言 `task.currency == 'GBP'`,异常则标 `failed`,error_code=`currency_unsupported`,人工介入
+
+**个人任务 / 个人服务的币种**不受此约束(继续走原流程)。
+
+**`expert_stripe_transfers.currency` 列**保留(`DEFAULT 'GBP'`),为未来扩展留口子,但**当前 spec 范围内只允许 'GBP'**。
 
 ---
 
@@ -453,7 +469,8 @@ else:
 | 1 | `task_expert_routes.py:3090-3130`(咨询任务创建) | 通过 `resolve_task_taker_from_service()` helper 解析,填 `taker_id` + `taker_expert_id` |
 | 2 | `task_expert_routes.py:3820-3860`(正式服务任务创建) | 同上 |
 | 3 | `task_expert_routes.py:3870-3899`(Payment Intent 创建) | 取消 `transfer_data.destination`,统一走 manual transfer(见 4.4) |
-| 4 | 任务完成端点(位置 plan 阶段 grep) | 加 `taker_expert_id` 分叉,enqueue Celery Transfer |
+| 4 | `multi_participant_routes.py:236-599`(活动报名 → Task 创建) | 通过 `resolve_task_taker_from_activity()` helper 解析,填 `taker_id` + `taker_expert_id`(详见 4.3a) |
+| 5 | 任务完成端点(位置 plan 阶段 grep) | 加 `taker_expert_id` 分叉,enqueue Celery Transfer |
 
 ### 4.2 & 4.3 任务创建分叉 —— 新 helper
 
@@ -512,6 +529,62 @@ async def resolve_task_taker_from_service(
 
 **在 `task_expert_routes.py` 两处调用点统一使用此 helper,`taker_id` 和 `taker_expert_id` 从 tuple 解构。**
 
+### 4.3a 活动报名 → Task 创建分叉 —— 对偶 helper
+
+`multi_participant_routes.py:236-599` 现有逻辑里,活动报名时会创建 Task(单人活动),Task 的 `taker_id` 取自 `activity.expert_id`(老的个人 user_id 字段)。本 spec 落地后,活动有 `owner_type` / `owner_id` 多态列(§1.2),所以这里也要分叉。
+
+**在同一个 `expert_task_resolver.py` 文件里加一个对偶 helper:**
+
+```python
+async def resolve_task_taker_from_activity(
+    db: AsyncSession,
+    activity: models.Activity,
+) -> tuple[str, Optional[str]]:
+    """
+    返回 (taker_id, taker_expert_id):
+      - owner_type='expert':(team owner user_id, expert_id) —— 团队活动
+      - owner_type='user':  (user_id, None) —— 个人活动(legacy / grandfather)
+    团队路径会校验 Stripe onboarding + 币种(GBP)。
+    """
+    if activity.owner_type == 'expert':
+        expert = await db.get(Expert, activity.owner_id)
+        if not expert:
+            raise HTTPException(404, "Expert team not found")
+        if not expert.stripe_onboarding_complete:
+            raise HTTPException(409, detail={
+                "error_code": "expert_stripe_not_ready",
+                "message": "Team is temporarily unable to accept sign-ups"
+            })
+        if (activity.currency or 'GBP').upper() != 'GBP':
+            raise HTTPException(409, detail={
+                "error_code": "expert_currency_unsupported",
+                "message": "Team activities only support GBP currently"
+            })
+
+        result = await db.execute(
+            select(ExpertMember).where(
+                ExpertMember.expert_id == expert.id,
+                ExpertMember.role == 'owner',
+                ExpertMember.status == 'active',
+            ).limit(1)
+        )
+        owner = result.scalar_one_or_none()
+        if not owner:
+            raise HTTPException(500, detail={
+                "error_code": "expert_owner_missing",
+                "message": "Team has no active owner"
+            })
+        return (owner.user_id, expert.id)
+
+    elif activity.owner_type == 'user':
+        return (activity.expert_id, None)  # legacy 个人活动
+
+    else:
+        raise HTTPException(500, f"Unknown activity owner_type: {activity.owner_type}")
+```
+
+**`multi_participant_routes.py` 的 Task 创建处**(具体行号 plan 阶段 grep 确认,可能不止一处:单人活动 / 时间槽活动 / 多人活动,见 §0 探索报告)调用此 helper,把 `taker_id` 和 `taker_expert_id` 一起写入新 Task。
+
 ### 4.4 Payment Intent 统一 Manual Transfer
 
 **现状(待 plan 阶段 grep 确认):** `task_expert_routes.py:3870-3899` 可能在 Payment Intent 里设了 `transfer_data.destination`(destination charge 模式),让钱直接进 taker 的 Stripe Connect 账户。
@@ -533,7 +606,29 @@ intent = stripe.PaymentIntent.create(
 )
 ```
 
-**影响范围:** 如果当前个人服务走 destination charge,这个改动把它们**顺带对齐**到 manual transfer,让所有路径统一。plan 阶段的 **Task 1 必须 grep 确认** 当前资金流模式,影响后续任务的拆分粒度。如果已经是 manual transfer,这段基本无改动。
+**影响范围:** 如果当前个人服务走 destination charge,这个改动把它们**顺带对齐**到 manual transfer,让所有路径统一。plan 阶段的 **Task 1 必须 grep 确认** 当前资金流模式,影响后续任务的拆分粒度。
+
+**两种结果分支:**
+
+- **A. 当前已经是 manual transfer**(钱进平台账户 → wallet_accounts credit → 用户提现):§4.4 这段基本无改动,只是个人 taker 路径不变,团队 taker 路径**新增** §3.2 的 Celery Transfer。
+- **B. 当前是 destination charge**(钱直接进 taker Stripe):必须**补建** "个人任务完成 → wallet_accounts.balance credit" 的代码路径,否则改成 manual transfer 后个人 taker 的钱会被锁在平台账户。这是一个**额外子任务**,plan 阶段如果发现是 B,要扩范围或者**回退本 spec 的 Payment Intent 改动**(Payment Intent 仍按 taker 类型分叉:团队走 manual,个人走 destination charge)。
+
+**选 B 的回退方案(plan 阶段如果不想扩范围):**
+
+```python
+if taker_expert_id_value:
+    # 团队任务:Payment Intent 不设 transfer_data,等 Celery Transfer
+    intent_kwargs = {...}  # 同上
+else:
+    # 个人任务:维持现状,destination charge
+    intent_kwargs = {
+        ...,
+        'transfer_data': {'destination': taker_stripe_account_id},
+        'application_fee_amount': fee_pence,
+    }
+```
+
+这个回退保留了"团队走新流程,个人不动"的最小爆炸半径。**plan Task 1 grep 之后再决定走 A 还是回退。**
 
 ### 4.5 受影响下游代码
 
@@ -815,6 +910,9 @@ await db.execute(
 7. **现有 webhook 处理器的准确位置**(`routers.py:8058-8080` 附近,需精确定位)
 8. **ownership transfer 端点的函数名**(`expert_routes.py` 内)
 9. **Stripe Account 类型**(`type='standard'` vs `'express'` vs `'custom'`):grep 现有个人用户 Stripe Connect 创建代码(若有),与之对齐。若现有代码没有 Account 创建路径(只做 Account Link),plan 阶段根据业务需求决定
+10. **个人 taker 任务完成 → `wallet_accounts.balance` credit 的代码路径是否存在**:§4.4 的"顺带正确化"假设这条路径已经在,但我没在探索阶段验证。Plan Task 1 必须 grep 确认:在任务完成端点附近找到对 `wallet_accounts.balance` 的 UPDATE / +=,确认它和 Payment Intent 的资金流模式兼容。如果当前是 destination charge(钱直接进 taker Stripe),那 wallet credit 路径**可能根本不存在**,改 manual transfer 后会出现"个人 taker 任务完成 → 钱被锁在平台账户" bug,需要补建 credit 路径
+11. **退款端点位置**:§3.5 场景 C 提到"现有 refund 端点",未定位。grep `refund` / `Refund` / `退款` in `backend/app/routers.py` + `*payment*.py`,找到主入口
+12. **Celery sync session factory**:§3.2 伪代码用 `from app.database import SessionLocal`(同步)。确认仓库现在的 Celery 任务是用 sync 还是 async session。Async 用 `asyncio.run(...)` 或 `nest_asyncio` 包,sync 直接用。这影响 §3.2 代码的最终形态,**不影响设计决策**
 
 ---
 
