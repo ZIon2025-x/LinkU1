@@ -235,8 +235,10 @@ class _TeamTitle extends StatelessWidget {
               backgroundImage:
                   team.avatar != null ? NetworkImage(team.avatar!) : null,
               child: team.avatar == null
-                  ? Text(team.name.characters.first,
-                      style: const TextStyle(fontSize: 12))
+                  ? Text(
+                      team.name.isNotEmpty ? team.name.characters.first : '?',
+                      style: const TextStyle(fontSize: 12),
+                    )
                   : null,
             ),
             const SizedBox(width: 8),

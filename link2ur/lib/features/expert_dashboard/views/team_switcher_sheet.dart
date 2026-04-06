@@ -53,16 +53,18 @@ class TeamSwitcherSheet extends StatelessWidget {
                   iconColor: AppColors.primary,
                   label: context.l10n.expertDashboardApplyNewTeam,
                   onTap: () {
+                    final router = GoRouter.of(context);
                     Navigator.of(context).pop();
-                    context.push(AppRoutes.expertTeamCreate);
+                    router.push(AppRoutes.expertTeamCreate);
                   },
                 ),
                 _ActionTile(
                   icon: Icons.mail_outline,
                   label: context.l10n.expertDashboardMyInvitations,
                   onTap: () {
+                    final router = GoRouter.of(context);
                     Navigator.of(context).pop();
-                    context.push(AppRoutes.expertTeamInvitations);
+                    router.push(AppRoutes.expertTeamInvitations);
                   },
                 ),
                 const SizedBox(height: AppSpacing.sm),
@@ -99,7 +101,7 @@ class _TeamTile extends StatelessWidget {
               backgroundImage:
                   team.avatar != null ? NetworkImage(team.avatar!) : null,
               child: team.avatar == null
-                  ? Text(team.name.characters.first)
+                  ? Text(team.name.isNotEmpty ? team.name.characters.first : '?')
                   : null,
             ),
             const SizedBox(width: AppSpacing.md),
