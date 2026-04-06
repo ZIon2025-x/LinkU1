@@ -21,7 +21,8 @@ import 'team_switcher_sheet.dart';
 /// 统一达人管理页面 shell
 /// 两阶段：1. fetch my-teams 解析 expertId；2. 显示 5 tab dashboard
 class ExpertDashboardShell extends StatefulWidget {
-  const ExpertDashboardShell({super.key});
+  const ExpertDashboardShell({super.key, this.initialExpertId});
+  final String? initialExpertId;
 
   @override
   State<ExpertDashboardShell> createState() => _ExpertDashboardShellState();
@@ -52,10 +53,22 @@ class _ExpertDashboardShellState extends State<ExpertDashboardShell> {
         context.go(AppRoutes.taskExpertsIntro);
         return;
       }
+      // Priority order:
+      //   1. expertId from URL (deep link / notification)
+      //   2. last selected (StorageService)
+      //   3. first team
+      final urlId = widget.initialExpertId;
       final storedId = StorageService.instance.getSelectedExpertId();
-      final initial = (storedId != null && teams.any((t) => t.id == storedId))
-          ? storedId
-          : teams.first.id;
+      final String initial;
+      if (urlId != null && teams.any((t) => t.id == urlId)) {
+        initial = urlId;
+        // Persist URL-provided choice so subsequent visits without param keep it
+        await StorageService.instance.setSelectedExpertId(urlId);
+      } else if (storedId != null && teams.any((t) => t.id == storedId)) {
+        initial = storedId;
+      } else {
+        initial = teams.first.id;
+      }
       setState(() {
         _myTeams = teams;
         _initialExpertId = initial;

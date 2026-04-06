@@ -20,7 +20,10 @@ List<RouteBase> get expertDashboardRoutes => [
       GoRoute(
         path: AppRoutes.expertDashboardWithId,
         name: 'expertDashboardWithId',
-        builder: (context, state) => const ExpertDashboardShell(),
+        builder: (context, state) {
+          final expertId = state.pathParameters['expertId'];
+          return ExpertDashboardShell(initialExpertId: expertId);
+        },
       ),
       GoRoute(
         path: AppRoutes.expertDashboardManagement,
