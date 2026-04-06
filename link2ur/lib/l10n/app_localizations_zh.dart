@@ -11688,6 +11688,34 @@ class AppLocalizationsZh extends AppLocalizations {
   String get expertManagementReviewReplies => '评价回复';
 
   @override
+  String get expertReviewReplySent => '回复已发送';
+
+  @override
+  String get expertReviewNoReviews => '暂无评价';
+
+  @override
+  String get expertReviewReplyLabel => '回复';
+
+  @override
+  String get expertReviewReplyButton => '回复';
+
+  @override
+  String get expertReviewReplyHint => '输入你的回复...';
+
+  @override
+  String get expertStripeAlreadyActive =>
+      '你的 Stripe Connect 账户已激活，可以在 Stripe 面板管理。';
+
+  @override
+  String get expertStripeNotActive => '你还没有完成 Stripe Connect 设置。设置后即可接收付款。';
+
+  @override
+  String get expertStripeStartOnboarding => '开始设置';
+
+  @override
+  String get expertStripeViewDashboard => '查看面板';
+
+  @override
   String get expertManagementViewPublicPage => '查看公开主页';
 
   @override
@@ -23481,6 +23509,34 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get expertManagementReviewReplies => '評價回覆';
+
+  @override
+  String get expertReviewReplySent => '回覆已發送';
+
+  @override
+  String get expertReviewNoReviews => '暫無評價';
+
+  @override
+  String get expertReviewReplyLabel => '回覆';
+
+  @override
+  String get expertReviewReplyButton => '回覆';
+
+  @override
+  String get expertReviewReplyHint => '輸入你的回覆...';
+
+  @override
+  String get expertStripeAlreadyActive =>
+      '你的 Stripe Connect 帳戶已激活，可以在 Stripe 面板管理。';
+
+  @override
+  String get expertStripeNotActive => '你還沒有完成 Stripe Connect 設置。設置後即可接收付款。';
+
+  @override
+  String get expertStripeStartOnboarding => '開始設置';
+
+  @override
+  String get expertStripeViewDashboard => '查看面板';
 
   @override
   String get expertManagementViewPublicPage => '查看公開主頁';

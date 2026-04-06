@@ -12165,6 +12165,35 @@ class AppLocalizationsEn extends AppLocalizations {
   String get expertManagementReviewReplies => 'Review Replies';
 
   @override
+  String get expertReviewReplySent => 'Reply sent';
+
+  @override
+  String get expertReviewNoReviews => 'No reviews yet';
+
+  @override
+  String get expertReviewReplyLabel => 'Reply';
+
+  @override
+  String get expertReviewReplyButton => 'Reply';
+
+  @override
+  String get expertReviewReplyHint => 'Write your reply...';
+
+  @override
+  String get expertStripeAlreadyActive =>
+      'Your Stripe Connect account is active. You can manage it in the Stripe dashboard.';
+
+  @override
+  String get expertStripeNotActive =>
+      'You haven\'t completed Stripe Connect setup. Set it up to receive payments.';
+
+  @override
+  String get expertStripeStartOnboarding => 'Start Setup';
+
+  @override
+  String get expertStripeViewDashboard => 'View Dashboard';
+
+  @override
   String get expertManagementViewPublicPage => 'View Public Page';
 
   @override

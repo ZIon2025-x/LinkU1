@@ -22475,6 +22475,60 @@ abstract class AppLocalizations {
   /// **'Review Replies'**
   String get expertManagementReviewReplies;
 
+  /// No description provided for @expertReviewReplySent.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply sent'**
+  String get expertReviewReplySent;
+
+  /// No description provided for @expertReviewNoReviews.
+  ///
+  /// In en, this message translates to:
+  /// **'No reviews yet'**
+  String get expertReviewNoReviews;
+
+  /// No description provided for @expertReviewReplyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply'**
+  String get expertReviewReplyLabel;
+
+  /// No description provided for @expertReviewReplyButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply'**
+  String get expertReviewReplyButton;
+
+  /// No description provided for @expertReviewReplyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Write your reply...'**
+  String get expertReviewReplyHint;
+
+  /// No description provided for @expertStripeAlreadyActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Stripe Connect account is active. You can manage it in the Stripe dashboard.'**
+  String get expertStripeAlreadyActive;
+
+  /// No description provided for @expertStripeNotActive.
+  ///
+  /// In en, this message translates to:
+  /// **'You haven\'t completed Stripe Connect setup. Set it up to receive payments.'**
+  String get expertStripeNotActive;
+
+  /// No description provided for @expertStripeStartOnboarding.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Setup'**
+  String get expertStripeStartOnboarding;
+
+  /// No description provided for @expertStripeViewDashboard.
+  ///
+  /// In en, this message translates to:
+  /// **'View Dashboard'**
+  String get expertStripeViewDashboard;
+
   /// No description provided for @expertManagementViewPublicPage.
   ///
   /// In en, this message translates to:
