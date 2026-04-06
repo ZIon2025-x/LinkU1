@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>达人管理页面 - 布局方案对比</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #f0f2f5;
+    padding: 24px;
+    color: #1a1a1a;
+  }
+  .page-title {
+    text-align: center;
+    margin-bottom: 8px;
+    font-size: 24px;
+    font-weight: 700;
+  }
+  .page-subtitle {
+    text-align: center;
+    margin-bottom: 32px;
+    color: #666;
+    font-size: 14px;
+  }
+  .mockup-row {
+    display: flex;
+    gap: 32px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .mockup-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+  .mockup-label {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+  }
+  .mockup-recommend {
+    background: #FF9500;
+    color: white;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+  .mockup-desc {
+    font-size: 12px;
+    color: #666;
+    text-align: center;
+    max-width: 320px;
+    line-height: 1.6;
+    min-height: 58px;
+  }
+  /* Phone frame */
+  .phone {
+    width: 340px;
+    height: 700px;
+    background: #fff;
+    border-radius: 28px;
+    border: 10px solid #1a1a1a;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+  /* Status bar */
+  .status-bar {
+    height: 26px;
+    background: #f7f7f7;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 18px;
+    font-size: 11px;
+    color: #000;
+    font-weight: 600;
+  }
+  /* AppBar */
+  .appbar {
+    background: #fff;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .appbar-title {
+    font-size: 17px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+  }
+  .appbar-title .avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #007AFF, #5856D6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 11px;
+    font-weight: bold;
+  }
+  .appbar-title .caret {
+    color: #999;
+    font-size: 10px;
+  }
+  .appbar-actions {
+    display: flex;
+    gap: 14px;
+    color: #007AFF;
+    font-size: 18px;
+  }
+  /* Role badge */
+  .role-badge {
+    background: #e0f7e5;
+    color: #2E7D32;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 4px;
+    font-weight: 500;
+  }
+  .role-badge.admin { background: #fff4e0; color: #F57C00; }
+  .role-badge.member { background: #f0f0f0; color: #666; }
+  /* TabBar */
+  .tabbar {
+    background: #fff;
+    display: flex;
+    overflow-x: auto;
+    border-bottom: 1px solid #f0f0f0;
+    scrollbar-width: none;
+  }
+  .tabbar::-webkit-scrollbar { display: none; }
+  .tab {
+    flex: 1;
+    min-width: 60px;
+    padding: 12px 8px;
+    text-align: center;
+    font-size: 12px;
+    color: #666;
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+  }
+  .tab.active {
+    color: #007AFF;
+    border-bottom-color: #007AFF;
+    font-weight: 600;
+  }
+  .tab-icon {
+    font-size: 16px;
+    display: block;
+    margin-bottom: 2px;
+  }
+  .tab.locked {
+    color: #ccc;
+  }
+  /* Body content */
+  .body {
+    flex: 1;
+    overflow-y: auto;
+    background: #f7f7f9;
+    padding: 12px;
+  }
+  /* Stats tab content */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .stat-card {
+    background: linear-gradient(135deg, rgba(0,122,255,0.12), rgba(0,122,255,0.04));
+    border: 1px solid rgba(0,122,255,0.18);
+    border-radius: 12px;
+    padding: 14px;
+  }
+  .stat-card.green { background: linear-gradient(135deg, rgba(52,199,89,0.12), rgba(52,199,89,0.04)); border-color: rgba(52,199,89,0.18); }
+  .stat-card.orange { background: linear-gradient(135deg, rgba(255,149,0,0.12), rgba(255,149,0,0.04)); border-color: rgba(255,149,0,0.18); }
+  .stat-card.purple { background: linear-gradient(135deg, rgba(175,82,222,0.12), rgba(175,82,222,0.04)); border-color: rgba(175,82,222,0.18); }
+  .stat-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: rgba(0,122,255,0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+  }
+  .stat-card.green .stat-icon { background: rgba(52,199,89,0.15); }
+  .stat-card.orange .stat-icon { background: rgba(255,149,0,0.15); }
+  .stat-card.purple .stat-icon { background: rgba(175,82,222,0.15); }
+  .stat-value {
+    font-size: 26px;
+    font-weight: 700;
+    margin-top: 8px;
+    line-height: 1;
+    color: #1a1a1a;
+  }
+  .stat-label {
+    font-size: 11px;
+    color: #666;
+    margin-top: 4px;
+  }
+  .stat-full {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .stat-full .stat-value { font-size: 30px; margin-top: 0; color: #00B38F; }
+  /* Option C grid home */
+  .grid-home {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .grid-item {
+    background: #fff;
+    border-radius: 14px;
+    padding: 18px 12px;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    cursor: pointer;
+  }
+  .grid-item .grid-icon {
+    font-size: 28px;
+    margin-bottom: 6px;
+  }
+  .grid-item .grid-label {
+    font-size: 12px;
+    color: #333;
+    font-weight: 500;
+  }
+  .grid-item.locked {
+    opacity: 0.35;
+  }
+  .grid-item .grid-badge {
+    position: relative;
+  }
+  .grid-item .dot {
+    position: absolute;
+    top: -4px;
+    right: 24px;
+    background: #FF3B30;
+    color: white;
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 8px;
+    font-weight: 600;
+  }
+  /* Option A management center sheet */
+  .sheet {
+    background: #fff;
+    border-radius: 14px;
+    margin-bottom: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .sheet-title {
+    font-size: 12px;
+    color: #999;
+    padding: 12px 14px 6px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .sheet-item {
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-top: 1px solid #f5f5f5;
+    cursor: pointer;
+  }
+  .sheet-item:first-of-type { border-top: none; }
+  .sheet-item .sheet-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: #f0f0f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+  }
+  .sheet-item .sheet-text {
+    flex: 1;
+    font-size: 14px;
+    color: #1a1a1a;
+  }
+  .sheet-item .sheet-chevron {
+    color: #ccc;
+    font-size: 14px;
+  }
+  .sheet-item.locked {
+    opacity: 0.35;
+  }
+  .sheet-item .dot {
+    background: #FF3B30;
+    color: white;
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 8px;
+    margin-right: 4px;
+  }
+  .section-header {
+    font-size: 14px;
+    font-weight: 600;
+    padding: 6px 4px 10px;
+    color: #333;
+  }
+  /* Team switcher sheet overlay */
+  .switcher-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.4);
+    display: none;
+    align-items: flex-end;
+  }
+  .switcher-sheet {
+    background: #fff;
+    width: 100%;
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+    padding: 16px;
+    max-height: 60%;
+  }
+  .switcher-sheet h3 {
+    font-size: 15px;
+    margin-bottom: 12px;
+    color: #333;
+  }
+  .switcher-team {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    gap: 10px;
+  }
+  .switcher-team.active { background: #f0f7ff; }
+  .switcher-team .team-avatar {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #FF9500, #FF3B30);
+    color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: bold;
+    font-size: 13px;
+  }
+  .switcher-team .team-info { flex: 1; }
+  .switcher-team .team-name { font-size: 14px; font-weight: 500; }
+  .switcher-team .team-meta { font-size: 11px; color: #999; }
+  .switcher-check { color: #007AFF; font-size: 16px; }
+
+  /* Pros and cons */
+  .pros-cons {
+    margin-top: 8px;
+    font-size: 11px;
+    max-width: 320px;
+    background: #fff;
+    border-radius: 10px;
+    padding: 12px 14px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .pros-cons h4 {
+    font-size: 11px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 4px;
+  }
+  .pros-cons ul { padding-left: 16px; margin-bottom: 8px; color: #555; }
+  .pros-cons ul:last-child { margin-bottom: 0; }
+  .pros-cons .pro { color: #2E7D32; }
+  .pros-cons .con { color: #C62828; }
+
+  .divider {
+    height: 1px;
+    background: #eee;
+    margin: 8px 0;
+  }
+
+  /* Floating notes */
+  .annotation {
+    position: absolute;
+    background: #FFF3CD;
+    border: 1px dashed #FFC107;
+    color: #856404;
+    padding: 4px 8px;
+    font-size: 10px;
+    border-radius: 4px;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  .arrow {
+    position: absolute;
+    color: #FFC107;
+    font-size: 16px;
+  }
+</style>
+</head>
+<body>
+
+<h1 class="page-title">达人管理页面 · 布局方案对比</h1>
+<p class="page-subtitle">统一入口 · 多团队切换 · 角色权限显示</p>
+
+<div class="mockup-row">
+
+  <!-- ============== Option A ============== -->
+  <div class="mockup-col">
+    <div class="mockup-label">方案 A · 主次分离<span class="mockup-recommend">推荐</span></div>
+    <div class="mockup-desc">5 核心 tab 做日常工作流，⚙ 管理中心放次要功能。</div>
+
+    <div class="phone">
+      <div class="status-bar"><span>9:41</span><span>●●● 100%</span></div>
+      <div class="appbar">
+        <div class="appbar-title">
+          <div class="avatar">设</div>
+          <span>设计达人工作室</span>
+          <span class="role-badge">Owner</span>
+          <span class="caret">▾</span>
+        </div>
+        <div class="appbar-actions">⚙</div>
+      </div>
+      <div class="tabbar">
+        <div class="tab active"><span class="tab-icon">📊</span>看板</div>
+        <div class="tab"><span class="tab-icon">🛠️</span>服务</div>
+        <div class="tab"><span class="tab-icon">📨</span>申请</div>
+        <div class="tab"><span class="tab-icon">⏰</span>时段</div>
+        <div class="tab"><span class="tab-icon">📅</span>日程</div>
+      </div>
+      <div class="body">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon">🛠️</div>
+            <div class="stat-value">12</div>
+            <div class="stat-label">服务总数</div>
+          </div>
+          <div class="stat-card green">
+            <div class="stat-icon">✓</div>
+            <div class="stat-value">8</div>
+            <div class="stat-label">上架中</div>
+          </div>
+          <div class="stat-card purple">
+            <div class="stat-icon">📨</div>
+            <div class="stat-value">47</div>
+            <div class="stat-label">申请总数</div>
+          </div>
+          <div class="stat-card orange">
+            <div class="stat-icon">⏳</div>
+            <div class="stat-value">5</div>
+            <div class="stat-label">待处理</div>
+          </div>
+        </div>
+        <div style="background: linear-gradient(135deg, rgba(0,179,143,0.12), rgba(0,179,143,0.04)); border: 1px solid rgba(0,179,143,0.18); border-radius: 12px; padding: 14px; margin-top: 10px;">
+          <div class="stat-full">
+            <div>
+              <div class="stat-icon" style="background: rgba(0,179,143,0.15);">⏰</div>
+              <div class="stat-label" style="margin-top: 12px;">即将到来的时间段</div>
+            </div>
+            <div class="stat-value">18</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pros-cons">
+      <h4 class="pro">✓ 优点</h4>
+      <ul><li>日常工作流快速访问</li><li>管理功能集中不淹没</li><li>改动最小，复用现有 5-tab 结构</li></ul>
+      <h4 class="con">✗ 缺点</h4>
+      <ul><li>成员/优惠券等二级功能多一层点击</li></ul>
+    </div>
+  </div>
+
+  <!-- ============== Option B ============== -->
+  <div class="mockup-col">
+    <div class="mockup-label">方案 B · 全部 Tab</div>
+    <div class="mockup-desc">所有功能平铺成 tab，可左右滚动。Member 角色看到灰掉的 tab。</div>
+
+    <div class="phone">
+      <div class="status-bar"><span>9:41</span><span>●●● 100%</span></div>
+      <div class="appbar">
+        <div class="appbar-title">
+          <div class="avatar">设</div>
+          <span>设计达人工作室</span>
+          <span class="role-badge member">Member</span>
+          <span class="caret">▾</span>
+        </div>
+        <div class="appbar-actions">⚙</div>
+      </div>
+      <div class="tabbar">
+        <div class="tab active"><span class="tab-icon">📊</span>看板</div>
+        <div class="tab locked"><span class="tab-icon">🛠️</span>服务</div>
+        <div class="tab locked"><span class="tab-icon">📨</span>申请</div>
+        <div class="tab locked"><span class="tab-icon">⏰</span>时段</div>
+        <div class="tab"><span class="tab-icon">📅</span>日程</div>
+        <div class="tab"><span class="tab-icon">👥</span>成员</div>
+        <div class="tab locked"><span class="tab-icon">🎟️</span>券</div>
+        <div class="tab locked"><span class="tab-icon">📦</span>套餐</div>
+        <div class="tab locked"><span class="tab-icon">💬</span>评价</div>
+      </div>
+      <div class="body">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon">🛠️</div>
+            <div class="stat-value">12</div>
+            <div class="stat-label">服务总数</div>
+          </div>
+          <div class="stat-card green">
+            <div class="stat-icon">✓</div>
+            <div class="stat-value">8</div>
+            <div class="stat-label">上架中</div>
+          </div>
+          <div class="stat-card purple">
+            <div class="stat-icon">📨</div>
+            <div class="stat-value">47</div>
+            <div class="stat-label">申请总数</div>
+          </div>
+          <div class="stat-card orange">
+            <div class="stat-icon">⏳</div>
+            <div class="stat-value">5</div>
+            <div class="stat-label">待处理</div>
+          </div>
+        </div>
+        <div style="text-align:center; font-size:10px; color:#999; margin-top:12px;">← 可左右滚动 →</div>
+      </div>
+    </div>
+
+    <div class="pros-cons">
+      <h4 class="pro">✓ 优点</h4>
+      <ul><li>所有功能一层可达，无需跳转</li></ul>
+      <h4 class="con">✗ 缺点</h4>
+      <ul><li>9+ tab 拥挤，必须滚动</li><li>Member 看到大量灰掉 tab，体验差</li><li>角色切换时 tab 布局跳变</li></ul>
+    </div>
+  </div>
+
+  <!-- ============== Option C ============== -->
+  <div class="mockup-col">
+    <div class="mockup-label">方案 C · Grid 主页</div>
+    <div class="mockup-desc">类似 iOS 设置，首页是功能 grid，点击进入子页。</div>
+
+    <div class="phone">
+      <div class="status-bar"><span>9:41</span><span>●●● 100%</span></div>
+      <div class="appbar">
+        <div class="appbar-title">
+          <div class="avatar">设</div>
+          <span>设计达人工作室</span>
+          <span class="role-badge admin">Admin</span>
+          <span class="caret">▾</span>
+        </div>
+        <div class="appbar-actions">↻</div>
+      </div>
+      <div class="body" style="padding: 16px;">
+        <div style="margin-bottom: 14px; background: linear-gradient(135deg, #007AFF, #5856D6); color: white; padding: 14px; border-radius: 12px;">
+          <div style="font-size: 12px; opacity: 0.8;">本月申请</div>
+          <div style="font-size: 28px; font-weight: 700; margin-top: 4px;">47 <span style="font-size: 12px; opacity: 0.8;">待处理 5</span></div>
+        </div>
+        <div class="grid-home">
+          <div class="grid-item">
+            <div class="grid-icon">📊</div>
+            <div class="grid-label">看板</div>
+          </div>
+          <div class="grid-item">
+            <div class="grid-icon">🛠️</div>
+            <div class="grid-label">我的服务</div>
+          </div>
+          <div class="grid-item">
+            <div class="grid-icon grid-badge">📨<span class="dot">5</span></div>
+            <div class="grid-label">申请管理</div>
+          </div>
+          <div class="grid-item">
+            <div class="grid-icon">⏰</div>
+            <div class="grid-label">时间段</div>
+          </div>
+          <div class="grid-item">
+            <div class="grid-icon">📅</div>
+            <div class="grid-label">日程</div>
+          </div>
+          <div class="grid-item">
+            <div class="grid-icon grid-badge">👥<span class="dot">2</span></div>
+            <div class="grid-label">成员</div>
+          </div>
+          <div class="grid-item">
+            <div class="grid-icon">🎟️</div>
+            <div class="grid-label">优惠券</div>
+          </div>
+          <div class="grid-item">
+            <div class="grid-icon">📦</div>
+            <div class="grid-label">套餐</div>
+          </div>
+          <div class="grid-item locked">
+            <div class="grid-icon">⚙️</div>
+            <div class="grid-label">团队资料</div>
+          </div>
+          <div class="grid-item locked">
+            <div class="grid-icon">💳</div>
+            <div class="grid-label">Stripe</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pros-cons">
+      <h4 class="pro">✓ 优点</h4>
+      <ul><li>清晰、可扩展</li><li>角色权限显示自然（隐藏/灰掉格子）</li><li>可在首页放 banner 突出待处理任务</li></ul>
+      <h4 class="con">✗ 缺点</h4>
+      <ul><li>日常频繁操作多一次点击</li><li>需要完全重写现有 5-tab 结构</li></ul>
+    </div>
+  </div>
+
+</div>
+
+<!-- ============================== -->
+<!-- Team Switcher & Management Center demonstration -->
+<!-- ============================== -->
+<div style="max-width: 1100px; margin: 60px auto 0; text-align: center;">
+  <h2 style="font-size: 20px; margin-bottom: 8px;">附加细节</h2>
+  <p style="color: #666; font-size: 13px; margin-bottom: 32px;">团队切换器 + 管理中心（方案 A 的 ⚙ 按钮打开）</p>
+</div>
+
+<div class="mockup-row">
+
+  <!-- Team switcher -->
+  <div class="mockup-col">
+    <div class="mockup-label">团队切换器（点 AppBar 标题）</div>
+    <div class="mockup-desc">多团队用户点击标题的 ▾ 展开切换器，列出所有团队 + 角色。</div>
+
+    <div class="phone">
+      <div class="status-bar"><span>9:41</span><span>●●● 100%</span></div>
+      <div class="appbar">
+        <div class="appbar-title">
+          <div class="avatar">设</div>
+          <span>设计达人工作室</span>
+          <span class="role-badge">Owner</span>
+          <span class="caret">▾</span>
+        </div>
+        <div class="appbar-actions">⚙</div>
+      </div>
+      <div class="tabbar" style="opacity: 0.3;">
+        <div class="tab active"><span class="tab-icon">📊</span>看板</div>
+        <div class="tab"><span class="tab-icon">🛠️</span>服务</div>
+        <div class="tab"><span class="tab-icon">📨</span>申请</div>
+        <div class="tab"><span class="tab-icon">⏰</span>时段</div>
+        <div class="tab"><span class="tab-icon">📅</span>日程</div>
+      </div>
+      <div class="body" style="background: rgba(0,0,0,0.35); padding: 0; position: relative;">
+        <div style="position: absolute; bottom: 0; left: 0; right: 0; background: #fff; border-top-left-radius: 16px; border-top-right-radius: 16px; padding: 16px; max-height: 90%;">
+          <div style="width: 40px; height: 4px; background: #e0e0e0; border-radius: 2px; margin: 0 auto 12px;"></div>
+          <h3 style="font-size: 15px; margin-bottom: 12px; color: #333;">切换达人团队</h3>
+          <div class="switcher-team active">
+            <div class="team-avatar">设</div>
+            <div class="team-info">
+              <div class="team-name">设计达人工作室</div>
+              <div class="team-meta">Owner · 12 服务</div>
+            </div>
+            <div class="switcher-check">✓</div>
+          </div>
+          <div class="switcher-team">
+            <div class="team-avatar" style="background: linear-gradient(135deg, #007AFF, #5856D6);">Ai</div>
+            <div class="team-info">
+              <div class="team-name">AI 助教团</div>
+              <div class="team-meta">Admin · 8 服务</div>
+            </div>
+          </div>
+          <div class="switcher-team">
+            <div class="team-avatar" style="background: linear-gradient(135deg, #34C759, #00B38F);">翻</div>
+            <div class="team-info">
+              <div class="team-name">翻译小分队</div>
+              <div class="team-meta">Member · 5 服务</div>
+            </div>
+          </div>
+          <div style="border-top: 1px solid #f0f0f0; margin: 12px -16px 0; padding: 12px 16px 0;">
+            <div class="switcher-team" style="padding: 8px 10px;">
+              <div style="width: 36px; height: 36px; border-radius: 8px; background: #f0f7ff; color: #007AFF; display: flex; align-items: center; justify-content: center; font-size: 18px;">＋</div>
+              <div class="team-info">
+                <div class="team-name" style="color: #007AFF;">申请新团队</div>
+              </div>
+            </div>
+            <div class="switcher-team" style="padding: 8px 10px;">
+              <div style="width: 36px; height: 36px; border-radius: 8px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; font-size: 16px;">✉️</div>
+              <div class="team-info">
+                <div class="team-name">我的邀请</div>
+                <div class="team-meta">2 条待处理</div>
+              </div>
+              <span class="dot" style="background:#FF3B30; color:white; font-size:10px; padding:1px 6px; border-radius:8px;">2</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Management center -->
+  <div class="mockup-col">
+    <div class="mockup-label">管理中心（⚙ 按钮打开）</div>
+    <div class="mockup-desc">方案 A 的 ⚙ 按钮打开的页面。按角色分组，member 只看到部分条目。</div>
+
+    <div class="phone">
+      <div class="status-bar"><span>9:41</span><span>●●● 100%</span></div>
+      <div class="appbar">
+        <div class="appbar-title">
+          <span style="font-size: 18px;">‹</span>
+          <span>管理中心</span>
+        </div>
+        <div class="appbar-actions"></div>
+      </div>
+      <div class="body" style="padding: 12px;">
+        <div class="sheet">
+          <div class="sheet-title">团队</div>
+          <div class="sheet-item">
+            <div class="sheet-icon">👥</div>
+            <div class="sheet-text">成员管理</div>
+            <span style="background:#FF3B30; color:white; font-size:10px; padding:1px 6px; border-radius:8px; margin-right:4px;">2</span>
+            <div class="sheet-chevron">›</div>
+          </div>
+          <div class="sheet-item">
+            <div class="sheet-icon">✉️</div>
+            <div class="sheet-text">入队申请</div>
+            <span style="background:#FF3B30; color:white; font-size:10px; padding:1px 6px; border-radius:8px; margin-right:4px;">1</span>
+            <div class="sheet-chevron">›</div>
+          </div>
+          <div class="sheet-item">
+            <div class="sheet-icon">⚙️</div>
+            <div class="sheet-text">编辑团队资料</div>
+            <div class="sheet-chevron">›</div>
+          </div>
+        </div>
+
+        <div class="sheet">
+          <div class="sheet-title">营销</div>
+          <div class="sheet-item">
+            <div class="sheet-icon">🎟️</div>
+            <div class="sheet-text">优惠券</div>
+            <div class="sheet-chevron">›</div>
+          </div>
+          <div class="sheet-item">
+            <div class="sheet-icon">📦</div>
+            <div class="sheet-text">服务套餐</div>
+            <div class="sheet-chevron">›</div>
+          </div>
+          <div class="sheet-item">
+            <div class="sheet-icon">💬</div>
+            <div class="sheet-text">评价回复</div>
+            <span style="background:#FF3B30; color:white; font-size:10px; padding:1px 6px; border-radius:8px; margin-right:4px;">3</span>
+            <div class="sheet-chevron">›</div>
+          </div>
+        </div>
+
+        <div class="sheet">
+          <div class="sheet-title">财务（仅 Owner）</div>
+          <div class="sheet-item">
+            <div class="sheet-icon">💳</div>
+            <div class="sheet-text">Stripe Connect</div>
+            <span style="color:#34C759; font-size:11px; margin-right:4px;">已认证</span>
+            <div class="sheet-chevron">›</div>
+          </div>
+        </div>
+
+        <div class="sheet">
+          <div class="sheet-title">其他</div>
+          <div class="sheet-item">
+            <div class="sheet-icon">🌐</div>
+            <div class="sheet-text">查看公开主页</div>
+            <div class="sheet-chevron">›</div>
+          </div>
+          <div class="sheet-item" style="color: #FF3B30;">
+            <div class="sheet-icon" style="background:#ffebee;">🚪</div>
+            <div class="sheet-text" style="color: #FF3B30;">离开团队</div>
+            <div class="sheet-chevron">›</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div style="max-width: 900px; margin: 60px auto 40px; background: #fff; padding: 24px 32px; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.04);">
+  <h2 style="font-size: 18px; margin-bottom: 12px;">角色权限显示规则</h2>
+  <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+    <thead>
+      <tr style="background: #f7f7f9;">
+        <th style="text-align: left; padding: 10px; font-weight: 600;">功能</th>
+        <th style="padding: 10px; font-weight: 600;">Owner</th>
+        <th style="padding: 10px; font-weight: 600;">Admin</th>
+        <th style="padding: 10px; font-weight: 600;">Member</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="border-top: 1px solid #eee;"><td style="padding: 8px 10px;">看板统计</td><td style="text-align:center;">✓</td><td style="text-align:center;">✓</td><td style="text-align:center;">✓</td></tr>
+      <tr style="border-top: 1px solid #eee;"><td style="padding: 8px 10px;">我的日程（只看个人的）</td><td style="text-align:center;">✓</td><td style="text-align:center;">✓</td><td style="text-align:center;">✓</td></tr>
+      <tr style="border-top: 1px solid #eee;"><td style="padding: 8px 10px;">服务管理（CRUD）</td><td style="text-align:center;">✓</td><td style="text-align:center;">✓</td><td style="text-align:center; color:#999;">只读</td></tr>
+      <tr style="border-top: 1px solid #eee;"><td style="padding: 8px 10px;">处理申请</td><td style="text-align:center;">✓</td><td style="text-align:center;">✓</td><td style="text-align:center; color:#ccc;">—</td></tr>
+      <tr style="border-top: 1px solid #eee;"><td style="padding: 8px 10px;">时间段管理</td><td style="text-align:center;">✓</td><td style="text-align:center;">✓</td><td style="text-align:center; color:#ccc;">—</td></tr>
+      <tr style="border-top: 1px solid #eee;"><td style="padding: 8px 10px;">成员管理（邀请/踢人）</td><td style="text-align:center;">✓</td><td style="text-align:center;">✓</td><td style="text-align:center; color:#999;">只读</td></tr>
+      <tr style="border-top: 1px solid #eee;"><td style="padding: 8px 10px;">审批入队申请</td><td style="text-align:center;">✓</td><td style="text-align:center;">✓</td><td style="text-align:center; color:#ccc;">—</td></tr>
+      <tr style="border-top: 1px solid #eee;"><td style="padding: 8px 10px;">优惠券/套餐管理</td><td style="text-align:center;">✓</td><td style="text-align:center;">✓</td><td style="text-align:center; color:#ccc;">—</td></tr>
+      <tr style="border-top: 1px solid #eee;"><td style="padding: 8px 10px;">评价回复</td><td style="text-align:center;">✓</td><td style="text-align:center;">✓</td><td style="text-align:center; color:#ccc;">—</td></tr>
+      <tr style="border-top: 1px solid #eee;"><td style="padding: 8px 10px;">编辑团队资料</td><td style="text-align:center;">✓</td><td style="text-align:center; color:#ccc;">—</td><td style="text-align:center; color:#ccc;">—</td></tr>
+      <tr style="border-top: 1px solid #eee;"><td style="padding: 8px 10px;">Stripe Connect（财务）</td><td style="text-align:center;">✓</td><td style="text-align:center; color:#ccc;">—</td><td style="text-align:center; color:#ccc;">—</td></tr>
+      <tr style="border-top: 1px solid #eee;"><td style="padding: 8px 10px;">转让所有权 / 解散团队</td><td style="text-align:center;">✓</td><td style="text-align:center; color:#ccc;">—</td><td style="text-align:center; color:#ccc;">—</td></tr>
+      <tr style="border-top: 1px solid #eee;"><td style="padding: 8px 10px;">离开团队</td><td style="text-align:center; color:#ccc;">—</td><td style="text-align:center;">✓</td><td style="text-align:center;">✓</td></tr>
+    </tbody>
+  </table>
+</div>
+
+</body>
+</html>
