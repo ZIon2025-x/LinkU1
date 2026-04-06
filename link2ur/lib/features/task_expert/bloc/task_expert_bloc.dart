@@ -675,6 +675,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     required TaskExpertRepository taskExpertRepository,
     ActivityRepository? activityRepository,
     required QuestionRepository questionRepository,
+    this.expertId,
   })  : _taskExpertRepository = taskExpertRepository,
         _activityRepository = activityRepository,
         _questionRepository = questionRepository,
@@ -731,6 +732,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
   final TaskExpertRepository _taskExpertRepository;
   final ActivityRepository? _activityRepository;
   final QuestionRepository _questionRepository;
+  final String? expertId;
 
   /// 获取城市筛选参数，'all' 时返回 null
   String? _cityParam(String city) => city == 'all' ? null : city;
@@ -1150,8 +1152,9 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     emit(state.copyWith(status: TaskExpertStatus.loading));
 
     try {
-      final expertApplications =
-          await _taskExpertRepository.getMyExpertApplications();
+      final expertApplications = expertId != null
+          ? await _taskExpertRepository.getExpertApplications(expertId!)
+          : <Map<String, dynamic>>[];
 
       emit(state.copyWith(
         status: TaskExpertStatus.loaded,

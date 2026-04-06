@@ -61,7 +61,10 @@ List<RouteBase> get taskExpertRoutes => [
       GoRoute(
         path: AppRoutes.expertApplicationsManagement,
         name: 'expertApplicationsManagement',
-        builder: (context, state) => const ExpertApplicationsManagementView(),
+        builder: (context, state) {
+          final expertId = state.uri.queryParameters['expertId'] ?? '';
+          return ExpertApplicationsManagementView(expertId: expertId);
+        },
       ),
       GoRoute(
         path: AppRoutes.expertDashboard,

@@ -26,9 +26,11 @@ import '../bloc/task_expert_bloc.dart';
 class ExpertApplicationsManagementView extends StatelessWidget {
   const ExpertApplicationsManagementView({
     super.key,
+    required this.expertId,
     this.showAppBar = true,
   });
 
+  final String expertId;
   final bool showAppBar;
 
   @override
@@ -37,6 +39,7 @@ class ExpertApplicationsManagementView extends StatelessWidget {
       create: (context) => TaskExpertBloc(
         taskExpertRepository: context.read<TaskExpertRepository>(),
         questionRepository: context.read<QuestionRepository>(),
+        expertId: expertId,
       )..add(const TaskExpertLoadExpertApplications()),
       child: _ExpertApplicationsManagementContent(showAppBar: showAppBar),
     );

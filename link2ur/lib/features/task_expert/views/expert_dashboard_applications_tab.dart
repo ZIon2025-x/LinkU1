@@ -6,10 +6,15 @@ import 'expert_applications_management_view.dart';
 /// Embeds [ExpertApplicationsManagementView] without its own AppBar,
 /// reusing the same BLoC and card logic (including the "查看任务" button).
 class ExpertDashboardApplicationsTab extends StatelessWidget {
-  const ExpertDashboardApplicationsTab({super.key});
+  const ExpertDashboardApplicationsTab({super.key, required this.expertId});
+
+  final String expertId;
 
   @override
   Widget build(BuildContext context) {
-    return const ExpertApplicationsManagementView(showAppBar: false);
+    return ExpertApplicationsManagementView(
+      expertId: expertId,
+      showAppBar: false,
+    );
   }
 }
