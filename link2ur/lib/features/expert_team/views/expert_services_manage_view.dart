@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:link2ur/core/utils/error_localizer.dart';
-import 'package:link2ur/core/utils/l10n_extension.dart';
 import 'package:link2ur/data/repositories/expert_team_repository.dart';
 import 'package:link2ur/features/expert_team/bloc/expert_team_bloc.dart';
 

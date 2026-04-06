@@ -68,7 +68,7 @@ class _ExpertTeamDetailBody extends StatelessWidget {
           children: [
             Text(state.errorMessage != null
                 ? context.localizeError(state.errorMessage!)
-                : context.l10n.commonLoadFailed),
+                : context.l10n.taskExpertLoadFailed),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () =>
@@ -81,7 +81,7 @@ class _ExpertTeamDetailBody extends StatelessWidget {
     }
     final team = state.currentTeam;
     if (team == null) {
-      return Center(child: Text(context.l10n.commonLoadFailed));
+      return Center(child: Text(context.l10n.taskExpertLoadFailed));
     }
     return _ExpertTeamDetailContent(team: team, expertId: expertId);
   }

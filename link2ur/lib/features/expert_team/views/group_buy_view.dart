@@ -12,22 +12,11 @@ class GroupBuyView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) {
-        final bloc = ExpertTeamBloc(
-          repository: context.read<ExpertTeamRepository>(),
-        );
-        _loadStatus(bloc);
-        return bloc;
-      },
+      create: (_) => ExpertTeamBloc(
+        repository: context.read<ExpertTeamRepository>(),
+      ),
       child: _GroupBuyBody(activityId: activityId),
     );
-  }
-
-  void _loadStatus(ExpertTeamBloc bloc) async {
-    try {
-      final status = await bloc.repository.getGroupBuyStatus(activityId);
-      // Can't dispatch directly from here, the view will handle it
-    } catch (_) {}
   }
 }
 
