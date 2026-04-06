@@ -313,6 +313,25 @@ class StorageService {
     await _prefs.setString(StorageKeys.lastLocationUpload, isoTimestamp);
   }
 
+  // ==================== 达人 Dashboard 当前选中团队 ====================
+
+  static const String _keySelectedExpertId = 'selected_expert_id';
+
+  /// 获取当前选中的达人团队 id
+  String? getSelectedExpertId() {
+    return _prefs.getString(_keySelectedExpertId);
+  }
+
+  /// 保存当前选中的达人团队 id
+  Future<void> setSelectedExpertId(String expertId) async {
+    await _prefs.setString(_keySelectedExpertId, expertId);
+  }
+
+  /// 清除当前选中的达人团队 id
+  Future<void> clearSelectedExpertId() async {
+    await _prefs.remove(_keySelectedExpertId);
+  }
+
   // ==================== 搜索历史 ====================
 
   /// 获取搜索历史
@@ -490,6 +509,7 @@ class StorageService {
   Future<void> clearAllOnLogout() async {
     await clearTokens();
     await clearUserInfo();
+    await clearSelectedExpertId();
     // 清除个人数据相关的内存缓存
     _cachedSearchHistory = null;
     _cachedPinnedTaskChatIds = null;
