@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../features/expert_dashboard/views/expert_dashboard_shell.dart';
@@ -15,5 +16,16 @@ List<RouteBase> get expertDashboardRoutes => [
         path: AppRoutes.expertDashboardWithId,
         name: 'expertDashboardWithId',
         builder: (context, state) => const ExpertDashboardShell(),
+      ),
+      // Placeholder for Phase C — real management center replaces this
+      GoRoute(
+        path: AppRoutes.expertDashboardManagement,
+        name: 'expertDashboardManagement',
+        builder: (context, state) => Scaffold(
+          appBar: AppBar(title: const Text('Management')),
+          body: const Center(
+            child: Text('Coming soon'),
+          ),
+        ),
       ),
     ];
