@@ -16,7 +16,7 @@
 ### 包含
 - Dashboard 重构为 5 核心 tab + 管理中心（方案 A）
 - 团队切换器（AppBar 标题点击打开 bottom sheet）
-- 管理中心独立路由（整合成员/申请审核/优惠券/套餐/Stripe/评价回复/团队资料/公开主页/离开/解散）
+- 管理中心独立路由（整合成员/申请审核/优惠券/套餐/Stripe/评价回复/团队资料/公开主页/离开）
 - 角色权限规则
 - 代码迁移：`features/task_expert/` 的管理相关 views + `features/expert_team/` 的管理相关 views → 新目录 `features/expert_dashboard/`
 - 删除重复的 `expert_services_manage_view.dart`
