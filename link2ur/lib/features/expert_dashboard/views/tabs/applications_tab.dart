@@ -493,7 +493,7 @@ class _ApplicationCard extends StatelessWidget {
     );
   }
 
-  void _showRejectDialog(BuildContext context) async {
+  Future<void> _showRejectDialog(BuildContext context) async {
     final l10n = context.l10n;
     final appId = application['id'] as int;
     AppHaptics.light();
@@ -517,7 +517,9 @@ class _ApplicationCard extends StatelessWidget {
     }
   }
 
-  void _showCounterOfferDialog(BuildContext context) {
+  Future<void> _showCounterOfferDialog(BuildContext context) async {
+    final bloc = context.read<TaskExpertBloc>();
+    final messenger = ScaffoldMessenger.of(context);
     final l10n = context.l10n;
     final appId = application['id'] as int;
     final priceController = TextEditingController();
@@ -525,111 +527,77 @@ class _ApplicationCard extends StatelessWidget {
     final isIOS = !kIsWeb && Platform.isIOS;
     AppHaptics.light();
 
-    showDialog(
-      context: context,
-      builder: (dialogContext) {
-        final counterOfferContent = Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            isIOS
-                ? CupertinoTextField(
-                    controller: priceController,
-                    placeholder: l10n.expertApplicationCounterPriceHint,
-                    prefix: Padding(
-                      padding: const EdgeInsets.only(left: 8),
-                      child: Text('${Helpers.currencySymbolFor(application['currency'] as String? ?? 'GBP')} '),
+    try {
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) {
+          final counterOfferContent = Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              isIOS
+                  ? CupertinoTextField(
+                      controller: priceController,
+                      placeholder: l10n.expertApplicationCounterPriceHint,
+                      prefix: Padding(
+                        padding: const EdgeInsets.only(left: 8),
+                        child: Text('${Helpers.currencySymbolFor(application['currency'] as String? ?? 'GBP')} '),
+                      ),
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                    )
+                  : TextField(
+                      controller: priceController,
+                      decoration: InputDecoration(
+                        labelText: l10n.expertApplicationCounterPrice,
+                        hintText: l10n.expertApplicationCounterPriceHint,
+                        prefixText: '${Helpers.currencySymbolFor(application['currency'] as String? ?? 'GBP')} ',
+                        border: const OutlineInputBorder(),
+                      ),
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
                     ),
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                  )
-                : TextField(
-                    controller: priceController,
-                    decoration: InputDecoration(
-                      labelText: l10n.expertApplicationCounterPrice,
-                      hintText: l10n.expertApplicationCounterPriceHint,
-                      prefixText: '${Helpers.currencySymbolFor(application['currency'] as String? ?? 'GBP')} ',
-                      border: const OutlineInputBorder(),
+              const SizedBox(height: AppSpacing.md),
+              isIOS
+                  ? CupertinoTextField(
+                      controller: messageController,
+                      placeholder: l10n.expertApplicationCounterMessageHint,
+                      maxLines: 3,
+                    )
+                  : TextField(
+                      controller: messageController,
+                      decoration: InputDecoration(
+                        labelText: l10n.expertApplicationCounterMessage,
+                        hintText: l10n.expertApplicationCounterMessageHint,
+                        border: const OutlineInputBorder(),
+                      ),
+                      maxLines: 3,
                     ),
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                  ),
-            const SizedBox(height: AppSpacing.md),
-            isIOS
-                ? CupertinoTextField(
-                    controller: messageController,
-                    placeholder: l10n.expertApplicationCounterMessageHint,
-                    maxLines: 3,
-                  )
-                : TextField(
-                    controller: messageController,
-                    decoration: InputDecoration(
-                      labelText: l10n.expertApplicationCounterMessage,
-                      hintText: l10n.expertApplicationCounterMessageHint,
-                      border: const OutlineInputBorder(),
-                    ),
-                    maxLines: 3,
-                  ),
-          ],
-        );
-
-        if (isIOS) {
-          return CupertinoAlertDialog(
-            title: Text(l10n.expertApplicationCounterOffer),
-            content: counterOfferContent,
-            actions: [
-              CupertinoDialogAction(
-                onPressed: () => Navigator.of(dialogContext).pop(),
-                child: Text(l10n.commonCancel),
-              ),
-              CupertinoDialogAction(
-                isDefaultAction: true,
-                onPressed: () {
-                  final price = double.tryParse(priceController.text.trim());
-                  if (price == null || price <= 0) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                          content:
-                              Text(l10n.fleaMarketNegotiatePriceTooLow)),
-                    );
-                    return;
-                  }
-                  Navigator.of(dialogContext).pop();
-                  context.read<TaskExpertBloc>().add(
-                        TaskExpertCounterOffer(
-                          appId,
-                          counterPrice: price,
-                          message: messageController.text.trim().isNotEmpty
-                              ? messageController.text.trim()
-                              : null,
-                        ),
-                      );
-                },
-                child: Text(l10n.commonConfirm),
-              ),
             ],
           );
-        }
 
-        return AlertDialog(
-          title: Text(l10n.expertApplicationCounterOffer),
-          content: counterOfferContent,
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text(l10n.commonCancel),
-            ),
-            FilledButton(
-              onPressed: () {
-                final price = double.tryParse(priceController.text.trim());
-                if (price == null || price <= 0) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                        content: Text(l10n.fleaMarketNegotiatePriceTooLow)),
-                  );
-                  return;
-                }
-                Navigator.of(dialogContext).pop();
-                context.read<TaskExpertBloc>().add(
+          if (isIOS) {
+            return CupertinoAlertDialog(
+              title: Text(l10n.expertApplicationCounterOffer),
+              content: counterOfferContent,
+              actions: [
+                CupertinoDialogAction(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: Text(l10n.commonCancel),
+                ),
+                CupertinoDialogAction(
+                  isDefaultAction: true,
+                  onPressed: () {
+                    final price = double.tryParse(priceController.text.trim());
+                    if (price == null || price <= 0) {
+                      messenger.showSnackBar(
+                        SnackBar(
+                            content:
+                                Text(l10n.fleaMarketNegotiatePriceTooLow)),
+                      );
+                      return;
+                    }
+                    Navigator.of(dialogContext).pop();
+                    bloc.add(
                       TaskExpertCounterOffer(
                         appId,
                         counterPrice: price,
@@ -638,18 +606,52 @@ class _ApplicationCard extends StatelessWidget {
                             : null,
                       ),
                     );
-              },
-              child: Text(l10n.commonConfirm),
-            ),
-          ],
-        );
-      },
-    ).whenComplete(() {
-      Future.delayed(const Duration(milliseconds: 300), () {
-        priceController.dispose();
-        messageController.dispose();
-      });
-    });
+                  },
+                  child: Text(l10n.commonConfirm),
+                ),
+              ],
+            );
+          }
+
+          return AlertDialog(
+            title: Text(l10n.expertApplicationCounterOffer),
+            content: counterOfferContent,
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: Text(l10n.commonCancel),
+              ),
+              FilledButton(
+                onPressed: () {
+                  final price = double.tryParse(priceController.text.trim());
+                  if (price == null || price <= 0) {
+                    messenger.showSnackBar(
+                      SnackBar(
+                          content: Text(l10n.fleaMarketNegotiatePriceTooLow)),
+                    );
+                    return;
+                  }
+                  Navigator.of(dialogContext).pop();
+                  bloc.add(
+                    TaskExpertCounterOffer(
+                      appId,
+                      counterPrice: price,
+                      message: messageController.text.trim().isNotEmpty
+                          ? messageController.text.trim()
+                          : null,
+                    ),
+                  );
+                },
+                child: Text(l10n.commonConfirm),
+              ),
+            ],
+          );
+        },
+      );
+    } finally {
+      priceController.dispose();
+      messageController.dispose();
+    }
   }
 }
 

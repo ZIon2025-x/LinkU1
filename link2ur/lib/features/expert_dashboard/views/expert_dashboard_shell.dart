@@ -28,6 +28,7 @@ class ExpertDashboardShell extends StatefulWidget {
 
 class _ExpertDashboardShellState extends State<ExpertDashboardShell> {
   List<ExpertTeam>? _myTeams;
+  String? _initialExpertId;
   bool _loading = true;
   String? _error;
 
@@ -50,8 +51,13 @@ class _ExpertDashboardShellState extends State<ExpertDashboardShell> {
         context.go(AppRoutes.taskExpertsIntro);
         return;
       }
+      final storedId = StorageService.instance.getSelectedExpertId();
+      final initial = (storedId != null && teams.any((t) => t.id == storedId))
+          ? storedId
+          : teams.first.id;
       setState(() {
         _myTeams = teams;
+        _initialExpertId = initial;
         _loading = false;
       });
     } catch (e) {
@@ -90,20 +96,15 @@ class _ExpertDashboardShellState extends State<ExpertDashboardShell> {
       );
     }
 
-    // 初始 expertId：存储的优先，否则第一个
-    final storedId = StorageService.instance.getSelectedExpertId();
-    final initialId =
-        (storedId != null && _myTeams!.any((t) => t.id == storedId))
-            ? storedId
-            : _myTeams!.first.id;
-
     return BlocProvider(
       create: (_) => SelectedExpertCubit(
         myTeams: _myTeams!,
-        initialExpertId: initialId,
+        initialExpertId: _initialExpertId!,
       ),
       child: BlocBuilder<SelectedExpertCubit, SelectedExpertState>(
-        buildWhen: (prev, curr) => prev.currentExpertId != curr.currentExpertId,
+        buildWhen: (prev, curr) =>
+            prev.currentExpertId != curr.currentExpertId ||
+            prev.canManage != curr.canManage,
         builder: (context, state) {
           return _DashboardTabs(key: ValueKey(state.currentExpertId));
         },
