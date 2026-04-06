@@ -2349,8 +2349,14 @@ class TaskExpertServiceUpdate(BaseModel):
     images: Optional[List[str]] = None
     base_price: Optional[condecimal(gt=0, max_digits=12, decimal_places=2)] = None  # 使用condecimal与DB的DECIMAL一致，避免精度丢失
     currency: Optional[Literal["GBP", "EUR"]] = None  # 统一为Literal类型
+    pricing_type: Optional[str] = None  # fixed / negotiable
     status: Optional[str] = None
     display_order: Optional[int] = None
+    # 位置相关字段
+    location_type: Optional[str] = None  # online / in_person / both
+    location: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
     # 时间段相关字段
     has_time_slots: Optional[bool] = None
     time_slot_duration_minutes: Optional[int] = None

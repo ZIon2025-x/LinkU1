@@ -383,28 +383,49 @@ async def list_expert_applications(
     await _get_expert_or_404(db, expert_id)
     await _get_member_or_403(db, expert_id, current_user.id, required_roles=["owner", "admin"])
 
-    query = select(models.ServiceApplication).where(
-        models.ServiceApplication.new_expert_id == expert_id
+    query = (
+        select(
+            models.ServiceApplication,
+            models.User.name.label("applicant_name"),
+            models.TaskExpertService.service_name.label("service_name"),
+            models.TaskExpertService.service_name_en.label("service_name_en"),
+            models.TaskExpertService.service_name_zh.label("service_name_zh"),
+        )
+        .join(
+            models.User,
+            models.User.id == models.ServiceApplication.applicant_id,
+        )
+        .join(
+            models.TaskExpertService,
+            models.TaskExpertService.id == models.ServiceApplication.service_id,
+        )
+        .where(models.ServiceApplication.new_expert_id == expert_id)
     )
     if status_filter:
         query = query.where(models.ServiceApplication.status == status_filter)
     query = query.order_by(models.ServiceApplication.created_at.desc()).offset(offset).limit(limit)
 
     result = await db.execute(query)
-    apps = result.scalars().all()
+    rows = result.all()
     return [
         {
-            "id": a.id,
-            "service_id": a.service_id,
-            "applicant_id": a.applicant_id,
-            "status": a.status,
-            "application_message": a.application_message,
-            "negotiated_price": float(a.negotiated_price) if a.negotiated_price else None,
-            "expert_counter_price": float(a.expert_counter_price) if a.expert_counter_price else None,
-            "final_price": float(a.final_price) if a.final_price else None,
-            "created_at": a.created_at.isoformat() if a.created_at else None,
+            "id": row.ServiceApplication.id,
+            "service_id": row.ServiceApplication.service_id,
+            "service_name": row.service_name,
+            "service_name_en": row.service_name_en,
+            "service_name_zh": row.service_name_zh,
+            "applicant_id": row.ServiceApplication.applicant_id,
+            "applicant_name": row.applicant_name,
+            "status": row.ServiceApplication.status,
+            "application_message": row.ServiceApplication.application_message,
+            "negotiated_price": float(row.ServiceApplication.negotiated_price) if row.ServiceApplication.negotiated_price else None,
+            "expert_counter_price": float(row.ServiceApplication.expert_counter_price) if row.ServiceApplication.expert_counter_price else None,
+            "final_price": float(row.ServiceApplication.final_price) if row.ServiceApplication.final_price else None,
+            "currency": row.ServiceApplication.currency or "GBP",
+            "task_id": row.ServiceApplication.task_id,
+            "created_at": row.ServiceApplication.created_at.isoformat() if row.ServiceApplication.created_at else None,
         }
-        for a in apps
+        for row in rows
     ]
 
 

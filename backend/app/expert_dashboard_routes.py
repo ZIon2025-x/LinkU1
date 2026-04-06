@@ -36,8 +36,19 @@ async def get_dashboard_stats(
     expert = await _get_expert_or_404(db, expert_id)
     await _get_member_or_403(db, expert_id, current_user.id)
 
-    # 服务数
-    service_count_result = await db.execute(
+    # 服务总数
+    total_services_result = await db.execute(
+        select(func.count()).select_from(models.TaskExpertService).where(
+            and_(
+                models.TaskExpertService.owner_type == "expert",
+                models.TaskExpertService.owner_id == expert_id,
+            )
+        )
+    )
+    total_services = total_services_result.scalar_one()
+
+    # 上架中服务数
+    active_services_result = await db.execute(
         select(func.count()).select_from(models.TaskExpertService).where(
             and_(
                 models.TaskExpertService.owner_type == "expert",
@@ -46,12 +57,54 @@ async def get_dashboard_stats(
             )
         )
     )
+    active_services = active_services_result.scalar_one()
+
+    # 申请总数 & 待处理数
+    total_apps_result = await db.execute(
+        select(func.count()).select_from(models.ServiceApplication).where(
+            models.ServiceApplication.new_expert_id == expert_id
+        )
+    )
+    total_applications = total_apps_result.scalar_one()
+
+    pending_apps_result = await db.execute(
+        select(func.count()).select_from(models.ServiceApplication).where(
+            and_(
+                models.ServiceApplication.new_expert_id == expert_id,
+                models.ServiceApplication.status.in_(["pending", "negotiating", "consulting"]),
+            )
+        )
+    )
+    pending_applications = pending_apps_result.scalar_one()
+
+    # 即将到来的时间段（未过期、未满、未删除）
+    now = get_utc_time()
+    upcoming_slots_result = await db.execute(
+        select(func.count()).select_from(models.ServiceTimeSlot)
+        .join(
+            models.TaskExpertService,
+            models.ServiceTimeSlot.service_id == models.TaskExpertService.id,
+        )
+        .where(
+            and_(
+                models.TaskExpertService.owner_type == "expert",
+                models.TaskExpertService.owner_id == expert_id,
+                models.ServiceTimeSlot.slot_start_datetime >= now,
+                models.ServiceTimeSlot.is_manually_deleted == False,
+            )
+        )
+    )
+    upcoming_time_slots = upcoming_slots_result.scalar_one()
 
     return {
         "expert_id": expert_id,
         "name": expert.name,
         "rating": float(expert.rating) if expert.rating else 0,
-        "total_services": service_count_result.scalar_one(),
+        "total_services": total_services,
+        "active_services": active_services,
+        "total_applications": total_applications,
+        "pending_applications": pending_applications,
+        "upcoming_time_slots": upcoming_time_slots,
         "completed_tasks": expert.completed_tasks,
         "completion_rate": expert.completion_rate,
         "member_count": expert.member_count,
