@@ -17,31 +17,105 @@ import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/animated_list_item.dart';
+import '../../../core/utils/error_localizer.dart';
+import '../../../data/repositories/expert_team_repository.dart';
 import '../../../data/repositories/question_repository.dart';
 import '../../../data/repositories/task_expert_repository.dart';
 import '../bloc/task_expert_bloc.dart';
 
 /// 达人服务申请管理页面
 /// 达人查看并处理收到的服务申请（同意/拒绝/议价）
-class ExpertApplicationsManagementView extends StatelessWidget {
+///
+/// 可以通过两种方式使用：
+/// 1. 嵌入式（tab 中）：传入 [expertId]
+/// 2. 独立路由：不传 [expertId]，自行通过 my-teams 解析
+class ExpertApplicationsManagementView extends StatefulWidget {
   const ExpertApplicationsManagementView({
     super.key,
-    required this.expertId,
+    this.expertId,
     this.showAppBar = true,
   });
 
-  final String expertId;
+  final String? expertId;
   final bool showAppBar;
 
   @override
+  State<ExpertApplicationsManagementView> createState() =>
+      _ExpertApplicationsManagementViewState();
+}
+
+class _ExpertApplicationsManagementViewState
+    extends State<ExpertApplicationsManagementView> {
+  String? _resolvedExpertId;
+  bool _loading = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.expertId != null && widget.expertId!.isNotEmpty) {
+      _resolvedExpertId = widget.expertId;
+    } else {
+      _loading = true;
+      _loadExpertId();
+    }
+  }
+
+  Future<void> _loadExpertId() async {
+    try {
+      final teams = await context.read<ExpertTeamRepository>().getMyTeams();
+      if (!mounted) return;
+      if (teams.isEmpty) {
+        setState(() {
+          _loading = false;
+          _error = 'expert_dashboard_no_team';
+        });
+        return;
+      }
+      setState(() {
+        _resolvedExpertId = teams.first.id;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = e.toString();
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return widget.showAppBar
+          ? Scaffold(
+              appBar: AppBar(title: Text(context.l10n.expertApplicationsTitle)),
+              body: const Center(child: CircularProgressIndicator()),
+            )
+          : const Center(child: CircularProgressIndicator());
+    }
+
+    if (_error != null || _resolvedExpertId == null) {
+      final errorWidget = Center(
+        child: Text(context.localizeError(
+            _error ?? 'expert_dashboard_no_team')),
+      );
+      return widget.showAppBar
+          ? Scaffold(
+              appBar: AppBar(title: Text(context.l10n.expertApplicationsTitle)),
+              body: errorWidget,
+            )
+          : errorWidget;
+    }
+
     return BlocProvider(
       create: (context) => TaskExpertBloc(
         taskExpertRepository: context.read<TaskExpertRepository>(),
         questionRepository: context.read<QuestionRepository>(),
-        expertId: expertId,
+        expertId: _resolvedExpertId,
       )..add(const TaskExpertLoadExpertApplications()),
-      child: _ExpertApplicationsManagementContent(showAppBar: showAppBar),
+      child: _ExpertApplicationsManagementContent(showAppBar: widget.showAppBar),
     );
   }
 }

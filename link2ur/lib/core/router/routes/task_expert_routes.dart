@@ -61,10 +61,8 @@ List<RouteBase> get taskExpertRoutes => [
       GoRoute(
         path: AppRoutes.expertApplicationsManagement,
         name: 'expertApplicationsManagement',
-        builder: (context, state) {
-          final expertId = state.uri.queryParameters['expertId'] ?? '';
-          return ExpertApplicationsManagementView(expertId: expertId);
-        },
+        // expertId 可选：View 自行通过 my-teams 解析，支持通知跳转
+        builder: (context, state) => const ExpertApplicationsManagementView(),
       ),
       GoRoute(
         path: AppRoutes.expertDashboard,
