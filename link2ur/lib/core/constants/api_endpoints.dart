@@ -250,27 +250,9 @@ class ApiEndpoints {
   static String taskExpertServiceReviews(int serviceId) =>
       '/api/task-experts/services/$serviceId/reviews';
 
-  // 旧兼容（Flutter 旧代码可能引用这些，逐步废弃）
-  static const String myExpertProfile = '/api/task-experts/me';
-  static const String myExpertServices = '/api/task-experts/me/services';
-  static const String myExpertApplications = '/api/task-experts/me/applications';
-  static const String myExpertDashboardStats = '/api/task-experts/me/dashboard/stats';
-  static const String myExpertSchedule = '/api/task-experts/me/schedule';
-  static const String myExpertClosedDates = '/api/task-experts/me/closed-dates';
-  static const String myExpertStats = '/api/task-experts/me/dashboard/stats';
-  static String myExpertServiceById(String id) => '/api/task-experts/me/services/$id';
-  static String myExpertServiceTimeSlots(String serviceId) =>
-      '/api/task-experts/me/services/$serviceId/time-slots';
-  static String myExpertServiceTimeSlotById(String serviceId, String slotId) =>
-      '/api/task-experts/me/services/$serviceId/time-slots/$slotId';
-  static String myExpertClosedDateById(String id) =>
-      '/api/task-experts/me/closed-dates/$id';
-  static const String myExpertProfileUpdateRequest =
-      '/api/task-experts/me/profile-update-request';
+  // 旧兼容路径（仍被公共/用户侧使用）
   static String serviceTimeSlots(int serviceId) =>
       '/api/task-experts/services/$serviceId/time-slots';
-  static String myServiceTimeSlots(int serviceId) =>
-      '/api/task-experts/me/services/$serviceId/time-slots';
   static String taskExpertServiceDetail(int serviceId) =>
       '/api/task-experts/services/$serviceId';
   static String respondServiceCounterOffer(int applicationId) =>
