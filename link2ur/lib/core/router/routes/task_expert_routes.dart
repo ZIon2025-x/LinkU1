@@ -9,9 +9,6 @@ import '../../../features/task_expert/views/task_experts_intro_view.dart';
 import '../../../features/task_expert/views/task_expert_detail_view.dart';
 import '../../../features/task_expert/views/service_detail_view.dart';
 import '../../../features/task_expert/views/my_service_applications_view.dart';
-import '../../../features/task_expert/views/expert_applications_management_view.dart';
-import '../../../features/task_expert/views/expert_dashboard_view.dart';
-import '../../../features/task_expert/views/expert_profile_edit_view.dart';
 
 /// 任务达人相关路由
 List<RouteBase> get taskExpertRoutes => [
@@ -57,21 +54,5 @@ List<RouteBase> get taskExpertRoutes => [
         path: AppRoutes.myServiceApplications,
         name: 'myServiceApplications',
         builder: (context, state) => const MyServiceApplicationsView(),
-      ),
-      GoRoute(
-        path: AppRoutes.expertApplicationsManagement,
-        name: 'expertApplicationsManagement',
-        // expertId 可选：View 自行通过 my-teams 解析，支持通知跳转
-        builder: (context, state) => const ExpertApplicationsManagementView(),
-      ),
-      GoRoute(
-        path: AppRoutes.expertDashboard,
-        name: 'expertDashboard',
-        builder: (context, state) => const ExpertDashboardView(),
-      ),
-      GoRoute(
-        path: AppRoutes.expertProfileEdit,
-        name: 'expertProfileEdit',
-        builder: (context, state) => const ExpertProfileEditView(),
       ),
     ];

@@ -39,6 +39,9 @@ class AppRoutes {
   static const String myReceivedServiceApplications = '/services/my/applications';
   static const String expertApplicationsManagement = '/expert-applications-management';
   static const String expertDashboard = '/expert-dashboard';
+  static const String expertDashboardWithId = '/expert-dashboard/:expertId';
+  static const String expertDashboardManagement =
+      '/expert-dashboard/:expertId/management';
   static const String expertProfileEdit = '/expert-profile-edit';
 
   // 达人团队管理
