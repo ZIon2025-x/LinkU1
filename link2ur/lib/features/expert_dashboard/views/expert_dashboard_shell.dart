@@ -16,6 +16,7 @@ import 'tabs/schedule_tab.dart';
 import 'tabs/services_tab.dart';
 import 'tabs/stats_tab.dart';
 import 'tabs/time_slots_tab.dart';
+import 'team_switcher_sheet.dart';
 
 /// 统一达人管理页面 shell
 /// 两阶段：1. fetch my-teams 解析 expertId；2. 显示 5 tab dashboard
@@ -195,9 +196,66 @@ class _TeamTitle extends StatelessWidget {
   const _TeamTitle({required this.state});
   final SelectedExpertState state;
 
+  Widget _roleBadge(BuildContext context, String role) {
+    final (bg, fg, label) = switch (role) {
+      'owner' => (const Color(0xFFE0F7E5), const Color(0xFF2E7D32), 'OWNER'),
+      'admin' => (const Color(0xFFFFF4E0), const Color(0xFFF57C00), 'ADMIN'),
+      _ => (const Color(0xFFF0F0F0), const Color(0xFF666666), 'MEMBER'),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: fg,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Phase B 会替换为可点击切换团队的版本
-    return Text(state.currentTeam.name);
+    final team = state.currentTeam;
+    return InkWell(
+      onTap: () => TeamSwitcherSheet.show(context),
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircleAvatar(
+              radius: 14,
+              backgroundImage:
+                  team.avatar != null ? NetworkImage(team.avatar!) : null,
+              child: team.avatar == null
+                  ? Text(team.name.characters.first,
+                      style: const TextStyle(fontSize: 12))
+                  : null,
+            ),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                team.name,
+                style: const TextStyle(
+                    fontSize: 16, fontWeight: FontWeight.w600),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 6),
+            _roleBadge(context, state.currentRole),
+            const SizedBox(width: 2),
+            const Icon(Icons.arrow_drop_down,
+                size: 18, color: Colors.grey),
+          ],
+        ),
+      ),
+    );
   }
 }
