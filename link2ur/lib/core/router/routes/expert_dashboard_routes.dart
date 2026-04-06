@@ -1,7 +1,11 @@
 import 'package:go_router/go_router.dart';
 
 import '../../../features/expert_dashboard/views/expert_dashboard_shell.dart';
+import '../../../features/expert_dashboard/views/management/coupons_view.dart';
+import '../../../features/expert_dashboard/views/management/edit_team_profile_view.dart';
+import '../../../features/expert_dashboard/views/management/join_requests_view.dart';
 import '../../../features/expert_dashboard/views/management/management_center_view.dart';
+import '../../../features/expert_dashboard/views/management/members_view.dart';
 import '../app_routes.dart';
 
 List<RouteBase> get expertDashboardRoutes => [
@@ -23,6 +27,38 @@ List<RouteBase> get expertDashboardRoutes => [
         builder: (context, state) {
           final id = state.pathParameters['expertId']!;
           return ManagementCenterView(expertId: id);
+        },
+      ),
+      GoRoute(
+        path: '/expert-dashboard/:expertId/management/members',
+        name: 'expertDashboardManagementMembers',
+        builder: (context, state) {
+          final id = state.pathParameters['expertId']!;
+          return MembersView(expertId: id);
+        },
+      ),
+      GoRoute(
+        path: '/expert-dashboard/:expertId/management/join-requests',
+        name: 'expertDashboardManagementJoinRequests',
+        builder: (context, state) {
+          final id = state.pathParameters['expertId']!;
+          return JoinRequestsView(expertId: id);
+        },
+      ),
+      GoRoute(
+        path: '/expert-dashboard/:expertId/management/edit-profile',
+        name: 'expertDashboardManagementEditProfile',
+        builder: (context, state) {
+          final id = state.pathParameters['expertId']!;
+          return EditTeamProfileView(expertId: id);
+        },
+      ),
+      GoRoute(
+        path: '/expert-dashboard/:expertId/management/coupons',
+        name: 'expertDashboardManagementCoupons',
+        builder: (context, state) {
+          final id = state.pathParameters['expertId']!;
+          return CouponsView(expertId: id);
         },
       ),
     ];
