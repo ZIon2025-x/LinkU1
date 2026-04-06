@@ -10533,6 +10533,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get expertDashboardManagement => 'Management';
 
   @override
+  String get expertDashboardSwitchTeam => 'Switch Team';
+
+  @override
+  String get expertDashboardApplyNewTeam => 'Apply for New Team';
+
+  @override
+  String get expertDashboardMyInvitations => 'My Invitations';
+
+  @override
+  String get expertDashboardServiceCount => 'services';
+
+  @override
   String get expertDashboardNoTeam => 'You are not part of any expert team.';
 
   @override

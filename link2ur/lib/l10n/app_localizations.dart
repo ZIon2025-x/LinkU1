@@ -19355,6 +19355,30 @@ abstract class AppLocalizations {
   /// **'Management'**
   String get expertDashboardManagement;
 
+  /// No description provided for @expertDashboardSwitchTeam.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch Team'**
+  String get expertDashboardSwitchTeam;
+
+  /// No description provided for @expertDashboardApplyNewTeam.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply for New Team'**
+  String get expertDashboardApplyNewTeam;
+
+  /// No description provided for @expertDashboardMyInvitations.
+  ///
+  /// In en, this message translates to:
+  /// **'My Invitations'**
+  String get expertDashboardMyInvitations;
+
+  /// No description provided for @expertDashboardServiceCount.
+  ///
+  /// In en, this message translates to:
+  /// **'services'**
+  String get expertDashboardServiceCount;
+
   /// No description provided for @expertDashboardNoTeam.
   ///
   /// In en, this message translates to:
