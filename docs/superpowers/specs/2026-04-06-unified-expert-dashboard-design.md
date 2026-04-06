@@ -71,8 +71,7 @@ link2ur/lib/features/expert_dashboard/      ← 新目录
 │       │                                      列表使用 GET /api/experts/{id}/reviews
 │       └── （Stripe Connect 不新建 view，
 │           Management Center 直接链接到现有 features/payment/views/stripe_connect_onboarding_view.dart）
-│       ├── leave_team_dialog.dart          ← 新：离开团队确认
-│       └── dissolve_team_dialog.dart       ← 新：解散团队危险确认（输入团队名）
+│       └── leave_team_dialog.dart          ← 新：离开团队确认
 ```
 
 ### 路由
@@ -140,7 +139,8 @@ Member 角色只看到 4 个 tab（无申请 tab），TabBar 动态生成。
 | 财务 | Stripe Connect | ✓ | ❌ | ❌ |
 | 其他 | 查看公开主页 | ✓ | ✓ | ✓ |
 | 其他 | 离开团队 | ❌ | ✓ | ✓ |
-| 其他 | 解散团队 | ✓ | ❌ | ❌ |
+
+> **解散团队**：不做 app 内自助入口。Owner 想停用团队需要联系客服/运营处理。后端 `POST /api/experts/{id}/dissolve` endpoint 保留（供管理后台使用）。
 
 未授权项**完全不显示**（不灰掉）。
 
@@ -164,9 +164,8 @@ Member 角色只看到 4 个 tab（无申请 tab），TabBar 动态生成。
 - 布局：普通 Scaffold + 分组 ListView（`Material` CupertinoLikedListTile 样式）
 - 数据：从 `SelectedExpertCubit` 读取 `currentTeam.myRole`，根据权限表动态构建分组和项
 - 每项点击：`context.push('/expert-dashboard/$expertId/management/<sub-route>')`
-- 危险操作（离开 / 解散）：点击弹出确认 dialog
-  - 离开：简单确认 dialog
-  - 解散：需要输入团队全名确认，按钮禁用直到输入完全匹配
+- 危险操作（仅离开）：点击弹出确认 dialog
+  - 离开：简单确认 dialog（Owner 不显示此项）
 
 ### 管理子页
 
@@ -195,10 +194,10 @@ Member 角色只看到 4 个 tab（无申请 tab），TabBar 动态生成。
   2. 多团队用户通过切换器切换团队，内容正确更新，持久化正确
   3. 管理中心各项可见性匹配角色表
   4. 每个管理子页能正常 CRUD
-  5. 解散团队确认对话框正常工作
-  6. 刷新页面后自动恢复上次选中的团队
-  7. Member 用户看不到申请 tab
-  8. 0 teams 用户被重定向到 intro 页
+  5. 刷新页面后自动恢复上次选中的团队
+  6. Member 用户看不到申请 tab
+  7. 0 teams 用户被重定向到 intro 页
+  8. Owner 看不到"离开团队"选项；Admin/Member 能正常离开
 
 ## 代码清理
 
@@ -235,7 +234,7 @@ Member 角色只看到 4 个 tab（无申请 tab），TabBar 动态生成。
 2. **Phase B**: 团队切换器 + 多团队支持 + StorageService 持久化
 3. **Phase C**: 管理中心主页 + 子页迁移（成员、申请审核、团队资料、优惠券、套餐）
 4. **Phase D**: 新建评价回复 view + 链接到已有 Stripe Connect onboarding view
-5. **Phase E**: 危险操作（离开 / 解散团队）
+5. **Phase E**: 离开团队（非 Owner）
 6. **Phase F**: 路由切换、清理旧目录、手动验证清单
 
 Phase A 和 B 完成后 dashboard 已可用（只差团队 switcher，单团队用户无感）。C/D/E 逐步添加管理功能。F 清理。
