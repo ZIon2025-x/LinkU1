@@ -376,16 +376,20 @@ class TaskExpertRepository {
   }
 
   /// 获取达人申请记录（别人申请该达人的服务）
+  /// 后端用 limit/offset 分页，返回 List（非 {items: [...]}）
   Future<List<Map<String, dynamic>>> getExpertApplications(
     String expertId, {
     int page = 1,
     int pageSize = 20,
+    String? statusFilter,
   }) async {
-    final response = await _apiService.get<Map<String, dynamic>>(
+    final offset = (page - 1) * pageSize;
+    final response = await _apiService.get<dynamic>(
       ApiEndpoints.expertApplicationsList(expertId),
       queryParameters: {
-        'page': page,
-        'page_size': pageSize,
+        'limit': pageSize,
+        'offset': offset,
+        if (statusFilter != null) 'status': statusFilter,
       },
     );
 
@@ -393,8 +397,19 @@ class TaskExpertRepository {
       throw TaskExpertException(response.message ?? '获取申请记录失败');
     }
 
-    final items = response.data!['items'] as List<dynamic>? ?? [];
-    return items.map((e) => e as Map<String, dynamic>).toList();
+    // 后端直接返回数组
+    if (response.data is List) {
+      return (response.data as List<dynamic>)
+          .map((e) => e as Map<String, dynamic>)
+          .toList();
+    }
+    // 兼容可能的包装格式
+    if (response.data is Map<String, dynamic>) {
+      final items = (response.data as Map<String, dynamic>)['items']
+              as List<dynamic>? ?? [];
+      return items.map((e) => e as Map<String, dynamic>).toList();
+    }
+    return [];
   }
 
   /// 获取达人仪表盘统计
@@ -472,7 +487,8 @@ class TaskExpertRepository {
   }
 
   /// 获取达人服务时间段
-  /// 后端返回: 直接数组 List[ServiceTimeSlotOut] 或 Map 包装
+  /// 后端返回 ISO 格式 slot_start_datetime/slot_end_datetime；
+  /// 本方法拆分为 UI 期望的 slot_date/start_time/end_time/is_expired 字段。
   Future<List<Map<String, dynamic>>> getExpertServiceTimeSlots(String expertId, int serviceId) async {
     final response = await _apiService.get<dynamic>(
       ApiEndpoints.expertServiceTimeSlots(expertId, serviceId),
@@ -492,14 +508,85 @@ class TaskExpertRepository {
     } else {
       items = [];
     }
-    return items.map((e) => e as Map<String, dynamic>).toList();
+    return items
+        .map((e) => _enrichTimeSlot(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// 将后端 ISO datetime 格式的时间段转换为 UI 期望的分离字段格式。
+  Map<String, dynamic> _enrichTimeSlot(Map<String, dynamic> slot) {
+    final enriched = Map<String, dynamic>.from(slot);
+
+    // 已有 slot_date 则跳过（向后兼容）
+    if (enriched['slot_date'] == null) {
+      final startIso = enriched['slot_start_datetime'] as String?;
+      final endIso = enriched['slot_end_datetime'] as String?;
+
+      if (startIso != null) {
+        final start = DateTime.tryParse(startIso)?.toLocal();
+        if (start != null) {
+          enriched['slot_date'] =
+              '${start.year.toString().padLeft(4, '0')}-'
+              '${start.month.toString().padLeft(2, '0')}-'
+              '${start.day.toString().padLeft(2, '0')}';
+          enriched['start_time'] =
+              '${start.hour.toString().padLeft(2, '0')}:'
+              '${start.minute.toString().padLeft(2, '0')}:00';
+          // 过期判断：结束时间早于当前时间
+          final end = endIso != null ? DateTime.tryParse(endIso)?.toLocal() : null;
+          enriched['is_expired'] =
+              (end ?? start).isBefore(DateTime.now());
+        }
+      }
+      if (endIso != null) {
+        final end = DateTime.tryParse(endIso)?.toLocal();
+        if (end != null) {
+          enriched['end_time'] =
+              '${end.hour.toString().padLeft(2, '0')}:'
+              '${end.minute.toString().padLeft(2, '0')}:00';
+        }
+      }
+    }
+
+    return enriched;
+  }
+
+  /// 将 UI 格式（slot_date + start_time + end_time）转换为后端 ISO datetime 格式。
+  Map<String, dynamic> _timeSlotToBackendFormat(Map<String, dynamic> data) {
+    // 如果已经是 ISO 格式，直接使用
+    if (data.containsKey('slot_start_datetime') &&
+        data.containsKey('slot_end_datetime')) {
+      return data;
+    }
+
+    final slotDate = data['slot_date'] as String?;
+    final startTime = data['start_time'] as String?;
+    final endTime = data['end_time'] as String?;
+
+    if (slotDate == null || startTime == null || endTime == null) {
+      // 不足以转换，原样返回让后端报错
+      return data;
+    }
+
+    // 本地时间 -> UTC ISO
+    final startLocal = DateTime.parse('${slotDate}T$startTime');
+    final endLocal = DateTime.parse('${slotDate}T$endTime');
+
+    return <String, dynamic>{
+      'slot_start_datetime': startLocal.toUtc().toIso8601String(),
+      'slot_end_datetime': endLocal.toUtc().toIso8601String(),
+      if (data['price_per_participant'] != null)
+        'price_per_participant': data['price_per_participant'],
+      if (data['max_participants'] != null)
+        'max_participants': data['max_participants'],
+    };
   }
 
   /// 创建服务时间段
   Future<Map<String, dynamic>> createServiceTimeSlot(String expertId, int serviceId, Map<String, dynamic> data) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.expertServiceTimeSlots(expertId, serviceId),
-      data: data,
+      data: _timeSlotToBackendFormat(data),
     );
 
     if (!response.isSuccess || response.data == null) {
@@ -539,7 +626,7 @@ class TaskExpertRepository {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.expertClosedDates(expertId),
       data: {
-        'date': date,
+        'closed_date': date,
         if (reason != null && reason.isNotEmpty) 'reason': reason,
       },
     );
@@ -572,9 +659,9 @@ class TaskExpertRepository {
     final response = await _apiService.post(
       ApiEndpoints.expertTeamProfileUpdateRequest(expertId),
       data: {
-        if (name != null && name.isNotEmpty) 'name': name,
-        if (bio != null && bio.isNotEmpty) 'bio': bio,
-        if (avatarUrl != null && avatarUrl.isNotEmpty) 'avatar_url': avatarUrl,
+        if (name != null && name.isNotEmpty) 'new_name': name,
+        if (bio != null && bio.isNotEmpty) 'new_bio': bio,
+        if (avatarUrl != null && avatarUrl.isNotEmpty) 'new_avatar': avatarUrl,
       },
     );
 
