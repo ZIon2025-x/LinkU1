@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../features/expert_dashboard/views/expert_dashboard_shell.dart';
+import '../../../features/expert_dashboard/views/management/management_center_view.dart';
 import '../app_routes.dart';
 
 List<RouteBase> get expertDashboardRoutes => [
@@ -17,15 +17,12 @@ List<RouteBase> get expertDashboardRoutes => [
         name: 'expertDashboardWithId',
         builder: (context, state) => const ExpertDashboardShell(),
       ),
-      // Placeholder for Phase C — real management center replaces this
       GoRoute(
         path: AppRoutes.expertDashboardManagement,
         name: 'expertDashboardManagement',
-        builder: (context, state) => Scaffold(
-          appBar: AppBar(title: const Text('Management')),
-          body: const Center(
-            child: Text('Coming soon'),
-          ),
-        ),
+        builder: (context, state) {
+          final id = state.pathParameters['expertId']!;
+          return ManagementCenterView(expertId: id);
+        },
       ),
     ];

@@ -22445,6 +22445,60 @@ abstract class AppLocalizations {
   /// **'Join Requests'**
   String get expertTeamJoinRequests;
 
+  /// No description provided for @expertManagementSectionTeam.
+  ///
+  /// In en, this message translates to:
+  /// **'Team'**
+  String get expertManagementSectionTeam;
+
+  /// No description provided for @expertManagementSectionMarketing.
+  ///
+  /// In en, this message translates to:
+  /// **'Marketing'**
+  String get expertManagementSectionMarketing;
+
+  /// No description provided for @expertManagementSectionFinance.
+  ///
+  /// In en, this message translates to:
+  /// **'Finance'**
+  String get expertManagementSectionFinance;
+
+  /// No description provided for @expertManagementSectionOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get expertManagementSectionOther;
+
+  /// No description provided for @expertManagementReviewReplies.
+  ///
+  /// In en, this message translates to:
+  /// **'Review Replies'**
+  String get expertManagementReviewReplies;
+
+  /// No description provided for @expertManagementViewPublicPage.
+  ///
+  /// In en, this message translates to:
+  /// **'View Public Page'**
+  String get expertManagementViewPublicPage;
+
+  /// No description provided for @expertManagementLeaveTeam.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave Team'**
+  String get expertManagementLeaveTeam;
+
+  /// No description provided for @expertManagementLeaveConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to leave this team? You will lose access to the team\'s services and chat.'**
+  String get expertManagementLeaveConfirm;
+
+  /// No description provided for @expertDashboardEditTeamProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Team Profile'**
+  String get expertDashboardEditTeamProfile;
+
   /// No description provided for @expertTeamInvitations.
   ///
   /// In en, this message translates to:

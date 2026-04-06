@@ -12150,6 +12150,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get expertTeamJoinRequests => 'Join Requests';
 
   @override
+  String get expertManagementSectionTeam => 'Team';
+
+  @override
+  String get expertManagementSectionMarketing => 'Marketing';
+
+  @override
+  String get expertManagementSectionFinance => 'Finance';
+
+  @override
+  String get expertManagementSectionOther => 'Other';
+
+  @override
+  String get expertManagementReviewReplies => 'Review Replies';
+
+  @override
+  String get expertManagementViewPublicPage => 'View Public Page';
+
+  @override
+  String get expertManagementLeaveTeam => 'Leave Team';
+
+  @override
+  String get expertManagementLeaveConfirm =>
+      'Are you sure you want to leave this team? You will lose access to the team\'s services and chat.';
+
+  @override
+  String get expertDashboardEditTeamProfile => 'Edit Team Profile';
+
+  @override
   String get expertTeamInvitations => 'Team Invitations';
 
   @override

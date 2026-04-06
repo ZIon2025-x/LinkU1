@@ -11673,6 +11673,33 @@ class AppLocalizationsZh extends AppLocalizations {
   String get expertTeamJoinRequests => '加入申请';
 
   @override
+  String get expertManagementSectionTeam => '团队';
+
+  @override
+  String get expertManagementSectionMarketing => '营销';
+
+  @override
+  String get expertManagementSectionFinance => '财务';
+
+  @override
+  String get expertManagementSectionOther => '其他';
+
+  @override
+  String get expertManagementReviewReplies => '评价回复';
+
+  @override
+  String get expertManagementViewPublicPage => '查看公开主页';
+
+  @override
+  String get expertManagementLeaveTeam => '离开团队';
+
+  @override
+  String get expertManagementLeaveConfirm => '确定要离开这个团队吗？你将失去对团队服务和聊天的访问权限。';
+
+  @override
+  String get expertDashboardEditTeamProfile => '编辑团队资料';
+
+  @override
   String get expertTeamInvitations => '团队邀请';
 
   @override
@@ -23439,6 +23466,33 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get expertTeamJoinRequests => '加入申請';
+
+  @override
+  String get expertManagementSectionTeam => '團隊';
+
+  @override
+  String get expertManagementSectionMarketing => '營銷';
+
+  @override
+  String get expertManagementSectionFinance => '財務';
+
+  @override
+  String get expertManagementSectionOther => '其他';
+
+  @override
+  String get expertManagementReviewReplies => '評價回覆';
+
+  @override
+  String get expertManagementViewPublicPage => '查看公開主頁';
+
+  @override
+  String get expertManagementLeaveTeam => '離開團隊';
+
+  @override
+  String get expertManagementLeaveConfirm => '確定要離開這個團隊嗎？你將失去對團隊服務和聊天的訪問權限。';
+
+  @override
+  String get expertDashboardEditTeamProfile => '編輯團隊資料';
 
   @override
   String get expertTeamInvitations => '團隊邀請';
