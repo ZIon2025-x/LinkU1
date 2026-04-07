@@ -1646,3 +1646,50 @@ def weekly_reliability_calibration_task(self):
             db.close()
             release_redis_distributed_lock(lock_key)
 
+    # ── 15. warn_long_running_team_tasks_task (每天) ──
+    # spec §3.4a — 接近 Stripe 90 天 Transfer 时效的团队任务提醒 owner
+    @celery_app.task(name='app.celery_tasks.warn_long_running_team_tasks_task', bind=True, max_retries=2, default_retry_delay=300)
+    def warn_long_running_team_tasks_task(self):
+        """每天扫一次,通知 owner 接近 90 天 Transfer 时效的 in-flight 团队任务. spec §3.4a"""
+        task_name = 'warn_long_running_team_tasks_task'
+        lock_key = f"celery_lock:{task_name}"
+        if not get_redis_distributed_lock(lock_key, lock_ttl=86400):
+            return {"status": "skipped"}
+        db = SessionLocal()
+        try:
+            from datetime import datetime, timedelta
+            from app import models, crud
+
+            threshold = datetime.utcnow() - timedelta(days=60)
+            tasks = db.query(models.Task).filter(
+                models.Task.taker_expert_id.is_not(None),
+                models.Task.status.in_(['in_progress', 'disputed']),
+                models.Task.payment_completed_at < threshold,
+            ).all()
+            notified = 0
+            for t in tasks:
+                try:
+                    crud.create_notification(
+                        db, str(t.taker_id),
+                        "expert_transfer_window_warning",
+                        "款项接近时效",
+                        f"任务 #{t.id} 已超过 60 天未完成，请尽快完成，否则款项无法 Transfer",
+                        related_id=str(t.id),
+                        auto_commit=False,
+                    )
+                    notified += 1
+                except Exception as e:
+                    logger.error(f"通知 taker 任务 {t.id} 失败: {e}")
+            db.commit()
+            logger.info(f"warn_long_running_team_tasks_task: scanned, notified {notified} tasks")
+            return {"status": "success", "notified": notified}
+        except Exception as e:
+            db.rollback()
+            logger.error(f"团队任务时效警告任务失败: {e}", exc_info=True)
+            if self.request.retries < self.max_retries:
+                raise self.retry(exc=e)
+            raise
+        finally:
+            db.close()
+            release_redis_distributed_lock(lock_key)
+
