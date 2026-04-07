@@ -160,7 +160,30 @@ def execute_transfer(
                 )
                 return False, None, error_msg
             taker_stripe_account_id = expert.stripe_account_id
-        
+
+            # 90-day Stripe Transfer window check (spec §3.4a) — only for team tasks
+            # Stripe enforces a strict 90-day window for stripe.Transfer.create after the original Charge
+            if task.payment_completed_at:
+                from datetime import datetime, timedelta
+                age = datetime.utcnow() - task.payment_completed_at.replace(tzinfo=None)
+                if age > timedelta(days=89):
+                    transfer_record.status = "failed"
+                    transfer_record.last_error = f"stripe_transfer_window_expired ({age.days}d > 89d)"
+                    if commit:
+                        from app.transaction_utils import safe_commit
+                        safe_commit(db, f"transfer 时效过期 task={transfer_record.task_id}")
+                    return False, None, transfer_record.last_error
+
+            # GBP-only enforcement for team tasks (spec §1.4)
+            currency_upper = (transfer_record.currency or 'GBP').upper()
+            if currency_upper != 'GBP':
+                transfer_record.status = "failed"
+                transfer_record.last_error = f"currency_unsupported ({currency_upper}; team tasks require GBP)"
+                if commit:
+                    from app.transaction_utils import safe_commit
+                    safe_commit(db, f"team task 币种不支持 task={transfer_record.task_id}")
+                return False, None, transfer_record.last_error
+
         if task.is_confirmed == 1 and task.escrow_amount == 0:
             # 任务已确认且托管金额已清空，可能已经转账成功
             logger.warning(f"任务 {transfer_record.task_id} 已确认，但转账记录状态为 {transfer_record.status}")
