@@ -105,6 +105,7 @@ async def test_resolve_service_unknown_owner_type(mock_db):
     with pytest.raises(HTTPException) as exc:
         await resolve_task_taker_from_service(mock_db, s)
     assert exc.value.status_code == 500
+    assert exc.value.detail['error_code'] == 'unknown_owner_type'
 
 
 @pytest.fixture
@@ -149,3 +150,38 @@ async def test_resolve_activity_team_non_gbp(mock_db, fake_activity, fake_expert
         await resolve_task_taker_from_activity(mock_db, fake_activity)
     assert exc.value.status_code == 409
     assert exc.value.detail['error_code'] == 'expert_currency_unsupported'
+
+
+@pytest.mark.asyncio
+async def test_resolve_activity_team_no_stripe(mock_db, fake_activity, fake_expert):
+    from app.services.expert_task_resolver import resolve_task_taker_from_activity
+    fake_expert.stripe_onboarding_complete = False
+    mock_db.get.return_value = fake_expert
+    with pytest.raises(HTTPException) as exc:
+        await resolve_task_taker_from_activity(mock_db, fake_activity)
+    assert exc.value.status_code == 409
+    assert exc.value.detail['error_code'] == 'expert_stripe_not_ready'
+
+
+@pytest.mark.asyncio
+async def test_resolve_activity_team_no_owner(mock_db, fake_activity, fake_expert):
+    from app.services.expert_task_resolver import resolve_task_taker_from_activity
+    mock_db.get.return_value = fake_expert
+    result_obj = MagicMock()
+    result_obj.scalar_one_or_none.return_value = None
+    mock_db.execute.return_value = result_obj
+    with pytest.raises(HTTPException) as exc:
+        await resolve_task_taker_from_activity(mock_db, fake_activity)
+    assert exc.value.status_code == 500
+    assert exc.value.detail['error_code'] == 'expert_owner_missing'
+
+
+@pytest.mark.asyncio
+async def test_resolve_activity_unknown_owner_type(mock_db):
+    from app.services.expert_task_resolver import resolve_task_taker_from_activity
+    a = MagicMock()
+    a.owner_type = 'alien'
+    with pytest.raises(HTTPException) as exc:
+        await resolve_task_taker_from_activity(mock_db, a)
+    assert exc.value.status_code == 500
+    assert exc.value.detail['error_code'] == 'unknown_owner_type'
