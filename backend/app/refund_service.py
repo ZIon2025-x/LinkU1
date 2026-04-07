@@ -139,6 +139,13 @@ def process_refund(
                                     )
                                     refund_transfer_id = reversal.id
                                     logger.info(f"✅ 创建反向转账成功: reversal_id={reversal.id}, amount=£{refund_amount:.2f}")
+
+                                    # Phase 7: 在现有 PaymentTransfer 行上填充新的审计字段
+                                    # （spec §1.3）。不在此 commit，由上层事务统一提交。
+                                    original_transfer.stripe_reversal_id = reversal.id
+                                    original_transfer.status = "reversed"
+                                    original_transfer.reversed_at = get_utc_time()
+                                    original_transfer.reversed_reason = "refund"
                                 except stripe.error.StripeError as e:
                                     # Reversal 可能不可用（例如转账已结算），记录为需要手动处理
                                     logger.warning(f"无法创建反向转账: {e}。需要手动处理。")
