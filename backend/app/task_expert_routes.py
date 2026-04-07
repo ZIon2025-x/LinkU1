@@ -3838,7 +3838,6 @@ async def approve_service_application(
         new_task = existing_task
     else:
         # Original task creation code
-        taker_id_value, taker_expert_id_value = await resolve_task_taker_from_service(db, service)
         new_task = models.Task(
             title=service.service_name,
             description=service.description,
@@ -3852,8 +3851,7 @@ async def approve_service_application(
             task_type=featured_expert.category if featured_expert and featured_expert.category else "其他",
             task_level="expert",
             poster_id=application.applicant_id,  # 申请用户是发布人
-            taker_id=taker_id_value,  # 接收方（个人或团队 owner）
-            taker_expert_id=taker_expert_id_value,  # 达人团队接单时填充
+            taker_id=application.expert_id,  # 任务达人接收方
             status="pending_payment",  # ⚠️ 安全修复：等待支付，不直接进入进行中状态
             is_paid=0,  # 明确标记为未支付
             payment_expires_at=get_utc_time() + timedelta(minutes=30),  # 支付过期时间（30分钟）
