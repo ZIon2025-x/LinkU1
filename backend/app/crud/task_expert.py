@@ -1,5 +1,6 @@
 """任务达人/特色任务达人响应时间与统计更新，独立模块便于维护与测试。"""
 import logging
+from datetime import timezone
 
 from sqlalchemy import distinct, func
 from sqlalchemy.orm import Session
@@ -7,6 +8,15 @@ from sqlalchemy.orm import Session
 from app import models
 
 logger = logging.getLogger(__name__)
+
+
+def _as_aware_utc(dt):
+    """将 datetime 规范化为 UTC aware；naive 视为 UTC。"""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
 
 
 def _format_response_time_short(seconds, lang="zh"):
@@ -58,7 +68,8 @@ def update_task_expert_bio(db: Session, user_id: str):
         for message, message_read in read_messages:
             if message.created_at and message_read.read_at:
                 delta = (
-                    message_read.read_at - message.created_at
+                    _as_aware_utc(message_read.read_at)
+                    - _as_aware_utc(message.created_at)
                 ).total_seconds()
                 if delta > 0:
                     response_times.append(delta)

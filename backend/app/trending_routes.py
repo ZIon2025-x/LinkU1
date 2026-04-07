@@ -20,20 +20,44 @@ router = APIRouter(prefix="/api/trending", tags=["热搜榜"])
 # ==================== 公开接口 ====================
 
 @router.get("/searches", response_model=schemas.TrendingSearchResponse)
-async def get_trending_searches():
-    """获取热搜榜 Top10（公开，读 Redis 缓存）"""
+async def get_trending_searches(db: AsyncSession = Depends(get_async_db)):
+    """
+    获取热搜榜 Top10（公开）。
+    优先读 Redis 缓存；miss 时回落到 trending_snapshot 表，保证永不为空。
+    """
     redis_client = get_client(decode_responses=True)
-    if not redis_client:
-        return schemas.TrendingSearchResponse(items=[], updated_at=None)
+    updated_at = None
+    items_raw = None
 
-    data = redis_client.get("trending:current")
-    updated_at = redis_client.get("trending:updated_at")
+    if redis_client:
+        try:
+            data = redis_client.get("trending:current")
+            updated_at = redis_client.get("trending:updated_at")
+            if data:
+                items_raw = json.loads(data)
+        except (json.JSONDecodeError, TypeError) as e:
+            logger.warning(f"trending cache data corrupted: {e}")
 
-    if not data:
-        return schemas.TrendingSearchResponse(items=[], updated_at=updated_at)
+    # Redis miss → 回落到 DB 快照表
+    if not items_raw:
+        result = await db.execute(
+            select(models.TrendingSnapshot).order_by(models.TrendingSnapshot.rank.asc())
+        )
+        snapshot_rows = result.scalars().all()
+        items_raw = [
+            {
+                "rank": row.rank,
+                "keyword": row.keyword,
+                "heat_display": row.heat_display,
+                "view_count": row.view_count,
+                "tag": row.tag,
+            }
+            for row in snapshot_rows
+        ]
+        if snapshot_rows:
+            updated_at = snapshot_rows[0].updated_at.isoformat() if snapshot_rows[0].updated_at else None
 
     try:
-        items_raw = json.loads(data)
         items = [
             schemas.TrendingSearchItem(
                 rank=item["rank"],
@@ -44,8 +68,8 @@ async def get_trending_searches():
             )
             for item in items_raw
         ]
-    except (json.JSONDecodeError, KeyError, TypeError) as e:
-        logger.warning(f"trending cache data corrupted: {e}")
+    except (KeyError, TypeError) as e:
+        logger.warning(f"trending data malformed: {e}")
         items = []
 
     return schemas.TrendingSearchResponse(items=items, updated_at=updated_at)
@@ -187,3 +211,30 @@ async def remove_pinned(
         raise HTTPException(status_code=404, detail="Not found")
     await db.delete(entry)
     await db.commit()
+
+
+@router.delete("/admin/snapshot", status_code=204)
+async def clear_trending_snapshot(
+    request: Request,
+    db: AsyncSession = Depends(get_async_db),
+):
+    """
+    清空热搜榜快照（管理员手动重置用）。
+    同时清除 Redis 的 trending:current / trending:previous / trending:updated_at，
+    下一次 compute_trending (每小时) 会重新从搜索日志 + 置顶词开始累积。
+    """
+    await _get_admin(request, db)
+
+    # 清空快照表
+    await db.execute(models.TrendingSnapshot.__table__.delete())
+    await db.commit()
+
+    # 清除 Redis 缓存
+    redis_client = get_client(decode_responses=True)
+    if redis_client:
+        try:
+            redis_client.delete("trending:current", "trending:previous", "trending:updated_at")
+        except Exception as e:
+            logger.warning(f"clear_trending_snapshot: Redis 清除失败: {e}")
+
+    logger.info("热搜榜快照已被管理员清空")

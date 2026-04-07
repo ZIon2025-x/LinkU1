@@ -118,31 +118,44 @@ def format_heat_display(view_count: int) -> str:
         return f"{view_count}浏览"
 
 
+TRENDING_WINDOW_DAYS = 90
+LOG_RETENTION_DAYS = 120  # 搜索日志保留天数（≥ 窗口天数 + 缓冲）
+TRENDING_TOP_N = 10
+
+
 def compute_trending(db: Session) -> List[Dict[str, Any]]:
     """
     计算热搜榜 Top10（同步函数，由 TaskScheduler with_db 调用）。
 
+    Sticky 语义：一旦上榜就"挂着"，只有新词权重更高时才会被挤下去。
+    - 90 天内的搜索词计算 fresh 权重
+    - 已存在于快照但本次未出现在候选中的老词，**冻结**其历史 weighted_count
+    - 合并后按 weighted_count 排序取 Top N
+
     流程:
-    1. 查 7 天内搜索日志，按 raw_query 聚合，过滤 ≥3 个不同用户
+    1. 查 90 天内搜索日志，按 raw_query 聚合，过滤 ≥3 个不同用户
     2. 按天衰减加权
     3. Jaccard 聚类
     4. 黑名单过滤
-    5. 计算浏览量 (多 token AND 匹配标题+内容/描述，与搜索逻辑一致)
-    6. 与上期 Top10 比较生成 tag
-    7. 插入置顶词
-    8. 写入 Redis
-    9. 清理 30 天前日志
+    5. 计算浏览量
+    6. 合并老快照（冻结权重）
+    7. 与上期 Top10 比较生成 tag
+    8. 插入置顶词
+    9. 写入 trending_snapshot 表 + Redis 缓存
+    10. 清理过期日志
     """
     now = get_utc_time()
-    seven_days_ago = now - timedelta(days=7)
+    window_start = now - timedelta(days=TRENDING_WINDOW_DAYS)
 
     # ------------------------------------------------------------------
     # Step 1 & 2: SQL 聚合 — 按 raw_query 分组，计算加权值，过滤 ≥3 用户
-    # 将聚合逻辑下推到 SQL，避免全量拉取到 Python 内存
+    # 按天衰减：今天=TRENDING_WINDOW_DAYS，越老权重越低，最低为 1
     # ------------------------------------------------------------------
     day_weight = func.greatest(
         1,
-        7 - func.extract("day", now - models.SearchLog.created_at).cast(Float),
+        TRENDING_WINDOW_DAYS - func.extract(
+            "day", now - models.SearchLog.created_at
+        ).cast(Float),
     )
 
     agg_query = (
@@ -151,29 +164,34 @@ def compute_trending(db: Session) -> List[Dict[str, Any]]:
             func.count(distinct(models.SearchLog.user_id)).label("user_count"),
             func.sum(day_weight).label("weighted_count"),
         )
-        .where(models.SearchLog.created_at >= seven_days_ago)
+        .where(models.SearchLog.created_at >= window_start)
         .group_by(models.SearchLog.raw_query)
         .having(func.count(distinct(models.SearchLog.user_id)) >= 3)
     )
     agg_rows = db.execute(agg_query).fetchall()
 
     if not agg_rows:
-        logger.info("compute_trending: 无满足条件的搜索词 (≥3 users)")
-        return []
+        logger.info(
+            f"compute_trending: 无满足条件的搜索词 (≥3 users, {TRENDING_WINDOW_DAYS}d window) — "
+            "将仅使用老快照 + 置顶词"
+        )
+        agg_rows = []
 
     # 只对满足条件的 raw_query 取 tokens（去重后的第一条即可）
     qualified_queries = {row.raw_query for row in agg_rows}
     weighted_map = {row.raw_query: float(row.weighted_count) for row in agg_rows}
 
     # 批量取 tokens：每个 raw_query 只取一条的 tokens
-    token_rows = db.execute(
-        select(
-            models.SearchLog.raw_query,
-            models.SearchLog.tokens,
-        )
-        .where(models.SearchLog.raw_query.in_(qualified_queries))
-        .distinct(models.SearchLog.raw_query)
-    ).fetchall()
+    token_rows = []
+    if qualified_queries:
+        token_rows = db.execute(
+            select(
+                models.SearchLog.raw_query,
+                models.SearchLog.tokens,
+            )
+            .where(models.SearchLog.raw_query.in_(qualified_queries))
+            .distinct(models.SearchLog.raw_query)
+        ).fetchall()
 
     token_map: Dict[str, set] = {}
     for row in token_rows:
@@ -195,8 +213,7 @@ def compute_trending(db: Session) -> List[Dict[str, Any]]:
     ]
 
     if not query_data:
-        logger.info("compute_trending: 无有效 token 的搜索词")
-        return []
+        logger.info("compute_trending: 无有效 token 的新搜索词 — 将仅使用老快照 + 置顶词")
 
     # ------------------------------------------------------------------
     # Step 3: 聚类
@@ -346,7 +363,41 @@ def compute_trending(db: Session) -> List[Dict[str, Any]]:
         cluster["view_count"] = 0
 
     # ------------------------------------------------------------------
-    # Step 6: 与上期 Top10 比较, 生成 tag
+    # Step 5.5: 合并老快照 — 冻结权重实现 sticky trending
+    #
+    # 本次新候选以 fresh 权重胜出；但上次快照里未出现在新候选的老词，
+    # 携带 **冻结** 的 weighted_count 注入，保留其在榜位置。
+    # ------------------------------------------------------------------
+    fresh_keywords_lower = {c["keyword"].lower() for c in clusters}
+
+    snapshot_rows = db.execute(
+        select(models.TrendingSnapshot).order_by(models.TrendingSnapshot.rank.asc())
+    ).scalars().all()
+
+    frozen_count = 0
+    for snap in snapshot_rows:
+        if snap.keyword.lower() in fresh_keywords_lower:
+            continue  # 本次有新权重，直接覆盖老值
+        snap_tokens = snap.tokens if isinstance(snap.tokens, list) else []
+        clusters.append({
+            "keyword": snap.keyword,
+            "tokens": set(snap_tokens),
+            "weighted_count": float(snap.weighted_count),
+            "view_count": int(snap.view_count),
+            "tag": snap.tag,  # 冻结原 tag；Step 6 会跳过已有 tag 的条目
+            "_frozen": True,
+            "_frozen_heat_display": snap.heat_display or "",
+        })
+        frozen_count += 1
+
+    if frozen_count:
+        logger.info(f"compute_trending: 合并 {frozen_count} 个冻结老词")
+
+    # 合并后按 weighted_count 再次排序
+    clusters.sort(key=lambda c: c["weighted_count"], reverse=True)
+
+    # ------------------------------------------------------------------
+    # Step 6: 与上期 Top10 比较, 生成 tag (跳过已冻结 tag 的老词)
     # ------------------------------------------------------------------
     from app.redis_pool import get_client
     redis_client = get_client(decode_responses=True)
@@ -365,6 +416,10 @@ def compute_trending(db: Session) -> List[Dict[str, Any]]:
     prev_count_map = {item["keyword"]: item.get("weighted_count", 0) for item in previous_top10}
 
     for rank, cluster in enumerate(clusters):
+        if cluster.get("_frozen"):
+            # 老快照词：保留原 tag，不重新评估
+            continue
+
         keyword = cluster["keyword"]
         tag = None
 
@@ -418,14 +473,23 @@ def compute_trending(db: Session) -> List[Dict[str, Any]]:
             seen_keywords.add(item["keyword"].lower())
 
     for cluster in clusters:
-        if len(results) >= 10:
+        if len(results) >= TRENDING_TOP_N:
             break
         if cluster["keyword"].lower() in seen_keywords:
             continue
+        # 冻结条目使用快照里的 heat_display；新条目按 view_count 格式化
+        if cluster.get("_frozen"):
+            heat_display = cluster.get("_frozen_heat_display", "") or format_heat_display(
+                cluster.get("view_count", 0)
+            )
+        else:
+            heat_display = format_heat_display(cluster.get("view_count", 0))
+
         results.append({
             "keyword": cluster["keyword"],
+            "tokens": sorted(cluster.get("tokens") or []),  # 存回 snapshot 需要
             "view_count": cluster.get("view_count", 0),
-            "heat_display": format_heat_display(cluster.get("view_count", 0)),
+            "heat_display": heat_display,
             "tag": cluster.get("tag"),
             "weighted_count": cluster["weighted_count"],
             "is_pinned": False,
@@ -436,37 +500,72 @@ def compute_trending(db: Session) -> List[Dict[str, Any]]:
     for i, item in enumerate(results):
         item["rank"] = i + 1
 
-    # 写入 Redis (redis_client 已在 Step 6 获取)
+    # ------------------------------------------------------------------
+    # Step 9a: 持久化到 trending_snapshot 表（非置顶词，供下次合并使用）
+    # ------------------------------------------------------------------
+    try:
+        db.execute(models.TrendingSnapshot.__table__.delete())
+        snapshot_entries = [
+            r for r in results if not r.get("is_pinned")
+        ]
+        for item in snapshot_entries:
+            db.execute(
+                models.TrendingSnapshot.__table__.insert().values(
+                    rank=item["rank"],
+                    keyword=item["keyword"],
+                    tokens=item.get("tokens", []),
+                    view_count=int(item.get("view_count", 0)),
+                    heat_display=item.get("heat_display", ""),
+                    tag=item.get("tag"),
+                    weighted_count=float(item.get("weighted_count", 0)),
+                    updated_at=now,
+                )
+            )
+        db.commit()
+        logger.info(
+            f"compute_trending: 快照已持久化, {len(snapshot_entries)} 条 (总榜 {len(results)} 条)"
+        )
+    except Exception as e:
+        logger.warning(f"compute_trending: 写入 snapshot 表失败: {e}")
+        db.rollback()
+
+    # 构建对外返回/Redis 用的精简结构 (去掉内部 tokens 字段，对前端无用)
+    public_results = [
+        {k: v for k, v in r.items() if k != "tokens"}
+        for r in results
+    ]
+
+    # ------------------------------------------------------------------
+    # Step 9b: 写入 Redis 缓存 (redis_client 已在 Step 6 获取)
+    # ------------------------------------------------------------------
     try:
         if not redis_client:
             logger.warning("compute_trending: Redis 不可用，跳过缓存写入")
-            return results
+        else:
+            # 保存旧 current → previous
+            current_json = redis_client.get("trending:current")
+            if current_json:
+                redis_client.set("trending:previous", current_json, ex=14400)  # 4h TTL
 
-        # 保存旧 current → previous
-        current_json = redis_client.get("trending:current")
-        if current_json:
-            redis_client.set("trending:previous", current_json, ex=14400)  # 4h TTL
-
-        # 写入新 current (TTL 70 min)
-        redis_client.set(
-            "trending:current",
-            json.dumps(results, ensure_ascii=False),
-            ex=4200,
-        )
-        # 记录更新时间
-        redis_client.set("trending:updated_at", now.isoformat(), ex=4200)
-        logger.info(f"compute_trending: 已更新热搜榜, {len(results)} 条")
+            # 写入新 current (TTL 70 min)
+            redis_client.set(
+                "trending:current",
+                json.dumps(public_results, ensure_ascii=False),
+                ex=4200,
+            )
+            redis_client.set("trending:updated_at", now.isoformat(), ex=4200)
+            logger.info(f"compute_trending: 已更新热搜榜, {len(public_results)} 条")
     except Exception as e:
         logger.warning(f"compute_trending: 写入 Redis 失败: {e}")
 
     # ------------------------------------------------------------------
-    # Step 9: 清理 30 天前搜索日志
+    # Step 10: 清理过期搜索日志 (保留 LOG_RETENTION_DAYS 天)
     # ------------------------------------------------------------------
-    thirty_days_ago = now - timedelta(days=30)
+    retention_cutoff = now - timedelta(days=LOG_RETENTION_DAYS)
     try:
         db.execute(
             models.SearchLog.__table__.delete().where(
-                models.SearchLog.created_at < thirty_days_ago
+                models.SearchLog.created_at < retention_cutoff
             )
         )
         db.commit()
@@ -474,4 +573,4 @@ def compute_trending(db: Session) -> List[Dict[str, Any]]:
         logger.warning(f"compute_trending: 清理旧日志失败: {e}")
         db.rollback()
 
-    return results
+    return public_results

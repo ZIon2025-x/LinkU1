@@ -3886,6 +3886,20 @@ class TrendingPinned(Base):
     created_at = Column(DateTime(timezone=True), default=get_utc_time)
 
 
+class TrendingSnapshot(Base):
+    """热搜榜快照 - 持久化 Top N，老词权重被冻结，实现 sticky trending"""
+    __tablename__ = "trending_snapshot"
+
+    rank = Column(Integer, primary_key=True)
+    keyword = Column(String(200), nullable=False, index=True)
+    tokens = Column(JSONB, nullable=False, default=list)
+    view_count = Column(Integer, nullable=False, default=0)
+    heat_display = Column(String(50), nullable=False, default="")
+    tag = Column(String(20), nullable=True)
+    weighted_count = Column(Float, nullable=False, default=0.0)
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time)
+
+
 from app.wallet_models import WalletAccount, WalletTransaction  # noqa: F401, E402
 
 # 达人团队体系模型（独立文件，合并到同一 metadata）
