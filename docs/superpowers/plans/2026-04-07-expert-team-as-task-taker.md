@@ -817,7 +817,19 @@ await _get_member_or_403(db, expert_id, current_user.id, required_roles=["owner"
 
 ---
 
-# Phase 4: 老 task_expert_routes.py 内部重写
+# Phase 4: 服务发布门槛(Phase 4 修订)
+
+> **🔴 v2 → v3 修订(2026-04-07):** Phase 4 原本计划在 LEGACY `task_expert_routes.py` 里 wire helper(Tasks 4.2/4.3/4.5),但执行中发现这是**架构理解错误**。
+>
+> Link2Ur 后端实际有**两套并行**的达人服务系统:
+> - **LEGACY:** `task_expert_routes.py` (`/api/task-experts/...`) —— 只服务于老的"个人达人"模型(`task_experts.id` ID 空间),团队服务**永远不会**到达这条路径
+> - **NEW:** `expert_consultation_routes.py` + `expert_dashboard_routes.py` (`/api/applications/...`、`/api/experts/{id}/...`) —— 通过 `ServiceApplication.new_expert_id` + `service_owner_id` 双写模式,**已经正确处理团队服务的全链路**(创建 → approve → reject → counter-offer)
+>
+> Tasks 4.2/4.3/4.5 在错误的代码路径上做了 wiring,生产代码中**完全不可达**(LEGACY 入口的 `current_expert: TaskExpert` 鉴权直接拒绝团队 user)。这些 commit 已经通过 `git revert` 干净撤销:`63430701b`、`2fc1d927f`、`97722a57c`、`af6f0974e`、`879d876a0`、`0f9cb69e1`。
+>
+> **Phase 4 收敛为:只做 Task 4.1**(服务发布门槛,在 NEW 系统里,正确)。
+>
+> Tasks 4.2/4.3/4.4/4.5 全部 OUT OF SCOPE —— 团队服务的任务创建路径已经在 NEW 系统里 work,不需要任何改动。Phase 6 的 `payment_transfer_service` 扩展会让团队任务自动流到正确的 Stripe 账户。
 
 ### Task 4.1: 服务发布端点加 Stripe + GBP 门槛
 
