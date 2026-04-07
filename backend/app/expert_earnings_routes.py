@@ -170,3 +170,58 @@ async def earnings_summary(
         "succeeded_count": int(row.succeeded_count or 0),
         "note": "Actual balance is held in your team's Stripe account. Check the Stripe Dashboard for real-time balance.",
     }
+
+
+@router.get("/{expert_id}/earnings/transfers")
+async def transfer_history(
+    expert_id: str,
+    status: Optional[str] = None,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    db: AsyncSession = Depends(get_async_db_dependency),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+):
+    """Team Stripe Transfer audit history. spec §5.3"""
+    await _get_member_or_403(db, expert_id, current_user.id, required_roles=['owner', 'admin', 'member'])
+
+    conditions = [models.PaymentTransfer.taker_expert_id == expert_id]
+    if status:
+        conditions.append(models.PaymentTransfer.status.in_([s.strip() for s in status.split(',')]))
+    if start_date:
+        conditions.append(models.PaymentTransfer.created_at >= start_date)
+    if end_date:
+        conditions.append(models.PaymentTransfer.created_at <= end_date)
+
+    total_q = select(func.count()).select_from(models.PaymentTransfer).where(and_(*conditions))
+    total = (await db.execute(total_q)).scalar_one()
+
+    q = (
+        select(models.PaymentTransfer)
+        .where(and_(*conditions))
+        .order_by(models.PaymentTransfer.created_at.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
+    rows = (await db.execute(q)).scalars().all()
+
+    items = []
+    for r in rows:
+        task = await db.get(models.Task, r.task_id)
+        items.append({
+            "id": r.id,
+            "task": {"id": r.task_id, "title": task.title if task else None},
+            "amount": str(r.amount),
+            "currency": r.currency,
+            "status": r.status,
+            "stripe_transfer_id": r.transfer_id,
+            "stripe_reversal_id": r.stripe_reversal_id,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+            "retry_count": r.retry_count,
+            "error_message": r.last_error,
+            "reversed_at": r.reversed_at.isoformat() if r.reversed_at else None,
+            "reversed_reason": r.reversed_reason,
+        })
+
+    return {"items": items, "total": total, "page": page, "page_size": page_size}
