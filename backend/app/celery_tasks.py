@@ -1646,8 +1646,13 @@ def weekly_reliability_calibration_task(self):
             db.close()
             release_redis_distributed_lock(lock_key)
 
-    # ── 15. warn_long_running_team_tasks_task (每天) ──
-    # spec §3.4a — 接近 Stripe 90 天 Transfer 时效的团队任务提醒 owner
+
+# ── warn_long_running_team_tasks_task (每天) ──
+# spec §3.4a — 接近 Stripe 90 天 Transfer 时效的团队任务提醒 owner
+# NOTE: defined at module level so Celery autodiscovery sees it. Many existing
+# tasks above (lines ~1029-1647) are nested inside another function's body and
+# are effectively dead code — that is a pre-existing issue outside this PR's scope.
+if CELERY_AVAILABLE:
     @celery_app.task(name='app.celery_tasks.warn_long_running_team_tasks_task', bind=True, max_retries=2, default_retry_delay=300)
     def warn_long_running_team_tasks_task(self):
         """每天扫一次,通知 owner 接近 90 天 Transfer 时效的 in-flight 团队任务. spec §3.4a"""
@@ -1692,4 +1697,3 @@ def weekly_reliability_calibration_task(self):
         finally:
             db.close()
             release_redis_distributed_lock(lock_key)
-
