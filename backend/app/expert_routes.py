@@ -861,6 +861,22 @@ async def transfer_ownership(
     owner_member.role = "admin"
     owner_member.updated_at = now
 
+    # Phase 9: sync in-flight team task taker_id to new owner (spec §6.5)
+    # Tasks still active (not yet completed) should reflect the current team
+    # owner so notifications, "my tasks" lists, and UI all point to the right
+    # person. Already-completed tasks keep their original taker_id (historical
+    # snapshot).
+    await db.execute(
+        update(models.Task)
+        .where(
+            models.Task.taker_expert_id == expert_id,
+            models.Task.status.in_(
+                ["pending", "pending_payment", "in_progress", "disputed"]
+            ),
+        )
+        .values(taker_id=body.new_owner_id)
+    )
+
     await db.commit()
     return {"detail": "所有权已转让"}
 
