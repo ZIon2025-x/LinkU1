@@ -26,7 +26,6 @@ from app import models, schemas
 from app.deps import get_async_db_dependency
 from app.separate_auth_deps import get_current_admin
 from app.async_routers import get_current_user_optional
-from app.services.expert_task_resolver import resolve_task_taker_from_service
 from app.utils.time_utils import get_utc_time, format_iso_utc
 
 logger = logging.getLogger(__name__)
@@ -3095,7 +3094,6 @@ async def create_consultation(
     await db.flush()  # get new_application.id
 
     # 5. 创建占位 Task（status=consulting）
-    taker_id_value, taker_expert_id_value = await resolve_task_taker_from_service(db, service)
     new_task = models.Task(
         title=f"咨询: {service.service_name}",
         description=f"咨询服务: {service.service_name}",
@@ -3106,8 +3104,7 @@ async def create_consultation(
         task_type=service.category or "consultation",
         task_level="normal",
         poster_id=current_user.id,
-        taker_id=taker_id_value,
-        taker_expert_id=taker_expert_id_value,
+        taker_id=service.owner_user_id,
         expert_service_id=service.id,
         status="consulting",
         task_source="consultation",
