@@ -5,6 +5,7 @@ spec §4.2 §4.3a
 from typing import Optional, Tuple
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 from fastapi import HTTPException
 
 from app import models
@@ -111,6 +112,59 @@ async def resolve_task_taker_from_activity(
         # Legacy: pre-polymorphism activities store the creator's user_id in expert_id,
         # NOT in owner_id. Don't "fix" this to activity.owner_id — it would break backward compat.
         return (activity.expert_id, None)
+    else:
+        raise HTTPException(status_code=500, detail={
+            "error_code": "unknown_owner_type",
+            "message": f"Unknown activity owner_type: {activity.owner_type}",
+        })
+
+
+def resolve_task_taker_from_activity_sync(
+    db: Session,
+    activity: "models.Activity",
+) -> Tuple[str, Optional[str]]:
+    """Sync version of resolve_task_taker_from_activity for use in sync endpoints.
+    spec §4.3a
+
+    Mirrors the async version exactly:
+      - owner_type='expert': (team_owner.user_id, expert.id)
+      - owner_type='user':   (activity.expert_id, None)  # legacy mirror
+    Raises HTTPException for the same conditions as the async version.
+    """
+    if activity.owner_type == 'expert':
+        expert = db.query(Expert).filter(Expert.id == activity.owner_id).first()
+        if not expert:
+            raise HTTPException(status_code=404, detail="Expert team not found")
+        if not expert.stripe_onboarding_complete:
+            raise HTTPException(status_code=409, detail={
+                "error_code": "expert_stripe_not_ready",
+                "message": "Team is temporarily unable to accept sign-ups",
+            })
+        if (activity.currency or 'GBP').upper() != 'GBP':
+            raise HTTPException(status_code=409, detail={
+                "error_code": "expert_currency_unsupported",
+                "message": "Team activities only support GBP currently",
+            })
+        owner = (
+            db.query(ExpertMember)
+            .filter(
+                ExpertMember.expert_id == expert.id,
+                ExpertMember.role == 'owner',
+                ExpertMember.status == 'active',
+            )
+            .first()
+        )
+        if not owner:
+            raise HTTPException(status_code=500, detail={
+                "error_code": "expert_owner_missing",
+                "message": "Team has no active owner",
+            })
+        return (owner.user_id, expert.id)
+
+    elif activity.owner_type == 'user':
+        # Legacy: see note on the async version above.
+        return (activity.expert_id, None)
+
     else:
         raise HTTPException(status_code=500, detail={
             "error_code": "unknown_owner_type",
