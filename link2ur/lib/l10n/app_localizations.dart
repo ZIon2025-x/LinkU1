@@ -22792,6 +22792,120 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Transfer Ownership'**
   String get expertTransferConfirmButton;
+
+  /// No description provided for @expertManagementPackages.
+  ///
+  /// In en, this message translates to:
+  /// **'Service Packages'**
+  String get expertManagementPackages;
+
+  /// No description provided for @expertPackageCreate.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Package'**
+  String get expertPackageCreate;
+
+  /// No description provided for @expertPackageEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Package'**
+  String get expertPackageEdit;
+
+  /// No description provided for @expertPackageType.
+  ///
+  /// In en, this message translates to:
+  /// **'Package Type'**
+  String get expertPackageType;
+
+  /// No description provided for @expertPackageTypeMulti.
+  ///
+  /// In en, this message translates to:
+  /// **'Multi-session'**
+  String get expertPackageTypeMulti;
+
+  /// No description provided for @expertPackageTypeBundle.
+  ///
+  /// In en, this message translates to:
+  /// **'Service Bundle'**
+  String get expertPackageTypeBundle;
+
+  /// No description provided for @expertPackageName.
+  ///
+  /// In en, this message translates to:
+  /// **'Package Name'**
+  String get expertPackageName;
+
+  /// No description provided for @expertPackageDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Description'**
+  String get expertPackageDescription;
+
+  /// No description provided for @expertPackageSessionCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Sessions'**
+  String get expertPackageSessionCount;
+
+  /// No description provided for @expertPackageSessionCountHint.
+  ///
+  /// In en, this message translates to:
+  /// **'How many sessions are included in this package'**
+  String get expertPackageSessionCountHint;
+
+  /// No description provided for @expertPackageSessions.
+  ///
+  /// In en, this message translates to:
+  /// **'sessions'**
+  String get expertPackageSessions;
+
+  /// No description provided for @expertPackagePrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Price'**
+  String get expertPackagePrice;
+
+  /// No description provided for @expertPackageEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No packages yet'**
+  String get expertPackageEmpty;
+
+  /// No description provided for @expertPackageEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Create multi-session or bundle packages to offer better value to your customers.'**
+  String get expertPackageEmptyMessage;
+
+  /// No description provided for @expertPackageCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Package created'**
+  String get expertPackageCreated;
+
+  /// No description provided for @expertPackageUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Package updated'**
+  String get expertPackageUpdated;
+
+  /// No description provided for @expertPackageDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Package deleted'**
+  String get expertPackageDeleted;
+
+  /// No description provided for @expertPackageConfirmDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Package'**
+  String get expertPackageConfirmDelete;
+
+  /// No description provided for @expertPackageConfirmDeleteMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete this package? Existing customers who purchased it will keep their access.'**
+  String get expertPackageConfirmDeleteMessage;
 }
 
 class _AppLocalizationsDelegate

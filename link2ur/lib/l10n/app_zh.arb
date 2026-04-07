@@ -5373,5 +5373,24 @@
       "teamName": {"type": "String"}
     }
   },
-  "expertTransferConfirmButton": "确认转让"
+  "expertTransferConfirmButton": "确认转让",
+  "expertManagementPackages": "服务套餐",
+  "expertPackageCreate": "创建套餐",
+  "expertPackageEdit": "编辑套餐",
+  "expertPackageType": "套餐类型",
+  "expertPackageTypeMulti": "多课时套餐",
+  "expertPackageTypeBundle": "服务包",
+  "expertPackageName": "套餐名称",
+  "expertPackageDescription": "套餐描述",
+  "expertPackageSessionCount": "总课时数",
+  "expertPackageSessionCountHint": "此套餐包含多少次课程/服务",
+  "expertPackageSessions": "次",
+  "expertPackagePrice": "套餐总价",
+  "expertPackageEmpty": "暂无套餐",
+  "expertPackageEmptyMessage": "创建多课时或服务包套餐，给客户更优惠的价格。",
+  "expertPackageCreated": "套餐已创建",
+  "expertPackageUpdated": "套餐已更新",
+  "expertPackageDeleted": "套餐已删除",
+  "expertPackageConfirmDelete": "删除套餐",
+  "expertPackageConfirmDeleteMessage": "确定删除此套餐？已购买的客户仍保留使用权限。"
 }

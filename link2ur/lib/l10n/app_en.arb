@@ -5481,5 +5481,24 @@
       "teamName": {"type": "String"}
     }
   },
-  "expertTransferConfirmButton": "Transfer Ownership"
+  "expertTransferConfirmButton": "Transfer Ownership",
+  "expertManagementPackages": "Service Packages",
+  "expertPackageCreate": "Create Package",
+  "expertPackageEdit": "Edit Package",
+  "expertPackageType": "Package Type",
+  "expertPackageTypeMulti": "Multi-session",
+  "expertPackageTypeBundle": "Service Bundle",
+  "expertPackageName": "Package Name",
+  "expertPackageDescription": "Description",
+  "expertPackageSessionCount": "Total Sessions",
+  "expertPackageSessionCountHint": "How many sessions are included in this package",
+  "expertPackageSessions": "sessions",
+  "expertPackagePrice": "Total Price",
+  "expertPackageEmpty": "No packages yet",
+  "expertPackageEmptyMessage": "Create multi-session or bundle packages to offer better value to your customers.",
+  "expertPackageCreated": "Package created",
+  "expertPackageUpdated": "Package updated",
+  "expertPackageDeleted": "Package deleted",
+  "expertPackageConfirmDelete": "Delete Package",
+  "expertPackageConfirmDeleteMessage": "Are you sure you want to delete this package? Existing customers who purchased it will keep their access."
 }

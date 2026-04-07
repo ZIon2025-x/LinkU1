@@ -12334,4 +12334,64 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get expertTransferConfirmButton => 'Transfer Ownership';
+
+  @override
+  String get expertManagementPackages => 'Service Packages';
+
+  @override
+  String get expertPackageCreate => 'Create Package';
+
+  @override
+  String get expertPackageEdit => 'Edit Package';
+
+  @override
+  String get expertPackageType => 'Package Type';
+
+  @override
+  String get expertPackageTypeMulti => 'Multi-session';
+
+  @override
+  String get expertPackageTypeBundle => 'Service Bundle';
+
+  @override
+  String get expertPackageName => 'Package Name';
+
+  @override
+  String get expertPackageDescription => 'Description';
+
+  @override
+  String get expertPackageSessionCount => 'Total Sessions';
+
+  @override
+  String get expertPackageSessionCountHint =>
+      'How many sessions are included in this package';
+
+  @override
+  String get expertPackageSessions => 'sessions';
+
+  @override
+  String get expertPackagePrice => 'Total Price';
+
+  @override
+  String get expertPackageEmpty => 'No packages yet';
+
+  @override
+  String get expertPackageEmptyMessage =>
+      'Create multi-session or bundle packages to offer better value to your customers.';
+
+  @override
+  String get expertPackageCreated => 'Package created';
+
+  @override
+  String get expertPackageUpdated => 'Package updated';
+
+  @override
+  String get expertPackageDeleted => 'Package deleted';
+
+  @override
+  String get expertPackageConfirmDelete => 'Delete Package';
+
+  @override
+  String get expertPackageConfirmDeleteMessage =>
+      'Are you sure you want to delete this package? Existing customers who purchased it will keep their access.';
 }

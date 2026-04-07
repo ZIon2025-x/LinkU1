@@ -2329,6 +2329,10 @@ class TaskExpertServiceCreate(BaseModel):
     base_price: condecimal(gt=0, max_digits=12, decimal_places=2)  # 使用condecimal与DB的DECIMAL一致
     currency: Literal["GBP", "EUR"] = "GBP"  # 统一为Literal类型
     display_order: int = 0
+    # 套餐字段（Phase 7）
+    package_type: Optional[str] = None  # 'single' | 'multi' | 'bundle'
+    total_sessions: Optional[int] = None  # multi 类型：总课时数
+    bundle_service_ids: Optional[List[int]] = None  # bundle 类型：包含的服务 ID 列表
     # 时间段相关字段
     has_time_slots: bool = False
     time_slot_duration_minutes: Optional[int] = None  # 每个时间段的时长（分钟）
@@ -2357,6 +2361,10 @@ class TaskExpertServiceUpdate(BaseModel):
     location: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+    # 套餐字段（Phase 7）
+    package_type: Optional[str] = None  # 'single' | 'multi' | 'bundle'
+    total_sessions: Optional[int] = None
+    bundle_service_ids: Optional[List[int]] = None
     # 时间段相关字段
     has_time_slots: Optional[bool] = None
     time_slot_duration_minutes: Optional[int] = None

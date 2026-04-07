@@ -5310,5 +5310,24 @@
       "teamName": {"type": "String"}
     }
   },
-  "expertTransferConfirmButton": "確認轉讓"
+  "expertTransferConfirmButton": "確認轉讓",
+  "expertManagementPackages": "服務套餐",
+  "expertPackageCreate": "創建套餐",
+  "expertPackageEdit": "編輯套餐",
+  "expertPackageType": "套餐類型",
+  "expertPackageTypeMulti": "多課時套餐",
+  "expertPackageTypeBundle": "服務包",
+  "expertPackageName": "套餐名稱",
+  "expertPackageDescription": "套餐描述",
+  "expertPackageSessionCount": "總課時數",
+  "expertPackageSessionCountHint": "此套餐包含多少次課程/服務",
+  "expertPackageSessions": "次",
+  "expertPackagePrice": "套餐總價",
+  "expertPackageEmpty": "暫無套餐",
+  "expertPackageEmptyMessage": "創建多課時或服務包套餐，給客戶更優惠的價格。",
+  "expertPackageCreated": "套餐已創建",
+  "expertPackageUpdated": "套餐已更新",
+  "expertPackageDeleted": "套餐已刪除",
+  "expertPackageConfirmDelete": "刪除套餐",
+  "expertPackageConfirmDeleteMessage": "確定刪除此套餐？已購買的客戶仍保留使用權限。"
 }

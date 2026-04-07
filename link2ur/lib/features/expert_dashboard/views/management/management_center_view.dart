@@ -126,7 +126,12 @@ class _ManagementCenterViewState extends State<ManagementCenterView> {
                 onTap: () => context
                     .push('/expert-dashboard/$expertId/management/coupons'),
               ),
-              // Packages management deferred — needs expert-side management view design
+              _MenuTile(
+                icon: Icons.inventory_2_outlined,
+                label: context.l10n.expertManagementPackages,
+                onTap: () => context
+                    .push('/expert-dashboard/$expertId/management/packages'),
+              ),
               _MenuTile(
                 icon: Icons.reviews_outlined,
                 label: context.l10n.expertManagementReviewReplies,

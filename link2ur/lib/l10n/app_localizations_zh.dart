@@ -11850,6 +11850,63 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get expertTransferConfirmButton => '确认转让';
+
+  @override
+  String get expertManagementPackages => '服务套餐';
+
+  @override
+  String get expertPackageCreate => '创建套餐';
+
+  @override
+  String get expertPackageEdit => '编辑套餐';
+
+  @override
+  String get expertPackageType => '套餐类型';
+
+  @override
+  String get expertPackageTypeMulti => '多课时套餐';
+
+  @override
+  String get expertPackageTypeBundle => '服务包';
+
+  @override
+  String get expertPackageName => '套餐名称';
+
+  @override
+  String get expertPackageDescription => '套餐描述';
+
+  @override
+  String get expertPackageSessionCount => '总课时数';
+
+  @override
+  String get expertPackageSessionCountHint => '此套餐包含多少次课程/服务';
+
+  @override
+  String get expertPackageSessions => '次';
+
+  @override
+  String get expertPackagePrice => '套餐总价';
+
+  @override
+  String get expertPackageEmpty => '暂无套餐';
+
+  @override
+  String get expertPackageEmptyMessage => '创建多课时或服务包套餐，给客户更优惠的价格。';
+
+  @override
+  String get expertPackageCreated => '套餐已创建';
+
+  @override
+  String get expertPackageUpdated => '套餐已更新';
+
+  @override
+  String get expertPackageDeleted => '套餐已删除';
+
+  @override
+  String get expertPackageConfirmDelete => '删除套餐';
+
+  @override
+  String get expertPackageConfirmDeleteMessage => '确定删除此套餐？已购买的客户仍保留使用权限。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -23698,4 +23755,61 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get expertTransferConfirmButton => '確認轉讓';
+
+  @override
+  String get expertManagementPackages => '服務套餐';
+
+  @override
+  String get expertPackageCreate => '創建套餐';
+
+  @override
+  String get expertPackageEdit => '編輯套餐';
+
+  @override
+  String get expertPackageType => '套餐類型';
+
+  @override
+  String get expertPackageTypeMulti => '多課時套餐';
+
+  @override
+  String get expertPackageTypeBundle => '服務包';
+
+  @override
+  String get expertPackageName => '套餐名稱';
+
+  @override
+  String get expertPackageDescription => '套餐描述';
+
+  @override
+  String get expertPackageSessionCount => '總課時數';
+
+  @override
+  String get expertPackageSessionCountHint => '此套餐包含多少次課程/服務';
+
+  @override
+  String get expertPackageSessions => '次';
+
+  @override
+  String get expertPackagePrice => '套餐總價';
+
+  @override
+  String get expertPackageEmpty => '暫無套餐';
+
+  @override
+  String get expertPackageEmptyMessage => '創建多課時或服務包套餐，給客戶更優惠的價格。';
+
+  @override
+  String get expertPackageCreated => '套餐已創建';
+
+  @override
+  String get expertPackageUpdated => '套餐已更新';
+
+  @override
+  String get expertPackageDeleted => '套餐已刪除';
+
+  @override
+  String get expertPackageConfirmDelete => '刪除套餐';
+
+  @override
+  String get expertPackageConfirmDeleteMessage => '確定刪除此套餐？已購買的客戶仍保留使用權限。';
 }

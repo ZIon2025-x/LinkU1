@@ -6,6 +6,7 @@ import '../../../features/expert_dashboard/views/management/edit_team_profile_vi
 import '../../../features/expert_dashboard/views/management/join_requests_view.dart';
 import '../../../features/expert_dashboard/views/management/management_center_view.dart';
 import '../../../features/expert_dashboard/views/management/members_view.dart';
+import '../../../features/expert_dashboard/views/management/packages_view.dart';
 import '../../../features/expert_dashboard/views/management/review_replies_view.dart';
 import '../app_routes.dart';
 
@@ -71,6 +72,14 @@ List<RouteBase> get expertDashboardRoutes => [
         builder: (context, state) {
           final id = state.pathParameters['expertId']!;
           return ReviewRepliesView(expertId: id);
+        },
+      ),
+      GoRoute(
+        path: '/expert-dashboard/:expertId/management/packages',
+        name: 'expertDashboardManagementPackages',
+        builder: (context, state) {
+          final id = state.pathParameters['expertId']!;
+          return PackagesView(expertId: id);
         },
       ),
     ];
