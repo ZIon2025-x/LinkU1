@@ -5464,5 +5464,22 @@
   "expertTeamConfirmTransfer": "Transfer ownership? You will become Admin.",
   "expertTeamOwner": "Owner",
   "expertTeamAdmin": "Admin",
-  "expertTeamMember": "Member"
+  "expertTeamMember": "Member",
+  "expertTransferConfirmIntro": "You're about to transfer ownership of this team to {newOwnerName}.",
+  "@expertTransferConfirmIntro": {
+    "placeholders": {
+      "newOwnerName": {"type": "String"}
+    }
+  },
+  "expertTransferImpactTitle": "After transfer:",
+  "expertTransferImpact1": "You will become an Admin and lose Owner privileges.",
+  "expertTransferImpact2": "You can no longer edit team profile or manage Stripe Connect.",
+  "expertTransferImpact3": "This action cannot be undone by you — only the new owner can transfer it back.",
+  "expertTransferTypeNameToConfirm": "To confirm, type the team name {teamName} below:",
+  "@expertTransferTypeNameToConfirm": {
+    "placeholders": {
+      "teamName": {"type": "String"}
+    }
+  },
+  "expertTransferConfirmButton": "Transfer Ownership"
 }

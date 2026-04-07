@@ -11825,6 +11825,31 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get expertTeamMember => '成员';
+
+  @override
+  String expertTransferConfirmIntro(String newOwnerName) {
+    return '你即将把团队所有权转让给 $newOwnerName。';
+  }
+
+  @override
+  String get expertTransferImpactTitle => '转让后：';
+
+  @override
+  String get expertTransferImpact1 => '你将变为管理员，失去 Owner 权限';
+
+  @override
+  String get expertTransferImpact2 => '你不能再编辑团队资料或管理 Stripe Connect';
+
+  @override
+  String get expertTransferImpact3 => '此操作你无法撤销 —— 只有新 Owner 才能转回';
+
+  @override
+  String expertTransferTypeNameToConfirm(String teamName) {
+    return '请输入团队名称 $teamName 以确认：';
+  }
+
+  @override
+  String get expertTransferConfirmButton => '确认转让';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -23648,4 +23673,29 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get expertTeamMember => '成員';
+
+  @override
+  String expertTransferConfirmIntro(String newOwnerName) {
+    return '你即將把團隊所有權轉讓給 $newOwnerName。';
+  }
+
+  @override
+  String get expertTransferImpactTitle => '轉讓後：';
+
+  @override
+  String get expertTransferImpact1 => '你將變為管理員，失去 Owner 權限';
+
+  @override
+  String get expertTransferImpact2 => '你不能再編輯團隊資料或管理 Stripe Connect';
+
+  @override
+  String get expertTransferImpact3 => '此操作你無法撤銷 —— 只有新 Owner 才能轉回';
+
+  @override
+  String expertTransferTypeNameToConfirm(String teamName) {
+    return '請輸入團隊名稱 $teamName 以確認：';
+  }
+
+  @override
+  String get expertTransferConfirmButton => '確認轉讓';
 }

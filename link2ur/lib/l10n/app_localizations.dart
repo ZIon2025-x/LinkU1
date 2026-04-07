@@ -22750,6 +22750,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Member'**
   String get expertTeamMember;
+
+  /// No description provided for @expertTransferConfirmIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re about to transfer ownership of this team to {newOwnerName}.'**
+  String expertTransferConfirmIntro(String newOwnerName);
+
+  /// No description provided for @expertTransferImpactTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'After transfer:'**
+  String get expertTransferImpactTitle;
+
+  /// No description provided for @expertTransferImpact1.
+  ///
+  /// In en, this message translates to:
+  /// **'You will become an Admin and lose Owner privileges.'**
+  String get expertTransferImpact1;
+
+  /// No description provided for @expertTransferImpact2.
+  ///
+  /// In en, this message translates to:
+  /// **'You can no longer edit team profile or manage Stripe Connect.'**
+  String get expertTransferImpact2;
+
+  /// No description provided for @expertTransferImpact3.
+  ///
+  /// In en, this message translates to:
+  /// **'This action cannot be undone by you — only the new owner can transfer it back.'**
+  String get expertTransferImpact3;
+
+  /// No description provided for @expertTransferTypeNameToConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'To confirm, type the team name {teamName} below:'**
+  String expertTransferTypeNameToConfirm(String teamName);
+
+  /// No description provided for @expertTransferConfirmButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Transfer Ownership'**
+  String get expertTransferConfirmButton;
 }
 
 class _AppLocalizationsDelegate

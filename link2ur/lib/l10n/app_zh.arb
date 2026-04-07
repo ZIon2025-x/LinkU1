@@ -5356,5 +5356,22 @@
   "expertTeamConfirmTransfer": "确定转让所有权吗？转让后您将成为管理员。",
   "expertTeamOwner": "创始人",
   "expertTeamAdmin": "管理员",
-  "expertTeamMember": "成员"
+  "expertTeamMember": "成员",
+  "expertTransferConfirmIntro": "你即将把团队所有权转让给 {newOwnerName}。",
+  "@expertTransferConfirmIntro": {
+    "placeholders": {
+      "newOwnerName": {"type": "String"}
+    }
+  },
+  "expertTransferImpactTitle": "转让后：",
+  "expertTransferImpact1": "你将变为管理员，失去 Owner 权限",
+  "expertTransferImpact2": "你不能再编辑团队资料或管理 Stripe Connect",
+  "expertTransferImpact3": "此操作你无法撤销 —— 只有新 Owner 才能转回",
+  "expertTransferTypeNameToConfirm": "请输入团队名称 {teamName} 以确认：",
+  "@expertTransferTypeNameToConfirm": {
+    "placeholders": {
+      "teamName": {"type": "String"}
+    }
+  },
+  "expertTransferConfirmButton": "确认转让"
 }

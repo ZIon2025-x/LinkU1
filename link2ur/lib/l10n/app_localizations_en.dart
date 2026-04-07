@@ -12306,4 +12306,32 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get expertTeamMember => 'Member';
+
+  @override
+  String expertTransferConfirmIntro(String newOwnerName) {
+    return 'You\'re about to transfer ownership of this team to $newOwnerName.';
+  }
+
+  @override
+  String get expertTransferImpactTitle => 'After transfer:';
+
+  @override
+  String get expertTransferImpact1 =>
+      'You will become an Admin and lose Owner privileges.';
+
+  @override
+  String get expertTransferImpact2 =>
+      'You can no longer edit team profile or manage Stripe Connect.';
+
+  @override
+  String get expertTransferImpact3 =>
+      'This action cannot be undone by you — only the new owner can transfer it back.';
+
+  @override
+  String expertTransferTypeNameToConfirm(String teamName) {
+    return 'To confirm, type the team name $teamName below:';
+  }
+
+  @override
+  String get expertTransferConfirmButton => 'Transfer Ownership';
 }

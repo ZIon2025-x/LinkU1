@@ -19,7 +19,9 @@ class MembersView extends StatelessWidget {
     return BlocProvider(
       create: (context) => ExpertTeamBloc(
         repository: context.read<ExpertTeamRepository>(),
-      )..add(ExpertTeamLoadMembers(expertId)),
+      )
+        ..add(ExpertTeamLoadMembers(expertId))
+        ..add(ExpertTeamLoadDetail(expertId)),
       child: _MembersBody(expertId: expertId),
     );
   }
@@ -275,22 +277,14 @@ class _MemberMenuButton extends StatelessWidget {
         }
         break;
       case 'transfer':
+        final teamName = bloc.state.currentTeam?.name ?? '';
+        final newOwnerName = member.userName ?? member.userId;
         final confirmed = await showDialog<bool>(
           context: context,
-          builder: (ctx) => AlertDialog(
-            title: Text(context.l10n.expertTeamTransferOwnership),
-            content: Text(context.l10n.expertTeamConfirmTransfer),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(false),
-                child: Text(MaterialLocalizations.of(ctx).cancelButtonLabel),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(true),
-                child: Text(context.l10n.expertTeamTransferOwnership,
-                    style: const TextStyle(color: Colors.orange)),
-              ),
-            ],
+          barrierDismissible: false,
+          builder: (ctx) => _TransferOwnershipDialog(
+            teamName: teamName,
+            newOwnerName: newOwnerName,
           ),
         );
         if (confirmed == true) {
@@ -301,5 +295,110 @@ class _MemberMenuButton extends StatelessWidget {
         }
         break;
     }
+  }
+}
+
+/// 转让所有权强化确认对话框：要求输入团队名 + 列出影响。
+class _TransferOwnershipDialog extends StatefulWidget {
+  const _TransferOwnershipDialog({
+    required this.teamName,
+    required this.newOwnerName,
+  });
+
+  final String teamName;
+  final String newOwnerName;
+
+  @override
+  State<_TransferOwnershipDialog> createState() =>
+      _TransferOwnershipDialogState();
+}
+
+class _TransferOwnershipDialogState extends State<_TransferOwnershipDialog> {
+  final _controller = TextEditingController();
+  bool _matches = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_onChanged);
+  }
+
+  void _onChanged() {
+    final newMatch = _controller.text.trim() == widget.teamName;
+    if (newMatch != _matches) {
+      setState(() => _matches = newMatch);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.removeListener(_onChanged);
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return AlertDialog(
+      title: Text(l10n.expertTeamTransferOwnership),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l10n.expertTransferConfirmIntro(widget.newOwnerName)),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange.shade200),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.expertTransferImpactTitle,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 6),
+                  Text('• ${l10n.expertTransferImpact1}'),
+                  Text('• ${l10n.expertTransferImpact2}'),
+                  Text('• ${l10n.expertTransferImpact3}'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(l10n.expertTransferTypeNameToConfirm(widget.teamName)),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _controller,
+              autofocus: true,
+              decoration: InputDecoration(
+                hintText: widget.teamName,
+                border: const OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
+        ),
+        FilledButton(
+          onPressed: _matches ? () => Navigator.of(context).pop(true) : null,
+          style: FilledButton.styleFrom(
+            backgroundColor: Colors.red,
+            disabledBackgroundColor: Colors.grey.shade300,
+          ),
+          child: Text(l10n.expertTransferConfirmButton),
+        ),
+      ],
+    );
   }
 }
