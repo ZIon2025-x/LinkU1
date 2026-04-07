@@ -2160,7 +2160,7 @@ class Activity(Base):
     title_en = Column(String(200), nullable=True)  # 英文标题，首次翻译后写入
     description_zh = Column(Text, nullable=True)  # 中文描述，首次翻译后写入
     description_en = Column(Text, nullable=True)  # 英文描述，首次翻译后写入
-    expert_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    expert_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)  # [legacy] 团队活动时填 owner.user_id 作为代表;新代码用 owner_type/owner_id
     expert_service_id = Column(Integer, ForeignKey("task_expert_services.id", ondelete="RESTRICT"), nullable=True)
     # 多态归属（user 或 expert team）；CHECK 约束在 SQL 迁移中
     owner_type = Column(String(20), nullable=False, server_default='user')
