@@ -3844,46 +3844,16 @@ async def approve_service_application(
     applicant_user = await db.get(models.User, application.applicant_id)
     if not applicant_user:
         raise HTTPException(status_code=404, detail="申请用户不存在")
-
-    # Resolve the taker (individual user OR expert team owner) and the
-    # corresponding Stripe Connect destination account. This is team-aware:
-    # for owner_type='expert' services, application.expert_id may be NULL,
-    # so we cannot look up via that column. The helper validates Stripe
-    # readiness and currency before returning.
-    try:
-        taker_id_value, taker_expert_id_value, taker_stripe_account_id = (
-            await _resolve_taker_for_service_application(db, application)
-        )
-    except HTTPException as e:
-        # Preserve legacy 400 message+header for the individual no-Stripe case
-        # so existing clients keep working.
-        if (
-            e.status_code == 400
-            and isinstance(e.detail, dict)
-            and e.detail.get("error_code") == "taker_no_stripe_account"
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="任务达人尚未创建 Stripe Connect 收款账户，无法完成支付。请联系任务达人先创建收款账户。",
-                headers={"X-Stripe-Connect-Required": "true"},
-            )
-        raise
-
-    # Resolve a display name for metadata strings. For team services we
-    # prefer the team name; for individual services we load the taker User.
-    taker_display_name = None
-    expert_user = None  # legacy var name retained for downstream metadata
-    if taker_expert_id_value:
-        from app.models_expert import Expert
-        team_expert = await db.get(Expert, taker_expert_id_value)
-        taker_display_name = (
-            getattr(team_expert, "name", None)
-            or f"Team {taker_expert_id_value}"
-        )
-    else:
-        expert_user = await db.get(models.User, taker_id_value)
-        taker_display_name = (
-            expert_user.name if expert_user else f"User {taker_id_value}"
+    
+    # 获取任务达人的 Stripe Connect 账户ID（接收方）
+    expert_user = await db.get(models.User, application.expert_id)
+    taker_stripe_account_id = expert_user.stripe_account_id if expert_user else None
+    
+    if not taker_stripe_account_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="任务达人尚未创建 Stripe Connect 收款账户，无法完成支付。请联系任务达人先创建收款账户。",
+            headers={"X-Stripe-Connect-Required": "true"}
         )
     
     # 8. 创建任务（达人服务是认证过的，任务等级为 expert）
@@ -3930,8 +3900,7 @@ async def approve_service_application(
         new_task = existing_task
     else:
         # Original task creation code
-        # taker_id_value / taker_expert_id_value already resolved above by
-        # _resolve_taker_for_service_application — do not re-resolve.
+        taker_id_value, taker_expert_id_value = await resolve_task_taker_from_service(db, service)
         new_task = models.Task(
             title=service.service_name,
             description=service.description,
@@ -3983,9 +3952,8 @@ async def approve_service_application(
                 "task_title": service.service_name[:200] if service.service_name else "",
                 "poster_id": str(application.applicant_id),
                 "poster_name": applicant_user.name if applicant_user else f"User {application.applicant_id}",
-                "taker_id": str(taker_id_value),
-                "taker_name": taker_display_name,
-                "taker_expert_id": str(taker_expert_id_value) if taker_expert_id_value else "",
+                "taker_id": str(application.expert_id),
+                "taker_name": expert_user.name if expert_user else f"User {application.expert_id}",
                 "taker_stripe_account_id": taker_stripe_account_id,
                 "application_fee": str(application_fee_pence),
                 "task_amount": str(task_amount_pence),
@@ -4052,9 +4020,7 @@ async def approve_service_application(
         await send_service_application_approved_notification(
             db=db,
             applicant_id=application.applicant_id,
-            # Pass resolved taker_id (team owner for team services, individual
-            # otherwise) so the notification helper can load the User row.
-            expert_id=taker_id_value,
+            expert_id=application.expert_id,
             task_id=new_task.id,
             service_name=service.service_name
         )
