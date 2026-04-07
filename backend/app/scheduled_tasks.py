@@ -1980,7 +1980,7 @@ def auto_transfer_expired_tasks(db: Session):
                         amount=auto_transfer_amount,
                         currency=task.currency or "GBP",
                         taker_expert_id=task.taker_expert_id,  # spec §3.2 v2
-                        idempotency_key=f"earning:task:{task.id}:user:{task.taker_id}",
+                        idempotency_key=f"task_{task.id}_transfer",
                         metadata={
                             "transfer_source": "auto_confirm_expired",
                             "original_escrow": str(escrow),
@@ -2004,7 +2004,8 @@ def auto_transfer_expired_tasks(db: Session):
 
                 if taker:
                     payout_currency = (task.currency or "GBP").upper()
-                    payout_idempotency_key = f"earning:task:{task.id}:user:{taker.id}"
+                    # spec §1.3 — unified idempotency key matches create_transfer_record's DB row
+                    payout_idempotency_key = f"task_{task.id}_transfer"
 
                     # Team-aware destination: spec §3.2 v2
                     from app.services.expert_task_resolver import resolve_payout_destination
