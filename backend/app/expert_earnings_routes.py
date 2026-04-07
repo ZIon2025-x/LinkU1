@@ -91,3 +91,82 @@ async def list_team_tasks(
         })
 
     return {"items": items, "total": total, "page": page, "page_size": page_size}
+
+
+@router.get("/{expert_id}/earnings/summary")
+async def earnings_summary(
+    expert_id: str,
+    period: str = Query('all_time', regex='^(all_time|this_month|last_30d|last_90d)$'),
+    db: AsyncSession = Depends(get_async_db_dependency),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+):
+    """Aggregate team earnings summary. spec §5.2"""
+    await _get_member_or_403(db, expert_id, current_user.id, required_roles=['owner', 'admin', 'member'])
+
+    from datetime import timedelta
+    now = datetime.utcnow()
+    if period == 'this_month':
+        start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    elif period == 'last_30d':
+        start = now - timedelta(days=30)
+    elif period == 'last_90d':
+        start = now - timedelta(days=90)
+    else:
+        start = None
+
+    # Build conditions for the JOIN query
+    task_conditions = [models.Task.taker_expert_id == expert_id]
+    if start:
+        task_conditions.append(models.Task.created_at >= start)
+
+    q = (
+        select(
+            func.coalesce(func.sum(models.Task.agreed_reward), 0).label('total_gross'),
+            func.coalesce(
+                func.sum(models.PaymentTransfer.amount).filter(
+                    models.PaymentTransfer.status == 'succeeded'
+                ),
+                0,
+            ).label('total_net'),
+            func.count(models.PaymentTransfer.id)
+                .filter(models.PaymentTransfer.status == 'succeeded')
+                .label('succeeded_count'),
+            func.count(models.PaymentTransfer.id)
+                .filter(models.PaymentTransfer.status.in_(['pending', 'retrying']))
+                .label('pending_count'),
+            func.count(models.PaymentTransfer.id)
+                .filter(models.PaymentTransfer.status == 'failed')
+                .label('failed_count'),
+            func.coalesce(
+                func.sum(models.PaymentTransfer.amount).filter(
+                    models.PaymentTransfer.status == 'reversed'
+                ),
+                0,
+            ).label('total_reversed'),
+        )
+        .select_from(models.Task)
+        .join(
+            models.PaymentTransfer,
+            models.PaymentTransfer.task_id == models.Task.id,
+            isouter=True,
+        )
+        .where(and_(*task_conditions))
+    )
+
+    row = (await db.execute(q)).one()
+    total_gross = row.total_gross or 0
+    total_net = row.total_net or 0
+    total_fee = total_gross - total_net  # platform fee = gross - net (excluding reversed)
+
+    return {
+        "period": period,
+        "currency": "GBP",
+        "total_gross": str(total_gross),
+        "total_net": str(total_net),
+        "total_fee": str(total_fee),
+        "total_reversed": str(row.total_reversed or 0),
+        "pending_count": int(row.pending_count or 0),
+        "failed_count": int(row.failed_count or 0),
+        "succeeded_count": int(row.succeeded_count or 0),
+        "note": "Actual balance is held in your team's Stripe account. Check the Stripe Dashboard for real-time balance.",
+    }
