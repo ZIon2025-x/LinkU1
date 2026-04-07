@@ -567,6 +567,9 @@ app.include_router(expert_dashboard_router)
 from app.expert_activity_routes import router as expert_activity_router
 app.include_router(expert_activity_router)
 
+from app.expert_earnings_routes import router as expert_earnings_router
+app.include_router(expert_earnings_router)
+
 # 创建上传目录
 import os
 RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
