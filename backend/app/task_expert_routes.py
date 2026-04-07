@@ -45,6 +45,68 @@ def _payment_method_types_for_currency(currency: str) -> list:
 task_expert_router = APIRouter(prefix="/api/task-experts", tags=["task-experts"])
 
 
+async def _resolve_taker_for_service_application(
+    db: AsyncSession,
+    application: "models.ServiceApplication",
+) -> tuple:
+    """Resolve (taker_id, taker_expert_id, taker_stripe_account_id) for a
+    ServiceApplication, regardless of whether the underlying service is owned
+    by an individual user or by an expert team.
+
+    For team services (owner_type='expert'), the Stripe Connect destination
+    account comes from experts.stripe_account_id (validated by the resolver to
+    be onboarding-complete and GBP). For individual services, it comes from
+    users.stripe_account_id.
+
+    Returns:
+        (taker_id, taker_expert_id, taker_stripe_account_id)
+            - taker_expert_id is None for individual services
+            - taker_stripe_account_id is always non-empty on success
+
+    Raises:
+        HTTPException 404 if the service no longer exists
+        HTTPException 409 (propagated) if the team's Stripe is not ready
+            or the team service currency is not GBP
+        HTTPException 400 if an individual taker has no Stripe Connect account
+        HTTPException 500 (propagated) if the team has no active owner or
+            owner_type is unknown
+    """
+    service = await db.get(models.TaskExpertService, application.service_id)
+    if not service:
+        raise HTTPException(status_code=404, detail="Service not found")
+
+    taker_id, taker_expert_id = await resolve_task_taker_from_service(db, service)
+
+    if taker_expert_id:
+        # Team service: use experts.stripe_account_id (resolver already
+        # validated stripe_onboarding_complete + GBP).
+        from app.models_expert import Expert
+        expert = await db.get(Expert, taker_expert_id)
+        stripe_account_id = expert.stripe_account_id if expert else None
+        if not stripe_account_id:
+            # Defensive: resolver should have caught this, but be explicit.
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error_code": "taker_no_stripe_account",
+                    "message": "Expert team has no Stripe Connect account",
+                },
+            )
+        return (taker_id, taker_expert_id, stripe_account_id)
+
+    # Individual service: use users.stripe_account_id
+    taker_user = await db.get(models.User, taker_id)
+    if not taker_user or not taker_user.stripe_account_id:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error_code": "taker_no_stripe_account",
+                "message": "Service provider has no Stripe Connect account",
+            },
+        )
+    return (taker_id, None, taker_user.stripe_account_id)
+
+
 def _get_language_from_request(request: Request) -> str:
     """从 Accept-Language 请求头获取语言偏好
     
