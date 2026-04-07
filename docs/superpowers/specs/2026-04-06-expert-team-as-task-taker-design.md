@@ -141,12 +141,14 @@ COMMIT;
 
 本 spec 范围内,**所有涉及 `taker_expert_id` 的任务、服务、活动强制使用 GBP**。理由:Link2Ur 主战场是英国,无多币种业务诉求;真要做国际化是另一个 Phase 的事。
 
-**强制点:**
+**强制点(以下所有代码块都必须显式检查):**
 
 1. `POST /api/experts/{id}/services`(§2.1)收到 body 时校验 `currency == 'GBP'`,否则 422
 2. `POST /api/experts/{id}/activities`(§2.2)同上
-3. `resolve_task_taker_from_service()`(§4.2)在 `owner_type='expert'` 分支额外校验 `service.currency == 'GBP'`,否则抛 409 `error_code='expert_currency_unsupported'`
-4. `enqueue_expert_transfer` Celery 任务(§3.2)在创建 `expert_stripe_transfers` 行前断言 `task.currency == 'GBP'`,异常则标 `failed`,error_code=`currency_unsupported`,人工介入
+3. `resolve_task_taker_from_service()`(§4.2)在 `owner_type='expert'` 分支校验 `service.currency == 'GBP'`,否则抛 409 `error_code='expert_currency_unsupported'`
+4. `resolve_task_taker_from_activity()`(§4.3a)在 `owner_type='expert'` 分支校验 `activity.currency == 'GBP'`,同上
+5. `enqueue_expert_transfer` Celery 任务(§3.2)在创建 `expert_stripe_transfers` 行前断言 `task.currency == 'GBP'`,异常则标 `failed`,error_code=`currency_unsupported`,人工介入
+6. `§6.2` 回填脚本只回填 `currency = 'GBP'` 的在飞任务
 
 **个人任务 / 个人服务的币种**不受此约束(继续走原流程)。
 
@@ -162,7 +164,7 @@ COMMIT;
 - 要求调用者是团队 owner/admin(`_get_member_or_403`)
 - 写 `task_expert_services.owner_type='expert', owner_id=expert_id`
 
-**本 spec 的改动:** 在端点开头加一道 Stripe 门槛检查:
+**本 spec 的改动:** 在端点开头加 Stripe 门槛 + 币种检查:
 
 ```python
 expert = await db.get(Expert, expert_id)
@@ -173,6 +175,13 @@ if not expert.stripe_onboarding_complete:
         "error_code": "expert_stripe_not_ready",
         "message": "Team must complete Stripe onboarding before publishing services"
     })
+
+# 币种检查(§1.4)
+if (body.currency or 'GBP').upper() != 'GBP':
+    raise HTTPException(status_code=422, detail={
+        "error_code": "expert_currency_unsupported",
+        "message": "Team services only support GBP currently"
+    })
 ```
 
 ### 2.2 活动发布 —— 新建团队专用端点
@@ -181,6 +190,7 @@ if not expert.stripe_onboarding_complete:
 
 - **鉴权:** `_get_member_or_403(expert_id, roles=['owner','admin'])`
 - **Stripe 门槛检查:** 同 2.1
+- **币种检查(§1.4):** body.currency 必须是 GBP,否则 422 `expert_currency_unsupported`
 - **数据写入:**
   - `activities.owner_type = 'expert'`
   - `activities.owner_id = expert_id`
@@ -210,6 +220,17 @@ GET /api/experts/{expert_id}/stripe/status
 ```
 
 ### 2.4 Stripe Webhook 同步 `account.updated`
+
+**前置配置(plan 阶段必做):**
+
+1. 在 **Stripe Dashboard → Developers → Webhooks** 给现有 webhook endpoint 订阅以下事件(若已订阅则跳过):
+   - `account.updated`(团队 Connect 账户状态变化)
+   - `charge.dispute.created`(争议产生,见 §3.5)
+   - `charge.dispute.closed`(争议结束,可选,用于审计)
+2. **Webhook signing secret** 通过现有环境变量(具体名 plan 阶段 grep 确认)注入,新分支沿用同一密钥校验
+3. **Connect 账户的事件源:** 需要确认现有 webhook endpoint 是否同时接收 platform account 事件 + connected account 事件。`account.updated` 是 connected account 事件,可能需要在 Stripe Dashboard 单独勾选 "Listen to events on Connected accounts"
+
+**Race condition 注意:** 调 `stripe.Account.create` 时,Stripe 会**立即**异步 fire 一个 `account.updated` 事件。如果该事件在我们 `db.commit()`(写入 `experts.stripe_account_id`)**之前**到达,handler 查 `Expert.stripe_account_id == acct.id` 会查不到,事件被静默忽略。**实践上不致命** —— 后续状态变化(用户填了表单等)会再触发新的 `account.updated` 事件,handler 那时能找到记录。但 plan 阶段最好把 `Account.create` 和 `db.commit()` 放在**同一事务**且**先 commit 再返回 onboarding URL**,缩短窗口。
 
 在现有 webhook 处理器(`routers.py:8058-8080` 区域,具体位置 plan 阶段 grep 确认)里加 `account.updated` 分支:
 
@@ -413,6 +434,33 @@ def on_failure(self, exc, task_id_arg, args, kwargs, einfo):
 2. 管理员后台新增 `GET /api/admin/expert-transfers?status=failed` 监控端点
 3. 管理员手工重试端点 `POST /api/admin/expert-transfers/{id}/retry`(把 status 改回 pending 再 enqueue)
 
+#### 3.4a Stripe Transfer 90 天时效
+
+**Stripe API 规则:** `stripe.Transfer.create` 必须在原始 Charge **90 天内**调用。超过 90 天 Stripe 返回 `transfer_already_pending` 或 `cannot_transfer` 类错误。
+
+**对应场景:** 任务在 `in_progress` / `disputed` 状态滞留超过 90 天才完成 —— 客户付款已经超过 90 天。
+
+**处理策略:**
+1. **预防性监控:** 后台定期任务(Celery beat 或 cron)每天扫描所有 `in_progress` 且 `payment_completed_at < now() - 60d` 的团队任务,通知 owner 和管理员"接近 Transfer 时效,请尽快完成"
+2. **超期失败:** Celery 任务 §3.2 在调 Stripe 之前,显式检查 `task.payment_completed_at`(或等价字段,plan 阶段确认)与当前时间差,若超过 89 天直接标 `failed`,error_code=`stripe_transfer_window_expired`,**不发请求到 Stripe** 避免浪费一次 retry
+3. **人工兜底:** 管理员可以手工把这笔钱从平台账户**直接**通过 Stripe Dashboard 转给团队(绕过 Transfer API),然后在 admin 端点把 `expert_stripe_transfers` 行手工标 `succeeded` + 填备注
+
+```python
+# §3.2 Celery 任务里,调 Stripe 之前加这段
+from datetime import timedelta
+TRANSFER_WINDOW_DAYS = 89  # 留 1 天 buffer
+
+if task.payment_completed_at:
+    age = datetime.utcnow() - task.payment_completed_at
+    if age > timedelta(days=TRANSFER_WINDOW_DAYS):
+        existing.status = 'failed'
+        existing.error_code = 'stripe_transfer_window_expired'
+        existing.error_message = f"Task age {age.days}d exceeds {TRANSFER_WINDOW_DAYS}d Transfer window"
+        db.commit()
+        _notify_team_owner_of_transfer_failure(expert.id, task_id, "transfer window expired")
+        return
+```
+
 ### 3.5 退款 / 争议处理
 
 **场景 A:任务完成前退款** —— 钱还在平台账户,团队未收到。现有退款流程不动,`expert_stripe_transfers` 行尚未创建,零影响。
@@ -452,11 +500,38 @@ if event.type == 'charge.dispute.created':
 
 ```python
 if task.taker_expert_id is not None:
-    enqueue_expert_transfer.delay(task_id=task.id)
+    enqueue_expert_transfer.delay(task_id=task.id)  # 现金走 Stripe Transfer
+    # 积分见 §3.7
 else:
     # 个人任务:现有 TaskParticipantReward + wallet_accounts 流程(不动)
     ...
 ```
+
+### 3.7 积分奖励 (`task.points_reward`) 的处理
+
+**决策:积分进团队 owner 的个人积分账户**(对应 Y 方案"owner 是经济代表"的语义)。
+
+**理由:**
+- 沿用现金的 Y 方案心智:owner 是团队的对外代表,平台不介入团队内分配
+- 实现成本几乎为零 —— 复用现有 user `points_balance` 流程,不需要为 expert 加 points 字段或新表
+- Owner 在团队内自行决定是否、如何把积分分给成员
+- 不引入"团队积分钱包"违反 §0 第 7 条和 §7 范围声明
+
+**实现:** 任务完成时,无论是个人还是团队任务,积分发放逻辑统一走"发给 `task.taker_id` 这个 user_id"。因为团队任务的 `taker_id` 已经被 §4.2 / §4.3a helper 填成了 owner 的 user_id,所以**积分代码完全不需要分叉,自然就发到 owner 头上**。
+
+```python
+# 现有积分发放代码(伪)
+if task.points_reward and task.points_reward > 0:
+    await credit_user_points(
+        user_id=task.taker_id,  # 团队任务时 = owner.user_id, 个人任务时 = 个人 taker
+        amount=task.points_reward,
+        source=f"task_completion_{task.id}",
+    )
+```
+
+**注意:** 这是 Y 方案的天然好处之一 —— 个人和团队两条路径在积分层面**完全同构**,不需要任何 if-else。
+
+**限制:** 如果未来产品决定"团队任务的积分应该按贡献分摊给所有团队成员",那时需要新功能,但本 spec 不做这件事。Y 方案的当前实现意味着"积分全归 owner",owner 自行处理分发(在团队管理 UI 里手动发,或私下用其他方式)。
 
 ---
 
@@ -502,6 +577,12 @@ async def resolve_task_taker_from_service(
             raise HTTPException(status_code=409, detail={
                 "error_code": "expert_stripe_not_ready",
                 "message": "This service is temporarily unavailable"
+            })
+        # 币种检查(§1.4)
+        if (service.currency or 'GBP').upper() != 'GBP':
+            raise HTTPException(status_code=409, detail={
+                "error_code": "expert_currency_unsupported",
+                "message": "Team services only support GBP currently"
             })
 
         result = await db.execute(
@@ -760,12 +841,14 @@ GET /api/experts/{expert_id}/earnings/transfers
 
 ```sql
 -- 列出 taker 可映射到多个团队的任务(需要人工决策)
+-- 注意:同时覆盖服务来源 (expert_service_id) 和活动来源 (parent_activity_id)
 SELECT t.id, t.taker_id, array_agg(em.expert_id) AS candidate_experts
 FROM tasks t
 JOIN expert_members em ON em.user_id = t.taker_id
 WHERE t.status IN ('pending','pending_payment','in_progress','disputed')
   AND t.taker_expert_id IS NULL
-  AND t.expert_service_id IS NOT NULL
+  AND (t.expert_service_id IS NOT NULL OR t.parent_activity_id IS NOT NULL)
+  AND COALESCE(t.currency, 'GBP') = 'GBP'  -- §1.4 GBP-only
   AND em.status = 'active'
 GROUP BY t.id, t.taker_id
 HAVING COUNT(DISTINCT em.expert_id) > 1;
@@ -778,6 +861,12 @@ HAVING COUNT(DISTINCT em.expert_id) > 1;
 ```sql
 BEGIN;
 
+-- 回填规则:
+--   1. 任务必须是达人来源(expert_service_id IS NOT NULL 或 parent_activity_id IS NOT NULL)
+--   2. 必须是 GBP(§1.4)
+--   3. taker 必须是某 active 团队的 owner/admin
+--   4. 团队本身 active
+--   5. 多团队归属时取(owner > admin)+(joined_at 最早)
 WITH candidate AS (
   SELECT DISTINCT ON (t.id)
     t.id AS task_id,
@@ -787,7 +876,8 @@ WITH candidate AS (
   JOIN experts e ON e.id = em.expert_id
   WHERE t.status IN ('pending','pending_payment','in_progress','disputed')
     AND t.taker_expert_id IS NULL
-    AND t.expert_service_id IS NOT NULL
+    AND (t.expert_service_id IS NOT NULL OR t.parent_activity_id IS NOT NULL)
+    AND COALESCE(t.currency, 'GBP') = 'GBP'
     AND em.role IN ('owner','admin')
     AND em.status = 'active'
     AND e.status = 'active'
@@ -809,14 +899,15 @@ BEGIN
   SELECT COUNT(*) INTO total_inflight
   FROM tasks
   WHERE status IN ('pending','pending_payment','in_progress','disputed')
-    AND expert_service_id IS NOT NULL;
+    AND (expert_service_id IS NOT NULL OR parent_activity_id IS NOT NULL)
+    AND COALESCE(currency, 'GBP') = 'GBP';
 
   SELECT COUNT(*) INTO backfilled
   FROM tasks
   WHERE taker_expert_id IS NOT NULL
     AND status IN ('pending','pending_payment','in_progress','disputed');
 
-  RAISE NOTICE 'In-flight expert service tasks: %', total_inflight;
+  RAISE NOTICE 'In-flight expert tasks (service + activity, GBP only): %', total_inflight;
   RAISE NOTICE 'Backfilled with taker_expert_id: %', backfilled;
   RAISE NOTICE 'Remaining individual-model tasks: %', total_inflight - backfilled;
 END $$;
@@ -824,7 +915,7 @@ END $$;
 COMMIT;
 ```
 
-**无法回填的任务**(taker 不在任何 active 团队 / 团队非 active / 非达人服务来源 / taker 只是 member 而非 owner/admin):保留个人模型继续流转,新代码不触发 Transfer(`taker_expert_id IS NULL`)。
+**无法回填的任务**(taker 不在任何 active 团队 / 团队非 active / 非达人来源 / taker 只是 member 而非 owner/admin / 非 GBP 币种):保留个人模型继续流转,新代码不触发 Transfer(`taker_expert_id IS NULL`)。
 
 > **为什么只回填 taker 是 owner/admin 的任务?** 因为普通 member 可能同时属于多个团队,自动归属会错位。实际上,现有老代码(`task_expert_routes.py:3107, 3851`)创建任务时 `taker_id` 几乎总是服务/申请的 owning user(多数是团队 owner),所以实际回填覆盖率应该很高。普通 member 被指定为 taker 的场景极少,保留个人模型是安全默认。
 
@@ -913,6 +1004,9 @@ await db.execute(
 10. **个人 taker 任务完成 → `wallet_accounts.balance` credit 的代码路径是否存在**:§4.4 的"顺带正确化"假设这条路径已经在,但我没在探索阶段验证。Plan Task 1 必须 grep 确认:在任务完成端点附近找到对 `wallet_accounts.balance` 的 UPDATE / +=,确认它和 Payment Intent 的资金流模式兼容。如果当前是 destination charge(钱直接进 taker Stripe),那 wallet credit 路径**可能根本不存在**,改 manual transfer 后会出现"个人 taker 任务完成 → 钱被锁在平台账户" bug,需要补建 credit 路径
 11. **退款端点位置**:§3.5 场景 C 提到"现有 refund 端点",未定位。grep `refund` / `Refund` / `退款` in `backend/app/routers.py` + `*payment*.py`,找到主入口
 12. **Celery sync session factory**:§3.2 伪代码用 `from app.database import SessionLocal`(同步)。确认仓库现在的 Celery 任务是用 sync 还是 async session。Async 用 `asyncio.run(...)` 或 `nest_asyncio` 包,sync 直接用。这影响 §3.2 代码的最终形态,**不影响设计决策**
+13. **`tasks.payment_completed_at` 字段**:§3.4a 90 天 Transfer 时效检查需要这个字段(或等价的"客户付款完成时间")。grep `payment_completed_at` / `paid_at` / `payment_intent_succeeded_at` in `models.py` Task 类,找不到则需要新增列(独立 migration,简单 ALTER)
+14. **Webhook signing secret 环境变量名**:§2.4 webhook handler 沿用现有验签逻辑,需要 grep 现有 webhook handler 找到对应环境变量名(可能是 `STRIPE_WEBHOOK_SECRET` 之类)
+15. **现有积分发放函数名**:§3.7 假设有 `credit_user_points()` 或等价函数。grep `points_balance` / `add_points` / `credit_points` in `backend/app/`,确认实际函数名和调用方式
 
 ---
 
