@@ -4297,31 +4297,47 @@ def confirm_task_completion(
 
             idempotency_key = f"earning:task:{task.id}:user:{task.taker_id}"
 
-            # 检查接单者是否有 Stripe Connect 账户（taker 已在函数开头查询）
-            taker_stripe_id = getattr(taker, "stripe_account_id", None) if taker else None
+            # Team-aware destination: 团队任务 → experts.stripe_account_id,
+            # 个人任务 → taker.stripe_account_id (保持原行为)
+            # spec §3.2 (v2 — payout site team-awareness)
+            from app.services.expert_task_resolver import resolve_payout_destination
+            is_team_task = bool(task.taker_expert_id)
+            destination_stripe_id = resolve_payout_destination(db, task)
 
-            if taker_stripe_id:
-                # 有 Stripe Connect 账户 → 尝试直接转账，失败则回退到钱包
+            if destination_stripe_id:
+                # 有 Stripe Connect 账户 → 尝试直接转账
                 amount_minor = int(net_amount * 100)  # 转为最小货币单位（便士/分）
                 try:
                     transfer = stripe.Transfer.create(
                         amount=amount_minor,
                         currency=currency.lower(),
-                        destination=taker_stripe_id,
+                        destination=destination_stripe_id,
                         description=f"Task #{task.id} payout",
                         metadata={
                             "task_id": str(task.id),
                             "taker_id": str(task.taker_id),
+                            "taker_expert_id": str(task.taker_expert_id) if task.taker_expert_id else "",
                             "source": source,
                         },
                         idempotency_key=idempotency_key,
                     )
                     logger.info(
-                        f"✅ 任务 {task_id} 奖励 £{net_amount:.2f} 已直接转账至用户 {task.taker_id} "
-                        f"Stripe 账户 {taker_stripe_id} (transfer={transfer.id})"
+                        f"✅ 任务 {task_id} 奖励 £{net_amount:.2f} 已直接转账至 "
+                        f"{'团队' if is_team_task else '用户'} "
+                        f"Stripe 账户 {destination_stripe_id} (transfer={transfer.id})"
                     )
                 except stripe.error.StripeError as stripe_err:
-                    # Stripe 明确拒绝 → 回退到钱包入账（不会双重支付）
+                    if is_team_task:
+                        # 团队任务：不回退钱包，资金只能流向团队 Stripe
+                        logger.error(
+                            f"任务 {task_id} 团队 Stripe Transfer 失败，不回退钱包: {stripe_err}"
+                        )
+                        payout_savepoint.rollback()
+                        raise HTTPException(status_code=500, detail={
+                            "error_code": "team_payout_failed",
+                            "message": f"Team Stripe transfer failed: {stripe_err}",
+                        })
+                    # 个人任务：Stripe 明确拒绝 → 回退到钱包入账（不会双重支付）
                     logger.warning(
                         f"任务 {task_id} Stripe Transfer 被拒绝，回退到钱包入账: {stripe_err}"
                     )
@@ -4347,7 +4363,18 @@ def confirm_task_completion(
                     )
                     raise
             else:
-                # 无 Stripe Connect 账户 → 入本地钱包（用户后续可绑定 Stripe 后提现）
+                if is_team_task:
+                    # 团队任务不应走到此分支（resolve_payout_destination 会抛 HTTPException）
+                    # 防御性编程：若到这里，说明 helper 返回了 None 但没抛异常，视为错误
+                    logger.error(
+                        f"任务 {task_id} 团队任务无 Stripe 目的地，不回退钱包"
+                    )
+                    payout_savepoint.rollback()
+                    raise HTTPException(status_code=500, detail={
+                        "error_code": "team_payout_failed",
+                        "message": "Team task has no Stripe destination",
+                    })
+                # 个人任务无 Stripe Connect 账户 → 入本地钱包（用户后续可绑定 Stripe 后提现）
                 from app.wallet_service import credit_wallet
                 credit_wallet(
                     db=db,
@@ -4373,10 +4400,14 @@ def confirm_task_completion(
             task.is_confirmed = 1
 
             payout_savepoint.commit()
+        except HTTPException:
+            # 团队任务 payout 失败 → 抛给客户端，不静默吞掉 (spec §3.2 v2)
+            # savepoint 已在内部 rollback
+            raise
         except Exception as e:
             payout_savepoint.rollback()
             logger.error(f"任务报酬支付失败 for task {task_id}: {e}", exc_info=True)
-            # 支付失败不影响任务完成确认流程
+            # 支付失败不影响任务完成确认流程（仅个人任务路径）
 
     # 提交所有 savepoint 内的变更（积分奖励、活动奖励、钱包入账）
     try:
