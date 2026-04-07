@@ -3143,11 +3143,16 @@ async def create_consultation(
             "is_existing": True,
         }
 
-    # 4. 创建 ServiceApplication（status=consulting）
+    # 4. 解析 taker（个人 or 团队 owner）— 必须在创建 ServiceApplication 前完成，
+    # 因为团队服务的 service.expert_id 为 NULL，application.expert_id 必须用
+    # 解析后的 taker_id（团队服务时 = 团队 owner 的 user_id），保持 Y-scheme 对齐。
+    taker_id_value, taker_expert_id_value = await resolve_task_taker_from_service(db, service)
+
+    # 5. 创建 ServiceApplication（status=consulting）
     new_application = models.ServiceApplication(
         service_id=service_id,
         applicant_id=current_user.id,
-        expert_id=service.expert_id,
+        expert_id=taker_id_value,  # 团队服务时是团队 owner 的 user_id
         service_owner_id=service.owner_user_id,
         currency=service.currency,
         is_flexible=1,
@@ -3156,8 +3161,7 @@ async def create_consultation(
     db.add(new_application)
     await db.flush()  # get new_application.id
 
-    # 5. 创建占位 Task（status=consulting）
-    taker_id_value, taker_expert_id_value = await resolve_task_taker_from_service(db, service)
+    # 6. 创建占位 Task（status=consulting）
     new_task = models.Task(
         title=f"咨询: {service.service_name}",
         description=f"咨询服务: {service.service_name}",
