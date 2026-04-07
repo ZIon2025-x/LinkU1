@@ -8334,14 +8334,18 @@ def confirm_task_complete(
     # 优先直接 Stripe Transfer（接单者有 Connect 账户时），否则入本地钱包
     try:
         # 确保 escrow_amount 正确（任务金额 - 平台服务费）
+        # I8: 使用 Decimal 保精度，避免浮点累加误差
         if task.escrow_amount <= 0:
-            task_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
+            task_amount_dec = Decimal(str(task.agreed_reward)) if task.agreed_reward is not None else (
+                Decimal(str(task.base_reward)) if task.base_reward is not None else Decimal('0')
+            )
             from app.utils.fee_calculator import calculate_application_fee
             task_source = getattr(task, "task_source", None)
             task_type = getattr(task, "task_type", None)
-            application_fee = calculate_application_fee(task_amount, task_source, task_type)
-            task.escrow_amount = max(0.0, task_amount - application_fee)
-            logger.info(f"重新计算 escrow_amount: 任务金额={task_amount}, 服务费={application_fee}, escrow={task.escrow_amount}")
+            # calculate_application_fee 返回 float — 用 str 中转以避免二进制浮点误差
+            application_fee_dec = Decimal(str(calculate_application_fee(float(task_amount_dec), task_source, task_type)))
+            task.escrow_amount = max(Decimal('0'), task_amount_dec - application_fee_dec)
+            logger.info(f"重新计算 escrow_amount: 任务金额={task_amount_dec}, 服务费={application_fee_dec}, escrow={task.escrow_amount}")
 
         escrow_amount = Decimal(str(task.escrow_amount))
         currency = (task.currency or "GBP").upper()
