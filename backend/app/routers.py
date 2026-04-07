@@ -8347,21 +8347,39 @@ def confirm_task_complete(
         currency = (task.currency or "GBP").upper()
         payout_idempotency_key = f"earning:task:{task_id}:user:{taker.id}"
 
-        if taker.stripe_account_id:
-            # 有 Stripe Connect 账户 → 尝试直接转账，失败则回退到钱包
+        # Team-aware destination: 团队任务 → experts.stripe_account_id,
+        # 个人任务 → taker.stripe_account_id. spec §3.2 (v2)
+        from app.services.expert_task_resolver import resolve_payout_destination
+        is_team_task = bool(task.taker_expert_id)
+        destination_stripe_id = resolve_payout_destination(db, task)
+
+        if destination_stripe_id:
+            # 有 Stripe Connect 账户 → 尝试直接转账
             amount_minor = int(escrow_amount * 100)
             try:
                 stripe_transfer = stripe.Transfer.create(
                     amount=amount_minor,
                     currency=currency.lower(),
-                    destination=taker.stripe_account_id,
+                    destination=destination_stripe_id,
                     description=f"Task #{task_id} payout",
-                    metadata={"task_id": str(task_id), "taker_id": str(taker.id)},
+                    metadata={
+                        "task_id": str(task_id),
+                        "taker_id": str(taker.id),
+                        "taker_expert_id": str(task.taker_expert_id) if task.taker_expert_id else "",
+                    },
                     idempotency_key=payout_idempotency_key,
                 )
                 logger.info(f"✅ 直接 Stripe Transfer: task={task_id}, transfer={stripe_transfer.id}, amount=£{escrow_amount:.2f}")
                 payout_method = "stripe_transfer"
             except stripe.error.StripeError as stripe_err:
+                if is_team_task:
+                    # 团队任务不回退钱包
+                    logger.error(f"任务 {task_id} 团队 Stripe Transfer 失败: {stripe_err}")
+                    db.rollback()
+                    raise HTTPException(status_code=500, detail={
+                        "error_code": "team_payout_failed",
+                        "message": f"Team Stripe transfer failed: {stripe_err}",
+                    })
                 # Stripe 明确拒绝 → 回退到钱包
                 logger.warning(f"任务 {task_id} Stripe Transfer 被拒绝，回退到钱包入账: {stripe_err}")
                 from app.wallet_service import credit_wallet
@@ -8378,6 +8396,14 @@ def confirm_task_complete(
                 )
                 payout_method = "wallet_fallback"
         else:
+            if is_team_task:
+                # 防御性：团队任务必须走 Stripe，无 destination 视为错误
+                logger.error(f"任务 {task_id} 团队任务无 Stripe 目的地")
+                db.rollback()
+                raise HTTPException(status_code=500, detail={
+                    "error_code": "team_payout_failed",
+                    "message": "Team task has no Stripe destination",
+                })
             # 无 Stripe Connect 账户 → 入本地钱包
             from app.wallet_service import credit_wallet
             credit_wallet(
@@ -8408,6 +8434,9 @@ def confirm_task_complete(
             "currency": currency
         }
 
+    except HTTPException:
+        # 团队任务 payout 失败的结构化错误 → 原样抛出 (spec §3.2 v2)
+        raise
     except Exception as e:
         logger.error(f"Error confirming task {task_id}: {e}")
         db.rollback()
