@@ -105,3 +105,47 @@ async def test_resolve_service_unknown_owner_type(mock_db):
     with pytest.raises(HTTPException) as exc:
         await resolve_task_taker_from_service(mock_db, s)
     assert exc.value.status_code == 500
+
+
+@pytest.fixture
+def fake_activity():
+    a = MagicMock()
+    a.owner_type = 'expert'
+    a.owner_id = 'e_test01'
+    a.currency = 'GBP'
+    a.expert_id = 'u_legacy01'
+    return a
+
+
+@pytest.mark.asyncio
+async def test_resolve_activity_team_happy_path(mock_db, fake_activity, fake_expert, fake_owner_member):
+    from app.services.expert_task_resolver import resolve_task_taker_from_activity
+    mock_db.get.return_value = fake_expert
+    result_obj = MagicMock()
+    result_obj.scalar_one_or_none.return_value = fake_owner_member
+    mock_db.execute.return_value = result_obj
+    taker_id, taker_expert_id = await resolve_task_taker_from_activity(mock_db, fake_activity)
+    assert taker_id == 'u_owner01'
+    assert taker_expert_id == 'e_test01'
+
+
+@pytest.mark.asyncio
+async def test_resolve_activity_user_legacy(mock_db):
+    from app.services.expert_task_resolver import resolve_task_taker_from_activity
+    a = MagicMock()
+    a.owner_type = 'user'
+    a.expert_id = 'u_legacy01'
+    taker_id, taker_expert_id = await resolve_task_taker_from_activity(mock_db, a)
+    assert taker_id == 'u_legacy01'
+    assert taker_expert_id is None
+
+
+@pytest.mark.asyncio
+async def test_resolve_activity_team_non_gbp(mock_db, fake_activity, fake_expert):
+    from app.services.expert_task_resolver import resolve_task_taker_from_activity
+    fake_activity.currency = 'EUR'
+    mock_db.get.return_value = fake_expert
+    with pytest.raises(HTTPException) as exc:
+        await resolve_task_taker_from_activity(mock_db, fake_activity)
+    assert exc.value.status_code == 409
+    assert exc.value.detail['error_code'] == 'expert_currency_unsupported'
