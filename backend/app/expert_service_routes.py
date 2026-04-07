@@ -118,6 +118,18 @@ async def create_expert_service(
     expert = await _get_expert_or_404(db, expert_id)
     await _get_member_or_403(db, expert_id, current_user.id, required_roles=["owner", "admin"])
 
+    if not expert.stripe_onboarding_complete:
+        raise HTTPException(status_code=409, detail={
+            "error_code": "expert_stripe_not_ready",
+            "message": "Team must complete Stripe onboarding before publishing services",
+        })
+
+    if (body.currency or 'GBP').upper() != 'GBP':
+        raise HTTPException(status_code=422, detail={
+            "error_code": "expert_currency_unsupported",
+            "message": "Team services only support GBP currently",
+        })
+
     data = body.model_dump(exclude_unset=True)
     service = models.TaskExpertService(
         owner_type="expert",
