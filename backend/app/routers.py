@@ -6518,6 +6518,82 @@ def create_payment(
     return {"checkout_url": session.url}
 
 
+def _handle_dispute_team_reversal(db, task_id: int) -> None:
+    """Phase 7: 达人团队任务争议时自动反转 Stripe Transfer。
+
+    当客户对达人团队任务发起 Stripe 争议时，资金已经通过 Transfer
+    划拨到团队的 Connect 账户。此函数调用 stripe.Transfer.create_reversal
+    将资金拉回平台账户（争议金额将从该处扣除）。
+
+    个人任务（``taker_expert_id=None``）不在此处理：沿用旧的冻结 +
+    credit_wallet 退款流程。
+
+    spec §3.5 + §1.3（PaymentTransfer 审计字段）
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+
+    # 查找该任务对应的 PaymentTransfer 记录
+    pt = db.query(models.PaymentTransfer).filter(
+        models.PaymentTransfer.task_id == task_id
+    ).first()
+
+    if not pt:
+        # 没有转账记录 —— 说明尚未结算，争议在结算前触发，无需反转
+        logger.info(
+            f"Dispute on task {task_id}: no PaymentTransfer record yet, "
+            f"no reversal needed"
+        )
+        return
+
+    if not pt.taker_expert_id:
+        # 个人任务，由原冻结流程处理，此处早退
+        return
+
+    if pt.status != "succeeded":
+        # 已反转 / 从未成功 / 仍在重试 —— 幂等保护
+        logger.info(
+            f"Dispute on task {task_id}: PaymentTransfer status is {pt.status}, "
+            f"no reversal action (idempotent)"
+        )
+        return
+
+    if not pt.transfer_id:
+        logger.warning(
+            f"Dispute on task {task_id}: PaymentTransfer marked succeeded "
+            f"but has no transfer_id"
+        )
+        return
+
+    try:
+        reversal = stripe.Transfer.create_reversal(
+            pt.transfer_id,
+            amount=int(float(pt.amount) * 100),  # decimal 英镑 -> 便士
+            metadata={
+                "task_id": str(task_id),
+                "reason": "dispute",
+                "payment_transfer_id": str(pt.id),
+            },
+        )
+        # 填充审计字段（spec §1.3）
+        pt.stripe_reversal_id = reversal.id
+        pt.status = "reversed"
+        pt.reversed_at = datetime.utcnow()
+        pt.reversed_reason = "dispute"
+        db.commit()
+        logger.warning(
+            f"✅ 达人团队任务 {task_id} 因争议已反转 Stripe Transfer: "
+            f"reversal_id={reversal.id}"
+        )
+    except stripe.error.StripeError as e:
+        # 常见原因：团队 Stripe 余额不足。不更新 pt.status，保持 succeeded，
+        # 便于管理员介入手动处理。
+        logger.error(
+            f"❌ 反转达人团队争议任务 {task_id} 的转账失败: {e}",
+            exc_info=True,
+        )
+
+
 def _handle_account_updated(db, acct):
     """Handle Stripe ``account.updated`` events for expert team Connect accounts.
 
@@ -7780,7 +7856,18 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 )
         except Exception as e:
             logger.error(f"charge.dispute.created 通知处理失败: {e}", exc_info=True)
-    
+
+        # Phase 7: 达人团队任务自动反转 Transfer
+        if task_id:
+            try:
+                _handle_dispute_team_reversal(db, task_id)
+            except Exception as e:
+                logger.error(
+                    f"_handle_dispute_team_reversal failed for task {task_id}: {e}",
+                    exc_info=True,
+                )
+                # 不让 webhook 失败 —— 冻结与通知已经完成
+
     elif event_type == "charge.dispute.updated":
         dispute = event_data
         charge_id = dispute.get("charge")
