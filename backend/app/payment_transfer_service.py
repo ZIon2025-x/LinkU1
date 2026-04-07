@@ -408,6 +408,17 @@ def retry_failed_transfer(
             return True, None
         transfer_record.last_error = error_msg
         transfer_record.status = "retrying"
+        # I1: Unconditionally increment retry_count to ensure progress to failed state.
+        # (The whitelist-based increment inside execute_transfer targets individual taker
+        # semantics and does not fire for generic Stripe/unknown errors — without this
+        # bump the team branch would tight-loop forever.)
+        transfer_record.retry_count = (transfer_record.retry_count or 0) + 1
+        # I2: Respect RETRY_DELAYS schedule so the scheduler waits before re-picking this row.
+        if transfer_record.status == "retrying":
+            delay_idx = min(transfer_record.retry_count - 1, len(RETRY_DELAYS) - 1)
+            delay_seconds = RETRY_DELAYS[delay_idx] if delay_idx >= 0 else RETRY_DELAYS[0]
+            from datetime import datetime, timedelta
+            transfer_record.next_retry_at = datetime.utcnow() + timedelta(seconds=delay_seconds)
         if transfer_record.retry_count >= transfer_record.max_retries:
             transfer_record.status = "failed"
             transfer_record.next_retry_at = None
