@@ -1254,9 +1254,9 @@ async def get_expert_stripe_status(
     db: AsyncSession = Depends(get_async_db_dependency),
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
 ):
-    """获取达人团队 Stripe Connect 状态（Owner/Admin）"""
+    """获取达人团队 Stripe Connect 状态（Owner/Admin/Member）"""
     expert = await _get_expert_or_404(db, expert_id)
-    await _get_member_or_403(db, expert_id, current_user.id, required_roles=["owner", "admin"])
+    await _get_member_or_403(db, expert_id, current_user.id, required_roles=["owner", "admin", "member"])
 
     if not expert.stripe_account_id:
         return {
