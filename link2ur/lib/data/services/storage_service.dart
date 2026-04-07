@@ -526,6 +526,7 @@ class StorageService {
   Future<void> clearAll() async {
     await clearTokens();
     await clearUserInfo();
+    await clearSelectedExpertId();
     await clearCache();
     // 重置所有内存缓存
     _cachedLanguage = null;

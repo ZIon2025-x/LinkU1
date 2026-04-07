@@ -102,7 +102,6 @@ class _ExpertTeamDetailContent extends StatelessWidget {
       orElse: () => const ExpertMember(id: -1, userId: '', role: ''),
     );
     final isInTeam = currentMember.id != -1;
-    final isOwner = isInTeam && currentMember.isOwner;
     final canManage = isInTeam && currentMember.canManage;
     final previewMembers = members.take(5).toList();
 
@@ -120,117 +119,19 @@ class _ExpertTeamDetailContent extends StatelessWidget {
             const SizedBox(height: 16),
           ],
           _buildActionButtons(context, team, isInTeam, canManage, currentMember),
-          // 管理面板（Owner/Admin 可见）
-          if (canManage) ...[
-            const SizedBox(height: 24),
-            const Divider(),
-            const SizedBox(height: 8),
-            Text(context.l10n.expertTeamManageMembers,
-                style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            _ManagementTile(
-              icon: Icons.miscellaneous_services,
-              title: '服务管理',
-              onTap: () => context.push('/expert-teams/$expertId/services'),
-            ),
-            _ManagementTile(
-              icon: Icons.local_offer,
-              title: context.l10n.expertTeamCoupons,
-              onTap: () => context.push('/expert-teams/$expertId/coupons'),
-            ),
+          // 论坛板块入口（所有人可见，如果板块存在）
+          if (team.forumCategoryId != null) ...[
+            const SizedBox(height: 16),
             _ManagementTile(
               icon: Icons.forum,
               title: '达人板块',
-              onTap: () {
-                if (team.forumCategoryId != null) {
-                  context.push('/forum/category/${team.forumCategoryId}');
-                }
-              },
+              onTap: () =>
+                  context.push('/forum/category/${team.forumCategoryId}'),
             ),
-            if (isOwner) ...[
-              _ManagementTile(
-                icon: Icons.account_balance,
-                title: '收款账户设置',
-                onTap: () => _setupStripeConnect(context),
-              ),
-              _ManagementTile(
-                icon: Icons.toggle_on,
-                title: team.allowApplications ? context.l10n.expertTeamApplicationsDisabled : context.l10n.expertTeamApplicationsEnabled,
-                onTap: () {
-                  context.read<ExpertTeamBloc>().add(
-                    ExpertTeamToggleAllowApplications(
-                      expertId: expertId,
-                      allow: !team.allowApplications,
-                    ),
-                  );
-                },
-              ),
-              _ManagementTile(
-                icon: Icons.edit,
-                title: '编辑团队信息',
-                onTap: () => context.push('/expert-teams/$expertId/edit'),
-              ),
-              _ManagementTile(
-                icon: Icons.delete_forever,
-                title: '注销团队',
-                color: Colors.red,
-                onTap: () => _confirmDissolve(context),
-              ),
-            ],
           ],
         ],
       ),
     );
-  }
-
-  void _confirmDissolve(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('注销团队'),
-        content: const Text('注销后所有服务将下架，达人板块将隐藏。此操作不可撤销。'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(MaterialLocalizations.of(ctx).cancelButtonLabel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('确认注销', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true && context.mounted) {
-      context.read<ExpertTeamBloc>().add(ExpertTeamDissolve(expertId));
-    }
-  }
-
-  Future<void> _setupStripeConnect(BuildContext context) async {
-    try {
-      final repo = context.read<ExpertTeamRepository>();
-      final result = await repo.createStripeConnect(expertId);
-      if (!context.mounted) return;
-
-      final url = result['onboarding_url'] as String?;
-      if (url != null) {
-        // Open in browser
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(result['message'] ?? '请在浏览器中完成设置')),
-        );
-        // TODO: launch URL in browser (url_launcher)
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(result['message'] ?? 'Stripe 账户已设置')),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('设置失败: $e')),
-        );
-      }
-    }
   }
 
   Widget _buildHeader(BuildContext context, ExpertTeam team) {
@@ -335,7 +236,8 @@ class _ExpertTeamDetailContent extends StatelessWidget {
             ),
             if (team.memberCount > 5)
               TextButton(
-                onPressed: () => context.push('/expert-teams/$expertId/members'),
+                onPressed: () => context.push(
+                    '/expert-dashboard/$expertId/management/members'),
                 child: const Text('查看全部'),
               ),
           ],
@@ -360,11 +262,14 @@ class _ExpertTeamDetailContent extends StatelessWidget {
     final bloc = context.read<ExpertTeamBloc>();
 
     if (canManage) {
+      // 团队成员/管理员：跳转到统一管理中心
       return SizedBox(
         width: double.infinity,
-        child: ElevatedButton(
-          onPressed: () => context.push('/expert-teams/$expertId/members'),
-          child: Text(context.l10n.expertTeamManageMembers),
+        child: ElevatedButton.icon(
+          onPressed: () =>
+              context.push('/expert-dashboard/$expertId/management'),
+          icon: const Icon(Icons.settings_outlined),
+          label: Text(context.l10n.expertDashboardManagement),
         ),
       );
     }
@@ -428,20 +333,18 @@ class _ManagementTile extends StatelessWidget {
   final IconData icon;
   final String title;
   final VoidCallback onTap;
-  final Color? color;
 
   const _ManagementTile({
     required this.icon,
     required this.title,
     required this.onTap,
-    this.color,
   });
 
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      leading: Icon(icon, color: color),
-      title: Text(title, style: color != null ? TextStyle(color: color) : null),
+      leading: Icon(icon),
+      title: Text(title),
       trailing: const Icon(Icons.chevron_right, size: 20),
       onTap: onTap,
       dense: true,
