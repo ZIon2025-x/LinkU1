@@ -13,17 +13,22 @@ def _make_db_with_expert(expert):
     return db
 
 
-def _make_db_with_expert_and_user(expert, user):
-    """Helper: first query returns expert, second returns user."""
+def _make_db_with_user(user):
+    """Helper: db.query(User).filter(...).first() returns user."""
     db = MagicMock()
-    results = [expert, user]
+    q = MagicMock()
+    q.filter.return_value.first.return_value = user
+    db.query.return_value = q
+    return db
 
-    def _query(*args, **kwargs):
-        q = MagicMock()
-        q.filter.return_value.first.return_value = results.pop(0) if results else None
-        return q
 
-    db.query.side_effect = _query
+def _make_db_with_expert_and_user(expert, user):
+    """Helper: first query returns expert, second returns user (or single-query fallback)."""
+    db = MagicMock()
+    q = MagicMock()
+    # Individual path only queries User once; return user
+    q.filter.return_value.first.return_value = user if expert is None else expert
+    db.query.return_value = q
     return db
 
 

@@ -170,3 +170,48 @@ def resolve_task_taker_from_activity_sync(
             "error_code": "unknown_owner_type",
             "message": f"Unknown activity owner_type: {activity.owner_type}",
         })
+
+
+def resolve_payout_destination(
+    db: Session,
+    task: "models.Task",
+) -> Optional[str]:
+    """
+    Returns the Stripe Connect destination account ID for this task's payout.
+    Sync version (for use in sync endpoints — most payout sites are sync).
+
+    spec §3.2 (v2 — payout site team-awareness)
+
+    For team tasks (taker_expert_id non-null): returns experts.stripe_account_id.
+    For individual tasks: returns task.taker's stripe_account_id (or None — caller
+        falls back to wallet).
+
+    Raises HTTPException 500 for team tasks if Stripe state is bad (defense-in-depth;
+    should be unreachable because publish-time gate prevents it).
+    """
+    if task.taker_expert_id:
+        expert = db.query(Expert).filter(Expert.id == task.taker_expert_id).first()
+        if not expert:
+            raise HTTPException(status_code=500, detail={
+                "error_code": "team_not_found",
+                "message": "Expert team referenced by task no longer exists",
+            })
+        if not expert.stripe_account_id:
+            raise HTTPException(status_code=500, detail={
+                "error_code": "team_no_stripe_account",
+                "message": "Team has no Stripe Connect account configured",
+            })
+        if not expert.stripe_onboarding_complete:
+            raise HTTPException(status_code=500, detail={
+                "error_code": "team_stripe_not_ready",
+                "message": "Team Stripe Connect onboarding not complete",
+            })
+        return expert.stripe_account_id
+
+    # Individual taker path
+    if not getattr(task, 'taker_id', None):
+        return None
+    taker = db.query(models.User).filter(models.User.id == task.taker_id).first()
+    if not taker:
+        return None
+    return getattr(taker, 'stripe_account_id', None)
