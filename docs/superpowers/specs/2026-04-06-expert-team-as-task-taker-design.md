@@ -1,9 +1,11 @@
 # 达人团队作为任务接单方 —— 设计文档
 
-**日期:** 2026-04-06
-**状态:** Draft(等待实施 plan)
+**日期:** 2026-04-06(初版),2026-04-07(v2 修订)
+**状态:** Draft v2(基于 Phase 0 discovery 重大修订,等待实施 plan v2)
 **作者:** Brainstorm session with Claude
 **取代:** `docs/superpowers/plans/2026-04-04-expert-team-phase5-chat-multiuser.md`(该 plan 在本 spec 确定方向后废弃,多人聊天问题将在团队接单模型落地后重新评估)
+
+> **v2 修订说明:** 初版 spec 假设要新建 `expert_stripe_transfers` 表 + 新 Celery 任务 + 新 Stripe Onboarding 端点。Phase 0 discovery (`docs/superpowers/plans/2026-04-07-expert-team-discovery.md`) 揭示这些**绝大多数已经存在**:`payment_transfers` 表 + `payment_transfer_service.py` + `expert_routes.py` 里的 stripe-connect 端点。本 v2 把"新建"全部改为"扩展现有",大幅减少改动面。
 
 ---
 
@@ -18,6 +20,17 @@
 5. **`activities` 表目前是"个人所有"模型** —— `expert_id FK → users.id`,无多态列。本 spec 将为其引入多态所有权。
 6. **客户对达人团队的交互是"被动履约"**:团队只发布服务 / 活动,客户浏览下单,系统自动创建 Task,团队无"接单"动作。
 7. **平台钱包 (`wallet_accounts`) 只支持 user**,没有 expert 支持(`wallet_models.py:8-24`)。本 spec **不引入** expert 钱包表。
+8. **🆕 (Phase 0 discovery)** 现有支付基础设施已经为个人 taker 完整实现,本 spec 主要是**扩展**它们支持团队 taker:
+   - `payment_transfers` 表 (`models.py:3248`):manual transfer 审计表,有 `task_id`/`taker_id`/`amount`/`status`/`retry_count`/`transfer_id`/`last_error`/`next_retry_at`/`succeeded_at`/`extra_metadata`
+   - `payment_transfer_service.py`:`create_transfer_record()`、`execute_transfer()`、`retry_failed_transfer()`、`process_pending_transfers()` —— 完整的 manual transfer + retry 实现
+   - `expert_routes.py:1176, 1250`:**已存在**的 Stripe Onboarding 端点 `POST /api/experts/{id}/stripe-connect` + `GET /api/experts/{id}/stripe-connect/status`,用 `type='express'` 创建 Account
+   - `routers.py:7620`:**已存在**的 `charge.dispute.created` webhook handler(冻结任务 + 通知,**未做反向 transfer**)
+   - `refund_service.py:131`:**已存在**的 `stripe.Transfer.create_reversal` 调用,在 admin 退款流程里自动反向相关 PaymentTransfer
+   - `wallet_service.py:124` `credit_wallet()`:个人 taker 的 wallet credit 入口(在 transfer 失败时 fallback 用)
+   - `_get_member_or_403` 参数名是 `required_roles=`(不是 `roles=`)
+   - `STRIPE_WEBHOOK_SECRET` 是 webhook 验签的环境变量名
+   - Celery 用 sync session(`from app.database import SessionLocal`),没有 `backend/app/tasks/` 目录,Celery 任务文件全部在 `backend/app/celery_*.py`
+   - 平台抽成函数:`from app.utils.fee_calculator import calculate_application_fee_pence`(参数是**便士 int**,不是英镑 Decimal)
 
 ---
 
@@ -86,56 +99,97 @@ COMMIT;
 
 **保留 `activities.expert_id` 不 DROP 的理由:** 大量既有代码用 `activities.expert_id = :user_id` 过滤,丢字段会导致 grep 风险。让它作为"团队代表"的自然人指针继续存在,语义与 `tasks.taker_id` 一致。
 
-### 1.3 `expert_stripe_transfers` 审计表(新建)
+### 1.3 扩展现有 `payment_transfers` 表(v2 修订)
 
-**迁移文件:** `N+2_create_expert_stripe_transfers.sql`
+> **v2:** 不再新建 `expert_stripe_transfers`。现有 `payment_transfers` (`models.py:3248`) 已经包含 90% 字段,只需 ALTER 加 6 列 + 改 status 取值约束。这让团队任务能直接复用 `payment_transfer_service.py` 的所有 manual transfer + retry 逻辑。
+
+**现有 `payment_transfers` 字段映射:**
+
+| 字段 | 已有 | 新需求 |
+|------|------|---------|
+| id, task_id, taker_id, poster_id, amount, currency | ✓ | — |
+| transfer_id (Stripe tr_xxx) | ✓ | — |
+| status (pending/succeeded/failed/retrying) | ✓ | 加 `'reversed'` |
+| retry_count, max_retries, last_error, next_retry_at | ✓ | — |
+| succeeded_at, created_at, updated_at, extra_metadata | ✓ | — |
+| **taker_expert_id** | — | 新增 (FK experts) |
+| **idempotency_key** | — | 新增 (UNIQUE) |
+| **stripe_charge_id** | — | 新增 (dispute 反查用) |
+| **stripe_reversal_id** | — | 新增 (反向跟踪) |
+| **reversed_at, reversed_reason** | — | 新增 (反向审计) |
+
+**迁移文件:** `N+2_extend_payment_transfers_for_team_taker.sql`
 
 ```sql
+-- ===========================================
+-- 迁移 N+2: 扩展 payment_transfers 表支持团队接单
+-- spec §1.3 (v2)
+-- ===========================================
+
 BEGIN;
 
-CREATE TABLE expert_stripe_transfers (
-    id                   BIGSERIAL PRIMARY KEY,
-    task_id              INTEGER NOT NULL REFERENCES tasks(id) ON DELETE RESTRICT,
-    expert_id            VARCHAR(8) NOT NULL REFERENCES experts(id) ON DELETE RESTRICT,
-    amount               DECIMAL(12,2) NOT NULL,   -- 净额(扣除 application_fee 后打给团队的金额)
-    currency             VARCHAR(3) NOT NULL DEFAULT 'GBP',
-    stripe_transfer_id   VARCHAR(255) NULL,        -- Stripe 返回的 tr_xxx
-    stripe_reversal_id   VARCHAR(255) NULL,        -- 被 reverse 时的 trr_xxx
-    stripe_charge_id     VARCHAR(255) NULL,        -- 对应客户付款的 Charge,用于 dispute 反查
-    status               VARCHAR(20) NOT NULL,     -- pending / succeeded / failed / reversed
-    idempotency_key      VARCHAR(64) NOT NULL,     -- 'task_{task_id}_transfer'
-    error_message        TEXT NULL,
-    error_code           VARCHAR(100) NULL,        -- Stripe error code(如果有)
-    attempt_count        INTEGER NOT NULL DEFAULT 0,
-    last_attempt_at      TIMESTAMPTZ NULL,
-    reversed_at          TIMESTAMPTZ NULL,
-    reversed_reason      TEXT NULL,                -- dispute / refund / manual
-    created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+-- 1. 新增团队接单字段
+ALTER TABLE payment_transfers
+  ADD COLUMN taker_expert_id VARCHAR(8) NULL
+    REFERENCES experts(id) ON DELETE RESTRICT,
+  ADD COLUMN idempotency_key VARCHAR(64) NULL,
+  ADD COLUMN stripe_charge_id VARCHAR(255) NULL,
+  ADD COLUMN stripe_reversal_id VARCHAR(255) NULL,
+  ADD COLUMN reversed_at TIMESTAMPTZ NULL,
+  ADD COLUMN reversed_reason TEXT NULL;
 
-    CONSTRAINT uq_est_task UNIQUE (task_id),
-    CONSTRAINT uq_est_idempotency UNIQUE (idempotency_key),
-    CONSTRAINT chk_est_status CHECK (status IN ('pending','succeeded','failed','reversed'))
-);
+-- 2. 回填现有行的 idempotency_key (让 UNIQUE 约束能加上)
+UPDATE payment_transfers
+SET idempotency_key = 'legacy_' || id::text
+WHERE idempotency_key IS NULL;
 
-CREATE INDEX ix_est_expert
-  ON expert_stripe_transfers(expert_id, created_at DESC);
+-- 3. 加 NOT NULL + UNIQUE 约束
+ALTER TABLE payment_transfers
+  ALTER COLUMN idempotency_key SET NOT NULL,
+  ADD CONSTRAINT uq_payment_transfers_idempotency UNIQUE (idempotency_key);
 
-CREATE INDEX ix_est_status
-  ON expert_stripe_transfers(status)
-  WHERE status IN ('pending', 'failed');
+-- 4. 索引
+CREATE INDEX ix_pt_taker_expert
+  ON payment_transfers(taker_expert_id)
+  WHERE taker_expert_id IS NOT NULL;
 
-CREATE INDEX ix_est_charge
-  ON expert_stripe_transfers(stripe_charge_id)
+CREATE INDEX ix_pt_charge
+  ON payment_transfers(stripe_charge_id)
   WHERE stripe_charge_id IS NOT NULL;
+
+-- 5. status 约束(加 'reversed' 取值)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.check_constraints
+    WHERE constraint_name = 'chk_payment_transfers_status'
+  ) THEN
+    ALTER TABLE payment_transfers
+      ADD CONSTRAINT chk_payment_transfers_status
+      CHECK (status IN ('pending','succeeded','failed','retrying','reversed'));
+  END IF;
+END $$;
+
+COMMENT ON COLUMN payment_transfers.taker_expert_id IS
+  '团队接单时填团队 ID。非 NULL 时 destination 是 experts.stripe_account_id。';
+COMMENT ON COLUMN payment_transfers.idempotency_key IS
+  '幂等键。新行: task_{task_id}_transfer。老行: legacy_{id}。';
+COMMENT ON COLUMN payment_transfers.stripe_charge_id IS
+  '原始 Charge ID,dispute 反查用';
+COMMENT ON COLUMN payment_transfers.stripe_reversal_id IS
+  '被 reverse 时的 Stripe trr_xxx';
 
 COMMIT;
 ```
 
-**关键不变量:**
-- `UNIQUE(task_id)`:一个任务最多一条 transfer 记录。反向(dispute / refund)通过 **in-place update** 同一行的 `status='reversed'` + 填 `stripe_reversal_id` 实现,**不另开新行**。
-- `UNIQUE(idempotency_key)`:第二次 INSERT 尝试会失败,配合 `SELECT ... FOR UPDATE SKIP LOCKED` 处理并发 worker。
-- 这张表**不是钱包** —— 没有余额字段。团队真实可用余额的事实来源是 Stripe Dashboard。
+**关键不变量(v2):**
+- `UNIQUE(idempotency_key)` 配合 `SELECT ... FOR UPDATE SKIP LOCKED` 处理并发 worker
+- 团队任务的 idempotency_key 格式 = `'task_{task_id}_transfer'`
+- 反向(dispute / refund)通过 **in-place update** `status='reversed'` + 填 `stripe_reversal_id`,**不另开新行**
+- `payment_transfers.taker_id` 在团队任务时仍填 owner.user_id(Y 方案对齐),`taker_expert_id` 标识真正经济主体
+- 这张表**不是钱包** —— 没有余额字段
+
+**ORM 模型变更:** `models.py:3248` 的 `PaymentTransfer` 类追加 6 个新 Column 字段,**不需要新建模型**。
 
 ### 1.4 币种约束 —— 团队任务强制 GBP
 
@@ -147,12 +201,12 @@ COMMIT;
 2. `POST /api/experts/{id}/activities`(§2.2)同上
 3. `resolve_task_taker_from_service()`(§4.2)在 `owner_type='expert'` 分支校验 `service.currency == 'GBP'`,否则抛 409 `error_code='expert_currency_unsupported'`
 4. `resolve_task_taker_from_activity()`(§4.3a)在 `owner_type='expert'` 分支校验 `activity.currency == 'GBP'`,同上
-5. `enqueue_expert_transfer` Celery 任务(§3.2)在创建 `expert_stripe_transfers` 行前断言 `task.currency == 'GBP'`,异常则标 `failed`,error_code=`currency_unsupported`,人工介入
+5. `payment_transfer_service.execute_transfer`(§3.2)在调 Stripe 之前断言 `transfer_record.currency == 'GBP'`,异常则标 `failed`,error_code=`currency_unsupported`
 6. `§6.2` 回填脚本只回填 `currency = 'GBP'` 的在飞任务
 
 **个人任务 / 个人服务的币种**不受此约束(继续走原流程)。
 
-**`expert_stripe_transfers.currency` 列**保留(`DEFAULT 'GBP'`),为未来扩展留口子,但**当前 spec 范围内只允许 'GBP'**。
+**`payment_transfers.currency` 列已存在**(`DEFAULT 'GBP'`),为未来扩展留口子,但**当前 spec 范围内对团队任务只允许 'GBP'**。
 
 ---
 
@@ -199,25 +253,23 @@ if (body.currency or 'GBP').upper() != 'GBP':
 
 **现有个人活动创建端点** (`multi_participant_routes.py:1754-1939`) **不动**,保持个人身份创建的老流程作为 grandfather 路径。
 
-### 2.3 Stripe Onboarding 入口 + 状态查询
+### 2.3 Stripe Onboarding 入口 + 状态查询(v2:已存在)
 
-**新建文件 `backend/app/expert_stripe_routes.py`**,包含两个端点:
+> **v2 修订:** Phase 0 discovery 发现这两个端点**已经存在**:
 
-```
-POST /api/experts/{expert_id}/stripe/onboarding
-  鉴权: owner 或 admin
-  行为: 若 experts.stripe_account_id 为空,先调 stripe.Account.create(type=<see §8>, ...);
-        然后调 stripe.AccountLink.create(account=stripe_account_id, type='account_onboarding', ...)
-  返回: { "url": "<stripe onboarding url>", "expires_at": 1234567890 }
+- `POST /api/experts/{expert_id}/stripe-connect` (`expert_routes.py:1176`) —— 创建 Stripe Express Account + AccountLink
+- `GET /api/experts/{expert_id}/stripe-connect/status` (`expert_routes.py:1250`) —— 查 Account 状态,会自动同步 `stripe_onboarding_complete` 字段
 
-GET /api/experts/{expert_id}/stripe/status
-  鉴权: owner/admin/member(所有活跃成员可查)
-  返回: {
-    "onboarding_complete": true/false,
-    "charges_enabled": true/false,
-    "requirements": { ... Stripe requirements object ... }
-  }
-```
+**实现细节:**
+- Account 类型:`type='express'`(不是 `'standard'`)
+- `business_type='individual'`
+- `capabilities={card_payments:{requested:True}, transfers:{requested:True}}`
+- 鉴权:`required_roles=["owner", "admin"]`
+- GET status 端点会**主动调 Stripe API** retrieve account,并把 `details_submitted` 同步到 `expert.stripe_onboarding_complete`(line 1275-1277)
+
+**本 spec 不需要新建任何端点。** 达人管理页面顶部的红条幅直接调 `GET /api/experts/{id}/stripe-connect/status`。
+
+**唯一要补的小改动:** 现有 status 端点的 `required_roles=["owner", "admin"]` 限制了只有 owner/admin 能查。如果产品上希望普通 member 也能在达人管理页面看到 onboarding 状态(以便了解为什么团队不能接单),需要把这个改成 `["owner", "admin", "member"]`。**本 spec 建议改**,但放进 plan 阶段决定。
 
 ### 2.4 Stripe Webhook 同步 `account.updated`
 
@@ -278,234 +330,234 @@ if activity.owner_type == 'expert':
 
 ## §3 支付结算 + Transfer 执行流程
 
-### 3.1 触发点
+### 3.1 触发点(v2)
 
-任务完成(`task.status` 转为 `'completed'`)时,**DB commit 之后**,对有 `taker_expert_id` 的任务 enqueue Celery 任务:
+任务完成(`task.status` 转为 `'completed'`)时,**复用现有 `payment_transfer_service` 流程** —— 个人 taker 任务和团队 taker 任务都走同一条路径,只是 destination 不同。
 
+**任务完成端点(共 4 处,见 §8 D2):**
+
+| 文件:行 | 触发方式 |
+|---------|---------|
+| `routers.py:3920` | 客户手动确认完成 |
+| `scheduled_tasks.py:267` | 定时超时确认 |
+| `scheduled_tasks.py:1012` | `auto_confirm_expired_tasks` |
+| `scheduled_tasks.py:1133` | 另一处 scheduled completion |
+
+每处的 `task.status = 'completed'` 之后,现有代码已经调 `payment_transfer_service.create_transfer_record()` 和 `execute_transfer()`。**本 spec 不需要在任务完成端点加任何代码** —— 现有调用会自动 work,只要 `execute_transfer` 内部知道怎么处理 `taker_expert_id`(见 §3.2)。
+
+**唯一可能要改:** 现有 `create_transfer_record()` 调用方传 `taker_id=task.taker_id`,需要确认它会顺带读 `task.taker_expert_id`。如果不读,§3.2 给出的修改方案要在调用方加一个 `taker_expert_id` 参数。
+
+### 3.2 扩展 `payment_transfer_service.execute_transfer`(v2 替代原 Celery 任务)
+
+> **v2 修订:** 不再新建 Celery 任务。直接在现有 `execute_transfer()` 里加 `taker_expert_id` 分支。
+
+**现有 `execute_transfer` 签名(`payment_transfer_service.py:108`):**
 ```python
-await db.commit()
-
-if task.taker_expert_id is not None:
-    from app.tasks.expert_transfer import enqueue_expert_transfer
-    enqueue_expert_transfer.delay(task_id=task.id)
+def execute_transfer(
+    db: Session,
+    transfer_record: models.PaymentTransfer,
+    taker_stripe_account_id: str,
+    commit: bool = True
+) -> tuple[bool, Optional[str], Optional[str]]:
+    """执行 Stripe Transfer 转账"""
+    ...
 ```
 
-**为什么 Celery 而非同步:** (1) 不阻塞客户端 UX,(2) 网络错误可以重试,(3) 失败/监控/审计都能独立运作。
-
-**待定:** "任务完成"在代码里的准确位置(可能多处,plan 阶段 grep 定位)。
-
-### 3.2 Celery 任务实现
-
-**新建:** `backend/app/tasks/expert_transfer.py`
+**v2 改动 1 —— `create_transfer_record` 接受 `taker_expert_id`:**
 
 ```python
-from celery import shared_task
-from app.database import SessionLocal
-from app import models
-from app.models_expert import Expert, ExpertMember
-from app.models.expert_stripe_transfer import ExpertStripeTransfer  # 新建 ORM 模型
-import stripe
+def create_transfer_record(
+    db: Session,
+    task_id: int,
+    taker_id: str,
+    poster_id: str,
+    amount: Decimal,
+    currency: str = "GBP",
+    taker_expert_id: Optional[str] = None,   # ★ 新增
+    metadata: Optional[Dict[str, Any]] = None,
+    commit: bool = True
+) -> models.PaymentTransfer:
+    # ... 现有幂等检查 ...
 
-@shared_task(
-    bind=True,
-    max_retries=10,
-    default_retry_delay=300,
-    retry_backoff=True,
-    retry_backoff_max=3600,
-    retry_jitter=True,
-)
-def enqueue_expert_transfer(self, task_id: int):
-    db = SessionLocal()
-    try:
-        task = db.get(models.Task, task_id)
-        if not task or not task.taker_expert_id:
-            return
+    transfer_record = models.PaymentTransfer(
+        task_id=task_id,
+        taker_id=taker_id,
+        taker_expert_id=taker_expert_id,           # ★ 新增
+        poster_id=poster_id,
+        amount=amount,
+        currency=currency,
+        status="pending",
+        idempotency_key=f"task_{task_id}_transfer", # ★ 新增,启用 v2 幂等
+        # 其他字段不变
+    )
+    ...
+```
 
-        idempotency_key = f"task_{task_id}_transfer"
+**v2 改动 2 —— `execute_transfer` 内部读 `taker_expert_id` 决定 destination:**
 
-        # 并发保护:SKIP LOCKED,让其他 worker 自己放弃
-        existing = db.query(ExpertStripeTransfer).filter_by(
-            idempotency_key=idempotency_key
-        ).with_for_update(skip_locked=True).first()
+```python
+def execute_transfer(
+    db: Session,
+    transfer_record: models.PaymentTransfer,
+    taker_stripe_account_id: Optional[str] = None,  # ★ 改为 Optional
+    commit: bool = True
+) -> tuple[bool, Optional[str], Optional[str]]:
+    ...
+    task = db.query(models.Task).filter(models.Task.id == transfer_record.task_id).first()
+    if not task:
+        return False, None, "任务不存在"
 
-        if existing:
-            if existing.status in ('succeeded', 'failed', 'reversed'):
-                return
+    # ★ v2 新增:团队任务的 destination 是 experts.stripe_account_id
+    if transfer_record.taker_expert_id:
+        from app.models_expert import Expert
+        expert = db.query(Expert).filter(Expert.id == transfer_record.taker_expert_id).first()
+        if not expert or not expert.stripe_account_id:
+            return False, None, "Team has no Stripe Connect account"
+        if not expert.stripe_onboarding_complete:
+            return False, None, "Team Stripe onboarding not complete"
+        destination_account = expert.stripe_account_id
+    else:
+        destination_account = taker_stripe_account_id  # 个人 taker,沿用现状
 
-        expert = db.get(Expert, task.taker_expert_id)
-        if not expert.stripe_account_id:
-            _mark_failed(db, existing, 'missing_stripe_account', 'Team has no Stripe account')
-            return
-
-        # 计算净额
-        gross = task.agreed_reward or task.reward
-        if gross is None or gross <= 0:
-            # 零值任务,记一条成功用于审计完整性
-            if not existing:
-                existing = ExpertStripeTransfer(
-                    task_id=task_id, expert_id=expert.id, amount=0,
-                    currency=task.currency or 'GBP', status='succeeded',
-                    idempotency_key=idempotency_key, attempt_count=0,
-                )
-                db.add(existing)
-            else:
-                existing.amount = 0
-                existing.status = 'succeeded'
+    # ★ v2 新增:90 天 Transfer 时效检查 (§3.4a)
+    if task.payment_completed_at:
+        from datetime import datetime, timedelta
+        age = datetime.utcnow() - task.payment_completed_at.replace(tzinfo=None)
+        if age > timedelta(days=89):
+            transfer_record.status = 'failed'
+            transfer_record.last_error = f'Transfer window expired ({age.days}d)'
             db.commit()
-            return
+            return False, None, 'stripe_transfer_window_expired'
 
-        fee = _compute_application_fee(gross)
-        net = gross - fee
-
-        if not existing:
-            existing = ExpertStripeTransfer(
-                task_id=task_id,
-                expert_id=expert.id,
-                amount=net,
-                currency=(task.currency or 'GBP').upper(),
-                stripe_charge_id=task.payment_charge_id,  # 字段名 plan 阶段确认
-                status='pending',
-                idempotency_key=idempotency_key,
-                attempt_count=0,
-            )
-            db.add(existing)
-            db.commit()
-
-        existing.attempt_count += 1
-        existing.last_attempt_at = datetime.utcnow()
+    # ★ v2 新增:币种检查
+    if transfer_record.taker_expert_id and (transfer_record.currency or 'GBP').upper() != 'GBP':
+        transfer_record.status = 'failed'
+        transfer_record.last_error = 'Currency not supported for team tasks'
         db.commit()
+        return False, None, 'currency_unsupported'
 
-        try:
-            transfer = stripe.Transfer.create(
-                amount=int(net * 100),
-                currency=existing.currency.lower(),
-                destination=expert.stripe_account_id,
-                transfer_group=f"task_{task_id}",
-                metadata={
-                    'task_id': str(task_id),
-                    'expert_id': expert.id,
-                    'platform_fee_pence': str(int(fee * 100)),
-                },
-                idempotency_key=idempotency_key,  # Stripe 端幂等
-            )
-            existing.stripe_transfer_id = transfer.id
-            existing.status = 'succeeded'
-            db.commit()
-
-        except stripe.error.StripeError as e:
-            existing.error_code = getattr(e, 'code', None) or type(e).__name__
-            existing.error_message = str(e)
-            db.commit()
-
-            if isinstance(e, (stripe.error.APIConnectionError, stripe.error.APIError)):
-                raise self.retry(exc=e)
-            else:
-                existing.status = 'failed'
-                db.commit()
-                _notify_team_owner_of_transfer_failure(expert.id, task_id, e)
-    finally:
-        db.close()
-
-
-def on_failure(self, exc, task_id_arg, args, kwargs, einfo):
-    """Celery 达到 max_retries 时的 fallback。"""
-    db = SessionLocal()
-    try:
-        row = db.query(ExpertStripeTransfer).filter_by(
-            idempotency_key=f"task_{args[0]}_transfer"
-        ).first()
-        if row and row.status == 'pending':
-            row.status = 'failed'
-            row.error_code = 'max_retries_exhausted'
-            db.commit()
-            _notify_team_owner_of_transfer_failure(row.expert_id, row.task_id, exc)
-    finally:
-        db.close()
+    # ... 后续逻辑(stripe_dispute_frozen 检查、Stripe Account validate、Transfer.create)
+    # 调 stripe.Transfer.create 时把 destination=destination_account 传进去
+    # 同时把 idempotency_key 也传给 Stripe (transfer_record.idempotency_key)
 ```
 
-### 3.3 平台抽成
+**v2 改动 3 —— 任务完成端点的现有调用补 `taker_expert_id`:**
 
-**沿用** `task_expert_routes.py:3874-3899` 区域现有的 `_compute_application_fee()` 函数(实际名字 plan 阶段 grep 确认)。团队任务和个人任务**同一套** fee 规则(P1 决策)。fee 在本地计算从 gross 扣掉,Stripe Transfer 只传净额。
+每个任务完成端点(§3.1 列的 4 处)在调 `create_transfer_record` 时多传一个参数:
 
-### 3.4 失败处理
+```python
+transfer_record = create_transfer_record(
+    db=db,
+    task_id=task.id,
+    taker_id=task.taker_id,
+    poster_id=task.poster_id,
+    amount=transfer_amount,
+    currency=task.currency or 'GBP',
+    taker_expert_id=task.taker_expert_id,  # ★ 新增
+    metadata={...}
+)
+```
 
-`status='failed'` 的 transfer:
-1. 应用内通知 + 邮件给团队 owner
-2. 管理员后台新增 `GET /api/admin/expert-transfers?status=failed` 监控端点
-3. 管理员手工重试端点 `POST /api/admin/expert-transfers/{id}/retry`(把 status 改回 pending 再 enqueue)
+**复用的现有逻辑(零改动):**
+- ✅ 幂等检查(`create_transfer_record` 已经查 task_id+taker_id+status)
+- ✅ Stripe 调用错误处理
+- ✅ Retry 机制(`retry_failed_transfer` + `process_pending_transfers`)
+- ✅ 失败时 fallback 到 `credit_wallet`(对个人 taker)
+- ✅ 余额监控、日志记录、错误格式化
+
+**为什么不再用 Celery `delay()`:** 现有 `execute_transfer` 是**同步调用**(在任务完成端点的事务里直接执行),失败的话有 `retry_failed_transfer` 和 `process_pending_transfers` 这两个独立的重试入口。这个模式对个人 taker 已经验证过,团队 taker 沿用即可。如果将来要异步化,改的是整个 transfer service,不是本 spec 的范围。
+
+**待定:** "任务完成"在代码里的准确位置 —— Phase 0 已确认是上面 4 处。
+
+### 3.3 平台抽成(v2)
+
+**实际函数:** `from app.utils.fee_calculator import calculate_application_fee_pence`
+
+```python
+application_fee_pence = calculate_application_fee_pence(
+    task_amount_pence,            # int 便士,不是英镑
+    task_source="expert_service",
+    task_type=None
+)
+```
+
+团队任务和个人任务**同一套** fee 规则(P1 决策)。fee 由 PaymentIntent 创建时记录在 metadata,任务完成 transfer 时从 gross 扣 fee 后传 net 给 Stripe Transfer。**所有计算都用便士 int,不要混 Decimal**(精度问题)。
+
+### 3.4 失败处理(v2)
+
+**复用现有 retry 机制:** `payment_transfer_service.retry_failed_transfer` + `process_pending_transfers` 已经处理 retry。团队任务的失败会被同样的 Celery beat / cron 自动重试。
+
+**新增 admin 监控:** 加 `GET /api/admin/expert-transfers?status=failed` 端点(等同于现有个人任务监控,只是带 `taker_expert_id IS NOT NULL` 过滤)。如果现有 admin 监控已经有"失败 transfer 列表",直接让它显示 `taker_expert_id` 字段即可,不需要新端点。
+
+**通知:** Transfer 失败时,通过现有通知系统(`crud.create_notification`)给 `team owner.user_id`(也就是 `transfer_record.taker_id`)发"打款失败"通知。无需新建通知通道。
 
 #### 3.4a Stripe Transfer 90 天时效
 
-**Stripe API 规则:** `stripe.Transfer.create` 必须在原始 Charge **90 天内**调用。超过 90 天 Stripe 返回 `transfer_already_pending` 或 `cannot_transfer` 类错误。
+**Stripe API 规则:** `stripe.Transfer.create` 必须在原始 Charge **90 天内**调用。
 
-**对应场景:** 任务在 `in_progress` / `disputed` 状态滞留超过 90 天才完成 —— 客户付款已经超过 90 天。
+**实现位置:** §3.2 给的 `execute_transfer` 改造里已经包含了 90 天检查,在调 Stripe 之前显式检查 `task.payment_completed_at` 与 `datetime.utcnow()` 的差,超过 89 天直接标 failed 不发 Stripe 请求。
 
-**处理策略:**
-1. **预防性监控:** 后台定期任务(Celery beat 或 cron)每天扫描所有 `in_progress` 且 `payment_completed_at < now() - 60d` 的团队任务,通知 owner 和管理员"接近 Transfer 时效,请尽快完成"
-2. **超期失败:** Celery 任务 §3.2 在调 Stripe 之前,显式检查 `task.payment_completed_at`(或等价字段,plan 阶段确认)与当前时间差,若超过 89 天直接标 `failed`,error_code=`stripe_transfer_window_expired`,**不发请求到 Stripe** 避免浪费一次 retry
-3. **人工兜底:** 管理员可以手工把这笔钱从平台账户**直接**通过 Stripe Dashboard 转给团队(绕过 Transfer API),然后在 admin 端点把 `expert_stripe_transfers` 行手工标 `succeeded` + 填备注
+**预防性监控:** 加一个 daily Celery beat 任务,扫描 `in_progress` 且 `payment_completed_at < now() - 60d` 的团队任务,通知 owner "接近 Transfer 时效"。这个 task 加在现有 `celery_tasks.py` 里,**不要新建 `tasks/` 目录**(D11 确认无此目录)。
 
-```python
-# §3.2 Celery 任务里,调 Stripe 之前加这段
-from datetime import timedelta
-TRANSFER_WINDOW_DAYS = 89  # 留 1 天 buffer
+**人工兜底:** 管理员手工通过 Stripe Dashboard 转账,然后在 admin 端点把对应 `payment_transfers` 行手工标 `succeeded` + 填 transfer_id 和备注。
 
-if task.payment_completed_at:
-    age = datetime.utcnow() - task.payment_completed_at
-    if age > timedelta(days=TRANSFER_WINDOW_DAYS):
-        existing.status = 'failed'
-        existing.error_code = 'stripe_transfer_window_expired'
-        existing.error_message = f"Task age {age.days}d exceeds {TRANSFER_WINDOW_DAYS}d Transfer window"
-        db.commit()
-        _notify_team_owner_of_transfer_failure(expert.id, task_id, "transfer window expired")
-        return
-```
+### 3.5 退款 / 争议处理(v2)
 
-### 3.5 退款 / 争议处理
+**场景 A:任务完成前退款** —— 钱还在平台账户,团队未收到。现有退款流程不动,`payment_transfers` 行尚未创建,零影响。
 
-**场景 A:任务完成前退款** —— 钱还在平台账户,团队未收到。现有退款流程不动,`expert_stripe_transfers` 行尚未创建,零影响。
+**场景 B:任务完成后客户 dispute** —— `routers.py:7620` 的 `charge.dispute.created` webhook handler **已存在**,目前会:
+1. 设置 `task.stripe_dispute_frozen=1`(冻结后续 transfer)
+2. 通知 poster + taker + admin
+3. 发系统消息
 
-**场景 B:任务完成后客户 dispute** —— Webhook `charge.dispute.created` 分支里:
+**v2 改动:** 在该 handler 内追加一段"团队任务自动反向 transfer"的逻辑(在现有冻结/通知逻辑之后):
 
 ```python
-if event.type == 'charge.dispute.created':
-    charge_id = event.data.object.charge
-    row = db.query(ExpertStripeTransfer).filter_by(
-        stripe_charge_id=charge_id
+# 加在现有 charge.dispute.created 分支末尾
+if task and task.taker_expert_id:
+    # 团队任务:查 payment_transfers,如果已经 succeeded 就反向
+    pt = db.query(models.PaymentTransfer).filter(
+        models.PaymentTransfer.task_id == task_id,
+        models.PaymentTransfer.status == 'succeeded'
     ).first()
-
-    if row and row.status == 'succeeded':
-        reversal = stripe.Transfer.create_reversal(
-            row.stripe_transfer_id,
-            amount=int(row.amount * 100),
-            metadata={'task_id': str(row.task_id), 'reason': 'dispute'},
-        )
-        row.stripe_reversal_id = reversal.id
-        row.status = 'reversed'
-        row.reversed_at = datetime.utcnow()
-        row.reversed_reason = 'dispute'
-        db.commit()
-        _notify_team_owner_of_reversal(row)
+    if pt and pt.transfer_id:
+        try:
+            reversal = stripe.Transfer.create_reversal(
+                pt.transfer_id,
+                amount=int(pt.amount * 100),
+                metadata={'task_id': str(task_id), 'reason': 'dispute'},
+            )
+            pt.stripe_reversal_id = reversal.id
+            pt.status = 'reversed'
+            pt.reversed_at = get_utc_time()
+            pt.reversed_reason = 'dispute'
+            db.commit()
+            # 通知团队 owner(taker_id 已经是 owner.user_id)
+            crud.create_notification(
+                db, str(pt.taker_id),
+                "expert_transfer_reversed", "款项已反向",
+                f"任务 #{task_id} 的 £{pt.amount} 因争议被反向", auto_commit=False
+            )
+        except stripe.error.StripeError as e:
+            logger.error(f"Failed to reverse team transfer for task {task_id}: {e}")
+            # 反向失败:保持 succeeded,管理员介入
 ```
 
-**反向失败(团队 Stripe 余额不足):** Stripe 返回错误 → 保持 `status='succeeded'` + 管理员报警 + 人工介入。
+**反向失败(团队 Stripe 余额不足):** 沿用现有 `refund_service.py:131` 的处理模式 —— 记录 warning,留给管理员手工处理。
 
-**场景 C:管理员主动退款给已完成任务的客户** —— 现有 refund 端点里,若任务 `taker_expert_id` 非空且已存在 `status='succeeded'` 的 transfer,先调 `Transfer.create_reversal`,再 refund 给客户。
+**场景 C:管理员主动退款给已完成任务的客户** —— `refund_service.py:131` **已存在** `stripe.Transfer.create_reversal` 调用,会自动反向 `PaymentTransfer` 行。**对团队任务自动 work**(因为 Reversal API 用 transfer_id,与 destination 无关)。
 
-### 3.6 `TaskParticipantReward` 对团队任务
+**v2 唯一要补的:** 现有 reversal 代码用 `original_transfer.transfer_id` 反向,但**没有写 `stripe_reversal_id` / `reversed_at` / `reversed_reason` 这三个新字段**。需要在 `refund_service.py:131-141` 的 reversal 成功分支里追加这三个字段的写入。
 
-**团队任务(`taker_expert_id IS NOT NULL`)不创建 `TaskParticipantReward` 行。** 审计事实来源是 `expert_stripe_transfers`。这避免两套审计表争夺事实来源。
+### 3.6 `TaskParticipantReward` 对团队任务(v2)
 
-任务完成时的分叉:
+**团队任务(`taker_expert_id IS NOT NULL`)不创建 `TaskParticipantReward` 行。** 审计事实来源是 `payment_transfers`(扩展了 6 列后的版本)。这避免两套审计表争夺事实来源。
 
-```python
-if task.taker_expert_id is not None:
-    enqueue_expert_transfer.delay(task_id=task.id)  # 现金走 Stripe Transfer
-    # 积分见 §3.7
-else:
-    # 个人任务:现有 TaskParticipantReward + wallet_accounts 流程(不动)
-    ...
-```
+任务完成时的代码路径:**实际上不需要分叉** —— 任务完成端点都已经在调 `create_transfer_record(...)` + `execute_transfer(...)`,只要这俩函数知道怎么处理 `taker_expert_id` 即可(见 §3.2 的改造)。
+
+**`TaskParticipantReward` 的写入位置在哪?** Phase 0 没具体定位,但它和 `payment_transfers` 是平行的两套机制(前者是多人任务的"每个参与者拿多少"快照,后者是真正打款的审计)。在团队任务路径里,**两者都跳过**(因为团队任务不分账给成员)。
+
+**实施确认:** Phase 4 里改任务创建的代码时,要确认团队任务的代码路径不会触发 `TaskParticipantReward` 创建。如果触发了,要加个 if 跳过。
 
 ### 3.7 积分奖励 (`task.points_reward`) 的处理
 
@@ -519,10 +571,14 @@ else:
 
 **实现:** 任务完成时,无论是个人还是团队任务,积分发放逻辑统一走"发给 `task.taker_id` 这个 user_id"。因为团队任务的 `taker_id` 已经被 §4.2 / §4.3a helper 填成了 owner 的 user_id,所以**积分代码完全不需要分叉,自然就发到 owner 头上**。
 
+**实际函数(D14 grep 结果):** `add_points_transaction()` 在 `coupon_points_crud.py:76`。Phase 4 改任务完成路径时确认这个函数被调用且 `user_id` 参数取自 `task.taker_id`。
+
 ```python
-# 现有积分发放代码(伪)
+# 现有积分发放代码(实际函数名)
+from app.coupon_points_crud import add_points_transaction
 if task.points_reward and task.points_reward > 0:
-    await credit_user_points(
+    add_points_transaction(
+        db,
         user_id=task.taker_id,  # 团队任务时 = owner.user_id, 个人任务时 = 个人 taker
         amount=task.points_reward,
         source=f"task_completion_{task.id}",
@@ -780,7 +836,7 @@ GET /api/experts/{expert_id}/tasks
 }
 ```
 
-**实现:** `tasks` LEFT JOIN `expert_stripe_transfers`(不是所有任务都有 transfer 行)。
+**实现:** `tasks` LEFT JOIN `payment_transfers`(不是所有任务都有 transfer 行;`taker_expert_id` 在 `tasks` 上做 WHERE 过滤)。
 
 ### 5.2 团队收入汇总
 
@@ -816,7 +872,7 @@ GET /api/experts/{expert_id}/earnings/transfers
 
 **Query:** `status`、`start_date`、`end_date`、`page`、`page_size`
 
-**Response:** `expert_stripe_transfers` 行直接展开,附带关联 task 标题 + poster 信息。
+**Response:** `payment_transfers` 行直接展开(只过滤 `taker_expert_id IS NOT NULL` 的行),附带关联 task 标题 + poster 信息。
 
 ### 5.4 Stripe 状态 + Onboarding 入口
 
@@ -965,7 +1021,7 @@ await db.execute(
 2. ✅ §6.2 预审 SQL 非空的情况已人工决策
 3. ✅ 所有新 migration 在 staging 跑通
 4. ✅ `resolve_task_taker_from_service` helper 单元测试
-5. ✅ Celery worker 能接到 `enqueue_expert_transfer`(Stripe test mode)
+5. ✅ 扩展后的 `payment_transfer_service.execute_transfer` 在 staging 用团队任务跑通(Stripe test mode)
 6. ✅ Webhook `account.updated` / `charge.dispute.created` 分支在 Stripe test dashboard 触发验证
 7. ✅ E2E 冒烟:发布服务 → 下单 → 付款 → 完成 → Transfer 成功
 8. ✅ 负测试:未 onboard 的团队发布服务 → 409
@@ -988,25 +1044,33 @@ await db.execute(
 
 ---
 
-## §8 Plan 阶段待确认事项
+## §8 Plan 阶段待确认事项(v2:Phase 0 后绝大多数已解决)
 
-以下细节**不影响本 spec 的设计决策**,但 plan 阶段必须解决:
+✅ **下面 14 项已经在 Phase 0 discovery 解决:** `docs/superpowers/plans/2026-04-07-expert-team-discovery.md`
 
-1. **下一个可用 migration 编号**(本 spec 用 `N/N+1/N+2/N+3` 占位):`ls backend/migrations/ | tail`
-2. **个人服务当前的资金流路径**(destination charge vs manual transfer):grep `task_expert_routes.py:3870-3899` 附近的 PaymentIntent 创建代码,确认是否设了 `transfer_data.destination`。这决定 §4.4 的改动范围。
-3. **任务完成端点的准确位置**(`task.status → 'completed'` 的转移点,可能多处)
-4. **`_compute_application_fee()` 或等价 fee 计算函数的实际名字和签名**
-5. **`tasks.payment_charge_id` 或等价字段名**(存放客户付款 Charge ID,用于 §3.5 dispute 反查)
-6. **`expert_stripe_transfers` ORM 模型放在哪个文件**(`models.py` / `models_expert.py` / 新文件)
-7. **现有 webhook 处理器的准确位置**(`routers.py:8058-8080` 附近,需精确定位)
-8. **ownership transfer 端点的函数名**(`expert_routes.py` 内)
-9. **Stripe Account 类型**(`type='standard'` vs `'express'` vs `'custom'`):grep 现有个人用户 Stripe Connect 创建代码(若有),与之对齐。若现有代码没有 Account 创建路径(只做 Account Link),plan 阶段根据业务需求决定
-10. **个人 taker 任务完成 → `wallet_accounts.balance` credit 的代码路径是否存在**:§4.4 的"顺带正确化"假设这条路径已经在,但我没在探索阶段验证。Plan Task 1 必须 grep 确认:在任务完成端点附近找到对 `wallet_accounts.balance` 的 UPDATE / +=,确认它和 Payment Intent 的资金流模式兼容。如果当前是 destination charge(钱直接进 taker Stripe),那 wallet credit 路径**可能根本不存在**,改 manual transfer 后会出现"个人 taker 任务完成 → 钱被锁在平台账户" bug,需要补建 credit 路径
-11. **退款端点位置**:§3.5 场景 C 提到"现有 refund 端点",未定位。grep `refund` / `Refund` / `退款` in `backend/app/routers.py` + `*payment*.py`,找到主入口
-12. **Celery sync session factory**:§3.2 伪代码用 `from app.database import SessionLocal`(同步)。确认仓库现在的 Celery 任务是用 sync 还是 async session。Async 用 `asyncio.run(...)` 或 `nest_asyncio` 包,sync 直接用。这影响 §3.2 代码的最终形态,**不影响设计决策**
-13. **`tasks.payment_completed_at` 字段**:§3.4a 90 天 Transfer 时效检查需要这个字段(或等价的"客户付款完成时间")。grep `payment_completed_at` / `paid_at` / `payment_intent_succeeded_at` in `models.py` Task 类,找不到则需要新增列(独立 migration,简单 ALTER)
-14. **Webhook signing secret 环境变量名**:§2.4 webhook handler 沿用现有验签逻辑,需要 grep 现有 webhook handler 找到对应环境变量名(可能是 `STRIPE_WEBHOOK_SECRET` 之类)
-15. **现有积分发放函数名**:§3.7 假设有 `credit_user_points()` 或等价函数。grep `points_balance` / `add_points` / `credit_points` in `backend/app/`,确认实际函数名和调用方式
+| # | 事项 | 结论 |
+|---|------|------|
+| 1 | 下一个 migration 编号 | **176**(基于现有 175) |
+| 2 | 个人服务资金流模式 | **manual transfer**,§4.4 走 A 路径,无回退需要 |
+| 3 | 任务完成端点位置 | **4 处:** `routers.py:3920`, `scheduled_tasks.py:267,1012,1133` |
+| 4 | fee 计算函数 | `from app.utils.fee_calculator import calculate_application_fee_pence`,**参数和返回都是便士 int** |
+| 5 | `tasks.payment_charge_id` 字段 | **不存在**。Task 有 `payment_intent_id`,可调 Stripe API 反查;或加新字段(plan 决定) |
+| 6 | ORM 模型位置 | (v2 已解决)扩展 `PaymentTransfer` 类,不新建 |
+| 7 | webhook handler 位置 | `routers.py:6536` (`stripe.Webhook.construct_event`),已有 `charge.dispute.*` 5 个分支 |
+| 8 | ownership transfer 端点 | `expert_routes.py:833` `transfer_ownership` |
+| 9 | Stripe Account 类型 | (D8 解决)**`type='express'`**,already in use at `expert_routes.py:1212` |
+| 10 | wallet credit 路径 | (D9 解决)`wallet_service.py:124` `credit_wallet()` 存在;且 `payment_transfer_service.py` 是完整 manual transfer 实现 |
+| 11 | refund 端点位置 | `refund_service.py`,反向 transfer 已经在 line 131 实现 |
+| 12 | Celery session | (D11 解决)全部 sync,`from app.database import SessionLocal`,**没有 `tasks/` 目录** |
+| 13 | `tasks.payment_completed_at` | **不存在**。需要 Phase 1 加 column |
+| 14 | webhook secret 环境变量 | `STRIPE_WEBHOOK_SECRET` |
+| 15 | 积分发放函数 | `coupon_points_crud.py:76` `add_points_transaction()` |
+
+**剩余真正的 plan 阶段决策:**
+- 是否新增 `tasks.payment_charge_id` 列(便利 dispute 反查)还是用 `payment_intent_id` 反查 charge
+
+**剩余的"已存在端点是否需要小调整":**
+- `GET /api/experts/{id}/stripe-connect/status` 现在 `required_roles=["owner","admin"]`,本 spec 建议放宽到 `["owner","admin","member"]`,让普通成员在达人管理页面也能看到 Stripe 状态(plan 决定)
 
 ---
 
@@ -1015,7 +1079,8 @@ await db.execute(
 ### 9.1 单元测试
 
 - `resolve_task_taker_from_service()` —— 覆盖 owner_type='expert'、'user'、团队未 onboard、团队无 owner、未知 owner_type 五种情况
-- `enqueue_expert_transfer` Celery task —— mock Stripe,覆盖成功、APIConnectionError retry、Stripe error failed、zero reward、已 succeeded 跳过、并发锁等场景
+- `resolve_task_taker_from_activity()` —— 同上,加币种检查
+- **扩展后**的 `payment_transfer_service.execute_transfer()` —— 增加团队任务测试:mock Stripe,覆盖成功、destination 走 expert.stripe_account_id、Stripe error → status=failed、90 天时效拦截、币种 non-GBP 拦截、idempotency key UNIQUE 冲突
 - `build_taker_display()` —— 团队任务、个人任务、NULL taker 三种
 
 ### 9.2 集成测试(pytest + Stripe test mode)
@@ -1026,7 +1091,7 @@ await db.execute(
 4. 未 onboard 团队的活动报名 → 409
 5. 团队 owner 收到"新订单"通知
 6. 客户看到的 `taker_display` 对团队/个人分别正确
-7. 任务完成 → `expert_stripe_transfers` 行创建 + Celery job enqueue
+7. 任务完成 → `payment_transfers` 行创建(带 taker_expert_id)+ `execute_transfer` 同步执行
 8. Stripe Transfer 成功 → `status='succeeded'` + `stripe_transfer_id` 填入
 9. Stripe 5xx → Celery retry
 10. Stripe 4xx → `status='failed'` + owner 收到失败通知
