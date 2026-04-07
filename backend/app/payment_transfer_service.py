@@ -140,12 +140,26 @@ def execute_transfer(
         task = db.query(models.Task).filter(models.Task.id == transfer_record.task_id).first()
         if not task:
             return False, None, "任务不存在"
-        
+
         # ✅ Stripe争议冻结检查：如果任务因Stripe争议被冻结，阻止转账
         if task.stripe_dispute_frozen == 1:
             error_msg = "任务因Stripe争议已冻结，无法执行转账。请等待争议解决后再试。"
             logger.warning(f"任务 {transfer_record.task_id} 因Stripe争议已冻结，阻止转账")
             return False, None, error_msg
+
+        # Team-aware destination override: 若为团队任务，直接使用 experts.stripe_account_id
+        # spec §3.2 (v2 — payout site team-awareness)
+        if transfer_record.taker_expert_id:
+            from app.models_expert import Expert
+            expert = db.query(Expert).filter(Expert.id == transfer_record.taker_expert_id).first()
+            if not expert or not expert.stripe_account_id or not expert.stripe_onboarding_complete:
+                error_msg = "Team Stripe Connect not ready"
+                logger.error(
+                    f"任务 {transfer_record.task_id} 团队 Stripe 状态异常 "
+                    f"(expert_id={transfer_record.taker_expert_id})，取消转账"
+                )
+                return False, None, error_msg
+            taker_stripe_account_id = expert.stripe_account_id
         
         if task.is_confirmed == 1 and task.escrow_amount == 0:
             # 任务已确认且托管金额已清空，可能已经转账成功
@@ -223,19 +237,23 @@ def execute_transfer(
         # 创建 Transfer（从主账户转到 Connect 子账户）
         # 注意：Transfer 使用主账户的可用余额（available balance），不是总余额
         # 如果资金还在 pending 状态，需要等待资金可用后才能转账
-        transfer = stripe_client.Transfer.create(
+        _stripe_create_kwargs = dict(
             amount=transfer_amount_pence,
             currency=transfer_record.currency.lower(),
             destination=taker_stripe_account_id,  # Connect 子账户 ID
             metadata={
                 "task_id": str(transfer_record.task_id),
                 "taker_id": str(transfer_record.taker_id),
+                "taker_expert_id": str(transfer_record.taker_expert_id) if transfer_record.taker_expert_id else "",
                 "poster_id": str(transfer_record.poster_id),
                 "transfer_record_id": str(transfer_record.id),
                 "transfer_type": "task_reward"
             },
             description=f"任务 #{transfer_record.task_id} 奖励"
         )
+        if transfer_record.idempotency_key:
+            _stripe_create_kwargs["idempotency_key"] = transfer_record.idempotency_key
+        transfer = stripe_client.Transfer.create(**_stripe_create_kwargs)
         
         logger.info(f"✅ Transfer 创建成功: transfer_id={transfer.id}, amount=£{transfer_record.amount:.2f}")
         
@@ -342,7 +360,42 @@ def retry_failed_transfer(
         logger.debug(f"转账记录 {transfer_record.id} 尚未到重试时间")
         return False, "尚未到重试时间"
     
-    # 获取任务接受人的 Stripe Connect 账户ID
+    # 团队任务：直接进入 Stripe 重试路径，不做 taker.stripe_account_id 检查/钱包回退
+    # spec §3.2 v2 — 团队任务资金只能流向团队 Stripe
+    if transfer_record.taker_expert_id:
+        from app.models_expert import Expert
+        expert = db.query(Expert).filter(Expert.id == transfer_record.taker_expert_id).first()
+        if not expert or not expert.stripe_account_id or not expert.stripe_onboarding_complete:
+            error_msg = "Team Stripe Connect not ready (manual intervention required)"
+            transfer_record.last_error = error_msg
+            transfer_record.status = "retrying"
+            # 保持 retrying 状态，等后台修复
+            from app.transaction_utils import safe_commit
+            safe_commit(db, f"团队 Stripe 未就绪 transfer_record_id={transfer_record.id}")
+            logger.error(f"{error_msg}: transfer_record_id={transfer_record.id}")
+            return False, error_msg
+        transfer_record.status = "retrying"
+        logger.info(
+            f"🔄 团队任务重试转账: transfer_record_id={transfer_record.id}, "
+            f"retry_count={transfer_record.retry_count}/{transfer_record.max_retries}"
+        )
+        success, transfer_id, error_msg = execute_transfer(db, transfer_record, expert.stripe_account_id)
+        if success:
+            logger.info(f"✅ 团队转账重试成功: transfer_record_id={transfer_record.id}, transfer_id={transfer_id}")
+            return True, None
+        transfer_record.last_error = error_msg
+        transfer_record.status = "retrying"
+        if transfer_record.retry_count >= transfer_record.max_retries:
+            transfer_record.status = "failed"
+            transfer_record.next_retry_at = None
+            logger.error(
+                f"❌ 团队任务 transfer_record {transfer_record.id} 重试失败，已达到最大重试次数 — 不回退钱包"
+            )
+        from app.transaction_utils import safe_commit
+        safe_commit(db, f"更新团队转账重试状态 transfer_record_id={transfer_record.id}")
+        return False, error_msg
+
+    # 获取任务接受人的 Stripe Connect 账户ID（个人任务路径）
     taker = db.query(models.User).filter(models.User.id == transfer_record.taker_id).first()
     if not taker:
         error_msg = "任务接受人不存在"
@@ -352,7 +405,7 @@ def retry_failed_transfer(
         if not safe_commit(db, f"标记转账记录为失败（接受人不存在） transfer_record_id={transfer_record.id}"):
             logger.error(f"标记转账记录为失败时提交失败: transfer_record_id={transfer_record.id}")
         return False, error_msg
-    
+
     if not taker.stripe_account_id:
         # 无 Stripe Connect 账户，改为钱包入账
         logger.info(f"接单人无 Stripe Connect，转为钱包入账: transfer_record_id={transfer_record.id}")
