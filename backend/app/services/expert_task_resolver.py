@@ -58,3 +58,47 @@ async def resolve_task_taker_from_service(
             status_code=500,
             detail=f"Unknown service owner_type: {service.owner_type}"
         )
+
+
+async def resolve_task_taker_from_activity(
+    db: AsyncSession,
+    activity: "models.Activity",
+) -> Tuple[str, Optional[str]]:
+    if activity.owner_type == 'expert':
+        expert = await db.get(Expert, activity.owner_id)
+        if not expert:
+            raise HTTPException(status_code=404, detail="Expert team not found")
+        if not expert.stripe_onboarding_complete:
+            raise HTTPException(status_code=409, detail={
+                "error_code": "expert_stripe_not_ready",
+                "message": "Team is temporarily unable to accept sign-ups",
+            })
+        if (activity.currency or 'GBP').upper() != 'GBP':
+            raise HTTPException(status_code=409, detail={
+                "error_code": "expert_currency_unsupported",
+                "message": "Team activities only support GBP currently",
+            })
+
+        result = await db.execute(
+            select(ExpertMember).where(
+                ExpertMember.expert_id == expert.id,
+                ExpertMember.role == 'owner',
+                ExpertMember.status == 'active',
+            ).limit(1)
+        )
+        owner = result.scalar_one_or_none()
+        if not owner:
+            raise HTTPException(status_code=500, detail={
+                "error_code": "expert_owner_missing",
+                "message": "Team has no active owner",
+            })
+        return (owner.user_id, expert.id)
+
+    elif activity.owner_type == 'user':
+        return (activity.expert_id, None)
+
+    else:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Unknown activity owner_type: {activity.owner_type}"
+        )
