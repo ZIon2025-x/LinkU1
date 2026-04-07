@@ -922,109 +922,109 @@ if CELERY_AVAILABLE:
             db.close()
 
 
-@celery_app.task(name='app.celery_tasks.cleanup_nearby_task_pushes_task', bind=True, max_retries=2)
-def cleanup_nearby_task_pushes_task(self):
-    """清理30天前的附近任务推送记录"""
-    task_name = "cleanup_nearby_task_pushes"
-    lock_key = f"celery_lock:{task_name}"
-    lock_value = get_redis_distributed_lock(lock_key, expire_seconds=300)
-    if not lock_value:
-        return {"status": "skipped", "reason": "lock_held"}
-
-    import time
-    start_time = time.time()
-    db = SessionLocal()
-    try:
-        from app.services.nearby_task_service import cleanup_old_pushes
-        deleted = cleanup_old_pushes(db, days=30)
-        db.commit()
-        duration = time.time() - start_time
-        logger.info(f"附近推送记录清理完成: 删除 {deleted} 条 (耗时: {duration:.2f}秒)")
-        _record_task_metrics(task_name, "success", duration)
-        return {"status": "success", "deleted": deleted}
-    except Exception as e:
-        db.rollback()
-        duration = time.time() - start_time
-        logger.error(f"附近推送记录清理失败: {e}", exc_info=True)
-        _record_task_metrics(task_name, "error", duration)
-        raise self.retry(exc=e, countdown=120)
-    finally:
-        db.close()
-        release_redis_distributed_lock(lock_key, lock_value)
-
-
-# ========== 用户画像系统任务 ==========
-
-@celery_app.task(bind=True, max_retries=2, default_retry_delay=120)
-def nightly_demand_inference_task(self):
-    """需求画像夜间推断：更新活跃用户的需求画像"""
-    task_name = "nightly_demand_inference"
-    lock_key = f"celery_task:{task_name}"
-    if not get_redis_distributed_lock(lock_key, lock_ttl=1800):
-        logger.debug(f"{task_name}: 已有实例在运行，跳过")
-        return {"status": "skipped", "reason": "already_running"}
-
-    start_time = time.time()
-    db = SessionLocal()
-    try:
-        from app.services.demand_inference import batch_infer_demands
-        results = batch_infer_demands(db, limit=500)
-        db.commit()
-        duration = time.time() - start_time
-        logger.info(f"需求画像推断完成: 成功 {results['succeeded']}/{results['total']} 个用户, 失败 {results['failed']} (耗时: {duration:.2f}秒)")
-        _record_task_metrics(task_name, "success", duration)
-        return {"status": "success", **results}
-    except Exception as e:
-        duration = time.time() - start_time
-        logger.error(f"需求画像推断失败: {e}", exc_info=True)
-        _record_task_metrics(task_name, "error", duration)
-        try:
-            db.rollback()
-        except Exception:
-            pass
-        if self.request.retries < self.max_retries:
-            raise self.retry(exc=e)
-        raise
-    finally:
-        db.close()
-        release_redis_distributed_lock(lock_key)
-
-
-@celery_app.task(bind=True, max_retries=2, default_retry_delay=120)
-def weekly_reliability_calibration_task(self):
-    """可靠度分数周校准：全量重算修正增量更新的累积误差"""
-    task_name = "weekly_reliability_calibration"
-    lock_key = f"celery_task:{task_name}"
-    if not get_redis_distributed_lock(lock_key, lock_ttl=3600):
-        logger.debug(f"{task_name}: 已有实例在运行，跳过")
-        return {"status": "skipped", "reason": "already_running"}
-
-    start_time = time.time()
-    db = SessionLocal()
-    try:
-        from app.services.reliability_calculator import recalculate_all_reliability
-        recalculate_all_reliability(db, limit=500)
-        db.commit()
-        duration = time.time() - start_time
-        logger.info(f"可靠度校准完成 (耗时: {duration:.2f}秒)")
-        _record_task_metrics(task_name, "success", duration)
-        return {"status": "success"}
-    except Exception as e:
-        duration = time.time() - start_time
-        logger.error(f"可靠度校准失败: {e}", exc_info=True)
-        _record_task_metrics(task_name, "error", duration)
-        try:
-            db.rollback()
-        except Exception:
-            pass
-        if self.request.retries < self.max_retries:
-            raise self.retry(exc=e)
-        raise
-    finally:
-        db.close()
-        release_redis_distributed_lock(lock_key)
-
 if CELERY_AVAILABLE:
+    @celery_app.task(name='app.celery_tasks.cleanup_nearby_task_pushes_task', bind=True, max_retries=2)
+    def cleanup_nearby_task_pushes_task(self):
+        """清理30天前的附近任务推送记录"""
+        task_name = "cleanup_nearby_task_pushes"
+        lock_key = f"celery_lock:{task_name}"
+        lock_value = get_redis_distributed_lock(lock_key, expire_seconds=300)
+        if not lock_value:
+            return {"status": "skipped", "reason": "lock_held"}
+
+        import time
+        start_time = time.time()
+        db = SessionLocal()
+        try:
+            from app.services.nearby_task_service import cleanup_old_pushes
+            deleted = cleanup_old_pushes(db, days=30)
+            db.commit()
+            duration = time.time() - start_time
+            logger.info(f"附近推送记录清理完成: 删除 {deleted} 条 (耗时: {duration:.2f}秒)")
+            _record_task_metrics(task_name, "success", duration)
+            return {"status": "success", "deleted": deleted}
+        except Exception as e:
+            db.rollback()
+            duration = time.time() - start_time
+            logger.error(f"附近推送记录清理失败: {e}", exc_info=True)
+            _record_task_metrics(task_name, "error", duration)
+            raise self.retry(exc=e, countdown=120)
+        finally:
+            db.close()
+            release_redis_distributed_lock(lock_key, lock_value)
+
+
+    # ========== 用户画像系统任务 ==========
+
+    @celery_app.task(bind=True, max_retries=2, default_retry_delay=120)
+    def nightly_demand_inference_task(self):
+        """需求画像夜间推断：更新活跃用户的需求画像"""
+        task_name = "nightly_demand_inference"
+        lock_key = f"celery_task:{task_name}"
+        if not get_redis_distributed_lock(lock_key, lock_ttl=1800):
+            logger.debug(f"{task_name}: 已有实例在运行，跳过")
+            return {"status": "skipped", "reason": "already_running"}
+
+        start_time = time.time()
+        db = SessionLocal()
+        try:
+            from app.services.demand_inference import batch_infer_demands
+            results = batch_infer_demands(db, limit=500)
+            db.commit()
+            duration = time.time() - start_time
+            logger.info(f"需求画像推断完成: 成功 {results['succeeded']}/{results['total']} 个用户, 失败 {results['failed']} (耗时: {duration:.2f}秒)")
+            _record_task_metrics(task_name, "success", duration)
+            return {"status": "success", **results}
+        except Exception as e:
+            duration = time.time() - start_time
+            logger.error(f"需求画像推断失败: {e}", exc_info=True)
+            _record_task_metrics(task_name, "error", duration)
+            try:
+                db.rollback()
+            except Exception:
+                pass
+            if self.request.retries < self.max_retries:
+                raise self.retry(exc=e)
+            raise
+        finally:
+            db.close()
+            release_redis_distributed_lock(lock_key)
+
+
+    @celery_app.task(bind=True, max_retries=2, default_retry_delay=120)
+    def weekly_reliability_calibration_task(self):
+        """可靠度分数周校准：全量重算修正增量更新的累积误差"""
+        task_name = "weekly_reliability_calibration"
+        lock_key = f"celery_task:{task_name}"
+        if not get_redis_distributed_lock(lock_key, lock_ttl=3600):
+            logger.debug(f"{task_name}: 已有实例在运行，跳过")
+            return {"status": "skipped", "reason": "already_running"}
+
+        start_time = time.time()
+        db = SessionLocal()
+        try:
+            from app.services.reliability_calculator import recalculate_all_reliability
+            recalculate_all_reliability(db, limit=500)
+            db.commit()
+            duration = time.time() - start_time
+            logger.info(f"可靠度校准完成 (耗时: {duration:.2f}秒)")
+            _record_task_metrics(task_name, "success", duration)
+            return {"status": "success"}
+        except Exception as e:
+            duration = time.time() - start_time
+            logger.error(f"可靠度校准失败: {e}", exc_info=True)
+            _record_task_metrics(task_name, "error", duration)
+            try:
+                db.rollback()
+            except Exception:
+                pass
+            if self.request.retries < self.max_retries:
+                raise self.retry(exc=e)
+            raise
+        finally:
+            db.close()
+            release_redis_distributed_lock(lock_key)
+
     # ==================== 钱包 pending 交易超时清理 ====================
 
     @celery_app.task(
