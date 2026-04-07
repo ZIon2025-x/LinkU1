@@ -6487,6 +6487,69 @@ def create_payment(
     return {"checkout_url": session.url}
 
 
+def _handle_account_updated(db, acct):
+    """Handle Stripe ``account.updated`` events for expert team Connect accounts.
+
+    Sync function (matches the webhook handler's sync session style). Keeps
+    ``experts.stripe_onboarding_complete`` aligned with Stripe's view of the
+    account, and freezes / unfreezes owned team services accordingly.
+
+    Args:
+        db: sync SQLAlchemy Session.
+        acct: Stripe account object (dict or ``stripe.Account``).
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+    from app import models
+    from app.models_expert import Expert
+
+    # Extract acct id + charges_enabled regardless of dict vs object form
+    if isinstance(acct, dict):
+        acct_id = acct.get("id")
+        charges_enabled = acct.get("charges_enabled")
+    else:
+        acct_id = getattr(acct, "id", None)
+        charges_enabled = getattr(acct, "charges_enabled", None)
+
+    if not acct_id:
+        logger.debug("[WEBHOOK] account.updated: missing account id, ignoring")
+        return
+
+    expert = db.query(Expert).filter(Expert.stripe_account_id == acct_id).first()
+    if expert is None:
+        logger.debug(
+            f"[WEBHOOK] account.updated: no expert team matches stripe_account_id={acct_id}, ignoring"
+        )
+        return
+
+    new_state = bool(charges_enabled)
+    if expert.stripe_onboarding_complete == new_state:
+        logger.info(
+            f"[WEBHOOK] account.updated: expert={expert.id} already in desired "
+            f"stripe_onboarding_complete={new_state}, no-op"
+        )
+        return
+
+    expert.stripe_onboarding_complete = new_state
+
+    if not new_state:
+        # Freeze any active team-owned services when charges are disabled
+        db.query(models.TaskExpertService).filter(
+            models.TaskExpertService.owner_type == 'expert',
+            models.TaskExpertService.owner_id == expert.id,
+            models.TaskExpertService.status == 'active',
+        ).update({"status": "inactive"}, synchronize_session=False)
+        logger.info(
+            f"[WEBHOOK] account.updated: expert={expert.id} charges_enabled=False, "
+            f"stripe_onboarding_complete=False, active team services suspended"
+        )
+    else:
+        logger.info(
+            f"[WEBHOOK] account.updated: expert={expert.id} charges_enabled=True, "
+            f"stripe_onboarding_complete=True"
+        )
+
+
 @router.post("/stripe/webhook")
 async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     import logging
@@ -7747,7 +7810,16 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         charge_id = dispute.get("charge")
         task_id = int(dispute.get("metadata", {}).get("task_id", 0))
         logger.info(f"Dispute funds reinstated for charge {charge_id}, task {task_id}")
-    
+
+    # Connect 账户状态同步：专家团队 stripe_onboarding_complete + 服务冻结
+    elif event_type == "account.updated":
+        try:
+            _handle_account_updated(db, event_data)
+            db.commit()
+        except Exception as e:
+            logger.error(f"account.updated 处理失败: {e}", exc_info=True)
+            db.rollback()
+
     # 处理其他 charge 事件
     elif event_type == "charge.succeeded":
         charge = event_data
