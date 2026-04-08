@@ -65,9 +65,18 @@ async def list_team_tasks(
     )
     rows = (await db.execute(q)).all()
 
+    # Batch-load posters to avoid N+1 (was: db.get(User) inside the loop)
+    poster_ids = list({task.poster_id for task, _ in rows if task.poster_id})
+    posters_by_id: dict = {}
+    if poster_ids:
+        posters_result = await db.execute(
+            select(models.User).where(models.User.id.in_(poster_ids))
+        )
+        posters_by_id = {u.id: u for u in posters_result.scalars().all()}
+
     items = []
     for task, pt in rows:
-        poster = await db.get(models.User, task.poster_id) if task.poster_id else None
+        poster = posters_by_id.get(task.poster_id) if task.poster_id else None
         items.append({
             "id": task.id,
             "title": task.title,
@@ -206,9 +215,18 @@ async def transfer_history(
     )
     rows = (await db.execute(q)).scalars().all()
 
+    # Batch-load tasks to avoid N+1 (was: db.get(Task) inside the loop)
+    task_ids = list({r.task_id for r in rows if r.task_id})
+    tasks_by_id: dict = {}
+    if task_ids:
+        tasks_result = await db.execute(
+            select(models.Task).where(models.Task.id.in_(task_ids))
+        )
+        tasks_by_id = {t.id: t for t in tasks_result.scalars().all()}
+
     items = []
     for r in rows:
-        task = await db.get(models.Task, r.task_id)
+        task = tasks_by_id.get(r.task_id)
         items.append({
             "id": r.id,
             "task": {"id": r.task_id, "title": task.title if task else None},
