@@ -1,103 +1,87 @@
-const PRERENDER_TOKEN = process.env.PRERENDER_TOKEN || '';
+// frontend/middleware.ts
+//
+// Vercel Edge Middleware: forward non-JS social crawler requests to the
+// backend SSR endpoints (api.link2ur.com) so crawlers get real OG/Twitter
+// Card meta tags. Googlebot/Bingbot and normal users fall through to the
+// SPA. Any backend error or unexpected response also falls through — we
+// never propagate failures to crawlers.
 
-const BOT_USER_AGENTS = [
-  'googlebot',
-  'bingbot',
-  'yandex',
-  'baiduspider',
-  'facebookexternalhit',
-  'twitterbot',
-  'rogerbot',
-  'linkedinbot',
-  'embedly',
-  'quora link preview',
-  'showyoubot',
-  'outbrain',
-  'pinterest/0.',
-  'developers.google.com/+/web/snippet',
-  'slackbot',
-  'vkshare',
-  'w3c_validator',
-  'redditbot',
-  'applebot',
-  'whatsapp',
-  'flipboard',
-  'tumblr',
-  'bitlybot',
-  'skypeuripreview',
-  'nuzzel',
-  'discordbot',
-  'qwantify',
-  'pinterestbot',
-  'bitrix link preview',
-  'xing-contenttabreceiver',
-  'chrome-lighthouse',
-  'telegrambot',
-  'google-inspectiontool',
-  'petalbot',
+const NON_JS_CRAWLERS: RegExp[] = [
+  /MicroMessenger/i,
+  /WeChat/i,
+  /Weixin/i,
+  /WeChatShareExtension/i,
+  /facebookexternalhit/i,
+  /Facebot/i,
+  /Twitterbot/i,
+  /LinkedInBot/i,
+  /Slackbot/i,
+  /TelegramBot/i,
+  /WhatsApp/i,
+  /Discordbot/i,
+  /Pinterest/i,
+  /Baiduspider/i,
+  /YandexBot/i,
+  /CCBot/i,
 ];
 
-function isBot(userAgent: string): boolean {
-  const ua = userAgent.toLowerCase();
-  return BOT_USER_AGENTS.some(bot => ua.includes(bot));
+const SSR_PATH_PATTERNS: RegExp[] = [
+  /^\/(zh|en)?\/?$/,                                  // home
+  /^\/(zh\/|en\/)?tasks\/\d+\/?$/,                    // task detail
+  /^\/(zh\/|en\/)?forum\/post\/\d+\/?$/,              // forum post detail
+  /^\/(zh\/|en\/)?leaderboard\/custom\/\d+\/?$/,      // leaderboard detail
+  /^\/(zh\/|en\/)?activities\/\d+\/?$/,               // activity detail
+];
+
+const BACKEND_ORIGIN = 'https://api.link2ur.com';
+const FETCH_TIMEOUT_MS = 5000;
+const ALLOWED_PASSTHROUGH_STATUSES = new Set([200, 404, 410]);
+
+function isNonJsCrawler(ua: string): boolean {
+  return NON_JS_CRAWLERS.some((re) => re.test(ua));
 }
 
-export default async function middleware(request: Request) {
+function isSsrPath(pathname: string): boolean {
+  return SSR_PATH_PATTERNS.some((re) => re.test(pathname));
+}
+
+export default async function middleware(request: Request): Promise<Response | undefined> {
   const userAgent = request.headers.get('user-agent') || '';
+  if (!isNonJsCrawler(userAgent)) return;
 
-  // Only proxy crawler requests to prerender.io
-  if (!isBot(userAgent)) {
-    return;
-  }
-
-  // Skip prerendering for static assets, API routes, and non-page resources
   const url = new URL(request.url);
-  const { pathname } = url;
-  if (
-    pathname.startsWith('/static/') ||
-    pathname.startsWith('/api/') ||
-    pathname.match(/\.(js|css|xml|json|ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot|txt|map)$/)
-  ) {
-    return;
-  }
+  if (!isSsrPath(url.pathname)) return;
 
-  // Build the prerender.io URL
-  const prerenderUrl = `https://service.prerender.io/${request.url}`;
+  const backendUrl = `${BACKEND_ORIGIN}${url.pathname}${url.search}`;
 
-  // No token configured → skip prerender entirely, serve SPA to bots
-  if (!PRERENDER_TOKEN) {
-    return;
-  }
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
   try {
-    // Fetch pre-rendered page from prerender.io
-    const response = await fetch(prerenderUrl, {
-      headers: {
-        'X-Prerender-Token': PRERENDER_TOKEN,
-        'X-Prerender-Int-Type': 'visionary',
-      },
+    const upstream = await fetch(backendUrl, {
+      headers: { 'user-agent': userAgent },
       redirect: 'follow',
+      signal: controller.signal,
     });
 
-    // If prerender.io returns an error (e.g. invalid token, quota exceeded,
-    // upstream 5xx), DO NOT propagate it to crawlers — fall through to the
-    // normal SPA so Google Search Console doesn't see 5xx spikes.
-    if (!response.ok) {
-      return;
-    }
+    if (!ALLOWED_PASSTHROUGH_STATUSES.has(upstream.status)) return;
 
-    // Return the pre-rendered HTML
-    return new Response(response.body, {
-      status: response.status,
+    const contentType = upstream.headers.get('content-type') || '';
+    if (!contentType.includes('text/html')) return;
+
+    const body = await upstream.text();
+    return new Response(body, {
+      status: upstream.status,
       headers: {
-        'Content-Type': response.headers.get('Content-Type') || 'text/html',
-        'Cache-Control': 'public, max-age=3600',
-        'X-Prerendered': 'true',
+        'content-type': contentType,
+        'cache-control': 'public, s-maxage=3600, stale-while-revalidate=86400',
+        'x-ssr': 'backend',
       },
     });
   } catch {
-    // If prerender.io fails, fall through to normal SPA
     return;
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
