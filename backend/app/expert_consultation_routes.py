@@ -21,6 +21,51 @@ logger = logging.getLogger(__name__)
 consultation_router = APIRouter(tags=["expert-consultations"])
 
 
+# ==================== Helpers ====================
+
+async def _notify_team_admins_new_application(
+    db: AsyncSession,
+    expert_id: str,
+    applicant_name: str,
+    service_name: str,
+    application_id: int,
+    notification_type: str = "service_application_received",
+    title_zh: str = "新服务申请",
+    title_en: str = "New Service Application",
+) -> None:
+    """通知团队所有 active owner+admin 收到新的服务申请/咨询。Best-effort,失败不阻塞主流程。"""
+    try:
+        from app.async_crud import AsyncNotificationCRUD
+        managers_result = await db.execute(
+            select(ExpertMember.user_id).where(
+                and_(
+                    ExpertMember.expert_id == expert_id,
+                    ExpertMember.status == "active",
+                    ExpertMember.role.in_(["owner", "admin"]),
+                )
+            )
+        )
+        manager_ids = [r[0] for r in managers_result.all()]
+        if not manager_ids:
+            return
+        content_zh = f"用户「{applicant_name}」对服务「{service_name}」发起了新申请,请前往达人后台处理"
+        content_en = f"「{applicant_name}」submitted a new request for service「{service_name}」"
+        for mid in manager_ids:
+            await AsyncNotificationCRUD.create_notification(
+                db=db,
+                user_id=mid,
+                notification_type=notification_type,
+                title=title_zh,
+                content=content_zh,
+                title_en=title_en,
+                content_en=content_en,
+                related_id=str(application_id),
+                related_type="service_application",
+            )
+    except Exception as e:
+        logger.warning(f"通知团队成员新申请失败: {e}")
+
+
 # ==================== 用户侧：申请/咨询服务 ====================
 
 @consultation_router.post("/api/services/{service_id}/apply")
@@ -121,6 +166,19 @@ async def apply_for_service(
     await db.commit()
     await db.refresh(application)
 
+    # 通知团队 owner+admin 有新申请(团队服务才发,个人服务跳过)
+    if service.owner_type == "expert":
+        await _notify_team_admins_new_application(
+            db,
+            expert_id=service.owner_id,
+            applicant_name=current_user.name or "用户",
+            service_name=service.service_name or "服务",
+            application_id=application.id,
+            notification_type="service_application_received",
+            title_zh="新服务申请",
+            title_en="New Service Application",
+        )
+
     return {
         "id": application.id,
         "service_id": service_id,
@@ -156,6 +214,19 @@ async def create_consultation(
     db.add(application)
     await db.commit()
     await db.refresh(application)
+
+    # 通知团队 owner+admin 有新咨询
+    if service.owner_type == "expert":
+        await _notify_team_admins_new_application(
+            db,
+            expert_id=service.owner_id,
+            applicant_name=current_user.name or "用户",
+            service_name=service.service_name or "服务",
+            application_id=application.id,
+            notification_type="service_consultation_received",
+            title_zh="新服务咨询",
+            title_en="New Consultation Request",
+        )
 
     return {"id": application.id, "status": "consulting"}
 

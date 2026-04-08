@@ -43,7 +43,9 @@ class ExpertDetailOut(ExpertOut):
 
 class ExpertMemberOut(BaseModel):
     id: int
-    user_id: str
+    # user_id 改为 Optional: 公开列表对非团队成员/未登录用户隐藏(防枚举攻击)
+    # 团队 owner/admin/member 仍能拿到 user_id 用于 remove/transfer 等操作
+    user_id: Optional[str] = None
     user_name: Optional[str] = None
     user_avatar: Optional[str] = None
     role: str

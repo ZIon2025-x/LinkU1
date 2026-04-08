@@ -455,8 +455,26 @@ async def list_members(
     db: AsyncSession = Depends(get_async_db_dependency),
     current_user: Optional[models.User] = Depends(get_current_user_optional),
 ):
-    """查看团队成员列表（公开）"""
+    """查看团队成员列表（公开）。
+
+    user_id 字段仅对团队内部成员(任意 active member)返回,非成员/未登录
+    用户拿到的列表只有 name + avatar + role,无法用于枚举攻击。
+    """
     await _get_expert_or_404(db, expert_id)
+
+    # 判断当前用户是否是这个团队的 active member
+    is_team_member = False
+    if current_user:
+        member_check = await db.execute(
+            select(ExpertMember).where(
+                and_(
+                    ExpertMember.expert_id == expert_id,
+                    ExpertMember.user_id == current_user.id,
+                    ExpertMember.status == "active",
+                )
+            )
+        )
+        is_team_member = member_check.scalar_one_or_none() is not None
 
     result = await db.execute(
         select(ExpertMember, models.User)
@@ -475,6 +493,9 @@ async def list_members(
         m = ExpertMemberOut.model_validate(member)
         m.user_name = user.name
         m.user_avatar = user.avatar
+        if not is_team_member:
+            # 隐藏 user_id 防枚举
+            m.user_id = None
         out.append(m)
     return out
 

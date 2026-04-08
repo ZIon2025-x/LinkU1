@@ -333,6 +333,26 @@ async def delete_expert_service(
     if service.status == "deleted":
         return {"detail": "服务已删除"}
 
+    # A3: Activity.expert_service_id FK 是 RESTRICT — 若有 active 活动引用此服务,
+    # 拒绝删除并提示用户先处理。
+    from sqlalchemy import func as _func
+    active_act_q = select(_func.count(models.Activity.id)).where(
+        and_(
+            models.Activity.expert_service_id == service_id,
+            models.Activity.status.in_(["open", "in_progress"]),
+        )
+    )
+    active_count = (await db.execute(active_act_q)).scalar() or 0
+    if active_count > 0:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error_code": "service_has_active_activities",
+                "message": f"该服务还有 {active_count} 个进行中的活动,请先取消或完成后再删除",
+                "active_activities": active_count,
+            },
+        )
+
     was_active = service.status == "active"
     service.status = "deleted"
     service.updated_at = get_utc_time()
