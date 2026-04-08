@@ -44,4 +44,31 @@ describe('middleware', () => {
     expect((fetchOptions as RequestInit).redirect).toBe('error');
     expect((fetchOptions as RequestInit).signal).toBeInstanceOf(AbortSignal);
   });
+
+  it('does NOT intercept Googlebot — falls through to SPA', async () => {
+    global.fetch = jest.fn();
+    const req = makeRequest(
+      'https://www.link2ur.com/zh/tasks/123',
+      'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)'
+    );
+
+    const res = await middleware(req);
+
+    expect(res).toBeUndefined();
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('does NOT intercept normal browser users', async () => {
+    global.fetch = jest.fn();
+    const req = makeRequest(
+      'https://www.link2ur.com/zh/tasks/123',
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 ' +
+        '(KHTML, like Gecko) Version/17.0 Safari/605.1.15'
+    );
+
+    const res = await middleware(req);
+
+    expect(res).toBeUndefined();
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
 });
