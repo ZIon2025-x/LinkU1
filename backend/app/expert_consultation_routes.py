@@ -672,30 +672,86 @@ async def list_expert_applications(
 async def list_my_service_applications(
     request: Request,
     status_filter: Optional[str] = Query(None, alias="status"),
-    limit: int = Query(20, ge=1, le=100),
-    offset: int = Query(0, ge=0),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_async_db_dependency),
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
 ):
-    """获取我发出的服务申请列表"""
-    query = select(models.ServiceApplication).where(
-        models.ServiceApplication.applicant_id == current_user.id
-    )
+    """获取我发出的服务申请列表（含服务/所有者信息）"""
+    base_filter = [models.ServiceApplication.applicant_id == current_user.id]
     if status_filter:
-        query = query.where(models.ServiceApplication.status == status_filter)
-    query = query.order_by(models.ServiceApplication.created_at.desc()).offset(offset).limit(limit)
+        base_filter.append(models.ServiceApplication.status == status_filter)
 
+    # 总数
+    total_result = await db.execute(
+        select(func.count(models.ServiceApplication.id)).where(and_(*base_filter))
+    )
+    total = total_result.scalar() or 0
+
+    offset = (page - 1) * page_size
+    query = (
+        select(models.ServiceApplication)
+        .where(and_(*base_filter))
+        .order_by(models.ServiceApplication.created_at.desc())
+        .offset(offset)
+        .limit(page_size)
+    )
     result = await db.execute(query)
     apps = result.scalars().all()
-    return [
-        {
-            "id": a.id,
-            "service_id": a.service_id,
-            "status": a.status,
-            "application_message": a.application_message,
-            "negotiated_price": float(a.negotiated_price) if a.negotiated_price else None,
-            "final_price": float(a.final_price) if a.final_price else None,
-            "created_at": a.created_at.isoformat() if a.created_at else None,
-        }
-        for a in apps
+
+    # 批量取关联 service 和 owner 信息，避免 N+1
+    service_ids = list({a.service_id for a in apps if a.service_id})
+    services_map: dict = {}
+    if service_ids:
+        svc_result = await db.execute(
+            select(models.TaskExpertService).where(
+                models.TaskExpertService.id.in_(service_ids)
+            )
+        )
+        for s in svc_result.scalars().all():
+            services_map[s.id] = s
+
+    owner_ids = list({a.service_owner_id for a in apps if a.service_owner_id})
+    # 也把 service.user_id 一并取，避免 owner 字段为空
+    owner_ids += [
+        s.user_id for s in services_map.values() if s.user_id and s.user_id not in owner_ids
     ]
+    owners_map: dict = {}
+    if owner_ids:
+        owner_result = await db.execute(
+            select(models.User).where(models.User.id.in_(owner_ids))
+        )
+        for u in owner_result.scalars().all():
+            owners_map[u.id] = u
+
+    items = []
+    for a in apps:
+        svc = services_map.get(a.service_id)
+        owner_id = a.service_owner_id or (svc.user_id if svc else None)
+        owner = owners_map.get(owner_id) if owner_id else None
+        items.append(
+            {
+                "id": a.id,
+                "service_id": a.service_id,
+                "service_name": svc.service_name if svc else None,
+                "service_owner_id": owner_id,
+                "service_owner_name": owner.name if owner else None,
+                "status": a.status,
+                "application_message": a.application_message,
+                "negotiated_price": float(a.negotiated_price) if a.negotiated_price else None,
+                "expert_counter_price": float(a.expert_counter_price) if a.expert_counter_price else None,
+                "final_price": float(a.final_price) if a.final_price else None,
+                "currency": a.currency or (svc.currency if svc else "GBP"),
+                "task_id": a.task_id,
+                "owner_reply": a.owner_reply,
+                "owner_reply_at": a.owner_reply_at.isoformat() if a.owner_reply_at else None,
+                "created_at": a.created_at.isoformat() if a.created_at else None,
+            }
+        )
+
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+    }

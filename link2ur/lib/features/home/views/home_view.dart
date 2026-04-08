@@ -282,27 +282,33 @@ class _HomeViewContentState extends State<_HomeViewContent> {
           ),
           // 中间：3 个 Tab 居中
           Expanded(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _TabButton(
-                  title: context.l10n.homeFollow,
-                  isSelected: _selectedTab == 0,
-                  onTap: () => _onTabChanged(0),
+            child: Center(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _TabButton(
+                      title: context.l10n.homeFollow,
+                      isSelected: _selectedTab == 0,
+                      onTap: () => _onTabChanged(0),
+                    ),
+                    const SizedBox(width: 24),
+                    _TabButton(
+                      title: context.l10n.homeRecommended,
+                      isSelected: _selectedTab == 1,
+                      onTap: () => _onTabChanged(1),
+                    ),
+                    const SizedBox(width: 24),
+                    _TabButton(
+                      title: context.l10n.homeNearby,
+                      isSelected: _selectedTab == 2,
+                      onTap: () => _onTabChanged(2),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 24),
-                _TabButton(
-                  title: context.l10n.homeRecommended,
-                  isSelected: _selectedTab == 1,
-                  onTap: () => _onTabChanged(1),
-                ),
-                const SizedBox(width: 24),
-                _TabButton(
-                  title: context.l10n.homeNearby,
-                  isSelected: _selectedTab == 2,
-                  onTap: () => _onTabChanged(2),
-                ),
-              ],
+              ),
             ),
           ),
           // 右侧：搜索按钮（与左侧等宽保证 tab 居中）
