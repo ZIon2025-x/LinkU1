@@ -98,12 +98,37 @@ async def create_time_slot(
     await _get_member_or_403(db, expert_id, current_user.id, required_roles=["owner", "admin"])
     service = await _get_expert_service(db, expert_id, service_id)
 
+    # 输入校验
+    try:
+        start_dt = datetime.fromisoformat(body['slot_start_datetime'])
+        end_dt = datetime.fromisoformat(body['slot_end_datetime'])
+    except (KeyError, ValueError, TypeError):
+        raise HTTPException(status_code=400, detail="slot_start_datetime/slot_end_datetime 格式无效")
+    if end_dt <= start_dt:
+        raise HTTPException(status_code=400, detail="结束时间必须晚于开始时间")
+
+    price = body.get('price_per_participant', service.base_price)
+    try:
+        price_val = float(price) if price is not None else 0
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="price_per_participant 必须为数字")
+    if price_val < 0:
+        raise HTTPException(status_code=400, detail="price_per_participant 不能为负数")
+
+    max_p = body.get('max_participants', service.participants_per_slot or 1)
+    try:
+        max_p = int(max_p)
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="max_participants 必须为整数")
+    if max_p < 1 or max_p > 1000:
+        raise HTTPException(status_code=400, detail="max_participants 必须在 1~1000 之间")
+
     slot = models.ServiceTimeSlot(
         service_id=service_id,
-        slot_start_datetime=datetime.fromisoformat(body['slot_start_datetime']),
-        slot_end_datetime=datetime.fromisoformat(body['slot_end_datetime']),
-        price_per_participant=body.get('price_per_participant', service.base_price),
-        max_participants=body.get('max_participants', service.participants_per_slot or 1),
+        slot_start_datetime=start_dt,
+        slot_end_datetime=end_dt,
+        price_per_participant=price_val,
+        max_participants=max_p,
         is_available=True,
     )
     db.add(slot)
@@ -136,13 +161,37 @@ async def update_time_slot(
     if not slot:
         raise HTTPException(status_code=404, detail="时间段不存在")
 
-    for field in ['price_per_participant', 'max_participants', 'is_available']:
-        if field in body:
-            setattr(slot, field, body[field])
+    # 输入校验
+    if 'price_per_participant' in body:
+        try:
+            v = float(body['price_per_participant'])
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=400, detail="price_per_participant 必须为数字")
+        if v < 0:
+            raise HTTPException(status_code=400, detail="price_per_participant 不能为负数")
+        slot.price_per_participant = v
+    if 'max_participants' in body:
+        try:
+            v = int(body['max_participants'])
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=400, detail="max_participants 必须为整数")
+        if v < 1 or v > 1000:
+            raise HTTPException(status_code=400, detail="max_participants 必须在 1~1000 之间")
+        slot.max_participants = v
+    if 'is_available' in body:
+        slot.is_available = bool(body['is_available'])
     if 'slot_start_datetime' in body:
-        slot.slot_start_datetime = datetime.fromisoformat(body['slot_start_datetime'])
+        try:
+            slot.slot_start_datetime = datetime.fromisoformat(body['slot_start_datetime'])
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=400, detail="slot_start_datetime 格式无效")
     if 'slot_end_datetime' in body:
-        slot.slot_end_datetime = datetime.fromisoformat(body['slot_end_datetime'])
+        try:
+            slot.slot_end_datetime = datetime.fromisoformat(body['slot_end_datetime'])
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=400, detail="slot_end_datetime 格式无效")
+    if slot.slot_end_datetime and slot.slot_start_datetime and slot.slot_end_datetime <= slot.slot_start_datetime:
+        raise HTTPException(status_code=400, detail="结束时间必须晚于开始时间")
     slot.updated_at = get_utc_time()
     await db.commit()
     return {"detail": "已更新"}

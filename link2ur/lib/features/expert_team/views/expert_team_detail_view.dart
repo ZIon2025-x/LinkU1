@@ -185,7 +185,9 @@ class _ExpertTeamDetailContent extends StatelessWidget {
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
-                  team.status == 'active' ? '运营中' : '已停止',
+                  team.status == 'active'
+                      ? context.l10n.expertTeamStatusActive
+                      : context.l10n.expertTeamStatusInactive,
                   style: TextStyle(color: statusColor, fontSize: 12),
                 ),
               ),

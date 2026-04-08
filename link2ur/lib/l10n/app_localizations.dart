@@ -22415,6 +22415,48 @@ abstract class AppLocalizations {
   /// **'Reply posted'**
   String get expertTeamReviewReplied;
 
+  /// No description provided for @expertTimeSlotFull.
+  ///
+  /// In en, this message translates to:
+  /// **'This time slot is full. Please pick another one.'**
+  String get expertTimeSlotFull;
+
+  /// No description provided for @expertStripeNotReady.
+  ///
+  /// In en, this message translates to:
+  /// **'This team has not finished Stripe onboarding yet.'**
+  String get expertStripeNotReady;
+
+  /// No description provided for @expertCurrencyUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Team services only support GBP for now.'**
+  String get expertCurrencyUnsupported;
+
+  /// No description provided for @expertBundleInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'The bundle package references invalid services.'**
+  String get expertBundleInvalid;
+
+  /// No description provided for @expertTeamStatusActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get expertTeamStatusActive;
+
+  /// No description provided for @expertTeamStatusInactive.
+  ///
+  /// In en, this message translates to:
+  /// **'Suspended'**
+  String get expertTeamStatusInactive;
+
+  /// No description provided for @expertTeamCreateAvatarPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Avatar (upload not yet supported)'**
+  String get expertTeamCreateAvatarPlaceholder;
+
   /// No description provided for @expertTeamMyTeams.
   ///
   /// In en, this message translates to:

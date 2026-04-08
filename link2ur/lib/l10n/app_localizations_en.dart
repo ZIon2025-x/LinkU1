@@ -12135,6 +12135,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get expertTeamReviewReplied => 'Reply posted';
 
   @override
+  String get expertTimeSlotFull => 'This time slot is full. Please pick another one.';
+
+  @override
+  String get expertStripeNotReady => 'This team has not finished Stripe onboarding yet.';
+
+  @override
+  String get expertCurrencyUnsupported => 'Team services only support GBP for now.';
+
+  @override
+  String get expertBundleInvalid => 'The bundle package references invalid services.';
+
+  @override
+  String get expertTeamStatusActive => 'Active';
+
+  @override
+  String get expertTeamStatusInactive => 'Suspended';
+
+  @override
+  String get expertTeamCreateAvatarPlaceholder => 'Avatar (upload not yet supported)';
+
+  @override
   String get expertTeamMyTeams => 'My Teams';
 
   @override

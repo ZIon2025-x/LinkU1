@@ -426,6 +426,17 @@ class ErrorLocalizer {
       case 'expert_team_coupon_created': return context.l10n.expertTeamCouponCreated;
       case 'expert_team_coupon_deactivated': return context.l10n.expertTeamCouponDeactivated;
       case 'expert_team_review_replied': return context.l10n.expertTeamReviewReplied;
+      // 时间段容量已满 (后端 expert_consultation_routes.apply_for_service 返回)
+      case 'time_slot_full': return context.l10n.expertTimeSlotFull;
+      // 团队 stripe 未就绪 / 货币不支持 (resolve_task_taker)
+      case 'expert_stripe_not_ready': return context.l10n.expertStripeNotReady;
+      case 'expert_currency_unsupported': return context.l10n.expertCurrencyUnsupported;
+      // bundle 套餐校验
+      case 'bundle_service_not_found':
+      case 'bundle_service_deleted':
+      case 'bundle_nested':
+      case 'bundle_self_reference':
+        return context.l10n.expertBundleInvalid;
       default:
         // 服务端返回的已翻译消息，直接使用
         return errorMessage;
