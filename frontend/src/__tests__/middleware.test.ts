@@ -71,4 +71,48 @@ describe('middleware', () => {
     expect(res).toBeUndefined();
     expect(global.fetch).not.toHaveBeenCalled();
   });
+
+  it('does NOT proxy unsupported paths even for crawlers', async () => {
+    global.fetch = jest.fn();
+    // /profile/me is a real SPA route but has no backend SSR endpoint
+    const req = makeRequest('https://www.link2ur.com/profile/me', WECHAT_UA);
+
+    const res = await middleware(req);
+
+    expect(res).toBeUndefined();
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('proxies all supported SSR paths for non-JS crawlers', async () => {
+    const ok = (body = '<html></html>') =>
+      new Response(body, { status: 200, headers: { 'content-type': 'text/html' } });
+    global.fetch = jest.fn().mockImplementation(() => Promise.resolve(ok()));
+
+    const paths = [
+      '/',
+      '/zh',
+      '/en',
+      '/tasks/1',
+      '/zh/tasks/42',
+      '/en/tasks/999',
+      '/forum/post/1',
+      '/zh/forum/post/42',
+      '/en/forum/post/999',
+      '/leaderboard/custom/1',
+      '/zh/leaderboard/custom/42',
+      '/en/leaderboard/custom/999',
+      '/activities/1',
+      '/zh/activities/42',
+      '/en/activities/999',
+    ];
+
+    for (const p of paths) {
+      const req = makeRequest(`https://www.link2ur.com${p}`, WECHAT_UA);
+      const res = await middleware(req);
+      expect(res).toBeInstanceOf(Response);
+      expect(res!.status).toBe(200);
+    }
+
+    expect((global.fetch as jest.Mock).mock.calls.length).toBe(paths.length);
+  });
 });
