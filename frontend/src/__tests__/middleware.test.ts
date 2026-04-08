@@ -115,4 +115,83 @@ describe('middleware', () => {
 
     expect((global.fetch as jest.Mock).mock.calls.length).toBe(paths.length);
   });
+
+  it('falls through to SPA when backend returns 500', async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response('upstream error', {
+        status: 500,
+        headers: { 'content-type': 'text/html' },
+      })
+    );
+
+    const req = makeRequest('https://www.link2ur.com/zh/tasks/123', WECHAT_UA);
+    const res = await middleware(req);
+
+    expect(res).toBeUndefined();
+  });
+
+  it('falls through to SPA when backend returns 502/503/504', async () => {
+    for (const status of [502, 503, 504]) {
+      global.fetch = jest.fn().mockResolvedValue(
+        new Response('', { status, headers: { 'content-type': 'text/html' } })
+      );
+      const req = makeRequest('https://www.link2ur.com/zh/tasks/123', WECHAT_UA);
+      const res = await middleware(req);
+      expect(res).toBeUndefined();
+    }
+  });
+
+  it('passes through 404 from backend (e.g. task does not exist)', async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response('<html><head><title>Not found</title></head></html>', {
+        status: 404,
+        headers: { 'content-type': 'text/html' },
+      })
+    );
+
+    const req = makeRequest('https://www.link2ur.com/zh/tasks/99999', WECHAT_UA);
+    const res = await middleware(req);
+
+    expect(res).toBeInstanceOf(Response);
+    expect(res!.status).toBe(404);
+    expect(res!.headers.get('x-ssr')).toBe('backend');
+  });
+
+  it('passes through 410 from backend (e.g. cancelled task)', async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response('<html></html>', {
+        status: 410,
+        headers: { 'content-type': 'text/html' },
+      })
+    );
+
+    const req = makeRequest('https://www.link2ur.com/zh/tasks/55', WECHAT_UA);
+    const res = await middleware(req);
+
+    expect(res).toBeInstanceOf(Response);
+    expect(res!.status).toBe(410);
+  });
+
+  it('falls through when backend returns non-HTML content-type', async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response('{"error":"oops"}', {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      })
+    );
+
+    const req = makeRequest('https://www.link2ur.com/zh/tasks/123', WECHAT_UA);
+    const res = await middleware(req);
+
+    expect(res).toBeUndefined();
+  });
+
+  it('falls through when fetch throws (network error)', async () => {
+    global.fetch = jest.fn().mockRejectedValue(new Error('ECONNREFUSED'));
+
+    const req = makeRequest('https://www.link2ur.com/zh/tasks/123', WECHAT_UA);
+    const res = await middleware(req);
+
+    expect(res).toBeUndefined();
+  });
 });
