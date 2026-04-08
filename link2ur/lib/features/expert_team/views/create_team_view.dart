@@ -124,7 +124,7 @@ class _CreateTeamContentState extends State<_CreateTeamContent> {
                     const SizedBox(height: 8),
                     Center(
                       child: Text(
-                        '头像（暂不支持上传）',
+                        context.l10n.expertTeamCreateAvatarPlaceholder,
                         style: Theme.of(context)
                             .textTheme
                             .bodySmall

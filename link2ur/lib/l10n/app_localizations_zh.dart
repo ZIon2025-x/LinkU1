@@ -11658,6 +11658,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get expertTeamReviewReplied => '回复成功';
 
   @override
+  String get expertTimeSlotFull => '该时间段已满,请选择其他时间段';
+
+  @override
+  String get expertStripeNotReady => '该团队尚未完成 Stripe 入驻,暂时无法接单';
+
+  @override
+  String get expertCurrencyUnsupported => '团队服务暂仅支持 GBP 货币';
+
+  @override
+  String get expertBundleInvalid => '服务包套餐引用了无效的服务';
+
+  @override
+  String get expertTeamStatusActive => '运营中';
+
+  @override
+  String get expertTeamStatusInactive => '已停止';
+
+  @override
+  String get expertTeamCreateAvatarPlaceholder => '头像(暂不支持上传)';
+
+  @override
   String get expertTeamMyTeams => '我的团队';
 
   @override
@@ -23561,6 +23582,27 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get expertTeamReviewReplied => '回覆成功';
+
+  @override
+  String get expertTimeSlotFull => '該時間段已滿,請選擇其他時間段';
+
+  @override
+  String get expertStripeNotReady => '該團隊尚未完成 Stripe 入駐,暫時無法接單';
+
+  @override
+  String get expertCurrencyUnsupported => '團隊服務暫僅支援 GBP 貨幣';
+
+  @override
+  String get expertBundleInvalid => '服務包套餐引用了無效的服務';
+
+  @override
+  String get expertTeamStatusActive => '運營中';
+
+  @override
+  String get expertTeamStatusInactive => '已停止';
+
+  @override
+  String get expertTeamCreateAvatarPlaceholder => '頭像(暫不支援上傳)';
 
   @override
   String get expertTeamMyTeams => '我的團隊';
