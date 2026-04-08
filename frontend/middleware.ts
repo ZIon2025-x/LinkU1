@@ -1,3 +1,4 @@
+/// <reference lib="dom" />
 const PRERENDER_TOKEN = process.env.PRERENDER_TOKEN || '';
 
 const BOT_USER_AGENTS = [
