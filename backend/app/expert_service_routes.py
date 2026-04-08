@@ -24,6 +24,53 @@ expert_service_router = APIRouter(
 )
 
 
+async def _validate_bundle_service_ids(
+    db: AsyncSession,
+    expert_id: str,
+    bundle_service_ids: Optional[List[int]],
+    exclude_service_id: Optional[int] = None,
+) -> None:
+    """运行时校验 bundle 套餐引用的服务都存在,且同属当前团队、不是 deleted/bundle 自身。"""
+    if not bundle_service_ids:
+        return
+    # 去重
+    ids = list(set(bundle_service_ids))
+    rows = await db.execute(
+        select(models.TaskExpertService.id, models.TaskExpertService.status, models.TaskExpertService.package_type)
+        .where(
+            and_(
+                models.TaskExpertService.id.in_(ids),
+                models.TaskExpertService.owner_type == "expert",
+                models.TaskExpertService.owner_id == expert_id,
+            )
+        )
+    )
+    found = {row.id: (row.status, row.package_type) for row in rows.all()}
+    missing = [i for i in ids if i not in found]
+    if missing:
+        raise HTTPException(status_code=422, detail={
+            "error_code": "bundle_service_not_found",
+            "message": f"引用的服务不存在或不属于本团队: {missing}",
+        })
+    bad_status = [i for i, (s, _) in found.items() if s == "deleted"]
+    if bad_status:
+        raise HTTPException(status_code=422, detail={
+            "error_code": "bundle_service_deleted",
+            "message": f"引用的服务已被删除: {bad_status}",
+        })
+    bad_type = [i for i, (_, pt) in found.items() if pt == "bundle"]
+    if bad_type:
+        raise HTTPException(status_code=422, detail={
+            "error_code": "bundle_nested",
+            "message": f"bundle 套餐不能嵌套引用其他 bundle: {bad_type}",
+        })
+    if exclude_service_id and exclude_service_id in ids:
+        raise HTTPException(status_code=422, detail={
+            "error_code": "bundle_self_reference",
+            "message": "bundle 不能引用自身",
+        })
+
+
 @expert_service_router.get("", response_model=List[dict])
 async def list_expert_services(
     expert_id: str,
@@ -130,6 +177,10 @@ async def create_expert_service(
             "message": "Team services only support GBP currently",
         })
 
+    # bundle 套餐: 校验引用的服务存在且同属
+    if body.package_type == "bundle":
+        await _validate_bundle_service_ids(db, expert_id, body.bundle_service_ids)
+
     data = body.model_dump(exclude_unset=True)
     service = models.TaskExpertService(
         owner_type="expert",
@@ -166,7 +217,7 @@ async def get_expert_service_detail(
         )
     )
     service = result.scalar_one_or_none()
-    if not service:
+    if not service or service.status == "deleted":
         raise HTTPException(status_code=404, detail="服务不存在")
 
     service.view_count = (service.view_count or 0) + 1
@@ -235,6 +286,15 @@ async def update_expert_service(
         raise HTTPException(status_code=404, detail="服务不存在")
 
     update_data = body.model_dump(exclude_unset=True)
+
+    # bundle 套餐: 如果新的 package_type 是 bundle 或 bundle_service_ids 被更新,执行校验
+    new_package_type = update_data.get("package_type", service.package_type)
+    new_bundle_ids = update_data.get("bundle_service_ids", service.bundle_service_ids)
+    if new_package_type == "bundle" and ("bundle_service_ids" in update_data or "package_type" in update_data):
+        await _validate_bundle_service_ids(
+            db, expert_id, new_bundle_ids, exclude_service_id=service_id
+        )
+
     for field, value in update_data.items():
         if hasattr(service, field):
             setattr(service, field, value)
@@ -268,8 +328,16 @@ async def delete_expert_service(
     if not service:
         raise HTTPException(status_code=404, detail="服务不存在")
 
-    await db.delete(service)
-    expert.total_services = max((expert.total_services or 1) - 1, 0)
+    # 软删除: 保留历史 ServiceApplication / Review / Task 关联,
+    # 仅把 status 改为 'deleted',下架展示。
+    if service.status == "deleted":
+        return {"detail": "服务已删除"}
+
+    was_active = service.status == "active"
+    service.status = "deleted"
+    service.updated_at = get_utc_time()
+    if was_active:
+        expert.total_services = max((expert.total_services or 1) - 1, 0)
     expert.updated_at = get_utc_time()
     await db.commit()
     return {"detail": "服务已删除"}

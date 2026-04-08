@@ -2320,6 +2320,24 @@ class TaskExpertOut(BaseModel):
         from_attributes = True
 
 
+_VALID_PACKAGE_TYPES = ("single", "multi", "bundle")
+
+
+def _validate_package_fields(package_type, total_sessions, bundle_service_ids):
+    """共享 package 字段一致性校验。返回错误消息或 None。"""
+    if package_type is None:
+        return None
+    if package_type not in _VALID_PACKAGE_TYPES:
+        return f"package_type 必须是 {_VALID_PACKAGE_TYPES} 之一"
+    if package_type == "multi":
+        if total_sessions is None or total_sessions < 2:
+            return "package_type=multi 时 total_sessions 必须 >= 2"
+    if package_type == "bundle":
+        if not bundle_service_ids or len(bundle_service_ids) < 2:
+            return "package_type=bundle 时 bundle_service_ids 至少需要 2 个服务 ID"
+    return None
+
+
 class TaskExpertServiceCreate(BaseModel):
     service_name: str
     service_name_en: Optional[str] = None
@@ -2343,6 +2361,13 @@ class TaskExpertServiceCreate(BaseModel):
     time_slot_end_time: Optional[str] = None  # 时间段结束时间（格式：HH:MM:SS，向后兼容）
     participants_per_slot: Optional[int] = None  # 每个时间段最多参与者数量
     weekly_time_slot_config: Optional[dict] = None  # 按周几设置时间段配置
+
+    @model_validator(mode='after')
+    def _check_package_fields(self):
+        err = _validate_package_fields(self.package_type, self.total_sessions, self.bundle_service_ids)
+        if err:
+            raise ValueError(err)
+        return self
 
 
 class TaskExpertServiceUpdate(BaseModel):
@@ -2375,6 +2400,32 @@ class TaskExpertServiceUpdate(BaseModel):
     time_slot_end_time: Optional[str] = None
     participants_per_slot: Optional[int] = None
     weekly_time_slot_config: Optional[dict] = None  # 按周几设置时间段配置
+
+    @model_validator(mode='after')
+    def _check_package_fields(self):
+        err = _validate_package_fields(self.package_type, self.total_sessions, self.bundle_service_ids)
+        if err:
+            raise ValueError(err)
+        return self
+
+
+class ExpertDashboardStatsOut(BaseModel):
+    """达人面板统计响应 (expert_dashboard_routes.get_dashboard_stats)"""
+    expert_id: str
+    name: Optional[str] = None
+    rating: float = 0.0
+    total_services: int = 0
+    active_services: int = 0
+    total_applications: int = 0
+    pending_applications: int = 0
+    upcoming_time_slots: int = 0
+    time_slots_with_participants: int = 0
+    total_multi_tasks: int = 0
+    in_progress_multi_tasks: int = 0
+    total_participants: int = 0
+    completed_tasks: int = 0
+    completion_rate: Optional[float] = None
+    member_count: int = 0
 
 
 class PersonalServiceCreate(BaseModel):

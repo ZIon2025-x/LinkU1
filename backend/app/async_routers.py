@@ -1585,6 +1585,7 @@ async def create_review_async(
         task_created_by_expert = getattr(task, 'created_by_expert', False)
         task_expert_creator_id = getattr(task, 'expert_creator_id', None)
         task_originating_user_id = getattr(task, 'originating_user_id', None)
+        task_taker_expert_id = getattr(task, 'taker_expert_id', None)
 
         # 检查用户是否是任务的参与者
         # 对于单人任务：检查是否是发布者或接受者
@@ -1629,12 +1630,14 @@ async def create_review_async(
                 cleaned_comment = cleaned_comment[:500]
         
         # 创建评价
+        # 团队任务: 同步 expert_id,这样团队评价列表 / 团队回复 / 团队评分聚合都能工作
         db_review = models.Review(
             user_id=user_id,
             task_id=task_id,
             rating=review.rating,
             comment=cleaned_comment,
             is_anonymous=1 if review.is_anonymous else 0,
+            expert_id=task_taker_expert_id,
         )
         
         db.add(db_review)
@@ -1685,7 +1688,20 @@ async def create_review_async(
                     sync_db.close()
             except Exception as e:
                 logger.warning(f"更新用户统计信息失败（异步路由）: {e}，将通过定时任务更新")
-        
+
+        # 团队任务: 同步聚合到 Expert 团队评分
+        if task_taker_expert_id:
+            try:
+                from app.database import SessionLocal
+                from app.crud.review import update_expert_team_statistics
+                sync_db = SessionLocal()
+                try:
+                    update_expert_team_statistics(sync_db, task_taker_expert_id)
+                finally:
+                    sync_db.close()
+            except Exception as e:
+                logger.warning(f"更新团队评分失败（异步路由）: {e}")
+
         return db_review
         
     except HTTPException:

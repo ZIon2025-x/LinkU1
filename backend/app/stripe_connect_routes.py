@@ -2471,6 +2471,34 @@ async def connect_webhook(request: Request, db: Session = Depends(get_db)):
                         logger.warning(f"Account.updated event for account {account_id} with metadata user_id {user_id}, but user not found")
                 else:
                     logger.warning(f"Account.updated event for account {account_id}, but no matching user found (no metadata.user_id)")
+
+            # 同时尝试同步 Expert 团队 Stripe Connect 状态
+            # 团队账户 metadata 中带 expert_id，account_id 也会写到 experts.stripe_account_id
+            try:
+                from app.models_expert import Expert as _Expert
+                expert_team = None
+                # 优先按 stripe_account_id 查
+                expert_team = db.query(_Expert).filter(_Expert.stripe_account_id == account_id).first()
+                if not expert_team:
+                    metadata = account.get("metadata") or {}
+                    meta_expert_id = metadata.get("expert_id") or metadata.get("expert_team_id")
+                    if meta_expert_id:
+                        expert_team = db.query(_Expert).filter(_Expert.id == str(meta_expert_id)).first()
+                        if expert_team and not expert_team.stripe_account_id:
+                            expert_team.stripe_account_id = account_id
+
+                if expert_team:
+                    # 复用上方解析出的 charges_enabled / details_submitted
+                    new_complete = bool(charges_enabled and details_submitted)
+                    if expert_team.stripe_onboarding_complete != new_complete:
+                        expert_team.stripe_onboarding_complete = new_complete
+                        db.commit()
+                        logger.info(
+                            f"Expert team {expert_team.id} stripe_onboarding_complete -> "
+                            f"{new_complete} (account_id={account_id})"
+                        )
+            except Exception as e:
+                logger.error(f"Failed to sync Expert team stripe state from account.updated: {e}", exc_info=True)
         
         # 处理账户关闭事件（V2 API）
         elif event_type == "v2.core.account.closed":

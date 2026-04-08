@@ -25,7 +25,7 @@ expert_dashboard_router = APIRouter(
 )
 
 
-@expert_dashboard_router.get("/dashboard/stats")
+@expert_dashboard_router.get("/dashboard/stats", response_model=schemas.ExpertDashboardStatsOut)
 async def get_dashboard_stats(
     expert_id: str,
     request: Request,

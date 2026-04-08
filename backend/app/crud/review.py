@@ -68,6 +68,61 @@ def get_user_reviews_with_reviewer_info(db: Session, user_id: str, limit: int = 
     return result
 
 
+def update_expert_team_statistics(db: Session, expert_id: str):
+    """聚合并更新达人团队的评分 / 完成任务数 / 完成率。
+
+    在每次创建针对团队任务的 Review 后调用,确保团队详情/列表展示的
+    rating 和 completed_tasks 与实际评价/任务状态保持一致。
+
+    Args:
+        expert_id: 新 experts 表的 id (8 位字符串)
+    """
+    from decimal import Decimal
+    from app.models_expert import Expert
+    from app.models import Review, Task
+
+    expert = db.query(Expert).filter(Expert.id == expert_id).first()
+    if not expert:
+        return None
+
+    # 1) 平均评分: 仅取这条团队收到的评价
+    avg_rating_result = (
+        db.query(func.avg(Review.rating))
+        .filter(Review.expert_id == expert_id)
+        .scalar()
+    )
+    avg_rating = float(avg_rating_result) if avg_rating_result is not None else 0.0
+
+    # 2) 完成任务数: 这个团队作为 taker 的已完成任务
+    completed_tasks = (
+        db.query(Task)
+        .filter(Task.taker_expert_id == expert_id, Task.status == "completed")
+        .count()
+    )
+
+    # 3) 完成率: completed / 已派单(taken_expert + completed)
+    total_taken = (
+        db.query(Task)
+        .filter(
+            Task.taker_expert_id == expert_id,
+            Task.status.in_(["in_progress", "completed", "pending_confirmation", "disputed"]),
+        )
+        .count()
+    )
+    completion_rate = (completed_tasks / total_taken * 100.0) if total_taken > 0 else 0.0
+
+    expert.rating = Decimal(str(avg_rating)).quantize(Decimal("0.01"))
+    expert.completed_tasks = completed_tasks
+    expert.completion_rate = completion_rate
+    db.commit()
+    db.refresh(expert)
+    return {
+        "rating": float(expert.rating),
+        "completed_tasks": completed_tasks,
+        "completion_rate": completion_rate,
+    }
+
+
 def calculate_user_avg_rating(db: Session, user_id: str):
     """计算并更新用户的平均评分"""
     result = (
@@ -131,12 +186,19 @@ def create_review(
         if len(cleaned_comment) > 500:
             cleaned_comment = cleaned_comment[:500]
 
+    # 团队任务: 把 expert_id 同步过来,这样:
+    #   1) GET /api/experts/{id}/reviews 能查到这条评价
+    #   2) 团队 Owner/Admin 可以回复 (expert_marketing_routes)
+    #   3) Expert.rating 聚合(下方 update_user_statistics)能正确归并到团队
+    review_expert_id = task.taker_expert_id if getattr(task, 'taker_expert_id', None) else None
+
     db_review = Review(
         user_id=user_id,
         task_id=task_id,
         rating=review.rating,
         comment=cleaned_comment,
         is_anonymous=1 if review.is_anonymous else 0,
+        expert_id=review_expert_id,
     )
     db.add(db_review)
     db.commit()
@@ -166,6 +228,14 @@ def create_review(
         except Exception as e:
             import logging
             logging.getLogger(__name__).warning(f"更新可靠度失败(review_created): {e}")
+
+    # 团队任务: 同步聚合到 Expert 团队评分
+    if review_expert_id:
+        try:
+            update_expert_team_statistics(db, review_expert_id)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"更新团队评分失败: {e}")
 
     return db_review
 

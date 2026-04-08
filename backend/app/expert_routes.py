@@ -538,6 +538,21 @@ async def invite_user(
     await db.commit()
     await db.refresh(invitation)
 
+    # 通知被邀请人(best-effort)
+    try:
+        from app.async_crud import AsyncNotificationCRUD
+        await AsyncNotificationCRUD.create_notification(
+            db=db,
+            user_id=body.invitee_id,
+            notification_type="expert_team_invitation",
+            title=f"达人团队邀请",
+            content=f"「{expert.name}」邀请你加入团队,点击查看详情。",
+            related_id=str(invitation.id),
+            related_type="expert_invitation",
+        )
+    except Exception as e:
+        logger.warning(f"发送达人团队邀请通知失败: {e}")
+
     # 填充 invitee 信息
     out = ExpertInvitationOut.model_validate(invitation)
     out.invitee_name = invitee.name
@@ -670,6 +685,32 @@ async def request_to_join(
     await db.commit()
     await db.refresh(join_req)
 
+    # 通知所有 owner/admin 有新加入申请(best-effort)
+    try:
+        from app.async_crud import AsyncNotificationCRUD
+        managers_result = await db.execute(
+            select(ExpertMember.user_id).where(
+                and_(
+                    ExpertMember.expert_id == expert_id,
+                    ExpertMember.status == "active",
+                    ExpertMember.role.in_(["owner", "admin"]),
+                )
+            )
+        )
+        manager_ids = [r[0] for r in managers_result.all()]
+        for mid in manager_ids:
+            await AsyncNotificationCRUD.create_notification(
+                db=db,
+                user_id=mid,
+                notification_type="expert_team_join_request",
+                title="新加入申请",
+                content=f"用户「{current_user.name}」申请加入团队「{expert.name}」",
+                related_id=str(join_req.id),
+                related_type="expert_join_request",
+            )
+    except Exception as e:
+        logger.warning(f"发送加入申请通知失败: {e}")
+
     out = ExpertJoinRequestOut.model_validate(join_req)
     out.user_name = current_user.name
     out.user_avatar = current_user.avatar
@@ -747,6 +788,21 @@ async def review_join_request(
         jr.status = "rejected"
         await db.commit()
         await db.refresh(jr)
+        # 通知申请人(best-effort)
+        try:
+            from app.async_crud import AsyncNotificationCRUD
+            expert_for_notify = await _get_expert_or_404(db, expert_id)
+            await AsyncNotificationCRUD.create_notification(
+                db=db,
+                user_id=jr.user_id,
+                notification_type="expert_team_join_rejected",
+                title="加入申请未通过",
+                content=f"很遗憾,你加入「{expert_for_notify.name}」团队的申请未通过。",
+                related_id=str(jr.id),
+                related_type="expert_join_request",
+            )
+        except Exception as e:
+            logger.warning(f"发送加入申请拒绝通知失败: {e}")
         return ExpertJoinRequestOut.model_validate(jr)
 
     # approve
@@ -784,6 +840,22 @@ async def review_join_request(
     expert.member_count = expert.member_count + 1
     await db.commit()
     await db.refresh(jr)
+
+    # 通知申请人申请通过(best-effort)
+    try:
+        from app.async_crud import AsyncNotificationCRUD
+        await AsyncNotificationCRUD.create_notification(
+            db=db,
+            user_id=jr.user_id,
+            notification_type="expert_team_join_approved",
+            title="加入申请已通过",
+            content=f"恭喜!你已加入「{expert.name}」达人团队。",
+            related_id=str(jr.id),
+            related_type="expert_join_request",
+        )
+    except Exception as e:
+        logger.warning(f"发送加入申请批准通知失败: {e}")
+
     return ExpertJoinRequestOut.model_validate(jr)
 
 

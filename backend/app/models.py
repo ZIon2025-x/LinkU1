@@ -1572,8 +1572,8 @@ class TaskExpert(Base):
     approver = relationship("AdminUser", backref="approved_experts")
     services = relationship("TaskExpertService", back_populates="expert", cascade="all, delete-orphan")
     profile_update_requests = relationship("TaskExpertProfileUpdateRequest", back_populates="expert", cascade="all, delete-orphan")
-    closed_dates = relationship("ExpertClosedDate", back_populates="expert", cascade="all, delete-orphan")
-    
+    # closed_dates 已迁移至新 Expert 表（migration 182）；TaskExpert 不再持有此关系
+
     __table_args__ = (
         Index("ix_task_experts_status", status),
         Index("ix_task_experts_rating", rating),
@@ -1745,18 +1745,18 @@ class ServiceTimeSlot(Base):
 
 
 class ExpertClosedDate(Base):
-    """任务达人关门日期表 - 存储任务达人的休息日"""
+    """达人团队关门日期表 - 存储团队的休息日
+
+    Phase 2a: expert_id 已迁移至新 experts 表（migration 182）。
+    """
     __tablename__ = "expert_closed_dates"
-    
+
     id = Column(Integer, primary_key=True, index=True)
-    expert_id = Column(String(8), ForeignKey("task_experts.id", ondelete="CASCADE"), nullable=False)
+    expert_id = Column(String(8), ForeignKey("experts.id", ondelete="CASCADE"), nullable=False)
     closed_date = Column(Date, nullable=False)  # 关门日期（不包含时间）
     reason = Column(String(200), nullable=True)  # 关门原因（可选）
     created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
-    
-    # 关系
-    expert = relationship("TaskExpert", back_populates="closed_dates")
     
     __table_args__ = (
         Index("ix_expert_closed_dates_expert_id", expert_id),
@@ -1772,9 +1772,9 @@ class ServiceApplication(Base):
     id = Column(Integer, primary_key=True, index=True)
     service_id = Column(Integer, ForeignKey("task_expert_services.id", ondelete="CASCADE"), nullable=False)
     applicant_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    expert_id = Column(String(8), ForeignKey("task_experts.id", ondelete="CASCADE"), nullable=True)
+    expert_id = Column(String(8), ForeignKey("task_experts.id", ondelete="CASCADE"), nullable=True)  # [legacy] 指向旧 task_experts 表，仅历史数据使用
     # 指向新 experts 表的 ID（Phase 2a）——与旧 expert_id 共存
-    new_expert_id = Column(String(8), nullable=True)  # 指向 experts.id（新表）
+    new_expert_id = Column(String(8), ForeignKey("experts.id", ondelete="CASCADE"), nullable=True)  # 指向 experts.id（新表）
     service_owner_id = Column(String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     time_slot_id = Column(Integer, ForeignKey("service_time_slots.id", ondelete="SET NULL"), nullable=True)  # 选择的时间段ID
     application_message = Column(Text, nullable=True)
@@ -1805,6 +1805,7 @@ class ServiceApplication(Base):
         Index("ix_service_applications_service_id", service_id),
         Index("ix_service_applications_applicant_id", applicant_id),
         Index("ix_service_applications_expert_id", expert_id),
+        Index("ix_service_applications_new_expert_id", new_expert_id),
         Index("ix_service_applications_status", status),
         Index("ix_service_applications_task_id", task_id),
         # 注意：部分唯一索引需要在数据库层面通过SQL创建

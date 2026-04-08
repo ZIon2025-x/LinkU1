@@ -64,6 +64,11 @@ export default async function middleware(request: Request) {
   // Build the prerender.io URL
   const prerenderUrl = `https://service.prerender.io/${request.url}`;
 
+  // No token configured → skip prerender entirely, serve SPA to bots
+  if (!PRERENDER_TOKEN) {
+    return;
+  }
+
   try {
     // Fetch pre-rendered page from prerender.io
     const response = await fetch(prerenderUrl, {
@@ -73,6 +78,13 @@ export default async function middleware(request: Request) {
       },
       redirect: 'follow',
     });
+
+    // If prerender.io returns an error (e.g. invalid token, quota exceeded,
+    // upstream 5xx), DO NOT propagate it to crawlers — fall through to the
+    // normal SPA so Google Search Console doesn't see 5xx spikes.
+    if (!response.ok) {
+      return;
+    }
 
     // Return the pre-rendered HTML
     return new Response(response.body, {

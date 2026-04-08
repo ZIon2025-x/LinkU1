@@ -2302,11 +2302,28 @@ def complete_task(
     if db_task.status != "in_progress":
         raise HTTPException(status_code=400, detail="Task is not in progress")
 
-    if db_task.taker_id != current_user.id:
+    # 权限检查: 单人任务只有 taker 能完成；
+    # 团队任务 (taker_expert_id 非空) 允许 owner/admin 任意一人完成。
+    is_authorized = db_task.taker_id == current_user.id
+    if not is_authorized and db_task.taker_expert_id:
+        from app.models_expert import ExpertMember
+        member = (
+            db.query(ExpertMember)
+            .filter(
+                ExpertMember.expert_id == db_task.taker_expert_id,
+                ExpertMember.user_id == current_user.id,
+                ExpertMember.status == "active",
+                ExpertMember.role.in_(["owner", "admin"]),
+            )
+            .first()
+        )
+        if member:
+            is_authorized = True
+    if not is_authorized:
         raise HTTPException(
             status_code=403, detail="Only the task taker can complete the task"
         )
-    
+
     # ⚠️ 安全修复：检查支付状态，确保只有已支付的任务才能完成
     if not db_task.is_paid:
         logger.warning(
@@ -7056,6 +7073,82 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                                 logger.warning(f"⚠️ [WEBHOOK] 租赁申请 {rental_request_id} 不存在或状态不匹配")
                         except Exception as e:
                             logger.error(f"❌ [WEBHOOK] 创建跳蚤市场租赁记录失败: {e}", exc_info=True)
+
+                # ==================== 团队服务申请批准的支付完成 ====================
+                # expert_consultation_routes.approve_application 创建 Task(status=pending_payment)
+                # + ServiceApplication(status=approved) + PaymentIntent。
+                # 此处把任务从 pending_payment 翻成 in_progress，并通知申请人。
+                if payment_type == "team_service_application_approve":
+                    service_application_id_str = metadata.get("service_application_id")
+                    if service_application_id_str:
+                        try:
+                            service_application_id = int(service_application_id_str)
+                            sa = db.execute(
+                                select(models.ServiceApplication).where(
+                                    models.ServiceApplication.id == service_application_id
+                                ).with_for_update()
+                            ).scalar_one_or_none()
+
+                            if sa is None:
+                                logger.warning(
+                                    f"⚠️ [WEBHOOK] 团队服务申请 {service_application_id} 不存在"
+                                )
+                            elif task.status == "pending_payment":
+                                task.status = "in_progress"
+                                task.accepted_at = task.accepted_at or get_utc_time()
+                                # ServiceApplication 在 approve 时已写为 approved，
+                                # 这里只需写 task 状态，但确保 task_id 已绑定
+                                if sa.task_id is None:
+                                    sa.task_id = task_id
+                                logger.info(
+                                    f"✅ [WEBHOOK] 团队服务任务 {task_id} 进入 in_progress "
+                                    f"(service_application_id={service_application_id})"
+                                )
+
+                                # 通知申请人 + 团队 owner: 任务已开始
+                                try:
+                                    from app.task_notifications import (
+                                        send_service_application_approved_notification,
+                                    )
+                                    service_obj = db.query(models.TaskExpertService).filter(
+                                        models.TaskExpertService.id == sa.service_id
+                                    ).first()
+                                    service_name = service_obj.service_name if service_obj else "服务"
+                                    # 向 buyer 发通知
+                                    crud.create_notification(
+                                        db=db,
+                                        user_id=sa.applicant_id,
+                                        type="team_service_task_started",
+                                        title="任务已开始",
+                                        content=f"您支付的「{service_name}」服务已开始,达人将尽快为您服务。",
+                                        related_id=str(task_id),
+                                        auto_commit=False,
+                                    )
+                                    # 向 team owner (taker_id) 发通知
+                                    if task.taker_id:
+                                        crud.create_notification(
+                                            db=db,
+                                            user_id=task.taker_id,
+                                            type="team_service_payment_received",
+                                            title="收到新订单",
+                                            content=f"用户已支付「{service_name}」服务,任务已进入进行中。",
+                                            related_id=str(task_id),
+                                            auto_commit=False,
+                                        )
+                                except Exception as notify_err:
+                                    logger.warning(
+                                        f"⚠️ [WEBHOOK] 团队服务任务通知发送失败: {notify_err}"
+                                    )
+                            else:
+                                logger.info(
+                                    f"ℹ️ [WEBHOOK] 团队服务任务 {task_id} 状态={task.status}, "
+                                    f"跳过状态翻转(可能已被处理)"
+                                )
+                        except Exception as e:
+                            logger.error(
+                                f"❌ [WEBHOOK] 处理团队服务申请支付失败: {e}",
+                                exc_info=True,
+                            )
 
                 application_id_str = metadata.get("application_id")
                 
