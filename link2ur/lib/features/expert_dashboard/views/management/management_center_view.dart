@@ -168,7 +168,7 @@ class _ManagementCenterScaffold extends StatelessWidget {
               ),
               _MenuTile(
                 icon: Icons.qr_code_scanner_outlined,
-                label: '套餐核销 / 我的客户',
+                label: context.l10n.expertManagementCustomerPackages,
                 onTap: () => context.push(
                     '/expert-dashboard/$expertId/management/customer-packages'),
               ),

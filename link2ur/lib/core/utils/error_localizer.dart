@@ -437,6 +437,20 @@ class ErrorLocalizer {
       case 'bundle_nested':
       case 'bundle_self_reference':
         return context.l10n.expertBundleInvalid;
+      // A1 套餐购买/核销
+      case 'package_already_active':
+        return context.l10n.errorPackageAlreadyActive;
+      case 'package_expired':
+        return context.l10n.errorPackageExpired;
+      case 'bundle_sub_service_required':
+        return context.l10n.errorPackageBundleSubRequired;
+      case 'team_no_stripe_account':
+        return context.l10n.errorTeamNoStripeAccount;
+      // 服务删除前置校验
+      case 'service_has_active_activities':
+        return context.l10n.errorServiceHasActiveActivities;
+      case 'service_has_active_applications':
+        return context.l10n.errorServiceHasActiveApplications;
       default:
         // 服务端返回的已翻译消息，直接使用
         return errorMessage;

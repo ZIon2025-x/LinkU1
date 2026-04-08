@@ -255,12 +255,13 @@ class _CalendarGrid extends StatelessWidget {
   final void Function(DateTime day) onDayTapped;
 
   // Returns weekday abbreviations; Monday-first.
+  // 中文 (简/繁) 共用同一组单字符标签; 其他语言走英文 abbrev.
   List<String> _weekdayLabels(BuildContext context) {
     final locale = Localizations.localeOf(context).languageCode;
     if (locale == 'zh') {
-      return ['一', '二', '三', '四', '五', '六', '日'];
+      return const ['一', '二', '三', '四', '五', '六', '日'];
     }
-    return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    return const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   }
 
   bool _isClosed(DateTime day) {

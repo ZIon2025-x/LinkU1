@@ -117,38 +117,41 @@ class _MembersBody extends StatelessWidget {
   }
 
   Future<void> _showInviteDialog(BuildContext context) async {
+    final l10n = context.l10n;
     final controller = TextEditingController();
     final bloc = context.read<ExpertTeamBloc>();
 
     await showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(context.l10n.expertTeamInviteMember),
+        title: Text(l10n.expertTeamInviteMember),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(
-            labelText: '用户 ID',
-            hintText: '请输入要邀请的用户 ID',
+          decoration: InputDecoration(
+            labelText: l10n.expertTeamInviteUserIdLabel,
+            hintText: l10n.expertTeamInviteUserIdHint,
           ),
           autofocus: true,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('取消'),
+            child: Text(l10n.commonCancel),
           ),
           TextButton(
             onPressed: () {
               final inviteeId = controller.text.trim();
-              if (inviteeId.isNotEmpty) {
-                bloc.add(ExpertTeamInviteMember(
-                  expertId: expertId,
-                  inviteeId: inviteeId,
-                ));
-                Navigator.of(ctx).pop();
+              // 客户端校验: 非空且长度合理 (后端 user_id 通常 8-32 字符)
+              if (inviteeId.isEmpty || inviteeId.length < 4 || inviteeId.length > 64) {
+                return;
               }
+              bloc.add(ExpertTeamInviteMember(
+                expertId: expertId,
+                inviteeId: inviteeId,
+              ));
+              Navigator.of(ctx).pop();
             },
-            child: const Text('发送邀请'),
+            child: Text(l10n.expertTeamSendInvite),
           ),
         ],
       ),

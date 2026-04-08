@@ -11937,6 +11937,152 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get expertPackageConfirmDeleteMessage => '确定删除此套餐？已购买的客户仍保留使用权限。';
+
+  @override
+  String get expertManagementCustomerPackages => '套餐核销 / 我的客户';
+
+  @override
+  String get customerPackagesTitle => '我的客户 · 套餐';
+
+  @override
+  String get customerPackagesScanRedeem => '扫码核销';
+
+  @override
+  String get customerPackagesEmpty => '暂无客户套餐数据';
+
+  @override
+  String get customerPackagesAnonymousUser => '匿名用户';
+
+  @override
+  String customerPackagesUsedCount(int used, int total) {
+    return '已核销 $used / $total 次';
+  }
+
+  @override
+  String get customerPackagesSubServiceProgress => '子服务进度：';
+
+  @override
+  String customerPackagesSubServiceLine(String id, int used, int total) {
+    return '服务 #$id：$used / $total';
+  }
+
+  @override
+  String customerPackagesExpiresOn(String date) {
+    return '到期：$date';
+  }
+
+  @override
+  String get packageStatusActive => '使用中';
+
+  @override
+  String get packageStatusExhausted => '已用完';
+
+  @override
+  String get packageStatusExpired => '已过期';
+
+  @override
+  String get packageStatusAll => '全部';
+
+  @override
+  String expertPackageNumber(String id) {
+    return '套餐 #$id';
+  }
+
+  @override
+  String expertPackageRemainingCount(int remaining, int total) {
+    return '剩余 $remaining / $total 次';
+  }
+
+  @override
+  String expertPackageQrTitle(int id, int remaining) {
+    return '套餐 #$id · 剩 $remaining 次';
+  }
+
+  @override
+  String get expertPackageShowRedemptionCode => '出示核销码';
+
+  @override
+  String get expertPackageNotRedeemable => '不可核销';
+
+  @override
+  String get couponsCreateTitle => '创建优惠券';
+
+  @override
+  String get couponsFieldName => '名称';
+
+  @override
+  String get couponsFieldCode => '优惠码';
+
+  @override
+  String get couponsFieldValue => '优惠值';
+
+  @override
+  String get couponsCreateAction => '创建';
+
+  @override
+  String get expertTeamInviteUserIdLabel => '用户 ID';
+
+  @override
+  String get expertTeamInviteUserIdHint => '请输入要邀请的用户 ID';
+
+  @override
+  String get expertTeamSendInvite => '发送邀请';
+
+  @override
+  String get expertTeamCreateNameTooShort => '团队名称至少 2 个字符';
+
+  @override
+  String get expertTeamCreateBioHint => '介绍你的团队（选填）';
+
+  @override
+  String get expertTeamCreateMessageHint => '向管理员说明你的创建理由（选填）';
+
+  @override
+  String get expertTeamCreateInfoNote => '申请提交后将由管理员审核，审核通过后即可创建团队。';
+
+  @override
+  String get expertTeamOfficialBadge => '官方';
+
+  @override
+  String get expertTeamForumSection => '达人板块';
+
+  @override
+  String get expertTeamStatMembers => '成员';
+
+  @override
+  String get expertTeamStatServices => '服务';
+
+  @override
+  String get expertTeamStatCompleted => '完成';
+
+  @override
+  String get expertTeamStatRating => '评分';
+
+  @override
+  String expertTeamMembersHeader(int count) {
+    return '成员（$count）';
+  }
+
+  @override
+  String get expertTeamSeeAll => '查看全部';
+
+  @override
+  String get errorPackageAlreadyActive => '你已有一个进行中的此服务套餐，请用完后再购买。';
+
+  @override
+  String get errorPackageExpired => '套餐已过期。';
+
+  @override
+  String get errorPackageBundleSubRequired => '请选择要核销的子服务。';
+
+  @override
+  String get errorTeamNoStripeAccount => '团队 Stripe 尚未配置完成。';
+
+  @override
+  String get errorServiceHasActiveActivities => '该服务仍有进行中的活动，请先取消或完成后再删除。';
+
+  @override
+  String get errorServiceHasActiveApplications => '该服务仍有进行中的申请，请先处理后再删除。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -23872,4 +24018,150 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get expertPackageConfirmDeleteMessage => '確定刪除此套餐？已購買的客戶仍保留使用權限。';
+
+  @override
+  String get expertManagementCustomerPackages => '套餐核銷 / 我的客戶';
+
+  @override
+  String get customerPackagesTitle => '我的客戶 · 套餐';
+
+  @override
+  String get customerPackagesScanRedeem => '掃碼核銷';
+
+  @override
+  String get customerPackagesEmpty => '暫無客戶套餐資料';
+
+  @override
+  String get customerPackagesAnonymousUser => '匿名用戶';
+
+  @override
+  String customerPackagesUsedCount(int used, int total) {
+    return '已核銷 $used / $total 次';
+  }
+
+  @override
+  String get customerPackagesSubServiceProgress => '子服務進度：';
+
+  @override
+  String customerPackagesSubServiceLine(String id, int used, int total) {
+    return '服務 #$id：$used / $total';
+  }
+
+  @override
+  String customerPackagesExpiresOn(String date) {
+    return '到期：$date';
+  }
+
+  @override
+  String get packageStatusActive => '使用中';
+
+  @override
+  String get packageStatusExhausted => '已用完';
+
+  @override
+  String get packageStatusExpired => '已過期';
+
+  @override
+  String get packageStatusAll => '全部';
+
+  @override
+  String expertPackageNumber(String id) {
+    return '套餐 #$id';
+  }
+
+  @override
+  String expertPackageRemainingCount(int remaining, int total) {
+    return '剩餘 $remaining / $total 次';
+  }
+
+  @override
+  String expertPackageQrTitle(int id, int remaining) {
+    return '套餐 #$id · 剩 $remaining 次';
+  }
+
+  @override
+  String get expertPackageShowRedemptionCode => '出示核銷碼';
+
+  @override
+  String get expertPackageNotRedeemable => '不可核銷';
+
+  @override
+  String get couponsCreateTitle => '建立優惠券';
+
+  @override
+  String get couponsFieldName => '名稱';
+
+  @override
+  String get couponsFieldCode => '優惠碼';
+
+  @override
+  String get couponsFieldValue => '優惠值';
+
+  @override
+  String get couponsCreateAction => '建立';
+
+  @override
+  String get expertTeamInviteUserIdLabel => '使用者 ID';
+
+  @override
+  String get expertTeamInviteUserIdHint => '請輸入要邀請的使用者 ID';
+
+  @override
+  String get expertTeamSendInvite => '發送邀請';
+
+  @override
+  String get expertTeamCreateNameTooShort => '團隊名稱至少 2 個字元';
+
+  @override
+  String get expertTeamCreateBioHint => '介紹你的團隊（選填）';
+
+  @override
+  String get expertTeamCreateMessageHint => '向管理員說明你的創建理由（選填）';
+
+  @override
+  String get expertTeamCreateInfoNote => '申請提交後將由管理員審核，審核通過後即可建立團隊。';
+
+  @override
+  String get expertTeamOfficialBadge => '官方';
+
+  @override
+  String get expertTeamForumSection => '達人板塊';
+
+  @override
+  String get expertTeamStatMembers => '成員';
+
+  @override
+  String get expertTeamStatServices => '服務';
+
+  @override
+  String get expertTeamStatCompleted => '完成';
+
+  @override
+  String get expertTeamStatRating => '評分';
+
+  @override
+  String expertTeamMembersHeader(int count) {
+    return '成員（$count）';
+  }
+
+  @override
+  String get expertTeamSeeAll => '查看全部';
+
+  @override
+  String get errorPackageAlreadyActive => '你已有一個進行中的此服務套餐，請用完後再購買。';
+
+  @override
+  String get errorPackageExpired => '套餐已過期。';
+
+  @override
+  String get errorPackageBundleSubRequired => '請選擇要核銷的子服務。';
+
+  @override
+  String get errorTeamNoStripeAccount => '團隊 Stripe 尚未設定完成。';
+
+  @override
+  String get errorServiceHasActiveActivities => '該服務仍有進行中的活動，請先取消或完成後再刪除。';
+
+  @override
+  String get errorServiceHasActiveApplications => '該服務仍有進行中的申請，請先處理後再刪除。';
 }

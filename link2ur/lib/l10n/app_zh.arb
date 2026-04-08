@@ -5402,5 +5402,70 @@
   "expertPackageUpdated": "套餐已更新",
   "expertPackageDeleted": "套餐已删除",
   "expertPackageConfirmDelete": "删除套餐",
-  "expertPackageConfirmDeleteMessage": "确定删除此套餐？已购买的客户仍保留使用权限。"
+  "expertPackageConfirmDeleteMessage": "确定删除此套餐？已购买的客户仍保留使用权限。",
+  "expertManagementCustomerPackages": "套餐核销 / 我的客户",
+  "customerPackagesTitle": "我的客户 · 套餐",
+  "customerPackagesScanRedeem": "扫码核销",
+  "customerPackagesEmpty": "暂无客户套餐数据",
+  "customerPackagesAnonymousUser": "匿名用户",
+  "customerPackagesUsedCount": "已核销 {used} / {total} 次",
+  "@customerPackagesUsedCount": {
+    "placeholders": { "used": {"type": "int"}, "total": {"type": "int"} }
+  },
+  "customerPackagesSubServiceProgress": "子服务进度：",
+  "customerPackagesSubServiceLine": "服务 #{id}：{used} / {total}",
+  "@customerPackagesSubServiceLine": {
+    "placeholders": { "id": {"type": "String"}, "used": {"type": "int"}, "total": {"type": "int"} }
+  },
+  "customerPackagesExpiresOn": "到期：{date}",
+  "@customerPackagesExpiresOn": {
+    "placeholders": { "date": {"type": "String"} }
+  },
+  "packageStatusActive": "使用中",
+  "packageStatusExhausted": "已用完",
+  "packageStatusExpired": "已过期",
+  "packageStatusAll": "全部",
+  "expertPackageNumber": "套餐 #{id}",
+  "@expertPackageNumber": {
+    "placeholders": { "id": {"type": "String"} }
+  },
+  "expertPackageRemainingCount": "剩余 {remaining} / {total} 次",
+  "@expertPackageRemainingCount": {
+    "placeholders": { "remaining": {"type": "int"}, "total": {"type": "int"} }
+  },
+  "expertPackageQrTitle": "套餐 #{id} · 剩 {remaining} 次",
+  "@expertPackageQrTitle": {
+    "placeholders": { "id": {"type": "int"}, "remaining": {"type": "int"} }
+  },
+  "expertPackageShowRedemptionCode": "出示核销码",
+  "expertPackageNotRedeemable": "不可核销",
+  "couponsCreateTitle": "创建优惠券",
+  "couponsFieldName": "名称",
+  "couponsFieldCode": "优惠码",
+  "couponsFieldValue": "优惠值",
+  "couponsCreateAction": "创建",
+  "expertTeamInviteUserIdLabel": "用户 ID",
+  "expertTeamInviteUserIdHint": "请输入要邀请的用户 ID",
+  "expertTeamSendInvite": "发送邀请",
+  "expertTeamCreateNameTooShort": "团队名称至少 2 个字符",
+  "expertTeamCreateBioHint": "介绍你的团队（选填）",
+  "expertTeamCreateMessageHint": "向管理员说明你的创建理由（选填）",
+  "expertTeamCreateInfoNote": "申请提交后将由管理员审核，审核通过后即可创建团队。",
+  "expertTeamOfficialBadge": "官方",
+  "expertTeamForumSection": "达人板块",
+  "expertTeamStatMembers": "成员",
+  "expertTeamStatServices": "服务",
+  "expertTeamStatCompleted": "完成",
+  "expertTeamStatRating": "评分",
+  "expertTeamMembersHeader": "成员（{count}）",
+  "@expertTeamMembersHeader": {
+    "placeholders": { "count": {"type": "int"} }
+  },
+  "expertTeamSeeAll": "查看全部",
+  "errorPackageAlreadyActive": "你已有一个进行中的此服务套餐，请用完后再购买。",
+  "errorPackageExpired": "套餐已过期。",
+  "errorPackageBundleSubRequired": "请选择要核销的子服务。",
+  "errorTeamNoStripeAccount": "团队 Stripe 尚未配置完成。",
+  "errorServiceHasActiveActivities": "该服务仍有进行中的活动，请先取消或完成后再删除。",
+  "errorServiceHasActiveApplications": "该服务仍有进行中的申请，请先处理后再删除。"
 }

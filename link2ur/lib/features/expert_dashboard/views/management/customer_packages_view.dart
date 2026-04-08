@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/utils/l10n_extension.dart';
 import '../../../../data/repositories/package_purchase_repository.dart';
 import 'package_redemption_scan_view.dart';
 
@@ -76,13 +77,14 @@ class _CustomerPackagesViewState extends State<CustomerPackagesView> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('我的客户 · 套餐'),
+        title: Text(l10n.customerPackagesTitle),
         actions: [
           IconButton(
             icon: const Icon(Icons.qr_code_scanner),
-            tooltip: '扫码核销',
+            tooltip: l10n.customerPackagesScanRedeem,
             onPressed: _openScanner,
           ),
         ],
@@ -93,11 +95,11 @@ class _CustomerPackagesViewState extends State<CustomerPackagesView> {
           Padding(
             padding: const EdgeInsets.all(12),
             child: SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'active', label: Text('使用中')),
-                ButtonSegment(value: 'exhausted', label: Text('已用完')),
-                ButtonSegment(value: 'expired', label: Text('已过期')),
-                ButtonSegment(value: 'all', label: Text('全部')),
+              segments: [
+                ButtonSegment(value: 'active', label: Text(l10n.packageStatusActive)),
+                ButtonSegment(value: 'exhausted', label: Text(l10n.packageStatusExhausted)),
+                ButtonSegment(value: 'expired', label: Text(l10n.packageStatusExpired)),
+                ButtonSegment(value: 'all', label: Text(l10n.packageStatusAll)),
               ],
               selected: {_statusFilter},
               onSelectionChanged: (s) {
@@ -114,12 +116,13 @@ class _CustomerPackagesViewState extends State<CustomerPackagesView> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _openScanner,
         icon: const Icon(Icons.qr_code_scanner),
-        label: const Text('扫码核销'),
+        label: Text(l10n.customerPackagesScanRedeem),
       ),
     );
   }
 
   Widget _buildList() {
+    final l10n = context.l10n;
     if (_loading) return const Center(child: CircularProgressIndicator());
     if (_error != null) {
       return Center(
@@ -128,13 +131,13 @@ class _CustomerPackagesViewState extends State<CustomerPackagesView> {
           children: [
             Text(_error!),
             const SizedBox(height: 8),
-            ElevatedButton(onPressed: _load, child: const Text('重试')),
+            ElevatedButton(onPressed: _load, child: Text(l10n.commonRetry)),
           ],
         ),
       );
     }
     if (_items.isEmpty) {
-      return const Center(child: Text('暂无客户套餐数据'));
+      return Center(child: Text(l10n.customerPackagesEmpty));
     }
     return RefreshIndicator(
       onRefresh: _load,
@@ -175,7 +178,7 @@ class _CustomerPackagesViewState extends State<CustomerPackagesView> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              p['user_name'] as String? ?? '匿名用户',
+                              p['user_name'] as String? ?? l10n.customerPackagesAnonymousUser,
                               style: Theme.of(context).textTheme.titleMedium,
                             ),
                             Text(
@@ -193,11 +196,11 @@ class _CustomerPackagesViewState extends State<CustomerPackagesView> {
                   const SizedBox(height: 12),
                   LinearProgressIndicator(value: progress),
                   const SizedBox(height: 4),
-                  Text('已核销 $used / $total 次'),
+                  Text(l10n.customerPackagesUsedCount(used, total)),
                   if (breakdown != null && breakdown.isNotEmpty) ...[
                     const SizedBox(height: 8),
-                    const Text('子服务进度:',
-                        style: TextStyle(
+                    Text(l10n.customerPackagesSubServiceProgress,
+                        style: const TextStyle(
                             fontSize: 12, fontWeight: FontWeight.bold)),
                     ...breakdown.entries.map((e) {
                       final entry = e.value as Map<String, dynamic>;
@@ -215,7 +218,7 @@ class _CustomerPackagesViewState extends State<CustomerPackagesView> {
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              '服务 #${e.key}: $u / $t',
+                              l10n.customerPackagesSubServiceLine(e.key, u, t),
                               style: const TextStyle(fontSize: 12),
                             ),
                           ],
@@ -226,7 +229,7 @@ class _CustomerPackagesViewState extends State<CustomerPackagesView> {
                   if (p['expires_at'] != null) ...[
                     const SizedBox(height: 6),
                     Text(
-                      '到期: ${(p['expires_at'] as String).substring(0, 10)}',
+                      l10n.customerPackagesExpiresOn((p['expires_at'] as String).substring(0, 10)),
                       style: const TextStyle(fontSize: 11, color: Colors.grey),
                     ),
                   ],
@@ -240,20 +243,21 @@ class _CustomerPackagesViewState extends State<CustomerPackagesView> {
   }
 
   Widget _statusBadge(String status) {
+    final l10n = context.l10n;
     Color c;
     String label;
     switch (status) {
       case 'active':
         c = Colors.green;
-        label = '使用中';
+        label = l10n.packageStatusActive;
         break;
       case 'exhausted':
         c = Colors.orange;
-        label = '已用完';
+        label = l10n.packageStatusExhausted;
         break;
       case 'expired':
         c = Colors.red;
-        label = '已过期';
+        label = l10n.packageStatusExpired;
         break;
       default:
         c = Colors.grey;

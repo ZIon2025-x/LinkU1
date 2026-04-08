@@ -61,7 +61,7 @@ class _PackagesBody extends StatelessWidget {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text('套餐 #${p['id']}',
+                                Text(context.l10n.expertPackageNumber('${p['id']}'),
                                     style: Theme.of(context).textTheme.titleMedium),
                                 _StatusChip(status: status),
                               ],
@@ -71,10 +71,10 @@ class _PackagesBody extends StatelessWidget {
                               value: total > 0 ? (total - remaining) / total : 0,
                             ),
                             const SizedBox(height: 4),
-                            Text('剩余 $remaining / $total 次'),
+                            Text(context.l10n.expertPackageRemainingCount(remaining, total)),
                             if (p['expires_at'] != null) ...[
                               const SizedBox(height: 4),
-                              Text('到期: ${(p['expires_at'] as String).substring(0, 10)}',
+                              Text(context.l10n.customerPackagesExpiresOn((p['expires_at'] as String).substring(0, 10)),
                                   style: Theme.of(context).textTheme.bodySmall),
                             ],
                             const SizedBox(height: 12),
@@ -86,8 +86,8 @@ class _PackagesBody extends StatelessWidget {
                                         showPackageRedemptionQrSheet(
                                           context: context,
                                           packageId: packageId,
-                                          packageTitle:
-                                              '套餐 #$packageId · 剩 $remaining 次',
+                                          packageTitle: context.l10n
+                                              .expertPackageQrTitle(packageId, remaining),
                                           repository: context
                                               .read<PackagePurchaseRepository>(),
                                         );
@@ -95,7 +95,9 @@ class _PackagesBody extends StatelessWidget {
                                     : null,
                                 icon: const Icon(Icons.qr_code),
                                 label: Text(
-                                  canRedeem ? '出示核销码' : '不可核销',
+                                  canRedeem
+                                      ? context.l10n.expertPackageShowRedemptionCode
+                                      : context.l10n.expertPackageNotRedeemable,
                                 ),
                               ),
                             ),
@@ -117,20 +119,21 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     Color color;
     String label;
     switch (status) {
       case 'active':
         color = Colors.green;
-        label = '使用中';
+        label = l10n.packageStatusActive;
         break;
       case 'exhausted':
         color = Colors.orange;
-        label = '已用完';
+        label = l10n.packageStatusExhausted;
         break;
       case 'expired':
         color = Colors.red;
-        label = '已过期';
+        label = l10n.packageStatusExpired;
         break;
       default:
         color = Colors.grey;

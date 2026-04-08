@@ -5510,5 +5510,70 @@
   "expertPackageUpdated": "Package updated",
   "expertPackageDeleted": "Package deleted",
   "expertPackageConfirmDelete": "Delete Package",
-  "expertPackageConfirmDeleteMessage": "Are you sure you want to delete this package? Existing customers who purchased it will keep their access."
+  "expertPackageConfirmDeleteMessage": "Are you sure you want to delete this package? Existing customers who purchased it will keep their access.",
+  "expertManagementCustomerPackages": "Customer Packages / Redeem",
+  "customerPackagesTitle": "Customer Packages",
+  "customerPackagesScanRedeem": "Scan to Redeem",
+  "customerPackagesEmpty": "No customer packages yet",
+  "customerPackagesAnonymousUser": "Anonymous user",
+  "customerPackagesUsedCount": "Used {used} / {total}",
+  "@customerPackagesUsedCount": {
+    "placeholders": { "used": {"type": "int"}, "total": {"type": "int"} }
+  },
+  "customerPackagesSubServiceProgress": "Sub-service progress:",
+  "customerPackagesSubServiceLine": "Service #{id}: {used} / {total}",
+  "@customerPackagesSubServiceLine": {
+    "placeholders": { "id": {"type": "String"}, "used": {"type": "int"}, "total": {"type": "int"} }
+  },
+  "customerPackagesExpiresOn": "Expires: {date}",
+  "@customerPackagesExpiresOn": {
+    "placeholders": { "date": {"type": "String"} }
+  },
+  "packageStatusActive": "Active",
+  "packageStatusExhausted": "Used up",
+  "packageStatusExpired": "Expired",
+  "packageStatusAll": "All",
+  "expertPackageNumber": "Package #{id}",
+  "@expertPackageNumber": {
+    "placeholders": { "id": {"type": "String"} }
+  },
+  "expertPackageRemainingCount": "Remaining {remaining} / {total}",
+  "@expertPackageRemainingCount": {
+    "placeholders": { "remaining": {"type": "int"}, "total": {"type": "int"} }
+  },
+  "expertPackageQrTitle": "Package #{id} · {remaining} left",
+  "@expertPackageQrTitle": {
+    "placeholders": { "id": {"type": "int"}, "remaining": {"type": "int"} }
+  },
+  "expertPackageShowRedemptionCode": "Show Redemption Code",
+  "expertPackageNotRedeemable": "Not redeemable",
+  "couponsCreateTitle": "Create Coupon",
+  "couponsFieldName": "Name",
+  "couponsFieldCode": "Code",
+  "couponsFieldValue": "Discount value",
+  "couponsCreateAction": "Create",
+  "expertTeamInviteUserIdLabel": "User ID",
+  "expertTeamInviteUserIdHint": "Enter the user ID to invite",
+  "expertTeamSendInvite": "Send Invite",
+  "expertTeamCreateNameTooShort": "Team name must be at least 2 characters",
+  "expertTeamCreateBioHint": "Introduce your team (optional)",
+  "expertTeamCreateMessageHint": "Tell admins why you want to create this team (optional)",
+  "expertTeamCreateInfoNote": "After submission, an admin will review your request before the team is created.",
+  "expertTeamOfficialBadge": "Official",
+  "expertTeamForumSection": "Team Forum",
+  "expertTeamStatMembers": "Members",
+  "expertTeamStatServices": "Services",
+  "expertTeamStatCompleted": "Completed",
+  "expertTeamStatRating": "Rating",
+  "expertTeamMembersHeader": "Members ({count})",
+  "@expertTeamMembersHeader": {
+    "placeholders": { "count": {"type": "int"} }
+  },
+  "expertTeamSeeAll": "See all",
+  "errorPackageAlreadyActive": "You already have an active package for this service. Use it up before buying another.",
+  "errorPackageExpired": "This package has expired.",
+  "errorPackageBundleSubRequired": "Please select which sub-service to redeem.",
+  "errorTeamNoStripeAccount": "The team has not finished Stripe setup yet.",
+  "errorServiceHasActiveActivities": "This service still has active activities. Cancel or finish them before deleting.",
+  "errorServiceHasActiveApplications": "This service still has in-flight applications. Resolve them before deleting."
 }

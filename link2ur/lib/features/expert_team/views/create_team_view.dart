@@ -155,7 +155,7 @@ class _CreateTeamContentState extends State<_CreateTeamContent> {
                           return context.l10n.expertTeamTeamName;
                         }
                         if (value.trim().length < 2) {
-                          return '团队名称至少2个字符';
+                          return context.l10n.expertTeamCreateNameTooShort;
                         }
                         return null;
                       },
@@ -174,9 +174,9 @@ class _CreateTeamContentState extends State<_CreateTeamContent> {
                     TextFormField(
                       controller: _bioController,
                       enabled: !isLoading,
-                      decoration: const InputDecoration(
-                        hintText: '介绍你的团队（选填）',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        hintText: context.l10n.expertTeamCreateBioHint,
+                        border: const OutlineInputBorder(),
                         alignLabelWithHint: true,
                       ),
                       maxLines: 3,
@@ -196,9 +196,9 @@ class _CreateTeamContentState extends State<_CreateTeamContent> {
                     TextFormField(
                       controller: _messageController,
                       enabled: !isLoading,
-                      decoration: const InputDecoration(
-                        hintText: '向管理员说明你的创建理由（选填）',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        hintText: context.l10n.expertTeamCreateMessageHint,
+                        border: const OutlineInputBorder(),
                         alignLabelWithHint: true,
                       ),
                       maxLines: 3,
@@ -248,7 +248,7 @@ class _CreateTeamContentState extends State<_CreateTeamContent> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              '申请提交后将由管理员审核，审核通过后即可创建团队。',
+                              context.l10n.expertTeamCreateInfoNote,
                               style: Theme.of(context)
                                   .textTheme
                                   .bodySmall

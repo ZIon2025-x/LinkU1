@@ -12135,16 +12135,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get expertTeamReviewReplied => 'Reply posted';
 
   @override
-  String get expertTimeSlotFull => 'This time slot is full. Please pick another one.';
+  String get expertTimeSlotFull =>
+      'This time slot is full. Please pick another one.';
 
   @override
-  String get expertStripeNotReady => 'This team has not finished Stripe onboarding yet.';
+  String get expertStripeNotReady =>
+      'This team has not finished Stripe onboarding yet.';
 
   @override
-  String get expertCurrencyUnsupported => 'Team services only support GBP for now.';
+  String get expertCurrencyUnsupported =>
+      'Team services only support GBP for now.';
 
   @override
-  String get expertBundleInvalid => 'The bundle package references invalid services.';
+  String get expertBundleInvalid =>
+      'The bundle package references invalid services.';
 
   @override
   String get expertTeamStatusActive => 'Active';
@@ -12153,7 +12157,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get expertTeamStatusInactive => 'Suspended';
 
   @override
-  String get expertTeamCreateAvatarPlaceholder => 'Avatar (upload not yet supported)';
+  String get expertTeamCreateAvatarPlaceholder =>
+      'Avatar (upload not yet supported)';
 
   @override
   String get expertTeamMyTeams => 'My Teams';
@@ -12177,10 +12182,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get expertManagementAllowApplications => 'Accept join applications';
 
   @override
-  String get expertManagementAllowApplicationsOn => 'Anyone can apply to join the team';
+  String get expertManagementAllowApplicationsOn =>
+      'Anyone can apply to join the team';
 
   @override
-  String get expertManagementAllowApplicationsOff => 'Applications are closed; only invitations are accepted';
+  String get expertManagementAllowApplicationsOff =>
+      'Applications are closed; only invitations are accepted';
 
   @override
   String get expertManagementSectionMarketing => 'Marketing';
@@ -12424,4 +12431,158 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get expertPackageConfirmDeleteMessage =>
       'Are you sure you want to delete this package? Existing customers who purchased it will keep their access.';
+
+  @override
+  String get expertManagementCustomerPackages => 'Customer Packages / Redeem';
+
+  @override
+  String get customerPackagesTitle => 'Customer Packages';
+
+  @override
+  String get customerPackagesScanRedeem => 'Scan to Redeem';
+
+  @override
+  String get customerPackagesEmpty => 'No customer packages yet';
+
+  @override
+  String get customerPackagesAnonymousUser => 'Anonymous user';
+
+  @override
+  String customerPackagesUsedCount(int used, int total) {
+    return 'Used $used / $total';
+  }
+
+  @override
+  String get customerPackagesSubServiceProgress => 'Sub-service progress:';
+
+  @override
+  String customerPackagesSubServiceLine(String id, int used, int total) {
+    return 'Service #$id: $used / $total';
+  }
+
+  @override
+  String customerPackagesExpiresOn(String date) {
+    return 'Expires: $date';
+  }
+
+  @override
+  String get packageStatusActive => 'Active';
+
+  @override
+  String get packageStatusExhausted => 'Used up';
+
+  @override
+  String get packageStatusExpired => 'Expired';
+
+  @override
+  String get packageStatusAll => 'All';
+
+  @override
+  String expertPackageNumber(String id) {
+    return 'Package #$id';
+  }
+
+  @override
+  String expertPackageRemainingCount(int remaining, int total) {
+    return 'Remaining $remaining / $total';
+  }
+
+  @override
+  String expertPackageQrTitle(int id, int remaining) {
+    return 'Package #$id · $remaining left';
+  }
+
+  @override
+  String get expertPackageShowRedemptionCode => 'Show Redemption Code';
+
+  @override
+  String get expertPackageNotRedeemable => 'Not redeemable';
+
+  @override
+  String get couponsCreateTitle => 'Create Coupon';
+
+  @override
+  String get couponsFieldName => 'Name';
+
+  @override
+  String get couponsFieldCode => 'Code';
+
+  @override
+  String get couponsFieldValue => 'Discount value';
+
+  @override
+  String get couponsCreateAction => 'Create';
+
+  @override
+  String get expertTeamInviteUserIdLabel => 'User ID';
+
+  @override
+  String get expertTeamInviteUserIdHint => 'Enter the user ID to invite';
+
+  @override
+  String get expertTeamSendInvite => 'Send Invite';
+
+  @override
+  String get expertTeamCreateNameTooShort =>
+      'Team name must be at least 2 characters';
+
+  @override
+  String get expertTeamCreateBioHint => 'Introduce your team (optional)';
+
+  @override
+  String get expertTeamCreateMessageHint =>
+      'Tell admins why you want to create this team (optional)';
+
+  @override
+  String get expertTeamCreateInfoNote =>
+      'After submission, an admin will review your request before the team is created.';
+
+  @override
+  String get expertTeamOfficialBadge => 'Official';
+
+  @override
+  String get expertTeamForumSection => 'Team Forum';
+
+  @override
+  String get expertTeamStatMembers => 'Members';
+
+  @override
+  String get expertTeamStatServices => 'Services';
+
+  @override
+  String get expertTeamStatCompleted => 'Completed';
+
+  @override
+  String get expertTeamStatRating => 'Rating';
+
+  @override
+  String expertTeamMembersHeader(int count) {
+    return 'Members ($count)';
+  }
+
+  @override
+  String get expertTeamSeeAll => 'See all';
+
+  @override
+  String get errorPackageAlreadyActive =>
+      'You already have an active package for this service. Use it up before buying another.';
+
+  @override
+  String get errorPackageExpired => 'This package has expired.';
+
+  @override
+  String get errorPackageBundleSubRequired =>
+      'Please select which sub-service to redeem.';
+
+  @override
+  String get errorTeamNoStripeAccount =>
+      'The team has not finished Stripe setup yet.';
+
+  @override
+  String get errorServiceHasActiveActivities =>
+      'This service still has active activities. Cancel or finish them before deleting.';
+
+  @override
+  String get errorServiceHasActiveApplications =>
+      'This service still has in-flight applications. Resolve them before deleting.';
 }

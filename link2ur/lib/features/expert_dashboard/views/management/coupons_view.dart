@@ -78,6 +78,8 @@ class _CouponsBody extends StatelessWidget {
   }
 
   void _showCreateDialog(BuildContext context) {
+    final l10n = context.l10n;
+    final bloc = context.read<ExpertTeamBloc>();
     final nameCtrl = TextEditingController();
     final codeCtrl = TextEditingController();
     final valueCtrl = TextEditingController();
@@ -86,26 +88,26 @@ class _CouponsBody extends StatelessWidget {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('创建优惠券'),
+        title: Text(l10n.couponsCreateTitle),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: '名称')),
+              TextField(controller: nameCtrl, decoration: InputDecoration(labelText: l10n.couponsFieldName)),
               const SizedBox(height: 8),
-              TextField(controller: codeCtrl, decoration: const InputDecoration(labelText: '优惠码')),
+              TextField(controller: codeCtrl, decoration: InputDecoration(labelText: l10n.couponsFieldCode)),
               const SizedBox(height: 8),
-              TextField(controller: valueCtrl, decoration: const InputDecoration(labelText: '优惠值'), keyboardType: TextInputType.number),
+              TextField(controller: valueCtrl, decoration: InputDecoration(labelText: l10n.couponsFieldValue), keyboardType: TextInputType.number),
             ],
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('取消')),
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(l10n.commonCancel)),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(dialogContext);
               final now = DateTime.now();
-              context.read<ExpertTeamBloc>().add(ExpertTeamCreateCoupon(
+              bloc.add(ExpertTeamCreateCoupon(
                 expertId: expertId,
                 data: {
                   'name': nameCtrl.text,
@@ -117,7 +119,7 @@ class _CouponsBody extends StatelessWidget {
                 },
               ));
             },
-            child: const Text('创建'),
+            child: Text(l10n.couponsCreateAction),
           ),
         ],
       ),

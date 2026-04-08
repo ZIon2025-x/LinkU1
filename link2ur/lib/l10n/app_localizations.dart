@@ -22966,6 +22966,270 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Are you sure you want to delete this package? Existing customers who purchased it will keep their access.'**
   String get expertPackageConfirmDeleteMessage;
+
+  /// No description provided for @expertManagementCustomerPackages.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer Packages / Redeem'**
+  String get expertManagementCustomerPackages;
+
+  /// No description provided for @customerPackagesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer Packages'**
+  String get customerPackagesTitle;
+
+  /// No description provided for @customerPackagesScanRedeem.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan to Redeem'**
+  String get customerPackagesScanRedeem;
+
+  /// No description provided for @customerPackagesEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No customer packages yet'**
+  String get customerPackagesEmpty;
+
+  /// No description provided for @customerPackagesAnonymousUser.
+  ///
+  /// In en, this message translates to:
+  /// **'Anonymous user'**
+  String get customerPackagesAnonymousUser;
+
+  /// No description provided for @customerPackagesUsedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Used {used} / {total}'**
+  String customerPackagesUsedCount(int used, int total);
+
+  /// No description provided for @customerPackagesSubServiceProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Sub-service progress:'**
+  String get customerPackagesSubServiceProgress;
+
+  /// No description provided for @customerPackagesSubServiceLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Service #{id}: {used} / {total}'**
+  String customerPackagesSubServiceLine(String id, int used, int total);
+
+  /// No description provided for @customerPackagesExpiresOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Expires: {date}'**
+  String customerPackagesExpiresOn(String date);
+
+  /// No description provided for @packageStatusActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get packageStatusActive;
+
+  /// No description provided for @packageStatusExhausted.
+  ///
+  /// In en, this message translates to:
+  /// **'Used up'**
+  String get packageStatusExhausted;
+
+  /// No description provided for @packageStatusExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Expired'**
+  String get packageStatusExpired;
+
+  /// No description provided for @packageStatusAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get packageStatusAll;
+
+  /// No description provided for @expertPackageNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Package #{id}'**
+  String expertPackageNumber(String id);
+
+  /// No description provided for @expertPackageRemainingCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining {remaining} / {total}'**
+  String expertPackageRemainingCount(int remaining, int total);
+
+  /// No description provided for @expertPackageQrTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Package #{id} · {remaining} left'**
+  String expertPackageQrTitle(int id, int remaining);
+
+  /// No description provided for @expertPackageShowRedemptionCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Show Redemption Code'**
+  String get expertPackageShowRedemptionCode;
+
+  /// No description provided for @expertPackageNotRedeemable.
+  ///
+  /// In en, this message translates to:
+  /// **'Not redeemable'**
+  String get expertPackageNotRedeemable;
+
+  /// No description provided for @couponsCreateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Coupon'**
+  String get couponsCreateTitle;
+
+  /// No description provided for @couponsFieldName.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get couponsFieldName;
+
+  /// No description provided for @couponsFieldCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Code'**
+  String get couponsFieldCode;
+
+  /// No description provided for @couponsFieldValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Discount value'**
+  String get couponsFieldValue;
+
+  /// No description provided for @couponsCreateAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Create'**
+  String get couponsCreateAction;
+
+  /// No description provided for @expertTeamInviteUserIdLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'User ID'**
+  String get expertTeamInviteUserIdLabel;
+
+  /// No description provided for @expertTeamInviteUserIdHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the user ID to invite'**
+  String get expertTeamInviteUserIdHint;
+
+  /// No description provided for @expertTeamSendInvite.
+  ///
+  /// In en, this message translates to:
+  /// **'Send Invite'**
+  String get expertTeamSendInvite;
+
+  /// No description provided for @expertTeamCreateNameTooShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Team name must be at least 2 characters'**
+  String get expertTeamCreateNameTooShort;
+
+  /// No description provided for @expertTeamCreateBioHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Introduce your team (optional)'**
+  String get expertTeamCreateBioHint;
+
+  /// No description provided for @expertTeamCreateMessageHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tell admins why you want to create this team (optional)'**
+  String get expertTeamCreateMessageHint;
+
+  /// No description provided for @expertTeamCreateInfoNote.
+  ///
+  /// In en, this message translates to:
+  /// **'After submission, an admin will review your request before the team is created.'**
+  String get expertTeamCreateInfoNote;
+
+  /// No description provided for @expertTeamOfficialBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Official'**
+  String get expertTeamOfficialBadge;
+
+  /// No description provided for @expertTeamForumSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Team Forum'**
+  String get expertTeamForumSection;
+
+  /// No description provided for @expertTeamStatMembers.
+  ///
+  /// In en, this message translates to:
+  /// **'Members'**
+  String get expertTeamStatMembers;
+
+  /// No description provided for @expertTeamStatServices.
+  ///
+  /// In en, this message translates to:
+  /// **'Services'**
+  String get expertTeamStatServices;
+
+  /// No description provided for @expertTeamStatCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get expertTeamStatCompleted;
+
+  /// No description provided for @expertTeamStatRating.
+  ///
+  /// In en, this message translates to:
+  /// **'Rating'**
+  String get expertTeamStatRating;
+
+  /// No description provided for @expertTeamMembersHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'Members ({count})'**
+  String expertTeamMembersHeader(int count);
+
+  /// No description provided for @expertTeamSeeAll.
+  ///
+  /// In en, this message translates to:
+  /// **'See all'**
+  String get expertTeamSeeAll;
+
+  /// No description provided for @errorPackageAlreadyActive.
+  ///
+  /// In en, this message translates to:
+  /// **'You already have an active package for this service. Use it up before buying another.'**
+  String get errorPackageAlreadyActive;
+
+  /// No description provided for @errorPackageExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'This package has expired.'**
+  String get errorPackageExpired;
+
+  /// No description provided for @errorPackageBundleSubRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select which sub-service to redeem.'**
+  String get errorPackageBundleSubRequired;
+
+  /// No description provided for @errorTeamNoStripeAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'The team has not finished Stripe setup yet.'**
+  String get errorTeamNoStripeAccount;
+
+  /// No description provided for @errorServiceHasActiveActivities.
+  ///
+  /// In en, this message translates to:
+  /// **'This service still has active activities. Cancel or finish them before deleting.'**
+  String get errorServiceHasActiveActivities;
+
+  /// No description provided for @errorServiceHasActiveApplications.
+  ///
+  /// In en, this message translates to:
+  /// **'This service still has in-flight applications. Resolve them before deleting.'**
+  String get errorServiceHasActiveApplications;
 }
 
 class _AppLocalizationsDelegate

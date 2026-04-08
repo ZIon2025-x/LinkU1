@@ -115,7 +115,7 @@ class _ExpertTeamDetailContent extends StatelessWidget {
           _buildStatsRow(context, team),
           const SizedBox(height: 16),
           if (previewMembers.isNotEmpty) ...[
-            _buildMembersSection(context, previewMembers, team),
+            _buildMembersSection(context, previewMembers, team, canManage),
             const SizedBox(height: 16),
           ],
           _buildActionButtons(context, team, isInTeam, canManage, currentMember),
@@ -124,7 +124,7 @@ class _ExpertTeamDetailContent extends StatelessWidget {
             const SizedBox(height: 16),
             _ManagementTile(
               icon: Icons.forum,
-              title: '达人板块',
+              title: context.l10n.expertTeamForumSection,
               onTap: () =>
                   context.push('/forum/category/${team.forumCategoryId}'),
             ),
@@ -170,9 +170,9 @@ class _ExpertTeamDetailContent extends StatelessWidget {
                         color: Colors.blue,
                         borderRadius: BorderRadius.circular(4),
                       ),
-                      child: const Text(
-                        '官方',
-                        style: TextStyle(color: Colors.white, fontSize: 11),
+                      child: Text(
+                        context.l10n.expertTeamOfficialBadge,
+                        style: const TextStyle(color: Colors.white, fontSize: 11),
                       ),
                     ),
                 ],
@@ -208,13 +208,14 @@ class _ExpertTeamDetailContent extends StatelessWidget {
   }
 
   Widget _buildStatsRow(BuildContext context, ExpertTeam team) {
+    final l10n = context.l10n;
     return Row(
       children: [
-        _StatItem(label: '成员', value: team.memberCount.toString()),
-        _StatItem(label: '服务', value: team.totalServices.toString()),
-        _StatItem(label: '完成', value: team.completedTasks.toString()),
+        _StatItem(label: l10n.expertTeamStatMembers, value: team.memberCount.toString()),
+        _StatItem(label: l10n.expertTeamStatServices, value: team.totalServices.toString()),
+        _StatItem(label: l10n.expertTeamStatCompleted, value: team.completedTasks.toString()),
         _StatItem(
-          label: '评分',
+          label: l10n.expertTeamStatRating,
           value: team.rating.toStringAsFixed(1),
         ),
       ],
@@ -225,6 +226,7 @@ class _ExpertTeamDetailContent extends StatelessWidget {
     BuildContext context,
     List<ExpertMember> previewMembers,
     ExpertTeam team,
+    bool canManage,
   ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -233,14 +235,16 @@ class _ExpertTeamDetailContent extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              '成员 (${team.memberCount})',
+              context.l10n.expertTeamMembersHeader(team.memberCount),
               style: Theme.of(context).textTheme.titleMedium,
             ),
-            if (team.memberCount > 5)
+            // 公开主页对访客只显示 preview 5 个成员; "查看全部" 是管理中心
+            // 入口, 仅 owner/admin 可见, 防止访客被引到 /expert-dashboard 路由前缀。
+            if (team.memberCount > 5 && canManage)
               TextButton(
                 onPressed: () => context.push(
                     '/expert-dashboard/$expertId/management/members'),
-                child: const Text('查看全部'),
+                child: Text(context.l10n.expertTeamSeeAll),
               ),
           ],
         ),
