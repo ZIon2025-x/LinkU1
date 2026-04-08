@@ -1,3 +1,4 @@
+/// <reference lib="dom" />
 // frontend/middleware.ts
 //
 // Vercel Edge Middleware: forward non-JS social crawler requests to the
