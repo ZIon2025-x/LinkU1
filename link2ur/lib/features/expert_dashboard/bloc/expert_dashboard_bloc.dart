@@ -67,6 +67,20 @@ class ExpertDashboardBloc
     }
   }
 
+  /// 帮助函数: 服务列表 + stats 同步刷新,避免 stats_tab 显示陈旧的"上架服务数"
+  Future<({List<Map<String, dynamic>> services, Map<String, dynamic>? stats})>
+      _reloadServicesAndStats() async {
+    final services = await _repository.getExpertManagedServices(expertId);
+    Map<String, dynamic>? stats;
+    try {
+      stats = await _repository.getExpertStats(expertId);
+    } catch (_) {
+      // stats 失败不阻塞主流程,仍返回 services
+      stats = null;
+    }
+    return (services: services, stats: stats);
+  }
+
   Future<void> _onCreateService(
     ExpertDashboardCreateService event,
     Emitter<ExpertDashboardState> emit,
@@ -74,10 +88,11 @@ class ExpertDashboardBloc
     emit(state.copyWith(status: ExpertDashboardStatus.submitting));
     try {
       await _repository.createService(expertId, event.data);
-      final services = await _repository.getExpertManagedServices(expertId);
+      final reloaded = await _reloadServicesAndStats();
       emit(state.copyWith(
         status: ExpertDashboardStatus.loaded,
-        services: services,
+        services: reloaded.services,
+        stats: reloaded.stats ?? state.stats,
         actionMessage: 'expertServiceSubmitted',
       ));
     } catch (e) {
@@ -96,10 +111,11 @@ class ExpertDashboardBloc
     try {
       await _repository.updateService(
           expertId, int.tryParse(event.id) ?? 0, event.data);
-      final services = await _repository.getExpertManagedServices(expertId);
+      final reloaded = await _reloadServicesAndStats();
       emit(state.copyWith(
         status: ExpertDashboardStatus.loaded,
-        services: services,
+        services: reloaded.services,
+        stats: reloaded.stats ?? state.stats,
         actionMessage: 'expertServiceUpdated',
       ));
     } catch (e) {
@@ -117,10 +133,11 @@ class ExpertDashboardBloc
     emit(state.copyWith(status: ExpertDashboardStatus.submitting));
     try {
       await _repository.deleteService(expertId, int.tryParse(event.id) ?? 0);
-      final services = await _repository.getExpertManagedServices(expertId);
+      final reloaded = await _reloadServicesAndStats();
       emit(state.copyWith(
         status: ExpertDashboardStatus.loaded,
-        services: services,
+        services: reloaded.services,
+        stats: reloaded.stats ?? state.stats,
         actionMessage: 'expertServiceDeleted',
       ));
     } catch (e) {

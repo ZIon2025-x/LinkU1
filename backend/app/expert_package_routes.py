@@ -73,6 +73,19 @@ async def use_package_session(
     if not package:
         raise HTTPException(status_code=404, detail="套餐不存在或已失效")
 
+    # 过期检查 — 之前完全没查 expires_at,过期套餐照样能核销
+    if package.expires_at:
+        from app.utils.time_utils import get_utc_time as _now
+        now_utc = _now()
+        expires = package.expires_at
+        if expires.tzinfo is None:
+            from datetime import timezone
+            expires = expires.replace(tzinfo=timezone.utc)
+        if expires < now_utc:
+            package.status = "expired"
+            await db.commit()
+            raise HTTPException(status_code=400, detail="套餐已过期")
+
     if package.used_sessions >= package.total_sessions:
         raise HTTPException(status_code=400, detail="套餐次数已用完")
 

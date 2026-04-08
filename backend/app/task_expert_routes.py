@@ -358,18 +358,28 @@ async def get_experts_list(
     
     result = await db.execute(query)
     experts = result.scalars().all()
-    
+
+    # Batch-load Users and FeaturedTaskExpert to avoid N+1 (was 2N extra queries per page)
+    expert_ids = [e.id for e in experts]
+    users_by_id: dict = {}
+    featured_by_id: dict = {}
+    if expert_ids:
+        users_result = await db.execute(
+            select(models.User).where(models.User.id.in_(expert_ids))
+        )
+        users_by_id = {u.id: u for u in users_result.scalars().all()}
+        featured_result = await db.execute(
+            select(models.FeaturedTaskExpert).where(
+                models.FeaturedTaskExpert.id.in_(expert_ids)
+            )
+        )
+        featured_by_id = {f.id: f for f in featured_result.scalars().all()}
+
     # 加载关联的用户信息，构建与 FeaturedTaskExpert 路径相同格式的响应
     items = []
     for expert in experts:
-        from app import async_crud
-        user = await async_crud.async_user_crud.get_user_by_id(db, expert.id)
-        
-        # 获取 FeaturedTaskExpert（如果存在），用于补充头像/location/双语字段
-        featured_expert_result = await db.execute(
-            select(models.FeaturedTaskExpert).where(models.FeaturedTaskExpert.id == expert.id)
-        )
-        featured_expert = featured_expert_result.scalar_one_or_none()
+        user = users_by_id.get(expert.id)
+        featured_expert = featured_by_id.get(expert.id)
         
         # 确定各字段值
         display_name = user.name if user else (expert.expert_name or "")
