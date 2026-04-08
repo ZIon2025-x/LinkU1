@@ -6819,6 +6819,11 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
             if task and not task.is_paid:  # 幂等性检查
                 task.is_paid = 1
                 task.payment_intent_id = payment_intent_id  # 保存 Payment Intent ID 用于关联
+                # spec §3.4a — 团队任务 90 天 Stripe Transfer 时效检查、
+                # warn-long-running-team-tasks 60 天告警 Celery 任务都依赖此字段。
+                # 不写这一行的话 payment_transfer_service.execute_transfer 的窗口检查
+                # 永远是 NULL 跳过，celery beat 任务永远查不到行，整套防御层失效。
+                task.payment_completed_at = get_utc_time()
                 # 获取任务金额（使用最终成交价或原始标价）
                 task_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
                 
