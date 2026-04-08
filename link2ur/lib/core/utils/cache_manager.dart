@@ -44,9 +44,6 @@ class CacheManager {
   /// 磁盘缓存条目上限：超过此值触发淘汰
   static const int _maxDiskCacheCount = 500;
 
-  /// 磁盘缓存大小上限：100MB
-  static const int _maxDiskCacheBytes = 100 * 1024 * 1024;
-
   int _diskWriteCount = 0;
 
   // ==================== 统计 ====================

@@ -610,7 +610,6 @@ class _CreateFleaMarketItemContentState
                     color: isDark
                         ? Colors.white.withValues(alpha: 0.12)
                         : AppColors.textTertiaryLight.withValues(alpha: 0.4),
-                    style: BorderStyle.solid,
                   ),
                 ),
                 child: Column(

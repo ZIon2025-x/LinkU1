@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { message, Modal, Select, Tag } from 'antd';
+import { message, Modal, Select, Tag, Spin } from 'antd';
 import { useAdminTable, useModalForm } from '../../../hooks';
 import { AdminTable, AdminPagination, StatusBadge, Column } from '../../../components/admin';
 import api, {
@@ -9,6 +9,7 @@ import api, {
   getTaskExpertApplications,
   reviewTaskExpertApplication,
   createExpertFromApplication,
+  createExpertTeamByAdmin,
   getProfileUpdateRequests,
   reviewProfileUpdateRequest,
   getAllExpertServicesAdmin,
@@ -19,6 +20,7 @@ import api, {
   deleteExpertActivityAdmin,
   reviewExpertServiceAdmin,
   reviewExpertActivityAdmin,
+  getUsersForAdmin,
 } from '../../../api';
 import { getErrorMessage } from '../../../utils/errorHandler';
 
@@ -140,6 +142,126 @@ const ExpertManagement: React.FC = () => {
   const [detailExpert, setDetailExpert] = useState<any>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [serviceImageUploading, setServiceImageUploading] = useState<number | null>(null);
+
+  // ==================== 新建达人团队 Modal ====================
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    name: '',
+    name_en: '',
+    name_zh: '',
+    bio: '',
+    owner_user_id: '',
+    is_official: false,
+    official_badge: '',
+    allow_applications: false,
+  });
+  const [createSubmitting, setCreateSubmitting] = useState(false);
+  // 创建成功后保存新 expert id,用于第二步上传头像
+  const [createdExpertId, setCreatedExpertId] = useState<string | null>(null);
+  const [createdExpertAvatar, setCreatedExpertAvatar] = useState<string>('');
+  const [createdAvatarUploading, setCreatedAvatarUploading] = useState(false);
+  // Owner 用户搜索
+  const [ownerOptions, setOwnerOptions] = useState<Array<{ value: string; label: string }>>([]);
+  const [ownerSearchLoading, setOwnerSearchLoading] = useState(false);
+  const ownerSearchTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const resetCreateForm = () => {
+    setCreateForm({
+      name: '',
+      name_en: '',
+      name_zh: '',
+      bio: '',
+      owner_user_id: '',
+      is_official: false,
+      official_badge: '',
+      allow_applications: false,
+    });
+    setCreatedExpertId(null);
+    setCreatedExpertAvatar('');
+    setOwnerOptions([]);
+  };
+
+  const handleOwnerSearch = (query: string) => {
+    if (ownerSearchTimerRef.current) {
+      clearTimeout(ownerSearchTimerRef.current);
+    }
+    if (!query || query.length < 1) {
+      setOwnerOptions([]);
+      return;
+    }
+    ownerSearchTimerRef.current = setTimeout(async () => {
+      setOwnerSearchLoading(true);
+      try {
+        const response = await getUsersForAdmin(1, 20, query);
+        const users = (response.users || []) as Array<{ id: string; name?: string; email?: string }>;
+        setOwnerOptions(
+          users.map((u) => ({
+            value: u.id,
+            label: `${u.name || '(无昵称)'} · ${u.id}${u.email ? ` · ${u.email}` : ''}`,
+          })),
+        );
+      } catch (err) {
+        message.error(getErrorMessage(err));
+      } finally {
+        setOwnerSearchLoading(false);
+      }
+    }, 300);
+  };
+
+  const handleCreateSubmit = async () => {
+    if (!createForm.name.trim()) {
+      message.error('团队名称不能为空');
+      return;
+    }
+    if (!createForm.owner_user_id.trim()) {
+      message.error('必须指定 Owner 用户');
+      return;
+    }
+    setCreateSubmitting(true);
+    try {
+      const result = await createExpertTeamByAdmin({
+        name: createForm.name.trim(),
+        owner_user_id: createForm.owner_user_id.trim(),
+        name_en: createForm.name_en.trim() || undefined,
+        name_zh: createForm.name_zh.trim() || undefined,
+        bio: createForm.bio.trim() || undefined,
+        is_official: createForm.is_official,
+        official_badge: createForm.official_badge.trim() || undefined,
+        allow_applications: createForm.allow_applications,
+      });
+      message.success(`创建成功，达人 ID: ${result.expert_id}`);
+      // 进入第二步:可选上传头像
+      setCreatedExpertId(result.expert_id);
+      expertsTable.refresh();
+    } catch (error) {
+      message.error(getErrorMessage(error));
+    } finally {
+      setCreateSubmitting(false);
+    }
+  };
+
+  const handleCreatedAvatarUpload = async (file: File) => {
+    if (!createdExpertId) return;
+    setCreatedAvatarUploading(true);
+    try {
+      const url = await uploadImageWithCategory(file, 'expert_avatar', createdExpertId);
+      // 直接 PUT 到达人记录上
+      await updateTaskExpert(createdExpertId, { avatar: url });
+      setCreatedExpertAvatar(url);
+      message.success('头像上传成功');
+      expertsTable.refresh();
+    } catch (err) {
+      message.error(getErrorMessage(err));
+    } finally {
+      setCreatedAvatarUploading(false);
+    }
+  };
+
+  const closeCreateModal = () => {
+    if (createSubmitting || createdAvatarUploading) return;
+    setCreateModalOpen(false);
+    resetCreateForm();
+  };
   // Status filters use useAdminTable's built-in filters to avoid stale closure on refresh
 
   // ==================== 达人列表 ====================
@@ -847,6 +969,23 @@ const ExpertManagement: React.FC = () => {
       {/* 达人列表 */}
       {subTab === 'list' && (
         <>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+            <button
+              onClick={() => setCreateModalOpen(true)}
+              style={{
+                padding: '8px 16px',
+                background: '#28a745',
+                color: 'white',
+                border: 'none',
+                borderRadius: 5,
+                cursor: 'pointer',
+                fontSize: 14,
+                fontWeight: 500,
+              }}
+            >
+              + 新建达人团队
+            </button>
+          </div>
           <AdminTable
             columns={expertColumns}
             data={expertsTable.data}
@@ -1530,6 +1669,180 @@ const ExpertManagement: React.FC = () => {
               创建时间：{detailExpert.created_at ? new Date(detailExpert.created_at).toLocaleString('zh-CN') : '-'}
               {' | '}
               更新时间：{detailExpert.updated_at ? new Date(detailExpert.updated_at).toLocaleString('zh-CN') : '-'}
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* 新建达人团队 Modal — 两步:1.填基本信息 2.可选上传头像 */}
+      <Modal
+        title={createdExpertId ? `达人团队已创建 (ID: ${createdExpertId})` : '新建达人团队'}
+        open={createModalOpen}
+        onCancel={closeCreateModal}
+        onOk={createdExpertId ? closeCreateModal : handleCreateSubmit}
+        confirmLoading={createSubmitting}
+        okText={createdExpertId ? '完成' : '创建'}
+        cancelText="取消"
+        cancelButtonProps={{ style: { display: createdExpertId ? 'none' : undefined } }}
+        width={600}
+        maskClosable={false}
+      >
+        {!createdExpertId ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 13 }}>
+                Owner 用户 <span style={{ color: 'red' }}>*</span>
+              </label>
+              <Select
+                showSearch
+                allowClear
+                placeholder="按用户名/ID/邮箱搜索,选中后此人将成为团队 owner"
+                value={createForm.owner_user_id || undefined}
+                filterOption={false}
+                onSearch={handleOwnerSearch}
+                onChange={(val) => setCreateForm({ ...createForm, owner_user_id: val || '' })}
+                onClear={() => setCreateForm({ ...createForm, owner_user_id: '' })}
+                notFoundContent={ownerSearchLoading ? <Spin size="small" /> : '未找到匹配用户'}
+                options={ownerOptions}
+                style={{ width: '100%' }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 13 }}>
+                团队名称 <span style={{ color: 'red' }}>*</span>
+              </label>
+              <input
+                type="text"
+                maxLength={100}
+                value={createForm.name}
+                onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+                style={{ width: '100%', padding: 8, border: '1px solid #ddd', borderRadius: 4, boxSizing: 'border-box' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: 12 }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 13 }}>名称(中文)</label>
+                <input
+                  type="text"
+                  maxLength={100}
+                  value={createForm.name_zh}
+                  onChange={(e) => setCreateForm({ ...createForm, name_zh: e.target.value })}
+                  style={{ width: '100%', padding: 8, border: '1px solid #ddd', borderRadius: 4, boxSizing: 'border-box' }}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 13 }}>名称(英文)</label>
+                <input
+                  type="text"
+                  maxLength={100}
+                  value={createForm.name_en}
+                  onChange={(e) => setCreateForm({ ...createForm, name_en: e.target.value })}
+                  style={{ width: '100%', padding: 8, border: '1px solid #ddd', borderRadius: 4, boxSizing: 'border-box' }}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 13 }}>简介</label>
+              <textarea
+                rows={3}
+                value={createForm.bio}
+                onChange={(e) => setCreateForm({ ...createForm, bio: e.target.value })}
+                style={{ width: '100%', padding: 8, border: '1px solid #ddd', borderRadius: 4, boxSizing: 'border-box', resize: 'vertical' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', paddingTop: 4 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
+                <input
+                  type="checkbox"
+                  checked={createForm.is_official}
+                  onChange={(e) => setCreateForm({ ...createForm, is_official: e.target.checked })}
+                />
+                官方团队
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
+                <input
+                  type="checkbox"
+                  checked={createForm.allow_applications}
+                  onChange={(e) => setCreateForm({ ...createForm, allow_applications: e.target.checked })}
+                />
+                允许其他用户申请加入
+              </label>
+            </div>
+
+            {createForm.is_official && (
+              <div>
+                <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 13 }}>官方徽章标识</label>
+                <input
+                  type="text"
+                  maxLength={50}
+                  placeholder="可选,例如 verified, partner"
+                  value={createForm.official_badge}
+                  onChange={(e) => setCreateForm({ ...createForm, official_badge: e.target.value })}
+                  style={{ width: '100%', padding: 8, border: '1px solid #ddd', borderRadius: 4, boxSizing: 'border-box' }}
+                />
+              </div>
+            )}
+          </div>
+        ) : (
+          // ===== 第二步:可选上传头像 =====
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'center', padding: '8px 0' }}>
+            <div style={{ fontSize: 13, color: '#666', textAlign: 'center' }}>
+              团队已创建成功。可选:为团队上传一张头像(留空使用默认头像)。
+            </div>
+            <div
+              style={{
+                width: 96,
+                height: 96,
+                borderRadius: '50%',
+                border: '2px dashed #ddd',
+                background: '#fafafa',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                overflow: 'hidden',
+              }}
+            >
+              {createdExpertAvatar ? (
+                <img
+                  src={createdExpertAvatar}
+                  alt="头像"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              ) : (
+                <span style={{ fontSize: 32, color: '#ccc' }}>?</span>
+              )}
+            </div>
+            <label
+              style={{
+                padding: '8px 16px',
+                background: createdAvatarUploading ? '#aaa' : '#007bff',
+                color: 'white',
+                borderRadius: 5,
+                cursor: createdAvatarUploading ? 'not-allowed' : 'pointer',
+                fontSize: 14,
+              }}
+            >
+              {createdAvatarUploading ? '上传中...' : (createdExpertAvatar ? '重新上传' : '选择图片')}
+              <input
+                type="file"
+                accept="image/*"
+                disabled={createdAvatarUploading}
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    void handleCreatedAvatarUpload(file);
+                  }
+                  e.target.value = '';
+                }}
+              />
+            </label>
+            <div style={{ fontSize: 12, color: '#999' }}>
+              点击"完成"关闭对话框,或继续在达人列表中编辑团队信息。
             </div>
           </div>
         )}

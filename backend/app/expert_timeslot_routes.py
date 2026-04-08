@@ -28,6 +28,20 @@ expert_timeslot_router = APIRouter(
 public_service_router = APIRouter(tags=["public-services"])
 
 
+def _serialize_slot(s) -> dict:
+    """统一的 ServiceTimeSlot 序列化, list/create/update 都用这个."""
+    return {
+        "id": s.id,
+        "service_id": s.service_id,
+        "slot_start_datetime": s.slot_start_datetime.isoformat() if s.slot_start_datetime else None,
+        "slot_end_datetime": s.slot_end_datetime.isoformat() if s.slot_end_datetime else None,
+        "price_per_participant": float(s.price_per_participant) if s.price_per_participant is not None else None,
+        "max_participants": s.max_participants,
+        "current_participants": getattr(s, "current_participants", 0),
+        "is_available": s.is_available,
+    }
+
+
 async def _get_expert_service(db, expert_id, service_id):
     """Verify service belongs to expert team"""
     result = await db.execute(
@@ -134,7 +148,7 @@ async def create_time_slot(
     db.add(slot)
     await db.commit()
     await db.refresh(slot)
-    return {"id": slot.id}
+    return _serialize_slot(slot)
 
 
 @expert_timeslot_router.put("/{slot_id}")
@@ -194,7 +208,8 @@ async def update_time_slot(
         raise HTTPException(status_code=400, detail="结束时间必须晚于开始时间")
     slot.updated_at = get_utc_time()
     await db.commit()
-    return {"detail": "已更新"}
+    await db.refresh(slot)
+    return _serialize_slot(slot)
 
 
 @expert_timeslot_router.delete("/by-date")

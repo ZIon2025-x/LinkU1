@@ -8,81 +8,99 @@ import '../../../../core/utils/l10n_extension.dart';
 import '../../../../data/models/expert_team.dart';
 import '../../../../data/repositories/expert_team_repository.dart';
 import '../../../../data/services/storage_service.dart';
+import '../../../../features/expert_team/bloc/expert_team_bloc.dart';
 
 /// 管理中心主页
-/// 从路由参数接收 expertId，自行 fetch 团队详情获取角色。
-class ManagementCenterView extends StatefulWidget {
+/// 通过 ExpertTeamBloc 加载团队详情，并把 allowApplications 等状态变更
+/// 走同一条 BLoC 流，避免和 detail view 出现状态分裂。
+class ManagementCenterView extends StatelessWidget {
   const ManagementCenterView({super.key, required this.expertId});
   final String expertId;
 
   @override
-  State<ManagementCenterView> createState() => _ManagementCenterViewState();
+  Widget build(BuildContext context) {
+    return BlocProvider<ExpertTeamBloc>(
+      create: (ctx) => ExpertTeamBloc(
+        repository: ctx.read<ExpertTeamRepository>(),
+      )..add(ExpertTeamLoadDetail(expertId)),
+      child: _ManagementCenterContent(expertId: expertId),
+    );
+  }
 }
 
-class _ManagementCenterViewState extends State<ManagementCenterView> {
-  ExpertTeam? _team;
-  bool _loading = true;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadTeam();
-  }
-
-  Future<void> _loadTeam() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-    try {
-      final team =
-          await context.read<ExpertTeamRepository>().getExpertById(widget.expertId);
-      if (!mounted) return;
-      setState(() {
-        _team = team;
-        _loading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = e.toString();
-        _loading = false;
-      });
-    }
-  }
+class _ManagementCenterContent extends StatelessWidget {
+  const _ManagementCenterContent({required this.expertId});
+  final String expertId;
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
-      return Scaffold(
-        appBar: AppBar(title: Text(context.l10n.expertDashboardManagement)),
-        body: const Center(child: CircularProgressIndicator()),
-      );
-    }
-    if (_error != null || _team == null) {
-      return Scaffold(
-        appBar: AppBar(title: Text(context.l10n.expertDashboardManagement)),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(context.localizeError(_error ?? 'load_failed')),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: _loadTeam,
-                child: Text(context.l10n.commonRetry),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
+    return BlocConsumer<ExpertTeamBloc, ExpertTeamState>(
+      listenWhen: (prev, curr) =>
+          prev.actionMessage != curr.actionMessage ||
+          prev.errorMessage != curr.errorMessage,
+      listener: (context, state) {
+        final messenger = ScaffoldMessenger.of(context);
+        if (state.errorMessage != null && state.errorMessage!.isNotEmpty) {
+          messenger.showSnackBar(
+            SnackBar(content: Text(context.localizeError(state.errorMessage!))),
+          );
+        } else if (state.actionMessage != null &&
+            state.actionMessage!.isNotEmpty) {
+          messenger.showSnackBar(
+            SnackBar(content: Text(context.localizeError(state.actionMessage!))),
+          );
+        }
+      },
+      builder: (context, state) {
+        final team = state.currentTeam;
 
-    final role = _team!.myRole ?? 'member';
+        if (state.status == ExpertTeamStatus.loading && team == null) {
+          return Scaffold(
+            appBar:
+                AppBar(title: Text(context.l10n.expertDashboardManagement)),
+            body: const Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        if (team == null) {
+          return Scaffold(
+            appBar:
+                AppBar(title: Text(context.l10n.expertDashboardManagement)),
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(context
+                      .localizeError(state.errorMessage ?? 'load_failed')),
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    onPressed: () => context
+                        .read<ExpertTeamBloc>()
+                        .add(ExpertTeamLoadDetail(expertId)),
+                    child: Text(context.l10n.commonRetry),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        return _ManagementCenterScaffold(team: team, expertId: expertId);
+      },
+    );
+  }
+}
+
+class _ManagementCenterScaffold extends StatelessWidget {
+  const _ManagementCenterScaffold({required this.team, required this.expertId});
+  final ExpertTeam team;
+  final String expertId;
+
+  @override
+  Widget build(BuildContext context) {
+    final role = team.myRole ?? 'member';
     final isOwner = role == 'owner';
     final canManage = isOwner || role == 'admin';
-    final expertId = widget.expertId;
 
     return Scaffold(
       appBar: AppBar(title: Text(context.l10n.expertDashboardManagement)),
@@ -104,6 +122,16 @@ class _ManagementCenterViewState extends State<ManagementCenterView> {
                 label: context.l10n.expertTeamJoinRequests,
                 onTap: () => context
                     .push('/expert-dashboard/$expertId/management/join-requests'),
+              ),
+            if (isOwner)
+              _AllowApplicationsSwitchTile(
+                value: team.allowApplications,
+                onChanged: (newValue) => context.read<ExpertTeamBloc>().add(
+                      ExpertTeamToggleAllowApplications(
+                        expertId: expertId,
+                        allow: newValue,
+                      ),
+                    ),
               ),
             if (isOwner)
               _MenuTile(
@@ -216,7 +244,6 @@ class _ManagementCenterViewState extends State<ManagementCenterView> {
     try {
       await repo.leaveTeam(expertId);
       await StorageService.instance.clearSelectedExpertId();
-      if (!mounted) return;
       router.go('/expert-dashboard');
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(e.toString())));
@@ -232,9 +259,9 @@ class _ManagementCenterViewState extends State<ManagementCenterView> {
       final status = await context
           .read<ExpertTeamRepository>()
           .getStripeConnectStatus(expertId);
-      if (!mounted) return;
       final isActive = status['onboarding_complete'] == true;
 
+      if (!context.mounted) return;
       final goToOnboarding = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
@@ -305,6 +332,39 @@ class _MenuCard extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+class _AllowApplicationsSwitchTile extends StatelessWidget {
+  const _AllowApplicationsSwitchTile({
+    required this.value,
+    required this.onChanged,
+  });
+  final bool value;
+  final ValueChanged<bool>? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    // 注意：用 secondary 而不是 leading —— SwitchListTile 没有 leading 参数。
+    // 为了和 _MenuTile 的 leading icon 对齐，把开关本体放在 trailing 位置，
+    // 用 ListTile 自己组装而不是 SwitchListTile，确保左侧 icon 距离一致 (16dp)。
+    return ListTile(
+      leading: Icon(
+        value ? Icons.lock_open_outlined : Icons.lock_outlined,
+      ),
+      title: Text(context.l10n.expertManagementAllowApplications),
+      subtitle: Text(
+        value
+            ? context.l10n.expertManagementAllowApplicationsOn
+            : context.l10n.expertManagementAllowApplicationsOff,
+        style: Theme.of(context).textTheme.bodySmall,
+      ),
+      trailing: Switch(
+        value: value,
+        onChanged: onChanged,
+      ),
+      onTap: onChanged == null ? null : () => onChanged!(!value),
     );
   }
 }

@@ -372,15 +372,20 @@ async def get_redemption_qr(
     if pkg.used_sessions >= pkg.total_sessions:
         raise HTTPException(status_code=400, detail="套餐次数已用完")
 
-    # 过期检查
+    # 过期检查 — 只读, 不写库
+    # 注意: 这里不能 mark expired, 否则:
+    #   1) 并发的 redeem 路径会因为状态变为 expired 而拿不到记录;
+    #   2) buyer 第二次请求 QR 时会看到不一致状态。
+    # 真正的过期 mark 由 redeem 路径处理 (那里有 with_for_update 行锁)。
     if pkg.expires_at:
         expires = pkg.expires_at
         if expires.tzinfo is None:
             expires = expires.replace(tzinfo=timezone.utc)
         if expires < get_utc_time():
-            pkg.status = "expired"
-            await db.commit()
-            raise HTTPException(status_code=400, detail="套餐已过期")
+            raise HTTPException(
+                status_code=400,
+                detail={"error_code": "package_expired", "message": "套餐已过期"},
+            )
 
     qr = _generate_qr_payload(pkg.id, current_user.id)
     otp = _generate_otp(pkg.id, current_user.id)
@@ -488,8 +493,9 @@ async def redeem_package(
             raise HTTPException(status_code=400, detail="该子服务已核销完")
         sub_entry["used"] = int(sub_entry.get("used", 0)) + 1
         bd[sub_key] = sub_entry
-        pkg.bundle_breakdown = bd
-        # 强制 SQLAlchemy 检测 JSON 字段变更
+        # 必须创建一个全新 dict 而非 in-place 修改, 保证 SQLAlchemy 的 dirty tracking
+        # 一定能检测到 JSONB 字段变更; 双保险再加 flag_modified.
+        pkg.bundle_breakdown = dict(bd)
         from sqlalchemy.orm.attributes import flag_modified
         flag_modified(pkg, "bundle_breakdown")
 
@@ -554,7 +560,8 @@ async def list_customer_packages(
 ):
     """团队"我的客户"端点 - 列出该团队所有 buyer 的套餐余额"""
     await _get_expert_or_404(db, expert_id)
-    await _get_member_or_403(db, expert_id, current_user.id, required_roles=["owner", "admin", "member"])
+    # 仅 owner/admin 可见客户列表 — 普通 member 不应看到 buyer 隐私(姓名/头像/购买金额/套餐余额)
+    await _get_member_or_403(db, expert_id, current_user.id, required_roles=["owner", "admin"])
 
     base = select(UserServicePackage).where(UserServicePackage.expert_id == expert_id)
     if status_filter:

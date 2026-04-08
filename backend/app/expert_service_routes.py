@@ -353,6 +353,26 @@ async def delete_expert_service(
             },
         )
 
+    # in-flight ServiceApplication 检查 — 防止 buyer 处于"申请中但服务消失"的状态
+    active_app_q = select(_func.count(models.ServiceApplication.id)).where(
+        and_(
+            models.ServiceApplication.service_id == service_id,
+            models.ServiceApplication.status.in_(
+                ["pending", "consulting", "negotiating", "price_agreed", "approved"]
+            ),
+        )
+    )
+    active_app_count = (await db.execute(active_app_q)).scalar() or 0
+    if active_app_count > 0:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error_code": "service_has_active_applications",
+                "message": f"该服务还有 {active_app_count} 个进行中的申请,请先处理后再删除",
+                "active_applications": active_app_count,
+            },
+        )
+
     was_active = service.status == "active"
     service.status = "deleted"
     service.updated_at = get_utc_time()

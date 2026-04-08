@@ -320,6 +320,36 @@ NOTIFICATION_TEMPLATES: Dict[str, Dict[str, Dict[str, str]]] = {
             "content_template": "A buyer has paid for「{service_name}」. The task is now in progress."
         }
     },
+    "package_purchased": {
+        "zh": {
+            "title": "套餐购买成功",
+            "content_template": "您已成功购买「{service_name}」套餐,共 {total_sessions} 次,可在「我的套餐」中查看。"
+        },
+        "en": {
+            "title": "Package Purchased",
+            "content_template": "You have successfully purchased the「{service_name}」package ({total_sessions} sessions). View it in My Packages."
+        }
+    },
+    "package_sold": {
+        "zh": {
+            "title": "新套餐订单",
+            "content_template": "用户已购买「{service_name}」套餐 ({total_sessions} 次)。"
+        },
+        "en": {
+            "title": "New Package Order",
+            "content_template": "A buyer has purchased the「{service_name}」package ({total_sessions} sessions)."
+        }
+    },
+    "package_redeemed": {
+        "zh": {
+            "title": "套餐核销成功",
+            "content_template": "您的套餐已使用 {used}/{total} 次。"
+        },
+        "en": {
+            "title": "Package Redeemed",
+            "content_template": "Your package has been used {used}/{total} times."
+        }
+    },
 }
 
 

@@ -1173,7 +1173,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     TaskExpertApproveApplication event,
     Emitter<TaskExpertState> emit,
   ) async {
-    emit(state.copyWith(isSubmitting: true, errorMessage: null, actionMessage: null));
+    emit(state.copyWith(isSubmitting: true));
 
     try {
       await _taskExpertRepository.approveServiceApplication(event.applicationId);
@@ -1198,7 +1198,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     TaskExpertOwnerApproveApplication event,
     Emitter<TaskExpertState> emit,
   ) async {
-    emit(state.copyWith(isSubmitting: true, errorMessage: null, actionMessage: null));
+    emit(state.copyWith(isSubmitting: true));
 
     try {
       await _taskExpertRepository.ownerApproveApplication(event.applicationId);
@@ -1475,7 +1475,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     TaskExpertStartConsultation event,
     Emitter<TaskExpertState> emit,
   ) async {
-    emit(state.copyWith(isSubmitting: true, errorMessage: null, actionMessage: null));
+    emit(state.copyWith(isSubmitting: true));
     try {
       final result = await _taskExpertRepository.createConsultation(event.serviceId);
       emit(state.copyWith(
@@ -1494,7 +1494,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     TaskExpertNegotiatePrice event,
     Emitter<TaskExpertState> emit,
   ) async {
-    emit(state.copyWith(isSubmitting: true, errorMessage: null, actionMessage: null));
+    emit(state.copyWith(isSubmitting: true));
     try {
       await _taskExpertRepository.negotiatePrice(event.applicationId, proposedPrice: event.price);
       emit(state.copyWith(isSubmitting: false, actionMessage: 'negotiation_sent'));
@@ -1509,7 +1509,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     TaskExpertQuotePrice event,
     Emitter<TaskExpertState> emit,
   ) async {
-    emit(state.copyWith(isSubmitting: true, errorMessage: null, actionMessage: null));
+    emit(state.copyWith(isSubmitting: true));
     try {
       await _taskExpertRepository.quotePrice(event.applicationId, quotedPrice: event.price, message: event.message);
       emit(state.copyWith(isSubmitting: false, actionMessage: 'quote_sent'));
@@ -1524,7 +1524,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     TaskExpertNegotiateResponse event,
     Emitter<TaskExpertState> emit,
   ) async {
-    emit(state.copyWith(isSubmitting: true, errorMessage: null, actionMessage: null));
+    emit(state.copyWith(isSubmitting: true));
     try {
       final result = await _taskExpertRepository.respondToNegotiation(
         event.applicationId,
@@ -1547,7 +1547,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     TaskExpertFormalApply event,
     Emitter<TaskExpertState> emit,
   ) async {
-    emit(state.copyWith(isSubmitting: true, errorMessage: null, actionMessage: null));
+    emit(state.copyWith(isSubmitting: true));
     try {
       await _taskExpertRepository.formalApply(
         event.applicationId,
@@ -1569,7 +1569,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     TaskExpertCloseConsultation event,
     Emitter<TaskExpertState> emit,
   ) async {
-    emit(state.copyWith(isSubmitting: true, errorMessage: null, actionMessage: null));
+    emit(state.copyWith(isSubmitting: true));
     try {
       await _taskExpertRepository.closeConsultation(event.applicationId);
       emit(state.copyWith(isSubmitting: false, actionMessage: 'consultation_closed'));
@@ -1586,7 +1586,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     TaskExpertStartTaskConsultation event,
     Emitter<TaskExpertState> emit,
   ) async {
-    emit(state.copyWith(isSubmitting: true, errorMessage: null, actionMessage: null));
+    emit(state.copyWith(isSubmitting: true));
     try {
       final result = await _taskExpertRepository.createTaskConsultation(event.taskId);
       emit(state.copyWith(isSubmitting: false, actionMessage: 'consultation_started', consultationData: result));
@@ -1601,7 +1601,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     TaskExpertTaskNegotiate event,
     Emitter<TaskExpertState> emit,
   ) async {
-    emit(state.copyWith(isSubmitting: true, errorMessage: null, actionMessage: null));
+    emit(state.copyWith(isSubmitting: true));
     try {
       await _taskExpertRepository.negotiateTaskConsultation(event.taskId, event.applicationId, proposedPrice: event.price);
       emit(state.copyWith(isSubmitting: false, actionMessage: 'negotiation_sent'));
@@ -1616,7 +1616,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     TaskExpertTaskQuote event,
     Emitter<TaskExpertState> emit,
   ) async {
-    emit(state.copyWith(isSubmitting: true, errorMessage: null, actionMessage: null));
+    emit(state.copyWith(isSubmitting: true));
     try {
       await _taskExpertRepository.quoteTaskConsultation(event.taskId, event.applicationId, quotedPrice: event.price, message: event.message);
       emit(state.copyWith(isSubmitting: false, actionMessage: 'quote_sent'));
@@ -1631,7 +1631,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     TaskExpertTaskNegotiateResponse event,
     Emitter<TaskExpertState> emit,
   ) async {
-    emit(state.copyWith(isSubmitting: true, errorMessage: null, actionMessage: null));
+    emit(state.copyWith(isSubmitting: true));
     try {
       final result = await _taskExpertRepository.respondTaskNegotiation(
         event.taskId, event.applicationId,
@@ -1651,7 +1651,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     TaskExpertTaskFormalApply event,
     Emitter<TaskExpertState> emit,
   ) async {
-    emit(state.copyWith(isSubmitting: true, errorMessage: null, actionMessage: null));
+    emit(state.copyWith(isSubmitting: true));
     try {
       await _taskExpertRepository.formalApplyTaskConsultation(
         event.taskId, event.applicationId,
@@ -1670,7 +1670,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     TaskExpertCloseTaskConsultation event,
     Emitter<TaskExpertState> emit,
   ) async {
-    emit(state.copyWith(isSubmitting: true, errorMessage: null, actionMessage: null));
+    emit(state.copyWith(isSubmitting: true));
     try {
       await _taskExpertRepository.closeTaskConsultation(event.taskId, event.applicationId);
       emit(state.copyWith(isSubmitting: false, actionMessage: 'consultation_closed'));
@@ -1687,7 +1687,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     TaskExpertStartFleaMarketConsultation event,
     Emitter<TaskExpertState> emit,
   ) async {
-    emit(state.copyWith(isSubmitting: true, errorMessage: null, actionMessage: null));
+    emit(state.copyWith(isSubmitting: true));
     try {
       final result = await _taskExpertRepository.createFleaMarketConsultation(event.itemId);
       emit(state.copyWith(isSubmitting: false, actionMessage: 'consultation_started', consultationData: result));
@@ -1702,7 +1702,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     TaskExpertFleaMarketNegotiate event,
     Emitter<TaskExpertState> emit,
   ) async {
-    emit(state.copyWith(isSubmitting: true, errorMessage: null, actionMessage: null));
+    emit(state.copyWith(isSubmitting: true));
     try {
       await _taskExpertRepository.negotiateFleaMarketConsultation(event.requestId, proposedPrice: event.price);
       emit(state.copyWith(isSubmitting: false, actionMessage: 'negotiation_sent'));
@@ -1717,7 +1717,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     TaskExpertFleaMarketQuote event,
     Emitter<TaskExpertState> emit,
   ) async {
-    emit(state.copyWith(isSubmitting: true, errorMessage: null, actionMessage: null));
+    emit(state.copyWith(isSubmitting: true));
     try {
       await _taskExpertRepository.quoteFleaMarketConsultation(event.requestId, quotedPrice: event.price, message: event.message);
       emit(state.copyWith(isSubmitting: false, actionMessage: 'quote_sent'));
@@ -1732,7 +1732,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     TaskExpertFleaMarketNegotiateResponse event,
     Emitter<TaskExpertState> emit,
   ) async {
-    emit(state.copyWith(isSubmitting: true, errorMessage: null, actionMessage: null));
+    emit(state.copyWith(isSubmitting: true));
     try {
       final result = await _taskExpertRepository.respondFleaMarketNegotiation(
         event.requestId,
@@ -1752,7 +1752,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     TaskExpertFleaMarketFormalBuy event,
     Emitter<TaskExpertState> emit,
   ) async {
-    emit(state.copyWith(isSubmitting: true, errorMessage: null, actionMessage: null));
+    emit(state.copyWith(isSubmitting: true));
     try {
       await _taskExpertRepository.formalBuyFleaMarket(event.requestId);
       emit(state.copyWith(isSubmitting: false, actionMessage: 'formal_apply_submitted'));
@@ -1767,7 +1767,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     TaskExpertApproveFleaMarketPurchase event,
     Emitter<TaskExpertState> emit,
   ) async {
-    emit(state.copyWith(isSubmitting: true, errorMessage: null, actionMessage: null));
+    emit(state.copyWith(isSubmitting: true));
     try {
       await _taskExpertRepository.approveFleaMarketPurchase(event.requestId);
       emit(state.copyWith(isSubmitting: false, actionMessage: 'application_approved'));
@@ -1782,7 +1782,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
     TaskExpertCloseFleaMarketConsultation event,
     Emitter<TaskExpertState> emit,
   ) async {
-    emit(state.copyWith(isSubmitting: true, errorMessage: null, actionMessage: null));
+    emit(state.copyWith(isSubmitting: true));
     try {
       await _taskExpertRepository.closeFleaMarketConsultation(event.requestId);
       emit(state.copyWith(isSubmitting: false, actionMessage: 'consultation_closed'));

@@ -1207,7 +1207,7 @@ class _LeaderboardCard extends StatelessWidget {
                 leaderboard.coverImage != null &&
                         leaderboard.coverImage!.isNotEmpty
                     ? AsyncImageView(
-                        imageUrl: Helpers.getThumbnailUrl(leaderboard.coverImage, size: 'medium'),
+                        imageUrl: Helpers.getThumbnailUrl(leaderboard.coverImage),
                         fallbackUrl: Helpers.getImageUrl(leaderboard.coverImage),
                         width: 90,
                         height: 90,

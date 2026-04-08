@@ -325,7 +325,6 @@ class _ItemInfoSection extends StatelessWidget {
                 fallbackUrl: Helpers.getImageUrl(rental.itemImage!),
                 width: 64,
                 height: 64,
-                fit: BoxFit.cover,
               ),
             )
           else

@@ -314,8 +314,9 @@ async def respond_to_negotiation(
         select(models.ServiceApplication).where(models.ServiceApplication.id == application_id)
     )
     application = app_result.scalar_one_or_none()
+    # not-found 也 mask 成 403, 防止匿名用户枚举 application_id 是否存在
     if not application:
-        raise HTTPException(status_code=404, detail="申请不存在")
+        raise HTTPException(status_code=403, detail="无权操作该申请")
 
     # 权限检查 — 修复 IDOR
     # 解析当前用户身份: 是 applicant 还是 provider

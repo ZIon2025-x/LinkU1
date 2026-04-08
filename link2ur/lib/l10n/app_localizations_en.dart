@@ -12174,6 +12174,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get expertManagementSectionTeam => 'Team';
 
   @override
+  String get expertManagementAllowApplications => 'Accept join applications';
+
+  @override
+  String get expertManagementAllowApplicationsOn => 'Anyone can apply to join the team';
+
+  @override
+  String get expertManagementAllowApplicationsOff => 'Applications are closed; only invitations are accepted';
+
+  @override
   String get expertManagementSectionMarketing => 'Marketing';
 
   @override

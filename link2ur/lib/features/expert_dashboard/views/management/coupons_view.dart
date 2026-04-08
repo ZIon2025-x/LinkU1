@@ -81,7 +81,7 @@ class _CouponsBody extends StatelessWidget {
     final nameCtrl = TextEditingController();
     final codeCtrl = TextEditingController();
     final valueCtrl = TextEditingController();
-    String type = 'fixed_amount';
+    const String type = 'fixed_amount';
 
     showDialog(
       context: context,

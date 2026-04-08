@@ -783,7 +783,7 @@ class _TaskGridCard extends StatelessWidget {
                     ? Hero(
                         tag: 'task_image_${task.id}',
                         child: AsyncImageView(
-                          imageUrl: Helpers.getThumbnailUrl(task.firstImage!, size: 'medium'),
+                          imageUrl: Helpers.getThumbnailUrl(task.firstImage!),
                           fallbackUrl: Helpers.getImageUrl(task.firstImage!),
                           width: w,
                           height: h,

@@ -22493,6 +22493,24 @@ abstract class AppLocalizations {
   /// **'Team'**
   String get expertManagementSectionTeam;
 
+  /// No description provided for @expertManagementAllowApplications.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept join applications'**
+  String get expertManagementAllowApplications;
+
+  /// No description provided for @expertManagementAllowApplicationsOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Anyone can apply to join the team'**
+  String get expertManagementAllowApplicationsOn;
+
+  /// No description provided for @expertManagementAllowApplicationsOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Applications are closed; only invitations are accepted'**
+  String get expertManagementAllowApplicationsOff;
+
   /// No description provided for @expertManagementSectionMarketing.
   ///
   /// In en, this message translates to:

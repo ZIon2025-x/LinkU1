@@ -43,7 +43,7 @@ class Expert(Base):
     bio_zh = Column(Text, nullable=True)
     avatar = Column(Text, nullable=True)
     status = Column(String(20), nullable=False, default="active")
-    allow_applications = Column(Boolean, nullable=False, default=True)
+    allow_applications = Column(Boolean, nullable=False, default=False)
     max_members = Column(Integer, nullable=False, default=20)
     member_count = Column(Integer, nullable=False, default=1)
     rating = Column(DECIMAL(3, 2), nullable=False, default=0.00)

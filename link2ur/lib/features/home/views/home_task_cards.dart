@@ -212,7 +212,6 @@ class _NearbyTabState extends State<_NearbyTab> {
               locale,
             );
       final price = service['base_price'];
-      final pricingType = service['pricing_type'] as String? ?? '';
       final priceStr = price != null
           ? '\u00A3${_formatServicePrice(price)}'
           : null;
@@ -713,7 +712,7 @@ class _NearbyWaterfallCard extends StatelessWidget {
       children: [
         if (hasImage)
           AsyncImageView(
-            imageUrl: Helpers.getThumbnailUrl(imageUrl!, size: 'medium'),
+            imageUrl: Helpers.getThumbnailUrl(imageUrl!),
             fallbackUrl: Helpers.getImageUrl(imageUrl!),
             width: double.infinity,
             height: height,

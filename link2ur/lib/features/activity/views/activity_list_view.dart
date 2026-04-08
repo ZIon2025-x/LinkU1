@@ -364,7 +364,7 @@ class ActivityCardView extends StatelessWidget {
                 // 图片或占位
                 activity.firstImage != null
                     ? AsyncImageView(
-                        imageUrl: Helpers.getThumbnailUrl(activity.firstImage!, size: 'medium'),
+                        imageUrl: Helpers.getThumbnailUrl(activity.firstImage!),
                         fallbackUrl: Helpers.getImageUrl(activity.firstImage!),
                         width: double.infinity,
                         height: 160,

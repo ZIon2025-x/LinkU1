@@ -621,7 +621,7 @@ class _ExpertActivityCard extends StatelessWidget {
           children: [
             if (activity.firstImage != null)
               AsyncImageView(
-                imageUrl: Helpers.getThumbnailUrl(activity.firstImage!, size: 'medium'),
+                imageUrl: Helpers.getThumbnailUrl(activity.firstImage!),
                 fallbackUrl: Helpers.getImageUrl(activity.firstImage!),
                 width: double.infinity,
                 height: 160,
@@ -1070,7 +1070,7 @@ class _ServiceCard extends StatelessWidget {
                 ClipRRect(
                   borderRadius: AppRadius.allMedium,
                   child: AsyncImageView(
-                    imageUrl: Helpers.getThumbnailUrl(service.firstImage, size: 'medium'),
+                    imageUrl: Helpers.getThumbnailUrl(service.firstImage),
                     fallbackUrl: Helpers.getImageUrl(service.firstImage),
                     width: 100,
                     height: 100,

@@ -1552,7 +1552,7 @@ class _FleaMarketPurchaseSheetState extends State<_FleaMarketPurchaseSheet> {
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(12),
                                 child: AsyncImageView(
-                                  imageUrl: Helpers.getThumbnailUrl(widget.item.firstImage!, size: 'medium'),
+                                  imageUrl: Helpers.getThumbnailUrl(widget.item.firstImage!),
                                   fallbackUrl: Helpers.getImageUrl(widget.item.firstImage!),
                                   width: 90,
                                   height: 90,

@@ -82,7 +82,6 @@ class _GroupBuyBodyState extends State<_GroupBuyBody> {
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const SizedBox(height: 32),
           // Progress circle

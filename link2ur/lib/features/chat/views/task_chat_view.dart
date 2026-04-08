@@ -109,6 +109,8 @@ class _TaskChatContentState extends State<_TaskChatContent> {
 
   Future<void> _showInviteMemberDialog(BuildContext context) async {
     final controller = TextEditingController();
+    final repo = context.read<ExpertTeamRepository>();
+    final messenger = ScaffoldMessenger.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -135,18 +137,18 @@ class _TaskChatContentState extends State<_TaskChatContent> {
     );
     if (confirmed == true && controller.text.trim().isNotEmpty && mounted) {
       try {
-        await context.read<ExpertTeamRepository>().inviteToTaskChat(
+        await repo.inviteToTaskChat(
               widget.taskId,
               controller.text.trim(),
             );
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          messenger.showSnackBar(
             const SnackBar(content: Text('已邀请成员加入聊天')),
           );
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          messenger.showSnackBar(
             SnackBar(content: Text('邀请失败: $e')),
           );
         }

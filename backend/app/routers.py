@@ -6790,6 +6790,23 @@ def _handle_account_updated(db, acct):
         )
 
 
+def _safe_int_metadata(obj, key: str, default: int = 0) -> int:
+    """从 Stripe 对象 metadata 安全提取整数. 解析失败返回 default,
+    防止伪造或异常 metadata 击穿整个 webhook (Stripe 会无限重试)."""
+    try:
+        if not isinstance(obj, dict):
+            return default
+        meta = obj.get("metadata")
+        if not isinstance(meta, dict):
+            return default
+        v = meta.get(key, default)
+        if v is None or v == "":
+            return default
+        return int(v)
+    except (TypeError, ValueError):
+        return default
+
+
 @router.post("/stripe/webhook")
 async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     import logging
@@ -6939,7 +6956,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     if event_type == "payment_intent.succeeded":
         payment_intent = event_data
         payment_intent_id = payment_intent.get("id")
-        task_id = int(payment_intent.get("metadata", {}).get("task_id", 0))
+        task_id = _safe_int_metadata(payment_intent, "task_id")
         
         logger.info(f"Payment intent succeeded: {payment_intent_id}, task_id: {task_id}, amount: {payment_intent.get('amount')}")
         
@@ -7724,6 +7741,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 try:
                     from app.models_expert import UserServicePackage
                     from datetime import timedelta as _td
+                    from sqlalchemy.exc import IntegrityError
                     service_id_meta = metadata.get("service_id")
                     buyer_id = metadata.get("buyer_id")
                     expert_id_meta = metadata.get("expert_id")
@@ -7738,9 +7756,11 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                         )
                     else:
                         # 幂等性检查 — 同 PI 是否已创建 package
+                        # 注意: DB 层有 partial unique index uq_user_service_packages_pi (migration 187),
+                        # 即便 query 后并发 add 也会被 IntegrityError 拦下,见下方 except。
                         existing_pkg = db.query(UserServicePackage).filter(
                             UserServicePackage.payment_intent_id == payment_intent_id
-                        ).first()
+                        ).with_for_update().first()
                         if existing_pkg:
                             logger.info(
                                 f"✅ [WEBHOOK] 套餐 {existing_pkg.id} 已存在,跳过 (idempotent)"
@@ -7787,46 +7807,74 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                                     bundle_breakdown=breakdown,
                                 )
                                 db.add(new_pkg)
-                                db.commit()
-                                db.refresh(new_pkg)
-                                logger.info(
-                                    f"✅ [WEBHOOK] 套餐 {new_pkg.id} 已创建 "
-                                    f"(buyer={buyer_id} expert={expert_id_meta} type={package_type_meta} total={final_total})"
-                                )
-
-                                # 通知 buyer + 团队所有 admin
+                                idempotent_skipped = False
                                 try:
-                                    crud.create_notification(
-                                        db=db,
-                                        user_id=buyer_id,
-                                        type="package_purchased",
-                                        title="套餐购买成功",
-                                        content=f"您已成功购买「{service_obj.service_name}」套餐,共 {final_total} 次,可在「我的套餐」中查看",
-                                        related_id=str(new_pkg.id),
-                                        auto_commit=False,
+                                    db.commit()
+                                except IntegrityError:
+                                    # 并发兜底: unique index uq_user_service_packages_pi (migration 187)
+                                    # 命中 → 已被另一 webhook 创建,幂等跳过通知
+                                    db.rollback()
+                                    logger.info(
+                                        f"✅ [WEBHOOK] 套餐 {payment_intent_id} 并发已创建,幂等跳过"
                                     )
-                                    # 团队侧广播
-                                    from app.models_expert import ExpertMember as _EM
-                                    managers = db.query(_EM.user_id).filter(
-                                        _EM.expert_id == expert_id_meta,
-                                        _EM.status == "active",
-                                        _EM.role.in_(["owner", "admin"]),
-                                    ).all()
-                                    for (mid,) in managers:
+                                    idempotent_skipped = True
+
+                                if not idempotent_skipped:
+                                    db.refresh(new_pkg)
+                                    logger.info(
+                                        f"✅ [WEBHOOK] 套餐 {new_pkg.id} 已创建 "
+                                        f"(buyer={buyer_id} expert={expert_id_meta} type={package_type_meta} total={final_total})"
+                                    )
+
+                                    # 通知 buyer + 团队所有 admin (i18n 模板)
+                                    try:
+                                        from app.utils.notification_templates import get_notification_texts
+                                        from app.models_expert import ExpertMember as _EM
+
+                                        buyer_t_zh, buyer_c_zh, buyer_t_en, buyer_c_en = get_notification_texts(
+                                            "package_purchased",
+                                            service_name=service_obj.service_name or "",
+                                            total_sessions=final_total,
+                                        )
                                         crud.create_notification(
                                             db=db,
-                                            user_id=mid,
-                                            type="package_sold",
-                                            title="新套餐订单",
-                                            content=f"用户已购买「{service_obj.service_name}」套餐 ({final_total} 次)",
+                                            user_id=buyer_id,
+                                            type="package_purchased",
+                                            title=buyer_t_zh,
+                                            content=buyer_c_zh,
+                                            title_en=buyer_t_en,
+                                            content_en=buyer_c_en,
                                             related_id=str(new_pkg.id),
                                             auto_commit=False,
                                         )
-                                    db.commit()
-                                except Exception as notify_err:
-                                    logger.warning(
-                                        f"⚠️ [WEBHOOK] 套餐购买通知失败: {notify_err}"
-                                    )
+                                        admin_t_zh, admin_c_zh, admin_t_en, admin_c_en = get_notification_texts(
+                                            "package_sold",
+                                            service_name=service_obj.service_name or "",
+                                            total_sessions=final_total,
+                                        )
+                                        managers = db.query(_EM.user_id).filter(
+                                            _EM.expert_id == expert_id_meta,
+                                            _EM.status == "active",
+                                            _EM.role.in_(["owner", "admin"]),
+                                        ).all()
+                                        for (mid,) in managers:
+                                            crud.create_notification(
+                                                db=db,
+                                                user_id=mid,
+                                                type="package_sold",
+                                                title=admin_t_zh,
+                                                content=admin_c_zh,
+                                                title_en=admin_t_en,
+                                                content_en=admin_c_en,
+                                                related_id=str(new_pkg.id),
+                                                auto_commit=False,
+                                            )
+                                        db.commit()
+                                    except Exception as notify_err:
+                                        logger.warning(
+                                            f"⚠️ [WEBHOOK] 套餐购买通知失败: {notify_err}"
+                                        )
+                                        db.rollback()
                 except Exception as e:
                     logger.error(
                         f"❌ [WEBHOOK] 处理 package_purchase 失败: {e}",
@@ -7840,7 +7888,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     elif event_type == "payment_intent.payment_failed":
         payment_intent = event_data
         payment_intent_id = payment_intent.get("id")
-        task_id = int(payment_intent.get("metadata", {}).get("task_id", 0))
+        task_id = _safe_int_metadata(payment_intent, "task_id")
         application_id_str = payment_intent.get("metadata", {}).get("application_id")
         error_message = payment_intent.get('last_payment_error', {}).get('message', 'Unknown error')
         
@@ -7995,7 +8043,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     # 处理退款事件
     elif event_type == "charge.refunded":
         charge = event_data
-        task_id = int(charge.get("metadata", {}).get("task_id", 0))
+        task_id = _safe_int_metadata(charge, "task_id")
         refund_request_id = charge.get("metadata", {}).get("refund_request_id")
         
         if task_id:
@@ -8130,7 +8178,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     elif event_type == "charge.dispute.created":
         dispute = event_data
         charge_id = dispute.get("charge")
-        task_id = int(dispute.get("metadata", {}).get("task_id", 0))
+        task_id = _safe_int_metadata(dispute, "task_id")
         reason = dispute.get("reason", "unknown")
         amount = (dispute.get("amount") or 0) / 100.0
         logger.warning(f"Stripe 争议 charge.dispute.created: charge={charge_id}, task_id={task_id}, reason={reason}, amount={amount}")
@@ -8211,14 +8259,14 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     elif event_type == "charge.dispute.updated":
         dispute = event_data
         charge_id = dispute.get("charge")
-        task_id = int(dispute.get("metadata", {}).get("task_id", 0))
+        task_id = _safe_int_metadata(dispute, "task_id")
         status = dispute.get("status")
         logger.info(f"Dispute updated for charge {charge_id}, task {task_id}: status={status}")
     
     elif event_type == "charge.dispute.closed":
         dispute = event_data
         charge_id = dispute.get("charge")
-        task_id = int(dispute.get("metadata", {}).get("task_id", 0))
+        task_id = _safe_int_metadata(dispute, "task_id")
         status = dispute.get("status")
         logger.info(f"Dispute closed for charge {charge_id}, task {task_id}: status={status}")
         
@@ -8260,13 +8308,13 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     elif event_type == "charge.dispute.funds_withdrawn":
         dispute = event_data
         charge_id = dispute.get("charge")
-        task_id = int(dispute.get("metadata", {}).get("task_id", 0))
+        task_id = _safe_int_metadata(dispute, "task_id")
         logger.warning(f"Dispute funds withdrawn for charge {charge_id}, task {task_id}")
     
     elif event_type == "charge.dispute.funds_reinstated":
         dispute = event_data
         charge_id = dispute.get("charge")
-        task_id = int(dispute.get("metadata", {}).get("task_id", 0))
+        task_id = _safe_int_metadata(dispute, "task_id")
         logger.info(f"Dispute funds reinstated for charge {charge_id}, task {task_id}")
 
     # Connect 账户状态同步：专家团队 stripe_onboarding_complete + 服务冻结
@@ -8281,37 +8329,37 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     # 处理其他 charge 事件
     elif event_type == "charge.succeeded":
         charge = event_data
-        task_id = int(charge.get("metadata", {}).get("task_id", 0))
+        task_id = _safe_int_metadata(charge, "task_id")
         if task_id:
             logger.info(f"Charge succeeded for task {task_id}: charge_id={charge.get('id')}")
     
     elif event_type == "charge.failed":
         charge = event_data
-        task_id = int(charge.get("metadata", {}).get("task_id", 0))
+        task_id = _safe_int_metadata(charge, "task_id")
         logger.warning(f"Charge failed for task {task_id}: {charge.get('failure_message', 'Unknown error')}")
     
     elif event_type == "charge.captured":
         charge = event_data
-        task_id = int(charge.get("metadata", {}).get("task_id", 0))
+        task_id = _safe_int_metadata(charge, "task_id")
         logger.info(f"Charge captured for task {task_id}: charge_id={charge.get('id')}")
     
     elif event_type == "charge.refund.updated":
         refund = event_data
         charge_id = refund.get("charge")
-        task_id = int(refund.get("metadata", {}).get("task_id", 0))
+        task_id = _safe_int_metadata(refund, "task_id")
         status = refund.get("status")
         logger.info(f"Refund updated for charge {charge_id}, task {task_id}: status={status}")
     
     # 处理 Payment Intent 其他事件
     elif event_type == "payment_intent.created":
         payment_intent = event_data
-        task_id = int(payment_intent.get("metadata", {}).get("task_id", 0))
+        task_id = _safe_int_metadata(payment_intent, "task_id")
         logger.info(f"Payment intent created for task {task_id}: payment_intent_id={payment_intent.get('id')}")
     
     elif event_type == "payment_intent.canceled":
         payment_intent = event_data
         payment_intent_id = payment_intent.get("id")
-        task_id = int(payment_intent.get("metadata", {}).get("task_id", 0))
+        task_id = _safe_int_metadata(payment_intent, "task_id")
         logger.warning(f"⚠️ [WEBHOOK] Payment intent canceled: payment_intent_id={payment_intent_id}, task_id={task_id}")
 
         # ==================== 钱包混合支付：退还钱包扣款 ====================
@@ -8358,12 +8406,12 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     
     elif event_type == "payment_intent.requires_action":
         payment_intent = event_data
-        task_id = int(payment_intent.get("metadata", {}).get("task_id", 0))
+        task_id = _safe_int_metadata(payment_intent, "task_id")
         logger.info(f"Payment intent requires action for task {task_id}: payment_intent_id={payment_intent.get('id')}")
     
     elif event_type == "payment_intent.processing":
         payment_intent = event_data
-        task_id = int(payment_intent.get("metadata", {}).get("task_id", 0))
+        task_id = _safe_int_metadata(payment_intent, "task_id")
         logger.info(f"Payment intent processing for task {task_id}: payment_intent_id={payment_intent.get('id')}")
     
     # 处理 Invoice 事件（用于订阅）
@@ -8385,7 +8433,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     elif event_type == "checkout.session.completed":
         session = event_data
         metadata = session.get("metadata", {})
-        task_id = int(metadata.get("task_id", 0))
+        task_id = _safe_int_metadata(session, "task_id")
         payment_type = metadata.get("payment_type", "")
         
         logger.info(f"[WEBHOOK] Checkout Session 完成: session_id={session.get('id')}, task_id={task_id}, payment_type={payment_type}")
@@ -8509,7 +8557,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         transfer = event_data
         transfer_id = transfer.get("id")
         transfer_record_id_str = transfer.get("metadata", {}).get("transfer_record_id")
-        task_id = int(transfer.get("metadata", {}).get("task_id", 0))
+        task_id = _safe_int_metadata(transfer, "task_id")
         
         logger.info(f"✅ [WEBHOOK] Transfer 支付成功:")
         logger.info(f"  - Transfer ID: {transfer_id}")
@@ -8616,7 +8664,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         transfer = event_data
         transfer_id = transfer.get("id")
         transfer_record_id_str = transfer.get("metadata", {}).get("transfer_record_id")
-        task_id = int(transfer.get("metadata", {}).get("task_id", 0))
+        task_id = _safe_int_metadata(transfer, "task_id")
         failure_code = transfer.get("failure_code", "unknown")
         failure_message = transfer.get("failure_message", "Unknown error")
 

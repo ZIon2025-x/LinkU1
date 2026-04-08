@@ -11697,6 +11697,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get expertManagementSectionTeam => '团队';
 
   @override
+  String get expertManagementAllowApplications => '接受加入申请';
+
+  @override
+  String get expertManagementAllowApplicationsOn => '任何人都可以申请加入团队';
+
+  @override
+  String get expertManagementAllowApplicationsOff => '已关闭申请通道，仅接受邀请加入';
+
+  @override
   String get expertManagementSectionMarketing => '营销';
 
   @override
@@ -23621,6 +23630,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get expertManagementSectionTeam => '團隊';
+
+  @override
+  String get expertManagementAllowApplications => '接受加入申請';
+
+  @override
+  String get expertManagementAllowApplicationsOn => '任何人都可以申請加入團隊';
+
+  @override
+  String get expertManagementAllowApplicationsOff => '已關閉申請通道，僅接受邀請加入';
 
   @override
   String get expertManagementSectionMarketing => '營銷';

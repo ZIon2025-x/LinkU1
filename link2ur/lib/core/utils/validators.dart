@@ -132,7 +132,7 @@ class Validators {
     if (value == null || value.isEmpty) {
       return l10n?.validatorUsernameRequired ?? 'Please enter username';
     }
-    if (value.length < 1) {
+    if (value.isEmpty) {
       return l10n?.validatorUsernameMinLength ??
           'Username must be at least 1 character';
     }

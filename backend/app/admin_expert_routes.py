@@ -27,12 +27,102 @@ from app.schemas_expert import (
     ExpertProfileUpdateOut,
     ExpertProfileUpdateReview,
     ExpertOut,
+    ExpertCreateByAdmin,
 )
 from app.utils.time_utils import get_utc_time
 
 logger = logging.getLogger(__name__)
 
 admin_expert_router = APIRouter(prefix="/api/admin/experts", tags=["admin-experts"])
+
+
+# ==================== 内部辅助 ====================
+
+async def _create_expert_team_with_owner(
+    db: AsyncSession,
+    *,
+    name: str,
+    owner_user_id: str,
+    name_en: Optional[str] = None,
+    name_zh: Optional[str] = None,
+    bio: Optional[str] = None,
+    bio_en: Optional[str] = None,
+    bio_zh: Optional[str] = None,
+    avatar: Optional[str] = None,
+    is_official: bool = False,
+    official_badge: Optional[str] = None,
+    allow_applications: bool = False,
+) -> Expert:
+    """在事务中创建一个达人团队 + owner 成员 + 论坛板块。
+
+    调用方负责 `db.commit()` 或 `db.rollback()`。
+    raises HTTPException(404) 如果 owner_user_id 不存在。
+    """
+    # 校验 owner 用户存在
+    user_result = await db.execute(
+        select(models.User).where(models.User.id == owner_user_id)
+    )
+    owner = user_result.scalar_one_or_none()
+    if not owner:
+        raise HTTPException(status_code=404, detail=f"用户 {owner_user_id} 不存在")
+
+    now = get_utc_time()
+
+    # 生成唯一 expert_id
+    expert_id = generate_expert_id()
+    for _ in range(10):
+        existing = await db.execute(select(Expert).where(Expert.id == expert_id))
+        if existing.scalar_one_or_none() is None:
+            break
+        expert_id = generate_expert_id()
+    else:
+        raise HTTPException(status_code=500, detail="Failed to generate unique expert ID")
+
+    expert = Expert(
+        id=expert_id,
+        name=name,
+        name_en=name_en,
+        name_zh=name_zh,
+        bio=bio,
+        bio_en=bio_en,
+        bio_zh=bio_zh,
+        avatar=avatar,
+        status="active",
+        allow_applications=allow_applications,
+        is_official=is_official,
+        official_badge=official_badge,
+        member_count=1,
+        created_at=now,
+        updated_at=now,
+    )
+    db.add(expert)
+
+    member = ExpertMember(
+        expert_id=expert_id,
+        user_id=owner_user_id,
+        role="owner",
+        status="active",
+        joined_at=now,
+        updated_at=now,
+    )
+    db.add(member)
+
+    # 创建达人板块
+    from app.models import ForumCategory
+    board = ForumCategory(
+        name=f"expert_{expert_id}",
+        name_zh=name,
+        name_en=name_en or name,
+        type="expert",
+        expert_id=expert_id,
+        is_visible=True,
+        is_admin_only=False,
+    )
+    db.add(board)
+    await db.flush()
+    expert.forum_category_id = board.id
+
+    return expert
 
 
 # ==================== 达人申请管理 ====================
@@ -102,56 +192,16 @@ async def review_expert_application(
         if body.action == "approve":
             application.status = "approved"
 
-            # 生成唯一达人 ID
-            expert_id = generate_expert_id()
-            for _ in range(10):
-                existing = await db.execute(select(Expert).where(Expert.id == expert_id))
-                if existing.scalar_one_or_none() is None:
-                    break
-                expert_id = generate_expert_id()
-            else:
-                raise HTTPException(status_code=500, detail="Failed to generate unique expert ID")
-
-            # 创建达人团队记录
-            expert = Expert(
-                id=expert_id,
+            expert = await _create_expert_team_with_owner(
+                db,
                 name=application.expert_name,
+                owner_user_id=application.user_id,
                 bio=application.bio,
                 avatar=application.avatar,
-                status="active",
-                created_at=now,
-                updated_at=now,
             )
-            db.add(expert)
-
-            # 创建达人成员记录（申请人为 owner）
-            member = ExpertMember(
-                expert_id=expert_id,
-                user_id=application.user_id,
-                role="owner",
-                status="active",
-                joined_at=now,
-                updated_at=now,
-            )
-            db.add(member)
-
-            # 创建达人板块（type='expert'）
-            from app.models import ForumCategory
-            board = ForumCategory(
-                name=f"expert_{expert_id}",
-                name_zh=application.expert_name,
-                name_en=application.expert_name,
-                type="expert",
-                expert_id=expert_id,
-                is_visible=True,
-                is_admin_only=False,
-            )
-            db.add(board)
-            await db.flush()
-            expert.forum_category_id = board.id
 
             await db.commit()
-            return {"status": "approved", "expert_id": expert_id}
+            return {"status": "approved", "expert_id": expert.id}
         else:
             application.status = "rejected"
             await db.commit()
@@ -162,6 +212,49 @@ async def review_expert_application(
     except Exception as e:
         await db.rollback()
         logger.error("review_expert_application error: %s", e)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+# ==================== 管理员直接新建达人团队 ====================
+
+@admin_expert_router.post("", status_code=201)
+async def admin_create_expert_team(
+    body: ExpertCreateByAdmin,
+    current_admin: models.AdminUser = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """管理员直接创建达人团队（不走用户申请流程）。
+
+    - 必须指定 owner_user_id（一个已存在的真实用户作为团队 owner）
+    - 创建时同时创建：Expert 记录、ExpertMember(owner) 记录、ForumCategory 板块
+    """
+    try:
+        expert = await _create_expert_team_with_owner(
+            db,
+            name=body.name,
+            name_en=body.name_en,
+            name_zh=body.name_zh,
+            bio=body.bio,
+            bio_en=body.bio_en,
+            bio_zh=body.bio_zh,
+            avatar=body.avatar,
+            owner_user_id=body.owner_user_id,
+            is_official=body.is_official,
+            official_badge=body.official_badge,
+            allow_applications=body.allow_applications,
+        )
+        await db.commit()
+        logger.info(
+            "admin %s created expert team %s with owner %s",
+            current_admin.id, expert.id, body.owner_user_id,
+        )
+        return {"detail": "创建成功", "expert_id": expert.id}
+    except HTTPException:
+        await db.rollback()
+        raise
+    except Exception as e:
+        await db.rollback()
+        logger.error("admin_create_expert_team error: %s", e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 

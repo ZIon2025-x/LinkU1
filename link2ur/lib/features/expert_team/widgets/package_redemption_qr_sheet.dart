@@ -32,7 +32,6 @@ class PackageRedemptionQrSheet extends StatefulWidget {
 class _PackageRedemptionQrSheetState extends State<PackageRedemptionQrSheet> {
   String? _qrData;
   String? _otp;
-  int? _expiresAtTs;
   bool _loading = false;
   String? _error;
   Timer? _refreshTimer;
@@ -63,7 +62,6 @@ class _PackageRedemptionQrSheetState extends State<PackageRedemptionQrSheet> {
       setState(() {
         _qrData = data['qr_data'] as String?;
         _otp = data['otp'] as String?;
-        _expiresAtTs = (data['expires_at_ts'] as num?)?.toInt();
         _loading = false;
         _secondsLeft = 60;
       });
@@ -156,7 +154,6 @@ class _PackageRedemptionQrSheetState extends State<PackageRedemptionQrSheet> {
                 ),
                 child: QrImageView(
                   data: _qrData!,
-                  version: QrVersions.auto,
                   size: 220,
                   backgroundColor: Colors.white,
                 ),

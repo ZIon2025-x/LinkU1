@@ -620,7 +620,7 @@ class _HeroSection extends StatelessWidget {
           Positioned.fill(
             child: leaderboard.coverImage != null
                 ? AsyncImageView(
-                    imageUrl: Helpers.getThumbnailUrl(leaderboard.coverImage!, size: 'medium'),
+                    imageUrl: Helpers.getThumbnailUrl(leaderboard.coverImage!),
                     fallbackUrl: Helpers.getImageUrl(leaderboard.coverImage!),
                     width: 400,
                     height: 240,
@@ -869,7 +869,7 @@ class _RankItemCard extends StatelessWidget {
                 ? ClipRRect(
                     borderRadius: AppRadius.allMedium,
                     child: AsyncImageView(
-                      imageUrl: Helpers.getThumbnailUrl(item.firstImage!, size: 'medium'),
+                      imageUrl: Helpers.getThumbnailUrl(item.firstImage!),
                       fallbackUrl: Helpers.getImageUrl(item.firstImage!),
                       width: 64,
                       height: 64,

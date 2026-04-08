@@ -696,7 +696,7 @@ class _TaskChatItem extends StatelessWidget {
         // 有图片: 显示第一张任务图片 (对齐iOS AsyncImageView)
         if (taskChat.images.isNotEmpty)
           AsyncImageView(
-            imageUrl: Helpers.getThumbnailUrl(taskChat.images.first, size: 'medium'),
+            imageUrl: Helpers.getThumbnailUrl(taskChat.images.first),
             fallbackUrl: Helpers.getImageUrl(taskChat.images.first),
             width: imageSize,
             height: imageSize,

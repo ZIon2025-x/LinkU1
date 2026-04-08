@@ -857,7 +857,7 @@ class ForumRepository {
       );
       return SkillFeedResponse.fromJson(response.data as Map<String, dynamic>);
     } catch (e) {
-      throw ForumException('skill_feed_load_failed');
+      throw const ForumException('skill_feed_load_failed');
     }
   }
 }

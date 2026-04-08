@@ -3084,7 +3084,7 @@ class _TimelineItemTile extends StatelessWidget {
                                 );
                               },
                               child: AsyncImageView(
-                                imageUrl: Helpers.getThumbnailUrl(url, size: 'medium'),
+                                imageUrl: Helpers.getThumbnailUrl(url),
                                 fallbackUrl: Helpers.getImageUrl(url),
                                 width: 80,
                                 height: 80,

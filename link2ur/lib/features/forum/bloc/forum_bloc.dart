@@ -1140,8 +1140,6 @@ class ForumBloc extends Bloc<ForumEvent, ForumState> {
     try {
       final response = await _forumRepository.getSkillFeed(
         categoryId: event.categoryId,
-        page: 1,
-        pageSize: 20,
         sortBy: event.sortBy,
       );
       emit(state.copyWith(

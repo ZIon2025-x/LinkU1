@@ -16,9 +16,9 @@ Widget _buildMobileProfile(
             _buildStatsSection(context, profileState, user, isDark),
             const SizedBox(height: 24),
             // 徽章展示区域
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-              child: const BadgesDisplayView(),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              child: BadgesDisplayView(),
             ),
             const SizedBox(height: 24),
             _buildMyContentSection(context, isDark),

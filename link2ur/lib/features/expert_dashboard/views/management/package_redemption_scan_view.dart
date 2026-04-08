@@ -32,7 +32,6 @@ class _PackageRedemptionScanViewState extends State<PackageRedemptionScanView> {
     formats: const [BarcodeFormat.qrCode],
   );
   bool _processing = false;
-  bool _showManualInput = false;
 
   @override
   void dispose() {

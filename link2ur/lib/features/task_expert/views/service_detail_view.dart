@@ -206,7 +206,6 @@ class _ServiceDetailContent extends StatelessWidget {
                                 isLoading: state.isLoadingServiceQuestions,
                                 totalCount: state.serviceQuestionsTotalCount,
                                 isLoggedIn: StorageService.instance.getUserId() != null,
-                                allowAsk: true,
                                 onAsk: (content) => context.read<TaskExpertBloc>().add(
                                   TaskExpertAskServiceQuestion(serviceId: serviceId, content: content),
                                 ),
@@ -548,7 +547,7 @@ class _DescriptionCard extends StatelessWidget {
             const SizedBox(height: 16),
             Row(
               children: [
-                Icon(Icons.label_outlined, size: 16, color: AppColors.primary),
+                const Icon(Icons.label_outlined, size: 16, color: AppColors.primary),
                 const SizedBox(width: 6),
                 Text(
                   context.l10n.createTaskRequiredSkills,
@@ -572,7 +571,7 @@ class _DescriptionCard extends StatelessWidget {
                 ),
                 child: Text(
                   skill,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 13,
                     color: AppColors.primary,
                     fontWeight: FontWeight.w500,
@@ -1132,7 +1131,7 @@ class _RelatedActivityMiniCard extends StatelessWidget {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(10),
                   child: AsyncImageView(
-                    imageUrl: Helpers.getThumbnailUrl(activity.firstImage!, size: 'medium'),
+                    imageUrl: Helpers.getThumbnailUrl(activity.firstImage!),
                     fallbackUrl: Helpers.getImageUrl(activity.firstImage!),
                     width: 72,
                     height: 72,

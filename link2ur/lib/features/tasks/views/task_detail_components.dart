@@ -656,7 +656,7 @@ class CompletionEvidenceCard extends StatelessWidget {
               children: images.map((url) => ClipRRect(
                 borderRadius: AppRadius.allSmall,
                 child: AsyncImageView(
-                  imageUrl: Helpers.getThumbnailUrl(url, size: 'medium'),
+                  imageUrl: Helpers.getThumbnailUrl(url),
                   fallbackUrl: Helpers.getImageUrl(url),
                   width: 100,
                   height: 100,

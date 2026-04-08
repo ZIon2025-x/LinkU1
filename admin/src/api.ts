@@ -458,6 +458,27 @@ export const createTaskExpert = async (expertData: any) => {
   return res.data;
 };
 
+/**
+ * 管理员直接新建达人团队（不走用户申请审核流程）。
+ * owner_user_id 必填:必须是已存在的真实用户。
+ */
+export const createExpertTeamByAdmin = async (data: {
+  name: string;
+  owner_user_id: string;
+  name_en?: string;
+  name_zh?: string;
+  bio?: string;
+  bio_en?: string;
+  bio_zh?: string;
+  avatar?: string;
+  is_official?: boolean;
+  official_badge?: string;
+  allow_applications?: boolean;
+}) => {
+  const res = await api.post('/api/admin/experts', data);
+  return res.data as { detail: string; expert_id: string };
+};
+
 export const updateTaskExpert = async (expertId: string, expertData: any) => {
   const res = await api.put(`/api/admin/experts/${expertId}`, expertData);
   return res.data;

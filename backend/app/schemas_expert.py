@@ -90,6 +90,23 @@ class ExpertApplicationReview(BaseModel):
     review_comment: Optional[str] = None
 
 
+# ==================== Admin: 直接创建达人团队 ====================
+
+class ExpertCreateByAdmin(BaseModel):
+    """管理员直接创建达人团队的请求体"""
+    name: str = Field(..., max_length=100, min_length=1)
+    name_en: Optional[str] = Field(None, max_length=100)
+    name_zh: Optional[str] = Field(None, max_length=100)
+    bio: Optional[str] = None
+    bio_en: Optional[str] = None
+    bio_zh: Optional[str] = None
+    avatar: Optional[str] = None
+    owner_user_id: str = Field(..., min_length=1, description="必填:owner 必须是已存在的用户 id")
+    is_official: bool = False
+    official_badge: Optional[str] = Field(None, max_length=50)
+    allow_applications: bool = False
+
+
 # ==================== ExpertJoinRequest ====================
 
 class ExpertJoinRequestCreate(BaseModel):

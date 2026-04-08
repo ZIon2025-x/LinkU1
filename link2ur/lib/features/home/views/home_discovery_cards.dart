@@ -52,7 +52,7 @@ class _PostCard extends StatelessWidget {
                     final h = w * 4 / 3;
                     return ClipRect(
                       child: AsyncImageView(
-                        imageUrl: Helpers.getThumbnailUrl(item.firstImage!, size: 'medium'),
+                        imageUrl: Helpers.getThumbnailUrl(item.firstImage!),
                         fallbackUrl: Helpers.getImageUrl(item.firstImage!),
                         width: w,
                         height: h,
@@ -247,7 +247,7 @@ class _ProductCard extends StatelessWidget {
                     final w = constraints.maxWidth;
                     return ClipRect(
                     child: AsyncImageView(
-                      imageUrl: Helpers.getThumbnailUrl(item.firstImage!, size: 'medium'),
+                      imageUrl: Helpers.getThumbnailUrl(item.firstImage!),
                       fallbackUrl: Helpers.getImageUrl(item.firstImage!),
                       width: w,
                       height: w,
@@ -675,7 +675,7 @@ class _RankingCard extends StatelessWidget {
                   final h = w * 9 / 16;
                   return ClipRect(
                     child: AsyncImageView(
-                      imageUrl: Helpers.getThumbnailUrl(item.firstImage!, size: 'medium'),
+                      imageUrl: Helpers.getThumbnailUrl(item.firstImage!),
                       fallbackUrl: Helpers.getImageUrl(item.firstImage!),
                       width: w,
                       height: h,
@@ -835,7 +835,7 @@ class _ServiceCard extends StatelessWidget {
                     final h = w * 3 / 4;
                   return ClipRect(
                     child: AsyncImageView(
-                      imageUrl: Helpers.getThumbnailUrl(item.firstImage!, size: 'medium'),
+                      imageUrl: Helpers.getThumbnailUrl(item.firstImage!),
                       fallbackUrl: Helpers.getImageUrl(item.firstImage!),
                       width: w,
                       height: h,
@@ -1273,7 +1273,7 @@ class _DiscoveryTaskCard extends StatelessWidget {
           final h = w * 3 / 4;
           return ClipRect(
             child: AsyncImageView(
-              imageUrl: Helpers.getThumbnailUrl(item.firstImage!, size: 'medium'),
+              imageUrl: Helpers.getThumbnailUrl(item.firstImage!),
               fallbackUrl: Helpers.getImageUrl(item.firstImage!),
               width: w,
               height: h,
@@ -1476,7 +1476,7 @@ class _DiscoveryActivityCard extends StatelessWidget {
           final h = w * 9 / 16;
           return ClipRect(
             child: AsyncImageView(
-              imageUrl: Helpers.getThumbnailUrl(item.firstImage!, size: 'medium'),
+              imageUrl: Helpers.getThumbnailUrl(item.firstImage!),
               fallbackUrl: Helpers.getImageUrl(item.firstImage!),
               width: w,
               height: h,

@@ -1827,10 +1827,34 @@ def delete_expert_activity(
                 logger.error(f"活动 {activity_id} 取消，返还积分失败: {e}")
                 # 不抛出异常，继续取消活动
     
+    # Stripe 退款失败汇总: 写入第一个失败 task 的 audit log + 返回给前端,
+    # 让 ops/客服可以看到哪些 task 需要人工补退款
+    if stripe_refund_failures:
+        try:
+            failure_summary = "; ".join(
+                f"task#{f['task_id']}: {f['error']}" for f in stripe_refund_failures
+            )[:1000]
+            first_failed_task_id = stripe_refund_failures[0]["task_id"]
+            db.add(TaskAuditLog(
+                task_id=first_failed_task_id,
+                action_type="refund_partial_failure",
+                action_description=f"活动 {activity_id} 取消时 {len(stripe_refund_failures)} 个 task 退款失败: {failure_summary}",
+                user_id=current_user.id,
+                old_status="cancelled",
+                new_status="cancelled",
+            ))
+        except Exception as audit_err:
+            logger.error(f"写入退款失败 audit log 异常: {audit_err}")
+
     db.commit()
     db.refresh(db_activity)
-    
-    return {"message": "Activity cancelled successfully", "activity_id": activity_id, "refunded_points": refund_points}
+
+    return {
+        "message": "Activity cancelled successfully",
+        "activity_id": activity_id,
+        "refunded_points": refund_points,
+        "stripe_refund_failures": stripe_refund_failures,
+    }
 
 
 @router.post("/expert/activities", response_model=ActivityOut)

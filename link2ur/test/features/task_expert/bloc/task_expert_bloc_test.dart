@@ -426,17 +426,20 @@ void main() {
       blocTest<TaskExpertBloc, TaskExpertState>(
         'loads incoming expert applications',
         build: () {
-          when(() => mockExpertRepo.getMyExpertApplications(
-                page: any(named: 'page'),
-                pageSize: any(named: 'pageSize'),
-              )).thenAnswer((_) async => [
-                {
-                  'id': 1,
-                  'user_id': 'user1',
-                  'status': 'pending',
-                }
-              ]);
-          return bloc;
+          when(() => mockExpertRepo.getExpertApplications('expert1'))
+              .thenAnswer((_) async => [
+                    {
+                      'id': 1,
+                      'user_id': 'user1',
+                      'status': 'pending',
+                    }
+                  ]);
+          return TaskExpertBloc(
+            taskExpertRepository: mockExpertRepo,
+            activityRepository: mockActivityRepo,
+            questionRepository: mockQuestionRepo,
+            expertId: 'expert1',
+          );
         },
         act: (bloc) =>
             bloc.add(const TaskExpertLoadExpertApplications()),
@@ -460,10 +463,7 @@ void main() {
         build: () {
           when(() => mockExpertRepo.approveServiceApplication(any()))
               .thenAnswer((_) async => {'success': true});
-          when(() => mockExpertRepo.getMyExpertApplications(
-                page: any(named: 'page'),
-                pageSize: any(named: 'pageSize'),
-              )).thenAnswer((_) async => []);
+          // Chained reload uses expertId=null branch, no repo call.
           return bloc;
         },
         act: (bloc) => bloc.add(
@@ -501,10 +501,7 @@ void main() {
                 any(),
                 reason: any(named: 'reason'),
               )).thenAnswer((_) async {});
-          when(() => mockExpertRepo.getMyExpertApplications(
-                page: any(named: 'page'),
-                pageSize: any(named: 'pageSize'),
-              )).thenAnswer((_) async => []);
+          // Chained reload uses expertId=null branch, no repo call.
           return bloc;
         },
         act: (bloc) => bloc.add(

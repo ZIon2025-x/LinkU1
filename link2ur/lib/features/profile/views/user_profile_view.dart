@@ -1048,7 +1048,7 @@ class UserProfileView extends StatelessWidget {
                           ),
                           child: item.images.isNotEmpty
                               ? AsyncImageView(
-                                  imageUrl: Helpers.getThumbnailUrl(item.images.first, size: 'medium'),
+                                  imageUrl: Helpers.getThumbnailUrl(item.images.first),
                                   fallbackUrl: Helpers.getImageUrl(item.images.first),
                                   width: 120,
                                   height: 80,

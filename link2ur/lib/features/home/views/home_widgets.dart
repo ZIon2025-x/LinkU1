@@ -722,7 +722,6 @@ class _BannerData {
     this.subtitle,
     this.localImage,
     this.networkImage,
-    this.imageAlignment = Alignment.center,
     required this.gradient,
     required this.icon,
     this.linkType = 'internal',
@@ -733,7 +732,7 @@ class _BannerData {
   final String? subtitle;
   final String? localImage;
   final String? networkImage;
-  final Alignment imageAlignment;
+  Alignment get imageAlignment => Alignment.center;
   final List<Color> gradient;
   final IconData icon;
   final String linkType;

@@ -259,8 +259,8 @@ class _SelectSheetState<T> extends State<_SelectSheet<T>> {
     final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
 
     // 动态高度：少选项时紧凑，多选项最高 70%
-    final itemHeight = 56.0;
-    final headerHeight = 56.0;
+    const itemHeight = 56.0;
+    const headerHeight = 56.0;
     final searchHeight = widget.showSearch ? 52.0 : 0.0;
     final contentHeight = headerHeight + searchHeight + (_filtered.length * itemHeight) + bottomPadding + 16;
     final maxHeight = MediaQuery.of(context).size.height * 0.7;
@@ -323,7 +323,6 @@ class _SelectSheetState<T> extends State<_SelectSheet<T>> {
               child: TextField(
                 controller: _searchController,
                 onChanged: _onSearch,
-                autofocus: false,
                 style: const TextStyle(fontSize: 14),
                 decoration: InputDecoration(
                   hintText: widget.searchHint ?? '搜索…',
