@@ -109,8 +109,12 @@ describe('middleware', () => {
     for (const p of paths) {
       const req = makeRequest(`https://www.link2ur.com${p}`, WECHAT_UA);
       const res = await middleware(req);
-      expect(res).toBeInstanceOf(Response);
-      expect(res!.status).toBe(200);
+      if (!(res instanceof Response)) {
+        throw new Error(`path "${p}" was not proxied (returned ${res})`);
+      }
+      if (res.status !== 200) {
+        throw new Error(`path "${p}" returned status ${res.status}, expected 200`);
+      }
     }
 
     expect((global.fetch as jest.Mock).mock.calls.length).toBe(paths.length);
@@ -170,6 +174,7 @@ describe('middleware', () => {
 
     expect(res).toBeInstanceOf(Response);
     expect(res!.status).toBe(410);
+    expect(res!.headers.get('x-ssr')).toBe('backend');
   });
 
   it('falls through when backend returns non-HTML content-type', async () => {
@@ -214,19 +219,23 @@ describe('middleware', () => {
       'CCBot/2.0 (https://commoncrawl.org/faq/)',
     ];
 
-    for (const ua of crawlerUAs) {
-      global.fetch = jest.fn().mockResolvedValue(
+    global.fetch = jest.fn().mockImplementation(() =>
+      Promise.resolve(
         new Response('<html></html>', {
           status: 200,
           headers: { 'content-type': 'text/html' },
         })
-      );
+      )
+    );
 
+    for (const ua of crawlerUAs) {
       const req = makeRequest('https://www.link2ur.com/zh/tasks/1', ua);
       const res = await middleware(req);
-
-      expect(res).toBeInstanceOf(Response);
-      expect((global.fetch as jest.Mock)).toHaveBeenCalledTimes(1);
+      if (!(res instanceof Response)) {
+        throw new Error(`UA "${ua}" was not intercepted (returned ${res})`);
+      }
     }
+
+    expect((global.fetch as jest.Mock).mock.calls.length).toBe(crawlerUAs.length);
   });
 });
