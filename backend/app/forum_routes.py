@@ -7766,19 +7766,23 @@ async def search_linkable_content(
     from app.utils.search_expander import build_keyword_filter
     limit_per_type = 5
     
-    # 搜索达人服务
+    # 搜索服务（包含达人服务和个人服务）
     if type in ("all", "service"):
+        # 服务所有者：个人服务用 user_id，达人服务用 expert_id（与 users.id 同空间）
+        owner_user_id_expr = func.coalesce(
+            models.TaskExpertService.user_id,
+            models.TaskExpertService.expert_id,
+        )
         service_query = (
             select(
                 models.TaskExpertService.id,
                 models.TaskExpertService.service_name,
                 models.TaskExpertService.description,
                 models.TaskExpertService.images,
-                models.TaskExpertService.expert_id,
-                models.User.name.label("expert_name"),
+                models.TaskExpertService.service_type,
+                models.User.name.label("owner_name"),
             )
-            .join(models.TaskExpert, models.TaskExpertService.expert_id == models.TaskExpert.id)
-            .join(models.User, models.TaskExpert.id == models.User.id)
+            .join(models.User, models.User.id == owner_user_id_expr)
             .where(
                 models.TaskExpertService.status == "active",
             )
@@ -7821,11 +7825,13 @@ async def search_linkable_content(
                         svc_thumb = parsed[0] if isinstance(parsed, list) and parsed else None
                     except Exception:
                         pass
+            owner_label = "个人" if row.service_type == "personal" else "达人"
+            svc_subtitle = f"{owner_label} · {row.owner_name}" if row.owner_name else owner_label
             results.append({
                 "item_type": "service",
                 "item_id": str(row.id),
                 "title": row.service_name,
-                "subtitle": f"{row.expert_name}",
+                "subtitle": svc_subtitle,
                 "thumbnail": svc_thumb,
                 "is_experienced": is_experienced,
             })
@@ -8048,43 +8054,44 @@ async def get_linkable_content_for_user(
     results = []
     limit_per_type = 5
 
-    # 我的达人服务（当前用户是达人且有名下服务）
-    expert_row = await db.execute(
-        select(models.TaskExpert.id).where(models.TaskExpert.id == current_user.id)
-    )
-    expert_id = expert_row.scalar_one_or_none()
-    if expert_id:
-        svc_query = (
-            select(
-                models.TaskExpertService.id,
-                models.TaskExpertService.service_name,
-                models.TaskExpertService.images,
-            )
-            .where(
-                models.TaskExpertService.expert_id == expert_id,
-                models.TaskExpertService.status == "active",
-            )
-            .limit(limit_per_type)
+    # 我的服务（达人服务 + 个人服务）
+    my_svc_query = (
+        select(
+            models.TaskExpertService.id,
+            models.TaskExpertService.service_name,
+            models.TaskExpertService.images,
+            models.TaskExpertService.service_type,
         )
-        for row in (await db.execute(svc_query)).all():
-            thumb = None
-            if row.images:
-                if isinstance(row.images, list):
-                    thumb = row.images[0] if row.images else None
-                elif isinstance(row.images, str):
-                    try:
-                        parsed = json.loads(row.images)
-                        thumb = parsed[0] if isinstance(parsed, list) and parsed else None
-                    except Exception:
-                        pass
-            results.append({
-                "item_type": "service",
-                "item_id": str(row.id),
-                "name": row.service_name,
-                "title": row.service_name,
-                "subtitle": "我的服务",
-                "thumbnail": thumb,
-            })
+        .where(
+            or_(
+                models.TaskExpertService.user_id == current_user.id,
+                models.TaskExpertService.expert_id == current_user.id,
+            ),
+            models.TaskExpertService.status == "active",
+        )
+        .order_by(desc(models.TaskExpertService.created_at))
+        .limit(limit_per_type)
+    )
+    for row in (await db.execute(my_svc_query)).all():
+        thumb = None
+        if row.images:
+            if isinstance(row.images, list):
+                thumb = row.images[0] if row.images else None
+            elif isinstance(row.images, str):
+                try:
+                    parsed = json.loads(row.images)
+                    thumb = parsed[0] if isinstance(parsed, list) and parsed else None
+                except Exception:
+                    pass
+        my_label = "我的个人服务" if row.service_type == "personal" else "我的达人服务"
+        results.append({
+            "item_type": "service",
+            "item_id": str(row.id),
+            "name": row.service_name,
+            "title": row.service_name,
+            "subtitle": my_label,
+            "thumbnail": thumb,
+        })
 
     # 我的活动（我发布的）
     act_query = (

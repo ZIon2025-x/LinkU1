@@ -171,7 +171,7 @@ class Message extends Equatable {
           ? DateTime.tryParse(json['created_at'].toString())
           : null,
       attachments: (json['attachments'] as List<dynamic>?)
-              ?.cast<Map<String, dynamic>>()
+              ?.whereType<Map<String, dynamic>>()
               .map((e) => MessageAttachment.fromJson(e))
               .toList() ??
           const [],
@@ -367,7 +367,7 @@ class TaskChat extends Equatable {
       images: images,
       isMultiParticipant: parseBool(json['is_multi_participant']),
       participants: (json['participants'] as List<dynamic>?)
-              ?.cast<Map<String, dynamic>>()
+              ?.whereType<Map<String, dynamic>>()
               .map((e) => UserBrief.fromJson(e))
               .toList() ??
           [],

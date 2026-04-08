@@ -49,11 +49,11 @@ async def get_discovery_feed(
     # 每种类型获取的数量（多取一些用于混排）
     fetch_limit = limit * 2
     
-    # 计算当前用户可见的板块 ID（普通板块 + 学校板块）
-    # 与论坛列表的权限逻辑一致
+    # 计算当前用户可见的板块 ID（普通板块 + 技能板块 + 学校板块）
+    # 与论坛列表的权限逻辑一致；达人板块 (type='expert') 走专属入口，不进入发现 Feed
     general_result = await db.execute(
         select(models.ForumCategory.id).where(
-            models.ForumCategory.type == "general",
+            models.ForumCategory.type.in_(("general", "skill")),
             models.ForumCategory.is_visible == True,
         )
     )
