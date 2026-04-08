@@ -172,6 +172,82 @@ async def setup_official_account(
         expert.is_official = True
         expert.official_badge = data.official_badge or "官方"
 
+    # B1: 同时 mirror 到新 Expert/ExpertMember/_expert_id_migration_map
+    # 让官方账号在新模型(团队 dashboard / 公开主页)下也可见。
+    # 1 人团队语义: 这位 user 自己就是 owner。
+    from app.models_expert import (
+        Expert,
+        ExpertMember,
+        generate_expert_id,
+    )
+    from sqlalchemy import text as sa_text
+
+    map_check = await db.execute(
+        sa_text("SELECT new_id FROM _expert_id_migration_map WHERE old_id = :old_id"),
+        {"old_id": data.user_id},
+    )
+    map_row = map_check.first()
+
+    if not map_row:
+        # 生成新 8 位 id (避免与现有 experts.id 撞)
+        new_expert_id = None
+        for _ in range(10):
+            candidate = generate_expert_id()
+            exists = await db.execute(
+                select(Expert).where(Expert.id == candidate)
+            )
+            if exists.scalar_one_or_none() is None:
+                new_expert_id = candidate
+                break
+        if not new_expert_id:
+            raise HTTPException(
+                status_code=500,
+                detail="无法生成唯一 expert id,请重试",
+            )
+
+        new_expert = Expert(
+            id=new_expert_id,
+            name=user.name or f"User {data.user_id}",
+            bio=None,
+            avatar=None,
+            status="active",
+            allow_applications=True,
+            max_members=20,
+            member_count=1,
+            rating=5.0,
+            total_services=0,
+            completed_tasks=0,
+            completion_rate=0.0,
+            is_official=True,
+            official_badge=data.official_badge or "官方",
+            stripe_onboarding_complete=False,
+        )
+        db.add(new_expert)
+
+        owner_member = ExpertMember(
+            expert_id=new_expert_id,
+            user_id=data.user_id,
+            role="owner",
+            status="active",
+        )
+        db.add(owner_member)
+
+        # 持久化映射
+        await db.execute(
+            sa_text(
+                "INSERT INTO _expert_id_migration_map (old_id, new_id) "
+                "VALUES (:old_id, :new_id) ON CONFLICT DO NOTHING"
+            ),
+            {"old_id": data.user_id, "new_id": new_expert_id},
+        )
+    else:
+        # 已有映射 — 同步 official 标记到新 Expert
+        existing_new_id = map_row[0]
+        existing_expert = await db.get(Expert, existing_new_id)
+        if existing_expert:
+            existing_expert.is_official = True
+            existing_expert.official_badge = data.official_badge or "官方"
+
     await db.commit()
     return {"success": True, "user_id": data.user_id, "badge": expert.official_badge}
 

@@ -1,6 +1,41 @@
 """
-任务达人功能API路由
-实现任务达人相关的所有接口
+任务达人功能API路由 (LEGACY)
+============================
+
+[B1 收口标记 - 2026-04-08]
+
+这个文件是 Phase 1 时代的"个人达人"系统遗留 API,Phase 2 之后被新的
+"达人团队"系统(`expert_routes.py` + 11 个 expert_*.py)替代。
+
+已经做的迁移:
+  - migration 168/169/170 把所有 task_experts 数据迁移到 experts +
+    expert_members + _expert_id_migration_map
+  - migration 185 (B1) 做 catch-up,处理 168 之后新建的 task_experts
+  - admin_official_routes.setup_official_account 现在同时 mirror 到新表
+  - 1 人团队语义: 每个 task_experts 行 = 一个 1 人团队 (owner = 自己)
+
+仍保留运行的 endpoint (前端还在用,**不要直接删**):
+
+  POST   /apply                                              -> 用户申请成为达人
+                                                                ⚠️ DEPRECATED: 新 client 应走 /api/experts/apply
+  GET    /my-application                                     -> 查申请状态
+                                                                ⚠️ DEPRECATED: 新 client 走 /api/experts/my-applications
+  GET    /                                                   -> 公开达人列表 (按 task_experts)
+                                                                ⚠️ 仅服务 legacy 个人达人浏览;团队走 /api/experts/
+  GET    /{expert_id}                                        -> 公开达人详情
+  GET    /services/{service_id}                              -> 公开服务详情
+  GET    /services/{service_id}/applications                 -> 服务申请列表 (公开 + owner)
+  POST   /services/{service_id}/applications/{id}/reply      -> 所有者回复申请
+  GET    /services/{service_id}/reviews                      -> 服务评价
+  GET    /{expert_id}/reviews                                -> 达人评价
+  GET    /{expert_id}/services                               -> 达人公开服务列表
+
+未来计划:
+  Phase 3 (待定): 当前端 (frontend/admin/Flutter) 全部切换到 /api/experts/*
+  之后,这个文件可以全量删除。在那之前,所有 endpoint 的 SQL 仍然走旧
+  task_experts 表 + 通过 _expert_id_migration_map 桥接到新模型。
+
+不要在此文件添加新 endpoint。新 endpoint 一律加到 expert_*.py。
 """
 
 import json
@@ -138,23 +173,56 @@ async def apply_to_be_expert(
             status_code=status.HTTP_400_BAD_REQUEST, detail="您已经是任务达人"
         )
     
-    # 创建申请
+    # B1: 这个 endpoint 是 legacy。新 client 应走 /api/experts/apply。
+    # 我们仍创建 TaskExpertApplication (back-compat),但同时 mirror 到新
+    # ExpertApplication 表,这样 admin 在新 dashboard 也能审批
+    logger.warning(
+        f"[DEPRECATED] /api/task-experts/apply called by user {current_user.id}. "
+        f"New clients should call /api/experts/apply instead."
+    )
+
+    # 创建 legacy 申请
     new_application = models.TaskExpertApplication(
         user_id=current_user.id,
         application_message=application_data.application_message,
         status="pending",
     )
     db.add(new_application)
+
+    # B1: 同时创建新 ExpertApplication (如果还没有 pending)
+    try:
+        from app.models_expert import ExpertApplication
+        existing_new = await db.execute(
+            select(ExpertApplication).where(
+                and_(
+                    ExpertApplication.user_id == current_user.id,
+                    ExpertApplication.status == "pending",
+                )
+            )
+        )
+        if not existing_new.scalar_one_or_none():
+            mirror_app = ExpertApplication(
+                user_id=current_user.id,
+                expert_name=current_user.name or f"User {current_user.id}",
+                bio=None,
+                avatar=None,
+                application_message=application_data.application_message,
+                status="pending",
+            )
+            db.add(mirror_app)
+    except Exception as e:
+        logger.warning(f"Failed to mirror to ExpertApplication: {e}")
+
     await db.commit()
     await db.refresh(new_application)
-    
+
     # 发送通知给管理员
     from app.task_notifications import send_expert_application_notification
     try:
         await send_expert_application_notification(db, current_user.id)
     except Exception as e:
         logger.error(f"Failed to send notification: {e}")
-    
+
     return new_application
 
 
