@@ -56,17 +56,20 @@ async def apply_for_service(
         raise HTTPException(status_code=400, detail="你已有进行中的申请")
 
     # 时间段容量校验: 若指定了 time_slot_id, 检查该 slot 是否还有名额
-    # 动态计数: 已 approved (Task 已创建) + 仍 pending/negotiating/price_agreed 占位的申请
+    # 并发安全: 用 SELECT FOR UPDATE 锁定 slot 行,然后 count + insert,
+    # 这样并发请求会串行化,避免超额。
     time_slot_id = body.get("time_slot_id")
     if time_slot_id:
         slot_result = await db.execute(
-            select(models.ServiceTimeSlot).where(
+            select(models.ServiceTimeSlot)
+            .where(
                 and_(
                     models.ServiceTimeSlot.id == time_slot_id,
                     models.ServiceTimeSlot.service_id == service_id,
                     models.ServiceTimeSlot.is_manually_deleted == False,
                 )
             )
+            .with_for_update()  # 🔒 锁住 slot 行,后续 count+insert 串行化
         )
         slot = slot_result.scalar_one_or_none()
         if not slot:
@@ -108,8 +111,13 @@ async def apply_for_service(
     )
     db.add(application)
 
-    # 更新服务申请计数
-    service.application_count = (service.application_count or 0) + 1
+    # 更新服务申请计数 — 用 atomic UPDATE 避免 read-modify-write 竞态
+    from sqlalchemy import update
+    await db.execute(
+        update(models.TaskExpertService)
+        .where(models.TaskExpertService.id == service_id)
+        .values(application_count=models.TaskExpertService.application_count + 1)
+    )
     await db.commit()
     await db.refresh(application)
 
@@ -172,7 +180,13 @@ async def negotiate_price(
     if application.applicant_id != current_user.id:
         raise HTTPException(status_code=403, detail="无权操作")
 
-    application.negotiated_price = body.get("price")
+    try:
+        price = float(body.get("price", 0))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="price 必须为数字")
+    if price <= 0:
+        raise HTTPException(status_code=400, detail="price 必须大于 0")
+    application.negotiated_price = price
     application.status = "negotiating"
     application.updated_at = get_utc_time()
     await db.commit()
@@ -203,7 +217,13 @@ async def quote_price(
     else:
         raise HTTPException(status_code=403, detail="无权操作")
 
-    application.expert_counter_price = body.get("price")
+    try:
+        price = float(body.get("price", 0))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="price 必须为数字")
+    if price <= 0:
+        raise HTTPException(status_code=400, detail="price 必须大于 0")
+    application.expert_counter_price = price
     application.status = "negotiating"
     application.updated_at = get_utc_time()
     await db.commit()
@@ -218,7 +238,7 @@ async def respond_to_negotiation(
     db: AsyncSession = Depends(get_async_db_dependency),
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
 ):
-    """回应协商（接受/拒绝/还价）"""
+    """回应协商(接受/拒绝/还价)。仅申请人或服务提供方可调用。"""
     app_result = await db.execute(
         select(models.ServiceApplication).where(models.ServiceApplication.id == application_id)
     )
@@ -226,7 +246,38 @@ async def respond_to_negotiation(
     if not application:
         raise HTTPException(status_code=404, detail="申请不存在")
 
+    # 权限检查 — 修复 IDOR
+    # 解析当前用户身份: 是 applicant 还是 provider
+    is_applicant = application.applicant_id == current_user.id
+    is_provider = False
+    if not is_applicant:
+        if application.new_expert_id:
+            try:
+                await _get_member_or_403(
+                    db,
+                    application.new_expert_id,
+                    current_user.id,
+                    required_roles=["owner", "admin"],
+                )
+                is_provider = True
+            except HTTPException:
+                pass
+        elif application.service_owner_id == current_user.id:
+            is_provider = True
+    if not is_applicant and not is_provider:
+        raise HTTPException(status_code=403, detail="无权操作该申请")
+
+    # 状态校验: 仅 negotiating 状态可回应
+    if application.status not in ("negotiating", "pending"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"当前状态({application.status})不允许回应协商",
+        )
+
     action = body.get("action")  # accept, reject, counter
+    if action not in ("accept", "reject", "counter"):
+        raise HTTPException(status_code=400, detail="action 必须为 accept/reject/counter")
+
     if action == "accept":
         application.final_price = application.expert_counter_price or application.negotiated_price
         application.status = "price_agreed"
@@ -235,10 +286,18 @@ async def respond_to_negotiation(
         application.status = "rejected"
         application.rejected_at = get_utc_time()
     elif action == "counter":
-        if application.applicant_id == current_user.id:
-            application.negotiated_price = body.get("price")
+        # 校验价格
+        try:
+            price = float(body.get("price", 0))
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=400, detail="price 必须为数字")
+        if price <= 0:
+            raise HTTPException(status_code=400, detail="price 必须大于 0")
+        # 按身份区分写哪个字段(不再依赖匿名 fallback)
+        if is_applicant:
+            application.negotiated_price = price
         else:
-            application.expert_counter_price = body.get("price")
+            application.expert_counter_price = price
         application.status = "negotiating"
 
     application.updated_at = get_utc_time()
@@ -273,6 +332,38 @@ async def formal_apply(
     return {"status": "pending"}
 
 
+async def _check_application_party(
+    db: AsyncSession,
+    application: "models.ServiceApplication",
+    current_user_id: str,
+    *,
+    allow_applicant: bool = True,
+    allow_provider: bool = True,
+) -> None:
+    """权限检查 helper: 确认 current_user 是 application 的相关方。
+
+    - allow_applicant: 申请人本人可访问
+    - allow_provider: 服务提供方(团队 owner/admin 或个人服务 owner)可访问
+    """
+    if allow_applicant and application.applicant_id == current_user_id:
+        return
+    if allow_provider:
+        if application.new_expert_id:
+            try:
+                await _get_member_or_403(
+                    db,
+                    application.new_expert_id,
+                    current_user_id,
+                    required_roles=["owner", "admin"],
+                )
+                return
+            except HTTPException:
+                pass
+        elif application.service_owner_id == current_user_id:
+            return
+    raise HTTPException(status_code=403, detail="无权访问该申请")
+
+
 @consultation_router.post("/api/applications/{application_id}/close")
 async def close_consultation(
     application_id: int,
@@ -280,13 +371,25 @@ async def close_consultation(
     db: AsyncSession = Depends(get_async_db_dependency),
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
 ):
-    """关闭咨询"""
+    """关闭咨询(申请人或服务提供方均可)"""
     app_result = await db.execute(
         select(models.ServiceApplication).where(models.ServiceApplication.id == application_id)
     )
     application = app_result.scalar_one_or_none()
     if not application:
         raise HTTPException(status_code=404, detail="申请不存在")
+
+    # 权限检查 — 修复 IDOR
+    await _check_application_party(db, application, current_user.id)
+
+    # 幂等: 已 cancelled 直接返回
+    if application.status == "cancelled":
+        return {"status": "cancelled"}
+
+    # 仅在 consulting/negotiating/pending/price_agreed 状态可关闭
+    # approved/rejected 状态不允许关闭(已有最终结果)
+    if application.status not in ("consulting", "negotiating", "pending", "price_agreed"):
+        raise HTTPException(status_code=400, detail=f"当前状态({application.status})不允许关闭")
 
     application.status = "cancelled"
     application.updated_at = get_utc_time()
@@ -629,13 +732,16 @@ async def get_application_status(
     db: AsyncSession = Depends(get_async_db_dependency),
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
 ):
-    """获取申请状态"""
+    """获取申请状态(申请人或服务提供方)"""
     app_result = await db.execute(
         select(models.ServiceApplication).where(models.ServiceApplication.id == application_id)
     )
     application = app_result.scalar_one_or_none()
     if not application:
         raise HTTPException(status_code=404, detail="申请不存在")
+
+    # 权限检查 — 修复 IDOR
+    await _check_application_party(db, application, current_user.id)
 
     return {
         "id": application.id,

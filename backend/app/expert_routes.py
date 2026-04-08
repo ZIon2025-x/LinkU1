@@ -600,8 +600,13 @@ async def respond_to_invitation(
     # accept
     invitation.status = "accepted"
 
-    # 检查团队是否已满
-    expert = await _get_expert_or_404(db, invitation.expert_id)
+    # 并发安全: 锁定 Expert 行,串行化容量检查 + 计数更新
+    expert_lock_result = await db.execute(
+        select(Expert).where(Expert.id == invitation.expert_id).with_for_update()
+    )
+    expert = expert_lock_result.scalar_one_or_none()
+    if not expert:
+        raise HTTPException(status_code=404, detail="团队不存在")
     if expert.member_count >= expert.max_members:
         raise HTTPException(status_code=400, detail="团队成员已满")
 
@@ -631,6 +636,7 @@ async def respond_to_invitation(
         )
         db.add(new_member)
 
+    # 原子递增 — 在锁内串行化已经够,这里使用赋值即可(锁保证一致性)
     expert.member_count = expert.member_count + 1
     await db.commit()
     await db.refresh(invitation)
@@ -828,7 +834,13 @@ async def review_join_request(
     # approve
     jr.status = "approved"
 
-    expert = await _get_expert_or_404(db, expert_id)
+    # 并发安全: 锁定 Expert 行,串行化容量检查 + 计数更新
+    expert_lock_result = await db.execute(
+        select(Expert).where(Expert.id == expert_id).with_for_update()
+    )
+    expert = expert_lock_result.scalar_one_or_none()
+    if not expert:
+        raise HTTPException(status_code=404, detail="团队不存在")
     if expert.member_count >= expert.max_members:
         raise HTTPException(status_code=400, detail="团队成员已满")
 
