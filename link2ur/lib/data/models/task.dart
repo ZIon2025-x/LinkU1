@@ -31,6 +31,7 @@ class Task extends Equatable {
     this.poster,
     this.takerId,
     this.taker,
+    this.takerDisplay,
     this.isMultiParticipant = false,
     this.maxParticipants = 1,
     this.currentParticipants = 0,
@@ -90,6 +91,18 @@ class Task extends Equatable {
   final UserBrief? poster;
   final String? takerId;
   final UserBrief? taker;
+
+  /// 统一的"接单方"显示信息（spec §4.6 U2 方案）。
+  ///
+  /// - 团队接单(后端 `task.taker_expert_id` 非空)：`type='expert'`，
+  ///   `entityId` 是 `experts.id`，`name`/`avatar` 是团队的名称和 logo
+  /// - 个人接单：`type='user'`，`entityId` 是 `users.id`
+  /// - 任务尚无接单方：`null`
+  ///
+  /// 渲染接单方信息时优先用此字段；旧的 `taker` (UserBrief) 仅作为个人接单
+  /// 时的兜底，且不携带团队语义。
+  final TakerDisplay? takerDisplay;
+
   final bool isMultiParticipant;
   final int maxParticipants;
   final int currentParticipants;
@@ -391,6 +404,9 @@ class Task extends Equatable {
       taker: json['taker'] != null
           ? UserBrief.fromJson(json['taker'] as Map<String, dynamic>)
           : null,
+      takerDisplay: json['taker_display'] != null
+          ? TakerDisplay.fromJson(json['taker_display'] as Map<String, dynamic>)
+          : null,
       isMultiParticipant: parseBool(json['is_multi_participant']),
       maxParticipants: json['max_participants'] as int? ?? 1,
       currentParticipants: json['current_participants'] as int? ?? 0,
@@ -458,6 +474,7 @@ class Task extends Equatable {
       'deadline': deadline?.toIso8601String(),
       'poster_id': posterId,
       'taker_id': takerId,
+      if (takerDisplay != null) 'taker_display': takerDisplay!.toJson(),
       'is_multi_participant': isMultiParticipant,
       'max_participants': maxParticipants,
       'current_participants': currentParticipants,
@@ -518,6 +535,7 @@ class Task extends Equatable {
     UserBrief? poster,
     String? takerId,
     UserBrief? taker,
+    TakerDisplay? takerDisplay,
     bool? isMultiParticipant,
     int? maxParticipants,
     int? currentParticipants,
@@ -577,6 +595,7 @@ class Task extends Equatable {
       poster: poster ?? this.poster,
       takerId: takerId ?? this.takerId,
       taker: taker ?? this.taker,
+      takerDisplay: takerDisplay ?? this.takerDisplay,
       isMultiParticipant: isMultiParticipant ?? this.isMultiParticipant,
       maxParticipants: maxParticipants ?? this.maxParticipants,
       currentParticipants: currentParticipants ?? this.currentParticipants,
@@ -620,11 +639,60 @@ class Task extends Equatable {
   @override
   List<Object?> get props => [
         id, title, status, reward, currency, hasApplied,
-        userApplicationStatus, takerId, hasReviewed, updatedAt,
+        userApplicationStatus, takerId, takerDisplay, hasReviewed, updatedAt,
         counterOfferPrice, counterOfferStatus, counterOfferUserId,
         isPublic, takerPublic,
         pricingType, taskMode, requiredSkills,
       ];
+}
+
+/// 接单方统一显示信息（spec §4.6 U2 方案）。
+///
+/// 后端 `build_taker_display` 序列化器返回:
+/// - 团队任务: `{type: 'expert', entity_id, name, avatar}`
+/// - 个人任务: `{type: 'user',   entity_id, name, avatar}`
+/// - 未接单:   `null`
+class TakerDisplay extends Equatable {
+  const TakerDisplay({
+    required this.type,
+    required this.entityId,
+    this.name,
+    this.avatar,
+  });
+
+  /// `'expert'` 表示达人团队接单，`'user'` 表示个人接单
+  final String type;
+
+  /// `experts.id`（团队）或 `users.id`（个人）
+  final String entityId;
+
+  /// 团队名称或用户昵称
+  final String? name;
+
+  /// 团队 logo 或用户头像 URL
+  final String? avatar;
+
+  bool get isTeam => type == 'expert';
+  bool get isIndividual => type == 'user';
+
+  factory TakerDisplay.fromJson(Map<String, dynamic> json) {
+    return TakerDisplay(
+      type: (json['type'] as String?) ?? 'user',
+      entityId: json['entity_id']?.toString() ?? '',
+      name: json['name'] as String?,
+      avatar: json['avatar'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'type': type,
+        'entity_id': entityId,
+        'name': name,
+        'avatar': avatar,
+      };
+
+  @override
+  List<Object?> get props => [type, entityId, name, avatar];
 }
 
 /// 任务列表响应

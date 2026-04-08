@@ -2517,6 +2517,25 @@ class _CounterpartyCard extends StatelessWidget {
 
   /// 根据身份和任务类型解析要显示的对方信息
   _CounterpartyInfo? _resolveCounterpartyInfo(BuildContext context) {
+    // ===== 团队接单（spec §4.6 U2 方案，最高优先级）=====
+    // 后端 taker_display.type == 'expert' 表示任务由达人团队接单。
+    // 此时无论任务来源(普通/达人服务/活动)，发布者(客户)看到的对方都应是
+    // 团队整体——名称+logo，而不是 taker_id 指向的团队 owner 个人。
+    final display = task.takerDisplay;
+    if (isPoster && display != null && display.isTeam) {
+      return _CounterpartyInfo(
+        name: display.name ?? context.l10n.taskSourceExpertService,
+        avatar: display.avatar,
+        isExpert: true,
+        roleLabel: context.l10n.taskDetailRecipient,
+        onTap: () {
+          AppHaptics.selection();
+          // 团队详情页（与现有达人详情路由一致）
+          context.safePush('/task-experts/${display.entityId}');
+        },
+      );
+    }
+
     final isExpertTask = task.isExpertServiceTask || task.isExpertActivityTask;
 
     // ===== 达人服务/活动任务 =====
