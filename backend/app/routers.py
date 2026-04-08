@@ -4481,6 +4481,106 @@ def cancel_task(
         
         return cancelled_task
 
+    # pending_payment 状态: buyer 在支付前可以自助取消(无需客服审核)
+    # 场景: 团队服务被 owner approve 后,Task 进入 pending_payment 等支付,
+    # buyer 反悔不想付。需要 cancel PaymentIntent + 回滚 ServiceApplication。
+    elif task.status == "pending_payment":
+        # 仅 poster (买家) 能在 pending_payment 自助取消;接单方也可以(代取消)
+        if task.poster_id != current_user.id and task.taker_id != current_user.id:
+            raise HTTPException(
+                status_code=403,
+                detail="Only the buyer or assignee can cancel a pending payment task",
+            )
+
+        # 1) Cancel Stripe PaymentIntent (best-effort)
+        if task.payment_intent_id:
+            try:
+                import stripe
+                from app.stripe_config import ensure_stripe_configured
+                ensure_stripe_configured()
+                pi = stripe.PaymentIntent.retrieve(task.payment_intent_id)
+                # 仅当 PI 还可以取消的状态才 cancel(已 succeeded 走 refund 路径,不在这里处理)
+                if pi.status in (
+                    "requires_payment_method",
+                    "requires_confirmation",
+                    "requires_action",
+                    "processing",
+                ):
+                    stripe.PaymentIntent.cancel(task.payment_intent_id)
+                    logger.info(f"PaymentIntent {task.payment_intent_id} cancelled by user")
+                elif pi.status == "succeeded":
+                    # PI 已 succeeded 但 webhook 还没处理,这是窗口期。拒绝自助取消,
+                    # 让 webhook 流转完成后走标准退款流程
+                    raise HTTPException(
+                        status_code=409,
+                        detail="支付已完成,请刷新页面后通过取消任务流程申请退款",
+                    )
+            except HTTPException:
+                raise
+            except Exception as e:
+                logger.warning(f"Stripe PI cancel 失败 (不阻塞任务取消): {e}")
+
+        # 2) 回滚 ServiceApplication 到 cancelled (如果是团队服务流程)
+        try:
+            sa = db.query(models.ServiceApplication).filter(
+                models.ServiceApplication.task_id == task_id
+            ).first()
+            if sa:
+                sa.status = "cancelled"
+                sa.updated_at = get_utc_time()
+                # 回退时间段参与者占位 (与 user_service_application_routes 一致)
+                if sa.time_slot_id:
+                    db.execute(
+                        update(models.ServiceTimeSlot)
+                        .where(models.ServiceTimeSlot.id == sa.time_slot_id)
+                        .where(models.ServiceTimeSlot.current_participants > 0)
+                        .values(
+                            current_participants=models.ServiceTimeSlot.current_participants - 1
+                        )
+                    )
+        except Exception as e:
+            logger.warning(f"回滚 ServiceApplication 失败: {e}")
+
+        # 3) 任务标记为 cancelled
+        task.status = "cancelled"
+        task.cancelled_at = get_utc_time()
+        db.commit()
+
+        # 4) 通知双方
+        try:
+            from app.utils.notification_templates import get_notification_texts
+            crud.create_notification(
+                db=db,
+                user_id=task.poster_id,
+                type="task_cancelled",
+                title="任务已取消",
+                content=f"任务「{task.title}」已取消,如已扣款将自动退回。",
+                related_id=str(task_id),
+                auto_commit=False,
+            )
+            if task.taker_id and task.taker_id != task.poster_id:
+                crud.create_notification(
+                    db=db,
+                    user_id=task.taker_id,
+                    type="task_cancelled",
+                    title="订单已被取消",
+                    content=f"任务「{task.title}」已被买家取消。",
+                    related_id=str(task_id),
+                    auto_commit=False,
+                )
+            db.commit()
+        except Exception as e:
+            logger.warning(f"取消通知发送失败: {e}")
+
+        # 清缓存
+        try:
+            from app.services.task_service import TaskService
+            TaskService.invalidate_cache(task_id)
+        except Exception:
+            pass
+
+        return {"message": "任务已取消", "status": "cancelled"}
+
     # 如果任务已被接受或正在进行中，创建取消请求等待客服审核
     elif task.status in ["taken", "in_progress"]:
         # 检查是否已有待审核的取消请求
