@@ -55,6 +55,46 @@ async def apply_for_service(
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="你已有进行中的申请")
 
+    # 时间段容量校验: 若指定了 time_slot_id, 检查该 slot 是否还有名额
+    # 动态计数: 已 approved (Task 已创建) + 仍 pending/negotiating/price_agreed 占位的申请
+    time_slot_id = body.get("time_slot_id")
+    if time_slot_id:
+        slot_result = await db.execute(
+            select(models.ServiceTimeSlot).where(
+                and_(
+                    models.ServiceTimeSlot.id == time_slot_id,
+                    models.ServiceTimeSlot.service_id == service_id,
+                    models.ServiceTimeSlot.is_manually_deleted == False,
+                )
+            )
+        )
+        slot = slot_result.scalar_one_or_none()
+        if not slot:
+            raise HTTPException(status_code=404, detail="时间段不存在或已删除")
+
+        max_cap = slot.max_participants or 1
+        active_count_result = await db.execute(
+            select(func.count(models.ServiceApplication.id)).where(
+                and_(
+                    models.ServiceApplication.time_slot_id == time_slot_id,
+                    models.ServiceApplication.status.in_(
+                        ["pending", "negotiating", "price_agreed", "approved"]
+                    ),
+                )
+            )
+        )
+        active_count = active_count_result.scalar() or 0
+        if active_count >= max_cap:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "error_code": "time_slot_full",
+                    "message": "该时间段已满,请选择其他时间段",
+                    "max_participants": max_cap,
+                    "current": active_count,
+                },
+            )
+
     application = models.ServiceApplication(
         service_id=service_id,
         applicant_id=current_user.id,
@@ -62,7 +102,7 @@ async def apply_for_service(
         new_expert_id=service.owner_id if service.owner_type == "expert" else None,
         service_owner_id=service.owner_id if service.owner_type == "user" else None,
         application_message=body.get("message"),
-        time_slot_id=body.get("time_slot_id"),
+        time_slot_id=time_slot_id,
         status="pending",
         currency=service.currency or "GBP",
     )
