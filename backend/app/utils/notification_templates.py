@@ -258,6 +258,68 @@ NOTIFICATION_TEMPLATES: Dict[str, Dict[str, Dict[str, str]]] = {
             "content_template": "Your task application has been approved! Task: {task_title}{payment_expires_info}"
         }
     },
+
+    # ==================== 达人团队相关通知 ====================
+    "expert_team_invitation": {
+        "zh": {
+            "title": "达人团队邀请",
+            "content_template": "「{team_name}」邀请你加入团队,点击查看详情。"
+        },
+        "en": {
+            "title": "Expert Team Invitation",
+            "content_template": "「{team_name}」invites you to join their team. Tap to view details."
+        }
+    },
+    "expert_team_join_request": {
+        "zh": {
+            "title": "新加入申请",
+            "content_template": "用户「{applicant_name}」申请加入团队「{team_name}」"
+        },
+        "en": {
+            "title": "New Join Request",
+            "content_template": "「{applicant_name}」has requested to join team「{team_name}」"
+        }
+    },
+    "expert_team_join_approved": {
+        "zh": {
+            "title": "加入申请已通过",
+            "content_template": "恭喜!你已加入「{team_name}」达人团队。"
+        },
+        "en": {
+            "title": "Join Request Approved",
+            "content_template": "Congratulations! You have joined the「{team_name}」expert team."
+        }
+    },
+    "expert_team_join_rejected": {
+        "zh": {
+            "title": "加入申请未通过",
+            "content_template": "很遗憾,你加入「{team_name}」团队的申请未通过。"
+        },
+        "en": {
+            "title": "Join Request Rejected",
+            "content_template": "Unfortunately, your request to join「{team_name}」was not approved."
+        }
+    },
+    "team_service_task_started": {
+        "zh": {
+            "title": "任务已开始",
+            "content_template": "您支付的「{service_name}」服务已开始,达人将尽快为您服务。"
+        },
+        "en": {
+            "title": "Task Started",
+            "content_template": "Your payment for「{service_name}」has been received and the task has started."
+        }
+    },
+    "team_service_payment_received": {
+        "zh": {
+            "title": "收到新订单",
+            "content_template": "用户已支付「{service_name}」服务,任务已进入进行中。"
+        },
+        "en": {
+            "title": "New Order Received",
+            "content_template": "A buyer has paid for「{service_name}」. The task is now in progress."
+        }
+    },
 }
 
 

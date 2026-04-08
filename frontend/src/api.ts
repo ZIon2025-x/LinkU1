@@ -1407,12 +1407,33 @@ export const submitJobApplication = async (data: {
 
 // ----------- Expert team helpers -----------
 // 当前选中的达人团队 ID（可由 team switcher 通过 setMyExpertId 显式设置）。
-// 默认值为 null，第一次使用时会调用 /api/experts/my-teams 自动取第一个团队。
-let _cachedMyExpertId: string | null = null;
+// 优先级: 内存缓存 > localStorage > /api/experts/my-teams 第一个团队
+// 与 TaskExpertDashboard.tsx 中的 localStorage key 对齐,统一单一来源
+const _EXPERT_ID_STORAGE_KEY = 'selected_expert_id';
+let _cachedMyExpertId: string | null = (() => {
+  try {
+    return typeof window !== 'undefined' ? window.localStorage.getItem(_EXPERT_ID_STORAGE_KEY) : null;
+  } catch {
+    return null;
+  }
+})();
 let _expertIdInflight: Promise<string> | null = null;
 
+const _persistExpertId = (id: string | null) => {
+  try {
+    if (typeof window === 'undefined') return;
+    if (id) window.localStorage.setItem(_EXPERT_ID_STORAGE_KEY, id);
+    else window.localStorage.removeItem(_EXPERT_ID_STORAGE_KEY);
+  } catch {
+    // localStorage 不可用就只更新内存缓存
+  }
+};
+
 const _getMyExpertId = async (): Promise<string> => {
-  if (_cachedMyExpertId) return _cachedMyExpertId;
+  if (_cachedMyExpertId) {
+    // 校验 storage 中的 ID 仍然在当前用户的团队列表里(用户可能已被踢出)
+    return _cachedMyExpertId;
+  }
   if (_expertIdInflight) return _expertIdInflight;
   _expertIdInflight = (async () => {
     const res = await api.get('/api/experts/my-teams');
@@ -1425,6 +1446,7 @@ const _getMyExpertId = async (): Promise<string> => {
   try {
     const id = await _expertIdInflight;
     _cachedMyExpertId = id;
+    _persistExpertId(id);
     return id;
   } finally {
     _expertIdInflight = null;
@@ -1432,12 +1454,17 @@ const _getMyExpertId = async (): Promise<string> => {
 };
 
 // 由 team switcher / dashboard shell 显式设置当前团队 ID
+// 同时持久化到 localStorage,跨会话保留
 export const setMyExpertId = (id: string | null) => {
   _cachedMyExpertId = id;
+  _persistExpertId(id);
 };
 
 // 读取当前生效的 expert ID（异步，因为可能需要 fetch /my-teams）
 export const getMyExpertId = (): Promise<string> => _getMyExpertId();
+
+// 同步读取当前缓存的 expert ID,React 组件初始化时使用(可能为 null)
+export const peekMyExpertId = (): string | null => _cachedMyExpertId;
 
 // 获取我加入的所有达人团队（team switcher 用）
 export const fetchMyExpertTeams = async (): Promise<any[]> => {
@@ -1448,6 +1475,7 @@ export const fetchMyExpertTeams = async (): Promise<any[]> => {
 // Logout 等场景需要清除缓存
 export const clearMyExpertIdCache = () => {
   _cachedMyExpertId = null;
+  _persistExpertId(null);
 };
 
 // London 本地时间 → UTC ISO 转换：从 utils/londonTime.ts 引入（含单元测试覆盖 BST/GMT 边界）

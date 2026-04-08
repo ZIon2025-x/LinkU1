@@ -7105,33 +7105,41 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                                     f"(service_application_id={service_application_id})"
                                 )
 
-                                # 通知申请人 + 团队 owner: 任务已开始
+                                # 通知申请人 + 团队 owner: 任务已开始 (i18n)
                                 try:
-                                    from app.task_notifications import (
-                                        send_service_application_approved_notification,
-                                    )
+                                    from app.utils.notification_templates import get_notification_texts
                                     service_obj = db.query(models.TaskExpertService).filter(
                                         models.TaskExpertService.id == sa.service_id
                                     ).first()
                                     service_name = service_obj.service_name if service_obj else "服务"
                                     # 向 buyer 发通知
+                                    started_zh_t, started_zh_c, started_en_t, started_en_c = get_notification_texts(
+                                        "team_service_task_started", service_name=service_name
+                                    )
                                     crud.create_notification(
                                         db=db,
                                         user_id=sa.applicant_id,
                                         type="team_service_task_started",
-                                        title="任务已开始",
-                                        content=f"您支付的「{service_name}」服务已开始,达人将尽快为您服务。",
+                                        title=started_zh_t,
+                                        content=started_zh_c,
+                                        title_en=started_en_t,
+                                        content_en=started_en_c,
                                         related_id=str(task_id),
                                         auto_commit=False,
                                     )
                                     # 向 team owner (taker_id) 发通知
                                     if task.taker_id:
+                                        recv_zh_t, recv_zh_c, recv_en_t, recv_en_c = get_notification_texts(
+                                            "team_service_payment_received", service_name=service_name
+                                        )
                                         crud.create_notification(
                                             db=db,
                                             user_id=task.taker_id,
                                             type="team_service_payment_received",
-                                            title="收到新订单",
-                                            content=f"用户已支付「{service_name}」服务,任务已进入进行中。",
+                                            title=recv_zh_t,
+                                            content=recv_zh_c,
+                                            title_en=recv_en_t,
+                                            content_en=recv_en_c,
                                             related_id=str(task_id),
                                             auto_commit=False,
                                         )

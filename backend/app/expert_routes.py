@@ -538,15 +538,21 @@ async def invite_user(
     await db.commit()
     await db.refresh(invitation)
 
-    # 通知被邀请人(best-effort)
+    # 通知被邀请人(best-effort, i18n)
     try:
         from app.async_crud import AsyncNotificationCRUD
+        from app.utils.notification_templates import get_notification_texts
+        title_zh, content_zh, title_en, content_en = get_notification_texts(
+            "expert_team_invitation", team_name=expert.name
+        )
         await AsyncNotificationCRUD.create_notification(
             db=db,
             user_id=body.invitee_id,
             notification_type="expert_team_invitation",
-            title=f"达人团队邀请",
-            content=f"「{expert.name}」邀请你加入团队,点击查看详情。",
+            title=title_zh,
+            content=content_zh,
+            title_en=title_en,
+            content_en=content_en,
             related_id=str(invitation.id),
             related_type="expert_invitation",
         )
@@ -685,9 +691,10 @@ async def request_to_join(
     await db.commit()
     await db.refresh(join_req)
 
-    # 通知所有 owner/admin 有新加入申请(best-effort)
+    # 通知所有 owner/admin 有新加入申请(best-effort, i18n)
     try:
         from app.async_crud import AsyncNotificationCRUD
+        from app.utils.notification_templates import get_notification_texts
         managers_result = await db.execute(
             select(ExpertMember.user_id).where(
                 and_(
@@ -698,13 +705,20 @@ async def request_to_join(
             )
         )
         manager_ids = [r[0] for r in managers_result.all()]
+        title_zh, content_zh, title_en, content_en = get_notification_texts(
+            "expert_team_join_request",
+            applicant_name=current_user.name,
+            team_name=expert.name,
+        )
         for mid in manager_ids:
             await AsyncNotificationCRUD.create_notification(
                 db=db,
                 user_id=mid,
                 notification_type="expert_team_join_request",
-                title="新加入申请",
-                content=f"用户「{current_user.name}」申请加入团队「{expert.name}」",
+                title=title_zh,
+                content=content_zh,
+                title_en=title_en,
+                content_en=content_en,
                 related_id=str(join_req.id),
                 related_type="expert_join_request",
             )
@@ -788,16 +802,22 @@ async def review_join_request(
         jr.status = "rejected"
         await db.commit()
         await db.refresh(jr)
-        # 通知申请人(best-effort)
+        # 通知申请人(best-effort, i18n)
         try:
             from app.async_crud import AsyncNotificationCRUD
+            from app.utils.notification_templates import get_notification_texts
             expert_for_notify = await _get_expert_or_404(db, expert_id)
+            title_zh, content_zh, title_en, content_en = get_notification_texts(
+                "expert_team_join_rejected", team_name=expert_for_notify.name
+            )
             await AsyncNotificationCRUD.create_notification(
                 db=db,
                 user_id=jr.user_id,
                 notification_type="expert_team_join_rejected",
-                title="加入申请未通过",
-                content=f"很遗憾,你加入「{expert_for_notify.name}」团队的申请未通过。",
+                title=title_zh,
+                content=content_zh,
+                title_en=title_en,
+                content_en=content_en,
                 related_id=str(jr.id),
                 related_type="expert_join_request",
             )
@@ -841,15 +861,21 @@ async def review_join_request(
     await db.commit()
     await db.refresh(jr)
 
-    # 通知申请人申请通过(best-effort)
+    # 通知申请人申请通过(best-effort, i18n)
     try:
         from app.async_crud import AsyncNotificationCRUD
+        from app.utils.notification_templates import get_notification_texts
+        title_zh, content_zh, title_en, content_en = get_notification_texts(
+            "expert_team_join_approved", team_name=expert.name
+        )
         await AsyncNotificationCRUD.create_notification(
             db=db,
             user_id=jr.user_id,
             notification_type="expert_team_join_approved",
-            title="加入申请已通过",
-            content=f"恭喜!你已加入「{expert.name}」达人团队。",
+            title=title_zh,
+            content=content_zh,
+            title_en=title_en,
+            content_en=content_en,
             related_id=str(jr.id),
             related_type="expert_join_request",
         )
