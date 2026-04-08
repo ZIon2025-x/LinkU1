@@ -185,11 +185,18 @@ class TestExpertProfileUpdateCreateValidation:
 class TestExpertApplicationCreateValidation:
     """测试 ExpertApplicationCreate 验证"""
 
-    def test_requires_expert_name(self):
+    def test_expert_name_is_optional(self):
+        """expert_name 现在是可选的;路由层会在缺省时回退用申请人 user.name
+        作为默认团队名,这样兼容只填一段话的简化申请表单。"""
         from app.schemas_expert import ExpertApplicationCreate
-        import pydantic
-        with pytest.raises((pydantic.ValidationError, Exception)):
-            ExpertApplicationCreate()
+        # 没有任何字段
+        empty = ExpertApplicationCreate()
+        assert empty.expert_name is None
+        assert empty.application_message is None
+        # 只填 message,不填 name
+        msg_only = ExpertApplicationCreate(application_message="想加入")
+        assert msg_only.expert_name is None
+        assert msg_only.application_message == "想加入"
 
     def test_name_max_length(self):
         from app.schemas_expert import ExpertApplicationCreate

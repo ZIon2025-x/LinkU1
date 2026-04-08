@@ -94,9 +94,16 @@ async def apply_to_create_expert(
     if result.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="你已有待审核的申请")
 
+    # 团队名称可选:简化的申请表单(只填一段话)会留空 expert_name,此时
+    # 默认用申请人的 user.name 作为团队名,管理后台批准后用户可在
+    # dashboard 改成更合适的名字。
+    effective_name = (body.expert_name or "").strip() or (
+        getattr(current_user, "name", None) or f"User {current_user.id}"
+    )
+
     app = ExpertApplication(
         user_id=current_user.id,
-        expert_name=body.expert_name,
+        expert_name=effective_name,
         bio=body.bio,
         avatar=body.avatar,
         application_message=body.application_message,
@@ -1142,6 +1149,34 @@ async def request_profile_update(
     await db.commit()
     await db.refresh(update_req)
     return update_req
+
+
+@expert_router.get(
+    "/{expert_id}/profile-update-request",
+    response_model=Optional[ExpertProfileUpdateOut],
+)
+async def get_pending_profile_update_request(
+    expert_id: str,
+    request: Request,
+    db: AsyncSession = Depends(get_async_db_dependency),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+):
+    """获取当前待审核的团队资料修改申请（Owner/Admin/Member）"""
+    await _get_expert_or_404(db, expert_id)
+    await _get_member_or_403(db, expert_id, current_user.id)
+
+    result = await db.execute(
+        select(ExpertProfileUpdateRequest)
+        .where(
+            and_(
+                ExpertProfileUpdateRequest.expert_id == expert_id,
+                ExpertProfileUpdateRequest.status == "pending",
+            )
+        )
+        .order_by(ExpertProfileUpdateRequest.created_at.desc())
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
 
 
 # ==================== 18. PUT /{expert_id}/board ====================

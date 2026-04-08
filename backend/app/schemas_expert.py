@@ -57,7 +57,10 @@ class ExpertMemberOut(BaseModel):
 # ==================== ExpertApplication (创建达人) ====================
 
 class ExpertApplicationCreate(BaseModel):
-    expert_name: str = Field(..., max_length=100)
+    # 团队名称可选:不传时后端会回退用申请人的 user.name 作为默认团队名,
+    # 用户可以在 dashboard 里之后修改。这样兼容只采集 application_message
+    # 的简化申请表单(spec §0.1 — 团队即默认形态,1 人团队也合法)。
+    expert_name: Optional[str] = Field(None, max_length=100)
     bio: Optional[str] = None
     avatar: Optional[str] = None
     application_message: Optional[str] = None
