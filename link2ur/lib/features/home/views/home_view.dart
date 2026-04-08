@@ -403,8 +403,8 @@ class _HomeViewContentState extends State<_HomeViewContent> {
               label: context.l10n.drawerTaskExpert,
               onTap: () {
                 Navigator.of(context).pop();
-                final isExpert = context.read<AuthBloc>().state.user?.isExpert ?? false;
-                context.push(isExpert ? '/expert-dashboard' : '/task-experts/intro');
+                // ExpertDashboardShell 内部会检查 getMyTeams()，无团队时自动重定向到 intro 页
+                context.push('/expert-dashboard');
               },
             ),
             _DrawerMenuItem(
