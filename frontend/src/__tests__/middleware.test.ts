@@ -194,4 +194,39 @@ describe('middleware', () => {
 
     expect(res).toBeUndefined();
   });
+
+  it('intercepts all listed non-JS crawler User-Agents', async () => {
+    const crawlerUAs = [
+      'MicroMessenger/6.5.2',
+      'Mozilla/5.0 WeChat/8.0',
+      'Weixin/1.0',
+      'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)',
+      'Facebot/1.0',
+      'Twitterbot/1.0',
+      'LinkedInBot/1.0 (compatible; Mozilla/5.0; Apache-HttpClient +http://www.linkedin.com)',
+      'Slackbot-LinkExpanding 1.0 (+https://api.slack.com/robots)',
+      'TelegramBot (like TwitterBot)',
+      'WhatsApp/2.21.12.21 A',
+      'Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)',
+      'Pinterest/0.2 (+http://www.pinterest.com/)',
+      'Mozilla/5.0 (compatible; Baiduspider/2.0; +http://www.baidu.com/search/spider.html)',
+      'Mozilla/5.0 (compatible; YandexBot/3.0; +http://yandex.com/bots)',
+      'CCBot/2.0 (https://commoncrawl.org/faq/)',
+    ];
+
+    for (const ua of crawlerUAs) {
+      global.fetch = jest.fn().mockResolvedValue(
+        new Response('<html></html>', {
+          status: 200,
+          headers: { 'content-type': 'text/html' },
+        })
+      );
+
+      const req = makeRequest('https://www.link2ur.com/zh/tasks/1', ua);
+      const res = await middleware(req);
+
+      expect(res).toBeInstanceOf(Response);
+      expect((global.fetch as jest.Mock)).toHaveBeenCalledTimes(1);
+    }
+  });
 });
