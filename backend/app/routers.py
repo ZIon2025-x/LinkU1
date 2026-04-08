@@ -4630,13 +4630,23 @@ def get_my_profile(
         
         in_progress_tasks_count = regular_in_progress_count + multi_participant_in_progress_count + multi_task_creator_in_progress_count
 
-        # 检查用户是否是任务达人
+        # 检查用户是否是任务达人。
+        # 两条路径都算"达人":
+        #   1. 老的个人达人模型 (task_experts 表) —— 迁移 159 之前申请的用户
+        #   2. 新的团队模型 (expert_members 表) —— 团队 owner / admin / member
+        # 任一存在即返回 True,这样 Flutter profile 页面的"达人管理"入口对
+        # 通过 admin_expert_routes 新审批的团队 owner 也可见(spec §0.1)。
         from app.models import TaskExpert
+        from app.models_expert import ExpertMember
         task_expert = db.query(TaskExpert).filter(
             TaskExpert.id == current_user.id,
             TaskExpert.status == "active"
         ).first()
-        is_expert = task_expert is not None
+        expert_member = db.query(ExpertMember).filter(
+            ExpertMember.user_id == current_user.id,
+            ExpertMember.status == "active"
+        ).first()
+        is_expert = (task_expert is not None) or (expert_member is not None)
 
         # 检查用户是否通过学生认证
         from app.models import StudentVerification
@@ -4909,13 +4919,19 @@ def user_profile(
     )
     avg_rating = float(avg_rating_result) if avg_rating_result is not None else 0.0
 
-    # 检查用户是否是任务达人（在task_experts表中且status为active）
+    # 检查用户是否是任务达人:老的 task_experts 或新的 expert_members 任一即可
+    # 详见 get_my_profile 同名注释
     from app.models import TaskExpert
+    from app.models_expert import ExpertMember
     task_expert = db.query(TaskExpert).filter(
         TaskExpert.id == user_id,
         TaskExpert.status == "active"
     ).first()
-    is_expert = task_expert is not None
+    expert_member = db.query(ExpertMember).filter(
+        ExpertMember.user_id == user_id,
+        ExpertMember.status == "active"
+    ).first()
+    is_expert = (task_expert is not None) or (expert_member is not None)
 
     # 检查用户是否通过学生认证（在student_verifications表中有verified状态的记录）
     from app.models import StudentVerification
