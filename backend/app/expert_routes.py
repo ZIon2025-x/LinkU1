@@ -956,7 +956,30 @@ async def transfer_ownership(
 ):
     """转让团队所有权（Owner only）"""
     await _get_expert_or_404(db, expert_id)
-    owner_member = await _get_member_or_403(db, expert_id, current_user.id, required_roles=["owner"])
+    await _get_member_or_403(db, expert_id, current_user.id, required_roles=["owner"])
+
+    # 锁定 owner 行,串行化转让操作 — 防止 2 个并发 transfer 都通过 role 检查后
+    # 各自把不同的 target 设为 owner,导致团队出现多个 owner
+    owner_lock_result = await db.execute(
+        select(ExpertMember)
+        .where(
+            and_(
+                ExpertMember.expert_id == expert_id,
+                ExpertMember.user_id == current_user.id,
+                ExpertMember.role == "owner",
+                ExpertMember.status == "active",
+            )
+        )
+        .with_for_update()
+    )
+    owner_member = owner_lock_result.scalar_one_or_none()
+    if not owner_member:
+        # 在锁等待期间,另一个并发转让已成功(current_user 已不是 owner)
+        raise HTTPException(status_code=409, detail="所有权已被其他操作转让")
+
+    # 幂等: 自己转给自己 = noop
+    if body.new_owner_id == current_user.id:
+        return {"detail": "无需转让(目标与当前 owner 相同)"}
 
     # 新 owner 必须是活跃成员
     new_owner_result = await db.execute(

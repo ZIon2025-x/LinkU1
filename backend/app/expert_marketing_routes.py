@@ -40,14 +40,16 @@ async def reply_to_review(
     if not review:
         raise HTTPException(status_code=404, detail="评价不存在")
 
-    if review.reply_content:
-        raise HTTPException(status_code=400, detail="该评价已回复，不可重复回复")
-
-    # 检查权限：评价的 expert_id 对应的达人团队的 Owner/Admin
+    # 权限检查必须在状态检查之前,否则攻击者可探测 review_id 是否已回复(信息泄露)
     if not review.expert_id:
-        raise HTTPException(status_code=403, detail="仅达人服务的评价可回复")
+        # 不是团队评价(个人服务等),返回 404 防止泄露存在性
+        raise HTTPException(status_code=404, detail="评价不存在")
 
     await _get_member_or_403(db, review.expert_id, current_user.id, required_roles=["owner", "admin"])
+
+    # 权限通过后再检查业务状态
+    if review.reply_content:
+        raise HTTPException(status_code=400, detail="该评价已回复,不可重复回复")
 
     review.reply_content = content.strip()
     review.reply_at = get_utc_time()

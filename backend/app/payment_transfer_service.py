@@ -162,13 +162,18 @@ def execute_transfer(
             taker_stripe_account_id = expert.stripe_account_id
 
             # 90-day Stripe Transfer window check (spec §3.4a) — only for team tasks
-            # Stripe enforces a strict 90-day window for stripe.Transfer.create after the original Charge
+            # Stripe enforces a strict 90-day window for stripe.Transfer.create after the original Charge.
+            # 安全边界: 留 1 天 buffer 防止 transfer 在 89~90 天之间因时差/重试漂移到失败
             if task.payment_completed_at:
                 from datetime import datetime, timedelta
                 age = datetime.utcnow() - task.payment_completed_at.replace(tzinfo=None)
-                if age > timedelta(days=89):
+                STRIPE_TRANSFER_WINDOW_DAYS = 89  # 89 天为安全阈值,Stripe 实际允许 90
+                if age > timedelta(days=STRIPE_TRANSFER_WINDOW_DAYS):
                     transfer_record.status = "failed"
-                    transfer_record.last_error = f"stripe_transfer_window_expired ({age.days}d > 89d)"
+                    transfer_record.last_error = (
+                        f"stripe_transfer_window_expired "
+                        f"({age.days}d > {STRIPE_TRANSFER_WINDOW_DAYS}d safety threshold, Stripe limit: 90d)"
+                    )
                     if commit:
                         from app.transaction_utils import safe_commit
                         safe_commit(db, f"transfer 时效过期 task={transfer_record.task_id}")
