@@ -84,7 +84,7 @@
 		<false/>
 		<!-- Privacy - Permission Descriptions -->
 		<key>NSCameraUsageDescription</key>
-		<string>This app will use the camera to take photos of your ID documents for setting up your payment account.</string>
+		<string>Link²Ur uses the camera to take photos of your ID documents for payment setup, and to scan QR codes when redeeming service packages.</string>
 		<key>NSLocationWhenInUseUsageDescription</key>
 		<string>We need to access your location information to select task/item locations on the map, or use your current location. You can also choose to manually enter locations.</string>
 		<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>

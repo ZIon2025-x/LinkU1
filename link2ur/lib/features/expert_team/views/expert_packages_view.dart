@@ -3,7 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:link2ur/core/utils/error_localizer.dart';
 import 'package:link2ur/core/utils/l10n_extension.dart';
 import 'package:link2ur/data/repositories/expert_team_repository.dart';
+import 'package:link2ur/data/repositories/package_purchase_repository.dart';
 import 'package:link2ur/features/expert_team/bloc/expert_team_bloc.dart';
+import 'package:link2ur/features/expert_team/widgets/package_redemption_qr_sheet.dart';
 
 class ExpertPackagesView extends StatelessWidget {
   const ExpertPackagesView({super.key});
@@ -47,6 +49,8 @@ class _PackagesBody extends StatelessWidget {
                     final remaining = (p['remaining_sessions'] ?? 0) as int;
                     final total = (p['total_sessions'] ?? 0) as int;
                     final status = p['status'] as String? ?? '';
+                    final packageId = (p['id'] as num).toInt();
+                    final canRedeem = status == 'active' && remaining > 0;
                     return Card(
                       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                       child: Padding(
@@ -73,6 +77,28 @@ class _PackagesBody extends StatelessWidget {
                               Text('到期: ${(p['expires_at'] as String).substring(0, 10)}',
                                   style: Theme.of(context).textTheme.bodySmall),
                             ],
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                onPressed: canRedeem
+                                    ? () {
+                                        showPackageRedemptionQrSheet(
+                                          context: context,
+                                          packageId: packageId,
+                                          packageTitle:
+                                              '套餐 #$packageId · 剩 $remaining 次',
+                                          repository: context
+                                              .read<PackagePurchaseRepository>(),
+                                        );
+                                      }
+                                    : null,
+                                icon: const Icon(Icons.qr_code),
+                                label: Text(
+                                  canRedeem ? '出示核销码' : '不可核销',
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),

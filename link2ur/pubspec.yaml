@@ -89,8 +89,9 @@ dependencies:
   # 社交分享 SDK
   fluwx: ^4.6.1
 
-  # QR 码生成
+  # QR 码生成 (buyer 端) + 扫码 (达人端套餐核销)
   qr_flutter: ^4.1.0
+  mobile_scanner: ^5.2.3
 
   # 图片处理
   image: ^4.2.0

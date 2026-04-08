@@ -28,6 +28,7 @@ import 'data/repositories/ticker_repository.dart';
 import 'data/repositories/trending_search_repository.dart';
 import 'data/repositories/question_repository.dart';
 import 'package:link2ur/data/repositories/expert_team_repository.dart';
+import 'package:link2ur/data/repositories/package_purchase_repository.dart';
 import 'data/services/ai_chat_service.dart';
 import 'data/services/api_service.dart';
 import 'features/auth/bloc/auth_bloc.dart';
@@ -99,6 +100,9 @@ class AppProviders extends StatelessWidget {
         ),
         RepositoryProvider<ExpertTeamRepository>(
           create: (_) => ExpertTeamRepository(apiService: apiService),
+        ),
+        RepositoryProvider<PackagePurchaseRepository>(
+          create: (_) => PackagePurchaseRepository(apiService),
         ),
         RepositoryProvider<CouponPointsRepository>(
           create: (_) => CouponPointsRepository(apiService: apiService),

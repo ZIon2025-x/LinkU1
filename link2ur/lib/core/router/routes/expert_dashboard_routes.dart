@@ -8,6 +8,10 @@ import '../../../features/expert_dashboard/views/management/management_center_vi
 import '../../../features/expert_dashboard/views/management/members_view.dart';
 import '../../../features/expert_dashboard/views/management/packages_view.dart';
 import '../../../features/expert_dashboard/views/management/review_replies_view.dart';
+import '../../../features/expert_dashboard/views/management/customer_packages_view.dart';
+import '../../../data/repositories/package_purchase_repository.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../app_routes.dart';
 
 List<RouteBase> get expertDashboardRoutes => [
@@ -80,6 +84,15 @@ List<RouteBase> get expertDashboardRoutes => [
         builder: (context, state) {
           final id = state.pathParameters['expertId']!;
           return PackagesView(expertId: id);
+        },
+      ),
+      GoRoute(
+        path: '/expert-dashboard/:expertId/management/customer-packages',
+        name: 'expertDashboardManagementCustomerPackages',
+        builder: (context, state) {
+          final id = state.pathParameters['expertId']!;
+          final repo = context.read<PackagePurchaseRepository>();
+          return CustomerPackagesView(expertId: id, repository: repo);
         },
       ),
     ];

@@ -261,6 +261,18 @@ class ApiEndpoints {
   static String cancelServiceApplication(int applicationId) =>
       '/api/users/me/service-applications/$applicationId/cancel';
 
+  // ==================== A1 套餐购买 + QR 核销 ====================
+  static String purchasePackage(int serviceId) =>
+      '/api/services/$serviceId/purchase-package';
+  static String myPackageDetail(int packageId) =>
+      '/api/my/packages/$packageId';
+  static String myPackageRedemptionQr(int packageId) =>
+      '/api/my/packages/$packageId/redemption-qr';
+  static String redeemPackage(String expertId) =>
+      '/api/experts/$expertId/packages/redeem';
+  static String customerPackages(String expertId) =>
+      '/api/experts/$expertId/customer-packages';
+
   // ==================== Expert Team ====================
   static const String expertTeams = '/api/experts';
   static const String expertTeamApply = '/api/experts/apply';

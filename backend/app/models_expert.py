@@ -17,6 +17,7 @@ from sqlalchemy import (
     UniqueConstraint,
     DECIMAL,
 )
+from sqlalchemy.dialects.postgresql import JSONB as JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -280,6 +281,15 @@ class UserServicePackage(Base):
     purchased_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
     expires_at = Column(DateTime(timezone=True), nullable=True)
     task_id = Column(Integer, ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True)
+    # A1 套餐购买流程新字段
+    payment_intent_id = Column(String(255), nullable=True)  # 关联的 Stripe PI
+    paid_amount = Column(Float, nullable=True)  # 实付金额(单位: 主货币,如 GBP)
+    currency = Column(String(3), nullable=True, default="GBP")
+    # bundle_breakdown: bundle 套餐每个子服务的进度
+    # 格式: {"service_id": {"total": N, "used": M}, ...}
+    # multi 套餐为 NULL,直接用 used_sessions
+    bundle_breakdown = Column(JSON, nullable=True)
+    last_redeemed_at = Column(DateTime(timezone=True), nullable=True)
 
     user = relationship("User", backref="service_packages")
 
@@ -287,6 +297,7 @@ class UserServicePackage(Base):
         Index("ix_user_packages_user", "user_id"),
         Index("ix_user_packages_service", "service_id"),
         Index("ix_user_packages_expert", "expert_id"),
+        Index("ix_user_packages_status", "status"),
     )
 
 
@@ -299,6 +310,10 @@ class PackageUsageLog(Base):
     used_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
     used_by = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     note = Column(Text, nullable=True)
+    # A1: bundle 套餐核销时记录是哪个子服务被核销
+    sub_service_id = Column(Integer, nullable=True)
+    # 核销方式: 'qr' | 'otp' | 'manual'
+    redeem_method = Column(String(20), nullable=True, default="qr")
 
     __table_args__ = (
         Index("ix_package_usage_package", "package_id"),

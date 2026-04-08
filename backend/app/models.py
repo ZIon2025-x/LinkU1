@@ -1653,10 +1653,17 @@ class TaskExpertService(Base):
     participants_per_slot = Column(Integer, nullable=True)  # 每个时间段最多参与者数量
     weekly_time_slot_config = Column(JSONB, nullable=True)  # 按周几设置时间段配置（JSON格式）
 
-    # 套餐字段（Phase 7）
+    # 套餐字段（Phase 7 + A1 purchase flow）
     package_type = Column(String(20), nullable=False, default="single", server_default=text("'single'"))
     total_sessions = Column(Integer, nullable=True)
+    # bundle_service_ids 双格式向后兼容:
+    #   [A, B, C]                                — legacy "each once"
+    #   [{"service_id": A, "count": 5}, ...]     — explicit count per service
     bundle_service_ids = Column(JSONB, nullable=True)
+    # owner-set total package price (覆盖 base_price * total_sessions 的默认计算)
+    package_price = Column(DECIMAL(12, 2), nullable=True)
+    # 套餐有效天数 (NULL = 永不过期);购买后 expires_at = purchased_at + validity_days
+    validity_days = Column(Integer, nullable=True)
 
     # 关系
     expert = relationship("TaskExpert", back_populates="services")

@@ -7715,10 +7715,128 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                     logger.warning(f"  - 任务已支付状态: {task.is_paid}")
                     logger.warning(f"  - 任务当前状态: {task.status}")
         else:
-            logger.warning(f"⚠️ [WEBHOOK] Payment Intent 成功但 metadata 中没有 task_id")
-            logger.warning(f"  - Metadata: {json.dumps(payment_intent.get('metadata', {}), ensure_ascii=False)}")
-            logger.warning(f"  - Payment Intent ID: {payment_intent_id}")
-    
+            # 没有 task_id 的 PI: 检查是不是套餐购买 (A1)
+            metadata = payment_intent.get("metadata", {}) or {}
+            pmt_type = metadata.get("payment_type")
+            if pmt_type == "package_purchase":
+                # ==================== A1: 套餐购买完成 ====================
+                # buyer 完成套餐支付,创建 UserServicePackage 记录
+                try:
+                    from app.models_expert import UserServicePackage
+                    from datetime import timedelta as _td
+                    service_id_meta = metadata.get("service_id")
+                    buyer_id = metadata.get("buyer_id")
+                    expert_id_meta = metadata.get("expert_id")
+                    package_type_meta = metadata.get("package_type")
+                    total_sessions_meta = int(metadata.get("total_sessions", 0))
+                    package_price_meta = float(metadata.get("package_price", 0))
+                    validity_days_meta = int(metadata.get("validity_days", 0))
+
+                    if not (service_id_meta and buyer_id and expert_id_meta):
+                        logger.error(
+                            f"❌ [WEBHOOK] package_purchase metadata 不完整: {metadata}"
+                        )
+                    else:
+                        # 幂等性检查 — 同 PI 是否已创建 package
+                        existing_pkg = db.query(UserServicePackage).filter(
+                            UserServicePackage.payment_intent_id == payment_intent_id
+                        ).first()
+                        if existing_pkg:
+                            logger.info(
+                                f"✅ [WEBHOOK] 套餐 {existing_pkg.id} 已存在,跳过 (idempotent)"
+                            )
+                        else:
+                            # 加载 service 拿 bundle_breakdown 配置
+                            from app.models import TaskExpertService
+                            service_obj = db.query(TaskExpertService).filter(
+                                TaskExpertService.id == int(service_id_meta)
+                            ).first()
+                            if not service_obj:
+                                logger.error(
+                                    f"❌ [WEBHOOK] package_purchase: service {service_id_meta} 不存在"
+                                )
+                            else:
+                                # 构建 bundle_breakdown
+                                from app.package_purchase_routes import (
+                                    _build_bundle_breakdown,
+                                    _bundle_total_sessions,
+                                )
+                                breakdown = None
+                                final_total = total_sessions_meta
+                                if package_type_meta == "bundle":
+                                    breakdown = _build_bundle_breakdown(service_obj.bundle_service_ids)
+                                    final_total = _bundle_total_sessions(breakdown)
+
+                                # 计算 expires_at
+                                exp_at = None
+                                if validity_days_meta > 0:
+                                    exp_at = get_utc_time() + _td(days=validity_days_meta)
+
+                                new_pkg = UserServicePackage(
+                                    user_id=buyer_id,
+                                    service_id=int(service_id_meta),
+                                    expert_id=expert_id_meta,
+                                    total_sessions=final_total,
+                                    used_sessions=0,
+                                    status="active",
+                                    purchased_at=get_utc_time(),
+                                    expires_at=exp_at,
+                                    payment_intent_id=payment_intent_id,
+                                    paid_amount=package_price_meta,
+                                    currency="GBP",
+                                    bundle_breakdown=breakdown,
+                                )
+                                db.add(new_pkg)
+                                db.commit()
+                                db.refresh(new_pkg)
+                                logger.info(
+                                    f"✅ [WEBHOOK] 套餐 {new_pkg.id} 已创建 "
+                                    f"(buyer={buyer_id} expert={expert_id_meta} type={package_type_meta} total={final_total})"
+                                )
+
+                                # 通知 buyer + 团队所有 admin
+                                try:
+                                    crud.create_notification(
+                                        db=db,
+                                        user_id=buyer_id,
+                                        type="package_purchased",
+                                        title="套餐购买成功",
+                                        content=f"您已成功购买「{service_obj.service_name}」套餐,共 {final_total} 次,可在「我的套餐」中查看",
+                                        related_id=str(new_pkg.id),
+                                        auto_commit=False,
+                                    )
+                                    # 团队侧广播
+                                    from app.models_expert import ExpertMember as _EM
+                                    managers = db.query(_EM.user_id).filter(
+                                        _EM.expert_id == expert_id_meta,
+                                        _EM.status == "active",
+                                        _EM.role.in_(["owner", "admin"]),
+                                    ).all()
+                                    for (mid,) in managers:
+                                        crud.create_notification(
+                                            db=db,
+                                            user_id=mid,
+                                            type="package_sold",
+                                            title="新套餐订单",
+                                            content=f"用户已购买「{service_obj.service_name}」套餐 ({final_total} 次)",
+                                            related_id=str(new_pkg.id),
+                                            auto_commit=False,
+                                        )
+                                    db.commit()
+                                except Exception as notify_err:
+                                    logger.warning(
+                                        f"⚠️ [WEBHOOK] 套餐购买通知失败: {notify_err}"
+                                    )
+                except Exception as e:
+                    logger.error(
+                        f"❌ [WEBHOOK] 处理 package_purchase 失败: {e}",
+                        exc_info=True,
+                    )
+            else:
+                logger.warning(f"⚠️ [WEBHOOK] Payment Intent 成功但 metadata 中没有 task_id")
+                logger.warning(f"  - Metadata: {json.dumps(payment_intent.get('metadata', {}), ensure_ascii=False)}")
+                logger.warning(f"  - Payment Intent ID: {payment_intent_id}")
+
     elif event_type == "payment_intent.payment_failed":
         payment_intent = event_data
         payment_intent_id = payment_intent.get("id")

@@ -2324,7 +2324,12 @@ _VALID_PACKAGE_TYPES = ("single", "multi", "bundle")
 
 
 def _validate_package_fields(package_type, total_sessions, bundle_service_ids):
-    """共享 package 字段一致性校验。返回错误消息或 None。"""
+    """共享 package 字段一致性校验。返回错误消息或 None。
+
+    bundle_service_ids 接受双格式:
+      - [A, B, C]                                  legacy "each once"
+      - [{"service_id": A, "count": N}, ...]       explicit count
+    """
     if package_type is None:
         return None
     if package_type not in _VALID_PACKAGE_TYPES:
@@ -2334,7 +2339,18 @@ def _validate_package_fields(package_type, total_sessions, bundle_service_ids):
             return "package_type=multi 时 total_sessions 必须 >= 2"
     if package_type == "bundle":
         if not bundle_service_ids or len(bundle_service_ids) < 2:
-            return "package_type=bundle 时 bundle_service_ids 至少需要 2 个服务 ID"
+            return "package_type=bundle 时 bundle_service_ids 至少需要 2 个服务"
+        # 校验每一项是 int 或 {service_id, count}
+        for item in bundle_service_ids:
+            if isinstance(item, int):
+                continue
+            if isinstance(item, dict):
+                if "service_id" not in item or "count" not in item:
+                    return "bundle_service_ids dict 项必须含 service_id + count"
+                if not isinstance(item.get("count"), int) or item["count"] < 1:
+                    return "bundle_service_ids 的 count 必须是正整数"
+                continue
+            return "bundle_service_ids 项必须是 int 或 {service_id, count}"
     return None
 
 
@@ -2350,10 +2366,15 @@ class TaskExpertServiceCreate(BaseModel):
     base_price: condecimal(gt=0, max_digits=12, decimal_places=2)  # 使用condecimal与DB的DECIMAL一致
     currency: Literal["GBP", "EUR"] = "GBP"  # 统一为Literal类型
     display_order: int = 0
-    # 套餐字段（Phase 7）
+    # 套餐字段（Phase 7 + A1）
     package_type: Optional[str] = None  # 'single' | 'multi' | 'bundle'
     total_sessions: Optional[int] = None  # multi 类型：总课时数
-    bundle_service_ids: Optional[List[int]] = None  # bundle 类型：包含的服务 ID 列表
+    # bundle_service_ids 双格式向后兼容:
+    #   [A, B, C]                              — legacy "each once"
+    #   [{"service_id": A, "count": N}, ...]   — explicit count per service
+    bundle_service_ids: Optional[List[Any]] = None
+    package_price: Optional[condecimal(gt=0, max_digits=12, decimal_places=2)] = None  # owner-set total
+    validity_days: Optional[int] = None  # null = 永不过期
     # 时间段相关字段
     has_time_slots: bool = False
     time_slot_duration_minutes: Optional[int] = None  # 每个时间段的时长（分钟）
@@ -2367,6 +2388,11 @@ class TaskExpertServiceCreate(BaseModel):
         err = _validate_package_fields(self.package_type, self.total_sessions, self.bundle_service_ids)
         if err:
             raise ValueError(err)
+        # 套餐类型必须有 package_price (multi/bundle 都要)
+        if self.package_type in ("multi", "bundle") and self.package_price is None:
+            raise ValueError("multi/bundle 套餐必须指定 package_price")
+        if self.validity_days is not None and self.validity_days <= 0:
+            raise ValueError("validity_days 必须大于 0")
         return self
 
 
@@ -2389,10 +2415,13 @@ class TaskExpertServiceUpdate(BaseModel):
     location: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
-    # 套餐字段（Phase 7）
+    # 套餐字段（Phase 7 + A1）
     package_type: Optional[str] = None  # 'single' | 'multi' | 'bundle'
     total_sessions: Optional[int] = None
-    bundle_service_ids: Optional[List[int]] = None
+    # 双格式: [A,B,C] 或 [{"service_id": A, "count": N}, ...]
+    bundle_service_ids: Optional[List[Any]] = None
+    package_price: Optional[condecimal(gt=0, max_digits=12, decimal_places=2)] = None
+    validity_days: Optional[int] = None
     # 时间段相关字段
     has_time_slots: Optional[bool] = None
     time_slot_duration_minutes: Optional[int] = None
@@ -2406,6 +2435,8 @@ class TaskExpertServiceUpdate(BaseModel):
         err = _validate_package_fields(self.package_type, self.total_sessions, self.bundle_service_ids)
         if err:
             raise ValueError(err)
+        if self.validity_days is not None and self.validity_days <= 0:
+            raise ValueError("validity_days 必须大于 0")
         return self
 
 

@@ -548,6 +548,10 @@ app.include_router(chat_participant_router)
 from app.expert_package_routes import expert_package_router
 app.include_router(expert_package_router)
 
+# A1: 套餐购买 + QR 核销系统
+from app.package_purchase_routes import package_purchase_router
+app.include_router(package_purchase_router)
+
 from app.expert_marketing_routes import expert_marketing_router
 app.include_router(expert_marketing_router)
 
