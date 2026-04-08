@@ -2,8 +2,6 @@ part of 'profile_view.dart';
 
 /// 我的内容 (对齐iOS myContentSection)
 Widget _buildMyContentSection(BuildContext context, bool isDark) {
-  final isExpert =
-      context.read<AuthBloc>().state.user?.isExpert ?? false;
   return Padding(
     padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
     child: Column(
@@ -102,17 +100,7 @@ Widget _buildMyContentSection(BuildContext context, bool isDark) {
                 color: AppColors.purple,
                 onTap: () => context.push('/my-service-applications'),
               ),
-              if (isExpert) ...[
-                _profileDivider(isDark),
-                _ProfileRow(
-                  icon: Icons.assignment_ind,
-                  title: context.l10n.profileExpertManagement,
-                  subtitle: context.l10n.profileExpertManagementSubtitle,
-                  color: AppColors.indigo,
-                  onTap: () =>
-                      context.push('/expert-dashboard'),
-                ),
-              ],
+              _ExpertEntryRow(isDark: isDark),
             ],
           ),
         ),
@@ -282,6 +270,69 @@ void _showLogoutDialog(BuildContext context) async {
   );
   if (confirmed == true && context.mounted) {
     context.read<AuthBloc>().add(AuthLogoutRequested());
+  }
+}
+
+/// 达人中心入口行：
+/// - 如果 user.is_expert == true，立即显示
+/// - 否则尝试拉一次 my-teams，命中则显示（覆盖历史 is_expert 未回填的账号）
+/// - 结果缓存到 session 静态变量，避免每次进 profile 都请求
+class _ExpertEntryRow extends StatefulWidget {
+  const _ExpertEntryRow({required this.isDark});
+  final bool isDark;
+
+  // Session-level cache: null = unknown, true/false = result of my-teams probe
+  static bool? _cachedHasTeams;
+
+  @override
+  State<_ExpertEntryRow> createState() => _ExpertEntryRowState();
+}
+
+class _ExpertEntryRowState extends State<_ExpertEntryRow> {
+  bool? _hasTeams = _ExpertEntryRow._cachedHasTeams;
+
+  @override
+  void initState() {
+    super.initState();
+    final isExpertFlag =
+        context.read<AuthBloc>().state.user?.isExpert ?? false;
+    if (!isExpertFlag && _hasTeams == null) {
+      _probeTeams();
+    }
+  }
+
+  Future<void> _probeTeams() async {
+    try {
+      final teams =
+          await context.read<ExpertTeamRepository>().getMyTeams();
+      if (!mounted) return;
+      setState(() => _hasTeams = teams.isNotEmpty);
+      _ExpertEntryRow._cachedHasTeams = teams.isNotEmpty;
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _hasTeams = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isExpertFlag =
+        context.watch<AuthBloc>().state.user?.isExpert ?? false;
+    final show = isExpertFlag || (_hasTeams ?? false);
+    if (!show) return const SizedBox.shrink();
+
+    return Column(
+      children: [
+        _profileDivider(widget.isDark),
+        _ProfileRow(
+          icon: Icons.assignment_ind,
+          title: context.l10n.profileExpertManagement,
+          subtitle: context.l10n.profileExpertManagementSubtitle,
+          color: AppColors.indigo,
+          onTap: () => context.push('/expert-dashboard'),
+        ),
+      ],
+    );
   }
 }
 
