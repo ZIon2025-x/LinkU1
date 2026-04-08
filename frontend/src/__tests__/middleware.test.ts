@@ -38,7 +38,10 @@ describe('middleware', () => {
     expect(await res!.text()).toBe(backendHtml);
 
     expect(global.fetch).toHaveBeenCalledTimes(1);
-    const fetchUrl = (global.fetch as jest.Mock).mock.calls[0][0];
+    const [fetchUrl, fetchOptions] = (global.fetch as jest.Mock).mock.calls[0];
     expect(fetchUrl).toBe('https://api.link2ur.com/zh/tasks/123');
+    expect((fetchOptions as RequestInit).headers).toEqual({ 'user-agent': WECHAT_UA });
+    expect((fetchOptions as RequestInit).redirect).toBe('error');
+    expect((fetchOptions as RequestInit).signal).toBeInstanceOf(AbortSignal);
   });
 });

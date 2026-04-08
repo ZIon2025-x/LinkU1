@@ -60,7 +60,7 @@ export default async function middleware(request: Request): Promise<Response | u
   try {
     const upstream = await fetch(backendUrl, {
       headers: { 'user-agent': userAgent },
-      redirect: 'follow',
+      redirect: 'error',
       signal: controller.signal,
     });
 
