@@ -1695,25 +1695,98 @@ def delete_expert_activity(
     
     from app.models import TaskParticipant
     
+    # 集中收集 Stripe 退款失败的 task,最后返给前端 (best-effort,部分失败不阻塞 cancel)
+    stripe_refund_failures = []
+
     for task in pending_tasks:
         old_task_status = task.status  # 保存旧状态
         task.status = "cancelled"
         task.updated_at = get_utc_time()
-        
+
+        # A2: 混合退款 (PI refund + transfer reversal fallback)
+        # 路径 A: task.is_paid → 走 stripe.Refund.create (+ Transfer reversal if transferred)
+        # 路径 B: task.payment_intent_id 存在但未付款 → cancel PI
+        if task.payment_intent_id:
+            try:
+                import stripe as _stripe
+                from app.stripe_config import ensure_stripe_configured
+                ensure_stripe_configured()
+
+                if task.is_paid:
+                    # 已付款,先反转已转账的钱(如果有)
+                    pt = db.query(models.PaymentTransfer).filter(
+                        models.PaymentTransfer.task_id == task.id,
+                        models.PaymentTransfer.status == "succeeded",
+                    ).first()
+                    if pt and pt.transfer_id:
+                        try:
+                            _stripe.Transfer.create_reversal(
+                                pt.transfer_id,
+                                metadata={
+                                    "task_id": str(task.id),
+                                    "reason": "activity_cancelled",
+                                    "activity_id": str(activity_id),
+                                },
+                                idempotency_key=f"act_cancel_rev_{task.id}",
+                            )
+                            pt.status = "reversed"
+                            pt.reversed_at = get_utc_time()
+                            pt.reversed_reason = "activity_cancelled"
+                            logger.info(f"活动 {activity_id} 取消: task {task.id} transfer {pt.transfer_id} 反转成功")
+                        except Exception as rev_err:
+                            logger.error(f"反转 transfer 失败 task={task.id}: {rev_err}")
+                            # 继续尝试退款 — 即使 reversal 失败,refund 仍可能从平台余额成功
+
+                    # 退款 PI (只取第一个 charge)
+                    try:
+                        charges = _stripe.Charge.list(payment_intent=task.payment_intent_id, limit=1)
+                        if charges.data:
+                            _stripe.Refund.create(
+                                charge=charges.data[0].id,
+                                reason="requested_by_customer",
+                                metadata={
+                                    "task_id": str(task.id),
+                                    "reason": "activity_cancelled",
+                                    "activity_id": str(activity_id),
+                                },
+                                idempotency_key=f"act_cancel_refund_{task.id}",
+                            )
+                            logger.info(f"活动 {activity_id} 取消: task {task.id} 退款成功")
+                    except Exception as ref_err:
+                        logger.error(f"退款失败 task={task.id}: {ref_err}")
+                        stripe_refund_failures.append({"task_id": task.id, "error": str(ref_err)[:200]})
+                else:
+                    # 未付款,直接取消 PI 释放预授权
+                    try:
+                        pi = _stripe.PaymentIntent.retrieve(task.payment_intent_id)
+                        if pi.status in (
+                            "requires_payment_method",
+                            "requires_confirmation",
+                            "requires_action",
+                            "processing",
+                        ):
+                            _stripe.PaymentIntent.cancel(task.payment_intent_id)
+                            logger.info(f"活动 {activity_id} 取消: task {task.id} PI {task.payment_intent_id} 已 cancel")
+                    except Exception as pi_err:
+                        logger.warning(f"PI cancel 失败 task={task.id}: {pi_err}")
+            except Exception as outer:
+                logger.error(f"活动 {activity_id} task {task.id} 退款流程异常: {outer}", exc_info=True)
+                stripe_refund_failures.append({"task_id": task.id, "error": str(outer)[:200]})
+
         # 对于多人任务，取消所有参与者的状态（pending、accepted、in_progress）
         if task.is_multi_participant:
             participants = db.query(TaskParticipant).filter(
                 TaskParticipant.task_id == task.id,
                 TaskParticipant.status.in_(["pending", "accepted", "in_progress"])
             ).all()
-            
+
             for participant in participants:
                 old_participant_status = participant.status
                 participant.status = "cancelled"
                 participant.cancelled_at = get_utc_time()
                 participant.updated_at = get_utc_time()
                 logger.info(f"活动取消：参与者 {participant.user_id} 的状态从 {old_participant_status} 变更为 cancelled")
-        
+
         # 记录审计日志
         audit_log = TaskAuditLog(
             task_id=task.id,
