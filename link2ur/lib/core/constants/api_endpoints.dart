@@ -250,9 +250,10 @@ class ApiEndpoints {
   static String taskExpertServiceReviews(int serviceId) =>
       '/api/task-experts/services/$serviceId/reviews';
 
-  // 旧兼容路径（仍被公共/用户侧使用）
+  // 公开服务时间段（已迁移到新公开端点；新端点已包含关门日过滤 / user_has_applied / 多人参与者计数）
   static String serviceTimeSlots(int serviceId) =>
-      '/api/task-experts/services/$serviceId/time-slots';
+      '/api/services/$serviceId/time-slots';
+  // 服务详情：保留旧路由（新路由要求 expert_id，买家侧无法只用 service_id 查询）
   static String taskExpertServiceDetail(int serviceId) =>
       '/api/task-experts/services/$serviceId';
   static String respondServiceCounterOffer(int applicationId) =>

@@ -831,7 +831,7 @@ def get_service_application_email(
                 </div>
                 
                 <div style="text-align: center; margin: 30px 0;">
-                    <a href="{Config.FRONTEND_URL}/task-experts/me/applications" 
+                    <a href="{Config.FRONTEND_URL}/expert-dashboard" 
                        style="background: #1976d2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600;">
                         查看服务申请
                     </a>
@@ -912,7 +912,7 @@ def get_service_application_email(
                 </div>
                 
                 <div style="text-align: center; margin: 30px 0;">
-                    <a href="{Config.FRONTEND_URL}/task-experts/me/applications" 
+                    <a href="{Config.FRONTEND_URL}/expert-dashboard" 
                        style="background: #1976d2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600;">
                         View Service Applications
                     </a>

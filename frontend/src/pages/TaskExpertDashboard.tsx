@@ -40,6 +40,8 @@ import {
   deleteClosedDate,
   deleteClosedDateByDate,
   deleteActivity,
+  fetchMyExpertTeams,
+  setMyExpertId,
 } from '../api';
 import LoginModal from '../components/LoginModal';
 import TabButton from '../components/taskExpertDashboard/TabButton';
@@ -93,6 +95,9 @@ const TaskExpertDashboard: React.FC = () => {
   const [user, setUser] = useState<any>(null);
   const [expert, setExpert] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  // 团队切换 — Phase 2d (2026-04-08)：web 跟上 Flutter 的多团队 dashboard
+  const [myTeams, setMyTeams] = useState<any[]>([]);
+  const [selectedExpertId, setSelectedExpertId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'services' | 'applications' | 'multi-tasks' | 'schedule'>('dashboard');
   
   // 服务管理相关
@@ -311,7 +316,25 @@ const TaskExpertDashboard: React.FC = () => {
       loadMultiTasks();
     }
     // schedule 标签页的加载由下面的 useEffect 处理，避免重复调用
-  }, [activeTab, user]);
+    // selectedExpertId 列入 deps 是为了切换团队时自动刷新当前 tab 数据
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, user, selectedExpertId]);
+
+  // 切换达人团队（多团队用户）
+  const handleSwitchTeam = useCallback((newId: string) => {
+    if (!newId || newId === selectedExpertId) return;
+    setSelectedExpertId(newId);
+    setMyExpertId(newId);
+    try {
+      localStorage.setItem('selected_expert_id', newId);
+    } catch {}
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set('teamId', newId);
+      window.history.replaceState({}, '', url.toString());
+    } catch {}
+    // 数据由 useEffect 监听 selectedExpertId 变化自动刷新（包括 schedule tab 自己的 useEffect）
+  }, [selectedExpertId]);
 
   // 时刻表页面定时刷新（每10秒刷新一次，确保参与者数量实时更新）
   useEffect(() => {
@@ -323,7 +346,8 @@ const TaskExpertDashboard: React.FC = () => {
       return () => clearInterval(interval);
     }
     return () => {};
-  }, [activeTab, user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, user, selectedExpertId]);
 
   // 当打开创建多人活动模态框时，确保服务列表已加载
     useEffect(() => {
@@ -336,10 +360,32 @@ const TaskExpertDashboard: React.FC = () => {
     try {
       const userData = await fetchCurrentUser();
       setUser(userData);
-      
-      // 加载任务达人信息
+
+      // 加载任务达人信息（legacy individual expert，用 user_id 查）
       const expertData = await getTaskExpert(userData.id);
       setExpert(expertData);
+
+      // 加载用户加入的所有达人团队（new model）+ 解析当前选中的团队
+      try {
+        const teams = await fetchMyExpertTeams();
+        setMyTeams(teams);
+        if (teams.length > 0) {
+          // 优先级：URL ?teamId= > localStorage > teams[0]
+          const urlParams = new URLSearchParams(window.location.search);
+          const fromUrl = urlParams.get('teamId');
+          const fromStorage = localStorage.getItem('selected_expert_id');
+          const validIds = new Set(teams.map((t: any) => t.id));
+          const initial =
+            (fromUrl && validIds.has(fromUrl) ? fromUrl : null) ??
+            (fromStorage && validIds.has(fromStorage) ? fromStorage : null) ??
+            teams[0].id;
+          setSelectedExpertId(initial);
+          setMyExpertId(initial);
+          localStorage.setItem('selected_expert_id', initial);
+        }
+      } catch (e) {
+        // 如果用户没有加入任何团队，回退到 legacy individual expert 模式（不阻塞主流程）
+      }
     } catch (err: any) {
       if (err.response?.status === 401) {
         setShowLoginModal(true);
@@ -944,6 +990,38 @@ const TaskExpertDashboard: React.FC = () => {
               <div className={styles.subtitle}>
                 欢迎回来，{expert.expert_name || user?.name || '任务达人'}
               </div>
+              {/* 多团队切换器 — 只在用户加入了 2+ 团队时显示 */}
+              {myTeams.length > 1 && selectedExpertId && (
+                <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 13, color: '#666' }}>当前团队：</span>
+                  <select
+                    value={selectedExpertId}
+                    onChange={(e) => handleSwitchTeam(e.target.value)}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: 6,
+                      border: '1px solid #d9d9d9',
+                      background: '#fff',
+                      fontSize: 14,
+                      cursor: 'pointer',
+                      minWidth: 180,
+                    }}
+                  >
+                    {myTeams.map((team: any) => (
+                      <option key={team.id} value={team.id}>
+                        {team.name}
+                        {team.my_role ? ` (${team.my_role})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {/* 单团队提示 */}
+              {myTeams.length === 1 && (
+                <div style={{ marginTop: 8, fontSize: 12, color: '#999' }}>
+                  团队：{myTeams[0].name}
+                </div>
+              )}
               {pendingRequest && (
                 <div className={styles.pendingRequestNotice}>
                   您有一个待审核的信息修改请求，请等待管理员审核

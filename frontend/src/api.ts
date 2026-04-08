@@ -1,6 +1,7 @@
 import axios, { AxiosError } from 'axios';
 import { API_BASE_URL } from './config';
 import { logger } from './utils/logger';
+import { londonLocalToUtcIso } from './utils/londonTime';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -1399,8 +1400,60 @@ export const submitJobApplication = async (data: {
 };
 
 // ==================== 任务达人功能 API ====================
+// 注意：本节内的"达人 dashboard"类函数已迁移至新的 /api/experts/{expertId}/* 路由。
+// 通过 _getMyExpertId() 解析当前用户的团队 ID，对调用方保持函数签名不变。
+// 仅"买家侧公开浏览"类函数（getPublicTaskExperts、getTaskExpert、getTaskExpertServices 等）
+// 仍指向旧的 /api/task-experts/* 路由——这些是供未登录用户浏览的公开端点。
 
-// 公开 API - 获取任务达人列表（用于前端展示）
+// ----------- Expert team helpers -----------
+// 当前选中的达人团队 ID（可由 team switcher 通过 setMyExpertId 显式设置）。
+// 默认值为 null，第一次使用时会调用 /api/experts/my-teams 自动取第一个团队。
+let _cachedMyExpertId: string | null = null;
+let _expertIdInflight: Promise<string> | null = null;
+
+const _getMyExpertId = async (): Promise<string> => {
+  if (_cachedMyExpertId) return _cachedMyExpertId;
+  if (_expertIdInflight) return _expertIdInflight;
+  _expertIdInflight = (async () => {
+    const res = await api.get('/api/experts/my-teams');
+    const teams = (res.data as any[]) || [];
+    if (!teams.length) {
+      throw new Error('用户未加入任何达人团队');
+    }
+    return teams[0].id as string;
+  })();
+  try {
+    const id = await _expertIdInflight;
+    _cachedMyExpertId = id;
+    return id;
+  } finally {
+    _expertIdInflight = null;
+  }
+};
+
+// 由 team switcher / dashboard shell 显式设置当前团队 ID
+export const setMyExpertId = (id: string | null) => {
+  _cachedMyExpertId = id;
+};
+
+// 读取当前生效的 expert ID（异步，因为可能需要 fetch /my-teams）
+export const getMyExpertId = (): Promise<string> => _getMyExpertId();
+
+// 获取我加入的所有达人团队（team switcher 用）
+export const fetchMyExpertTeams = async (): Promise<any[]> => {
+  const res = await api.get('/api/experts/my-teams');
+  return (res.data as any[]) || [];
+};
+
+// Logout 等场景需要清除缓存
+export const clearMyExpertIdCache = () => {
+  _cachedMyExpertId = null;
+};
+
+// London 本地时间 → UTC ISO 转换：从 utils/londonTime.ts 引入（含单元测试覆盖 BST/GMT 边界）
+const _londonLocalToUtcIso = londonLocalToUtcIso;
+
+// 公开 API - 获取任务达人列表（买家侧浏览，保留旧路由）
 export const getPublicTaskExperts = async (category?: string, location?: string) => {
   const params: any = {};
   if (category) params.category = category;
@@ -1409,9 +1462,7 @@ export const getPublicTaskExperts = async (category?: string, location?: string)
   return res.data;
 };
 
-// ==================== 任务达人功能 API ====================
-
-// 任务达人申请相关
+// 任务达人申请相关（旧版个人申请流程，保留）
 export const applyToBeTaskExpert = async (applicationMessage?: string) => {
   const res = await api.post('/api/task-experts/apply', { application_message: applicationMessage });
   return res.data;
@@ -1422,14 +1473,20 @@ export const getMyTaskExpertApplication = async () => {
   return res.data;
 };
 
-// 任务达人信息
+// 任务达人信息（公开浏览，保留旧路由）
 export const getTaskExpert = async (expertId: string) => {
   const res = await api.get(`/api/task-experts/${expertId}`);
   return res.data;
 };
 
+// 团队资料修改 — 走新的 profile-update-request workflow
 export const updateTaskExpertProfile = async (expertData: { expert_name?: string; bio?: string; avatar?: string }) => {
-  const res = await api.put('/api/task-experts/me', expertData);
+  const expertId = await _getMyExpertId();
+  const res = await api.post(`/api/experts/${expertId}/profile-update-request`, {
+    new_name: expertData.expert_name,
+    new_bio: expertData.bio,
+    new_avatar: expertData.avatar,
+  });
   return res.data;
 };
 
@@ -1442,24 +1499,28 @@ export const createTaskExpertService = async (serviceData: {
   currency?: string;
   display_order?: number;
 }) => {
-  const res = await api.post('/api/task-experts/me/services', serviceData);
+  const expertId = await _getMyExpertId();
+  const res = await api.post(`/api/experts/${expertId}/services`, serviceData);
   return res.data;
 };
 
 export const getMyTaskExpertServices = async (params?: { status?: string; limit?: number; offset?: number }) => {
-  const res = await api.get('/api/task-experts/me/services', { params });
+  const expertId = await _getMyExpertId();
+  const res = await api.get(`/api/experts/${expertId}/services`, { params });
   return res.data;
 };
 
 // 获取任务达人仪表盘统计数据
 export const getExpertDashboardStats = async () => {
-  const res = await api.get('/api/task-experts/me/dashboard/stats');
+  const expertId = await _getMyExpertId();
+  const res = await api.get(`/api/experts/${expertId}/dashboard/stats`);
   return res.data;
 };
 
 // 获取任务达人时刻表数据
 export const getExpertSchedule = async (params?: { start_date?: string; end_date?: string }) => {
-  const res = await api.get('/api/task-experts/me/schedule', { params });
+  const expertId = await _getMyExpertId();
+  const res = await api.get(`/api/experts/${expertId}/schedule`, { params });
   return res.data;
 };
 
@@ -1472,16 +1533,18 @@ export const updateTaskExpertService = async (serviceId: number, serviceData: {
   status?: string;
   display_order?: number;
 }) => {
-  const res = await api.put(`/api/task-experts/me/services/${serviceId}`, serviceData);
+  const expertId = await _getMyExpertId();
+  const res = await api.put(`/api/experts/${expertId}/services/${serviceId}`, serviceData);
   return res.data;
 };
 
 export const deleteTaskExpertService = async (serviceId: number) => {
-  const res = await api.delete(`/api/task-experts/me/services/${serviceId}`);
+  const expertId = await _getMyExpertId();
+  const res = await api.delete(`/api/experts/${expertId}/services/${serviceId}`);
   return res.data;
 };
 
-// 服务时间段管理
+// 服务时间段管理（输入仍接受 slot_date+start_time+end_time，内部转 ISO）
 export const createServiceTimeSlot = async (serviceId: number, timeSlotData: {
   slot_date: string;
   start_time: string;
@@ -1489,7 +1552,14 @@ export const createServiceTimeSlot = async (serviceId: number, timeSlotData: {
   price_per_participant: number;
   max_participants: number;
 }) => {
-  const res = await api.post(`/api/task-experts/me/services/${serviceId}/time-slots`, timeSlotData);
+  const expertId = await _getMyExpertId();
+  const body = {
+    slot_start_datetime: _londonLocalToUtcIso(timeSlotData.slot_date, timeSlotData.start_time),
+    slot_end_datetime: _londonLocalToUtcIso(timeSlotData.slot_date, timeSlotData.end_time),
+    price_per_participant: timeSlotData.price_per_participant,
+    max_participants: timeSlotData.max_participants,
+  };
+  const res = await api.post(`/api/experts/${expertId}/services/${serviceId}/time-slots`, body);
   return res.data;
 };
 
@@ -1497,7 +1567,8 @@ export const getServiceTimeSlots = async (serviceId: number, params?: {
   start_date?: string;
   end_date?: string;
 }) => {
-  const res = await api.get(`/api/task-experts/me/services/${serviceId}/time-slots`, { params });
+  const expertId = await _getMyExpertId();
+  const res = await api.get(`/api/experts/${expertId}/services/${serviceId}/time-slots`, { params });
   return res.data;
 };
 
@@ -1506,54 +1577,64 @@ export const updateServiceTimeSlot = async (serviceId: number, timeSlotId: numbe
   max_participants?: number;
   is_available?: boolean;
 }) => {
-  const res = await api.put(`/api/task-experts/me/services/${serviceId}/time-slots/${timeSlotId}`, timeSlotData);
+  const expertId = await _getMyExpertId();
+  const res = await api.put(`/api/experts/${expertId}/services/${serviceId}/time-slots/${timeSlotId}`, timeSlotData);
   return res.data;
 };
 
 export const deleteServiceTimeSlot = async (serviceId: number, timeSlotId: number) => {
-  const res = await api.delete(`/api/task-experts/me/services/${serviceId}/time-slots/${timeSlotId}`);
+  const expertId = await _getMyExpertId();
+  const res = await api.delete(`/api/experts/${expertId}/services/${serviceId}/time-slots/${timeSlotId}`);
   return res.data;
 };
 
-export const batchCreateServiceTimeSlots = async (serviceId: number, params: {
+// 旧的"按日期范围批量生成"端点已被禁用并删除。新的批量端点要求客户端逐 slot 提供。
+// 当前 UI 不依赖此函数，保留为占位以避免 import 编译错误。
+export const batchCreateServiceTimeSlots = async (_serviceId: number, _params: {
   start_date: string;
   end_date: string;
   price_per_participant: number;
 }) => {
-  const res = await api.post(`/api/task-experts/me/services/${serviceId}/time-slots/batch-create`, null, { params });
-  return res.data;
+  throw new Error('批量按日期范围创建时间段已废弃，请逐个创建');
 };
 
 export const deleteTimeSlotsByDate = async (serviceId: number, targetDate: string) => {
-  const res = await api.delete(`/api/task-experts/me/services/${serviceId}/time-slots/by-date`, {
-    params: { target_date: targetDate }
+  const expertId = await _getMyExpertId();
+  const res = await api.delete(`/api/experts/${expertId}/services/${serviceId}/time-slots/by-date`, {
+    params: { slot_date: targetDate }
   });
   return res.data;
 };
 
 // 关门日期管理
 export const createClosedDate = async (closedDateData: { closed_date: string; reason?: string }) => {
-  const res = await api.post('/api/task-experts/me/closed-dates', closedDateData);
+  const expertId = await _getMyExpertId();
+  const res = await api.post(`/api/experts/${expertId}/closed-dates`, closedDateData);
   return res.data;
 };
 
-export const getClosedDates = async (params?: { start_date?: string; end_date?: string }) => {
-  const res = await api.get('/api/task-experts/me/closed-dates', { params });
+export const getClosedDates = async (_params?: { start_date?: string; end_date?: string }) => {
+  // 新端点不支持日期范围过滤，始终返回所有
+  const expertId = await _getMyExpertId();
+  const res = await api.get(`/api/experts/${expertId}/closed-dates`);
   return res.data;
 };
 
 export const deleteClosedDate = async (closedDateId: number) => {
-  const res = await api.delete(`/api/task-experts/me/closed-dates/${closedDateId}`);
+  const expertId = await _getMyExpertId();
+  const res = await api.delete(`/api/experts/${expertId}/closed-dates/${closedDateId}`);
   return res.data;
 };
 
 export const deleteClosedDateByDate = async (targetDate: string) => {
-  const res = await api.delete('/api/task-experts/me/closed-dates/by-date', {
+  const expertId = await _getMyExpertId();
+  const res = await api.delete(`/api/experts/${expertId}/closed-dates/by-date`, {
     params: { target_date: targetDate }
   });
   return res.data;
 };
 
+// 公开浏览（买家侧）— 保留旧路由
 export const getTaskExpertServices = async (expertId: string, status?: string) => {
   const params = status ? { status } : {};
   const res = await api.get(`/api/task-experts/${expertId}/services`, { params });
@@ -1565,25 +1646,25 @@ export const getTaskExpertServiceDetail = async (serviceId: number) => {
   return res.data;
 };
 
-// 获取服务时间段列表（公开接口）
+// 获取服务时间段列表（公开接口，已迁移到 /api/services/{id}/time-slots，新版含关门日过滤 + user_has_applied）
 export const getServiceTimeSlotsPublic = async (serviceId: number, params?: {
   start_date?: string;
   end_date?: string;
 }) => {
-  const res = await api.get(`/api/task-experts/services/${serviceId}/time-slots`, { params });
+  const res = await api.get(`/api/services/${serviceId}/time-slots`, { params });
   return res.data;
 };
 
-// 服务申请相关
+// 服务申请相关（已迁移到 /api/services/{id}/apply）
 export const applyForService = async (serviceId: number, applicationData: {
   application_message?: string;
   negotiated_price?: number;
   currency?: string;
-  deadline?: string;  // ISO 格式的日期时间字符串
-  is_flexible?: number;  // 1=灵活，无截至日期；0=有截至日期
-  time_slot_id?: number;  // 选择的时间段ID
+  deadline?: string;
+  is_flexible?: number;
+  time_slot_id?: number;
 }) => {
-  const res = await api.post(`/api/task-experts/services/${serviceId}/apply`, applicationData);
+  const res = await api.post(`/api/services/${serviceId}/apply`, applicationData);
   return res.data;
 };
 
@@ -1602,39 +1683,46 @@ export const cancelServiceApplication = async (applicationId: number) => {
   return res.data;
 };
 
-// 任务达人申请管理
+// 达人收到的申请列表
 export const getMyTaskExpertApplications = async (params?: { status?: string; service_id?: number; limit?: number; offset?: number }) => {
-  const res = await api.get('/api/task-experts/me/applications', { params });
+  const expertId = await _getMyExpertId();
+  const res = await api.get(`/api/experts/${expertId}/applications`, { params });
   return res.data;
 };
 
-
+// 协商/批准/拒绝（新路由不再有 /api/task-experts 前缀）
 export const counterOfferServiceApplication = async (applicationId: number, counterData: {
   counter_price: number;
   message?: string;
 }) => {
-  const res = await api.post(`/api/task-experts/applications/${applicationId}/counter-offer`, counterData);
+  const res = await api.post(`/api/applications/${applicationId}/counter-offer`, counterData);
   return res.data;
 };
 
 export const approveServiceApplication = async (applicationId: number) => {
-  const res = await api.post(`/api/task-experts/applications/${applicationId}/approve`);
+  const res = await api.post(`/api/applications/${applicationId}/approve`);
   return res.data;
 };
 
 export const rejectServiceApplication = async (applicationId: number, rejectReason?: string) => {
-  const res = await api.post(`/api/task-experts/applications/${applicationId}/reject`, { reject_reason: rejectReason });
+  const res = await api.post(`/api/applications/${applicationId}/reject`, { reject_reason: rejectReason });
   return res.data;
 };
 
-// 任务达人信息修改请求
+// 团队资料修改请求
 export const submitProfileUpdateRequest = async (data: { expert_name?: string; bio?: string; avatar?: string }) => {
-  const res = await api.post('/api/task-experts/me/profile-update-request', data);
+  const expertId = await _getMyExpertId();
+  const res = await api.post(`/api/experts/${expertId}/profile-update-request`, {
+    new_name: data.expert_name,
+    new_bio: data.bio,
+    new_avatar: data.avatar,
+  });
   return res.data;
 };
 
 export const getMyProfileUpdateRequest = async () => {
-  const res = await api.get('/api/task-experts/me/profile-update-request');
+  const expertId = await _getMyExpertId();
+  const res = await api.get(`/api/experts/${expertId}/profile-update-request`);
   return res.data;
 };
 

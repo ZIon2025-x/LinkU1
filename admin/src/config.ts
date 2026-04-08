@@ -38,10 +38,10 @@ export const API_ENDPOINTS = {
   // 客服管理
   CUSTOMER_SERVICES: '/api/admin/customer-services',
   
-  // 任务达人
-  TASK_EXPERTS: '/api/task-experts/admin',
-  EXPERT_APPLICATIONS: '/api/task-experts/admin/applications',
-  PROFILE_UPDATE_REQUESTS: '/api/task-experts/admin/profile-update-requests',
+  // 达人团队（管理员）— 实际调用见 admin/src/api.ts，使用 /api/admin/experts/* 与 /api/admin/task-expert*
+  TASK_EXPERTS: '/api/admin/experts',
+  EXPERT_APPLICATIONS: '/api/admin/experts/applications',
+  PROFILE_UPDATE_REQUESTS: '/api/admin/experts/profile-update-requests',
   
   // 论坛管理
   FORUM_CATEGORIES: '/api/forum/categories',

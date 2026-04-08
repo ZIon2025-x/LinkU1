@@ -409,6 +409,8 @@ enum APIEndpoints {
         static let myProfile = "/api/task-experts/me"
         static let myServices = "/api/task-experts/me/services"
         static let myApplications = "/api/task-experts/me/applications"
+        // ⚠️ DEPRECATED 2026-04-08: 后端 /api/task-experts/me/* 端点已删除（2026-04 重构）。
+        // 此 iOS app 是 legacy（参见 CLAUDE.md），不再维护。新模型见 /api/experts/{expertId}/*。
         static func myServiceTimeSlots(_ serviceId: Int) -> String {
             "/api/task-experts/me/services/\(serviceId)/time-slots"
         }
