@@ -201,6 +201,7 @@ class Task(Base):
     task_type = Column(String(50), nullable=False)
     poster_id = Column(String(8), ForeignKey("users.id", ondelete="RESTRICT"))  # 不能删除有任务的用户
     taker_id = Column(String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)  # 删除用户时设为NULL
+    taker_expert_id = Column(String(8), ForeignKey("experts.id", ondelete="RESTRICT"), nullable=True)  # 当任务由达人团队接单时填充
     status = Column(String(20), default="open")
     task_level = Column(String(20), default="normal")  # normal, vip, super, expert（达人任务）
     created_at = Column(DateTime(timezone=True), default=get_utc_time)
@@ -213,6 +214,7 @@ class Task(Base):
     is_paid = Column(Integer, default=0)  # 1=paid, 0=not paid
     payment_intent_id = Column(String(255), nullable=True)  # Stripe Payment Intent ID，用于关联支付记录
     payment_expires_at = Column(DateTime(timezone=True), nullable=True)  # 支付过期时间（待支付状态的任务）
+    payment_completed_at = Column(DateTime(timezone=True), nullable=True)  # 支付完成时间
     escrow_amount = Column(DECIMAL(12, 2), default=0.00)  # 托管金额（任务金额 - 平台服务费）
     is_confirmed = Column(Integer, default=0)  # 1=confirmed, 0=not
     paid_to_user_id = Column(String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)  # 删除用户时设为NULL
@@ -2158,8 +2160,11 @@ class Activity(Base):
     title_en = Column(String(200), nullable=True)  # 英文标题，首次翻译后写入
     description_zh = Column(Text, nullable=True)  # 中文描述，首次翻译后写入
     description_en = Column(Text, nullable=True)  # 英文描述，首次翻译后写入
-    expert_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    expert_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)  # [legacy] 团队活动时填 owner.user_id 作为代表;新代码用 owner_type/owner_id
     expert_service_id = Column(Integer, ForeignKey("task_expert_services.id", ondelete="RESTRICT"), nullable=True)
+    # 多态归属（user 或 expert team）；CHECK 约束在 SQL 迁移中
+    owner_type = Column(String(20), nullable=False, server_default='user')
+    owner_id = Column(String(8), nullable=False)
     location = Column(String(255), nullable=False)
     task_type = Column(String(50), nullable=False)
     # 价格相关
@@ -3252,8 +3257,14 @@ class PaymentTransfer(Base):
     id = Column(BigInteger, primary_key=True, index=True)
     task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
     taker_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)  # 任务接受人ID
+    taker_expert_id = Column(String(8), ForeignKey("experts.id", ondelete="RESTRICT"), nullable=True)  # 达人团队接单时填充
     poster_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)  # 任务发布者ID
     transfer_id = Column(String(255), nullable=True)  # Stripe Transfer ID
+    idempotency_key = Column(String(64), nullable=False, unique=True)  # Stripe 转账幂等键
+    stripe_charge_id = Column(String(255), nullable=True)  # 关联的 Stripe Charge ID
+    stripe_reversal_id = Column(String(255), nullable=True)  # Stripe Reversal ID（退款时填充）
+    reversed_at = Column(DateTime(timezone=True), nullable=True)  # 转账撤销时间
+    reversed_reason = Column(Text, nullable=True)  # 转账撤销原因
     amount = Column(DECIMAL(12, 2), nullable=False)  # 转账金额
     currency = Column(String(3), default="GBP")
     status = Column(String(20), default="pending")  # pending, succeeded, failed, retrying

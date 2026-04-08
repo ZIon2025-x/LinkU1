@@ -264,7 +264,21 @@ async def approve_application(
     db: AsyncSession = Depends(get_async_db_dependency),
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
 ):
-    """达人批准申请（Owner/Admin）"""
+    """达人批准申请（Owner/Admin）。
+
+    对于团队服务申请 (`new_expert_id` 非空):
+      - 调用 resolve_task_taker_from_service 解析 (taker_id, taker_expert_id)
+      - 创建 Task (status='pending_payment')
+      - 创建 Stripe PaymentIntent (客户后续支付时使用 client_secret)
+      - 关联 application.task_id
+      - 通知申请人
+
+    对于历史个人服务路径 (`service_owner_id` 等于 current_user)：
+      - 仅更新 status='approved'。Task 创建走 user_service_application_routes
+        的 owner-approve 端点，不在此处重复。
+
+    spec §4.2 (修复 plan v3 在 LEGACY 路径上 wire helper 后留下的空洞)。
+    """
     app_result = await db.execute(
         select(models.ServiceApplication).where(models.ServiceApplication.id == application_id)
     )
@@ -278,11 +292,236 @@ async def approve_application(
     elif application.service_owner_id != current_user.id:
         raise HTTPException(status_code=403, detail="无权操作")
 
+    # 幂等性：已经 approved 且关联了 task → 返回现状，不重复创建
+    if application.status == "approved" and application.task_id:
+        existing = await db.get(models.Task, application.task_id)
+        return {
+            "message": "任务已创建",
+            "application_id": application_id,
+            "task_id": application.task_id,
+            "task_status": getattr(existing, "status", None) if existing else None,
+            "task": existing,
+        }
+
+    # 团队服务路径：创建 Task + PaymentIntent
+    if application.new_expert_id:
+        return await _approve_team_service_application(
+            db=db,
+            request=request,
+            current_user=current_user,
+            application=application,
+        )
+
+    # 历史个人服务路径：仅更新状态（Task 创建在 user_service_application_routes）
     application.status = "approved"
     application.approved_at = get_utc_time()
     application.updated_at = get_utc_time()
     await db.commit()
     return {"status": "approved"}
+
+
+async def _approve_team_service_application(
+    *,
+    db: AsyncSession,
+    request: Request,
+    current_user: "models.User",
+    application: "models.ServiceApplication",
+) -> dict:
+    """Create Task + PaymentIntent for a team service application approval.
+
+    Splits the heavy lifting out of approve_application so the request handler
+    stays readable. All preconditions (auth, idempotency) have already been
+    checked by the caller.
+
+    spec §4.2 — team service Task creation site (filling the gap left by the
+    plan v3 reverts).
+    """
+    from datetime import timedelta
+    from app.services.expert_task_resolver import resolve_task_taker_from_service
+
+    # 1. 状态校验：仅允许从 pending / price_agreed 进入 approved
+    if application.status not in ("pending", "price_agreed"):
+        raise HTTPException(status_code=409, detail="当前状态不允许批准")
+
+    # 2. 加载服务
+    service = await db.get(models.TaskExpertService, application.service_id)
+    if not service:
+        raise HTTPException(status_code=404, detail="服务不存在")
+    if service.status != "active":
+        raise HTTPException(status_code=400, detail="服务未上架，无法创建任务")
+
+    # 3. 解析团队 taker（同时校验 Stripe Connect + GBP 货币）
+    taker_id_value, taker_expert_id_value = await resolve_task_taker_from_service(db, service)
+
+    # 4. 加载 expert 以拿到 stripe_account_id（resolver 已校验过 onboarding）
+    expert = await db.get(Expert, taker_expert_id_value)
+    if not expert or not expert.stripe_account_id:
+        raise HTTPException(status_code=500, detail={
+            "error_code": "team_no_stripe_account",
+            "message": "Team has no Stripe Connect account configured",
+        })
+
+    # 5. 决定最终价格（与 user_service_application_routes 保持一致的回退逻辑）
+    if application.status == "price_agreed" and application.expert_counter_price is not None:
+        price = float(application.expert_counter_price)
+    elif application.final_price is not None:
+        price = float(application.final_price)
+    elif application.negotiated_price is not None:
+        price = float(application.negotiated_price)
+    else:
+        price = float(service.base_price)
+
+    # 6. 决定截止日期
+    if application.is_flexible == 1:
+        task_deadline = None
+    elif application.deadline:
+        task_deadline = application.deadline
+    else:
+        task_deadline = get_utc_time() + timedelta(days=7)
+
+    # 7. 加载申请人（用于通知 + PaymentIntent metadata）
+    applicant_user = await db.get(models.User, application.applicant_id)
+    if not applicant_user:
+        raise HTTPException(status_code=404, detail="申请用户不存在")
+
+    # 8. 处理图片
+    import json as _json
+    images_json = None
+    if service.images:
+        if isinstance(service.images, list):
+            images_json = _json.dumps(service.images) if service.images else None
+        elif isinstance(service.images, str):
+            images_json = service.images
+
+    # 9. 位置归一化
+    location = service.location or "线上"
+    if isinstance(location, str) and location.lower() in ("online", "线上"):
+        location = "线上"
+
+    # 10. 创建 Task —— 关键:taker_expert_id 必须填团队 id
+    new_task = models.Task(
+        title=service.service_name,
+        description=service.description or f"团队服务: {service.service_name}",
+        deadline=task_deadline,
+        is_flexible=application.is_flexible or 0,
+        reward=price,
+        base_reward=service.base_price,
+        agreed_reward=price,
+        currency=application.currency or service.currency or "GBP",
+        location=location,
+        task_type=service.category or "其他",
+        task_level="expert",
+        poster_id=application.applicant_id,
+        taker_id=taker_id_value,                  # 团队 owner 的 user_id
+        taker_expert_id=taker_expert_id_value,    # 🎯 团队 id —— 核心修复
+        expert_service_id=service.id,
+        status="pending_payment",
+        is_paid=0,
+        payment_expires_at=get_utc_time() + timedelta(minutes=30),
+        images=images_json,
+        accepted_at=get_utc_time(),
+        task_source="expert_service",
+    )
+    db.add(new_task)
+    await db.flush()  # allocate new_task.id
+
+    # 11. 创建 PaymentIntent（destination 走平台账户，后续 payment_transfer_service
+    #     会按 task.taker_expert_id 把钱转到团队的 Stripe Connect 账户）
+    import stripe
+    from app.utils.fee_calculator import calculate_application_fee_pence
+    task_amount_pence = int(round(price * 100))
+    application_fee_pence = calculate_application_fee_pence(
+        task_amount_pence, task_source="expert_service", task_type=None
+    )
+
+    try:
+        currency_lower = (getattr(new_task, "currency", None) or "GBP").lower()
+        try:
+            from app.routers import _payment_method_types_for_currency
+            pm_types = _payment_method_types_for_currency(currency_lower)
+        except Exception:
+            pm_types = ["card"]
+        try:
+            from app.secure_auth import get_wechat_pay_payment_method_options
+            payment_method_options = (
+                get_wechat_pay_payment_method_options(request) if "wechat_pay" in pm_types else {}
+            )
+        except Exception:
+            payment_method_options = {}
+
+        create_pi_kw = {
+            "amount": task_amount_pence,
+            "currency": currency_lower,
+            "payment_method_types": pm_types,
+            "description": f"团队服务 #{new_task.id}: {service.service_name[:50]}",
+            "metadata": {
+                "task_id": str(new_task.id),
+                "task_title": (service.service_name or "")[:200],
+                "poster_id": str(application.applicant_id),
+                "poster_name": getattr(applicant_user, "name", "") or f"User {application.applicant_id}",
+                "taker_id": str(taker_id_value),
+                "taker_expert_id": str(taker_expert_id_value),
+                "team_name": getattr(expert, "name", "") or "",
+                "team_stripe_account_id": expert.stripe_account_id,
+                "application_fee": str(application_fee_pence),
+                "task_amount": str(task_amount_pence),
+                "task_amount_display": f"{price:.2f}",
+                "platform": "Link\u00b2Ur",
+                "payment_type": "team_service_application_approve",
+                "service_application_id": str(application.id),
+                "service_id": str(service.id),
+            },
+        }
+        if payment_method_options:
+            create_pi_kw["payment_method_options"] = payment_method_options
+
+        payment_intent = stripe.PaymentIntent.create(**create_pi_kw)
+        new_task.payment_intent_id = payment_intent.id
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"创建团队服务 PaymentIntent 失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="创建支付失败，请稍后重试",
+        )
+
+    # 12. 更新 application
+    application.status = "approved"
+    application.final_price = price
+    application.task_id = new_task.id
+    application.approved_at = get_utc_time()
+    application.updated_at = get_utc_time()
+
+    await db.commit()
+
+    # 13. 通知申请人（best-effort，失败不阻塞主流程）
+    try:
+        from app.task_notifications import send_service_application_approved_notification
+        await send_service_application_approved_notification(
+            db=db,
+            applicant_id=application.applicant_id,
+            expert_id=taker_id_value,  # 团队 owner 的 user_id（兼容现有签名）
+            task_id=new_task.id,
+            service_name=service.service_name,
+        )
+    except Exception as e:
+        logger.warning(f"团队服务批准通知发送失败: {e}")
+
+    return {
+        "message": "申请已同意，请等待申请者完成支付",
+        "application_id": application.id,
+        "task_id": new_task.id,
+        "task_status": "pending_payment",
+        "payment_intent_id": payment_intent.id,
+        "client_secret": payment_intent.client_secret,
+        "amount": payment_intent.amount,
+        "amount_display": f"{payment_intent.amount / 100:.2f}",
+        "currency": (payment_intent.currency or "gbp").upper(),
+        "taker_expert_id": taker_expert_id_value,
+        "task": new_task,
+    }
 
 
 @consultation_router.post("/api/applications/{application_id}/reject")

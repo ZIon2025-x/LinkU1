@@ -1979,11 +1979,14 @@ def auto_transfer_expired_tasks(db: Session):
                         poster_id=task.poster_id,
                         amount=auto_transfer_amount,
                         currency=task.currency or "GBP",
+                        taker_expert_id=task.taker_expert_id,  # spec §3.2 v2
+                        idempotency_key=f"task_{task.id}_transfer",
                         metadata={
                             "transfer_source": "auto_confirm_expired",
                             "original_escrow": str(escrow),
                             "total_previously_transferred": str(total_transferred),
                             "confirmation_deadline": str(task.confirmation_deadline),
+                            "taker_expert_id": str(task.taker_expert_id) if task.taker_expert_id else "",
                         },
                         commit=False  # 在 SAVEPOINT 内使用 flush，避免破坏事务隔离
                     )
@@ -2000,23 +2003,39 @@ def auto_transfer_expired_tasks(db: Session):
                 taker = takers_map.get(task.taker_id)
 
                 if taker:
-                    taker_stripe_id = getattr(taker, "stripe_account_id", None)
                     payout_currency = (task.currency or "GBP").upper()
-                    payout_idempotency_key = f"earning:task:{task.id}:user:{taker.id}"
+                    # spec §1.3 — unified idempotency key matches create_transfer_record's DB row
+                    payout_idempotency_key = f"task_{task.id}_transfer"
 
-                    if taker_stripe_id:
-                        # 有 Stripe Connect → 尝试直接转账，失败则回退到钱包
+                    # Team-aware destination: spec §3.2 v2
+                    from app.services.expert_task_resolver import resolve_payout_destination
+                    is_team_task = bool(task.taker_expert_id)
+                    try:
+                        destination_stripe_id = resolve_payout_destination(db, task)
+                    except Exception as resolve_err:
+                        # 团队任务 Stripe 状态异常 → 回滚 SAVEPOINT（含 transfer_record），
+                        # 下次运行会重试（spec §3.2 v2 — 团队任务不回退钱包）
+                        logger.error(
+                            f"任务 {task.id} 团队 Stripe 状态异常，跳过自动转账: {resolve_err}"
+                        )
+                        savepoint.rollback()
+                        stats["skipped"] += 1
+                        continue
+
+                    if destination_stripe_id:
+                        # 有 Stripe Connect → 尝试直接转账
                         import stripe
                         amount_minor = int(auto_transfer_amount * 100)
                         try:
                             stripe_xfer = stripe.Transfer.create(
                                 amount=amount_minor,
                                 currency=payout_currency.lower(),
-                                destination=taker_stripe_id,
+                                destination=destination_stripe_id,
                                 description=f"Task #{task.id} auto payout",
                                 metadata={
                                     "task_id": str(task.id),
                                     "taker_id": str(taker.id),
+                                    "taker_expert_id": str(task.taker_expert_id) if task.taker_expert_id else "",
                                     "transfer_record_id": str(transfer_record.id),
                                     "source": "auto_confirm_expired",
                                 },
@@ -2025,10 +2044,20 @@ def auto_transfer_expired_tasks(db: Session):
                             transfer_record.transfer_id = stripe_xfer.id
                             logger.info(
                                 f"✅ 任务 {task.id} 自动 Stripe Transfer：£{auto_transfer_amount} → "
-                                f"{taker_stripe_id} (transfer={stripe_xfer.id})"
+                                f"{'团队' if is_team_task else '用户'} "
+                                f"{destination_stripe_id} (transfer={stripe_xfer.id})"
                             )
                         except stripe.error.StripeError as stripe_err:
-                            # Stripe 明确拒绝 → 回退到钱包入账（不会双重支付）
+                            if is_team_task:
+                                # 团队任务不回退钱包 — 回滚 SAVEPOINT，下次运行会重试
+                                # (spec §3.2 v2 — 资金只能流向团队 Stripe)
+                                logger.error(
+                                    f"任务 {task.id} 团队 Stripe Transfer 失败，不回退钱包: {stripe_err}"
+                                )
+                                savepoint.rollback()
+                                stats["skipped"] += 1
+                                continue
+                            # 个人任务：Stripe 明确拒绝 → 回退到钱包入账（不会双重支付）
                             logger.warning(
                                 f"任务 {task.id} Stripe Transfer 被拒绝，回退到钱包入账: {stripe_err}"
                             )
@@ -2052,7 +2081,13 @@ def auto_transfer_expired_tasks(db: Session):
                             )
                             raise
                     else:
-                        # 无 Stripe Connect → 入本地钱包
+                        if is_team_task:
+                            # 防御性：团队任务无 Stripe 目的地 → 回滚，下次重试
+                            logger.error(f"任务 {task.id} 团队任务无 Stripe 目的地")
+                            savepoint.rollback()
+                            stats["skipped"] += 1
+                            continue
+                        # 个人任务无 Stripe Connect → 入本地钱包
                         from app.wallet_service import credit_wallet
                         credit_wallet(
                             db,

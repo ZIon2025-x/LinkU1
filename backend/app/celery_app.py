@@ -293,6 +293,12 @@ celery_app.conf.beat_schedule = {
         'schedule': crontab(hour=2, minute=30),
     },
 
+    # 团队任务 Stripe Transfer 90天时效预警 - 每天执行一次 (spec §3.4a)
+    'warn-long-running-team-tasks': {
+        'task': 'app.celery_tasks.warn_long_running_team_tasks_task',
+        'schedule': 86400.0,  # 每天 (24 * 3600 秒)
+    },
+
     # 🔒 钱包 pending 交易超时清理 - 每15分钟执行
     # 防止因 PI 创建失败或用户切换支付方式导致 pending wallet tx 永远悬挂
     'cleanup-stale-pending-wallet-txs': {

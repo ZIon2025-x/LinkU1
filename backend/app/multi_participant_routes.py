@@ -550,6 +550,15 @@ def apply_to_activity(
         task_deadline = None  # 时间段服务不需要截止日期
         task_is_flexible = 0  # 时间段服务不是灵活模式
     
+    # 解析任务接单方（spec §4.3a）
+    # - 个人活动 (owner_type='user')：返回 (activity.expert_id, None)
+    # - 团队活动 (owner_type='expert')：返回 (team_owner.user_id, expert.id)
+    #   并且会校验团队 Stripe + GBP，未通过抛 409
+    from app.services.expert_task_resolver import resolve_task_taker_from_activity_sync
+    taker_id_value, taker_expert_id_value = resolve_task_taker_from_activity_sync(
+        db, db_activity
+    )
+
     # Activity.images 为 JSONB（Python list），Task.images 为 Text（JSON 字符串），必须序列化
     images_for_task = None
     if db_activity.images is not None:
@@ -576,7 +585,8 @@ def apply_to_activity(
         # 对于多人任务，poster_id 应该为 None，因为参与者通过 TaskParticipant 管理
         # 对于单人任务，poster_id 是申请者（付钱的）
         poster_id=None if is_multi_participant else current_user.id,
-        taker_id=db_activity.expert_id,  # 达人作为接收者（收钱的）
+        taker_id=taker_id_value,  # 达人作为接收者（收钱的）；团队活动时为 owner.user_id
+        taker_expert_id=taker_expert_id_value,  # 团队活动时为 expert.id；个人活动为 None
         status=initial_status,
         task_level="expert",
         is_public=1 if db_activity.is_public else 0,

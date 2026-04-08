@@ -1,7 +1,7 @@
 # 达人团队作为任务接单方 —— 设计文档
 
 **日期:** 2026-04-06(初版),2026-04-07(v2 修订)
-**状态:** Draft v2(基于 Phase 0 discovery 重大修订,等待实施 plan v2)
+**状态:** Implemented (2026-04-07) on branch `feat/expert-team-as-taker`
 **作者:** Brainstorm session with Claude
 **取代:** `docs/superpowers/plans/2026-04-04-expert-team-phase5-chat-multiuser.md`(该 plan 在本 spec 确定方向后废弃,多人聊天问题将在团队接单模型落地后重新评估)
 
@@ -1117,6 +1117,7 @@ Flutter 侧只需要适配:
 | `2026-04-04-expert-team-phase5-chat-multiuser.md` | **本 spec 取代之**。该 plan 基于"聊天层扩展"假设,但团队经济主体缺失这一更根本的问题未解决。本 spec 落地后,多人聊天问题会自然消解(团队成员天然属于团队,聊天可见性可以直接查 `expert_members`) |
 | `2026-04-05-expert-dashboard-rewrite.md` | **并行且互补**。本 spec 定义后端查询端点契约(§5),dashboard rewrite plan 定义 Flutter 侧的 Bloc + View 消费方式。两个 plan 可以并行开发,在前端 Bloc 调用新端点时对接 |
 | `2026-04-01-group-chat-design.md` | **无直接关系**。群聊系统是独立的 Phase 1 能力,不涉及经济主体 |
+| `2026-04-07-expert-team-as-task-taker.md` | **本 spec 的实施 plan**(已完成) |
 
 ---
 

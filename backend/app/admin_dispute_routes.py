@@ -352,6 +352,8 @@ def resolve_task_dispute(
                             poster_id=task.poster_id,
                             amount=transfer_amount,
                             currency=task.currency or "GBP",
+                            taker_expert_id=task.taker_expert_id,
+                            idempotency_key=f"task_{task.id}_dispute_{dispute_id}",
                             metadata={
                                 "transfer_source": "dispute_resolution",
                                 "dispute_id": str(dispute_id),

@@ -861,6 +861,22 @@ async def transfer_ownership(
     owner_member.role = "admin"
     owner_member.updated_at = now
 
+    # Phase 9: sync in-flight team task taker_id to new owner (spec §6.5)
+    # Tasks still active (not yet completed) should reflect the current team
+    # owner so notifications, "my tasks" lists, and UI all point to the right
+    # person. Already-completed tasks keep their original taker_id (historical
+    # snapshot).
+    await db.execute(
+        update(models.Task)
+        .where(
+            models.Task.taker_expert_id == expert_id,
+            models.Task.status.in_(
+                ["pending", "pending_payment", "in_progress", "disputed"]
+            ),
+        )
+        .values(taker_id=body.new_owner_id)
+    )
+
     await db.commit()
     return {"detail": "所有权已转让"}
 
@@ -1254,9 +1270,9 @@ async def get_expert_stripe_status(
     db: AsyncSession = Depends(get_async_db_dependency),
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
 ):
-    """获取达人团队 Stripe Connect 状态（Owner/Admin）"""
+    """获取达人团队 Stripe Connect 状态（Owner/Admin/Member）"""
     expert = await _get_expert_or_404(db, expert_id)
-    await _get_member_or_403(db, expert_id, current_user.id, required_roles=["owner", "admin"])
+    await _get_member_or_403(db, expert_id, current_user.id, required_roles=["owner", "admin", "member"])
 
     if not expert.stripe_account_id:
         return {

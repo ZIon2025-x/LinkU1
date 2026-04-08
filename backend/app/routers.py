@@ -4297,31 +4297,47 @@ def confirm_task_completion(
 
             idempotency_key = f"earning:task:{task.id}:user:{task.taker_id}"
 
-            # 检查接单者是否有 Stripe Connect 账户（taker 已在函数开头查询）
-            taker_stripe_id = getattr(taker, "stripe_account_id", None) if taker else None
+            # Team-aware destination: 团队任务 → experts.stripe_account_id,
+            # 个人任务 → taker.stripe_account_id (保持原行为)
+            # spec §3.2 (v2 — payout site team-awareness)
+            from app.services.expert_task_resolver import resolve_payout_destination
+            is_team_task = bool(task.taker_expert_id)
+            destination_stripe_id = resolve_payout_destination(db, task)
 
-            if taker_stripe_id:
-                # 有 Stripe Connect 账户 → 尝试直接转账，失败则回退到钱包
+            if destination_stripe_id:
+                # 有 Stripe Connect 账户 → 尝试直接转账
                 amount_minor = int(net_amount * 100)  # 转为最小货币单位（便士/分）
                 try:
                     transfer = stripe.Transfer.create(
                         amount=amount_minor,
                         currency=currency.lower(),
-                        destination=taker_stripe_id,
+                        destination=destination_stripe_id,
                         description=f"Task #{task.id} payout",
                         metadata={
                             "task_id": str(task.id),
                             "taker_id": str(task.taker_id),
+                            "taker_expert_id": str(task.taker_expert_id) if task.taker_expert_id else "",
                             "source": source,
                         },
                         idempotency_key=idempotency_key,
                     )
                     logger.info(
-                        f"✅ 任务 {task_id} 奖励 £{net_amount:.2f} 已直接转账至用户 {task.taker_id} "
-                        f"Stripe 账户 {taker_stripe_id} (transfer={transfer.id})"
+                        f"✅ 任务 {task_id} 奖励 £{net_amount:.2f} 已直接转账至 "
+                        f"{'团队' if is_team_task else '用户'} "
+                        f"Stripe 账户 {destination_stripe_id} (transfer={transfer.id})"
                     )
                 except stripe.error.StripeError as stripe_err:
-                    # Stripe 明确拒绝 → 回退到钱包入账（不会双重支付）
+                    if is_team_task:
+                        # 团队任务：不回退钱包，资金只能流向团队 Stripe
+                        logger.error(
+                            f"任务 {task_id} 团队 Stripe Transfer 失败，不回退钱包: {stripe_err}"
+                        )
+                        payout_savepoint.rollback()
+                        raise HTTPException(status_code=500, detail={
+                            "error_code": "team_payout_failed",
+                            "message": f"Team Stripe transfer failed: {stripe_err}",
+                        })
+                    # 个人任务：Stripe 明确拒绝 → 回退到钱包入账（不会双重支付）
                     logger.warning(
                         f"任务 {task_id} Stripe Transfer 被拒绝，回退到钱包入账: {stripe_err}"
                     )
@@ -4347,7 +4363,18 @@ def confirm_task_completion(
                     )
                     raise
             else:
-                # 无 Stripe Connect 账户 → 入本地钱包（用户后续可绑定 Stripe 后提现）
+                if is_team_task:
+                    # 团队任务不应走到此分支（resolve_payout_destination 会抛 HTTPException）
+                    # 防御性编程：若到这里，说明 helper 返回了 None 但没抛异常，视为错误
+                    logger.error(
+                        f"任务 {task_id} 团队任务无 Stripe 目的地，不回退钱包"
+                    )
+                    payout_savepoint.rollback()
+                    raise HTTPException(status_code=500, detail={
+                        "error_code": "team_payout_failed",
+                        "message": "Team task has no Stripe destination",
+                    })
+                # 个人任务无 Stripe Connect 账户 → 入本地钱包（用户后续可绑定 Stripe 后提现）
                 from app.wallet_service import credit_wallet
                 credit_wallet(
                     db=db,
@@ -4373,10 +4400,14 @@ def confirm_task_completion(
             task.is_confirmed = 1
 
             payout_savepoint.commit()
+        except HTTPException:
+            # 团队任务 payout 失败 → 抛给客户端，不静默吞掉 (spec §3.2 v2)
+            # savepoint 已在内部 rollback
+            raise
         except Exception as e:
             payout_savepoint.rollback()
             logger.error(f"任务报酬支付失败 for task {task_id}: {e}", exc_info=True)
-            # 支付失败不影响任务完成确认流程
+            # 支付失败不影响任务完成确认流程（仅个人任务路径）
 
     # 提交所有 savepoint 内的变更（积分奖励、活动奖励、钱包入账）
     try:
@@ -6487,6 +6518,145 @@ def create_payment(
     return {"checkout_url": session.url}
 
 
+def _handle_dispute_team_reversal(db, task_id: int) -> None:
+    """Phase 7: 达人团队任务争议时自动反转 Stripe Transfer。
+
+    当客户对达人团队任务发起 Stripe 争议时，资金已经通过 Transfer
+    划拨到团队的 Connect 账户。此函数调用 stripe.Transfer.create_reversal
+    将资金拉回平台账户（争议金额将从该处扣除）。
+
+    个人任务（``taker_expert_id=None``）不在此处理：沿用旧的冻结 +
+    credit_wallet 退款流程。
+
+    spec §3.5 + §1.3（PaymentTransfer 审计字段）
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+
+    # 查找该任务对应的 PaymentTransfer 记录
+    pt = db.query(models.PaymentTransfer).filter(
+        models.PaymentTransfer.task_id == task_id
+    ).first()
+
+    if not pt:
+        # 没有转账记录 —— 说明尚未结算，争议在结算前触发，无需反转
+        logger.info(
+            f"Dispute on task {task_id}: no PaymentTransfer record yet, "
+            f"no reversal needed"
+        )
+        return
+
+    if not pt.taker_expert_id:
+        # 个人任务，由原冻结流程处理，此处早退
+        return
+
+    if pt.status != "succeeded":
+        # 已反转 / 从未成功 / 仍在重试 —— 幂等保护
+        logger.info(
+            f"Dispute on task {task_id}: PaymentTransfer status is {pt.status}, "
+            f"no reversal action (idempotent)"
+        )
+        return
+
+    if not pt.transfer_id:
+        logger.warning(
+            f"Dispute on task {task_id}: PaymentTransfer marked succeeded "
+            f"but has no transfer_id"
+        )
+        return
+
+    try:
+        reversal = stripe.Transfer.create_reversal(
+            pt.transfer_id,
+            amount=int(float(pt.amount) * 100),  # decimal 英镑 -> 便士
+            metadata={
+                "task_id": str(task_id),
+                "reason": "dispute",
+                "payment_transfer_id": str(pt.id),
+            },
+        )
+        # 填充审计字段（spec §1.3）
+        pt.stripe_reversal_id = reversal.id
+        pt.status = "reversed"
+        pt.reversed_at = datetime.utcnow()
+        pt.reversed_reason = "dispute"
+        db.commit()
+        logger.warning(
+            f"✅ 达人团队任务 {task_id} 因争议已反转 Stripe Transfer: "
+            f"reversal_id={reversal.id}"
+        )
+    except stripe.error.StripeError as e:
+        # 常见原因：团队 Stripe 余额不足。不更新 pt.status，保持 succeeded，
+        # 便于管理员介入手动处理。
+        logger.error(
+            f"❌ 反转达人团队争议任务 {task_id} 的转账失败: {e}",
+            exc_info=True,
+        )
+
+
+def _handle_account_updated(db, acct):
+    """Handle Stripe ``account.updated`` events for expert team Connect accounts.
+
+    Sync function (matches the webhook handler's sync session style). Keeps
+    ``experts.stripe_onboarding_complete`` aligned with Stripe's view of the
+    account, and freezes / unfreezes owned team services accordingly.
+
+    Args:
+        db: sync SQLAlchemy Session.
+        acct: Stripe account object (dict or ``stripe.Account``).
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+    from app import models
+    from app.models_expert import Expert
+
+    # Extract acct id + charges_enabled regardless of dict vs object form
+    if isinstance(acct, dict):
+        acct_id = acct.get("id")
+        charges_enabled = acct.get("charges_enabled")
+    else:
+        acct_id = getattr(acct, "id", None)
+        charges_enabled = getattr(acct, "charges_enabled", None)
+
+    if not acct_id:
+        logger.debug("[WEBHOOK] account.updated: missing account id, ignoring")
+        return
+
+    expert = db.query(Expert).filter(Expert.stripe_account_id == acct_id).first()
+    if expert is None:
+        logger.debug(
+            f"[WEBHOOK] account.updated: no expert team matches stripe_account_id={acct_id}, ignoring"
+        )
+        return
+
+    new_state = bool(charges_enabled)
+    if expert.stripe_onboarding_complete == new_state:
+        logger.info(
+            f"[WEBHOOK] account.updated: expert={expert.id} already in desired "
+            f"stripe_onboarding_complete={new_state}, no-op"
+        )
+        return
+
+    expert.stripe_onboarding_complete = new_state
+
+    if not new_state:
+        # Freeze any active team-owned services when charges are disabled
+        db.query(models.TaskExpertService).filter(
+            models.TaskExpertService.owner_type == 'expert',
+            models.TaskExpertService.owner_id == expert.id,
+            models.TaskExpertService.status == 'active',
+        ).update({"status": "inactive"}, synchronize_session=False)
+        logger.info(
+            f"[WEBHOOK] account.updated: expert={expert.id} charges_enabled=False, "
+            f"stripe_onboarding_complete=False, active team services suspended"
+        )
+    else:
+        logger.info(
+            f"[WEBHOOK] account.updated: expert={expert.id} charges_enabled=True, "
+            f"stripe_onboarding_complete=True"
+        )
+
+
 @router.post("/stripe/webhook")
 async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     import logging
@@ -7686,7 +7856,18 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 )
         except Exception as e:
             logger.error(f"charge.dispute.created 通知处理失败: {e}", exc_info=True)
-    
+
+        # Phase 7: 达人团队任务自动反转 Transfer
+        if task_id:
+            try:
+                _handle_dispute_team_reversal(db, task_id)
+            except Exception as e:
+                logger.error(
+                    f"_handle_dispute_team_reversal failed for task {task_id}: {e}",
+                    exc_info=True,
+                )
+                # 不让 webhook 失败 —— 冻结与通知已经完成
+
     elif event_type == "charge.dispute.updated":
         dispute = event_data
         charge_id = dispute.get("charge")
@@ -7747,7 +7928,16 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         charge_id = dispute.get("charge")
         task_id = int(dispute.get("metadata", {}).get("task_id", 0))
         logger.info(f"Dispute funds reinstated for charge {charge_id}, task {task_id}")
-    
+
+    # Connect 账户状态同步：专家团队 stripe_onboarding_complete + 服务冻结
+    elif event_type == "account.updated":
+        try:
+            _handle_account_updated(db, event_data)
+            db.commit()
+        except Exception as e:
+            logger.error(f"account.updated 处理失败: {e}", exc_info=True)
+            db.rollback()
+
     # 处理其他 charge 事件
     elif event_type == "charge.succeeded":
         charge = event_data
@@ -8231,34 +8421,56 @@ def confirm_task_complete(
     # 优先直接 Stripe Transfer（接单者有 Connect 账户时），否则入本地钱包
     try:
         # 确保 escrow_amount 正确（任务金额 - 平台服务费）
+        # I8: 使用 Decimal 保精度，避免浮点累加误差
         if task.escrow_amount <= 0:
-            task_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
+            task_amount_dec = Decimal(str(task.agreed_reward)) if task.agreed_reward is not None else (
+                Decimal(str(task.base_reward)) if task.base_reward is not None else Decimal('0')
+            )
             from app.utils.fee_calculator import calculate_application_fee
             task_source = getattr(task, "task_source", None)
             task_type = getattr(task, "task_type", None)
-            application_fee = calculate_application_fee(task_amount, task_source, task_type)
-            task.escrow_amount = max(0.0, task_amount - application_fee)
-            logger.info(f"重新计算 escrow_amount: 任务金额={task_amount}, 服务费={application_fee}, escrow={task.escrow_amount}")
+            # calculate_application_fee 返回 float — 用 str 中转以避免二进制浮点误差
+            application_fee_dec = Decimal(str(calculate_application_fee(float(task_amount_dec), task_source, task_type)))
+            task.escrow_amount = max(Decimal('0'), task_amount_dec - application_fee_dec)
+            logger.info(f"重新计算 escrow_amount: 任务金额={task_amount_dec}, 服务费={application_fee_dec}, escrow={task.escrow_amount}")
 
         escrow_amount = Decimal(str(task.escrow_amount))
         currency = (task.currency or "GBP").upper()
         payout_idempotency_key = f"earning:task:{task_id}:user:{taker.id}"
 
-        if taker.stripe_account_id:
-            # 有 Stripe Connect 账户 → 尝试直接转账，失败则回退到钱包
+        # Team-aware destination: 团队任务 → experts.stripe_account_id,
+        # 个人任务 → taker.stripe_account_id. spec §3.2 (v2)
+        from app.services.expert_task_resolver import resolve_payout_destination
+        is_team_task = bool(task.taker_expert_id)
+        destination_stripe_id = resolve_payout_destination(db, task)
+
+        if destination_stripe_id:
+            # 有 Stripe Connect 账户 → 尝试直接转账
             amount_minor = int(escrow_amount * 100)
             try:
                 stripe_transfer = stripe.Transfer.create(
                     amount=amount_minor,
                     currency=currency.lower(),
-                    destination=taker.stripe_account_id,
+                    destination=destination_stripe_id,
                     description=f"Task #{task_id} payout",
-                    metadata={"task_id": str(task_id), "taker_id": str(taker.id)},
+                    metadata={
+                        "task_id": str(task_id),
+                        "taker_id": str(taker.id),
+                        "taker_expert_id": str(task.taker_expert_id) if task.taker_expert_id else "",
+                    },
                     idempotency_key=payout_idempotency_key,
                 )
                 logger.info(f"✅ 直接 Stripe Transfer: task={task_id}, transfer={stripe_transfer.id}, amount=£{escrow_amount:.2f}")
                 payout_method = "stripe_transfer"
             except stripe.error.StripeError as stripe_err:
+                if is_team_task:
+                    # 团队任务不回退钱包
+                    logger.error(f"任务 {task_id} 团队 Stripe Transfer 失败: {stripe_err}")
+                    db.rollback()
+                    raise HTTPException(status_code=500, detail={
+                        "error_code": "team_payout_failed",
+                        "message": f"Team Stripe transfer failed: {stripe_err}",
+                    })
                 # Stripe 明确拒绝 → 回退到钱包
                 logger.warning(f"任务 {task_id} Stripe Transfer 被拒绝，回退到钱包入账: {stripe_err}")
                 from app.wallet_service import credit_wallet
@@ -8275,6 +8487,14 @@ def confirm_task_complete(
                 )
                 payout_method = "wallet_fallback"
         else:
+            if is_team_task:
+                # 防御性：团队任务必须走 Stripe，无 destination 视为错误
+                logger.error(f"任务 {task_id} 团队任务无 Stripe 目的地")
+                db.rollback()
+                raise HTTPException(status_code=500, detail={
+                    "error_code": "team_payout_failed",
+                    "message": "Team task has no Stripe destination",
+                })
             # 无 Stripe Connect 账户 → 入本地钱包
             from app.wallet_service import credit_wallet
             credit_wallet(
@@ -8305,6 +8525,9 @@ def confirm_task_complete(
             "currency": currency
         }
 
+    except HTTPException:
+        # 团队任务 payout 失败的结构化错误 → 原样抛出 (spec §3.2 v2)
+        raise
     except Exception as e:
         logger.error(f"Error confirming task {task_id}: {e}")
         db.rollback()

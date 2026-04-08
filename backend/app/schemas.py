@@ -501,6 +501,9 @@ class TaskOut(TaskBase):
     counter_offer_price: Optional[float] = None
     counter_offer_status: Optional[str] = None
     counter_offer_user_id: Optional[str] = None
+    # Phase 8: unified taker display info (replaces direct taker_id/taker_expert_id consumption on the client)
+    # spec §4.6 (U2 scheme). Team task: {type:'expert', entity_id, name, avatar}. Individual: {type:'user', ...}. Unclaimed: None.
+    taker_display: Optional[Dict[str, Any]] = None
 
     @field_validator('required_skills', mode='before')
     @classmethod

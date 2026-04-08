@@ -626,6 +626,9 @@ async def get_task_by_id(
         task_dict["poster"] = schemas.UserBrief.model_validate(task.poster).model_dump()
     if task.taker is not None:
         task_dict["taker"] = schemas.UserBrief.model_validate(task.taker).model_dump()
+    # Phase 8 (U2 scheme): unified taker_display info — team logo+name for team tasks, user info for individual tasks
+    from app.serializers.task_taker_display import build_taker_display
+    task_dict["taker_display"] = await build_taker_display(task, db)
     return task_dict
 
 
