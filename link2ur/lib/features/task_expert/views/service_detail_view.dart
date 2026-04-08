@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../data/repositories/package_purchase_repository.dart';
+import '../../../data/services/payment_service.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/auth_guard.dart';
@@ -2176,26 +2177,31 @@ class _PurchasePackageDialog extends StatelessWidget {
             final repo = context.read<PackagePurchaseRepository>();
             Navigator.of(context).pop();
             try {
+              // 1. 创建套餐订单 PaymentIntent
               final result = await repo.purchasePackage(serviceId);
               final clientSecret = result['client_secret'] as String?;
-              if (clientSecret == null) {
+              if (clientSecret == null || clientSecret.isEmpty) {
                 messengerSaved.showSnackBar(
                   const SnackBar(content: Text('套餐订单创建失败')),
                 );
                 return;
               }
-              // 跳转支付页 — 复用 Stripe checkout 流程
-              // (项目里 task 支付走 /payment/{taskId},套餐这里
-              //  暂用通用 client_secret 处理。生产用项目 PaymentRepository.)
-              messengerSaved.showSnackBar(
-                SnackBar(
-                  content: Text(
-                    '套餐订单已创建,请完成支付 (PI: ${result['payment_intent_id']})',
-                  ),
-                ),
+              // 2. 唤起 Stripe PaymentSheet 完成支付
+              //    复用项目通用支付组件 (与 task 申请支付走同一条路径)
+              final success = await PaymentService.instance.presentPaymentSheet(
+                clientSecret: clientSecret,
               );
-              // 跳到"我的套餐"等待支付完成 (webhook 会创建套餐)
-              routerSaved.go('/expert-team/my-packages');
+              if (success) {
+                messengerSaved.showSnackBar(
+                  const SnackBar(
+                    content: Text('支付成功!可在「我的套餐」中查看核销码'),
+                  ),
+                );
+                // 跳到"我的套餐",webhook 会同步创建 UserServicePackage
+                routerSaved.go('/my-packages');
+              } else {
+                // 用户取消支付,什么都不做(订单 PI 30 分钟后自动过期)
+              }
             } catch (e) {
               final cleaned = e.toString().replaceFirst('Exception: ', '');
               messengerSaved.showSnackBar(SnackBar(content: Text(cleaned)));
