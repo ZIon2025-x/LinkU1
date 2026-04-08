@@ -3201,7 +3201,12 @@ class ActivityOut(BaseModel):
     title_zh: Optional[str] = None
     description_en: Optional[str] = None
     description_zh: Optional[str] = None
-    expert_id: str
+    expert_id: str  # [legacy] 团队活动时填 owner.user_id 作为代表;新代码用 owner_type/owner_id
+    # 多态归属(spec §1.2 — migration 177):
+    #   owner_type='user'   → owner_id 是 users.id (个人活动)
+    #   owner_type='expert' → owner_id 是 experts.id (达人团队活动)
+    owner_type: str = "user"
+    owner_id: Optional[str] = None
     expert_service_id: Optional[int] = None
     location: str
     task_type: str
