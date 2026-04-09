@@ -3223,7 +3223,7 @@ class PaymentTransfer(Base):
     id = Column(BigInteger, primary_key=True, index=True)
     task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=True)
     package_id = Column(Integer, ForeignKey("user_service_packages.id", ondelete="SET NULL"), nullable=True)
-    taker_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)  # 任务接受人ID
+    taker_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=True)  # 任务接受人ID（package 转账时为 None）
     taker_expert_id = Column(String(8), ForeignKey("experts.id", ondelete="RESTRICT"), nullable=True)  # 达人团队接单时填充
     poster_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)  # 任务发布者ID
     transfer_id = Column(String(255), nullable=True)  # Stripe Transfer ID
