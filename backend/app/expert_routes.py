@@ -536,10 +536,17 @@ async def get_expert_detail(
                 my_role = m.role
                 break
 
-    detail = ExpertDetailOut.model_validate(expert)
-    detail.members = members_out
+    # 注意: 不能直接 ExpertDetailOut.model_validate(expert) — 它会让 Pydantic
+    # 通过 from_attributes 访问 expert.members (SQLAlchemy relationship),
+    # 在 async session 下触发隐式 lazy load → MissingGreenlet → 500。
+    # 改为先 validate ExpertOut (不含 members 字段),再用已显式加载的 members_out 构造 ExpertDetailOut。
+    base = ExpertOut.model_validate(expert)
+    detail = ExpertDetailOut(
+        **base.model_dump(),
+        members=members_out,
+        is_featured=is_featured,
+    )
     detail.is_following = is_following
-    detail.is_featured = is_featured
     detail.my_role = my_role
     return detail
 

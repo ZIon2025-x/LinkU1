@@ -2235,89 +2235,13 @@ class StripeConnectPayoutResponse(BaseModel):
 
 
 # ==================== 任务达人功能 Schema ====================
-
-class TaskExpertApplicationCreate(BaseModel):
-    application_message: Optional[str] = None
-
-
-class TaskExpertApplicationOut(BaseModel):
-    id: int
-    user_id: str
-    application_message: Optional[str]
-    status: str
-    reviewed_by: Optional[str]
-    reviewed_at: Optional[datetime.datetime]
-    review_comment: Optional[str]
-    created_at: datetime.datetime
-    
-    class Config:
-        from_attributes = True
-
-
-class TaskExpertApplicationReview(BaseModel):
-    """管理员审核申请请求"""
-    action: Literal["approve", "reject"]
-    review_comment: Optional[str] = None
-
-
-class TaskExpertCreate(BaseModel):
-    expert_name: Optional[str] = None
-    bio: Optional[str] = None
-    avatar: Optional[str] = None
-
-
-class TaskExpertUpdate(BaseModel):
-    expert_name: Optional[str] = None
-    bio: Optional[str] = None
-    avatar: Optional[str] = None
-
-
-class TaskExpertProfileUpdateRequestCreate(BaseModel):
-    """任务达人提交信息修改请求"""
-    expert_name: Optional[str] = None
-    bio: Optional[str] = None
-    avatar: Optional[str] = None
-
-
-class TaskExpertProfileUpdateRequestOut(BaseModel):
-    """任务达人信息修改请求输出"""
-    id: int
-    expert_id: str
-    new_expert_name: Optional[str]
-    new_bio: Optional[str]
-    new_avatar: Optional[str]
-    status: str
-    reviewed_by: Optional[str]
-    reviewed_at: Optional[datetime.datetime]
-    review_comment: Optional[str]
-    created_at: datetime.datetime
-    updated_at: datetime.datetime
-    
-    class Config:
-        from_attributes = True
-
-
-class TaskExpertProfileUpdateRequestReview(BaseModel):
-    """管理员审核信息修改请求"""
-    action: Literal["approve", "reject"]
-    review_comment: Optional[str] = None
-
-
-class TaskExpertOut(BaseModel):
-    id: str
-    expert_name: Optional[str]
-    bio: Optional[str]
-    avatar: Optional[str]
-    status: str
-    rating: float
-    total_services: int
-    completed_tasks: int
-    created_at: datetime.datetime
-    is_official: bool = False
-    official_badge: Optional[str] = None
-    
-    class Config:
-        from_attributes = True
+# Phase B1 收口第四轮 (2026-04-09): 删除以下 legacy schemas (零引用):
+#   - TaskExpertApplicationCreate / Out / Review  (随 task_expert_routes.py 一起废弃)
+#   - TaskExpertCreate / Update                    (从未被使用的死代码)
+#   - TaskExpertProfileUpdateRequestCreate / Out / Review (从未挂到 handler)
+#   - TaskExpertOut                                 (从未作为 response_model)
+# 新的达人申请流程使用 schemas_expert.ExpertApplicationCreate / Out / Review
+# 新的团队信息修改使用 schemas_expert.ExpertProfileUpdateCreate / Out
 
 
 _VALID_PACKAGE_TYPES = ("single", "multi", "bundle")

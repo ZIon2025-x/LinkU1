@@ -740,8 +740,20 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
   /// 获取类型筛选参数，'all' 时返回 null
   String? _categoryParam(String cat) => cat == 'all' ? null : cat;
 
-  /// 获取排序参数，始终传递（默认 'rating_desc'）
-  String _sortParam(String sort) => sort;
+  /// 获取排序参数 — 将 UI 状态值映射为新 `/api/experts` 后端接受的枚举。
+  /// 后端 (expert_routes.py:382) 只接受: rating / created_at / completed_tasks / display_order / random
+  String? _sortParam(String sort) {
+    switch (sort) {
+      case 'rating_desc':
+        return 'rating';
+      case 'completed_desc':
+        return 'completed_tasks';
+      case 'newest':
+        return 'created_at';
+      default:
+        return null; // 未知值不传，让后端走默认 display_order
+    }
+  }
 
   Future<void> _onLoadRequested(
     TaskExpertLoadRequested event,

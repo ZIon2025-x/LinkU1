@@ -1514,32 +1514,12 @@ class AuditLog(Base):
 
 
 # ==================== 任务达人功能模型 ====================
-
-class TaskExpertApplication(Base):
-    """任务达人申请表"""
-    __tablename__ = "task_expert_applications"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    application_message = Column(Text, nullable=True)
-    status = Column(String(20), default="pending")  # pending, approved, rejected
-    reviewed_by = Column(String(5), ForeignKey("admin_users.id", ondelete="SET NULL"), nullable=True)  # 审核者，删除管理员时设为NULL
-    reviewed_at = Column(DateTime(timezone=True), nullable=True)  # 审核时间
-    review_comment = Column(Text, nullable=True)
-    created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
-    
-    # 关系
-    user = relationship("User", backref="task_expert_applications")
-    reviewer = relationship("AdminUser", backref="reviewed_task_expert_applications")
-    
-    __table_args__ = (
-        Index("ix_task_expert_applications_user_id", user_id),
-        Index("ix_task_expert_applications_status", status),
-        Index("ix_task_expert_applications_reviewed_by", reviewed_by),
-        # 注意：部分唯一索引需要在数据库层面通过SQL创建
-        # CREATE UNIQUE INDEX uq_expert_app_pending ON task_expert_applications (user_id, status) WHERE status = 'pending';
-    )
+# Phase B1 收口第四轮 (2026-04-09): TaskExpertApplication 模型已删除
+#   - 随 task_expert_routes.py 一起废弃 (所有申请走新 models_expert.ExpertApplication)
+#   - 表 `task_expert_applications` 保留 (历史数据,不接收新写入),后续 migration 可 drop
+#
+# TaskExpert 模型保留 (仍被 admin_official / discovery / multi_participant / routers /
+#   ai_tools / cleanup / celery / crud/user 等 11 个文件使用于官方账户/AI 搜索等场景)
 
 
 class TaskExpert(Base):
@@ -1571,7 +1551,7 @@ class TaskExpert(Base):
     user = relationship("User", backref="expert_profile", foreign_keys=[id])
     approver = relationship("AdminUser", backref="approved_experts")
     services = relationship("TaskExpertService", back_populates="expert", cascade="all, delete-orphan")
-    profile_update_requests = relationship("TaskExpertProfileUpdateRequest", back_populates="expert", cascade="all, delete-orphan")
+    # profile_update_requests 关系已删除: TaskExpertProfileUpdateRequest 模型废弃 (Phase B1 收口第四轮)
     # closed_dates 已迁移至新 Expert 表（migration 182）；TaskExpert 不再持有此关系
 
     __table_args__ = (
@@ -1580,35 +1560,10 @@ class TaskExpert(Base):
     )
 
 
-class TaskExpertProfileUpdateRequest(Base):
-    """任务达人信息修改审核申请表"""
-    __tablename__ = "task_expert_profile_update_requests"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    expert_id = Column(String(8), ForeignKey("task_experts.id", ondelete="CASCADE"), nullable=False)
-    # 待修改的字段
-    new_expert_name = Column(String(100), nullable=True)  # 新的名字
-    new_bio = Column(Text, nullable=True)  # 新的简介
-    new_avatar = Column(Text, nullable=True)  # 新的头像
-    # 审核相关
-    status = Column(String(20), default="pending")  # pending, approved, rejected
-    reviewed_by = Column(String(5), ForeignKey("admin_users.id", ondelete="SET NULL"), nullable=True)  # 审核者，删除管理员时设为NULL
-    reviewed_at = Column(DateTime(timezone=True), nullable=True)
-    review_comment = Column(Text, nullable=True)
-    created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
-    
-    # 关系
-    expert = relationship("TaskExpert", back_populates="profile_update_requests")
-    reviewer = relationship("AdminUser", backref="reviewed_profile_update_requests")
-    
-    __table_args__ = (
-        Index("ix_profile_update_requests_expert_id", expert_id),
-        Index("ix_profile_update_requests_status", status),
-        Index("ix_profile_update_requests_reviewed_by", reviewed_by),
-        # 部分唯一索引：确保一个任务达人只能有一个待审核的修改请求
-        # CREATE UNIQUE INDEX uq_profile_update_pending ON task_expert_profile_update_requests (expert_id, status) WHERE status = 'pending';
-    )
+# Phase B1 收口第四轮 (2026-04-09): TaskExpertProfileUpdateRequest 模型已删除
+#   - 表从未挂到任何 handler (只有 models.py 声明 + schemas.py 定义)
+#   - 新团队信息修改走 models_expert.ExpertProfileUpdateRequest (完全不同的表)
+#   - 表 `task_expert_profile_update_requests` 保留 (历史数据),后续 migration 可 drop
 
 
 class TaskExpertService(Base):
