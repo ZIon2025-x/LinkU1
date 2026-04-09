@@ -113,6 +113,9 @@ async def use_package_session(
     await db.refresh(package)
     if package.used_sessions >= package.total_sessions:
         package.status = "exhausted"
+        # Trigger settlement: creates a pending PaymentTransfer for async processing
+        from app.services.package_settlement import trigger_package_release
+        trigger_package_release(db, package, reason="exhausted")
 
     log = PackageUsageLog(
         package_id=package_id,

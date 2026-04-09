@@ -658,6 +658,9 @@ async def redeem_package(
     pkg.last_redeemed_at = get_utc_time()
     if pkg.used_sessions >= pkg.total_sessions:
         pkg.status = "exhausted"
+        # Trigger settlement: creates a pending PaymentTransfer for async processing
+        from app.services.package_settlement import trigger_package_release
+        trigger_package_release(db, pkg, reason="exhausted")
 
     log = PackageUsageLog(
         package_id=pkg.id,
