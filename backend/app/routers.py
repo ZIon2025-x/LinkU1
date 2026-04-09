@@ -7784,13 +7784,18 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                                 breakdown = None
                                 final_total = total_sessions_meta
                                 if package_type_meta == "bundle":
-                                    breakdown = _build_bundle_breakdown(service_obj.bundle_service_ids)
+                                    breakdown = _build_bundle_breakdown(service_obj.bundle_service_ids, db)
                                     final_total = _bundle_total_sessions(breakdown)
 
                                 # 计算 expires_at
                                 exp_at = None
                                 if validity_days_meta > 0:
                                     exp_at = get_utc_time() + _td(days=validity_days_meta)
+
+                                # 计算 unit_price_pence_snapshot (multi 套餐专用; bundle 价格已内嵌在 breakdown)
+                                unit_snapshot = None
+                                if package_type_meta == "multi" and service_obj is not None:
+                                    unit_snapshot = int(round(float(service_obj.base_price) * 100))
 
                                 new_pkg = UserServicePackage(
                                     user_id=buyer_id,
@@ -7800,11 +7805,13 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                                     used_sessions=0,
                                     status="active",
                                     purchased_at=get_utc_time(),
+                                    cooldown_until=get_utc_time() + timedelta(hours=24),  # NEW: 24h 冷却期
                                     expires_at=exp_at,
                                     payment_intent_id=payment_intent_id,
                                     paid_amount=package_price_meta,
                                     currency="GBP",
                                     bundle_breakdown=breakdown,
+                                    unit_price_pence_snapshot=unit_snapshot,  # NEW: 单价快照
                                 )
                                 db.add(new_pkg)
                                 idempotent_skipped = False

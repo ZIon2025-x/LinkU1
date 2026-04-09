@@ -49,28 +49,64 @@ def _qr_secret() -> bytes:
     return hashlib.sha256(b"package_qr_v1:" + base).digest()
 
 
-def _build_bundle_breakdown(bundle_service_ids):
-    """把 service.bundle_service_ids 解析为 UserServicePackage.bundle_breakdown 格式。
+def _build_bundle_breakdown(bundle_service_ids, db=None):
+    """把 service.bundle_service_ids 解析为 UserServicePackage.bundle_breakdown 新格式。
 
-    Input formats (双格式向后兼容):
-      [A, B, C]                                  → 每个 service 各 1 次
-      [{"service_id": A, "count": 5}, ...]       → 显式 count
+    Args:
+        bundle_service_ids: List from TaskExpertService.bundle_service_ids. Supports two formats:
+            - [A, B, C]                                — legacy "each once"
+            - [{"service_id": A, "count": 5}, ...]     — explicit count per service
+        db: SQLAlchemy Session (sync — called from webhook context in routers.py).
+            If provided, snapshots unit_price_pence from TaskExpertService.base_price.
+            If None (e.g. async call sites used only for validation), unit_price_pence defaults to 0.
 
-    Output:
-      {"A": {"total": 1, "used": 0}, ...}
+    Returns:
+        New format dict:
+            {"<sid>": {"total": N, "used": 0, "unit_price_pence": P}, ...}
+        Or None if bundle_service_ids is empty/invalid.
+
+    Note:
+        unit_price_pence is snapshotted from TaskExpertService.base_price at purchase time
+        so subsequent service price changes don't affect already-purchased packages.
     """
     if not bundle_service_ids:
         return None
-    breakdown = {}
+
+    # Aggregate counts per service_id
+    sid_counts = {}
     for item in bundle_service_ids:
         if isinstance(item, int):
-            breakdown[str(item)] = {"total": 1, "used": 0}
+            sid_counts[item] = sid_counts.get(item, 0) + 1
         elif isinstance(item, dict):
             sid = item.get("service_id")
             cnt = item.get("count", 1)
             if sid is not None:
-                breakdown[str(sid)] = {"total": int(cnt), "used": 0}
-    return breakdown if breakdown else None
+                sid_counts[sid] = sid_counts.get(sid, 0) + int(cnt)
+
+    if not sid_counts:
+        return None
+
+    # Snapshot unit prices at purchase time (protect against later service price changes)
+    price_map = {}
+    if db is not None:
+        from app import models as _models
+        sids = list(sid_counts.keys())
+        sub_services = db.query(_models.TaskExpertService).filter(
+            _models.TaskExpertService.id.in_(sids)
+        ).all()
+        price_map = {
+            s.id: int(round(float(s.base_price) * 100))
+            for s in sub_services
+        }
+
+    breakdown = {}
+    for sid, total in sid_counts.items():
+        breakdown[str(sid)] = {
+            "total": total,
+            "used": 0,
+            "unit_price_pence": price_map.get(sid, 0),  # 0 fallback when db not provided or service missing
+        }
+    return breakdown
 
 
 def _bundle_total_sessions(breakdown) -> int:
