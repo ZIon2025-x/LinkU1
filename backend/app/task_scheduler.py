@@ -1443,5 +1443,25 @@ def init_scheduler():
         description="钱包提现对账（Stripe Transfer 状态校验）"
     )
 
+    # ========== 套餐生命周期任务 ==========
+
+    from app.scheduled_tasks import check_expired_packages, send_package_expiry_reminders
+
+    # 检查并释放过期套餐 - 每1小时
+    scheduler.register_task(
+        'check_expired_packages',
+        with_db(check_expired_packages),
+        interval_seconds=3600,
+        description="检查并释放过期套餐（expires_at < now → trigger_package_release）"
+    )
+
+    # 发送套餐到期提醒（7d/3d/1d）- 每1小时
+    scheduler.register_task(
+        'send_package_expiry_reminders',
+        with_db(send_package_expiry_reminders),
+        interval_seconds=3600,
+        description="发送套餐到期提醒通知（7天/3天/1天前各发一次）"
+    )
+
     logger.info(f"已注册 {len(scheduler.tasks)} 个定时任务")
     return scheduler

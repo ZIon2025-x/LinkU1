@@ -2311,6 +2311,127 @@ def _send_auto_transfer_notifications(
         logger.warning(f"发送自动转账系统消息失败（任务 {task.id}）: {e}")
 
 
+def check_expired_packages(db: Session) -> dict:
+    """Scheduled task: find expired UserServicePackages and trigger release.
+
+    Runs hourly. Scans for:
+        status IN ('active', 'expired') AND expires_at < now AND released_at IS NULL
+    Marks them as expired (if still active) and creates PaymentTransfer rows
+    via trigger_package_release. The async payment_transfer_service then
+    executes the Stripe Transfer.
+    """
+    from app.models_expert import UserServicePackage
+    from app.services.package_settlement import trigger_package_release
+
+    now = get_utc_time()
+
+    expired_pkgs = db.query(UserServicePackage).filter(
+        UserServicePackage.status.in_(["active", "expired"]),
+        UserServicePackage.expires_at < now,
+        UserServicePackage.released_at.is_(None),
+    ).limit(500).all()
+
+    processed = 0
+    failed = 0
+    for pkg in expired_pkgs:
+        try:
+            if pkg.status == "active":
+                pkg.status = "expired"
+            trigger_package_release(db, pkg, reason="expired")
+            processed += 1
+        except Exception as e:
+            logger.error(f"Failed to process expired package {pkg.id}: {e}", exc_info=True)
+            failed += 1
+            continue
+
+    if processed > 0 or failed > 0:
+        try:
+            db.commit()
+            logger.info(f"check_expired_packages: processed={processed}, failed={failed}")
+        except Exception as commit_err:
+            logger.error(f"check_expired_packages commit failed: {commit_err}")
+            db.rollback()
+
+    return {"processed": processed, "failed": failed}
+
+
+def send_package_expiry_reminders(db: Session) -> dict:
+    """Scheduled task: send expiry reminders at 7d/3d/1d before expires_at.
+
+    Runs hourly. For each reminder window, scans active packages with
+    unused sessions and expires_at within (window_start, window_end), and
+    sends a notification if not already sent for that key.
+    """
+    from datetime import timedelta
+    from app.models_expert import UserServicePackage
+    from app import crud
+    from app.utils.notification_templates import get_notification_texts
+
+    now = get_utc_time()
+    sent = 0
+
+    for days, reminder_key in [(7, "7d"), (3, "3d"), (1, "1d")]:
+        window_start = now + timedelta(days=days, hours=-12)
+        window_end = now + timedelta(days=days, hours=12)
+
+        due = db.query(UserServicePackage).filter(
+            UserServicePackage.status == "active",
+            UserServicePackage.expires_at.between(window_start, window_end),
+            UserServicePackage.used_sessions < UserServicePackage.total_sessions,
+        ).all()
+
+        notif_type = f"package_expiry_reminder_{reminder_key}"
+        for pkg in due:
+            # Dedup: skip if reminder already sent for this package
+            existing = db.query(models.Notification).filter(
+                models.Notification.user_id == pkg.user_id,
+                models.Notification.related_id == str(pkg.id),
+                models.Notification.type == notif_type,
+            ).first()
+            if existing:
+                continue
+
+            try:
+                service_obj = db.query(models.TaskExpertService).filter(
+                    models.TaskExpertService.id == pkg.service_id
+                ).first()
+                service_name = service_obj.service_name if service_obj else ""
+                remaining = pkg.total_sessions - pkg.used_sessions
+
+                title_zh, content_zh, title_en, content_en = get_notification_texts(
+                    notif_type,
+                    service_name=service_name,
+                    days=days,
+                    remaining=remaining,
+                )
+                crud.create_notification(
+                    db=db,
+                    user_id=pkg.user_id,
+                    type=notif_type,
+                    title=title_zh,
+                    content=content_zh,
+                    title_en=title_en,
+                    content_en=content_en,
+                    related_id=str(pkg.id),
+                    related_type="package",
+                    auto_commit=False,
+                )
+                sent += 1
+            except Exception as e:
+                logger.error(f"Failed to send reminder for package {pkg.id}: {e}", exc_info=True)
+                continue
+
+    if sent > 0:
+        try:
+            db.commit()
+            logger.info(f"send_package_expiry_reminders: sent {sent}")
+        except Exception as commit_err:
+            logger.error(f"expiry reminders commit failed: {commit_err}")
+            db.rollback()
+
+    return {"sent": sent}
+
+
 if __name__ == "__main__":
     # 可以直接运行此脚本执行定时任务
     run_scheduled_tasks()
