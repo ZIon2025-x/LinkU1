@@ -4,6 +4,7 @@ import { useAdminTable, useModalForm } from '../../../hooks';
 import { AdminTable, AdminPagination, StatusBadge, Column } from '../../../components/admin';
 import api, {
   getTaskExperts,
+  getTaskExpertForAdmin,
   updateTaskExpert,
   deleteTaskExpert,
   getTaskExpertApplications,
@@ -14,12 +15,14 @@ import api, {
   reviewProfileUpdateRequest,
   getAllExpertServicesAdmin,
   getAllExpertActivitiesAdmin,
+  getExpertServicesAdmin,
   updateExpertServiceAdmin,
   deleteExpertServiceAdmin,
   updateExpertActivityAdmin,
   deleteExpertActivityAdmin,
   reviewExpertServiceAdmin,
   reviewExpertActivityAdmin,
+  toggleFeaturedExpert,
   getUsersForAdmin,
 } from '../../../api';
 import { getErrorMessage } from '../../../utils/errorHandler';
@@ -40,18 +43,29 @@ const initialReviewForm: ReviewForm = {
   item: null,
 };
 
+// 与新 `experts` 表 (migration 188 后) + admin_expert_routes.update_expert_admin 的
+// allowed_fields 对齐。is_featured 走单独的 /api/admin/experts/{id}/feature 端点
+// (FeaturedExpertV2 表), 不在 PUT 主体里;UI 上仍作为单字段呈现。
 interface ExpertEditForm {
   id: string;
   name: string;
+  name_en: string;
+  name_zh: string;
   bio: string;
   bio_en: string;
+  bio_zh: string;
+  avatar: string;
+  status: 'active' | 'inactive' | 'suspended' | 'dissolved';
+  is_official: boolean;
+  official_badge: string;
+  allow_applications: boolean;
+  // migration 188 — 达人画像字段
   category: string;
   location: string;
   display_order: number;
-  is_active: boolean;
-  is_featured: boolean;
   is_verified: boolean;
-  expertise_areas: string;
+  user_level: string;
+  expertise_areas: string;     // 逗号/换行分隔, 提交前 parseList 转 string[]
   expertise_areas_en: string;
   featured_skills: string;
   featured_skills_en: string;
@@ -59,10 +73,16 @@ interface ExpertEditForm {
   achievements_en: string;
   response_time: string;
   response_time_en: string;
-  avatar: string;
-  user_level: string;
+  // 通过单独端点同步, 显示在主表单里
+  is_featured: boolean;
   services: any[];
 }
+
+const STATUS_OPTIONS: Array<{ value: ExpertEditForm['status']; label: string }> = [
+  { value: 'active', label: '活跃 active' },
+  { value: 'inactive', label: '停用 inactive' },
+  { value: 'suspended', label: '暂停 suspended' },
+];
 
 const CATEGORY_OPTIONS = [
   { value: '', label: '未分类' },
@@ -81,14 +101,21 @@ const CATEGORY_OPTIONS = [
 const initialEditForm: ExpertEditForm = {
   id: '',
   name: '',
+  name_en: '',
+  name_zh: '',
   bio: '',
   bio_en: '',
+  bio_zh: '',
+  avatar: '',
+  status: 'active',
+  is_official: false,
+  official_badge: '',
+  allow_applications: false,
   category: '',
   location: '',
   display_order: 0,
-  is_active: true,
-  is_featured: true,
   is_verified: false,
+  user_level: 'normal',
   expertise_areas: '',
   expertise_areas_en: '',
   featured_skills: '',
@@ -97,8 +124,7 @@ const initialEditForm: ExpertEditForm = {
   achievements_en: '',
   response_time: '',
   response_time_en: '',
-  avatar: '',
-  user_level: 'normal',
+  is_featured: false,
   services: [],
 };
 
@@ -375,31 +401,52 @@ const ExpertManagement: React.FC = () => {
   };
 
   // ==================== 编辑模态框 ====================
+  // 编辑前快照: 用来对比哪些字段变了, 避免每次保存都打 feature toggle 接口。
+  const featuredSnapshotRef = React.useRef<boolean>(false);
+
   const editModal = useModalForm<ExpertEditForm>({
     initialValues: initialEditForm,
     onSubmit: async (values) => {
-      const parseList = (s: string) => s.split(/[,，\n]/).map(v => v.trim()).filter(Boolean);
+      const parseList = (s: string) =>
+        s.split(/[,，\n]/).map((v) => v.trim()).filter(Boolean);
+      // 1. 基本字段 + 画像字段 走 PUT /api/admin/experts/{id}
+      //    (allowlist 字段对齐 admin_expert_routes.update_expert_admin migration 188 后版本)
       await updateTaskExpert(values.id, {
         name: values.name,
+        name_en: values.name_en || undefined,
+        name_zh: values.name_zh || undefined,
         bio: values.bio || undefined,
         bio_en: values.bio_en || undefined,
-        category: values.category || undefined,
-        location: values.location || undefined,
+        bio_zh: values.bio_zh || undefined,
+        avatar: values.avatar || undefined,
+        status: values.status,
+        is_official: values.is_official,
+        official_badge: values.official_badge || undefined,
+        allow_applications: values.allow_applications,
+        // migration 188 字段
+        category: values.category || null,
+        location: values.location || null,
         display_order: values.display_order,
-        is_active: values.is_active ? 1 : 0,
-        is_featured: values.is_featured ? 1 : 0,
-        is_verified: values.is_verified ? 1 : 0,
+        is_verified: values.is_verified,
+        user_level: values.user_level || 'normal',
         expertise_areas: parseList(values.expertise_areas),
         expertise_areas_en: parseList(values.expertise_areas_en),
         featured_skills: parseList(values.featured_skills),
         featured_skills_en: parseList(values.featured_skills_en),
         achievements: parseList(values.achievements),
         achievements_en: parseList(values.achievements_en),
-        response_time: values.response_time || undefined,
-        response_time_en: values.response_time_en || undefined,
-        avatar: values.avatar || undefined,
-        user_level: values.user_level || 'normal',
+        response_time: values.response_time || null,
+        response_time_en: values.response_time_en || null,
       });
+      // 2. is_featured 切换走单独端点 (FeaturedExpertV2 表), 仅在状态发生变化时调用
+      if (values.is_featured !== featuredSnapshotRef.current) {
+        try {
+          await toggleFeaturedExpert(values.id);
+          featuredSnapshotRef.current = values.is_featured;
+        } catch (e) {
+          message.warning(`基础信息已保存，但精选状态切换失败：${getErrorMessage(e)}`);
+        }
+      }
       message.success('达人信息已更新');
       expertsTable.refresh();
     },
@@ -407,35 +454,54 @@ const ExpertManagement: React.FC = () => {
   });
 
   const handleEdit = async (expert: any) => {
-    const joinList = (arr: any) => Array.isArray(arr) ? arr.join(', ') : (arr || '');
+    // 列表行 record 已包含 ExpertOut 的字段, 但缺 is_featured + 完整服务列表;
+    // 这里再 fetch 一次详情 + 服务列表, 保证编辑面板看到的是最新状态。
+    let detail: any = expert;
+    try {
+      detail = await getTaskExpertForAdmin(expert.id);
+    } catch (e) {
+      // 详情拉取失败时回退用列表行的字段, 不阻塞编辑
+      console.warn('getTaskExpertForAdmin failed, falling back to row data', e);
+    }
     let services: any[] = [];
     try {
-      const res = await api.get(`/api/admin/task-expert/${expert.id}/services`);
-      services = res.data.services || [];
+      const res = await getExpertServicesAdmin(expert.id);
+      services = res.items || res.services || [];
     } catch {
-      // ignore
+      // 服务列表非关键, 静默忽略
     }
+    const joinList = (arr: any) =>
+      Array.isArray(arr) ? arr.join(', ') : (typeof arr === 'string' ? arr : '');
+    const isFeatured = !!detail.is_featured;
+    featuredSnapshotRef.current = isFeatured;
+    const status = (detail.status as ExpertEditForm['status']) || 'active';
     editModal.open({
-      id: expert.id,
-      name: expert.name || '',
-      bio: expert.bio || '',
-      bio_en: expert.bio_en || '',
-      category: expert.category || '',
-      location: expert.location || '',
-      display_order: expert.display_order || 0,
-      is_active: !!expert.is_active,
-      is_featured: !!expert.is_featured,
-      is_verified: !!expert.is_verified,
-      expertise_areas: joinList(expert.expertise_areas),
-      expertise_areas_en: joinList(expert.expertise_areas_en),
-      featured_skills: joinList(expert.featured_skills),
-      featured_skills_en: joinList(expert.featured_skills_en),
-      achievements: joinList(expert.achievements),
-      achievements_en: joinList(expert.achievements_en),
-      response_time: expert.response_time || '',
-      response_time_en: expert.response_time_en || '',
-      avatar: expert.avatar || '',
-      user_level: expert.user_level || 'normal',
+      id: detail.id,
+      name: detail.name || '',
+      name_en: detail.name_en || '',
+      name_zh: detail.name_zh || '',
+      bio: detail.bio || '',
+      bio_en: detail.bio_en || '',
+      bio_zh: detail.bio_zh || '',
+      avatar: detail.avatar || '',
+      status,
+      is_official: !!detail.is_official,
+      official_badge: detail.official_badge || '',
+      allow_applications: !!detail.allow_applications,
+      category: detail.category || '',
+      location: detail.location || '',
+      display_order: detail.display_order ?? 0,
+      is_verified: !!detail.is_verified,
+      user_level: detail.user_level || 'normal',
+      expertise_areas: joinList(detail.expertise_areas),
+      expertise_areas_en: joinList(detail.expertise_areas_en),
+      featured_skills: joinList(detail.featured_skills),
+      featured_skills_en: joinList(detail.featured_skills_en),
+      achievements: joinList(detail.achievements),
+      achievements_en: joinList(detail.achievements_en),
+      response_time: detail.response_time || '',
+      response_time_en: detail.response_time_en || '',
+      is_featured: isFeatured,
       services,
     });
   };
@@ -591,10 +657,10 @@ const ExpertManagement: React.FC = () => {
       render: (_, record) => record.location || '-',
     },
     {
-      key: 'avg_rating',
+      key: 'rating',
       title: '评分',
       width: 70,
-      render: (_, record) => record.avg_rating ? Number(record.avg_rating).toFixed(1) : '-',
+      render: (_, record) => (record.rating != null ? Number(record.rating).toFixed(1) : '-'),
     },
     {
       key: 'completed_tasks',
@@ -603,32 +669,46 @@ const ExpertManagement: React.FC = () => {
       render: (_, record) => record.completed_tasks ?? 0,
     },
     {
-      key: 'is_active',
-      title: '状态',
-      width: 80,
-      render: (_, record) => (
-        <StatusBadge
-          text={record.is_active ? '活跃' : '停用'}
-          variant={record.is_active ? 'success' : 'danger'}
-        />
-      ),
+      key: 'member_count',
+      title: '成员',
+      width: 60,
+      render: (_, record) => record.member_count ?? 1,
     },
     {
-      key: 'is_featured',
-      title: '精选',
-      width: 70,
-      render: (_, record) => (
-        <StatusBadge
-          text={record.is_featured ? '是' : '否'}
-          variant={record.is_featured ? 'info' : 'default'}
-        />
+      key: 'status',
+      title: '状态',
+      width: 90,
+      render: (_, record) => {
+        const s = (record.status as string) || 'active';
+        const variantMap: Record<string, 'success' | 'danger' | 'warning' | 'default'> = {
+          active: 'success',
+          inactive: 'default',
+          suspended: 'warning',
+          dissolved: 'danger',
+        };
+        const labelMap: Record<string, string> = {
+          active: '活跃',
+          inactive: '停用',
+          suspended: '暂停',
+          dissolved: '已注销',
+        };
+        return <StatusBadge text={labelMap[s] || s} variant={variantMap[s] || 'default'} />;
+      },
+    },
+    {
+      key: 'is_official',
+      title: '官方',
+      width: 60,
+      render: (_, record) => (record.is_official
+        ? <StatusBadge text="官方" variant="info" />
+        : <span style={{ color: '#bbb' }}>-</span>
       ),
     },
     {
       key: 'display_order',
       title: '排序',
-      dataIndex: 'display_order',
       width: 60,
+      render: (_, record) => record.display_order ?? 0,
     },
     {
       key: 'actions',
@@ -1201,6 +1281,28 @@ const ExpertManagement: React.FC = () => {
           </div>
           <div style={{ display: 'flex', gap: '15px' }}>
             <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', marginBottom: '4px', fontWeight: '600', fontSize: '13px' }}>名称(中文)</label>
+              <input
+                type="text"
+                maxLength={100}
+                value={editModal.formData.name_zh}
+                onChange={(e) => editModal.updateField('name_zh', e.target.value)}
+                style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', marginBottom: '4px', fontWeight: '600', fontSize: '13px' }}>名称(英文)</label>
+              <input
+                type="text"
+                maxLength={100}
+                value={editModal.formData.name_en}
+                onChange={(e) => editModal.updateField('name_en', e.target.value)}
+                style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
+              />
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '15px' }}>
+            <div style={{ flex: 1 }}>
               <label style={{ display: 'block', marginBottom: '4px', fontWeight: '600', fontSize: '13px' }}>分类</label>
               <select
                 value={editModal.formData.category}
@@ -1263,6 +1365,15 @@ const ExpertManagement: React.FC = () => {
             <textarea
               value={editModal.formData.bio_en}
               onChange={(e) => editModal.updateField('bio_en', e.target.value)}
+              rows={2}
+              style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', resize: 'vertical', boxSizing: 'border-box' }}
+            />
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '4px', fontWeight: '600', fontSize: '13px' }}>简介(zh-Hant 备用)</label>
+            <textarea
+              value={editModal.formData.bio_zh}
+              onChange={(e) => editModal.updateField('bio_zh', e.target.value)}
               rows={2}
               style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', resize: 'vertical', boxSizing: 'border-box' }}
             />
@@ -1379,7 +1490,7 @@ const ExpertManagement: React.FC = () => {
                             const newImages = [...(svc.images || [])];
                             newImages.splice(imgIdx, 1);
                             try {
-                              await api.put(`/api/admin/task-expert/${editModal.formData.id}/services/${svc.id}`, { images: newImages });
+                              await updateExpertServiceAdmin(editModal.formData.id, svc.id, { images: newImages });
                               const updatedServices = [...editModal.formData.services];
                               updatedServices[svcIdx] = { ...svc, images: newImages };
                               editModal.updateField('services', updatedServices);
@@ -1417,7 +1528,7 @@ const ExpertManagement: React.FC = () => {
                       try {
                         const url = await uploadImageWithCategory(file, 'service_image', expertId);
                         const newImages = [...(svc.images || []), url];
-                        await api.put(`/api/admin/task-expert/${editModal.formData.id}/services/${svc.id}`, { images: newImages });
+                        await updateExpertServiceAdmin(editModal.formData.id, svc.id, { images: newImages });
                         const updatedServices = [...editModal.formData.services];
                         updatedServices[svcIdx] = { ...svc, images: newImages };
                         editModal.updateField('services', updatedServices);
@@ -1437,20 +1548,49 @@ const ExpertManagement: React.FC = () => {
             </>
           )}
 
-          {/* 状态开关 */}
-          <div style={{ fontWeight: 'bold', fontSize: '14px', color: '#333', borderBottom: '1px solid #eee', paddingBottom: '6px', marginTop: '4px' }}>状态</div>
-          <div style={{ display: 'flex', gap: '24px' }}>
+          {/* 状态 + 团队属性 */}
+          <div style={{ fontWeight: 'bold', fontSize: '14px', color: '#333', borderBottom: '1px solid #eee', paddingBottom: '6px', marginTop: '4px' }}>状态与属性</div>
+          <div style={{ display: 'flex', gap: '15px' }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', marginBottom: '4px', fontWeight: '600', fontSize: '13px' }}>团队状态</label>
+              <select
+                value={editModal.formData.status}
+                onChange={(e) => editModal.updateField('status', e.target.value as ExpertEditForm['status'])}
+                style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box', background: 'white' }}
+              >
+                {STATUS_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', marginBottom: '4px', fontWeight: '600', fontSize: '13px' }}>官方徽章 (badge slug)</label>
+              <input
+                type="text"
+                value={editModal.formData.official_badge}
+                onChange={(e) => editModal.updateField('official_badge', e.target.value)}
+                placeholder="如 verified / partner"
+                disabled={!editModal.formData.is_official}
+                style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box', background: editModal.formData.is_official ? 'white' : '#f5f5f5' }}
+              />
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-              <input type="checkbox" checked={editModal.formData.is_active} onChange={(e) => editModal.updateField('is_active', e.target.checked)} />
-              <span>启用</span>
+              <input type="checkbox" checked={editModal.formData.is_official} onChange={(e) => editModal.updateField('is_official', e.target.checked)} />
+              <span>官方团队</span>
             </label>
             <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
               <input type="checkbox" checked={editModal.formData.is_featured} onChange={(e) => editModal.updateField('is_featured', e.target.checked)} />
-              <span>精选</span>
+              <span>精选 (单独 API)</span>
             </label>
             <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
               <input type="checkbox" checked={editModal.formData.is_verified} onChange={(e) => editModal.updateField('is_verified', e.target.checked)} />
               <span>已认证</span>
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+              <input type="checkbox" checked={editModal.formData.allow_applications} onChange={(e) => editModal.updateField('allow_applications', e.target.checked)} />
+              <span>允许加入申请</span>
             </label>
           </div>
         </div>
@@ -1627,14 +1767,14 @@ const ExpertManagement: React.FC = () => {
               </div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 24px' }}>
-              <div><strong>评分：</strong>{detailExpert.avg_rating ? Number(detailExpert.avg_rating).toFixed(1) : '-'}</div>
+              <div><strong>评分：</strong>{detailExpert.rating != null ? Number(detailExpert.rating).toFixed(1) : '-'}</div>
               <div><strong>完成任务：</strong>{detailExpert.completed_tasks ?? 0}</div>
-              <div><strong>总任务：</strong>{detailExpert.total_tasks ?? 0}</div>
+              <div><strong>团队服务数：</strong>{detailExpert.total_services ?? 0}</div>
               <div><strong>完成率：</strong>{detailExpert.completion_rate ? `${(detailExpert.completion_rate * 100).toFixed(0)}%` : '-'}</div>
-              <div><strong>成功率：</strong>{detailExpert.success_rate ? `${(detailExpert.success_rate * 100).toFixed(0)}%` : '-'}</div>
+              <div><strong>成员数：</strong>{detailExpert.member_count ?? 1}</div>
               <div><strong>城市：</strong>{detailExpert.location || '-'}</div>
               <div><strong>分类：</strong>{detailExpert.category || '-'}</div>
-              <div><strong>排序：</strong>{detailExpert.display_order}</div>
+              <div><strong>排序：</strong>{detailExpert.display_order ?? 0}</div>
               <div><strong>响应时间：</strong>{detailExpert.response_time || '-'}</div>
               <div><strong>等级：</strong>{detailExpert.user_level || '-'}</div>
             </div>
@@ -1660,10 +1800,11 @@ const ExpertManagement: React.FC = () => {
               <strong>简介：</strong>
               <p style={{ marginTop: '4px', color: '#555' }}>{detailExpert.bio || '-'}</p>
             </div>
-            <div style={{ marginTop: '8px', display: 'flex', gap: '10px' }}>
-              <StatusBadge text={detailExpert.is_active ? '活跃' : '停用'} variant={detailExpert.is_active ? 'success' : 'danger'} />
+            <div style={{ marginTop: '8px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              <StatusBadge text={detailExpert.status === 'active' ? '活跃' : (detailExpert.status || '-')} variant={detailExpert.status === 'active' ? 'success' : 'default'} />
               <StatusBadge text={detailExpert.is_featured ? '精选' : '非精选'} variant={detailExpert.is_featured ? 'info' : 'default'} />
               <StatusBadge text={detailExpert.is_verified ? '已认证' : '未认证'} variant={detailExpert.is_verified ? 'success' : 'default'} />
+              {detailExpert.is_official && <StatusBadge text="官方" variant="info" />}
             </div>
             <div style={{ marginTop: '12px', color: '#999', fontSize: '12px' }}>
               创建时间：{detailExpert.created_at ? new Date(detailExpert.created_at).toLocaleString('zh-CN') : '-'}

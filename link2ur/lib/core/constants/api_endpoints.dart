@@ -209,7 +209,7 @@ class ApiEndpoints {
   static String publicServiceTimeSlots(int serviceId) =>
       '/api/services/$serviceId/time-slots';
   static String publicServiceDetail(int serviceId) =>
-      '/api/experts/services/$serviceId'; // legacy compatibility
+      '/api/services/$serviceId'; // Phase B1: service_public_routes
 
   // 服务申请/咨询（不需要 expertId，用 serviceId/applicationId）
   static String applyForService(int serviceId) =>
@@ -240,22 +240,24 @@ class ApiEndpoints {
   static String expertApplicationsList(String expertId) =>
       '/api/experts/$expertId/applications';
 
-  // 服务公开申请列表/回复（保留旧路径，旧路由仍运行）
+  // 服务公开申请列表/回复 — Phase B1 收口: 走 service_public_routes,
+  // 新 ExpertMember ownership 解析,新团队 owner/admin 都能 reply
   static String serviceApplications(int serviceId) =>
-      '/api/task-experts/services/$serviceId/applications';
+      '/api/services/$serviceId/applications';
   static String replyServiceApplication(int serviceId, int applicationId) =>
-      '/api/task-experts/services/$serviceId/applications/$applicationId/reply';
+      '/api/services/$serviceId/applications/$applicationId/reply';
 
   // 服务评价
   static String taskExpertServiceReviews(int serviceId) =>
-      '/api/task-experts/services/$serviceId/reviews';
+      '/api/services/$serviceId/reviews';
 
   // 公开服务时间段（已迁移到新公开端点；新端点已包含关门日过滤 / user_has_applied / 多人参与者计数）
   static String serviceTimeSlots(int serviceId) =>
       '/api/services/$serviceId/time-slots';
-  // 服务详情：保留旧路由（新路由要求 expert_id，买家侧无法只用 service_id 查询）
+  // 服务详情 — Phase B1 收口: 切到 service_public_routes 的 /api/services/{id},
+  // 新 owner_type/owner_id 解析, 团队/个人服务都正确返回 owner 信息
   static String taskExpertServiceDetail(int serviceId) =>
-      '/api/task-experts/services/$serviceId';
+      '/api/services/$serviceId';
   static String respondServiceCounterOffer(int applicationId) =>
       '/api/users/me/service-applications/$applicationId/respond-counter-offer';
   static String cancelServiceApplication(int applicationId) =>

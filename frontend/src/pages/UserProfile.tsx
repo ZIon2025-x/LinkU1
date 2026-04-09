@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { getUserProfile, fetchCurrentUser, getTaskExpert, getTaskExpertServices, getUserHotPosts, getUserStudentVerificationStatus } from '../api';
+import api, { getUserProfile, fetchCurrentUser, fetchExpertByUser, getUserHotPosts, getUserStudentVerificationStatus } from '../api';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import { formatViewCount } from '../utils/formatUtils';
@@ -213,20 +213,20 @@ const UserProfile: React.FC = () => {
 
   const loadTaskExpertInfo = async () => {
     if (!userId) return;
-    
+
     setLoadingExpert(true);
     try {
-      // 尝试获取任务达人信息
-      const expertData = await getTaskExpert(userId);
+      // Phase B1 收口: 走新 by-user 解析端点,拿到团队后再查该团队的服务列表
+      const expertData = await fetchExpertByUser(userId);
       setTaskExpert(expertData);
-      
-      // 获取任务达人的服务列表
-      const services = await getTaskExpertServices(userId, 'active');
-      setExpertServices(services || []);
+
+      // 拿到 expert.id (新 8 字符团队 ID) 后查该团队的公开服务
+      const servicesRes = await api.get(`/api/experts/${expertData.id}/services`, {
+        params: { status: 'active' },
+      });
+      setExpertServices(Array.isArray(servicesRes.data) ? servicesRes.data : []);
     } catch (err: any) {
-      // 如果不是任务达人，忽略错误
-      if (err.response?.status !== 404) {
-              }
+      // 如果不是任务达人 (404),忽略错误
       setTaskExpert(null);
       setExpertServices([]);
     } finally {

@@ -489,8 +489,9 @@ export const deleteTaskExpert = async (expertId: string) => {
   return res.data;
 };
 
+// 旧 URL 走 legacy task_experts 表查不到新团队,改用跨团队列表 + expert_id 过滤。
 export const getExpertServicesAdmin = async (expertId: string) => {
-  const res = await api.get(`/api/admin/task-expert/${expertId}/services`);
+  const res = await api.get('/api/admin/task-expert-services', { params: { expert_id: expertId } });
   return res.data;
 };
 
@@ -506,28 +507,34 @@ export const getAllExpertActivitiesAdmin = async (params?: { page?: number; limi
   return res.data;
 };
 
-export const updateExpertServiceAdmin = async (expertId: string, serviceId: number, serviceData: any) => {
-  const res = await api.put(`/api/admin/task-expert/${expertId}/services/${serviceId}`, serviceData);
+// 注: 旧 URL `/api/admin/task-expert/{expert_id}/services/{service_id}` 走 routers.py
+// 的 legacy 端点,按 task_experts.id (旧 user_id 语义) 查表,与新管理端列表返回的
+// 8 字符 experts.id 不匹配,会全部 404。新端点改为只用 service_id (全局唯一),
+// 路由参数 expertId 保留以避免动 ExpertManagement.tsx 的调用站点。
+export const updateExpertServiceAdmin = async (_expertId: string, serviceId: number, serviceData: any) => {
+  const res = await api.put(`/api/admin/task-expert-services/${serviceId}`, serviceData);
   return res.data;
 };
 
-export const deleteExpertServiceAdmin = async (expertId: string, serviceId: number) => {
-  const res = await api.delete(`/api/admin/task-expert/${expertId}/services/${serviceId}`);
+export const deleteExpertServiceAdmin = async (_expertId: string, serviceId: number) => {
+  const res = await api.delete(`/api/admin/task-expert-services/${serviceId}`);
   return res.data;
 };
 
+// 同上 — legacy 单团队活动列表 URL 已死,但函数本身被 admin_task_expert_router 列表替代,
+// 这里保留只是因为没人在用 (也没人 import)。新 URL 也走 admin_task_expert_router。
 export const getExpertActivitiesAdmin = async (expertId: string) => {
-  const res = await api.get(`/api/admin/task-expert/${expertId}/activities`);
+  const res = await api.get('/api/admin/task-expert-activities', { params: { expert_id: expertId } });
   return res.data;
 };
 
-export const updateExpertActivityAdmin = async (expertId: string, activityId: number, activityData: any) => {
-  const res = await api.put(`/api/admin/task-expert/${expertId}/activities/${activityId}`, activityData);
+export const updateExpertActivityAdmin = async (_expertId: string, activityId: number, activityData: any) => {
+  const res = await api.put(`/api/admin/task-expert-activities/${activityId}`, activityData);
   return res.data;
 };
 
-export const deleteExpertActivityAdmin = async (expertId: string, activityId: number) => {
-  const res = await api.delete(`/api/admin/task-expert/${expertId}/activities/${activityId}`);
+export const deleteExpertActivityAdmin = async (_expertId: string, activityId: number) => {
+  const res = await api.delete(`/api/admin/task-expert-activities/${activityId}`);
   return res.data;
 };
 
@@ -565,6 +572,12 @@ export const getProfileUpdateRequests = async (params?: { status?: string; limit
 export const reviewProfileUpdateRequest = async (requestId: number, data: { action: 'approve' | 'reject'; review_comment?: string }) => {
   const res = await api.post(`/api/admin/experts/profile-update-requests/${requestId}/review`, data);
   return res.data;
+};
+
+/** 切换团队的"精选"状态 (FeaturedExpertV2 表)。 */
+export const toggleFeaturedExpert = async (expertId: string) => {
+  const res = await api.post(`/api/admin/experts/${expertId}/feature`);
+  return res.data as { expert_id: string; is_featured: boolean };
 };
 
 // ==================== 优惠券管理 API ====================

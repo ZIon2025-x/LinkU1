@@ -27,6 +27,20 @@ class ExpertOut(BaseModel):
     stripe_onboarding_complete: bool = False
     forum_category_id: Optional[int] = None
     created_at: datetime.datetime
+    # migration 188 / admin 编辑表单 + buyer 端达人画像字段
+    category: Optional[str] = None
+    location: Optional[str] = None
+    display_order: int = 0
+    is_verified: bool = False
+    expertise_areas: Optional[List[str]] = None
+    expertise_areas_en: Optional[List[str]] = None
+    featured_skills: Optional[List[str]] = None
+    featured_skills_en: Optional[List[str]] = None
+    achievements: Optional[List[str]] = None
+    achievements_en: Optional[List[str]] = None
+    response_time: Optional[str] = None
+    response_time_en: Optional[str] = None
+    user_level: str = "normal"
     is_following: bool = False  # 当前用户是否关注（接口层填充）
     my_role: Optional[str] = None  # 当前用户在此团队中的角色（接口层填充）
 

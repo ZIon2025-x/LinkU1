@@ -12,6 +12,7 @@ from sqlalchemy import select, desc, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models
+from app.models_expert import Expert, ExpertFollow
 from app.deps import get_current_user_secure, get_async_db_dependency
 from app.discovery_routes import _first_image, _parse_images
 
@@ -30,12 +31,16 @@ async def get_follow_feed(
     current_user: models.User = Depends(get_current_user_secure),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    """获取关注用户的内容时间线
+    """获取关注用户 + 关注达人团队的内容时间线
 
-    按发布时间倒序排列，展示所有已关注用户的最新内容。
+    按发布时间倒序排列，展示所有已关注用户和已关注达人团队的最新内容。
     包含：任务、论坛帖子、跳蚤市场商品、达人/个人服务、活动、任务完成记录、竞品评价、服务评价、排行榜。
+
+    关注维度：
+    - UserFollow → 关注个人用户，feed 展示该用户的个人动态
+    - ExpertFollow → 关注达人团队，feed 展示该团队的服务/活动/团队身份发帖
     """
-    # 1. 获取关注的用户 ID（最近关注的 200 个）
+    # 1a. 获取关注的用户 ID（最近关注的 200 个）
     following_result = await db.execute(
         select(models.UserFollow.following_id)
         .where(models.UserFollow.follower_id == current_user.id)
@@ -44,21 +49,30 @@ async def get_follow_feed(
     )
     following_ids = [row[0] for row in following_result.all()]
 
-    if not following_ids:
+    # 1b. 获取关注的达人团队 ID（最近关注的 200 个）
+    expert_follow_result = await db.execute(
+        select(ExpertFollow.expert_id)
+        .where(ExpertFollow.user_id == current_user.id)
+        .order_by(desc(ExpertFollow.created_at))
+        .limit(200)
+    )
+    following_expert_ids = [row[0] for row in expert_follow_result.all()]
+
+    if not following_ids and not following_expert_ids:
         return {"items": [], "page": page, "has_more": False}
 
     offset = (page - 1) * page_size
     fetch_limit = offset + page_size
 
-    # 2. 顺序获取 6 种内容类型（共享 db session，无需 SAVEPOINT）
+    # 2. 顺序获取内容类型（共享 db session，无需 SAVEPOINT）
     all_items: List[dict] = []
 
     fetch_tasks = [
         ("tasks", _fetch_followed_tasks(db, following_ids, fetch_limit)),
-        ("forum_posts", _fetch_followed_forum_posts(db, following_ids, fetch_limit)),
+        ("forum_posts", _fetch_followed_forum_posts(db, following_ids, following_expert_ids, fetch_limit)),
         ("flea_market", _fetch_followed_flea_market(db, following_ids, fetch_limit)),
-        ("services", _fetch_followed_services(db, following_ids, fetch_limit)),
-        ("activities", _fetch_followed_activities(db, following_ids, fetch_limit)),
+        ("services", _fetch_followed_services(db, following_ids, following_expert_ids, fetch_limit)),
+        ("activities", _fetch_followed_activities(db, following_ids, following_expert_ids, fetch_limit)),
         ("completions", _fetch_followed_completions(db, following_ids, fetch_limit)),
         ("competitor_reviews", _fetch_followed_competitor_reviews(db, following_ids, fetch_limit, current_user)),
         ("service_reviews", _fetch_followed_service_reviews(db, following_ids, fetch_limit)),
@@ -95,6 +109,9 @@ async def _fetch_followed_tasks(db: AsyncSession, following_ids: List[str], limi
     """获取关注用户的任务（30天内）"""
     from sqlalchemy import func
     from app.utils.time_utils import get_utc_time
+
+    if not following_ids:
+        return []
 
     cutoff = get_utc_time() - timedelta(days=30)
 
@@ -187,11 +204,46 @@ async def _fetch_followed_tasks(db: AsyncSession, following_ids: List[str], limi
     return items
 
 
-async def _fetch_followed_forum_posts(db: AsyncSession, following_ids: List[str], limit: int) -> list:
-    """获取关注用户的论坛帖子（30天内）"""
+async def _fetch_followed_forum_posts(
+    db: AsyncSession,
+    following_ids: List[str],
+    following_expert_ids: List[str],
+    limit: int,
+) -> list:
+    """获取关注用户或关注达人团队的论坛帖子（30天内）
+
+    匹配规则：
+    - author_id IN following_ids（个人身份发帖）
+    - 或 expert_id IN following_expert_ids（以达人团队身份发帖）
+    达人团队身份发帖时，展示团队名/头像而非作者个人。
+    """
+    from sqlalchemy import or_, and_
+    from sqlalchemy.orm import aliased
     from app.utils.time_utils import get_utc_time
 
+    if not following_ids and not following_expert_ids:
+        return []
+
     cutoff = get_utc_time() - timedelta(days=30)
+
+    ExpertAlias = aliased(Expert)
+
+    # 构建 OR 条件：至少一个列表非空时才加对应子句
+    author_match = (
+        models.ForumPost.author_id.in_(following_ids) if following_ids else None
+    )
+    expert_match = (
+        and_(
+            models.ForumPost.expert_id.isnot(None),
+            models.ForumPost.expert_id.in_(following_expert_ids),
+        )
+        if following_expert_ids
+        else None
+    )
+    if author_match is not None and expert_match is not None:
+        match_clause = or_(author_match, expert_match)
+    else:
+        match_clause = author_match if author_match is not None else expert_match
 
     query = (
         select(
@@ -203,13 +255,17 @@ async def _fetch_followed_forum_posts(db: AsyncSession, following_ids: List[str]
             models.ForumPost.reply_count,
             models.ForumPost.view_count,
             models.ForumPost.author_id,
+            models.ForumPost.expert_id.label("post_expert_id"),
             models.ForumPost.created_at,
             models.User.name.label("user_name"),
             models.User.avatar.label("user_avatar"),
+            ExpertAlias.name.label("expert_name"),
+            ExpertAlias.avatar.label("expert_avatar"),
         )
         .join(models.User, models.ForumPost.author_id == models.User.id)
+        .outerjoin(ExpertAlias, models.ForumPost.expert_id == ExpertAlias.id)
         .where(
-            models.ForumPost.author_id.in_(following_ids),
+            match_clause,
             models.ForumPost.is_deleted == False,
             models.ForumPost.is_visible == True,
             models.ForumPost.created_at >= cutoff,
@@ -225,6 +281,11 @@ async def _fetch_followed_forum_posts(db: AsyncSession, following_ids: List[str]
     for row in rows:
         post_images = _parse_images(row.images)
         content_preview = (row.content or "")[:100]
+        # 团队身份发帖：优先展示团队信息
+        is_team_post = bool(row.post_expert_id)
+        display_id = str(row.post_expert_id) if is_team_post else (str(row.author_id) if row.author_id else None)
+        display_name = (row.expert_name if is_team_post else row.user_name) or "匿名用户"
+        display_avatar = row.expert_avatar if is_team_post else row.user_avatar
         items.append({
             "feed_type": "forum_post",
             "id": f"post_{row.id}",
@@ -235,9 +296,9 @@ async def _fetch_followed_forum_posts(db: AsyncSession, following_ids: List[str]
             "description_zh": None,
             "description_en": None,
             "images": post_images if post_images else None,
-            "user_id": str(row.author_id) if row.author_id else None,
-            "user_name": row.user_name or "匿名用户",
-            "user_avatar": row.user_avatar,
+            "user_id": display_id,
+            "user_name": display_name,
+            "user_avatar": display_avatar,
             "price": None,
             "original_price": None,
             "discount_percentage": None,
@@ -263,6 +324,9 @@ async def _fetch_followed_forum_posts(db: AsyncSession, following_ids: List[str]
 async def _fetch_followed_flea_market(db: AsyncSession, following_ids: List[str], limit: int) -> list:
     """获取关注用户的跳蚤市场商品（30天内）"""
     from app.utils.time_utils import get_utc_time
+
+    if not following_ids:
+        return []
 
     cutoff = get_utc_time() - timedelta(days=30)
 
@@ -332,19 +396,52 @@ async def _fetch_followed_flea_market(db: AsyncSession, following_ids: List[str]
     return items
 
 
-async def _fetch_followed_services(db: AsyncSession, following_ids: List[str], limit: int) -> list:
-    """获取关注用户发布的达人服务（无时间限制，服务长期有效）"""
-    from sqlalchemy import func as sa_func
+async def _fetch_followed_services(
+    db: AsyncSession,
+    following_ids: List[str],
+    following_expert_ids: List[str],
+    limit: int,
+) -> list:
+    """获取关注对象发布的达人服务（无时间限制，服务长期有效）
+
+    匹配规则（使用新规范字段 owner_type/owner_id）：
+    - owner_type='user' 且 owner_id IN following_ids（个人达人服务）
+    - 或 owner_type='expert' 且 owner_id IN following_expert_ids（团队服务）
+
+    展示信息：
+    - 团队服务：展示 Expert.name / Expert.avatar
+    - 个人服务：展示 User.name / User.avatar（FeaturedTaskExpert 优先作为达人展示名）
+    """
+    from sqlalchemy import and_, or_
     from sqlalchemy.orm import aliased
 
-    # Resolve owner: expert_id takes priority over user_id (avoids duplicate joins)
-    owner_col = sa_func.coalesce(
-        models.TaskExpertService.expert_id,
-        models.TaskExpertService.user_id,
-    ).label("owner_id")
+    if not following_ids and not following_expert_ids:
+        return []
 
-    # 优先使用 FeaturedTaskExpert 的名字和头像（达人展示名），回退到 User 表
     FTE = aliased(models.FeaturedTaskExpert)
+    ExpertAlias = aliased(Expert)
+
+    # 构建匹配条件
+    user_match = (
+        and_(
+            models.TaskExpertService.owner_type == "user",
+            models.TaskExpertService.owner_id.in_(following_ids),
+        )
+        if following_ids
+        else None
+    )
+    expert_match = (
+        and_(
+            models.TaskExpertService.owner_type == "expert",
+            models.TaskExpertService.owner_id.in_(following_expert_ids),
+        )
+        if following_expert_ids
+        else None
+    )
+    if user_match is not None and expert_match is not None:
+        match_clause = or_(user_match, expert_match)
+    else:
+        match_clause = user_match if user_match is not None else expert_match
 
     query = (
         select(
@@ -359,34 +456,41 @@ async def _fetch_followed_services(db: AsyncSession, following_ids: List[str], l
             models.TaskExpertService.images.label("service_images"),
             models.TaskExpertService.base_price,
             models.TaskExpertService.currency,
-            models.TaskExpertService.expert_id,
-            models.TaskExpertService.user_id,
+            models.TaskExpertService.owner_type,
+            models.TaskExpertService.owner_id,
             models.TaskExpertService.created_at,
-            owner_col,
             models.User.name.label("user_name"),
             models.User.avatar.label("user_avatar"),
-            FTE.name.label("expert_name"),
-            FTE.avatar.label("expert_avatar"),
+            FTE.name.label("fte_name"),
+            FTE.avatar.label("fte_avatar"),
+            ExpertAlias.name.label("expert_name"),
+            ExpertAlias.avatar.label("expert_avatar"),
         )
-        .join(
+        # User JOIN 只在 owner_type='user' 时命中
+        .outerjoin(
             models.User,
-            sa_func.coalesce(
-                models.TaskExpertService.expert_id,
-                models.TaskExpertService.user_id,
-            ) == models.User.id,
+            and_(
+                models.TaskExpertService.owner_type == "user",
+                models.TaskExpertService.owner_id == models.User.id,
+            ),
         )
         .outerjoin(
             FTE,
-            sa_func.coalesce(
-                models.TaskExpertService.expert_id,
-                models.TaskExpertService.user_id,
-            ) == FTE.id,
+            and_(
+                models.TaskExpertService.owner_type == "user",
+                models.TaskExpertService.owner_id == FTE.id,
+            ),
+        )
+        # Expert JOIN 只在 owner_type='expert' 时命中
+        .outerjoin(
+            ExpertAlias,
+            and_(
+                models.TaskExpertService.owner_type == "expert",
+                models.TaskExpertService.owner_id == ExpertAlias.id,
+            ),
         )
         .where(
-            sa_func.coalesce(
-                models.TaskExpertService.expert_id,
-                models.TaskExpertService.user_id,
-            ).in_(following_ids),
+            match_clause,
             models.TaskExpertService.status == "active",
         )
         .order_by(desc(models.TaskExpertService.created_at))
@@ -399,10 +503,14 @@ async def _fetch_followed_services(db: AsyncSession, following_ids: List[str], l
     items = []
     for row in rows:
         service_thumb = _first_image(row.service_images)
-        owner_id = row.expert_id or row.user_id
-        # 达人展示名优先
-        display_name = row.expert_name or row.user_name
-        display_avatar = (row.expert_avatar if row.expert_avatar else None) or row.user_avatar
+        is_team = row.owner_type == "expert"
+        if is_team:
+            display_name = row.expert_name
+            display_avatar = row.expert_avatar
+        else:
+            # 个人达人：FeaturedTaskExpert 展示名优先，回退 User
+            display_name = row.fte_name or row.user_name
+            display_avatar = row.fte_avatar or row.user_avatar
         items.append({
             "feed_type": "service",
             "id": f"service_{row.id}",
@@ -413,7 +521,7 @@ async def _fetch_followed_services(db: AsyncSession, following_ids: List[str], l
             "description_zh": (row.description_zh or "")[:80] if row.description_zh else None,
             "description_en": (row.description_en or "")[:80] if row.description_en else None,
             "images": [service_thumb] if service_thumb else None,
-            "user_id": str(owner_id) if owner_id else None,
+            "user_id": str(row.owner_id) if row.owner_id else None,
             "user_name": display_name,
             "user_avatar": display_avatar,
             "price": float(row.base_price) if row.base_price else None,
@@ -438,14 +546,28 @@ async def _fetch_followed_services(db: AsyncSession, following_ids: List[str], l
     return items
 
 
-async def _fetch_followed_activities(db: AsyncSession, following_ids: List[str], limit: int) -> list:
-    """获取关注用户创建的活动（无时间限制，open 状态未过期）"""
-    from sqlalchemy import func, or_
+async def _fetch_followed_activities(
+    db: AsyncSession,
+    following_ids: List[str],
+    following_expert_ids: List[str],
+    limit: int,
+) -> list:
+    """获取关注对象创建的活动（无时间限制，open 状态未过期）
+
+    匹配规则（使用新规范字段 owner_type/owner_id）：
+    - owner_type='user' 且 owner_id IN following_ids（个人达人活动）
+    - 或 owner_type='expert' 且 owner_id IN following_expert_ids（团队活动）
+    """
+    from sqlalchemy import func, or_, and_
     from sqlalchemy.orm import aliased
     from app.utils.time_utils import get_utc_time
 
+    if not following_ids and not following_expert_ids:
+        return []
+
     now = get_utc_time()
     FTE = aliased(models.FeaturedTaskExpert)
+    ExpertAlias = aliased(Expert)
 
     participant_count = (
         select(func.count(models.OfficialActivityApplication.id))
@@ -457,6 +579,28 @@ async def _fetch_followed_activities(db: AsyncSession, following_ids: List[str],
         .scalar_subquery()
         .label("participant_count")
     )
+
+    # 构建匹配条件
+    user_match = (
+        and_(
+            models.Activity.owner_type == "user",
+            models.Activity.owner_id.in_(following_ids),
+        )
+        if following_ids
+        else None
+    )
+    expert_match = (
+        and_(
+            models.Activity.owner_type == "expert",
+            models.Activity.owner_id.in_(following_expert_ids),
+        )
+        if following_expert_ids
+        else None
+    )
+    if user_match is not None and expert_match is not None:
+        match_clause = or_(user_match, expert_match)
+    else:
+        match_clause = user_match if user_match is not None else expert_match
 
     query = (
         select(
@@ -476,18 +620,40 @@ async def _fetch_followed_activities(db: AsyncSession, following_ids: List[str],
             models.Activity.discounted_price_per_participant,
             models.Activity.currency,
             models.Activity.max_participants,
-            models.Activity.expert_id,
+            models.Activity.owner_type,
+            models.Activity.owner_id,
             models.Activity.created_at,
             participant_count,
             models.User.name.label("user_name"),
             models.User.avatar.label("user_avatar"),
-            FTE.name.label("expert_name"),
-            FTE.avatar.label("expert_avatar"),
+            FTE.name.label("fte_name"),
+            FTE.avatar.label("fte_avatar"),
+            ExpertAlias.name.label("expert_name"),
+            ExpertAlias.avatar.label("expert_avatar"),
         )
-        .join(models.User, models.Activity.expert_id == models.User.id)
-        .outerjoin(FTE, models.Activity.expert_id == FTE.id)
+        .outerjoin(
+            models.User,
+            and_(
+                models.Activity.owner_type == "user",
+                models.Activity.owner_id == models.User.id,
+            ),
+        )
+        .outerjoin(
+            FTE,
+            and_(
+                models.Activity.owner_type == "user",
+                models.Activity.owner_id == FTE.id,
+            ),
+        )
+        .outerjoin(
+            ExpertAlias,
+            and_(
+                models.Activity.owner_type == "expert",
+                models.Activity.owner_id == ExpertAlias.id,
+            ),
+        )
         .where(
-            models.Activity.expert_id.in_(following_ids),
+            match_clause,
             models.Activity.status == "open",
             models.Activity.visibility == "public",
             or_(
@@ -511,9 +677,13 @@ async def _fetch_followed_activities(db: AsyncSession, following_ids: List[str],
         if original_price and price and original_price > 0 and price < original_price:
             discount_pct = round((1 - price / original_price) * 100)
 
-        # 达人展示名优先
-        display_name = row.expert_name or row.user_name
-        display_avatar = (row.expert_avatar if row.expert_avatar else None) or row.user_avatar
+        is_team = row.owner_type == "expert"
+        if is_team:
+            display_name = row.expert_name
+            display_avatar = row.expert_avatar
+        else:
+            display_name = row.fte_name or row.user_name
+            display_avatar = row.fte_avatar or row.user_avatar
         items.append({
             "feed_type": "activity",
             "id": f"activity_{row.id}",
@@ -524,7 +694,7 @@ async def _fetch_followed_activities(db: AsyncSession, following_ids: List[str],
             "description_zh": (row.description_zh or "")[:100] if row.description_zh else None,
             "description_en": (row.description_en or "")[:100] if row.description_en else None,
             "images": [first_img] if first_img else None,
-            "user_id": str(row.expert_id) if row.expert_id else None,
+            "user_id": str(row.owner_id) if row.owner_id else None,
             "user_name": display_name,
             "user_avatar": display_avatar,
             "price": price,
@@ -559,6 +729,9 @@ async def _fetch_followed_activities(db: AsyncSession, following_ids: List[str],
 async def _fetch_followed_completions(db: AsyncSession, following_ids: List[str], limit: int) -> list:
     """获取关注用户的任务完成记录（30天内）"""
     from app.utils.time_utils import get_utc_time
+
+    if not following_ids:
+        return []
 
     cutoff = get_utc_time() - timedelta(days=30)
 
@@ -630,6 +803,9 @@ async def _fetch_followed_competitor_reviews(
 ) -> list:
     """获取关注用户的竞品评价（30天内有留言的排行榜投票）"""
     from app.utils.time_utils import get_utc_time
+
+    if not following_ids:
+        return []
 
     cutoff = get_utc_time() - timedelta(days=30)
 
@@ -737,6 +913,9 @@ async def _fetch_followed_service_reviews(
 ) -> list:
     """获取关注用户的达人服务评价（30天内）"""
     from app.utils.time_utils import get_utc_time
+
+    if not following_ids:
+        return []
 
     cutoff = get_utc_time() - timedelta(days=30)
 
@@ -846,6 +1025,9 @@ async def _fetch_followed_rankings(
     db: AsyncSession, following_ids: List[str], limit: int
 ) -> list:
     """获取关注用户申请的排行榜（无时间限制，含 TOP 3）"""
+
+    if not following_ids:
+        return []
 
     query = (
         select(

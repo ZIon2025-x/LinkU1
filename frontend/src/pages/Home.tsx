@@ -721,14 +721,8 @@ const Home: React.FC = () => {
     setLoadingExperts(true);
     getPublicTaskExperts()
       .then(data => {
-        let expertsList: any[] = [];
-        if (Array.isArray(data)) {
-          expertsList = data;
-        } else if (data.task_experts) {
-          expertsList = data.task_experts;
-        } else if (data.items) {
-          expertsList = data.items;
-        }
+        // Phase B1 收口: getPublicTaskExperts 现在总是返回数组 (ExpertOut[])
+        const expertsList: any[] = Array.isArray(data) ? data : [];
         
         // 按评分和完成任务数排序，取前3个
         const sortedExperts = expertsList

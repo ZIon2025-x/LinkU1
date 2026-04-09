@@ -433,6 +433,12 @@ async def get_expert_detail_admin(
     )
     members = members_result.scalars().all()
 
+    # is_featured 在独立的 FeaturedExpertV2 表里, 这里 left-join 取一下
+    featured_result = await db.execute(
+        select(FeaturedExpertV2.is_featured).where(FeaturedExpertV2.expert_id == expert_id)
+    )
+    is_featured_row = featured_result.scalar_one_or_none()
+
     return {
         "id": expert.id,
         "name": expert.name,
@@ -440,9 +446,11 @@ async def get_expert_detail_admin(
         "name_zh": expert.name_zh,
         "bio": expert.bio,
         "bio_en": expert.bio_en,
+        "bio_zh": expert.bio_zh,
         "avatar": expert.avatar,
         "status": expert.status,
         "rating": float(expert.rating) if expert.rating else 0,
+        "completion_rate": float(expert.completion_rate) if expert.completion_rate else 0,
         "total_services": expert.total_services,
         "completed_tasks": expert.completed_tasks,
         "member_count": expert.member_count,
@@ -451,7 +459,23 @@ async def get_expert_detail_admin(
         "allow_applications": expert.allow_applications,
         "stripe_onboarding_complete": expert.stripe_onboarding_complete,
         "forum_category_id": expert.forum_category_id,
+        # migration 188: 达人画像字段
+        "category": expert.category,
+        "location": expert.location,
+        "display_order": expert.display_order,
+        "is_verified": expert.is_verified,
+        "expertise_areas": expert.expertise_areas,
+        "expertise_areas_en": expert.expertise_areas_en,
+        "featured_skills": expert.featured_skills,
+        "featured_skills_en": expert.featured_skills_en,
+        "achievements": expert.achievements,
+        "achievements_en": expert.achievements_en,
+        "response_time": expert.response_time,
+        "response_time_en": expert.response_time_en,
+        "user_level": expert.user_level,
+        "is_featured": bool(is_featured_row) if is_featured_row is not None else False,
         "created_at": expert.created_at.isoformat() if expert.created_at else None,
+        "updated_at": expert.updated_at.isoformat() if expert.updated_at else None,
         "members": [
             {"user_id": m.user_id, "role": m.role, "joined_at": m.joined_at.isoformat() if m.joined_at else None}
             for m in members
@@ -472,12 +496,19 @@ async def update_expert_admin(
     if not expert:
         raise HTTPException(status_code=404, detail="达人不存在")
 
-    # 允许更新的字段
+    # 允许更新的字段 — migration 188 加了 11 个画像字段
     allowed_fields = [
         'name', 'name_en', 'name_zh', 'bio', 'bio_en', 'bio_zh',
         'avatar', 'status', 'is_official', 'official_badge',
         'allow_applications',
+        # migration 188:
+        'category', 'location', 'display_order', 'is_verified',
+        'expertise_areas', 'expertise_areas_en',
+        'featured_skills', 'featured_skills_en',
+        'achievements', 'achievements_en',
+        'response_time', 'response_time_en', 'user_level',
     ]
+    # JSONB 列收到 None 当成 NULL, 收到 [] 当成空数组, 与 admin 表单 parseList 行为对齐
     for field in allowed_fields:
         if field in body:
             setattr(expert, field, body[field])

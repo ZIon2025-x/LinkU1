@@ -11,7 +11,6 @@ import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import { TimeHandlerV2 } from '../utils/timeUtils';
 import {
   fetchCurrentUser,
-  getTaskExpert,
   getMyTaskExpertServices,
   createTaskExpertService,
   updateTaskExpertService,
@@ -361,37 +360,39 @@ const TaskExpertDashboard: React.FC = () => {
       const userData = await fetchCurrentUser();
       setUser(userData);
 
-      // 加载任务达人信息（legacy individual expert，用 user_id 查）
-      const expertData = await getTaskExpert(userData.id);
-      setExpert(expertData);
-
-      // 加载用户加入的所有达人团队（new model）+ 解析当前选中的团队
-      try {
-        const teams = await fetchMyExpertTeams();
-        setMyTeams(teams);
-        if (teams.length > 0) {
-          // 优先级：URL ?teamId= > localStorage > teams[0]
-          const urlParams = new URLSearchParams(window.location.search);
-          const fromUrl = urlParams.get('teamId');
-          const fromStorage = localStorage.getItem('selected_expert_id');
-          const validIds = new Set(teams.map((t: any) => t.id));
-          const initial =
-            (fromUrl && validIds.has(fromUrl) ? fromUrl : null) ??
-            (fromStorage && validIds.has(fromStorage) ? fromStorage : null) ??
-            teams[0].id;
-          setSelectedExpertId(initial);
-          setMyExpertId(initial);
-          localStorage.setItem('selected_expert_id', initial);
-        }
-      } catch (e) {
-        // 如果用户没有加入任何团队，回退到 legacy individual expert 模式（不阻塞主流程）
+      // Phase B1 收口: 不再调 legacy getTaskExpert(user_id),改用 fetchMyExpertTeams
+      // "是达人" = 拥有至少一个团队;"达人基本信息" = 当前选中团队的 name/bio/avatar
+      const teams = await fetchMyExpertTeams();
+      if (!Array.isArray(teams) || teams.length === 0) {
+        message.error('您还不是任务达人');
+        navigate('/task-experts/intro');
+        return;
       }
+      setMyTeams(teams);
+
+      // 选中当前团队 (URL ?teamId= > localStorage > teams[0])
+      const urlParams = new URLSearchParams(window.location.search);
+      const fromUrl = urlParams.get('teamId');
+      const fromStorage = localStorage.getItem('selected_expert_id');
+      const validIds = new Set(teams.map((t: any) => t.id));
+      const initial =
+        (fromUrl && validIds.has(fromUrl) ? fromUrl : null) ??
+        (fromStorage && validIds.has(fromStorage) ? fromStorage : null) ??
+        teams[0].id;
+      setSelectedExpertId(initial);
+      setMyExpertId(initial);
+      localStorage.setItem('selected_expert_id', initial);
+
+      // 把当前选中团队映射到 legacy `expert` state (字段名对齐: name → expert_name)
+      // 下游代码还在用 expert.expert_name / expert.bio / expert.avatar 做欢迎语和表单 pre-fill
+      const currentTeam = teams.find((t: any) => t.id === initial) || teams[0];
+      setExpert({
+        ...currentTeam,
+        expert_name: currentTeam.name || currentTeam.expert_name || '',
+      });
     } catch (err: any) {
       if (err.response?.status === 401) {
         setShowLoginModal(true);
-      } else if (err.response?.status === 404) {
-        message.error('您还不是任务达人');
-        navigate('/task-experts/intro');
       } else {
         message.error('加载数据失败');
       }

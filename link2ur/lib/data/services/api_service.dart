@@ -846,7 +846,7 @@ class _MemoryCache {
     '/api/tasks': 30,                   // 任务列表 30s
     '/api/forum': 30,                   // 论坛帖子 30s
     '/api/flea-market': 30,             // 跳蚤市场 30s
-    '/api/task-experts': 60,            // 达人列表 60s
+    '/api/experts': 60,                 // 达人团队列表 60s (Phase B1: 原 /api/task-experts 已迁移)
     '/api/users/profile/': 120,         // 用户资料 120s
     '/api/leaderboard': 300,            // 排行榜 5min
     '/api/categories': 600,             // 分类 10min

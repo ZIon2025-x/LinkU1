@@ -284,38 +284,169 @@ async def list_my_following_experts(
     return out
 
 
+# ==================== 4b. GET /by-user/{user_id} — user_id → team resolver ====================
+
+@expert_router.get("/by-user/{user_id}", response_model=ExpertOut)
+async def get_expert_by_user(
+    user_id: str,
+    request: Request,
+    db: AsyncSession = Depends(get_async_db_dependency),
+    current_user: Optional[models.User] = Depends(get_current_user_optional),
+):
+    """通过 user_id 解析到达人团队,返回团队详情 (公开).
+
+    用途: legacy Web UI 需要"查一个用户作为达人的团队信息",但新 experts.id
+    与 user.id 是不同 namespace。本端点做解析,让前端从 user_id 一步跳到 ExpertOut。
+
+    解析顺序:
+    1. `_expert_id_migration_map`: old_id == user_id → new expert_id
+       (覆盖 B1 legacy 1 人团队: task_experts.id=user.id 通过 migration 168/185 映射到新团队)
+    2. ExpertMember: user_id 作为 owner 的 active 团队 (按 joined_at 最早,兼容 owner 多团队)
+       (覆盖没 migration map 记录的新注册 owner)
+    3. 都没有 → 404
+
+    响应: ExpertOut (含 is_following 当前用户视角)
+    """
+    from sqlalchemy import text as _sql_text
+
+    resolved_id: Optional[str] = None
+
+    # Strategy 1: _expert_id_migration_map (legacy 1 人团队 catch-up)
+    try:
+        mapped = await db.execute(
+            _sql_text("SELECT new_id FROM _expert_id_migration_map WHERE old_id = :old_id"),
+            {"old_id": user_id},
+        )
+        row = mapped.first()
+        if row and row[0]:
+            resolved_id = row[0]
+    except Exception as e:
+        logger.warning(f"_expert_id_migration_map lookup failed for user_id={user_id}: {e}")
+
+    # Strategy 2: ExpertMember(role='owner', status='active')
+    if not resolved_id:
+        member_result = await db.execute(
+            select(ExpertMember.expert_id)
+            .where(
+                and_(
+                    ExpertMember.user_id == user_id,
+                    ExpertMember.status == "active",
+                    ExpertMember.role == "owner",
+                )
+            )
+            .order_by(ExpertMember.joined_at.asc())
+            .limit(1)
+        )
+        resolved_id = member_result.scalar_one_or_none()
+
+    if not resolved_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="该用户未拥有任何达人团队",
+        )
+
+    expert_result = await db.execute(select(Expert).where(Expert.id == resolved_id))
+    expert = expert_result.scalar_one_or_none()
+    if not expert:
+        # migration_map 可能指向已删除的团队,降级 404
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="达人团队不存在",
+        )
+
+    out = ExpertOut.model_validate(expert)
+    # 填充 is_following
+    if current_user:
+        fr = await db.execute(
+            select(ExpertFollow.expert_id).where(
+                and_(
+                    ExpertFollow.user_id == current_user.id,
+                    ExpertFollow.expert_id == resolved_id,
+                )
+            )
+        )
+        out.is_following = fr.scalar_one_or_none() is not None
+    return out
+
+
 # ==================== 5. GET / (list/search) — placed before /{expert_id} ====================
 
 @expert_router.get("", response_model=List[ExpertOut])
 async def list_experts(
     request: Request,
-    keyword: Optional[str] = Query(None),
-    sort: Optional[str] = Query("created_at", pattern="^(rating|created_at|completed_tasks)$"),
+    keyword: Optional[str] = Query(None, description="名称/简介/技能/分类的模糊匹配"),
+    category: Optional[str] = Query(None, description="按 experts.category 精确筛选"),
+    location: Optional[str] = Query(None, description="按 experts.location 大小写不敏感、支持中英文城市别名"),
+    sort: Optional[str] = Query(
+        None,
+        pattern="^(rating|created_at|completed_tasks|display_order|random)$",
+        description="排序: rating / completed_tasks / created_at / display_order(默认) / random",
+    ),
+    status_filter: Optional[str] = Query("active", alias="status"),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_async_db_dependency),
     current_user: Optional[models.User] = Depends(get_current_user_optional),
 ):
-    """搜索/列表达人团队（公开）"""
-    query = select(Expert).where(Expert.status == "active")
+    """搜索/列表达人团队（公开）
 
-    if keyword:
-        like = f"%{keyword}%"
-        query = query.where(
-            Expert.name.ilike(like)
-            | Expert.name_en.ilike(like)
-            | Expert.name_zh.ilike(like)
-            | Expert.bio.ilike(like)
+    Phase B1 收口: 这是 Flutter buyer 端 `/api/task-experts` 调用的迁移目标 ——
+    用 Expert 表替换 legacy FeaturedTaskExpert,并接管原 task_expert_routes.get_experts_list
+    支持的所有筛选参数 (category / location / keyword / sort=random)。
+    """
+    query = select(Expert).where(Expert.status == (status_filter or "active"))
+
+    if category:
+        query = query.where(Expert.category == category)
+
+    if location:
+        # 与 legacy 一致: build_city_location_filter 处理大小写不敏感 + 中英文城市别名
+        from app.utils.city_filter_utils import build_city_location_filter
+        loc_filter = build_city_location_filter(Expert.location, location.strip())
+        if loc_filter is not None:
+            query = query.where(loc_filter)
+
+    if keyword and keyword.strip():
+        # 与 legacy 一致: build_keyword_filter 支持同义词扩展 (Phase B1 行为对齐)
+        # 注意: 新表 expertise_areas / featured_skills / achievements 是 JSONB,
+        # 不能直接 ilike, 这里只对 Text/VARCHAR 列做模糊匹配。
+        # JSONB 列需要时单独 cast(JSONB → Text) 后再 ilike, 当前 keyword 命中率
+        # 通过 name + bio + category + bio_zh 已经足够好,先不引入 cast 复杂度。
+        from app.utils.search_expander import build_keyword_filter
+        kw_filter = build_keyword_filter(
+            columns=[
+                Expert.name,
+                Expert.name_en,
+                Expert.name_zh,
+                Expert.bio,
+                Expert.bio_en,
+                Expert.bio_zh,
+                Expert.category,
+                Expert.location,
+            ],
+            keyword=keyword.strip(),
+            use_similarity=False,
         )
+        if kw_filter is not None:
+            query = query.where(kw_filter)
 
     if sort == "rating":
         query = query.order_by(Expert.rating.desc())
     elif sort == "completed_tasks":
         query = query.order_by(Expert.completed_tasks.desc())
-    else:
+    elif sort == "created_at":
         query = query.order_by(Expert.created_at.desc())
+    elif sort == "random":
+        # 随机排序无法稳定分页, 这里忽略 offset, 仅 limit
+        from sqlalchemy.sql.expression import func as sql_func
+        query = query.order_by(sql_func.random()).limit(limit)
+    else:
+        # 默认: 与 legacy 一致, 按 display_order 升序、created_at 降序兜底
+        query = query.order_by(Expert.display_order.asc(), Expert.created_at.desc())
 
-    query = query.offset(offset).limit(limit)
+    if sort != "random":
+        query = query.offset(offset).limit(limit)
+
     result = await db.execute(query)
     experts = result.scalars().all()
 

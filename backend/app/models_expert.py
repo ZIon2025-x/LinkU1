@@ -59,6 +59,21 @@ class Expert(Base):
     # Phase 3/4: FK 约束后续迁移添加
     forum_category_id = Column(Integer, nullable=True)
     internal_group_id = Column(Integer, nullable=True)
+    # migration 188: 从 legacy `featured_task_experts` 迁过来的"达人画像"字段
+    # admin 后台编辑表单 + buyer 端达人详情页都依赖这些
+    category = Column(String(50), nullable=True)
+    location = Column(String(100), nullable=True)
+    display_order = Column(Integer, nullable=False, default=0, server_default="0")
+    is_verified = Column(Boolean, nullable=False, default=False, server_default="false")
+    expertise_areas = Column(JSON, nullable=True)
+    expertise_areas_en = Column(JSON, nullable=True)
+    featured_skills = Column(JSON, nullable=True)
+    featured_skills_en = Column(JSON, nullable=True)
+    achievements = Column(JSON, nullable=True)
+    achievements_en = Column(JSON, nullable=True)
+    response_time = Column(String(50), nullable=True)
+    response_time_en = Column(String(50), nullable=True)
+    user_level = Column(String(20), nullable=False, default="normal", server_default="normal")
     created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
 
@@ -73,6 +88,9 @@ class Expert(Base):
     __table_args__ = (
         Index("ix_experts_status", "status"),
         Index("ix_experts_rating", "rating"),
+        # migration 188: 与 legacy ix_task_experts_category / ix_task_experts_display_order 对齐
+        Index("ix_experts_category", "category"),
+        Index("ix_experts_display_order", "display_order"),
     )
 
 

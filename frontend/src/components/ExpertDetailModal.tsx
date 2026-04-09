@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Spin } from 'antd';
 import { CloseOutlined } from '@ant-design/icons';
 import { useLanguage } from '../contexts/LanguageContext';
-import { getTaskExpert } from '../api';
+import api from '../api';
 import LazyImage from './LazyImage';
 
 interface ExpertDetailModalProps {
@@ -33,8 +33,11 @@ const ExpertDetailModal: React.FC<ExpertDetailModalProps> = ({
   const loadExpertDetail = async () => {
     setLoading(true);
     try {
-      const data = await getTaskExpert(expertId);
-      // 确保所有字段都有默认值
+      // Phase B1 收口: 走新 /api/experts/{expertId} (expert_routes.py:392)
+      // expertId 来自 getPublicTaskExperts 返回的新 ExpertOut.id (8 字符团队 ID)
+      // 新 schema 字段差异: rating (非 avg_rating), name (非 expert_name) — 这里做兼容映射
+      const res = await api.get(`/api/experts/${expertId}`);
+      const data: any = res.data || {};
       setExpert({
         ...data,
         expert_name: data.expert_name || data.name,
@@ -46,16 +49,17 @@ const ExpertDetailModal: React.FC<ExpertDetailModalProps> = ({
         expertise_areas: data.expertise_areas || [],
         featured_skills: data.featured_skills || [],
         achievements: data.achievements || [],
-        avg_rating: data.avg_rating || 0,
+        avg_rating: data.rating ?? data.avg_rating ?? 0,
         completed_tasks: data.completed_tasks || 0,
         completion_rate: data.completion_rate || 0,
         response_time: data.response_time || null,
         success_rate: data.success_rate !== undefined ? data.success_rate : null,
         is_verified: data.is_verified || false,
-        user_level: data.user_level || null
+        user_level: data.user_level || null,
       });
     } catch (err: any) {
-          } finally {
+      // ignore load error
+    } finally {
       setLoading(false);
     }
   };

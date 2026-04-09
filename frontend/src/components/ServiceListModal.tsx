@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { message } from 'antd';
-import { getTaskExpertServices, applyForService, fetchCurrentUser, getServiceTimeSlotsPublic, applyToActivity } from '../api';
+import api, { applyForService, fetchCurrentUser, getServiceTimeSlotsPublic, applyToActivity } from '../api';
 import ServiceDetailModal from './ServiceDetailModal';
 import LoginModal from './LoginModal';
 import { MODAL_OVERLAY_STYLE } from './TaskDetailModal.styles';
@@ -119,17 +119,22 @@ const ServiceListModal: React.FC<ServiceListModalProps> = ({
     setLoading(true);
     setError('');
     try {
-      const response = await getTaskExpertServices(expertId, 'active');
-      const servicesList = response?.services || [];
+      // Phase B1 收口: 走新 /api/experts/{expertId}/services (expert_service_routes.py:74)
+      // expertId 来自 getPublicTaskExperts 返回的新 ExpertOut.id (8 字符团队 ID)
+      // 响应是 List[dict] 直接返回,不再包 {services: [...]}
+      const response = await api.get(`/api/experts/${expertId}/services`, {
+        params: { status: 'active' },
+      });
+      const servicesList: any[] = Array.isArray(response.data) ? response.data : [];
       setServices(servicesList);
-      
+
       if (servicesList.length === 0) {
         setError('达人准备中，请稍后再来~');
       }
     } catch (err: any) {
       setError('加载服务列表失败');
       message.error('加载服务列表失败');
-          } finally {
+    } finally {
       setLoading(false);
     }
   };

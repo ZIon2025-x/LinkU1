@@ -1400,10 +1400,19 @@ export const submitJobApplication = async (data: {
 };
 
 // ==================== 任务达人功能 API ====================
-// 注意：本节内的"达人 dashboard"类函数已迁移至新的 /api/experts/{expertId}/* 路由。
-// 通过 _getMyExpertId() 解析当前用户的团队 ID，对调用方保持函数签名不变。
-// 仅"买家侧公开浏览"类函数（getPublicTaskExperts、getTaskExpert、getTaskExpertServices 等）
-// 仍指向旧的 /api/task-experts/* 路由——这些是供未登录用户浏览的公开端点。
+// 迁移状态（2026-04-09, Phase B1 收口第三轮完成）：
+//   ✅ "达人 dashboard"类函数：已全部迁移到 /api/experts/{expertId}/*
+//      通过 _getMyExpertId() 解析当前团队 ID，函数签名不变
+//   ✅ 服务详情 (getTaskExpertServiceDetail) → /api/services/{id}
+//   ✅ 申请达人 (applyToBeTaskExpert) → /api/experts/apply
+//   ✅ 查我的申请 (getMyTaskExpertApplication) → /api/experts/my-applications + empty→404 shim
+//   ✅ 达人列表 (getPublicTaskExperts) → /api/experts + rating→avg_rating 字段映射
+//   ✅ getTaskExpert / getTaskExpertServices 已**删除** (所有调用方迁移):
+//      - TaskExpertDashboard/TaskExperts boolean 探测 → fetchMyExpertTeams
+//      - UserProfile (另一用户) → fetchExpertByUser 新 /api/experts/by-user/{user_id}
+//      - ExpertDetailModal / ServiceListModal → 直接调新 /api/experts/{id} 或 /api/experts/{id}/services
+//
+// **本文件中零 `/api/task-experts/*` 调用** (iOS 仍用老 URL,但不影响 Web)
 
 // ----------- Expert team helpers -----------
 // 当前选中的达人团队 ID（可由 team switcher 通过 setMyExpertId 显式设置）。
@@ -1472,6 +1481,18 @@ export const fetchMyExpertTeams = async (): Promise<any[]> => {
   return (res.data as any[]) || [];
 };
 
+// 通过 user_id 解析到达人团队 (对应 backend expert_routes.py /by-user/{user_id})
+// 返回 ExpertOut,同时做 rating → avg_rating 字段映射保持 Web UI 兼容
+// 用于"查另一个用户作为达人的团队信息"场景 (UserProfile 等)
+export const fetchExpertByUser = async (userId: string) => {
+  const res = await api.get(`/api/experts/by-user/${userId}`);
+  const data: any = res.data || {};
+  return {
+    ...data,
+    avg_rating: data.rating ?? data.avg_rating ?? 0,
+  };
+};
+
 // Logout 等场景需要清除缓存
 export const clearMyExpertIdCache = () => {
   _cachedMyExpertId = null;
@@ -1481,31 +1502,53 @@ export const clearMyExpertIdCache = () => {
 // London 本地时间 → UTC ISO 转换：从 utils/londonTime.ts 引入（含单元测试覆盖 BST/GMT 边界）
 const _londonLocalToUtcIso = londonLocalToUtcIso;
 
-// 公开 API - 获取任务达人列表（买家侧浏览，保留旧路由）
+// 公开 API - 获取达人团队列表 — Phase B1 收口: 切到 /api/experts (expert_routes.py:289)
+// 新 ExpertOut 用 `rating` (非 `avg_rating`); Home.tsx 和 TaskExperts.tsx 的列表项仍读 `avg_rating`,
+// 这里做字段映射,避免改 Web UI。其余字段 (name/avatar/bio/location/category/completed_tasks/
+// completion_rate/is_verified/expertise_areas/featured_skills/achievements) 新老 schema 同名。
 export const getPublicTaskExperts = async (category?: string, location?: string) => {
   const params: any = {};
   if (category) params.category = category;
   if (location && location !== 'all') params.location = location;
-  const res = await api.get('/api/task-experts', { params });
-  return res.data;
+  const res = await api.get('/api/experts', { params });
+  const list = Array.isArray(res.data) ? res.data : [];
+  // rating → avg_rating 兼容映射
+  return list.map((e: any) => ({
+    ...e,
+    avg_rating: e.rating ?? e.avg_rating ?? 0,
+  }));
 };
 
-// 任务达人申请相关（旧版个人申请流程，保留）
+// 任务达人申请 — Phase B1 收口: 切到 /api/experts/apply
+// 后端 ExpertApplicationCreate.expert_name 是 Optional,不传时回退 user.name (expert_routes.py:97-102)
+// 旧流程只传 application_message,兼容无缝
+// 响应 ExpertApplicationOut 包含模态框用到的全部字段 (id/user_id/application_message/status/review_comment/created_at)
 export const applyToBeTaskExpert = async (applicationMessage?: string) => {
-  const res = await api.post('/api/task-experts/apply', { application_message: applicationMessage });
+  const res = await api.post('/api/experts/apply', { application_message: applicationMessage });
   return res.data;
 };
 
+// Phase B1 收口: 切到 GET /api/experts/my-applications (返回 List)
+// 旧端点返回 single + 404 (无申请时); 新端点返回 empty list
+// 为保持调用方语义不变,这里把 empty list 转成 404 错误
 export const getMyTaskExpertApplication = async () => {
-  const res = await api.get('/api/task-experts/my-application');
-  return res.data;
+  const res = await api.get('/api/experts/my-applications');
+  const list = Array.isArray(res.data) ? res.data : [];
+  if (list.length === 0) {
+    const err: any = new Error('No application found');
+    err.response = { status: 404, data: { detail: 'No application found' } };
+    throw err;
+  }
+  // 返回最新的一条申请 (后端已按 created_at desc 排序)
+  return list[0];
 };
 
-// 任务达人信息（公开浏览，保留旧路由）
-export const getTaskExpert = async (expertId: string) => {
-  const res = await api.get(`/api/task-experts/${expertId}`);
-  return res.data;
-};
+// [已删除] getTaskExpert — Phase B1 收口第三轮完成
+// 调用方全部迁移:
+//   - TaskExpertDashboard.tsx → fetchMyExpertTeams + 当前团队映射
+//   - TaskExperts.tsx 的 boolean 探测 → fetchMyExpertTeams().length > 0
+//   - UserProfile.tsx → fetchExpertByUser (新 /api/experts/by-user/{user_id})
+//   - ExpertDetailModal.tsx → 直接调 /api/experts/{expertId} (expertId 来自已迁移的 list)
 
 // 团队资料修改 — 走新的 profile-update-request workflow
 export const updateTaskExpertProfile = async (expertData: { expert_name?: string; bio?: string; avatar?: string }) => {
@@ -1662,15 +1705,15 @@ export const deleteClosedDateByDate = async (targetDate: string) => {
   return res.data;
 };
 
-// 公开浏览（买家侧）— 保留旧路由
-export const getTaskExpertServices = async (expertId: string, status?: string) => {
-  const params = status ? { status } : {};
-  const res = await api.get(`/api/task-experts/${expertId}/services`, { params });
-  return res.data;
-};
+// [已删除] getTaskExpertServices — Phase B1 收口第三轮完成
+// 调用方全部迁移:
+//   - ServiceListModal.tsx → 直接调 /api/experts/{expertId}/services (expertId 来自新 list)
+//   - UserProfile.tsx → 先 fetchExpertByUser 拿 team id,再 /api/experts/{team.id}/services
 
 export const getTaskExpertServiceDetail = async (serviceId: number) => {
-  const res = await api.get(`/api/task-experts/services/${serviceId}`);
+  // Phase B1 收口：切到 service_public_routes 新端点（同 schema TaskExpertServiceOut）
+  // 相比旧 /api/task-experts/services/{id}: ownership 走 ExpertMember，新团队 owner/admin 都能拿到回复权限
+  const res = await api.get(`/api/services/${serviceId}`);
   return res.data;
 };
 

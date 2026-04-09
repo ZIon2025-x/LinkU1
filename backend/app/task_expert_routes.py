@@ -260,268 +260,184 @@ async def get_experts_list(
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    """获取任务达人列表（公开接口，登录后返回 is_following）
+    """[B1 收口 / 2026-04-09] LEGACY URL,但内部已改为查新 `experts` 表。
 
-    优先从 FeaturedTaskExpert 表获取精选任务达人，如果没有则从 TaskExpert 表获取。
-    根据 Accept-Language 请求头自动返回对应语言的双语字段。
-    支持 category 和 location 筛选。location 支持中英文城市名（如 London / 伦敦）。
-    sort=random 时随机排序，offset 被忽略（随机排序无法稳定分页）。
+    旧实现读 `featured_task_experts` + `task_experts`,在 migration 168/185 之后
+    那两个表只是历史归档,所有真实数据都在新 `experts` 表里 (含 migration 188 加的
+    画像字段)。本端点保留 URL + 完整响应字段名,确保任何还在调用 /api/task-experts
+    的旧客户端都能解析,但数据源切到新表。
+
+    新 client 应改用 /api/experts (`expert_routes.list_experts`),响应是 ExpertOut。
     """
-    import json
-    from app.utils.city_filter_utils import build_city_location_filter
-    
-    # 获取用户语言偏好（从 Accept-Language 请求头）
+    return await _legacy_list_from_new_experts(
+        request=request,
+        category=category,
+        location=location,
+        keyword=keyword,
+        sort=sort,
+        status_filter=status_filter or "active",
+        limit=limit,
+        offset=offset,
+        db=db,
+    )
+
+
+async def _legacy_list_from_new_experts(
+    *,
+    request: Request,
+    category: Optional[str],
+    location: Optional[str],
+    keyword: Optional[str],
+    sort: Optional[str],
+    status_filter: str,
+    limit: int,
+    offset: int,
+    db: AsyncSession,
+):
+    """B1 收口辅助: 从新 Expert 表查列表,转换为 legacy 响应 shape。"""
+    from app.models_expert import Expert
     user_lang = _get_language_from_request(request)
-    
-    # 首先尝试从 FeaturedTaskExpert 表获取（精选任务达人）
-    featured_query = select(models.FeaturedTaskExpert).where(
-        models.FeaturedTaskExpert.is_active == 1
-    )
-    
+
+    query = select(Expert).where(Expert.status == status_filter)
+
     if category:
-        featured_query = featured_query.where(
-            models.FeaturedTaskExpert.category == category
-        )
-    
+        query = query.where(Expert.category == category)
+
     if location:
-        # 使用 build_city_location_filter 进行大小写不敏感的城市匹配
-        location_filter = build_city_location_filter(models.FeaturedTaskExpert.location, location.strip())
-        if location_filter is not None:
-            featured_query = featured_query.where(location_filter)
+        from app.utils.city_filter_utils import build_city_location_filter
+        loc_filter = build_city_location_filter(Expert.location, location.strip())
+        if loc_filter is not None:
+            query = query.where(loc_filter)
 
     if keyword and keyword.strip():
         from app.utils.search_expander import build_keyword_filter
-        keyword_expr = build_keyword_filter(
+        kw_filter = build_keyword_filter(
             columns=[
-                models.FeaturedTaskExpert.name,
-                models.FeaturedTaskExpert.bio,
-                models.FeaturedTaskExpert.bio_en,
-                models.FeaturedTaskExpert.expertise_areas,
-                models.FeaturedTaskExpert.expertise_areas_en,
-                models.FeaturedTaskExpert.featured_skills,
-                models.FeaturedTaskExpert.featured_skills_en,
-                models.FeaturedTaskExpert.category,
+                Expert.name,
+                Expert.name_en,
+                Expert.name_zh,
+                Expert.bio,
+                Expert.bio_en,
+                Expert.bio_zh,
+                Expert.category,
+                Expert.location,
             ],
             keyword=keyword.strip(),
             use_similarity=False,
         )
-        if keyword_expr is not None:
-            featured_query = featured_query.where(keyword_expr)
-    
-    if sort == 'random':
-        from sqlalchemy.sql.expression import func as sql_func
-        featured_query = featured_query.order_by(sql_func.random()).limit(limit)
-    else:
-        featured_query = featured_query.order_by(
-            models.FeaturedTaskExpert.display_order,
-            models.FeaturedTaskExpert.created_at.desc()
-        ).offset(offset).limit(limit)
-    
-    featured_result = await db.execute(featured_query)
-    featured_experts = featured_result.scalars().all()
-    
-    # 如果有精选任务达人，返回它们
-    if featured_experts:
-        items = []
-        for expert in featured_experts:
-            # 解析 JSON 字段（中文 + 英文版本）
-            expertise_areas = json.loads(expert.expertise_areas) if expert.expertise_areas else []
-            expertise_areas_en = json.loads(expert.expertise_areas_en) if expert.expertise_areas_en else []
-            featured_skills = json.loads(expert.featured_skills) if expert.featured_skills else []
-            featured_skills_en = json.loads(expert.featured_skills_en) if expert.featured_skills_en else []
-            achievements = json.loads(expert.achievements) if expert.achievements else []
-            achievements_en = json.loads(expert.achievements_en) if expert.achievements_en else []
-            
-            # 根据语言选择显示字段（与论坛双语模式一致）
-            display_bio = expert.bio or ""
-            if user_lang == 'en' and expert.bio_en:
-                display_bio = expert.bio_en
-            
-            display_specialties = expertise_areas
-            if user_lang == 'en' and expertise_areas_en:
-                display_specialties = expertise_areas_en
-            
-            display_featured_skills = featured_skills
-            if user_lang == 'en' and featured_skills_en:
-                display_featured_skills = featured_skills_en
-            
-            display_achievements = achievements
-            if user_lang == 'en' and achievements_en:
-                display_achievements = achievements_en
-            
-            display_response_time = expert.response_time or ""
-            if user_lang == 'en' and expert.response_time_en:
-                display_response_time = expert.response_time_en
-            
-            # 从 FeaturedTaskExpert 转换为前端需要的格式
-            # 字段名以 React 前端 TaskExperts.tsx interface TaskExpert 为准
-            # 同时增加双语字段（_en/_zh）供 Flutter 使用
-            expert_dict = {
-                # === 基础字段（与 React 前端 interface 一致） ===
-                "id": expert.id,
-                "name": expert.name,
-                "avatar": expert.avatar,
-                "user_level": expert.user_level,
-                "avg_rating": expert.avg_rating or 0,
-                "completed_tasks": expert.completed_tasks or 0,
-                "total_tasks": expert.total_tasks or 0,
-                "completion_rate": round(expert.completion_rate or 0, 1),
-                "is_verified": bool(expert.is_verified),
-                "success_rate": expert.success_rate or 0,
-                "location": expert.location if expert.location and expert.location.strip() else "Online",
-                "category": expert.category,
-                "created_at": format_iso_utc(expert.created_at) if expert.created_at else None,
-                "updated_at": format_iso_utc(expert.updated_at) if expert.updated_at else None,
-                # === 双语字段：bio ===
-                "bio": display_bio,
-                "bio_en": expert.bio_en or "",
-                "bio_zh": expert.bio or "",
-                # === 双语字段：expertise_areas（专业领域） ===
-                "expertise_areas": display_specialties,
-                "expertise_areas_en": expertise_areas_en,
-                "specialties_zh": expertise_areas,  # Flutter 使用
-                # === 双语字段：featured_skills（特色技能） ===
-                "featured_skills": display_featured_skills,
-                "featured_skills_en": featured_skills_en,
-                "featured_skills_zh": featured_skills,
-                # === 双语字段：achievements（成就） ===
-                "achievements": display_achievements,
-                "achievements_en": achievements_en,
-                "achievements_zh": achievements,
-                # === 双语字段：response_time ===
-                "response_time": display_response_time,
-                "response_time_en": expert.response_time_en or "",
-                "response_time_zh": expert.response_time or "",
-            }
-            items.append(expert_dict)
-        return await _attach_is_following(items, request, db)
+        if kw_filter is not None:
+            query = query.where(kw_filter)
 
-    # 如果没有精选任务达人，从 TaskExpert 表获取
-    query = select(models.TaskExpert).where(
-        models.TaskExpert.status == status_filter
-    )
-
-    if keyword and keyword.strip():
-        from app.utils.search_expander import build_keyword_filter
-        keyword_expr = build_keyword_filter(
-            columns=[
-                models.TaskExpert.expert_name,
-                models.TaskExpert.bio,
-            ],
-            keyword=keyword.strip(),
-            use_similarity=False,
-        )
-        if keyword_expr is not None:
-            query = query.where(keyword_expr)
-    
-    # 分页查询
-    if sort == 'random':
+    if sort == "random":
         from sqlalchemy.sql.expression import func as sql_func
         query = query.order_by(sql_func.random()).limit(limit)
     else:
-        query = query.order_by(
-            models.TaskExpert.is_official.desc(),
-            models.TaskExpert.created_at.desc()
-        ).offset(offset).limit(limit)
-    
-    result = await db.execute(query)
-    experts = result.scalars().all()
-
-    # Batch-load Users and FeaturedTaskExpert to avoid N+1 (was 2N extra queries per page)
-    expert_ids = [e.id for e in experts]
-    users_by_id: dict = {}
-    featured_by_id: dict = {}
-    if expert_ids:
-        users_result = await db.execute(
-            select(models.User).where(models.User.id.in_(expert_ids))
+        query = (
+            query.order_by(Expert.display_order.asc(), Expert.created_at.desc())
+            .offset(offset).limit(limit)
         )
-        users_by_id = {u.id: u for u in users_result.scalars().all()}
-        featured_result = await db.execute(
-            select(models.FeaturedTaskExpert).where(
-                models.FeaturedTaskExpert.id.in_(expert_ids)
-            )
-        )
-        featured_by_id = {f.id: f for f in featured_result.scalars().all()}
 
-    # 加载关联的用户信息，构建与 FeaturedTaskExpert 路径相同格式的响应
-    items = []
-    for expert in experts:
-        user = users_by_id.get(expert.id)
-        featured_expert = featured_by_id.get(expert.id)
-        
-        # 确定各字段值
-        display_name = user.name if user else (expert.expert_name or "")
-        avatar = ""
-        if featured_expert and featured_expert.avatar:
-            avatar = featured_expert.avatar
-        elif user:
-            avatar = user.avatar or ""
-        
-        location_val = "Online"
-        if featured_expert and featured_expert.location:
-            location_val = featured_expert.location
-        elif user and hasattr(user, 'residence_city') and user.residence_city:
-            location_val = user.residence_city
-        
-        # 使用与 FeaturedTaskExpert 路径一致的字段名（React 前端格式）
-        expert_dict = {
-            "id": expert.id,
-            "name": display_name,
-            "avatar": avatar,
-            "user_level": "normal",
-            "avg_rating": float(expert.rating) if expert.rating else 0,
-            "completed_tasks": expert.completed_tasks or 0,
-            "total_tasks": expert.total_services or 0,
-            "completion_rate": 0,
-            "is_verified": False,
-            "bio": expert.bio or "",
-            "success_rate": 0,
-            "location": location_val,
-            "expertise_areas": [],
-            "featured_skills": [],
-            "achievements": [],
-            "response_time": "",
-            "created_at": format_iso_utc(expert.created_at) if expert.created_at else None,
-        }
-        
-        # 如果有 FeaturedTaskExpert 关联，补充双语字段和扩展数据
-        if featured_expert:
-            bio_zh = featured_expert.bio or ""
-            bio_en = featured_expert.bio_en or ""
-            expert_dict["bio"] = bio_en if user_lang == 'en' and bio_en else bio_zh
-            expert_dict["bio_en"] = bio_en
-            expert_dict["bio_zh"] = bio_zh
-            expert_dict["user_level"] = featured_expert.user_level or "normal"
-            expert_dict["is_verified"] = bool(featured_expert.is_verified)
-            expert_dict["success_rate"] = featured_expert.success_rate or 0
-            expert_dict["completion_rate"] = round(featured_expert.completion_rate or 0, 1)
-            expert_dict["total_tasks"] = featured_expert.total_tasks or expert_dict["total_tasks"]
-            
-            ea = json.loads(featured_expert.expertise_areas) if featured_expert.expertise_areas else []
-            ea_en = json.loads(featured_expert.expertise_areas_en) if featured_expert.expertise_areas_en else []
-            expert_dict["expertise_areas"] = ea_en if user_lang == 'en' and ea_en else ea
-            expert_dict["expertise_areas_en"] = ea_en
-            expert_dict["specialties_zh"] = ea
-            
-            fs = json.loads(featured_expert.featured_skills) if featured_expert.featured_skills else []
-            fs_en = json.loads(featured_expert.featured_skills_en) if featured_expert.featured_skills_en else []
-            expert_dict["featured_skills"] = fs_en if user_lang == 'en' and fs_en else fs
-            expert_dict["featured_skills_en"] = fs_en
-            expert_dict["featured_skills_zh"] = fs
-            
-            ach = json.loads(featured_expert.achievements) if featured_expert.achievements else []
-            ach_en = json.loads(featured_expert.achievements_en) if featured_expert.achievements_en else []
-            expert_dict["achievements"] = ach_en if user_lang == 'en' and ach_en else ach
-            expert_dict["achievements_en"] = ach_en
-            expert_dict["achievements_zh"] = ach
-            
-            expert_dict["response_time"] = featured_expert.response_time_en if user_lang == 'en' and featured_expert.response_time_en else (featured_expert.response_time or "")
-            expert_dict["response_time_en"] = featured_expert.response_time_en or ""
-            expert_dict["response_time_zh"] = featured_expert.response_time or ""
-        
-        items.append(expert_dict)
+    rows = await db.execute(query)
+    experts = rows.scalars().all()
 
+    items = [_expert_to_legacy_dict(e, user_lang) for e in experts]
     return await _attach_is_following(items, request, db)
+
+
+def _expert_to_legacy_dict(expert, user_lang: str) -> dict:
+    """把新 Expert ORM 行转成 legacy `/api/task-experts` 返回的字段名。
+
+    Flutter 旧 TaskExpert.fromJson 会优先读 `name` / `avg_rating` / `expertise_areas`
+    等字段;新 ExpertOut 用 `rating` 等。这个 helper 确保任何还在打 legacy URL 的
+    客户端拿到与历史一致的 JSON。
+    """
+    bio_en = expert.bio_en or ""
+    bio_zh = expert.bio_zh or ""
+    bio_default = expert.bio or ""
+
+    ea = expert.expertise_areas or []
+    ea_en = expert.expertise_areas_en or []
+    fs = expert.featured_skills or []
+    fs_en = expert.featured_skills_en or []
+    ach = expert.achievements or []
+    ach_en = expert.achievements_en or []
+
+    return {
+        "id": expert.id,
+        "name": expert.name or "",
+        "avatar": expert.avatar or "",
+        "user_level": expert.user_level or "normal",
+        "avg_rating": float(expert.rating) if expert.rating else 0.0,
+        "rating": float(expert.rating) if expert.rating else 0.0,  # 双名兼容新 client
+        "completed_tasks": expert.completed_tasks or 0,
+        "total_tasks": expert.completed_tasks or 0,  # legacy 字段, 新模型没区分
+        "completion_rate": round(float(expert.completion_rate or 0), 1),
+        "is_verified": bool(expert.is_verified),
+        "success_rate": 0.0,  # 新模型没此字段, 给 0 兼容
+        "location": expert.location or "Online",
+        "category": expert.category,
+        "display_order": expert.display_order or 0,
+        "is_official": bool(expert.is_official),
+        "official_badge": expert.official_badge,
+        "status": expert.status,
+        "total_services": expert.total_services or 0,
+        "member_count": expert.member_count or 1,
+        # 双语 bio
+        "bio": bio_en if user_lang == "en" and bio_en else (bio_zh or bio_default),
+        "bio_en": bio_en,
+        "bio_zh": bio_zh or bio_default,
+        # 双语 expertise_areas
+        "expertise_areas": ea_en if user_lang == "en" and ea_en else ea,
+        "expertise_areas_en": ea_en,
+        "specialties_zh": ea,
+        # 双语 featured_skills
+        "featured_skills": fs_en if user_lang == "en" and fs_en else fs,
+        "featured_skills_en": fs_en,
+        "featured_skills_zh": fs,
+        # 双语 achievements
+        "achievements": ach_en if user_lang == "en" and ach_en else ach,
+        "achievements_en": ach_en,
+        "achievements_zh": ach,
+        # 双语 response_time
+        "response_time": (
+            expert.response_time_en
+            if user_lang == "en" and expert.response_time_en
+            else (expert.response_time or "")
+        ),
+        "response_time_en": expert.response_time_en or "",
+        "response_time_zh": expert.response_time or "",
+        "created_at": format_iso_utc(expert.created_at) if expert.created_at else None,
+        "updated_at": format_iso_utc(expert.updated_at) if expert.updated_at else None,
+    }
+
+
+async def _resolve_legacy_expert_id_to_new(
+    db: AsyncSession, candidate: str
+) -> Optional[str]:
+    """把传入的 expert_id 解析为新 experts.id。
+
+    候选可能是:
+      a) 已经是新 8 字符 experts.id → 直接返回
+      b) 旧 task_experts.id (= 旧 user_id 语义) → 走 _expert_id_migration_map
+    """
+    from app.models_expert import Expert
+    from sqlalchemy import text as _sql_text
+    # 直接查
+    direct = await db.execute(select(Expert.id).where(Expert.id == candidate))
+    if direct.scalar_one_or_none():
+        return candidate
+    # 走映射表 (历史表, 没有 ORM 模型, 用裸 SQL)
+    try:
+        mapped = await db.execute(
+            _sql_text("SELECT new_id FROM _expert_id_migration_map WHERE old_id = :old_id"),
+            {"old_id": candidate},
+        )
+        row = mapped.first()
+        if row and row[0]:
+            return row[0]
+    except Exception:
+        pass
+    return None
 
 
 async def _attach_is_following(items: list, request, db) -> list:
@@ -564,116 +480,34 @@ async def get_expert(
     expert_id: str,
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    """获取任务达人信息（优先从 FeaturedTaskExpert 获取，与列表接口保持一致）
-    
-    响应格式与列表接口一致，包含完整的双语字段（_en/_zh）。
+    """[B1 收口 / 2026-04-09] LEGACY URL,内部已改为查新 `experts` 表。
+
+    候选 expert_id 可能是:
+      a) 新 8 字符 experts.id → 直接查
+      b) 旧 task_experts.id (= 老 user_id 语义) → 通过 _expert_id_migration_map 解析
+
+    响应字段名仍与历史保持一致 (`name` / `avg_rating` / `expertise_areas` 等),
+    确保任何缓存的旧客户端仍能解析。
     """
+    from app.models_expert import Expert
     user_lang = _get_language_from_request(request)
-    
-    # 优先从 FeaturedTaskExpert 获取数据（与列表接口保持一致）
-    featured_expert = await db.execute(
-        select(models.FeaturedTaskExpert).where(models.FeaturedTaskExpert.id == expert_id)
-    )
-    featured_expert = featured_expert.scalar_one_or_none()
-    
-    # 如果 FeaturedTaskExpert 不存在，从 TaskExpert 获取基础信息
-    expert = await db.execute(
-        select(models.TaskExpert).where(models.TaskExpert.id == expert_id)
-    )
-    expert = expert.scalar_one_or_none()
-    
-    if not expert and not featured_expert:
+
+    resolved = await _resolve_legacy_expert_id_to_new(db, expert_id)
+    if not resolved:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="任务达人不存在"
         )
-    
-    # 加载用户信息以获取名称和头像
-    from app import async_crud
-    user = await async_crud.async_user_crud.get_user_by_id(db, expert_id)
-    
-    # 优先使用 FeaturedTaskExpert 的数据（与列表接口保持一致）
-    if featured_expert:
-        import json
-        # 解析 JSON 字段
-        ea = json.loads(featured_expert.expertise_areas) if featured_expert.expertise_areas else []
-        ea_en = json.loads(featured_expert.expertise_areas_en) if featured_expert.expertise_areas_en else []
-        fs = json.loads(featured_expert.featured_skills) if featured_expert.featured_skills else []
-        fs_en = json.loads(featured_expert.featured_skills_en) if featured_expert.featured_skills_en else []
-        ach = json.loads(featured_expert.achievements) if featured_expert.achievements else []
-        ach_en = json.loads(featured_expert.achievements_en) if featured_expert.achievements_en else []
-        
-        result_dict = {
-            # 基础字段（与 React 前端一致）
-            "id": featured_expert.id,
-            "name": featured_expert.name,
-            "avatar": featured_expert.avatar or "",
-            "user_level": featured_expert.user_level,
-            "avg_rating": featured_expert.avg_rating or 0.0,
-            "completed_tasks": featured_expert.completed_tasks or 0,
-            "total_tasks": featured_expert.total_tasks or 0,
-            "completion_rate": round(featured_expert.completion_rate or 0.0, 1),
-            "is_verified": bool(featured_expert.is_verified),
-            "success_rate": featured_expert.success_rate or 0.0,
-            "location": featured_expert.location or "Online",
-            "category": featured_expert.category,
-            "status": expert.status if expert else "active",
-            "total_services": expert.total_services if expert else 0,
-            "created_at": format_iso_utc(featured_expert.created_at) if featured_expert.created_at else None,
-            "updated_at": format_iso_utc(featured_expert.updated_at) if featured_expert.updated_at else None,
-            # 双语：bio
-            "bio": featured_expert.bio_en if user_lang == 'en' and featured_expert.bio_en else (featured_expert.bio or ""),
-            "bio_en": featured_expert.bio_en or "",
-            "bio_zh": featured_expert.bio or "",
-            # 双语：expertise_areas
-            "expertise_areas": ea_en if user_lang == 'en' and ea_en else ea,
-            "expertise_areas_en": ea_en,
-            "specialties_zh": ea,
-            # 双语：featured_skills
-            "featured_skills": fs_en if user_lang == 'en' and fs_en else fs,
-            "featured_skills_en": fs_en,
-            "featured_skills_zh": fs,
-            # 双语：achievements
-            "achievements": ach_en if user_lang == 'en' and ach_en else ach,
-            "achievements_en": ach_en,
-            "achievements_zh": ach,
-            # 双语：response_time
-            "response_time": featured_expert.response_time_en if user_lang == 'en' and featured_expert.response_time_en else (featured_expert.response_time or ""),
-            "response_time_en": featured_expert.response_time_en or "",
-            "response_time_zh": featured_expert.response_time or "",
-        }
-        result = await _attach_is_following([result_dict], request, db)
-        return result[0]
 
-    # 如果没有 FeaturedTaskExpert，使用 TaskExpert 的基础数据
-    if expert:
-        result_dict = {
-            "id": expert.id,
-            "name": expert.expert_name or (user.name if user else ""),
-            "avatar": expert.avatar or (user.avatar if user else "") or "",
-            "user_level": "normal",
-            "avg_rating": float(expert.rating) if expert.rating else 0.0,
-            "completed_tasks": expert.completed_tasks or 0,
-            "total_tasks": 0,
-            "completion_rate": 0.0,
-            "is_verified": False,
-            "success_rate": 0.0,
-            "location": user.residence_city if user and hasattr(user, 'residence_city') and user.residence_city else "Online",
-            "status": expert.status,
-            "total_services": expert.total_services,
-            "bio": expert.bio or "",
-            "expertise_areas": [],
-            "featured_skills": [],
-            "achievements": [],
-            "response_time": "",
-            "created_at": format_iso_utc(expert.created_at),
-            "updated_at": format_iso_utc(expert.updated_at) if expert.updated_at else None,
-        }
-        result = await _attach_is_following([result_dict], request, db)
-        return result[0]
+    expert = await db.execute(select(Expert).where(Expert.id == resolved))
+    expert = expert.scalar_one_or_none()
+    if not expert:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="任务达人不存在"
+        )
 
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND, detail="任务达人不存在"
-    )
+    result_dict = _expert_to_legacy_dict(expert, user_lang)
+    result = await _attach_is_following([result_dict], request, db)
+    return result[0]
 
 
 # ==================== 服务菜单管理接口 ====================

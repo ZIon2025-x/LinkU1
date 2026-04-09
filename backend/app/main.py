@@ -542,6 +542,12 @@ app.include_router(admin_expert_router)
 from app.expert_service_routes import expert_service_router
 app.include_router(expert_service_router)
 
+# 公开服务路由 (Phase B1 收口) — 接管 task_expert_routes 下的 5 个 buyer 端点,
+# 用 ExpertMember 解析新团队的 ownership, 修复 reply 端点对新团队失效的 bug,
+# 并补上 Flutter 一直 404 的 GET /api/experts/{id}/reviews
+from app.service_public_routes import service_public_router
+app.include_router(service_public_router)
+
 from app.chat_participant_routes import chat_participant_router
 app.include_router(chat_participant_router)
 

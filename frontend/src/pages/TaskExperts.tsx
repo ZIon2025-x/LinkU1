@@ -4,7 +4,7 @@ import { message } from 'antd';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import { useUnreadMessages } from '../contexts/UnreadMessageContext';
-import api, { fetchCurrentUser, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, getPublicSystemSettings, logout, getPublicTaskExperts, getTaskExpert, applyToActivity } from '../api';
+import api, { fetchCurrentUser, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, getPublicSystemSettings, logout, getPublicTaskExperts, fetchMyExpertTeams, applyToActivity } from '../api';
 import { API_BASE_URL } from '../config';
 import LoginModal from '../components/LoginModal';
 import HamburgerMenu from '../components/HamburgerMenu';
@@ -256,13 +256,13 @@ const TaskExperts: React.FC = () => {
           setSelectedCity(userData.residence_city);
         }
         
-        // 检查用户是否是任务达人
+        // 检查用户是否是任务达人 (Phase B1 收口: 改用 fetchMyExpertTeams,
+        // 新模型下"是达人"= 拥有至少一个团队或作为 active 成员)
         if (userData && userData.id) {
           try {
-            await getTaskExpert(userData.id);
-            setIsTaskExpert(true);
+            const teams = await fetchMyExpertTeams();
+            setIsTaskExpert(Array.isArray(teams) && teams.length > 0);
           } catch (_error: any) {
-            // 如果不是任务达人（404错误），设置为false
             setIsTaskExpert(false);
           }
         } else {
@@ -325,15 +325,9 @@ const TaskExperts: React.FC = () => {
         selectedCity !== 'all' ? selectedCity : undefined
       );
       
-      // 转换数据格式 - 后端返回 { task_experts: [...] }
-      let expertsList: any[] = [];
-      if (Array.isArray(expertsData)) {
-        expertsList = expertsData;
-      } else if (expertsData.task_experts) {
-        expertsList = expertsData.task_experts;
-      } else if (expertsData.items) {
-        expertsList = expertsData.items;
-      }
+      // Phase B1 收口: getPublicTaskExperts 现在总是返回数组 (ExpertOut[]),
+      // 不再需要 legacy { task_experts: [...] } / { items: [...] } object-shape fallback
+      let expertsList: any[] = Array.isArray(expertsData) ? expertsData : [];
       
       // 确保所有必需字段都有默认值
       expertsList = expertsList.map((expert: any) => ({

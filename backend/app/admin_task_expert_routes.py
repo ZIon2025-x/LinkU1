@@ -358,3 +358,170 @@ async def create_featured_expert_from_application(
         "expert_id": resolved_expert_id,
         "featured_id": new_featured.id,
     }
+
+
+# ==================== 单个服务/活动 编辑 + 删除 ====================
+#
+# 历史:
+#   旧 routers.py 的 /admin/task-expert/{expert_id}/services/{service_id}
+#   和 /admin/task-expert/{expert_id}/activities/{activity_id} 用 expert_id 路由参数
+#   去查 legacy `task_experts` 表 (TaskExpert.id == expert_id)。但新 admin 列表
+#   (get_all_expert_services_admin / get_all_expert_activities_admin) 返回的
+#   `expert_id` 实际是新 `experts` 表的 8 字符 ID,与 legacy `task_experts.id`
+#   (= user_id 语义) 不匹配,导致编辑/删除全部 404。
+#
+#   修复: 在新 admin 路由文件里加 4 个新端点,直接用 service_id / activity_id
+#   (全局唯一) 查,过滤 owner_type='expert',与新 Expert 团队模型对齐。
+#   admin 前端 api.ts 切到这 4 个新 URL。
+#
+def _now():
+    from app.utils import get_utc_time
+    return get_utc_time()
+
+
+@admin_task_expert_router.put("/task-expert-services/{service_id}")
+async def update_expert_service_admin_v2(
+    service_id: int,
+    body: dict,
+    current_admin: models.AdminUser = Depends(get_current_admin_async),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """管理员编辑团队服务字段。
+
+    只动安全可改字段;价格走 Decimal 转换。
+    与团队侧 expert_service_routes.update_service 不同,本端点是管理员越权编辑路径,
+    不做 owner 校验,仅限 owner_type='expert' (团队服务)。
+    """
+    result = await db.execute(
+        select(models.TaskExpertService).where(
+            and_(
+                models.TaskExpertService.id == service_id,
+                models.TaskExpertService.owner_type == "expert",
+            )
+        )
+    )
+    service = result.scalar_one_or_none()
+    if not service:
+        raise HTTPException(status_code=404, detail="服务不存在")
+
+    allowed = {
+        "service_name", "service_name_en", "service_name_zh",
+        "description", "description_en", "description_zh",
+        "base_price", "currency", "status", "display_order",
+        "category", "pricing_type", "location_type", "location",
+        "skills", "images",
+    }
+    for key, value in (body or {}).items():
+        if key not in allowed or not hasattr(service, key):
+            continue
+        if key == "base_price" and value is not None:
+            from decimal import Decimal
+            setattr(service, key, Decimal(str(value)))
+        else:
+            setattr(service, key, value)
+
+    service.updated_at = _now()
+    await db.commit()
+    logger.info(
+        f"管理员 {current_admin.id} 编辑团队服务 {service_id} (owner={service.owner_id})"
+    )
+    return {"message": "服务更新成功", "service_id": service_id}
+
+
+@admin_task_expert_router.delete("/task-expert-services/{service_id}")
+async def delete_expert_service_admin_v2(
+    service_id: int,
+    current_admin: models.AdminUser = Depends(get_current_admin_async),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """管理员软删除团队服务 (status='deleted'),与 review reject 行为一致。
+
+    不做硬删: 历史 ServiceApplication 仍需保留;如需恢复,用 review approve。
+    """
+    result = await db.execute(
+        select(models.TaskExpertService).where(
+            and_(
+                models.TaskExpertService.id == service_id,
+                models.TaskExpertService.owner_type == "expert",
+            )
+        )
+    )
+    service = result.scalar_one_or_none()
+    if not service:
+        raise HTTPException(status_code=404, detail="服务不存在")
+    if service.status != "deleted":
+        service.status = "deleted"
+        service.updated_at = _now()
+        await db.commit()
+    logger.info(
+        f"管理员 {current_admin.id} 软删除团队服务 {service_id} (owner={service.owner_id})"
+    )
+    return {"message": "服务已删除", "service_id": service_id}
+
+
+@admin_task_expert_router.put("/task-expert-activities/{activity_id}")
+async def update_expert_activity_admin_v2(
+    activity_id: int,
+    body: dict,
+    current_admin: models.AdminUser = Depends(get_current_admin_async),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """管理员编辑团队活动安全字段 (不动定价/上限/截止时间,避免影响订单)。"""
+    result = await db.execute(
+        select(models.Activity).where(
+            and_(
+                models.Activity.id == activity_id,
+                models.Activity.owner_type == "expert",
+            )
+        )
+    )
+    activity = result.scalar_one_or_none()
+    if not activity:
+        raise HTTPException(status_code=404, detail="活动不存在")
+
+    allowed = {
+        "title", "description", "status", "location",
+        "task_type", "is_public", "visibility",
+    }
+    for key, value in (body or {}).items():
+        if key not in allowed or not hasattr(activity, key):
+            continue
+        setattr(activity, key, value)
+    activity.updated_at = _now()
+    await db.commit()
+    logger.info(
+        f"管理员 {current_admin.id} 编辑团队活动 {activity_id} (owner={activity.owner_id})"
+    )
+    return {"message": "活动更新成功", "activity_id": activity_id}
+
+
+@admin_task_expert_router.delete("/task-expert-activities/{activity_id}")
+async def delete_expert_activity_admin_v2(
+    activity_id: int,
+    current_admin: models.AdminUser = Depends(get_current_admin_async),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """管理员取消团队活动 (status='cancelled'),与 review reject 行为一致。
+
+    不做硬删 + cascade: 已支付的子任务 PI 仍在跑,误删会丢退款链路。
+    需要彻底清理 (含买家退款) 的场景走 multi_participant_routes.delete_expert_activity。
+    """
+    result = await db.execute(
+        select(models.Activity).where(
+            and_(
+                models.Activity.id == activity_id,
+                models.Activity.owner_type == "expert",
+            )
+        )
+    )
+    activity = result.scalar_one_or_none()
+    if not activity:
+        raise HTTPException(status_code=404, detail="活动不存在")
+    if activity.status != "cancelled":
+        activity.status = "cancelled"
+        activity.updated_at = _now()
+        await db.commit()
+    logger.info(
+        f"管理员 {current_admin.id} 取消团队活动 {activity_id} (owner={activity.owner_id})"
+    )
+    return {"message": "活动已取消", "activity_id": activity_id}
