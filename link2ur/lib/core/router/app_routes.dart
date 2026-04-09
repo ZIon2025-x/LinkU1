@@ -41,6 +41,22 @@ class AppRoutes {
   static const String expertDashboardWithId = '/expert-dashboard/:expertId';
   static const String expertDashboardManagement =
       '/expert-dashboard/:expertId/management';
+  static const String expertDashboardManagementMembers =
+      '/expert-dashboard/:expertId/management/members';
+  static const String expertDashboardManagementJoinRequests =
+      '/expert-dashboard/:expertId/management/join-requests';
+  static const String expertDashboardManagementEditProfile =
+      '/expert-dashboard/:expertId/management/edit-profile';
+  static const String expertDashboardManagementCoupons =
+      '/expert-dashboard/:expertId/management/coupons';
+  static const String expertDashboardManagementReviewReplies =
+      '/expert-dashboard/:expertId/management/review-replies';
+  static const String expertDashboardManagementPackages =
+      '/expert-dashboard/:expertId/management/packages';
+  static const String expertDashboardManagementCustomerPackages =
+      '/expert-dashboard/:expertId/management/customer-packages';
+  static const String expertDashboardManagementPackageRedeem =
+      '/expert-dashboard/:expertId/management/package-redeem';
 
   // 达人团队管理
   static const String expertTeamMyTeams = '/expert-teams';
@@ -162,6 +178,16 @@ const authRequiredRoutes = <String>{
   AppRoutes.editService,
   AppRoutes.myReceivedServiceApplications,
   AppRoutes.expertDashboard,
+  AppRoutes.expertDashboardWithId,
+  AppRoutes.expertDashboardManagement,
+  AppRoutes.expertDashboardManagementMembers,
+  AppRoutes.expertDashboardManagementJoinRequests,
+  AppRoutes.expertDashboardManagementEditProfile,
+  AppRoutes.expertDashboardManagementCoupons,
+  AppRoutes.expertDashboardManagementReviewReplies,
+  AppRoutes.expertDashboardManagementPackages,
+  AppRoutes.expertDashboardManagementCustomerPackages,
+  AppRoutes.expertDashboardManagementPackageRedeem,
   AppRoutes.applyLeaderboard,
   AppRoutes.submitLeaderboardItem,
   AppRoutes.fleaMarketRentalDetail,

@@ -451,6 +451,76 @@ class ErrorLocalizer {
         return context.l10n.errorServiceHasActiveActivities;
       case 'service_has_active_applications':
         return context.l10n.errorServiceHasActiveApplications;
+      // Expert / team 相关后端错误码
+      case 'activity_type_unsupported':
+        return context.l10n.errorActivityTypeUnsupported;
+      case 'ambiguous_expert_team':
+        return context.l10n.errorAmbiguousExpertTeam;
+      case 'expert_owner_missing':
+        return context.l10n.errorExpertOwnerMissing;
+      case 'service_not_found':
+        return context.l10n.errorServiceNotFound;
+      case 'service_not_owned_by_team':
+        return context.l10n.errorServiceNotOwnedByTeam;
+      case 'service_inactive':
+        return context.l10n.errorServiceInactive;
+      case 'team_not_found':
+        return context.l10n.errorTeamNotFound;
+      case 'team_stripe_not_ready':
+        return context.l10n.expertStripeNotReady;
+      case 'team_payout_failed':
+        return context.l10n.errorTeamPayoutFailed;
+      case 'unknown_owner_type':
+        return context.l10n.errorUnknownOwnerType;
+      // 中间件级别错误码（偶尔透传到 UI）
+      case 'admin_origin_denied':
+      case 'admin_ip_denied':
+      case 'ADMIN_ORIGIN_DENIED':
+      case 'ADMIN_IP_DENIED':
+        return context.l10n.errorAdminAccessDenied;
+      case 'admin_rate_limit':
+      case 'ADMIN_RATE_LIMIT':
+        return context.l10n.errorRateLimited;
+      case 'auth_failed':
+      case 'mobile_auth_failed':
+        return context.l10n.errorAuthFailed;
+      // A1 套餐购买 / 核销 新错误码 (package_purchase_routes)
+      case 'package_not_found':
+        return context.l10n.errorPackageNotFound;
+      case 'package_not_found_or_inactive':
+        return context.l10n.errorPackageNotFoundOrInactive;
+      case 'package_not_found_or_not_team':
+        return context.l10n.errorPackageNotFoundOrNotTeam;
+      case 'package_exhausted':
+        return context.l10n.errorPackageExhausted;
+      case 'package_price_not_set':
+        return context.l10n.errorPackagePriceNotSet;
+      case 'service_not_package':
+        return context.l10n.errorServiceNotPackage;
+      case 'personal_service_no_package':
+        return context.l10n.errorPersonalServiceNoPackage;
+      case 'service_team_resolve_failed':
+        return context.l10n.errorServiceTeamResolveFailed;
+      case 'qr_or_otp_required':
+        return context.l10n.errorQrOrOtpRequired;
+      case 'qr_invalid_or_expired':
+        return context.l10n.errorQrInvalidOrExpired;
+      case 'otp_invalid_or_expired':
+        return context.l10n.errorOtpInvalidOrExpired;
+      case 'sub_service_id_invalid':
+        return context.l10n.errorSubServiceIdInvalid;
+      case 'sub_service_not_in_bundle':
+        return context.l10n.errorSubServiceNotInBundle;
+      case 'sub_service_exhausted':
+        return context.l10n.errorSubServiceExhausted;
+      case 'multi_total_sessions_invalid':
+        return context.l10n.errorMultiTotalSessionsInvalid;
+      case 'expert_bundle_invalid':
+        return context.l10n.expertBundleInvalid;
+      case 'stripe_create_failed':
+        return context.l10n.errorStripeCreateFailed;
+      case 'package_purchase_failed':
+        return context.l10n.errorPackagePurchaseFailed;
       default:
         // 服务端返回的已翻译消息，直接使用
         return errorMessage;

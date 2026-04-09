@@ -2,7 +2,10 @@
 系统通知国际化模板
 用于生成中英文通知标题和内容
 """
+import logging
 from typing import Dict, Any, Optional, Tuple
+
+logger = logging.getLogger(__name__)
 
 # 系统通知模板字典
 # 格式: {notification_type: {"zh": {"title": "...", "content": "..."}, "en": {"title": "...", "content": "..."}}}

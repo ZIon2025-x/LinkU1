@@ -16,6 +16,7 @@ from sqlalchemy import (
     Index,
     UniqueConstraint,
     DECIMAL,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB as JSON
 from sqlalchemy.orm import relationship
@@ -298,6 +299,16 @@ class UserServicePackage(Base):
         Index("ix_user_packages_service", "service_id"),
         Index("ix_user_packages_expert", "expert_id"),
         Index("ix_user_packages_status", "status"),
+        # migration 187: 防止 webhook 并发重复创建 UserServicePackage
+        # 必须是 partial unique index (WHERE payment_intent_id IS NOT NULL),
+        # 否则历史数据里的多条 NULL 行会相互冲突。与 migration SQL 完全对齐,
+        # 这样 Base.metadata.create_all() 产出的 schema 也一致。
+        Index(
+            "uq_user_service_packages_pi",
+            "payment_intent_id",
+            unique=True,
+            postgresql_where=text("payment_intent_id IS NOT NULL"),
+        ),
     )
 
 

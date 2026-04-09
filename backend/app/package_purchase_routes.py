@@ -175,26 +175,44 @@ async def purchase_package(
     )
     service = service_result.scalar_one_or_none()
     if not service:
-        raise HTTPException(status_code=404, detail="服务不存在")
+        raise HTTPException(
+            status_code=404,
+            detail={"error_code": "service_not_found", "message": "服务不存在"},
+        )
     if service.status != "active":
-        raise HTTPException(status_code=400, detail="服务未上架")
+        raise HTTPException(
+            status_code=400,
+            detail={"error_code": "service_inactive", "message": "服务未上架"},
+        )
     if service.package_type not in ("multi", "bundle"):
-        raise HTTPException(status_code=400, detail="该服务不是套餐类型")
+        raise HTTPException(
+            status_code=400,
+            detail={"error_code": "service_not_package", "message": "该服务不是套餐类型"},
+        )
     if service.package_price is None or float(service.package_price) <= 0:
-        raise HTTPException(status_code=400, detail="服务未设置套餐价格")
+        raise HTTPException(
+            status_code=400,
+            detail={"error_code": "package_price_not_set", "message": "服务未设置套餐价格"},
+        )
     if service.owner_type != "expert":
-        raise HTTPException(status_code=400, detail="个人服务暂不支持套餐购买")
+        raise HTTPException(
+            status_code=400,
+            detail={"error_code": "personal_service_no_package", "message": "个人服务暂不支持套餐购买"},
+        )
 
     # 2. 解析团队 + Stripe 状态
     from app.services.expert_task_resolver import resolve_task_taker_from_service
     taker_id_value, taker_expert_id_value = await resolve_task_taker_from_service(db, service)
     if not taker_expert_id_value:
-        raise HTTPException(status_code=500, detail="无法解析服务团队")
+        raise HTTPException(
+            status_code=500,
+            detail={"error_code": "service_team_resolve_failed", "message": "无法解析服务团队"},
+        )
 
     expert = await db.get(Expert, taker_expert_id_value)
     if not expert or not expert.stripe_account_id:
         raise HTTPException(status_code=500, detail={
-            "error_code": "team_no_stripe_account",
+            "error_code": "team_stripe_not_ready",
             "message": "团队 Stripe 未配置",
         })
 
@@ -221,15 +239,24 @@ async def purchase_package(
     if service.package_type == "multi":
         total_sessions = service.total_sessions or 0
         if total_sessions < 2:
-            raise HTTPException(status_code=400, detail="multi 套餐 total_sessions 配置错误")
+            raise HTTPException(
+                status_code=400,
+                detail={"error_code": "multi_total_sessions_invalid", "message": "multi 套餐 total_sessions 配置错误"},
+            )
         bundle_breakdown = None
     else:  # bundle
         bundle_breakdown = _build_bundle_breakdown(service.bundle_service_ids)
         if not bundle_breakdown:
-            raise HTTPException(status_code=400, detail="bundle 套餐配置错误")
+            raise HTTPException(
+                status_code=400,
+                detail={"error_code": "expert_bundle_invalid", "message": "bundle 套餐配置错误"},
+            )
         total_sessions = _bundle_total_sessions(bundle_breakdown)
         if total_sessions < 1:
-            raise HTTPException(status_code=400, detail="bundle 套餐总次数为 0")
+            raise HTTPException(
+                status_code=400,
+                detail={"error_code": "expert_bundle_invalid", "message": "bundle 套餐总次数为 0"},
+            )
 
     # 5. 创建 Stripe PaymentIntent
     import stripe
@@ -240,10 +267,10 @@ async def purchase_package(
     price = float(service.package_price)
     currency = (service.currency or "GBP").lower()
     if currency != "gbp":
-        raise HTTPException(status_code=422, detail={
-            "error_code": "expert_currency_unsupported",
-            "message": "团队套餐目前仅支持 GBP",
-        })
+        raise HTTPException(
+            status_code=422,
+            detail={"error_code": "expert_currency_unsupported", "message": "团队套餐目前仅支持 GBP"},
+        )
     amount_pence = int(round(price * 100))
     application_fee_pence = calculate_application_fee_pence(
         amount_pence, task_source="expert_service", task_type=None
@@ -270,7 +297,10 @@ async def purchase_package(
             },
         )
     except stripe.error.StripeError as e:
-        raise HTTPException(status_code=502, detail=f"Stripe 创建失败: {str(e)}")
+        raise HTTPException(
+            status_code=502,
+            detail={"error_code": "stripe_create_failed", "message": f"Stripe 创建失败: {str(e)}"},
+        )
 
     return {
         "payment_intent_id": pi.id,
@@ -303,7 +333,10 @@ async def get_my_package_detail(
     )
     pkg = pkg_result.scalar_one_or_none()
     if not pkg:
-        raise HTTPException(status_code=404, detail="套餐不存在")
+        raise HTTPException(
+            status_code=404,
+            detail={"error_code": "package_not_found", "message": "套餐不存在"},
+        )
 
     # 加载关联 service 名称
     service = await db.get(models.TaskExpertService, pkg.service_id)
@@ -328,10 +361,14 @@ async def get_my_package_detail(
         for l in logs
     ]
 
+    # validity_days 从 service 推导 (UserServicePackage 本身没存)
+    validity_days = getattr(service, "validity_days", None) if service else None
+
     return {
         "id": pkg.id,
         "service_id": pkg.service_id,
         "service_name": service.service_name if service else None,
+        "package_type": getattr(service, "package_type", None) if service else None,
         "expert_id": pkg.expert_id,
         "expert_name": expert.name if expert else None,
         "total_sessions": pkg.total_sessions,
@@ -340,7 +377,9 @@ async def get_my_package_detail(
         "status": pkg.status,
         "purchased_at": pkg.purchased_at.isoformat() if pkg.purchased_at else None,
         "expires_at": pkg.expires_at.isoformat() if pkg.expires_at else None,
-        "paid_amount": pkg.paid_amount,
+        "validity_days": validity_days,
+        "payment_intent_id": pkg.payment_intent_id,
+        "paid_amount": float(pkg.paid_amount) if pkg.paid_amount is not None else None,
         "currency": pkg.currency,
         "bundle_breakdown": pkg.bundle_breakdown,
         "last_redeemed_at": pkg.last_redeemed_at.isoformat() if pkg.last_redeemed_at else None,
@@ -367,10 +406,16 @@ async def get_redemption_qr(
     )
     pkg = pkg_result.scalar_one_or_none()
     if not pkg:
-        raise HTTPException(status_code=404, detail="套餐不存在或已失效")
+        raise HTTPException(
+            status_code=404,
+            detail={"error_code": "package_not_found_or_inactive", "message": "套餐不存在或已失效"},
+        )
 
     if pkg.used_sessions >= pkg.total_sessions:
-        raise HTTPException(status_code=400, detail="套餐次数已用完")
+        raise HTTPException(
+            status_code=400,
+            detail={"error_code": "package_exhausted", "message": "套餐次数已用完"},
+        )
 
     # 过期检查 — 只读, 不写库
     # 注意: 这里不能 mark expired, 否则:
@@ -422,23 +467,42 @@ async def redeem_package(
 
     qr_data = body.get("qr_data")
     otp = body.get("otp")
-    sub_service_id = body.get("sub_service_id")
+    raw_sub_service_id = body.get("sub_service_id")
+    # bundle 子服务 id 必须强转 int, 否则 PackageUsageLog.sub_service_id (INTEGER) insert 会爆
+    sub_service_id: Optional[int] = None
+    if raw_sub_service_id is not None:
+        try:
+            sub_service_id = int(raw_sub_service_id)
+        except (TypeError, ValueError):
+            raise HTTPException(
+                status_code=400,
+                detail={"error_code": "sub_service_id_invalid", "message": "sub_service_id 必须是整数"},
+            )
 
     if not qr_data and not otp:
-        raise HTTPException(status_code=400, detail="必须提供 qr_data 或 otp 之一")
+        raise HTTPException(
+            status_code=400,
+            detail={"error_code": "qr_or_otp_required", "message": "必须提供 qr_data 或 otp 之一"},
+        )
 
     # 解析 package_id + user_id
     if qr_data:
         payload = _verify_qr_payload(qr_data)
         if not payload:
-            raise HTTPException(status_code=400, detail="QR 无效或已过期,请刷新")
+            raise HTTPException(
+                status_code=400,
+                detail={"error_code": "qr_invalid_or_expired", "message": "QR 无效或已过期,请刷新"},
+            )
         target_package_id = int(payload["p"])
         target_user_id = str(payload["u"])
         redeem_method = "qr"
     else:
         otp_data = _consume_otp(str(otp))
         if not otp_data:
-            raise HTTPException(status_code=400, detail="OTP 无效或已过期")
+            raise HTTPException(
+                status_code=400,
+                detail={"error_code": "otp_invalid_or_expired", "message": "OTP 无效或已过期"},
+            )
         target_package_id = otp_data["package_id"]
         target_user_id = otp_data["user_id"]
         redeem_method = "otp"
@@ -458,7 +522,10 @@ async def redeem_package(
     )
     pkg = pkg_result.scalar_one_or_none()
     if not pkg:
-        raise HTTPException(status_code=404, detail="套餐不存在或不属于该团队")
+        raise HTTPException(
+            status_code=404,
+            detail={"error_code": "package_not_found_or_not_team", "message": "套餐不存在或不属于该团队"},
+        )
 
     # 过期检查
     if pkg.expires_at:
@@ -468,29 +535,80 @@ async def redeem_package(
         if expires < get_utc_time():
             pkg.status = "expired"
             await db.commit()
-            raise HTTPException(status_code=400, detail="套餐已过期")
+            raise HTTPException(
+                status_code=400,
+                detail={"error_code": "package_expired", "message": "套餐已过期"},
+            )
 
     if pkg.used_sessions >= pkg.total_sessions:
-        raise HTTPException(status_code=400, detail="套餐次数已用完")
+        raise HTTPException(
+            status_code=400,
+            detail={"error_code": "package_exhausted", "message": "套餐次数已用完"},
+        )
 
     # bundle 套餐必须指定子服务,且 breakdown[sub].used < breakdown[sub].total
     if pkg.bundle_breakdown:
         if sub_service_id is None:
-            raise HTTPException(
-                status_code=400,
-                detail={
-                    "error_code": "bundle_sub_service_required",
-                    "message": "bundle 套餐需指定要核销的子服务",
-                    "bundle_breakdown": pkg.bundle_breakdown,
-                },
-            )
+            # 需要前端弹出子服务选择器。
+            # 这里必须返回 200 OK + requires_sub_service_selection=true,
+            # 而不是 raise HTTPException(detail=dict), 原因:
+            # 全局 http_exception_handler 通过 create_error_response(...) 只把
+            # message/error_code 放到顶层, 丢掉 detail 里其他字段 (sub_services),
+            # 导致前端永远拿不到子服务列表, bundle 套餐根本无法核销。
+            sub_ids: list[int] = []
+            for raw_key in pkg.bundle_breakdown.keys():
+                try:
+                    sub_ids.append(int(raw_key))
+                except (TypeError, ValueError):
+                    continue
+            sub_service_map: dict[int, dict] = {}
+            if sub_ids:
+                sub_result = await db.execute(
+                    select(models.TaskExpertService).where(
+                        models.TaskExpertService.id.in_(sub_ids)
+                    )
+                )
+                for svc in sub_result.scalars().all():
+                    sub_service_map[svc.id] = {
+                        "id": svc.id,
+                        "service_name": svc.service_name,
+                        "service_name_en": getattr(svc, "service_name_en", None),
+                        "service_name_zh": getattr(svc, "service_name_zh", None),
+                    }
+            sub_services_payload: list[dict] = []
+            for raw_key, entry in pkg.bundle_breakdown.items():
+                try:
+                    sid = int(raw_key)
+                except (TypeError, ValueError):
+                    continue
+                total = int(entry.get("total", 0)) if isinstance(entry, dict) else 0
+                used = int(entry.get("used", 0)) if isinstance(entry, dict) else 0
+                info = sub_service_map.get(sid, {"id": sid})
+                sub_services_payload.append({
+                    **info,
+                    "total": total,
+                    "used": used,
+                    "remaining": max(total - used, 0),
+                })
+            return {
+                "requires_sub_service_selection": True,
+                "package_id": pkg.id,
+                "bundle_breakdown": pkg.bundle_breakdown,
+                "sub_services": sub_services_payload,
+            }
         sub_key = str(sub_service_id)
         bd = dict(pkg.bundle_breakdown)
         if sub_key not in bd:
-            raise HTTPException(status_code=400, detail="该子服务不在此套餐中")
+            raise HTTPException(
+                status_code=400,
+                detail={"error_code": "sub_service_not_in_bundle", "message": "该子服务不在此套餐中"},
+            )
         sub_entry = dict(bd[sub_key])
         if int(sub_entry.get("used", 0)) >= int(sub_entry.get("total", 0)):
-            raise HTTPException(status_code=400, detail="该子服务已核销完")
+            raise HTTPException(
+                status_code=400,
+                detail={"error_code": "sub_service_exhausted", "message": "该子服务已核销完"},
+            )
         sub_entry["used"] = int(sub_entry.get("used", 0)) + 1
         bd[sub_key] = sub_entry
         # 必须创建一个全新 dict 而非 in-place 修改, 保证 SQLAlchemy 的 dirty tracking
@@ -518,17 +636,23 @@ async def redeem_package(
     await db.commit()
     await db.refresh(pkg)
 
-    # 通知 buyer (best-effort)
+    # 通知 buyer (best-effort) — 用 i18n 模板
     try:
         from app.async_crud import AsyncNotificationCRUD
+        from app.utils.notification_templates import get_notification_texts
+        title_zh, content_zh, title_en, content_en = get_notification_texts(
+            "package_redeemed",
+            used=pkg.used_sessions,
+            total=pkg.total_sessions,
+        )
         await AsyncNotificationCRUD.create_notification(
             db=db,
             user_id=pkg.user_id,
             notification_type="package_redeemed",
-            title="套餐核销成功",
-            content=f"您的套餐已使用 {pkg.used_sessions}/{pkg.total_sessions} 次",
-            title_en="Package Redeemed",
-            content_en=f"Your package has been used {pkg.used_sessions}/{pkg.total_sessions} times",
+            title=title_zh,
+            content=content_zh,
+            title_en=title_en,
+            content_en=content_en,
             related_id=str(pkg.id),
             related_type="user_service_package",
         )

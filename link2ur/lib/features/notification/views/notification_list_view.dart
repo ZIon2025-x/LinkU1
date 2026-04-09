@@ -258,6 +258,60 @@ class _NotificationListViewContentState
       return;
     }
 
+    // ==================== 达人团队 (Expert Team) ====================
+    // expert_team_invitation: relatedId = expert_id (新被邀请的团队 id) → 我的邀请页
+    // expert_team_join_request: 团队 owner/admin 收到申请 → 跳团队 join requests 管理页
+    // expert_team_join_approved/rejected: 申请人收到结果 → 跳团队详情或我的团队
+    // expert_team_role_changed / member_removed: 跳团队成员页
+    if (type.startsWith('expert_team_')) {
+      switch (type) {
+        case 'expert_team_invitation':
+          context.push('/expert-teams/invitations');
+          return;
+        case 'expert_team_join_request':
+          // relatedId 是 expert_id (团队 id)
+          if (relatedId != null) {
+            context
+                .push('/expert-dashboard/$relatedId/management/join-requests');
+          } else {
+            context.push('/expert-dashboard');
+          }
+          return;
+        case 'expert_team_join_approved':
+        case 'expert_team_role_changed':
+        case 'expert_team_member_added':
+          if (relatedId != null) {
+            context.push('/expert-dashboard/$relatedId');
+          } else {
+            context.push('/expert-dashboard');
+          }
+          return;
+        case 'expert_team_join_rejected':
+        case 'expert_team_member_removed':
+        case 'expert_team_dissolved':
+          context.push('/expert-teams');
+          return;
+        case 'team_service_payment_received':
+        case 'team_service_task_started':
+          // related_id = task_id
+          final id = taskId ?? relatedId;
+          if (id != null) context.safePush('/tasks/$id');
+          return;
+        default:
+          context.push('/expert-dashboard');
+          return;
+      }
+    }
+
+    // ==================== 套餐购买/核销 ====================
+    if (type == 'package_purchased' ||
+        type == 'package_redeemed' ||
+        type == 'package_expired') {
+      // related_id = user_service_package id → 跳"我的套餐"
+      context.push('/my-packages');
+      return;
+    }
+
     // ==================== 达人服务 ====================
     // 达人身份审核结果（related_id 为 null）→ 去服务申请列表
     if (type == 'expert_application_approved' ||

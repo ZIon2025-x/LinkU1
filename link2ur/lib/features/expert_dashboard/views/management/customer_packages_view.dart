@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/utils/l10n_extension.dart';
 import '../../../../data/repositories/package_purchase_repository.dart';
-import 'package_redemption_scan_view.dart';
 
 /// 团队 "我的客户" view (A1)
 ///
@@ -63,15 +63,8 @@ class _CustomerPackagesViewState extends State<CustomerPackagesView> {
   }
 
   void _openScanner() {
-    Navigator.of(context)
-        .push(
-          MaterialPageRoute(
-            builder: (_) => PackageRedemptionScanView(
-              expertId: widget.expertId,
-              repository: widget.repository,
-            ),
-          ),
-        )
+    context
+        .push('/expert-dashboard/${widget.expertId}/management/package-redeem')
         .then((_) => _load());
   }
 

@@ -73,7 +73,7 @@ class _EditBodyState extends State<_EditBody> {
         if (team != null) _initFromTeam(team);
 
         return Scaffold(
-          appBar: AppBar(title: const Text('编辑团队信息')),
+          appBar: AppBar(title: Text(context.l10n.expertTeamEditProfileTitle)),
           body: team == null
               ? const Center(child: CircularProgressIndicator())
               : Padding(
@@ -114,7 +114,9 @@ class _EditBodyState extends State<_EditBody> {
                             labelText: context.l10n.expertTeamTeamName,
                             border: const OutlineInputBorder(),
                           ),
-                          validator: (v) => v == null || v.trim().isEmpty ? '请输入团队名称' : null,
+                          validator: (v) => v == null || v.trim().isEmpty
+                              ? context.l10n.expertTeamEditProfileValidateName
+                              : null,
                         ),
                         const SizedBox(height: 16),
                         TextFormField(
@@ -127,7 +129,7 @@ class _EditBodyState extends State<_EditBody> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          '提交后需要管理员审核',
+                          context.l10n.expertTeamEditProfileReviewNote,
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.orange),
                         ),
                         const SizedBox(height: 24),
@@ -147,7 +149,11 @@ class _EditBodyState extends State<_EditBody> {
                                           : null;
                                       if (newName == null && newBio == null) {
                                         ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(content: Text('没有修改')),
+                                          SnackBar(
+                                            content: Text(
+                                              context.l10n.expertTeamEditProfileNoChanges,
+                                            ),
+                                          ),
                                         );
                                         return;
                                       }
@@ -158,14 +164,20 @@ class _EditBodyState extends State<_EditBody> {
                                       ).then((_) {
                                         if (context.mounted) {
                                           ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(content: Text('修改申请已提交，等待管理员审核')),
+                                            SnackBar(
+                                              content: Text(
+                                                context.l10n.expertTeamEditProfileSubmitted,
+                                              ),
+                                            ),
                                           );
                                           context.pop();
                                         }
                                       }).catchError((e) {
                                         if (context.mounted) {
+                                          final prefix = context.l10n.expertTeamEditProfileSubmitFailed;
+                                          final detail = context.localizeError(e.toString());
                                           ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(content: Text('提交失败: $e')),
+                                            SnackBar(content: Text('$prefix: $detail')),
                                           );
                                         }
                                       });

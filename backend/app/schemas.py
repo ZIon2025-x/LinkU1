@@ -2546,9 +2546,16 @@ class TaskExpertServiceOut(BaseModel):
     description: str
     description_en: Optional[str] = None
     description_zh: Optional[str] = None
+    category: Optional[str] = None
     images: Optional[List[str]]
     base_price: float
     currency: Literal["GBP", "EUR"]  # 统一为Literal类型
+    pricing_type: Optional[str] = None  # fixed / negotiable
+    # 位置相关字段
+    location_type: Optional[str] = None  # online / in_person / both
+    location: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
     skills: Optional[List[str]] = None
     status: str
     display_order: int
@@ -2565,6 +2572,13 @@ class TaskExpertServiceOut(BaseModel):
     time_slot_start_time: Optional[str] = None
     time_slot_end_time: Optional[str] = None
     participants_per_slot: Optional[int] = None
+    weekly_time_slot_config: Optional[dict] = None
+    # 套餐字段 (Phase 7 + A1)
+    package_type: Optional[str] = None  # 'single' | 'multi' | 'bundle'
+    total_sessions: Optional[int] = None
+    bundle_service_ids: Optional[List[Any]] = None
+    package_price: Optional[float] = None
+    validity_days: Optional[int] = None
     # 用户申请的服务申请信息（如果已申请）
     user_application_id: Optional[int] = None  # 用户申请的服务申请ID
     user_application_status: Optional[str] = None  # 申请状态
@@ -2588,15 +2602,26 @@ class TaskExpertServiceOut(BaseModel):
             "description": obj.description,
             "description_en": getattr(obj, "description_en", None),
             "description_zh": getattr(obj, "description_zh", None),
+            "category": getattr(obj, "category", None),
             "images": obj.images,
             "base_price": float(obj.base_price),
             "currency": obj.currency,
+            "pricing_type": getattr(obj, "pricing_type", None),
+            "location_type": getattr(obj, "location_type", None),
+            "location": getattr(obj, "location", None),
+            "latitude": float(obj.latitude) if getattr(obj, "latitude", None) is not None else None,
+            "longitude": float(obj.longitude) if getattr(obj, "longitude", None) is not None else None,
             "skills": obj.skills if obj.skills else None,
             "status": obj.status,
             "display_order": obj.display_order,
             "view_count": obj.view_count,
             "application_count": obj.application_count,
             "created_at": obj.created_at,
+            "package_type": getattr(obj, "package_type", None),
+            "total_sessions": getattr(obj, "total_sessions", None),
+            "bundle_service_ids": getattr(obj, "bundle_service_ids", None),
+            "package_price": float(obj.package_price) if getattr(obj, "package_price", None) is not None else None,
+            "validity_days": getattr(obj, "validity_days", None),
             "has_time_slots": obj.has_time_slots,
             "time_slot_duration_minutes": obj.time_slot_duration_minutes,
             "time_slot_start_time": obj.time_slot_start_time.isoformat() if isinstance(obj.time_slot_start_time, time) else (str(obj.time_slot_start_time) if obj.time_slot_start_time else None),
@@ -2823,7 +2848,14 @@ class ServiceApplicationOut(BaseModel):
     ephemeral_key_secret: Optional[str] = None
     payment_required: Optional[bool] = False
     payment_expires_at: Optional[str] = None  # ISO 格式字符串
-    
+    # JOIN 补充字段 — 只在 expert_consultation_routes.list_expert_applications 返回的
+    # dict 里实际出现 (目前没有路由用 response_model=ServiceApplicationOut 返回 JOIN 结果,
+    # 这些字段属于前向兼容占位, Optional 保持 None 不影响纯 model_validate(app) 路径)
+    applicant_name: Optional[str] = None
+    service_name: Optional[str] = None
+    service_name_en: Optional[str] = None
+    service_name_zh: Optional[str] = None
+
     class Config:
         from_attributes = True
 

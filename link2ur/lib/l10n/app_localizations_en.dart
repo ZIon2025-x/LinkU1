@@ -12151,6 +12151,292 @@ class AppLocalizationsEn extends AppLocalizations {
       'The bundle package references invalid services.';
 
   @override
+  String get errorActivityTypeUnsupported =>
+      'This activity type is not supported.';
+
+  @override
+  String get errorAmbiguousExpertTeam =>
+      'You belong to multiple teams. Please specify which team to use.';
+
+  @override
+  String get errorExpertOwnerMissing =>
+      'This team has no active owner. Please contact support.';
+
+  @override
+  String get errorServiceNotFound => 'Service not found.';
+
+  @override
+  String get errorServiceNotOwnedByTeam =>
+      'This service does not belong to your team.';
+
+  @override
+  String get errorServiceInactive => 'This service is not available right now.';
+
+  @override
+  String get errorTeamNotFound => 'Team not found.';
+
+  @override
+  String get errorTeamPayoutFailed =>
+      'Team payout failed. Please contact support.';
+
+  @override
+  String get errorUnknownOwnerType => 'Unsupported service owner type.';
+
+  @override
+  String get errorAdminAccessDenied =>
+      'Access denied. This action is restricted.';
+
+  @override
+  String get errorRateLimited => 'Too many requests. Please try again later.';
+
+  @override
+  String get errorAuthFailed => 'Authentication failed. Please sign in again.';
+
+  @override
+  String get packageRedemptionScanTitle => 'Scan to Redeem Package';
+
+  @override
+  String get packageRedemptionTorchTooltip => 'Flash';
+
+  @override
+  String get packageRedemptionCameraSwitchTooltip => 'Switch camera';
+
+  @override
+  String get packageRedemptionAimHint =>
+      'Align the customer\'s QR code with the frame.';
+
+  @override
+  String get packageRedemptionManualOtpButton => 'Enter OTP manually';
+
+  @override
+  String get packageRedemptionManualOtpTitle => 'Enter OTP';
+
+  @override
+  String get packageRedemptionManualOtpHint =>
+      'Ask the customer for their 6-digit code';
+
+  @override
+  String get packageRedemptionOtpLabel => 'OTP';
+
+  @override
+  String get packageRedemptionOtpPlaceholder => '6 digits';
+
+  @override
+  String get packageRedemptionCancel => 'Cancel';
+
+  @override
+  String get packageRedemptionConfirm => 'Redeem';
+
+  @override
+  String get packageRedemptionSuccessTitle => 'Redeemed';
+
+  @override
+  String packageRedemptionSuccessPackageId(Object id) {
+    return 'Package ID: $id';
+  }
+
+  @override
+  String packageRedemptionSuccessUsage(Object used, Object total) {
+    return 'Used: $used / $total';
+  }
+
+  @override
+  String packageRedemptionSuccessRemaining(Object remaining) {
+    return 'Remaining: $remaining';
+  }
+
+  @override
+  String get packageRedemptionSuccessExhausted =>
+      '⚠️ All sessions have been redeemed.';
+
+  @override
+  String get packageRedemptionContinueScan => 'Continue scanning';
+
+  @override
+  String get packageRedemptionPickSubServiceTitle => 'Choose a sub-service';
+
+  @override
+  String get packageRedemptionPickSubServiceHint =>
+      'Pick which sub-service to redeem for this customer.';
+
+  @override
+  String packageRedemptionSubServiceRemaining(Object remaining) {
+    return 'Remaining: $remaining';
+  }
+
+  @override
+  String get packagePurchaseDialogTitle => 'Buy Package';
+
+  @override
+  String get packagePurchaseTypeLabel => 'Type';
+
+  @override
+  String get packagePurchaseTypeMulti => 'Multi-session';
+
+  @override
+  String get packagePurchaseTypeBundle => 'Service bundle';
+
+  @override
+  String get packagePurchaseTotalSessionsLabel => 'Total sessions';
+
+  @override
+  String packagePurchaseTotalSessionsValue(Object count) {
+    return '$count sessions';
+  }
+
+  @override
+  String get packagePurchaseBundleSizeLabel => 'Included services';
+
+  @override
+  String packagePurchaseBundleSizeValue(Object count) {
+    return '$count items';
+  }
+
+  @override
+  String get packagePurchasePriceLabel => 'Price';
+
+  @override
+  String packagePurchasePriceValue(String currency, String amount) {
+    return '$currency $amount';
+  }
+
+  @override
+  String get packagePurchaseValidityLabel => 'Valid for';
+
+  @override
+  String packagePurchaseValidityDays(Object days) {
+    return '$days days after purchase';
+  }
+
+  @override
+  String get packagePurchaseValidityForever => 'No expiry';
+
+  @override
+  String get packagePurchaseFootnote =>
+      'After purchase, open the package from My Packages and show the QR code to redeem.';
+
+  @override
+  String get packagePurchaseCancel => 'Cancel';
+
+  @override
+  String get packagePurchaseConfirm => 'Confirm purchase';
+
+  @override
+  String get packagePurchaseOrderCreateFailed =>
+      'Failed to create package order';
+
+  @override
+  String get packagePurchaseProcessing => 'Processing...';
+
+  @override
+  String get packagePurchaseSuccess =>
+      'Payment successful! Find your QR in My Packages.';
+
+  @override
+  String get packagePurchasePendingWebhook =>
+      'Payment received. Your package will be activated shortly — refresh My Packages.';
+
+  @override
+  String get errorPackageNotFound => 'Package not found.';
+
+  @override
+  String get errorPackageNotFoundOrInactive =>
+      'Package not found or no longer active.';
+
+  @override
+  String get errorPackageNotFoundOrNotTeam =>
+      'Package does not belong to this team.';
+
+  @override
+  String get errorPackageExpired => 'This package has expired.';
+
+  @override
+  String get errorPackageExhausted =>
+      'All sessions of this package have been used.';
+
+  @override
+  String get errorPackagePriceNotSet => 'Package price has not been set.';
+
+  @override
+  String get errorServiceNotPackage => 'This service is not a package.';
+
+  @override
+  String get errorPersonalServiceNoPackage =>
+      'Personal services do not support package purchases.';
+
+  @override
+  String get errorPackageAlreadyActive =>
+      'You already have an active package for this service. Use it up before buying another.';
+
+  @override
+  String get errorServiceTeamResolveFailed =>
+      'Cannot resolve the team that owns this service.';
+
+  @override
+  String get errorQrOrOtpRequired => 'Please provide a QR code or OTP.';
+
+  @override
+  String get errorQrInvalidOrExpired =>
+      'QR code is invalid or has expired. Please refresh.';
+
+  @override
+  String get errorOtpInvalidOrExpired => 'OTP is invalid or has expired.';
+
+  @override
+  String get errorSubServiceIdInvalid => 'Sub-service ID is invalid.';
+
+  @override
+  String get errorSubServiceNotInBundle =>
+      'This sub-service does not belong to the package.';
+
+  @override
+  String get errorSubServiceExhausted =>
+      'All sessions of this sub-service have been used.';
+
+  @override
+  String get errorMultiTotalSessionsInvalid =>
+      'Multi package is misconfigured (invalid total sessions).';
+
+  @override
+  String get errorStripeCreateFailed =>
+      'Failed to create the Stripe payment intent.';
+
+  @override
+  String get errorPackagePurchaseFailed => 'Package purchase failed.';
+
+  @override
+  String get expertTeamEditProfileTitle => 'Edit Team Profile';
+
+  @override
+  String get expertTeamEditProfileValidateName => 'Please enter a team name';
+
+  @override
+  String get expertTeamEditProfileReviewNote =>
+      'Changes require admin review after submission';
+
+  @override
+  String get expertTeamEditProfileNoChanges => 'No changes to submit';
+
+  @override
+  String get expertTeamEditProfileSubmitted =>
+      'Your changes have been submitted for review';
+
+  @override
+  String get expertTeamEditProfileSubmitFailed => 'Failed to submit changes';
+
+  @override
+  String get expertTeamUnknownUser => 'Unknown user';
+
+  @override
+  String get expertTeamJoinRequestStatusApproved => 'Approved';
+
+  @override
+  String get expertTeamJoinRequestStatusRejected => 'Rejected';
+
+  @override
+  String get expertTeamJoinRequestStatusPending => 'Pending';
+
+  @override
   String get expertTeamStatusActive => 'Active';
 
   @override
@@ -12562,13 +12848,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get expertTeamSeeAll => 'See all';
-
-  @override
-  String get errorPackageAlreadyActive =>
-      'You already have an active package for this service. Use it up before buying another.';
-
-  @override
-  String get errorPackageExpired => 'This package has expired.';
 
   @override
   String get errorPackageBundleSubRequired =>

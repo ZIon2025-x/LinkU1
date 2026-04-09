@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -2130,14 +2131,21 @@ class _PurchasePackageDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final isMulti = service.packageType == 'multi';
     final isBundle = service.packageType == 'bundle';
     final theme = Theme.of(context);
     final routerSaved = GoRouter.of(context);
     final messengerSaved = ScaffoldMessenger.of(context);
 
+    // 价格格式化: packagePrice 是单位一致的 double (GBP 为镑),
+    // 未设置时 fallback 为 base_price * total_sessions 的估算, 与后端 metadata 不一定一致,
+    // 所以只在 packagePrice 存在时才显示, 避免误导用户.
+    final priceStr = service.packagePrice?.toStringAsFixed(2);
+    final currency = service.currency;
+
     return AlertDialog(
-      title: const Text('购买套餐'),
+      title: Text(l10n.packagePurchaseDialogTitle),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2148,20 +2156,41 @@ class _PurchasePackageDialog extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           if (isMulti) ...[
-            _row('套餐类型', '多课时'),
-            _row('总课时', '${service.totalSessions ?? 0} 次'),
+            _row(
+              l10n.packagePurchaseTypeLabel,
+              l10n.packagePurchaseTypeMulti,
+            ),
+            _row(
+              l10n.packagePurchaseTotalSessionsLabel,
+              l10n.packagePurchaseTotalSessionsValue(service.totalSessions ?? 0),
+            ),
           ],
           if (isBundle) ...[
-            _row('套餐类型', '服务包'),
-            _row('包含服务', '${service.bundleServiceIds?.length ?? 0} 项'),
+            _row(
+              l10n.packagePurchaseTypeLabel,
+              l10n.packagePurchaseTypeBundle,
+            ),
+            _row(
+              l10n.packagePurchaseBundleSizeLabel,
+              l10n.packagePurchaseBundleSizeValue(service.bundleServiceIds?.length ?? 0),
+            ),
           ],
-          // package_price 字段在 model 上 — 如果存在
-          // 这里直接展示 base_price 或 currency 加金额(model 字段名以 model 实际为准)
+          if (priceStr != null)
+            _row(
+              l10n.packagePurchasePriceLabel,
+              l10n.packagePurchasePriceValue(currency, priceStr),
+            ),
+          _row(
+            l10n.packagePurchaseValidityLabel,
+            service.validityDays != null
+                ? l10n.packagePurchaseValidityDays(service.validityDays!)
+                : l10n.packagePurchaseValidityForever,
+          ),
           const SizedBox(height: 8),
           const Divider(),
           const SizedBox(height: 4),
           Text(
-            '说明: 购买后可在「我的套餐」中查看,出示二维码核销',
+            l10n.packagePurchaseFootnote,
             style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
           ),
         ],
@@ -2169,44 +2198,98 @@ class _PurchasePackageDialog extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('取消'),
+          child: Text(l10n.packagePurchaseCancel),
         ),
         ElevatedButton(
           onPressed: () async {
             final repo = context.read<PackagePurchaseRepository>();
+            final rootNavigator = Navigator.of(context, rootNavigator: true);
+            // 先把对话框用到的 l10n / localizer 句柄保存下来, pop 后 context 就不能再用了
+            final l10nSaved = context.l10n;
+            // 扩展方法不能直接 tear-off, 用闭包包一层, 捕获 root navigator 的 context
+            String localizeError(String msg) =>
+                rootNavigator.context.localizeError(msg);
+            // 用专属 GlobalKey 给 loading dialog 定身份, 关闭时只 pop 它本身,
+            // 避免 rootNavigator.canPop() 误伤无关路由 (例如用户在等待期间进了别的页面)。
+            final loadingDialogKey = GlobalKey();
+            bool loadingDialogOpen = false;
+            void closeLoadingDialog() {
+              if (!loadingDialogOpen) return;
+              loadingDialogOpen = false;
+              final ctx = loadingDialogKey.currentContext;
+              if (ctx != null) {
+                Navigator.of(ctx, rootNavigator: true).pop();
+              }
+            }
+
             Navigator.of(context).pop();
             try {
               // 1. 创建套餐订单 PaymentIntent
               final result = await repo.purchasePackage(serviceId);
               final clientSecret = result['client_secret'] as String?;
+              final paymentIntentId = result['payment_intent_id'] as String?;
               if (clientSecret == null || clientSecret.isEmpty) {
                 messengerSaved.showSnackBar(
-                  const SnackBar(content: Text('套餐订单创建失败')),
+                  SnackBar(content: Text(l10nSaved.packagePurchaseOrderCreateFailed)),
                 );
                 return;
               }
               // 2. 唤起 Stripe PaymentSheet 完成支付
-              //    复用项目通用支付组件 (与 task 申请支付走同一条路径)
               final success = await PaymentService.instance.presentPaymentSheet(
                 clientSecret: clientSecret,
               );
-              if (success) {
-                messengerSaved.showSnackBar(
-                  const SnackBar(
-                    content: Text('支付成功!可在「我的套餐」中查看核销码'),
+              if (!success) return;
+              // 3. 显示 loading dialog,轮询直到 webhook 创建 UserServicePackage
+              //    避免导航竞速导致"我的套餐"列表为空
+              // 用 root navigator 的 context 打开 dialog — 原 dialog 的 context 已在 pop 后失效
+              loadingDialogOpen = true;
+              unawaited(showDialog<void>(
+                // ignore: use_build_context_synchronously
+                context: rootNavigator.context,
+                barrierDismissible: false,
+                builder: (_) => Dialog(
+                  key: loadingDialogKey,
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const CircularProgressIndicator(),
+                        const SizedBox(width: 16),
+                        Flexible(child: Text(l10nSaved.packagePurchaseProcessing)),
+                      ],
+                    ),
                   ),
+                ),
+              ).whenComplete(() => loadingDialogOpen = false));
+              Map<String, dynamic>? created;
+              if (paymentIntentId != null && paymentIntentId.isNotEmpty) {
+                created = await repo.waitForPackageByPaymentIntent(
+                  paymentIntentId,
                 );
-                // 跳到"我的套餐",webhook 会同步创建 UserServicePackage
-                routerSaved.go('/my-packages');
-              } else {
-                // 用户取消支付,什么都不做(订单 PI 30 分钟后自动过期)
               }
+              // 关闭 loading dialog (只 pop 它自身, 不动其他路由)
+              closeLoadingDialog();
+              if (created != null) {
+                messengerSaved.showSnackBar(
+                  SnackBar(content: Text(l10nSaved.packagePurchaseSuccess)),
+                );
+              } else {
+                // 轮询超时:webhook 可能稍后完成,友好提示
+                messengerSaved.showSnackBar(
+                  SnackBar(content: Text(l10nSaved.packagePurchasePendingWebhook)),
+                );
+              }
+              routerSaved.go('/my-packages');
             } catch (e) {
-              final cleaned = e.toString().replaceFirst('Exception: ', '');
-              messengerSaved.showSnackBar(SnackBar(content: Text(cleaned)));
+              // 任何错误都要确保 loading dialog 被关掉
+              closeLoadingDialog();
+              messengerSaved.showSnackBar(
+                SnackBar(content: Text(localizeError(e.toString()))),
+              );
             }
           },
-          child: const Text('确认购买'),
+          child: Text(l10n.packagePurchaseConfirm),
         ),
       ],
     );

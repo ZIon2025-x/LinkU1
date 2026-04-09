@@ -118,7 +118,7 @@ class _JoinRequestCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        request.userName ?? '未知用户',
+                        request.userName ?? context.l10n.expertTeamUnknownUser,
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
@@ -202,19 +202,20 @@ class _StatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     Color color;
     String label;
+    final l10n = context.l10n;
 
     switch (status) {
       case 'approved':
         color = Colors.green;
-        label = '已批准';
+        label = l10n.expertTeamJoinRequestStatusApproved;
         break;
       case 'rejected':
         color = Colors.red;
-        label = '已拒绝';
+        label = l10n.expertTeamJoinRequestStatusRejected;
         break;
       default:
         color = Colors.amber;
-        label = '待审核';
+        label = l10n.expertTeamJoinRequestStatusPending;
     }
 
     return Container(

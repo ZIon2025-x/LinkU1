@@ -22439,6 +22439,492 @@ abstract class AppLocalizations {
   /// **'The bundle package references invalid services.'**
   String get expertBundleInvalid;
 
+  /// No description provided for @errorActivityTypeUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'This activity type is not supported.'**
+  String get errorActivityTypeUnsupported;
+
+  /// No description provided for @errorAmbiguousExpertTeam.
+  ///
+  /// In en, this message translates to:
+  /// **'You belong to multiple teams. Please specify which team to use.'**
+  String get errorAmbiguousExpertTeam;
+
+  /// No description provided for @errorExpertOwnerMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'This team has no active owner. Please contact support.'**
+  String get errorExpertOwnerMissing;
+
+  /// No description provided for @errorServiceNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Service not found.'**
+  String get errorServiceNotFound;
+
+  /// No description provided for @errorServiceNotOwnedByTeam.
+  ///
+  /// In en, this message translates to:
+  /// **'This service does not belong to your team.'**
+  String get errorServiceNotOwnedByTeam;
+
+  /// No description provided for @errorServiceInactive.
+  ///
+  /// In en, this message translates to:
+  /// **'This service is not available right now.'**
+  String get errorServiceInactive;
+
+  /// No description provided for @errorTeamNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Team not found.'**
+  String get errorTeamNotFound;
+
+  /// No description provided for @errorTeamPayoutFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Team payout failed. Please contact support.'**
+  String get errorTeamPayoutFailed;
+
+  /// No description provided for @errorUnknownOwnerType.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsupported service owner type.'**
+  String get errorUnknownOwnerType;
+
+  /// No description provided for @errorAdminAccessDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Access denied. This action is restricted.'**
+  String get errorAdminAccessDenied;
+
+  /// No description provided for @errorRateLimited.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many requests. Please try again later.'**
+  String get errorRateLimited;
+
+  /// No description provided for @errorAuthFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Authentication failed. Please sign in again.'**
+  String get errorAuthFailed;
+
+  /// No description provided for @packageRedemptionScanTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan to Redeem Package'**
+  String get packageRedemptionScanTitle;
+
+  /// No description provided for @packageRedemptionTorchTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Flash'**
+  String get packageRedemptionTorchTooltip;
+
+  /// No description provided for @packageRedemptionCameraSwitchTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch camera'**
+  String get packageRedemptionCameraSwitchTooltip;
+
+  /// No description provided for @packageRedemptionAimHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Align the customer\'s QR code with the frame.'**
+  String get packageRedemptionAimHint;
+
+  /// No description provided for @packageRedemptionManualOtpButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter OTP manually'**
+  String get packageRedemptionManualOtpButton;
+
+  /// No description provided for @packageRedemptionManualOtpTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter OTP'**
+  String get packageRedemptionManualOtpTitle;
+
+  /// No description provided for @packageRedemptionManualOtpHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask the customer for their 6-digit code'**
+  String get packageRedemptionManualOtpHint;
+
+  /// No description provided for @packageRedemptionOtpLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'OTP'**
+  String get packageRedemptionOtpLabel;
+
+  /// No description provided for @packageRedemptionOtpPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'6 digits'**
+  String get packageRedemptionOtpPlaceholder;
+
+  /// No description provided for @packageRedemptionCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get packageRedemptionCancel;
+
+  /// No description provided for @packageRedemptionConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Redeem'**
+  String get packageRedemptionConfirm;
+
+  /// No description provided for @packageRedemptionSuccessTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Redeemed'**
+  String get packageRedemptionSuccessTitle;
+
+  /// No description provided for @packageRedemptionSuccessPackageId.
+  ///
+  /// In en, this message translates to:
+  /// **'Package ID: {id}'**
+  String packageRedemptionSuccessPackageId(Object id);
+
+  /// No description provided for @packageRedemptionSuccessUsage.
+  ///
+  /// In en, this message translates to:
+  /// **'Used: {used} / {total}'**
+  String packageRedemptionSuccessUsage(Object used, Object total);
+
+  /// No description provided for @packageRedemptionSuccessRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining: {remaining}'**
+  String packageRedemptionSuccessRemaining(Object remaining);
+
+  /// No description provided for @packageRedemptionSuccessExhausted.
+  ///
+  /// In en, this message translates to:
+  /// **'⚠️ All sessions have been redeemed.'**
+  String get packageRedemptionSuccessExhausted;
+
+  /// No description provided for @packageRedemptionContinueScan.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue scanning'**
+  String get packageRedemptionContinueScan;
+
+  /// No description provided for @packageRedemptionPickSubServiceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a sub-service'**
+  String get packageRedemptionPickSubServiceTitle;
+
+  /// No description provided for @packageRedemptionPickSubServiceHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick which sub-service to redeem for this customer.'**
+  String get packageRedemptionPickSubServiceHint;
+
+  /// No description provided for @packageRedemptionSubServiceRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining: {remaining}'**
+  String packageRedemptionSubServiceRemaining(Object remaining);
+
+  /// No description provided for @packagePurchaseDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Buy Package'**
+  String get packagePurchaseDialogTitle;
+
+  /// No description provided for @packagePurchaseTypeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get packagePurchaseTypeLabel;
+
+  /// No description provided for @packagePurchaseTypeMulti.
+  ///
+  /// In en, this message translates to:
+  /// **'Multi-session'**
+  String get packagePurchaseTypeMulti;
+
+  /// No description provided for @packagePurchaseTypeBundle.
+  ///
+  /// In en, this message translates to:
+  /// **'Service bundle'**
+  String get packagePurchaseTypeBundle;
+
+  /// No description provided for @packagePurchaseTotalSessionsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Total sessions'**
+  String get packagePurchaseTotalSessionsLabel;
+
+  /// No description provided for @packagePurchaseTotalSessionsValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} sessions'**
+  String packagePurchaseTotalSessionsValue(Object count);
+
+  /// No description provided for @packagePurchaseBundleSizeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Included services'**
+  String get packagePurchaseBundleSizeLabel;
+
+  /// No description provided for @packagePurchaseBundleSizeValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} items'**
+  String packagePurchaseBundleSizeValue(Object count);
+
+  /// No description provided for @packagePurchasePriceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Price'**
+  String get packagePurchasePriceLabel;
+
+  /// No description provided for @packagePurchasePriceValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{currency} {amount}'**
+  String packagePurchasePriceValue(String currency, String amount);
+
+  /// No description provided for @packagePurchaseValidityLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Valid for'**
+  String get packagePurchaseValidityLabel;
+
+  /// No description provided for @packagePurchaseValidityDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{days} days after purchase'**
+  String packagePurchaseValidityDays(Object days);
+
+  /// No description provided for @packagePurchaseValidityForever.
+  ///
+  /// In en, this message translates to:
+  /// **'No expiry'**
+  String get packagePurchaseValidityForever;
+
+  /// No description provided for @packagePurchaseFootnote.
+  ///
+  /// In en, this message translates to:
+  /// **'After purchase, open the package from My Packages and show the QR code to redeem.'**
+  String get packagePurchaseFootnote;
+
+  /// No description provided for @packagePurchaseCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get packagePurchaseCancel;
+
+  /// No description provided for @packagePurchaseConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm purchase'**
+  String get packagePurchaseConfirm;
+
+  /// No description provided for @packagePurchaseOrderCreateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to create package order'**
+  String get packagePurchaseOrderCreateFailed;
+
+  /// No description provided for @packagePurchaseProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing...'**
+  String get packagePurchaseProcessing;
+
+  /// No description provided for @packagePurchaseSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment successful! Find your QR in My Packages.'**
+  String get packagePurchaseSuccess;
+
+  /// No description provided for @packagePurchasePendingWebhook.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment received. Your package will be activated shortly — refresh My Packages.'**
+  String get packagePurchasePendingWebhook;
+
+  /// No description provided for @errorPackageNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Package not found.'**
+  String get errorPackageNotFound;
+
+  /// No description provided for @errorPackageNotFoundOrInactive.
+  ///
+  /// In en, this message translates to:
+  /// **'Package not found or no longer active.'**
+  String get errorPackageNotFoundOrInactive;
+
+  /// No description provided for @errorPackageNotFoundOrNotTeam.
+  ///
+  /// In en, this message translates to:
+  /// **'Package does not belong to this team.'**
+  String get errorPackageNotFoundOrNotTeam;
+
+  /// No description provided for @errorPackageExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'This package has expired.'**
+  String get errorPackageExpired;
+
+  /// No description provided for @errorPackageExhausted.
+  ///
+  /// In en, this message translates to:
+  /// **'All sessions of this package have been used.'**
+  String get errorPackageExhausted;
+
+  /// No description provided for @errorPackagePriceNotSet.
+  ///
+  /// In en, this message translates to:
+  /// **'Package price has not been set.'**
+  String get errorPackagePriceNotSet;
+
+  /// No description provided for @errorServiceNotPackage.
+  ///
+  /// In en, this message translates to:
+  /// **'This service is not a package.'**
+  String get errorServiceNotPackage;
+
+  /// No description provided for @errorPersonalServiceNoPackage.
+  ///
+  /// In en, this message translates to:
+  /// **'Personal services do not support package purchases.'**
+  String get errorPersonalServiceNoPackage;
+
+  /// No description provided for @errorPackageAlreadyActive.
+  ///
+  /// In en, this message translates to:
+  /// **'You already have an active package for this service. Use it up before buying another.'**
+  String get errorPackageAlreadyActive;
+
+  /// No description provided for @errorServiceTeamResolveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot resolve the team that owns this service.'**
+  String get errorServiceTeamResolveFailed;
+
+  /// No description provided for @errorQrOrOtpRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please provide a QR code or OTP.'**
+  String get errorQrOrOtpRequired;
+
+  /// No description provided for @errorQrInvalidOrExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'QR code is invalid or has expired. Please refresh.'**
+  String get errorQrInvalidOrExpired;
+
+  /// No description provided for @errorOtpInvalidOrExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'OTP is invalid or has expired.'**
+  String get errorOtpInvalidOrExpired;
+
+  /// No description provided for @errorSubServiceIdInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Sub-service ID is invalid.'**
+  String get errorSubServiceIdInvalid;
+
+  /// No description provided for @errorSubServiceNotInBundle.
+  ///
+  /// In en, this message translates to:
+  /// **'This sub-service does not belong to the package.'**
+  String get errorSubServiceNotInBundle;
+
+  /// No description provided for @errorSubServiceExhausted.
+  ///
+  /// In en, this message translates to:
+  /// **'All sessions of this sub-service have been used.'**
+  String get errorSubServiceExhausted;
+
+  /// No description provided for @errorMultiTotalSessionsInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Multi package is misconfigured (invalid total sessions).'**
+  String get errorMultiTotalSessionsInvalid;
+
+  /// No description provided for @errorStripeCreateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to create the Stripe payment intent.'**
+  String get errorStripeCreateFailed;
+
+  /// No description provided for @errorPackagePurchaseFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Package purchase failed.'**
+  String get errorPackagePurchaseFailed;
+
+  /// No description provided for @expertTeamEditProfileTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Team Profile'**
+  String get expertTeamEditProfileTitle;
+
+  /// No description provided for @expertTeamEditProfileValidateName.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a team name'**
+  String get expertTeamEditProfileValidateName;
+
+  /// No description provided for @expertTeamEditProfileReviewNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Changes require admin review after submission'**
+  String get expertTeamEditProfileReviewNote;
+
+  /// No description provided for @expertTeamEditProfileNoChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'No changes to submit'**
+  String get expertTeamEditProfileNoChanges;
+
+  /// No description provided for @expertTeamEditProfileSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Your changes have been submitted for review'**
+  String get expertTeamEditProfileSubmitted;
+
+  /// No description provided for @expertTeamEditProfileSubmitFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to submit changes'**
+  String get expertTeamEditProfileSubmitFailed;
+
+  /// No description provided for @expertTeamUnknownUser.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown user'**
+  String get expertTeamUnknownUser;
+
+  /// No description provided for @expertTeamJoinRequestStatusApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get expertTeamJoinRequestStatusApproved;
+
+  /// No description provided for @expertTeamJoinRequestStatusRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get expertTeamJoinRequestStatusRejected;
+
+  /// No description provided for @expertTeamJoinRequestStatusPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get expertTeamJoinRequestStatusPending;
+
   /// No description provided for @expertTeamStatusActive.
   ///
   /// In en, this message translates to:
@@ -23194,18 +23680,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'See all'**
   String get expertTeamSeeAll;
-
-  /// No description provided for @errorPackageAlreadyActive.
-  ///
-  /// In en, this message translates to:
-  /// **'You already have an active package for this service. Use it up before buying another.'**
-  String get errorPackageAlreadyActive;
-
-  /// No description provided for @errorPackageExpired.
-  ///
-  /// In en, this message translates to:
-  /// **'This package has expired.'**
-  String get errorPackageExpired;
 
   /// No description provided for @errorPackageBundleSubRequired.
   ///

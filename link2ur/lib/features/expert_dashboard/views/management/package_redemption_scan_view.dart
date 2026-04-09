@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
+import '../../../../core/utils/error_localizer.dart';
+import '../../../../core/utils/l10n_extension.dart';
 import '../../../../data/repositories/package_purchase_repository.dart';
 
 /// 团队 owner/admin 套餐核销扫码 view (A1)
@@ -8,7 +10,9 @@ import '../../../../data/repositories/package_purchase_repository.dart';
 /// 流程:
 ///   1. 默认打开相机扫描 QR
 ///   2. 扫到 QR → POST /api/experts/{id}/packages/redeem
-///   3. 如果返回 bundle_sub_service_required → 弹子服务选择对话框
+///   3. bundle 套餐若未指定子服务 → 后端返回 200 OK + requires_sub_service_selection,
+///      弹选择对话框 (旧实现曾依赖从 HTTPException 消息里解析 JSON,但后端全局异常
+///      handler 会吞掉 detail 里的额外字段,导致 bundle 流程完全坏掉,见 package_purchase_routes.redeem_package)
 ///   4. 失败显示错误,可重新扫
 ///   5. "手动输入 OTP" 按钮 fallback,显示 6 位数字输入
 class PackageRedemptionScanView extends StatefulWidget {
@@ -57,91 +61,125 @@ class _PackageRedemptionScanViewState extends State<PackageRedemptionScanView> {
         subServiceId: subServiceId,
       );
       if (!mounted) return;
+      // 后端用 200 OK + requires_sub_service_selection 表达 "bundle 套餐需要先选子服务"
+      if (result['requires_sub_service_selection'] == true) {
+        final rawList = result['sub_services'];
+        final subServices = rawList is List
+            ? rawList.whereType<Map<String, dynamic>>().toList(growable: false)
+            : const <Map<String, dynamic>>[];
+        final picked = await _pickSubService(subServices);
+        if (picked != null && mounted) {
+          await _redeem(
+            qrData: qrData,
+            otp: otp,
+            subServiceId: picked,
+          );
+        }
+        return;
+      }
       _showSuccessDialog(result);
     } catch (e) {
       if (!mounted) return;
-      // 解析 bundle_sub_service_required 错误
-      final errStr = e.toString();
-      if (errStr.contains('bundle_sub_service_required') &&
-          (qrData != null || otp != null)) {
-        // 需要选择子服务 — 但不知道子服务列表(因为 redeem 失败没返回 breakdown)
-        // 提示用户手动选,这里简化为重新输入 sub_service_id
-        await _promptSubServiceId(qrData: qrData, otp: otp);
-      } else {
-        _showErrorSnack(errStr);
-      }
+      _showErrorSnack(e.toString());
     }
   }
 
-  Future<void> _promptSubServiceId({String? qrData, String? otp}) async {
-    final controller = TextEditingController();
-    final result = await showDialog<int>(
+  Future<int?> _pickSubService(
+    List<Map<String, dynamic>> subServices,
+  ) async {
+    final l10n = context.l10n;
+    return showDialog<int>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('选择要核销的子服务'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('该套餐包含多个子服务,请输入要核销的服务 ID:',
-                style: TextStyle(fontSize: 13, color: Colors.grey)),
-            const SizedBox(height: 12),
-            TextField(
-              controller: controller,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: '子服务 ID',
-                border: OutlineInputBorder(),
+        title: Text(l10n.packageRedemptionPickSubServiceTitle),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.packageRedemptionPickSubServiceHint,
+                style: const TextStyle(fontSize: 13, color: Colors.grey),
               ),
-              autofocus: true,
-            ),
-          ],
+              const SizedBox(height: 12),
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: subServices.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (_, i) {
+                    final s = subServices[i];
+                    final id = (s['id'] as num?)?.toInt();
+                    final name = (s['service_name'] as String?) ??
+                        (s['service_name_en'] as String?) ??
+                        (s['service_name_zh'] as String?) ??
+                        '#$id';
+                    final remaining = (s['remaining'] as num?)?.toInt() ?? 0;
+                    final exhausted = remaining <= 0;
+                    return ListTile(
+                      dense: true,
+                      enabled: !exhausted,
+                      title: Text(name),
+                      subtitle: Text(
+                        l10n.packageRedemptionSubServiceRemaining(remaining),
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      trailing: exhausted
+                          ? const Icon(Icons.block, color: Colors.grey)
+                          : const Icon(Icons.chevron_right),
+                      onTap: exhausted || id == null
+                          ? null
+                          : () => Navigator.of(ctx).pop(id),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('取消'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final id = int.tryParse(controller.text.trim());
-              if (id != null) Navigator.of(ctx).pop(id);
-            },
-            child: const Text('确认'),
+            child: Text(l10n.packageRedemptionCancel),
           ),
         ],
       ),
     );
-    controller.dispose();
-    if (result != null && mounted) {
-      await _redeem(qrData: qrData, otp: otp, subServiceId: result);
-    }
   }
 
   void _showSuccessDialog(Map<String, dynamic> result) {
+    final l10n = context.l10n;
+    final total = (result['total_sessions'] as num?)?.toInt() ?? 0;
+    final used = (result['used_sessions'] as num?)?.toInt() ?? 0;
+    final remaining = (result['remaining_sessions'] as num?)?.toInt() ?? 0;
+    final exhausted = result['status'] == 'exhausted';
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         icon: const Icon(Icons.check_circle, color: Colors.green, size: 48),
-        title: const Text('核销成功'),
+        title: Text(l10n.packageRedemptionSuccessTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('套餐 ID: ${result['id']}'),
-            Text('已核销: ${result['used_sessions']} / ${result['total_sessions']} 次'),
-            Text('剩余: ${result['remaining_sessions']} 次'),
-            if (result['status'] == 'exhausted')
-              const Padding(
-                padding: EdgeInsets.only(top: 8),
-                child: Text('⚠️ 此套餐已全部核销完毕',
-                    style: TextStyle(color: Colors.orange)),
+            Text(l10n.packageRedemptionSuccessPackageId(result['id'] ?? '')),
+            Text(l10n.packageRedemptionSuccessUsage(used, total)),
+            Text(l10n.packageRedemptionSuccessRemaining(remaining)),
+            if (exhausted)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  l10n.packageRedemptionSuccessExhausted,
+                  style: const TextStyle(color: Colors.orange),
+                ),
               ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('继续扫码'),
+            child: Text(l10n.packageRedemptionContinueScan),
           ),
         ],
       ),
@@ -149,10 +187,9 @@ class _PackageRedemptionScanViewState extends State<PackageRedemptionScanView> {
   }
 
   void _showErrorSnack(String message) {
-    final cleaned = message.replaceFirst('Exception: ', '');
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(cleaned),
+        content: Text(context.localizeError(message)),
         backgroundColor: Colors.red,
         duration: const Duration(seconds: 3),
       ),
@@ -160,25 +197,28 @@ class _PackageRedemptionScanViewState extends State<PackageRedemptionScanView> {
   }
 
   Future<void> _showManualOtpDialog() async {
+    final l10n = context.l10n;
     final controller = TextEditingController();
     final otp = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('手动输入 OTP'),
+        title: Text(l10n.packageRedemptionManualOtpTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('请让用户提供 6 位 OTP 代码',
-                style: TextStyle(fontSize: 13, color: Colors.grey)),
+            Text(
+              l10n.packageRedemptionManualOtpHint,
+              style: const TextStyle(fontSize: 13, color: Colors.grey),
+            ),
             const SizedBox(height: 12),
             TextField(
               controller: controller,
               keyboardType: TextInputType.number,
               maxLength: 6,
-              decoration: const InputDecoration(
-                labelText: 'OTP',
-                border: OutlineInputBorder(),
-                hintText: '6 位数字',
+              decoration: InputDecoration(
+                labelText: l10n.packageRedemptionOtpLabel,
+                border: const OutlineInputBorder(),
+                hintText: l10n.packageRedemptionOtpPlaceholder,
               ),
               autofocus: true,
               textAlign: TextAlign.center,
@@ -189,14 +229,14 @@ class _PackageRedemptionScanViewState extends State<PackageRedemptionScanView> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('取消'),
+            child: Text(l10n.packageRedemptionCancel),
           ),
           ElevatedButton(
             onPressed: () {
               final code = controller.text.trim();
               if (code.length == 6) Navigator.of(ctx).pop(code);
             },
-            child: const Text('核销'),
+            child: Text(l10n.packageRedemptionConfirm),
           ),
         ],
       ),
@@ -209,19 +249,20 @@ class _PackageRedemptionScanViewState extends State<PackageRedemptionScanView> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('套餐核销扫码'),
+        title: Text(l10n.packageRedemptionScanTitle),
         actions: [
           IconButton(
             icon: const Icon(Icons.flash_on),
             onPressed: () => _scanner.toggleTorch(),
-            tooltip: '闪光灯',
+            tooltip: l10n.packageRedemptionTorchTooltip,
           ),
           IconButton(
             icon: const Icon(Icons.cameraswitch),
             onPressed: () => _scanner.switchCamera(),
-            tooltip: '切换相机',
+            tooltip: l10n.packageRedemptionCameraSwitchTooltip,
           ),
         ],
       ),
@@ -262,9 +303,9 @@ class _PackageRedemptionScanViewState extends State<PackageRedemptionScanView> {
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                const Text(
-                  '请将用户出示的二维码对准扫描框',
-                  style: TextStyle(color: Colors.grey),
+                Text(
+                  l10n.packageRedemptionAimHint,
+                  style: const TextStyle(color: Colors.grey),
                 ),
                 const SizedBox(height: 12),
                 SizedBox(
@@ -272,7 +313,7 @@ class _PackageRedemptionScanViewState extends State<PackageRedemptionScanView> {
                   child: OutlinedButton.icon(
                     onPressed: _showManualOtpDialog,
                     icon: const Icon(Icons.dialpad),
-                    label: const Text('手动输入 OTP'),
+                    label: Text(l10n.packageRedemptionManualOtpButton),
                   ),
                 ),
               ],

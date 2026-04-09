@@ -11670,6 +11670,265 @@ class AppLocalizationsZh extends AppLocalizations {
   String get expertBundleInvalid => '服务包套餐引用了无效的服务';
 
   @override
+  String get errorActivityTypeUnsupported => '暂不支持该活动类型';
+
+  @override
+  String get errorAmbiguousExpertTeam => '你属于多个团队，请指定要使用的团队';
+
+  @override
+  String get errorExpertOwnerMissing => '该团队暂无管理员，请联系客服';
+
+  @override
+  String get errorServiceNotFound => '服务不存在';
+
+  @override
+  String get errorServiceNotOwnedByTeam => '该服务不属于此团队';
+
+  @override
+  String get errorServiceInactive => '该服务暂未开放';
+
+  @override
+  String get errorTeamNotFound => '团队不存在';
+
+  @override
+  String get errorTeamPayoutFailed => '团队分账失败，请联系客服';
+
+  @override
+  String get errorUnknownOwnerType => '不支持的服务所有者类型';
+
+  @override
+  String get errorAdminAccessDenied => '拒绝访问，此操作受限';
+
+  @override
+  String get errorRateLimited => '请求过于频繁，请稍后再试';
+
+  @override
+  String get errorAuthFailed => '身份验证失败，请重新登录';
+
+  @override
+  String get packageRedemptionScanTitle => '扫码核销套餐';
+
+  @override
+  String get packageRedemptionTorchTooltip => '闪光灯';
+
+  @override
+  String get packageRedemptionCameraSwitchTooltip => '切换相机';
+
+  @override
+  String get packageRedemptionAimHint => '请将顾客出示的二维码对准扫描框';
+
+  @override
+  String get packageRedemptionManualOtpButton => '手动输入 OTP';
+
+  @override
+  String get packageRedemptionManualOtpTitle => '手动输入 OTP';
+
+  @override
+  String get packageRedemptionManualOtpHint => '请让顾客提供 6 位 OTP 代码';
+
+  @override
+  String get packageRedemptionOtpLabel => 'OTP';
+
+  @override
+  String get packageRedemptionOtpPlaceholder => '6 位数字';
+
+  @override
+  String get packageRedemptionCancel => '取消';
+
+  @override
+  String get packageRedemptionConfirm => '核销';
+
+  @override
+  String get packageRedemptionSuccessTitle => '核销成功';
+
+  @override
+  String packageRedemptionSuccessPackageId(Object id) {
+    return '套餐 ID：$id';
+  }
+
+  @override
+  String packageRedemptionSuccessUsage(Object used, Object total) {
+    return '已核销：$used / $total';
+  }
+
+  @override
+  String packageRedemptionSuccessRemaining(Object remaining) {
+    return '剩余：$remaining 次';
+  }
+
+  @override
+  String get packageRedemptionSuccessExhausted => '⚠️ 此套餐已全部核销完毕';
+
+  @override
+  String get packageRedemptionContinueScan => '继续扫码';
+
+  @override
+  String get packageRedemptionPickSubServiceTitle => '选择要核销的子服务';
+
+  @override
+  String get packageRedemptionPickSubServiceHint => '请选择本次要为顾客核销的子服务';
+
+  @override
+  String packageRedemptionSubServiceRemaining(Object remaining) {
+    return '剩余：$remaining 次';
+  }
+
+  @override
+  String get packagePurchaseDialogTitle => '购买套餐';
+
+  @override
+  String get packagePurchaseTypeLabel => '类型';
+
+  @override
+  String get packagePurchaseTypeMulti => '多课时';
+
+  @override
+  String get packagePurchaseTypeBundle => '服务包';
+
+  @override
+  String get packagePurchaseTotalSessionsLabel => '总课时';
+
+  @override
+  String packagePurchaseTotalSessionsValue(Object count) {
+    return '$count 次';
+  }
+
+  @override
+  String get packagePurchaseBundleSizeLabel => '包含服务';
+
+  @override
+  String packagePurchaseBundleSizeValue(Object count) {
+    return '$count 项';
+  }
+
+  @override
+  String get packagePurchasePriceLabel => '套餐价格';
+
+  @override
+  String packagePurchasePriceValue(String currency, String amount) {
+    return '$currency $amount';
+  }
+
+  @override
+  String get packagePurchaseValidityLabel => '有效期';
+
+  @override
+  String packagePurchaseValidityDays(Object days) {
+    return '购买后 $days 天内有效';
+  }
+
+  @override
+  String get packagePurchaseValidityForever => '永久有效';
+
+  @override
+  String get packagePurchaseFootnote => '购买后可在「我的套餐」中查看,出示二维码核销';
+
+  @override
+  String get packagePurchaseCancel => '取消';
+
+  @override
+  String get packagePurchaseConfirm => '确认购买';
+
+  @override
+  String get packagePurchaseOrderCreateFailed => '套餐订单创建失败';
+
+  @override
+  String get packagePurchaseProcessing => '处理中...';
+
+  @override
+  String get packagePurchaseSuccess => '支付成功!可在「我的套餐」中查看核销码';
+
+  @override
+  String get packagePurchasePendingWebhook => '支付已提交,套餐稍后将自动入账,请稍候刷新「我的套餐」';
+
+  @override
+  String get errorPackageNotFound => '套餐不存在';
+
+  @override
+  String get errorPackageNotFoundOrInactive => '套餐不存在或已失效';
+
+  @override
+  String get errorPackageNotFoundOrNotTeam => '套餐不存在或不属于该团队';
+
+  @override
+  String get errorPackageExpired => '套餐已过期。';
+
+  @override
+  String get errorPackageExhausted => '套餐次数已用完';
+
+  @override
+  String get errorPackagePriceNotSet => '服务未设置套餐价格';
+
+  @override
+  String get errorServiceNotPackage => '该服务不是套餐类型';
+
+  @override
+  String get errorPersonalServiceNoPackage => '个人服务暂不支持套餐购买';
+
+  @override
+  String get errorPackageAlreadyActive => '你已有一个进行中的此服务套餐，请用完后再购买。';
+
+  @override
+  String get errorServiceTeamResolveFailed => '无法解析服务团队';
+
+  @override
+  String get errorQrOrOtpRequired => '必须提供 QR 或 OTP';
+
+  @override
+  String get errorQrInvalidOrExpired => 'QR 无效或已过期,请刷新';
+
+  @override
+  String get errorOtpInvalidOrExpired => 'OTP 无效或已过期';
+
+  @override
+  String get errorSubServiceIdInvalid => '子服务 ID 格式错误';
+
+  @override
+  String get errorSubServiceNotInBundle => '该子服务不在此套餐中';
+
+  @override
+  String get errorSubServiceExhausted => '该子服务已核销完';
+
+  @override
+  String get errorMultiTotalSessionsInvalid => '多课时套餐配置错误';
+
+  @override
+  String get errorStripeCreateFailed => 'Stripe 订单创建失败';
+
+  @override
+  String get errorPackagePurchaseFailed => '套餐购买失败';
+
+  @override
+  String get expertTeamEditProfileTitle => '编辑团队信息';
+
+  @override
+  String get expertTeamEditProfileValidateName => '请输入团队名称';
+
+  @override
+  String get expertTeamEditProfileReviewNote => '提交后需要管理员审核';
+
+  @override
+  String get expertTeamEditProfileNoChanges => '没有修改';
+
+  @override
+  String get expertTeamEditProfileSubmitted => '修改申请已提交，等待管理员审核';
+
+  @override
+  String get expertTeamEditProfileSubmitFailed => '提交失败';
+
+  @override
+  String get expertTeamUnknownUser => '未知用户';
+
+  @override
+  String get expertTeamJoinRequestStatusApproved => '已批准';
+
+  @override
+  String get expertTeamJoinRequestStatusRejected => '已拒绝';
+
+  @override
+  String get expertTeamJoinRequestStatusPending => '待审核';
+
+  @override
   String get expertTeamStatusActive => '运营中';
 
   @override
@@ -12065,12 +12324,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get expertTeamSeeAll => '查看全部';
-
-  @override
-  String get errorPackageAlreadyActive => '你已有一个进行中的此服务套餐，请用完后再购买。';
-
-  @override
-  String get errorPackageExpired => '套餐已过期。';
 
   @override
   String get errorPackageBundleSubRequired => '请选择要核销的子服务。';
@@ -23751,6 +24004,265 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get expertBundleInvalid => '服務包套餐引用了無效的服務';
 
   @override
+  String get errorActivityTypeUnsupported => '暫不支援該活動類型';
+
+  @override
+  String get errorAmbiguousExpertTeam => '你屬於多個團隊，請指定要使用的團隊';
+
+  @override
+  String get errorExpertOwnerMissing => '該團隊暫無管理員，請聯絡客服';
+
+  @override
+  String get errorServiceNotFound => '服務不存在';
+
+  @override
+  String get errorServiceNotOwnedByTeam => '該服務不屬於此團隊';
+
+  @override
+  String get errorServiceInactive => '該服務暫未開放';
+
+  @override
+  String get errorTeamNotFound => '團隊不存在';
+
+  @override
+  String get errorTeamPayoutFailed => '團隊分帳失敗，請聯絡客服';
+
+  @override
+  String get errorUnknownOwnerType => '不支援的服務擁有者類型';
+
+  @override
+  String get errorAdminAccessDenied => '拒絕存取，此操作受限';
+
+  @override
+  String get errorRateLimited => '請求過於頻繁，請稍後再試';
+
+  @override
+  String get errorAuthFailed => '身分驗證失敗，請重新登入';
+
+  @override
+  String get packageRedemptionScanTitle => '掃碼核銷套餐';
+
+  @override
+  String get packageRedemptionTorchTooltip => '閃光燈';
+
+  @override
+  String get packageRedemptionCameraSwitchTooltip => '切換相機';
+
+  @override
+  String get packageRedemptionAimHint => '請將顧客出示的二維碼對準掃描框';
+
+  @override
+  String get packageRedemptionManualOtpButton => '手動輸入 OTP';
+
+  @override
+  String get packageRedemptionManualOtpTitle => '手動輸入 OTP';
+
+  @override
+  String get packageRedemptionManualOtpHint => '請讓顧客提供 6 位 OTP 代碼';
+
+  @override
+  String get packageRedemptionOtpLabel => 'OTP';
+
+  @override
+  String get packageRedemptionOtpPlaceholder => '6 位數字';
+
+  @override
+  String get packageRedemptionCancel => '取消';
+
+  @override
+  String get packageRedemptionConfirm => '核銷';
+
+  @override
+  String get packageRedemptionSuccessTitle => '核銷成功';
+
+  @override
+  String packageRedemptionSuccessPackageId(Object id) {
+    return '套餐 ID：$id';
+  }
+
+  @override
+  String packageRedemptionSuccessUsage(Object used, Object total) {
+    return '已核銷：$used / $total';
+  }
+
+  @override
+  String packageRedemptionSuccessRemaining(Object remaining) {
+    return '剩餘：$remaining 次';
+  }
+
+  @override
+  String get packageRedemptionSuccessExhausted => '⚠️ 此套餐已全部核銷完畢';
+
+  @override
+  String get packageRedemptionContinueScan => '繼續掃碼';
+
+  @override
+  String get packageRedemptionPickSubServiceTitle => '選擇要核銷的子服務';
+
+  @override
+  String get packageRedemptionPickSubServiceHint => '請選擇本次要為顧客核銷的子服務';
+
+  @override
+  String packageRedemptionSubServiceRemaining(Object remaining) {
+    return '剩餘：$remaining 次';
+  }
+
+  @override
+  String get packagePurchaseDialogTitle => '購買套餐';
+
+  @override
+  String get packagePurchaseTypeLabel => '類型';
+
+  @override
+  String get packagePurchaseTypeMulti => '多堂課';
+
+  @override
+  String get packagePurchaseTypeBundle => '服務包';
+
+  @override
+  String get packagePurchaseTotalSessionsLabel => '總堂數';
+
+  @override
+  String packagePurchaseTotalSessionsValue(Object count) {
+    return '$count 次';
+  }
+
+  @override
+  String get packagePurchaseBundleSizeLabel => '包含服務';
+
+  @override
+  String packagePurchaseBundleSizeValue(Object count) {
+    return '$count 項';
+  }
+
+  @override
+  String get packagePurchasePriceLabel => '套餐價格';
+
+  @override
+  String packagePurchasePriceValue(String currency, String amount) {
+    return '$currency $amount';
+  }
+
+  @override
+  String get packagePurchaseValidityLabel => '有效期';
+
+  @override
+  String packagePurchaseValidityDays(Object days) {
+    return '購買後 $days 天內有效';
+  }
+
+  @override
+  String get packagePurchaseValidityForever => '永久有效';
+
+  @override
+  String get packagePurchaseFootnote => '購買後可在「我的套餐」中查看,出示二維碼核銷';
+
+  @override
+  String get packagePurchaseCancel => '取消';
+
+  @override
+  String get packagePurchaseConfirm => '確認購買';
+
+  @override
+  String get packagePurchaseOrderCreateFailed => '套餐訂單建立失敗';
+
+  @override
+  String get packagePurchaseProcessing => '處理中...';
+
+  @override
+  String get packagePurchaseSuccess => '付款成功!可在「我的套餐」中查看核銷碼';
+
+  @override
+  String get packagePurchasePendingWebhook => '付款已提交,套餐稍後將自動入帳,請稍候刷新「我的套餐」';
+
+  @override
+  String get errorPackageNotFound => '套餐不存在';
+
+  @override
+  String get errorPackageNotFoundOrInactive => '套餐不存在或已失效';
+
+  @override
+  String get errorPackageNotFoundOrNotTeam => '套餐不存在或不屬於該團隊';
+
+  @override
+  String get errorPackageExpired => '套餐已過期。';
+
+  @override
+  String get errorPackageExhausted => '套餐次數已用完';
+
+  @override
+  String get errorPackagePriceNotSet => '服務未設定套餐價格';
+
+  @override
+  String get errorServiceNotPackage => '該服務不是套餐類型';
+
+  @override
+  String get errorPersonalServiceNoPackage => '個人服務暫不支援套餐購買';
+
+  @override
+  String get errorPackageAlreadyActive => '你已有一個進行中的此服務套餐，請用完後再購買。';
+
+  @override
+  String get errorServiceTeamResolveFailed => '無法解析服務團隊';
+
+  @override
+  String get errorQrOrOtpRequired => '必須提供 QR 或 OTP';
+
+  @override
+  String get errorQrInvalidOrExpired => 'QR 無效或已過期,請刷新';
+
+  @override
+  String get errorOtpInvalidOrExpired => 'OTP 無效或已過期';
+
+  @override
+  String get errorSubServiceIdInvalid => '子服務 ID 格式錯誤';
+
+  @override
+  String get errorSubServiceNotInBundle => '該子服務不在此套餐中';
+
+  @override
+  String get errorSubServiceExhausted => '該子服務已核銷完';
+
+  @override
+  String get errorMultiTotalSessionsInvalid => '多堂套餐設定錯誤';
+
+  @override
+  String get errorStripeCreateFailed => 'Stripe 訂單建立失敗';
+
+  @override
+  String get errorPackagePurchaseFailed => '套餐購買失敗';
+
+  @override
+  String get expertTeamEditProfileTitle => '編輯團隊資料';
+
+  @override
+  String get expertTeamEditProfileValidateName => '請輸入團隊名稱';
+
+  @override
+  String get expertTeamEditProfileReviewNote => '提交後需要管理員審核';
+
+  @override
+  String get expertTeamEditProfileNoChanges => '沒有修改';
+
+  @override
+  String get expertTeamEditProfileSubmitted => '修改申請已提交，等待管理員審核';
+
+  @override
+  String get expertTeamEditProfileSubmitFailed => '提交失敗';
+
+  @override
+  String get expertTeamUnknownUser => '未知使用者';
+
+  @override
+  String get expertTeamJoinRequestStatusApproved => '已核准';
+
+  @override
+  String get expertTeamJoinRequestStatusRejected => '已拒絕';
+
+  @override
+  String get expertTeamJoinRequestStatusPending => '待審核';
+
+  @override
   String get expertTeamStatusActive => '運營中';
 
   @override
@@ -24146,12 +24658,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get expertTeamSeeAll => '查看全部';
-
-  @override
-  String get errorPackageAlreadyActive => '你已有一個進行中的此服務套餐，請用完後再購買。';
-
-  @override
-  String get errorPackageExpired => '套餐已過期。';
 
   @override
   String get errorPackageBundleSubRequired => '請選擇要核銷的子服務。';

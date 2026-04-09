@@ -1,16 +1,17 @@
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../data/repositories/package_purchase_repository.dart';
 import '../../../features/expert_dashboard/views/expert_dashboard_shell.dart';
 import '../../../features/expert_dashboard/views/management/coupons_view.dart';
+import '../../../features/expert_dashboard/views/management/customer_packages_view.dart';
 import '../../../features/expert_dashboard/views/management/edit_team_profile_view.dart';
 import '../../../features/expert_dashboard/views/management/join_requests_view.dart';
 import '../../../features/expert_dashboard/views/management/management_center_view.dart';
 import '../../../features/expert_dashboard/views/management/members_view.dart';
+import '../../../features/expert_dashboard/views/management/package_redemption_scan_view.dart';
 import '../../../features/expert_dashboard/views/management/packages_view.dart';
 import '../../../features/expert_dashboard/views/management/review_replies_view.dart';
-import '../../../features/expert_dashboard/views/management/customer_packages_view.dart';
-import '../../../data/repositories/package_purchase_repository.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import '../app_routes.dart';
 
 List<RouteBase> get expertDashboardRoutes => [
@@ -20,7 +21,7 @@ List<RouteBase> get expertDashboardRoutes => [
         name: 'expertDashboard',
         builder: (context, state) => const ExpertDashboardShell(),
       ),
-      // 显式 expertId 版本（Phase B 之后启用，暂时也指向 shell）
+      // 显式 expertId 版本
       GoRoute(
         path: AppRoutes.expertDashboardWithId,
         name: 'expertDashboardWithId',
@@ -38,7 +39,7 @@ List<RouteBase> get expertDashboardRoutes => [
         },
       ),
       GoRoute(
-        path: '/expert-dashboard/:expertId/management/members',
+        path: AppRoutes.expertDashboardManagementMembers,
         name: 'expertDashboardManagementMembers',
         builder: (context, state) {
           final id = state.pathParameters['expertId']!;
@@ -46,7 +47,7 @@ List<RouteBase> get expertDashboardRoutes => [
         },
       ),
       GoRoute(
-        path: '/expert-dashboard/:expertId/management/join-requests',
+        path: AppRoutes.expertDashboardManagementJoinRequests,
         name: 'expertDashboardManagementJoinRequests',
         builder: (context, state) {
           final id = state.pathParameters['expertId']!;
@@ -54,7 +55,7 @@ List<RouteBase> get expertDashboardRoutes => [
         },
       ),
       GoRoute(
-        path: '/expert-dashboard/:expertId/management/edit-profile',
+        path: AppRoutes.expertDashboardManagementEditProfile,
         name: 'expertDashboardManagementEditProfile',
         builder: (context, state) {
           final id = state.pathParameters['expertId']!;
@@ -62,7 +63,7 @@ List<RouteBase> get expertDashboardRoutes => [
         },
       ),
       GoRoute(
-        path: '/expert-dashboard/:expertId/management/coupons',
+        path: AppRoutes.expertDashboardManagementCoupons,
         name: 'expertDashboardManagementCoupons',
         builder: (context, state) {
           final id = state.pathParameters['expertId']!;
@@ -70,7 +71,7 @@ List<RouteBase> get expertDashboardRoutes => [
         },
       ),
       GoRoute(
-        path: '/expert-dashboard/:expertId/management/review-replies',
+        path: AppRoutes.expertDashboardManagementReviewReplies,
         name: 'expertDashboardManagementReviewReplies',
         builder: (context, state) {
           final id = state.pathParameters['expertId']!;
@@ -78,7 +79,7 @@ List<RouteBase> get expertDashboardRoutes => [
         },
       ),
       GoRoute(
-        path: '/expert-dashboard/:expertId/management/packages',
+        path: AppRoutes.expertDashboardManagementPackages,
         name: 'expertDashboardManagementPackages',
         builder: (context, state) {
           final id = state.pathParameters['expertId']!;
@@ -86,12 +87,24 @@ List<RouteBase> get expertDashboardRoutes => [
         },
       ),
       GoRoute(
-        path: '/expert-dashboard/:expertId/management/customer-packages',
+        path: AppRoutes.expertDashboardManagementCustomerPackages,
         name: 'expertDashboardManagementCustomerPackages',
         builder: (context, state) {
           final id = state.pathParameters['expertId']!;
           final repo = context.read<PackagePurchaseRepository>();
           return CustomerPackagesView(expertId: id, repository: repo);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.expertDashboardManagementPackageRedeem,
+        name: 'expertDashboardManagementPackageRedeem',
+        builder: (context, state) {
+          final id = state.pathParameters['expertId']!;
+          final repo = context.read<PackagePurchaseRepository>();
+          return PackageRedemptionScanView(
+            expertId: id,
+            repository: repo,
+          );
         },
       ),
     ];

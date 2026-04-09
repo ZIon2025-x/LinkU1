@@ -42,6 +42,11 @@ async def get_my_packages(
             "status": p.status,
             "purchased_at": p.purchased_at.isoformat() if p.purchased_at else None,
             "expires_at": p.expires_at.isoformat() if p.expires_at else None,
+            # 支付关联字段 — 购买成功后前端用它来判定 webhook 已完成
+            "payment_intent_id": p.payment_intent_id,
+            "paid_amount": float(p.paid_amount) if p.paid_amount is not None else None,
+            "currency": p.currency,
+            "bundle_breakdown": p.bundle_breakdown,
         }
         for p in packages
     ]

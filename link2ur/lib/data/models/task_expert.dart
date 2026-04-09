@@ -350,6 +350,8 @@ class TaskExpertService extends Equatable {
     this.packageType,
     this.totalSessions,
     this.bundleServiceIds,
+    this.packagePrice,
+    this.validityDays,
   });
 
   final int id;
@@ -405,6 +407,10 @@ class TaskExpertService extends Equatable {
   final int? totalSessions;
   /// bundle 套餐包含的服务 ID 列表
   final List<int>? bundleServiceIds;
+  /// multi/bundle 套餐总价 (owner-set,单位与 currency 一致)
+  final double? packagePrice;
+  /// 套餐有效期天数 (null = 永不过期)
+  final int? validityDays;
 
   /// 是否多课时套餐
   bool get isMultiPackage => packageType == 'multi';
@@ -496,9 +502,17 @@ class TaskExpertService extends Equatable {
       packageType: json['package_type']?.toString(),
       totalSessions: json['total_sessions'] as int?,
       bundleServiceIds: (json['bundle_service_ids'] as List<dynamic>?)
-          ?.map((e) => e is int ? e : int.tryParse(e.toString()) ?? 0)
+          ?.map((e) {
+            if (e is int) return e;
+            if (e is Map && e['service_id'] is int) {
+              return e['service_id'] as int;
+            }
+            return int.tryParse(e.toString()) ?? 0;
+          })
           .where((e) => e > 0)
           .toList(),
+      packagePrice: (json['package_price'] as num?)?.toDouble(),
+      validityDays: json['validity_days'] as int?,
     );
   }
 
@@ -540,11 +554,13 @@ class TaskExpertService extends Equatable {
       'package_type': packageType,
       'total_sessions': totalSessions,
       'bundle_service_ids': bundleServiceIds,
+      'package_price': packagePrice,
+      'validity_days': validityDays,
     };
   }
 
   @override
-  List<Object?> get props => [id, expertId, serviceType, userId, serviceName, serviceNameEn, serviceNameZh, descriptionEn, descriptionZh, basePrice, pricingType, locationType, location, latitude, longitude, status, isExpertVerified, ownerName, ownerAvatar, ownerRating, skills, packageType, totalSessions, bundleServiceIds];
+  List<Object?> get props => [id, expertId, serviceType, userId, serviceName, serviceNameEn, serviceNameZh, descriptionEn, descriptionZh, basePrice, pricingType, locationType, location, latitude, longitude, status, isExpertVerified, ownerName, ownerAvatar, ownerRating, skills, packageType, totalSessions, bundleServiceIds, packagePrice, validityDays];
 }
 
 /// 任务达人列表响应
