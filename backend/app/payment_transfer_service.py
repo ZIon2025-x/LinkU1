@@ -318,7 +318,11 @@ def execute_transfer(
                 "transfer_record_id": str(transfer_record.id),
                 "transfer_type": "package_release" if transfer_record.package_id else "task_reward",
             },
-            description=f"任务 #{transfer_record.task_id} 奖励"
+            description=(
+                f"Package #{transfer_record.package_id} release"
+                if transfer_record.package_id
+                else f"任务 #{transfer_record.task_id} 奖励"
+            )
         )
         if transfer_record.idempotency_key:
             _stripe_create_kwargs["idempotency_key"] = transfer_record.idempotency_key
@@ -344,7 +348,7 @@ def execute_transfer(
             ).first()
             if pkg:
                 pkg.released_at = get_utc_time()
-                pkg.released_amount_pence = int(round(float(transfer_record.amount) * 100))
+                pkg.released_amount_pence = int(Decimal(str(transfer_record.amount)) * 100)
                 if pkg.status in ("exhausted", "expired"):
                     pkg.status = "released"
                 logger.info(
@@ -800,7 +804,7 @@ def process_pending_transfers(db: Session) -> Dict[str, Any]:
                     # and transition exhausted/expired → released.
                     # partially_refunded is terminal — leave as-is.
                     pkg.released_at = get_utc_time()
-                    pkg.released_amount_pence = int(round(float(transfer_record.amount) * 100))
+                    pkg.released_amount_pence = int(Decimal(str(transfer_record.amount)) * 100)
                     if pkg.status in ("exhausted", "expired"):
                         pkg.status = "released"
 
