@@ -1505,6 +1505,44 @@ def get_account_status(
         }
         
     except stripe.error.StripeError as e:
+        # 孤儿 stripe_account_id 处理：用户 DB 里存的账户 ID 当前 Stripe key 无法访问
+        # (常见于 staging/dev key 切换后的遗留数据)。把这种情况当作"无 Connect 账户"处理:
+        # 清掉坏的 ID + 返回空状态,让钱包页面/Profile 不会因此挂掉。
+        # 对应错误形态:
+        #   - V2: stripe.error.PermissionError ("API Key does not have permission")
+        #   - V1: InvalidRequestError code=account_invalid ("does not have access to account")
+        error_message = str(e)
+        error_code = getattr(e, "code", None) or ""
+        is_orphan = (
+            isinstance(e, stripe.error.PermissionError)
+            or error_code == "account_invalid"
+            or "does not have access to account" in error_message
+            or "Application access may have been revoked" in error_message
+        )
+        if is_orphan:
+            logger.warning(
+                f"Orphaned stripe_account_id {current_user.stripe_account_id} for user "
+                f"{current_user.id}: {error_message}. Clearing and returning empty status."
+            )
+            try:
+                db_user = db.query(models.User).filter(models.User.id == current_user.id).first()
+                if db_user and db_user.stripe_account_id:
+                    db_user.stripe_account_id = None
+                    db.commit()
+            except Exception as cleanup_err:
+                logger.warning(
+                    f"Failed to clear orphaned stripe_account_id for user "
+                    f"{current_user.id}: {cleanup_err}"
+                )
+            return {
+                "account_id": None,
+                "details_submitted": False,
+                "charges_enabled": False,
+                "payouts_enabled": False,
+                "client_secret": None,
+                "needs_onboarding": True,
+                "requirements": None,
+            }
         logger.error(f"Stripe error retrieving account: {e}")
         raise HTTPException(
             status_code=400,
