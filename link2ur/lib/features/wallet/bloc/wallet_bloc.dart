@@ -128,12 +128,22 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     emit(state.copyWith(status: WalletStatus.loading, clearError: true));
 
     try {
+      // 积分相关三个调用是核心,失败应该让钱包页面显示错误。
       final results = await Future.wait([
         _couponPointsRepo.getPointsAccount(),
         _couponPointsRepo.getPointsTransactions(),
         _couponPointsRepo.getMyCoupons(),
-        _paymentRepo.getStripeConnectStatus(),
       ]);
+
+      // Stripe Connect 状态:用户可能没绑定 Connect 账户,或者后端 Stripe key
+      // 与历史 stripe_account_id 不匹配 (返回 400)。任何失败都不应阻塞钱包加载,
+      // status 保持 null → UI 显示"未开通 Connect"。
+      StripeConnectStatus? stripeStatus;
+      try {
+        stripeStatus = await _paymentRepo.getStripeConnectStatus();
+      } catch (_) {
+        // 无 Connect 账户 / Stripe key 不匹配 / API 错误,UI 显示未开通
+      }
 
       // 尝试加载 Connect 余额（可能无账户 → 404，视为零余额）
       StripeConnectBalance? balance;
@@ -156,7 +166,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
         pointsAccount: results[0] as PointsAccount,
         transactions: results[1] as List<PointsTransaction>,
         coupons: results[2] as List<UserCoupon>,
-        stripeConnectStatus: results[3] as StripeConnectStatus,
+        stripeConnectStatus: stripeStatus,
         connectBalance: balance,
         walletBalances: walletBalances,
         transactionPage: 1,
