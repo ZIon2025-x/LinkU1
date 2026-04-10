@@ -60,6 +60,7 @@ async def get_my_packages(
             "platform_fee_pence": p.platform_fee_pence,
             "released_at": p.released_at.isoformat() if p.released_at else None,
             "refunded_at": p.refunded_at.isoformat() if p.refunded_at else None,
+            "last_redeemed_at": p.last_redeemed_at.isoformat() if p.last_redeemed_at else None,
             "can_refund_full": flags["can_refund_full"],
             "can_refund_partial": flags["can_refund_partial"],
             "can_review": flags["can_review"],

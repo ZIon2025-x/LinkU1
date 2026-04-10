@@ -902,23 +902,28 @@ async def _process_full_refund(db: AsyncSession, pkg, reason: str) -> dict:
             refund_req.completed_at = get_utc_time()
             pkg.refunded_at = get_utc_time()
         else:
+            # Stripe failed — rollback package status so buyer can retry
             refund_req.status = "failed"
             refund_req.admin_comment = f"Stripe error: {error}"
-            logger.error(f"Package {pkg.id} full refund Stripe call failed: {error}")
+            pkg.status = "active"
+            pkg.refunded_amount_pence = None
+            logger.error(f"Package {pkg.id} full refund Stripe call failed, reverted to active: {error}")
         await db.commit()
 
-    # Best-effort notifications
-    try:
-        await _notify_package_refunded(db, pkg, full=True)
-    except Exception as e:
-        logger.warning(f"Failed to send package refund notification: {e}")
+    if pkg.status != "active":
+        # Best-effort notifications (only if refund actually succeeded)
+        try:
+            await _notify_package_refunded(db, pkg, full=True)
+        except Exception as e:
+            logger.warning(f"Failed to send package refund notification: {e}")
 
     return {
-        "refund_type": "full",
-        "status": "refunded",
-        "refund_amount_pence": paid_pence,
+        "refund_type": "full" if pkg.status == "refunded" else "failed",
+        "status": pkg.status,
+        "refund_amount_pence": paid_pence if pkg.status == "refunded" else 0,
         "transfer_amount_pence": 0,
         "platform_fee_pence": 0,
+        "error": error if pkg.status == "active" else None,
     }
 
 
@@ -966,6 +971,7 @@ async def _process_partial_refund(db: AsyncSession, pkg, reason: str) -> dict:
     await db.refresh(refund_req)
 
     # Execute Stripe refund for the unconsumed portion
+    stripe_error = None
     if pkg.payment_intent_id and split["unconsumed_value_pence"] > 0:
         success, refund_id, error = await asyncio.to_thread(
             _execute_stripe_refund_sync,
@@ -978,22 +984,39 @@ async def _process_partial_refund(db: AsyncSession, pkg, reason: str) -> dict:
             refund_req.completed_at = get_utc_time()
             pkg.refunded_at = get_utc_time()
         else:
+            # Stripe failed — rollback package + cancel the pending transfer
             refund_req.status = "failed"
             refund_req.admin_comment = f"Stripe error: {error}"
-            logger.error(f"Package {pkg.id} partial refund Stripe call failed: {error}")
+            pkg.status = "active"
+            pkg.released_amount_pence = None
+            pkg.platform_fee_pence = None
+            pkg.refunded_amount_pence = None
+            stripe_error = error
+            # Cancel the pending PaymentTransfer we just created
+            pt_result = await db.execute(
+                select(models.PaymentTransfer).where(
+                    models.PaymentTransfer.idempotency_key == f"pkg_{pkg.id}_partial_transfer",
+                    models.PaymentTransfer.status == "pending",
+                )
+            )
+            for pt in pt_result.scalars().all():
+                pt.status = "cancelled"
+            logger.error(f"Package {pkg.id} partial refund Stripe failed, reverted to active: {error}")
         await db.commit()
 
-    try:
-        await _notify_package_refunded(db, pkg, full=False)
-    except Exception as e:
-        logger.warning(f"Failed to send partial refund notification: {e}")
+    if pkg.status != "active":
+        try:
+            await _notify_package_refunded(db, pkg, full=False)
+        except Exception as e:
+            logger.warning(f"Failed to send partial refund notification: {e}")
 
     return {
-        "refund_type": "pro_rata",
-        "status": "partially_refunded",
-        "refund_amount_pence": split["unconsumed_value_pence"],
-        "transfer_amount_pence": split["transfer_pence"],
-        "platform_fee_pence": split["fee_pence"],
+        "refund_type": "pro_rata" if pkg.status == "partially_refunded" else "failed",
+        "status": pkg.status,
+        "refund_amount_pence": split["unconsumed_value_pence"] if pkg.status == "partially_refunded" else 0,
+        "transfer_amount_pence": split["transfer_pence"] if pkg.status == "partially_refunded" else 0,
+        "platform_fee_pence": split["fee_pence"] if pkg.status == "partially_refunded" else 0,
+        "error": stripe_error,
     }
 
 
