@@ -11,9 +11,12 @@ ALTER TABLE payment_transfers
 ALTER TABLE payment_transfers
   DROP CONSTRAINT IF EXISTS payment_transfers_target_check;
 
+-- NOT VALID: skip scanning existing rows (may have legacy NULL/NULL entries).
+-- New inserts are validated immediately; run VALIDATE later if desired.
 ALTER TABLE payment_transfers
   ADD CONSTRAINT payment_transfers_target_check
-  CHECK ((task_id IS NULL) != (package_id IS NULL));
+  CHECK ((task_id IS NULL) != (package_id IS NULL))
+  NOT VALID;
 
 CREATE INDEX IF NOT EXISTS ix_payment_transfers_package
   ON payment_transfers(package_id)
