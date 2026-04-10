@@ -114,6 +114,7 @@ def trigger_package_release(db, pkg, reason: str) -> None:
 
     from app.utils.fee_calculator import calculate_application_fee_pence
     from app import models
+    import logging as _logging
 
     paid_pence = int(round(float(pkg.paid_amount) * 100))
     fee = calculate_application_fee_pence(paid_pence, "expert_service", None)
@@ -123,17 +124,26 @@ def trigger_package_release(db, pkg, reason: str) -> None:
     # Note: released_amount_pence and released_at are written by payment_transfer_service
     # after the Stripe Transfer succeeds.
 
-    db.add(models.PaymentTransfer(
-        task_id=None,
-        package_id=pkg.id,
-        taker_id=None,
-        taker_expert_id=pkg.expert_id,
-        poster_id=pkg.user_id,
-        amount=transfer_pence / 100.0,
-        currency=pkg.currency or "GBP",
-        status="pending",
-        idempotency_key=f"pkg_{pkg.id}_{reason}",
-    ))
+    try:
+        db.add(models.PaymentTransfer(
+            task_id=None,
+            package_id=pkg.id,
+            taker_id=None,
+            taker_expert_id=pkg.expert_id,
+            poster_id=pkg.user_id,
+            amount=transfer_pence / 100.0,
+            currency=pkg.currency or "GBP",
+            status="pending",
+            idempotency_key=f"pkg_{pkg.id}_{reason}",
+        ))
+        db.flush()
+    except Exception as e:
+        # Concurrent trigger hit UNIQUE constraint on idempotency_key — safe to ignore
+        _logging.getLogger(__name__).warning(
+            f"trigger_package_release duplicate for pkg {pkg.id} reason={reason}: {e}"
+        )
+        db.rollback()
+        return
 
 
 def compute_package_action_flags(pkg: "UserServicePackage", now) -> dict:

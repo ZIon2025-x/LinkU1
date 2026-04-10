@@ -2338,19 +2338,15 @@ def check_expired_packages(db: Session) -> dict:
             if pkg.status == "active":
                 pkg.status = "expired"
             trigger_package_release(db, pkg, reason="expired")
+            db.commit()
             processed += 1
         except Exception as e:
+            db.rollback()
             logger.error(f"Failed to process expired package {pkg.id}: {e}", exc_info=True)
             failed += 1
-            continue
 
     if processed > 0 or failed > 0:
-        try:
-            db.commit()
-            logger.info(f"check_expired_packages: processed={processed}, failed={failed}")
-        except Exception as commit_err:
-            logger.error(f"check_expired_packages commit failed: {commit_err}")
-            db.rollback()
+        logger.info(f"check_expired_packages: processed={processed}, failed={failed}")
 
     return {"processed": processed, "failed": failed}
 
