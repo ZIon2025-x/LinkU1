@@ -134,3 +134,39 @@ def trigger_package_release(db, pkg, reason: str) -> None:
         status="pending",
         idempotency_key=f"pkg_{pkg.id}_{reason}",
     ))
+
+
+def compute_package_action_flags(pkg: "UserServicePackage", now) -> dict:
+    """Return the UI action flags for a package.
+
+    Returns dict with:
+        in_cooldown: bool
+        can_refund_full: bool  (in_cooldown AND never_used)
+        can_refund_partial: bool  (active AND used > 0)
+        can_review: bool  (status in set)
+        can_dispute: bool  (active AND used > 0)
+        status_display: str  (i18n key)
+    """
+    from datetime import timezone as _tz
+
+    cooldown_until = pkg.cooldown_until
+    if cooldown_until and cooldown_until.tzinfo is None:
+        cooldown_until = cooldown_until.replace(tzinfo=_tz.utc)
+
+    in_cooldown = cooldown_until is not None and now < cooldown_until
+    never_used = pkg.used_sessions == 0
+    has_used = pkg.used_sessions > 0
+
+    can_refund_full = pkg.status == "active" and in_cooldown and never_used
+    can_refund_partial = pkg.status == "active" and has_used
+    can_review = pkg.status in ("exhausted", "expired", "released", "partially_refunded")
+    can_dispute = pkg.status == "active" and has_used
+
+    return {
+        "in_cooldown": in_cooldown,
+        "can_refund_full": can_refund_full,
+        "can_refund_partial": can_refund_partial,
+        "can_review": can_review,
+        "can_dispute": can_dispute,
+        "status_display": f"package_status_{pkg.status}",
+    }

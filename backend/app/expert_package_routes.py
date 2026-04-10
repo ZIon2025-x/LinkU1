@@ -25,14 +25,20 @@ async def get_my_packages(
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
 ):
     """获取我购买的套餐列表"""
+    from app.services.package_settlement import compute_package_action_flags
+
     result = await db.execute(
         select(UserServicePackage)
         .where(UserServicePackage.user_id == current_user.id)
         .order_by(UserServicePackage.purchased_at.desc())
     )
     packages = result.scalars().all()
-    return [
-        {
+    now = get_utc_time()
+
+    out = []
+    for p in packages:
+        flags = compute_package_action_flags(p, now)
+        out.append({
             "id": p.id,
             "service_id": p.service_id,
             "expert_id": p.expert_id,
@@ -40,16 +46,26 @@ async def get_my_packages(
             "used_sessions": p.used_sessions,
             "remaining_sessions": p.total_sessions - p.used_sessions,
             "status": p.status,
+            "status_display": flags["status_display"],
             "purchased_at": p.purchased_at.isoformat() if p.purchased_at else None,
+            "cooldown_until": p.cooldown_until.isoformat() if p.cooldown_until else None,
+            "in_cooldown": flags["in_cooldown"],
             "expires_at": p.expires_at.isoformat() if p.expires_at else None,
-            # 支付关联字段 — 购买成功后前端用它来判定 webhook 已完成
             "payment_intent_id": p.payment_intent_id,
             "paid_amount": float(p.paid_amount) if p.paid_amount is not None else None,
             "currency": p.currency,
             "bundle_breakdown": p.bundle_breakdown,
-        }
-        for p in packages
-    ]
+            "released_amount_pence": p.released_amount_pence,
+            "refunded_amount_pence": p.refunded_amount_pence,
+            "platform_fee_pence": p.platform_fee_pence,
+            "released_at": p.released_at.isoformat() if p.released_at else None,
+            "refunded_at": p.refunded_at.isoformat() if p.refunded_at else None,
+            "can_refund_full": flags["can_refund_full"],
+            "can_refund_partial": flags["can_refund_partial"],
+            "can_review": flags["can_review"],
+            "can_dispute": flags["can_dispute"],
+        })
+    return out
 
 
 @expert_package_router.post("/api/experts/{expert_id}/packages/{package_id}/use")

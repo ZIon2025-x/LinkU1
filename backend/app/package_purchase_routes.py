@@ -400,6 +400,10 @@ async def get_my_package_detail(
     # validity_days 从 service 推导 (UserServicePackage 本身没存)
     validity_days = getattr(service, "validity_days", None) if service else None
 
+    from app.services.package_settlement import compute_package_action_flags
+    now = get_utc_time()
+    flags = compute_package_action_flags(pkg, now)
+
     return {
         "id": pkg.id,
         "service_id": pkg.service_id,
@@ -411,14 +415,26 @@ async def get_my_package_detail(
         "used_sessions": pkg.used_sessions,
         "remaining_sessions": pkg.total_sessions - pkg.used_sessions,
         "status": pkg.status,
+        "status_display": flags["status_display"],
         "purchased_at": pkg.purchased_at.isoformat() if pkg.purchased_at else None,
+        "cooldown_until": pkg.cooldown_until.isoformat() if pkg.cooldown_until else None,
+        "in_cooldown": flags["in_cooldown"],
         "expires_at": pkg.expires_at.isoformat() if pkg.expires_at else None,
         "validity_days": validity_days,
         "payment_intent_id": pkg.payment_intent_id,
         "paid_amount": float(pkg.paid_amount) if pkg.paid_amount is not None else None,
         "currency": pkg.currency,
         "bundle_breakdown": pkg.bundle_breakdown,
+        "released_amount_pence": pkg.released_amount_pence,
+        "refunded_amount_pence": pkg.refunded_amount_pence,
+        "platform_fee_pence": pkg.platform_fee_pence,
+        "released_at": pkg.released_at.isoformat() if pkg.released_at else None,
+        "refunded_at": pkg.refunded_at.isoformat() if pkg.refunded_at else None,
         "last_redeemed_at": pkg.last_redeemed_at.isoformat() if pkg.last_redeemed_at else None,
+        "can_refund_full": flags["can_refund_full"],
+        "can_refund_partial": flags["can_refund_partial"],
+        "can_review": flags["can_review"],
+        "can_dispute": flags["can_dispute"],
         "history": history,
     }
 
