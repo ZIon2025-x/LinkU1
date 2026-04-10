@@ -996,3 +996,172 @@ async def request_package_refund(
         return await _process_full_refund(db, pkg, reason)
     else:
         return await _process_partial_refund(db, pkg, reason)
+
+
+@package_purchase_router.post("/api/my/packages/{package_id}/review")
+async def review_package(
+    package_id: int,
+    body: dict,
+    request: Request,
+    db: AsyncSession = Depends(get_async_db_dependency),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+):
+    """Buyer submits a review for a package.
+
+    Allowed statuses: exhausted, expired, released, partially_refunded
+    (any state where at least some service was rendered).
+    """
+    rating = body.get("rating")
+    comment = (body.get("comment") or "").strip()[:2000]
+
+    if not isinstance(rating, (int, float)) or not (1 <= rating <= 5):
+        raise HTTPException(
+            400,
+            {"error_code": "invalid_rating", "message": "评分必须是 1-5"},
+        )
+
+    pkg = await _load_package_for_update(db, package_id, current_user.id)
+
+    allowed_statuses = ("exhausted", "expired", "released", "partially_refunded")
+    if pkg.status not in allowed_statuses:
+        raise HTTPException(
+            400,
+            {"error_code": "package_not_reviewable", "message": "当前状态不允许评价"},
+        )
+
+    # Check duplicate
+    existing = await db.execute(
+        select(models.Review).where(
+            models.Review.package_id == package_id,
+            models.Review.user_id == current_user.id,
+        )
+    )
+    if existing.scalar_one_or_none():
+        raise HTTPException(
+            400,
+            {"error_code": "review_already_exists", "message": "您已评价过该套餐"},
+        )
+
+    review = models.Review(
+        task_id=None,
+        package_id=package_id,
+        user_id=current_user.id,
+        rating=float(rating),
+        comment=comment,
+        expert_id=pkg.expert_id,
+    )
+    db.add(review)
+    await db.commit()
+    await db.refresh(review)
+
+    return {
+        "review_id": review.id,
+        "package_id": package_id,
+        "rating": rating,
+        "status": "submitted",
+    }
+
+
+@package_purchase_router.post("/api/my/packages/{package_id}/dispute")
+async def open_package_dispute(
+    package_id: int,
+    body: dict,
+    request: Request,
+    db: AsyncSession = Depends(get_async_db_dependency),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+):
+    """Buyer opens a dispute for an active package with at least 1 usage."""
+    reason = (body.get("reason") or "").strip()[:2000]
+    evidence_files = body.get("evidence_files") or []
+
+    if not reason:
+        raise HTTPException(
+            400,
+            {"error_code": "reason_required", "message": "必须填写争议原因"},
+        )
+
+    pkg = await _load_package_for_update(db, package_id, current_user.id)
+
+    if pkg.status != "active":
+        raise HTTPException(
+            400,
+            {"error_code": "package_not_active", "message": "仅 active 套餐可发起争议"},
+        )
+
+    if pkg.used_sessions == 0:
+        raise HTTPException(
+            400,
+            {
+                "error_code": "package_never_used_use_refund",
+                "message": "未使用的套餐请走退款流程",
+            },
+        )
+
+    dispute = models.TaskDispute(
+        task_id=None,
+        package_id=pkg.id,
+        poster_id=current_user.id,
+        reason=reason,
+        evidence_files=_json.dumps(evidence_files) if evidence_files else None,
+        status="pending",
+    )
+    db.add(dispute)
+
+    pkg.status = "disputed"
+
+    # Freeze any pending PaymentTransfer for this package
+    pending_result = await db.execute(
+        select(models.PaymentTransfer).where(
+            models.PaymentTransfer.package_id == pkg.id,
+            models.PaymentTransfer.status == "pending",
+        )
+    )
+    for t in pending_result.scalars().all():
+        t.status = "on_hold"
+
+    await db.commit()
+    await db.refresh(dispute)
+
+    # Best-effort notifications (expert team admins)
+    try:
+        await _notify_package_dispute_opened(db, pkg)
+    except Exception as e:
+        logger.warning(f"Failed to send dispute notification: {e}")
+
+    return {
+        "dispute_id": dispute.id,
+        "status": "pending",
+        "package_status": "disputed",
+    }
+
+
+async def _notify_package_dispute_opened(db: AsyncSession, pkg):
+    """Notify expert team admins when a buyer opens a package dispute."""
+    from app.async_crud import AsyncNotificationCRUD
+    from app.utils.notification_templates import get_notification_texts
+
+    svc_result = await db.execute(
+        select(models.TaskExpertService).where(
+            models.TaskExpertService.id == pkg.service_id
+        )
+    )
+    service_obj = svc_result.scalar_one_or_none()
+    service_name = service_obj.service_name if service_obj else ""
+
+    t_zh, c_zh, t_en, c_en = get_notification_texts(
+        "package_dispute_opened", service_name=service_name
+    )
+
+    managers_result = await db.execute(
+        select(ExpertMember.user_id).where(
+            ExpertMember.expert_id == pkg.expert_id,
+            ExpertMember.status == "active",
+            ExpertMember.role.in_(["owner", "admin"]),
+        )
+    )
+    for (mid,) in managers_result.all():
+        await AsyncNotificationCRUD.create_notification(
+            db=db, user_id=mid, notification_type="package_dispute_opened",
+            title=t_zh, content=c_zh, title_en=t_en, content_en=c_en,
+            related_id=str(pkg.id), related_type="package_dispute",
+        )
