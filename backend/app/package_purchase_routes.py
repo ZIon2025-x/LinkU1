@@ -102,10 +102,16 @@ def _build_bundle_breakdown(bundle_service_ids, db=None):
 
     breakdown = {}
     for sid, total in sid_counts.items():
+        unit_price = price_map.get(sid, 0)
+        if db is not None and sid not in price_map:
+            logger.warning(
+                f"_build_bundle_breakdown: sub-service {sid} not found in DB, "
+                f"unit_price_pence defaulting to 0 — bundle settlement split may be inaccurate"
+            )
         breakdown[str(sid)] = {
             "total": total,
             "used": 0,
-            "unit_price_pence": price_map.get(sid, 0),  # 0 fallback when db not provided or service missing
+            "unit_price_pence": unit_price,
         }
     return breakdown
 
