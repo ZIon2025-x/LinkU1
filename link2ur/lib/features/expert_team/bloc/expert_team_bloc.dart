@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:link2ur/data/models/expert_team.dart';
+import 'package:link2ur/data/models/user_service_package.dart';
 import 'package:link2ur/data/repositories/expert_team_repository.dart';
 
 // ==================== Events ====================
@@ -232,7 +233,7 @@ class ExpertTeamState extends Equatable {
   final List<ExpertTeam> featuredExperts;
   final List<ExpertTeam> followingExperts;
   final List<ExpertInvitation> myInvitations;
-  final List<Map<String, dynamic>> packages;
+  final List<UserServicePackage> packages;
   final List<Map<String, dynamic>> coupons;
   final Map<String, dynamic>? groupBuyStatus;
   final String? errorMessage;
@@ -267,7 +268,7 @@ class ExpertTeamState extends Equatable {
     List<ExpertTeam>? featuredExperts,
     List<ExpertTeam>? followingExperts,
     List<ExpertInvitation>? myInvitations,
-    List<Map<String, dynamic>>? packages,
+    List<UserServicePackage>? packages,
     List<Map<String, dynamic>>? coupons,
     Map<String, dynamic>? groupBuyStatus,
     String? errorMessage,
@@ -593,7 +594,8 @@ class ExpertTeamBloc extends Bloc<ExpertTeamEvent, ExpertTeamState> {
 
   Future<void> _onLoadMyPackages(ExpertTeamLoadMyPackages event, Emitter<ExpertTeamState> emit) async {
     try {
-      final packages = await _repository.getMyPackages();
+      final raw = await _repository.getMyPackages();
+      final packages = raw.map((m) => UserServicePackage.fromJson(m)).toList();
       emit(state.copyWith(packages: packages));
     } catch (e) {
       emit(state.copyWith(errorMessage: e.toString()));
@@ -603,7 +605,8 @@ class ExpertTeamBloc extends Bloc<ExpertTeamEvent, ExpertTeamState> {
   Future<void> _onUsePackage(ExpertTeamUsePackage event, Emitter<ExpertTeamState> emit) async {
     try {
       await _repository.usePackageSession(event.expertId, event.packageId, note: event.note);
-      final packages = await _repository.getMyPackages();
+      final raw = await _repository.getMyPackages();
+      final packages = raw.map((m) => UserServicePackage.fromJson(m)).toList();
       emit(state.copyWith(packages: packages, actionMessage: 'expert_team_package_used'));
     } catch (e) {
       emit(state.copyWith(errorMessage: e.toString()));

@@ -23,6 +23,7 @@ class UserServicePackage extends Equatable {
   final int? platformFeePence;
   final DateTime? releasedAt;
   final DateTime? refundedAt;
+  final DateTime? lastRedeemedAt;
   final bool canRefundFull;
   final bool canRefundPartial;
   final bool canReview;
@@ -50,6 +51,7 @@ class UserServicePackage extends Equatable {
     this.platformFeePence,
     this.releasedAt,
     this.refundedAt,
+    this.lastRedeemedAt,
     required this.canRefundFull,
     required this.canRefundPartial,
     required this.canReview,
@@ -89,6 +91,9 @@ class UserServicePackage extends Equatable {
           : null,
       refundedAt: json['refunded_at'] != null
           ? DateTime.parse(json['refunded_at'] as String)
+          : null,
+      lastRedeemedAt: json['last_redeemed_at'] != null
+          ? DateTime.parse(json['last_redeemed_at'] as String)
           : null,
       canRefundFull: json['can_refund_full'] as bool? ?? false,
       canRefundPartial: json['can_refund_partial'] as bool? ?? false,

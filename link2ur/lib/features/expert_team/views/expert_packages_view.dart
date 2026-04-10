@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:link2ur/core/utils/error_localizer.dart';
 import 'package:link2ur/core/utils/l10n_extension.dart';
+import 'package:link2ur/data/models/user_service_package.dart';
 import 'package:link2ur/data/repositories/expert_team_repository.dart';
 import 'package:link2ur/data/repositories/package_purchase_repository.dart';
 import 'package:link2ur/features/expert_team/bloc/expert_team_bloc.dart';
@@ -46,10 +47,10 @@ class _PackagesBody extends StatelessWidget {
                   itemCount: packages.length,
                   itemBuilder: (context, index) {
                     final p = packages[index];
-                    final remaining = (p['remaining_sessions'] ?? 0) as int;
-                    final total = (p['total_sessions'] ?? 0) as int;
-                    final status = p['status'] as String? ?? '';
-                    final packageId = (p['id'] as num).toInt();
+                    final remaining = p.remainingSessions;
+                    final total = p.totalSessions;
+                    final status = p.status;
+                    final packageId = p.id;
                     final canRedeem = status == 'active' && remaining > 0;
                     return Card(
                       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -61,7 +62,7 @@ class _PackagesBody extends StatelessWidget {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(context.l10n.expertPackageNumber('${p['id']}'),
+                                Text(context.l10n.expertPackageNumber('${p.id}'),
                                     style: Theme.of(context).textTheme.titleMedium),
                                 _StatusChip(status: status),
                               ],
@@ -72,13 +73,13 @@ class _PackagesBody extends StatelessWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(context.l10n.expertPackageRemainingCount(remaining, total)),
-                            if (p['expires_at'] != null) ...[
+                            if (p.expiresAt != null) ...[
                               const SizedBox(height: 4),
-                              Text(context.l10n.customerPackagesExpiresOn((p['expires_at'] as String).substring(0, 10)),
+                              Text(context.l10n.customerPackagesExpiresOn(p.expiresAt!.toIso8601String().substring(0, 10)),
                                   style: Theme.of(context).textTheme.bodySmall),
                             ],
                             // Cooldown banner
-                            if (p['in_cooldown'] == true) ...[
+                            if (p.inCooldown) ...[
                               const SizedBox(height: 8),
                               Container(
                                 padding: const EdgeInsets.all(10),
@@ -97,7 +98,7 @@ class _PackagesBody extends StatelessWidget {
                               ),
                             ],
                             // Expiry warning
-                            if (_isExpiringSoon(p)) ...[
+                            if (_isExpiringSoon(p.expiresAt, p.remainingSessions)) ...[
                               const SizedBox(height: 8),
                               Container(
                                 padding: const EdgeInsets.all(10),
@@ -136,19 +137,19 @@ class _PackagesBody extends StatelessWidget {
                                     icon: const Icon(Icons.qr_code, size: 18),
                                     label: Text(context.l10n.expertPackageShowRedemptionCode),
                                   ),
-                                if (p['can_refund_full'] == true || p['can_refund_partial'] == true)
+                                if (p.canRefundFull || p.canRefundPartial)
                                   OutlinedButton.icon(
                                     onPressed: () => _confirmRefund(context, p),
                                     icon: const Icon(Icons.money_off, size: 18),
                                     label: Text(context.l10n.packageActionRefund),
                                   ),
-                                if (p['can_review'] == true)
+                                if (p.canReview)
                                   OutlinedButton.icon(
                                     onPressed: () => _openReviewDialog(context, p),
                                     icon: const Icon(Icons.rate_review, size: 18),
                                     label: Text(context.l10n.packageActionReview),
                                   ),
-                                if (p['can_dispute'] == true)
+                                if (p.canDispute)
                                   OutlinedButton.icon(
                                     onPressed: () => _openDisputeDialog(context, p),
                                     icon: const Icon(Icons.gavel, size: 18),
@@ -168,20 +169,15 @@ class _PackagesBody extends StatelessWidget {
   }
 }
 
-bool _isExpiringSoon(Map<String, dynamic> p) {
-  final expiresStr = p['expires_at'] as String?;
-  if (expiresStr == null) return false;
-  final remaining = (p['remaining_sessions'] ?? 0) as int;
-  if (remaining <= 0) return false;
-  final expires = DateTime.tryParse(expiresStr);
-  if (expires == null) return false;
-  final diff = expires.difference(DateTime.now());
-  return diff.inDays <= 7 && diff.isNegative == false;
+bool _isExpiringSoon(DateTime? expiresAt, int remaining) {
+  if (expiresAt == null || remaining <= 0) return false;
+  final diff = expiresAt.difference(DateTime.now().toUtc());
+  return diff.inDays <= 7 && !diff.isNegative;
 }
 
-Future<void> _confirmRefund(BuildContext context, Map<String, dynamic> p) async {
+Future<void> _confirmRefund(BuildContext context, UserServicePackage p) async {
   final l10n = context.l10n;
-  final isFull = p['can_refund_full'] == true;
+  final isFull = p.canRefundFull;
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
@@ -207,7 +203,7 @@ Future<void> _confirmRefund(BuildContext context, Map<String, dynamic> p) async 
 
   try {
     final repo = context.read<PackagePurchaseRepository>();
-    await repo.requestRefund((p['id'] as num).toInt());
+    await repo.requestRefund(p.id);
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(l10n.packageRefundSuccess)),
@@ -221,7 +217,7 @@ Future<void> _confirmRefund(BuildContext context, Map<String, dynamic> p) async 
   }
 }
 
-Future<void> _openReviewDialog(BuildContext context, Map<String, dynamic> p) async {
+Future<void> _openReviewDialog(BuildContext context, UserServicePackage p) async {
   final l10n = context.l10n;
   int rating = 5;
   final commentController = TextEditingController();
@@ -280,7 +276,7 @@ Future<void> _openReviewDialog(BuildContext context, Map<String, dynamic> p) asy
   try {
     final repo = context.read<PackagePurchaseRepository>();
     await repo.submitReview(
-      (p['id'] as num).toInt(),
+      p.id,
       rating: rating,
       comment: commentController.text,
     );
@@ -299,7 +295,7 @@ Future<void> _openReviewDialog(BuildContext context, Map<String, dynamic> p) asy
   }
 }
 
-Future<void> _openDisputeDialog(BuildContext context, Map<String, dynamic> p) async {
+Future<void> _openDisputeDialog(BuildContext context, UserServicePackage p) async {
   final l10n = context.l10n;
   final reasonController = TextEditingController();
 
@@ -340,7 +336,7 @@ Future<void> _openDisputeDialog(BuildContext context, Map<String, dynamic> p) as
   try {
     final repo = context.read<PackagePurchaseRepository>();
     await repo.openDispute(
-      (p['id'] as num).toInt(),
+      p.id,
       reason: reasonController.text,
     );
     reasonController.dispose();
