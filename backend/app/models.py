@@ -292,7 +292,8 @@ class Review(Base):
         Index("ix_reviews_task_id_anonymous", "task_id", "is_anonymous"),
     )
     id = Column(Integer, primary_key=True, index=True)
-    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"))
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=True)
+    package_id = Column(Integer, ForeignKey("user_service_packages.id", ondelete="SET NULL"), nullable=True)
     user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"))
     rating = Column(Float, nullable=False)  # 改为Float以支持0.5星间隔
     comment = Column(Text, nullable=True)
@@ -365,7 +366,8 @@ class TaskDispute(Base):
     """任务争议记录表"""
     __tablename__ = "task_disputes"
     id = Column(Integer, primary_key=True, index=True)
-    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=True)
+    package_id = Column(Integer, ForeignKey("user_service_packages.id", ondelete="SET NULL"), nullable=True)
     poster_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)  # 发布者ID
     reason = Column(Text, nullable=False)  # 争议原因
     evidence_files = Column(Text, nullable=True)  # JSON数组存储证据文件ID列表
@@ -390,7 +392,8 @@ class RefundRequest(Base):
     """退款申请记录表"""
     __tablename__ = "refund_requests"
     id = Column(Integer, primary_key=True, index=True)
-    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=True)
+    package_id = Column(Integer, ForeignKey("user_service_packages.id", ondelete="SET NULL"), nullable=True)
     poster_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)  # 发布者ID
     reason = Column(Text, nullable=False)  # 退款原因说明
     evidence_files = Column(Text, nullable=True)  # JSON数组存储证据文件ID列表
@@ -3218,8 +3221,9 @@ class PaymentTransfer(Base):
     __tablename__ = "payment_transfers"
     
     id = Column(BigInteger, primary_key=True, index=True)
-    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
-    taker_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)  # 任务接受人ID
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=True)
+    package_id = Column(Integer, ForeignKey("user_service_packages.id", ondelete="SET NULL"), nullable=True)
+    taker_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=True)  # 任务接受人ID（package 转账时为 None）
     taker_expert_id = Column(String(8), ForeignKey("experts.id", ondelete="RESTRICT"), nullable=True)  # 达人团队接单时填充
     poster_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)  # 任务发布者ID
     transfer_id = Column(String(255), nullable=True)  # Stripe Transfer ID

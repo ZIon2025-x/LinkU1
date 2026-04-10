@@ -136,60 +136,100 @@ def execute_transfer(
         return False, None, "Stripe API 未配置"
     
     try:
-        # 检查任务状态
-        task = db.query(models.Task).filter(models.Task.id == transfer_record.task_id).first()
-        if not task:
-            return False, None, "任务不存在"
-
-        # ✅ Stripe争议冻结检查：如果任务因Stripe争议被冻结，阻止转账
-        if task.stripe_dispute_frozen == 1:
-            error_msg = "任务因Stripe争议已冻结，无法执行转账。请等待争议解决后再试。"
-            logger.warning(f"任务 {transfer_record.task_id} 因Stripe争议已冻结，阻止转账")
-            return False, None, error_msg
-
-        # Team-aware destination override: 若为团队任务，直接使用 experts.stripe_account_id
-        # spec §3.2 (v2 — payout site team-awareness)
-        if transfer_record.taker_expert_id:
-            from app.models_expert import Expert
-            expert = db.query(Expert).filter(Expert.id == transfer_record.taker_expert_id).first()
-            if not expert or not expert.stripe_account_id or not expert.stripe_onboarding_complete:
-                error_msg = "Team Stripe Connect not ready"
+        # ── Package branch: resolve destination from expert team ──────────────────
+        if transfer_record.package_id is not None:
+            from app.models_expert import UserServicePackage, Expert
+            pkg = db.query(UserServicePackage).filter(
+                UserServicePackage.id == transfer_record.package_id
+            ).first()
+            if not pkg:
                 logger.error(
-                    f"任务 {transfer_record.task_id} 团队 Stripe 状态异常 "
-                    f"(expert_id={transfer_record.taker_expert_id})，取消转账"
+                    f"PaymentTransfer {transfer_record.id} references non-existent "
+                    f"package {transfer_record.package_id}"
                 )
-                return False, None, error_msg
-            taker_stripe_account_id = expert.stripe_account_id
-
-            # 90-day Stripe Transfer window check (spec §3.4a) — only for team tasks
-            # Stripe enforces a strict 90-day window for stripe.Transfer.create after the original Charge.
-            # 安全边界: 留 1 天 buffer 防止 transfer 在 89~90 天之间因时差/重试漂移到失败
-            if task.payment_completed_at:
-                from datetime import datetime, timedelta
-                age = datetime.utcnow() - task.payment_completed_at.replace(tzinfo=None)
-                STRIPE_TRANSFER_WINDOW_DAYS = 89  # 89 天为安全阈值,Stripe 实际允许 90
-                if age > timedelta(days=STRIPE_TRANSFER_WINDOW_DAYS):
-                    transfer_record.status = "failed"
-                    transfer_record.last_error = (
-                        f"stripe_transfer_window_expired "
-                        f"({age.days}d > {STRIPE_TRANSFER_WINDOW_DAYS}d safety threshold, Stripe limit: 90d)"
-                    )
-                    if commit:
-                        from app.transaction_utils import safe_commit
-                        safe_commit(db, f"transfer 时效过期 task={transfer_record.task_id}")
-                    return False, None, transfer_record.last_error
-
-            # GBP-only enforcement for team tasks (spec §1.4)
-            currency_upper = (transfer_record.currency or 'GBP').upper()
-            if currency_upper != 'GBP':
                 transfer_record.status = "failed"
-                transfer_record.last_error = f"currency_unsupported ({currency_upper}; team tasks require GBP)"
+                transfer_record.last_error = "package_not_found"
                 if commit:
                     from app.transaction_utils import safe_commit
-                    safe_commit(db, f"team task 币种不支持 task={transfer_record.task_id}")
-                return False, None, transfer_record.last_error
+                    safe_commit(db, f"package not found transfer={transfer_record.id}")
+                return False, None, "package_not_found"
 
-        if task.is_confirmed == 1 and task.escrow_amount == 0:
+            expert = db.query(Expert).filter(Expert.id == pkg.expert_id).first()
+            if not expert or not expert.stripe_account_id:
+                transfer_record.status = "failed"
+                transfer_record.last_error = "expert_stripe_account_missing"
+                if commit:
+                    from app.transaction_utils import safe_commit
+                    safe_commit(db, f"missing stripe account transfer={transfer_record.id}")
+                return False, None, "expert_stripe_account_missing"
+
+            taker_stripe_account_id = expert.stripe_account_id
+            # Note: skip the 90-day Stripe Transfer window check for packages
+            # (packages have their own expires_at limit, typically much shorter)
+
+        else:
+            # ── Task branch: existing task-based destination resolution ───────────
+            # 检查任务状态
+            task = db.query(models.Task).filter(models.Task.id == transfer_record.task_id).first()
+            if not task:
+                return False, None, "任务不存在"
+
+            # ✅ Stripe争议冻结检查：如果任务因Stripe争议被冻结，阻止转账
+            if task.stripe_dispute_frozen == 1:
+                error_msg = "任务因Stripe争议已冻结，无法执行转账。请等待争议解决后再试。"
+                logger.warning(f"任务 {transfer_record.task_id} 因Stripe争议已冻结，阻止转账")
+                return False, None, error_msg
+
+        # Task-specific checks: only run for task transfers (package branch already returned or
+        # set taker_stripe_account_id and has no task object).
+        if transfer_record.package_id is None:
+            task = db.query(models.Task).filter(models.Task.id == transfer_record.task_id).first()
+            # Note: task was already loaded and checked above in the else branch; re-query is a
+            # no-op on SQLAlchemy identity map, but kept here for clarity of the code path.
+
+            # Team-aware destination override: 若为团队任务，直接使用 experts.stripe_account_id
+            # spec §3.2 (v2 — payout site team-awareness)
+            if transfer_record.taker_expert_id:
+                from app.models_expert import Expert
+                expert = db.query(Expert).filter(Expert.id == transfer_record.taker_expert_id).first()
+                if not expert or not expert.stripe_account_id or not expert.stripe_onboarding_complete:
+                    error_msg = "Team Stripe Connect not ready"
+                    logger.error(
+                        f"任务 {transfer_record.task_id} 团队 Stripe 状态异常 "
+                        f"(expert_id={transfer_record.taker_expert_id})，取消转账"
+                    )
+                    return False, None, error_msg
+                taker_stripe_account_id = expert.stripe_account_id
+
+                # 90-day Stripe Transfer window check (spec §3.4a) — only for team tasks
+                # Stripe enforces a strict 90-day window for stripe.Transfer.create after the original Charge.
+                # 安全边界: 留 1 天 buffer 防止 transfer 在 89~90 天之间因时差/重试漂移到失败
+                if task.payment_completed_at:
+                    from datetime import datetime, timedelta
+                    age = datetime.utcnow() - task.payment_completed_at.replace(tzinfo=None)
+                    STRIPE_TRANSFER_WINDOW_DAYS = 89  # 89 天为安全阈值,Stripe 实际允许 90
+                    if age > timedelta(days=STRIPE_TRANSFER_WINDOW_DAYS):
+                        transfer_record.status = "failed"
+                        transfer_record.last_error = (
+                            f"stripe_transfer_window_expired "
+                            f"({age.days}d > {STRIPE_TRANSFER_WINDOW_DAYS}d safety threshold, Stripe limit: 90d)"
+                        )
+                        if commit:
+                            from app.transaction_utils import safe_commit
+                            safe_commit(db, f"transfer 时效过期 task={transfer_record.task_id}")
+                        return False, None, transfer_record.last_error
+
+                # GBP-only enforcement for team tasks (spec §1.4)
+                currency_upper = (transfer_record.currency or 'GBP').upper()
+                if currency_upper != 'GBP':
+                    transfer_record.status = "failed"
+                    transfer_record.last_error = f"currency_unsupported ({currency_upper}; team tasks require GBP)"
+                    if commit:
+                        from app.transaction_utils import safe_commit
+                        safe_commit(db, f"team task 币种不支持 task={transfer_record.task_id}")
+                    return False, None, transfer_record.last_error
+
+        if transfer_record.package_id is None and task.is_confirmed == 1 and task.escrow_amount == 0:
             # 任务已确认且托管金额已清空，可能已经转账成功
             logger.warning(f"任务 {transfer_record.task_id} 已确认，但转账记录状态为 {transfer_record.status}")
             # 检查是否有成功的转账记录
@@ -270,14 +310,19 @@ def execute_transfer(
             currency=transfer_record.currency.lower(),
             destination=taker_stripe_account_id,  # Connect 子账户 ID
             metadata={
-                "task_id": str(transfer_record.task_id),
-                "taker_id": str(transfer_record.taker_id),
+                "task_id": str(transfer_record.task_id) if transfer_record.task_id else "",
+                "package_id": str(transfer_record.package_id) if transfer_record.package_id else "",
+                "taker_id": str(transfer_record.taker_id) if transfer_record.taker_id else "",
                 "taker_expert_id": str(transfer_record.taker_expert_id) if transfer_record.taker_expert_id else "",
-                "poster_id": str(transfer_record.poster_id),
+                "poster_id": str(transfer_record.poster_id) if transfer_record.poster_id else "",
                 "transfer_record_id": str(transfer_record.id),
-                "transfer_type": "task_reward"
+                "transfer_type": "package_release" if transfer_record.package_id else "task_reward",
             },
-            description=f"任务 #{transfer_record.task_id} 奖励"
+            description=(
+                f"Package #{transfer_record.package_id} release"
+                if transfer_record.package_id
+                else f"任务 #{transfer_record.task_id} 奖励"
+            )
         )
         if transfer_record.idempotency_key:
             _stripe_create_kwargs["idempotency_key"] = transfer_record.idempotency_key
@@ -292,7 +337,25 @@ def execute_transfer(
         transfer_record.succeeded_at = get_utc_time()
         transfer_record.last_error = None
         transfer_record.next_retry_at = None
-        
+
+        # Package post-processing: stamp released_at / released_amount_pence and
+        # transition exhausted/expired → released.
+        # partially_refunded is terminal — leave as-is.
+        if transfer_record.package_id is not None:
+            from app.models_expert import UserServicePackage
+            pkg = db.query(UserServicePackage).filter(
+                UserServicePackage.id == transfer_record.package_id
+            ).first()
+            if pkg:
+                pkg.released_at = get_utc_time()
+                pkg.released_amount_pence = int(Decimal(str(transfer_record.amount)) * 100)
+                if pkg.status in ("exhausted", "expired"):
+                    pkg.status = "released"
+                logger.info(
+                    f"Package {transfer_record.package_id} post-process: "
+                    f"released_at set, status={pkg.status}"
+                )
+
         if commit:
             # 使用安全提交，带错误处理和回滚
             from app.transaction_utils import safe_commit
@@ -301,7 +364,7 @@ def execute_transfer(
         else:
             # 仅 flush，保持 SAVEPOINT 隔离
             db.flush()
-        
+
         logger.info(f"✅ 任务 {transfer_record.task_id} Transfer 已创建并标记为成功: transfer_id={transfer.id}")
         return True, transfer.id, None
         
@@ -645,6 +708,116 @@ def process_pending_transfers(db: Session) -> Dict[str, Any]:
             stats["processed"] += 1
 
             try:
+                # ── Package branch ────────────────────────────────────────────────────
+                # Package transfers have no individual taker; destination is resolved
+                # from UserServicePackage.expert_id → Expert.stripe_account_id.
+                if transfer_record.package_id is not None:
+                    from app.models_expert import UserServicePackage, Expert
+                    pkg = db.query(UserServicePackage).filter(
+                        UserServicePackage.id == transfer_record.package_id
+                    ).first()
+                    if not pkg:
+                        logger.error(
+                            f"PaymentTransfer {transfer_record.id} references non-existent "
+                            f"package {transfer_record.package_id}"
+                        )
+                        transfer_record.status = "failed"
+                        transfer_record.last_error = "package_not_found"
+                        from app.transaction_utils import safe_commit
+                        safe_commit(db, f"package not found transfer={transfer_record.id}")
+                        stats["failed"] += 1
+                        continue
+
+                    expert = db.query(Expert).filter(Expert.id == pkg.expert_id).first()
+                    if not expert or not expert.stripe_account_id:
+                        transfer_record.status = "failed"
+                        transfer_record.last_error = "expert_stripe_account_missing"
+                        from app.transaction_utils import safe_commit
+                        safe_commit(db, f"missing stripe account transfer={transfer_record.id}")
+                        stats["failed"] += 1
+                        logger.error(
+                            f"PaymentTransfer {transfer_record.id} package={transfer_record.package_id}: "
+                            f"expert stripe account missing"
+                        )
+                        continue
+
+                    taker_stripe_id = expert.stripe_account_id
+                    transfer_amount = Decimal(str(transfer_record.amount))
+                    transfer_currency = (transfer_record.currency or "GBP").upper()
+                    amount_minor = int(transfer_amount * 100)
+                    payout_idempotency_key = transfer_record.idempotency_key
+
+                    try:
+                        stripe_xfer = stripe.Transfer.create(
+                            amount=amount_minor,
+                            currency=transfer_currency.lower(),
+                            destination=taker_stripe_id,
+                            description=f"Package #{transfer_record.package_id} release",
+                            metadata={
+                                "package_id": str(transfer_record.package_id),
+                                "taker_expert_id": str(transfer_record.taker_expert_id) if transfer_record.taker_expert_id else "",
+                                "poster_id": str(transfer_record.poster_id) if transfer_record.poster_id else "",
+                                "transfer_record_id": str(transfer_record.id),
+                                "transfer_type": "package_release",
+                            },
+                            idempotency_key=payout_idempotency_key,
+                        )
+                        transfer_record.transfer_id = stripe_xfer.id
+                        logger.info(
+                            f"✅ Package Stripe Transfer: transfer_record_id={transfer_record.id}, "
+                            f"stripe_transfer={stripe_xfer.id}, package={transfer_record.package_id}"
+                        )
+                    except stripe.error.StripeError as stripe_err:
+                        error_msg = str(stripe_err)
+                        error_code = getattr(stripe_err, "code", None)
+                        if error_code in ("balance_insufficient", "account_invalid", "rate_limit"):
+                            transfer_record.status = "retrying"
+                            transfer_record.last_error = error_msg
+                            transfer_record.retry_count = (transfer_record.retry_count or 0) + 1
+                            delay_idx = min(transfer_record.retry_count - 1, len(RETRY_DELAYS) - 1)
+                            transfer_record.next_retry_at = now + timedelta(seconds=RETRY_DELAYS[delay_idx])
+                            if transfer_record.retry_count >= transfer_record.max_retries:
+                                transfer_record.status = "failed"
+                                transfer_record.next_retry_at = None
+                            from app.transaction_utils import safe_commit
+                            safe_commit(db, f"package transfer stripe error transfer={transfer_record.id}")
+                            stats["retrying"] += 1
+                        else:
+                            transfer_record.status = "failed"
+                            transfer_record.last_error = error_msg
+                            from app.transaction_utils import safe_commit
+                            safe_commit(db, f"package transfer stripe fatal transfer={transfer_record.id}")
+                            stats["failed"] += 1
+                        logger.error(
+                            f"Package Stripe Transfer failed: transfer_record_id={transfer_record.id}, "
+                            f"package={transfer_record.package_id}, error={error_msg}"
+                        )
+                        continue
+
+                    # Stripe Transfer succeeded — mark record and update package
+                    transfer_record.status = "succeeded"
+                    transfer_record.succeeded_at = get_utc_time()
+                    transfer_record.last_error = None
+                    transfer_record.next_retry_at = None
+
+                    # Post-processing: stamp released_at / released_amount_pence on package
+                    # and transition exhausted/expired → released.
+                    # partially_refunded is terminal — leave as-is.
+                    pkg.released_at = get_utc_time()
+                    pkg.released_amount_pence = int(Decimal(str(transfer_record.amount)) * 100)
+                    if pkg.status in ("exhausted", "expired"):
+                        pkg.status = "released"
+
+                    from app.transaction_utils import safe_commit
+                    safe_commit(db, f"package transfer succeeded transfer={transfer_record.id}")
+                    stats["succeeded"] += 1
+                    logger.info(
+                        f"✅ Package transfer complete: transfer_record_id={transfer_record.id}, "
+                        f"package={transfer_record.package_id}, pkg.status={pkg.status}"
+                    )
+                    continue
+                # ── End package branch ────────────────────────────────────────────────
+
                 # 获取任务接受人信息（已批量加载）
                 taker = _takers_map.get(transfer_record.taker_id)
                 if not taker:
@@ -675,6 +848,7 @@ def process_pending_transfers(db: Session) -> Dict[str, Any]:
                                 "task_id": str(transfer_record.task_id),
                                 "taker_id": str(taker.id),
                                 "transfer_record_id": str(transfer_record.id),
+                                "transfer_type": "task_reward",
                             },
                             idempotency_key=payout_idempotency_key,
                         )

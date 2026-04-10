@@ -23516,7 +23516,7 @@ abstract class AppLocalizations {
   /// No description provided for @packageStatusExhausted.
   ///
   /// In en, this message translates to:
-  /// **'Used up'**
+  /// **'All sessions used'**
   String get packageStatusExhausted;
 
   /// No description provided for @packageStatusExpired.
@@ -23525,11 +23525,95 @@ abstract class AppLocalizations {
   /// **'Expired'**
   String get packageStatusExpired;
 
+  /// No description provided for @packageStatusReleased.
+  ///
+  /// In en, this message translates to:
+  /// **'Settled'**
+  String get packageStatusReleased;
+
+  /// No description provided for @packageStatusRefunded.
+  ///
+  /// In en, this message translates to:
+  /// **'Refunded'**
+  String get packageStatusRefunded;
+
+  /// No description provided for @packageStatusPartiallyRefunded.
+  ///
+  /// In en, this message translates to:
+  /// **'Partially refunded'**
+  String get packageStatusPartiallyRefunded;
+
+  /// No description provided for @packageStatusDisputed.
+  ///
+  /// In en, this message translates to:
+  /// **'In dispute'**
+  String get packageStatusDisputed;
+
+  /// No description provided for @packageStatusCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get packageStatusCancelled;
+
   /// No description provided for @packageStatusAll.
   ///
   /// In en, this message translates to:
   /// **'All'**
   String get packageStatusAll;
+
+  /// No description provided for @packageCooldownBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'24-hour cooldown period: full refund available if no sessions used'**
+  String get packageCooldownBanner;
+
+  /// No description provided for @packageExpirySoonBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'This package expires soon. Please use your remaining sessions.'**
+  String get packageExpirySoonBanner;
+
+  /// No description provided for @packageActionRefund.
+  ///
+  /// In en, this message translates to:
+  /// **'Refund'**
+  String get packageActionRefund;
+
+  /// No description provided for @packageActionReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Review'**
+  String get packageActionReview;
+
+  /// No description provided for @packageActionDispute.
+  ///
+  /// In en, this message translates to:
+  /// **'Dispute'**
+  String get packageActionDispute;
+
+  /// No description provided for @packageRefundConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Refund'**
+  String get packageRefundConfirmTitle;
+
+  /// No description provided for @packageRefundConfirmFullContent.
+  ///
+  /// In en, this message translates to:
+  /// **'You will receive a full refund. Continue?'**
+  String get packageRefundConfirmFullContent;
+
+  /// No description provided for @packageRefundConfirmPartialContent.
+  ///
+  /// In en, this message translates to:
+  /// **'You will receive a pro-rata refund based on unused sessions. Continue?'**
+  String get packageRefundConfirmPartialContent;
+
+  /// No description provided for @packageRefundSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Request submitted'**
+  String get packageRefundSuccess;
 
   /// No description provided for @expertPackageNumber.
   ///

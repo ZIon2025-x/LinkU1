@@ -299,7 +299,6 @@ class UserServicePackage(Base):
     status = Column(String(20), nullable=False, default="active")
     purchased_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
     expires_at = Column(DateTime(timezone=True), nullable=True)
-    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True)
     # A1 套餐购买流程新字段
     payment_intent_id = Column(String(255), nullable=True)  # 关联的 Stripe PI
     paid_amount = Column(Float, nullable=True)  # 实付金额(单位: 主货币,如 GBP)
@@ -309,6 +308,18 @@ class UserServicePackage(Base):
     # multi 套餐为 NULL,直接用 used_sessions
     bundle_breakdown = Column(JSON, nullable=True)
     last_redeemed_at = Column(DateTime(timezone=True), nullable=True)
+    # ── Lifecycle fields (migration 189) ──
+    # 24h 冷静期到期时间 (purchased_at + 24h)
+    cooldown_until = Column(DateTime(timezone=True), nullable=True)
+    # 释放记录 (filled when payment_transfer_service completes transfer)
+    released_at = Column(DateTime(timezone=True), nullable=True)
+    released_amount_pence = Column(Integer, nullable=True)
+    platform_fee_pence = Column(Integer, nullable=True)
+    # 退款记录 (filled when refund_service completes refund)
+    refunded_amount_pence = Column(Integer, nullable=True)
+    refunded_at = Column(DateTime(timezone=True), nullable=True)
+    # multi 套餐的单价快照 (bundle 套餐的单价存在 bundle_breakdown 里)
+    unit_price_pence_snapshot = Column(Integer, nullable=True)
 
     user = relationship("User", backref="service_packages")
 

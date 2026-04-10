@@ -12240,7 +12240,49 @@ class AppLocalizationsZh extends AppLocalizations {
   String get packageStatusExpired => '已过期';
 
   @override
+  String get packageStatusReleased => '已结算';
+
+  @override
+  String get packageStatusRefunded => '已退款';
+
+  @override
+  String get packageStatusPartiallyRefunded => '部分退款';
+
+  @override
+  String get packageStatusDisputed => '争议中';
+
+  @override
+  String get packageStatusCancelled => '已取消';
+
+  @override
   String get packageStatusAll => '全部';
+
+  @override
+  String get packageCooldownBanner => '24 小时冷静期内，未使用可申请全额退款';
+
+  @override
+  String get packageExpirySoonBanner => '套餐即将过期，请及时使用剩余次数';
+
+  @override
+  String get packageActionRefund => '申请退款';
+
+  @override
+  String get packageActionReview => '评价';
+
+  @override
+  String get packageActionDispute => '发起争议';
+
+  @override
+  String get packageRefundConfirmTitle => '确认退款';
+
+  @override
+  String get packageRefundConfirmFullContent => '您将获得全额退款，是否继续？';
+
+  @override
+  String get packageRefundConfirmPartialContent => '您将按未使用次数比例获得退款，是否继续？';
+
+  @override
+  String get packageRefundSuccess => '申请已提交';
 
   @override
   String expertPackageNumber(String id) {
@@ -24574,7 +24616,49 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get packageStatusExpired => '已過期';
 
   @override
+  String get packageStatusReleased => '已結算';
+
+  @override
+  String get packageStatusRefunded => '已退款';
+
+  @override
+  String get packageStatusPartiallyRefunded => '部分退款';
+
+  @override
+  String get packageStatusDisputed => '爭議中';
+
+  @override
+  String get packageStatusCancelled => '已取消';
+
+  @override
   String get packageStatusAll => '全部';
+
+  @override
+  String get packageCooldownBanner => '24 小時冷靜期內，未使用可申請全額退款';
+
+  @override
+  String get packageExpirySoonBanner => '套餐即將過期，請及時使用剩餘次數';
+
+  @override
+  String get packageActionRefund => '申請退款';
+
+  @override
+  String get packageActionReview => '評價';
+
+  @override
+  String get packageActionDispute => '發起爭議';
+
+  @override
+  String get packageRefundConfirmTitle => '確認退款';
+
+  @override
+  String get packageRefundConfirmFullContent => '您將獲得全額退款，是否繼續？';
+
+  @override
+  String get packageRefundConfirmPartialContent => '您將按未使用次數比例獲得退款，是否繼續？';
+
+  @override
+  String get packageRefundSuccess => '申請已提交';
 
   @override
   String expertPackageNumber(String id) {

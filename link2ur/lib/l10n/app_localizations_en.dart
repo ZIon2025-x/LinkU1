@@ -12755,13 +12755,59 @@ class AppLocalizationsEn extends AppLocalizations {
   String get packageStatusActive => 'Active';
 
   @override
-  String get packageStatusExhausted => 'Used up';
+  String get packageStatusExhausted => 'All sessions used';
 
   @override
   String get packageStatusExpired => 'Expired';
 
   @override
+  String get packageStatusReleased => 'Settled';
+
+  @override
+  String get packageStatusRefunded => 'Refunded';
+
+  @override
+  String get packageStatusPartiallyRefunded => 'Partially refunded';
+
+  @override
+  String get packageStatusDisputed => 'In dispute';
+
+  @override
+  String get packageStatusCancelled => 'Cancelled';
+
+  @override
   String get packageStatusAll => 'All';
+
+  @override
+  String get packageCooldownBanner =>
+      '24-hour cooldown period: full refund available if no sessions used';
+
+  @override
+  String get packageExpirySoonBanner =>
+      'This package expires soon. Please use your remaining sessions.';
+
+  @override
+  String get packageActionRefund => 'Refund';
+
+  @override
+  String get packageActionReview => 'Review';
+
+  @override
+  String get packageActionDispute => 'Dispute';
+
+  @override
+  String get packageRefundConfirmTitle => 'Confirm Refund';
+
+  @override
+  String get packageRefundConfirmFullContent =>
+      'You will receive a full refund. Continue?';
+
+  @override
+  String get packageRefundConfirmPartialContent =>
+      'You will receive a pro-rata refund based on unused sessions. Continue?';
+
+  @override
+  String get packageRefundSuccess => 'Request submitted';
 
   @override
   String expertPackageNumber(String id) {

@@ -353,6 +353,97 @@ NOTIFICATION_TEMPLATES: Dict[str, Dict[str, Dict[str, str]]] = {
             "content_template": "Your package has been used {used}/{total} times."
         }
     },
+    # ==================== Package Lifecycle Templates ====================
+    "package_exhausted_released": {
+        "zh": {
+            "title": "套餐已完成结算",
+            "content_template": "服务「{service_name}」的套餐已全部使用完毕,款项已转账到团队账户。"
+        },
+        "en": {
+            "title": "Package Settled",
+            "content_template": "All sessions of「{service_name}」package have been used; payment transferred to team account."
+        }
+    },
+    "package_expired_released": {
+        "zh": {
+            "title": "套餐已过期",
+            "content_template": "服务「{service_name}」的套餐已过期。"
+        },
+        "en": {
+            "title": "Package Expired",
+            "content_template": "The「{service_name}」package has expired."
+        }
+    },
+    "package_expiry_reminder_7d": {
+        "zh": {
+            "title": "套餐 7 天后过期",
+            "content_template": "您购买的「{service_name}」还剩 {remaining} 次未使用,将于 7 天后过期。"
+        },
+        "en": {
+            "title": "Package Expires in 7 Days",
+            "content_template": "Your「{service_name}」package has {remaining} unused sessions and expires in 7 days."
+        }
+    },
+    "package_expiry_reminder_3d": {
+        "zh": {
+            "title": "套餐 3 天后过期",
+            "content_template": "您购买的「{service_name}」还剩 {remaining} 次未使用,将于 3 天后过期。"
+        },
+        "en": {
+            "title": "Package Expires in 3 Days",
+            "content_template": "Your「{service_name}」package has {remaining} unused sessions and expires in 3 days."
+        }
+    },
+    "package_expiry_reminder_1d": {
+        "zh": {
+            "title": "套餐明天过期",
+            "content_template": "您购买的「{service_name}」还剩 {remaining} 次未使用,将于明天过期。"
+        },
+        "en": {
+            "title": "Package Expires Tomorrow",
+            "content_template": "Your「{service_name}」package has {remaining} unused sessions and expires tomorrow."
+        }
+    },
+    "package_refunded_full": {
+        "zh": {
+            "title": "套餐已全额退款",
+            "content_template": "您的「{service_name}」套餐已全额退款。"
+        },
+        "en": {
+            "title": "Package Fully Refunded",
+            "content_template": "Your「{service_name}」package has been fully refunded."
+        }
+    },
+    "package_refunded_partial": {
+        "zh": {
+            "title": "套餐部分退款",
+            "content_template": "您的「{service_name}」套餐已按比例退款。"
+        },
+        "en": {
+            "title": "Package Partially Refunded",
+            "content_template": "Your「{service_name}」package has been partially refunded (pro-rata)."
+        }
+    },
+    "package_dispute_opened": {
+        "zh": {
+            "title": "套餐争议已开启",
+            "content_template": "套餐「{service_name}」的争议已提交,管理员将尽快处理。"
+        },
+        "en": {
+            "title": "Package Dispute Opened",
+            "content_template": "A dispute has been opened for「{service_name}」; admins will review shortly."
+        }
+    },
+    "package_dispute_resolved": {
+        "zh": {
+            "title": "套餐争议已裁决",
+            "content_template": "套餐「{service_name}」的争议已处理完毕。"
+        },
+        "en": {
+            "title": "Package Dispute Resolved",
+            "content_template": "The dispute for「{service_name}」has been resolved."
+        }
+    },
 }
 
 

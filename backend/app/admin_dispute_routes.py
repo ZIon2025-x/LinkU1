@@ -19,6 +19,138 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["管理员-任务争议管理"])
 
 
+def _resolve_package_dispute(db: Session, dispute, resolution, current_user):
+    """Handle dispute resolution for package-type disputes (no task involved).
+
+    Verdicts (mapped from resolution_type):
+        refund_poster  → full refund to buyer
+        pay_taker      → full release to expert
+        partial_refund → pro-rata split
+        dismiss        → revert to active
+    """
+    from decimal import Decimal
+    from sqlalchemy import select, and_
+    from app.models_expert import UserServicePackage
+    from app.services.package_settlement import compute_package_split, trigger_package_release
+
+    locked_pkg = db.execute(
+        select(UserServicePackage).where(
+            UserServicePackage.id == dispute.package_id
+        ).with_for_update()
+    ).scalar_one_or_none()
+    if not locked_pkg:
+        raise HTTPException(status_code=404, detail="Package not found")
+
+    resolution_type = resolution.resolution_type
+    valid_types = {"refund_poster", "partial_refund", "pay_taker", "dismiss"}
+    if resolution_type not in valid_types:
+        raise HTTPException(
+            status_code=400,
+            detail=f"无效的裁决类型: {resolution_type}。有效类型: {', '.join(valid_types)}",
+        )
+
+    try:
+        # Unfreeze previously held transfers
+        held = db.query(models.PaymentTransfer).filter(
+            models.PaymentTransfer.package_id == locked_pkg.id,
+            models.PaymentTransfer.status == "on_hold",
+        ).all()
+        for t in held:
+            t.status = "cancelled"
+
+        if resolution_type == "refund_poster":
+            # Full refund to buyer
+            paid_pence = int(round(float(locked_pkg.paid_amount) * 100))
+            locked_pkg.status = "refunded"
+            locked_pkg.refunded_amount_pence = paid_pence
+            db.add(models.RefundRequest(
+                task_id=None,
+                package_id=locked_pkg.id,
+                poster_id=locked_pkg.user_id,
+                refund_amount=Decimal(str(paid_pence / 100.0)),
+                reason=f"admin_dispute_{dispute.id}_refund: {resolution.resolution_note}",
+                status="approved_auto",
+                reviewed_by=current_user.id,
+                reviewed_at=get_utc_time(),
+            ))
+
+        elif resolution_type == "pay_taker":
+            # Full release to expert
+            locked_pkg.status = "exhausted"
+            trigger_package_release(db, locked_pkg, reason=f"dispute_{dispute.id}_favor_expert")
+
+        elif resolution_type == "partial_refund":
+            # Pro-rata split
+            split = compute_package_split(locked_pkg)
+            locked_pkg.status = "partially_refunded"
+            locked_pkg.released_amount_pence = split["transfer_pence"]
+            locked_pkg.platform_fee_pence = split["fee_pence"]
+            locked_pkg.refunded_amount_pence = split["unconsumed_value_pence"]
+
+            if split["transfer_pence"] > 0:
+                db.add(models.PaymentTransfer(
+                    task_id=None,
+                    package_id=locked_pkg.id,
+                    taker_expert_id=locked_pkg.expert_id,
+                    poster_id=locked_pkg.user_id,
+                    amount=split["transfer_pence"] / 100.0,
+                    currency=locked_pkg.currency or "GBP",
+                    status="pending",
+                    idempotency_key=f"pkg_{locked_pkg.id}_dispute_{dispute.id}_transfer",
+                ))
+            if split["unconsumed_value_pence"] > 0:
+                db.add(models.RefundRequest(
+                    task_id=None,
+                    package_id=locked_pkg.id,
+                    poster_id=locked_pkg.user_id,
+                    refund_amount=Decimal(str(split["unconsumed_value_pence"] / 100.0)),
+                    reason=f"admin_dispute_{dispute.id}_compromise: {resolution.resolution_note}",
+                    status="approved_auto",
+                    reviewed_by=current_user.id,
+                    reviewed_at=get_utc_time(),
+                ))
+
+        elif resolution_type == "dismiss":
+            locked_pkg.status = "active"
+
+        dispute.status = "resolved"
+        dispute.resolved_at = get_utc_time()
+        dispute.resolved_by = current_user.id
+        dispute.resolution_note = f"[{resolution_type}] {resolution.resolution_note}"
+
+        # Best-effort notification to buyer
+        try:
+            from app.utils.notification_templates import get_notification_texts
+            svc = db.query(models.TaskExpertService).filter(
+                models.TaskExpertService.id == locked_pkg.service_id
+            ).first()
+            service_name = svc.service_name if svc else ""
+            t_zh, c_zh, t_en, c_en = get_notification_texts(
+                "package_dispute_resolved", service_name=service_name
+            )
+            crud.create_notification(
+                db=db, user_id=locked_pkg.user_id, type="package_dispute_resolved",
+                title=t_zh, content=c_zh, title_en=t_en, content_en=c_en,
+                related_id=str(locked_pkg.id), related_type="package_dispute",
+                auto_commit=False,
+            )
+        except Exception as e:
+            logger.warning(f"Failed to send package dispute resolution notification: {e}")
+
+        db.commit()
+        db.refresh(dispute)
+
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"处理套餐争议 {dispute.id} 失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"处理争议失败: {str(e)}")
+
+    return dispute
+
+
 @router.get("/admin/task-disputes", response_model=dict)
 def get_admin_task_disputes(
     skip: int = Query(0, ge=0),
@@ -194,7 +326,11 @@ def resolve_task_dispute(
     
     if dispute.status != "pending":
         raise HTTPException(status_code=400, detail="Dispute is already resolved")
-    
+
+    # ==================== Package dispute branch ====================
+    if dispute.package_id is not None:
+        return _resolve_package_dispute(db, dispute, resolution, current_user)
+
     # 🔒 同时锁定关联任务，确保原子操作
     locked_task_query = select(models.Task).where(
         models.Task.id == dispute.task_id

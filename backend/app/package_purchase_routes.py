@@ -49,28 +49,64 @@ def _qr_secret() -> bytes:
     return hashlib.sha256(b"package_qr_v1:" + base).digest()
 
 
-def _build_bundle_breakdown(bundle_service_ids):
-    """把 service.bundle_service_ids 解析为 UserServicePackage.bundle_breakdown 格式。
+def _build_bundle_breakdown(bundle_service_ids, db=None):
+    """把 service.bundle_service_ids 解析为 UserServicePackage.bundle_breakdown 新格式。
 
-    Input formats (双格式向后兼容):
-      [A, B, C]                                  → 每个 service 各 1 次
-      [{"service_id": A, "count": 5}, ...]       → 显式 count
+    Args:
+        bundle_service_ids: List from TaskExpertService.bundle_service_ids. Supports two formats:
+            - [A, B, C]                                — legacy "each once"
+            - [{"service_id": A, "count": 5}, ...]     — explicit count per service
+        db: SQLAlchemy Session (sync — called from webhook context in routers.py).
+            If provided, snapshots unit_price_pence from TaskExpertService.base_price.
+            If None (e.g. async call sites used only for validation), unit_price_pence defaults to 0.
 
-    Output:
-      {"A": {"total": 1, "used": 0}, ...}
+    Returns:
+        New format dict:
+            {"<sid>": {"total": N, "used": 0, "unit_price_pence": P}, ...}
+        Or None if bundle_service_ids is empty/invalid.
+
+    Note:
+        unit_price_pence is snapshotted from TaskExpertService.base_price at purchase time
+        so subsequent service price changes don't affect already-purchased packages.
     """
     if not bundle_service_ids:
         return None
-    breakdown = {}
+
+    # Aggregate counts per service_id
+    sid_counts = {}
     for item in bundle_service_ids:
         if isinstance(item, int):
-            breakdown[str(item)] = {"total": 1, "used": 0}
+            sid_counts[item] = sid_counts.get(item, 0) + 1
         elif isinstance(item, dict):
             sid = item.get("service_id")
             cnt = item.get("count", 1)
             if sid is not None:
-                breakdown[str(sid)] = {"total": int(cnt), "used": 0}
-    return breakdown if breakdown else None
+                sid_counts[sid] = sid_counts.get(sid, 0) + int(cnt)
+
+    if not sid_counts:
+        return None
+
+    # Snapshot unit prices at purchase time (protect against later service price changes)
+    price_map = {}
+    if db is not None:
+        from app import models as _models
+        sids = list(sid_counts.keys())
+        sub_services = db.query(_models.TaskExpertService).filter(
+            _models.TaskExpertService.id.in_(sids)
+        ).all()
+        price_map = {
+            s.id: int(round(float(s.base_price) * 100))
+            for s in sub_services
+        }
+
+    breakdown = {}
+    for sid, total in sid_counts.items():
+        breakdown[str(sid)] = {
+            "total": total,
+            "used": 0,
+            "unit_price_pence": price_map.get(sid, 0),  # 0 fallback when db not provided or service missing
+        }
+    return breakdown
 
 
 def _bundle_total_sessions(breakdown) -> int:
@@ -364,6 +400,10 @@ async def get_my_package_detail(
     # validity_days 从 service 推导 (UserServicePackage 本身没存)
     validity_days = getattr(service, "validity_days", None) if service else None
 
+    from app.services.package_settlement import compute_package_action_flags
+    now = get_utc_time()
+    flags = compute_package_action_flags(pkg, now)
+
     return {
         "id": pkg.id,
         "service_id": pkg.service_id,
@@ -375,14 +415,26 @@ async def get_my_package_detail(
         "used_sessions": pkg.used_sessions,
         "remaining_sessions": pkg.total_sessions - pkg.used_sessions,
         "status": pkg.status,
+        "status_display": flags["status_display"],
         "purchased_at": pkg.purchased_at.isoformat() if pkg.purchased_at else None,
+        "cooldown_until": pkg.cooldown_until.isoformat() if pkg.cooldown_until else None,
+        "in_cooldown": flags["in_cooldown"],
         "expires_at": pkg.expires_at.isoformat() if pkg.expires_at else None,
         "validity_days": validity_days,
         "payment_intent_id": pkg.payment_intent_id,
         "paid_amount": float(pkg.paid_amount) if pkg.paid_amount is not None else None,
         "currency": pkg.currency,
         "bundle_breakdown": pkg.bundle_breakdown,
+        "released_amount_pence": pkg.released_amount_pence,
+        "refunded_amount_pence": pkg.refunded_amount_pence,
+        "platform_fee_pence": pkg.platform_fee_pence,
+        "released_at": pkg.released_at.isoformat() if pkg.released_at else None,
+        "refunded_at": pkg.refunded_at.isoformat() if pkg.refunded_at else None,
         "last_redeemed_at": pkg.last_redeemed_at.isoformat() if pkg.last_redeemed_at else None,
+        "can_refund_full": flags["can_refund_full"],
+        "can_refund_partial": flags["can_refund_partial"],
+        "can_review": flags["can_review"],
+        "can_dispute": flags["can_dispute"],
         "history": history,
     }
 
@@ -622,6 +674,9 @@ async def redeem_package(
     pkg.last_redeemed_at = get_utc_time()
     if pkg.used_sessions >= pkg.total_sessions:
         pkg.status = "exhausted"
+        # Trigger settlement: creates a pending PaymentTransfer for async processing
+        from app.services.package_settlement import trigger_package_release
+        trigger_package_release(db, pkg, reason="exhausted")
 
     log = PackageUsageLog(
         package_id=pkg.id,
@@ -743,3 +798,386 @@ async def list_customer_packages(
         })
 
     return {"items": items, "total": total, "limit": limit, "offset": offset}
+
+
+# ==================== 5. 退款 / 争议 / 评价 ====================
+
+async def _load_package_for_update(
+    db: AsyncSession, package_id: int, user_id: str
+) -> UserServicePackage:
+    """Load a package row with SELECT FOR UPDATE, verify ownership."""
+    result = await db.execute(
+        select(UserServicePackage)
+        .where(
+            and_(
+                UserServicePackage.id == package_id,
+                UserServicePackage.user_id == user_id,
+            )
+        )
+        .with_for_update()
+    )
+    pkg = result.scalar_one_or_none()
+    if not pkg:
+        raise HTTPException(
+            status_code=404,
+            detail={"error_code": "package_not_found", "message": "套餐不存在"},
+        )
+    return pkg
+
+
+async def _process_full_refund(db: AsyncSession, pkg, reason: str) -> dict:
+    """Process a full refund: sets status='refunded', creates RefundRequest row."""
+    paid_pence = int(round(float(pkg.paid_amount) * 100))
+    pkg.status = "refunded"
+    pkg.refunded_amount_pence = paid_pence
+
+    db.add(models.RefundRequest(
+        task_id=None,
+        package_id=pkg.id,
+        poster_id=pkg.user_id,
+        refund_amount=paid_pence / 100.0,
+        reason=reason or "cooldown_full_refund",
+        status="approved_auto",
+    ))
+    await db.commit()
+
+    # Best-effort notifications
+    try:
+        await _notify_package_refunded(db, pkg, full=True)
+    except Exception as e:
+        logger.warning(f"Failed to send package refund notification: {e}")
+
+    return {
+        "refund_type": "full",
+        "status": "refunded",
+        "refund_amount_pence": paid_pence,
+        "transfer_amount_pence": 0,
+        "platform_fee_pence": 0,
+    }
+
+
+async def _process_partial_refund(db: AsyncSession, pkg, reason: str) -> dict:
+    """Process a pro-rata refund: consumed → expert, unconsumed → buyer."""
+    from app.services.package_settlement import compute_package_split
+
+    split = compute_package_split(pkg)
+
+    if split["consumed_value_pence"] == 0:
+        # Past cooldown but never used → behaves as full refund
+        return await _process_full_refund(db, pkg, reason)
+
+    if split["unconsumed_value_pence"] == 0:
+        raise HTTPException(
+            400,
+            {"error_code": "package_already_exhausted", "message": "套餐已用完"},
+        )
+
+    pkg.status = "partially_refunded"
+    pkg.released_amount_pence = split["transfer_pence"]
+    pkg.platform_fee_pence = split["fee_pence"]
+    pkg.refunded_amount_pence = split["unconsumed_value_pence"]
+
+    db.add(models.PaymentTransfer(
+        task_id=None,
+        package_id=pkg.id,
+        taker_expert_id=pkg.expert_id,
+        poster_id=pkg.user_id,
+        amount=split["transfer_pence"] / 100.0,
+        currency=pkg.currency or "GBP",
+        status="pending",
+        idempotency_key=f"pkg_{pkg.id}_partial_transfer",
+    ))
+    db.add(models.RefundRequest(
+        task_id=None,
+        package_id=pkg.id,
+        poster_id=pkg.user_id,
+        refund_amount=split["unconsumed_value_pence"] / 100.0,
+        reason=reason or "user_cancel_partial",
+        status="approved_auto",
+    ))
+    await db.commit()
+
+    try:
+        await _notify_package_refunded(db, pkg, full=False)
+    except Exception as e:
+        logger.warning(f"Failed to send partial refund notification: {e}")
+
+    return {
+        "refund_type": "pro_rata",
+        "status": "partially_refunded",
+        "refund_amount_pence": split["unconsumed_value_pence"],
+        "transfer_amount_pence": split["transfer_pence"],
+        "platform_fee_pence": split["fee_pence"],
+    }
+
+
+async def _notify_package_refunded(db: AsyncSession, pkg, full: bool):
+    """Best-effort notification to buyer + expert team admins."""
+    from app.async_crud import AsyncNotificationCRUD
+    from app.utils.notification_templates import get_notification_texts
+
+    # Look up service name for the template
+    svc_result = await db.execute(
+        select(models.TaskExpertService).where(
+            models.TaskExpertService.id == pkg.service_id
+        )
+    )
+    service_obj = svc_result.scalar_one_or_none()
+    service_name = service_obj.service_name if service_obj else ""
+
+    notif_type = "package_refunded_full" if full else "package_refunded_partial"
+    t_zh, c_zh, t_en, c_en = get_notification_texts(notif_type, service_name=service_name)
+
+    # Buyer
+    await AsyncNotificationCRUD.create_notification(
+        db=db, user_id=pkg.user_id, notification_type=notif_type,
+        title=t_zh, content=c_zh, title_en=t_en, content_en=c_en,
+        related_id=str(pkg.id), related_type="package",
+    )
+
+    # Expert team admins
+    managers_result = await db.execute(
+        select(ExpertMember.user_id).where(
+            ExpertMember.expert_id == pkg.expert_id,
+            ExpertMember.status == "active",
+            ExpertMember.role.in_(["owner", "admin"]),
+        )
+    )
+    for (mid,) in managers_result.all():
+        await AsyncNotificationCRUD.create_notification(
+            db=db, user_id=mid, notification_type=notif_type,
+            title=t_zh, content=c_zh, title_en=t_en, content_en=c_en,
+            related_id=str(pkg.id), related_type="package",
+        )
+
+
+@package_purchase_router.post("/api/my/packages/{package_id}/refund")
+async def request_package_refund(
+    package_id: int,
+    request: Request,
+    body: dict = None,
+    db: AsyncSession = Depends(get_async_db_dependency),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+):
+    """Buyer requests refund for a package.
+
+    Dispatches to full refund (scenario A/C1) or pro-rata (scenario B/C2)
+    based on cooldown state and usage.
+    """
+    pkg = await _load_package_for_update(db, package_id, current_user.id)
+
+    # State guard
+    if pkg.status != "active":
+        error_code_map = {
+            "exhausted": "package_already_exhausted",
+            "expired": "package_expired",
+            "disputed": "package_disputed",
+            "refunded": "package_already_refunded",
+            "partially_refunded": "package_already_refunded",
+            "released": "package_already_released",
+            "cancelled": "package_cancelled",
+        }
+        error_code = error_code_map.get(pkg.status, "package_not_active")
+        raise HTTPException(
+            400,
+            {"error_code": error_code, "message": f"Package status is {pkg.status}"},
+        )
+
+    now = get_utc_time()
+
+    # Lazy expiry check
+    if pkg.expires_at:
+        expires = pkg.expires_at
+        if expires.tzinfo is None:
+            expires = expires.replace(tzinfo=timezone.utc)
+        if expires < now:
+            from app.services.package_settlement import trigger_package_release
+            pkg.status = "expired"
+            trigger_package_release(db, pkg, reason="expired")
+            await db.commit()
+            raise HTTPException(
+                400,
+                {"error_code": "package_expired", "message": "套餐已过期"},
+            )
+
+    in_cooldown = pkg.cooldown_until and now < (
+        pkg.cooldown_until.replace(tzinfo=timezone.utc)
+        if pkg.cooldown_until.tzinfo is None
+        else pkg.cooldown_until
+    )
+    never_used = pkg.used_sessions == 0
+    reason = ((body or {}).get("reason") or "").strip()[:500]
+
+    if in_cooldown and never_used:
+        return await _process_full_refund(db, pkg, reason)
+    else:
+        return await _process_partial_refund(db, pkg, reason)
+
+
+@package_purchase_router.post("/api/my/packages/{package_id}/review")
+async def review_package(
+    package_id: int,
+    body: dict,
+    request: Request,
+    db: AsyncSession = Depends(get_async_db_dependency),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+):
+    """Buyer submits a review for a package.
+
+    Allowed statuses: exhausted, expired, released, partially_refunded
+    (any state where at least some service was rendered).
+    """
+    rating = body.get("rating")
+    comment = (body.get("comment") or "").strip()[:2000]
+
+    if not isinstance(rating, (int, float)) or not (1 <= rating <= 5):
+        raise HTTPException(
+            400,
+            {"error_code": "invalid_rating", "message": "评分必须是 1-5"},
+        )
+
+    pkg = await _load_package_for_update(db, package_id, current_user.id)
+
+    allowed_statuses = ("exhausted", "expired", "released", "partially_refunded")
+    if pkg.status not in allowed_statuses:
+        raise HTTPException(
+            400,
+            {"error_code": "package_not_reviewable", "message": "当前状态不允许评价"},
+        )
+
+    # Check duplicate
+    existing = await db.execute(
+        select(models.Review).where(
+            models.Review.package_id == package_id,
+            models.Review.user_id == current_user.id,
+        )
+    )
+    if existing.scalar_one_or_none():
+        raise HTTPException(
+            400,
+            {"error_code": "review_already_exists", "message": "您已评价过该套餐"},
+        )
+
+    review = models.Review(
+        task_id=None,
+        package_id=package_id,
+        user_id=current_user.id,
+        rating=float(rating),
+        comment=comment,
+        expert_id=pkg.expert_id,
+    )
+    db.add(review)
+    await db.commit()
+    await db.refresh(review)
+
+    return {
+        "review_id": review.id,
+        "package_id": package_id,
+        "rating": rating,
+        "status": "submitted",
+    }
+
+
+@package_purchase_router.post("/api/my/packages/{package_id}/dispute")
+async def open_package_dispute(
+    package_id: int,
+    body: dict,
+    request: Request,
+    db: AsyncSession = Depends(get_async_db_dependency),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+):
+    """Buyer opens a dispute for an active package with at least 1 usage."""
+    reason = (body.get("reason") or "").strip()[:2000]
+    evidence_files = body.get("evidence_files") or []
+
+    if not reason:
+        raise HTTPException(
+            400,
+            {"error_code": "reason_required", "message": "必须填写争议原因"},
+        )
+
+    pkg = await _load_package_for_update(db, package_id, current_user.id)
+
+    if pkg.status != "active":
+        raise HTTPException(
+            400,
+            {"error_code": "package_not_active", "message": "仅 active 套餐可发起争议"},
+        )
+
+    if pkg.used_sessions == 0:
+        raise HTTPException(
+            400,
+            {
+                "error_code": "package_never_used_use_refund",
+                "message": "未使用的套餐请走退款流程",
+            },
+        )
+
+    dispute = models.TaskDispute(
+        task_id=None,
+        package_id=pkg.id,
+        poster_id=current_user.id,
+        reason=reason,
+        evidence_files=_json.dumps(evidence_files) if evidence_files else None,
+        status="pending",
+    )
+    db.add(dispute)
+
+    pkg.status = "disputed"
+
+    # Freeze any pending PaymentTransfer for this package
+    pending_result = await db.execute(
+        select(models.PaymentTransfer).where(
+            models.PaymentTransfer.package_id == pkg.id,
+            models.PaymentTransfer.status == "pending",
+        )
+    )
+    for t in pending_result.scalars().all():
+        t.status = "on_hold"
+
+    await db.commit()
+    await db.refresh(dispute)
+
+    # Best-effort notifications (expert team admins)
+    try:
+        await _notify_package_dispute_opened(db, pkg)
+    except Exception as e:
+        logger.warning(f"Failed to send dispute notification: {e}")
+
+    return {
+        "dispute_id": dispute.id,
+        "status": "pending",
+        "package_status": "disputed",
+    }
+
+
+async def _notify_package_dispute_opened(db: AsyncSession, pkg):
+    """Notify expert team admins when a buyer opens a package dispute."""
+    from app.async_crud import AsyncNotificationCRUD
+    from app.utils.notification_templates import get_notification_texts
+
+    svc_result = await db.execute(
+        select(models.TaskExpertService).where(
+            models.TaskExpertService.id == pkg.service_id
+        )
+    )
+    service_obj = svc_result.scalar_one_or_none()
+    service_name = service_obj.service_name if service_obj else ""
+
+    t_zh, c_zh, t_en, c_en = get_notification_texts(
+        "package_dispute_opened", service_name=service_name
+    )
+
+    managers_result = await db.execute(
+        select(ExpertMember.user_id).where(
+            ExpertMember.expert_id == pkg.expert_id,
+            ExpertMember.status == "active",
+            ExpertMember.role.in_(["owner", "admin"]),
+        )
+    )
+    for (mid,) in managers_result.all():
+        await AsyncNotificationCRUD.create_notification(
+            db=db, user_id=mid, notification_type="package_dispute_opened",
+            title=t_zh, content=c_zh, title_en=t_en, content_en=c_en,
+            related_id=str(pkg.id), related_type="package_dispute",
+        )
