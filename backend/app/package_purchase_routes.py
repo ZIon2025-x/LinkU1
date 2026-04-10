@@ -154,36 +154,66 @@ def _verify_qr_payload(qr_data: str) -> Optional[dict]:
 
 
 # ==================== OTP cache (Redis 优先, fallback in-memory) ====================
-# OTP map: otp_code → (package_id, user_id, expires_at_ts)
-_OTP_CACHE: dict = {}
 _OTP_TTL_SECONDS = 60
+_OTP_CACHE: dict = {}  # fallback when Redis unavailable
+_OTP_REDIS_PREFIX = "pkg_otp:"
+
+
+def _get_redis():
+    """尝试获取 Redis 客户端,不可用返回 None"""
+    try:
+        from app.redis_cache import get_redis_client
+        return get_redis_client()
+    except Exception:
+        return None
 
 
 def _generate_otp(package_id: int, user_id: str) -> str:
-    """生成 6 位 OTP,存到 cache,TTL 60s"""
-    # 清理过期 (轻量,每次生成时顺带清)
-    now = int(time.time())
-    expired = [k for k, v in _OTP_CACHE.items() if v[2] < now]
-    for k in expired:
-        _OTP_CACHE.pop(k, None)
-    # 生成不重复的 6 位
+    """生成 6 位 OTP,优先存 Redis (多 worker 安全),fallback 内存"""
+    rc = _get_redis()
     for _ in range(10):
         otp = f"{secrets.randbelow(900000) + 100000}"
-        if otp not in _OTP_CACHE:
-            _OTP_CACHE[otp] = (package_id, user_id, now + _OTP_TTL_SECONDS)
-            return otp
+        if rc:
+            key = f"{_OTP_REDIS_PREFIX}{otp}"
+            # SET NX — 仅当 key 不存在时设置,避免覆盖
+            if rc.set(key, f"{package_id}:{user_id}", ex=_OTP_TTL_SECONDS, nx=True):
+                return otp
+        else:
+            # fallback in-memory
+            now = int(time.time())
+            expired = [k for k, v in _OTP_CACHE.items() if v[2] < now]
+            for k in expired:
+                _OTP_CACHE.pop(k, None)
+            if otp not in _OTP_CACHE:
+                _OTP_CACHE[otp] = (package_id, user_id, now + _OTP_TTL_SECONDS)
+                return otp
     raise RuntimeError("OTP 生成冲突,请重试")
 
 
 def _consume_otp(otp: str) -> Optional[dict]:
     """验证 + 消费 OTP,返回 {package_id, user_id} 或 None"""
-    entry = _OTP_CACHE.pop(otp, None)
-    if not entry:
-        return None
-    package_id, user_id, exp_ts = entry
-    if exp_ts < int(time.time()):
-        return None
-    return {"package_id": package_id, "user_id": user_id}
+    rc = _get_redis()
+    if rc:
+        key = f"{_OTP_REDIS_PREFIX}{otp}"
+        val = rc.get(key)
+        if not val:
+            return None
+        rc.delete(key)
+        if isinstance(val, bytes):
+            val = val.decode("utf-8")
+        parts = val.split(":", 1)
+        if len(parts) != 2:
+            return None
+        return {"package_id": int(parts[0]), "user_id": parts[1]}
+    else:
+        # fallback in-memory
+        entry = _OTP_CACHE.pop(otp, None)
+        if not entry:
+            return None
+        package_id, user_id, exp_ts = entry
+        if exp_ts < int(time.time()):
+            return None
+        return {"package_id": package_id, "user_id": user_id}
 
 
 # ==================== 1. 套餐购买 ====================
