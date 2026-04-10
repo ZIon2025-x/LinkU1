@@ -66,6 +66,11 @@ class TeamActivityCreate(BaseModel):
     # Images
     images: Optional[List[str]] = None
 
+    # Location coordinates + radius
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    service_radius_km: Optional[float] = None
+
 
 @router.post("/{expert_id}/activities")
 async def create_team_activity(
@@ -179,6 +184,10 @@ async def create_team_activity(
         applicant_points_reward=body.applicant_points_reward,
         # Legacy field: mirror owner's user_id so existing readers keep working.
         expert_id=owner.user_id,
+        # Geo-location and service radius
+        latitude=body.latitude,
+        longitude=body.longitude,
+        service_radius_km=body.service_radius_km if body.latitude else None,
         # New polymorphic fields (source of truth).
         owner_type='expert',
         owner_id=expert.id,

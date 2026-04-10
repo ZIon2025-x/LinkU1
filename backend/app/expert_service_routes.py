@@ -143,6 +143,7 @@ async def list_expert_services(
             "package_type": s.package_type,
             "total_sessions": s.total_sessions,
             "bundle_service_ids": s.bundle_service_ids,
+            "service_radius_km": s.service_radius_km,
             "view_count": s.view_count or 0,
             "application_count": s.application_count or 0,
             "created_at": s.created_at.isoformat() if s.created_at else None,
@@ -191,6 +192,10 @@ async def create_expert_service(
         status="active",
         **data,
     )
+    # Null out service_radius_km for online services
+    if service.location_type == "online":
+        service.service_radius_km = None
+
     db.add(service)
     expert.total_services = (expert.total_services or 0) + 1
     expert.updated_at = get_utc_time()
@@ -250,6 +255,7 @@ async def get_expert_service_detail(
         "package_type": service.package_type,
         "total_sessions": service.total_sessions,
         "bundle_service_ids": service.bundle_service_ids,
+        "service_radius_km": service.service_radius_km,
         "view_count": service.view_count or 0,
         "application_count": service.application_count or 0,
         "created_at": service.created_at.isoformat() if service.created_at else None,
@@ -298,6 +304,11 @@ async def update_expert_service(
     for field, value in update_data.items():
         if hasattr(service, field):
             setattr(service, field, value)
+
+    # Null out service_radius_km if location_type changed to online
+    if service.location_type == "online":
+        service.service_radius_km = None
+
     service.updated_at = get_utc_time()
     await db.commit()
     return {"id": service.id, "status": service.status}
