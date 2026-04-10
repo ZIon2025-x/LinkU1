@@ -74,6 +74,10 @@ class Expert(Base):
     response_time = Column(String(50), nullable=True)
     response_time_en = Column(String(50), nullable=True)
     user_level = Column(String(20), nullable=False, default="normal", server_default="normal")
+    # 基地地址 + 默认服务半径 (migration 195)
+    latitude = Column(DECIMAL(10, 8), nullable=True)
+    longitude = Column(DECIMAL(11, 8), nullable=True)
+    service_radius_km = Column(Integer, nullable=True)
     created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
 

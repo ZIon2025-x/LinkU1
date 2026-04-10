@@ -1585,6 +1585,7 @@ class TaskExpertService(Base):
     location = Column(String(255), nullable=True)  # city/address text for display
     latitude = Column(DECIMAL(10, 8), nullable=True)  # for distance calc
     longitude = Column(DECIMAL(11, 8), nullable=True)  # for distance calc
+    service_radius_km = Column(Integer, nullable=True)  # null = inherit from expert team
     category = Column(String(50), nullable=True)  # service category: programming, translation, tutoring, etc.
     service_name = Column(String(200), nullable=False)
     service_name_en = Column(String(200), nullable=True)  # English name
@@ -2132,6 +2133,9 @@ class Activity(Base):
     owner_type = Column(String(20), nullable=False, server_default='user')
     owner_id = Column(String(8), nullable=False)
     location = Column(String(255), nullable=False)
+    latitude = Column(DECIMAL(10, 8), nullable=True)
+    longitude = Column(DECIMAL(11, 8), nullable=True)
+    service_radius_km = Column(Integer, nullable=True)
     task_type = Column(String(50), nullable=False)
     # 价格相关
     reward_type = Column(String(20), nullable=False, default='cash')  # cash, points, both

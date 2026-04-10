@@ -2306,6 +2306,8 @@ class TaskExpertServiceCreate(BaseModel):
     time_slot_end_time: Optional[str] = None  # 时间段结束时间（格式：HH:MM:SS，向后兼容）
     participants_per_slot: Optional[int] = None  # 每个时间段最多参与者数量
     weekly_time_slot_config: Optional[dict] = None  # 按周几设置时间段配置
+    # 服务区域
+    service_radius_km: Optional[Literal[0, 5, 10, 25, 50]] = None
 
     @model_validator(mode='after')
     def _check_package_fields(self):
@@ -2353,6 +2355,8 @@ class TaskExpertServiceUpdate(BaseModel):
     time_slot_end_time: Optional[str] = None
     participants_per_slot: Optional[int] = None
     weekly_time_slot_config: Optional[dict] = None  # 按周几设置时间段配置
+    # 服务区域
+    service_radius_km: Optional[Literal[0, 5, 10, 25, 50]] = None
 
     @model_validator(mode='after')
     def _check_package_fields(self):
@@ -3203,6 +3207,9 @@ class ActivityCreate(BaseModel):
     expert_service_id: int
     deadline: Optional[datetime.datetime] = None
     location: str
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    service_radius_km: Optional[Literal[0, 5, 10, 25, 50]] = None
     task_type: str
     reward_type: Literal["cash", "points", "both"] = "cash"
     original_price_per_participant: Optional[float] = None
@@ -3247,6 +3254,9 @@ class ActivityOut(BaseModel):
     owner_id: Optional[str] = None
     expert_service_id: Optional[int] = None
     location: str
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    service_radius_km: Optional[int] = None
     task_type: str
     reward_type: str
     original_price_per_participant: float = 0.0

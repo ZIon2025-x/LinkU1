@@ -41,6 +41,9 @@ class ExpertOut(BaseModel):
     response_time: Optional[str] = None
     response_time_en: Optional[str] = None
     user_level: str = "normal"
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    service_radius_km: Optional[int] = None
     is_following: bool = False  # 当前用户是否关注（接口层填充）
     my_role: Optional[str] = None  # 当前用户在此团队中的角色（接口层填充）
 
