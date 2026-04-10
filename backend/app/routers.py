@@ -7787,6 +7787,13 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                                     breakdown = _build_bundle_breakdown(service_obj.bundle_service_ids, db)
                                     final_total = _bundle_total_sessions(breakdown)
 
+                                if final_total <= 0:
+                                    logger.error(
+                                        f"❌ [WEBHOOK] package_purchase: total_sessions={final_total}, "
+                                        f"无法创建空套餐,跳过 (metadata={metadata})"
+                                    )
+                                    raise ValueError(f"total_sessions={final_total}, 无法创建套餐")
+
                                 # 计算 expires_at
                                 exp_at = None
                                 if validity_days_meta > 0:
