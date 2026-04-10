@@ -22865,6 +22865,72 @@ abstract class AppLocalizations {
   /// **'Package purchase failed.'**
   String get errorPackagePurchaseFailed;
 
+  /// No description provided for @errorPackageAlreadyExhausted.
+  ///
+  /// In en, this message translates to:
+  /// **'This package has already been fully used.'**
+  String get errorPackageAlreadyExhausted;
+
+  /// No description provided for @errorPackageDisputed.
+  ///
+  /// In en, this message translates to:
+  /// **'This package is under dispute.'**
+  String get errorPackageDisputed;
+
+  /// No description provided for @errorPackageAlreadyRefunded.
+  ///
+  /// In en, this message translates to:
+  /// **'This package has already been refunded.'**
+  String get errorPackageAlreadyRefunded;
+
+  /// No description provided for @errorPackageAlreadyReleased.
+  ///
+  /// In en, this message translates to:
+  /// **'This package has already been settled.'**
+  String get errorPackageAlreadyReleased;
+
+  /// No description provided for @errorPackageCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'This package has been cancelled.'**
+  String get errorPackageCancelled;
+
+  /// No description provided for @errorPackageNotActive.
+  ///
+  /// In en, this message translates to:
+  /// **'This package is no longer active.'**
+  String get errorPackageNotActive;
+
+  /// No description provided for @errorPackageNotReviewable.
+  ///
+  /// In en, this message translates to:
+  /// **'This package cannot be reviewed in its current state.'**
+  String get errorPackageNotReviewable;
+
+  /// No description provided for @errorInvalidRating.
+  ///
+  /// In en, this message translates to:
+  /// **'Rating must be between 1 and 5.'**
+  String get errorInvalidRating;
+
+  /// No description provided for @errorReviewAlreadyExists.
+  ///
+  /// In en, this message translates to:
+  /// **'You have already reviewed this package.'**
+  String get errorReviewAlreadyExists;
+
+  /// No description provided for @errorReasonRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please provide a reason.'**
+  String get errorReasonRequired;
+
+  /// No description provided for @errorPackageNeverUsedUseRefund.
+  ///
+  /// In en, this message translates to:
+  /// **'This package has not been used yet. Please use the refund option instead.'**
+  String get errorPackageNeverUsedUseRefund;
+
   /// No description provided for @expertTeamEditProfileTitle.
   ///
   /// In en, this message translates to:

@@ -119,7 +119,7 @@ def trigger_package_release(db, pkg, reason: str) -> None:
     if pkg.status not in ("exhausted", "expired"):
         raise ValueError(f"Invalid status for release: {pkg.status}")
 
-    if pkg.released_amount_pence is not None:
+    if pkg.released_amount_pence is not None or pkg.refunded_amount_pence is not None:
         # Already processed — skip
         return
 
@@ -129,9 +129,32 @@ def trigger_package_release(db, pkg, reason: str) -> None:
     if pkg.paid_amount is None or float(pkg.paid_amount) <= 0:
         return  # defensive: no payment to release
 
+    # Settlement logic by scenario:
+    # - Exhausted (all sessions used) → expert gets full amount
+    # - Expired + never used → full refund to buyer, expert gets nothing
+    # - Expired + partially used → pro-rata split: consumed → expert, unconsumed → buyer
     paid_pence = int(round(float(pkg.paid_amount) * 100))
-    fee = calculate_application_fee_pence(paid_pence, "expert_service", None)
-    transfer_pence = paid_pence - fee
+
+    if pkg.status == "expired" and pkg.used_sessions == 0:
+        # Never used before expiry → full refund to buyer
+        transfer_pence = 0
+        fee = 0
+        refund_pence = paid_pence
+        pkg.refunded_amount_pence = refund_pence
+        pkg.status = "refunded"
+    elif pkg.status == "expired" and pkg.used_sessions < pkg.total_sessions:
+        # Partially used before expiry → pro-rata split
+        split = compute_package_split(pkg)
+        transfer_pence = split["transfer_pence"]
+        fee = split["fee_pence"]
+        refund_pence = split["unconsumed_value_pence"]
+        pkg.refunded_amount_pence = refund_pence
+        pkg.status = "partially_refunded"
+    else:
+        # Exhausted or expired with all sessions used → expert gets full amount
+        fee = calculate_application_fee_pence(paid_pence, "expert_service", None)
+        transfer_pence = paid_pence - fee
+        refund_pence = 0
 
     pkg.platform_fee_pence = fee
     # Note: released_amount_pence and released_at are written by payment_transfer_service
@@ -139,17 +162,29 @@ def trigger_package_release(db, pkg, reason: str) -> None:
     # Concurrent safety: idempotency_key UNIQUE constraint prevents duplicate transfers.
     # Callers should catch IntegrityError from commit if needed.
 
-    db.add(models.PaymentTransfer(
-        task_id=None,
-        package_id=pkg.id,
-        taker_id=None,
-        taker_expert_id=pkg.expert_id,
-        poster_id=pkg.user_id,
-        amount=transfer_pence / 100.0,
-        currency=pkg.currency or "GBP",
-        status="pending",
-        idempotency_key=f"pkg_{pkg.id}_{reason}",
-    ))
+    if transfer_pence > 0:
+        db.add(models.PaymentTransfer(
+            task_id=None,
+            package_id=pkg.id,
+            taker_id=None,
+            taker_expert_id=pkg.expert_id,
+            poster_id=pkg.user_id,
+            amount=transfer_pence / 100.0,
+            currency=pkg.currency or "GBP",
+            status="pending",
+            idempotency_key=f"pkg_{pkg.id}_{reason}",
+        ))
+
+    # Create RefundRequest so Stripe refund can be processed by admin/cron
+    if refund_pence > 0:
+        db.add(models.RefundRequest(
+            task_id=None,
+            package_id=pkg.id,
+            poster_id=pkg.user_id,
+            refund_amount=refund_pence / 100.0,
+            reason="expired_auto_refund",
+            status="pending",
+        ))
 
 
 def compute_package_action_flags(pkg: "UserServicePackage", now) -> dict:

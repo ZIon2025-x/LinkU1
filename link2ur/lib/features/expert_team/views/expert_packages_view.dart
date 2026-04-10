@@ -62,8 +62,14 @@ class _PackagesBody extends StatelessWidget {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(context.l10n.expertPackageNumber('${p.id}'),
-                                    style: Theme.of(context).textTheme.titleMedium),
+                                Expanded(
+                                  child: Text(
+                                    p.serviceName ?? context.l10n.expertPackageNumber('${p.id}'),
+                                    style: Theme.of(context).textTheme.titleMedium,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
                                 _StatusChip(status: status),
                               ],
                             ),

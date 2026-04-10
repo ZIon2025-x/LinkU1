@@ -11899,6 +11899,39 @@ class AppLocalizationsZh extends AppLocalizations {
   String get errorPackagePurchaseFailed => '套餐购买失败';
 
   @override
+  String get errorPackageAlreadyExhausted => '套餐次数已全部使用';
+
+  @override
+  String get errorPackageDisputed => '套餐正在争议中';
+
+  @override
+  String get errorPackageAlreadyRefunded => '套餐已退款';
+
+  @override
+  String get errorPackageAlreadyReleased => '套餐已结算';
+
+  @override
+  String get errorPackageCancelled => '套餐已取消';
+
+  @override
+  String get errorPackageNotActive => '套餐已不处于有效状态';
+
+  @override
+  String get errorPackageNotReviewable => '当前状态不允许评价';
+
+  @override
+  String get errorInvalidRating => '评分必须在 1 到 5 之间';
+
+  @override
+  String get errorReviewAlreadyExists => '你已评价过该套餐';
+
+  @override
+  String get errorReasonRequired => '请填写原因';
+
+  @override
+  String get errorPackageNeverUsedUseRefund => '套餐尚未使用，请使用退款功能';
+
+  @override
   String get expertTeamEditProfileTitle => '编辑团队信息';
 
   @override
@@ -24279,6 +24312,39 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get errorPackagePurchaseFailed => '套餐購買失敗';
+
+  @override
+  String get errorPackageAlreadyExhausted => '套餐次數已全部使用';
+
+  @override
+  String get errorPackageDisputed => '套餐正在爭議中';
+
+  @override
+  String get errorPackageAlreadyRefunded => '套餐已退款';
+
+  @override
+  String get errorPackageAlreadyReleased => '套餐已結算';
+
+  @override
+  String get errorPackageCancelled => '套餐已取消';
+
+  @override
+  String get errorPackageNotActive => '套餐已不處於有效狀態';
+
+  @override
+  String get errorPackageNotReviewable => '目前狀態不允許評價';
+
+  @override
+  String get errorInvalidRating => '評分必須在 1 到 5 之間';
+
+  @override
+  String get errorReviewAlreadyExists => '你已評價過該套餐';
+
+  @override
+  String get errorReasonRequired => '請填寫原因';
+
+  @override
+  String get errorPackageNeverUsedUseRefund => '套餐尚未使用，請使用退款功能';
 
   @override
   String get expertTeamEditProfileTitle => '編輯團隊資料';

@@ -35,13 +35,28 @@ async def get_my_packages(
     packages = result.scalars().all()
     now = get_utc_time()
 
+    # Batch-load service names for all packages
+    service_ids = list({p.service_id for p in packages if p.service_id})
+    service_map = {}
+    if service_ids:
+        svc_result = await db.execute(
+            select(models.TaskExpertService).where(
+                models.TaskExpertService.id.in_(service_ids)
+            )
+        )
+        for svc in svc_result.scalars().all():
+            service_map[svc.id] = svc
+
     out = []
     for p in packages:
         flags = compute_package_action_flags(p, now)
+        svc = service_map.get(p.service_id)
         out.append({
             "id": p.id,
             "service_id": p.service_id,
             "expert_id": p.expert_id,
+            "service_name": svc.service_name if svc else None,
+            "package_type": svc.package_type if svc else None,
             "total_sessions": p.total_sessions,
             "used_sessions": p.used_sessions,
             "remaining_sessions": p.total_sessions - p.used_sessions,
@@ -97,7 +112,10 @@ async def use_package_session(
     )
     package = result.scalar_one_or_none()
     if not package:
-        raise HTTPException(status_code=404, detail="套餐不存在或已失效")
+        raise HTTPException(
+            status_code=404,
+            detail={"error_code": "package_not_found_or_inactive", "message": "套餐不存在或已失效"},
+        )
 
     # 过期检查
     if package.expires_at:
@@ -108,10 +126,16 @@ async def use_package_session(
         if expires < now_utc:
             package.status = "expired"
             await db.commit()
-            raise HTTPException(status_code=400, detail="套餐已过期")
+            raise HTTPException(
+                status_code=400,
+                detail={"error_code": "package_expired", "message": "套餐已过期"},
+            )
 
     if package.used_sessions >= package.total_sessions:
-        raise HTTPException(status_code=400, detail="套餐次数已用完")
+        raise HTTPException(
+            status_code=400,
+            detail={"error_code": "package_exhausted", "message": "套餐次数已用完"},
+        )
 
     # Bundle 套餐: 更新 bundle_breakdown
     sub_service_id = body.get("sub_service_id")

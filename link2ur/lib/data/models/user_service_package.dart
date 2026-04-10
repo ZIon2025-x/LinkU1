@@ -5,6 +5,8 @@ class UserServicePackage extends Equatable {
   final int id;
   final int serviceId;
   final String? expertId;
+  final String? serviceName;
+  final String? packageType;
   final int totalSessions;
   final int usedSessions;
   final int remainingSessions;
@@ -33,6 +35,8 @@ class UserServicePackage extends Equatable {
     required this.id,
     required this.serviceId,
     this.expertId,
+    this.serviceName,
+    this.packageType,
     required this.totalSessions,
     required this.usedSessions,
     required this.remainingSessions,
@@ -63,6 +67,8 @@ class UserServicePackage extends Equatable {
       id: json['id'] as int,
       serviceId: json['service_id'] as int,
       expertId: json['expert_id'] as String?,
+      serviceName: json['service_name'] as String?,
+      packageType: json['package_type'] as String?,
       totalSessions: json['total_sessions'] as int,
       usedSessions: json['used_sessions'] as int,
       remainingSessions: json['remaining_sessions'] as int,
@@ -103,5 +109,16 @@ class UserServicePackage extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, status, usedSessions, remainingSessions];
+  List<Object?> get props => [
+        id,
+        status,
+        usedSessions,
+        remainingSessions,
+        inCooldown,
+        canRefundFull,
+        canRefundPartial,
+        canReview,
+        canDispute,
+        lastRedeemedAt,
+      ];
 }

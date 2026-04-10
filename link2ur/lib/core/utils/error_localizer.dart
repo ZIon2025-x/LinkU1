@@ -521,6 +521,29 @@ class ErrorLocalizer {
         return context.l10n.errorStripeCreateFailed;
       case 'package_purchase_failed':
         return context.l10n.errorPackagePurchaseFailed;
+      // 套餐退款 / 评价 / 争议 错误码
+      case 'package_already_exhausted':
+        return context.l10n.errorPackageAlreadyExhausted;
+      case 'package_disputed':
+        return context.l10n.errorPackageDisputed;
+      case 'package_already_refunded':
+        return context.l10n.errorPackageAlreadyRefunded;
+      case 'package_already_released':
+        return context.l10n.errorPackageAlreadyReleased;
+      case 'package_cancelled':
+        return context.l10n.errorPackageCancelled;
+      case 'package_not_active':
+        return context.l10n.errorPackageNotActive;
+      case 'package_not_reviewable':
+        return context.l10n.errorPackageNotReviewable;
+      case 'invalid_rating':
+        return context.l10n.errorInvalidRating;
+      case 'review_already_exists':
+        return context.l10n.errorReviewAlreadyExists;
+      case 'reason_required':
+        return context.l10n.errorReasonRequired;
+      case 'package_never_used_use_refund':
+        return context.l10n.errorPackageNeverUsedUseRefund;
       default:
         // 服务端返回的已翻译消息，直接使用
         return errorMessage;

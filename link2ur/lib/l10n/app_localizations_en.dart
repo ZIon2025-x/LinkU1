@@ -12405,6 +12405,45 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorPackagePurchaseFailed => 'Package purchase failed.';
 
   @override
+  String get errorPackageAlreadyExhausted =>
+      'This package has already been fully used.';
+
+  @override
+  String get errorPackageDisputed => 'This package is under dispute.';
+
+  @override
+  String get errorPackageAlreadyRefunded =>
+      'This package has already been refunded.';
+
+  @override
+  String get errorPackageAlreadyReleased =>
+      'This package has already been settled.';
+
+  @override
+  String get errorPackageCancelled => 'This package has been cancelled.';
+
+  @override
+  String get errorPackageNotActive => 'This package is no longer active.';
+
+  @override
+  String get errorPackageNotReviewable =>
+      'This package cannot be reviewed in its current state.';
+
+  @override
+  String get errorInvalidRating => 'Rating must be between 1 and 5.';
+
+  @override
+  String get errorReviewAlreadyExists =>
+      'You have already reviewed this package.';
+
+  @override
+  String get errorReasonRequired => 'Please provide a reason.';
+
+  @override
+  String get errorPackageNeverUsedUseRefund =>
+      'This package has not been used yet. Please use the refund option instead.';
+
+  @override
   String get expertTeamEditProfileTitle => 'Edit Team Profile';
 
   @override
