@@ -35,16 +35,24 @@ class TestRefundScenarios:
         pkg.released_amount_pence = None
         pkg.refunded_amount_pence = None
         pkg.platform_fee_pence = None
+        pkg.refunded_at = None
         return pkg
+
+    def _make_db(self):
+        db = AsyncMock()
+        # db.refresh needs to be AsyncMock (awaitable)
+        db.refresh = AsyncMock()
+        return db
 
     @pytest.mark.asyncio
     @patch("app.package_purchase_routes._notify_package_refunded", new_callable=AsyncMock)
-    async def test_scenario_a_cooldown_never_used_full_refund(self, mock_notify):
+    @patch("app.package_purchase_routes._execute_stripe_refund_sync", return_value=(True, "re_test", None))
+    async def test_scenario_a_cooldown_never_used_full_refund(self, mock_stripe, mock_notify):
         """< 24h + 0 used → full refund."""
         from app.package_purchase_routes import _process_full_refund
 
         pkg = self._make_package(used_sessions=0)
-        db = AsyncMock()
+        db = self._make_db()
 
         result = await _process_full_refund(db, pkg, reason="test")
 
@@ -53,15 +61,17 @@ class TestRefundScenarios:
         assert result["refund_amount_pence"] == 1000
         assert pkg.status == "refunded"
         assert pkg.refunded_amount_pence == 1000
+        mock_stripe.assert_called_once()
 
     @pytest.mark.asyncio
     @patch("app.package_purchase_routes._notify_package_refunded", new_callable=AsyncMock)
-    async def test_scenario_b_cooldown_used_pro_rata(self, mock_notify):
+    @patch("app.package_purchase_routes._execute_stripe_refund_sync", return_value=(True, "re_test", None))
+    async def test_scenario_b_cooldown_used_pro_rata(self, mock_stripe, mock_notify):
         """< 24h + 3 used → pro-rata."""
         from app.package_purchase_routes import _process_partial_refund
 
         pkg = self._make_package(used_sessions=3)
-        db = AsyncMock()
+        db = self._make_db()
 
         result = await _process_partial_refund(db, pkg, reason="test")
 
@@ -71,15 +81,17 @@ class TestRefundScenarios:
         assert result["refund_amount_pence"] == 700
         assert result["transfer_amount_pence"] == 250
         assert pkg.status == "partially_refunded"
+        mock_stripe.assert_called_once()
 
     @pytest.mark.asyncio
     @patch("app.package_purchase_routes._notify_package_refunded", new_callable=AsyncMock)
-    async def test_scenario_c1_past_cooldown_never_used_full_refund(self, mock_notify):
+    @patch("app.package_purchase_routes._execute_stripe_refund_sync", return_value=(True, "re_test", None))
+    async def test_scenario_c1_past_cooldown_never_used_full_refund(self, mock_stripe, mock_notify):
         """≥ 24h + 0 used → falls through to full refund."""
         from app.package_purchase_routes import _process_partial_refund
 
         pkg = self._make_package(used_sessions=0)
-        db = AsyncMock()
+        db = self._make_db()
 
         result = await _process_partial_refund(db, pkg, reason="test")
 
@@ -87,15 +99,17 @@ class TestRefundScenarios:
         assert result["refund_type"] == "full"
         assert result["status"] == "refunded"
         assert pkg.status == "refunded"
+        mock_stripe.assert_called_once()
 
     @pytest.mark.asyncio
     @patch("app.package_purchase_routes._notify_package_refunded", new_callable=AsyncMock)
-    async def test_scenario_c2_past_cooldown_used_pro_rata(self, mock_notify):
+    @patch("app.package_purchase_routes._execute_stripe_refund_sync", return_value=(True, "re_test", None))
+    async def test_scenario_c2_past_cooldown_used_pro_rata(self, mock_stripe, mock_notify):
         """≥ 24h + 5 used → pro-rata."""
         from app.package_purchase_routes import _process_partial_refund
 
         pkg = self._make_package(used_sessions=5)
-        db = AsyncMock()
+        db = self._make_db()
 
         result = await _process_partial_refund(db, pkg, reason="test")
 
@@ -104,3 +118,4 @@ class TestRefundScenarios:
         # consumed = 500p, fee = 50p (min), transfer = 450p, refund = 500p
         assert result["refund_amount_pence"] == 500
         assert result["transfer_amount_pence"] == 450
+        mock_stripe.assert_called_once()

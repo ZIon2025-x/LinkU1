@@ -9,6 +9,7 @@ Endpoints:
 
 webhook 处理 (在 routers.py): payment_type='package_purchase' 分支创建 UserServicePackage
 """
+import asyncio
 import base64
 import hmac
 import hashlib
@@ -825,21 +826,86 @@ async def _load_package_for_update(
     return pkg
 
 
+def _execute_stripe_refund_sync(
+    payment_intent_id: str,
+    refund_amount_pence: int,
+    package_id: int,
+    refund_request_id: int,
+    user_id: str,
+) -> tuple:
+    """Synchronously call Stripe Refund API. Returns (success, refund_id, error)."""
+    import stripe
+    from app.stripe_config import configure_stripe
+    configure_stripe()
+
+    try:
+        pi = stripe.PaymentIntent.retrieve(payment_intent_id)
+        if pi.status == "canceled":
+            logger.warning(f"PaymentIntent {payment_intent_id} already canceled, skip refund")
+            return True, None, None
+
+        charges = stripe.Charge.list(payment_intent=payment_intent_id, limit=1)
+        if not charges.data:
+            return False, None, "stripe_charge_not_found"
+
+        idempotency_key = hashlib.sha256(
+            f"pkg_refund_{package_id}_{refund_request_id}_{refund_amount_pence}".encode()
+        ).hexdigest()
+
+        refund = stripe.Refund.create(
+            charge=charges.data[0].id,
+            amount=refund_amount_pence,
+            reason="requested_by_customer",
+            idempotency_key=idempotency_key,
+            metadata={
+                "package_id": str(package_id),
+                "refund_request_id": str(refund_request_id),
+                "user_id": user_id,
+                "refund_type": "package_refund",
+            },
+        )
+        logger.info(f"✅ Stripe refund created: {refund.id} for package {package_id}, {refund_amount_pence}p")
+        return True, refund.id, None
+
+    except Exception as e:
+        logger.error(f"❌ Stripe refund failed for package {package_id}: {e}")
+        return False, None, str(e)
+
+
 async def _process_full_refund(db: AsyncSession, pkg, reason: str) -> dict:
-    """Process a full refund: sets status='refunded', creates RefundRequest row."""
+    """Process a full refund: sets status='refunded', creates RefundRequest row, calls Stripe."""
     paid_pence = int(round(float(pkg.paid_amount) * 100))
     pkg.status = "refunded"
     pkg.refunded_amount_pence = paid_pence
 
-    db.add(models.RefundRequest(
+    refund_req = models.RefundRequest(
         task_id=None,
         package_id=pkg.id,
         poster_id=pkg.user_id,
         refund_amount=paid_pence / 100.0,
         reason=reason or "cooldown_full_refund",
-        status="approved_auto",
-    ))
+        status="processing",
+    )
+    db.add(refund_req)
     await db.commit()
+    await db.refresh(refund_req)
+
+    # Execute Stripe refund (blocking → thread pool)
+    if pkg.payment_intent_id:
+        success, refund_id, error = await asyncio.to_thread(
+            _execute_stripe_refund_sync,
+            pkg.payment_intent_id, paid_pence, pkg.id, refund_req.id, pkg.user_id,
+        )
+        if success:
+            refund_req.status = "completed"
+            refund_req.refund_intent_id = refund_id
+            refund_req.completed_at = get_utc_time()
+            pkg.refunded_at = get_utc_time()
+        else:
+            refund_req.status = "failed"
+            refund_req.admin_comment = f"Stripe error: {error}"
+            logger.error(f"Package {pkg.id} full refund Stripe call failed: {error}")
+        await db.commit()
 
     # Best-effort notifications
     try:
@@ -887,15 +953,35 @@ async def _process_partial_refund(db: AsyncSession, pkg, reason: str) -> dict:
         status="pending",
         idempotency_key=f"pkg_{pkg.id}_partial_transfer",
     ))
-    db.add(models.RefundRequest(
+    refund_req = models.RefundRequest(
         task_id=None,
         package_id=pkg.id,
         poster_id=pkg.user_id,
         refund_amount=split["unconsumed_value_pence"] / 100.0,
         reason=reason or "user_cancel_partial",
-        status="approved_auto",
-    ))
+        status="processing",
+    )
+    db.add(refund_req)
     await db.commit()
+    await db.refresh(refund_req)
+
+    # Execute Stripe refund for the unconsumed portion
+    if pkg.payment_intent_id and split["unconsumed_value_pence"] > 0:
+        success, refund_id, error = await asyncio.to_thread(
+            _execute_stripe_refund_sync,
+            pkg.payment_intent_id, split["unconsumed_value_pence"],
+            pkg.id, refund_req.id, pkg.user_id,
+        )
+        if success:
+            refund_req.status = "completed"
+            refund_req.refund_intent_id = refund_id
+            refund_req.completed_at = get_utc_time()
+            pkg.refunded_at = get_utc_time()
+        else:
+            refund_req.status = "failed"
+            refund_req.admin_comment = f"Stripe error: {error}"
+            logger.error(f"Package {pkg.id} partial refund Stripe call failed: {error}")
+        await db.commit()
 
     try:
         await _notify_package_refunded(db, pkg, full=False)
