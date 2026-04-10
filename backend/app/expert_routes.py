@@ -29,6 +29,7 @@ from app.schemas_expert import (
     ExpertInvitationCreate, ExpertInvitationOut, ExpertInvitationResponse,
     ExpertRoleChange, ExpertTransfer,
     ExpertProfileUpdateCreate, ExpertProfileUpdateOut,
+    ExpertLocationUpdate,
 )
 from app.utils.time_utils import get_utc_time
 
@@ -1512,6 +1513,38 @@ async def update_expert_board(
 
     await db.commit()
     return {"detail": "板块已更新"}
+
+
+# ==================== 19b. PUT /{expert_id}/location ====================
+
+@expert_router.put("/{expert_id}/location")
+async def update_expert_location(
+    expert_id: str,
+    body: ExpertLocationUpdate,
+    request: Request,
+    db: AsyncSession = Depends(get_async_db_dependency),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+):
+    """更新达人团队基地地址和默认服务半径（Owner only，直接生效）"""
+    expert = await _get_expert_or_404(db, expert_id)
+    await _get_member_or_403(db, expert_id, current_user.id, required_roles=["owner"])
+
+    update_data = body.model_dump(exclude_unset=True)
+    if not update_data:
+        raise HTTPException(status_code=400, detail="至少需要修改一个字段")
+
+    for key, value in update_data.items():
+        setattr(expert, key, value)
+
+    await db.commit()
+    await db.refresh(expert)
+    return {
+        "message": "基地地址已更新",
+        "location": expert.location,
+        "latitude": float(expert.latitude) if expert.latitude else None,
+        "longitude": float(expert.longitude) if expert.longitude else None,
+        "service_radius_km": expert.service_radius_km,
+    }
 
 
 # ==================== 19. POST /{expert_id}/stripe-connect ====================

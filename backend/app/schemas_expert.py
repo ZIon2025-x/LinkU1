@@ -222,5 +222,19 @@ class ExpertProfileUpdateReview(BaseModel):
     review_comment: Optional[str] = None
 
 
+class ExpertLocationUpdate(BaseModel):
+    """更新达人团队基地地址 + 默认服务半径（Owner 直接生效，无需审核）"""
+    location: Optional[str] = Field(None, max_length=100)
+    latitude: Optional[float] = Field(None, ge=-90, le=90)
+    longitude: Optional[float] = Field(None, ge=-180, le=180)
+    service_radius_km: Optional[Literal[0, 5, 10, 25, 50]] = None
+
+    @model_validator(mode='after')
+    def check_lat_lng_pair(self):
+        if (self.latitude is None) != (self.longitude is None):
+            raise ValueError("latitude 和 longitude 必须同时提供或同时为空")
+        return self
+
+
 # Forward ref
 ExpertDetailOut.model_rebuild()
