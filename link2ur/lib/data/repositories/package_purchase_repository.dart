@@ -105,6 +105,50 @@ class PackagePurchaseRepository {
     return res.data!;
   }
 
+  /// 申请退款(后端根据 cooldown + usage 自动判断全额/按比例)
+  Future<Map<String, dynamic>> requestRefund(int packageId,
+      {String? reason}) async {
+    final res = await _api.post<Map<String, dynamic>>(
+      ApiEndpoints.myPackageRefund(packageId),
+      data: {if (reason != null && reason.isNotEmpty) 'reason': reason},
+    );
+    if (!res.isSuccess || res.data == null) {
+      throw Exception(res.errorCode ?? res.message ?? 'refund_failed');
+    }
+    return res.data!;
+  }
+
+  /// 提交套餐评价
+  Future<Map<String, dynamic>> submitReview(
+    int packageId, {
+    required int rating,
+    required String comment,
+  }) async {
+    final res = await _api.post<Map<String, dynamic>>(
+      ApiEndpoints.myPackageReview(packageId),
+      data: {'rating': rating, 'comment': comment},
+    );
+    if (!res.isSuccess || res.data == null) {
+      throw Exception(res.errorCode ?? res.message ?? 'review_failed');
+    }
+    return res.data!;
+  }
+
+  /// 发起套餐争议(需已使用至少 1 次)
+  Future<Map<String, dynamic>> openDispute(
+    int packageId, {
+    required String reason,
+  }) async {
+    final res = await _api.post<Map<String, dynamic>>(
+      ApiEndpoints.myPackageDispute(packageId),
+      data: {'reason': reason},
+    );
+    if (!res.isSuccess || res.data == null) {
+      throw Exception(res.errorCode ?? res.message ?? 'dispute_failed');
+    }
+    return res.data!;
+  }
+
   /// 团队"我的客户"列表
   Future<Map<String, dynamic>> getCustomerPackages(
     String expertId, {

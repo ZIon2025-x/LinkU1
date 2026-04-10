@@ -274,6 +274,12 @@ class ApiEndpoints {
       '/api/experts/$expertId/packages/redeem';
   static String customerPackages(String expertId) =>
       '/api/experts/$expertId/customer-packages';
+  static String myPackageRefund(int packageId) =>
+      '/api/my/packages/$packageId/refund';
+  static String myPackageReview(int packageId) =>
+      '/api/my/packages/$packageId/review';
+  static String myPackageDispute(int packageId) =>
+      '/api/my/packages/$packageId/dispute';
 
   // ==================== Expert Team ====================
   static const String expertTeams = '/api/experts';
