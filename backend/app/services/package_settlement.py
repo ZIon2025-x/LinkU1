@@ -157,7 +157,9 @@ def compute_package_action_flags(pkg: "UserServicePackage", now) -> dict:
     never_used = pkg.used_sessions == 0
     has_used = pkg.used_sessions > 0
 
-    can_refund_full = pkg.status == "active" and in_cooldown and never_used
+    # Scenario A: cooldown + never used → full refund
+    # Scenario C1: past cooldown + never used → also full refund
+    can_refund_full = pkg.status == "active" and never_used
     can_refund_partial = pkg.status == "active" and has_used
     can_review = pkg.status in ("exhausted", "expired", "released", "partially_refunded")
     can_dispute = pkg.status == "active" and has_used
