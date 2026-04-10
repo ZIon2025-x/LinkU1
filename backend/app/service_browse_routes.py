@@ -141,13 +141,20 @@ async def browse_services(
             "owner_avatar": owner.avatar if owner else None,
             "owner_rating": float(owner.avg_rating) if owner and owner.avg_rating else None,
             "created_at": s.created_at.isoformat() if s.created_at else None,
+            "service_radius_km": s.service_radius_km,
         }
-        if sort == "nearby" and lat is not None and lng is not None and s.latitude and s.longitude:
+        if lat is not None and lng is not None and s.latitude and s.longitude:
             from math import radians, cos, sqrt
             lat_d = float(s.latitude) - lat
             lng_d = (float(s.longitude) - lng) * cos(radians(lat))
             dist_km = sqrt(lat_d * lat_d + lng_d * lng_d) * 111.0
             item["distance_km"] = round(dist_km, 1)
+            # within_service_area: null/0 radius = no limit = always true
+            radius = s.service_radius_km
+            if radius is None or radius == 0 or s.location_type == "online":
+                item["within_service_area"] = True
+            else:
+                item["within_service_area"] = dist_km <= radius
         items.append(item)
 
     return {"items": items, "total": total, "page": page, "page_size": page_size}
