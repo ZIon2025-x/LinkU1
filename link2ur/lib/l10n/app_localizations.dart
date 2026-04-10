@@ -23866,6 +23866,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This service still has in-flight applications. Resolve them before deleting.'**
   String get errorServiceHasActiveApplications;
+
+  /// No description provided for @serviceRadius.
+  ///
+  /// In en, this message translates to:
+  /// **'Service Area'**
+  String get serviceRadius;
+
+  /// No description provided for @serviceRadiusKm.
+  ///
+  /// In en, this message translates to:
+  /// **'{radius}km'**
+  String serviceRadiusKm(int radius);
+
+  /// No description provided for @serviceRadiusWholeCity.
+  ///
+  /// In en, this message translates to:
+  /// **'Whole City'**
+  String get serviceRadiusWholeCity;
+
+  /// No description provided for @outsideServiceArea.
+  ///
+  /// In en, this message translates to:
+  /// **'This service may not cover your area. Contact the expert to confirm.'**
+  String get outsideServiceArea;
+
+  /// No description provided for @selectServiceRadius.
+  ///
+  /// In en, this message translates to:
+  /// **'Select service area'**
+  String get selectServiceRadius;
+
+  /// No description provided for @baseAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Base Address'**
+  String get baseAddress;
+
+  /// No description provided for @defaultServiceRadius.
+  ///
+  /// In en, this message translates to:
+  /// **'Default Service Area'**
+  String get defaultServiceRadius;
+
+  /// No description provided for @inheritTeamDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'Use team default'**
+  String get inheritTeamDefault;
 }
 
 class _AppLocalizationsDelegate

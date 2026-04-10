@@ -12417,6 +12417,32 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get errorServiceHasActiveApplications => '该服务仍有进行中的申请，请先处理后再删除。';
+
+  @override
+  String get serviceRadius => '服务范围';
+
+  @override
+  String serviceRadiusKm(int radius) {
+    return '$radius公里';
+  }
+
+  @override
+  String get serviceRadiusWholeCity => '全城';
+
+  @override
+  String get outsideServiceArea => '该服务可能不在您的区域内，建议联系达人确认';
+
+  @override
+  String get selectServiceRadius => '选择服务范围';
+
+  @override
+  String get baseAddress => '基地地址';
+
+  @override
+  String get defaultServiceRadius => '默认服务范围';
+
+  @override
+  String get inheritTeamDefault => '使用团队默认';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -24832,4 +24858,30 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get errorServiceHasActiveApplications => '該服務仍有進行中的申請，請先處理後再刪除。';
+
+  @override
+  String get serviceRadius => '服務範圍';
+
+  @override
+  String serviceRadiusKm(int radius) {
+    return '$radius公里';
+  }
+
+  @override
+  String get serviceRadiusWholeCity => '全城';
+
+  @override
+  String get outsideServiceArea => '該服務可能不在您的區域內，建議聯繫達人確認';
+
+  @override
+  String get selectServiceRadius => '選擇服務範圍';
+
+  @override
+  String get baseAddress => '基地地址';
+
+  @override
+  String get defaultServiceRadius => '預設服務範圍';
+
+  @override
+  String get inheritTeamDefault => '使用團隊預設';
 }

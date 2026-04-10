@@ -325,6 +325,7 @@ class TaskExpertService extends Equatable {
     this.location,
     this.latitude,
     this.longitude,
+    this.serviceRadiusKm,
     this.currency = 'GBP',
     this.status = 'active',
     this.isExpertVerified = false,
@@ -371,6 +372,7 @@ class TaskExpertService extends Equatable {
   final String? location;
   final double? latitude;
   final double? longitude;
+  final int? serviceRadiusKm;
   final String currency;
   final String status;
   final bool isExpertVerified;
@@ -472,6 +474,7 @@ class TaskExpertService extends Equatable {
       location: json['location']?.toString(),
       latitude: (json['latitude'] as num?)?.toDouble(),
       longitude: (json['longitude'] as num?)?.toDouble(),
+      serviceRadiusKm: json['service_radius_km'] as int?,
       currency: json['currency'] as String? ?? 'GBP',
       status: json['status'] as String? ?? 'active',
       isExpertVerified: json['is_expert_verified'] == true,
@@ -535,6 +538,7 @@ class TaskExpertService extends Equatable {
       'location': location,
       'latitude': latitude,
       'longitude': longitude,
+      'service_radius_km': serviceRadiusKm,
       'currency': currency,
       'status': status,
       'is_expert_verified': isExpertVerified,
@@ -560,7 +564,7 @@ class TaskExpertService extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, expertId, serviceType, userId, serviceName, serviceNameEn, serviceNameZh, descriptionEn, descriptionZh, basePrice, pricingType, locationType, location, latitude, longitude, status, isExpertVerified, ownerName, ownerAvatar, ownerRating, skills, packageType, totalSessions, bundleServiceIds, packagePrice, validityDays];
+  List<Object?> get props => [id, expertId, serviceType, userId, serviceName, serviceNameEn, serviceNameZh, descriptionEn, descriptionZh, basePrice, pricingType, locationType, location, latitude, longitude, serviceRadiusKm, status, isExpertVerified, ownerName, ownerAvatar, ownerRating, skills, packageType, totalSessions, bundleServiceIds, packagePrice, validityDays];
 }
 
 /// 任务达人列表响应

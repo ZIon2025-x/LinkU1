@@ -5605,5 +5605,18 @@
   "errorPackageBundleSubRequired": "请选择要核销的子服务。",
   "errorTeamNoStripeAccount": "团队 Stripe 尚未配置完成。",
   "errorServiceHasActiveActivities": "该服务仍有进行中的活动，请先取消或完成后再删除。",
-  "errorServiceHasActiveApplications": "该服务仍有进行中的申请，请先处理后再删除。"
+  "errorServiceHasActiveApplications": "该服务仍有进行中的申请，请先处理后再删除。",
+  "serviceRadius": "服务范围",
+  "serviceRadiusKm": "{radius}公里",
+  "@serviceRadiusKm": {
+    "placeholders": {
+      "radius": { "type": "int" }
+    }
+  },
+  "serviceRadiusWholeCity": "全城",
+  "outsideServiceArea": "该服务可能不在您的区域内，建议联系达人确认",
+  "selectServiceRadius": "选择服务范围",
+  "baseAddress": "基地地址",
+  "defaultServiceRadius": "默认服务范围",
+  "inheritTeamDefault": "使用团队默认"
 }

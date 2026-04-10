@@ -12955,4 +12955,31 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get errorServiceHasActiveApplications =>
       'This service still has in-flight applications. Resolve them before deleting.';
+
+  @override
+  String get serviceRadius => 'Service Area';
+
+  @override
+  String serviceRadiusKm(int radius) {
+    return '${radius}km';
+  }
+
+  @override
+  String get serviceRadiusWholeCity => 'Whole City';
+
+  @override
+  String get outsideServiceArea =>
+      'This service may not cover your area. Contact the expert to confirm.';
+
+  @override
+  String get selectServiceRadius => 'Select service area';
+
+  @override
+  String get baseAddress => 'Base Address';
+
+  @override
+  String get defaultServiceRadius => 'Default Service Area';
+
+  @override
+  String get inheritTeamDefault => 'Use team default';
 }

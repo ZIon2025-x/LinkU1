@@ -5713,5 +5713,18 @@
   "errorPackageBundleSubRequired": "Please select which sub-service to redeem.",
   "errorTeamNoStripeAccount": "The team has not finished Stripe setup yet.",
   "errorServiceHasActiveActivities": "This service still has active activities. Cancel or finish them before deleting.",
-  "errorServiceHasActiveApplications": "This service still has in-flight applications. Resolve them before deleting."
+  "errorServiceHasActiveApplications": "This service still has in-flight applications. Resolve them before deleting.",
+  "serviceRadius": "Service Area",
+  "serviceRadiusKm": "{radius}km",
+  "@serviceRadiusKm": {
+    "placeholders": {
+      "radius": { "type": "int" }
+    }
+  },
+  "serviceRadiusWholeCity": "Whole City",
+  "outsideServiceArea": "This service may not cover your area. Contact the expert to confirm.",
+  "selectServiceRadius": "Select service area",
+  "baseAddress": "Base Address",
+  "defaultServiceRadius": "Default Service Area",
+  "inheritTeamDefault": "Use team default"
 }

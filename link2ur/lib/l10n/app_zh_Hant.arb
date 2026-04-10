@@ -5542,5 +5542,18 @@
   "errorPackageBundleSubRequired": "請選擇要核銷的子服務。",
   "errorTeamNoStripeAccount": "團隊 Stripe 尚未設定完成。",
   "errorServiceHasActiveActivities": "該服務仍有進行中的活動，請先取消或完成後再刪除。",
-  "errorServiceHasActiveApplications": "該服務仍有進行中的申請，請先處理後再刪除。"
+  "errorServiceHasActiveApplications": "該服務仍有進行中的申請，請先處理後再刪除。",
+  "serviceRadius": "服務範圍",
+  "serviceRadiusKm": "{radius}公里",
+  "@serviceRadiusKm": {
+    "placeholders": {
+      "radius": { "type": "int" }
+    }
+  },
+  "serviceRadiusWholeCity": "全城",
+  "outsideServiceArea": "該服務可能不在您的區域內，建議聯繫達人確認",
+  "selectServiceRadius": "選擇服務範圍",
+  "baseAddress": "基地地址",
+  "defaultServiceRadius": "預設服務範圍",
+  "inheritTeamDefault": "使用團隊預設"
 }

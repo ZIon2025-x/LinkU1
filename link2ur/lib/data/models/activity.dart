@@ -20,6 +20,9 @@ class Activity extends Equatable {
     required this.expertId,
     required this.expertServiceId,
     this.location = '',
+    this.latitude,
+    this.longitude,
+    this.serviceRadiusKm,
     this.taskType = '',
     this.rewardType = 'cash',
     this.originalPricePerParticipant,
@@ -78,6 +81,9 @@ class Activity extends Equatable {
   final String expertId;
   final int expertServiceId;
   final String location;
+  final double? latitude;
+  final double? longitude;
+  final int? serviceRadiusKm;
   final String taskType;
   final String rewardType; // cash, points, both
   final double? originalPricePerParticipant;
@@ -215,6 +221,9 @@ class Activity extends Equatable {
       expertId: json['expert_id']?.toString() ?? '',
       expertServiceId: json['expert_service_id'] as int? ?? 0,
       location: json['location'] as String? ?? '',
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
+      serviceRadiusKm: json['service_radius_km'] as int?,
       taskType: json['task_type'] as String? ?? '',
       rewardType: json['reward_type'] as String? ?? 'cash',
       originalPricePerParticipant:
@@ -301,6 +310,9 @@ class Activity extends Equatable {
       'expert_id': expertId,
       'expert_service_id': expertServiceId,
       'location': location,
+      'latitude': latitude,
+      'longitude': longitude,
+      'service_radius_km': serviceRadiusKm,
       'task_type': taskType,
       'reward_type': rewardType,
       'original_price_per_participant': originalPricePerParticipant,
@@ -361,6 +373,9 @@ class Activity extends Equatable {
     String? expertId,
     int? expertServiceId,
     String? location,
+    double? latitude,
+    double? longitude,
+    int? serviceRadiusKm,
     String? taskType,
     String? rewardType,
     double? originalPricePerParticipant,
@@ -419,6 +434,9 @@ class Activity extends Equatable {
       expertId: expertId ?? this.expertId,
       expertServiceId: expertServiceId ?? this.expertServiceId,
       location: location ?? this.location,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      serviceRadiusKm: serviceRadiusKm ?? this.serviceRadiusKm,
       taskType: taskType ?? this.taskType,
       rewardType: rewardType ?? this.rewardType,
       originalPricePerParticipant: originalPricePerParticipant ?? this.originalPricePerParticipant,
@@ -471,7 +489,7 @@ class Activity extends Equatable {
   @override
   List<Object?> get props => [
         id, title, titleEn, titleZh, description, descriptionEn, descriptionZh,
-        expertId, expertServiceId, location, taskType, rewardType,
+        expertId, expertServiceId, location, latitude, longitude, serviceRadiusKm, taskType, rewardType,
         originalPricePerParticipant, discountPercentage, discountedPricePerParticipant,
         currency, pointsReward, maxParticipants, minParticipants, currentParticipants,
         completionRule, rewardDistribution, status, isPublic, visibility,
