@@ -782,3 +782,217 @@ async def list_customer_packages(
         })
 
     return {"items": items, "total": total, "limit": limit, "offset": offset}
+
+
+# ==================== 5. 退款 / 争议 / 评价 ====================
+
+async def _load_package_for_update(
+    db: AsyncSession, package_id: int, user_id: str
+) -> UserServicePackage:
+    """Load a package row with SELECT FOR UPDATE, verify ownership."""
+    result = await db.execute(
+        select(UserServicePackage)
+        .where(
+            and_(
+                UserServicePackage.id == package_id,
+                UserServicePackage.user_id == user_id,
+            )
+        )
+        .with_for_update()
+    )
+    pkg = result.scalar_one_or_none()
+    if not pkg:
+        raise HTTPException(
+            status_code=404,
+            detail={"error_code": "package_not_found", "message": "套餐不存在"},
+        )
+    return pkg
+
+
+async def _process_full_refund(db: AsyncSession, pkg, reason: str) -> dict:
+    """Process a full refund: sets status='refunded', creates RefundRequest row."""
+    paid_pence = int(round(float(pkg.paid_amount) * 100))
+    pkg.status = "refunded"
+    pkg.refunded_amount_pence = paid_pence
+
+    db.add(models.RefundRequest(
+        task_id=None,
+        package_id=pkg.id,
+        poster_id=pkg.user_id,
+        refund_amount=paid_pence / 100.0,
+        reason=reason or "cooldown_full_refund",
+        status="approved_auto",
+    ))
+    await db.commit()
+
+    # Best-effort notifications
+    try:
+        await _notify_package_refunded(db, pkg, full=True)
+    except Exception as e:
+        logger.warning(f"Failed to send package refund notification: {e}")
+
+    return {
+        "refund_type": "full",
+        "status": "refunded",
+        "refund_amount_pence": paid_pence,
+        "transfer_amount_pence": 0,
+        "platform_fee_pence": 0,
+    }
+
+
+async def _process_partial_refund(db: AsyncSession, pkg, reason: str) -> dict:
+    """Process a pro-rata refund: consumed → expert, unconsumed → buyer."""
+    from app.services.package_settlement import compute_package_split
+
+    split = compute_package_split(pkg)
+
+    if split["consumed_value_pence"] == 0:
+        # Past cooldown but never used → behaves as full refund
+        return await _process_full_refund(db, pkg, reason)
+
+    if split["unconsumed_value_pence"] == 0:
+        raise HTTPException(
+            400,
+            {"error_code": "package_already_exhausted", "message": "套餐已用完"},
+        )
+
+    pkg.status = "partially_refunded"
+    pkg.released_amount_pence = split["transfer_pence"]
+    pkg.platform_fee_pence = split["fee_pence"]
+    pkg.refunded_amount_pence = split["unconsumed_value_pence"]
+
+    db.add(models.PaymentTransfer(
+        task_id=None,
+        package_id=pkg.id,
+        taker_expert_id=pkg.expert_id,
+        poster_id=pkg.user_id,
+        amount=split["transfer_pence"] / 100.0,
+        currency=pkg.currency or "GBP",
+        status="pending",
+        idempotency_key=f"pkg_{pkg.id}_partial_transfer",
+    ))
+    db.add(models.RefundRequest(
+        task_id=None,
+        package_id=pkg.id,
+        poster_id=pkg.user_id,
+        refund_amount=split["unconsumed_value_pence"] / 100.0,
+        reason=reason or "user_cancel_partial",
+        status="approved_auto",
+    ))
+    await db.commit()
+
+    try:
+        await _notify_package_refunded(db, pkg, full=False)
+    except Exception as e:
+        logger.warning(f"Failed to send partial refund notification: {e}")
+
+    return {
+        "refund_type": "pro_rata",
+        "status": "partially_refunded",
+        "refund_amount_pence": split["unconsumed_value_pence"],
+        "transfer_amount_pence": split["transfer_pence"],
+        "platform_fee_pence": split["fee_pence"],
+    }
+
+
+async def _notify_package_refunded(db: AsyncSession, pkg, full: bool):
+    """Best-effort notification to buyer + expert team admins."""
+    from app.async_crud import AsyncNotificationCRUD
+    from app.utils.notification_templates import get_notification_texts
+
+    # Look up service name for the template
+    svc_result = await db.execute(
+        select(models.TaskExpertService).where(
+            models.TaskExpertService.id == pkg.service_id
+        )
+    )
+    service_obj = svc_result.scalar_one_or_none()
+    service_name = service_obj.service_name if service_obj else ""
+
+    notif_type = "package_refunded_full" if full else "package_refunded_partial"
+    t_zh, c_zh, t_en, c_en = get_notification_texts(notif_type, service_name=service_name)
+
+    # Buyer
+    await AsyncNotificationCRUD.create_notification(
+        db=db, user_id=pkg.user_id, notification_type=notif_type,
+        title=t_zh, content=c_zh, title_en=t_en, content_en=c_en,
+        related_id=str(pkg.id), related_type="package",
+    )
+
+    # Expert team admins
+    managers_result = await db.execute(
+        select(ExpertMember.user_id).where(
+            ExpertMember.expert_id == pkg.expert_id,
+            ExpertMember.status == "active",
+            ExpertMember.role.in_(["owner", "admin"]),
+        )
+    )
+    for (mid,) in managers_result.all():
+        await AsyncNotificationCRUD.create_notification(
+            db=db, user_id=mid, notification_type=notif_type,
+            title=t_zh, content=c_zh, title_en=t_en, content_en=c_en,
+            related_id=str(pkg.id), related_type="package",
+        )
+
+
+@package_purchase_router.post("/api/my/packages/{package_id}/refund")
+async def request_package_refund(
+    package_id: int,
+    request: Request,
+    body: dict = None,
+    db: AsyncSession = Depends(get_async_db_dependency),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+):
+    """Buyer requests refund for a package.
+
+    Dispatches to full refund (scenario A/C1) or pro-rata (scenario B/C2)
+    based on cooldown state and usage.
+    """
+    pkg = await _load_package_for_update(db, package_id, current_user.id)
+
+    # State guard
+    if pkg.status != "active":
+        error_code_map = {
+            "exhausted": "package_already_exhausted",
+            "expired": "package_expired",
+            "disputed": "package_disputed",
+            "refunded": "package_already_refunded",
+            "partially_refunded": "package_already_refunded",
+            "released": "package_already_released",
+            "cancelled": "package_cancelled",
+        }
+        error_code = error_code_map.get(pkg.status, "package_not_active")
+        raise HTTPException(
+            400,
+            {"error_code": error_code, "message": f"Package status is {pkg.status}"},
+        )
+
+    now = get_utc_time()
+
+    # Lazy expiry check
+    if pkg.expires_at:
+        expires = pkg.expires_at
+        if expires.tzinfo is None:
+            expires = expires.replace(tzinfo=timezone.utc)
+        if expires < now:
+            from app.services.package_settlement import trigger_package_release
+            pkg.status = "expired"
+            trigger_package_release(db, pkg, reason="expired")
+            await db.commit()
+            raise HTTPException(
+                400,
+                {"error_code": "package_expired", "message": "套餐已过期"},
+            )
+
+    in_cooldown = pkg.cooldown_until and now < (
+        pkg.cooldown_until.replace(tzinfo=timezone.utc)
+        if pkg.cooldown_until.tzinfo is None
+        else pkg.cooldown_until
+    )
+    never_used = pkg.used_sessions == 0
+    reason = ((body or {}).get("reason") or "").strip()[:500]
+
+    if in_cooldown and never_used:
+        return await _process_full_refund(db, pkg, reason)
+    else:
+        return await _process_partial_refund(db, pkg, reason)
