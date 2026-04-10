@@ -12807,7 +12807,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'You will receive a pro-rata refund based on unused sessions. Continue?';
 
   @override
-  String get packageRefundSuccess => 'Request submitted';
+  String get packageRefundSuccess => 'Refund request submitted';
+
+  @override
+  String get packageReviewSuccess => 'Review submitted';
+
+  @override
+  String get packageDisputeSuccess => 'Dispute submitted';
 
   @override
   String expertPackageNumber(String id) {

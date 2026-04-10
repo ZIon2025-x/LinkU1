@@ -5486,7 +5486,9 @@
   "packageRefundConfirmTitle": "確認退款",
   "packageRefundConfirmFullContent": "您將獲得全額退款，是否繼續？",
   "packageRefundConfirmPartialContent": "您將按未使用次數比例獲得退款，是否繼續？",
-  "packageRefundSuccess": "申請已提交",
+  "packageRefundSuccess": "退款申請已提交",
+  "packageReviewSuccess": "評價已提交",
+  "packageDisputeSuccess": "爭議已提交",
   "expertPackageNumber": "套餐 #{id}",
   "@expertPackageNumber": {
     "placeholders": { "id": {"type": "String"} }

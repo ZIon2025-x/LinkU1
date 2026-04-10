@@ -287,7 +287,7 @@ Future<void> _openReviewDialog(BuildContext context, Map<String, dynamic> p) asy
     commentController.dispose();
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(l10n.packageRefundSuccess)),
+      SnackBar(content: Text(l10n.packageReviewSuccess)),
     );
     context.read<ExpertTeamBloc>().add(ExpertTeamLoadMyPackages());
   } catch (e) {
@@ -346,7 +346,7 @@ Future<void> _openDisputeDialog(BuildContext context, Map<String, dynamic> p) as
     reasonController.dispose();
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(l10n.packageRefundSuccess)),
+      SnackBar(content: Text(l10n.packageDisputeSuccess)),
     );
     context.read<ExpertTeamBloc>().add(ExpertTeamLoadMyPackages());
   } catch (e) {

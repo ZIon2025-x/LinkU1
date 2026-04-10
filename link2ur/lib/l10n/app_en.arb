@@ -5657,7 +5657,9 @@
   "packageRefundConfirmTitle": "Confirm Refund",
   "packageRefundConfirmFullContent": "You will receive a full refund. Continue?",
   "packageRefundConfirmPartialContent": "You will receive a pro-rata refund based on unused sessions. Continue?",
-  "packageRefundSuccess": "Request submitted",
+  "packageRefundSuccess": "Refund request submitted",
+  "packageReviewSuccess": "Review submitted",
+  "packageDisputeSuccess": "Dispute submitted",
   "expertPackageNumber": "Package #{id}",
   "@expertPackageNumber": {
     "placeholders": { "id": {"type": "String"} }

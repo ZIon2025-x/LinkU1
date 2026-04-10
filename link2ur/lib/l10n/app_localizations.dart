@@ -23612,8 +23612,20 @@ abstract class AppLocalizations {
   /// No description provided for @packageRefundSuccess.
   ///
   /// In en, this message translates to:
-  /// **'Request submitted'**
+  /// **'Refund request submitted'**
   String get packageRefundSuccess;
+
+  /// No description provided for @packageReviewSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Review submitted'**
+  String get packageReviewSuccess;
+
+  /// No description provided for @packageDisputeSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Dispute submitted'**
+  String get packageDisputeSuccess;
 
   /// No description provided for @expertPackageNumber.
   ///

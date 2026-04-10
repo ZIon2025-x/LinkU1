@@ -12282,7 +12282,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get packageRefundConfirmPartialContent => '您将按未使用次数比例获得退款，是否继续？';
 
   @override
-  String get packageRefundSuccess => '申请已提交';
+  String get packageRefundSuccess => '退款申请已提交';
+
+  @override
+  String get packageReviewSuccess => '评价已提交';
+
+  @override
+  String get packageDisputeSuccess => '争议已提交';
 
   @override
   String expertPackageNumber(String id) {
@@ -24658,7 +24664,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get packageRefundConfirmPartialContent => '您將按未使用次數比例獲得退款，是否繼續？';
 
   @override
-  String get packageRefundSuccess => '申請已提交';
+  String get packageRefundSuccess => '退款申請已提交';
+
+  @override
+  String get packageReviewSuccess => '評價已提交';
+
+  @override
+  String get packageDisputeSuccess => '爭議已提交';
 
   @override
   String expertPackageNumber(String id) {
