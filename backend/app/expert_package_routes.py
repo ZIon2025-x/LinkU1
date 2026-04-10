@@ -152,6 +152,7 @@ async def use_package_session(
         package_id=package_id,
         used_by=current_user.id,
         sub_service_id=sub_service_id,
+        redeem_method="manual",
         note=body.get("note"),
     )
     db.add(log)

@@ -891,6 +891,7 @@ async def _process_full_refund(db: AsyncSession, pkg, reason: str) -> dict:
     await db.refresh(refund_req)
 
     # Execute Stripe refund (blocking → thread pool)
+    error = None
     if pkg.payment_intent_id:
         success, refund_id, error = await asyncio.to_thread(
             _execute_stripe_refund_sync,
