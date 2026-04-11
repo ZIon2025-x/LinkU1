@@ -408,6 +408,7 @@ class _ServiceFormSheetState extends State<_ServiceFormSheet> {
   String? _location;
   double? _latitude;
   double? _longitude;
+  int? _serviceRadiusKm;
   bool _showEnglish = false;
 
   static const _nameMaxLength = 100;
@@ -437,6 +438,7 @@ class _ServiceFormSheetState extends State<_ServiceFormSheet> {
     _location = s?['location'] as String?;
     _latitude = (s?['latitude'] as num?)?.toDouble();
     _longitude = (s?['longitude'] as num?)?.toDouble();
+    _serviceRadiusKm = s?['service_radius_km'] as int?;
 
     // Auto-expand English section if editing and has English content
     if (_nameEnController.text.isNotEmpty ||
@@ -547,6 +549,9 @@ class _ServiceFormSheetState extends State<_ServiceFormSheet> {
       }
       if (_latitude != null) data['latitude'] = _latitude;
       if (_longitude != null) data['longitude'] = _longitude;
+      if (_serviceRadiusKm != null) {
+        data['service_radius_km'] = _serviceRadiusKm;
+      }
     }
 
     final nameEn = _nameEnController.text.trim();
@@ -885,6 +890,7 @@ class _ServiceFormSheetState extends State<_ServiceFormSheet> {
                         _location = null;
                         _latitude = null;
                         _longitude = null;
+                        _serviceRadiusKm = null;
                       }
                     });
                   },
@@ -906,6 +912,36 @@ class _ServiceFormSheetState extends State<_ServiceFormSheet> {
                     _latitude = lat;
                     _longitude = lng;
                   },
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  context.l10n.selectServiceRadius,
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    ChoiceChip(
+                      label: Text(context.l10n.inheritTeamDefault),
+                      selected: _serviceRadiusKm == null,
+                      onSelected: (selected) {
+                        if (selected) setState(() => _serviceRadiusKm = null);
+                      },
+                    ),
+                    ...[5, 10, 25, 50, 0].map((r) {
+                      final label = r == 0
+                          ? context.l10n.serviceRadiusWholeCity
+                          : context.l10n.serviceRadiusKm(r);
+                      return ChoiceChip(
+                        label: Text(label),
+                        selected: _serviceRadiusKm == r,
+                        onSelected: (selected) {
+                          setState(() => _serviceRadiusKm = selected ? r : null);
+                        },
+                      );
+                    }),
+                  ],
                 ),
               ],
               const SizedBox(height: 24),
