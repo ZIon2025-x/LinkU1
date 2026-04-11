@@ -5,7 +5,7 @@ The team owner's user_id is mirrored into the legacy ``activities.expert_id``
 column (Y-scheme alignment); ``owner_type`` is the source of truth.
 """
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -69,7 +69,7 @@ class TeamActivityCreate(BaseModel):
     # Location coordinates + radius
     latitude: Optional[float] = None
     longitude: Optional[float] = None
-    service_radius_km: Optional[float] = None
+    service_radius_km: Optional[Literal[0, 5, 10, 25, 50]] = None
 
 
 @router.post("/{expert_id}/activities")
