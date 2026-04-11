@@ -1,9 +1,12 @@
+from math import radians, cos, sqrt
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, case, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models
 from app.deps import get_async_db_dependency
+from app.models_expert import Expert
 
 service_browse_router = APIRouter(
     prefix="/api/services",
@@ -23,28 +26,22 @@ async def browse_services(
     page_size: int = Query(20, ge=1, le=50),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    base_filter = select(models.TaskExpertService).where(
-        models.TaskExpertService.status == "active",
-    )
+    S = models.TaskExpertService  # alias for readability
+
+    base_filter = select(S).where(S.status == "active")
 
     # Type filter
     if type == "expert":
-        base_filter = base_filter.where(models.TaskExpertService.service_type == "expert")
+        base_filter = base_filter.where(S.service_type == "expert")
     elif type == "personal":
-        base_filter = base_filter.where(models.TaskExpertService.service_type == "personal")
+        base_filter = base_filter.where(S.service_type == "personal")
 
     # Text search (bilingual keyword expansion)
     if q:
         from app.utils.search_expander import build_keyword_filter
         keyword_expr = build_keyword_filter(
-            columns=[
-                models.TaskExpertService.service_name,
-                models.TaskExpertService.service_name_en,
-                models.TaskExpertService.service_name_zh,
-                models.TaskExpertService.description,
-                models.TaskExpertService.description_en,
-                models.TaskExpertService.description_zh,
-            ],
+            columns=[S.service_name, S.service_name_en, S.service_name_zh,
+                     S.description, S.description_en, S.description_zh],
             keyword=q,
             use_similarity=False,
         )
@@ -53,18 +50,30 @@ async def browse_services(
 
     # Apply filters (including nearby) before counting
     query = base_filter
+    distance_sq = None  # will be set if sort == "nearby"
+
     if sort == "nearby":
         if lat is None or lng is None:
             raise HTTPException(status_code=400, detail="lat and lng required for nearby sort")
+
+        # LEFT JOIN experts to get fallback lat/lng for services that inherit team address
+        query = query.outerjoin(Expert, S.expert_id == Expert.id)
+
+        # Effective coordinates: service's own ?? expert team's
+        effective_lat = func.coalesce(S.latitude, Expert.latitude)
+        effective_lng = func.coalesce(S.longitude, Expert.longitude)
+
+        # Only in_person/both services that have coordinates (own or inherited)
         query = query.where(
-            models.TaskExpertService.location_type.in_(["in_person", "both"]),
-            models.TaskExpertService.latitude.isnot(None),
-            models.TaskExpertService.longitude.isnot(None),
+            S.location_type.in_(["in_person", "both"]),
+            effective_lat.isnot(None),
+            effective_lng.isnot(None),
         )
-        from sqlalchemy import func as sa_func
+
+        # Bounding box + distance filter
         radius_deg = radius / 111.0
-        lat_diff = models.TaskExpertService.latitude - lat
-        lng_diff = (models.TaskExpertService.longitude - lng) * sa_func.cos(sa_func.radians(lat))
+        lat_diff = effective_lat - lat
+        lng_diff = (effective_lng - lng) * func.cos(func.radians(lat))
         distance_sq = lat_diff * lat_diff + lng_diff * lng_diff
         query = query.where(distance_sq <= radius_deg * radius_deg)
 
@@ -76,18 +85,15 @@ async def browse_services(
     # Sort / Order
     if sort == "recommended":
         query = query.order_by(
-            case(
-                (models.TaskExpertService.service_type == "expert", 0),
-                else_=1,
-            ),
-            models.TaskExpertService.created_at.desc(),
+            case((S.service_type == "expert", 0), else_=1),
+            S.created_at.desc(),
         )
     elif sort == "newest":
-        query = query.order_by(models.TaskExpertService.created_at.desc())
+        query = query.order_by(S.created_at.desc())
     elif sort == "price_asc":
-        query = query.order_by(models.TaskExpertService.base_price.asc())
+        query = query.order_by(S.base_price.asc())
     elif sort == "price_desc":
-        query = query.order_by(models.TaskExpertService.base_price.desc())
+        query = query.order_by(S.base_price.desc())
     elif sort == "nearby":
         query = query.order_by(distance_sq.asc())
 
@@ -99,7 +105,6 @@ async def browse_services(
     services = result.scalars().all()
 
     # Batch-load owner user info (avoid N+1)
-    # personal services: owner is user_id; expert services: owner is expert_id (same as user id)
     owner_ids = set()
     for s in services:
         if s.owner_user_id:
@@ -114,11 +119,10 @@ async def browse_services(
         for u in owners_result.scalars().all():
             owners_map[u.id] = u
 
-    # Batch-load expert teams for location fallback (spec: effective lat/lng/radius = service ?? expert)
+    # Batch-load expert teams for location fallback (spec: effective = service ?? expert)
     expert_ids = {s.expert_id for s in services if s.expert_id}
     experts_map = {}
     if expert_ids:
-        from app.models_expert import Expert
         experts_result = await db.execute(
             select(Expert).where(Expert.id.in_(list(expert_ids)))
         )
@@ -132,9 +136,9 @@ async def browse_services(
 
         # Fallback to expert team values when service's own values are null
         expert = experts_map.get(s.expert_id) if s.expert_id else None
-        effective_lat = float(s.latitude) if s.latitude else (float(expert.latitude) if expert and expert.latitude else None)
-        effective_lng = float(s.longitude) if s.longitude else (float(expert.longitude) if expert and expert.longitude else None)
-        effective_radius = s.service_radius_km if s.service_radius_km is not None else (expert.service_radius_km if expert else None)
+        eff_lat = float(s.latitude) if s.latitude else (float(expert.latitude) if expert and expert.latitude else None)
+        eff_lng = float(s.longitude) if s.longitude else (float(expert.longitude) if expert and expert.longitude else None)
+        eff_radius = s.service_radius_km if s.service_radius_km is not None else (expert.service_radius_km if expert else None)
 
         item = {
             "id": s.id,
@@ -159,19 +163,17 @@ async def browse_services(
             "owner_avatar": owner.avatar if owner else None,
             "owner_rating": float(owner.avg_rating) if owner and owner.avg_rating else None,
             "created_at": s.created_at.isoformat() if s.created_at else None,
-            "service_radius_km": effective_radius,
+            "service_radius_km": eff_radius,
         }
-        if lat is not None and lng is not None and effective_lat is not None and effective_lng is not None:
-            from math import radians, cos, sqrt
-            lat_d = effective_lat - lat
-            lng_d = (effective_lng - lng) * cos(radians(lat))
+        if lat is not None and lng is not None and eff_lat is not None and eff_lng is not None:
+            lat_d = eff_lat - lat
+            lng_d = (eff_lng - lng) * cos(radians(lat))
             dist_km = sqrt(lat_d * lat_d + lng_d * lng_d) * 111.0
             item["distance_km"] = round(dist_km, 1)
-            # within_service_area: null/0 radius = no limit = always true
-            if effective_radius is None or effective_radius == 0 or s.location_type == "online":
+            if eff_radius is None or eff_radius == 0 or s.location_type == "online":
                 item["within_service_area"] = True
             else:
-                item["within_service_area"] = dist_km <= effective_radius
+                item["within_service_area"] = dist_km <= eff_radius
         items.append(item)
 
     return {"items": items, "total": total, "page": page, "page_size": page_size}
