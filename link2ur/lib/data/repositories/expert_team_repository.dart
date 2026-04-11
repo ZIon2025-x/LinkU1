@@ -317,19 +317,19 @@ class ExpertTeamRepository {
 
   Future<void> updateExpertLocation(
     String expertId, {
-    String? location,
-    double? latitude,
-    double? longitude,
-    int? serviceRadiusKm,
+    required String? location,
+    required double? latitude,
+    required double? longitude,
+    required int? serviceRadiusKm,
   }) async {
-    final data = <String, dynamic>{};
-    if (location != null) data['location'] = location;
-    if (latitude != null) data['latitude'] = latitude;
-    if (longitude != null) data['longitude'] = longitude;
-    if (serviceRadiusKm != null) data['service_radius_km'] = serviceRadiusKm;
     await _apiService.put(
       '${ApiEndpoints.expertTeams}/$expertId/location',
-      data: data,
+      data: {
+        'location': location,
+        'latitude': latitude,
+        'longitude': longitude,
+        'service_radius_km': serviceRadiusKm,
+      },
     );
   }
 

@@ -114,10 +114,28 @@ async def browse_services(
         for u in owners_result.scalars().all():
             owners_map[u.id] = u
 
+    # Batch-load expert teams for location fallback (spec: effective lat/lng/radius = service ?? expert)
+    expert_ids = {s.expert_id for s in services if s.expert_id}
+    experts_map = {}
+    if expert_ids:
+        from app.models_expert import Expert
+        experts_result = await db.execute(
+            select(Expert).where(Expert.id.in_(list(expert_ids)))
+        )
+        for e in experts_result.scalars().all():
+            experts_map[e.id] = e
+
     items = []
     for s in services:
         effective_owner_id = s.owner_user_id or s.expert_id or ""
         owner = owners_map.get(effective_owner_id)
+
+        # Fallback to expert team values when service's own values are null
+        expert = experts_map.get(s.expert_id) if s.expert_id else None
+        effective_lat = float(s.latitude) if s.latitude else (float(expert.latitude) if expert and expert.latitude else None)
+        effective_lng = float(s.longitude) if s.longitude else (float(expert.longitude) if expert and expert.longitude else None)
+        effective_radius = s.service_radius_km if s.service_radius_km is not None else (expert.service_radius_km if expert else None)
+
         item = {
             "id": s.id,
             "service_name": s.service_name,
@@ -141,20 +159,19 @@ async def browse_services(
             "owner_avatar": owner.avatar if owner else None,
             "owner_rating": float(owner.avg_rating) if owner and owner.avg_rating else None,
             "created_at": s.created_at.isoformat() if s.created_at else None,
-            "service_radius_km": s.service_radius_km,
+            "service_radius_km": effective_radius,
         }
-        if lat is not None and lng is not None and s.latitude and s.longitude:
+        if lat is not None and lng is not None and effective_lat is not None and effective_lng is not None:
             from math import radians, cos, sqrt
-            lat_d = float(s.latitude) - lat
-            lng_d = (float(s.longitude) - lng) * cos(radians(lat))
+            lat_d = effective_lat - lat
+            lng_d = (effective_lng - lng) * cos(radians(lat))
             dist_km = sqrt(lat_d * lat_d + lng_d * lng_d) * 111.0
             item["distance_km"] = round(dist_km, 1)
             # within_service_area: null/0 radius = no limit = always true
-            radius = s.service_radius_km
-            if radius is None or radius == 0 or s.location_type == "online":
+            if effective_radius is None or effective_radius == 0 or s.location_type == "online":
                 item["within_service_area"] = True
             else:
-                item["within_service_area"] = dist_km <= radius
+                item["within_service_area"] = dist_km <= effective_radius
         items.append(item)
 
     return {"items": items, "total": total, "page": page, "page_size": page_size}

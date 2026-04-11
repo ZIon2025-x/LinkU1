@@ -197,36 +197,46 @@ class _ServiceDetailContent extends StatelessWidget {
                               const SizedBox(height: 20),
 
                               if (withinServiceArea == false)
-                                Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.all(12),
-                                  margin:
-                                      const EdgeInsets.only(bottom: 8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.orange.shade50,
-                                    borderRadius:
-                                        BorderRadius.circular(8),
-                                    border: Border.all(
-                                        color: Colors.orange.shade200),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.info_outline,
-                                          color: Colors.orange.shade700,
-                                          size: 18),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          context.l10n.outsideServiceArea,
-                                          style: TextStyle(
-                                              color:
-                                                  Colors.orange.shade800,
-                                              fontSize: 13),
+                                Builder(builder: (context) {
+                                  final isBannerDark = Theme.of(context).brightness == Brightness.dark;
+                                  return Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(12),
+                                    margin:
+                                        const EdgeInsets.only(bottom: 8),
+                                    decoration: BoxDecoration(
+                                      color: isBannerDark
+                                          ? Colors.orange.withAlpha(30)
+                                          : Colors.orange.shade50,
+                                      borderRadius:
+                                          BorderRadius.circular(8),
+                                      border: Border.all(
+                                          color: isBannerDark
+                                              ? Colors.orange.withAlpha(80)
+                                              : Colors.orange.shade200),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.info_outline,
+                                            color: isBannerDark
+                                                ? Colors.orange.shade300
+                                                : Colors.orange.shade700,
+                                            size: 18),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            context.l10n.outsideServiceArea,
+                                            style: TextStyle(
+                                                color: isBannerDark
+                                                    ? Colors.orange.shade200
+                                                    : Colors.orange.shade800,
+                                                fontSize: 13),
+                                          ),
                                         ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                                      ],
+                                    ),
+                                  );
+                                }),
 
                               _ReviewsCard(
                                 reviews: state.reviews,

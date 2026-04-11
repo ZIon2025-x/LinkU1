@@ -26,6 +26,7 @@ class ExpertTeam extends Equatable {
   final int? forumCategoryId;
   final List<ExpertMember>? members;
   final bool? isFeatured;
+  final String? location;
   final double? latitude;
   final double? longitude;
   final int? serviceRadiusKm;
@@ -55,6 +56,7 @@ class ExpertTeam extends Equatable {
     this.forumCategoryId,
     this.members,
     this.isFeatured,
+    this.location,
     this.latitude,
     this.longitude,
     this.serviceRadiusKm,
@@ -88,6 +90,7 @@ class ExpertTeam extends Equatable {
           ? (json['members'] as List).map((e) => ExpertMember.fromJson(e as Map<String, dynamic>)).toList()
           : null,
       isFeatured: json['is_featured'] as bool?,
+      location: json['location'] as String?,
       latitude: (json['latitude'] as num?)?.toDouble(),
       longitude: (json['longitude'] as num?)?.toDouble(),
       serviceRadiusKm: json['service_radius_km'] as int?,
@@ -111,7 +114,7 @@ class ExpertTeam extends Equatable {
         totalServices, completedTasks, completionRate,
         isOfficial, officialBadge, stripeOnboardingComplete,
         createdAt, isFollowing, myRole, forumCategoryId, members, isFeatured,
-        latitude, longitude, serviceRadiusKm,
+        location, latitude, longitude, serviceRadiusKm,
       ];
 }
 

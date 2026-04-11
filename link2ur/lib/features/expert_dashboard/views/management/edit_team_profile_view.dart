@@ -52,6 +52,7 @@ class _EditBodyState extends State<_EditBody> {
     if (!_initialized) {
       _nameCtrl.text = team.name;
       _bioCtrl.text = team.bio ?? '';
+      _location = team.location;
       _latitude = team.latitude;
       _longitude = team.longitude;
       _serviceRadiusKm = team.serviceRadiusKm;
@@ -197,7 +198,8 @@ class _EditBodyState extends State<_EditBody> {
                                     final newBio = _bioCtrl.text.trim() != (team.bio ?? '')
                                         ? _bioCtrl.text.trim()
                                         : null;
-                                    final locationChanged = _latitude != team.latitude ||
+                                    final locationChanged = _location != team.location ||
+                                        _latitude != team.latitude ||
                                         _longitude != team.longitude ||
                                         _serviceRadiusKm != team.serviceRadiusKm;
 
