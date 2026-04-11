@@ -3207,8 +3207,8 @@ class ActivityCreate(BaseModel):
     expert_service_id: int
     deadline: Optional[datetime.datetime] = None
     location: str
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
+    latitude: Optional[float] = Field(None, ge=-90, le=90)
+    longitude: Optional[float] = Field(None, ge=-180, le=180)
     service_radius_km: Optional[Literal[0, 5, 10, 25, 50]] = None
     task_type: str
     reward_type: Literal["cash", "points", "both"] = "cash"

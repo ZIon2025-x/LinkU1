@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import Optional, List, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -67,8 +67,8 @@ class TeamActivityCreate(BaseModel):
     images: Optional[List[str]] = None
 
     # Location coordinates + radius
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
+    latitude: Optional[float] = Field(None, ge=-90, le=90)
+    longitude: Optional[float] = Field(None, ge=-180, le=180)
     service_radius_km: Optional[Literal[0, 5, 10, 25, 50]] = None
 
 
@@ -187,7 +187,7 @@ async def create_team_activity(
         # Geo-location and service radius
         latitude=body.latitude,
         longitude=body.longitude,
-        service_radius_km=body.service_radius_km if body.latitude else None,
+        service_radius_km=body.service_radius_km,
         # New polymorphic fields (source of truth).
         owner_type='expert',
         owner_id=expert.id,

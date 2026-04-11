@@ -549,7 +549,8 @@ class _ServiceFormSheetState extends State<_ServiceFormSheet> {
       }
       if (_latitude != null) data['latitude'] = _latitude;
       if (_longitude != null) data['longitude'] = _longitude;
-      if (_serviceRadiusKm != null) {
+      // Always send service_radius_km on edit (null = inherit team default)
+      if (_isEditing || _serviceRadiusKm != null) {
         data['service_radius_km'] = _serviceRadiusKm;
       }
     }
