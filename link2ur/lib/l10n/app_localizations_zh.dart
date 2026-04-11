@@ -10136,6 +10136,51 @@ class AppLocalizationsZh extends AppLocalizations {
   String get expertDashboardTabSchedule => '日程';
 
   @override
+  String get expertDashboardTabActivities => '活动';
+
+  @override
+  String get expertActivitiesEmpty => '暂无活动';
+
+  @override
+  String get expertActivitiesEmptyMessage => '点击 + 发布第一个活动';
+
+  @override
+  String get expertActivityCreate => '发布活动';
+
+  @override
+  String get expertActivityPublished => '活动已发布';
+
+  @override
+  String get expertActivityTitle => '活动标题';
+
+  @override
+  String get expertActivityTitleHint => '例如：团体摄影课';
+
+  @override
+  String get expertActivityDescription => '活动描述';
+
+  @override
+  String get expertActivityDescriptionHint => '描述这个活动...';
+
+  @override
+  String get expertActivityDeadline => '报名截止时间';
+
+  @override
+  String get expertActivityMaxParticipants => '最大参与人数';
+
+  @override
+  String get expertActivityMinParticipants => '最小参与人数';
+
+  @override
+  String get expertActivityPricePerParticipant => '每人价格';
+
+  @override
+  String get expertActivitySelectService => '关联服务';
+
+  @override
+  String get expertActivitySelectServiceHint => '选择该活动基于的服务';
+
+  @override
   String get expertDashboardEditProfile => '编辑资料';
 
   @override
@@ -22575,6 +22620,51 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get expertDashboardTabSchedule => '日程';
+
+  @override
+  String get expertDashboardTabActivities => '活動';
+
+  @override
+  String get expertActivitiesEmpty => '暫無活動';
+
+  @override
+  String get expertActivitiesEmptyMessage => '點擊 + 發布第一個活動';
+
+  @override
+  String get expertActivityCreate => '發布活動';
+
+  @override
+  String get expertActivityPublished => '活動已發布';
+
+  @override
+  String get expertActivityTitle => '活動標題';
+
+  @override
+  String get expertActivityTitleHint => '例如：團體攝影課';
+
+  @override
+  String get expertActivityDescription => '活動描述';
+
+  @override
+  String get expertActivityDescriptionHint => '描述這個活動...';
+
+  @override
+  String get expertActivityDeadline => '報名截止時間';
+
+  @override
+  String get expertActivityMaxParticipants => '最大參與人數';
+
+  @override
+  String get expertActivityMinParticipants => '最小參與人數';
+
+  @override
+  String get expertActivityPricePerParticipant => '每人價格';
+
+  @override
+  String get expertActivitySelectService => '關聯服務';
+
+  @override
+  String get expertActivitySelectServiceHint => '選擇該活動基於的服務';
 
   @override
   String get expertDashboardEditProfile => '編輯資料';

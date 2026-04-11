@@ -11,6 +11,7 @@ import '../../../data/repositories/task_expert_repository.dart';
 import '../../../data/services/storage_service.dart';
 import '../bloc/expert_dashboard_bloc.dart';
 import '../bloc/selected_expert_cubit.dart';
+import 'tabs/activities_tab.dart';
 import 'tabs/applications_tab.dart';
 import 'tabs/schedule_tab.dart';
 import 'tabs/services_tab.dart';
@@ -144,6 +145,8 @@ class _DashboardTabs extends StatelessWidget {
         Tab(icon: const Icon(Icons.assignment), text: context.l10n.expertDashboardTabApplications),
       Tab(icon: const Icon(Icons.schedule), text: context.l10n.expertDashboardTabTimeSlots),
       Tab(icon: const Icon(Icons.calendar_month), text: context.l10n.expertDashboardTabSchedule),
+      if (canManage)
+        Tab(icon: const Icon(Icons.event_outlined), text: context.l10n.expertDashboardTabActivities),
     ];
 
     final views = <Widget>[
@@ -152,6 +155,7 @@ class _DashboardTabs extends StatelessWidget {
       if (canManage) const ApplicationsTab(),
       const TimeSlotsTab(),
       const ScheduleTab(),
+      if (canManage) const ActivitiesTab(),
     ];
 
     return BlocProvider(

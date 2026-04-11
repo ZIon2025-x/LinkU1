@@ -19415,6 +19415,96 @@ abstract class AppLocalizations {
   /// **'Schedule'**
   String get expertDashboardTabSchedule;
 
+  /// No description provided for @expertDashboardTabActivities.
+  ///
+  /// In en, this message translates to:
+  /// **'Activities'**
+  String get expertDashboardTabActivities;
+
+  /// No description provided for @expertActivitiesEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No activities yet'**
+  String get expertActivitiesEmpty;
+
+  /// No description provided for @expertActivitiesEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap + to publish your first activity'**
+  String get expertActivitiesEmptyMessage;
+
+  /// No description provided for @expertActivityCreate.
+  ///
+  /// In en, this message translates to:
+  /// **'New Activity'**
+  String get expertActivityCreate;
+
+  /// No description provided for @expertActivityPublished.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity published'**
+  String get expertActivityPublished;
+
+  /// No description provided for @expertActivityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Title'**
+  String get expertActivityTitle;
+
+  /// No description provided for @expertActivityTitleHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Group Photography Session'**
+  String get expertActivityTitleHint;
+
+  /// No description provided for @expertActivityDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Description'**
+  String get expertActivityDescription;
+
+  /// No description provided for @expertActivityDescriptionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe the activity...'**
+  String get expertActivityDescriptionHint;
+
+  /// No description provided for @expertActivityDeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Registration Deadline'**
+  String get expertActivityDeadline;
+
+  /// No description provided for @expertActivityMaxParticipants.
+  ///
+  /// In en, this message translates to:
+  /// **'Max Participants'**
+  String get expertActivityMaxParticipants;
+
+  /// No description provided for @expertActivityMinParticipants.
+  ///
+  /// In en, this message translates to:
+  /// **'Min Participants'**
+  String get expertActivityMinParticipants;
+
+  /// No description provided for @expertActivityPricePerParticipant.
+  ///
+  /// In en, this message translates to:
+  /// **'Price per Participant'**
+  String get expertActivityPricePerParticipant;
+
+  /// No description provided for @expertActivitySelectService.
+  ///
+  /// In en, this message translates to:
+  /// **'Linked Service'**
+  String get expertActivitySelectService;
+
+  /// No description provided for @expertActivitySelectServiceHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Select the service this activity is based on'**
+  String get expertActivitySelectServiceHint;
+
   /// No description provided for @expertDashboardEditProfile.
   ///
   /// In en, this message translates to:

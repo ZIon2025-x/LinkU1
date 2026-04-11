@@ -358,4 +358,21 @@ class ExpertTeamRepository {
     final response = await _apiService.get(ApiEndpoints.expertTeamStripeStatus(expertId));
     return response.data as Map<String, dynamic>;
   }
+
+  // ==================== 活动发布 ====================
+
+  /// 发布团队活动。
+  /// [data] 包含 TeamActivityCreate 字段（title, description, location,
+  /// task_type, deadline, max_participants, expert_service_id 等）。
+  /// 可选地包含 latitude, longitude, service_radius_km。
+  Future<Map<String, dynamic>> createTeamActivity(
+    String expertId,
+    Map<String, dynamic> data,
+  ) async {
+    final response = await _apiService.post(
+      ApiEndpoints.expertTeamActivities(expertId),
+      data: data,
+    );
+    return response.data as Map<String, dynamic>;
+  }
 }

@@ -10563,6 +10563,53 @@ class AppLocalizationsEn extends AppLocalizations {
   String get expertDashboardTabSchedule => 'Schedule';
 
   @override
+  String get expertDashboardTabActivities => 'Activities';
+
+  @override
+  String get expertActivitiesEmpty => 'No activities yet';
+
+  @override
+  String get expertActivitiesEmptyMessage =>
+      'Tap + to publish your first activity';
+
+  @override
+  String get expertActivityCreate => 'New Activity';
+
+  @override
+  String get expertActivityPublished => 'Activity published';
+
+  @override
+  String get expertActivityTitle => 'Title';
+
+  @override
+  String get expertActivityTitleHint => 'e.g. Group Photography Session';
+
+  @override
+  String get expertActivityDescription => 'Description';
+
+  @override
+  String get expertActivityDescriptionHint => 'Describe the activity...';
+
+  @override
+  String get expertActivityDeadline => 'Registration Deadline';
+
+  @override
+  String get expertActivityMaxParticipants => 'Max Participants';
+
+  @override
+  String get expertActivityMinParticipants => 'Min Participants';
+
+  @override
+  String get expertActivityPricePerParticipant => 'Price per Participant';
+
+  @override
+  String get expertActivitySelectService => 'Linked Service';
+
+  @override
+  String get expertActivitySelectServiceHint =>
+      'Select the service this activity is based on';
+
+  @override
   String get expertDashboardEditProfile => 'Edit Profile';
 
   @override
