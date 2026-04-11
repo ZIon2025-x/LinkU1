@@ -37,9 +37,13 @@ import '../bloc/task_expert_bloc.dart';
 /// 服务详情页
 /// 对标iOS ServiceDetailView.swift
 class ServiceDetailView extends StatelessWidget {
-  const ServiceDetailView({super.key, required this.serviceId});
+  const ServiceDetailView(
+      {super.key, required this.serviceId, this.withinServiceArea});
 
   final int serviceId;
+
+  /// null = unknown (not from browse); false = outside service area; true = inside
+  final bool? withinServiceArea;
 
   @override
   Widget build(BuildContext context) {
@@ -54,15 +58,18 @@ class ServiceDetailView extends StatelessWidget {
         ..add(TaskExpertLoadServiceTimeSlots(serviceId))
         ..add(TaskExpertLoadServiceApplications(serviceId))
         ..add(TaskExpertLoadServiceQuestions(serviceId)),
-      child: _ServiceDetailContent(serviceId: serviceId),
+      child: _ServiceDetailContent(
+          serviceId: serviceId, withinServiceArea: withinServiceArea),
     );
   }
 }
 
 class _ServiceDetailContent extends StatelessWidget {
-  const _ServiceDetailContent({required this.serviceId});
+  const _ServiceDetailContent(
+      {required this.serviceId, this.withinServiceArea});
 
   final int serviceId;
+  final bool? withinServiceArea;
 
   bool _isServiceOwner(TaskExpertService? service) {
     if (service == null) return false;
@@ -188,6 +195,38 @@ class _ServiceDetailContent extends StatelessWidget {
                               _DescriptionCard(
                                   service: service, isDark: isDark),
                               const SizedBox(height: 20),
+
+                              if (withinServiceArea == false)
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(12),
+                                  margin:
+                                      const EdgeInsets.only(bottom: 8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange.shade50,
+                                    borderRadius:
+                                        BorderRadius.circular(8),
+                                    border: Border.all(
+                                        color: Colors.orange.shade200),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.info_outline,
+                                          color: Colors.orange.shade700,
+                                          size: 18),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          context.l10n.outsideServiceArea,
+                                          style: TextStyle(
+                                              color:
+                                                  Colors.orange.shade800,
+                                              fontSize: 13),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
 
                               _ReviewsCard(
                                 reviews: state.reviews,

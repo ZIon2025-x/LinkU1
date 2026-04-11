@@ -47,7 +47,13 @@ List<RouteBase> get taskExpertRoutes => [
           if (id == null || id <= 0) {
             return const SizedBox.shrink();
           }
-          return ServiceDetailView(serviceId: id);
+          final withinAreaParam =
+              state.uri.queryParameters['within_service_area'];
+          final withinServiceArea = withinAreaParam == null
+              ? null
+              : withinAreaParam != 'false';
+          return ServiceDetailView(
+              serviceId: id, withinServiceArea: withinServiceArea);
         },
       ),
       GoRoute(

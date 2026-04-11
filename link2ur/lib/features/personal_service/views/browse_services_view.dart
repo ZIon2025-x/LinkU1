@@ -285,7 +285,9 @@ class _ContentState extends State<_Content> {
                           service: service,
                           onTap: () {
                             final id = service['id'];
-                            context.push('/service/$id');
+                            final withinArea = service['within_service_area'];
+                            final extra = withinArea == false ? '?within_service_area=false' : '';
+                            context.push('/service/$id$extra');
                           },
                         ),
                       );
@@ -359,6 +361,7 @@ class _BrowseServiceCard extends StatelessWidget {
     final pricingType = (service['pricing_type'] as String?) ?? 'fixed';
     final serviceType = (service['service_type'] as String?) ?? 'personal';
     final ownerName = (service['owner_name'] as String?) ?? '';
+    final serviceRadiusKm = service['service_radius_km'] as int?;
     final images = service['images'] as List<dynamic>?;
     final firstImage =
         (images != null && images.isNotEmpty) ? images.first as String? : null;
@@ -501,6 +504,25 @@ class _BrowseServiceCard extends StatelessWidget {
                                 ),
                           ),
                         ],
+                      ),
+                    ],
+                    if (serviceRadiusKm != null) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .secondaryContainer,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          serviceRadiusKm == 0
+                              ? context.l10n.serviceRadiusWholeCity
+                              : context.l10n.serviceRadiusKm(serviceRadiusKm),
+                          style: Theme.of(context).textTheme.labelSmall,
+                        ),
                       ),
                     ],
                   ],
