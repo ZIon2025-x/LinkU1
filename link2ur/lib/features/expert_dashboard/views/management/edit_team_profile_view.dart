@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:link2ur/core/utils/error_localizer.dart';
 import 'package:link2ur/core/utils/l10n_extension.dart';
+import 'package:link2ur/core/widgets/location_picker.dart';
 import 'package:link2ur/data/models/expert_team.dart';
 import 'package:link2ur/data/repositories/expert_team_repository.dart';
 import 'package:link2ur/features/expert_team/bloc/expert_team_bloc.dart';
@@ -35,6 +36,10 @@ class _EditBodyState extends State<_EditBody> {
   final _nameCtrl = TextEditingController();
   final _bioCtrl = TextEditingController();
   bool _initialized = false;
+  String? _location;
+  double? _latitude;
+  double? _longitude;
+  int? _serviceRadiusKm;
 
   @override
   void dispose() {
@@ -47,6 +52,9 @@ class _EditBodyState extends State<_EditBody> {
     if (!_initialized) {
       _nameCtrl.text = team.name;
       _bioCtrl.text = team.bio ?? '';
+      _latitude = team.latitude;
+      _longitude = team.longitude;
+      _serviceRadiusKm = team.serviceRadiusKm;
       _initialized = true;
     }
   }
@@ -133,55 +141,128 @@ class _EditBodyState extends State<_EditBody> {
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.orange),
                         ),
                         const SizedBox(height: 24),
+                        Text(
+                          context.l10n.baseAddress,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 8),
+                        LocationInputField(
+                          initialValue: _location,
+                          initialLatitude: _latitude,
+                          initialLongitude: _longitude,
+                          onChanged: (value) => _location = value,
+                          onLocationPicked: (address, lat, lng) {
+                            setState(() {
+                              _location = address;
+                              _latitude = lat;
+                              _longitude = lng;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          context.l10n.defaultServiceRadius,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          children: [5, 10, 25, 50, 0].map((r) {
+                            final label = r == 0
+                                ? context.l10n.serviceRadiusWholeCity
+                                : context.l10n.serviceRadiusKm(r);
+                            return ChoiceChip(
+                              label: Text(label),
+                              selected: _serviceRadiusKm == r,
+                              onSelected: (selected) {
+                                setState(() {
+                                  _serviceRadiusKm = selected ? r : null;
+                                });
+                              },
+                            );
+                          }).toList(),
+                        ),
+                        const SizedBox(height: 24),
                         SizedBox(
                           width: double.infinity,
                           height: 48,
                           child: ElevatedButton(
                             onPressed: state.status == ExpertTeamStatus.loading
                                 ? null
-                                : () {
-                                    if (_formKey.currentState!.validate()) {
-                                      final newName = _nameCtrl.text.trim() != team.name
-                                          ? _nameCtrl.text.trim()
-                                          : null;
-                                      final newBio = _bioCtrl.text.trim() != (team.bio ?? '')
-                                          ? _bioCtrl.text.trim()
-                                          : null;
-                                      if (newName == null && newBio == null) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                              context.l10n.expertTeamEditProfileNoChanges,
-                                            ),
+                                : () async {
+                                    if (!_formKey.currentState!.validate()) return;
+                                    final newName = _nameCtrl.text.trim() != team.name
+                                        ? _nameCtrl.text.trim()
+                                        : null;
+                                    final newBio = _bioCtrl.text.trim() != (team.bio ?? '')
+                                        ? _bioCtrl.text.trim()
+                                        : null;
+                                    final locationChanged = _latitude != team.latitude ||
+                                        _longitude != team.longitude ||
+                                        _serviceRadiusKm != team.serviceRadiusKm;
+
+                                    if (newName == null && newBio == null && !locationChanged) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            context.l10n.expertTeamEditProfileNoChanges,
                                           ),
+                                        ),
+                                      );
+                                      return;
+                                    }
+
+                                    // Cache context-dependent refs before awaits
+                                    final repo = context.read<ExpertTeamRepository>();
+                                    final messenger = ScaffoldMessenger.of(context);
+                                    final router = GoRouter.of(context);
+                                    final submittedMsg = context.l10n.expertTeamEditProfileSubmitted;
+                                    final failedPrefix = context.l10n.expertTeamEditProfileSubmitFailed;
+
+                                    // Profile update (name/bio) goes through review flow
+                                    if (newName != null || newBio != null) {
+                                      try {
+                                        await repo.requestProfileUpdate(
+                                          widget.expertId,
+                                          newName: newName,
+                                          newBio: newBio,
+                                        );
+                                        messenger.showSnackBar(
+                                          SnackBar(content: Text(submittedMsg)),
+                                        );
+                                      } catch (e) {
+                                        final detail = context.mounted
+                                            ? context.localizeError(e.toString())
+                                            : e.toString();
+                                        messenger.showSnackBar(
+                                          SnackBar(content: Text('$failedPrefix: $detail')),
                                         );
                                         return;
                                       }
-                                      context.read<ExpertTeamRepository>().requestProfileUpdate(
-                                        widget.expertId,
-                                        newName: newName,
-                                        newBio: newBio,
-                                      ).then((_) {
-                                        if (context.mounted) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(
-                                              content: Text(
-                                                context.l10n.expertTeamEditProfileSubmitted,
-                                              ),
-                                            ),
-                                          );
-                                          context.pop();
-                                        }
-                                      }).catchError((e) {
-                                        if (context.mounted) {
-                                          final prefix = context.l10n.expertTeamEditProfileSubmitFailed;
-                                          final detail = context.localizeError(e.toString());
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(content: Text('$prefix: $detail')),
-                                          );
-                                        }
-                                      });
                                     }
+
+                                    // Save location directly (no review needed)
+                                    if (locationChanged) {
+                                      try {
+                                        await repo.updateExpertLocation(
+                                          widget.expertId,
+                                          location: _location,
+                                          latitude: _latitude,
+                                          longitude: _longitude,
+                                          serviceRadiusKm: _serviceRadiusKm,
+                                        );
+                                      } catch (e) {
+                                        final detail = context.mounted
+                                            ? context.localizeError(e.toString())
+                                            : e.toString();
+                                        messenger.showSnackBar(
+                                          SnackBar(content: Text(detail)),
+                                        );
+                                        return;
+                                      }
+                                    }
+
+                                    router.pop();
                                   },
                             child: state.status == ExpertTeamStatus.loading
                                 ? const SizedBox(

@@ -313,6 +313,26 @@ class ExpertTeamRepository {
     return response.data as Map<String, dynamic>;
   }
 
+  // ==================== 位置 ====================
+
+  Future<void> updateExpertLocation(
+    String expertId, {
+    String? location,
+    double? latitude,
+    double? longitude,
+    int? serviceRadiusKm,
+  }) async {
+    final data = <String, dynamic>{};
+    if (location != null) data['location'] = location;
+    if (latitude != null) data['latitude'] = latitude;
+    if (longitude != null) data['longitude'] = longitude;
+    if (serviceRadiusKm != null) data['service_radius_km'] = serviceRadiusKm;
+    await _apiService.put(
+      '${ApiEndpoints.expertTeams}/$expertId/location',
+      data: data,
+    );
+  }
+
   // ==================== 板块编辑 ====================
 
   Future<void> updateExpertBoard(String expertId, Map<String, dynamic> data) async {
