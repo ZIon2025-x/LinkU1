@@ -507,8 +507,12 @@ class ErrorLocalizer {
         return context.l10n.errorQrInvalidOrExpired;
       case 'otp_invalid_or_expired':
         return context.l10n.errorOtpInvalidOrExpired;
+      case 'package_id_invalid':
+        return context.l10n.errorSubServiceIdInvalid;
       case 'sub_service_id_invalid':
         return context.l10n.errorSubServiceIdInvalid;
+      case 'sub_service_required':
+        return context.l10n.errorPackageBundleSubRequired;
       case 'sub_service_not_in_bundle':
         return context.l10n.errorSubServiceNotInBundle;
       case 'sub_service_exhausted':

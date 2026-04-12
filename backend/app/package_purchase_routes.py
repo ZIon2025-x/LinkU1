@@ -196,15 +196,54 @@ def _generate_otp(package_id: int, user_id: str) -> str:
     raise RuntimeError("OTP 生成冲突,请重试")
 
 
-def _consume_otp(otp: str) -> Optional[dict]:
-    """验证 + 消费 OTP,返回 {package_id, user_id} 或 None"""
+def _verify_otp(otp: str) -> Optional[dict]:
+    """验证 OTP 但不消费,返回 {package_id, user_id} 或 None。
+
+    用于 bundle 套餐子服务选择阶段: 先验证 OTP 有效性,
+    待用户选好子服务后再调用 _consume_otp 消费。
+    """
     rc = _get_redis()
     if rc:
         key = f"{_OTP_REDIS_PREFIX}{otp}"
         val = rc.get(key)
         if not val:
             return None
-        rc.delete(key)
+        if isinstance(val, bytes):
+            val = val.decode("utf-8")
+        parts = val.split(":", 1)
+        if len(parts) != 2:
+            return None
+        return {"package_id": int(parts[0]), "user_id": parts[1]}
+    else:
+        entry = _OTP_CACHE.get(otp)
+        if not entry:
+            return None
+        package_id, user_id, exp_ts = entry
+        if exp_ts < int(time.time()):
+            return None
+        return {"package_id": package_id, "user_id": user_id}
+
+
+def _consume_otp(otp: str) -> Optional[dict]:
+    """验证 + 消费 OTP,返回 {package_id, user_id} 或 None
+
+    Redis path uses GETDEL (atomic get-and-delete) to prevent race conditions
+    where two concurrent requests both succeed with the same OTP.
+    Falls back to GET+DELETE pipeline for Redis < 6.2.
+    """
+    rc = _get_redis()
+    if rc:
+        key = f"{_OTP_REDIS_PREFIX}{otp}"
+        # Atomic consume: GETDEL (Redis 6.2+), fallback to GET+DELETE pipeline
+        try:
+            val = rc.getdel(key)
+        except (AttributeError, Exception):
+            # Redis client too old or command not supported — fallback
+            val = rc.get(key)
+            if val is not None:
+                rc.delete(key)
+        if not val:
+            return None
         if isinstance(val, bytes):
             val = val.decode("utf-8")
         parts = val.split(":", 1)
@@ -543,11 +582,15 @@ async def redeem_package(
     db: AsyncSession = Depends(get_async_db_dependency),
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
 ):
-    """团队 owner/admin 扫码或输入 OTP 核销套餐。
+    """团队 owner/admin 核销套餐。
 
-    Body:
-      - 二选一: qr_data (扫码) 或 otp (手动输入)
-      - bundle 套餐必填: sub_service_id
+    Body (三选一):
+      - qr_data: 扫码核销
+      - otp: 手动输入 OTP
+      - package_id: 管理后台直接核销 (不需 QR/OTP)
+    额外参数:
+      - sub_service_id: bundle 套餐必填
+      - note: 备注
 
     Returns: 更新后的 package 状态
     """
@@ -556,6 +599,7 @@ async def redeem_package(
 
     qr_data = body.get("qr_data")
     otp = body.get("otp")
+    manual_package_id = body.get("package_id")
     raw_sub_service_id = body.get("sub_service_id")
     # bundle 子服务 id 必须强转 int, 否则 PackageUsageLog.sub_service_id (INTEGER) insert 会爆
     sub_service_id: Optional[int] = None
@@ -568,13 +612,15 @@ async def redeem_package(
                 detail={"error_code": "sub_service_id_invalid", "message": "sub_service_id 必须是整数"},
             )
 
-    if not qr_data and not otp:
+    if not qr_data and not otp and manual_package_id is None:
         raise HTTPException(
             status_code=400,
-            detail={"error_code": "qr_or_otp_required", "message": "必须提供 qr_data 或 otp 之一"},
+            detail={"error_code": "qr_or_otp_required", "message": "必须提供 qr_data、otp 或 package_id 之一"},
         )
 
     # 解析 package_id + user_id
+    # OTP 消费延迟到实际核销时,避免 bundle 套餐子服务选择阶段就消费掉 OTP
+    otp_verified = False
     if qr_data:
         payload = _verify_qr_payload(qr_data)
         if not payload:
@@ -585,8 +631,9 @@ async def redeem_package(
         target_package_id = int(payload["p"])
         target_user_id = str(payload["u"])
         redeem_method = "qr"
-    else:
-        otp_data = _consume_otp(str(otp))
+    elif otp:
+        # 先验证 OTP 但不消费,等实际核销时再消费
+        otp_data = _verify_otp(str(otp))
         if not otp_data:
             raise HTTPException(
                 status_code=400,
@@ -595,18 +642,30 @@ async def redeem_package(
         target_package_id = otp_data["package_id"]
         target_user_id = otp_data["user_id"]
         redeem_method = "otp"
+        otp_verified = True
+    else:
+        # manual: 管理后台直接核销,package_id 由前端传入
+        try:
+            target_package_id = int(manual_package_id)
+        except (TypeError, ValueError):
+            raise HTTPException(
+                status_code=400,
+                detail={"error_code": "package_id_invalid", "message": "package_id 必须是整数"},
+            )
+        target_user_id = None  # manual 模式不限制 user_id
+        redeem_method = "manual"
 
     # 加载 + 锁定 package
+    filters = [
+        UserServicePackage.id == target_package_id,
+        UserServicePackage.expert_id == expert_id,
+        UserServicePackage.status == "active",
+    ]
+    if target_user_id is not None:
+        filters.append(UserServicePackage.user_id == target_user_id)
     pkg_result = await db.execute(
         select(UserServicePackage)
-        .where(
-            and_(
-                UserServicePackage.id == target_package_id,
-                UserServicePackage.user_id == target_user_id,
-                UserServicePackage.expert_id == expert_id,
-                UserServicePackage.status == "active",
-            )
-        )
+        .where(and_(*filters))
         .with_for_update()
     )
     pkg = pkg_result.scalar_one_or_none()
@@ -705,6 +764,15 @@ async def redeem_package(
         pkg.bundle_breakdown = dict(bd)
         from sqlalchemy.orm.attributes import flag_modified
         flag_modified(pkg, "bundle_breakdown")
+
+    # 实际核销 — 此时才消费 OTP (防止 bundle 子服务选择阶段误消费)
+    # 必须检查返回值: 若 OTP 已被并发请求消费,则中止核销
+    if otp_verified and otp:
+        if not _consume_otp(str(otp)):
+            raise HTTPException(
+                status_code=400,
+                detail={"error_code": "otp_invalid_or_expired", "message": "OTP 已被使用或已过期"},
+            )
 
     # 通用核销
     pkg.used_sessions = pkg.used_sessions + 1
@@ -1215,6 +1283,19 @@ async def review_package(
     db.add(review)
     await db.commit()
     await db.refresh(review)
+
+    # Update expert team average rating (best-effort, sync function)
+    if pkg.expert_id:
+        try:
+            from app.deps import get_db_dependency
+            sync_db = next(get_db_dependency())
+            try:
+                from app.crud.review import update_expert_team_statistics
+                update_expert_team_statistics(sync_db, pkg.expert_id)
+            finally:
+                sync_db.close()
+        except Exception as e:
+            logger.warning(f"Failed to update expert team stats after package review: {e}")
 
     return {
         "review_id": review.id,

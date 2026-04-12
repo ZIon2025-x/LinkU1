@@ -252,6 +252,26 @@ class _CustomerPackagesViewState extends State<CustomerPackagesView> {
         c = Colors.red;
         label = l10n.packageStatusExpired;
         break;
+      case 'released':
+        c = Colors.teal;
+        label = l10n.packageStatusReleased;
+        break;
+      case 'refunded':
+        c = Colors.blue;
+        label = l10n.packageStatusRefunded;
+        break;
+      case 'partially_refunded':
+        c = Colors.indigo;
+        label = l10n.packageStatusPartiallyRefunded;
+        break;
+      case 'disputed':
+        c = Colors.deepOrange;
+        label = l10n.packageStatusDisputed;
+        break;
+      case 'cancelled':
+        c = Colors.grey;
+        label = l10n.packageStatusCancelled;
+        break;
       default:
         c = Colors.grey;
         label = status;

@@ -322,8 +322,7 @@ class ApiEndpoints {
   static String groupBuyCancel(int activityId) => '/api/group-buy/activities/$activityId/cancel';
   static String groupBuyStatus(int activityId) => '/api/group-buy/activities/$activityId/status';
   static const String myPackages = '/api/my/packages';
-  static String expertTeamPackageUse(String expertId, int packageId) =>
-      '/api/experts/$expertId/packages/$packageId/use';
+  // expertTeamPackageUse 已合并到 redeemPackage (通过 body.package_id 参数)
   static String expertTeamCoupons(String expertId) => '/api/experts/$expertId/coupons';
   static String expertTeamStripeConnect(String id) => '/api/experts/$id/stripe-connect';
   static String expertTeamStripeStatus(String id) => '/api/experts/$id/stripe-connect/status';

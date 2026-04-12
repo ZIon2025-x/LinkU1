@@ -2319,6 +2319,9 @@ def check_expired_packages(db: Session) -> dict:
     Marks them as expired (if still active) and creates PaymentTransfer rows
     via trigger_package_release. The async payment_transfer_service then
     executes the Stripe Transfer.
+
+    Expired packages are NOT refunded — expert keeps the full amount.
+    Buyers are warned at 7d/3d/1d before expiry and can request refund while active.
     """
     from app.models_expert import UserServicePackage
     from app.services.package_settlement import trigger_package_release

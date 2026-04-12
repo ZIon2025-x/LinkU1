@@ -269,10 +269,14 @@ class ExpertTeamRepository {
     return (response.data as List).cast<Map<String, dynamic>>();
   }
 
-  Future<Map<String, dynamic>> usePackageSession(String expertId, int packageId, {String? note}) async {
+  Future<Map<String, dynamic>> usePackageSession(String expertId, int packageId, {int? subServiceId, String? note}) async {
     final response = await _apiService.post(
-      ApiEndpoints.expertTeamPackageUse(expertId, packageId),
-      data: {if (note != null) 'note': note},
+      ApiEndpoints.redeemPackage(expertId),
+      data: {
+        'package_id': packageId,
+        if (subServiceId != null) 'sub_service_id': subServiceId,
+        if (note != null) 'note': note,
+      },
     );
     return response.data as Map<String, dynamic>;
   }
