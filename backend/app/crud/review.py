@@ -123,6 +123,60 @@ def update_expert_team_statistics(db: Session, expert_id: str):
     }
 
 
+async def update_expert_team_statistics_async(db, expert_id: str):
+    """异步版 update_expert_team_statistics，用于 async 路由。
+
+    逻辑与同步版完全一致：聚合评分 / 完成任务数 / 完成率。
+    """
+    from decimal import Decimal
+    from sqlalchemy import select, and_
+    from app.models_expert import Expert
+    from app.models import Review, Task
+
+    result = await db.execute(select(Expert).where(Expert.id == expert_id))
+    expert = result.scalar_one_or_none()
+    if not expert:
+        return None
+
+    # 1) 平均评分
+    avg_result = await db.execute(
+        select(func.avg(Review.rating)).where(Review.expert_id == expert_id)
+    )
+    avg_rating_val = avg_result.scalar()
+    avg_rating = float(avg_rating_val) if avg_rating_val is not None else 0.0
+
+    # 2) 完成任务数
+    completed_result = await db.execute(
+        select(func.count()).select_from(Task).where(
+            and_(Task.taker_expert_id == expert_id, Task.status == "completed")
+        )
+    )
+    completed_tasks = completed_result.scalar()
+
+    # 3) 完成率
+    taken_result = await db.execute(
+        select(func.count()).select_from(Task).where(
+            and_(
+                Task.taker_expert_id == expert_id,
+                Task.status.in_(["in_progress", "completed", "pending_confirmation", "disputed"]),
+            )
+        )
+    )
+    total_taken = taken_result.scalar()
+    completion_rate = (completed_tasks / total_taken * 100.0) if total_taken > 0 else 0.0
+
+    expert.rating = Decimal(str(avg_rating)).quantize(Decimal("0.01"))
+    expert.completed_tasks = completed_tasks
+    expert.completion_rate = completion_rate
+    await db.commit()
+    await db.refresh(expert)
+    return {
+        "rating": float(expert.rating),
+        "completed_tasks": completed_tasks,
+        "completion_rate": completion_rate,
+    }
+
+
 def calculate_user_avg_rating(db: Session, user_id: str):
     """计算并更新用户的平均评分"""
     result = (

@@ -197,6 +197,7 @@ class TestTriggerPackageRelease:
         pkg.user_id = "16668888"
         pkg.currency = "GBP"
         pkg.released_amount_pence = None  # Not yet released
+        pkg.refunded_amount_pence = None  # Not yet refunded
         pkg.platform_fee_pence = None
         return pkg
 

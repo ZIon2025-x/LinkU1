@@ -1689,16 +1689,11 @@ async def create_review_async(
             except Exception as e:
                 logger.warning(f"更新用户统计信息失败（异步路由）: {e}，将通过定时任务更新")
 
-        # 团队任务: 同步聚合到 Expert 团队评分
+        # 团队任务: 异步聚合到 Expert 团队评分
         if task_taker_expert_id:
             try:
-                from app.database import SessionLocal
-                from app.crud.review import update_expert_team_statistics
-                sync_db = SessionLocal()
-                try:
-                    update_expert_team_statistics(sync_db, task_taker_expert_id)
-                finally:
-                    sync_db.close()
+                from app.crud.review import update_expert_team_statistics_async
+                await update_expert_team_statistics_async(db, task_taker_expert_id)
             except Exception as e:
                 logger.warning(f"更新团队评分失败（异步路由）: {e}")
 

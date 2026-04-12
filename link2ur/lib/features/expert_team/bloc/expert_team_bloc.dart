@@ -181,10 +181,11 @@ class ExpertTeamLoadMyPackages extends ExpertTeamEvent {}
 class ExpertTeamUsePackage extends ExpertTeamEvent {
   final String expertId;
   final int packageId;
+  final int? subServiceId;
   final String? note;
-  ExpertTeamUsePackage({required this.expertId, required this.packageId, this.note});
+  ExpertTeamUsePackage({required this.expertId, required this.packageId, this.subServiceId, this.note});
   @override
-  List<Object?> get props => [expertId, packageId];
+  List<Object?> get props => [expertId, packageId, subServiceId];
 }
 
 class ExpertTeamLoadCoupons extends ExpertTeamEvent {
@@ -604,7 +605,7 @@ class ExpertTeamBloc extends Bloc<ExpertTeamEvent, ExpertTeamState> {
 
   Future<void> _onUsePackage(ExpertTeamUsePackage event, Emitter<ExpertTeamState> emit) async {
     try {
-      await _repository.usePackageSession(event.expertId, event.packageId, note: event.note);
+      await _repository.usePackageSession(event.expertId, event.packageId, subServiceId: event.subServiceId, note: event.note);
       final raw = await _repository.getMyPackages();
       final packages = raw.map((m) => UserServicePackage.fromJson(m)).toList();
       emit(state.copyWith(packages: packages, actionMessage: 'expert_team_package_used'));

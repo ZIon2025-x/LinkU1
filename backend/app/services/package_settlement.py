@@ -119,8 +119,8 @@ def trigger_package_release(db, pkg, reason: str) -> None:
     if pkg.status not in ("exhausted", "expired"):
         raise ValueError(f"Invalid status for release: {pkg.status}")
 
-    if pkg.released_amount_pence is not None:
-        # Already processed — skip
+    if pkg.released_amount_pence is not None or pkg.refunded_amount_pence is not None:
+        # Already processed (transferred or refunded) — skip
         return
 
     from app.utils.fee_calculator import calculate_application_fee_pence

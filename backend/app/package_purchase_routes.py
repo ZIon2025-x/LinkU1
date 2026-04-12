@@ -1284,16 +1284,11 @@ async def review_package(
     await db.commit()
     await db.refresh(review)
 
-    # Update expert team average rating (best-effort, sync function)
+    # Update expert team average rating (best-effort)
     if pkg.expert_id:
         try:
-            from app.deps import get_db_dependency
-            sync_db = next(get_db_dependency())
-            try:
-                from app.crud.review import update_expert_team_statistics
-                update_expert_team_statistics(sync_db, pkg.expert_id)
-            finally:
-                sync_db.close()
+            from app.crud.review import update_expert_team_statistics_async
+            await update_expert_team_statistics_async(db, pkg.expert_id)
         except Exception as e:
             logger.warning(f"Failed to update expert team stats after package review: {e}")
 
