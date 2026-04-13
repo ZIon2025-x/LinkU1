@@ -17,6 +17,7 @@ class ShareUtil {
   static String leaderboardUrl(int leaderboardId) => '$_baseUrl/leaderboard/custom/$leaderboardId';
   static String leaderboardItemUrl(int itemId) => '$_baseUrl/leaderboard/item/$itemId';
   static String taskExpertUrl(String expertId) => '$_baseUrl/task-experts/$expertId';
+  static String expertTeamUrl(String expertId) => '$_baseUrl/experts/$expertId';
 
   /// 统一分享入口：根据 [imageUrl] 拉取首图并调起系统分享
   static Future<void> share({

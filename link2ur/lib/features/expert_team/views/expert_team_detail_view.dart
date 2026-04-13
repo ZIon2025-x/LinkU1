@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/design/app_colors.dart';
+import '../../../core/utils/share_util.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/utils/helpers.dart';
@@ -112,6 +113,19 @@ class _ExpertTeamDetailBody extends StatelessWidget {
               elevation: 0,
               scrolledUnderElevation: 0,
               iconTheme: const IconThemeData(color: Colors.white),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.share_outlined),
+                  onPressed: () {
+                    ShareUtil.share(
+                      title: team.displayName(Localizations.localeOf(context).languageCode),
+                      description: team.displayBio(Localizations.localeOf(context).languageCode) ?? '',
+                      url: ShareUtil.expertTeamUrl(team.id),
+                      imageUrl: team.avatar,
+                    );
+                  },
+                ),
+              ],
             ),
             body: _DetailContent(
               team: team,
@@ -171,6 +185,7 @@ class _DetailContent extends StatelessWidget {
               children: [
                 _BioSection(team: team),
                 const SizedBox(height: 12),
+                _TagsSection(team: team),
                 if (members.isNotEmpty) ...[
                   _MembersSection(
                     members: members,
@@ -395,6 +410,48 @@ class _HeroBanner extends StatelessWidget {
                                       ),
                                     ),
                                   ],
+                                ),
+                              ),
+                            if (team.isVerified)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 7, vertical: 2),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(4),
+                                  color: Colors.white.withAlpha(64),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.verified, size: 11, color: Colors.white),
+                                    SizedBox(width: 2),
+                                    Text('认证',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white,
+                                        )),
+                                  ],
+                                ),
+                              ),
+                            if (team.userLevel != 'normal')
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(3),
+                                  gradient: const LinearGradient(
+                                    colors: [Color(0xFFAF52DE), Color(0xFFFF2D55)],
+                                  ),
+                                ),
+                                child: Text(
+                                  team.userLevel.toUpperCase(),
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                    letterSpacing: 0.3,
+                                  ),
                                 ),
                               ),
                           ],
@@ -628,6 +685,12 @@ class _BioSectionState extends State<_BioSection> {
               spacing: 8,
               runSpacing: 8,
               children: [
+                if (widget.team.displayResponseTime(Localizations.localeOf(context).languageCode) != null)
+                  _InfoPill(
+                    icon: Icons.bolt_outlined,
+                    label: context.l10n.taskExpertResponseTime,
+                    value: widget.team.displayResponseTime(Localizations.localeOf(context).languageCode)!,
+                  ),
                 if (widget.team.serviceRadiusKm != null)
                   _InfoPill(
                     icon: Icons.location_on_outlined,
@@ -795,6 +858,131 @@ class _InfoPill extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 10b. Tags section — expertise + skills + achievements
+// ---------------------------------------------------------------------------
+
+class _TagsSection extends StatelessWidget {
+  final ExpertTeam team;
+  const _TagsSection({required this.team});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final langCode = Localizations.localeOf(context).languageCode;
+    final expertise = team.displayExpertiseAreas(langCode);
+    final skills = team.displayFeaturedSkills(langCode);
+    final achievementList = team.displayAchievements(langCode);
+
+    if (expertise.isEmpty && skills.isEmpty && achievementList.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: _SectionCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (expertise.isNotEmpty) ...[
+              Text(
+                context.l10n.taskExpertExpertiseAreas,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? const Color(0xFF636366) : AppColors.textSecondaryLight,
+                  letterSpacing: 0.3,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: expertise.map((t) => _Tag(
+                  text: t,
+                  bgColor: isDark ? const Color(0x260055CC) : const Color(0xFFE8F0FE),
+                  textColor: isDark ? const Color(0xFF409CFF) : const Color(0xFF0055CC),
+                )).toList(),
+              ),
+              const SizedBox(height: 10),
+            ],
+            if (skills.isNotEmpty) ...[
+              Text(
+                context.l10n.taskExpertFeaturedSkills,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? const Color(0xFF636366) : AppColors.textSecondaryLight,
+                  letterSpacing: 0.3,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: skills.map((t) => _Tag(
+                  text: t,
+                  bgColor: isDark ? const Color(0x266D28D9) : const Color(0xFFF0E6FF),
+                  textColor: isDark ? const Color(0xFFBF9FFF) : const Color(0xFF6D28D9),
+                )).toList(),
+              ),
+              const SizedBox(height: 10),
+            ],
+            if (achievementList.isNotEmpty) ...[
+              Text(
+                context.l10n.taskExpertAchievements,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? const Color(0xFF636366) : AppColors.textSecondaryLight,
+                  letterSpacing: 0.3,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: achievementList.map((t) => _Tag(
+                  text: '\u{1F3C6} $t',
+                  bgColor: isDark ? const Color(0x1FB45309) : const Color(0xFFFFF4E5),
+                  textColor: isDark ? const Color(0xFFFFB84D) : const Color(0xFFB45309),
+                )).toList(),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Tag extends StatelessWidget {
+  final String text;
+  final Color bgColor;
+  final Color textColor;
+
+  const _Tag({required this.text, required this.bgColor, required this.textColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+          color: textColor,
+        ),
       ),
     );
   }
