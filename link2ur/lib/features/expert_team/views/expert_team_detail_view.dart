@@ -229,8 +229,9 @@ class _HeroBanner extends StatelessWidget {
     final langCode = locale.languageCode;
     final teamName = team.displayName(langCode);
 
+    final topPadding = MediaQuery.of(context).padding.top;
     return SizedBox(
-      height: 230,
+      height: 210 + topPadding,
       child: Stack(
         children: [
           // Gradient background
@@ -1255,7 +1256,7 @@ class _ActivityCard extends StatelessWidget {
                           ),
                         ),
                         child: Text(
-                          activity.status,
+                          context.l10n.expertTeamStatusActive,
                           style: const TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w600,
