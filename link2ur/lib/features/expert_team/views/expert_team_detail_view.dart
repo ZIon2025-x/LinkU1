@@ -70,6 +70,16 @@ class _ExpertTeamDetailBody extends StatelessWidget {
         }
       },
       child: BlocBuilder<ExpertTeamBloc, ExpertTeamState>(
+        buildWhen: (prev, curr) =>
+            prev.status != curr.status ||
+            prev.currentTeam != curr.currentTeam ||
+            prev.services != curr.services ||
+            prev.activities != curr.activities ||
+            prev.isLoadingActivities != curr.isLoadingActivities ||
+            prev.reviews != curr.reviews ||
+            prev.isLoadingReviews != curr.isLoadingReviews ||
+            prev.hasMoreReviews != curr.hasMoreReviews ||
+            prev.totalReviews != curr.totalReviews,
         builder: (context, state) {
           if (state.status == ExpertTeamStatus.loading &&
               state.currentTeam == null) {
@@ -633,6 +643,7 @@ class _BioSectionState extends State<_BioSection> {
     final locale = Localizations.localeOf(context);
     final bio = widget.team.displayBio(locale.languageCode);
     if (bio == null || bio.isEmpty) return const SizedBox.shrink();
+    final isLongBio = bio.length > 50;
 
     return _SectionCard(
       child: Column(
@@ -644,42 +655,54 @@ class _BioSectionState extends State<_BioSection> {
             title: context.l10n.expertTeamBio,
           ),
           const SizedBox(height: 12),
-          AnimatedCrossFade(
-            firstChild: Text(
+          if (isLongBio)
+            AnimatedCrossFade(
+              firstChild: Text(
+                bio,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 14,
+                  height: 1.65,
+                  color: isDark ? Colors.white70 : const Color(0xFF3C3C43),
+                ),
+              ),
+              secondChild: Text(
+                bio,
+                style: TextStyle(
+                  fontSize: 14,
+                  height: 1.65,
+                  color: isDark ? Colors.white70 : const Color(0xFF3C3C43),
+                ),
+              ),
+              crossFadeState: _expanded
+                  ? CrossFadeState.showSecond
+                  : CrossFadeState.showFirst,
+              duration: const Duration(milliseconds: 200),
+            )
+          else
+            Text(
               bio,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: 14,
                 height: 1.65,
                 color: isDark ? Colors.white70 : const Color(0xFF3C3C43),
               ),
             ),
-            secondChild: Text(
-              bio,
-              style: TextStyle(
-                fontSize: 14,
-                height: 1.65,
-                color: isDark ? Colors.white70 : const Color(0xFF3C3C43),
+          if (isLongBio) ...[
+            const SizedBox(height: 4),
+            GestureDetector(
+              onTap: () => setState(() => _expanded = !_expanded),
+              child: Text(
+                _expanded ? context.l10n.taskDetailCollapse : context.l10n.taskDetailExpandAll,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppColors.primary,
+                ),
               ),
             ),
-            crossFadeState: _expanded
-                ? CrossFadeState.showSecond
-                : CrossFadeState.showFirst,
-            duration: const Duration(milliseconds: 200),
-          ),
-          const SizedBox(height: 4),
-          GestureDetector(
-            onTap: () => setState(() => _expanded = !_expanded),
-            child: Text(
-              _expanded ? context.l10n.taskDetailCollapse : context.l10n.taskDetailExpandAll,
-              style: const TextStyle(
-                fontSize: 13,
-                color: AppColors.primary,
-              ),
-            ),
-          ),
-          if (_expanded) ...[
+          ],
+          if (!isLongBio || _expanded) ...[
             const SizedBox(height: 10),
             Wrap(
               spacing: 8,
@@ -1027,7 +1050,7 @@ class _MembersSection extends StatelessWidget {
               scrollDirection: Axis.horizontal,
               itemCount: members.length > 10 ? 10 : members.length,
               separatorBuilder: (_, __) => const SizedBox(width: 16),
-              itemBuilder: (_, i) => _MemberAvatar(member: members[i]),
+              itemBuilder: (_, i) => _MemberAvatar(key: ValueKey(members[i].id), member: members[i]),
             ),
           ),
         ],
@@ -1042,7 +1065,7 @@ class _MembersSection extends StatelessWidget {
 
 class _MemberAvatar extends StatelessWidget {
   final ExpertMember member;
-  const _MemberAvatar({required this.member});
+  const _MemberAvatar({super.key, required this.member});
 
   @override
   Widget build(BuildContext context) {
@@ -1098,7 +1121,7 @@ class _MemberAvatar extends StatelessWidget {
             member.userName ?? member.userId,
             style: TextStyle(
               fontSize: 11,
-              color: Theme.of(context).brightness == Brightness.dark
+              color: isDark
                   ? Colors.white70
                   : const Color(0xFF3C3C43),
             ),
@@ -1169,6 +1192,7 @@ class _ServicesSection extends StatelessWidget {
               itemCount: services.length,
               separatorBuilder: (_, __) => const SizedBox(width: 10),
               itemBuilder: (_, i) => _ServiceCard(
+                key: ValueKey(services[i]['id']),
                 service: services[i],
                 expertId: expertId,
               ),
@@ -1188,7 +1212,7 @@ class _ServiceCard extends StatelessWidget {
   final Map<String, dynamic> service;
   final String expertId;
 
-  const _ServiceCard({required this.service, required this.expertId});
+  const _ServiceCard({super.key, required this.service, required this.expertId});
 
   @override
   Widget build(BuildContext context) {
@@ -1367,7 +1391,7 @@ class _ActivitiesSection extends StatelessWidget {
               scrollDirection: Axis.horizontal,
               itemCount: activities.length,
               separatorBuilder: (_, __) => const SizedBox(width: 10),
-              itemBuilder: (_, i) => _ActivityCard(activity: activities[i]),
+              itemBuilder: (_, i) => _ActivityCard(key: ValueKey(activities[i].id), activity: activities[i]),
             ),
           ),
         ],
@@ -1382,7 +1406,7 @@ class _ActivitiesSection extends StatelessWidget {
 
 class _ActivityCard extends StatelessWidget {
   final Activity activity;
-  const _ActivityCard({required this.activity});
+  const _ActivityCard({super.key, required this.activity});
 
   @override
   Widget build(BuildContext context) {
@@ -1449,7 +1473,7 @@ class _ActivityCard extends StatelessWidget {
                           ),
                         ),
                         child: Text(
-                          context.l10n.expertTeamStatusActive,
+                          context.l10n.taskStatusOpen,
                           style: const TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w600,
@@ -1732,16 +1756,14 @@ class _ReviewCard extends StatelessWidget {
                     ),
                     Row(
                       children: [
-                        ...List.generate(
-                          5,
-                          (i) => Icon(
-                            i < reviewRating.floor()
-                                ? Icons.star
-                                : Icons.star_border,
-                            size: 11,
-                            color: const Color(0xFFFF9500),
-                          ),
-                        ),
+                        ...List.generate(5, (i) {
+                          if (i < reviewRating.floor()) {
+                            return const Icon(Icons.star, size: 11, color: Color(0xFFFF9500));
+                          } else if (i < reviewRating.ceil() && reviewRating % 1 >= 0.5) {
+                            return const Icon(Icons.star_half, size: 11, color: Color(0xFFFF9500));
+                          }
+                          return Icon(Icons.star_border, size: 11, color: Colors.grey.withAlpha(100));
+                        }),
                         if (dateStr.isNotEmpty) ...[
                           const SizedBox(width: 6),
                           Text(
