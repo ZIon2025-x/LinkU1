@@ -207,25 +207,16 @@ class _PackageRedemptionScanViewState extends State<PackageRedemptionScanView> {
 
   Future<void> _showManualOtpDialog() async {
     if (!mounted) return;
-    // 暂停 scanner 防止 dialog 期间 onDetect 回调触发 setState 导致 framework 断言失败
     _scanner.stop();
     final l10n = context.l10n;
-    final controller = TextEditingController();
-    try {
-      final otp = await showDialog<String>(
-        context: context,
-        builder: (ctx) => _ManualOtpDialog(
-          l10n: l10n,
-          controller: controller,
-        ),
-      );
-      if (otp != null && mounted) {
-        await _redeem(otp: otp);
-      }
-    } finally {
-      controller.dispose();
-      if (mounted) _scanner.start();
+    final otp = await showDialog<String>(
+      context: context,
+      builder: (ctx) => _ManualOtpDialog(l10n: l10n),
+    );
+    if (otp != null && mounted) {
+      await _redeem(otp: otp);
     }
+    if (mounted) _scanner.start();
   }
 
   @override
@@ -306,15 +297,26 @@ class _PackageRedemptionScanViewState extends State<PackageRedemptionScanView> {
   }
 }
 
-/// 独立 widget 避免 dialog builder 持有父级 State context 的 InheritedWidget 依赖
-class _ManualOtpDialog extends StatelessWidget {
+class _ManualOtpDialog extends StatefulWidget {
   final AppLocalizations l10n;
-  final TextEditingController controller;
+  const _ManualOtpDialog({required this.l10n});
 
-  const _ManualOtpDialog({required this.l10n, required this.controller});
+  @override
+  State<_ManualOtpDialog> createState() => _ManualOtpDialogState();
+}
+
+class _ManualOtpDialogState extends State<_ManualOtpDialog> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = widget.l10n;
     return AlertDialog(
       title: Text(l10n.packageRedemptionManualOtpTitle),
       content: Column(
@@ -326,7 +328,7 @@ class _ManualOtpDialog extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           TextField(
-            controller: controller,
+            controller: _controller,
             keyboardType: TextInputType.number,
             maxLength: 6,
             decoration: InputDecoration(
@@ -347,7 +349,7 @@ class _ManualOtpDialog extends StatelessWidget {
         ),
         ElevatedButton(
           onPressed: () {
-            final code = controller.text.trim();
+            final code = _controller.text.trim();
             if (code.length == 6) Navigator.of(context).pop(code);
           },
           child: Text(l10n.packageRedemptionConfirm),
