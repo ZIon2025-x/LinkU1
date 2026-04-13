@@ -1186,7 +1186,7 @@ class _ServicesSection extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           SizedBox(
-            height: 175,
+            height: 195,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: services.length,

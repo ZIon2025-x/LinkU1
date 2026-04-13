@@ -3948,13 +3948,13 @@ abstract class AppLocalizations {
   /// No description provided for @profileExpertManagement.
   ///
   /// In en, this message translates to:
-  /// **'Expert Applications'**
+  /// **'Expert Management'**
   String get profileExpertManagement;
 
   /// No description provided for @profileExpertManagementSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Review incoming service applications'**
+  /// **'View public profile & manage team'**
   String get profileExpertManagementSubtitle;
 
   /// No description provided for @profilePointsCoupons.

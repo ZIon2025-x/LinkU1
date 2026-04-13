@@ -2141,11 +2141,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'View applied and favorited activities';
 
   @override
-  String get profileExpertManagement => 'Expert Applications';
+  String get profileExpertManagement => 'Expert Management';
 
   @override
   String get profileExpertManagementSubtitle =>
-      'Review incoming service applications';
+      'View public profile & manage team';
 
   @override
   String get profilePointsCoupons => 'Points & Coupons';

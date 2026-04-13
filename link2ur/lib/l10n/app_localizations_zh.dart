@@ -2039,10 +2039,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get profileMyApplicationsSubtitle => '查看申请和收藏的活动';
 
   @override
-  String get profileExpertManagement => '达人申请管理';
+  String get profileExpertManagement => '达人管理';
 
   @override
-  String get profileExpertManagementSubtitle => '审核收到的服务申请';
+  String get profileExpertManagementSubtitle => '查看公开主页与管理团队';
 
   @override
   String get profilePointsCoupons => '积分与优惠券';
@@ -14545,10 +14545,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get profileMyApplicationsSubtitle => '查看申請和收藏的活動';
 
   @override
-  String get profileExpertManagement => '達人申請管理';
+  String get profileExpertManagement => '達人管理';
 
   @override
-  String get profileExpertManagementSubtitle => '審核收到的服務申請';
+  String get profileExpertManagementSubtitle => '查看公開主頁與管理團隊';
 
   @override
   String get profilePointsCoupons => '積分與優惠券';
