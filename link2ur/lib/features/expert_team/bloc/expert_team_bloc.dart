@@ -1,8 +1,11 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:link2ur/data/models/activity.dart';
 import 'package:link2ur/data/models/expert_team.dart';
 import 'package:link2ur/data/models/user_service_package.dart';
+import 'package:link2ur/data/repositories/activity_repository.dart';
 import 'package:link2ur/data/repositories/expert_team_repository.dart';
+import 'package:link2ur/data/repositories/task_expert_repository.dart';
 
 // ==================== Events ====================
 
@@ -219,6 +222,21 @@ class ExpertTeamReplyReview extends ExpertTeamEvent {
   List<Object?> get props => [reviewId, content];
 }
 
+class ExpertTeamLoadActivities extends ExpertTeamEvent {
+  final String expertId;
+  ExpertTeamLoadActivities(this.expertId);
+  @override
+  List<Object?> get props => [expertId];
+}
+
+class ExpertTeamLoadReviews extends ExpertTeamEvent {
+  final String expertId;
+  final bool loadMore;
+  ExpertTeamLoadReviews(this.expertId, {this.loadMore = false});
+  @override
+  List<Object?> get props => [expertId, loadMore];
+}
+
 // ==================== State ====================
 
 enum ExpertTeamStatus { initial, loading, loaded, error }
@@ -236,6 +254,11 @@ class ExpertTeamState extends Equatable {
   final List<ExpertInvitation> myInvitations;
   final List<UserServicePackage> packages;
   final List<Map<String, dynamic>> coupons;
+  final List<Activity> activities;
+  final bool isLoadingActivities;
+  final List<Map<String, dynamic>> reviews;
+  final bool isLoadingReviews;
+  final bool hasMoreReviews;
   final Map<String, dynamic>? groupBuyStatus;
   final String? errorMessage;
   final String? actionMessage;
@@ -253,6 +276,11 @@ class ExpertTeamState extends Equatable {
     this.myInvitations = const [],
     this.packages = const [],
     this.coupons = const [],
+    this.activities = const [],
+    this.isLoadingActivities = false,
+    this.reviews = const [],
+    this.isLoadingReviews = false,
+    this.hasMoreReviews = false,
     this.groupBuyStatus,
     this.errorMessage,
     this.actionMessage,
@@ -271,6 +299,11 @@ class ExpertTeamState extends Equatable {
     List<ExpertInvitation>? myInvitations,
     List<UserServicePackage>? packages,
     List<Map<String, dynamic>>? coupons,
+    List<Activity>? activities,
+    bool? isLoadingActivities,
+    List<Map<String, dynamic>>? reviews,
+    bool? isLoadingReviews,
+    bool? hasMoreReviews,
     Map<String, dynamic>? groupBuyStatus,
     String? errorMessage,
     String? actionMessage,
@@ -288,6 +321,11 @@ class ExpertTeamState extends Equatable {
       myInvitations: myInvitations ?? this.myInvitations,
       packages: packages ?? this.packages,
       coupons: coupons ?? this.coupons,
+      activities: activities ?? this.activities,
+      isLoadingActivities: isLoadingActivities ?? this.isLoadingActivities,
+      reviews: reviews ?? this.reviews,
+      isLoadingReviews: isLoadingReviews ?? this.isLoadingReviews,
+      hasMoreReviews: hasMoreReviews ?? this.hasMoreReviews,
       groupBuyStatus: groupBuyStatus ?? this.groupBuyStatus,
       errorMessage: errorMessage,
       actionMessage: actionMessage,
@@ -295,16 +333,23 @@ class ExpertTeamState extends Equatable {
   }
 
   @override
-  List<Object?> get props => [status, myTeams, currentTeam, members, myApplications, joinRequests, services, featuredExperts, followingExperts, myInvitations, packages, coupons, groupBuyStatus, errorMessage, actionMessage];
+  List<Object?> get props => [status, myTeams, currentTeam, members, myApplications, joinRequests, services, featuredExperts, followingExperts, myInvitations, packages, coupons, activities, isLoadingActivities, reviews, isLoadingReviews, hasMoreReviews, groupBuyStatus, errorMessage, actionMessage];
 }
 
 // ==================== BLoC ====================
 
 class ExpertTeamBloc extends Bloc<ExpertTeamEvent, ExpertTeamState> {
   final ExpertTeamRepository _repository;
+  final ActivityRepository? _activityRepository;
+  final TaskExpertRepository? _taskExpertRepository;
 
-  ExpertTeamBloc({required ExpertTeamRepository repository})
-      : _repository = repository,
+  ExpertTeamBloc({
+    required ExpertTeamRepository repository,
+    ActivityRepository? activityRepository,
+    TaskExpertRepository? taskExpertRepository,
+  })  : _repository = repository,
+        _activityRepository = activityRepository,
+        _taskExpertRepository = taskExpertRepository,
         super(const ExpertTeamState()) {
     on<ExpertTeamLoadMyTeams>(_onLoadMyTeams);
     on<ExpertTeamLoadDetail>(_onLoadDetail);
@@ -337,6 +382,8 @@ class ExpertTeamBloc extends Bloc<ExpertTeamEvent, ExpertTeamState> {
     on<ExpertTeamCreateCoupon>(_onCreateCoupon);
     on<ExpertTeamDeactivateCoupon>(_onDeactivateCoupon);
     on<ExpertTeamReplyReview>(_onReplyReview);
+    on<ExpertTeamLoadActivities>(_onLoadActivities);
+    on<ExpertTeamLoadReviews>(_onLoadReviews);
   }
 
   Future<void> _onLoadMyTeams(ExpertTeamLoadMyTeams event, Emitter<ExpertTeamState> emit) async {
@@ -649,6 +696,47 @@ class ExpertTeamBloc extends Bloc<ExpertTeamEvent, ExpertTeamState> {
       emit(state.copyWith(actionMessage: 'expert_team_review_replied'));
     } catch (e) {
       emit(state.copyWith(errorMessage: e.toString()));
+    }
+  }
+
+  Future<void> _onLoadActivities(ExpertTeamLoadActivities event, Emitter<ExpertTeamState> emit) async {
+    if (_activityRepository == null) return;
+    emit(state.copyWith(isLoadingActivities: true));
+    try {
+      final result = await _activityRepository!.getActivities(
+        expertId: event.expertId,
+        status: 'open',
+        pageSize: 10,
+      );
+      emit(state.copyWith(
+        activities: result.activities,
+        isLoadingActivities: false,
+      ));
+    } catch (e) {
+      emit(state.copyWith(isLoadingActivities: false));
+    }
+  }
+
+  Future<void> _onLoadReviews(ExpertTeamLoadReviews event, Emitter<ExpertTeamState> emit) async {
+    if (_taskExpertRepository == null) return;
+    emit(state.copyWith(isLoadingReviews: true));
+    try {
+      final offset = event.loadMore ? state.reviews.length : 0;
+      final data = await _taskExpertRepository!.getExpertReviews(
+        event.expertId,
+        limit: 10,
+        offset: offset,
+      );
+      final items = data['items'] as List<Map<String, dynamic>>;
+      final total = data['total'] as int;
+      final allReviews = event.loadMore ? [...state.reviews, ...items] : items;
+      emit(state.copyWith(
+        reviews: allReviews,
+        isLoadingReviews: false,
+        hasMoreReviews: allReviews.length < total,
+      ));
+    } catch (e) {
+      emit(state.copyWith(isLoadingReviews: false));
     }
   }
 }
