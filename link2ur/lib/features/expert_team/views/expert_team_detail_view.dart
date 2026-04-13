@@ -247,7 +247,7 @@ class _HeroBanner extends StatelessWidget {
 
     final topPadding = MediaQuery.of(context).padding.top;
     return SizedBox(
-      height: 210 + topPadding,
+      height: 160 + topPadding,
       child: Stack(
         children: [
           // Gradient background
@@ -315,7 +315,7 @@ class _HeroBanner extends StatelessWidget {
           Positioned(
             left: 20,
             right: 20,
-            bottom: 34,
+            bottom: 16,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
