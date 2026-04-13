@@ -4,6 +4,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../../core/utils/error_localizer.dart';
 import '../../../../core/utils/l10n_extension.dart';
 import '../../../../data/repositories/package_purchase_repository.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// 团队 owner/admin 套餐核销扫码 view (A1)
 ///
@@ -87,6 +88,7 @@ class _PackageRedemptionScanViewState extends State<PackageRedemptionScanView> {
   Future<int?> _pickSubService(
     List<Map<String, dynamic>> subServices,
   ) async {
+    if (!mounted) return null;
     final l10n = context.l10n;
     return showDialog<int>(
       context: context,
@@ -149,6 +151,7 @@ class _PackageRedemptionScanViewState extends State<PackageRedemptionScanView> {
   }
 
   void _showSuccessDialog(Map<String, dynamic> result) {
+    if (!mounted) return;
     final l10n = context.l10n;
     final total = (result['total_sessions'] as num?)?.toInt() ?? 0;
     final used = (result['used_sessions'] as num?)?.toInt() ?? 0;
@@ -187,6 +190,7 @@ class _PackageRedemptionScanViewState extends State<PackageRedemptionScanView> {
   }
 
   void _showErrorSnack(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(context.localizeError(message)),
@@ -197,53 +201,22 @@ class _PackageRedemptionScanViewState extends State<PackageRedemptionScanView> {
   }
 
   Future<void> _showManualOtpDialog() async {
+    if (!mounted) return;
     final l10n = context.l10n;
     final controller = TextEditingController();
-    final otp = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.packageRedemptionManualOtpTitle),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              l10n.packageRedemptionManualOtpHint,
-              style: const TextStyle(fontSize: 13, color: Colors.grey),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: controller,
-              keyboardType: TextInputType.number,
-              maxLength: 6,
-              decoration: InputDecoration(
-                labelText: l10n.packageRedemptionOtpLabel,
-                border: const OutlineInputBorder(),
-                hintText: l10n.packageRedemptionOtpPlaceholder,
-              ),
-              autofocus: true,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 24, letterSpacing: 8),
-            ),
-          ],
+    try {
+      final otp = await showDialog<String>(
+        context: context,
+        builder: (ctx) => _ManualOtpDialog(
+          l10n: l10n,
+          controller: controller,
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(l10n.packageRedemptionCancel),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final code = controller.text.trim();
-              if (code.length == 6) Navigator.of(ctx).pop(code);
-            },
-            child: Text(l10n.packageRedemptionConfirm),
-          ),
-        ],
-      ),
-    );
-    controller.dispose();
-    if (otp != null && mounted) {
-      await _redeem(otp: otp);
+      );
+      if (otp != null && mounted) {
+        await _redeem(otp: otp);
+      }
+    } finally {
+      controller.dispose();
     }
   }
 
@@ -321,6 +294,57 @@ class _PackageRedemptionScanViewState extends State<PackageRedemptionScanView> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// 独立 widget 避免 dialog builder 持有父级 State context 的 InheritedWidget 依赖
+class _ManualOtpDialog extends StatelessWidget {
+  final AppLocalizations l10n;
+  final TextEditingController controller;
+
+  const _ManualOtpDialog({required this.l10n, required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(l10n.packageRedemptionManualOtpTitle),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            l10n.packageRedemptionManualOtpHint,
+            style: const TextStyle(fontSize: 13, color: Colors.grey),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: controller,
+            keyboardType: TextInputType.number,
+            maxLength: 6,
+            decoration: InputDecoration(
+              labelText: l10n.packageRedemptionOtpLabel,
+              border: const OutlineInputBorder(),
+              hintText: l10n.packageRedemptionOtpPlaceholder,
+            ),
+            autofocus: true,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 24, letterSpacing: 8),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.packageRedemptionCancel),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            final code = controller.text.trim();
+            if (code.length == 6) Navigator.of(context).pop(code);
+          },
+          child: Text(l10n.packageRedemptionConfirm),
+        ),
+      ],
     );
   }
 }
