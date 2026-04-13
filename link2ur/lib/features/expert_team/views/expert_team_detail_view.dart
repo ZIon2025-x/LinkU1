@@ -420,13 +420,13 @@ class _HeroBanner extends StatelessWidget {
                                   borderRadius: BorderRadius.circular(4),
                                   color: Colors.white.withAlpha(64),
                                 ),
-                                child: const Row(
+                                child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(Icons.verified, size: 11, color: Colors.white),
-                                    SizedBox(width: 2),
-                                    Text('认证',
-                                        style: TextStyle(
+                                    const Icon(Icons.verified, size: 11, color: Colors.white),
+                                    const SizedBox(width: 2),
+                                    Text(context.l10n.verificationStatusVerified,
+                                        style: const TextStyle(
                                           fontSize: 11,
                                           fontWeight: FontWeight.w600,
                                           color: Colors.white,
@@ -895,7 +895,7 @@ class _TagsSection extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  color: isDark ? const Color(0xFF636366) : AppColors.textSecondaryLight,
+                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                   letterSpacing: 0.3,
                 ),
               ),
@@ -917,7 +917,7 @@ class _TagsSection extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  color: isDark ? const Color(0xFF636366) : AppColors.textSecondaryLight,
+                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                   letterSpacing: 0.3,
                 ),
               ),
@@ -939,7 +939,7 @@ class _TagsSection extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  color: isDark ? const Color(0xFF636366) : AppColors.textSecondaryLight,
+                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                   letterSpacing: 0.3,
                 ),
               ),
@@ -1243,8 +1243,8 @@ class _ServiceCard extends StatelessWidget {
                             colors: [Color(0xFFE8F0FE), Color(0xFFF0E6FF)],
                           ),
                         ),
-                        child: const Icon(Icons.design_services,
-                            size: 28, color: AppColors.textSecondaryLight),
+                        child: Icon(Icons.design_services,
+                            size: 28, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
                       ),
               ),
             ),
@@ -1432,8 +1432,8 @@ class _ActivityCard extends StatelessWidget {
                             colors: [Color(0xFFE3F6E8), Color(0xFFD0F0DF)],
                           ),
                         ),
-                        child: const Icon(Icons.event,
-                            size: 28, color: AppColors.textSecondaryLight),
+                        child: Icon(Icons.event,
+                            size: 28, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
                       ),
                     // Status badge
                     Positioned(
@@ -1523,14 +1523,14 @@ class _ActivityCard extends StatelessWidget {
                       // Participants
                       Row(
                         children: [
-                          const Icon(Icons.people_outline,
-                              size: 14, color: Color(0xFF636366)),
+                          Icon(Icons.people_outline,
+                              size: 14, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
                           const SizedBox(width: 4),
                           Text(
                             '${activity.currentParticipants ?? 0}/${activity.maxParticipants}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 11,
-                              color: Color(0xFF636366),
+                              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                             ),
                           ),
                         ],
@@ -1576,6 +1576,7 @@ class _ReviewsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return _SectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1620,9 +1621,9 @@ class _ReviewsSection extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     l10n.taskExpertReviewsCount(totalReviews > 0 ? totalReviews : reviews.length),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
-                      color: AppColors.textSecondaryLight,
+                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                     ),
                   ),
                 ],
@@ -1635,9 +1636,9 @@ class _ReviewsSection extends StatelessWidget {
               child: Center(
                 child: Text(
                   l10n.taskExpertNoReviews,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
-                    color: AppColors.textSecondaryLight,
+                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                   ),
                 ),
               ),
@@ -1745,9 +1746,9 @@ class _ReviewCard extends StatelessWidget {
                           const SizedBox(width: 6),
                           Text(
                             dateStr,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 11,
-                              color: AppColors.textSecondaryLight,
+                              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                             ),
                           ),
                         ],

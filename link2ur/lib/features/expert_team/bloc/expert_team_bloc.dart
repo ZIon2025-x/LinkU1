@@ -731,8 +731,8 @@ class ExpertTeamBloc extends Bloc<ExpertTeamEvent, ExpertTeamState> {
         limit: 10,
         offset: offset,
       );
-      final items = (data['items'] as List).cast<Map<String, dynamic>>();
-      final total = data['total'] as int;
+      final items = (data['items'] as List? ?? []).cast<Map<String, dynamic>>();
+      final total = (data['total'] as int?) ?? 0;
       final allReviews = event.loadMore ? [...state.reviews, ...items] : items;
       emit(state.copyWith(
         reviews: allReviews,

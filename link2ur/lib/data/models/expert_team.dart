@@ -169,8 +169,9 @@ class ExpertTeam extends Equatable {
         isOfficial, officialBadge, stripeOnboardingComplete,
         createdAt, isFollowing, myRole, forumCategoryId, members, isFeatured,
         location, latitude, longitude, serviceRadiusKm,
-        category, isVerified, expertiseAreas, featuredSkills, achievements,
-        responseTime, userLevel,
+        category, isVerified, expertiseAreas, expertiseAreasEn,
+        featuredSkills, featuredSkillsEn, achievements, achievementsEn,
+        responseTime, responseTimeEn, userLevel,
       ];
 }
 
@@ -197,7 +198,7 @@ class ExpertMember extends Equatable {
   factory ExpertMember.fromJson(Map<String, dynamic> json) {
     return ExpertMember(
       id: json['id'] as int,
-      userId: json['user_id'] as String,
+      userId: json['user_id'] as String? ?? '',
       userName: json['user_name'] as String?,
       userAvatar: json['user_avatar'] as String?,
       role: json['role'] as String,
