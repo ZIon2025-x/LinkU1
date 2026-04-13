@@ -2290,6 +2290,11 @@ class TaskExpertServiceCreate(BaseModel):
     base_price: condecimal(gt=0, max_digits=12, decimal_places=2)  # 使用condecimal与DB的DECIMAL一致
     currency: Literal["GBP", "EUR"] = "GBP"  # 统一为Literal类型
     display_order: int = 0
+    # 位置相关字段
+    location_type: Optional[str] = None  # online / in_person / both
+    location: Optional[str] = None
+    latitude: Optional[float] = Field(None, ge=-90, le=90)
+    longitude: Optional[float] = Field(None, ge=-180, le=180)
     # 套餐字段（Phase 7 + A1）
     package_type: Optional[str] = None  # 'single' | 'multi' | 'bundle'
     total_sessions: Optional[int] = None  # multi 类型：总课时数
@@ -2484,6 +2489,7 @@ class TaskExpertServiceOut(BaseModel):
     location: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+    service_radius_km: Optional[int] = None
     skills: Optional[List[str]] = None
     status: str
     display_order: int
@@ -2539,6 +2545,7 @@ class TaskExpertServiceOut(BaseModel):
             "location": getattr(obj, "location", None),
             "latitude": float(obj.latitude) if getattr(obj, "latitude", None) is not None else None,
             "longitude": float(obj.longitude) if getattr(obj, "longitude", None) is not None else None,
+            "service_radius_km": getattr(obj, "service_radius_km", None),
             "skills": obj.skills if obj.skills else None,
             "status": obj.status,
             "display_order": obj.display_order,

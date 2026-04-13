@@ -5326,6 +5326,9 @@
   "errorServiceNotFound": "服务不存在",
   "errorServiceNotOwnedByTeam": "该服务不属于此团队",
   "errorServiceInactive": "该服务暂未开放",
+  "errorPackagePriceMissing": "套餐服务必须设置价格才能发布活动",
+  "errorDiscountTooDeep": "折扣价不能低于套餐原价的50%",
+  "errorDiscountNotLower": "折扣价必须低于原价",
   "errorTeamNotFound": "团队不存在",
   "errorTeamPayoutFailed": "团队分账失败，请联系客服",
   "errorUnknownOwnerType": "不支持的服务所有者类型",
@@ -5557,6 +5560,12 @@
   "customerPackagesExpiresOn": "到期：{date}",
   "@customerPackagesExpiresOn": {
     "placeholders": { "date": {"type": "String"} }
+  },
+  "customerPackagesManualRedeem": "核销",
+  "customerPackagesRedeemConfirmTitle": "确认核销",
+  "customerPackagesRedeemConfirmBody": "为 {userName} 核销 1 次？",
+  "@customerPackagesRedeemConfirmBody": {
+    "placeholders": { "userName": {"type": "String"} }
   },
   "packageStatusActive": "使用中",
   "packageStatusExhausted": "已用完",

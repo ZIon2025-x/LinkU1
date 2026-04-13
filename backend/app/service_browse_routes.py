@@ -1,7 +1,7 @@
 from math import radians, cos, sqrt
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select, case, func, or_
+from sqlalchemy import and_, or_, select, case, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models
@@ -57,7 +57,11 @@ async def browse_services(
             raise HTTPException(status_code=400, detail="lat and lng required for nearby sort")
 
         # LEFT JOIN experts to get fallback lat/lng for services that inherit team address
-        query = query.outerjoin(Expert, S.expert_id == Expert.id)
+        # 兼容旧数据: owner_type=NULL 时回退到 legacy expert_id
+        query = query.outerjoin(Expert, or_(
+            and_(S.owner_type == 'expert', S.owner_id == Expert.id),
+            and_(S.owner_type.is_(None), S.expert_id == Expert.id),
+        ))
 
         # Effective coordinates: service's own ?? expert team's
         effective_lat = func.coalesce(S.latitude, Expert.latitude)
@@ -104,38 +108,53 @@ async def browse_services(
     result = await db.execute(query)
     services = result.scalars().all()
 
-    # Batch-load owner user info (avoid N+1)
-    owner_ids = set()
-    for s in services:
-        if s.owner_user_id:
-            owner_ids.add(s.owner_user_id)
-        elif s.expert_id:
-            owner_ids.add(s.expert_id)
+    # Batch-load owner user info for personal services (avoid N+1)
+    user_owner_ids = {s.owner_id for s in services if s.owner_type == 'user' and s.owner_id}
     owners_map = {}
-    if owner_ids:
+    if user_owner_ids:
         owners_result = await db.execute(
-            select(models.User).where(models.User.id.in_(list(owner_ids)))
+            select(models.User).where(models.User.id.in_(list(user_owner_ids)))
         )
         for u in owners_result.scalars().all():
             owners_map[u.id] = u
 
-    # Batch-load expert teams for location fallback (spec: effective = service ?? expert)
-    expert_ids = {s.expert_id for s in services if s.expert_id}
+    # Batch-load expert teams for owner info + location fallback
+    # 兼容旧数据: owner_type=NULL 时回退到 legacy expert_id
+    expert_owner_ids = set()
+    for s in services:
+        if s.owner_type == 'expert' and s.owner_id:
+            expert_owner_ids.add(s.owner_id)
+        elif s.owner_type is None and s.expert_id:
+            expert_owner_ids.add(s.expert_id)
     experts_map = {}
-    if expert_ids:
+    if expert_owner_ids:
         experts_result = await db.execute(
-            select(Expert).where(Expert.id.in_(list(expert_ids)))
+            select(Expert).where(Expert.id.in_(list(expert_owner_ids)))
         )
         for e in experts_result.scalars().all():
             experts_map[e.id] = e
 
     items = []
     for s in services:
-        effective_owner_id = s.owner_user_id or s.expert_id or ""
-        owner = owners_map.get(effective_owner_id)
+        # Resolve owner info: personal → User, expert → Expert team
+        # 兼容旧数据: owner_type=NULL 时用 expert_id 查找
+        _expert_key = s.owner_id if s.owner_type == 'expert' else (s.expert_id if s.owner_type is None else None)
+        expert = experts_map.get(_expert_key) if _expert_key else None
+        if s.owner_type == 'user' and s.owner_id:
+            owner = owners_map.get(s.owner_id)
+            owner_name = owner.name if owner else "Unknown"
+            owner_avatar = owner.avatar if owner else None
+            owner_rating = float(owner.avg_rating) if owner and owner.avg_rating else None
+        elif expert:
+            owner_name = expert.name or "Unknown"
+            owner_avatar = expert.avatar
+            owner_rating = float(expert.rating) if expert.rating else None
+        else:
+            owner_name = "Unknown"
+            owner_avatar = None
+            owner_rating = None
 
         # Fallback to expert team values when service's own values are null
-        expert = experts_map.get(s.expert_id) if s.expert_id else None
         eff_lat = float(s.latitude) if s.latitude else (float(expert.latitude) if expert and expert.latitude else None)
         eff_lng = float(s.longitude) if s.longitude else (float(expert.longitude) if expert and expert.longitude else None)
         eff_radius = s.service_radius_km if s.service_radius_km is not None else (expert.service_radius_km if expert else None)
@@ -158,10 +177,10 @@ async def browse_services(
             "status": s.status,
             "images": s.images or [],
             "skills": s.skills or [],
-            "owner_id": effective_owner_id,
-            "owner_name": owner.name if owner else "Unknown",
-            "owner_avatar": owner.avatar if owner else None,
-            "owner_rating": float(owner.avg_rating) if owner and owner.avg_rating else None,
+            "owner_id": s.owner_id or "",
+            "owner_name": owner_name,
+            "owner_avatar": owner_avatar,
+            "owner_rating": owner_rating,
             "created_at": s.created_at.isoformat() if s.created_at else None,
             "service_radius_km": eff_radius,
         }

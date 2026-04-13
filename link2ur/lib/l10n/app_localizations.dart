@@ -22565,6 +22565,24 @@ abstract class AppLocalizations {
   /// **'This service is not available right now.'**
   String get errorServiceInactive;
 
+  /// No description provided for @errorPackagePriceMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Package price must be set before creating an activity.'**
+  String get errorPackagePriceMissing;
+
+  /// No description provided for @errorDiscountTooDeep.
+  ///
+  /// In en, this message translates to:
+  /// **'Discount price cannot be less than 50% of the package price.'**
+  String get errorDiscountTooDeep;
+
+  /// No description provided for @errorDiscountNotLower.
+  ///
+  /// In en, this message translates to:
+  /// **'Discount price must be lower than the original price.'**
+  String get errorDiscountNotLower;
+
   /// No description provided for @errorTeamNotFound.
   ///
   /// In en, this message translates to:
@@ -23662,6 +23680,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Expires: {date}'**
   String customerPackagesExpiresOn(String date);
+
+  /// No description provided for @customerPackagesManualRedeem.
+  ///
+  /// In en, this message translates to:
+  /// **'Redeem'**
+  String get customerPackagesManualRedeem;
+
+  /// No description provided for @customerPackagesRedeemConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Redemption'**
+  String get customerPackagesRedeemConfirmTitle;
+
+  /// No description provided for @customerPackagesRedeemConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Redeem 1 session for {userName}?'**
+  String customerPackagesRedeemConfirmBody(String userName);
 
   /// No description provided for @packageStatusActive.
   ///

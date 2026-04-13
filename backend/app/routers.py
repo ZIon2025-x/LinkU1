@@ -7592,11 +7592,133 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 
                 # 支付成功后，将任务状态从 pending_payment 更新为 in_progress
                 logger.info(f"🔍 检查任务状态: 当前状态={task.status}, is_paid={task.is_paid}")
+
+                # 预加载关联服务（一次查询，后续复用）
+                _act_service = None
+                _is_package_activity = False
+                if getattr(task, 'parent_activity_id', None) and getattr(task, 'expert_service_id', None):
+                    _act_service = db.query(models.TaskExpertService).filter(
+                        models.TaskExpertService.id == task.expert_service_id
+                    ).first()
+                    _is_package_activity = _act_service and _act_service.package_type in ("multi", "bundle")
+
+                # 支付成功后更新任务状态
                 if task.status == "pending_payment":
-                    logger.info(f"✅ 任务状态从 pending_payment 更新为 in_progress")
-                    task.status = "in_progress"
+                    if _is_package_activity:
+                        # 套餐活动的 Task 仅作为购买凭证，无实际服务交付环节。
+                        # 直接 completed，不触发普通任务的完成回调（统计/积分等），
+                        # 因为套餐的价值体现在 UserServicePackage 的 sessions 核销中。
+                        task.status = "completed"
+                        logger.info(f"✅ 套餐活动任务直接标记 completed（无需交付流程）")
+                    else:
+                        task.status = "in_progress"
+                        logger.info(f"✅ 任务状态从 pending_payment 更新为 in_progress")
                 else:
                     logger.info(f"⚠️ 任务状态不是 pending_payment，当前状态: {task.status}，跳过状态更新")
+
+                # ====== 活动→套餐自动创建 ======
+                # 如果任务来自活动，且关联的服务是套餐类型(multi/bundle)，
+                # 自动为买家创建 UserServicePackage 记录
+                if _is_package_activity and _act_service:
+                    act_service = _act_service
+                    try:
+                        from sqlalchemy.exc import IntegrityError
+                        from app.models_expert import UserServicePackage
+                        from app.package_purchase_routes import _build_bundle_breakdown, _bundle_total_sessions
+
+                        # 幂等: 同一 payment_intent 不重复创建 (with_for_update 与 A1 路径一致)
+                        existing_pkg = db.query(UserServicePackage).filter(
+                            UserServicePackage.payment_intent_id == payment_intent_id
+                        ).with_for_update().first()
+                        if existing_pkg:
+                            logger.info(f"✅ [WEBHOOK] 活动套餐已存在 (pi={payment_intent_id})，幂等跳过")
+                        else:
+                            # 计算总课时和 breakdown
+                            breakdown = None
+                            if act_service.package_type == "bundle":
+                                breakdown = _build_bundle_breakdown(act_service.bundle_service_ids, db=db)
+                                final_total = _bundle_total_sessions(breakdown) if breakdown else 0
+                            else:
+                                final_total = act_service.total_sessions or 0
+
+                            if final_total <= 0:
+                                logger.warning(f"⚠️ [WEBHOOK] 活动套餐 total_sessions=0，跳过创建")
+                            else:
+                                # 确定买家 ID（originating_user_id 是报名者，poster_id 是发布者兜底）
+                                buyer_id = task.originating_user_id or task.poster_id
+                                if not task.originating_user_id:
+                                    logger.warning(
+                                        f"⚠️ [WEBHOOK] 活动套餐 task {task.id} originating_user_id 为空，"
+                                        f"回退到 poster_id={task.poster_id}"
+                                    )
+                                # 确定团队 ID
+                                pkg_expert_id = act_service.owner_id if act_service.owner_type == 'expert' else None
+
+                                # 过期时间
+                                exp_at = None
+                                if act_service.validity_days and act_service.validity_days > 0:
+                                    exp_at = get_utc_time() + timedelta(days=act_service.validity_days)
+
+                                # 单价快照
+                                unit_snapshot = None
+                                if act_service.package_type == "multi":
+                                    unit_snapshot = int(round(float(act_service.base_price) * 100))
+
+                                # 实付金额 (pounds，与 A1 直接购买路径一致)
+                                paid_amount = float(task.reward or 0)
+
+                                new_pkg = UserServicePackage(
+                                    user_id=buyer_id,
+                                    service_id=act_service.id,
+                                    expert_id=pkg_expert_id,
+                                    total_sessions=final_total,
+                                    used_sessions=0,
+                                    status="active",
+                                    purchased_at=get_utc_time(),
+                                    cooldown_until=get_utc_time() + timedelta(hours=24),
+                                    expires_at=exp_at,
+                                    payment_intent_id=payment_intent_id,
+                                    paid_amount=paid_amount,
+                                    currency="GBP",
+                                    bundle_breakdown=breakdown,
+                                    unit_price_pence_snapshot=unit_snapshot,
+                                )
+                                db.add(new_pkg)
+                                try:
+                                    db.commit()
+                                    db.refresh(new_pkg)
+                                    logger.info(
+                                        f"✅ [WEBHOOK] 活动套餐 {new_pkg.id} 已创建 "
+                                        f"(buyer={buyer_id} service={act_service.id} "
+                                        f"type={act_service.package_type} total={final_total})"
+                                    )
+
+                                    # 通知买家
+                                    try:
+                                        from app.utils.notification_templates import get_notification_texts
+                                        buyer_t_zh, buyer_c_zh, buyer_t_en, buyer_c_en = get_notification_texts(
+                                            "package_purchased",
+                                            service_name=act_service.service_name or "",
+                                            total_sessions=final_total,
+                                        )
+                                        crud.create_notification(
+                                            db=db,
+                                            user_id=buyer_id,
+                                            type="package_purchased",
+                                            title=buyer_t_zh,
+                                            content=buyer_c_zh,
+                                            title_en=buyer_t_en,
+                                            content_en=buyer_c_en,
+                                            related_id=str(new_pkg.id),
+                                        )
+                                    except Exception as notify_err:
+                                        logger.warning(f"⚠️ [WEBHOOK] 活动套餐购买通知失败: {notify_err}")
+                                except IntegrityError:
+                                    db.rollback()
+                                    logger.info(f"✅ [WEBHOOK] 活动套餐并发已创建 (pi={payment_intent_id})，幂等跳过")
+                    except Exception as pkg_err:
+                        logger.error(f"❌ [WEBHOOK] 活动→套餐创建失败: {pkg_err}", exc_info=True)
+                        # 不影响主流程（Task 已正常处理）
 
             elif task and task.is_paid == 1:
                 # ====== 补差价支付（top_up）：任务已付款，此次为追加支付 ======

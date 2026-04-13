@@ -464,6 +464,12 @@ class ErrorLocalizer {
         return context.l10n.errorServiceNotOwnedByTeam;
       case 'service_inactive':
         return context.l10n.errorServiceInactive;
+      case 'package_price_missing':
+        return context.l10n.errorPackagePriceMissing;
+      case 'discount_too_deep':
+        return context.l10n.errorDiscountTooDeep;
+      case 'discount_not_lower':
+        return context.l10n.errorDiscountNotLower;
       case 'team_not_found':
         return context.l10n.errorTeamNotFound;
       case 'team_stripe_not_ready':

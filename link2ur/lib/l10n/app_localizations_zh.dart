@@ -11733,6 +11733,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get errorServiceInactive => '该服务暂未开放';
 
   @override
+  String get errorPackagePriceMissing => '套餐服务必须设置价格才能发布活动';
+
+  @override
+  String get errorDiscountTooDeep => '折扣价不能低于套餐原价的50%';
+
+  @override
+  String get errorDiscountNotLower => '折扣价必须低于原价';
+
+  @override
   String get errorTeamNotFound => '团队不存在';
 
   @override
@@ -12306,6 +12315,17 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String customerPackagesExpiresOn(String date) {
     return '到期：$date';
+  }
+
+  @override
+  String get customerPackagesManualRedeem => '核销';
+
+  @override
+  String get customerPackagesRedeemConfirmTitle => '确认核销';
+
+  @override
+  String customerPackagesRedeemConfirmBody(String userName) {
+    return '为 $userName 核销 1 次？';
   }
 
   @override
@@ -24219,6 +24239,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get errorServiceInactive => '該服務暫未開放';
 
   @override
+  String get errorPackagePriceMissing => '套餐服務必須設定價格才能發布活動';
+
+  @override
+  String get errorDiscountTooDeep => '折扣價不能低於套餐原價的50%';
+
+  @override
+  String get errorDiscountNotLower => '折扣價必須低於原價';
+
+  @override
   String get errorTeamNotFound => '團隊不存在';
 
   @override
@@ -24792,6 +24821,17 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String customerPackagesExpiresOn(String date) {
     return '到期：$date';
+  }
+
+  @override
+  String get customerPackagesManualRedeem => '核銷';
+
+  @override
+  String get customerPackagesRedeemConfirmTitle => '確認核銷';
+
+  @override
+  String customerPackagesRedeemConfirmBody(String userName) {
+    return '為 $userName 核銷 1 次？';
   }
 
   @override

@@ -5434,6 +5434,9 @@
   "errorServiceNotFound": "Service not found.",
   "errorServiceNotOwnedByTeam": "This service does not belong to your team.",
   "errorServiceInactive": "This service is not available right now.",
+  "errorPackagePriceMissing": "Package price must be set before creating an activity.",
+  "errorDiscountTooDeep": "Discount price cannot be less than 50% of the package price.",
+  "errorDiscountNotLower": "Discount price must be lower than the original price.",
   "errorTeamNotFound": "Team not found.",
   "errorTeamPayoutFailed": "Team payout failed. Please contact support.",
   "errorUnknownOwnerType": "Unsupported service owner type.",
@@ -5665,6 +5668,12 @@
   "customerPackagesExpiresOn": "Expires: {date}",
   "@customerPackagesExpiresOn": {
     "placeholders": { "date": {"type": "String"} }
+  },
+  "customerPackagesManualRedeem": "Redeem",
+  "customerPackagesRedeemConfirmTitle": "Confirm Redemption",
+  "customerPackagesRedeemConfirmBody": "Redeem 1 session for {userName}?",
+  "@customerPackagesRedeemConfirmBody": {
+    "placeholders": { "userName": {"type": "String"} }
   },
   "packageStatusActive": "Active",
   "packageStatusExhausted": "All sessions used",

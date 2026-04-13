@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>达人详情页 — Link2Ur Redesign</title>
+<style>
+  /* ==================== Reset & Base ==================== */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'PingFang SC',
+                 'Helvetica Neue', Arial, sans-serif;
+    background: #f5f5f5;
+    color: #1a1a1a;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 20px 0;
+  }
+
+  /* ==================== Phone Frame ==================== */
+  .phone-frame {
+    width: 393px;          /* iPhone 15 Pro logical width */
+    min-height: 852px;
+    background: #f5f5f5;
+    border-radius: 40px;
+    overflow: hidden;
+    box-shadow: 0 25px 80px rgba(0,0,0,.18), 0 0 0 1px rgba(0,0,0,.05);
+    position: relative;
+  }
+
+  /* ==================== Hero Banner ==================== */
+  .hero {
+    position: relative;
+    height: 210px;
+    overflow: hidden;
+  }
+  .hero-bg {
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, #007AFF 0%, #5856D6 50%, #AF52DE 100%);
+  }
+  .hero-bg::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(to bottom, transparent 40%, rgba(0,0,0,.45) 100%);
+  }
+  /* Decorative circles */
+  .hero-bg .deco {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255,255,255,.06);
+  }
+  .hero-bg .deco-1 { width: 180px; height: 180px; top: -50px; right: -30px; }
+  .hero-bg .deco-2 { width: 100px; height: 100px; bottom: 20px; left: -20px; }
+
+  /* Back button */
+  .back-btn {
+    position: absolute; top: 12px; left: 16px; z-index: 10;
+    width: 36px; height: 36px; border-radius: 50%;
+    background: rgba(255,255,255,.2);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; border: none; color: #fff; font-size: 18px;
+  }
+
+  /* Share button */
+  .share-btn {
+    position: absolute; top: 12px; right: 16px; z-index: 10;
+    width: 36px; height: 36px; border-radius: 50%;
+    background: rgba(255,255,255,.2);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; border: none; color: #fff; font-size: 16px;
+  }
+
+  .hero-content {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    padding: 12px 20px 34px;
+    z-index: 5;
+    color: #fff;
+  }
+  .hero-top-row {
+    display: flex; align-items: flex-end; gap: 16px;
+  }
+  .avatar-ring {
+    flex-shrink: 0;
+    width: 82px; height: 82px;
+    border-radius: 50%;
+    padding: 3px;
+    background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,.6) 100%);
+  }
+  .avatar {
+    width: 100%; height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+    background: #c4c4c4;
+  }
+  .hero-info { flex: 1; min-width: 0; padding-bottom: 4px; }
+  .hero-name {
+    font-size: 22px; font-weight: 700; line-height: 1.2;
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  }
+  .badge-official {
+    display: inline-flex; align-items: center; gap: 3px;
+    font-size: 11px; font-weight: 600;
+    padding: 2px 7px; border-radius: 4px;
+    background: linear-gradient(135deg, #FFD700, #FF8C00);
+    color: #fff; white-space: nowrap;
+  }
+  .badge-verified {
+    display: inline-flex; align-items: center; gap: 2px;
+    font-size: 11px; font-weight: 600;
+    padding: 2px 7px; border-radius: 4px;
+    background: rgba(255,255,255,.25);
+    backdrop-filter: blur(4px);
+    color: #fff; white-space: nowrap;
+  }
+  .badge-level {
+    display: inline-flex; align-items: center; gap: 2px;
+    font-size: 10px; font-weight: 600; letter-spacing: .3px;
+    padding: 2px 6px; border-radius: 3px;
+    background: linear-gradient(135deg, #AF52DE, #FF2D55);
+    color: #fff; white-space: nowrap; text-transform: uppercase;
+  }
+  .hero-sub-row {
+    margin-top: 6px; font-size: 13px; opacity: .85;
+    display: flex; align-items: center; gap: 4px;
+    flex-wrap: wrap;
+  }
+  .hero-followers { font-weight: 600; }
+  .hero-dot { opacity: .5; }
+  .hero-location {
+    margin-top: 3px; font-size: 12px; opacity: .7;
+    display: flex; align-items: center; gap: 4px;
+  }
+
+  /* ==================== Stats Card ==================== */
+  .stats-card {
+    margin: -28px 16px 0;
+    position: relative; z-index: 10;
+    background: #fff;
+    border-radius: 16px;
+    padding: 16px 8px;
+    display: flex;
+    box-shadow: 0 4px 20px rgba(0,0,0,.06);
+  }
+  .stat-item {
+    flex: 1;
+    text-align: center;
+    position: relative;
+  }
+  .stat-item + .stat-item::before {
+    content: '';
+    position: absolute; left: 0; top: 8px; bottom: 8px;
+    width: 1px;
+    background: #f0f0f0;
+  }
+  .stat-value {
+    font-size: 20px; font-weight: 700; color: #1a1a1a;
+    line-height: 1.2;
+  }
+  .stat-value .unit { font-size: 12px; font-weight: 500; color: #8e8e93; }
+  .stat-label {
+    font-size: 11px; color: #8e8e93; margin-top: 2px;
+    letter-spacing: .2px;
+  }
+  .stat-value.rating { color: #FF9500; }
+
+  /* ==================== Content Sections ==================== */
+  .content { padding: 16px 16px 100px; }
+
+  .section {
+    background: #fff;
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.03);
+  }
+  .section-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 12px;
+  }
+  .section-title {
+    font-size: 15px; font-weight: 600; color: #1a1a1a;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .section-title .icon {
+    width: 20px; height: 20px;
+    border-radius: 5px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; color: #fff;
+  }
+  .section-more {
+    font-size: 13px; color: #007AFF; cursor: pointer;
+    display: flex; align-items: center; gap: 2px;
+  }
+
+  /* ==================== Bio Section ==================== */
+  .bio-text {
+    font-size: 14px; line-height: 1.65; color: #3c3c43;
+  }
+  .bio-wrap {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    position: relative;
+  }
+  .bio-wrap.expanded {
+    display: block;
+    -webkit-line-clamp: unset;
+  }
+  .bio-toggle {
+    color: #007AFF; font-size: 13px; cursor: pointer;
+    margin-top: 4px; display: inline-block;
+    user-select: none;
+  }
+  .bio-extra { display: none; }
+  .bio-wrap.expanded + .bio-toggle + .bio-extra { display: block; }
+
+  /* ==================== Response & Radius Row ==================== */
+  .info-pills {
+    display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px;
+  }
+  .info-pill {
+    display: flex; align-items: center; gap: 5px;
+    padding: 5px 10px;
+    background: #f5f7fa;
+    border-radius: 8px;
+    font-size: 12px; color: #636366;
+  }
+  .info-pill .pill-icon { font-size: 13px; }
+  .info-pill .pill-value { font-weight: 600; color: #1a1a1a; }
+
+  /* ==================== Compact Tag Flow ==================== */
+  .tags-section { margin-top: 14px; }
+  .tags-row {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    margin-bottom: 10px;
+  }
+  .tags-row:last-child { margin-bottom: 0; }
+  .tags-label {
+    font-size: 11px; font-weight: 600; color: #8e8e93;
+    letter-spacing: .3px; text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .tag {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px; font-weight: 500;
+    line-height: 1.4;
+  }
+  .tag-expertise {
+    background: #e8f0fe;
+    color: #0055CC;
+  }
+  .tag-skill {
+    background: #f0e6ff;
+    color: #6D28D9;
+  }
+  .tag-achievement {
+    background: #fff4e5;
+    color: #B45309;
+    display: inline-flex; align-items: center; gap: 3px;
+  }
+  .tag-achievement::before { content: '🏆'; font-size: 10px; }
+
+  /* ==================== Members Section ==================== */
+  .members-scroll {
+    display: flex; gap: 16px; overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+  .members-scroll::-webkit-scrollbar { display: none; }
+  .member-card {
+    flex-shrink: 0;
+    display: flex; flex-direction: column; align-items: center;
+    width: 64px;
+  }
+  .member-avatar-wrap {
+    position: relative;
+    width: 52px; height: 52px;
+  }
+  .member-avatar {
+    width: 52px; height: 52px; border-radius: 50%;
+    object-fit: cover; border: 2px solid #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    background: #e5e5ea;
+  }
+  .member-role-dot {
+    position: absolute; bottom: 0; right: 0;
+    width: 18px; height: 18px; border-radius: 50%;
+    border: 2px solid #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 8px; color: #fff; font-weight: 700;
+  }
+  .role-owner  { background: linear-gradient(135deg, #FFD700, #FF8C00); }
+  .role-admin  { background: linear-gradient(135deg, #007AFF, #5856D6); }
+  .role-member { background: #8e8e93; }
+  .member-name {
+    margin-top: 6px; font-size: 11px; color: #3c3c43;
+    width: 64px; text-align: center;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  /* ==================== Services Preview ==================== */
+  .services-scroll {
+    display: flex; gap: 10px; overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+  .services-scroll::-webkit-scrollbar { display: none; }
+  .service-card {
+    flex-shrink: 0;
+    width: 220px;
+    background: #f9f9fb;
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform .2s;
+  }
+  .service-card:active { transform: scale(.97); }
+  .service-img {
+    width: 100%; height: 120px;
+    object-fit: cover;
+    background: linear-gradient(135deg, #e8f0fe, #f0e6ff);
+    display: flex; align-items: center; justify-content: center;
+    color: #8e8e93; font-size: 28px;
+  }
+  .service-body { padding: 10px 12px 12px; }
+  .service-name {
+    font-size: 14px; font-weight: 600; color: #1a1a1a;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .service-meta {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 6px;
+  }
+  .service-price {
+    font-size: 16px; font-weight: 700; color: #E64D4D;
+  }
+  .service-price .currency { font-size: 12px; font-weight: 500; }
+  .service-type-badge {
+    font-size: 10px; padding: 2px 6px; border-radius: 4px;
+    background: #e8f0fe; color: #007AFF; font-weight: 600;
+  }
+
+  /* ==================== Activities Section ==================== */
+  .activities-scroll {
+    display: flex; gap: 10px; overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+  .activities-scroll::-webkit-scrollbar { display: none; }
+  .activity-card {
+    flex-shrink: 0;
+    width: 260px;
+    background: #f9f9fb;
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform .2s;
+  }
+  .activity-card:active { transform: scale(.97); }
+  .activity-img {
+    width: 100%; height: 130px;
+    object-fit: cover;
+    background: linear-gradient(135deg, #e3f6e8, #d0f0df);
+    display: flex; align-items: center; justify-content: center;
+    color: #8e8e93; font-size: 28px;
+    position: relative;
+  }
+  .activity-status {
+    position: absolute; top: 8px; left: 8px;
+    padding: 3px 8px; border-radius: 6px;
+    font-size: 10px; font-weight: 600; color: #fff;
+    background: linear-gradient(135deg, #34C759, #30B350);
+  }
+  .activity-date-badge {
+    position: absolute; top: 8px; right: 8px;
+    background: rgba(0,0,0,.55);
+    backdrop-filter: blur(6px);
+    padding: 4px 8px; border-radius: 6px;
+    color: #fff; font-size: 10px; font-weight: 600;
+    text-align: center; line-height: 1.3;
+  }
+  .activity-body { padding: 10px 12px 12px; }
+  .activity-name {
+    font-size: 14px; font-weight: 600; color: #1a1a1a;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .activity-desc {
+    font-size: 12px; color: #8e8e93; margin-top: 3px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .activity-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 8px;
+  }
+  .activity-participants {
+    display: flex; align-items: center; gap: 4px;
+    font-size: 11px; color: #636366;
+  }
+  .activity-participants-avatars {
+    display: flex;
+  }
+  .activity-participants-avatars img {
+    width: 20px; height: 20px; border-radius: 50%;
+    border: 1.5px solid #f9f9fb;
+    margin-left: -6px; object-fit: cover;
+    background: #e5e5ea;
+  }
+  .activity-participants-avatars img:first-child { margin-left: 0; }
+  .activity-price {
+    font-size: 13px; font-weight: 700; color: #34C759;
+  }
+  .activity-price.free {
+    background: linear-gradient(135deg, #34C759, #30D158);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  /* ==================== Reviews Section ==================== */
+  .review-summary {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 14px;
+  }
+  .review-big-score {
+    font-size: 36px; font-weight: 700; color: #FF9500;
+    line-height: 1;
+  }
+  .review-stars-wrap {}
+  .review-stars {
+    color: #FF9500; font-size: 16px; letter-spacing: 1px;
+  }
+  .review-count {
+    font-size: 12px; color: #8e8e93; margin-top: 2px;
+  }
+  .review-card {
+    background: #f9f9fb;
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+  }
+  .review-card:last-child { margin-bottom: 0; }
+  .review-top {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 6px;
+  }
+  .review-avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    object-fit: cover; background: #e5e5ea; flex-shrink: 0;
+  }
+  .review-user-info { flex: 1; min-width: 0; }
+  .review-user-name {
+    font-size: 13px; font-weight: 600; color: #1a1a1a;
+  }
+  .review-meta {
+    font-size: 11px; color: #8e8e93;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .review-user-stars { color: #FF9500; font-size: 11px; letter-spacing: .5px; }
+  .review-body {
+    font-size: 13px; line-height: 1.55; color: #3c3c43;
+  }
+
+  /* ==================== Forum Entry ==================== */
+  .forum-entry {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 0;
+    cursor: pointer;
+  }
+  .forum-icon-wrap {
+    width: 40px; height: 40px; border-radius: 10px;
+    background: linear-gradient(135deg, #007AFF, #5AC8FA);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; color: #fff;
+  }
+  .forum-text { flex: 1; }
+  .forum-title { font-size: 14px; font-weight: 600; color: #1a1a1a; }
+  .forum-desc { font-size: 12px; color: #8e8e93; margin-top: 1px; }
+  .forum-arrow { color: #c7c7cc; font-size: 18px; }
+
+  /* ==================== Bottom Action Bar ==================== */
+  .bottom-bar {
+    position: fixed;
+    bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 393px;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+    background: rgba(255,255,255,.92);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border-top: .5px solid rgba(0,0,0,.06);
+    display: flex; gap: 10px; z-index: 100;
+  }
+  .btn-follow {
+    width: 52px; height: 44px;
+    border-radius: 12px;
+    border: 1.5px solid #007AFF;
+    background: transparent;
+    color: #007AFF;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all .2s;
+    flex-shrink: 0;
+  }
+  .btn-follow.followed {
+    background: #007AFF; color: #fff; border-color: #007AFF;
+  }
+  .btn-chat {
+    flex: 1; height: 44px;
+    border-radius: 12px;
+    border: 1.5px solid #007AFF;
+    background: transparent;
+    color: #007AFF;
+    font-size: 14px; font-weight: 600;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    transition: all .2s;
+  }
+  .btn-apply {
+    flex: 1.5; height: 44px;
+    border-radius: 12px;
+    border: none;
+    background: linear-gradient(135deg, #007AFF, #5856D6);
+    color: #fff;
+    font-size: 14px; font-weight: 600;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    box-shadow: 0 4px 14px rgba(0,122,255,.3);
+    transition: all .2s;
+  }
+  .btn-apply:active { transform: scale(.97); }
+
+  /* ==================== Dark Mode ==================== */
+  @media (prefers-color-scheme: dark) {
+    body { background: #000; color: #fff; }
+    .phone-frame { background: #000; }
+    .stats-card { background: #1c1c1e; box-shadow: 0 4px 20px rgba(0,0,0,.3); }
+    .stat-value { color: #fff; }
+    .stat-item + .stat-item::before { background: #38383a; }
+    .section { background: #1c1c1e; box-shadow: none; }
+    .section-title { color: #fff; }
+    .bio-text { color: #ebebf5cc; }
+    .info-pill { background: #2c2c2e; color: #8e8e93; }
+    .info-pill .pill-value { color: #fff; }
+    .tags-label { color: #636366; }
+    .tag-expertise { background: rgba(0,85,204,.15); color: #409CFF; }
+    .tag-skill { background: rgba(109,40,217,.15); color: #BF9FFF; }
+    .tag-achievement { background: rgba(180,83,9,.12); color: #FFB84D; }
+    .member-name { color: #ebebf5cc; }
+    .member-avatar { border-color: #1c1c1e; }
+    .service-card { background: #2c2c2e; }
+    .service-name { color: #fff; }
+    .service-type-badge { background: rgba(0,122,255,.2); }
+    .activity-card { background: #2c2c2e; }
+    .activity-name { color: #fff; }
+    .activity-desc { color: #636366; }
+    .activity-participants { color: #8e8e93; }
+    .activity-participants-avatars img { border-color: #2c2c2e; }
+    .review-card { background: #2c2c2e; }
+    .review-user-name { color: #fff; }
+    .review-body { color: #ebebf5cc; }
+    .forum-title { color: #fff; }
+    .bottom-bar {
+      background: rgba(28,28,30,.92);
+      border-top-color: rgba(255,255,255,.06);
+    }
+    .btn-chat { border-color: #409CFF; color: #409CFF; }
+    .btn-follow { border-color: #409CFF; color: #409CFF; }
+  }
+</style>
+</head>
+<body>
+
+<div class="phone-frame">
+
+  <!-- ==================== Hero Banner ==================== -->
+  <div class="hero">
+    <div class="hero-bg">
+      <div class="deco deco-1"></div>
+      <div class="deco deco-2"></div>
+    </div>
+    <button class="back-btn">‹</button>
+    <button class="share-btn">⤴</button>
+
+    <div class="hero-content">
+      <div class="hero-top-row">
+        <div class="avatar-ring">
+          <img class="avatar" src="https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=200&h=200&fit=crop&crop=face" alt="">
+        </div>
+        <div class="hero-info">
+          <div class="hero-name">
+            Studio 数字工坊
+            <span class="badge-verified">✓ 认证</span>
+          </div>
+          <div class="hero-sub-row">
+            <span class="hero-followers">1,280 粉丝</span>
+            <span class="hero-dot">·</span>
+            <span>🎨 设计 · 品牌策略</span>
+          </div>
+          <div class="hero-location">
+            <span>📍</span> 伦敦 · 服务半径 25km
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== Stats ==================== -->
+  <div class="stats-card">
+    <div class="stat-item">
+      <div class="stat-value">12</div>
+      <div class="stat-label">成员</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value">8</div>
+      <div class="stat-label">服务</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value">156</div>
+      <div class="stat-label">已完成</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value rating">4.9</div>
+      <div class="stat-label">评分</div>
+    </div>
+  </div>
+
+  <!-- ==================== Scrollable Content ==================== -->
+  <div class="content">
+
+    <!-- Bio -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title">
+          <span class="icon" style="background:linear-gradient(135deg,#007AFF,#5856D6)">i</span>
+          团队简介
+        </div>
+      </div>
+      <div class="bio-wrap" id="bioWrap">
+        <span class="bio-text">专注品牌视觉设计与数字产品体验的创意工作室。我们为初创企业和成长型公司提供从品牌定位、视觉识别到数字产品界面设计的全链路设计服务。团队成员来自 Apple、Google、字节跳动等一线科技公司，拥有丰富的跨行业设计经验，曾服务超过 200 家企业客户。</span>
+      </div>
+      <span class="bio-toggle" id="bioToggle" onclick="
+        var w=document.getElementById('bioWrap'),
+            e=document.getElementById('bioExtra'),
+            t=this;
+        if(w.classList.contains('expanded')){
+          w.classList.remove('expanded');
+          e.style.display='none';
+          t.textContent='展开';
+        }else{
+          w.classList.add('expanded');
+          e.style.display='block';
+          t.textContent='收起';
+        }
+      ">展开</span>
+
+      <div class="bio-extra" id="bioExtra">
+        <div class="info-pills">
+          <div class="info-pill">
+            <span class="pill-icon">⚡</span>
+            响应时间
+            <span class="pill-value">2小时内</span>
+          </div>
+          <div class="info-pill">
+            <span class="pill-icon">📍</span>
+            服务范围
+            <span class="pill-value">25km</span>
+          </div>
+          <div class="info-pill">
+            <span class="pill-icon">✅</span>
+            完成率
+            <span class="pill-value">98%</span>
+          </div>
+        </div>
+
+        <div class="tags-section">
+          <div class="tags-label">专业领域</div>
+          <div class="tags-row">
+            <span class="tag tag-expertise">UI/UX 设计</span>
+            <span class="tag tag-expertise">品牌策略</span>
+            <span class="tag tag-expertise">产品设计</span>
+            <span class="tag tag-expertise">动效设计</span>
+            <span class="tag tag-expertise">设计系统</span>
+          </div>
+          <div class="tags-label">技能</div>
+          <div class="tags-row">
+            <span class="tag tag-skill">Figma</span>
+            <span class="tag tag-skill">Framer</span>
+            <span class="tag tag-skill">Blender 3D</span>
+            <span class="tag tag-skill">After Effects</span>
+            <span class="tag tag-skill">Webflow</span>
+            <span class="tag tag-skill">Design Tokens</span>
+          </div>
+          <div class="tags-label">成就</div>
+          <div class="tags-row">
+            <span class="tag tag-achievement">Awwwards 年度提名</span>
+            <span class="tag tag-achievement">红点设计奖 2025</span>
+            <span class="tag tag-achievement">100+ 五星好评</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Services Preview -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title">
+          <span class="icon" style="background:linear-gradient(135deg,#FF6B6B,#E64D4D)">✦</span>
+          服务项目
+          <span style="font-weight:400;color:#8e8e93;font-size:13px">8</span>
+        </div>
+        <span class="section-more">查看全部 ›</span>
+      </div>
+      <div class="services-scroll">
+        <div class="service-card">
+          <div class="service-img">🎨</div>
+          <div class="service-body">
+            <div class="service-name">品牌视觉全案设计</div>
+            <div class="service-meta">
+              <div class="service-price"><span class="currency">£</span>2,500</div>
+              <span class="service-type-badge">套餐</span>
+            </div>
+          </div>
+        </div>
+        <div class="service-card">
+          <div class="service-img" style="background:linear-gradient(135deg,#f0e6ff,#e8d6ff)">📱</div>
+          <div class="service-body">
+            <div class="service-name">App UI/UX 设计</div>
+            <div class="service-meta">
+              <div class="service-price"><span class="currency">£</span>80<span class="unit" style="font-size:12px;color:#8e8e93;font-weight:400">/时</span></div>
+              <span class="service-type-badge">按时</span>
+            </div>
+          </div>
+        </div>
+        <div class="service-card">
+          <div class="service-img" style="background:linear-gradient(135deg,#fff4e5,#ffe8cc)">🖼</div>
+          <div class="service-body">
+            <div class="service-name">3D 产品渲染</div>
+            <div class="service-meta">
+              <div class="service-price"><span class="currency">£</span>150</div>
+              <span class="service-type-badge">固定</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Activities -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title">
+          <span class="icon" style="background:linear-gradient(135deg,#34C759,#30B350)">🎯</span>
+          进行中的活动
+          <span style="font-weight:400;color:#8e8e93;font-size:13px">3</span>
+        </div>
+        <span class="section-more">查看全部 ›</span>
+      </div>
+      <div class="activities-scroll">
+        <div class="activity-card">
+          <div class="activity-img" style="background:linear-gradient(135deg,#e8f0fe,#d6e4ff)">🎨</div>
+          <div class="activity-status">进行中</div>
+          <div class="activity-date-badge">6月15日<br>14:00</div>
+          <div class="activity-body">
+            <div class="activity-name">品牌设计工作坊</div>
+            <div class="activity-desc">从零开始学习品牌视觉设计的核心方法论</div>
+            <div class="activity-footer">
+              <div class="activity-participants">
+                <div class="activity-participants-avatars">
+                  <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=40&h=40&fit=crop&crop=face" alt="">
+                  <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face" alt="">
+                  <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=40&h=40&fit=crop&crop=face" alt="">
+                </div>
+                12/20人
+              </div>
+              <span class="activity-price"><span style="font-size:10px;font-weight:500">£</span>35</span>
+            </div>
+          </div>
+        </div>
+        <div class="activity-card">
+          <div class="activity-img" style="background:linear-gradient(135deg,#f0e6ff,#e8d6ff)">💡</div>
+          <div class="activity-status">进行中</div>
+          <div class="activity-date-badge">6月18日<br>19:00</div>
+          <div class="activity-body">
+            <div class="activity-name">Figma 进阶技巧分享</div>
+            <div class="activity-desc">高效组件系统与 Auto Layout 实战</div>
+            <div class="activity-footer">
+              <div class="activity-participants">
+                <div class="activity-participants-avatars">
+                  <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop&crop=face" alt="">
+                  <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=40&h=40&fit=crop&crop=face" alt="">
+                </div>
+                8/15人
+              </div>
+              <span class="activity-price free">免费</span>
+            </div>
+          </div>
+        </div>
+        <div class="activity-card">
+          <div class="activity-img" style="background:linear-gradient(135deg,#fff4e5,#ffe8cc)">🖥</div>
+          <div class="activity-status">进行中</div>
+          <div class="activity-date-badge">6月22日<br>10:00</div>
+          <div class="activity-body">
+            <div class="activity-name">作品集点评会</div>
+            <div class="activity-desc">资深设计师一对一点评你的作品集</div>
+            <div class="activity-footer">
+              <div class="activity-participants">
+                <div class="activity-participants-avatars">
+                  <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face" alt="">
+                </div>
+                3/10人
+              </div>
+              <span class="activity-price"><span style="font-size:10px;font-weight:500">£</span>15</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reviews -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title">
+          <span class="icon" style="background:linear-gradient(135deg,#FF9500,#FF6B00)">★</span>
+          用户评价
+        </div>
+        <span class="section-more">查看全部 ›</span>
+      </div>
+      <div class="review-summary">
+        <div class="review-big-score">4.9</div>
+        <div class="review-stars-wrap">
+          <div class="review-stars">★★★★★</div>
+          <div class="review-count">156 条评价</div>
+        </div>
+      </div>
+      <div class="review-card">
+        <div class="review-top">
+          <img class="review-avatar" src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80&h=80&fit=crop&crop=face" alt="">
+          <div class="review-user-info">
+            <div class="review-user-name">Alice Wang</div>
+            <div class="review-meta">
+              <span class="review-user-stars">★★★★★</span>
+              <span>品牌视觉全案设计</span>
+              <span>3天前</span>
+            </div>
+          </div>
+        </div>
+        <div class="review-body">非常专业的团队！从需求沟通到最终交付，每一步都很细致。设计方案超出预期，已经推荐给朋友了。</div>
+      </div>
+      <div class="review-card">
+        <div class="review-top">
+          <img class="review-avatar" src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&h=80&fit=crop&crop=face" alt="">
+          <div class="review-user-info">
+            <div class="review-user-name">David Li</div>
+            <div class="review-meta">
+              <span class="review-user-stars">★★★★★</span>
+              <span>App UI/UX 设计</span>
+              <span>1周前</span>
+            </div>
+          </div>
+        </div>
+        <div class="review-body">响应速度快，两小时内就给出了初步方案。最终成品质量很高，用户反馈也很好。</div>
+      </div>
+      <div class="review-card">
+        <div class="review-top">
+          <img class="review-avatar" src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=80&h=80&fit=crop&crop=face" alt="">
+          <div class="review-user-info">
+            <div class="review-user-name">Mia Chen</div>
+            <div class="review-meta">
+              <span class="review-user-stars">★★★★☆</span>
+              <span>3D 产品渲染</span>
+              <span>2周前</span>
+            </div>
+          </div>
+        </div>
+        <div class="review-body">渲染效果很棒，不过交付时间比预期晚了一天。整体还是很满意的。</div>
+      </div>
+    </div>
+
+    <!-- Forum Entry -->
+    <div class="section" style="padding:14px 18px;">
+      <div class="forum-entry">
+        <div class="forum-icon-wrap">💬</div>
+        <div class="forum-text">
+          <div class="forum-title">团队论坛</div>
+          <div class="forum-desc">与团队互动、获取最新动态</div>
+        </div>
+        <span class="forum-arrow">›</span>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+
+  <!-- ==================== Bottom Action Bar ==================== -->
+  <div class="bottom-bar">
+    <button class="btn-follow" title="关注">♡</button>
+    <button class="btn-chat">💬 咨询</button>
+  </div>
+
+</div><!-- /phone-frame -->
+
+</body>
+</html>

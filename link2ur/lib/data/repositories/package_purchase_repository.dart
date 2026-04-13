@@ -87,12 +87,14 @@ class PackagePurchaseRepository {
     required String expertId,
     String? qrData,
     String? otp,
+    int? packageId,
     int? subServiceId,
     String? note,
   }) async {
     final body = <String, dynamic>{};
     if (qrData != null) body['qr_data'] = qrData;
     if (otp != null) body['otp'] = otp;
+    if (packageId != null) body['package_id'] = packageId;
     if (subServiceId != null) body['sub_service_id'] = subServiceId;
     if (note != null) body['note'] = note;
     final res = await _api.post<Map<String, dynamic>>(

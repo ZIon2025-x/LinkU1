@@ -37,9 +37,9 @@ class TeamActivityCreate(BaseModel):
     deadline: datetime  # required, ISO format from JSON
 
     # Pricing (mostly inherited from service if not provided, but allow override)
-    original_price_per_participant: Optional[float] = None
-    discount_percentage: Optional[float] = None
-    discounted_price_per_participant: Optional[float] = None
+    original_price_per_participant: Optional[float] = Field(None, ge=0)
+    discount_percentage: Optional[float] = Field(None, ge=0, le=100)
+    discounted_price_per_participant: Optional[float] = Field(None, ge=0)
     currency: str = 'GBP'
 
     # Reward
@@ -138,6 +138,32 @@ async def create_team_activity(
             "error_code": "service_inactive",
             "message": "Cannot create activity from inactive service",
         })
+
+    # ---- 套餐服务价格校验 ----
+    is_package = service.package_type in ("multi", "bundle")
+    if is_package:
+        pkg_price = float(service.package_price) if service.package_price else None
+        if not pkg_price or pkg_price <= 0:
+            raise HTTPException(status_code=422, detail={
+                "error_code": "package_price_missing",
+                "message": "套餐服务必须设置 package_price 才能发布活动",
+            })
+
+        # 原价自动取 package_price（前端传了也覆盖，防止误填单次价）
+        body.original_price_per_participant = pkg_price
+
+        # 折扣价不能低于原价的 50%
+        if body.discounted_price_per_participant is not None:
+            if body.discounted_price_per_participant < pkg_price * 0.5:
+                raise HTTPException(status_code=422, detail={
+                    "error_code": "discount_too_deep",
+                    "message": f"折扣价不能低于套餐原价的 50%（最低 £{pkg_price * 0.5:.2f}）",
+                })
+            if body.discounted_price_per_participant >= pkg_price:
+                raise HTTPException(status_code=422, detail={
+                    "error_code": "discount_not_lower",
+                    "message": "折扣价必须低于套餐原价",
+                })
 
     result = await db.execute(
         select(ExpertMember).where(

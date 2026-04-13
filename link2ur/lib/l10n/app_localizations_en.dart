@@ -12220,6 +12220,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorServiceInactive => 'This service is not available right now.';
 
   @override
+  String get errorPackagePriceMissing =>
+      'Package price must be set before creating an activity.';
+
+  @override
+  String get errorDiscountTooDeep =>
+      'Discount price cannot be less than 50% of the package price.';
+
+  @override
+  String get errorDiscountNotLower =>
+      'Discount price must be lower than the original price.';
+
+  @override
   String get errorTeamNotFound => 'Team not found.';
 
   @override
@@ -12835,6 +12847,17 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String customerPackagesExpiresOn(String date) {
     return 'Expires: $date';
+  }
+
+  @override
+  String get customerPackagesManualRedeem => 'Redeem';
+
+  @override
+  String get customerPackagesRedeemConfirmTitle => 'Confirm Redemption';
+
+  @override
+  String customerPackagesRedeemConfirmBody(String userName) {
+    return 'Redeem 1 session for $userName?';
   }
 
   @override
