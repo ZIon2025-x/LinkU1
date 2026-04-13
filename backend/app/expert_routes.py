@@ -1547,6 +1547,39 @@ async def update_expert_location(
     }
 
 
+# ==================== 19c. PUT /{expert_id}/business-hours ====================
+
+VALID_DAYS = {"mon", "tue", "wed", "thu", "fri", "sat", "sun"}
+
+@expert_router.put("/{expert_id}/business-hours")
+async def update_business_hours(
+    expert_id: str,
+    body: dict,
+    db: AsyncSession = Depends(get_async_db_dependency),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+):
+    """更新达人团队每周营业时间（Owner/Admin，直接生效）
+
+    Body: {"mon": {"open": "09:00", "close": "18:00"}, "sun": null, ...}
+    key 缺失或 value=null 表示休息日。传空 {} 清空。
+    """
+    expert = await _get_expert_or_404(db, expert_id)
+    await _get_member_or_403(db, expert_id, current_user.id, required_roles=["owner", "admin"])
+
+    # Validate
+    for day, hours in body.items():
+        if day not in VALID_DAYS:
+            raise HTTPException(status_code=422, detail=f"无效的星期: {day}")
+        if hours is not None:
+            if not isinstance(hours, dict) or "open" not in hours or "close" not in hours:
+                raise HTTPException(status_code=422, detail=f"{day}: 需要 open 和 close 字段")
+
+    expert.business_hours = body if body else None
+    await db.commit()
+    await db.refresh(expert)
+    return {"message": "营业时间已更新", "business_hours": expert.business_hours}
+
+
 # ==================== 19. POST /{expert_id}/stripe-connect ====================
 
 @expert_router.post("/{expert_id}/stripe-connect")

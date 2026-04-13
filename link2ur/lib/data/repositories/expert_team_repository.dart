@@ -227,6 +227,15 @@ class ExpertTeamRepository {
     await _apiService.post(ApiEndpoints.expertTeamDissolve(expertId));
   }
 
+  // ==================== 营业时间 ====================
+
+  Future<void> updateBusinessHours(String expertId, Map<String, dynamic> hours) async {
+    await _apiService.put(
+      ApiEndpoints.expertTeamBusinessHours(expertId),
+      data: hours,
+    );
+  }
+
   // ==================== 开关申请 ====================
 
   Future<bool> toggleAllowApplications(String expertId, bool allow) async {

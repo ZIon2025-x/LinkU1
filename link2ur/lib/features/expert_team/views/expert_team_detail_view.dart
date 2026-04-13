@@ -718,9 +718,96 @@ class _BioSectionState extends State<_BioSection> {
                 ),
               ],
             ),
+            if (widget.team.businessHours != null && widget.team.businessHours!.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              _BusinessHoursView(businessHours: widget.team.businessHours!),
+            ],
           ],
         ],
       ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 7b. Business hours display
+// ---------------------------------------------------------------------------
+
+class _BusinessHoursView extends StatelessWidget {
+  final Map<String, dynamic> businessHours;
+  const _BusinessHoursView({required this.businessHours});
+
+  static const _dayKeys = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+  static const _dayLabelsZh = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+  static const _dayLabelsEn = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isZh = Localizations.localeOf(context).languageCode.startsWith('zh');
+    final labels = isZh ? _dayLabelsZh : _dayLabelsEn;
+    final closedText = isZh ? '休息' : 'Closed';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.schedule, size: 14, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+            const SizedBox(width: 4),
+            Text(
+              isZh ? '营业时间' : 'Business Hours',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        ...List.generate(_dayKeys.length, (i) {
+          final day = _dayKeys[i];
+          final hours = businessHours[day];
+          final isOpen = hours is Map && hours['open'] != null && hours['close'] != null;
+          final now = DateTime.now();
+          final isToday = now.weekday == i + 1; // DateTime.monday = 1
+
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 2),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 32,
+                  child: Text(
+                    labels[i],
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: isToday ? FontWeight.w700 : FontWeight.w400,
+                      color: isToday
+                          ? AppColors.primary
+                          : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  isOpen ? '${hours['open']} - ${hours['close']}' : closedText,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: isToday ? FontWeight.w600 : FontWeight.w400,
+                    color: isOpen
+                        ? (isToday
+                            ? AppColors.primary
+                            : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight))
+                        : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
     );
   }
 }

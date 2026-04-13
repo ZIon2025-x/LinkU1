@@ -42,6 +42,8 @@ class ExpertTeam extends Equatable {
   final String? responseTime;
   final String? responseTimeEn;
   final String userLevel;
+  /// 每周营业时间: {"mon": {"open": "09:00", "close": "18:00"}, "sun": null, ...}
+  final Map<String, dynamic>? businessHours;
 
   const ExpertTeam({
     required this.id,
@@ -83,6 +85,7 @@ class ExpertTeam extends Equatable {
     this.responseTime,
     this.responseTimeEn,
     this.userLevel = 'normal',
+    this.businessHours,
   });
 
   factory ExpertTeam.fromJson(Map<String, dynamic> json) {
@@ -128,6 +131,7 @@ class ExpertTeam extends Equatable {
       responseTime: json['response_time'] as String?,
       responseTimeEn: json['response_time_en'] as String?,
       userLevel: json['user_level'] as String? ?? 'normal',
+      businessHours: json['business_hours'] as Map<String, dynamic>?,
     );
   }
 
@@ -171,7 +175,7 @@ class ExpertTeam extends Equatable {
         location, latitude, longitude, serviceRadiusKm,
         category, isVerified, expertiseAreas, expertiseAreasEn,
         featuredSkills, featuredSkillsEn, achievements, achievementsEn,
-        responseTime, responseTimeEn, userLevel,
+        responseTime, responseTimeEn, userLevel, businessHours,
       ];
 }
 

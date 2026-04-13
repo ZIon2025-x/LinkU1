@@ -44,6 +44,7 @@ class ExpertOut(BaseModel):
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     service_radius_km: Optional[int] = None
+    business_hours: Optional[dict] = None  # {"mon": {"open": "09:00", "close": "18:00"}, ...}
     is_following: bool = False  # 当前用户是否关注（接口层填充）
     my_role: Optional[str] = None  # 当前用户在此团队中的角色（接口层填充）
 

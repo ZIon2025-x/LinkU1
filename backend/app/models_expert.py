@@ -78,6 +78,9 @@ class Expert(Base):
     latitude = Column(DECIMAL(10, 8), nullable=True)
     longitude = Column(DECIMAL(11, 8), nullable=True)
     service_radius_km = Column(Integer, nullable=True)
+    # 每周营业时间 (migration 196)
+    # {"mon": {"open": "09:00", "close": "18:00"}, "tue": {...}, "sun": null}
+    business_hours = Column(JSON, nullable=True)
     created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
 

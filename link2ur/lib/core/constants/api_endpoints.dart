@@ -327,6 +327,7 @@ class ApiEndpoints {
   static String expertTeamStripeConnect(String id) => '/api/experts/$id/stripe-connect';
   static String expertTeamStripeStatus(String id) => '/api/experts/$id/stripe-connect/status';
   static String expertTeamActivities(String expertId) => '/api/experts/$expertId/activities';
+  static String expertTeamBusinessHours(String expertId) => '/api/experts/$expertId/business-hours';
   static String reviewReply(int reviewId) => '/api/reviews/$reviewId/reply';
 
   // Task consultation endpoints
