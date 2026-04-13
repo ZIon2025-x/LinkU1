@@ -89,8 +89,9 @@ class _PackageRedemptionScanViewState extends State<PackageRedemptionScanView> {
     List<Map<String, dynamic>> subServices,
   ) async {
     if (!mounted) return null;
+    _scanner.stop();
     final l10n = context.l10n;
-    return showDialog<int>(
+    final result = await showDialog<int>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(l10n.packageRedemptionPickSubServiceTitle),
@@ -148,16 +149,19 @@ class _PackageRedemptionScanViewState extends State<PackageRedemptionScanView> {
         ],
       ),
     );
+    if (mounted) _scanner.start();
+    return result;
   }
 
-  void _showSuccessDialog(Map<String, dynamic> result) {
+  Future<void> _showSuccessDialog(Map<String, dynamic> result) async {
     if (!mounted) return;
+    _scanner.stop();
     final l10n = context.l10n;
     final total = (result['total_sessions'] as num?)?.toInt() ?? 0;
     final used = (result['used_sessions'] as num?)?.toInt() ?? 0;
     final remaining = (result['remaining_sessions'] as num?)?.toInt() ?? 0;
     final exhausted = result['status'] == 'exhausted';
-    showDialog<void>(
+    await showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         icon: const Icon(Icons.check_circle, color: Colors.green, size: 48),
@@ -187,6 +191,7 @@ class _PackageRedemptionScanViewState extends State<PackageRedemptionScanView> {
         ],
       ),
     );
+    if (mounted) _scanner.start();
   }
 
   void _showErrorSnack(String message) {
@@ -202,6 +207,8 @@ class _PackageRedemptionScanViewState extends State<PackageRedemptionScanView> {
 
   Future<void> _showManualOtpDialog() async {
     if (!mounted) return;
+    // 暂停 scanner 防止 dialog 期间 onDetect 回调触发 setState 导致 framework 断言失败
+    _scanner.stop();
     final l10n = context.l10n;
     final controller = TextEditingController();
     try {
@@ -217,6 +224,7 @@ class _PackageRedemptionScanViewState extends State<PackageRedemptionScanView> {
       }
     } finally {
       controller.dispose();
+      if (mounted) _scanner.start();
     }
   }
 
