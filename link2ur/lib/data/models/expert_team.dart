@@ -30,6 +30,18 @@ class ExpertTeam extends Equatable {
   final double? latitude;
   final double? longitude;
   final int? serviceRadiusKm;
+  // 达人画像字段 (migration 188)
+  final String? category;
+  final bool isVerified;
+  final List<String>? expertiseAreas;
+  final List<String>? expertiseAreasEn;
+  final List<String>? featuredSkills;
+  final List<String>? featuredSkillsEn;
+  final List<String>? achievements;
+  final List<String>? achievementsEn;
+  final String? responseTime;
+  final String? responseTimeEn;
+  final String userLevel;
 
   const ExpertTeam({
     required this.id,
@@ -60,6 +72,17 @@ class ExpertTeam extends Equatable {
     this.latitude,
     this.longitude,
     this.serviceRadiusKm,
+    this.category,
+    this.isVerified = false,
+    this.expertiseAreas,
+    this.expertiseAreasEn,
+    this.featuredSkills,
+    this.featuredSkillsEn,
+    this.achievements,
+    this.achievementsEn,
+    this.responseTime,
+    this.responseTimeEn,
+    this.userLevel = 'normal',
   });
 
   factory ExpertTeam.fromJson(Map<String, dynamic> json) {
@@ -94,6 +117,17 @@ class ExpertTeam extends Equatable {
       latitude: (json['latitude'] as num?)?.toDouble(),
       longitude: (json['longitude'] as num?)?.toDouble(),
       serviceRadiusKm: json['service_radius_km'] as int?,
+      category: json['category'] as String?,
+      isVerified: json['is_verified'] as bool? ?? false,
+      expertiseAreas: (json['expertise_areas'] as List?)?.cast<String>(),
+      expertiseAreasEn: (json['expertise_areas_en'] as List?)?.cast<String>(),
+      featuredSkills: (json['featured_skills'] as List?)?.cast<String>(),
+      featuredSkillsEn: (json['featured_skills_en'] as List?)?.cast<String>(),
+      achievements: (json['achievements'] as List?)?.cast<String>(),
+      achievementsEn: (json['achievements_en'] as List?)?.cast<String>(),
+      responseTime: json['response_time'] as String?,
+      responseTimeEn: json['response_time_en'] as String?,
+      userLevel: json['user_level'] as String? ?? 'normal',
     );
   }
 
@@ -107,6 +141,26 @@ class ExpertTeam extends Equatable {
     return bioEn ?? bio;
   }
 
+  List<String> displayExpertiseAreas(String locale) {
+    if (locale.startsWith('zh')) return expertiseAreas ?? [];
+    return expertiseAreasEn ?? expertiseAreas ?? [];
+  }
+
+  List<String> displayFeaturedSkills(String locale) {
+    if (locale.startsWith('zh')) return featuredSkills ?? [];
+    return featuredSkillsEn ?? featuredSkills ?? [];
+  }
+
+  List<String> displayAchievements(String locale) {
+    if (locale.startsWith('zh')) return achievements ?? [];
+    return achievementsEn ?? achievements ?? [];
+  }
+
+  String? displayResponseTime(String locale) {
+    if (locale.startsWith('zh')) return responseTime;
+    return responseTimeEn ?? responseTime;
+  }
+
   @override
   List<Object?> get props => [
         id, name, nameEn, nameZh, bio, bioEn, bioZh, avatar,
@@ -115,6 +169,8 @@ class ExpertTeam extends Equatable {
         isOfficial, officialBadge, stripeOnboardingComplete,
         createdAt, isFollowing, myRole, forumCategoryId, members, isFeatured,
         location, latitude, longitude, serviceRadiusKm,
+        category, isVerified, expertiseAreas, featuredSkills, achievements,
+        responseTime, userLevel,
       ];
 }
 
