@@ -179,7 +179,6 @@ class _DetailContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final members = team.members ?? [];
     return SingleChildScrollView(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).padding.bottom + 80,
@@ -196,15 +195,6 @@ class _DetailContent extends StatelessWidget {
                 _BioSection(team: team),
                 const SizedBox(height: 12),
                 _TagsSection(team: team),
-                if (members.isNotEmpty) ...[
-                  _MembersSection(
-                    members: members,
-                    memberCount: team.memberCount,
-                    expertId: expertId,
-                    canManage: canManage,
-                  ),
-                  const SizedBox(height: 12),
-                ],
                 if (state.services.isNotEmpty) ...[
                   _ServicesSection(
                     services: state.services,
@@ -1012,155 +1002,7 @@ class _Tag extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// 11. Members section — horizontal scroll
-// ---------------------------------------------------------------------------
-
-class _MembersSection extends StatelessWidget {
-  final List<ExpertMember> members;
-  final int memberCount;
-  final String expertId;
-  final bool canManage;
-
-  const _MembersSection({
-    required this.members,
-    required this.memberCount,
-    required this.expertId,
-    required this.canManage,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return _SectionCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _SectionHeader(
-            icon: Icons.group_outlined,
-            iconGradient: const [Color(0xFF5856D6), Color(0xFFAF52DE)],
-            title: context.l10n.expertTeamMembersHeader(memberCount),
-            onSeeAll: canManage
-                ? () => context
-                    .push('/expert-dashboard/$expertId/management/members')
-                : null,
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 80,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: members.length > 10 ? 10 : members.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 16),
-              itemBuilder: (_, i) => _MemberAvatar(key: ValueKey(members[i].id), member: members[i]),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// 12. Member avatar with role dot
-// ---------------------------------------------------------------------------
-
-class _MemberAvatar extends StatelessWidget {
-  final ExpertMember member;
-  const _MemberAvatar({super.key, required this.member});
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return SizedBox(
-      width: 64,
-      child: Column(
-        children: [
-          SizedBox(
-            width: 52,
-            height: 52,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                AvatarView(
-                  imageUrl: member.userAvatar,
-                  name: member.userName,
-                  size: 52,
-                ),
-                Positioned(
-                  bottom: -2,
-                  right: -2,
-                  child: Container(
-                    width: 18,
-                    height: 18,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: isDark ? AppColors.cardBackgroundDark : Colors.white,
-                        width: 2,
-                      ),
-                      gradient: _roleGradient(member.role),
-                      color: member.role == 'member'
-                          ? const Color(0xFF8E8E93)
-                          : null,
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      _roleIcon(member.role),
-                      style: const TextStyle(
-                        fontSize: 8,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            member.userName ?? member.userId,
-            style: TextStyle(
-              fontSize: 11,
-              color: isDark
-                  ? Colors.white70
-                  : const Color(0xFF3C3C43),
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
-  LinearGradient? _roleGradient(String role) {
-    switch (role) {
-      case 'owner':
-        return const LinearGradient(
-            colors: [Color(0xFFFFD700), Color(0xFFFF8C00)]);
-      case 'admin':
-        return const LinearGradient(
-            colors: [Color(0xFF007AFF), Color(0xFF5856D6)]);
-      default:
-        return null;
-    }
-  }
-
-  String _roleIcon(String role) {
-    switch (role) {
-      case 'owner':
-        return '\u2605'; // ★
-      case 'admin':
-        return 'A';
-      default:
-        return 'M';
-    }
-  }
-}
-
-// ---------------------------------------------------------------------------
-// 13. Services section — horizontal scroll
+// 11. Services section — horizontal scroll
 // ---------------------------------------------------------------------------
 
 class _ServicesSection extends StatelessWidget {
