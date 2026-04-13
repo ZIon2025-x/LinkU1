@@ -703,7 +703,7 @@ class ExpertTeamBloc extends Bloc<ExpertTeamEvent, ExpertTeamState> {
     if (_activityRepository == null) return;
     emit(state.copyWith(isLoadingActivities: true));
     try {
-      final result = await _activityRepository!.getActivities(
+      final result = await _activityRepository.getActivities(
         expertId: event.expertId,
         status: 'open',
         pageSize: 10,
@@ -722,7 +722,7 @@ class ExpertTeamBloc extends Bloc<ExpertTeamEvent, ExpertTeamState> {
     emit(state.copyWith(isLoadingReviews: true));
     try {
       final offset = event.loadMore ? state.reviews.length : 0;
-      final data = await _taskExpertRepository!.getExpertReviews(
+      final data = await _taskExpertRepository.getExpertReviews(
         event.expertId,
         limit: 10,
         offset: offset,
