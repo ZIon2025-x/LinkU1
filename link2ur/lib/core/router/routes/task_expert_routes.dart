@@ -6,9 +6,9 @@ import '../page_transitions.dart';
 import '../../../features/task_expert/views/task_expert_list_view.dart';
 import '../../../features/task_expert/views/task_expert_search_view.dart';
 import '../../../features/task_expert/views/task_experts_intro_view.dart';
-import '../../../features/task_expert/views/task_expert_detail_view.dart';
 import '../../../features/task_expert/views/service_detail_view.dart';
 import '../../../features/task_expert/views/my_service_applications_view.dart';
+import '../../../features/expert_team/views/expert_team_detail_view.dart';
 
 /// 任务达人相关路由
 List<RouteBase> get taskExpertRoutes => [
@@ -35,7 +35,7 @@ List<RouteBase> get taskExpertRoutes => [
           return platformDetailPage(
             context,
             key: state.pageKey,
-            child: TaskExpertDetailView(expertId: id),
+            child: ExpertTeamDetailView(expertId: id),
           );
         },
       ),
