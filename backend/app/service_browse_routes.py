@@ -164,10 +164,16 @@ async def browse_services(
             "service_name": s.service_name,
             "service_name_en": s.service_name_en,
             "service_name_zh": s.service_name_zh,
+            # Flutter 端用 name/name_zh/name_en 读取，加别名兼容
+            "name": s.service_name,
+            "name_en": s.service_name_en,
+            "name_zh": s.service_name_zh,
             "description": s.description,
             "description_en": s.description_en,
             "description_zh": s.description_zh,
             "base_price": float(s.base_price) if s.base_price else 0,
+            "package_price": float(s.package_price) if s.package_price else None,
+            "price": float(s.package_price or s.base_price) if (s.package_price or s.base_price) else 0,
             "currency": s.currency or "GBP",
             "pricing_type": s.pricing_type or "fixed",
             "location_type": s.location_type or "online",
@@ -183,6 +189,8 @@ async def browse_services(
             "owner_rating": owner_rating,
             "created_at": s.created_at.isoformat() if s.created_at else None,
             "service_radius_km": eff_radius,
+            "package_type": s.package_type,
+            "total_sessions": s.total_sessions,
         }
         if lat is not None and lng is not None and eff_lat is not None and eff_lng is not None:
             lat_d = eff_lat - lat
