@@ -1227,8 +1227,11 @@ class _ServiceCard extends StatelessWidget {
     final images = service['images'] as List?;
     final firstImage =
         images != null && images.isNotEmpty ? images.first as String? : null;
-    final price = service['price'] as num?;
+    // price 优先取后端计算好的 price (= package_price ?? base_price)，兼容 fallback
+    final price = (service['price'] ?? service['package_price'] ?? service['base_price']) as num?;
     final packageType = service['package_type'] as String?;
+    final isPackage = packageType == 'multi' || packageType == 'bundle';
+    final totalSessions = service['total_sessions'] as int?;
     final serviceId = service['id'];
 
     return GestureDetector(
@@ -1305,7 +1308,7 @@ class _ServiceCard extends StatelessWidget {
                         )
                       else
                         const SizedBox.shrink(),
-                      if (packageType != null)
+                      if (isPackage)
                         Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 6, vertical: 2),
@@ -1316,7 +1319,7 @@ class _ServiceCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
-                            packageType,
+                            totalSessions != null ? '${totalSessions}x' : packageType!,
                             style: const TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w600,

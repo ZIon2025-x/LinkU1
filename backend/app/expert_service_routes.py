@@ -127,10 +127,17 @@ async def list_expert_services(
             "service_name": s.service_name,
             "service_name_en": s.service_name_en,
             "service_name_zh": s.service_name_zh,
+            # Flutter 端用 name/name_zh/name_en 读取，加别名兼容
+            "name": s.service_name,
+            "name_en": s.service_name_en,
+            "name_zh": s.service_name_zh,
             "description": s.description,
             "description_en": s.description_en,
             "description_zh": s.description_zh,
             "base_price": float(s.base_price) if s.base_price else 0,
+            # 套餐价: 前端需要区分 base_price (单次) 和 package_price (整套)
+            "package_price": float(s.package_price) if s.package_price else None,
+            "price": float(s.package_price or s.base_price) if (s.package_price or s.base_price) else 0,
             "currency": s.currency,
             "pricing_type": s.pricing_type,
             "location_type": s.location_type,
