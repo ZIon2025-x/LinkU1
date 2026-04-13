@@ -257,6 +257,7 @@ class ExpertTeamState extends Equatable {
   final List<Activity> activities;
   final bool isLoadingActivities;
   final List<Map<String, dynamic>> reviews;
+  final int totalReviews;
   final bool isLoadingReviews;
   final bool hasMoreReviews;
   final Map<String, dynamic>? groupBuyStatus;
@@ -279,6 +280,7 @@ class ExpertTeamState extends Equatable {
     this.activities = const [],
     this.isLoadingActivities = false,
     this.reviews = const [],
+    this.totalReviews = 0,
     this.isLoadingReviews = false,
     this.hasMoreReviews = false,
     this.groupBuyStatus,
@@ -302,6 +304,7 @@ class ExpertTeamState extends Equatable {
     List<Activity>? activities,
     bool? isLoadingActivities,
     List<Map<String, dynamic>>? reviews,
+    int? totalReviews,
     bool? isLoadingReviews,
     bool? hasMoreReviews,
     Map<String, dynamic>? groupBuyStatus,
@@ -324,6 +327,7 @@ class ExpertTeamState extends Equatable {
       activities: activities ?? this.activities,
       isLoadingActivities: isLoadingActivities ?? this.isLoadingActivities,
       reviews: reviews ?? this.reviews,
+      totalReviews: totalReviews ?? this.totalReviews,
       isLoadingReviews: isLoadingReviews ?? this.isLoadingReviews,
       hasMoreReviews: hasMoreReviews ?? this.hasMoreReviews,
       groupBuyStatus: groupBuyStatus ?? this.groupBuyStatus,
@@ -333,7 +337,7 @@ class ExpertTeamState extends Equatable {
   }
 
   @override
-  List<Object?> get props => [status, myTeams, currentTeam, members, myApplications, joinRequests, services, featuredExperts, followingExperts, myInvitations, packages, coupons, activities, isLoadingActivities, reviews, isLoadingReviews, hasMoreReviews, groupBuyStatus, errorMessage, actionMessage];
+  List<Object?> get props => [status, myTeams, currentTeam, members, myApplications, joinRequests, services, featuredExperts, followingExperts, myInvitations, packages, coupons, activities, isLoadingActivities, reviews, totalReviews, isLoadingReviews, hasMoreReviews, groupBuyStatus, errorMessage, actionMessage];
 }
 
 // ==================== BLoC ====================
@@ -727,11 +731,12 @@ class ExpertTeamBloc extends Bloc<ExpertTeamEvent, ExpertTeamState> {
         limit: 10,
         offset: offset,
       );
-      final items = data['items'] as List<Map<String, dynamic>>;
+      final items = (data['items'] as List).cast<Map<String, dynamic>>();
       final total = data['total'] as int;
       final allReviews = event.loadMore ? [...state.reviews, ...items] : items;
       emit(state.copyWith(
         reviews: allReviews,
+        totalReviews: total,
         isLoadingReviews: false,
         hasMoreReviews: allReviews.length < total,
       ));

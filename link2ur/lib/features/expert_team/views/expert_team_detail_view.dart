@@ -197,6 +197,7 @@ class _DetailContent extends StatelessWidget {
                 ],
                 _ReviewsSection(
                   reviews: state.reviews,
+                  totalReviews: state.totalReviews,
                   rating: team.rating,
                   isLoading: state.isLoadingReviews,
                   hasMore: state.hasMoreReviews,
@@ -542,9 +543,9 @@ class _StatCell extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
-              color: AppColors.textSecondaryLight,
+              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
               letterSpacing: 0.2,
             ),
           ),
@@ -614,7 +615,7 @@ class _BioSectionState extends State<_BioSection> {
           GestureDetector(
             onTap: () => setState(() => _expanded = !_expanded),
             child: Text(
-              _expanded ? '\u6536\u8d77' : '\u5c55\u5f00', // 收起 / 展开
+              _expanded ? context.l10n.taskDetailCollapse : context.l10n.taskDetailExpandAll,
               style: const TextStyle(
                 fontSize: 13,
                 color: AppColors.primary,
@@ -630,12 +631,12 @@ class _BioSectionState extends State<_BioSection> {
                 if (widget.team.serviceRadiusKm != null)
                   _InfoPill(
                     icon: Icons.location_on_outlined,
-                    label: '\u670d\u52a1\u8303\u56f4', // 服务范围
+                    label: context.l10n.serviceRadius,
                     value: '${widget.team.serviceRadiusKm}km',
                   ),
                 _InfoPill(
                   icon: Icons.check_circle_outline,
-                  label: '\u5b8c\u6210\u7387', // 完成率
+                  label: context.l10n.taskExpertCompletionRate,
                   value:
                       '${(widget.team.completionRate * 100).toStringAsFixed(0)}%',
                 ),
@@ -775,12 +776,12 @@ class _InfoPill extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 13, color: AppColors.textSecondaryLight),
+          Icon(icon, size: 13, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
           const SizedBox(width: 5),
           Text(
             label,
-            style: const TextStyle(
-                fontSize: 12, color: AppColors.textSecondaryLight),
+            style: TextStyle(
+                fontSize: 12, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
           ),
           const SizedBox(width: 4),
           Text(
@@ -857,6 +858,7 @@ class _MemberAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return SizedBox(
       width: 64,
       child: Column(
@@ -880,7 +882,10 @@ class _MemberAvatar extends StatelessWidget {
                     height: 18,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
+                      border: Border.all(
+                        color: isDark ? AppColors.cardBackgroundDark : Colors.white,
+                        width: 2,
+                      ),
                       gradient: _roleGradient(member.role),
                       color: member.role == 'member'
                           ? const Color(0xFF8E8E93)
@@ -1316,7 +1321,7 @@ class _ActivityCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 12,
                         color: isDark
-                            ? const Color(0xFF636366)
+                            ? AppColors.textSecondaryDark
                             : AppColors.textSecondaryLight,
                       ),
                       maxLines: 1,
@@ -1365,6 +1370,7 @@ class _ActivityCard extends StatelessWidget {
 
 class _ReviewsSection extends StatelessWidget {
   final List<Map<String, dynamic>> reviews;
+  final int totalReviews;
   final double rating;
   final bool isLoading;
   final bool hasMore;
@@ -1372,6 +1378,7 @@ class _ReviewsSection extends StatelessWidget {
 
   const _ReviewsSection({
     required this.reviews,
+    required this.totalReviews,
     required this.rating,
     required this.isLoading,
     required this.hasMore,
@@ -1389,7 +1396,7 @@ class _ReviewsSection extends StatelessWidget {
             icon: Icons.star_outline,
             iconGradient: const [Color(0xFFFF9500), Color(0xFFFFCC00)],
             title: l10n.taskExpertReviews,
-            count: reviews.length,
+            count: totalReviews > 0 ? totalReviews : (reviews.isNotEmpty ? reviews.length : null),
           ),
           const SizedBox(height: 14),
           // Summary row
@@ -1424,7 +1431,7 @@ class _ReviewsSection extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    l10n.taskExpertReviewsCount(reviews.length),
+                    l10n.taskExpertReviewsCount(totalReviews > 0 ? totalReviews : reviews.length),
                     style: const TextStyle(
                       fontSize: 12,
                       color: AppColors.textSecondaryLight,
@@ -1774,12 +1781,12 @@ class _BottomActionBar extends StatelessWidget {
           child: SizedBox(
             height: 44,
             child: OutlinedButton.icon(
-              onPressed: () {
-                AppHaptics.selection();
-                if (owners.isNotEmpty) {
-                  context.push('/messages/${owners.first.userId}');
-                }
-              },
+              onPressed: owners.isNotEmpty
+                  ? () {
+                      AppHaptics.selection();
+                      context.push('/messages/${owners.first.userId}');
+                    }
+                  : null,
               icon: const Icon(Icons.chat_bubble_outline, size: 16),
               label: Text(l10n.consultExpert),
               style: OutlinedButton.styleFrom(
