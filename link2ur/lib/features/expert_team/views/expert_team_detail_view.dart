@@ -1079,7 +1079,7 @@ class _ServiceCard extends StatelessWidget {
     return GestureDetector(
       onTap: () {
         AppHaptics.selection();
-        context.push('/task-experts/$expertId/services/$serviceId');
+        context.push('/service/$serviceId');
       },
       child: Container(
         width: 220,
@@ -1840,7 +1840,7 @@ class _BottomActionBar extends StatelessWidget {
               onPressed: owners.isNotEmpty
                   ? () {
                       AppHaptics.selection();
-                      context.push('/messages/${owners.first.userId}');
+                      context.push('/chat/${owners.first.userId}');
                     }
                   : null,
               icon: const Icon(Icons.chat_bubble_outline, size: 16),
