@@ -401,6 +401,25 @@ async def negotiate_price(
         raise HTTPException(status_code=400, detail="price 必须为数字")
     if price <= 0:
         raise HTTPException(status_code=400, detail="price 必须大于 0")
+    # 团队咨询：议价时必须绑定服务
+    service_id = body.get("service_id")
+    if application.service_id is None:
+        if not service_id:
+            raise HTTPException(status_code=400, detail="团队咨询议价必须选择一个服务")
+        # 校验服务属于该团队
+        svc_result = await db.execute(
+            select(models.TaskExpertService).where(
+                and_(
+                    models.TaskExpertService.id == int(service_id),
+                    models.TaskExpertService.owner_type == "expert",
+                    models.TaskExpertService.owner_id == application.new_expert_id,
+                    models.TaskExpertService.status == "active",
+                )
+            )
+        )
+        if not svc_result.scalar_one_or_none():
+            raise HTTPException(status_code=400, detail="service_not_found")
+        application.service_id = int(service_id)
     application.negotiated_price = price
     application.status = "negotiating"
     application.updated_at = get_utc_time()
@@ -438,6 +457,24 @@ async def quote_price(
         raise HTTPException(status_code=400, detail="price 必须为数字")
     if price <= 0:
         raise HTTPException(status_code=400, detail="price 必须大于 0")
+    # 团队咨询：报价时必须绑定服务
+    service_id = body.get("service_id")
+    if application.service_id is None:
+        if not service_id:
+            raise HTTPException(status_code=400, detail="团队咨询报价必须选择一个服务")
+        svc_result = await db.execute(
+            select(models.TaskExpertService).where(
+                and_(
+                    models.TaskExpertService.id == int(service_id),
+                    models.TaskExpertService.owner_type == "expert",
+                    models.TaskExpertService.owner_id == application.new_expert_id,
+                    models.TaskExpertService.status == "active",
+                )
+            )
+        )
+        if not svc_result.scalar_one_or_none():
+            raise HTTPException(status_code=400, detail="service_not_found")
+        application.service_id = int(service_id)
     application.expert_counter_price = price
     application.status = "negotiating"
     application.updated_at = get_utc_time()
@@ -509,6 +546,24 @@ async def respond_to_negotiation(
             raise HTTPException(status_code=400, detail="price 必须为数字")
         if price <= 0:
             raise HTTPException(status_code=400, detail="price 必须大于 0")
+        # 团队咨询还价时可更换服务
+        service_id = body.get("service_id")
+        if application.service_id is None and not service_id:
+            raise HTTPException(status_code=400, detail="团队咨询还价必须选择一个服务")
+        if service_id:
+            svc_result = await db.execute(
+                select(models.TaskExpertService).where(
+                    and_(
+                        models.TaskExpertService.id == int(service_id),
+                        models.TaskExpertService.owner_type == "expert",
+                        models.TaskExpertService.owner_id == application.new_expert_id,
+                        models.TaskExpertService.status == "active",
+                    )
+                )
+            )
+            if not svc_result.scalar_one_or_none():
+                raise HTTPException(status_code=400, detail="service_not_found")
+            application.service_id = int(service_id)
         # 按身份区分写哪个字段(不再依赖匿名 fallback)
         if is_applicant:
             application.negotiated_price = price
