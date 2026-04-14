@@ -1201,7 +1201,13 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
                     NegotiationActionButton(
                       label: context.l10n.counterOffer,
                       color: AppColors.info,
-                      onPressed: () => _consultationActions!.showCounterOfferDialog(context, getCurrencySymbol: _getCurrencySymbol),
+                      onPressed: () => _consultationActions!.showCounterOfferDialog(
+                        context,
+                        getCurrencySymbol: _getCurrencySymbol,
+                        expertId: (_consultationApp != null && _consultationApp!['service_id'] == null)
+                            ? _consultationApp!['new_expert_id'] as String?
+                            : null,
+                      ),
                     ),
                   ],
                 ),

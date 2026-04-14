@@ -780,6 +780,7 @@ class TaskExpertRepository {
   Future<Map<String, dynamic>> createConsultation(int serviceId) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.consultService(serviceId),
+      data: {},
     );
     if (!response.isSuccess || response.data == null) {
       throw TaskExpertException(response.errorCode ?? response.message ?? '创建咨询失败', code: response.errorCode);
@@ -791,10 +792,14 @@ class TaskExpertRepository {
   Future<Map<String, dynamic>> negotiatePrice(
     int applicationId, {
     required double proposedPrice,
+    int? serviceId,
   }) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.negotiateConsultation(applicationId),
-      data: {'proposed_price': proposedPrice},
+      data: {
+        'price': proposedPrice,
+        if (serviceId != null) 'service_id': serviceId,
+      },
     );
     if (!response.isSuccess || response.data == null) {
       throw TaskExpertException(response.errorCode ?? response.message ?? '议价失败', code: response.errorCode);
@@ -807,12 +812,14 @@ class TaskExpertRepository {
     int applicationId, {
     required double quotedPrice,
     String? message,
+    int? serviceId,
   }) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.quoteApplication(applicationId),
       data: {
-        'quoted_price': quotedPrice,
+        'price': quotedPrice,
         if (message != null && message.isNotEmpty) 'message': message,
+        if (serviceId != null) 'service_id': serviceId,
       },
     );
     if (!response.isSuccess || response.data == null) {
@@ -826,12 +833,14 @@ class TaskExpertRepository {
     int applicationId, {
     required String action,
     double? counterPrice,
+    int? serviceId,
   }) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.negotiateResponse(applicationId),
       data: {
         'action': action,
-        if (counterPrice != null) 'counter_price': counterPrice,
+        if (counterPrice != null) 'price': counterPrice,
+        if (serviceId != null) 'service_id': serviceId,
       },
     );
     if (!response.isSuccess || response.data == null) {

@@ -4,6 +4,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/design/app_colors.dart';
 import '../../../../core/constants/api_endpoints.dart';
 import '../../../../core/utils/l10n_extension.dart';
+import '../../../../data/models/task_expert.dart';
+import '../../../../data/repositories/task_expert_repository.dart';
 import '../../../task_expert/bloc/task_expert_bloc.dart';
 import 'consultation_base.dart';
 
@@ -26,33 +28,66 @@ class ServiceConsultationActions extends ConsultationActions {
   bool get needsApplicationIdInMessages => false;
 
   @override
-  void handleNegotiationResponse(BuildContext context, String action) {
+  void handleNegotiationResponse(BuildContext context, String action, {int? serviceId}) {
     context.read<TaskExpertBloc>().add(
-      TaskExpertNegotiateResponse(applicationId, action: action),
+      TaskExpertNegotiateResponse(applicationId, action: action, serviceId: serviceId),
     );
   }
 
   @override
-  void showCounterOfferDialog(
+  Future<void> showCounterOfferDialog(
     BuildContext context, {
     required String Function() getCurrencySymbol,
-  }) {
+    String? expertId,
+  }) async {
+    // Pre-fetch services for team consultation
+    List<TaskExpertService>? services;
+    if (expertId != null) {
+      try {
+        services = await context.read<TaskExpertRepository>().getExpertServices(expertId);
+      } catch (_) {
+        services = [];
+      }
+    }
+
+    if (!context.mounted) return;
     final priceController = TextEditingController();
     final bloc = context.read<TaskExpertBloc>();
     String? errorText;
+    int? selectedServiceId;
+
     showDialog(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (dialogContext, setDialogState) => AlertDialog(
           title: Text(context.l10n.counterOffer),
-          content: TextField(
-            controller: priceController,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: InputDecoration(
-              hintText: context.l10n.counterOfferHint,
-              prefixText: getCurrencySymbol(),
-              errorText: errorText,
-            ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (expertId != null && services != null && services.isNotEmpty) ...[
+                DropdownButtonFormField<int>(
+                  initialValue: selectedServiceId,
+                  decoration: InputDecoration(
+                    labelText: context.l10n.consultationSelectService,
+                  ),
+                  items: services.map((s) => DropdownMenuItem<int>(
+                    value: s.id,
+                    child: Text(s.serviceName, overflow: TextOverflow.ellipsis),
+                  )).toList(),
+                  onChanged: (v) => setDialogState(() => selectedServiceId = v),
+                ),
+                const SizedBox(height: 12),
+              ],
+              TextField(
+                controller: priceController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  hintText: context.l10n.counterOfferHint,
+                  prefixText: getCurrencySymbol(),
+                  errorText: errorText,
+                ),
+              ),
+            ],
           ),
           actions: [
             TextButton(
@@ -61,6 +96,10 @@ class ServiceConsultationActions extends ConsultationActions {
             ),
             TextButton(
               onPressed: () {
+                if (expertId != null && services != null && services.isNotEmpty && selectedServiceId == null) {
+                  setDialogState(() => errorText = context.l10n.consultationSelectServiceHint);
+                  return;
+                }
                 final price = double.tryParse(priceController.text.trim());
                 if (price == null || price <= 0) {
                   setDialogState(() => errorText = context.l10n.counterOfferHint);
@@ -72,6 +111,7 @@ class ServiceConsultationActions extends ConsultationActions {
                     applicationId,
                     action: 'counter',
                     counterPrice: price,
+                    serviceId: selectedServiceId,
                   ),
                 );
               },
@@ -97,6 +137,11 @@ class ServiceConsultationActions extends ConsultationActions {
     final isNegotiating = appStatus == 'negotiating';
     final isPriceAgreed = appStatus == 'price_agreed';
 
+    // Team consultation: service_id is null on the application
+    final expertId = (consultationApp != null && consultationApp['service_id'] == null)
+        ? consultationApp['new_expert_id'] as String?
+        : null;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: SingleChildScrollView(
@@ -110,7 +155,7 @@ class ServiceConsultationActions extends ConsultationActions {
                 label: context.l10n.negotiatePrice,
                 onTap: isSubmitting
                     ? null
-                    : () => _showNegotiateDialog(context, getCurrencySymbol),
+                    : () => _showNegotiateDialog(context, getCurrencySymbol, expertId: expertId),
               ),
               const SizedBox(width: 8),
             ],
@@ -131,7 +176,7 @@ class ServiceConsultationActions extends ConsultationActions {
                 label: context.l10n.quotePrice,
                 onTap: isSubmitting
                     ? null
-                    : () => _showQuoteDialog(context, getCurrencySymbol),
+                    : () => _showQuoteDialog(context, getCurrencySymbol, expertId: expertId),
               ),
               const SizedBox(width: 8),
             ],
@@ -172,23 +217,59 @@ class ServiceConsultationActions extends ConsultationActions {
     );
   }
 
-  void _showNegotiateDialog(BuildContext context, String Function() getCurrencySymbol) {
+  Future<void> _showNegotiateDialog(
+    BuildContext context,
+    String Function() getCurrencySymbol, {
+    String? expertId,
+  }) async {
+    // Pre-fetch services for team consultation
+    List<TaskExpertService>? services;
+    if (expertId != null) {
+      try {
+        services = await context.read<TaskExpertRepository>().getExpertServices(expertId);
+      } catch (_) {
+        services = [];
+      }
+    }
+
+    if (!context.mounted) return;
     final priceController = TextEditingController();
     final bloc = context.read<TaskExpertBloc>();
     String? errorText;
+    int? selectedServiceId;
+
     showDialog(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (dialogContext, setDialogState) => AlertDialog(
           title: Text(context.l10n.negotiatePrice),
-          content: TextField(
-            controller: priceController,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: InputDecoration(
-              hintText: context.l10n.negotiatePriceHint,
-              prefixText: getCurrencySymbol(),
-              errorText: errorText,
-            ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (expertId != null && services != null && services.isNotEmpty) ...[
+                DropdownButtonFormField<int>(
+                  initialValue: selectedServiceId,
+                  decoration: InputDecoration(
+                    labelText: context.l10n.consultationSelectService,
+                  ),
+                  items: services.map((s) => DropdownMenuItem<int>(
+                    value: s.id,
+                    child: Text(s.serviceName, overflow: TextOverflow.ellipsis),
+                  )).toList(),
+                  onChanged: (v) => setDialogState(() => selectedServiceId = v),
+                ),
+                const SizedBox(height: 12),
+              ],
+              TextField(
+                controller: priceController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  hintText: context.l10n.negotiatePriceHint,
+                  prefixText: getCurrencySymbol(),
+                  errorText: errorText,
+                ),
+              ),
+            ],
           ),
           actions: [
             TextButton(
@@ -197,6 +278,10 @@ class ServiceConsultationActions extends ConsultationActions {
             ),
             TextButton(
               onPressed: () {
+                if (expertId != null && services != null && services.isNotEmpty && selectedServiceId == null) {
+                  setDialogState(() => errorText = context.l10n.consultationSelectServiceHint);
+                  return;
+                }
                 final price = double.tryParse(priceController.text.trim());
                 if (price == null || price <= 0) {
                   setDialogState(() => errorText = context.l10n.negotiatePriceHint);
@@ -204,7 +289,7 @@ class ServiceConsultationActions extends ConsultationActions {
                 }
                 Navigator.pop(dialogContext);
                 bloc.add(
-                  TaskExpertNegotiatePrice(applicationId, price: price),
+                  TaskExpertNegotiatePrice(applicationId, price: price, serviceId: selectedServiceId),
                 );
               },
               child: Text(MaterialLocalizations.of(context).okButtonLabel),
@@ -215,11 +300,28 @@ class ServiceConsultationActions extends ConsultationActions {
     ).whenComplete(() => priceController.dispose());
   }
 
-  void _showQuoteDialog(BuildContext context, String Function() getCurrencySymbol) {
+  Future<void> _showQuoteDialog(
+    BuildContext context,
+    String Function() getCurrencySymbol, {
+    String? expertId,
+  }) async {
+    // Pre-fetch services for team consultation
+    List<TaskExpertService>? services;
+    if (expertId != null) {
+      try {
+        services = await context.read<TaskExpertRepository>().getExpertServices(expertId);
+      } catch (_) {
+        services = [];
+      }
+    }
+
+    if (!context.mounted) return;
     final priceController = TextEditingController();
     final messageController = TextEditingController();
     final bloc = context.read<TaskExpertBloc>();
     String? errorText;
+    int? selectedServiceId;
+
     showDialog(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
@@ -228,6 +330,20 @@ class ServiceConsultationActions extends ConsultationActions {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (expertId != null && services != null && services.isNotEmpty) ...[
+                DropdownButtonFormField<int>(
+                  initialValue: selectedServiceId,
+                  decoration: InputDecoration(
+                    labelText: context.l10n.consultationSelectService,
+                  ),
+                  items: services.map((s) => DropdownMenuItem<int>(
+                    value: s.id,
+                    child: Text(s.serviceName, overflow: TextOverflow.ellipsis),
+                  )).toList(),
+                  onChanged: (v) => setDialogState(() => selectedServiceId = v),
+                ),
+                const SizedBox(height: 12),
+              ],
               TextField(
                 controller: priceController,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -255,6 +371,10 @@ class ServiceConsultationActions extends ConsultationActions {
             ),
             TextButton(
               onPressed: () {
+                if (expertId != null && services != null && services.isNotEmpty && selectedServiceId == null) {
+                  setDialogState(() => errorText = context.l10n.consultationSelectServiceHint);
+                  return;
+                }
                 final price = double.tryParse(priceController.text.trim());
                 if (price == null || price <= 0) {
                   setDialogState(() => errorText = context.l10n.quotePriceHint);
@@ -267,6 +387,7 @@ class ServiceConsultationActions extends ConsultationActions {
                     applicationId,
                     price: price,
                     message: msg.isNotEmpty ? msg : null,
+                    serviceId: selectedServiceId,
                   ),
                 );
               },

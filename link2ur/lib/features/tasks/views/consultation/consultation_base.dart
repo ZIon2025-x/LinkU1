@@ -65,12 +65,13 @@ abstract class ConsultationActions {
   });
 
   /// 处理议价回复（接受/拒绝/还价）
-  void handleNegotiationResponse(BuildContext context, String action);
+  void handleNegotiationResponse(BuildContext context, String action, {int? serviceId});
 
   /// 显示还价弹窗
-  void showCounterOfferDialog(
+  Future<void> showCounterOfferDialog(
     BuildContext context, {
     required String Function() getCurrencySymbol,
+    String? expertId,
   });
 }
 

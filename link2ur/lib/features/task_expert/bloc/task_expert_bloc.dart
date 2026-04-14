@@ -208,34 +208,37 @@ class TaskExpertStartConsultation extends TaskExpertEvent {
 
 /// 用户议价
 class TaskExpertNegotiatePrice extends TaskExpertEvent {
-  const TaskExpertNegotiatePrice(this.applicationId, {required this.price});
+  const TaskExpertNegotiatePrice(this.applicationId, {required this.price, this.serviceId});
   final int applicationId;
   final double price;
+  final int? serviceId;
 
   @override
-  List<Object?> get props => [applicationId, price];
+  List<Object?> get props => [applicationId, price, serviceId];
 }
 
 /// 达人报价
 class TaskExpertQuotePrice extends TaskExpertEvent {
-  const TaskExpertQuotePrice(this.applicationId, {required this.price, this.message});
+  const TaskExpertQuotePrice(this.applicationId, {required this.price, this.message, this.serviceId});
   final int applicationId;
   final double price;
   final String? message;
+  final int? serviceId;
 
   @override
-  List<Object?> get props => [applicationId, price, message];
+  List<Object?> get props => [applicationId, price, message, serviceId];
 }
 
 /// 回应议价/报价
 class TaskExpertNegotiateResponse extends TaskExpertEvent {
-  const TaskExpertNegotiateResponse(this.applicationId, {required this.action, this.counterPrice});
+  const TaskExpertNegotiateResponse(this.applicationId, {required this.action, this.counterPrice, this.serviceId});
   final int applicationId;
   final String action; // 'accept', 'reject', 'counter'
   final double? counterPrice;
+  final int? serviceId;
 
   @override
-  List<Object?> get props => [applicationId, action, counterPrice];
+  List<Object?> get props => [applicationId, action, counterPrice, serviceId];
 }
 
 /// 咨询转正式申请
@@ -1508,7 +1511,11 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
   ) async {
     emit(state.copyWith(isSubmitting: true));
     try {
-      await _taskExpertRepository.negotiatePrice(event.applicationId, proposedPrice: event.price);
+      await _taskExpertRepository.negotiatePrice(
+        event.applicationId,
+        proposedPrice: event.price,
+        serviceId: event.serviceId,
+      );
       emit(state.copyWith(isSubmitting: false, actionMessage: 'negotiation_sent'));
     } on TaskExpertException catch (e) {
       emit(state.copyWith(isSubmitting: false, errorMessage: e.message));
@@ -1523,7 +1530,12 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
   ) async {
     emit(state.copyWith(isSubmitting: true));
     try {
-      await _taskExpertRepository.quotePrice(event.applicationId, quotedPrice: event.price, message: event.message);
+      await _taskExpertRepository.quotePrice(
+        event.applicationId,
+        quotedPrice: event.price,
+        message: event.message,
+        serviceId: event.serviceId,
+      );
       emit(state.copyWith(isSubmitting: false, actionMessage: 'quote_sent'));
     } on TaskExpertException catch (e) {
       emit(state.copyWith(isSubmitting: false, errorMessage: e.message));
@@ -1542,6 +1554,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
         event.applicationId,
         action: event.action,
         counterPrice: event.counterPrice,
+        serviceId: event.serviceId,
       );
       final status = result['status'] as String? ?? '';
       emit(state.copyWith(

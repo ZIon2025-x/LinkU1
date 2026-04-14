@@ -26,17 +26,18 @@ class FleaMarketConsultationActions extends ConsultationActions {
   bool get needsApplicationIdInMessages => false;
 
   @override
-  void handleNegotiationResponse(BuildContext context, String action) {
+  void handleNegotiationResponse(BuildContext context, String action, {int? serviceId}) {
     context.read<TaskExpertBloc>().add(
       TaskExpertFleaMarketNegotiateResponse(applicationId, action: action),
     );
   }
 
   @override
-  void showCounterOfferDialog(
+  Future<void> showCounterOfferDialog(
     BuildContext context, {
     required String Function() getCurrencySymbol,
-  }) {
+    String? expertId,
+  }) async {
     final priceController = TextEditingController();
     final bloc = context.read<TaskExpertBloc>();
     String? errorText;

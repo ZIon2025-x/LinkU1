@@ -27,17 +27,18 @@ class TaskConsultationActions extends ConsultationActions {
   bool get needsApplicationIdInMessages => true;
 
   @override
-  void handleNegotiationResponse(BuildContext context, String action) {
+  void handleNegotiationResponse(BuildContext context, String action, {int? serviceId}) {
     context.read<TaskExpertBloc>().add(
       TaskExpertTaskNegotiateResponse(taskId, applicationId, action: action),
     );
   }
 
   @override
-  void showCounterOfferDialog(
+  Future<void> showCounterOfferDialog(
     BuildContext context, {
     required String Function() getCurrencySymbol,
-  }) {
+    String? expertId,
+  }) async {
     final priceController = TextEditingController();
     final bloc = context.read<TaskExpertBloc>();
     String? errorText;
