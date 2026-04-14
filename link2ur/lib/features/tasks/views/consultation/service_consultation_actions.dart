@@ -120,7 +120,7 @@ class ServiceConsultationActions extends ConsultationActions {
           ],
         ),
       ),
-    ).whenComplete(() => priceController.dispose());
+    );
   }
 
   @override
@@ -299,7 +299,7 @@ class ServiceConsultationActions extends ConsultationActions {
           ],
         ),
       ),
-    ).whenComplete(() => priceController.dispose());
+    );
   }
 
   Future<void> _showQuoteDialog(

@@ -82,7 +82,7 @@ class TaskConsultationActions extends ConsultationActions {
           ],
         ),
       ),
-    ).whenComplete(() => priceController.dispose());
+    );
   }
 
   @override
@@ -216,7 +216,7 @@ class TaskConsultationActions extends ConsultationActions {
           ],
         ),
       ),
-    ).whenComplete(() => priceController.dispose());
+    );
   }
 
   void _showQuoteDialog(BuildContext context, String Function() getCurrencySymbol) {
@@ -279,10 +279,7 @@ class TaskConsultationActions extends ConsultationActions {
           ],
         ),
       ),
-    ).whenComplete(() {
-      priceController.dispose();
-      messageController.dispose();
-    });
+    );
   }
 
   void _showFormalApplyDialog(BuildContext context, String Function() getCurrencySymbol) {
@@ -345,10 +342,7 @@ class TaskConsultationActions extends ConsultationActions {
           ],
         ),
       ),
-    ).whenComplete(() {
-      priceController.dispose();
-      messageController.dispose();
-    });
+    );
   }
 
   void _showApproveConfirmation(BuildContext context) {

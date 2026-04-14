@@ -1741,9 +1741,9 @@ class ExpertClosedDate(Base):
 class ServiceApplication(Base):
     """服务申请表"""
     __tablename__ = "service_applications"
-    
+
     id = Column(Integer, primary_key=True, index=True)
-    service_id = Column(Integer, ForeignKey("task_expert_services.id", ondelete="CASCADE"), nullable=False)
+    service_id = Column(Integer, ForeignKey("task_expert_services.id", ondelete="CASCADE"), nullable=True)  # NULL = 团队咨询（未指定具体服务）
     applicant_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     expert_id = Column(String(8), ForeignKey("task_experts.id", ondelete="CASCADE"), nullable=True)  # [legacy] 指向旧 task_experts 表，仅历史数据使用
     # 指向新 experts 表的 ID（Phase 2a）——与旧 expert_id 共存

@@ -227,9 +227,9 @@ async def create_consultation(
     consulting_task = models.Task(
         title=service_name,
         description=f"咨询: {service_name}",
-        reward=service.price or 0,
-        base_reward=service.price or 0,
-        reward_to_be_quoted=True if not service.price else False,
+        reward=service.base_price or 0,
+        base_reward=service.base_price or 0,
+        reward_to_be_quoted=True if not service.base_price else False,
         currency=service.currency or "GBP",
         location=service.location or "",
         task_type="expert_service",
