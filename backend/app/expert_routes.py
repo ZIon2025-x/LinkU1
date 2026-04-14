@@ -547,6 +547,12 @@ async def get_expert_detail(
         m.user_avatar = user.avatar
         members_out.append(m)
 
+    # 粉丝数
+    fc_result = await db.execute(
+        select(func.count()).select_from(ExpertFollow).where(ExpertFollow.expert_id == expert_id)
+    )
+    follower_count = fc_result.scalar() or 0
+
     # 关注状态
     is_following = False
     if current_user:
@@ -589,6 +595,7 @@ async def get_expert_detail(
         members=members_out,
         is_featured=is_featured,
     )
+    detail.follower_count = follower_count
     detail.is_following = is_following
     detail.my_role = my_role
 

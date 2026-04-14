@@ -13,6 +13,7 @@ class ExpertTeam extends Equatable {
   final String status;
   final bool allowApplications;
   final int memberCount;
+  final int followerCount;
   final double rating;
   final int totalServices;
   final int completedTasks;
@@ -59,6 +60,7 @@ class ExpertTeam extends Equatable {
     this.status = 'active',
     this.allowApplications = false,
     this.memberCount = 1,
+    this.followerCount = 0,
     this.rating = 0.0,
     this.totalServices = 0,
     this.completedTasks = 0,
@@ -104,6 +106,7 @@ class ExpertTeam extends Equatable {
       status: json['status'] as String? ?? 'active',
       allowApplications: json['allow_applications'] as bool? ?? false,
       memberCount: json['member_count'] as int? ?? 1,
+      followerCount: json['follower_count'] as int? ?? 0,
       rating: (json['rating'] as num?)?.toDouble() ?? 0.0,
       totalServices: json['total_services'] as int? ?? 0,
       completedTasks: json['completed_tasks'] as int? ?? 0,
@@ -172,7 +175,7 @@ class ExpertTeam extends Equatable {
   @override
   List<Object?> get props => [
         id, name, nameEn, nameZh, bio, bioEn, bioZh, avatar,
-        status, allowApplications, memberCount, rating,
+        status, allowApplications, memberCount, followerCount, rating,
         totalServices, completedTasks, completionRate,
         isOfficial, officialBadge, stripeOnboardingComplete,
         createdAt, isFollowing, myRole, forumCategoryId, members, isFeatured,

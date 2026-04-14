@@ -57,6 +57,8 @@ GoRoute(
               int.tryParse(state.pathParameters['applicationId'] ?? '');
           final isConsultation =
               state.uri.queryParameters['consultation'] == 'true';
+          final readOnly =
+              state.uri.queryParameters['readonly'] == 'true';
           final typeStr = state.uri.queryParameters['type'];
           final consultationType = switch (typeStr) {
             'task' => ConsultationType.task,
@@ -78,6 +80,7 @@ GoRoute(
               applicationId: applicationId,
               isConsultation: isConsultation,
               consultationType: consultationType,
+              readOnly: readOnly,
             ),
           );
         },

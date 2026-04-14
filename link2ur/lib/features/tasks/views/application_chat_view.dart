@@ -4,7 +4,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
+import '../../../core/utils/adaptive_dialogs.dart';
 import '../../../core/utils/error_localizer.dart';
+import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../data/models/message.dart';
 import '../../../data/models/task_application.dart';
@@ -37,12 +39,16 @@ class ApplicationChatView extends StatelessWidget {
     required this.applicationId,
     this.isConsultation = false,
     this.consultationType = ConsultationType.service,
+    this.readOnly = false,
   });
 
   final int taskId;
   final int applicationId;
   final bool isConsultation;
   final ConsultationType consultationType;
+  /// 只读模式：成交后从主任务聊天跳转回来查看议价历史时为 true
+  /// 隐藏输入框、报价修改、确认支付、拒绝、咨询操作按钮
+  final bool readOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -60,6 +66,7 @@ class ApplicationChatView extends StatelessWidget {
         applicationId: applicationId,
         isConsultation: isConsultation,
         consultationType: consultationType,
+        readOnly: readOnly,
       ),
     );
 
@@ -85,12 +92,14 @@ class _ApplicationChatContent extends StatefulWidget {
     required this.applicationId,
     this.isConsultation = false,
     this.consultationType = ConsultationType.service,
+    this.readOnly = false,
   });
 
   final int taskId;
   final int applicationId;
   final bool isConsultation;
   final ConsultationType consultationType;
+  final bool readOnly;
 
   @override
   State<_ApplicationChatContent> createState() =>
@@ -272,6 +281,28 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
         SnackBar(content: Text(context.localizeError('task_send_message_failed'))),
       );
     }
+  }
+
+  /// Poster rejects the application from inside the chat view.
+  /// Shows a confirm dialog, dispatches reject, then pops back to task detail.
+  Future<void> _confirmRejectFromChat() async {
+    final confirmed = await AdaptiveDialogs.showConfirmDialog<bool>(
+      context: context,
+      title: context.l10n.taskDetailRejectApplication,
+      content: context.l10n.taskDetailRejectApplicationConfirm,
+      confirmText: context.l10n.commonConfirm,
+      cancelText: context.l10n.commonCancel,
+      isDestructive: true,
+      onConfirm: () => true,
+      onCancel: () => false,
+    );
+    if (confirmed != true || !mounted) return;
+    AppHaptics.medium();
+    final navigator = Navigator.of(context);
+    context
+        .read<TaskDetailBloc>()
+        .add(TaskDetailRejectApplicant(widget.applicationId));
+    if (navigator.canPop()) navigator.pop();
   }
 
   void _showProposePriceDialog() {
@@ -535,6 +566,9 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
           ),
           body: Column(
             children: [
+              // Read-only banner (成交后历史查看)
+              if (widget.readOnly) _buildReadOnlyBanner(),
+
               // Service info card (consulting/negotiating/price_agreed mode)
               if (isLoaded && showServiceCard)
                 _buildServiceInfoCard(state),
@@ -550,7 +584,8 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
               Expanded(child: _buildMessageList()),
 
               // Consulting action buttons
-              if (widget.isConsultation &&
+              if (!widget.readOnly &&
+                  widget.isConsultation &&
                   isChatActive &&
                   (isConsultingOrNeg || appStatus == 'price_agreed' || appStatus == 'pending'))
                 _consultationActions!.buildActions(
@@ -567,10 +602,11 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
                 ),
 
               // Input bar (when chat is active)
-              if (isChatActive) _buildInputBar(),
+              if (!widget.readOnly && isChatActive) _buildInputBar(),
 
               // Confirm & Pay button (poster only, chatting mode — not consulting)
-              if (!widget.isConsultation &&
+              if (!widget.readOnly &&
+                  !widget.isConsultation &&
                   application?.isChatting == true &&
                   isPoster)
                 _buildConfirmAndPayButton(state),
@@ -614,7 +650,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
               ),
             ),
           ),
-          if (isChatActive)
+          if (isChatActive && !widget.readOnly)
             TextButton.icon(
               onPressed: _showProposePriceDialog,
               icon: const Icon(Icons.edit, size: 16),
@@ -626,6 +662,29 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
                 textStyle: const TextStyle(fontSize: 13),
               ),
             ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReadOnlyBanner() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      color: AppColors.info.withValues(alpha: isDark ? 0.14 : 0.10),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.history, size: 16, color: AppColors.info),
+          const SizedBox(width: 6),
+          Text(
+            context.l10n.taskChatHistoryReadOnlyBanner,
+            style: const TextStyle(fontSize: 13, color: AppColors.info),
+          ),
         ],
       ),
     );
@@ -977,36 +1036,56 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
       ),
       child: SafeArea(
         top: false,
-        child: SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: state.isSubmitting
-                ? null
-                : () {
-                    context.read<TaskDetailBloc>().add(
-                          TaskDetailConfirmAndPay(widget.applicationId),
-                        );
-                  },
-            icon: state.isSubmitting
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                : const Icon(Icons.payment),
-            label: Text(context.l10n.confirmAndPay),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppRadius.medium),
+        child: Row(
+          children: [
+            // 拒绝按钮（轮廓样式）
+            OutlinedButton.icon(
+              onPressed: state.isSubmitting ? null : _confirmRejectFromChat,
+              icon: const Icon(Icons.cancel_outlined, size: 18),
+              label: Text(context.l10n.taskDetailReject),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.error,
+                side: const BorderSide(color: AppColors.error),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.medium),
+                ),
               ),
             ),
-          ),
+            const SizedBox(width: AppSpacing.sm),
+            // 同意并支付按钮（主按钮）
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: state.isSubmitting
+                    ? null
+                    : () {
+                        context.read<TaskDetailBloc>().add(
+                              TaskDetailConfirmAndPay(widget.applicationId),
+                            );
+                      },
+                icon: state.isSubmitting
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.payment),
+                label: Text(context.l10n.confirmAndPay),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.medium),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

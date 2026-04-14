@@ -1148,22 +1148,48 @@ class _ApplicationItem extends StatelessWidget {
             if (application.isPending) ...[
               const SizedBox(height: AppSpacing.md),
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   // 批准按钮（单人/多人任务统一）
                   _ActionCircleButton(
-                      icon: Icons.check_circle,
-                      color: AppColors.success,
-                      onTap: () {
-                        AppHaptics.medium();
-                        context.read<TaskDetailBloc>().add(
-                              TaskDetailAcceptApplicant(application.id),
-                            );
-                      },
-                    ),
-                  const SizedBox(width: 12),
+                    icon: Icons.check_circle,
+                    color: AppColors.success,
+                    label: context.l10n.taskDetailApprove,
+                    onTap: () {
+                      AppHaptics.medium();
+                      context.read<TaskDetailBloc>().add(
+                            TaskDetailAcceptApplicant(application.id),
+                          );
+                    },
+                  ),
+                  // 咨询按钮：开启与申请者的聊天沟通（可议价）
+                  _ActionCircleButton(
+                    icon: Icons.chat_bubble_outline,
+                    color: AppColors.primary,
+                    label: context.l10n.taskDetailConsult,
+                    onTap: () async {
+                      AppHaptics.light();
+                      context.read<TaskDetailBloc>().add(
+                            TaskDetailStartChat(application.id),
+                          );
+                      final taskId = task.id;
+                      final appId = application.id;
+                      await context.push(
+                        '/tasks/$taskId/applications/$appId/chat',
+                      );
+                      if (!context.mounted) return;
+                      context.read<TaskDetailBloc>()
+                        ..add(TaskDetailLoadRequested(taskId))
+                        ..add(TaskDetailLoadApplications(
+                          currentUserId:
+                              StorageService.instance.getUserId(),
+                        ));
+                    },
+                  ),
                   _ActionCircleButton(
                     icon: Icons.cancel,
                     color: AppColors.error,
+                    label: context.l10n.taskDetailReject,
                     onTap: () => _confirmReject(context),
                   ),
                 ],
@@ -1279,35 +1305,52 @@ class _ActionCircleButton extends StatelessWidget {
     required this.icon,
     required this.color,
     required this.onTap,
+    this.label,
   });
 
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
+  final String? label;
 
   @override
   Widget build(BuildContext context) {
     return BouncingWidget(
       onTap: onTap,
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [color, color.withValues(alpha: 0.8)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [color, color.withValues(alpha: 0.8)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: color.withValues(alpha: 0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Icon(icon, size: 24, color: Colors.white),
           ),
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: color.withValues(alpha: 0.3),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
+          if (label != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              label!,
+              style: AppTypography.caption.copyWith(
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ],
-        ),
-        child: Icon(icon, size: 24, color: Colors.white),
+        ],
       ),
     );
   }

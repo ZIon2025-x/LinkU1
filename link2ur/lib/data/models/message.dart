@@ -97,6 +97,7 @@ class Message extends Equatable {
     this.attachments = const [],
     this.negotiationPrice,
     this.negotiationCurrency,
+    this.meta,
   });
 
   final int id;
@@ -113,6 +114,19 @@ class Message extends Equatable {
   final List<MessageAttachment> attachments;
   final double? negotiationPrice;
   final String? negotiationCurrency;
+  /// 解析后的 meta JSON（系统消息的结构化数据，如 deal_closed 的 application_id/price 等）
+  final Map<String, dynamic>? meta;
+
+  /// 系统消息动作类型（如 'deal_closed', 'application_rejected'）
+  String? get systemAction => meta?['system_action'] as String?;
+
+  /// 若系统消息关联某个议价聊天，返回对应 application_id
+  int? get systemApplicationId {
+    final v = meta?['application_id'];
+    if (v == null) return null;
+    if (v is int) return v;
+    return int.tryParse(v.toString());
+  }
 
   /// 是否是图片消息
   bool get isImage => messageType == 'image';
@@ -179,6 +193,7 @@ class Message extends Equatable {
           ? (num.tryParse(metaMap!['price'].toString()) ?? 0).toDouble()
           : null,
       negotiationCurrency: metaMap?['currency'] as String?,
+      meta: metaMap,
     );
   }
 
@@ -213,6 +228,7 @@ class Message extends Equatable {
     List<MessageAttachment>? attachments,
     double? negotiationPrice,
     String? negotiationCurrency,
+    Map<String, dynamic>? meta,
   }) {
     return Message(
       id: id ?? this.id,
@@ -229,6 +245,7 @@ class Message extends Equatable {
       attachments: attachments ?? this.attachments,
       negotiationPrice: negotiationPrice ?? this.negotiationPrice,
       negotiationCurrency: negotiationCurrency ?? this.negotiationCurrency,
+      meta: meta ?? this.meta,
     );
   }
 

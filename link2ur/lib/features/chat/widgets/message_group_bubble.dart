@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/utils/haptic_feedback.dart';
@@ -296,7 +297,9 @@ class _SystemMessageBubble extends StatelessWidget {
               ),
             ),
           // 系统消息卡片
-          if (_isRefundMessage)
+          if (message.systemAction == 'deal_closed')
+            _buildDealClosedCard(context)
+          else if (_isRefundMessage)
             _buildRefundCard(context)
           else
             _buildInfoCard(context),
@@ -379,6 +382,97 @@ class _SystemMessageBubble extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// 成交系统消息卡片（可点击跳转议价记录）
+  Widget _buildDealClosedCard(BuildContext context) {
+    final meta = message.meta ?? const {};
+    final takerName = meta['taker_name']?.toString() ?? '';
+    final currency = meta['currency']?.toString() ?? '';
+    final priceRaw = meta['price'];
+    final priceNum = priceRaw is num
+        ? priceRaw
+        : num.tryParse(priceRaw?.toString() ?? '');
+    final priceDisplay = priceNum != null
+        ? '$currency ${priceNum.toStringAsFixed(2)}'
+        : '';
+    final taskId = message.taskId;
+    final appId = message.systemApplicationId;
+    final canNavigate = taskId != null && appId != null;
+
+    return GestureDetector(
+      onTap: canNavigate
+          ? () {
+              AppHaptics.light();
+              context.push(
+                '/tasks/$taskId/applications/$appId/chat?readonly=true',
+              );
+            }
+          : null,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: AppColors.success.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12),
+          border:
+              Border.all(color: AppColors.success.withValues(alpha: 0.25)),
+        ),
+        child: Column(
+          children: [
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.handshake_outlined,
+                    size: 18, color: AppColors.success),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    takerName.isNotEmpty
+                        ? context.l10n.taskChatDealClosedTitle(takerName)
+                        : message.content,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.success,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
+            ),
+            if (priceDisplay.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                context.l10n.taskChatDealClosedPrice(priceDisplay),
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondaryLight,
+                ),
+              ),
+            ],
+            if (canNavigate) ...[
+              const SizedBox(height: 6),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    context.l10n.taskChatDealClosedCta,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(width: 2),
+                  const Icon(Icons.chevron_right,
+                      size: 14, color: AppColors.primary),
+                ],
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

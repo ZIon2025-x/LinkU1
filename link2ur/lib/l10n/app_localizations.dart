@@ -4449,6 +4449,48 @@ abstract class AppLocalizations {
   /// **'Rejected'**
   String get taskDetailRejected;
 
+  /// No description provided for @taskDetailApprove.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept'**
+  String get taskDetailApprove;
+
+  /// No description provided for @taskDetailReject.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject'**
+  String get taskDetailReject;
+
+  /// No description provided for @taskDetailConsult.
+  ///
+  /// In en, this message translates to:
+  /// **'Consult'**
+  String get taskDetailConsult;
+
+  /// No description provided for @taskChatDealClosedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Deal closed with {name}'**
+  String taskChatDealClosedTitle(String name);
+
+  /// No description provided for @taskChatDealClosedPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Final price: {price}'**
+  String taskChatDealClosedPrice(String price);
+
+  /// No description provided for @taskChatDealClosedCta.
+  ///
+  /// In en, this message translates to:
+  /// **'View negotiation history'**
+  String get taskChatDealClosedCta;
+
+  /// No description provided for @taskChatHistoryReadOnlyBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'History (read-only)'**
+  String get taskChatHistoryReadOnlyBanner;
+
   /// No description provided for @taskDetailRejectApplication.
   ///
   /// In en, this message translates to:
@@ -22217,6 +22259,24 @@ abstract class AppLocalizations {
   /// **'Enter counter price'**
   String get counterOfferHint;
 
+  /// No description provided for @consultationSelectService.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a service'**
+  String get consultationSelectService;
+
+  /// No description provided for @consultationSelectServiceHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a team service'**
+  String get consultationSelectServiceHint;
+
+  /// No description provided for @consultationTeamConsultation.
+  ///
+  /// In en, this message translates to:
+  /// **'Team Consultation'**
+  String get consultationTeamConsultation;
+
   /// No description provided for @acceptPrice.
   ///
   /// In en, this message translates to:
@@ -24040,6 +24100,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Members'**
   String get expertTeamStatMembers;
+
+  /// No description provided for @expertTeamStatFollowers.
+  ///
+  /// In en, this message translates to:
+  /// **'Followers'**
+  String get expertTeamStatFollowers;
 
   /// No description provided for @expertTeamStatServices.
   ///

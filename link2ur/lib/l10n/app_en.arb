@@ -1124,6 +1124,19 @@
   "taskDetailPendingReview": "Pending Review",
   "taskDetailApproved": "Approved",
   "taskDetailRejected": "Rejected",
+  "taskDetailApprove": "Accept",
+  "taskDetailReject": "Reject",
+  "taskDetailConsult": "Consult",
+  "taskChatDealClosedTitle": "Deal closed with {name}",
+  "@taskChatDealClosedTitle": {
+    "placeholders": {"name": {"type": "String"}}
+  },
+  "taskChatDealClosedPrice": "Final price: {price}",
+  "@taskChatDealClosedPrice": {
+    "placeholders": {"price": {"type": "String"}}
+  },
+  "taskChatDealClosedCta": "View negotiation history",
+  "taskChatHistoryReadOnlyBanner": "History (read-only)",
   "taskDetailRejectApplication": "Reject Application",
   "taskDetailRejectApplicationConfirm": "Are you sure you want to reject this application? This action cannot be undone.",
   "taskDetailUnknown": "Unknown",

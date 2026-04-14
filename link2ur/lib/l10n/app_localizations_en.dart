@@ -2420,6 +2420,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskDetailRejected => 'Rejected';
 
   @override
+  String get taskDetailApprove => 'Accept';
+
+  @override
+  String get taskDetailReject => 'Reject';
+
+  @override
+  String get taskDetailConsult => 'Consult';
+
+  @override
+  String taskChatDealClosedTitle(String name) {
+    return 'Deal closed with $name';
+  }
+
+  @override
+  String taskChatDealClosedPrice(String price) {
+    return 'Final price: $price';
+  }
+
+  @override
+  String get taskChatDealClosedCta => 'View negotiation history';
+
+  @override
+  String get taskChatHistoryReadOnlyBanner => 'History (read-only)';
+
+  @override
   String get taskDetailRejectApplication => 'Reject Application';
 
   @override
@@ -12038,6 +12063,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get counterOfferHint => 'Enter counter price';
 
   @override
+  String get consultationSelectService => 'Select a service';
+
+  @override
+  String get consultationSelectServiceHint => 'Choose a team service';
+
+  @override
+  String get consultationTeamConsultation => 'Team Consultation';
+
+  @override
   String get acceptPrice => 'Accept';
 
   @override
@@ -13047,6 +13081,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get expertTeamStatMembers => 'Members';
+
+  @override
+  String get expertTeamStatFollowers => 'Followers';
 
   @override
   String get expertTeamStatServices => 'Services';

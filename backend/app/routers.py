@@ -7342,7 +7342,46 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                                     created_at=get_utc_time(),
                                 )
                                 db.add(reject_msg)
-                        
+
+                        # 往主任务聊天（application_id=NULL）插入一条 deal_closed 系统消息
+                        # 作为 poster 和 taker 进入议价记录的入口
+                        try:
+                            taker_name_for_msg = (
+                                applicant.name if (applicant := db.query(models.User).filter(models.User.id == application.applicant_id).first()) and applicant.name
+                                else f"User {application.applicant_id}"
+                            )
+                            final_price_for_msg = (
+                                float(application.negotiated_price)
+                                if application.negotiated_price is not None
+                                else float(task.base_reward) if task.base_reward is not None else 0.0
+                            )
+                            currency_for_msg = getattr(task, "currency", None) or "GBP"
+                            deal_content_zh = f"已选择 {taker_name_for_msg} 达成合作，成交金额 {currency_for_msg} {final_price_for_msg:.2f}"
+                            deal_content_en = f"Deal closed with {taker_name_for_msg} at {currency_for_msg} {final_price_for_msg:.2f}"
+                            deal_msg = models.Message(
+                                task_id=task_id,
+                                application_id=None,  # 主任务聊天
+                                sender_id=None,       # 系统消息
+                                content=deal_content_zh,
+                                message_type="system",
+                                conversation_type="task",
+                                meta=json.dumps({
+                                    "system_action": "deal_closed",
+                                    "application_id": application_id,
+                                    "taker_id": str(application.applicant_id),
+                                    "taker_name": taker_name_for_msg,
+                                    "price": final_price_for_msg,
+                                    "currency": currency_for_msg,
+                                    "content_en": deal_content_en,
+                                }),
+                                created_at=get_utc_time(),
+                            )
+                            db.add(deal_msg)
+                            logger.info(f"✅ [WEBHOOK] 已写入 deal_closed 主聊天系统消息 task_id={task_id}, app_id={application_id}")
+                        except Exception as deal_msg_exc:
+                            # 消息写入失败不应阻断主流程
+                            logger.warning(f"⚠️ [WEBHOOK] 写入 deal_closed 系统消息失败: {deal_msg_exc}")
+
                         # 写入操作日志
                         from app.utils.time_utils import get_utc_time
                         log_entry = models.NegotiationResponseLog(

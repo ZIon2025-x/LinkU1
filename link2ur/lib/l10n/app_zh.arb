@@ -919,6 +919,19 @@
   "taskDetailPendingReview": "待审核",
   "taskDetailApproved": "已通过",
   "taskDetailRejected": "已拒绝",
+  "taskDetailApprove": "同意",
+  "taskDetailReject": "拒绝",
+  "taskDetailConsult": "咨询",
+  "taskChatDealClosedTitle": "已选择 {name} 达成合作",
+  "@taskChatDealClosedTitle": {
+    "placeholders": {"name": {"type": "String"}}
+  },
+  "taskChatDealClosedPrice": "成交金额 {price}",
+  "@taskChatDealClosedPrice": {
+    "placeholders": {"price": {"type": "String"}}
+  },
+  "taskChatDealClosedCta": "查看议价记录",
+  "taskChatHistoryReadOnlyBanner": "历史记录（只读）",
   "taskDetailRejectApplication": "拒绝申请",
   "taskDetailRejectApplicationConfirm": "确定要拒绝这个申请吗？拒绝后无法撤销。",
   "taskDetailUnknown": "未知",

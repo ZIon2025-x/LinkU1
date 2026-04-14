@@ -2302,6 +2302,31 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskDetailRejected => '已拒绝';
 
   @override
+  String get taskDetailApprove => '同意';
+
+  @override
+  String get taskDetailReject => '拒绝';
+
+  @override
+  String get taskDetailConsult => '咨询';
+
+  @override
+  String taskChatDealClosedTitle(String name) {
+    return '已选择 $name 达成合作';
+  }
+
+  @override
+  String taskChatDealClosedPrice(String price) {
+    return '成交金额 $price';
+  }
+
+  @override
+  String get taskChatDealClosedCta => '查看议价记录';
+
+  @override
+  String get taskChatHistoryReadOnlyBanner => '历史记录（只读）';
+
+  @override
   String get taskDetailRejectApplication => '拒绝申请';
 
   @override
@@ -11557,6 +11582,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get counterOfferHint => '输入还价金额';
 
   @override
+  String get consultationSelectService => '选择服务';
+
+  @override
+  String get consultationSelectServiceHint => '选择一个团队服务';
+
+  @override
+  String get consultationTeamConsultation => '团队咨询';
+
+  @override
   String get acceptPrice => '同意';
 
   @override
@@ -12504,6 +12538,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get expertTeamStatMembers => '成员';
+
+  @override
+  String get expertTeamStatFollowers => '粉丝';
 
   @override
   String get expertTeamStatServices => '服务';
@@ -14857,6 +14894,31 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get taskDetailRejected => '已拒絕';
+
+  @override
+  String get taskDetailApprove => '同意';
+
+  @override
+  String get taskDetailReject => '拒絕';
+
+  @override
+  String get taskDetailConsult => '諮詢';
+
+  @override
+  String taskChatDealClosedTitle(String name) {
+    return '已選擇 $name 達成合作';
+  }
+
+  @override
+  String taskChatDealClosedPrice(String price) {
+    return '成交金額 $price';
+  }
+
+  @override
+  String get taskChatDealClosedCta => '查看議價記錄';
+
+  @override
+  String get taskChatHistoryReadOnlyBanner => '歷史記錄（唯讀）';
 
   @override
   String get taskDetailRejectApplication => '拒絕申請';
@@ -24114,6 +24176,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get counterOfferHint => '輸入還價金額';
 
   @override
+  String get consultationSelectService => '選擇服務';
+
+  @override
+  String get consultationSelectServiceHint => '選擇一個團隊服務';
+
+  @override
+  String get consultationTeamConsultation => '團隊諮詢';
+
+  @override
   String get acceptPrice => '同意';
 
   @override
@@ -25061,6 +25132,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get expertTeamStatMembers => '成員';
+
+  @override
+  String get expertTeamStatFollowers => '粉絲';
 
   @override
   String get expertTeamStatServices => '服務';
