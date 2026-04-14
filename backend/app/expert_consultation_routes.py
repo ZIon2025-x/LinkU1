@@ -1040,16 +1040,46 @@ async def get_application_status(
     if not application:
         raise HTTPException(status_code=404, detail="申请不存在")
 
-    # 权限检查 — 修复 IDOR
-    await _check_application_party(db, application, current_user.id)
+    # 权限检查: 申请人、团队 owner/admin、或团队 member 可查看
+    is_applicant = application.applicant_id == current_user.id
+    is_owner_admin = False
+    is_team_member = False
+    if not is_applicant and application.new_expert_id:
+        try:
+            await _get_member_or_403(
+                db, application.new_expert_id, current_user.id,
+                required_roles=["owner", "admin"],
+            )
+            is_owner_admin = True
+        except HTTPException:
+            # 检查是否为普通 member
+            from app.models_expert import ExpertMember
+            mem_result = await db.execute(
+                select(ExpertMember.id).where(
+                    and_(
+                        ExpertMember.expert_id == application.new_expert_id,
+                        ExpertMember.user_id == current_user.id,
+                        ExpertMember.status == "active",
+                    )
+                ).limit(1)
+            )
+            is_team_member = mem_result.scalar_one_or_none() is not None
+    elif not is_applicant and application.service_owner_id == current_user.id:
+        is_owner_admin = True
+
+    if not is_applicant and not is_owner_admin and not is_team_member:
+        raise HTTPException(status_code=403, detail="无权查看该申请")
 
     return {
         "id": application.id,
         "service_id": application.service_id,
+        "applicant_id": application.applicant_id,
+        "new_expert_id": application.new_expert_id,
         "status": application.status,
         "negotiated_price": float(application.negotiated_price) if application.negotiated_price else None,
         "expert_counter_price": float(application.expert_counter_price) if application.expert_counter_price else None,
         "final_price": float(application.final_price) if application.final_price else None,
+        "can_quote": is_owner_admin and not is_applicant,
         "created_at": application.created_at.isoformat() if application.created_at else None,
     }
 

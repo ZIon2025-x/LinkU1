@@ -141,6 +141,8 @@ class ServiceConsultationActions extends ConsultationActions {
     final expertId = (consultationApp != null && consultationApp['service_id'] == null)
         ? consultationApp['new_expert_id'] as String?
         : null;
+    // 只有 owner/admin 能报价（后端返回 can_quote）
+    final canQuote = consultationApp?['can_quote'] == true;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -170,7 +172,7 @@ class ServiceConsultationActions extends ConsultationActions {
               ),
               const SizedBox(width: 8),
             ],
-            if (!isApplicant && (isConsulting || isNegotiating)) ...[
+            if (canQuote && (isConsulting || isNegotiating)) ...[
               ActionPill(
                 icon: Icons.request_quote,
                 label: context.l10n.quotePrice,
@@ -190,7 +192,7 @@ class ServiceConsultationActions extends ConsultationActions {
               ),
               const SizedBox(width: 8),
             ],
-            if (appStatus == 'pending' && !isApplicant) ...[
+            if (appStatus == 'pending' && canQuote) ...[
               ActionPill(
                 icon: Icons.check_circle,
                 label: context.l10n.expertApplicationConfirmApprove,
