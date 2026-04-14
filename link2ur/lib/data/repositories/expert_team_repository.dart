@@ -1,4 +1,5 @@
 import 'package:link2ur/core/constants/api_endpoints.dart';
+import 'package:link2ur/core/utils/app_exception.dart';
 import 'package:link2ur/data/models/expert_team.dart';
 import 'package:link2ur/data/services/api_service.dart';
 
@@ -274,12 +275,20 @@ class ExpertTeamRepository {
   // ==================== 套餐 ====================
 
   Future<List<Map<String, dynamic>>> getMyPackages() async {
-    final response = await _apiService.get(ApiEndpoints.myPackages);
-    return (response.data as List).cast<Map<String, dynamic>>();
+    final response = await _apiService.get<List<dynamic>>(ApiEndpoints.myPackages);
+    if (!response.isSuccess || response.data == null) {
+      throw ExpertTeamException(
+        response.errorCode ?? response.message ?? 'fetch_my_packages_failed',
+        code: response.errorCode,
+      );
+    }
+    return response.data!
+        .whereType<Map<String, dynamic>>()
+        .toList(growable: false);
   }
 
   Future<Map<String, dynamic>> usePackageSession(String expertId, int packageId, {int? subServiceId, String? note}) async {
-    final response = await _apiService.post(
+    final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.redeemPackage(expertId),
       data: {
         'package_id': packageId,
@@ -287,7 +296,13 @@ class ExpertTeamRepository {
         if (note != null) 'note': note,
       },
     );
-    return response.data as Map<String, dynamic>;
+    if (!response.isSuccess || response.data == null) {
+      throw ExpertTeamException(
+        response.errorCode ?? response.message ?? 'use_package_failed',
+        code: response.errorCode,
+      );
+    }
+    return response.data!;
   }
 
   // ==================== 优惠券 ====================
@@ -388,4 +403,8 @@ class ExpertTeamRepository {
     );
     return response.data as Map<String, dynamic>;
   }
+}
+
+class ExpertTeamException extends AppException {
+  const ExpertTeamException(super.message, {super.code});
 }

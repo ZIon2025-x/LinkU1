@@ -118,6 +118,20 @@ celery_app.conf.beat_schedule = {
         'task': 'app.celery_tasks.process_pending_payment_transfers_task',
         'schedule': 300.0,  # 5分钟
     },
+
+    # 套餐过期扫描 - 每 15 分钟执行一次
+    # 把 expires_at < now 的 active 套餐刷成 expired 并触发结算
+    # (否则资金永远停在 pending transfer,expert 拿不到钱,UI 显示错误状态)
+    'check-expired-packages': {
+        'task': 'app.celery_tasks.check_expired_packages_task',
+        'schedule': 900.0,  # 15分钟
+    },
+
+    # 套餐过期提醒 - 每小时执行一次 (7d/3d/1d 到期前通知买家)
+    'send-package-expiry-reminders': {
+        'task': 'app.celery_tasks.send_package_expiry_reminders_task',
+        'schedule': 3600.0,  # 1小时
+    },
     
     # 检查转账超时 - 每1小时执行一次（检查长时间处于 pending 状态的转账）
     'check-transfer-timeout': {

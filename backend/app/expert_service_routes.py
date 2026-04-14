@@ -343,6 +343,13 @@ async def update_expert_service(
     if service.location_type == "online":
         service.service_radius_km = None
 
+    # base_price 只允许 bundle 为 NULL;multi/普通单次服务不可清空(会让 webhook/结算崩)
+    if service.base_price is None and service.package_type != "bundle":
+        raise HTTPException(status_code=422, detail={
+            "error_code": "base_price_required_non_bundle",
+            "message": "非 bundle 服务必须有 base_price",
+        })
+
     service.updated_at = get_utc_time()
     await db.commit()
     return {"id": service.id, "status": service.status}

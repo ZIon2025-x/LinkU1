@@ -5671,7 +5671,7 @@
     "placeholders": { "used": {"type": "int"}, "total": {"type": "int"} }
   },
   "customerPackagesSubServiceProgress": "Sub-service progress:",
-  "customerPackagesSubServiceLine": "Service #{id}: {used} / {total}",
+  "customerPackagesSubServiceLine": "{id}: {used} / {total}",
   "@customerPackagesSubServiceLine": {
     "placeholders": { "id": {"type": "String"}, "used": {"type": "int"}, "total": {"type": "int"} }
   },

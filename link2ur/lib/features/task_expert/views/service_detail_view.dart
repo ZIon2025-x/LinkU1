@@ -2227,7 +2227,7 @@ class _PurchasePackageDialog extends StatelessWidget {
           if (priceStr != null)
             _row(
               l10n.packagePurchasePriceLabel,
-              l10n.packagePurchasePriceValue(currency, priceStr),
+              '${Helpers.currencySymbolFor(currency)}$priceStr',
             ),
           _row(
             l10n.packagePurchaseValidityLabel,

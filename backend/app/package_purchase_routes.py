@@ -454,6 +454,28 @@ async def get_my_package_detail(
     service = await db.get(models.TaskExpertService, pkg.service_id)
     expert = await db.get(Expert, pkg.expert_id) if pkg.expert_id else None
 
+    # 如果是 bundle,加载子服务名称供 UI 展示 breakdown
+    sub_service_names: dict = {}
+    if pkg.bundle_breakdown:
+        sub_ids: list[int] = []
+        for key in pkg.bundle_breakdown.keys():
+            try:
+                sub_ids.append(int(key))
+            except (TypeError, ValueError):
+                continue
+        if sub_ids:
+            sub_result = await db.execute(
+                select(models.TaskExpertService).where(
+                    models.TaskExpertService.id.in_(sub_ids)
+                )
+            )
+            for svc in sub_result.scalars().all():
+                sub_service_names[str(svc.id)] = {
+                    "service_name": svc.service_name,
+                    "service_name_en": svc.service_name_en,
+                    "service_name_zh": svc.service_name_zh,
+                }
+
     # 历史
     logs_result = await db.execute(
         select(PackageUsageLog)
@@ -501,6 +523,7 @@ async def get_my_package_detail(
         "paid_amount": float(pkg.paid_amount) if pkg.paid_amount is not None else None,
         "currency": pkg.currency,
         "bundle_breakdown": pkg.bundle_breakdown,
+        "sub_service_names": sub_service_names,
         "released_amount_pence": pkg.released_amount_pence,
         "refunded_amount_pence": pkg.refunded_amount_pence,
         "platform_fee_pence": pkg.platform_fee_pence,
@@ -863,8 +886,18 @@ async def list_customer_packages(
     pkgs = (await db.execute(list_q)).scalars().all()
 
     # batch load users + services 避免 N+1
+    # 同时收集 bundle breakdown 引用的子服务 id 一起加载
     user_ids = list({p.user_id for p in pkgs})
     service_ids = list({p.service_id for p in pkgs})
+    sub_service_ids: set[int] = set()
+    for p in pkgs:
+        if p.bundle_breakdown:
+            for key in p.bundle_breakdown.keys():
+                try:
+                    sub_service_ids.add(int(key))
+                except (TypeError, ValueError):
+                    continue
+    all_service_ids = list({*service_ids, *sub_service_ids})
     users_by_id: dict = {}
     services_by_id: dict = {}
     if user_ids:
@@ -872,13 +905,31 @@ async def list_customer_packages(
             select(models.User).where(models.User.id.in_(user_ids))
         )
         users_by_id = {u.id: u for u in users_result.scalars().all()}
-    if service_ids:
+    if all_service_ids:
         services_result = await db.execute(
             select(models.TaskExpertService).where(
-                models.TaskExpertService.id.in_(service_ids)
+                models.TaskExpertService.id.in_(all_service_ids)
             )
         )
         services_by_id = {s.id: s for s in services_result.scalars().all()}
+
+    def _build_sub_names(bd) -> dict:
+        if not bd:
+            return {}
+        names = {}
+        for key in bd.keys():
+            try:
+                sid = int(key)
+            except (TypeError, ValueError):
+                continue
+            svc = services_by_id.get(sid)
+            if svc:
+                names[str(sid)] = {
+                    "service_name": svc.service_name,
+                    "service_name_en": svc.service_name_en,
+                    "service_name_zh": svc.service_name_zh,
+                }
+        return names
 
     items = []
     for p in pkgs:
@@ -900,6 +951,7 @@ async def list_customer_packages(
             "expires_at": p.expires_at.isoformat() if p.expires_at else None,
             "last_redeemed_at": p.last_redeemed_at.isoformat() if p.last_redeemed_at else None,
             "bundle_breakdown": p.bundle_breakdown,
+            "sub_service_names": _build_sub_names(p.bundle_breakdown),
         })
 
     return {"items": items, "total": total, "limit": limit, "offset": offset}
@@ -1214,15 +1266,15 @@ async def request_package_refund(
                 {"error_code": "package_expired", "message": "套餐已过期"},
             )
 
-    in_cooldown = pkg.cooldown_until and now < (
-        pkg.cooldown_until.replace(tzinfo=timezone.utc)
-        if pkg.cooldown_until.tzinfo is None
-        else pkg.cooldown_until
-    )
     never_used = pkg.used_sessions == 0
     reason = ((body or {}).get("reason") or "").strip()[:500]
 
-    if in_cooldown and never_used:
+    # 语义:
+    #   never_used → 全额退款 (不论是否 in_cooldown);_process_full_refund 退全款
+    #   has_used   → 按比例退款 (未消费部分);_process_partial_refund 分账
+    # 旧实现把 "past cooldown + never_used" 错路由到 _process_partial_refund,
+    # 再靠 partial 内部 fallback 回 full,绕一圈。现在统一到一个入口。
+    if never_used:
         return await _process_full_refund(db, pkg, reason)
     else:
         return await _process_partial_refund(db, pkg, reason)

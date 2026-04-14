@@ -146,6 +146,7 @@ class _CustomerPackagesViewState extends State<CustomerPackagesView> {
           final progress = total > 0 ? used / total : 0.0;
           final status = p['status'] as String? ?? '';
           final breakdown = p['bundle_breakdown'] as Map<String, dynamic>?;
+          final subNames = p['sub_service_names'] as Map<String, dynamic>?;
 
           return Card(
             child: Padding(
@@ -200,6 +201,11 @@ class _CustomerPackagesViewState extends State<CustomerPackagesView> {
                       final t = (entry['total'] as num?)?.toInt() ?? 0;
                       final u = (entry['used'] as num?)?.toInt() ?? 0;
                       final done = u >= t;
+                      final nameMap = subNames?[e.key] as Map<String, dynamic>?;
+                      final subName = (nameMap?['service_name'] as String?) ??
+                          (nameMap?['service_name_en'] as String?) ??
+                          (nameMap?['service_name_zh'] as String?) ??
+                          '#${e.key}';
                       return Padding(
                         padding: const EdgeInsets.only(top: 4, left: 8),
                         child: Row(
@@ -210,9 +216,12 @@ class _CustomerPackagesViewState extends State<CustomerPackagesView> {
                               color: done ? Colors.green : Colors.grey,
                             ),
                             const SizedBox(width: 6),
-                            Text(
-                              l10n.customerPackagesSubServiceLine(e.key, u, t),
-                              style: const TextStyle(fontSize: 12),
+                            Expanded(
+                              child: Text(
+                                l10n.customerPackagesSubServiceLine(subName, u, t),
+                                style: const TextStyle(fontSize: 12),
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
                           ],
                         ),

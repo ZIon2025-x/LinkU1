@@ -2374,6 +2374,8 @@ class TaskExpertServiceUpdate(BaseModel):
         if self.validity_days is not None and self.validity_days <= 0:
             raise ValueError("validity_days 必须大于 0")
         return self
+    # 注: base_price 不能为 NULL 的业务规则在 route 层 cross-check
+    # (update_expert_service), 因为需要 DB 中现有 package_type 作为上下文
 
 
 class ExpertDashboardStatsOut(BaseModel):

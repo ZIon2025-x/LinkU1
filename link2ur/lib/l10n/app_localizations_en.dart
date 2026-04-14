@@ -12873,7 +12873,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String customerPackagesSubServiceLine(String id, int used, int total) {
-    return 'Service #$id: $used / $total';
+    return '$id: $used / $total';
   }
 
   @override

@@ -5500,7 +5500,7 @@
     "placeholders": { "used": {"type": "int"}, "total": {"type": "int"} }
   },
   "customerPackagesSubServiceProgress": "子服務進度：",
-  "customerPackagesSubServiceLine": "服務 #{id}：{used} / {total}",
+  "customerPackagesSubServiceLine": "{id}：{used} / {total}",
   "@customerPackagesSubServiceLine": {
     "placeholders": { "id": {"type": "String"}, "used": {"type": "int"}, "total": {"type": "int"} }
   },

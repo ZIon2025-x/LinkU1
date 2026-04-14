@@ -1695,3 +1695,50 @@ if CELERY_AVAILABLE:
         finally:
             db.close()
             release_redis_distributed_lock(lock_key)
+
+    # ── 套餐过期扫描 (每 15 分钟) ──
+    # 没有这个任务,过期套餐会永远停在 status='active',资金永远滞留 pending transfer。
+    @celery_app.task(name='app.celery_tasks.check_expired_packages_task', bind=True, max_retries=2, default_retry_delay=60)
+    def check_expired_packages_task(self):
+        """套餐过期扫描: 把 expires_at < now 的 active 套餐标 expired 并触发结算。"""
+        task_name = 'check_expired_packages_task'
+        lock_key = f"celery_lock:{task_name}"
+        if not get_redis_distributed_lock(lock_key, lock_ttl=1800):
+            return {"status": "skipped"}
+        db = SessionLocal()
+        try:
+            from app.scheduled_tasks import check_expired_packages
+            result = check_expired_packages(db)
+            return {"status": "success", **result}
+        except Exception as e:
+            db.rollback()
+            logger.error(f"套餐过期扫描失败: {e}", exc_info=True)
+            if self.request.retries < self.max_retries:
+                raise self.retry(exc=e)
+            raise
+        finally:
+            db.close()
+            release_redis_distributed_lock(lock_key)
+
+    # ── 套餐过期提醒 (每小时) ──
+    @celery_app.task(name='app.celery_tasks.send_package_expiry_reminders_task', bind=True, max_retries=2, default_retry_delay=60)
+    def send_package_expiry_reminders_task(self):
+        """套餐过期提醒: 到期 7d/3d/1d 前给买家发通知。"""
+        task_name = 'send_package_expiry_reminders_task'
+        lock_key = f"celery_lock:{task_name}"
+        if not get_redis_distributed_lock(lock_key, lock_ttl=3600):
+            return {"status": "skipped"}
+        db = SessionLocal()
+        try:
+            from app.scheduled_tasks import send_package_expiry_reminders
+            result = send_package_expiry_reminders(db)
+            return {"status": "success", **result}
+        except Exception as e:
+            db.rollback()
+            logger.error(f"套餐过期提醒失败: {e}", exc_info=True)
+            if self.request.retries < self.max_retries:
+                raise self.retry(exc=e)
+            raise
+        finally:
+            db.close()
+            release_redis_distributed_lock(lock_key)

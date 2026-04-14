@@ -33,16 +33,44 @@ async def get_my_packages(
     now = get_utc_time()
 
     # Batch-load service names for all packages
+    # 同时收集 bundle breakdown 里引用的子服务 id,一次性加载名称
     service_ids = list({p.service_id for p in packages if p.service_id})
-    service_map = {}
-    if service_ids:
+    sub_service_ids: set[int] = set()
+    for p in packages:
+        if p.bundle_breakdown:
+            for key in p.bundle_breakdown.keys():
+                try:
+                    sub_service_ids.add(int(key))
+                except (TypeError, ValueError):
+                    continue
+    all_service_ids = list({*service_ids, *sub_service_ids})
+    service_map: dict = {}
+    if all_service_ids:
         svc_result = await db.execute(
             select(models.TaskExpertService).where(
-                models.TaskExpertService.id.in_(service_ids)
+                models.TaskExpertService.id.in_(all_service_ids)
             )
         )
         for svc in svc_result.scalars().all():
             service_map[svc.id] = svc
+
+    def _build_sub_names(bd) -> dict:
+        if not bd:
+            return {}
+        names = {}
+        for key in bd.keys():
+            try:
+                sid = int(key)
+            except (TypeError, ValueError):
+                continue
+            svc = service_map.get(sid)
+            if svc:
+                names[str(sid)] = {
+                    "service_name": svc.service_name,
+                    "service_name_en": svc.service_name_en,
+                    "service_name_zh": svc.service_name_zh,
+                }
+        return names
 
     out = []
     for p in packages:
@@ -67,6 +95,7 @@ async def get_my_packages(
             "paid_amount": float(p.paid_amount) if p.paid_amount is not None else None,
             "currency": p.currency,
             "bundle_breakdown": p.bundle_breakdown,
+            "sub_service_names": _build_sub_names(p.bundle_breakdown),
             "released_amount_pence": p.released_amount_pence,
             "refunded_amount_pence": p.refunded_amount_pence,
             "platform_fee_pence": p.platform_fee_pence,

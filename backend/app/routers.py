@@ -7922,9 +7922,11 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                                     exp_at = get_utc_time() + _td(days=validity_days_meta)
 
                                 # 计算 unit_price_pence_snapshot (multi 套餐专用; bundle 价格已内嵌在 breakdown)
+                                # 防御: service.base_price 理论上 multi 非空 (schema validator 强制),
+                                # 但历史数据 / 不规范 PATCH 可能产生 NULL,fallback 到 0 避免 webhook 崩
                                 unit_snapshot = None
                                 if package_type_meta == "multi" and service_obj is not None:
-                                    unit_snapshot = int(round(float(service_obj.base_price) * 100))
+                                    unit_snapshot = int(round(float(service_obj.base_price or 0) * 100))
 
                                 new_pkg = UserServicePackage(
                                     user_id=buyer_id,

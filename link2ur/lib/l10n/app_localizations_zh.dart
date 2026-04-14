@@ -12339,7 +12339,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String customerPackagesSubServiceLine(String id, int used, int total) {
-    return '服务 #$id：$used / $total';
+    return '$id：$used / $total';
   }
 
   @override
@@ -24875,7 +24875,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String customerPackagesSubServiceLine(String id, int used, int total) {
-    return '服務 #$id：$used / $total';
+    return '$id：$used / $total';
   }
 
   @override
