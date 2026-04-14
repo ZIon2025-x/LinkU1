@@ -18,6 +18,7 @@ import '../../../../core/widgets/animated_list_item.dart';
 import '../../../../core/widgets/empty_state_view.dart';
 import '../../../../core/widgets/skeleton_view.dart';
 import '../../../../data/repositories/question_repository.dart';
+import '../../../../data/models/task_expert.dart';
 import '../../../../data/repositories/task_expert_repository.dart';
 import '../../../task_expert/bloc/task_expert_bloc.dart';
 import '../../bloc/selected_expert_cubit.dart';
@@ -587,13 +588,46 @@ class _ApplicationCard extends StatelessWidget {
     final isIOS = !kIsWeb && Platform.isIOS;
     AppHaptics.light();
 
+    // 团队咨询：预加载团队服务列表
+    final isTeamConsultation = application['service_id'] == null;
+    final expertId = application['new_expert_id'] as String?;
+    List<TaskExpertService>? services;
+    if (isTeamConsultation && expertId != null) {
+      try {
+        services = await context.read<TaskExpertRepository>().getExpertServices(expertId);
+      } catch (_) {
+        services = [];
+      }
+      if (!context.mounted) return;
+    }
+    int? selectedServiceId;
+
     try {
       await showDialog<void>(
         context: context,
-        builder: (dialogContext) {
+        builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) {
           final counterOfferContent = Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // 团队咨询时显示服务选择器
+              if (isTeamConsultation && services != null) ...[
+                DropdownButtonFormField<int>(
+                  initialValue: selectedServiceId,
+                  decoration: InputDecoration(
+                    labelText: l10n.consultationSelectService,
+                    border: const OutlineInputBorder(),
+                  ),
+                  items: services.map((s) {
+                    return DropdownMenuItem(
+                      value: s.id,
+                      child: Text(s.serviceName, overflow: TextOverflow.ellipsis),
+                    );
+                  }).toList(),
+                  onChanged: (v) => setDialogState(() => selectedServiceId = v),
+                ),
+                const SizedBox(height: AppSpacing.md),
+              ],
               isIOS
                   ? CupertinoTextField(
                       controller: priceController,
@@ -647,6 +681,12 @@ class _ApplicationCard extends StatelessWidget {
                 CupertinoDialogAction(
                   isDefaultAction: true,
                   onPressed: () {
+                    if (isTeamConsultation && selectedServiceId == null) {
+                      messenger.showSnackBar(
+                        SnackBar(content: Text(l10n.consultationSelectServiceHint)),
+                      );
+                      return;
+                    }
                     final price = double.tryParse(priceController.text.trim());
                     if (price == null || price <= 0) {
                       messenger.showSnackBar(
@@ -664,6 +704,7 @@ class _ApplicationCard extends StatelessWidget {
                         message: messageController.text.trim().isNotEmpty
                             ? messageController.text.trim()
                             : null,
+                        serviceId: selectedServiceId,
                       ),
                     );
                   },
@@ -683,6 +724,12 @@ class _ApplicationCard extends StatelessWidget {
               ),
               FilledButton(
                 onPressed: () {
+                  if (isTeamConsultation && selectedServiceId == null) {
+                    messenger.showSnackBar(
+                      SnackBar(content: Text(l10n.consultationSelectServiceHint)),
+                    );
+                    return;
+                  }
                   final price = double.tryParse(priceController.text.trim());
                   if (price == null || price <= 0) {
                     messenger.showSnackBar(
@@ -699,6 +746,7 @@ class _ApplicationCard extends StatelessWidget {
                       message: messageController.text.trim().isNotEmpty
                           ? messageController.text.trim()
                           : null,
+                      serviceId: selectedServiceId,
                     ),
                   );
                 },
@@ -707,6 +755,7 @@ class _ApplicationCard extends StatelessWidget {
             ],
           );
         },
+        ),
       );
     } finally {
       priceController.dispose();

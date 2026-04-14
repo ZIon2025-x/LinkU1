@@ -987,7 +987,36 @@ async def counter_offer(
     elif application.service_owner_id != current_user.id:
         raise HTTPException(status_code=403, detail="无权操作")
 
-    application.expert_counter_price = body.get("price")
+    price = body.get("price")
+    if price is not None:
+        try:
+            price = float(price)
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=400, detail="price 必须为数字")
+        if price <= 0:
+            raise HTTPException(status_code=400, detail="price 必须大于 0")
+
+    # 团队咨询：还价时必须绑定服务
+    service_id = body.get("service_id")
+    if application.service_id is None:
+        if not service_id:
+            raise HTTPException(status_code=400, detail="团队咨询还价必须选择一个服务")
+        svc_result = await db.execute(
+            select(models.TaskExpertService).where(
+                and_(
+                    models.TaskExpertService.id == int(service_id),
+                    models.TaskExpertService.owner_type == "expert",
+                    models.TaskExpertService.owner_id == application.new_expert_id,
+                    models.TaskExpertService.status == "active",
+                )
+            )
+        )
+        if not svc_result.scalar_one_or_none():
+            raise HTTPException(status_code=400, detail="service_not_found")
+        application.service_id = int(service_id)
+
+    if price is not None:
+        application.expert_counter_price = price
     application.status = "negotiating"
     application.updated_at = get_utc_time()
     await db.commit()

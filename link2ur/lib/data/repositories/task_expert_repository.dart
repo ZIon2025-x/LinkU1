@@ -748,12 +748,14 @@ class TaskExpertRepository {
     int applicationId, {
     required double counterPrice,
     String? message,
+    int? serviceId,
   }) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.counterOfferServiceApplication(applicationId),
       data: {
-        'counter_price': counterPrice,
+        'price': counterPrice,
         if (message != null && message.isNotEmpty) 'message': message,
+        if (serviceId != null) 'service_id': serviceId,
       },
     );
 

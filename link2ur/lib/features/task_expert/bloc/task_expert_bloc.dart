@@ -164,14 +164,15 @@ class TaskExpertRejectApplication extends TaskExpertEvent {
 
 /// 达人再次议价
 class TaskExpertCounterOffer extends TaskExpertEvent {
-  const TaskExpertCounterOffer(this.applicationId, {required this.counterPrice, this.message});
+  const TaskExpertCounterOffer(this.applicationId, {required this.counterPrice, this.message, this.serviceId});
 
   final int applicationId;
   final double counterPrice;
   final String? message;
+  final int? serviceId;
 
   @override
-  List<Object?> get props => [applicationId, counterPrice, message];
+  List<Object?> get props => [applicationId, counterPrice, message, serviceId];
 }
 
 /// 增强版申请服务事件（支持议价/时间段/期限/灵活时间）
@@ -1280,6 +1281,7 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
         event.applicationId,
         counterPrice: event.counterPrice,
         message: event.message,
+        serviceId: event.serviceId,
       );
 
       emit(state.copyWith(
