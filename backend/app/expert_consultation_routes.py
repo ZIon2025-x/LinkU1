@@ -189,8 +189,8 @@ async def apply_for_service(
 @consultation_router.post("/api/services/{service_id}/consult")
 async def create_consultation(
     service_id: int,
-    body: dict,
     request: Request,
+    body: Optional[dict] = None,
     db: AsyncSession = Depends(get_async_db_dependency),
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
 ):
@@ -202,14 +202,53 @@ async def create_consultation(
     if not service:
         raise HTTPException(status_code=404, detail="服务不存在")
 
+    # 检查是否已有进行中的咨询/申请
+    existing = await db.execute(
+        select(models.ServiceApplication).where(
+            and_(
+                models.ServiceApplication.service_id == service_id,
+                models.ServiceApplication.applicant_id == current_user.id,
+                models.ServiceApplication.status.in_(["consulting", "negotiating", "price_agreed", "pending"]),
+            )
+        )
+    )
+    existing_app = existing.scalar_one_or_none()
+    if existing_app:
+        # 已有进行中的咨询/申请，直接返回（幂等）
+        return {
+            "id": existing_app.id,
+            "status": existing_app.status,
+            "task_id": existing_app.task_id,
+            "application_id": existing_app.id,
+        }
+
+    # 创建 consulting 占位 task（供聊天页面使用）
+    service_name = service.service_name or "服务咨询"
+    consulting_task = models.Task(
+        title=service_name,
+        description=f"咨询: {service_name}",
+        reward=service.price or 0,
+        base_reward=service.price or 0,
+        reward_to_be_quoted=True if not service.price else False,
+        currency=service.currency or "GBP",
+        location=service.location or "",
+        task_type="expert_service",
+        poster_id=current_user.id,
+        status="consulting",
+        task_level="expert",
+    )
+    db.add(consulting_task)
+    await db.flush()  # 获取 task.id
+
     application = models.ServiceApplication(
         service_id=service_id,
         applicant_id=current_user.id,
         new_expert_id=service.owner_id if service.owner_type == "expert" else None,
         service_owner_id=service.owner_id if service.owner_type == "user" else None,
-        application_message=body.get("message"),
+        application_message=(body or {}).get("message"),
         status="consulting",
         currency=service.currency or "GBP",
+        task_id=consulting_task.id,
     )
     db.add(application)
     await db.commit()
@@ -228,7 +267,112 @@ async def create_consultation(
             title_en="New Consultation Request",
         )
 
-    return {"id": application.id, "status": "consulting"}
+    return {
+        "id": application.id,
+        "status": "consulting",
+        "task_id": consulting_task.id,
+        "application_id": application.id,
+    }
+
+
+@consultation_router.post("/api/experts/{expert_id}/consult")
+async def create_team_consultation(
+    expert_id: str,
+    request: Request,
+    body: Optional[dict] = None,
+    db: AsyncSession = Depends(get_async_db_dependency),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+):
+    """用户对达人团队发起咨询（不绑定具体服务）"""
+    # 校验团队存在且 active
+    result = await db.execute(select(Expert).where(Expert.id == expert_id))
+    expert = result.scalar_one_or_none()
+    if not expert:
+        raise HTTPException(status_code=404, detail="达人团队不存在")
+    if expert.status != "active":
+        raise HTTPException(status_code=400, detail="该团队未在运营中")
+
+    # 不能咨询自己的团队
+    member_check = await db.execute(
+        select(ExpertMember.id).where(
+            and_(
+                ExpertMember.expert_id == expert_id,
+                ExpertMember.user_id == current_user.id,
+                ExpertMember.status == "active",
+            )
+        ).limit(1)
+    )
+    if member_check.scalar_one_or_none() is not None:
+        raise HTTPException(status_code=400, detail="不能咨询自己所在的团队")
+
+    # 幂等：已有进行中的团队咨询直接返回
+    existing = await db.execute(
+        select(models.ServiceApplication).where(
+            and_(
+                models.ServiceApplication.new_expert_id == expert_id,
+                models.ServiceApplication.applicant_id == current_user.id,
+                models.ServiceApplication.service_id.is_(None),
+                models.ServiceApplication.status.in_(["consulting", "negotiating", "price_agreed"]),
+            )
+        )
+    )
+    existing_app = existing.scalar_one_or_none()
+    if existing_app:
+        return {
+            "task_id": existing_app.task_id,
+            "application_id": existing_app.id,
+            "status": existing_app.status,
+        }
+
+    # 创建占位 task
+    team_name = expert.name or "达人团队"
+    consulting_task = models.Task(
+        title=f"团队咨询: {team_name}",
+        description=f"团队咨询: {team_name}",
+        reward=0,
+        base_reward=0,
+        reward_to_be_quoted=True,
+        currency="GBP",
+        location="",
+        task_type="expert_service",
+        poster_id=current_user.id,
+        status="consulting",
+        task_level="expert",
+    )
+    db.add(consulting_task)
+    await db.flush()
+
+    # 创建 application（service_id=NULL 表示团队咨询）
+    application = models.ServiceApplication(
+        service_id=None,
+        applicant_id=current_user.id,
+        new_expert_id=expert_id,
+        application_message=(body or {}).get("message"),
+        status="consulting",
+        currency="GBP",
+        task_id=consulting_task.id,
+    )
+    db.add(application)
+    await db.commit()
+    await db.refresh(application)
+
+    # 通知团队 owner+admin
+    await _notify_team_admins_new_application(
+        db,
+        expert_id=expert_id,
+        applicant_name=current_user.name or "用户",
+        service_name=team_name,
+        application_id=application.id,
+        notification_type="team_consultation_received",
+        title_zh="新团队咨询",
+        title_en="New Team Consultation",
+    )
+
+    return {
+        "task_id": consulting_task.id,
+        "application_id": application.id,
+        "status": "consulting",
+    }
 
 
 # ==================== 用户侧：协商/报价 ====================
