@@ -387,6 +387,20 @@ class ExpertTeamRepository {
     return response.data as Map<String, dynamic>;
   }
 
+  // ==================== 咨询 ====================
+
+  /// 发起团队咨询（不绑定具体服务）
+  Future<Map<String, dynamic>> createTeamConsultation(String expertId) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.consultExpert(expertId),
+      data: {},
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw Exception(response.errorCode ?? response.message ?? 'consultation_failed');
+    }
+    return response.data!;
+  }
+
   // ==================== 活动发布 ====================
 
   /// 发布团队活动。

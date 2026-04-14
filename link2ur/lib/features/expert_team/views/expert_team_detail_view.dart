@@ -62,6 +62,16 @@ class _ExpertTeamDetailBody extends StatelessWidget {
           curr.actionMessage != prev.actionMessage ||
           curr.errorMessage != prev.errorMessage,
       listener: (context, state) {
+        // Handle consultation navigation
+        if (state.actionMessage == 'consultation_started' &&
+            state.consultationData != null) {
+          final taskId = state.consultationData!['task_id'];
+          final appId = state.consultationData!['application_id'];
+          if (taskId != null && appId != null) {
+            context.push('/tasks/$taskId/applications/$appId/chat?consultation=true');
+          }
+          return; // Don't show snackbar for this
+        }
         final msg = state.actionMessage ?? state.errorMessage;
         if (msg != null) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -247,7 +257,7 @@ class _HeroBanner extends StatelessWidget {
 
     final topPadding = MediaQuery.of(context).padding.top;
     return SizedBox(
-      height: 190 + topPadding,
+      height: 170 + topPadding,
       child: Stack(
         children: [
           // Gradient background
@@ -476,14 +486,35 @@ class _HeroBanner extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(height: 6),
-                        // Sub-row: member count
-                        Text(
-                          '${team.memberCount} ${context.l10n.expertTeamStatMembers}',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.white.withAlpha(217),
-                            fontWeight: FontWeight.w600,
-                          ),
+                        // Sub-row: category + follower count
+                        Row(
+                          children: [
+                            if (team.category != null && team.category!.isNotEmpty) ...[
+                              Text(
+                                team.category!,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.white.withAlpha(217),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              Text(
+                                ' · ',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.white.withAlpha(153),
+                                ),
+                              ),
+                            ],
+                            Text(
+                              '${team.followerCount} ${context.l10n.expertTeamStatFollowers}',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.white.withAlpha(217),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ),
                         // Location
                         if (team.location != null) ...[
@@ -1943,12 +1974,12 @@ class _BottomActionBar extends StatelessWidget {
           child: SizedBox(
             height: 44,
             child: OutlinedButton.icon(
-              onPressed: owners.isNotEmpty
-                  ? () {
-                      AppHaptics.selection();
-                      context.push('/chat/${owners.first.userId}');
-                    }
-                  : null,
+              onPressed: () {
+                AppHaptics.selection();
+                context.read<ExpertTeamBloc>().add(
+                  ExpertTeamStartConsultation(expertId),
+                );
+              },
               icon: const Icon(Icons.chat_bubble_outline, size: 16),
               label: Text(l10n.consultExpert),
               style: OutlinedButton.styleFrom(

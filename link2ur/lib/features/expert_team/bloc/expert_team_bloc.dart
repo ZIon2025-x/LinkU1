@@ -237,6 +237,13 @@ class ExpertTeamLoadReviews extends ExpertTeamEvent {
   List<Object?> get props => [expertId, loadMore];
 }
 
+class ExpertTeamStartConsultation extends ExpertTeamEvent {
+  final String expertId;
+  ExpertTeamStartConsultation(this.expertId);
+  @override
+  List<Object?> get props => [expertId];
+}
+
 // ==================== State ====================
 
 enum ExpertTeamStatus { initial, loading, loaded, error }
@@ -263,6 +270,7 @@ class ExpertTeamState extends Equatable {
   final Map<String, dynamic>? groupBuyStatus;
   final String? errorMessage;
   final String? actionMessage;
+  final Map<String, dynamic>? consultationData;
 
   const ExpertTeamState({
     this.status = ExpertTeamStatus.initial,
@@ -286,6 +294,7 @@ class ExpertTeamState extends Equatable {
     this.groupBuyStatus,
     this.errorMessage,
     this.actionMessage,
+    this.consultationData,
   });
 
   ExpertTeamState copyWith({
@@ -310,6 +319,7 @@ class ExpertTeamState extends Equatable {
     Map<String, dynamic>? groupBuyStatus,
     String? errorMessage,
     String? actionMessage,
+    Map<String, dynamic>? Function()? consultationData,
   }) {
     return ExpertTeamState(
       status: status ?? this.status,
@@ -333,11 +343,12 @@ class ExpertTeamState extends Equatable {
       groupBuyStatus: groupBuyStatus ?? this.groupBuyStatus,
       errorMessage: errorMessage,
       actionMessage: actionMessage,
+      consultationData: consultationData != null ? consultationData() : this.consultationData,
     );
   }
 
   @override
-  List<Object?> get props => [status, myTeams, currentTeam, members, myApplications, joinRequests, services, featuredExperts, followingExperts, myInvitations, packages, coupons, activities, isLoadingActivities, reviews, totalReviews, isLoadingReviews, hasMoreReviews, groupBuyStatus, errorMessage, actionMessage];
+  List<Object?> get props => [status, myTeams, currentTeam, members, myApplications, joinRequests, services, featuredExperts, followingExperts, myInvitations, packages, coupons, activities, isLoadingActivities, reviews, totalReviews, isLoadingReviews, hasMoreReviews, groupBuyStatus, errorMessage, actionMessage, consultationData];
 }
 
 // ==================== BLoC ====================
@@ -388,6 +399,7 @@ class ExpertTeamBloc extends Bloc<ExpertTeamEvent, ExpertTeamState> {
     on<ExpertTeamReplyReview>(_onReplyReview);
     on<ExpertTeamLoadActivities>(_onLoadActivities);
     on<ExpertTeamLoadReviews>(_onLoadReviews);
+    on<ExpertTeamStartConsultation>(_onStartConsultation);
   }
 
   Future<void> _onLoadMyTeams(ExpertTeamLoadMyTeams event, Emitter<ExpertTeamState> emit) async {
@@ -742,6 +754,24 @@ class ExpertTeamBloc extends Bloc<ExpertTeamEvent, ExpertTeamState> {
       ));
     } catch (e) {
       emit(state.copyWith(isLoadingReviews: false));
+    }
+  }
+
+  Future<void> _onStartConsultation(
+    ExpertTeamStartConsultation event,
+    Emitter<ExpertTeamState> emit,
+  ) async {
+    try {
+      final result = await _repository.createTeamConsultation(event.expertId);
+      emit(state.copyWith(
+        actionMessage: 'consultation_started',
+        consultationData: () => result,
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        errorMessage: e.toString(),
+        actionMessage: 'consultation_failed',
+      ));
     }
   }
 }
