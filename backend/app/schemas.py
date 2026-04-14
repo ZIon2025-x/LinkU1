@@ -2287,7 +2287,7 @@ class TaskExpertServiceCreate(BaseModel):
     description_zh: Optional[str] = None
     category: Optional[str] = None
     images: Optional[List[str]] = None
-    base_price: condecimal(gt=0, max_digits=12, decimal_places=2)  # 使用condecimal与DB的DECIMAL一致
+    base_price: Optional[condecimal(gt=0, max_digits=12, decimal_places=2)] = None  # bundle 可空,其他类型由 validator 强制 > 0
     currency: Literal["GBP", "EUR"] = "GBP"  # 统一为Literal类型
     display_order: int = 0
     # 位置相关字段
@@ -2322,6 +2322,9 @@ class TaskExpertServiceCreate(BaseModel):
         # 套餐类型必须有 package_price (multi/bundle 都要)
         if self.package_type in ("multi", "bundle") and self.package_price is None:
             raise ValueError("multi/bundle 套餐必须指定 package_price")
+        # base_price:bundle 可空(没有"单价"概念);multi/普通单次服务必须 > 0
+        if self.package_type != "bundle" and self.base_price is None:
+            raise ValueError("非 bundle 服务必须指定 base_price")
         if self.validity_days is not None and self.validity_days <= 0:
             raise ValueError("validity_days 必须大于 0")
         return self

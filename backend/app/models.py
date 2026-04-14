@@ -1594,7 +1594,9 @@ class TaskExpertService(Base):
     service_name_zh = Column(String(200), nullable=True)  # Chinese name
     description_zh = Column(Text, nullable=True)  # Chinese description
     images = Column(JSONB, nullable=True)  # JSON数组（使用PostgreSQL JSONB类型）
-    base_price = Column(DECIMAL(12, 2), nullable=False)
+    # bundle 套餐无"单价"概念 → NULL; multi 套餐 + 普通单次服务 → > 0
+    # (schema 层 validator 兜底,DB 允许 NULL;migration 198)
+    base_price = Column(DECIMAL(12, 2), nullable=True)
     currency = Column(String(3), default="GBP")
     skills = Column(JSONB, nullable=True)  # 技能标签 JSON数组，如 ["Python", "Flutter"]
     status = Column(String(20), default="active")  # active, inactive

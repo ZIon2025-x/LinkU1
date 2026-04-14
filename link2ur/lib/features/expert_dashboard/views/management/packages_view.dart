@@ -584,8 +584,7 @@ class _PackageFormSheetState extends State<_PackageFormSheet> {
       data['bundle_service_ids'] = _bundleSelections.entries
           .map((e) => {'service_id': e.key, 'count': e.value})
           .toList();
-      // bundle 后端也要求 base_price > 0;套餐总价作为占位
-      data['base_price'] = packagePrice;
+      // bundle 没有"单价"概念,base_price 不传(后端 nullable + validator 已放宽)
     }
 
     final validityText = _validityDaysController.text.trim();
