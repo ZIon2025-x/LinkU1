@@ -206,21 +206,23 @@ class _ApplicationCard extends StatelessWidget {
     final expertCounterPrice = application['expert_counter_price'];
     final statusColor = _statusColor();
 
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight,
-        borderRadius: BorderRadius.circular(AppRadius.medium),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+    return GestureDetector(
+      onTap: () => _onCardTap(context),
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight,
+          borderRadius: BorderRadius.circular(AppRadius.medium),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
           // Header with status badge
           Padding(
             padding: const EdgeInsets.fromLTRB(
@@ -231,9 +233,10 @@ class _ApplicationCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (serviceName.isNotEmpty)
                         Text(
-                          serviceName,
+                          serviceName.isNotEmpty
+                              ? serviceName
+                              : l10n.consultationTeamConsultation,
                           style: Theme.of(context)
                               .textTheme
                               .titleSmall
@@ -410,30 +413,67 @@ class _ApplicationCard extends StatelessWidget {
             ),
           ] else ...[
             // "沟通" button for consulting applications / "查看任务" button for approved applications
-            if ((application['status'] == 'consulting' ||
-                    application['status'] == 'negotiating' ||
-                    application['status'] == 'price_agreed') &&
-                application['task_id'] != null) ...[
+            if (application['status'] == 'consulting' ||
+                application['status'] == 'negotiating' ||
+                application['status'] == 'price_agreed') ...[
               const SizedBox(height: AppSpacing.xs),
               const Divider(height: 1),
               Padding(
                 padding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton.icon(
-                    onPressed: () {
-                      final taskId = application['task_id'];
-                      final appId = application['id'];
-                      context.push('/tasks/$taskId/applications/$appId/chat?consultation=true');
-                    },
-                    icon: const Icon(Icons.chat_outlined, size: 16),
-                    label: Text(l10n.expertApplicationChat),
-                    style: TextButton.styleFrom(
-                      foregroundColor: AppColors.info,
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    // 沟通 button
+                    if (application['task_id'] != null)
+                      TextButton.icon(
+                        onPressed: () {
+                          final taskId = application['task_id'];
+                          final appId = application['id'];
+                          context.push('/tasks/$taskId/applications/$appId/chat?consultation=true');
+                        },
+                        icon: const Icon(Icons.chat_outlined, size: 16),
+                        label: Text(l10n.expertApplicationChat),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.info,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      )
+                    else if (application['applicant_id'] != null)
+                      // 历史数据降级
+                      TextButton.icon(
+                        onPressed: () => context.push('/chat/${application['applicant_id']}'),
+                        icon: const Icon(Icons.chat_outlined, size: 16),
+                        label: Text(l10n.expertApplicationChat),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.info,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ),
+                    const SizedBox(width: 8),
+                    // 报价 button (consulting/negotiating only)
+                    if (application['status'] != 'price_agreed')
+                      TextButton.icon(
+                        onPressed: () => _showCounterOfferDialog(context),
+                        icon: const Icon(Icons.request_quote, size: 16),
+                        label: Text(l10n.quotePrice),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ),
+                    // 同意 button (price_agreed only)
+                    if (application['status'] == 'price_agreed')
+                      TextButton.icon(
+                        onPressed: () => _showApproveConfirmation(context),
+                        icon: const Icon(Icons.check, size: 16),
+                        label: Text(l10n.expertApplicationApprove),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.success,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ] else if (application['status'] == 'approved' &&
@@ -465,7 +505,27 @@ class _ApplicationCard extends StatelessWidget {
           ],
         ],
       ),
+    ),
     );
+  }
+
+  void _onCardTap(BuildContext context) {
+    final status = application['status'] as String?;
+    final taskId = application['task_id'];
+    final appId = application['id'];
+    final applicantId = application['applicant_id'] as String?;
+
+    if ((status == 'consulting' || status == 'negotiating' || status == 'price_agreed') &&
+        taskId != null) {
+      context.push('/tasks/$taskId/applications/$appId/chat?consultation=true');
+    } else if (status == 'approved' && taskId != null) {
+      final id = taskId is int ? taskId : int.tryParse(taskId.toString());
+      if (id != null) context.goToTaskDetail(id);
+    } else if ((status == 'consulting' || status == 'negotiating') &&
+        taskId == null && applicantId != null) {
+      // 历史数据降级：跳到跟用户的私聊
+      context.push('/chat/$applicantId');
+    }
   }
 
   String _formatPrice(dynamic price) {
