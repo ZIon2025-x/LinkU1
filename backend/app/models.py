@@ -1613,7 +1613,12 @@ class TaskExpertService(Base):
     weekly_time_slot_config = Column(JSONB, nullable=True)  # 按周几设置时间段配置（JSON格式）
 
     # 套餐字段（Phase 7 + A1 purchase flow）
-    package_type = Column(String(20), nullable=False, default="single", server_default=text("'single'"))
+    # package_type:
+    #   NULL     → 普通单次服务（走 apply + Task 流程）
+    #   'multi'  → 多课时套餐
+    #   'bundle' → 服务包
+    # 旧值 'single' 已在 migration 197 刷成 NULL 并下线。
+    package_type = Column(String(20), nullable=True)
     total_sessions = Column(Integer, nullable=True)
     # bundle_service_ids 双格式向后兼容:
     #   [A, B, C]                                — legacy "each once"

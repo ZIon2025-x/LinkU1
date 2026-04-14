@@ -14,7 +14,9 @@ import '../../../../data/repositories/task_expert_repository.dart';
 
 /// 达人套餐管理页
 ///
-/// 套餐 = `package_type != 'single'` 的服务（multi 多课时 / bundle 服务包）。
+/// 套餐 = `package_type IN ('multi', 'bundle')` 的服务。
+/// NULL = 普通单次服务（不在此页显示，走 apply + Task 流程）。
+/// 旧值 'single' 已下线（migration 197），读取端仍兼容。
 /// 复用 services CRUD endpoints，但 UI 仅显示套餐字段。
 class PackagesView extends StatefulWidget {
   const PackagesView({super.key, required this.expertId});

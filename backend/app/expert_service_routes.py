@@ -1,6 +1,6 @@
 """达人团队服务管理路由"""
 import logging
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select, and_
@@ -27,14 +27,38 @@ expert_service_router = APIRouter(
 async def _validate_bundle_service_ids(
     db: AsyncSession,
     expert_id: str,
-    bundle_service_ids: Optional[List[int]],
+    bundle_service_ids: Optional[List[Any]],
     exclude_service_id: Optional[int] = None,
 ) -> None:
-    """运行时校验 bundle 套餐引用的服务都存在,且同属当前团队、不是 deleted/bundle 自身。"""
+    """运行时校验 bundle 套餐引用的服务都存在,且同属当前团队、不是 deleted/bundle 自身。
+
+    bundle_service_ids 接受双格式:
+      - [A, B, C]                                legacy "each once"
+      - [{"service_id": A, "count": N}, ...]     explicit count per service
+    """
     if not bundle_service_ids:
         return
+    # 归一化为纯 service_id 列表 (忽略 count,count 由 schema validator 校验)
+    raw_ids: List[int] = []
+    for item in bundle_service_ids:
+        if isinstance(item, int):
+            raw_ids.append(item)
+        elif isinstance(item, dict):
+            sid = item.get("service_id")
+            if isinstance(sid, int):
+                raw_ids.append(sid)
+            else:
+                raise HTTPException(status_code=422, detail={
+                    "error_code": "expert_bundle_invalid",
+                    "message": "bundle_service_ids 的 service_id 必须是 int",
+                })
+        else:
+            raise HTTPException(status_code=422, detail={
+                "error_code": "expert_bundle_invalid",
+                "message": "bundle_service_ids 项必须是 int 或 {service_id, count}",
+            })
     # 去重
-    ids = list(set(bundle_service_ids))
+    ids = list(set(raw_ids))
     rows = await db.execute(
         select(models.TaskExpertService.id, models.TaskExpertService.status, models.TaskExpertService.package_type)
         .where(

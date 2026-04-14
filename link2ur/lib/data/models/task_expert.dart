@@ -403,7 +403,8 @@ class TaskExpertService extends Equatable {
   final double? ownerRating;
 
   // 套餐字段 (Phase 7)
-  /// 'single' | 'multi' | 'bundle' (null = single,向后兼容)
+  /// NULL (普通单次服务) | 'multi' (多课时套餐) | 'bundle' (服务包套餐)。
+  /// 旧值 'single' 已在后端 migration 197 下线,此处保留读取兼容。
   final String? packageType;
   /// multi 套餐总课时数
   final int? totalSessions;

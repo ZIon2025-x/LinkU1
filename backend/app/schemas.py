@@ -2244,7 +2244,7 @@ class StripeConnectPayoutResponse(BaseModel):
 # 新的团队信息修改使用 schemas_expert.ExpertProfileUpdateCreate / Out
 
 
-_VALID_PACKAGE_TYPES = ("single", "multi", "bundle")
+_VALID_PACKAGE_TYPES = ("multi", "bundle")  # NULL = 普通单次服务; 'single' 已下线 (migration 197)
 
 
 def _validate_package_fields(package_type, total_sessions, bundle_service_ids):
@@ -2296,7 +2296,7 @@ class TaskExpertServiceCreate(BaseModel):
     latitude: Optional[float] = Field(None, ge=-90, le=90)
     longitude: Optional[float] = Field(None, ge=-180, le=180)
     # 套餐字段（Phase 7 + A1）
-    package_type: Optional[str] = None  # 'single' | 'multi' | 'bundle'
+    package_type: Optional[str] = None  # NULL | 'multi' | 'bundle' ('single' 已下线)
     total_sessions: Optional[int] = None  # multi 类型：总课时数
     # bundle_service_ids 双格式向后兼容:
     #   [A, B, C]                              — legacy "each once"
@@ -2347,7 +2347,7 @@ class TaskExpertServiceUpdate(BaseModel):
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     # 套餐字段（Phase 7 + A1）
-    package_type: Optional[str] = None  # 'single' | 'multi' | 'bundle'
+    package_type: Optional[str] = None  # NULL | 'multi' | 'bundle' ('single' 已下线)
     total_sessions: Optional[int] = None
     # 双格式: [A,B,C] 或 [{"service_id": A, "count": N}, ...]
     bundle_service_ids: Optional[List[Any]] = None
@@ -2508,7 +2508,7 @@ class TaskExpertServiceOut(BaseModel):
     participants_per_slot: Optional[int] = None
     weekly_time_slot_config: Optional[dict] = None
     # 套餐字段 (Phase 7 + A1)
-    package_type: Optional[str] = None  # 'single' | 'multi' | 'bundle'
+    package_type: Optional[str] = None  # NULL | 'multi' | 'bundle' ('single' 已下线)
     total_sessions: Optional[int] = None
     bundle_service_ids: Optional[List[Any]] = None
     package_price: Optional[float] = None
