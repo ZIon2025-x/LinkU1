@@ -1,12 +1,10 @@
 import '../models/user_profile.dart';
 import '../services/api_service.dart';
 import '../../core/constants/api_endpoints.dart';
+import '../../core/utils/app_exception.dart';
 
-class UserProfileException implements Exception {
-  final String message;
-  const UserProfileException(this.message);
-  @override
-  String toString() => message;
+class UserProfileException extends AppException {
+  const UserProfileException(super.message, {super.code});
 }
 
 class UserProfileRepository {
@@ -18,7 +16,7 @@ class UserProfileRepository {
   Future<List<UserCapability>> getCapabilities() async {
     final response = await _apiService.get(ApiEndpoints.profileCapabilities);
     if (!response.isSuccess) {
-      throw UserProfileException(response.message ?? 'Failed to load capabilities');
+      throw UserProfileException(response.errorCode ?? response.message ?? 'Failed to load capabilities', code: response.errorCode);
     }
     return (response.data as List)
         .map((e) => UserCapability.fromJson(e as Map<String, dynamic>))
@@ -31,7 +29,7 @@ class UserProfileRepository {
       data: capabilities,
     );
     if (!response.isSuccess) {
-      throw UserProfileException(response.message ?? 'Failed to update capabilities');
+      throw UserProfileException(response.errorCode ?? response.message ?? 'Failed to update capabilities', code: response.errorCode);
     }
   }
 
@@ -40,14 +38,14 @@ class UserProfileRepository {
       '${ApiEndpoints.profileCapabilities}/$id',
     );
     if (!response.isSuccess) {
-      throw UserProfileException(response.message ?? 'Failed to delete capability');
+      throw UserProfileException(response.errorCode ?? response.message ?? 'Failed to delete capability', code: response.errorCode);
     }
   }
 
   Future<UserProfilePreference> getPreferences() async {
     final response = await _apiService.get(ApiEndpoints.profilePreferences);
     if (!response.isSuccess) {
-      throw UserProfileException(response.message ?? 'Failed to load preferences');
+      throw UserProfileException(response.errorCode ?? response.message ?? 'Failed to load preferences', code: response.errorCode);
     }
     return UserProfilePreference.fromJson(response.data as Map<String, dynamic>);
   }
@@ -58,14 +56,14 @@ class UserProfileRepository {
       data: data,
     );
     if (!response.isSuccess) {
-      throw UserProfileException(response.message ?? 'Failed to update preferences');
+      throw UserProfileException(response.errorCode ?? response.message ?? 'Failed to update preferences', code: response.errorCode);
     }
   }
 
   Future<UserReliability> getReliability() async {
     final response = await _apiService.get(ApiEndpoints.profileReliability);
     if (!response.isSuccess) {
-      throw UserProfileException(response.message ?? 'Failed to load reliability');
+      throw UserProfileException(response.errorCode ?? response.message ?? 'Failed to load reliability', code: response.errorCode);
     }
     return UserReliability.fromJson(response.data as Map<String, dynamic>);
   }
@@ -73,7 +71,7 @@ class UserProfileRepository {
   Future<UserDemand> getDemand() async {
     final response = await _apiService.get(ApiEndpoints.profileDemand);
     if (!response.isSuccess) {
-      throw UserProfileException(response.message ?? 'Failed to load demand');
+      throw UserProfileException(response.errorCode ?? response.message ?? 'Failed to load demand', code: response.errorCode);
     }
     return UserDemand.fromJson(response.data as Map<String, dynamic>);
   }
@@ -81,7 +79,7 @@ class UserProfileRepository {
   Future<UserProfileSummary> getSummary() async {
     final response = await _apiService.get(ApiEndpoints.profileSummary);
     if (!response.isSuccess) {
-      throw UserProfileException(response.message ?? 'Failed to load profile summary');
+      throw UserProfileException(response.errorCode ?? response.message ?? 'Failed to load profile summary', code: response.errorCode);
     }
     return UserProfileSummary.fromJson(response.data as Map<String, dynamic>);
   }
@@ -94,14 +92,14 @@ class UserProfileRepository {
       data: {'latitude': latitude, 'longitude': longitude},
     );
     if (!response.isSuccess) {
-      throw UserProfileException(response.message ?? 'Failed to upload location');
+      throw UserProfileException(response.errorCode ?? response.message ?? 'Failed to upload location', code: response.errorCode);
     }
   }
 
   Future<List<Map<String, dynamic>>> getSkillCategories() async {
     final response = await _apiService.get(ApiEndpoints.skillCategories);
     if (!response.isSuccess) {
-      throw UserProfileException(response.message ?? 'Failed to load categories');
+      throw UserProfileException(response.errorCode ?? response.message ?? 'Failed to load categories', code: response.errorCode);
     }
     final data = response.data;
     final list = data is Map ? (data['data'] as List?) : (data as List?);
@@ -130,7 +128,7 @@ class UserProfileRepository {
       },
     );
     if (!response.isSuccess) {
-      throw UserProfileException(response.message ?? 'Failed to submit onboarding');
+      throw UserProfileException(response.errorCode ?? response.message ?? 'Failed to submit onboarding', code: response.errorCode);
     }
   }
 }

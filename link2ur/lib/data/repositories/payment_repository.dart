@@ -47,7 +47,7 @@ class PaymentRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw PaymentException(response.message ?? '创建支付失败');
+      throw PaymentException(response.errorCode ?? response.message ?? '创建支付失败', code: response.errorCode);
     }
 
     return TaskPaymentResponse.fromJson(response.data!);
@@ -60,7 +60,7 @@ class PaymentRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw PaymentException(response.message ?? '查询支付状态失败');
+      throw PaymentException(response.errorCode ?? response.message ?? '查询支付状态失败', code: response.errorCode);
     }
 
     return response.data!;
@@ -90,7 +90,7 @@ class PaymentRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw PaymentException(response.message ?? '获取支付历史失败');
+      throw PaymentException(response.errorCode ?? response.message ?? '获取支付历史失败', code: response.errorCode);
     }
 
     // 支付数据使用个人TTL
@@ -123,7 +123,7 @@ class PaymentRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw PaymentException(response.message ?? '创建微信支付会话失败');
+      throw PaymentException(response.errorCode ?? response.message ?? '创建微信支付会话失败', code: response.errorCode);
     }
 
     final url = response.data!['checkout_url'] as String?;
@@ -193,7 +193,7 @@ class PaymentRepository {
       );
 
       if (!response.isSuccess || response.data == null) {
-        throw PaymentException(response.message ?? 'Failed to load payouts');
+        throw PaymentException(response.errorCode ?? response.message ?? 'Failed to load payouts', code: response.errorCode);
       }
 
       await _cache.set(cacheKey, response.data!, ttl: CacheManager.personalTTL);
@@ -223,7 +223,7 @@ class PaymentRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw PaymentException(response.message ?? '获取支持国家列表失败');
+      throw PaymentException(response.errorCode ?? response.message ?? '获取支持国家列表失败', code: response.errorCode);
     }
 
     final countries = response.data!['countries'] as List<dynamic>;
@@ -239,7 +239,7 @@ class PaymentRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw PaymentException(response.message ?? '创建Connect账户失败');
+      throw PaymentException(response.errorCode ?? response.message ?? '创建Connect账户失败', code: response.errorCode);
     }
 
     return response.data!;
@@ -255,7 +255,7 @@ class PaymentRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw PaymentException(response.message ?? '创建Connect账户失败');
+      throw PaymentException(response.errorCode ?? response.message ?? '创建Connect账户失败', code: response.errorCode);
     }
 
     return response.data!;
@@ -268,7 +268,7 @@ class PaymentRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw PaymentException(response.message ?? '获取入驻链接失败');
+      throw PaymentException(response.errorCode ?? response.message ?? '获取入驻链接失败', code: response.errorCode);
     }
 
     final url = response.data!['url'] as String?;
@@ -284,7 +284,7 @@ class PaymentRepository {
       ApiEndpoints.stripeConnectOnboardingSession,
     );
     if (!response.isSuccess || response.data == null) {
-      throw PaymentException(response.message ?? '获取入驻会话失败');
+      throw PaymentException(response.errorCode ?? response.message ?? '获取入驻会话失败', code: response.errorCode);
     }
     return response.data!;
   }
@@ -300,7 +300,7 @@ class PaymentRepository {
       },
     );
     if (!response.isSuccess || response.data == null) {
-      throw PaymentException(response.message ?? '获取账户管理会话失败');
+      throw PaymentException(response.errorCode ?? response.message ?? '获取账户管理会话失败', code: response.errorCode);
     }
     return response.data!;
   }
@@ -312,7 +312,7 @@ class PaymentRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw PaymentException(response.message ?? '获取Stripe Connect状态失败');
+      throw PaymentException(response.errorCode ?? response.message ?? '获取Stripe Connect状态失败', code: response.errorCode);
     }
 
     return StripeConnectStatus.fromJson(response.data!);
@@ -325,7 +325,7 @@ class PaymentRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw PaymentException(response.message ?? '获取Connect详情失败');
+      throw PaymentException(response.errorCode ?? response.message ?? '获取Connect详情失败', code: response.errorCode);
     }
 
     return StripeConnectAccountDetails.fromJson(response.data!);
@@ -338,7 +338,7 @@ class PaymentRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw PaymentException(response.message ?? '获取Connect详情失败');
+      throw PaymentException(response.errorCode ?? response.message ?? '获取Connect详情失败', code: response.errorCode);
     }
 
     return response.data!;
@@ -356,7 +356,7 @@ class PaymentRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw PaymentException(response.message ?? '获取余额失败');
+      throw PaymentException(response.errorCode ?? response.message ?? '获取余额失败', code: response.errorCode);
     }
 
     await _cache.set(cacheKey, response.data!, ttl: CacheManager.personalTTL);
@@ -376,7 +376,7 @@ class PaymentRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw PaymentException(response.message ?? '获取余额失败');
+      throw PaymentException(response.errorCode ?? response.message ?? '获取余额失败', code: response.errorCode);
     }
 
     await _cache.set(cacheKey, response.data!, ttl: CacheManager.personalTTL);
@@ -391,7 +391,7 @@ class PaymentRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw PaymentException(response.message ?? 'Failed to load external accounts');
+      throw PaymentException(response.errorCode ?? response.message ?? 'Failed to load external accounts', code: response.errorCode);
     }
 
     // 后端返回 "external_accounts" 键
@@ -494,7 +494,7 @@ class PaymentRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw PaymentException(response.message ?? '获取交易记录失败');
+      throw PaymentException(response.errorCode ?? response.message ?? '获取交易记录失败', code: response.errorCode);
     }
 
     await _cache.set(cacheKey, response.data!, ttl: CacheManager.personalTTL);
@@ -532,7 +532,7 @@ class PaymentRepository {
       );
 
       if (!response.isSuccess || response.data == null) {
-        throw PaymentException(response.message ?? '获取VIP历史失败');
+        throw PaymentException(response.errorCode ?? response.message ?? '获取VIP历史失败', code: response.errorCode);
       }
 
       await _cache.set(cacheKey, response.data!, ttl: CacheManager.personalTTL);
@@ -563,7 +563,7 @@ class PaymentRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw PaymentException(response.message ?? '提现请求失败');
+      throw PaymentException(response.errorCode ?? response.message ?? '提现请求失败', code: response.errorCode);
     }
 
     // 提现后失效支付相关缓存
@@ -579,7 +579,7 @@ class PaymentRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw PaymentException(response.message ?? '获取IAP产品列表失败');
+      throw PaymentException(response.errorCode ?? response.message ?? '获取IAP产品列表失败', code: response.errorCode);
     }
 
     final items = response.data!['products'] as List<dynamic>? ?? [];
@@ -604,7 +604,7 @@ class PaymentRepository {
       // 向后兼容：旧 API 返回单个对象
       return [WalletBalance.fromJson(response.data!)];
     }
-    throw PaymentException(response.message ?? '获取钱包余额失败');
+    throw PaymentException(response.errorCode ?? response.message ?? '获取钱包余额失败', code: response.errorCode);
   }
 
   /// 获取本地钱包余额（便捷方法，返回列表首个钱包）
@@ -645,7 +645,7 @@ class PaymentRepository {
         'page_size': response.data!['page_size'],
       };
     }
-    throw PaymentException(response.message ?? '获取钱包流水失败');
+    throw PaymentException(response.errorCode ?? response.message ?? '获取钱包流水失败', code: response.errorCode);
   }
 
   /// 申请本地钱包提现
@@ -665,11 +665,11 @@ class PaymentRepository {
     if (response.isSuccess && response.data != null) {
       return response.data!;
     }
-    throw PaymentException(response.message ?? '提现失败');
+    throw PaymentException(response.errorCode ?? response.message ?? '提现失败', code: response.errorCode);
   }
 }
 
 /// 支付异常
 class PaymentException extends AppException {
-  const PaymentException(super.message);
+  const PaymentException(super.message, {super.code});
 }

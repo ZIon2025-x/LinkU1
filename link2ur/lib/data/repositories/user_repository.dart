@@ -39,7 +39,7 @@ class UserRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw UserException(response.message ?? '获取用户资料失败');
+      throw UserException(response.errorCode ?? response.message ?? '获取用户资料失败', code: response.errorCode);
     }
 
     final user = User.fromJson(response.data!);
@@ -59,7 +59,7 @@ class UserRepository {
     );
 
     if (!response.isSuccess) {
-      throw UserException(response.message ?? '上传头像失败');
+      throw UserException(response.errorCode ?? response.message ?? '上传头像失败', code: response.errorCode);
     }
 
     // 后端返回 {"avatar": "url"}，非完整 User；需刷新完整资料
@@ -88,7 +88,7 @@ class UserRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw UserException(response.message ?? '获取用户资料失败');
+      throw UserException(response.errorCode ?? response.message ?? '获取用户资料失败', code: response.errorCode);
     }
 
     return UserProfileDetail.fromJson(response.data!);
@@ -102,7 +102,7 @@ class UserRepository {
     );
 
     if (!response.isSuccess) {
-      throw UserException(response.message ?? '更新头像失败');
+      throw UserException(response.errorCode ?? response.message ?? '更新头像失败', code: response.errorCode);
     }
 
     // 后端返回 {"avatar": "url"}，非完整 User；需刷新完整资料
@@ -143,7 +143,7 @@ class UserRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw UserException(response.message ?? '更新用户资料失败');
+      throw UserException(response.errorCode ?? response.message ?? '更新用户资料失败', code: response.errorCode);
     }
 
     final updatedUser = await getProfile(forceRefresh: true);
@@ -158,7 +158,7 @@ class UserRepository {
     );
 
     if (!response.isSuccess) {
-      throw UserException(response.message ?? '发送验证码失败');
+      throw UserException(response.errorCode ?? response.message ?? '发送验证码失败', code: response.errorCode);
     }
   }
 
@@ -170,7 +170,7 @@ class UserRepository {
     );
 
     if (!response.isSuccess) {
-      throw UserException(response.message ?? '发送验证码失败');
+      throw UserException(response.errorCode ?? response.message ?? '发送验证码失败', code: response.errorCode);
     }
   }
 
@@ -181,7 +181,7 @@ class UserRepository {
     );
 
     if (!response.isSuccess) {
-      throw UserException(response.message ?? '删除账号失败');
+      throw UserException(response.errorCode ?? response.message ?? '删除账号失败', code: response.errorCode);
     }
   }
 
@@ -194,7 +194,7 @@ class UserRepository {
     AppLogger.info('[UserPreferences] 响应: isSuccess=${response.isSuccess}, data=${response.data}, statusCode=${response.statusCode}');
 
     if (!response.isSuccess || response.data == null) {
-      throw UserException(response.message ?? '获取偏好设置失败');
+      throw UserException(response.errorCode ?? response.message ?? '获取偏好设置失败', code: response.errorCode);
     }
 
     return response.data!;
@@ -213,7 +213,7 @@ class UserRepository {
     );
 
     if (!response.isSuccess) {
-      throw UserException(response.message ?? '更新偏好设置失败');
+      throw UserException(response.errorCode ?? response.message ?? '更新偏好设置失败', code: response.errorCode);
     }
   }
 
@@ -227,7 +227,7 @@ class UserRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw UserException(response.message ?? '上传图片失败');
+      throw UserException(response.errorCode ?? response.message ?? '上传图片失败', code: response.errorCode);
     }
 
     return response.data!['url'] as String? ?? '';
@@ -243,7 +243,7 @@ class UserRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw UserException(response.message ?? '上传头像失败');
+      throw UserException(response.errorCode ?? response.message ?? '上传头像失败', code: response.errorCode);
     }
 
     return response.data!['url'] as String? ?? '';
@@ -259,7 +259,7 @@ class UserRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw UserException(response.message ?? '上传图片失败');
+      throw UserException(response.errorCode ?? response.message ?? '上传图片失败', code: response.errorCode);
     }
 
     return response.data!['url'] as String? ?? '';
@@ -274,7 +274,7 @@ class UserRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw UserException(response.message ?? '上传文件失败');
+      throw UserException(response.errorCode ?? response.message ?? '上传文件失败', code: response.errorCode);
     }
 
     return response.data!['url'] as String? ?? '';
@@ -289,7 +289,7 @@ class UserRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw UserException(response.message ?? '获取钱包信息失败');
+      throw UserException(response.errorCode ?? response.message ?? '获取钱包信息失败', code: response.errorCode);
     }
 
     return WalletInfo.fromJson(response.data!);
@@ -311,7 +311,7 @@ class UserRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw UserException(response.message ?? '获取交易记录失败');
+      throw UserException(response.errorCode ?? response.message ?? '获取交易记录失败', code: response.errorCode);
     }
 
     final items = response.data!['transactions'] as List<dynamic>? ?? [];
@@ -327,7 +327,7 @@ class UserRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw UserException(response.message ?? '获取VIP状态失败');
+      throw UserException(response.errorCode ?? response.message ?? '获取VIP状态失败', code: response.errorCode);
     }
 
     return response.data!;
@@ -340,7 +340,7 @@ class UserRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw UserException(response.message ?? '获取任务统计失败');
+      throw UserException(response.errorCode ?? response.message ?? '获取任务统计失败', code: response.errorCode);
     }
 
     return response.data!;
@@ -353,7 +353,7 @@ class UserRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw UserException(response.message ?? '获取共同任务失败');
+      throw UserException(response.errorCode ?? response.message ?? '获取共同任务失败', code: response.errorCode);
     }
 
     final list = response.data as List;
@@ -363,5 +363,5 @@ class UserRepository {
 
 /// 用户异常
 class UserException extends AppException {
-  const UserException(super.message);
+  const UserException(super.message, {super.code});
 }

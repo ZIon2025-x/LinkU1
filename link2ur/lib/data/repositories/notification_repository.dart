@@ -61,7 +61,7 @@ class NotificationRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw NotificationException(response.message ?? '获取通知列表失败');
+      throw NotificationException(response.errorCode ?? response.message ?? '获取通知列表失败', code: response.errorCode);
     }
 
     // 缓存仅支持 Map；如果后端返回 List 则不缓存
@@ -81,7 +81,7 @@ class NotificationRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw NotificationException(response.message ?? '获取通知列表失败');
+      throw NotificationException(response.errorCode ?? response.message ?? '获取通知列表失败', code: response.errorCode);
     }
 
     return _parseNotificationResponse(response.data);
@@ -94,7 +94,7 @@ class NotificationRepository {
     );
 
     if (!response.isSuccess) {
-      throw NotificationException(response.message ?? '标记已读失败');
+      throw NotificationException(response.errorCode ?? response.message ?? '标记已读失败', code: response.errorCode);
     }
 
     await _cache.invalidateNotificationsCache();
@@ -110,7 +110,7 @@ class NotificationRepository {
     );
 
     if (!response.isSuccess) {
-      throw NotificationException(response.message ?? '标记全部已读失败');
+      throw NotificationException(response.errorCode ?? response.message ?? '标记全部已读失败', code: response.errorCode);
     }
 
     await _cache.invalidateNotificationsCache();
@@ -123,7 +123,7 @@ class NotificationRepository {
     );
 
     if (!response.isSuccess) {
-      throw NotificationException(response.message ?? '标记已读失败');
+      throw NotificationException(response.errorCode ?? response.message ?? '标记已读失败', code: response.errorCode);
     }
   }
 
@@ -135,7 +135,7 @@ class NotificationRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw NotificationException(response.message ?? '获取未读数量失败');
+      throw NotificationException(response.errorCode ?? response.message ?? '获取未读数量失败', code: response.errorCode);
     }
 
     return UnreadNotificationCount.fromJson(response.data!);
@@ -155,7 +155,7 @@ class NotificationRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw NotificationException(response.message ?? '获取未读通知失败');
+      throw NotificationException(response.errorCode ?? response.message ?? '获取未读通知失败', code: response.errorCode);
     }
 
     return _parseNotificationResponse(response.data);
@@ -175,7 +175,7 @@ class NotificationRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw NotificationException(response.message ?? '获取互动消息失败');
+      throw NotificationException(response.errorCode ?? response.message ?? '获取互动消息失败', code: response.errorCode);
     }
 
     return _parseNotificationResponse(response.data);
@@ -189,7 +189,7 @@ class NotificationRepository {
     );
 
     if (!response.isSuccess) {
-      throw NotificationException(response.message ?? '注册设备Token失败');
+      throw NotificationException(response.errorCode ?? response.message ?? '注册设备Token失败', code: response.errorCode);
     }
   }
 
@@ -200,7 +200,7 @@ class NotificationRepository {
     );
 
     if (!response.isSuccess) {
-      throw NotificationException(response.message ?? '删除设备Token失败');
+      throw NotificationException(response.errorCode ?? response.message ?? '删除设备Token失败', code: response.errorCode);
     }
   }
 
@@ -211,7 +211,7 @@ class NotificationRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw NotificationException(response.message ?? '获取协商令牌失败');
+      throw NotificationException(response.errorCode ?? response.message ?? '获取协商令牌失败', code: response.errorCode);
     }
 
     return response.data!;
@@ -220,5 +220,5 @@ class NotificationRepository {
 
 /// 通知异常
 class NotificationException extends AppException {
-  const NotificationException(super.message);
+  const NotificationException(super.message, {super.code});
 }

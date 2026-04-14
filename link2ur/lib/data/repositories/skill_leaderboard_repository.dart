@@ -16,7 +16,7 @@ class SkillLeaderboardRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw SkillLeaderboardException(response.message ?? '获取排行榜分类失败');
+      throw SkillLeaderboardException(response.errorCode ?? response.message ?? '获取排行榜分类失败', code: response.errorCode);
     }
 
     final data = response.data!;
@@ -34,7 +34,7 @@ class SkillLeaderboardRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw SkillLeaderboardException(response.message ?? '获取排行榜失败');
+      throw SkillLeaderboardException(response.errorCode ?? response.message ?? '获取排行榜失败', code: response.errorCode);
     }
 
     final data = response.data!;
@@ -51,7 +51,7 @@ class SkillLeaderboardRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw SkillLeaderboardException(response.message ?? '获取我的排名失败');
+      throw SkillLeaderboardException(response.errorCode ?? response.message ?? '获取我的排名失败', code: response.errorCode);
     }
 
     return response.data!;
@@ -60,5 +60,5 @@ class SkillLeaderboardRepository {
 
 /// 技能排行榜异常
 class SkillLeaderboardException extends AppException {
-  const SkillLeaderboardException(super.message);
+  const SkillLeaderboardException(super.message, {super.code});
 }

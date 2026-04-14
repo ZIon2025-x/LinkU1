@@ -16,7 +16,7 @@ class BadgesRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw BadgesException(response.message ?? '获取我的徽章失败');
+      throw BadgesException(response.errorCode ?? response.message ?? '获取我的徽章失败', code: response.errorCode);
     }
 
     final items = response.data!['data'] as List<dynamic>? ?? [];
@@ -30,7 +30,7 @@ class BadgesRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw BadgesException(response.message ?? '切换徽章展示失败');
+      throw BadgesException(response.errorCode ?? response.message ?? '切换徽章展示失败', code: response.errorCode);
     }
 
     return response.data!;
@@ -43,7 +43,7 @@ class BadgesRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw BadgesException(response.message ?? '获取用户徽章失败');
+      throw BadgesException(response.errorCode ?? response.message ?? '获取用户徽章失败', code: response.errorCode);
     }
 
     final items = response.data!['data'] as List<dynamic>? ?? [];
@@ -53,5 +53,5 @@ class BadgesRepository {
 
 /// 徽章异常
 class BadgesException extends AppException {
-  const BadgesException(super.message);
+  const BadgesException(super.message, {super.code});
 }

@@ -23585,6 +23585,66 @@ abstract class AppLocalizations {
   /// **'Total Price'**
   String get expertPackagePrice;
 
+  /// No description provided for @expertPackageBasePrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Per-session Price'**
+  String get expertPackageBasePrice;
+
+  /// No description provided for @expertPackageBasePriceHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Reference price per session'**
+  String get expertPackageBasePriceHint;
+
+  /// No description provided for @expertPackageValidityDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Validity (days)'**
+  String get expertPackageValidityDays;
+
+  /// No description provided for @expertPackageValidityDaysHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave empty for no expiry'**
+  String get expertPackageValidityDaysHint;
+
+  /// No description provided for @expertPackageBundleServices.
+  ///
+  /// In en, this message translates to:
+  /// **'Included Services'**
+  String get expertPackageBundleServices;
+
+  /// No description provided for @expertPackageBundleServicesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Select at least 2 single services'**
+  String get expertPackageBundleServicesHint;
+
+  /// No description provided for @expertPackageBundleNoServices.
+  ///
+  /// In en, this message translates to:
+  /// **'No single services available. Create them first.'**
+  String get expertPackageBundleNoServices;
+
+  /// No description provided for @expertPackageBundleCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Qty'**
+  String get expertPackageBundleCount;
+
+  /// No description provided for @expertPackageSessionCountMin.
+  ///
+  /// In en, this message translates to:
+  /// **'Minimum 2 sessions'**
+  String get expertPackageSessionCountMin;
+
+  /// No description provided for @expertPackageBundleMin.
+  ///
+  /// In en, this message translates to:
+  /// **'Select at least 2 services'**
+  String get expertPackageBundleMin;
+
   /// No description provided for @expertPackageEmpty.
   ///
   /// In en, this message translates to:

@@ -36,7 +36,7 @@ class QuestionRepository {
         'page_size': data['page_size'] as int? ?? 20,
       };
     }
-    throw Exception(response.message ?? 'Failed to load questions');
+    throw Exception(response.errorCode ?? response.message ?? 'Failed to load questions');
   }
 
   /// 提问
@@ -56,7 +56,7 @@ class QuestionRepository {
     if (response.isSuccess && response.data != null) {
       return TaskQuestion.fromJson(response.data!);
     }
-    throw Exception(response.message ?? 'Failed to ask question');
+    throw Exception(response.errorCode ?? response.message ?? 'Failed to ask question');
   }
 
   /// 回复问题
@@ -71,7 +71,7 @@ class QuestionRepository {
     if (response.isSuccess && response.data != null) {
       return TaskQuestion.fromJson(response.data!);
     }
-    throw Exception(response.message ?? 'Failed to reply question');
+    throw Exception(response.errorCode ?? response.message ?? 'Failed to reply question');
   }
 
   /// 删除问题
@@ -80,7 +80,7 @@ class QuestionRepository {
       ApiEndpoints.questionDelete(questionId),
     );
     if (!response.isSuccess) {
-      throw Exception(response.message ?? 'Failed to delete question');
+      throw Exception(response.errorCode ?? response.message ?? 'Failed to delete question');
     }
   }
 }

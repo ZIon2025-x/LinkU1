@@ -16,7 +16,7 @@ class NewbieTasksRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw NewbieTasksException(response.message ?? '获取新手任务进度失败');
+      throw NewbieTasksException(response.errorCode ?? response.message ?? '获取新手任务进度失败', code: response.errorCode);
     }
 
     final items = response.data!['data'] as List<dynamic>? ?? [];
@@ -30,7 +30,7 @@ class NewbieTasksRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw NewbieTasksException(response.message ?? '领取任务奖励失败');
+      throw NewbieTasksException(response.errorCode ?? response.message ?? '领取任务奖励失败', code: response.errorCode);
     }
 
     return response.data!;
@@ -43,7 +43,7 @@ class NewbieTasksRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw NewbieTasksException(response.message ?? '获取阶段进度失败');
+      throw NewbieTasksException(response.errorCode ?? response.message ?? '获取阶段进度失败', code: response.errorCode);
     }
 
     final items = response.data!['data'] as List<dynamic>? ?? [];
@@ -57,7 +57,7 @@ class NewbieTasksRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw NewbieTasksException(response.message ?? '领取阶段奖励失败');
+      throw NewbieTasksException(response.errorCode ?? response.message ?? '领取阶段奖励失败', code: response.errorCode);
     }
 
     return response.data!;
@@ -66,5 +66,5 @@ class NewbieTasksRepository {
 
 /// 新手任务异常
 class NewbieTasksException extends AppException {
-  const NewbieTasksException(super.message);
+  const NewbieTasksException(super.message, {super.code});
 }

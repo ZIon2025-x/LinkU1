@@ -16,7 +16,7 @@ class OfficialTasksRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw OfficialTasksException(response.message ?? '获取官方任务列表失败');
+      throw OfficialTasksException(response.errorCode ?? response.message ?? '获取官方任务列表失败', code: response.errorCode);
     }
 
     final items = response.data!['data'] as List<dynamic>? ?? [];
@@ -30,7 +30,7 @@ class OfficialTasksRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw OfficialTasksException(response.message ?? '获取官方任务详情失败');
+      throw OfficialTasksException(response.errorCode ?? response.message ?? '获取官方任务详情失败', code: response.errorCode);
     }
 
     return response.data!;
@@ -45,7 +45,7 @@ class OfficialTasksRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw OfficialTasksException(response.message ?? '提交官方任务失败');
+      throw OfficialTasksException(response.errorCode ?? response.message ?? '提交官方任务失败', code: response.errorCode);
     }
 
     return response.data!;
@@ -58,7 +58,7 @@ class OfficialTasksRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw OfficialTasksException(response.message ?? '领取官方任务奖励失败');
+      throw OfficialTasksException(response.errorCode ?? response.message ?? '领取官方任务奖励失败', code: response.errorCode);
     }
 
     return response.data!;
@@ -67,5 +67,5 @@ class OfficialTasksRepository {
 
 /// 官方任务异常
 class OfficialTasksException extends AppException {
-  const OfficialTasksException(super.message);
+  const OfficialTasksException(super.message, {super.code});
 }

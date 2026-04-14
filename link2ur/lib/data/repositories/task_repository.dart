@@ -62,7 +62,7 @@ class TaskRepository {
       );
 
       if (!response.isSuccess || response.data == null) {
-        throw TaskException(response.message ?? '获取任务列表失败');
+        throw TaskException(response.errorCode ?? response.message ?? '获取任务列表失败', code: response.errorCode);
       }
 
       // 写入缓存（搜索结果使用更短的 TTL）
@@ -108,7 +108,7 @@ class TaskRepository {
       );
 
       if (!response.isSuccess || response.data == null) {
-        throw TaskException(response.message ?? '获取推荐任务失败');
+        throw TaskException(response.errorCode ?? response.message ?? '获取推荐任务失败', code: response.errorCode);
       }
 
       await _cache.set(cacheKey, response.data!, ttl: CacheManager.shortTTL);
@@ -133,7 +133,7 @@ class TaskRepository {
     );
 
     if (!response.isSuccess) {
-      throw TaskException(response.message ?? '推荐反馈提交失败');
+      throw TaskException(response.errorCode ?? response.message ?? '推荐反馈提交失败', code: response.errorCode);
     }
   }
 
@@ -160,7 +160,7 @@ class TaskRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw TaskException(response.message ?? '获取附近任务失败');
+      throw TaskException(response.errorCode ?? response.message ?? '获取附近任务失败', code: response.errorCode);
     }
 
     return TaskListResponse.fromJson(response.data!);
@@ -184,7 +184,7 @@ class TaskRepository {
       );
 
       if (!response.isSuccess || response.data == null) {
-        throw TaskException(response.message ?? '获取任务详情失败');
+        throw TaskException(response.errorCode ?? response.message ?? '获取任务详情失败', code: response.errorCode);
       }
 
       await _cache.set(cacheKey, response.data!, ttl: CacheManager.defaultTTL);
@@ -212,7 +212,7 @@ class TaskRepository {
       fieldName: 'image',
     );
     if (!response.isSuccess || response.data == null) {
-      throw TaskException(response.message ?? '上传图片失败');
+      throw TaskException(response.errorCode ?? response.message ?? '上传图片失败', code: response.errorCode);
     }
     final url = response.data!['url'] as String?;
     if (url == null || url.isEmpty) {
@@ -229,7 +229,7 @@ class TaskRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw TaskException(response.message ?? '创建任务失败');
+      throw TaskException(response.errorCode ?? response.message ?? '创建任务失败', code: response.errorCode);
     }
 
     // 创建后失效任务列表缓存
@@ -255,7 +255,7 @@ class TaskRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw TaskException(response.message ?? 'ai_optimize_failed');
+      throw TaskException(response.errorCode ?? response.message ?? 'ai_optimize_failed', code: response.errorCode);
     }
 
     return response.data!;
@@ -279,7 +279,7 @@ class TaskRepository {
     );
 
     if (!response.isSuccess) {
-      throw TaskException(response.message ?? '申请任务失败');
+      throw TaskException(response.errorCode ?? response.message ?? '申请任务失败', code: response.errorCode);
     }
 
     // 失效相关缓存
@@ -308,7 +308,7 @@ class TaskRepository {
       );
 
       if (!response.isSuccess || response.data == null) {
-        throw TaskException(response.message ?? 'Failed to load applications');
+        throw TaskException(response.errorCode ?? response.message ?? 'Failed to load applications', code: response.errorCode);
       }
 
       // 兼容后端两种返回格式：裸数组 或 { items/applications: [...] }
@@ -351,7 +351,7 @@ class TaskRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw TaskException(response.message ?? '获取申请列表失败');
+      throw TaskException(response.errorCode ?? response.message ?? '获取申请列表失败', code: response.errorCode);
     }
 
     final data = response.data!;
@@ -370,7 +370,7 @@ class TaskRepository {
     );
 
     if (!response.isSuccess) {
-      throw TaskException(response.message ?? '接受申请失败');
+      throw TaskException(response.errorCode ?? response.message ?? '接受申请失败', code: response.errorCode);
     }
 
     await _cache.remove('${CacheManager.prefixMyTasks}apps');
@@ -387,7 +387,7 @@ class TaskRepository {
     );
 
     if (!response.isSuccess) {
-      throw TaskException(response.message ?? 'Failed to start chat');
+      throw TaskException(response.errorCode ?? response.message ?? 'Failed to start chat', code: response.errorCode);
     }
 
     await _cache.invalidateTaskDetailCache(taskId);
@@ -404,7 +404,7 @@ class TaskRepository {
     );
 
     if (!response.isSuccess) {
-      throw TaskException(response.message ?? 'Failed to propose price');
+      throw TaskException(response.errorCode ?? response.message ?? 'Failed to propose price', code: response.errorCode);
     }
 
     return response.data;
@@ -418,7 +418,7 @@ class TaskRepository {
     );
 
     if (!response.isSuccess) {
-      throw TaskException(response.message ?? 'Failed to initiate payment');
+      throw TaskException(response.errorCode ?? response.message ?? 'Failed to initiate payment', code: response.errorCode);
     }
 
     await _cache.invalidateTaskDetailCache(taskId);
@@ -433,7 +433,7 @@ class TaskRepository {
     );
 
     if (!response.isSuccess) {
-      throw TaskException(response.message ?? '拒绝申请失败');
+      throw TaskException(response.errorCode ?? response.message ?? '拒绝申请失败', code: response.errorCode);
     }
 
     await _cache.remove('${CacheManager.prefixMyTasks}apps');
@@ -447,7 +447,7 @@ class TaskRepository {
     );
 
     if (!response.isSuccess) {
-      throw TaskException(response.message ?? '撤回申请失败');
+      throw TaskException(response.errorCode ?? response.message ?? '撤回申请失败', code: response.errorCode);
     }
 
     await _cache.remove('${CacheManager.prefixMyTasks}apps');
@@ -469,7 +469,7 @@ class TaskRepository {
     );
 
     if (!response.isSuccess) {
-      throw TaskException(response.message ?? '议价失败');
+      throw TaskException(response.errorCode ?? response.message ?? '议价失败', code: response.errorCode);
     }
 
     await _cache.invalidateTaskDetailCache(taskId);
@@ -491,7 +491,7 @@ class TaskRepository {
     );
 
     if (!response.isSuccess) {
-      throw TaskException(response.message ?? '回复议价失败');
+      throw TaskException(response.errorCode ?? response.message ?? '回复议价失败', code: response.errorCode);
     }
 
     await _cache.invalidateTaskDetailCache(taskId);
@@ -504,7 +504,7 @@ class TaskRepository {
       data: {'price': price},
     );
     if (!response.isSuccess) {
-      throw TaskException(response.message ?? '提交反报价失败');
+      throw TaskException(response.errorCode ?? response.message ?? '提交反报价失败', code: response.errorCode);
     }
 
     await _cache.invalidateTaskDetailCache(taskId);
@@ -520,7 +520,7 @@ class TaskRepository {
       data: {'action': action},
     );
     if (!response.isSuccess) {
-      throw TaskException(response.message ?? '回复反报价失败');
+      throw TaskException(response.errorCode ?? response.message ?? '回复反报价失败', code: response.errorCode);
     }
 
     await _cache.invalidateTaskDetailCache(taskId);
@@ -541,7 +541,7 @@ class TaskRepository {
     );
 
     if (!response.isSuccess) {
-      throw TaskException(response.message ?? '完成任务失败');
+      throw TaskException(response.errorCode ?? response.message ?? '完成任务失败', code: response.errorCode);
     }
 
     await _cache.invalidateTaskDetailCache(taskId);
@@ -567,7 +567,7 @@ class TaskRepository {
     );
 
     if (!response.isSuccess) {
-      throw TaskException(response.message ?? '确认完成失败');
+      throw TaskException(response.errorCode ?? response.message ?? '确认完成失败', code: response.errorCode);
     }
 
     await _cache.invalidateTaskDetailCache(taskId);
@@ -586,7 +586,7 @@ class TaskRepository {
     );
 
     if (!response.isSuccess) {
-      throw TaskException(response.message ?? '取消任务失败');
+      throw TaskException(response.errorCode ?? response.message ?? '取消任务失败', code: response.errorCode);
     }
 
     await _cache.invalidateTaskDetailCache(taskId);
@@ -607,7 +607,7 @@ class TaskRepository {
     );
 
     if (!response.isSuccess) {
-      throw TaskException(response.message ?? '删除任务失败');
+      throw TaskException(response.errorCode ?? response.message ?? '删除任务失败', code: response.errorCode);
     }
 
     await _cache.invalidateAllTasksCache();
@@ -620,7 +620,7 @@ class TaskRepository {
       data: {'reward': reward},
     );
     if (!response.isSuccess) {
-      throw TaskException(response.message ?? '更新奖励失败');
+      throw TaskException(response.errorCode ?? response.message ?? '更新奖励失败', code: response.errorCode);
     }
     await _cache.invalidateTaskDetailCache(taskId);
   }
@@ -633,7 +633,7 @@ class TaskRepository {
       data: {'is_public': isPublic},
     );
     if (!response.isSuccess) {
-      throw TaskException(response.message ?? '更新可见性失败');
+      throw TaskException(response.errorCode ?? response.message ?? '更新可见性失败', code: response.errorCode);
     }
     await _cache.invalidateTaskDetailCache(taskId);
   }
@@ -645,7 +645,7 @@ class TaskRepository {
     );
 
     if (!response.isSuccess) {
-      throw TaskException(response.message ?? '拒绝任务失败');
+      throw TaskException(response.errorCode ?? response.message ?? '拒绝任务失败', code: response.errorCode);
     }
   }
 
@@ -657,7 +657,7 @@ class TaskRepository {
     );
 
     if (!response.isSuccess) {
-      throw TaskException(response.message ?? '评价失败');
+      throw TaskException(response.errorCode ?? response.message ?? '评价失败', code: response.errorCode);
     }
 
     await _cache.invalidateTaskDetailCache(taskId);
@@ -670,7 +670,7 @@ class TaskRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw TaskException(response.message ?? '获取评价失败');
+      throw TaskException(response.errorCode ?? response.message ?? '获取评价失败', code: response.errorCode);
     }
 
     return response.data!.map((e) => e as Map<String, dynamic>).toList();
@@ -683,7 +683,7 @@ class TaskRepository {
     );
 
     if (!response.isSuccess) {
-      throw TaskException(response.message ?? '接受任务失败');
+      throw TaskException(response.errorCode ?? response.message ?? '接受任务失败', code: response.errorCode);
     }
   }
 
@@ -694,7 +694,7 @@ class TaskRepository {
     );
 
     if (!response.isSuccess) {
-      throw TaskException(response.message ?? '审批任务失败');
+      throw TaskException(response.errorCode ?? response.message ?? '审批任务失败', code: response.errorCode);
     }
   }
 
@@ -705,7 +705,7 @@ class TaskRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw TaskException(response.message ?? '获取匹配分数失败');
+      throw TaskException(response.errorCode ?? response.message ?? '获取匹配分数失败', code: response.errorCode);
     }
 
     return response.data!;
@@ -727,7 +727,7 @@ class TaskRepository {
       );
 
       if (!response.isSuccess || response.data == null) {
-        throw TaskException(response.message ?? '获取任务历史失败');
+        throw TaskException(response.errorCode ?? response.message ?? '获取任务历史失败', code: response.errorCode);
       }
 
       await _cache.set(cacheKey, response.data!, ttl: CacheManager.personalTTL);
@@ -759,7 +759,7 @@ class TaskRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw TaskException(response.message ?? '发起争议失败');
+      throw TaskException(response.errorCode ?? response.message ?? '发起争议失败', code: response.errorCode);
     }
 
     await _cache.invalidateTaskDetailCache(taskId);
@@ -792,7 +792,7 @@ class TaskRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw TaskException(response.message ?? '退款请求失败');
+      throw TaskException(response.errorCode ?? response.message ?? '退款请求失败', code: response.errorCode);
     }
 
     await _cache.invalidateTaskDetailCache(taskId);
@@ -813,7 +813,7 @@ class TaskRepository {
     }
 
     if (!response.isSuccess || response.data == null) {
-      throw TaskException(response.message ?? '获取退款状态失败');
+      throw TaskException(response.errorCode ?? response.message ?? '获取退款状态失败', code: response.errorCode);
     }
 
     return response.data!;
@@ -826,7 +826,7 @@ class TaskRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw TaskException(response.message ?? '获取退款历史失败');
+      throw TaskException(response.errorCode ?? response.message ?? '获取退款历史失败', code: response.errorCode);
     }
 
     return response.data!.map((e) => e as Map<String, dynamic>).toList();
@@ -839,7 +839,7 @@ class TaskRepository {
     );
 
     if (!response.isSuccess) {
-      throw TaskException(response.message ?? '取消退款请求失败');
+      throw TaskException(response.errorCode ?? response.message ?? '取消退款请求失败', code: response.errorCode);
     }
 
     await _cache.invalidateTaskDetailCache(taskId);
@@ -861,7 +861,7 @@ class TaskRepository {
     );
 
     if (!response.isSuccess) {
-      throw TaskException(response.message ?? '提交反驳失败');
+      throw TaskException(response.errorCode ?? response.message ?? '提交反驳失败', code: response.errorCode);
     }
 
     await _cache.invalidateTaskDetailCache(taskId);
@@ -874,7 +874,7 @@ class TaskRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw TaskException(response.message ?? '获取争议时间线失败');
+      throw TaskException(response.errorCode ?? response.message ?? '获取争议时间线失败', code: response.errorCode);
     }
 
     return response.data!;
@@ -890,7 +890,7 @@ class TaskRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw TaskException(response.message ?? '获取参与者失败');
+      throw TaskException(response.errorCode ?? response.message ?? '获取参与者失败', code: response.errorCode);
     }
 
     final items = response.data!['items'] as List<dynamic>? ?? [];
@@ -904,7 +904,7 @@ class TaskRepository {
     );
 
     if (!response.isSuccess) {
-      throw TaskException(response.message ?? '标记完成失败');
+      throw TaskException(response.errorCode ?? response.message ?? '标记完成失败', code: response.errorCode);
     }
   }
 
@@ -918,7 +918,7 @@ class TaskRepository {
     );
 
     if (!response.isSuccess) {
-      throw TaskException(response.message ?? '退出请求失败');
+      throw TaskException(response.errorCode ?? response.message ?? '退出请求失败', code: response.errorCode);
     }
   }
 
@@ -952,7 +952,7 @@ class TaskRepository {
       );
 
       if (!response.isSuccess || response.data == null) {
-        throw TaskException(response.message ?? '获取我的任务失败');
+        throw TaskException(response.errorCode ?? response.message ?? '获取我的任务失败', code: response.errorCode);
       }
 
       // 兼容后端返回裸数组或分页对象
@@ -1020,7 +1020,7 @@ class TaskRepository {
       );
 
       if (!response.isSuccess || response.data == null) {
-        throw TaskException(response.message ?? '获取已发布任务失败');
+        throw TaskException(response.errorCode ?? response.message ?? '获取已发布任务失败', code: response.errorCode);
       }
 
       // 兼容后端返回裸数组或分页对象
@@ -1057,7 +1057,7 @@ class TaskRepository {
     );
 
     if (!response.isSuccess) {
-      throw TaskException(response.message ?? '发送消息失败');
+      throw TaskException(response.errorCode ?? response.message ?? '发送消息失败', code: response.errorCode);
     }
   }
 
@@ -1069,7 +1069,7 @@ class TaskRepository {
     );
 
     if (!response.isSuccess) {
-      throw TaskException(response.message ?? '回复消息失败');
+      throw TaskException(response.errorCode ?? response.message ?? '回复消息失败', code: response.errorCode);
     }
   }
 
@@ -1085,7 +1085,7 @@ class TaskRepository {
       if (response.statusCode == 409) {
         throw const TaskException('public_reply_already_replied');
       }
-      throw TaskException(response.message ?? 'public_reply_failed');
+      throw TaskException(response.errorCode ?? response.message ?? 'public_reply_failed', code: response.errorCode);
     }
 
     return response.data!;
@@ -1094,5 +1094,5 @@ class TaskRepository {
 
 /// 任务异常
 class TaskException extends AppException {
-  const TaskException(super.message);
+  const TaskException(super.message, {super.code});
 }

@@ -31,7 +31,7 @@ class AuthRepository {
     );
 
     if (!response.isSuccess) {
-      throw AuthException(response.message ?? '登录失败');
+      throw AuthException(response.errorCode ?? response.message ?? '登录失败', code: response.errorCode);
     }
 
     if (response.data == null) {
@@ -79,7 +79,7 @@ class AuthRepository {
     );
 
     if (!response.isSuccess) {
-      throw AuthException(response.message ?? '登录失败');
+      throw AuthException(response.errorCode ?? response.message ?? '登录失败', code: response.errorCode);
     }
 
     if (response.data == null) {
@@ -124,7 +124,7 @@ class AuthRepository {
     );
 
     if (!response.isSuccess) {
-      throw AuthException(response.message ?? '登录失败');
+      throw AuthException(response.errorCode ?? response.message ?? '登录失败', code: response.errorCode);
     }
 
     if (response.data == null) {
@@ -172,7 +172,7 @@ class AuthRepository {
     );
 
     if (!response.isSuccess) {
-      throw AuthException(response.message ?? 'auth_error_register_failed');
+      throw AuthException(response.errorCode ?? response.message ?? 'auth_error_register_failed', code: response.errorCode);
     }
 
     if (response.data == null) {
@@ -210,7 +210,7 @@ class AuthRepository {
     );
 
     if (!response.isSuccess) {
-      throw AuthException(response.message ?? '发送验证码失败');
+      throw AuthException(response.errorCode ?? response.message ?? '发送验证码失败', code: response.errorCode);
     }
   }
 
@@ -222,7 +222,7 @@ class AuthRepository {
     );
 
     if (!response.isSuccess) {
-      throw AuthException(response.message ?? '发送验证码失败');
+      throw AuthException(response.errorCode ?? response.message ?? '发送验证码失败', code: response.errorCode);
     }
   }
 
@@ -306,7 +306,7 @@ class AuthRepository {
     );
 
     if (!response.isSuccess) {
-      throw AuthException(response.message ?? '发送重置邮件失败');
+      throw AuthException(response.errorCode ?? response.message ?? '发送重置邮件失败', code: response.errorCode);
     }
   }
 
@@ -322,7 +322,7 @@ class AuthRepository {
     );
 
     if (!response.isSuccess) {
-      throw AuthException(response.message ?? '重置密码失败');
+      throw AuthException(response.errorCode ?? response.message ?? '重置密码失败', code: response.errorCode);
     }
   }
 
@@ -330,7 +330,7 @@ class AuthRepository {
   Future<void> logoutAll() async {
     final response = await _apiService.post(ApiEndpoints.logoutAll);
     if (!response.isSuccess) {
-      throw AuthException(response.message ?? '登出所有设备失败');
+      throw AuthException(response.errorCode ?? response.message ?? '登出所有设备失败', code: response.errorCode);
     }
   }
 
@@ -338,7 +338,7 @@ class AuthRepository {
   Future<void> logoutOthers() async {
     final response = await _apiService.post(ApiEndpoints.logoutOthers);
     if (!response.isSuccess) {
-      throw AuthException(response.message ?? '登出其他设备失败');
+      throw AuthException(response.errorCode ?? response.message ?? '登出其他设备失败', code: response.errorCode);
     }
   }
 
@@ -347,7 +347,7 @@ class AuthRepository {
     final response =
         await _apiService.get<List<dynamic>>(ApiEndpoints.activeSessions);
     if (!response.isSuccess || response.data == null) {
-      throw AuthException(response.message ?? '获取会话列表失败');
+      throw AuthException(response.errorCode ?? response.message ?? '获取会话列表失败', code: response.errorCode);
     }
     return response.data!.cast<Map<String, dynamic>>();
   }
@@ -355,5 +355,5 @@ class AuthRepository {
 
 /// 认证异常
 class AuthException extends AppException {
-  const AuthException(super.message);
+  const AuthException(super.message, {super.code});
 }

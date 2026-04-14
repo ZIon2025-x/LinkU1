@@ -16,7 +16,7 @@ class UserSkillsRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw UserSkillsException(response.message ?? '获取技能列表失败');
+      throw UserSkillsException(response.errorCode ?? response.message ?? '获取技能列表失败', code: response.errorCode);
     }
 
     final items = response.data!['data'] as List<dynamic>? ?? [];
@@ -34,7 +34,7 @@ class UserSkillsRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw UserSkillsException(response.message ?? '添加技能失败');
+      throw UserSkillsException(response.errorCode ?? response.message ?? '添加技能失败', code: response.errorCode);
     }
 
     return response.data!;
@@ -47,7 +47,7 @@ class UserSkillsRepository {
     );
 
     if (!response.isSuccess) {
-      throw UserSkillsException(response.message ?? '删除技能失败');
+      throw UserSkillsException(response.errorCode ?? response.message ?? '删除技能失败', code: response.errorCode);
     }
   }
 
@@ -58,7 +58,7 @@ class UserSkillsRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw UserSkillsException(response.message ?? '获取技能分类失败');
+      throw UserSkillsException(response.errorCode ?? response.message ?? '获取技能分类失败', code: response.errorCode);
     }
 
     final items = response.data!['data'] as List<dynamic>? ?? [];
@@ -68,5 +68,5 @@ class UserSkillsRepository {
 
 /// 用户技能异常
 class UserSkillsException extends AppException {
-  const UserSkillsException(super.message);
+  const UserSkillsException(super.message, {super.code});
 }

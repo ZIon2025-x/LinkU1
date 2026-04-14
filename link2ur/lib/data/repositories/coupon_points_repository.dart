@@ -21,7 +21,7 @@ class CouponPointsRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw CouponPointsException(response.message ?? '获取积分账户失败');
+      throw CouponPointsException(response.errorCode ?? response.message ?? '获取积分账户失败', code: response.errorCode);
     }
 
     return PointsAccount.fromJson(response.data!);
@@ -44,7 +44,7 @@ class CouponPointsRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw CouponPointsException(response.message ?? '获取交易记录失败');
+      throw CouponPointsException(response.errorCode ?? response.message ?? '获取交易记录失败', code: response.errorCode);
     }
 
     // 后端返回 "data" key（非 "items"）
@@ -62,7 +62,7 @@ class CouponPointsRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw CouponPointsException(response.message ?? '兑换优惠券失败');
+      throw CouponPointsException(response.errorCode ?? response.message ?? '兑换优惠券失败', code: response.errorCode);
     }
 
     return response.data!;
@@ -78,7 +78,7 @@ class CouponPointsRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw CouponPointsException(response.message ?? '签到失败');
+      throw CouponPointsException(response.errorCode ?? response.message ?? '签到失败', code: response.errorCode);
     }
 
     return response.data!;
@@ -91,7 +91,7 @@ class CouponPointsRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw CouponPointsException(response.message ?? '获取签到状态失败');
+      throw CouponPointsException(response.errorCode ?? response.message ?? '获取签到状态失败', code: response.errorCode);
     }
 
     return response.data!;
@@ -104,7 +104,7 @@ class CouponPointsRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw CouponPointsException(response.message ?? '获取奖励配置失败');
+      throw CouponPointsException(response.errorCode ?? response.message ?? '获取奖励配置失败', code: response.errorCode);
     }
 
     final rewards = response.data!['rewards'] as List<dynamic>? ?? [];
@@ -121,7 +121,7 @@ class CouponPointsRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw CouponPointsException(response.message ?? '获取优惠券失败');
+      throw CouponPointsException(response.errorCode ?? response.message ?? '获取优惠券失败', code: response.errorCode);
     }
 
     final items = response.data!['data'] as List<dynamic>? ?? [];
@@ -148,7 +148,7 @@ class CouponPointsRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw CouponPointsException(response.message ?? '获取我的优惠券失败');
+      throw CouponPointsException(response.errorCode ?? response.message ?? '获取我的优惠券失败', code: response.errorCode);
     }
 
     final items = response.data!['data'] as List<dynamic>? ?? [];
@@ -165,7 +165,7 @@ class CouponPointsRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw CouponPointsException(response.message ?? '领取优惠券失败');
+      throw CouponPointsException(response.errorCode ?? response.message ?? '领取优惠券失败', code: response.errorCode);
     }
 
     return response.data!;
@@ -183,7 +183,7 @@ class CouponPointsRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw CouponPointsException(response.message ?? '兑换码无效或已失效');
+      throw CouponPointsException(response.errorCode ?? response.message ?? '兑换码无效或已失效', code: response.errorCode);
     }
 
     return response.data!;
@@ -197,7 +197,7 @@ class CouponPointsRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw CouponPointsException(response.message ?? '验证邀请码失败');
+      throw CouponPointsException(response.errorCode ?? response.message ?? '验证邀请码失败', code: response.errorCode);
     }
 
     return response.data!;
@@ -206,5 +206,5 @@ class CouponPointsRepository {
 
 /// 积分优惠券异常
 class CouponPointsException extends AppException {
-  const CouponPointsException(super.message);
+  const CouponPointsException(super.message, {super.code});
 }

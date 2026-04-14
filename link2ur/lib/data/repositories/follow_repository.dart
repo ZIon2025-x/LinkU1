@@ -1,11 +1,9 @@
 import '../services/api_service.dart';
 import '../models/discovery_feed.dart';
+import '../../core/utils/app_exception.dart';
 
-class FollowException implements Exception {
-  FollowException(this.message);
-  final String message;
-  @override
-  String toString() => message;
+class FollowException extends AppException {
+  const FollowException(super.message, {super.code});
 }
 
 class FollowRepository {
@@ -17,7 +15,7 @@ class FollowRepository {
       '/api/users/$userId/follow',
     );
     if (!response.isSuccess || response.data == null) {
-      throw FollowException(response.message ?? 'follow_failed');
+      throw FollowException(response.errorCode ?? response.message ?? 'follow_failed', code: response.errorCode);
     }
     return response.data!;
   }
@@ -27,7 +25,7 @@ class FollowRepository {
       '/api/users/$userId/follow',
     );
     if (!response.isSuccess || response.data == null) {
-      throw FollowException(response.message ?? 'unfollow_failed');
+      throw FollowException(response.errorCode ?? response.message ?? 'unfollow_failed', code: response.errorCode);
     }
     return response.data!;
   }
@@ -38,7 +36,7 @@ class FollowRepository {
       queryParameters: {'page': page, 'page_size': pageSize},
     );
     if (!response.isSuccess || response.data == null) {
-      throw FollowException(response.message ?? 'get_followers_failed');
+      throw FollowException(response.errorCode ?? response.message ?? 'get_followers_failed', code: response.errorCode);
     }
     return response.data!;
   }
@@ -49,7 +47,7 @@ class FollowRepository {
       queryParameters: {'page': page, 'page_size': pageSize},
     );
     if (!response.isSuccess || response.data == null) {
-      throw FollowException(response.message ?? 'get_following_failed');
+      throw FollowException(response.errorCode ?? response.message ?? 'get_following_failed', code: response.errorCode);
     }
     return response.data!;
   }
@@ -60,7 +58,7 @@ class FollowRepository {
       queryParameters: {'page': page, 'page_size': pageSize},
     );
     if (!response.isSuccess || response.data == null) {
-      throw FollowException(response.message ?? 'get_follow_feed_failed');
+      throw FollowException(response.errorCode ?? response.message ?? 'get_follow_feed_failed', code: response.errorCode);
     }
     return DiscoveryFeedResponse.fromJson(response.data!);
   }

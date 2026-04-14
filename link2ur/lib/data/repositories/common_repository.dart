@@ -32,7 +32,7 @@ class CommonRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw CommonException(response.message ?? '获取横幅失败');
+      throw CommonException(response.errorCode ?? response.message ?? '获取横幅失败', code: response.errorCode);
     }
 
     // Banner 变动少，使用静态TTL（1小时）
@@ -59,7 +59,7 @@ class CommonRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw CommonException(response.message ?? '获取FAQ失败');
+      throw CommonException(response.errorCode ?? response.message ?? '获取FAQ失败', code: response.errorCode);
     }
 
     final raw = response.data!;
@@ -86,7 +86,7 @@ class CommonRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw CommonException(response.message ?? '获取法律文档失败');
+      throw CommonException(response.errorCode ?? response.message ?? '获取法律文档失败', code: response.errorCode);
     }
 
     // 法律文档极少更新，使用静态TTL
@@ -131,7 +131,7 @@ class CommonRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw CommonException(response.message ?? '分配客服失败');
+      throw CommonException(response.errorCode ?? response.message ?? '分配客服失败', code: response.errorCode);
     }
 
     return response.data!;
@@ -144,7 +144,7 @@ class CommonRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw CommonException(response.message ?? '获取客服聊天失败');
+      throw CommonException(response.errorCode ?? response.message ?? '获取客服聊天失败', code: response.errorCode);
     }
 
     return response.data!.map((e) => e as Map<String, dynamic>).toList();
@@ -158,7 +158,7 @@ class CommonRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw CommonException(response.message ?? '获取客服消息失败');
+      throw CommonException(response.errorCode ?? response.message ?? '获取客服消息失败', code: response.errorCode);
     }
 
     return response.data!.map((e) => e as Map<String, dynamic>).toList();
@@ -171,7 +171,7 @@ class CommonRepository {
     );
 
     if (!response.isSuccess) {
-      throw CommonException(response.message ?? '结束聊天失败');
+      throw CommonException(response.errorCode ?? response.message ?? '结束聊天失败', code: response.errorCode);
     }
   }
 
@@ -190,7 +190,7 @@ class CommonRepository {
     );
 
     if (!response.isSuccess) {
-      throw CommonException(response.message ?? '评价失败');
+      throw CommonException(response.errorCode ?? response.message ?? '评价失败', code: response.errorCode);
     }
   }
 
@@ -205,7 +205,7 @@ class CommonRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw CommonException(response.message ?? '发送消息失败');
+      throw CommonException(response.errorCode ?? response.message ?? '发送消息失败', code: response.errorCode);
     }
 
     return response.data!;
@@ -218,7 +218,7 @@ class CommonRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw CommonException(response.message ?? '检查客服可用性失败');
+      throw CommonException(response.errorCode ?? response.message ?? '检查客服可用性失败', code: response.errorCode);
     }
 
     return response.data!;
@@ -231,7 +231,7 @@ class CommonRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw CommonException(response.message ?? '获取排队状态失败');
+      throw CommonException(response.errorCode ?? response.message ?? '获取排队状态失败', code: response.errorCode);
     }
 
     return response.data!;
@@ -246,7 +246,7 @@ class CommonRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw CommonException(response.message ?? '获取系统设置失败');
+      throw CommonException(response.errorCode ?? response.message ?? '获取系统设置失败', code: response.errorCode);
     }
 
     return response.data!;
@@ -259,7 +259,7 @@ class CommonRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw CommonException(response.message ?? '获取职位列表失败');
+      throw CommonException(response.errorCode ?? response.message ?? '获取职位列表失败', code: response.errorCode);
     }
 
     return response.data!.map((e) => e as Map<String, dynamic>).toList();
@@ -294,7 +294,7 @@ class CommonRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw CommonException(response.message ?? '翻译失败');
+      throw CommonException(response.errorCode ?? response.message ?? '翻译失败', code: response.errorCode);
     }
 
     // 缓存翻译结果
@@ -352,7 +352,7 @@ class CommonRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw CommonException(response.message ?? '批量翻译失败');
+      throw CommonException(response.errorCode ?? response.message ?? '批量翻译失败', code: response.errorCode);
     }
 
     // 缓存新翻译结果
@@ -378,7 +378,7 @@ class CommonRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw CommonException(response.message ?? '刷新图片URL失败');
+      throw CommonException(response.errorCode ?? response.message ?? '刷新图片URL失败', code: response.errorCode);
     }
 
     return response.data!['url'] as String? ?? '';
@@ -391,7 +391,7 @@ class CommonRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw CommonException(response.message ?? '获取私有图片失败');
+      throw CommonException(response.errorCode ?? response.message ?? '获取私有图片失败', code: response.errorCode);
     }
 
     return response.data!['url'] as String? ?? '';
@@ -405,7 +405,7 @@ class CommonRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw CommonException(response.message ?? '获取私有文件失败');
+      throw CommonException(response.errorCode ?? response.message ?? '获取私有文件失败', code: response.errorCode);
     }
 
     return response.data!['url'] as String? ?? '';
@@ -414,5 +414,5 @@ class CommonRepository {
 
 /// 通用异常
 class CommonException extends AppException {
-  const CommonException(super.message);
+  const CommonException(super.message, {super.code});
 }

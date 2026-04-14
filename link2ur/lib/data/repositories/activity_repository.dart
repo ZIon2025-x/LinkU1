@@ -64,7 +64,7 @@ class ActivityRepository {
       );
 
       if (!response.isSuccess || response.data == null) {
-        throw ActivityException(response.message ?? '获取活动列表失败');
+        throw ActivityException(response.errorCode ?? response.message ?? '获取活动列表失败', code: response.errorCode);
       }
 
       final data = response.data;
@@ -109,7 +109,7 @@ class ActivityRepository {
       );
 
       if (!response.isSuccess || response.data == null) {
-        throw ActivityException(response.message ?? '获取活动详情失败');
+        throw ActivityException(response.errorCode ?? response.message ?? '获取活动详情失败', code: response.errorCode);
       }
 
       await _cache.set(cacheKey, response.data!, ttl: CacheManager.defaultTTL);
@@ -141,7 +141,7 @@ class ActivityRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw ActivityException(response.message ?? '申请活动失败');
+      throw ActivityException(response.errorCode ?? response.message ?? '申请活动失败', code: response.errorCode);
     }
 
     // 申请后失效缓存
@@ -159,7 +159,7 @@ class ActivityRepository {
     );
 
     if (!response.isSuccess) {
-      throw ActivityException(response.message ?? '操作失败');
+      throw ActivityException(response.errorCode ?? response.message ?? '操作失败', code: response.errorCode);
     }
   }
 
@@ -209,7 +209,7 @@ class ActivityRepository {
       );
 
       if (!response.isSuccess || response.data == null) {
-        throw ActivityException(response.message ?? '获取我的活动失败');
+        throw ActivityException(response.errorCode ?? response.message ?? '获取我的活动失败', code: response.errorCode);
       }
 
       await _cache.set(cacheKey, response.data!, ttl: CacheManager.personalTTL);
@@ -238,7 +238,7 @@ class ActivityRepository {
       if (msg.contains('已满') || msg.contains('full') || msg.contains('no more')) {
         throw const ActivityFullException();
       }
-      throw ActivityException(response.message ?? 'activity_official_apply_failed');
+      throw ActivityException(response.errorCode ?? response.message ?? 'activity_official_apply_failed', code: response.errorCode);
     }
   }
 
@@ -248,7 +248,7 @@ class ActivityRepository {
       ApiEndpoints.officialActivityApply(activityId),
     );
     if (!response.isSuccess) {
-      throw ActivityException(response.message ?? '取消申请失败');
+      throw ActivityException(response.errorCode ?? response.message ?? '取消申请失败', code: response.errorCode);
     }
   }
 
@@ -258,7 +258,7 @@ class ActivityRepository {
       ApiEndpoints.officialActivityResult(activityId),
     );
     if (!response.isSuccess || response.data == null) {
-      throw ActivityException(response.message ?? '获取活动结果失败');
+      throw ActivityException(response.errorCode ?? response.message ?? '获取活动结果失败', code: response.errorCode);
     }
     return OfficialActivityResult.fromJson(response.data!);
   }
@@ -266,7 +266,7 @@ class ActivityRepository {
 
 /// 活动异常
 class ActivityException extends AppException {
-  const ActivityException(super.message);
+  const ActivityException(super.message, {super.code});
 }
 
 /// 活动名额已满异常

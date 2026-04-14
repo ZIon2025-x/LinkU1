@@ -85,7 +85,7 @@ class MessageRepository {
       );
 
       if (!response.isSuccess || response.data == null) {
-        throw MessageException(response.message ?? '获取联系人列表失败');
+        throw MessageException(response.errorCode ?? response.message ?? '获取联系人列表失败', code: response.errorCode);
       }
 
       final items = _extractList(response.data, ['contacts', 'items', 'data']);
@@ -135,7 +135,7 @@ class MessageRepository {
       );
 
       if (!response.isSuccess || response.data == null) {
-        throw MessageException(response.message ?? '获取消息失败');
+        throw MessageException(response.errorCode ?? response.message ?? '获取消息失败', code: response.errorCode);
       }
 
       final items = _extractList(
@@ -177,7 +177,7 @@ class MessageRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw MessageException(response.message ?? '发送消息失败');
+      throw MessageException(response.errorCode ?? response.message ?? '发送消息失败', code: response.errorCode);
     }
 
     // 发送后失效对应聊天缓存
@@ -203,7 +203,7 @@ class MessageRepository {
     );
 
     if (!response.isSuccess) {
-      throw MessageException(response.message ?? '标记已读失败');
+      throw MessageException(response.errorCode ?? response.message ?? '标记已读失败', code: response.errorCode);
     }
   }
 
@@ -221,7 +221,7 @@ class MessageRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw MessageException(response.message ?? '获取未读消息失败');
+      throw MessageException(response.errorCode ?? response.message ?? '获取未读消息失败', code: response.errorCode);
     }
 
     final items = _extractList(
@@ -278,7 +278,7 @@ class MessageRepository {
       );
 
       if (!response.isSuccess || response.data == null) {
-        throw MessageException(response.message ?? '获取任务聊天列表失败');
+        throw MessageException(response.errorCode ?? response.message ?? '获取任务聊天列表失败', code: response.errorCode);
       }
 
       final items = _extractList(
@@ -355,7 +355,7 @@ class MessageRepository {
       );
 
       if (!response.isSuccess || response.data == null) {
-        throw MessageException(response.message ?? '获取任务聊天消息失败');
+        throw MessageException(response.errorCode ?? response.message ?? '获取任务聊天消息失败', code: response.errorCode);
       }
 
       final data = response.data as Map<String, dynamic>;
@@ -427,7 +427,7 @@ class MessageRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw MessageException(response.message ?? '发送任务聊天消息失败');
+      throw MessageException(response.errorCode ?? response.message ?? '发送任务聊天消息失败', code: response.errorCode);
     }
 
     // 发送后失效对应任务聊天缓存
@@ -460,7 +460,7 @@ class MessageRepository {
     );
 
     if (!response.isSuccess) {
-      throw MessageException(response.message ?? '标记任务聊天已读失败');
+      throw MessageException(response.errorCode ?? response.message ?? '标记任务聊天已读失败', code: response.errorCode);
     }
 
     // 失效任务聊天列表缓存，刷新时能拿到最新未读数
@@ -477,7 +477,7 @@ class MessageRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw MessageException(response.message ?? '上传图片失败');
+      throw MessageException(response.errorCode ?? response.message ?? '上传图片失败', code: response.errorCode);
     }
 
     return response.data!['url'] as String? ?? '';
@@ -503,7 +503,7 @@ class MessageRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw MessageException(response.message ?? '生成图片URL失败');
+      throw MessageException(response.errorCode ?? response.message ?? '生成图片URL失败', code: response.errorCode);
     }
 
     return response.data!['url'] as String? ?? '';
@@ -512,5 +512,5 @@ class MessageRepository {
 
 /// 消息异常
 class MessageException extends AppException {
-  const MessageException(super.message);
+  const MessageException(super.message, {super.code});
 }

@@ -12794,6 +12794,38 @@ class AppLocalizationsEn extends AppLocalizations {
   String get expertPackagePrice => 'Total Price';
 
   @override
+  String get expertPackageBasePrice => 'Per-session Price';
+
+  @override
+  String get expertPackageBasePriceHint => 'Reference price per session';
+
+  @override
+  String get expertPackageValidityDays => 'Validity (days)';
+
+  @override
+  String get expertPackageValidityDaysHint => 'Leave empty for no expiry';
+
+  @override
+  String get expertPackageBundleServices => 'Included Services';
+
+  @override
+  String get expertPackageBundleServicesHint =>
+      'Select at least 2 single services';
+
+  @override
+  String get expertPackageBundleNoServices =>
+      'No single services available. Create them first.';
+
+  @override
+  String get expertPackageBundleCount => 'Qty';
+
+  @override
+  String get expertPackageSessionCountMin => 'Minimum 2 sessions';
+
+  @override
+  String get expertPackageBundleMin => 'Select at least 2 services';
+
+  @override
   String get expertPackageEmpty => 'No packages yet';
 
   @override

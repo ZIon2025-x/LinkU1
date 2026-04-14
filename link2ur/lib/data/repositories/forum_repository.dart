@@ -43,7 +43,7 @@ class ForumRepository {
       );
 
       if (!response.isSuccess || response.data == null) {
-        throw ForumException(response.message ?? '获取论坛分类失败');
+        throw ForumException(response.errorCode ?? response.message ?? '获取论坛分类失败', code: response.errorCode);
       }
 
       await _cache.set(cacheKey, response.data!, ttl: CacheManager.staticTTL);
@@ -99,7 +99,7 @@ class ForumRepository {
       );
 
       if (!response.isSuccess || response.data == null) {
-        throw ForumException(response.message ?? '获取帖子列表失败');
+        throw ForumException(response.errorCode ?? response.message ?? '获取帖子列表失败', code: response.errorCode);
       }
 
       if (cacheKey != null) {
@@ -137,7 +137,7 @@ class ForumRepository {
       );
 
       if (!response.isSuccess || response.data == null) {
-        throw ForumException(response.message ?? '获取论坛分类失败');
+        throw ForumException(response.errorCode ?? response.message ?? '获取论坛分类失败', code: response.errorCode);
       }
 
       await _cache.set(cacheKey, response.data!, ttl: CacheManager.staticTTL);
@@ -183,7 +183,7 @@ class ForumRepository {
       );
 
       if (!response.isSuccess || response.data == null) {
-        throw ForumException(response.message ?? '获取帖子详情失败');
+        throw ForumException(response.errorCode ?? response.message ?? '获取帖子详情失败', code: response.errorCode);
       }
 
       await _cache.set(cacheKey, response.data!, ttl: CacheManager.defaultTTL);
@@ -207,7 +207,7 @@ class ForumRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw ForumException(response.message ?? '上传图片失败');
+      throw ForumException(response.errorCode ?? response.message ?? '上传图片失败', code: response.errorCode);
     }
 
     final url = response.data!['url'] as String?;
@@ -227,7 +227,7 @@ class ForumRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw ForumException(response.message ?? '上传文件失败');
+      throw ForumException(response.errorCode ?? response.message ?? '上传文件失败', code: response.errorCode);
     }
 
     final data = response.data!;
@@ -251,7 +251,7 @@ class ForumRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw ForumException(response.message ?? '发帖失败');
+      throw ForumException(response.errorCode ?? response.message ?? '发帖失败', code: response.errorCode);
     }
 
     // 创建后失效论坛缓存
@@ -295,7 +295,7 @@ class ForumRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw ForumException(response.message ?? '获取回复失败');
+      throw ForumException(response.errorCode ?? response.message ?? '获取回复失败', code: response.errorCode);
     }
 
     final items = response.data!['replies'] as List<dynamic>? ?? [];
@@ -317,7 +317,7 @@ class ForumRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw ForumException(response.message ?? '回复失败');
+      throw ForumException(response.errorCode ?? response.message ?? '回复失败', code: response.errorCode);
     }
 
     return ForumReply.fromJson(response.data!);
@@ -331,7 +331,7 @@ class ForumRepository {
     );
 
     if (!response.isSuccess) {
-      throw ForumException(response.message ?? '点赞失败');
+      throw ForumException(response.errorCode ?? response.message ?? '点赞失败', code: response.errorCode);
     }
     // 使帖子详情缓存失效，刷新或再次进入时从服务端拉取最新 is_liked
     await _cache.remove('${CacheManager.prefixForumPostDetail}$postId');
@@ -351,7 +351,7 @@ class ForumRepository {
     );
 
     if (!response.isSuccess) {
-      throw ForumException(response.message ?? '点赞失败');
+      throw ForumException(response.errorCode ?? response.message ?? '点赞失败', code: response.errorCode);
     }
 
     final data = response.data;
@@ -369,7 +369,7 @@ class ForumRepository {
     );
 
     if (!response.isSuccess) {
-      throw ForumException(response.message ?? '收藏失败');
+      throw ForumException(response.errorCode ?? response.message ?? '收藏失败', code: response.errorCode);
     }
     // 使帖子详情缓存失效，刷新或再次进入时从服务端拉取最新 is_favorited
     await _cache.remove('${CacheManager.prefixForumPostDetail}$postId');
@@ -402,7 +402,7 @@ class ForumRepository {
       );
 
       if (!response.isSuccess || response.data == null) {
-        throw ForumException(response.message ?? '获取我的帖子失败');
+        throw ForumException(response.errorCode ?? response.message ?? '获取我的帖子失败', code: response.errorCode);
       }
 
       await _cache.set(cacheKey, response.data!, ttl: CacheManager.personalTTL);
@@ -429,7 +429,7 @@ class ForumRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw ForumException(response.message ?? '获取我的回复失败');
+      throw ForumException(response.errorCode ?? response.message ?? '获取我的回复失败', code: response.errorCode);
     }
 
     final items = response.data!['replies'] as List<dynamic>? ?? [];
@@ -452,7 +452,7 @@ class ForumRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw ForumException(response.message ?? '获取收藏帖子失败');
+      throw ForumException(response.errorCode ?? response.message ?? '获取收藏帖子失败', code: response.errorCode);
     }
 
     final data = response.data!;
@@ -491,7 +491,7 @@ class ForumRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw ForumException(response.message ?? '获取点赞帖子失败');
+      throw ForumException(response.errorCode ?? response.message ?? '获取点赞帖子失败', code: response.errorCode);
     }
 
     final data = response.data!;
@@ -532,7 +532,7 @@ class ForumRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw ForumException(response.message ?? '搜索失败');
+      throw ForumException(response.errorCode ?? response.message ?? '搜索失败', code: response.errorCode);
     }
 
     return ForumPostListResponse.fromJson(response.data!);
@@ -546,7 +546,7 @@ class ForumRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw ForumException(response.message ?? '更新帖子失败');
+      throw ForumException(response.errorCode ?? response.message ?? '更新帖子失败', code: response.errorCode);
     }
 
     // 失效相关缓存
@@ -563,7 +563,7 @@ class ForumRepository {
     );
 
     if (!response.isSuccess) {
-      throw ForumException(response.message ?? '删除帖子失败');
+      throw ForumException(response.errorCode ?? response.message ?? '删除帖子失败', code: response.errorCode);
     }
 
     await _cache.invalidateForumCache();
@@ -581,7 +581,7 @@ class ForumRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw ForumException(response.message ?? '更新回复失败');
+      throw ForumException(response.errorCode ?? response.message ?? '更新回复失败', code: response.errorCode);
     }
 
     return ForumReply.fromJson(response.data!);
@@ -594,7 +594,7 @@ class ForumRepository {
     );
 
     if (!response.isSuccess) {
-      throw ForumException(response.message ?? '删除回复失败');
+      throw ForumException(response.errorCode ?? response.message ?? '删除回复失败', code: response.errorCode);
     }
   }
 
@@ -611,7 +611,7 @@ class ForumRepository {
     );
 
     if (!response.isSuccess) {
-      throw ForumException(response.message ?? '举报失败');
+      throw ForumException(response.errorCode ?? response.message ?? '举报失败', code: response.errorCode);
     }
   }
 
@@ -628,7 +628,7 @@ class ForumRepository {
     );
 
     if (!response.isSuccess) {
-      throw ForumException(response.message ?? '举报失败');
+      throw ForumException(response.errorCode ?? response.message ?? '举报失败', code: response.errorCode);
     }
   }
 
@@ -648,7 +648,7 @@ class ForumRepository {
     );
 
     if (!response.isSuccess) {
-      throw ForumException(response.message ?? '请求创建分类失败');
+      throw ForumException(response.errorCode ?? response.message ?? '请求创建分类失败', code: response.errorCode);
     }
   }
 
@@ -672,7 +672,7 @@ class ForumRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw ForumException(response.message ?? '获取热帖失败');
+      throw ForumException(response.errorCode ?? response.message ?? '获取热帖失败', code: response.errorCode);
     }
 
     await _cache.set(cacheKey, response.data!, ttl: CacheManager.shortTTL);
@@ -690,7 +690,7 @@ class ForumRepository {
     );
 
     if (!response.isSuccess) {
-      throw ForumException(response.message ?? '操作失败');
+      throw ForumException(response.errorCode ?? response.message ?? '操作失败', code: response.errorCode);
     }
   }
 
@@ -739,7 +739,7 @@ class ForumRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw ForumException(response.message ?? '获取收藏板块失败');
+      throw ForumException(response.errorCode ?? response.message ?? '获取收藏板块失败', code: response.errorCode);
     }
 
     final list = _extractCategoryList(response.data!);
@@ -758,7 +758,7 @@ class ForumRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw ForumException(response.message ?? '获取用户统计失败');
+      throw ForumException(response.errorCode ?? response.message ?? '获取用户统计失败', code: response.errorCode);
     }
 
     return response.data!;
@@ -772,7 +772,7 @@ class ForumRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw ForumException(response.message ?? '获取热门帖子失败');
+      throw ForumException(response.errorCode ?? response.message ?? '获取热门帖子失败', code: response.errorCode);
     }
 
     final items = response.data!['posts'] as List<dynamic>? ?? [];
@@ -787,7 +787,7 @@ class ForumRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw ForumException(response.message ?? '获取排行榜失败');
+      throw ForumException(response.errorCode ?? response.message ?? '获取排行榜失败', code: response.errorCode);
     }
 
     final items = response.data!['items'] as List<dynamic>? ?? [];
@@ -802,7 +802,7 @@ class ForumRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw ForumException(response.message ?? '获取收藏排行榜失败');
+      throw ForumException(response.errorCode ?? response.message ?? '获取收藏排行榜失败', code: response.errorCode);
     }
 
     final items = response.data!['items'] as List<dynamic>? ?? [];
@@ -817,7 +817,7 @@ class ForumRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw ForumException(response.message ?? '获取点赞排行榜失败');
+      throw ForumException(response.errorCode ?? response.message ?? '获取点赞排行榜失败', code: response.errorCode);
     }
 
     final items = response.data!['items'] as List<dynamic>? ?? [];
@@ -831,7 +831,7 @@ class ForumRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw ForumException(response.message ?? '获取分类统计失败');
+      throw ForumException(response.errorCode ?? response.message ?? '获取分类统计失败', code: response.errorCode);
     }
 
     return response.data!;
@@ -864,5 +864,5 @@ class ForumRepository {
 
 /// 论坛异常
 class ForumException extends AppException {
-  const ForumException(super.message);
+  const ForumException(super.message, {super.code});
 }

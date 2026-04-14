@@ -12264,6 +12264,36 @@ class AppLocalizationsZh extends AppLocalizations {
   String get expertPackagePrice => '套餐总价';
 
   @override
+  String get expertPackageBasePrice => '单课时价格';
+
+  @override
+  String get expertPackageBasePriceHint => '单次课程/服务的参考价';
+
+  @override
+  String get expertPackageValidityDays => '有效期（天）';
+
+  @override
+  String get expertPackageValidityDaysHint => '留空 = 永不过期';
+
+  @override
+  String get expertPackageBundleServices => '包含的服务';
+
+  @override
+  String get expertPackageBundleServicesHint => '至少选择 2 个单次服务';
+
+  @override
+  String get expertPackageBundleNoServices => '暂无可选单次服务，请先创建。';
+
+  @override
+  String get expertPackageBundleCount => '次数';
+
+  @override
+  String get expertPackageSessionCountMin => '至少 2 节课';
+
+  @override
+  String get expertPackageBundleMin => '至少选择 2 个服务';
+
+  @override
   String get expertPackageEmpty => '暂无套餐';
 
   @override
@@ -24768,6 +24798,36 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get expertPackagePrice => '套餐總價';
+
+  @override
+  String get expertPackageBasePrice => '單課時價格';
+
+  @override
+  String get expertPackageBasePriceHint => '單次課程/服務的參考價';
+
+  @override
+  String get expertPackageValidityDays => '有效期（天）';
+
+  @override
+  String get expertPackageValidityDaysHint => '留空 = 永不過期';
+
+  @override
+  String get expertPackageBundleServices => '包含的服務';
+
+  @override
+  String get expertPackageBundleServicesHint => '至少選擇 2 個單次服務';
+
+  @override
+  String get expertPackageBundleNoServices => '暫無可選單次服務，請先創建。';
+
+  @override
+  String get expertPackageBundleCount => '次數';
+
+  @override
+  String get expertPackageSessionCountMin => '至少 2 節課';
+
+  @override
+  String get expertPackageBundleMin => '至少選擇 2 個服務';
 
   @override
   String get expertPackageEmpty => '暫無套餐';

@@ -49,7 +49,7 @@ class LeaderboardRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw LeaderboardException(response.message ?? '获取排行榜列表失败');
+      throw LeaderboardException(response.errorCode ?? response.message ?? '获取排行榜列表失败', code: response.errorCode);
     }
 
     // 排行榜变动少，使用长TTL
@@ -76,7 +76,7 @@ class LeaderboardRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw LeaderboardException(response.message ?? '获取排行榜详情失败');
+      throw LeaderboardException(response.errorCode ?? response.message ?? '获取排行榜详情失败', code: response.errorCode);
     }
 
     await _cache.set(cacheKey, response.data!, ttl: CacheManager.longTTL);
@@ -125,7 +125,7 @@ class LeaderboardRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw LeaderboardException(response.message ?? '获取排行榜项目失败');
+      throw LeaderboardException(response.errorCode ?? response.message ?? '获取排行榜项目失败', code: response.errorCode);
     }
 
     if (useCache) {
@@ -153,7 +153,7 @@ class LeaderboardRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw LeaderboardException(response.message ?? '投票失败');
+      throw LeaderboardException(response.errorCode ?? response.message ?? '投票失败', code: response.errorCode);
     }
 
     return response.data!;
@@ -166,7 +166,7 @@ class LeaderboardRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw LeaderboardException(response.message ?? '获取条目详情失败');
+      throw LeaderboardException(response.errorCode ?? response.message ?? '获取条目详情失败', code: response.errorCode);
     }
 
     return response.data!;
@@ -179,7 +179,7 @@ class LeaderboardRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw LeaderboardException(response.message ?? '获取投票列表失败');
+      throw LeaderboardException(response.errorCode ?? response.message ?? '获取投票列表失败', code: response.errorCode);
     }
 
     final items = response.data!['items'] as List<dynamic>? ?? [];
@@ -196,7 +196,7 @@ class LeaderboardRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw LeaderboardException(response.message ?? '图片上传失败');
+      throw LeaderboardException(response.errorCode ?? response.message ?? '图片上传失败', code: response.errorCode);
     }
 
     final url = response.data!['url'] as String? ??
@@ -228,7 +228,7 @@ class LeaderboardRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw LeaderboardException(response.message ?? '申请排行榜失败');
+      throw LeaderboardException(response.errorCode ?? response.message ?? '申请排行榜失败', code: response.errorCode);
     }
 
     return Leaderboard.fromJson(response.data!);
@@ -258,7 +258,7 @@ class LeaderboardRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw LeaderboardException(response.message ?? '提交条目失败');
+      throw LeaderboardException(response.errorCode ?? response.message ?? '提交条目失败', code: response.errorCode);
     }
 
     // 提交新竞品后使该榜单的竞品列表缓存失效，返回详情页刷新时能拿到最新列表
@@ -282,7 +282,7 @@ class LeaderboardRepository {
     );
 
     if (!response.isSuccess) {
-      throw LeaderboardException(response.message ?? '审核失败');
+      throw LeaderboardException(response.errorCode ?? response.message ?? '审核失败', code: response.errorCode);
     }
   }
 
@@ -293,7 +293,7 @@ class LeaderboardRepository {
     );
 
     if (!response.isSuccess) {
-      throw LeaderboardException(response.message ?? '点赞失败');
+      throw LeaderboardException(response.errorCode ?? response.message ?? '点赞失败', code: response.errorCode);
     }
   }
 
@@ -307,7 +307,7 @@ class LeaderboardRepository {
     );
 
     if (!response.isSuccess) {
-      throw LeaderboardException(response.message ?? '操作失败');
+      throw LeaderboardException(response.errorCode ?? response.message ?? '操作失败', code: response.errorCode);
     }
   }
 
@@ -358,7 +358,7 @@ class LeaderboardRepository {
     );
 
     if (!response.isSuccess || response.data == null) {
-      throw LeaderboardException(response.message ?? '获取收藏排行榜失败');
+      throw LeaderboardException(response.errorCode ?? response.message ?? '获取收藏排行榜失败', code: response.errorCode);
     }
 
     return LeaderboardListResponse.fromJson(response.data!);
@@ -377,7 +377,7 @@ class LeaderboardRepository {
     );
 
     if (!response.isSuccess) {
-      throw LeaderboardException(response.message ?? '举报失败');
+      throw LeaderboardException(response.errorCode ?? response.message ?? '举报失败', code: response.errorCode);
     }
   }
 
@@ -394,12 +394,12 @@ class LeaderboardRepository {
     );
 
     if (!response.isSuccess) {
-      throw LeaderboardException(response.message ?? '举报失败');
+      throw LeaderboardException(response.errorCode ?? response.message ?? '举报失败', code: response.errorCode);
     }
   }
 }
 
 /// 排行榜异常
 class LeaderboardException extends AppException {
-  const LeaderboardException(super.message);
+  const LeaderboardException(super.message, {super.code});
 }

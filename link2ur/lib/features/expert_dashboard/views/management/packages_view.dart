@@ -26,6 +26,7 @@ class PackagesView extends StatefulWidget {
 
 class _PackagesViewState extends State<PackagesView> {
   List<Map<String, dynamic>> _packages = [];
+  List<Map<String, dynamic>> _rawServices = [];
   bool _loading = true;
   String? _error;
   bool _submitting = false;
@@ -47,6 +48,7 @@ class _PackagesViewState extends State<PackagesView> {
           .getExpertManagedServices(widget.expertId);
       if (!mounted) return;
       setState(() {
+        _rawServices = services;
         _packages = services
             .where((s) {
               final pkgType = s['package_type'] as String?;
@@ -79,7 +81,9 @@ class _PackagesViewState extends State<PackagesView> {
       await _loadPackages();
     } catch (e) {
       if (!mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text(e.toString())));
+      messenger.showSnackBar(
+        SnackBar(content: Text(context.localizeError(e.toString()))),
+      );
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -100,7 +104,9 @@ class _PackagesViewState extends State<PackagesView> {
       await _loadPackages();
     } catch (e) {
       if (!mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text(e.toString())));
+      messenger.showSnackBar(
+        SnackBar(content: Text(context.localizeError(e.toString()))),
+      );
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -141,19 +147,24 @@ class _PackagesViewState extends State<PackagesView> {
       await _loadPackages();
     } catch (e) {
       if (!mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text(e.toString())));
+      messenger.showSnackBar(
+        SnackBar(content: Text(context.localizeError(e.toString()))),
+      );
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
   }
 
   void _showFormSheet({Map<String, dynamic>? existing}) {
+    // 用当前加载的 services 做 bundle 子服务候选（只保留 single + active）
+    final singleServices = _allSingleServices();
     SheetAdaptation.showAdaptiveModalBottomSheet(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
       builder: (sheetContext) => _PackageFormSheet(
         existing: existing,
+        singleServices: singleServices,
         onSubmit: (data) {
           if (existing == null) {
             _createPackage(data);
@@ -163,6 +174,19 @@ class _PackagesViewState extends State<PackagesView> {
         },
       ),
     );
+  }
+
+  /// 当前团队可以被 bundle 引用的单次服务
+  /// (package_type == 'single' 或 null，且 status == 'active')
+  List<Map<String, dynamic>> _allSingleServices() {
+    // _packages 已经被过滤成 package_type != single；这里需要原始列表。
+    // 重新从 _rawServices 取。
+    return _rawServices.where((s) {
+      final pkgType = s['package_type'] as String?;
+      final status = s['status'] as String?;
+      final isSingle = pkgType == null || pkgType == 'single';
+      return isSingle && status == 'active';
+    }).toList();
   }
 
   @override
@@ -438,10 +462,14 @@ class _PackageFormSheet extends StatefulWidget {
   const _PackageFormSheet({
     this.existing,
     required this.onSubmit,
+    required this.singleServices,
   });
 
   final Map<String, dynamic>? existing;
   final void Function(Map<String, dynamic>) onSubmit;
+
+  /// 可以被 bundle 套餐引用的单次服务候选列表
+  final List<Map<String, dynamic>> singleServices;
 
   @override
   State<_PackageFormSheet> createState() => _PackageFormSheetState();
@@ -451,10 +479,15 @@ class _PackageFormSheetState extends State<_PackageFormSheet> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
   late final TextEditingController _descController;
-  late final TextEditingController _priceController;
+  late final TextEditingController _packagePriceController;
+  late final TextEditingController _basePriceController;
   late final TextEditingController _sessionsController;
+  late final TextEditingController _validityDaysController;
   String _packageType = 'multi';
   String _currency = 'GBP';
+
+  /// bundle 子服务选择: serviceId -> count
+  final Map<int, int> _bundleSelections = {};
 
   bool get _isEditing => widget.existing != null;
 
@@ -466,38 +499,96 @@ class _PackageFormSheetState extends State<_PackageFormSheet> {
         TextEditingController(text: s?['service_name'] as String? ?? '');
     _descController =
         TextEditingController(text: s?['description'] as String? ?? '');
-    final price = s?['base_price'] as num?;
-    _priceController = TextEditingController(
-      text: price != null ? price.toStringAsFixed(2) : '',
+    final basePrice = s?['base_price'] as num?;
+    _basePriceController = TextEditingController(
+      text: basePrice != null ? basePrice.toStringAsFixed(2) : '',
+    );
+    final pkgPrice = s?['package_price'] as num?;
+    _packagePriceController = TextEditingController(
+      text: pkgPrice != null ? pkgPrice.toStringAsFixed(2) : '',
     );
     final sessions = s?['total_sessions'] as int?;
     _sessionsController =
         TextEditingController(text: sessions?.toString() ?? '');
+    final validity = s?['validity_days'] as int?;
+    _validityDaysController =
+        TextEditingController(text: validity?.toString() ?? '');
     _packageType = (s?['package_type'] as String?) ?? 'multi';
     _currency = (s?['currency'] as String?) ?? 'GBP';
+
+    // 回填 bundle 选择
+    final existingBundle = s?['bundle_service_ids'];
+    if (existingBundle is List) {
+      for (final item in existingBundle) {
+        if (item is int) {
+          _bundleSelections[item] = (_bundleSelections[item] ?? 0) + 1;
+        } else if (item is Map) {
+          final sid = item['service_id'];
+          final cnt = item['count'];
+          if (sid is int && cnt is int && cnt > 0) {
+            _bundleSelections[sid] = cnt;
+          }
+        }
+      }
+    }
   }
 
   @override
   void dispose() {
     _nameController.dispose();
     _descController.dispose();
-    _priceController.dispose();
+    _packagePriceController.dispose();
+    _basePriceController.dispose();
     _sessionsController.dispose();
+    _validityDaysController.dispose();
     super.dispose();
   }
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
 
+    // bundle 校验: 至少 2 个不同服务
+    if (_packageType == 'bundle' && _bundleSelections.length < 2) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.expertPackageBundleMin)),
+      );
+      return;
+    }
+
+    final packagePrice = double.parse(_packagePriceController.text.trim());
     final data = <String, dynamic>{
       'service_name': _nameController.text.trim(),
       'description': _descController.text.trim(),
-      'base_price': double.parse(_priceController.text.trim()),
       'currency': _currency,
       'package_type': _packageType,
+      'package_price': packagePrice,
     };
+
     if (_packageType == 'multi') {
-      data['total_sessions'] = int.parse(_sessionsController.text.trim());
+      final sessions = int.parse(_sessionsController.text.trim());
+      data['total_sessions'] = sessions;
+      // base_price: 用户可覆盖,否则按总价 / 课时数 推导（保留 2 位小数,最少 0.01）
+      final baseText = _basePriceController.text.trim();
+      double basePrice;
+      if (baseText.isNotEmpty) {
+        basePrice = double.parse(baseText);
+      } else {
+        basePrice = packagePrice / sessions;
+      }
+      basePrice = (basePrice * 100).round() / 100.0;
+      if (basePrice <= 0) basePrice = 0.01;
+      data['base_price'] = basePrice;
+    } else if (_packageType == 'bundle') {
+      data['bundle_service_ids'] = _bundleSelections.entries
+          .map((e) => {'service_id': e.key, 'count': e.value})
+          .toList();
+      // bundle 后端也要求 base_price > 0;套餐总价作为占位
+      data['base_price'] = packagePrice;
+    }
+
+    final validityText = _validityDaysController.text.trim();
+    if (validityText.isNotEmpty) {
+      data['validity_days'] = int.parse(validityText);
     }
 
     widget.onSubmit(data);
@@ -616,9 +707,36 @@ class _PackageFormSheetState extends State<_PackageFormSheet> {
                           l10n.expertPackageSessionCount);
                     }
                     final n = int.tryParse(value.trim());
-                    if (n == null || n <= 0) {
+                    if (n == null || n < 2) {
+                      return l10n.expertPackageSessionCountMin;
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: AppSpacing.md),
+
+                // Per-session reference price (optional; auto-derived if blank)
+                TextFormField(
+                  controller: _basePriceController,
+                  decoration: InputDecoration(
+                    labelText: l10n.expertPackageBasePrice,
+                    helperText: l10n.expertPackageBasePriceHint,
+                    prefixText: '${Helpers.currencySymbolFor(_currency)} ',
+                    border: const OutlineInputBorder(),
+                  ),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(
+                        RegExp(r'^\d+\.?\d{0,2}')),
+                  ],
+                  textInputAction: TextInputAction.next,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) return null;
+                    final p = double.tryParse(value.trim());
+                    if (p == null || p <= 0) {
                       return l10n.validatorFieldRequired(
-                          l10n.expertPackageSessionCount);
+                          l10n.expertPackageBasePrice);
                     }
                     return null;
                   },
@@ -626,9 +744,35 @@ class _PackageFormSheetState extends State<_PackageFormSheet> {
                 const SizedBox(height: AppSpacing.md),
               ],
 
-              // Price
+              // Bundle sub-services selector (bundle only)
+              if (_packageType == 'bundle') ...[
+                Text(
+                  l10n.expertPackageBundleServices,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  l10n.expertPackageBundleServicesHint,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 8),
+                _BundleServicePicker(
+                  services: widget.singleServices,
+                  selections: _bundleSelections,
+                  onChanged: (newMap) {
+                    setState(() {
+                      _bundleSelections
+                        ..clear()
+                        ..addAll(newMap);
+                    });
+                  },
+                ),
+                const SizedBox(height: AppSpacing.md),
+              ],
+
+              // Package total price
               TextFormField(
-                controller: _priceController,
+                controller: _packagePriceController,
                 decoration: InputDecoration(
                   labelText: l10n.expertPackagePrice,
                   prefixText: '${Helpers.currencySymbolFor(_currency)} ',
@@ -639,7 +783,7 @@ class _PackageFormSheetState extends State<_PackageFormSheet> {
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
                 ],
-                textInputAction: TextInputAction.done,
+                textInputAction: TextInputAction.next,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
                     return l10n.validatorFieldRequired(l10n.expertPackagePrice);
@@ -647,6 +791,29 @@ class _PackageFormSheetState extends State<_PackageFormSheet> {
                   final p = double.tryParse(value.trim());
                   if (p == null || p <= 0) {
                     return l10n.validatorFieldRequired(l10n.expertPackagePrice);
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: AppSpacing.md),
+
+              // Validity days (optional)
+              TextFormField(
+                controller: _validityDaysController,
+                decoration: InputDecoration(
+                  labelText: l10n.expertPackageValidityDays,
+                  helperText: l10n.expertPackageValidityDaysHint,
+                  border: const OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                textInputAction: TextInputAction.done,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) return null;
+                  final n = int.tryParse(value.trim());
+                  if (n == null || n <= 0) {
+                    return l10n.validatorFieldRequired(
+                        l10n.expertPackageValidityDays);
                   }
                   return null;
                 },
@@ -660,6 +827,166 @@ class _PackageFormSheetState extends State<_PackageFormSheet> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// Bundle Sub-service Picker
+// =============================================================================
+
+class _BundleServicePicker extends StatelessWidget {
+  const _BundleServicePicker({
+    required this.services,
+    required this.selections,
+    required this.onChanged,
+  });
+
+  final List<Map<String, dynamic>> services;
+  final Map<int, int> selections;
+  final void Function(Map<int, int>) onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    if (services.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          borderRadius: AppRadius.allSmall,
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.12)
+                : Colors.black.withValues(alpha: 0.12),
+          ),
+        ),
+        child: Text(
+          l10n.expertPackageBundleNoServices,
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+      );
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: AppRadius.allSmall,
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.12)
+              : Colors.black.withValues(alpha: 0.12),
+        ),
+      ),
+      child: Column(
+        children: [
+          for (int i = 0; i < services.length; i++) ...[
+            if (i > 0)
+              Divider(
+                height: 1,
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.08)
+                    : Colors.black.withValues(alpha: 0.08),
+              ),
+            _BundleServiceRow(
+              service: services[i],
+              count: selections[services[i]['id'] as int] ?? 0,
+              onCountChanged: (newCount) {
+                final sid = services[i]['id'] as int;
+                final next = Map<int, int>.from(selections);
+                if (newCount <= 0) {
+                  next.remove(sid);
+                } else {
+                  next[sid] = newCount;
+                }
+                onChanged(next);
+              },
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _BundleServiceRow extends StatelessWidget {
+  const _BundleServiceRow({
+    required this.service,
+    required this.count,
+    required this.onCountChanged,
+  });
+
+  final Map<String, dynamic> service;
+  final int count;
+  final ValueChanged<int> onCountChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final name = service['service_name'] as String? ?? '';
+    final price = (service['base_price'] as num?)?.toDouble() ?? 0.0;
+    final currency = (service['currency'] as String?) ?? 'GBP';
+    final selected = count > 0;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: 6,
+      ),
+      child: Row(
+        children: [
+          Checkbox(
+            value: selected,
+            onChanged: (v) => onCountChanged(v == true ? 1 : 0),
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  '${Helpers.currencySymbolFor(currency)}${price.toStringAsFixed(2)}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+          if (selected) ...[
+            Text(
+              l10n.expertPackageBundleCount,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(width: 4),
+            IconButton(
+              icon: const Icon(Icons.remove_circle_outline, size: 20),
+              onPressed: count > 1 ? () => onCountChanged(count - 1) : null,
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+            SizedBox(
+              width: 28,
+              child: Text(
+                '$count',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.add_circle_outline, size: 20),
+              onPressed: count < 99 ? () => onCountChanged(count + 1) : null,
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          ],
+        ],
       ),
     );
   }

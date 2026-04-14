@@ -13,7 +13,7 @@ class PersonalServiceRepository {
       data: data,
     );
     if (!response.isSuccess || response.data == null) {
-      throw Exception(response.message ?? 'create_service_failed');
+      throw Exception(response.errorCode ?? response.message ?? 'create_service_failed');
     }
     return Map<String, dynamic>.from(response.data);
   }
@@ -21,7 +21,7 @@ class PersonalServiceRepository {
   Future<List<Map<String, dynamic>>> getMyServices() async {
     final response = await _apiService.get(ApiEndpoints.myPersonalServices);
     if (!response.isSuccess) {
-      throw Exception(response.message ?? 'load_services_failed');
+      throw Exception(response.errorCode ?? response.message ?? 'load_services_failed');
     }
     final data = response.data;
     if (data is List) {
@@ -33,7 +33,7 @@ class PersonalServiceRepository {
   Future<Map<String, dynamic>> getServiceById(String id) async {
     final response = await _apiService.get(ApiEndpoints.myPersonalServiceById(id));
     if (!response.isSuccess || response.data == null) {
-      throw Exception(response.message ?? 'load_service_failed');
+      throw Exception(response.errorCode ?? response.message ?? 'load_service_failed');
     }
     return Map<String, dynamic>.from(response.data);
   }
@@ -44,14 +44,14 @@ class PersonalServiceRepository {
       data: data,
     );
     if (!response.isSuccess) {
-      throw Exception(response.message ?? 'update_service_failed');
+      throw Exception(response.errorCode ?? response.message ?? 'update_service_failed');
     }
   }
 
   Future<void> deleteService(String id) async {
     final response = await _apiService.delete(ApiEndpoints.myPersonalServiceById(id));
     if (!response.isSuccess) {
-      throw Exception(response.message ?? 'delete_service_failed');
+      throw Exception(response.errorCode ?? response.message ?? 'delete_service_failed');
     }
   }
 
@@ -81,7 +81,7 @@ class PersonalServiceRepository {
       queryParameters: params,
     );
     if (!response.isSuccess || response.data == null) {
-      throw Exception(response.message ?? 'browse_services_failed');
+      throw Exception(response.errorCode ?? response.message ?? 'browse_services_failed');
     }
     return Map<String, dynamic>.from(response.data);
   }
@@ -104,7 +104,7 @@ class PersonalServiceRepository {
       queryParameters: params,
     );
     if (!response.isSuccess || response.data == null) {
-      throw Exception(response.message ?? 'load_applications_failed');
+      throw Exception(response.errorCode ?? response.message ?? 'load_applications_failed');
     }
     return Map<String, dynamic>.from(response.data);
   }
@@ -115,7 +115,7 @@ class PersonalServiceRepository {
       data: {'accept': accept},
     );
     if (!response.isSuccess) {
-      throw Exception(response.message ?? 'respond_counter_offer_failed');
+      throw Exception(response.errorCode ?? response.message ?? 'respond_counter_offer_failed');
     }
   }
 
@@ -124,7 +124,7 @@ class PersonalServiceRepository {
       ApiEndpoints.cancelServiceApplication(applicationId),
     );
     if (!response.isSuccess) {
-      throw Exception(response.message ?? 'cancel_application_failed');
+      throw Exception(response.errorCode ?? response.message ?? 'cancel_application_failed');
     }
   }
 
@@ -135,7 +135,7 @@ class PersonalServiceRepository {
       ApiEndpoints.personalServiceToggleStatus(id),
     );
     if (!response.isSuccess || response.data == null) {
-      throw Exception(response.message ?? 'toggle_status_failed');
+      throw Exception(response.errorCode ?? response.message ?? 'toggle_status_failed');
     }
     return Map<String, dynamic>.from(response.data);
   }
@@ -151,7 +151,7 @@ class PersonalServiceRepository {
       queryParameters: {'page': page, 'page_size': pageSize},
     );
     if (!response.isSuccess || response.data == null) {
-      throw Exception(response.message ?? 'load_reviews_failed');
+      throw Exception(response.errorCode ?? response.message ?? 'load_reviews_failed');
     }
     return Map<String, dynamic>.from(response.data);
   }
@@ -161,7 +161,7 @@ class PersonalServiceRepository {
       ApiEndpoints.serviceReviewSummary(serviceId),
     );
     if (!response.isSuccess || response.data == null) {
-      throw Exception(response.message ?? 'load_review_summary_failed');
+      throw Exception(response.errorCode ?? response.message ?? 'load_review_summary_failed');
     }
     return Map<String, dynamic>.from(response.data);
   }
@@ -186,7 +186,7 @@ class PersonalServiceRepository {
       queryParameters: params,
     );
     if (!response.isSuccess || response.data == null) {
-      throw Exception(response.message ?? 'load_applications_failed');
+      throw Exception(response.errorCode ?? response.message ?? 'load_applications_failed');
     }
     return Map<String, dynamic>.from(response.data);
   }
@@ -196,7 +196,7 @@ class PersonalServiceRepository {
       ApiEndpoints.ownerApproveApplication(applicationId),
     );
     if (!response.isSuccess || response.data == null) {
-      throw Exception(response.message ?? 'approve_failed');
+      throw Exception(response.errorCode ?? response.message ?? 'approve_failed');
     }
     return Map<String, dynamic>.from(response.data);
   }
@@ -207,7 +207,7 @@ class PersonalServiceRepository {
       data: {'reject_reason': reason},
     );
     if (!response.isSuccess) {
-      throw Exception(response.message ?? 'reject_failed');
+      throw Exception(response.errorCode ?? response.message ?? 'reject_failed');
     }
   }
 
@@ -224,7 +224,7 @@ class PersonalServiceRepository {
       },
     );
     if (!response.isSuccess) {
-      throw Exception(response.message ?? 'counter_offer_failed');
+      throw Exception(response.errorCode ?? response.message ?? 'counter_offer_failed');
     }
   }
 }

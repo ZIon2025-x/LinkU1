@@ -20,7 +20,8 @@ class StudentVerificationRepository {
 
     if (!response.isSuccess || response.data == null) {
       throw StudentVerificationException(
-          response.message ?? '获取认证状态失败');
+          response.errorCode ?? response.message ?? '获取认证状态失败',
+          code: response.errorCode);
     }
 
     // 后端返回 {"code": 200, "data": {...}}，需要解包 data
@@ -37,7 +38,7 @@ class StudentVerificationRepository {
     );
 
     if (!response.isSuccess) {
-      throw StudentVerificationException(response.message ?? '提交认证失败');
+      throw StudentVerificationException(response.errorCode ?? response.message ?? '提交认证失败', code: response.errorCode);
     }
   }
 
@@ -48,7 +49,7 @@ class StudentVerificationRepository {
     );
 
     if (!response.isSuccess) {
-      throw StudentVerificationException(response.message ?? '验证失败');
+      throw StudentVerificationException(response.errorCode ?? response.message ?? '验证失败', code: response.errorCode);
     }
   }
 
@@ -60,7 +61,7 @@ class StudentVerificationRepository {
     );
 
     if (!response.isSuccess) {
-      throw StudentVerificationException(response.message ?? '续期失败');
+      throw StudentVerificationException(response.errorCode ?? response.message ?? '续期失败', code: response.errorCode);
     }
   }
   /// 更换验证邮箱
@@ -70,7 +71,7 @@ class StudentVerificationRepository {
       data: {'email': newEmail},
     );
     if (!response.isSuccess) {
-      throw StudentVerificationException(response.message ?? '更换验证邮箱失败');
+      throw StudentVerificationException(response.errorCode ?? response.message ?? '更换验证邮箱失败', code: response.errorCode);
     }
   }
 
@@ -82,7 +83,7 @@ class StudentVerificationRepository {
       queryParameters: {if (search != null) 'search': search},
     );
     if (!response.isSuccess || response.data == null) {
-      throw StudentVerificationException(response.message ?? '获取大学列表失败');
+      throw StudentVerificationException(response.errorCode ?? response.message ?? '获取大学列表失败', code: response.errorCode);
     }
     return response.data!.cast<Map<String, dynamic>>();
   }
@@ -90,5 +91,5 @@ class StudentVerificationRepository {
 
 /// 学生认证异常
 class StudentVerificationException extends AppException {
-  const StudentVerificationException(super.message);
+  const StudentVerificationException(super.message, {super.code});
 }
