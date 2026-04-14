@@ -319,8 +319,11 @@ class _NotificationListViewContentState
       context.push('/my-service-applications');
       return;
     }
-    // 新服务申请：跳转到服务申请管理页面
-    if (type == 'service_application') {
+    // 新服务申请 / 团队咨询：跳转到达人后台申请管理
+    if (type == 'service_application' ||
+        type == 'service_application_received' ||
+        type == 'service_consultation_received' ||
+        type == 'team_consultation_received') {
       context.push('/expert-dashboard');
       return;
     }

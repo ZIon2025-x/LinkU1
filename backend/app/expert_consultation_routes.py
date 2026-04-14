@@ -1080,7 +1080,7 @@ async def list_expert_applications(
             models.User,
             models.User.id == models.ServiceApplication.applicant_id,
         )
-        .join(
+        .outerjoin(
             models.TaskExpertService,
             models.TaskExpertService.id == models.ServiceApplication.service_id,
         )

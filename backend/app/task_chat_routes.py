@@ -32,6 +32,26 @@ logger = logging.getLogger(__name__)
 task_chat_router = APIRouter()
 
 
+async def _is_team_member_of_application(
+    db: AsyncSession, application: models.ServiceApplication, user_id: str
+) -> bool:
+    """检查用户是否为该申请关联团队的 active owner/admin/member"""
+    expert_id = application.new_expert_id
+    if not expert_id:
+        return False
+    from app.models_expert import ExpertMember
+    result = await db.execute(
+        select(ExpertMember.id).where(
+            and_(
+                ExpertMember.expert_id == expert_id,
+                ExpertMember.user_id == user_id,
+                ExpertMember.status == "active",
+            )
+        ).limit(1)
+    )
+    return result.scalar_one_or_none() is not None
+
+
 # 认证依赖（复用现有的认证逻辑）
 async def get_current_user_secure_async_csrf(
     request: Request,
@@ -678,8 +698,9 @@ async def get_task_messages(
                     detail="申请不存在"
                 )
 
-            # 只有任务发布者或申请者可以查看该申请的消息
-            if not (task.poster_id == current_user.id or application.applicant_id == current_user.id):
+            # 任务发布者、申请者、或关联团队成员可以查看该申请的消息
+            if not (task.poster_id == current_user.id or application.applicant_id == current_user.id
+                    or await _is_team_member_of_application(db, application, current_user.id)):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="无权限查看该申请的消息"
@@ -1061,8 +1082,9 @@ async def send_task_message(
                     detail="该申请当前不在聊天状态"
                 )
 
-            # 只有发布者或申请者可以在该频道发送消息
-            if not (task.poster_id == current_user.id or application.applicant_id == current_user.id):
+            # 发布者、申请者、或关联团队成员可以在该频道发送消息
+            if not (task.poster_id == current_user.id or application.applicant_id == current_user.id
+                    or await _is_team_member_of_application(db, application, current_user.id)):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="无权限在该申请频道发送消息"
@@ -1420,7 +1442,8 @@ async def mark_messages_read(
                     detail="申请不存在"
                 )
 
-            if not (task.poster_id == current_user.id or application.applicant_id == current_user.id):
+            if not (task.poster_id == current_user.id or application.applicant_id == current_user.id
+                    or await _is_team_member_of_application(db, application, current_user.id)):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="无权限标记该申请的消息"
