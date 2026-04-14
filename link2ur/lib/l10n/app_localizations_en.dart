@@ -1381,6 +1381,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorLoginFailed => 'Login Failed';
 
   @override
+  String get errorInvalidCredentials => 'Incorrect email/ID or password';
+
+  @override
+  String get errorAccountSuspended => 'Your account has been suspended';
+
+  @override
+  String get errorAccountBanned => 'Your account has been banned';
+
+  @override
+  String get errorCaptchaFailed =>
+      'CAPTCHA verification failed, please try again';
+
+  @override
+  String get errorCodeAttemptLimit =>
+      'Too many code attempts, please try again in 15 minutes';
+
+  @override
+  String get errorInvalidPhoneFormat => 'Invalid phone number format';
+
+  @override
   String get errorRegisterFailed => 'Registration Failed';
 
   @override
@@ -12539,6 +12559,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get expertTeamStatusInactive => 'Suspended';
+
+  @override
+  String get expertTeamStatusResting => 'Closed';
 
   @override
   String get expertTeamCreateAvatarPlaceholder =>

@@ -234,6 +234,21 @@ def get_error_code_from_detail(detail) -> str:
         return "PHONE_UPDATE_NEED_CODE"
     if "不能使用临时邮箱" in msg:
         return "TEMP_EMAIL_NOT_ALLOWED"
+    # 密码登录：邮箱/ID或密码错误（统一消息，防枚举）
+    if "密码错误" in msg or "邮箱/ID或密码错误" in msg or "邮箱或密码错误" in msg:
+        return "INVALID_CREDENTIALS"
+    # 账户状态
+    if "账户已被暂停" in msg:
+        return "ACCOUNT_SUSPENDED"
+    if "账户已被封禁" in msg:
+        return "ACCOUNT_BANNED"
+    # 验证码登录相关
+    if "人机验证失败" in msg:
+        return "CAPTCHA_FAILED"
+    if "验证码尝试次数过多" in msg:
+        return "CODE_ATTEMPT_LIMIT"
+    if "手机号格式不正确" in msg:
+        return "INVALID_PHONE_FORMAT"
     if "需要登录" in msg or "login" in msg_lower and "view" in msg_lower:
         return "LOGIN_REQUIRED"
     if "无权限查看" in msg or "not authorized" in msg_lower or "don't have permission" in msg_lower:

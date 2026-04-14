@@ -102,13 +102,8 @@ class AppRouter {
         }
       }
 
-      // 达人专属路由：非达人用户重定向到达人介绍页
-      if (location.startsWith(AppRoutes.expertDashboard)) {
-        final isExpert = authState.user?.isExpert ?? false;
-        if (!isExpert) {
-          return AppRoutes.taskExpertsIntro;
-        }
-      }
+      // 达人 Dashboard 自身会 fetch my-teams，无团队时重定向到 intro 页，
+      // 不再在路由守卫中用 isExpert flag 拦截（该 flag 可能未回填）。
 
       return null;
     },

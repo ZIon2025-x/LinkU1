@@ -1333,6 +1333,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get errorLoginFailed => '登录失败';
 
   @override
+  String get errorInvalidCredentials => '邮箱/ID或密码错误';
+
+  @override
+  String get errorAccountSuspended => '您的账户已被暂停';
+
+  @override
+  String get errorAccountBanned => '您的账户已被封禁';
+
+  @override
+  String get errorCaptchaFailed => '人机验证失败，请重试';
+
+  @override
+  String get errorCodeAttemptLimit => '验证码尝试次数过多，请15分钟后重试';
+
+  @override
+  String get errorInvalidPhoneFormat => '手机号格式不正确';
+
+  @override
   String get errorRegisterFailed => '注册失败';
 
   @override
@@ -12022,6 +12040,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get expertTeamStatusInactive => '已停止';
 
   @override
+  String get expertTeamStatusResting => '休息中';
+
+  @override
   String get expertTeamCreateAvatarPlaceholder => '头像(暂不支持上传)';
 
   @override
@@ -13867,6 +13888,24 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get errorLoginFailed => '登入失敗';
+
+  @override
+  String get errorInvalidCredentials => '郵箱/ID或密碼錯誤';
+
+  @override
+  String get errorAccountSuspended => '您的帳戶已被暫停';
+
+  @override
+  String get errorAccountBanned => '您的帳戶已被封禁';
+
+  @override
+  String get errorCaptchaFailed => '人機驗證失敗，請重試';
+
+  @override
+  String get errorCodeAttemptLimit => '驗證碼嘗試次數過多，請15分鐘後重試';
+
+  @override
+  String get errorInvalidPhoneFormat => '手機號格式不正確';
 
   @override
   String get errorRegisterFailed => '註冊失敗';
@@ -24556,6 +24595,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get expertTeamStatusInactive => '已停止';
+
+  @override
+  String get expertTeamStatusResting => '休息中';
 
   @override
   String get expertTeamCreateAvatarPlaceholder => '頭像(暫不支援上傳)';

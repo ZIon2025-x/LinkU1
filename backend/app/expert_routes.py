@@ -3,6 +3,7 @@
 Router prefix: /api/experts
 """
 
+import datetime
 import logging
 from typing import List, Optional
 
@@ -39,6 +40,47 @@ expert_router = APIRouter(prefix="/api/experts", tags=["experts"])
 
 
 # ==================== Helpers ====================
+
+_DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+
+
+async def _compute_is_open(db: AsyncSession, expert: Expert) -> Optional[bool]:
+    """根据 business_hours + closed_dates 计算当前是否营业。
+    business_hours 未设置时返回 None（不显示状态）。"""
+    bh = expert.business_hours
+    if not bh:
+        return None
+
+    now = datetime.datetime.now(datetime.timezone.utc)
+    day_key = _DAY_KEYS[now.weekday()]  # 0=mon
+    now_time_str = now.strftime("%H:%M")
+
+    # 检查今天是否临时关门
+    today_str = now.strftime("%Y-%m-%d")
+    from app.models import ExpertClosedDate
+    cd_result = await db.execute(
+        select(ExpertClosedDate.id).where(
+            and_(
+                ExpertClosedDate.expert_id == expert.id,
+                ExpertClosedDate.closed_date == today_str,
+            )
+        ).limit(1)
+    )
+    if cd_result.scalar_one_or_none() is not None:
+        return False
+
+    # 检查今天的营业时间
+    today_hours = bh.get(day_key)
+    if not today_hours or not isinstance(today_hours, dict):
+        return False
+
+    open_time = today_hours.get("open")
+    close_time = today_hours.get("close")
+    if not open_time or not close_time:
+        return False
+
+    return open_time <= now_time_str < close_time
+
 
 async def _get_expert_or_404(db: AsyncSession, expert_id: str) -> Expert:
     """获取达人团队，不存在则 404"""
@@ -549,6 +591,10 @@ async def get_expert_detail(
     )
     detail.is_following = is_following
     detail.my_role = my_role
+
+    # 计算实时营业状态: business_hours + closed_dates
+    detail.is_open = await _compute_is_open(db, expert)
+
     return detail
 
 

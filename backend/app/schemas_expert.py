@@ -55,6 +55,7 @@ class ExpertOut(BaseModel):
 class ExpertDetailOut(ExpertOut):
     members: List["ExpertMemberOut"] = []
     is_featured: bool = False
+    is_open: Optional[bool] = None  # 当前是否在营业时间内（结合 business_hours + closed_dates）
 
 
 # ==================== ExpertMember ====================

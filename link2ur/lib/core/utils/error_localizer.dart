@@ -80,6 +80,18 @@ class ErrorLocalizer {
         return context.l10n.errorUnknownGeneric;
       case 'auth_error_login_failed':
         return context.l10n.errorLoginFailed;
+      case 'INVALID_CREDENTIALS':
+        return context.l10n.errorInvalidCredentials;
+      case 'ACCOUNT_SUSPENDED':
+        return context.l10n.errorAccountSuspended;
+      case 'ACCOUNT_BANNED':
+        return context.l10n.errorAccountBanned;
+      case 'CAPTCHA_FAILED':
+        return context.l10n.errorCaptchaFailed;
+      case 'CODE_ATTEMPT_LIMIT':
+        return context.l10n.errorCodeAttemptLimit;
+      case 'INVALID_PHONE_FORMAT':
+        return context.l10n.errorInvalidPhoneFormat;
       case 'auth_error_register_failed':
         return context.l10n.errorRegisterFailed;
       case 'email_required':

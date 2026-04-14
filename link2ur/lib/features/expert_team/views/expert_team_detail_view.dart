@@ -247,7 +247,7 @@ class _HeroBanner extends StatelessWidget {
 
     final topPadding = MediaQuery.of(context).padding.top;
     return SizedBox(
-      height: 160 + topPadding,
+      height: 190 + topPadding,
       child: Stack(
         children: [
           // Gradient background
@@ -315,7 +315,7 @@ class _HeroBanner extends StatelessWidget {
           Positioned(
             left: 20,
             right: 20,
-            bottom: 16,
+            bottom: 40,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
@@ -386,32 +386,51 @@ class _HeroBanner extends StatelessWidget {
                                   ),
                                 ),
                               ),
-                            if (team.status == 'active')
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 7, vertical: 2),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(4),
-                                  color: Colors.white.withAlpha(64),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Text('✓ ',
-                                        style: TextStyle(
-                                            fontSize: 11,
-                                            color: Colors.white)),
-                                    Text(
-                                      context.l10n.expertTeamStatusActive,
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.white,
+                            if (team.status == 'active') ...[
+                              // isOpen: true=营业中, false=休息中, null=未设置营业时间(仅显示"运营中")
+                              Builder(builder: (context) {
+                                final isOpen = team.isOpen;
+                                final String label;
+                                final Color bgColor;
+                                final IconData icon;
+                                if (isOpen == null) {
+                                  label = context.l10n.expertTeamStatusActive;
+                                  bgColor = Colors.white.withAlpha(64);
+                                  icon = Icons.check;
+                                } else if (isOpen) {
+                                  label = context.l10n.expertTeamStatusActive;
+                                  bgColor = const Color(0xFF34C759).withAlpha(179);
+                                  icon = Icons.circle;
+                                } else {
+                                  label = context.l10n.expertTeamStatusResting;
+                                  bgColor = Colors.white.withAlpha(51);
+                                  icon = Icons.nightlight_round;
+                                }
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 7, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(4),
+                                    color: bgColor,
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(icon, size: 10, color: Colors.white),
+                                      const SizedBox(width: 3),
+                                      Text(
+                                        label,
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white,
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                              ),
+                                    ],
+                                  ),
+                                );
+                              }),
+                            ],
                             if (team.isVerified)
                               Container(
                                 padding: const EdgeInsets.symmetric(

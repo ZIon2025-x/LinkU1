@@ -2685,6 +2685,42 @@ abstract class AppLocalizations {
   /// **'Login Failed'**
   String get errorLoginFailed;
 
+  /// No description provided for @errorInvalidCredentials.
+  ///
+  /// In en, this message translates to:
+  /// **'Incorrect email/ID or password'**
+  String get errorInvalidCredentials;
+
+  /// No description provided for @errorAccountSuspended.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account has been suspended'**
+  String get errorAccountSuspended;
+
+  /// No description provided for @errorAccountBanned.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account has been banned'**
+  String get errorAccountBanned;
+
+  /// No description provided for @errorCaptchaFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'CAPTCHA verification failed, please try again'**
+  String get errorCaptchaFailed;
+
+  /// No description provided for @errorCodeAttemptLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many code attempts, please try again in 15 minutes'**
+  String get errorCodeAttemptLimit;
+
+  /// No description provided for @errorInvalidPhoneFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid phone number format'**
+  String get errorInvalidPhoneFormat;
+
   /// No description provided for @errorRegisterFailed.
   ///
   /// In en, this message translates to:
@@ -23111,6 +23147,12 @@ abstract class AppLocalizations {
   /// **'Suspended'**
   String get expertTeamStatusInactive;
 
+  /// No description provided for @expertTeamStatusResting.
+  ///
+  /// In en, this message translates to:
+  /// **'Closed'**
+  String get expertTeamStatusResting;
+
   /// No description provided for @expertTeamCreateAvatarPlaceholder.
   ///
   /// In en, this message translates to:
@@ -23732,7 +23774,7 @@ abstract class AppLocalizations {
   /// No description provided for @customerPackagesSubServiceLine.
   ///
   /// In en, this message translates to:
-  /// **'Service #{id}: {used} / {total}'**
+  /// **'{id}: {used} / {total}'**
   String customerPackagesSubServiceLine(String id, int used, int total);
 
   /// No description provided for @customerPackagesExpiresOn.

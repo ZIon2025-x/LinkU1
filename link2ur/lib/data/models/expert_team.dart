@@ -44,6 +44,8 @@ class ExpertTeam extends Equatable {
   final String userLevel;
   /// 每周营业时间: {"mon": {"open": "09:00", "close": "18:00"}, "sun": null, ...}
   final Map<String, dynamic>? businessHours;
+  /// 当前是否营业（后端根据 business_hours + closed_dates 计算，null=未设置营业时间）
+  final bool? isOpen;
 
   const ExpertTeam({
     required this.id,
@@ -86,6 +88,7 @@ class ExpertTeam extends Equatable {
     this.responseTimeEn,
     this.userLevel = 'normal',
     this.businessHours,
+    this.isOpen,
   });
 
   factory ExpertTeam.fromJson(Map<String, dynamic> json) {
@@ -132,6 +135,7 @@ class ExpertTeam extends Equatable {
       responseTimeEn: json['response_time_en'] as String?,
       userLevel: json['user_level'] as String? ?? 'normal',
       businessHours: json['business_hours'] as Map<String, dynamic>?,
+      isOpen: json['is_open'] as bool?,
     );
   }
 
@@ -175,7 +179,7 @@ class ExpertTeam extends Equatable {
         location, latitude, longitude, serviceRadiusKm,
         category, isVerified, expertiseAreas, expertiseAreasEn,
         featuredSkills, featuredSkillsEn, achievements, achievementsEn,
-        responseTime, responseTimeEn, userLevel, businessHours,
+        responseTime, responseTimeEn, userLevel, businessHours, isOpen,
       ];
 }
 
