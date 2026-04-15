@@ -1540,7 +1540,7 @@ async def get_my_related_flea_items(
                 select(models.FleaMarketRental)
                 .where(
                     models.FleaMarketRental.item_id.in_(rental_item_ids),
-                    models.FleaMarketRental.status.in_(["active", "overdue"]),
+                    models.FleaMarketRental.status.in_(["active", "pending_return", "overdue"]),
                 )
                 .order_by(models.FleaMarketRental.created_at.desc())
             )
@@ -1690,6 +1690,10 @@ async def get_my_related_flea_items(
                 my_role=my_role,
                 task_id=task_id_str,
                 final_price=final_price,
+                listing_type=getattr(item, "listing_type", None) or "sale",
+                deposit=item.deposit,
+                rental_price=item.rental_price,
+                rental_unit=item.rental_unit,
                 current_rental_status=_derive_rental_status(item),
             ))
 
