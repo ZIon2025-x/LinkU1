@@ -10596,7 +10596,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get expertDashboardTabStats => 'Dashboard';
 
   @override
-  String get expertDashboardTabServices => 'Skills';
+  String get expertDashboardTabServices => 'Services';
 
   @override
   String get expertDashboardTabApplications => 'Applications';
@@ -13269,4 +13269,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get inheritTeamDefault => 'Use team default';
+
+  @override
+  String get myPostsTabRentedOut => 'Rented Out';
+
+  @override
+  String get myPostsTabRentedIn => 'Rented In';
+
+  @override
+  String get rentalListingStatusAvailable => 'Available';
+
+  @override
+  String get rentalListingStatusRenting => 'Renting';
+
+  @override
+  String get rentalListingStatusOverdue => 'Overdue';
 }

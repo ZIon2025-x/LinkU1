@@ -19472,7 +19472,7 @@ abstract class AppLocalizations {
   /// No description provided for @expertDashboardTabServices.
   ///
   /// In en, this message translates to:
-  /// **'Skills'**
+  /// **'Services'**
   String get expertDashboardTabServices;
 
   /// No description provided for @expertDashboardTabApplications.
@@ -24425,6 +24425,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Use team default'**
   String get inheritTeamDefault;
+
+  /// Tab label: items I listed for rent
+  ///
+  /// In en, this message translates to:
+  /// **'Rented Out'**
+  String get myPostsTabRentedOut;
+
+  /// Tab label: rentals where I'm the renter
+  ///
+  /// In en, this message translates to:
+  /// **'Rented In'**
+  String get myPostsTabRentedIn;
+
+  /// Rental item status badge: available to rent
+  ///
+  /// In en, this message translates to:
+  /// **'Available'**
+  String get rentalListingStatusAvailable;
+
+  /// Rental item status badge: currently rented out
+  ///
+  /// In en, this message translates to:
+  /// **'Renting'**
+  String get rentalListingStatusRenting;
+
+  /// Rental item status badge: rental overdue
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue'**
+  String get rentalListingStatusOverdue;
 }
 
 class _AppLocalizationsDelegate

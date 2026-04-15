@@ -10167,7 +10167,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get expertDashboardTabStats => '看板';
 
   @override
-  String get expertDashboardTabServices => '我的技能';
+  String get expertDashboardTabServices => '我的服务';
 
   @override
   String get expertDashboardTabApplications => '申请管理';
@@ -12714,6 +12714,21 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get inheritTeamDefault => '使用团队默认';
+
+  @override
+  String get myPostsTabRentedOut => '我租出的';
+
+  @override
+  String get myPostsTabRentedIn => '我租入的';
+
+  @override
+  String get rentalListingStatusAvailable => '可租';
+
+  @override
+  String get rentalListingStatusRenting => '租赁中';
+
+  @override
+  String get rentalListingStatusOverdue => '逾期';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -22879,7 +22894,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get expertDashboardTabStats => '看板';
 
   @override
-  String get expertDashboardTabServices => '我的技能';
+  String get expertDashboardTabServices => '我的服務';
 
   @override
   String get expertDashboardTabApplications => '申請管理';
@@ -25426,4 +25441,19 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get inheritTeamDefault => '使用團隊預設';
+
+  @override
+  String get myPostsTabRentedOut => '我租出的';
+
+  @override
+  String get myPostsTabRentedIn => '我租入的';
+
+  @override
+  String get rentalListingStatusAvailable => '可租';
+
+  @override
+  String get rentalListingStatusRenting => '租賃中';
+
+  @override
+  String get rentalListingStatusOverdue => '逾期';
 }

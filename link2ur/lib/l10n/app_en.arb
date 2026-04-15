@@ -5842,5 +5842,25 @@
   "selectServiceRadius": "Select service area",
   "baseAddress": "Base Address",
   "defaultServiceRadius": "Default Service Area",
-  "inheritTeamDefault": "Use team default"
+  "inheritTeamDefault": "Use team default",
+  "myPostsTabRentedOut": "Rented Out",
+  "@myPostsTabRentedOut": {
+    "description": "Tab label: items I listed for rent"
+  },
+  "myPostsTabRentedIn": "Rented In",
+  "@myPostsTabRentedIn": {
+    "description": "Tab label: rentals where I'm the renter"
+  },
+  "rentalListingStatusAvailable": "Available",
+  "@rentalListingStatusAvailable": {
+    "description": "Rental item status badge: available to rent"
+  },
+  "rentalListingStatusRenting": "Renting",
+  "@rentalListingStatusRenting": {
+    "description": "Rental item status badge: currently rented out"
+  },
+  "rentalListingStatusOverdue": "Overdue",
+  "@rentalListingStatusOverdue": {
+    "description": "Rental item status badge: rental overdue"
+  }
 }

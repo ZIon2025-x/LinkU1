@@ -5671,5 +5671,25 @@
   "selectServiceRadius": "選擇服務範圍",
   "baseAddress": "基地地址",
   "defaultServiceRadius": "預設服務範圍",
-  "inheritTeamDefault": "使用團隊預設"
+  "inheritTeamDefault": "使用團隊預設",
+  "myPostsTabRentedOut": "我租出的",
+  "@myPostsTabRentedOut": {
+    "description": "Tab label: items I listed for rent"
+  },
+  "myPostsTabRentedIn": "我租入的",
+  "@myPostsTabRentedIn": {
+    "description": "Tab label: rentals where I'm the renter"
+  },
+  "rentalListingStatusAvailable": "可租",
+  "@rentalListingStatusAvailable": {
+    "description": "Rental item status badge: available to rent"
+  },
+  "rentalListingStatusRenting": "租賃中",
+  "@rentalListingStatusRenting": {
+    "description": "Rental item status badge: currently rented out"
+  },
+  "rentalListingStatusOverdue": "逾期",
+  "@rentalListingStatusOverdue": {
+    "description": "Rental item status badge: rental overdue"
+  }
 }
