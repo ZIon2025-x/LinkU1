@@ -52,6 +52,7 @@ class FleaMarketItem extends Equatable {
     this.activeRentals = const [],
     this.userRentalRequestId,
     this.userRentalRequestStatus,
+    this.currentRentalStatus,
   });
 
   /// 与我相关接口返回：seller=我发布的/已售出, buyer=收的闲置
@@ -107,6 +108,9 @@ class FleaMarketItem extends Equatable {
   final List<FleaMarketRentalSummary> activeRentals;
   final int? userRentalRequestId;
   final String? userRentalRequestStatus;
+
+  /// Derived rental status badge for listings: 'available' | 'renting' | 'overdue' | null (non-rental)
+  final String? currentRentalStatus;
 
   /// 第一张图片
   String? get firstImage => images.isNotEmpty ? images.first : null;
@@ -211,6 +215,7 @@ class FleaMarketItem extends Equatable {
       userRentalRequestId: _toIntNullable(json['user_rental_request_id']),
       userRentalRequestStatus:
           _toStringNullable(json['user_rental_request_status']),
+      currentRentalStatus: _toStringNullable(json['current_rental_status']),
     );
   }
 
@@ -260,6 +265,7 @@ class FleaMarketItem extends Equatable {
       'rental_unit': rentalUnit,
       'user_rental_request_id': userRentalRequestId,
       'user_rental_request_status': userRentalRequestStatus,
+      'current_rental_status': currentRentalStatus,
     };
   }
 
@@ -309,6 +315,7 @@ class FleaMarketItem extends Equatable {
     List<FleaMarketRentalSummary>? activeRentals,
     int? userRentalRequestId,
     String? userRentalRequestStatus,
+    String? currentRentalStatus,
   }) {
     return FleaMarketItem(
       id: id ?? this.id,
@@ -356,11 +363,12 @@ class FleaMarketItem extends Equatable {
       activeRentals: activeRentals ?? this.activeRentals,
       userRentalRequestId: userRentalRequestId ?? this.userRentalRequestId,
       userRentalRequestStatus: userRentalRequestStatus ?? this.userRentalRequestStatus,
+      currentRentalStatus: currentRentalStatus ?? this.currentRentalStatus,
     );
   }
 
   @override
-  List<Object?> get props => [id, title, status, price, listingType, updatedAt, sellerDisplayedBadge];
+  List<Object?> get props => [id, title, status, price, listingType, updatedAt, sellerDisplayedBadge, currentRentalStatus];
 }
 
 /// 我的购买列表响应（含待支付 + 已购）
