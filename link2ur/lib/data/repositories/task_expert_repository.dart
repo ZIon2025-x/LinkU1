@@ -705,27 +705,6 @@ class TaskExpertRepository {
     }
   }
 
-  /// 提交达人资料更新请求
-  Future<void> submitProfileUpdateRequest(
-    String expertId, {
-    String? name,
-    String? bio,
-    String? avatarUrl,
-  }) async {
-    final response = await _apiService.post(
-      ApiEndpoints.expertTeamProfileUpdateRequest(expertId),
-      data: {
-        if (name != null && name.isNotEmpty) 'new_name': name,
-        if (bio != null && bio.isNotEmpty) 'new_bio': bio,
-        if (avatarUrl != null && avatarUrl.isNotEmpty) 'new_avatar': avatarUrl,
-      },
-    );
-
-    if (!response.isSuccess) {
-      throw TaskExpertException(response.errorCode ?? response.message ?? '提交资料更新请求失败', code: response.errorCode);
-    }
-  }
-
   /// 获取服务时间段（公开）
   /// 后端实际返回: 直接数组 List[ServiceTimeSlotOut]
   Future<List<Map<String, dynamic>>> getServiceTimeSlots(int serviceId) async {

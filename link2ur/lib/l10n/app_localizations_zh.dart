@@ -12488,6 +12488,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get expertManagementCustomerPackages => '套餐核销 / 我的客户';
 
   @override
+  String get expertManagementCreatePost => '发达人动态';
+
+  @override
   String get customerPackagesTitle => '我的客户 · 套餐';
 
   @override
@@ -25195,6 +25198,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get expertManagementCustomerPackages => '套餐核銷 / 我的客戶';
+
+  @override
+  String get expertManagementCreatePost => '發達人動態';
 
   @override
   String get customerPackagesTitle => '我的客戶 · 套餐';

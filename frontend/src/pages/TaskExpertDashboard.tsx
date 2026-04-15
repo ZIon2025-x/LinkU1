@@ -19,8 +19,7 @@ import {
   approveServiceApplication,
   rejectServiceApplication,
   counterOfferServiceApplication,
-  submitProfileUpdateRequest,
-  getMyProfileUpdateRequest,
+  updateTaskExpertProfile,
   getTaskParticipants,
   approveParticipant,
   rejectParticipant,
@@ -119,7 +118,6 @@ const TaskExpertDashboard: React.FC = () => {
   // 信息修改相关
   const [showProfileEditModal, setShowProfileEditModal] = useState(false);
   const [profileForm, setProfileForm] = useState({ expert_name: '', bio: '', avatar: '' });
-  const [pendingRequest, setPendingRequest] = useState<any>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>('');
   
@@ -276,7 +274,6 @@ const TaskExpertDashboard: React.FC = () => {
 
   useEffect(() => {
     loadData();
-    loadPendingRequest();
     loadExpertPointsBalance();
   }, []);
   
@@ -290,14 +287,6 @@ const TaskExpertDashboard: React.FC = () => {
     }
   };
   
-  const loadPendingRequest = async () => {
-    try {
-      const request = await getMyProfileUpdateRequest();
-        setPendingRequest(request);
-      } catch (err: any) {
-        // 如果没有待审核请求，忽略错误
-      }
-    };
 
   // 使用 useCallback 优化标签页切换处理函数
   const handleTabChange = useCallback((tab: 'dashboard' | 'services' | 'applications' | 'multi-tasks' | 'schedule') => {
@@ -919,12 +908,7 @@ const TaskExpertDashboard: React.FC = () => {
       message.warning('请至少修改一个字段');
       return;
     }
-    
-    if (pendingRequest) {
-      message.warning('您已有一个待审核的修改请求，请等待审核完成后再提交新的请求');
-      return;
-    }
-    
+
     try {
       let avatarUrl: string | null = profileForm.avatar || null;
       if (avatarFile) {
@@ -933,18 +917,18 @@ const TaskExpertDashboard: React.FC = () => {
           return;
         }
       }
-      
-      await submitProfileUpdateRequest({
+
+      await updateTaskExpertProfile({
         expert_name: profileForm.expert_name || undefined,
         bio: profileForm.bio || undefined,
         avatar: avatarUrl || undefined,
       });
-      
-      message.success('修改请求已提交，等待管理员审核');
+
+      message.success('已保存');
       setShowProfileEditModal(false);
-      loadPendingRequest();
+      await loadData();
     } catch (err: any) {
-      message.error(err.response?.data?.detail || '提交修改请求失败');
+      message.error(err.response?.data?.detail || '保存失败');
     }
   };
 
@@ -1021,11 +1005,6 @@ const TaskExpertDashboard: React.FC = () => {
               {myTeams.length === 1 && (
                 <div style={{ marginTop: 8, fontSize: 12, color: '#999' }}>
                   团队：{myTeams[0].name}
-                </div>
-              )}
-              {pendingRequest && (
-                <div className={styles.pendingRequestNotice}>
-                  您有一个待审核的信息修改请求，请等待管理员审核
                 </div>
               )}
             </div>

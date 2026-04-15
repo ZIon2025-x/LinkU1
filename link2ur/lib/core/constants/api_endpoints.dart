@@ -301,8 +301,8 @@ class ApiEndpoints {
   static String expertTeamRemoveMember(String expertId, String userId) =>
       '/api/experts/$expertId/members/$userId';
   static String expertTeamLeave(String id) => '/api/experts/$id/leave';
-  static String expertTeamProfileUpdateRequest(String id) =>
-      '/api/experts/$id/profile-update-request';
+  static String expertTeamProfileUpdate(String id) =>
+      '/api/experts/$id/profile';
   static String expertTeamRespondInvitation(int invitationId) =>
       '/api/experts/invitations/$invitationId/respond';
   // Chat participants

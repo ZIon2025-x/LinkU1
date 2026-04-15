@@ -218,19 +218,16 @@ class _EditBodyState extends State<_EditBody> {
                                     final repo = context.read<ExpertTeamRepository>();
                                     final messenger = ScaffoldMessenger.of(context);
                                     final router = GoRouter.of(context);
-                                    final submittedMsg = context.l10n.expertTeamEditProfileSubmitted;
+                                    final savedMsg = context.l10n.commonSaved;
                                     final failedPrefix = context.l10n.expertTeamEditProfileSubmitFailed;
 
-                                    // Profile update (name/bio) goes through review flow
+                                    // Profile update (name/bio) — direct save, no review
                                     if (newName != null || newBio != null) {
                                       try {
-                                        await repo.requestProfileUpdate(
+                                        await repo.updateProfile(
                                           widget.expertId,
                                           newName: newName,
                                           newBio: newBio,
-                                        );
-                                        messenger.showSnackBar(
-                                          SnackBar(content: Text(submittedMsg)),
                                         );
                                       } catch (e) {
                                         final detail = context.mounted
@@ -264,6 +261,10 @@ class _EditBodyState extends State<_EditBody> {
                                       }
                                     }
 
+                                    // Single saved toast shown after both paths succeed
+                                    messenger.showSnackBar(
+                                      SnackBar(content: Text(savedMsg)),
+                                    );
                                     router.pop();
                                   },
                             child: state.status == ExpertTeamStatus.loading

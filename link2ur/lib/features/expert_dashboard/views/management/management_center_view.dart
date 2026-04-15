@@ -140,6 +140,13 @@ class _ManagementCenterScaffold extends StatelessWidget {
                 onTap: () => context
                     .push('/expert-dashboard/$expertId/management/edit-profile'),
               ),
+            if (team.forumCategoryId != null)
+              _MenuTile(
+                icon: Icons.edit_note_outlined,
+                label: context.l10n.expertManagementCreatePost,
+                onTap: () => context.push(
+                    '/create-post?categoryId=${team.forumCategoryId}'),
+              ),
           ]),
 
           // ========== MARKETING SECTION (canManage only) ==========

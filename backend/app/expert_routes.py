@@ -20,7 +20,7 @@ from app.async_routers import (
 from app.models_expert import (
     Expert, ExpertMember, ExpertApplication,
     ExpertJoinRequest, ExpertInvitation, ExpertFollow,
-    ExpertProfileUpdateRequest, FeaturedExpertV2,
+    FeaturedExpertV2,
     generate_expert_id,
 )
 from app.schemas_expert import (
@@ -29,7 +29,7 @@ from app.schemas_expert import (
     ExpertJoinRequestCreate, ExpertJoinRequestOut, ExpertJoinRequestReview,
     ExpertInvitationCreate, ExpertInvitationOut, ExpertInvitationResponse,
     ExpertRoleChange, ExpertTransfer,
-    ExpertProfileUpdateCreate, ExpertProfileUpdateOut,
+    ExpertProfileUpdateCreate,
     ExpertLocationUpdate, UpcomingClosedDate,
 )
 from app.utils.time_utils import get_utc_time
@@ -1540,75 +1540,54 @@ async def toggle_allow_applications(
     return {"allow_applications": expert.allow_applications}
 
 
-# ==================== 17. POST /{expert_id}/profile-update-request ====================
+# ==================== 17. PUT /{expert_id}/profile ====================
 
-@expert_router.post(
-    "/{expert_id}/profile-update-request",
-    response_model=ExpertProfileUpdateOut,
-    status_code=201,
-)
-async def request_profile_update(
+@expert_router.put("/{expert_id}/profile")
+async def update_expert_profile(
     expert_id: str,
     body: ExpertProfileUpdateCreate,
     request: Request,
     db: AsyncSession = Depends(get_async_db_dependency),
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
 ):
-    """申请修改团队资料（Owner only）"""
-    await _get_expert_or_404(db, expert_id)
+    """直接修改团队资料（Owner only，直接生效，无需审核）
+
+    2026-04-15: 取代原 POST /{expert_id}/profile-update-request 审核流。
+    老 POST/GET 端点已在同日移除；admin 面板的审核端点保留以处理历史积压行。
+    """
+    expert = await _get_expert_or_404(db, expert_id)
     await _get_member_or_403(db, expert_id, current_user.id, required_roles=["owner"])
 
-    # 检查是否有待审核的修改申请
-    existing = await db.execute(
-        select(ExpertProfileUpdateRequest).where(
-            and_(
-                ExpertProfileUpdateRequest.expert_id == expert_id,
-                ExpertProfileUpdateRequest.status == "pending",
-            )
-        )
-    )
-    if existing.scalar_one_or_none():
-        raise HTTPException(status_code=400, detail="已有待审核的资料修改申请")
+    update_data = body.model_dump(exclude_unset=True, exclude_none=True)
+    if not update_data:
+        raise HTTPException(status_code=400, detail="至少需要修改一个字段")
 
-    update_req = ExpertProfileUpdateRequest(
-        expert_id=expert_id,
-        requester_id=current_user.id,
-        new_name=body.new_name,
-        new_bio=body.new_bio,
-        new_avatar=body.new_avatar,
-    )
-    db.add(update_req)
+    # ExpertProfileUpdateCreate 的字段名带 new_ 前缀，映射到 Expert 实际字段
+    field_map = {
+        "new_name": "name",
+        "new_bio": "bio",
+        "new_avatar": "avatar",
+    }
+    for key, value in update_data.items():
+        target = field_map.get(key)
+        if target is not None:
+            setattr(expert, target, value)
+
+    expert.updated_at = get_utc_time()
     await db.commit()
-    await db.refresh(update_req)
-    return update_req
+    await db.refresh(expert)
+    return {
+        "message": "团队资料已更新",
+        "name": expert.name,
+        "bio": expert.bio,
+        "avatar": expert.avatar,
+    }
 
 
-@expert_router.get(
-    "/{expert_id}/profile-update-request",
-    response_model=Optional[ExpertProfileUpdateOut],
-)
-async def get_pending_profile_update_request(
-    expert_id: str,
-    request: Request,
-    db: AsyncSession = Depends(get_async_db_dependency),
-    current_user: models.User = Depends(get_current_user_secure_async_csrf),
-):
-    """获取当前待审核的团队资料修改申请（Owner/Admin/Member）"""
-    await _get_expert_or_404(db, expert_id)
-    await _get_member_or_403(db, expert_id, current_user.id)
-
-    result = await db.execute(
-        select(ExpertProfileUpdateRequest)
-        .where(
-            and_(
-                ExpertProfileUpdateRequest.expert_id == expert_id,
-                ExpertProfileUpdateRequest.status == "pending",
-            )
-        )
-        .order_by(ExpertProfileUpdateRequest.created_at.desc())
-        .limit(1)
-    )
-    return result.scalar_one_or_none()
+# Note: POST/GET /{expert_id}/profile-update-request endpoints removed 2026-04-15.
+# All clients (Flutter + web frontend) now use PUT /{expert_id}/profile for direct
+# updates. admin_expert_routes.py still exposes admin review endpoints to process
+# any historical pending rows that may still exist in expert_profile_update_requests.
 
 
 # ==================== 18. PUT /{expert_id}/board ====================

@@ -26,7 +26,6 @@ class ExpertDashboardBloc
     on<ExpertDashboardDeleteClosedDate>(_onDeleteClosedDate);
     on<ExpertDashboardLoadBusinessHours>(_onLoadBusinessHours);
     on<ExpertDashboardUpdateBusinessHours>(_onUpdateBusinessHours);
-    on<ExpertDashboardSubmitProfileUpdate>(_onSubmitProfileUpdate);
   }
 
   final TaskExpertRepository _repository;
@@ -336,27 +335,4 @@ class ExpertDashboardBloc
     }
   }
 
-  Future<void> _onSubmitProfileUpdate(
-    ExpertDashboardSubmitProfileUpdate event,
-    Emitter<ExpertDashboardState> emit,
-  ) async {
-    emit(state.copyWith(status: ExpertDashboardStatus.submitting));
-    try {
-      await _repository.submitProfileUpdateRequest(
-        expertId,
-        name: event.name,
-        bio: event.bio,
-        avatarUrl: event.avatarUrl,
-      );
-      emit(state.copyWith(
-        status: ExpertDashboardStatus.loaded,
-        actionMessage: 'expertProfileUpdateSubmitted',
-      ));
-    } catch (e) {
-      emit(state.copyWith(
-        status: ExpertDashboardStatus.error,
-        errorMessage: 'expert_dashboard_submit_profile_update_failed',
-      ));
-    }
-  }
 }

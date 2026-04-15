@@ -5571,6 +5571,7 @@
   "expertPackageConfirmDelete": "刪除套餐",
   "expertPackageConfirmDeleteMessage": "確定刪除此套餐？已購買的客戶仍保留使用權限。",
   "expertManagementCustomerPackages": "套餐核銷 / 我的客戶",
+  "expertManagementCreatePost": "發達人動態",
   "customerPackagesTitle": "我的客戶 · 套餐",
   "customerPackagesScanRedeem": "掃碼核銷",
   "customerPackagesEmpty": "暫無客戶套餐資料",

@@ -391,8 +391,6 @@ class ErrorLocalizer {
         return context.l10n.expertScheduleClosedAdded;
       case 'expertScheduleUnmarked':
         return context.l10n.expertScheduleClosedRemoved;
-      case 'expertProfileUpdateSubmitted':
-        return context.l10n.expertProfileEditSubmitted;
       case 'expertBusinessHoursUpdated':
         return context.l10n.expertBusinessHoursSaved;
       case 'expert_dashboard_no_team':

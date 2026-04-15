@@ -24006,6 +24006,12 @@ abstract class AppLocalizations {
   /// **'Customer Packages / Redeem'**
   String get expertManagementCustomerPackages;
 
+  /// No description provided for @expertManagementCreatePost.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Expert Update'**
+  String get expertManagementCreatePost;
+
   /// No description provided for @customerPackagesTitle.
   ///
   /// In en, this message translates to:

@@ -140,12 +140,13 @@ class ExpertTeamRepository {
 
   // ==================== 资料修改 ====================
 
-  Future<void> requestProfileUpdate(String expertId, {
+  /// 直接更新团队资料（Owner only，即时生效，无需审核）
+  Future<void> updateProfile(String expertId, {
     String? newName,
     String? newBio,
     String? newAvatar,
   }) async {
-    await _apiService.post(ApiEndpoints.expertTeamProfileUpdateRequest(expertId), data: {
+    await _apiService.put(ApiEndpoints.expertTeamProfileUpdate(expertId), data: {
       if (newName != null) 'new_name': newName,
       if (newBio != null) 'new_bio': newBio,
       if (newAvatar != null) 'new_avatar': newAvatar,

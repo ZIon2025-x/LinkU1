@@ -95,11 +95,3 @@ class ExpertDashboardUpdateBusinessHours extends ExpertDashboardEvent {
   List<Object?> get props => [hours];
 }
 
-class ExpertDashboardSubmitProfileUpdate extends ExpertDashboardEvent {
-  const ExpertDashboardSubmitProfileUpdate({this.name, this.bio, this.avatarUrl});
-  final String? name;
-  final String? bio;
-  final String? avatarUrl;
-  @override
-  List<Object?> get props => [name, bio, avatarUrl];
-}

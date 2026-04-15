@@ -13031,6 +13031,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get expertManagementCustomerPackages => 'Customer Packages / Redeem';
 
   @override
+  String get expertManagementCreatePost => 'Create Expert Update';
+
+  @override
   String get customerPackagesTitle => 'Customer Packages';
 
   @override

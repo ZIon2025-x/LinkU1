@@ -5634,6 +5634,7 @@
   "expertPackageConfirmDelete": "删除套餐",
   "expertPackageConfirmDeleteMessage": "确定删除此套餐？已购买的客户仍保留使用权限。",
   "expertManagementCustomerPackages": "套餐核销 / 我的客户",
+  "expertManagementCreatePost": "发达人动态",
   "customerPackagesTitle": "我的客户 · 套餐",
   "customerPackagesScanRedeem": "扫码核销",
   "customerPackagesEmpty": "暂无客户套餐数据",

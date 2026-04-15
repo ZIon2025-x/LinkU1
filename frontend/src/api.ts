@@ -1550,10 +1550,10 @@ export const getMyTaskExpertApplication = async () => {
 //   - UserProfile.tsx → fetchExpertByUser (新 /api/experts/by-user/{user_id})
 //   - ExpertDetailModal.tsx → 直接调 /api/experts/{expertId} (expertId 来自已迁移的 list)
 
-// 团队资料修改 — 走新的 profile-update-request workflow
+// 团队资料修改 — 直接生效 (PUT /api/experts/{id}/profile, owner only)
 export const updateTaskExpertProfile = async (expertData: { expert_name?: string; bio?: string; avatar?: string }) => {
   const expertId = await _getMyExpertId();
-  const res = await api.post(`/api/experts/${expertId}/profile-update-request`, {
+  const res = await api.put(`/api/experts/${expertId}/profile`, {
     new_name: expertData.expert_name,
     new_bio: expertData.bio,
     new_avatar: expertData.avatar,
@@ -1777,23 +1777,6 @@ export const approveServiceApplication = async (applicationId: number) => {
 
 export const rejectServiceApplication = async (applicationId: number, rejectReason?: string) => {
   const res = await api.post(`/api/applications/${applicationId}/reject`, { reject_reason: rejectReason });
-  return res.data;
-};
-
-// 团队资料修改请求
-export const submitProfileUpdateRequest = async (data: { expert_name?: string; bio?: string; avatar?: string }) => {
-  const expertId = await _getMyExpertId();
-  const res = await api.post(`/api/experts/${expertId}/profile-update-request`, {
-    new_name: data.expert_name,
-    new_bio: data.bio,
-    new_avatar: data.avatar,
-  });
-  return res.data;
-};
-
-export const getMyProfileUpdateRequest = async () => {
-  const expertId = await _getMyExpertId();
-  const res = await api.get(`/api/experts/${expertId}/profile-update-request`);
   return res.data;
 };
 
