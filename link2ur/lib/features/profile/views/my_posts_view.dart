@@ -276,8 +276,8 @@ class _MyPostsViewState extends State<MyPostsView>
           emptyTitle = l10n.myItemsEmptyPurchased;
           emptyMessage = l10n.myItemsEmptyPurchasedMessage;
         case _MyItemsCategory.rentedOut:
-          emptyTitle = l10n.myPostsTabRentedOut;
-          emptyMessage = l10n.myItemsEmptySellingMessage;
+          emptyTitle = l10n.myItemsEmptyRentedOut;
+          emptyMessage = l10n.myItemsEmptyRentedOutMessage;
         case _MyItemsCategory.favorites:
           emptyTitle = l10n.myItemsEmptyFavorites;
           emptyMessage = l10n.myItemsEmptyFavoritesMessage;

@@ -10178,6 +10178,18 @@ abstract class AppLocalizations {
   /// **'You haven\'t published any second-hand items yet'**
   String get myItemsEmptySellingMessage;
 
+  /// No description provided for @myItemsEmptyRentedOut.
+  ///
+  /// In en, this message translates to:
+  /// **'No rental listings yet'**
+  String get myItemsEmptyRentedOut;
+
+  /// No description provided for @myItemsEmptyRentedOutMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'List your first item for rent'**
+  String get myItemsEmptyRentedOutMessage;
+
   /// No description provided for @myItemsEmptyPurchasedMessage.
   ///
   /// In en, this message translates to:

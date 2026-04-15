@@ -5303,6 +5303,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get myItemsEmptySellingMessage => '您还没有发布任何闲置商品';
 
   @override
+  String get myItemsEmptyRentedOut => '暂无租赁商品';
+
+  @override
+  String get myItemsEmptyRentedOutMessage => '发布你的第一个可租赁物品吧';
+
+  @override
   String get myItemsEmptyPurchasedMessage => '您还没有购买过任何商品';
 
   @override
@@ -18028,6 +18034,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get myItemsEmptySellingMessage => '您還沒有發布任何閒置商品';
+
+  @override
+  String get myItemsEmptyRentedOut => '暫無租賃商品';
+
+  @override
+  String get myItemsEmptyRentedOutMessage => '發布你的第一個可租賃物品吧';
 
   @override
   String get myItemsEmptyPurchasedMessage => '您還沒有購買過任何商品';

@@ -2518,6 +2518,8 @@
   "myItemsEmptyFavorites": "暂无收藏",
   "myItemsEmptySold": "暂无已售商品",
   "myItemsEmptySellingMessage": "您还没有发布任何闲置商品",
+  "myItemsEmptyRentedOut": "暂无租赁商品",
+  "myItemsEmptyRentedOutMessage": "发布你的第一个可租赁物品吧",
   "myItemsEmptyPurchasedMessage": "您还没有购买过任何商品",
   "myItemsEmptyFavoritesMessage": "您还没有收藏任何商品",
   "myItemsEmptySoldMessage": "您还没有成功出售过商品",

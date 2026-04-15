@@ -5540,6 +5540,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'You haven\'t published any second-hand items yet';
 
   @override
+  String get myItemsEmptyRentedOut => 'No rental listings yet';
+
+  @override
+  String get myItemsEmptyRentedOutMessage => 'List your first item for rent';
+
+  @override
   String get myItemsEmptyPurchasedMessage =>
       'You haven\'t purchased any items yet';
 

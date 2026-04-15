@@ -2526,6 +2526,8 @@
   "myItemsEmptyFavorites": "No Favorites",
   "myItemsEmptySold": "No Sold Items",
   "myItemsEmptySellingMessage": "You haven't published any second-hand items yet",
+  "myItemsEmptyRentedOut": "No rental listings yet",
+  "myItemsEmptyRentedOutMessage": "List your first item for rent",
   "myItemsEmptyPurchasedMessage": "You haven't purchased any items yet",
   "myItemsEmptyFavoritesMessage": "You haven't favorited any items yet",
   "myItemsEmptySoldMessage": "You haven't successfully sold any items yet",
