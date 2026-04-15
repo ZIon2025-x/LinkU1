@@ -6,6 +6,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/adaptive_dialogs.dart';
+import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/router/go_router_extensions.dart';
@@ -52,8 +53,9 @@ class _ReceivedApplicationsContent extends StatelessWidget {
             'application_approved' => l10n.expertApplicationApproved,
             'application_rejected' => l10n.expertApplicationRejected,
             'counter_offer_sent' => l10n.expertApplicationCounterOfferSent,
-            'application_action_failed' =>
-              state.errorMessage ?? l10n.expertApplicationActionFailed,
+            'application_action_failed' => state.errorMessage != null
+                ? context.localizeError(state.errorMessage)
+                : l10n.expertApplicationActionFailed,
             _ => null,
           };
           if (msg != null) {
@@ -85,7 +87,9 @@ class _ReceivedApplicationsContent extends StatelessWidget {
                       size: 48,
                       color: AppColors.error.withValues(alpha: 0.5)),
                   AppSpacing.vMd,
-                  Text(state.errorMessage ?? l10n.expertApplicationActionFailed),
+                  Text(state.errorMessage != null
+                      ? context.localizeError(state.errorMessage)
+                      : l10n.expertApplicationActionFailed),
                   AppSpacing.vMd,
                   TextButton(
                     onPressed: () => context
@@ -174,9 +178,19 @@ class _ApplicationCard extends StatelessWidget {
     };
   }
 
-  bool get _canAct {
+  // Backend (user_service_application_routes.py):
+  //   approve allowed in: pending, price_agreed
+  //   reject  allowed in: pending, negotiating, price_agreed
+  bool get _canApprove {
     final status = application['status'] as String?;
     return status == 'pending' || status == 'price_agreed';
+  }
+
+  bool get _canReject {
+    final status = application['status'] as String?;
+    return status == 'pending' ||
+        status == 'negotiating' ||
+        status == 'price_agreed';
   }
 
   bool get _canCounterOffer {
@@ -355,7 +369,7 @@ class _ApplicationCard extends StatelessWidget {
             ),
 
           // Action buttons
-          if (_canAct || _canCounterOffer) ...[
+          if (_canReject || _canApprove || _canCounterOffer) ...[
             const SizedBox(height: AppSpacing.sm),
             const Divider(height: 1),
             Padding(
@@ -373,9 +387,9 @@ class _ApplicationCard extends StatelessWidget {
                             _showCounterOfferDialog(context),
                       ),
                     ),
-                  if (_canCounterOffer && _canAct)
+                  if (_canCounterOffer && _canReject)
                     const SizedBox(width: AppSpacing.sm),
-                  if (_canAct) ...[
+                  if (_canReject)
                     Expanded(
                       child: _ActionButton(
                         label: l10n.expertApplicationReject,
@@ -386,6 +400,7 @@ class _ApplicationCard extends StatelessWidget {
                             _showRejectDialog(context),
                       ),
                     ),
+                  if (_canApprove) ...[
                     const SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: _ActionButton(

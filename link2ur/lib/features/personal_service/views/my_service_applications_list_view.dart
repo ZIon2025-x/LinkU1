@@ -5,6 +5,7 @@ import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/adaptive_dialogs.dart';
+import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/router/go_router_extensions.dart';
@@ -116,11 +117,12 @@ class _ContentState extends State<_Content> {
                   'counter_offer_rejected' => l10n.serviceCounterOfferRejected,
                   'application_cancelled' =>
                     l10n.serviceApplicationCancelSuccess,
-                  'counter_offer_respond_failed' =>
-                    state.errorMessage ??
-                        l10n.serviceCounterOfferRespondFailed,
-                  'cancel_application_failed' =>
-                    state.errorMessage ?? l10n.serviceApplicationCancelFailed,
+                  'counter_offer_respond_failed' => state.errorMessage != null
+                      ? context.localizeError(state.errorMessage)
+                      : l10n.serviceCounterOfferRespondFailed,
+                  'cancel_application_failed' => state.errorMessage != null
+                      ? context.localizeError(state.errorMessage)
+                      : l10n.serviceApplicationCancelFailed,
                   _ => null,
                 };
                 if (msg != null) {
@@ -152,8 +154,9 @@ class _ContentState extends State<_Content> {
                             size: 48,
                             color: AppColors.error.withValues(alpha: 0.5)),
                         AppSpacing.vMd,
-                        Text(state.errorMessage ??
-                            l10n.expertApplicationActionFailed),
+                        Text(state.errorMessage != null
+                            ? context.localizeError(state.errorMessage)
+                            : l10n.expertApplicationActionFailed),
                         AppSpacing.vMd,
                         TextButton(
                           onPressed: () => _reload(context),

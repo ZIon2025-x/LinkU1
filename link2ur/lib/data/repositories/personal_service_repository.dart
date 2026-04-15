@@ -93,9 +93,12 @@ class PersonalServiceRepository {
     int page = 1,
     int pageSize = 20,
   }) async {
+    // Backend uses limit/offset (see backend/app/user_service_application_routes.py).
+    // Convert page/pageSize at the repository boundary to keep callers page-based.
+    final offset = (page - 1) * pageSize;
     final params = <String, dynamic>{
-      'page': page,
-      'page_size': pageSize,
+      'limit': pageSize,
+      'offset': offset,
     };
     if (status != null && status.isNotEmpty) params['status'] = status;
 
