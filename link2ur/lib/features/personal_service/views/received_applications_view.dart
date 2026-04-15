@@ -126,13 +126,17 @@ class _ReceivedApplicationsContent extends StatelessWidget {
                   const SizedBox(height: AppSpacing.md),
               itemBuilder: (context, index) {
                 final app = state.receivedApplications[index];
+                final appId = app['id'];
+                final isThisSubmitting = state.isSubmitting &&
+                    state.submittingApplicationId != null &&
+                    state.submittingApplicationId == appId;
                 return AnimatedListItem(
-                  key: ValueKey(app['id']),
+                  key: ValueKey(appId),
                   index: index,
                   maxAnimatedIndex: 11,
                   child: _ApplicationCard(
                     application: app,
-                    isSubmitting: state.isSubmitting,
+                    isSubmitting: isThisSubmitting,
                   ),
                 );
               },

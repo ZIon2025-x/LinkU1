@@ -11870,6 +11870,28 @@ class AppLocalizationsEn extends AppLocalizations {
       'You haven\'t applied to any services yet. Browse available services to get started.';
 
   @override
+  String get myServiceApplicationsEmptyPending => 'No pending applications.';
+
+  @override
+  String get myServiceApplicationsEmptyNegotiating =>
+      'No applications currently in negotiation.';
+
+  @override
+  String get myServiceApplicationsEmptyPriceAgreed =>
+      'No applications with agreed price.';
+
+  @override
+  String get myServiceApplicationsEmptyApproved =>
+      'No approved applications yet.';
+
+  @override
+  String get myServiceApplicationsEmptyRejected => 'No rejected applications.';
+
+  @override
+  String get myServiceApplicationsEmptyCancelled =>
+      'No cancelled applications.';
+
+  @override
   String get myServiceApplicationsFilterAll => 'All';
 
   @override

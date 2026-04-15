@@ -141,6 +141,7 @@ class PersonalServiceState extends Equatable {
     this.reviewSummary,
     this.errorMessage,
     this.isSubmitting = false,
+    this.submittingApplicationId,
     this.actionMessage,
   });
 
@@ -154,6 +155,8 @@ class PersonalServiceState extends Equatable {
   final Map<String, dynamic>? reviewSummary;
   final String? errorMessage;
   final bool isSubmitting;
+  /// 当前正在处理的申请 ID（per-item 提交状态）。null 表示没有申请级操作在进行。
+  final int? submittingApplicationId;
   final String? actionMessage;
 
   PersonalServiceState copyWith({
@@ -167,6 +170,7 @@ class PersonalServiceState extends Equatable {
     Map<String, dynamic>? reviewSummary,
     String? errorMessage,
     bool? isSubmitting,
+    int? submittingApplicationId,
     String? actionMessage,
   }) {
     return PersonalServiceState(
@@ -180,6 +184,7 @@ class PersonalServiceState extends Equatable {
       reviewSummary: reviewSummary ?? this.reviewSummary,
       errorMessage: errorMessage,
       isSubmitting: isSubmitting ?? this.isSubmitting,
+      submittingApplicationId: submittingApplicationId,
       actionMessage: actionMessage,
     );
   }
@@ -188,7 +193,7 @@ class PersonalServiceState extends Equatable {
   List<Object?> get props => [
         status, services, receivedApplications, myApplications,
         browseResults, reviews, browseTotalPages, reviewSummary,
-        errorMessage, isSubmitting, actionMessage,
+        errorMessage, isSubmitting, submittingApplicationId, actionMessage,
       ];
 }
 
@@ -304,13 +309,19 @@ class PersonalServiceBloc extends Bloc<PersonalServiceEvent, PersonalServiceStat
     Emitter<PersonalServiceState> emit,
   ) async {
     if (state.isSubmitting) return;
-    emit(state.copyWith(isSubmitting: true));
+    emit(state.copyWith(
+      isSubmitting: true,
+      submittingApplicationId: event.applicationId,
+    ));
     try {
       await _repository.approveApplication(event.applicationId);
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'application_approved',
       ));
+      // AUDIT-11: Delay list reload slightly so success toast is clearly visible
+      // before the list rebuild kicks in.
+      await Future<void>.delayed(const Duration(milliseconds: 400));
       add(const PersonalServiceLoadReceivedApplications());
     } catch (e) {
       AppLogger.error('Failed to approve application', e);
@@ -327,7 +338,10 @@ class PersonalServiceBloc extends Bloc<PersonalServiceEvent, PersonalServiceStat
     Emitter<PersonalServiceState> emit,
   ) async {
     if (state.isSubmitting) return;
-    emit(state.copyWith(isSubmitting: true));
+    emit(state.copyWith(
+      isSubmitting: true,
+      submittingApplicationId: event.applicationId,
+    ));
     try {
       await _repository.rejectApplication(event.applicationId, reason: event.reason);
       emit(state.copyWith(
@@ -350,7 +364,10 @@ class PersonalServiceBloc extends Bloc<PersonalServiceEvent, PersonalServiceStat
     Emitter<PersonalServiceState> emit,
   ) async {
     if (state.isSubmitting) return;
-    emit(state.copyWith(isSubmitting: true));
+    emit(state.copyWith(
+      isSubmitting: true,
+      submittingApplicationId: event.applicationId,
+    ));
     try {
       await _repository.counterOffer(
         event.applicationId,
@@ -405,7 +422,10 @@ class PersonalServiceBloc extends Bloc<PersonalServiceEvent, PersonalServiceStat
     Emitter<PersonalServiceState> emit,
   ) async {
     if (state.isSubmitting) return;
-    emit(state.copyWith(isSubmitting: true));
+    emit(state.copyWith(
+      isSubmitting: true,
+      submittingApplicationId: event.applicationId,
+    ));
     try {
       await _repository.respondCounterOffer(
         event.applicationId,
@@ -433,7 +453,10 @@ class PersonalServiceBloc extends Bloc<PersonalServiceEvent, PersonalServiceStat
     Emitter<PersonalServiceState> emit,
   ) async {
     if (state.isSubmitting) return;
-    emit(state.copyWith(isSubmitting: true));
+    emit(state.copyWith(
+      isSubmitting: true,
+      submittingApplicationId: event.applicationId,
+    ));
     try {
       await _repository.cancelApplication(event.applicationId);
       emit(state.copyWith(

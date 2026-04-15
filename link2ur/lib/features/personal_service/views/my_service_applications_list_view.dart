@@ -171,7 +171,7 @@ class _ContentState extends State<_Content> {
                   return EmptyStateView(
                     icon: Icons.assignment_outlined,
                     title: l10n.myServiceApplicationsEmpty,
-                    message: l10n.myServiceApplicationsEmptyMessage,
+                    message: _emptyMessageForFilter(l10n, _selectedFilter),
                   );
                 }
 
@@ -193,13 +193,17 @@ class _ContentState extends State<_Content> {
                         const SizedBox(height: AppSpacing.md),
                     itemBuilder: (context, index) {
                       final app = state.myApplications[index];
+                      final appId = app['id'];
+                      final isThisSubmitting = state.isSubmitting &&
+                          state.submittingApplicationId != null &&
+                          state.submittingApplicationId == appId;
                       return AnimatedListItem(
-                        key: ValueKey(app['id']),
+                        key: ValueKey(appId),
                         index: index,
                         maxAnimatedIndex: 11,
                         child: _MyApplicationCard(
                           application: app,
-                          isSubmitting: state.isSubmitting,
+                          isSubmitting: isThisSubmitting,
                         ),
                       );
                     },
@@ -228,6 +232,27 @@ class _ContentState extends State<_Content> {
             statusFilter: _selectedFilter.isEmpty ? null : _selectedFilter,
           ),
         );
+  }
+
+  /// AUDIT-8: Context-aware empty state message — surfaces which filter is
+  /// active so the user can tell "no data" from "filter matched nothing".
+  String _emptyMessageForFilter(dynamic l10n, String filter) {
+    switch (filter) {
+      case 'pending':
+        return l10n.myServiceApplicationsEmptyPending as String;
+      case 'negotiating':
+        return l10n.myServiceApplicationsEmptyNegotiating as String;
+      case 'price_agreed':
+        return l10n.myServiceApplicationsEmptyPriceAgreed as String;
+      case 'approved':
+        return l10n.myServiceApplicationsEmptyApproved as String;
+      case 'rejected':
+        return l10n.myServiceApplicationsEmptyRejected as String;
+      case 'cancelled':
+        return l10n.myServiceApplicationsEmptyCancelled as String;
+      default:
+        return l10n.myServiceApplicationsEmptyMessage as String;
+    }
   }
 }
 
@@ -605,7 +630,8 @@ class _MyApplicationCard extends StatelessWidget {
       context: context,
       title: l10n.serviceCounterOfferAcceptConfirm,
       content: l10n.serviceCounterOfferAcceptConfirmMessage(priceStr),
-      confirmText: l10n.commonConfirm,
+      // AUDIT-10: Explicit action label mirrors the reject-counter-offer dialog.
+      confirmText: l10n.serviceCounterOfferAcceptConfirm,
       cancelText: l10n.commonCancel,
       onConfirm: () {
         context.read<PersonalServiceBloc>().add(
@@ -624,7 +650,9 @@ class _MyApplicationCard extends StatelessWidget {
       context: context,
       title: l10n.serviceCounterOfferRejectConfirm,
       content: l10n.serviceCounterOfferRejectConfirmMessage,
-      confirmText: l10n.commonConfirm,
+      // AUDIT-10: Explicit action label so reject-counter-offer isn't confused
+      // with cancel-application.
+      confirmText: l10n.serviceCounterOfferRejectConfirm,
       cancelText: l10n.commonCancel,
       isDestructive: true,
       onConfirm: () {
@@ -644,6 +672,10 @@ class _MyApplicationCard extends StatelessWidget {
       context: context,
       title: l10n.serviceApplicationConfirmCancel,
       content: l10n.serviceApplicationConfirmCancelMessage,
+      // AUDIT-10: Explicit action label ("取消申请") rather than generic
+      // "confirm/cancel" so the user knows which action fires.
+      confirmText: l10n.serviceApplicationConfirmCancel,
+      cancelText: l10n.commonCancel,
       isDestructive: true,
       onConfirm: () {
         context.read<PersonalServiceBloc>().add(

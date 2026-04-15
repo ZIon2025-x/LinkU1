@@ -21893,6 +21893,42 @@ abstract class AppLocalizations {
   /// **'You haven\'t applied to any services yet. Browse available services to get started.'**
   String get myServiceApplicationsEmptyMessage;
 
+  /// No description provided for @myServiceApplicationsEmptyPending.
+  ///
+  /// In en, this message translates to:
+  /// **'No pending applications.'**
+  String get myServiceApplicationsEmptyPending;
+
+  /// No description provided for @myServiceApplicationsEmptyNegotiating.
+  ///
+  /// In en, this message translates to:
+  /// **'No applications currently in negotiation.'**
+  String get myServiceApplicationsEmptyNegotiating;
+
+  /// No description provided for @myServiceApplicationsEmptyPriceAgreed.
+  ///
+  /// In en, this message translates to:
+  /// **'No applications with agreed price.'**
+  String get myServiceApplicationsEmptyPriceAgreed;
+
+  /// No description provided for @myServiceApplicationsEmptyApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'No approved applications yet.'**
+  String get myServiceApplicationsEmptyApproved;
+
+  /// No description provided for @myServiceApplicationsEmptyRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'No rejected applications.'**
+  String get myServiceApplicationsEmptyRejected;
+
+  /// No description provided for @myServiceApplicationsEmptyCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'No cancelled applications.'**
+  String get myServiceApplicationsEmptyCancelled;
+
   /// No description provided for @myServiceApplicationsFilterAll.
   ///
   /// In en, this message translates to:

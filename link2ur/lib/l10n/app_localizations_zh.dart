@@ -11394,6 +11394,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get myServiceApplicationsEmptyMessage => '您还没有申请过任何服务。浏览可用服务开始吧。';
 
   @override
+  String get myServiceApplicationsEmptyPending => '暂无待处理的申请。';
+
+  @override
+  String get myServiceApplicationsEmptyNegotiating => '暂无协商中的申请。';
+
+  @override
+  String get myServiceApplicationsEmptyPriceAgreed => '暂无已达成价格的申请。';
+
+  @override
+  String get myServiceApplicationsEmptyApproved => '暂无已通过的申请。';
+
+  @override
+  String get myServiceApplicationsEmptyRejected => '暂无被拒绝的申请。';
+
+  @override
+  String get myServiceApplicationsEmptyCancelled => '暂无已取消的申请。';
+
+  @override
   String get myServiceApplicationsFilterAll => '全部';
 
   @override
@@ -24125,6 +24143,24 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get myServiceApplicationsEmptyMessage => '您還沒有申請過任何服務。瀏覽可用服務開始吧。';
+
+  @override
+  String get myServiceApplicationsEmptyPending => '暫無待處理的申請。';
+
+  @override
+  String get myServiceApplicationsEmptyNegotiating => '暫無協商中的申請。';
+
+  @override
+  String get myServiceApplicationsEmptyPriceAgreed => '暫無已達成價格的申請。';
+
+  @override
+  String get myServiceApplicationsEmptyApproved => '暫無已通過的申請。';
+
+  @override
+  String get myServiceApplicationsEmptyRejected => '暫無被拒絕的申請。';
+
+  @override
+  String get myServiceApplicationsEmptyCancelled => '暫無已取消的申請。';
 
   @override
   String get myServiceApplicationsFilterAll => '全部';
