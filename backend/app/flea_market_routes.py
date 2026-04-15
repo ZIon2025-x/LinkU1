@@ -1532,6 +1532,31 @@ async def get_my_related_flea_items(
         if not items:
             return schemas.MyRelatedFleaListResponse(items=[])
 
+        # Derive current_rental_status for rental-type items (batch to avoid N+1)
+        rental_item_ids = [it.id for it in items if getattr(it, "listing_type", None) == "rental"]
+        current_rental_by_item: dict = {}
+        if rental_item_ids:
+            rental_stmt = (
+                select(models.FleaMarketRental)
+                .where(
+                    models.FleaMarketRental.item_id.in_(rental_item_ids),
+                    models.FleaMarketRental.status.in_(["active", "overdue"]),
+                )
+                .order_by(models.FleaMarketRental.created_at.desc())
+            )
+            rental_result = await db.execute(rental_stmt)
+            for r in rental_result.scalars().all():
+                # Only keep the latest (most recent) rental per item
+                current_rental_by_item.setdefault(r.item_id, r)
+
+        def _derive_rental_status(it):
+            if getattr(it, "listing_type", None) != "rental":
+                return None
+            r = current_rental_by_item.get(it.id)
+            if r is None:
+                return "available"
+            return "overdue" if r.status == "overdue" else "renting"
+
         item_ids = [item.id for item in items]
         seller_ids = list({item.seller_id for item in items})
         seller_levels = {}
@@ -1665,6 +1690,7 @@ async def get_my_related_flea_items(
                 my_role=my_role,
                 task_id=task_id_str,
                 final_price=final_price,
+                current_rental_status=_derive_rental_status(item),
             ))
 
         return schemas.MyRelatedFleaListResponse(items=formatted)

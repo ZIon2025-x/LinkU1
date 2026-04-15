@@ -3010,6 +3010,8 @@ class FleaMarketItemResponse(BaseModel):
     # 当前用户的租赁申请信息
     user_rental_request_id: Optional[int] = None
     user_rental_request_status: Optional[str] = None
+    # 租赁当前状态（仅租赁类商品有值）：available=可租, renting=租赁中, overdue=逾期
+    current_rental_status: Optional[Literal["available", "renting", "overdue"]] = None
 
     class Config:
         from_attributes = True
