@@ -1,4 +1,5 @@
 import '../services/api_service.dart';
+import '../models/service_application.dart';
 import '../../core/constants/api_endpoints.dart';
 
 class PersonalServiceRepository {
@@ -88,7 +89,7 @@ class PersonalServiceRepository {
 
   // ==================== 申请者的申请列表 ====================
 
-  Future<Map<String, dynamic>> getMyServiceApplications({
+  Future<List<ServiceApplication>> getMyServiceApplications({
     String? status,
     int page = 1,
     int pageSize = 20,
@@ -109,7 +110,11 @@ class PersonalServiceRepository {
     if (!response.isSuccess || response.data == null) {
       throw Exception(response.errorCode ?? response.message ?? 'load_applications_failed');
     }
-    return Map<String, dynamic>.from(response.data);
+    final data = Map<String, dynamic>.from(response.data);
+    final items = (data['items'] as List<dynamic>?) ?? const [];
+    return items
+        .map((e) => ServiceApplication.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList();
   }
 
   Future<void> respondCounterOffer(int applicationId, {required bool accept}) async {
@@ -171,7 +176,7 @@ class PersonalServiceRepository {
 
   // ==================== 收到的申请管理 ====================
 
-  Future<Map<String, dynamic>> getReceivedApplications({
+  Future<List<ServiceApplication>> getReceivedApplications({
     String? status,
     int? serviceId,
     int limit = 20,
@@ -191,7 +196,11 @@ class PersonalServiceRepository {
     if (!response.isSuccess || response.data == null) {
       throw Exception(response.errorCode ?? response.message ?? 'load_applications_failed');
     }
-    return Map<String, dynamic>.from(response.data);
+    final data = Map<String, dynamic>.from(response.data);
+    final items = (data['items'] as List<dynamic>?) ?? const [];
+    return items
+        .map((e) => ServiceApplication.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList();
   }
 
   Future<Map<String, dynamic>> approveApplication(int applicationId) async {

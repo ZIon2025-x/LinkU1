@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/utils/logger.dart';
+import '../../../data/models/service_application.dart';
 import '../../../data/repositories/personal_service_repository.dart';
 
 // ==================== Events ====================
@@ -133,8 +134,8 @@ class PersonalServiceState extends Equatable {
   const PersonalServiceState({
     this.status = PersonalServiceStatus.initial,
     this.services = const [],
-    this.receivedApplications = const [],
-    this.myApplications = const [],
+    this.receivedApplicationsTyped = const [],
+    this.myApplicationsTyped = const [],
     this.browseResults = const [],
     this.reviews = const [],
     this.browseTotalPages = 1,
@@ -147,8 +148,8 @@ class PersonalServiceState extends Equatable {
 
   final PersonalServiceStatus status;
   final List<Map<String, dynamic>> services;
-  final List<Map<String, dynamic>> receivedApplications;
-  final List<Map<String, dynamic>> myApplications;
+  final List<ServiceApplication> receivedApplicationsTyped;
+  final List<ServiceApplication> myApplicationsTyped;
   final List<Map<String, dynamic>> browseResults;
   final List<Map<String, dynamic>> reviews;
   final int browseTotalPages;
@@ -159,11 +160,19 @@ class PersonalServiceState extends Equatable {
   final int? submittingApplicationId;
   final String? actionMessage;
 
+  /// Backward-compat view layer: views read the two application lists as raw
+  /// maps. M3/M4 flip the views to the typed list; this getter goes away in M5.
+  List<Map<String, dynamic>> get myApplications =>
+      myApplicationsTyped.map((a) => a.toJson()).toList();
+
+  List<Map<String, dynamic>> get receivedApplications =>
+      receivedApplicationsTyped.map((a) => a.toJson()).toList();
+
   PersonalServiceState copyWith({
     PersonalServiceStatus? status,
     List<Map<String, dynamic>>? services,
-    List<Map<String, dynamic>>? receivedApplications,
-    List<Map<String, dynamic>>? myApplications,
+    List<ServiceApplication>? receivedApplicationsTyped,
+    List<ServiceApplication>? myApplicationsTyped,
     List<Map<String, dynamic>>? browseResults,
     List<Map<String, dynamic>>? reviews,
     int? browseTotalPages,
@@ -176,8 +185,9 @@ class PersonalServiceState extends Equatable {
     return PersonalServiceState(
       status: status ?? this.status,
       services: services ?? this.services,
-      receivedApplications: receivedApplications ?? this.receivedApplications,
-      myApplications: myApplications ?? this.myApplications,
+      receivedApplicationsTyped:
+          receivedApplicationsTyped ?? this.receivedApplicationsTyped,
+      myApplicationsTyped: myApplicationsTyped ?? this.myApplicationsTyped,
       browseResults: browseResults ?? this.browseResults,
       reviews: reviews ?? this.reviews,
       browseTotalPages: browseTotalPages ?? this.browseTotalPages,
@@ -191,7 +201,7 @@ class PersonalServiceState extends Equatable {
 
   @override
   List<Object?> get props => [
-        status, services, receivedApplications, myApplications,
+        status, services, receivedApplicationsTyped, myApplicationsTyped,
         browseResults, reviews, browseTotalPages, reviewSummary,
         errorMessage, isSubmitting, submittingApplicationId, actionMessage,
       ];
@@ -286,14 +296,10 @@ class PersonalServiceBloc extends Bloc<PersonalServiceEvent, PersonalServiceStat
   ) async {
     emit(state.copyWith(status: PersonalServiceStatus.loading));
     try {
-      final result = await _repository.getReceivedApplications(limit: 100);
-      final items = (result['items'] as List<dynamic>?)
-              ?.map((e) => Map<String, dynamic>.from(e as Map))
-              .toList() ??
-          [];
+      final items = await _repository.getReceivedApplications(limit: 100);
       emit(state.copyWith(
         status: PersonalServiceStatus.loaded,
-        receivedApplications: items,
+        receivedApplicationsTyped: items,
       ));
     } catch (e) {
       AppLogger.error('Failed to load received applications', e);
@@ -397,16 +403,12 @@ class PersonalServiceBloc extends Bloc<PersonalServiceEvent, PersonalServiceStat
   ) async {
     emit(state.copyWith(status: PersonalServiceStatus.loading));
     try {
-      final result = await _repository.getMyServiceApplications(
+      final items = await _repository.getMyServiceApplications(
         status: event.statusFilter,
       );
-      final items = (result['items'] as List<dynamic>?)
-              ?.map((e) => Map<String, dynamic>.from(e as Map))
-              .toList() ??
-          [];
       emit(state.copyWith(
         status: PersonalServiceStatus.loaded,
-        myApplications: items,
+        myApplicationsTyped: items,
       ));
     } catch (e) {
       AppLogger.error('Failed to load my applications', e);
