@@ -218,3 +218,77 @@ class TestFleaMarketAPI:
             print(f"✅ 我的购买: {data}")
         else:
             print(f"ℹ️  我的购买返回: {response.status_code}")
+
+    # =========================================================================
+    # my-related-items: type filter + current_rental_status
+    # （对应 my-posts + my-rentals 合并的新表面）
+    # =========================================================================
+
+    @pytest.mark.api
+    def test_my_related_items_type_filter_rental_returns_only_rental(self, auth_client):
+        """测试：?type=rental 只返回 listing_type=rental 的条目。
+
+        注意：这是针对真实环境的 smoke 测试，无法保证测试账号一定有 rental 数据；
+        我们断言的是「服务端接受 type 参数且返回的每一项 listing_type 都是 rental」。
+        """
+        response = auth_client.get(
+            f"{TEST_API_URL}/api/flea-market/my-related-items",
+            params={"type": "rental"},
+        )
+        assert response.status_code == 200, (
+            f"?type=rental 应返回 200，但返回了 {response.status_code}: {response.text[:200]}"
+        )
+        data = response.json()
+        items = data.get("items", [])
+        assert isinstance(items, list), "items 应为数组"
+        for it in items:
+            assert it.get("listing_type") == "rental", (
+                f"?type=rental 返回了非 rental 条目: {it.get('id')} listing_type={it.get('listing_type')}"
+            )
+        print(f"✅ ?type=rental 过滤正确，共 {len(items)} 项")
+
+    @pytest.mark.api
+    def test_my_related_items_type_filter_sale_returns_only_sale(self, auth_client):
+        """测试：?type=sale 只返回 listing_type=sale 的条目。"""
+        response = auth_client.get(
+            f"{TEST_API_URL}/api/flea-market/my-related-items",
+            params={"type": "sale"},
+        )
+        assert response.status_code == 200, (
+            f"?type=sale 应返回 200，但返回了 {response.status_code}: {response.text[:200]}"
+        )
+        data = response.json()
+        items = data.get("items", [])
+        assert isinstance(items, list), "items 应为数组"
+        for it in items:
+            assert it.get("listing_type") == "sale", (
+                f"?type=sale 返回了非 sale 条目: {it.get('id')} listing_type={it.get('listing_type')}"
+            )
+        print(f"✅ ?type=sale 过滤正确，共 {len(items)} 项")
+
+    @pytest.mark.api
+    def test_my_related_items_current_rental_status_values(self, auth_client):
+        """测试：rental 条目的 current_rental_status 字段取值在合法集合内。
+
+        合法值：available / renting / overdue / null（或字段缺省）。
+        这是 overdue-priority tie-break 逻辑的弱断言（smoke）——无法在远端
+        测试环境任意造出「同一商品既 overdue 又 active」的数据，
+        只能验证字段结构正确。构造型 overdue-wins 测试需要本地 DB fixtures
+        （当前 API 测试不连库），故略过。
+        """
+        response = auth_client.get(
+            f"{TEST_API_URL}/api/flea-market/my-related-items",
+            params={"type": "rental"},
+        )
+        assert response.status_code == 200, (
+            f"预期 200，实际 {response.status_code}: {response.text[:200]}"
+        )
+        data = response.json()
+        items = data.get("items", [])
+        allowed = {"available", "renting", "overdue", None}
+        for it in items:
+            status = it.get("current_rental_status")
+            assert status in allowed, (
+                f"item {it.get('id')} current_rental_status={status!r} 不在合法集合 {allowed}"
+            )
+        print(f"✅ current_rental_status 字段结构校验通过（{len(items)} 条 rental 项）")
