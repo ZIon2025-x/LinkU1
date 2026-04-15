@@ -14,6 +14,7 @@ import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/animated_list_item.dart';
+import '../../../data/models/service_application.dart';
 import '../../../data/repositories/personal_service_repository.dart';
 import '../bloc/personal_service_bloc.dart';
 
@@ -71,14 +72,15 @@ class _ReceivedApplicationsContent extends StatelessWidget {
         },
         builder: (context, state) {
           final l10n = context.l10n;
+          final items = state.receivedApplicationsTyped;
 
           if (state.status == PersonalServiceStatus.loading &&
-              state.receivedApplications.isEmpty) {
+              items.isEmpty) {
             return const SkeletonList();
           }
 
           if (state.status == PersonalServiceStatus.error &&
-              state.receivedApplications.isEmpty) {
+              items.isEmpty) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -102,7 +104,7 @@ class _ReceivedApplicationsContent extends StatelessWidget {
             );
           }
 
-          if (state.receivedApplications.isEmpty) {
+          if (items.isEmpty) {
             return EmptyStateView(
               icon: Icons.inbox_outlined,
               title: l10n.expertApplicationsEmpty,
@@ -121,21 +123,20 @@ class _ReceivedApplicationsContent extends StatelessWidget {
             child: ListView.separated(
               clipBehavior: Clip.none,
               padding: const EdgeInsets.all(AppSpacing.md),
-              itemCount: state.receivedApplications.length,
+              itemCount: items.length,
               separatorBuilder: (_, __) =>
                   const SizedBox(height: AppSpacing.md),
               itemBuilder: (context, index) {
-                final app = state.receivedApplications[index];
-                final appId = app['id'];
+                final application = items[index];
                 final isThisSubmitting = state.isSubmitting &&
                     state.submittingApplicationId != null &&
-                    state.submittingApplicationId == appId;
+                    state.submittingApplicationId == application.id;
                 return AnimatedListItem(
-                  key: ValueKey(appId),
+                  key: ValueKey(application.id),
                   index: index,
                   maxAnimatedIndex: 11,
                   child: _ApplicationCard(
-                    application: app,
+                    application: application,
                     isSubmitting: isThisSubmitting,
                   ),
                 );
@@ -154,52 +155,33 @@ class _ApplicationCard extends StatelessWidget {
     required this.isSubmitting,
   });
 
-  final Map<String, dynamic> application;
+  final ServiceApplication application;
   final bool isSubmitting;
 
   String _statusLabel(BuildContext context) {
     final l10n = context.l10n;
-    return switch (application['status'] as String?) {
-      'pending' => l10n.expertApplicationStatusPending,
-      'negotiating' => l10n.expertApplicationStatusNegotiating,
-      'price_agreed' => l10n.expertApplicationStatusPriceAgreed,
-      'approved' => l10n.expertApplicationStatusApproved,
-      'rejected' => l10n.expertApplicationStatusRejected,
-      'cancelled' => l10n.expertApplicationStatusCancelled,
-      _ => application['status']?.toString() ?? '',
+    return switch (application.status) {
+      ServiceApplicationStatus.pending => l10n.expertApplicationStatusPending,
+      ServiceApplicationStatus.negotiating =>
+        l10n.expertApplicationStatusNegotiating,
+      ServiceApplicationStatus.priceAgreed =>
+        l10n.expertApplicationStatusPriceAgreed,
+      ServiceApplicationStatus.approved => l10n.expertApplicationStatusApproved,
+      ServiceApplicationStatus.rejected => l10n.expertApplicationStatusRejected,
+      ServiceApplicationStatus.cancelled =>
+        l10n.expertApplicationStatusCancelled,
     };
   }
 
   Color _statusColor() {
-    return switch (application['status'] as String?) {
-      'pending' => AppColors.warning,
-      'negotiating' => AppColors.accent,
-      'price_agreed' => AppColors.primary,
-      'approved' => AppColors.success,
-      'rejected' => AppColors.error,
-      'cancelled' => AppColors.textTertiaryLight,
-      _ => AppColors.textSecondaryLight,
+    return switch (application.status) {
+      ServiceApplicationStatus.pending => AppColors.warning,
+      ServiceApplicationStatus.negotiating => AppColors.accent,
+      ServiceApplicationStatus.priceAgreed => AppColors.primary,
+      ServiceApplicationStatus.approved => AppColors.success,
+      ServiceApplicationStatus.rejected => AppColors.error,
+      ServiceApplicationStatus.cancelled => AppColors.textTertiaryLight,
     };
-  }
-
-  // Backend (user_service_application_routes.py):
-  //   approve allowed in: pending, price_agreed
-  //   reject  allowed in: pending, negotiating, price_agreed
-  bool get _canApprove {
-    final status = application['status'] as String?;
-    return status == 'pending' || status == 'price_agreed';
-  }
-
-  bool get _canReject {
-    final status = application['status'] as String?;
-    return status == 'pending' ||
-        status == 'negotiating' ||
-        status == 'price_agreed';
-  }
-
-  bool get _canCounterOffer {
-    final status = application['status'] as String?;
-    return status == 'pending' || status == 'negotiating';
   }
 
   @override
@@ -207,14 +189,12 @@ class _ApplicationCard extends StatelessWidget {
     final l10n = context.l10n;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final applicantName =
-        application['applicant_name'] as String? ?? 'Unknown';
-    final serviceName =
-        application['service_name'] as String? ?? '';
-    final message =
-        application['application_message'] as String?;
-    final negotiatedPrice = application['negotiated_price'];
-    final expertCounterPrice = application['expert_counter_price'];
+    final applicantName = application.applicantName ?? 'Unknown';
+    final serviceName = application.serviceName ?? '';
+    final message = application.applicationMessage;
+    final negotiatedPrice = application.negotiatedPrice;
+    final expertCounterPrice = application.expertCounterPrice;
+    final currency = application.currency;
     final statusColor = _statusColor();
 
     return Container(
@@ -312,7 +292,7 @@ class _ApplicationCard extends StatelessWidget {
                           ),
                     ),
                     Text(
-                      '${Helpers.currencySymbolFor(application['currency'] as String? ?? 'GBP')}${_formatPrice(negotiatedPrice)}',
+                      '${Helpers.currencySymbolFor(currency)}${Helpers.formatAmountNumber(negotiatedPrice)}',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             fontWeight: FontWeight.w600,
                             color: AppColors.primary,
@@ -331,7 +311,7 @@ class _ApplicationCard extends StatelessWidget {
                           ),
                     ),
                     Text(
-                      '${Helpers.currencySymbolFor(application['currency'] as String? ?? 'GBP')}${_formatPrice(expertCounterPrice)}',
+                      '${Helpers.currencySymbolFor(currency)}${Helpers.formatAmountNumber(expertCounterPrice)}',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             fontWeight: FontWeight.w600,
                             color: AppColors.accent,
@@ -373,14 +353,16 @@ class _ApplicationCard extends StatelessWidget {
             ),
 
           // Action buttons
-          if (_canReject || _canApprove || _canCounterOffer) ...[
+          if (application.canReject ||
+              application.canApprove ||
+              application.canCounterOffer) ...[
             const SizedBox(height: AppSpacing.sm),
             const Divider(height: 1),
             Padding(
               padding: const EdgeInsets.all(AppSpacing.sm),
               child: Row(
                 children: [
-                  if (_canCounterOffer)
+                  if (application.canCounterOffer)
                     Expanded(
                       child: _ActionButton(
                         label: l10n.expertApplicationCounterOffer,
@@ -391,9 +373,9 @@ class _ApplicationCard extends StatelessWidget {
                             _showCounterOfferDialog(context),
                       ),
                     ),
-                  if (_canCounterOffer && _canReject)
+                  if (application.canCounterOffer && application.canReject)
                     const SizedBox(width: AppSpacing.sm),
-                  if (_canReject)
+                  if (application.canReject)
                     Expanded(
                       child: _ActionButton(
                         label: l10n.expertApplicationReject,
@@ -404,7 +386,7 @@ class _ApplicationCard extends StatelessWidget {
                             _showRejectDialog(context),
                       ),
                     ),
-                  if (_canApprove) ...[
+                  if (application.canApprove) ...[
                     const SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: _ActionButton(
@@ -421,8 +403,7 @@ class _ApplicationCard extends StatelessWidget {
               ),
             ),
           ] else ...[
-            if (application['status'] == 'approved' &&
-                application['task_id'] != null) ...[
+            if (application.canViewTask) ...[
               const SizedBox(height: AppSpacing.xs),
               const Divider(height: 1),
               Padding(
@@ -432,9 +413,7 @@ class _ApplicationCard extends StatelessWidget {
                   alignment: Alignment.centerRight,
                   child: TextButton.icon(
                     onPressed: () {
-                      final rawId = application['task_id'];
-                      final taskId =
-                          rawId is int ? rawId : int.tryParse(rawId.toString());
+                      final taskId = application.taskId;
                       if (taskId != null) context.goToTaskDetail(taskId);
                     },
                     icon: const Icon(Icons.open_in_new, size: 16),
@@ -453,15 +432,9 @@ class _ApplicationCard extends StatelessWidget {
     );
   }
 
-  String _formatPrice(dynamic price) {
-    if (price == null) return '0';
-    final num p = price is num ? price : num.tryParse(price.toString()) ?? 0;
-    return Helpers.formatAmountNumber(p);
-  }
-
   void _showApproveConfirmation(BuildContext context) {
     final l10n = context.l10n;
-    final appId = application['id'] as int;
+    final appId = application.id;
     AppHaptics.light();
 
     AdaptiveDialogs.showConfirmDialog(
@@ -480,7 +453,7 @@ class _ApplicationCard extends StatelessWidget {
 
   void _showRejectDialog(BuildContext context) async {
     final l10n = context.l10n;
-    final appId = application['id'] as int;
+    final appId = application.id;
     AppHaptics.light();
 
     final reason = await AdaptiveDialogs.showInputDialog(
@@ -504,7 +477,8 @@ class _ApplicationCard extends StatelessWidget {
 
   void _showCounterOfferDialog(BuildContext context) {
     final l10n = context.l10n;
-    final appId = application['id'] as int;
+    final appId = application.id;
+    final currency = application.currency;
     final priceController = TextEditingController();
     final messageController = TextEditingController();
     final isIOS = Theme.of(context).platform == TargetPlatform.iOS;
@@ -522,7 +496,7 @@ class _ApplicationCard extends StatelessWidget {
                     placeholder: l10n.expertApplicationCounterPriceHint,
                     prefix: Padding(
                       padding: const EdgeInsets.only(left: 8),
-                      child: Text('${Helpers.currencySymbolFor(application['currency'] as String? ?? 'GBP')} '),
+                      child: Text('${Helpers.currencySymbolFor(currency)} '),
                     ),
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
@@ -532,7 +506,7 @@ class _ApplicationCard extends StatelessWidget {
                     decoration: InputDecoration(
                       labelText: l10n.expertApplicationCounterPrice,
                       hintText: l10n.expertApplicationCounterPriceHint,
-                      prefixText: '${Helpers.currencySymbolFor(application['currency'] as String? ?? 'GBP')} ',
+                      prefixText: '${Helpers.currencySymbolFor(currency)} ',
                       border: const OutlineInputBorder(),
                     ),
                     keyboardType:
