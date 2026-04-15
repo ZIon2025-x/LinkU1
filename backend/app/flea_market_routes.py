@@ -9,7 +9,7 @@ import os
 import uuid
 import shutil
 from decimal import Decimal
-from typing import List, Optional
+from typing import List, Literal, Optional
 from datetime import timedelta
 from pathlib import Path
 from urllib.parse import urlparse
@@ -1487,10 +1487,14 @@ async def agree_flea_market_notice(
 
 @flea_market_router.get("/my-related-items", response_model=schemas.MyRelatedFleaListResponse)
 async def get_my_related_flea_items(
+    type: Optional[Literal["sale", "rental"]] = Query(None, description="Filter by listing_type: sale or rental"),
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    """获取所有与当前用户相关且任务来源为跳蚤市场的商品：我发布的 + 我购买的（通过任务 id 关联）。前端按 正在出售/收的闲置/已售出 本地筛选。"""
+    """获取所有与当前用户相关且任务来源为跳蚤市场的商品：我发布的 + 我购买的（通过任务 id 关联）。前端按 正在出售/收的闲置/已售出 本地筛选。
+
+    可选 `type` 参数按 listing_type 过滤：sale=仅出售，rental=仅租赁，省略=全部（向后兼容）。
+    """
     try:
         user_id = str(current_user.id)
         # 1) 与我相关且来源为跳蚤市场的任务 id
@@ -1517,6 +1521,10 @@ async def get_my_related_flea_items(
             )
         else:
             query = select(models.FleaMarketItem).where(models.FleaMarketItem.seller_id == user_id)
+        if type == "sale":
+            query = query.where(models.FleaMarketItem.listing_type == "sale")
+        elif type == "rental":
+            query = query.where(models.FleaMarketItem.listing_type == "rental")
         query = query.order_by(models.FleaMarketItem.refreshed_at.desc(), models.FleaMarketItem.id.desc())
         result = await db.execute(query)
         items = result.scalars().all()
