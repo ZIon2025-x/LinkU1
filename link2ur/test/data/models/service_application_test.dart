@@ -45,18 +45,18 @@ void main() {
       );
     });
 
-    test('fromApi falls back to pending for unknown / null', () {
+    test('fromApi maps unknown / null to the unknown variant', () {
       expect(
         ServiceApplicationStatus.fromApi(null),
-        ServiceApplicationStatus.pending,
+        ServiceApplicationStatus.unknown,
       );
       expect(
         ServiceApplicationStatus.fromApi('bogus'),
-        ServiceApplicationStatus.pending,
+        ServiceApplicationStatus.unknown,
       );
       expect(
         ServiceApplicationStatus.fromApi(''),
-        ServiceApplicationStatus.pending,
+        ServiceApplicationStatus.unknown,
       );
     });
 
@@ -266,6 +266,87 @@ void main() {
       expect(_app(ServiceApplicationStatus.approved).canCounterOffer, false);
       expect(_app(ServiceApplicationStatus.rejected).canCounterOffer, false);
       expect(_app(ServiceApplicationStatus.cancelled).canCounterOffer, false);
+    });
+  });
+
+  group('ServiceApplicationRules terminal states', () {
+    test('rejected: all actions disallowed', () {
+      final a = _app(ServiceApplicationStatus.rejected);
+      expect(a.canCancel, false);
+      expect(a.canRespondCounterOffer, false);
+      expect(a.canViewTask, false);
+      expect(a.canApprove, false);
+      expect(a.canReject, false);
+      expect(a.canCounterOffer, false);
+    });
+
+    test('cancelled: all actions disallowed', () {
+      final a = _app(ServiceApplicationStatus.cancelled);
+      expect(a.canCancel, false);
+      expect(a.canRespondCounterOffer, false);
+      expect(a.canViewTask, false);
+      expect(a.canApprove, false);
+      expect(a.canReject, false);
+      expect(a.canCounterOffer, false);
+    });
+
+    test('approved without taskId: all actions (incl. canViewTask) disallowed',
+        () {
+      final a = _app(ServiceApplicationStatus.approved); // taskId null
+      expect(a.canCancel, false);
+      expect(a.canRespondCounterOffer, false);
+      expect(a.canViewTask, false); // no taskId
+      expect(a.canApprove, false);
+      expect(a.canReject, false);
+      expect(a.canCounterOffer, false);
+    });
+
+    test('unknown status: all actions disallowed', () {
+      final a = _app(ServiceApplicationStatus.unknown);
+      expect(a.canCancel, false);
+      expect(a.canRespondCounterOffer, false);
+      expect(a.canViewTask, false);
+      expect(a.canApprove, false);
+      expect(a.canReject, false);
+      expect(a.canCounterOffer, false);
+    });
+  });
+
+  group('ServiceApplication.fromJson extra precedence/roundtrip', () {
+    test('owner_name wins when both owner_name and service_owner_name present',
+        () {
+      final json = <String, dynamic>{
+        'id': 1,
+        'status': 'pending',
+        'service_id': 1,
+        'owner_name': 'Primary',
+        'service_owner_name': 'Fallback',
+        'currency': 'GBP',
+        'created_at': '2026-01-01T00:00:00Z',
+      };
+      expect(ServiceApplication.fromJson(json).ownerName, 'Primary');
+    });
+
+    test('toJson preserves DateTime fields in ISO 8601 format', () {
+      final app = ServiceApplication(
+        id: 1,
+        status: ServiceApplicationStatus.priceAgreed,
+        serviceId: 1,
+        currency: 'GBP',
+        createdAt: DateTime.parse('2026-04-15T10:30:00.000Z'),
+        approvedAt: DateTime.parse('2026-04-16T11:00:00.000Z'),
+        priceAgreedAt: DateTime.parse('2026-04-15T15:00:00.000Z'),
+      );
+      final json = app.toJson();
+      expect(json['created_at'], '2026-04-15T10:30:00.000Z');
+      expect(json['approved_at'], '2026-04-16T11:00:00.000Z');
+      expect(json['price_agreed_at'], '2026-04-15T15:00:00.000Z');
+
+      // Round-trip: toJson -> fromJson restores original values.
+      final restored = ServiceApplication.fromJson(json);
+      expect(restored.createdAt, app.createdAt);
+      expect(restored.approvedAt, app.approvedAt);
+      expect(restored.priceAgreedAt, app.priceAgreedAt);
     });
   });
 }
