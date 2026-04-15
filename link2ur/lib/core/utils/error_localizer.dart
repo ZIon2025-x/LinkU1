@@ -189,6 +189,7 @@ class ErrorLocalizer {
       case 'flea_market_error_respond_rental_counter_offer_failed':
         return context.l10n.fleaMarketErrorCounterOfferRentalFailed;
       case 'flea_market_error_get_my_rentals_failed':
+      case 'my_posts_rentals_load_failed':
         return context.l10n.fleaMarketErrorGetRentalRequestsFailed;
       case 'flea_market_error_not_rental_item':
         return context.l10n.fleaMarketErrorNotRentalItem;
