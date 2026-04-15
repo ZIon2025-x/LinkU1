@@ -207,6 +207,12 @@ abstract class AppLocalizations {
   /// **'Clear'**
   String get commonClear;
 
+  /// No description provided for @commonPerson.
+  ///
+  /// In en, this message translates to:
+  /// **'person'**
+  String get commonPerson;
+
   /// No description provided for @commonSubmit.
   ///
   /// In en, this message translates to:
@@ -6156,7 +6162,7 @@ abstract class AppLocalizations {
   /// No description provided for @activitySelectTimeSlot.
   ///
   /// In en, this message translates to:
-  /// **'Select Time Slot'**
+  /// **'Select Group Deal'**
   String get activitySelectTimeSlot;
 
   /// No description provided for @activityNoAvailableTime.
@@ -6168,7 +6174,7 @@ abstract class AppLocalizations {
   /// No description provided for @activityNoAvailableTimeMessage.
   ///
   /// In en, this message translates to:
-  /// **'No available time slots at the moment'**
+  /// **'No group deals available at the moment'**
   String get activityNoAvailableTimeMessage;
 
   /// No description provided for @activityParticipateTime.
@@ -6228,7 +6234,7 @@ abstract class AppLocalizations {
   /// No description provided for @activityMultipleTimeSlots.
   ///
   /// In en, this message translates to:
-  /// **'Supports multiple time slot bookings'**
+  /// **'Supports multiple group deal bookings'**
   String get activityMultipleTimeSlots;
 
   /// No description provided for @activityDeadline.
@@ -6984,13 +6990,13 @@ abstract class AppLocalizations {
   /// No description provided for @taskExpertOptionalTimeSlots.
   ///
   /// In en, this message translates to:
-  /// **'Optional Time Slots'**
+  /// **'Group Deals'**
   String get taskExpertOptionalTimeSlots;
 
   /// No description provided for @taskExpertNoAvailableSlots.
   ///
   /// In en, this message translates to:
-  /// **'No Available Time Slots'**
+  /// **'No Group Deals Available'**
   String get taskExpertNoAvailableSlots;
 
   /// No description provided for @taskExpertApplyService.
@@ -16148,7 +16154,7 @@ abstract class AppLocalizations {
   /// No description provided for @serviceApplyOtherSlot.
   ///
   /// In en, this message translates to:
-  /// **'Apply for Another Slot'**
+  /// **'Apply for Another Group Deal'**
   String get serviceApplyOtherSlot;
 
   /// No description provided for @publishTitle.
@@ -19496,7 +19502,7 @@ abstract class AppLocalizations {
   /// No description provided for @expertDashboardTabTimeSlots.
   ///
   /// In en, this message translates to:
-  /// **'Time Slots'**
+  /// **'Group Deals'**
   String get expertDashboardTabTimeSlots;
 
   /// No description provided for @expertDashboardTabSchedule.
@@ -19628,7 +19634,7 @@ abstract class AppLocalizations {
   /// No description provided for @expertDashboardUpcomingSlots.
   ///
   /// In en, this message translates to:
-  /// **'Upcoming Slots'**
+  /// **'Upcoming Group Deals'**
   String get expertDashboardUpcomingSlots;
 
   /// No description provided for @expertServicesEmpty.
@@ -19820,19 +19826,19 @@ abstract class AppLocalizations {
   /// No description provided for @expertTimeSlotsEmpty.
   ///
   /// In en, this message translates to:
-  /// **'No time slots'**
+  /// **'No group deals'**
   String get expertTimeSlotsEmpty;
 
   /// No description provided for @expertTimeSlotsEmptyMessage.
   ///
   /// In en, this message translates to:
-  /// **'Select a service and add time slots'**
+  /// **'Select a service and add group deals'**
   String get expertTimeSlotsEmptyMessage;
 
   /// No description provided for @expertTimeSlotCreate.
   ///
   /// In en, this message translates to:
-  /// **'Add Time Slot'**
+  /// **'Add Group Deal'**
   String get expertTimeSlotCreate;
 
   /// No description provided for @expertTimeSlotDate.
@@ -19868,19 +19874,19 @@ abstract class AppLocalizations {
   /// No description provided for @expertTimeSlotCreated.
   ///
   /// In en, this message translates to:
-  /// **'Time slot added'**
+  /// **'Group deal added'**
   String get expertTimeSlotCreated;
 
   /// No description provided for @expertTimeSlotDeleted.
   ///
   /// In en, this message translates to:
-  /// **'Time slot removed'**
+  /// **'Group deal removed'**
   String get expertTimeSlotDeleted;
 
   /// No description provided for @expertTimeSlotConfirmDelete.
   ///
   /// In en, this message translates to:
-  /// **'Remove this time slot?'**
+  /// **'Remove this group deal?'**
   String get expertTimeSlotConfirmDelete;
 
   /// No description provided for @expertTimeSlotExpired.
@@ -20060,7 +20066,7 @@ abstract class AppLocalizations {
   /// No description provided for @expertTimeSlotOutsideHoursMessage.
   ///
   /// In en, this message translates to:
-  /// **'This time slot falls outside your business hours or on a closed date. Create anyway?'**
+  /// **'This group deal falls outside your business hours or on a closed date. Create anyway?'**
   String get expertTimeSlotOutsideHoursMessage;
 
   /// No description provided for @expertTimeSlotCreateAnyway.
@@ -21752,7 +21758,7 @@ abstract class AppLocalizations {
   /// No description provided for @fleaMarketCurrentlyRented.
   ///
   /// In en, this message translates to:
-  /// **'Currently rented out. You can still apply for a future time slot.'**
+  /// **'Currently rented out. You can still apply for a future group deal.'**
   String get fleaMarketCurrentlyRented;
 
   /// No description provided for @fleaMarketErrorRentalRequestFailed.
@@ -22772,7 +22778,7 @@ abstract class AppLocalizations {
   /// No description provided for @expertTimeSlotFull.
   ///
   /// In en, this message translates to:
-  /// **'This time slot is full. Please pick another one.'**
+  /// **'This group deal is full. Please pick another one.'**
   String get expertTimeSlotFull;
 
   /// No description provided for @expertStripeNotReady.

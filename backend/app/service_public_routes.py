@@ -443,6 +443,8 @@ async def get_service_reviews(
                 rating=r.rating,
                 comment=r.comment,
                 created_at=r.created_at,
+                reply_content=r.reply_content,
+                reply_at=r.reply_at,
             )
             for r in reviews
         ],
@@ -510,6 +512,8 @@ async def get_expert_reviews(
                 rating=r.rating,
                 comment=r.comment,
                 created_at=r.created_at,
+                reply_content=r.reply_content,
+                reply_at=r.reply_at,
             )
             for r in reviews
         ],

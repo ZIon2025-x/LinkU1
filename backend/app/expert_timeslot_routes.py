@@ -224,6 +224,11 @@ async def create_time_slot(
         is_available=True,
     )
     db.add(slot)
+
+    # 自动标记服务为时间段服务
+    if not service.has_time_slots:
+        service.has_time_slots = True
+
     await db.commit()
     await db.refresh(slot)
     return _serialize_slot(slot)
@@ -443,6 +448,10 @@ async def batch_create_time_slots(
         db.add(slot)
         await db.flush()
         created_ids.append(slot.id)
+
+    # 自动标记服务为时间段服务
+    if created_ids and not service.has_time_slots:
+        service.has_time_slots = True
 
     await db.commit()
     return {"created": len(created_ids), "skipped": skipped, "ids": created_ids}

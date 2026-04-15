@@ -275,6 +275,10 @@ class _ServiceDetailContent extends StatelessWidget {
                                   timeSlots: state.timeSlots,
                                   isLoading: state.isLoadingTimeSlots,
                                   isDark: isDark,
+                                  serviceBasePrice: service.basePrice,
+                                  currency: service.currency,
+                                  service: service,
+                                  serviceId: serviceId,
                                 ),
 
                               if (!(state.expertActivities.isEmpty &&
@@ -1045,11 +1049,19 @@ class _TimeSlotsCard extends StatelessWidget {
     required this.timeSlots,
     required this.isLoading,
     required this.isDark,
+    this.serviceBasePrice,
+    this.currency = 'GBP',
+    this.service,
+    this.serviceId,
   });
 
   final List<ServiceTimeSlot> timeSlots;
   final bool isLoading;
   final bool isDark;
+  final double? serviceBasePrice;
+  final String currency;
+  final TaskExpertService? service;
+  final int? serviceId;
 
   @override
   Widget build(BuildContext context) {
@@ -1106,8 +1118,20 @@ class _TimeSlotsCard extends StatelessWidget {
               ),
             )
           else
-            ...timeSlots
-                .map((slot) => _TimeSlotCard(slot: slot, isDark: isDark)),
+            ...timeSlots.map((slot) => _TimeSlotCard(
+                  slot: slot,
+                  isDark: isDark,
+                  serviceBasePrice: serviceBasePrice,
+                  currency: currency,
+                  onTap: slot.canSelect && service != null && serviceId != null
+                      ? () => _ApplyServiceSheet.show(
+                            context,
+                            service!,
+                            serviceId!,
+                            preselectedSlotId: slot.id,
+                          )
+                      : null,
+                )),
         ],
       ),
     );
@@ -1115,39 +1139,72 @@ class _TimeSlotsCard extends StatelessWidget {
 }
 
 class _TimeSlotCard extends StatelessWidget {
-  const _TimeSlotCard({required this.slot, required this.isDark});
+  const _TimeSlotCard({
+    required this.slot,
+    required this.isDark,
+    this.serviceBasePrice,
+    this.currency = 'GBP',
+    this.onTap,
+  });
 
   final ServiceTimeSlot slot;
   final bool isDark;
+  final double? serviceBasePrice;
+  final String currency;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final isDisabled = !slot.canSelect;
+    final slotPrice = slot.displayPrice;
+    final hasDiscount = slotPrice != null &&
+        serviceBasePrice != null &&
+        serviceBasePrice! > 0 &&
+        slotPrice < serviceBasePrice!;
+    final discountPercent = hasDiscount
+        ? ((1 - slotPrice / serviceBasePrice!) * 100).round()
+        : 0;
+    final symbol = Helpers.currencySymbolFor(currency);
 
-    return AnimatedOpacity(
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedOpacity(
       opacity: isDisabled ? 0.5 : 1.0,
       duration: const Duration(milliseconds: 200),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: slot.userHasApplied
               ? (isDark
                   ? Colors.white.withValues(alpha: 0.04)
                   : AppColors.textTertiaryLight.withValues(alpha: 0.08))
               : AppColors.primary.withValues(alpha: isDark ? 0.1 : 0.05),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
+          border: hasDiscount && !isDisabled
+              ? Border.all(
+                  color: AppColors.primary.withValues(alpha: 0.2),
+                  width: 1,
+                )
+              : null,
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _formatDateTime(slot.slotStartDatetime),
+            // 第一行：时间 + 状态 badge
+            Row(
+              children: [
+                Icon(Icons.schedule_outlined,
+                    size: 14,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    '${_formatDateTime(slot.slotStartDatetime)} — ${_formatTime(slot.slotEndDatetime)}',
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: isDisabled
                           ? (isDark
@@ -1158,48 +1215,105 @@ class _TimeSlotCard extends StatelessWidget {
                               : AppColors.textPrimaryLight),
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(Icons.people_outline,
-                          size: 12,
-                          color: isDark
-                              ? AppColors.textSecondaryDark
-                              : AppColors.textSecondaryLight),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${slot.currentParticipants}/${slot.maxParticipants} ${context.l10n.activityPersonsBooked}',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: isDark
-                              ? AppColors.textSecondaryDark
-                              : AppColors.textSecondaryLight,
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _getBadgeColor(),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    _getBadgeText(context),
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: _getBadgeTextColor(),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            // 第二行：参与人数 + 拼单价格
+            Row(
+              children: [
+                Icon(Icons.people_outline,
+                    size: 13,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight),
+                const SizedBox(width: 4),
+                Text(
+                  '${slot.currentParticipants}/${slot.maxParticipants} ${context.l10n.activityPersonsBooked}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
+                  ),
+                ),
+                const Spacer(),
+                // 拼单价格
+                if (slotPrice != null) ...[
+                  if (hasDiscount) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.error.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        '-$discountPercent%',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.error,
                         ),
                       ),
-                    ],
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '$symbol${serviceBasePrice!.toStringAsFixed(2)}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        decoration: TextDecoration.lineThrough,
+                        color: isDark
+                            ? AppColors.textTertiaryDark
+                            : AppColors.textTertiaryLight,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                  ],
+                  Text(
+                    '$symbol${slotPrice.toStringAsFixed(2)}',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: hasDiscount
+                          ? AppColors.error
+                          : (isDark
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimaryLight),
+                    ),
+                  ),
+                  Text(
+                    '/${context.l10n.commonPerson}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondaryLight,
+                    ),
                   ),
                 ],
-              ),
-            ),
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: _getBadgeColor(),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                _getBadgeText(context),
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: _getBadgeTextColor(),
-                ),
-              ),
+              ],
             ),
           ],
         ),
       ),
+    ),
     );
   }
 
@@ -1233,7 +1347,16 @@ class _TimeSlotCard extends StatelessWidget {
   String _formatDateTime(String dateStr) {
     try {
       final date = DateTime.parse(dateStr).toLocal();
-      return DateFormat('yyyy-MM-dd HH:mm').format(date);
+      return DateFormat('MM/dd HH:mm').format(date);
+    } catch (_) {
+      return dateStr;
+    }
+  }
+
+  String _formatTime(String dateStr) {
+    try {
+      final date = DateTime.parse(dateStr).toLocal();
+      return DateFormat('HH:mm').format(date);
     } catch (_) {
       return dateStr;
     }
@@ -1794,21 +1917,29 @@ class _ApplyServiceSheet extends StatefulWidget {
     required this.service,
     required this.serviceId,
     required this.bloc,
+    this.preselectedSlotId,
   });
 
   final TaskExpertService service;
   final int serviceId;
   final TaskExpertBloc bloc;
+  final int? preselectedSlotId;
 
   static void show(
-      BuildContext context, TaskExpertService service, int serviceId) {
+      BuildContext context, TaskExpertService service, int serviceId,
+      {int? preselectedSlotId}) {
     final bloc = context.read<TaskExpertBloc>();
     SheetAdaptation.showAdaptiveModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       showDragHandle: false,
-      builder: (_) => _ApplyServiceSheet(service: service, serviceId: serviceId, bloc: bloc),
+      builder: (_) => _ApplyServiceSheet(
+        service: service,
+        serviceId: serviceId,
+        bloc: bloc,
+        preselectedSlotId: preselectedSlotId,
+      ),
     );
   }
 
@@ -1822,7 +1953,7 @@ class _ApplyServiceSheetState extends State<_ApplyServiceSheet> {
   bool _showCounterPrice = false;
   bool _isFlexibleTime = false;
   DateTime? _selectedDeadline;
-  int? _selectedTimeSlotId;
+  late int? _selectedTimeSlotId = widget.preselectedSlotId;
 
   @override
   void dispose() {
@@ -2175,9 +2306,9 @@ class _ApplyServiceSheetState extends State<_ApplyServiceSheet> {
                         prev.isSubmitting != curr.isSubmitting,
                     builder: (context, state) {
                       final canSubmit = !state.isSubmitting &&
-                          (widget.service.hasTimeSlots
-                              ? _selectedTimeSlotId != null
-                              : (_isFlexibleTime || _selectedDeadline != null));
+                          (_selectedTimeSlotId != null ||
+                              _isFlexibleTime ||
+                              _selectedDeadline != null);
                       return SizedBox(
                         width: double.infinity,
                         height: 54,
@@ -2306,9 +2437,9 @@ class _ApplyServiceSheetState extends State<_ApplyServiceSheet> {
             counterPrice: counterPrice,
             timeSlotId: _selectedTimeSlotId,
             isFlexibleTime:
-                widget.service.hasTimeSlots ? false : _isFlexibleTime,
+                _selectedTimeSlotId != null ? false : _isFlexibleTime,
             preferredDeadline:
-                widget.service.hasTimeSlots ? null : deadline,
+                _selectedTimeSlotId != null ? null : deadline,
           ),
         );
   }

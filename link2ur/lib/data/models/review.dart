@@ -14,6 +14,8 @@ class Review extends Equatable {
     this.comment,
     this.createdAt,
     this.isAnonymous = false,
+    this.replyContent,
+    this.replyAt,
   });
 
   final int id;
@@ -24,6 +26,10 @@ class Review extends Equatable {
   final String? comment;
   final DateTime? createdAt;
   final bool isAnonymous;
+  final String? replyContent;
+  final DateTime? replyAt;
+
+  bool get hasReply => replyContent != null && replyContent!.isNotEmpty;
 
   factory Review.fromJson(Map<String, dynamic> json) {
     return Review(
@@ -39,11 +45,15 @@ class Review extends Equatable {
           ? DateTime.tryParse(json['created_at'])
           : null,
       isAnonymous: parseBool(json['is_anonymous']),
+      replyContent: json['reply_content'] as String?,
+      replyAt: json['reply_at'] != null
+          ? DateTime.tryParse(json['reply_at'].toString())
+          : null,
     );
   }
 
   @override
-  List<Object?> get props => [id, taskId, rating, isAnonymous];
+  List<Object?> get props => [id, taskId, rating, isAnonymous, replyContent];
 }
 
 /// 创建评价请求

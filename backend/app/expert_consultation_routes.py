@@ -163,6 +163,14 @@ async def apply_for_service(
         .where(models.TaskExpertService.id == service_id)
         .values(application_count=models.TaskExpertService.application_count + 1)
     )
+
+    # 拼单：增加时间段参与人数
+    if time_slot_id:
+        await db.execute(
+            update(models.ServiceTimeSlot)
+            .where(models.ServiceTimeSlot.id == time_slot_id)
+            .values(current_participants=models.ServiceTimeSlot.current_participants + 1)
+        )
     await db.commit()
     await db.refresh(application)
 
@@ -240,6 +248,7 @@ async def create_consultation(
         poster_id=current_user.id,
         status="consulting",
         task_level="expert",
+        expert_service_id=service.id,
     )
     db.add(consulting_task)
     await db.flush()  # 获取 task.id

@@ -1298,9 +1298,11 @@ def _get_task_detail_legacy(
                 ).first()
                 is_applicant = application is not None
             
-            # 咨询类任务：服务所有者通过 expert_service_id 反查
+            # 咨询/服务类任务：服务所有者通过 expert_service_id 或 ServiceApplication 反查
             is_service_owner = False
             if not is_poster and not is_taker and not is_participant and not is_applicant:
+                from app.models_expert import ExpertMember
+                # 路径 1: task.expert_service_id → 服务表
                 if task.expert_service_id:
                     svc = db.query(models.TaskExpertService).filter(
                         models.TaskExpertService.id == task.expert_service_id
@@ -1309,14 +1311,28 @@ def _get_task_detail_legacy(
                         if svc.user_id and str(svc.user_id) == user_id_str:
                             is_service_owner = True
                         elif svc.expert_id:
-                            from app.models_expert import ExpertMember
-                            member = db.query(ExpertMember).filter(
-                                and_(
-                                    ExpertMember.expert_id == svc.expert_id,
-                                    ExpertMember.user_id == user_id_str,
-                                    ExpertMember.status == "active",
-                                )
-                            ).first()
+                            member = db.query(ExpertMember).filter(and_(
+                                ExpertMember.expert_id == svc.expert_id,
+                                ExpertMember.user_id == user_id_str,
+                                ExpertMember.status == "active",
+                            )).first()
+                            if member:
+                                is_service_owner = True
+
+                # 路径 2: ServiceApplication.task_id 反查（兼容旧数据无 expert_service_id）
+                if not is_service_owner:
+                    app = db.query(models.ServiceApplication).filter(
+                        models.ServiceApplication.task_id == task_id
+                    ).first()
+                    if app:
+                        if app.service_owner_id and str(app.service_owner_id) == user_id_str:
+                            is_service_owner = True
+                        elif app.new_expert_id:
+                            member = db.query(ExpertMember).filter(and_(
+                                ExpertMember.expert_id == app.new_expert_id,
+                                ExpertMember.user_id == user_id_str,
+                                ExpertMember.status == "active",
+                            )).first()
                             if member:
                                 is_service_owner = True
 

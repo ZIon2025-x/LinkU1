@@ -63,6 +63,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonClear => 'Clear';
 
   @override
+  String get commonPerson => 'person';
+
+  @override
   String get commonSubmit => 'Submit';
 
   @override
@@ -3342,14 +3345,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get activityDetails => 'Details';
 
   @override
-  String get activitySelectTimeSlot => 'Select Time Slot';
+  String get activitySelectTimeSlot => 'Select Group Deal';
 
   @override
   String get activityNoAvailableTime => 'No Available Time';
 
   @override
   String get activityNoAvailableTimeMessage =>
-      'No available time slots at the moment';
+      'No group deals available at the moment';
 
   @override
   String get activityParticipateTime => 'Participate Time';
@@ -3380,7 +3383,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get activityMultipleTimeSlots =>
-      'Supports multiple time slot bookings';
+      'Supports multiple group deal bookings';
 
   @override
   String get activityDeadline => 'Deadline';
@@ -3763,10 +3766,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskExpertServiceMenu => 'Service Menu';
 
   @override
-  String get taskExpertOptionalTimeSlots => 'Optional Time Slots';
+  String get taskExpertOptionalTimeSlots => 'Group Deals';
 
   @override
-  String get taskExpertNoAvailableSlots => 'No Available Time Slots';
+  String get taskExpertNoAvailableSlots => 'No Group Deals Available';
 
   @override
   String get taskExpertApplyService => 'Apply for Service';
@@ -8793,7 +8796,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get serviceSelectDeadline => 'Select Deadline';
 
   @override
-  String get serviceApplyOtherSlot => 'Apply for Another Slot';
+  String get serviceApplyOtherSlot => 'Apply for Another Group Deal';
 
   @override
   String get publishTitle => 'Publish';
@@ -10608,7 +10611,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get expertDashboardTabApplications => 'Applications';
 
   @override
-  String get expertDashboardTabTimeSlots => 'Time Slots';
+  String get expertDashboardTabTimeSlots => 'Group Deals';
 
   @override
   String get expertDashboardTabSchedule => 'Schedule';
@@ -10676,7 +10679,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get expertDashboardPendingApplications => 'Pending';
 
   @override
-  String get expertDashboardUpcomingSlots => 'Upcoming Slots';
+  String get expertDashboardUpcomingSlots => 'Upcoming Group Deals';
 
   @override
   String get expertServicesEmpty => 'No services yet';
@@ -10776,14 +10779,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'Adding an English version reaches more users';
 
   @override
-  String get expertTimeSlotsEmpty => 'No time slots';
+  String get expertTimeSlotsEmpty => 'No group deals';
 
   @override
   String get expertTimeSlotsEmptyMessage =>
-      'Select a service and add time slots';
+      'Select a service and add group deals';
 
   @override
-  String get expertTimeSlotCreate => 'Add Time Slot';
+  String get expertTimeSlotCreate => 'Add Group Deal';
 
   @override
   String get expertTimeSlotDate => 'Date';
@@ -10801,13 +10804,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get expertTimeSlotMaxParticipants => 'Max Participants';
 
   @override
-  String get expertTimeSlotCreated => 'Time slot added';
+  String get expertTimeSlotCreated => 'Group deal added';
 
   @override
-  String get expertTimeSlotDeleted => 'Time slot removed';
+  String get expertTimeSlotDeleted => 'Group deal removed';
 
   @override
-  String get expertTimeSlotConfirmDelete => 'Remove this time slot?';
+  String get expertTimeSlotConfirmDelete => 'Remove this group deal?';
 
   @override
   String get expertTimeSlotExpired => 'Expired';
@@ -10901,7 +10904,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get expertTimeSlotOutsideHoursMessage =>
-      'This time slot falls outside your business hours or on a closed date. Create anyway?';
+      'This group deal falls outside your business hours or on a closed date. Create anyway?';
 
   @override
   String get expertTimeSlotCreateAnyway => 'Create anyway';
@@ -11787,7 +11790,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get fleaMarketCurrentlyRented =>
-      'Currently rented out. You can still apply for a future time slot.';
+      'Currently rented out. You can still apply for a future group deal.';
 
   @override
   String get fleaMarketErrorRentalRequestFailed =>
@@ -12329,7 +12332,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get expertTimeSlotFull =>
-      'This time slot is full. Please pick another one.';
+      'This group deal is full. Please pick another one.';
 
   @override
   String get expertStripeNotReady =>

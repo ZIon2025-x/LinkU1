@@ -456,10 +456,14 @@ async def owner_approve_application(
         raise HTTPException(status_code=400, detail="服务未上架，无法创建任务")
 
     # 确定最终价格
+    # 优先级: 议价达成 > 用户出价 > 时间段拼单价 > 服务基础价
     if application.status == "price_agreed" and application.expert_counter_price is not None:
         price = float(application.expert_counter_price)
     elif application.negotiated_price is not None:
         price = float(application.negotiated_price)
+    elif application.time_slot_id:
+        slot = await db.get(models.ServiceTimeSlot, application.time_slot_id)
+        price = float(slot.price_per_participant) if slot and slot.price_per_participant else float(service.base_price)
     else:
         price = float(service.base_price)
 
@@ -579,6 +583,20 @@ async def owner_approve_application(
 
         db.add(new_task)
         await db.flush()
+
+    # 拼单：创建任务-时间段关联（供自动完成定时器使用）
+    if application.time_slot_id:
+        slot = await db.get(models.ServiceTimeSlot, application.time_slot_id)
+        if slot:
+            relation = models.TaskTimeSlotRelation(
+                task_id=new_task.id,
+                time_slot_id=slot.id,
+                relation_mode='fixed',
+                slot_start_datetime=slot.slot_start_datetime,
+                slot_end_datetime=slot.slot_end_datetime,
+            )
+            db.add(relation)
+            await db.flush()
 
     # 创建支付意图
     import stripe

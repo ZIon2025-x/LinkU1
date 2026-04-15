@@ -909,6 +909,8 @@ class ReviewPublicOut(BaseModel):
     rating: float
     comment: Optional[str] = None
     created_at: datetime.datetime
+    reply_content: Optional[str] = None
+    reply_at: Optional[datetime.datetime] = None
 
     class Config:
         from_attributes = True
@@ -2681,9 +2683,9 @@ class ServiceTimeSlotOut(BaseModel):
         else:
             slot_end_utc = slot_end_utc.astimezone(timezone.utc)
         
-        # 检查时间段是否已过期（开始时间是否已过当前UTC时间）
+        # 检查拼单是否已过期（结束时间已过当前UTC时间）
         current_utc = get_utc_time()
-        is_expired = slot_start_utc < current_utc
+        is_expired = slot_end_utc < current_utc
         
         # 查询关联的活动信息（如果时间段被活动使用）
         activity_id = None

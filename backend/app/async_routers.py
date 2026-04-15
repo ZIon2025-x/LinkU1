@@ -467,34 +467,46 @@ async def get_task_by_id(
                 application_result = await db.execute(application_query)
                 is_applicant = application_result.scalar_one_or_none() is not None
 
-            # 咨询类任务：服务所有者通过 expert_service_id 反查
+            # 咨询/服务类任务：服务所有者通过 expert_service_id 或 ServiceApplication 反查
             is_service_owner = False
             if not is_poster and not is_taker and not is_participant and not is_applicant:
+                from app.models_expert import ExpertMember
+                # 路径 1: task.expert_service_id → 服务表
                 if task.expert_service_id:
-                    svc_query = select(models.TaskExpertService.user_id).where(
-                        models.TaskExpertService.id == task.expert_service_id
+                    svc_result = await db.execute(
+                        select(models.TaskExpertService.user_id, models.TaskExpertService.expert_id)
+                        .where(models.TaskExpertService.id == task.expert_service_id)
                     )
-                    svc_result = await db.execute(svc_query)
-                    svc_owner_id = svc_result.scalar_one_or_none()
-                    if svc_owner_id and str(svc_owner_id) == user_id_str:
-                        is_service_owner = True
-                    if not is_service_owner:
-                        svc_expert_query = select(models.TaskExpertService.expert_id).where(
-                            models.TaskExpertService.id == task.expert_service_id
-                        )
-                        svc_expert_result = await db.execute(svc_expert_query)
-                        svc_expert_id = svc_expert_result.scalar_one_or_none()
-                        if svc_expert_id:
-                            from app.models_expert import ExpertMember
-                            member_query = select(ExpertMember).where(
-                                and_(
-                                    ExpertMember.expert_id == svc_expert_id,
-                                    ExpertMember.user_id == user_id_str,
-                                    ExpertMember.status == "active",
-                                )
-                            )
-                            member_result = await db.execute(member_query)
-                            if member_result.scalar_one_or_none() is not None:
+                    svc_row = svc_result.first()
+                    if svc_row:
+                        if svc_row[0] and str(svc_row[0]) == user_id_str:
+                            is_service_owner = True
+                        elif svc_row[1]:
+                            m = await db.execute(select(ExpertMember.id).where(and_(
+                                ExpertMember.expert_id == svc_row[1],
+                                ExpertMember.user_id == user_id_str,
+                                ExpertMember.status == "active",
+                            )).limit(1))
+                            if m.scalar_one_or_none() is not None:
+                                is_service_owner = True
+
+                # 路径 2: ServiceApplication.task_id 反查（兼容旧数据无 expert_service_id）
+                if not is_service_owner:
+                    app_result = await db.execute(
+                        select(models.ServiceApplication.service_owner_id, models.ServiceApplication.new_expert_id)
+                        .where(models.ServiceApplication.task_id == task_id).limit(1)
+                    )
+                    app_row = app_result.first()
+                    if app_row:
+                        if app_row[0] and str(app_row[0]) == user_id_str:
+                            is_service_owner = True
+                        elif app_row[1]:
+                            m = await db.execute(select(ExpertMember.id).where(and_(
+                                ExpertMember.expert_id == app_row[1],
+                                ExpertMember.user_id == user_id_str,
+                                ExpertMember.status == "active",
+                            )).limit(1))
+                            if m.scalar_one_or_none() is not None:
                                 is_service_owner = True
 
             if not is_poster and not is_taker and not is_participant and not is_applicant and not is_service_owner:

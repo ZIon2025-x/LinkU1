@@ -52,6 +52,71 @@ async def _is_team_member_of_application(
     return result.scalar_one_or_none() is not None
 
 
+async def _check_is_service_owner(
+    db: AsyncSession, task: models.Task, user_id: str
+) -> bool:
+    """检查用户是否为该任务关联服务的所有者或团队成员。
+
+    两条反查路径:
+    1. task.expert_service_id → TaskExpertService.user_id / expert_id
+    2. ServiceApplication.task_id → service_owner_id / new_expert_id
+    """
+    from app.models_expert import ExpertMember
+
+    # 路径 1: 通过 task.expert_service_id
+    if task.expert_service_id:
+        svc_result = await db.execute(
+            select(
+                models.TaskExpertService.user_id,
+                models.TaskExpertService.expert_id,
+            ).where(models.TaskExpertService.id == task.expert_service_id)
+        )
+        svc_row = svc_result.first()
+        if svc_row:
+            svc_user_id, svc_expert_id = svc_row
+            if svc_user_id and str(svc_user_id) == user_id:
+                return True
+            if svc_expert_id:
+                member = await db.execute(
+                    select(ExpertMember.id).where(
+                        and_(
+                            ExpertMember.expert_id == svc_expert_id,
+                            ExpertMember.user_id == user_id,
+                            ExpertMember.status == "active",
+                        )
+                    ).limit(1)
+                )
+                if member.scalar_one_or_none() is not None:
+                    return True
+
+    # 路径 2: 通过 ServiceApplication.task_id 反查（兼容旧数据没有 expert_service_id 的情况）
+    app_result = await db.execute(
+        select(
+            models.ServiceApplication.service_owner_id,
+            models.ServiceApplication.new_expert_id,
+        ).where(models.ServiceApplication.task_id == task.id).limit(1)
+    )
+    app_row = app_result.first()
+    if app_row:
+        svc_owner_id, new_expert_id = app_row
+        if svc_owner_id and str(svc_owner_id) == user_id:
+            return True
+        if new_expert_id:
+            member = await db.execute(
+                select(ExpertMember.id).where(
+                    and_(
+                        ExpertMember.expert_id == new_expert_id,
+                        ExpertMember.user_id == user_id,
+                        ExpertMember.status == "active",
+                    )
+                ).limit(1)
+            )
+            if member.scalar_one_or_none() is not None:
+                return True
+
+    return False
+
+
 # 认证依赖（复用现有的认证逻辑）
 async def get_current_user_secure_async_csrf(
     request: Request,
@@ -673,36 +738,10 @@ async def get_task_messages(
                 participant_result = await db.execute(participant_query)
                 is_participant = participant_result.scalar_one_or_none() is not None
         
-        # 咨询类任务：服务所有者不是 poster/taker，通过 expert_service_id 反查
+        # 咨询/服务类任务：服务所有者不是 poster/taker，需要反查
         is_service_owner = False
         if not is_poster and not is_taker and not is_participant:
-            if task.expert_service_id:
-                svc_query = select(models.TaskExpertService.user_id).where(
-                    models.TaskExpertService.id == task.expert_service_id
-                )
-                svc_result = await db.execute(svc_query)
-                svc_owner_id = svc_result.scalar_one_or_none()
-                if svc_owner_id and str(svc_owner_id) == str(current_user.id):
-                    is_service_owner = True
-                # 也检查团队成员
-                if not is_service_owner:
-                    svc_expert_query = select(models.TaskExpertService.expert_id).where(
-                        models.TaskExpertService.id == task.expert_service_id
-                    )
-                    svc_expert_result = await db.execute(svc_expert_query)
-                    svc_expert_id = svc_expert_result.scalar_one_or_none()
-                    if svc_expert_id:
-                        from app.models_expert import ExpertMember
-                        member_query = select(ExpertMember).where(
-                            and_(
-                                ExpertMember.expert_id == svc_expert_id,
-                                ExpertMember.user_id == current_user.id,
-                                ExpertMember.status == "active",
-                            )
-                        )
-                        member_result = await db.execute(member_query)
-                        if member_result.scalar_one_or_none() is not None:
-                            is_service_owner = True
+            is_service_owner = await _check_is_service_owner(db, task, current_user.id)
 
         if not is_poster and not is_taker and not is_participant and not is_service_owner:
             # 如果提供了 application_id，允许该申请的申请者访问

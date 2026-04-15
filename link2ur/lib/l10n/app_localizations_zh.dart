@@ -63,6 +63,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get commonClear => '清空';
 
   @override
+  String get commonPerson => '人';
+
+  @override
   String get commonSubmit => '提交';
 
   @override
@@ -3201,13 +3204,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get activityDetails => '详细信息';
 
   @override
-  String get activitySelectTimeSlot => '选择时间段';
+  String get activitySelectTimeSlot => '选择拼单';
 
   @override
   String get activityNoAvailableTime => '暂无可用时间';
 
   @override
-  String get activityNoAvailableTimeMessage => '目前没有可选的时间段';
+  String get activityNoAvailableTimeMessage => '目前没有可选的拼单';
 
   @override
   String get activityParticipateTime => '参与时间';
@@ -3237,7 +3240,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get activityTimeArrangement => '时间安排';
 
   @override
-  String get activityMultipleTimeSlots => '支持多个时间段预约';
+  String get activityMultipleTimeSlots => '支持多个拼单预约';
 
   @override
   String get activityDeadline => '截止时间';
@@ -3615,10 +3618,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskExpertServiceMenu => '服务菜单';
 
   @override
-  String get taskExpertOptionalTimeSlots => '可选时间段';
+  String get taskExpertOptionalTimeSlots => '可选拼单';
 
   @override
-  String get taskExpertNoAvailableSlots => '暂无可用时间段';
+  String get taskExpertNoAvailableSlots => '暂无可用拼单';
 
   @override
   String get taskExpertApplyService => '申请服务';
@@ -8435,7 +8438,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get serviceSelectDeadline => '选择期限';
 
   @override
-  String get serviceApplyOtherSlot => '申请其他时间段';
+  String get serviceApplyOtherSlot => '申请其他拼单';
 
   @override
   String get publishTitle => '发布';
@@ -10179,7 +10182,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get expertDashboardTabApplications => '申请管理';
 
   @override
-  String get expertDashboardTabTimeSlots => '时间段';
+  String get expertDashboardTabTimeSlots => '拼单';
 
   @override
   String get expertDashboardTabSchedule => '日程';
@@ -10245,7 +10248,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get expertDashboardPendingApplications => '待处理';
 
   @override
-  String get expertDashboardUpcomingSlots => '即将到来的时间段';
+  String get expertDashboardUpcomingSlots => '即将到来的拼单';
 
   @override
   String get expertServicesEmpty => '暂无服务';
@@ -10341,13 +10344,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get expertServiceTip3 => '添加英文版本可覆盖更多用户';
 
   @override
-  String get expertTimeSlotsEmpty => '暂无时间段';
+  String get expertTimeSlotsEmpty => '暂无拼单';
 
   @override
-  String get expertTimeSlotsEmptyMessage => '选择服务后添加时间段';
+  String get expertTimeSlotsEmptyMessage => '选择服务后添加拼单';
 
   @override
-  String get expertTimeSlotCreate => '添加时间段';
+  String get expertTimeSlotCreate => '添加拼单';
 
   @override
   String get expertTimeSlotDate => '日期';
@@ -10365,13 +10368,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get expertTimeSlotMaxParticipants => '最大人数';
 
   @override
-  String get expertTimeSlotCreated => '时间段已添加';
+  String get expertTimeSlotCreated => '拼单已添加';
 
   @override
-  String get expertTimeSlotDeleted => '时间段已移除';
+  String get expertTimeSlotDeleted => '拼单已移除';
 
   @override
-  String get expertTimeSlotConfirmDelete => '移除此时间段？';
+  String get expertTimeSlotConfirmDelete => '移除此拼单？';
 
   @override
   String get expertTimeSlotExpired => '已过期';
@@ -10461,7 +10464,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get expertTimeSlotOutsideHoursTitle => '不在营业时间内';
 
   @override
-  String get expertTimeSlotOutsideHoursMessage => '该时间段不在营业时间内或落在休息日。是否仍要创建？';
+  String get expertTimeSlotOutsideHoursMessage => '该拼单不在营业时间内或落在休息日。是否仍要创建？';
 
   @override
   String get expertTimeSlotCreateAnyway => '仍然创建';
@@ -11322,7 +11325,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get fleaMarketRentalRequestSubmitted => '已提交申请';
 
   @override
-  String get fleaMarketCurrentlyRented => '当前已被租出，你仍可申请未来的时间段。';
+  String get fleaMarketCurrentlyRented => '当前已被租出，你仍可申请未来的拼单。';
 
   @override
   String get fleaMarketErrorRentalRequestFailed => '发送租用申请失败';
@@ -11839,7 +11842,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get expertTeamReviewReplied => '回复成功';
 
   @override
-  String get expertTimeSlotFull => '该时间段已满,请选择其他时间段';
+  String get expertTimeSlotFull => '该拼单已满，请选择其他拼单';
 
   @override
   String get expertStripeNotReady => '该团队尚未完成 Stripe 入驻,暂时无法接单';
@@ -12892,6 +12895,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get commonClear => '清空';
+
+  @override
+  String get commonPerson => '人';
 
   @override
   String get commonSubmit => '提交';
@@ -16032,13 +16038,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get activityDetails => '詳細信息';
 
   @override
-  String get activitySelectTimeSlot => '選擇時間段';
+  String get activitySelectTimeSlot => '選擇拼單';
 
   @override
   String get activityNoAvailableTime => '暫無可用時間';
 
   @override
-  String get activityNoAvailableTimeMessage => '目前沒有可選的時間段';
+  String get activityNoAvailableTimeMessage => '目前沒有可選的拼單';
 
   @override
   String get activityParticipateTime => '參與時間';
@@ -16068,7 +16074,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get activityTimeArrangement => '時間安排';
 
   @override
-  String get activityMultipleTimeSlots => '支持多個時間段預約';
+  String get activityMultipleTimeSlots => '支持多個拼單預約';
 
   @override
   String get activityDeadline => '截止時間';
@@ -16446,10 +16452,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get taskExpertServiceMenu => '服務菜單';
 
   @override
-  String get taskExpertOptionalTimeSlots => '可選時間段';
+  String get taskExpertOptionalTimeSlots => '可選拼單';
 
   @override
-  String get taskExpertNoAvailableSlots => '暫無可用時間段';
+  String get taskExpertNoAvailableSlots => '暫無可用拼單';
 
   @override
   String get taskExpertApplyService => '申請服務';
@@ -21266,7 +21272,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get serviceSelectDeadline => '選擇期限';
 
   @override
-  String get serviceApplyOtherSlot => '申請其他時間段';
+  String get serviceApplyOtherSlot => '申請其他拼單';
 
   @override
   String get publishTitle => '發佈';
@@ -23010,7 +23016,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get expertDashboardTabApplications => '申請管理';
 
   @override
-  String get expertDashboardTabTimeSlots => '時間段';
+  String get expertDashboardTabTimeSlots => '拼單';
 
   @override
   String get expertDashboardTabSchedule => '日程';
@@ -23076,7 +23082,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get expertDashboardPendingApplications => '待處理';
 
   @override
-  String get expertDashboardUpcomingSlots => '即將到來的時間段';
+  String get expertDashboardUpcomingSlots => '即將到來的拼單';
 
   @override
   String get expertServicesEmpty => '暫無服務';
@@ -23172,13 +23178,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get expertServiceTip3 => '新增英文版本可覆蓋更多使用者';
 
   @override
-  String get expertTimeSlotsEmpty => '暫無時間段';
+  String get expertTimeSlotsEmpty => '暫無拼單';
 
   @override
-  String get expertTimeSlotsEmptyMessage => '選擇服務後新增時間段';
+  String get expertTimeSlotsEmptyMessage => '選擇服務後新增拼單';
 
   @override
-  String get expertTimeSlotCreate => '新增時間段';
+  String get expertTimeSlotCreate => '新增拼單';
 
   @override
   String get expertTimeSlotDate => '日期';
@@ -23196,13 +23202,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get expertTimeSlotMaxParticipants => '最大人數';
 
   @override
-  String get expertTimeSlotCreated => '時間段已新增';
+  String get expertTimeSlotCreated => '拼單已新增';
 
   @override
-  String get expertTimeSlotDeleted => '時間段已移除';
+  String get expertTimeSlotDeleted => '拼單已移除';
 
   @override
-  String get expertTimeSlotConfirmDelete => '移除此時間段？';
+  String get expertTimeSlotConfirmDelete => '移除此拼單？';
 
   @override
   String get expertTimeSlotExpired => '已過期';
@@ -24153,7 +24159,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get fleaMarketRentalRequestSubmitted => '已提交申請';
 
   @override
-  String get fleaMarketCurrentlyRented => '當前已被租出，你仍可申請未來的時間段。';
+  String get fleaMarketCurrentlyRented => '當前已被租出，你仍可申請未來的拼單。';
 
   @override
   String get fleaMarketErrorRentalRequestFailed => '發送租用申請失敗';
@@ -24670,7 +24676,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get expertTeamReviewReplied => '回覆成功';
 
   @override
-  String get expertTimeSlotFull => '該時間段已滿,請選擇其他時間段';
+  String get expertTimeSlotFull => '該拼單已滿,請選擇其他拼單';
 
   @override
   String get expertStripeNotReady => '該團隊尚未完成 Stripe 入駐,暫時無法接單';
