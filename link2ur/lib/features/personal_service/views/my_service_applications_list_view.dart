@@ -78,6 +78,12 @@ class _ContentState extends State<_Content> {
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 _FilterChip(
+                  label: l10n.expertApplicationStatusPriceAgreed,
+                  selected: _selectedFilter == 'price_agreed',
+                  onTap: () => _applyFilter('price_agreed'),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                _FilterChip(
                   label: l10n.myServiceApplicationsFilterApproved,
                   selected: _selectedFilter == 'approved',
                   onTap: () => _applyFilter('approved'),
@@ -87,6 +93,12 @@ class _ContentState extends State<_Content> {
                   label: l10n.myServiceApplicationsFilterRejected,
                   selected: _selectedFilter == 'rejected',
                   onTap: () => _applyFilter('rejected'),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                _FilterChip(
+                  label: l10n.expertApplicationStatusCancelled,
+                  selected: _selectedFilter == 'cancelled',
+                  onTap: () => _applyFilter('cancelled'),
                 ),
               ],
             ),
@@ -277,11 +289,14 @@ class _MyApplicationCard extends StatelessWidget {
   }
 
   bool get _canRespondCounterOffer =>
-      application['status'] == 'negotiating';
+      application['status'] == 'negotiating' &&
+      application['expert_counter_price'] != null;
 
   bool get _canCancel {
     final status = application['status'] as String?;
-    return status == 'pending' || status == 'negotiating';
+    return status == 'pending' ||
+        status == 'negotiating' ||
+        status == 'price_agreed';
   }
 
   @override
