@@ -131,15 +131,6 @@ class RentalLoadDetail extends FleaMarketRentalEvent {
   List<Object?> get props => [rentalId];
 }
 
-class RentalLoadMyRentals extends FleaMarketRentalEvent {
-  const RentalLoadMyRentals({this.page = 1});
-
-  final int page;
-
-  @override
-  List<Object?> get props => [page];
-}
-
 class RentalClearPaymentData extends FleaMarketRentalEvent {
   const RentalClearPaymentData();
 }
@@ -156,10 +147,6 @@ class FleaMarketRentalState extends Equatable {
     this.isLoadingRequests = false,
     this.isLoadingDetail = false,
     this.currentRental,
-    this.myRentals = const [],
-    this.isLoadingMyRentals = false,
-    this.hasMoreRentals = true,
-    this.rentalsPage = 1,
     this.isSubmitting = false,
     this.actionMessage,
     this.errorMessage,
@@ -170,10 +157,6 @@ class FleaMarketRentalState extends Equatable {
   final bool isLoadingRequests;
   final bool isLoadingDetail;
   final FleaMarketRental? currentRental;
-  final List<FleaMarketRental> myRentals;
-  final bool isLoadingMyRentals;
-  final bool hasMoreRentals;
-  final int rentalsPage;
   final bool isSubmitting;
   final String? actionMessage;
   final String? errorMessage;
@@ -186,10 +169,6 @@ class FleaMarketRentalState extends Equatable {
     bool? isLoadingDetail,
     FleaMarketRental? currentRental,
     bool clearCurrentRental = false,
-    List<FleaMarketRental>? myRentals,
-    bool? isLoadingMyRentals,
-    bool? hasMoreRentals,
-    int? rentalsPage,
     bool? isSubmitting,
     String? actionMessage,
     String? errorMessage,
@@ -203,10 +182,6 @@ class FleaMarketRentalState extends Equatable {
       currentRental: clearCurrentRental
           ? null
           : (currentRental ?? this.currentRental),
-      myRentals: myRentals ?? this.myRentals,
-      isLoadingMyRentals: isLoadingMyRentals ?? this.isLoadingMyRentals,
-      hasMoreRentals: hasMoreRentals ?? this.hasMoreRentals,
-      rentalsPage: rentalsPage ?? this.rentalsPage,
       isSubmitting: isSubmitting ?? this.isSubmitting,
       actionMessage: actionMessage,
       errorMessage: errorMessage,
@@ -222,10 +197,6 @@ class FleaMarketRentalState extends Equatable {
         isLoadingRequests,
         isLoadingDetail,
         currentRental,
-        myRentals,
-        isLoadingMyRentals,
-        hasMoreRentals,
-        rentalsPage,
         isSubmitting,
         actionMessage,
         errorMessage,
@@ -249,7 +220,6 @@ class FleaMarketRentalBloc
     on<RentalRenterConfirmReturn>(_onRenterConfirmReturn);
     on<RentalConfirmReturn>(_onConfirmReturn);
     on<RentalLoadDetail>(_onLoadDetail);
-    on<RentalLoadMyRentals>(_onLoadMyRentals);
     on<RentalClearPaymentData>(_onClearPaymentData);
     on<RentalClearActionMessage>(_onClearActionMessage);
   }
@@ -495,35 +465,6 @@ class FleaMarketRentalBloc
       AppLogger.error('Failed to load rental detail', e);
       emit(state.copyWith(
         isLoadingDetail: false,
-        errorMessage: e.toString(),
-      ));
-    }
-  }
-
-  Future<void> _onLoadMyRentals(
-    RentalLoadMyRentals event,
-    Emitter<FleaMarketRentalState> emit,
-  ) async {
-    final isFirstPage = event.page == 1;
-
-    if (isFirstPage) {
-      emit(state.copyWith(isLoadingMyRentals: true));
-    }
-
-    try {
-      final rentals = await _repository.getMyRentals(page: event.page);
-      final hasMore = rentals.length >= 20; // 默认 pageSize=20
-
-      emit(state.copyWith(
-        isLoadingMyRentals: false,
-        myRentals: isFirstPage ? rentals : [...state.myRentals, ...rentals],
-        hasMoreRentals: hasMore,
-        rentalsPage: event.page,
-      ));
-    } catch (e) {
-      AppLogger.error('Failed to load my rentals', e);
-      emit(state.copyWith(
-        isLoadingMyRentals: false,
         errorMessage: e.toString(),
       ));
     }
