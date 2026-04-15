@@ -12800,6 +12800,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get expertTeamBio => 'Team Bio';
 
   @override
+  String get expertInfo => 'Expert Info';
+
+  @override
+  String get expertInfoGallery => 'Gallery';
+
+  @override
+  String get expertInfoLocation => 'Location';
+
+  @override
   String get expertTeamApplicationMessage => 'Application Message';
 
   @override
@@ -13190,7 +13199,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get expertTeamOfficialBadge => 'Official';
 
   @override
-  String get expertTeamForumSection => 'Team Forum';
+  String get expertTeamForumSection => 'Expert Updates';
 
   @override
   String get expertTeamStatMembers => 'Members';

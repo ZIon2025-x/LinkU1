@@ -1,12 +1,22 @@
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/config/app_config.dart';
 import '../../../core/design/app_colors.dart';
+import '../../../core/design/app_radius.dart';
+import '../../../core/design/app_spacing.dart';
+import '../../../core/router/go_router_extensions.dart';
 import '../../../core/utils/service_category_helper.dart';
 import '../../../core/utils/share_util.dart';
+import '../../../core/utils/sheet_adaptation.dart';
 import '../../../core/utils/error_localizer.dart';
+import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/haptic_feedback.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
@@ -16,8 +26,10 @@ import '../../../core/widgets/loading_view.dart';
 import '../../../data/models/activity.dart';
 import '../../../data/models/expert_team.dart';
 import '../../../data/models/expert_closed_date.dart';
+import '../../../data/models/forum.dart';
 import '../../../data/repositories/activity_repository.dart';
 import '../../../data/repositories/expert_team_repository.dart';
+import '../../../data/repositories/forum_repository.dart';
 import '../../../data/repositories/task_expert_repository.dart';
 import '../../../data/services/storage_service.dart';
 import '../../task_expert/views/activity_price_widget.dart';
@@ -136,16 +148,49 @@ class _ExpertTeamDetailBody extends StatelessWidget {
               scrolledUnderElevation: 0,
               iconTheme: const IconThemeData(color: Colors.white),
               actions: [
-                IconButton(
-                  icon: const Icon(Icons.share_outlined),
-                  onPressed: () {
-                    ShareUtil.share(
-                      title: team.displayName(Localizations.localeOf(context).languageCode),
-                      description: team.displayBio(Localizations.localeOf(context).languageCode) ?? '',
-                      url: ShareUtil.expertTeamUrl(team.id),
-                      imageUrl: team.avatar,
-                    );
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert),
+                  onSelected: (value) {
+                    if (value == 'share') {
+                      final locale =
+                          Localizations.localeOf(context).languageCode;
+                      ShareUtil.share(
+                        title: team.displayName(locale),
+                        description: team.displayBio(locale) ?? '',
+                        url: ShareUtil.expertTeamUrl(team.id),
+                        imageUrl: team.avatar,
+                      );
+                    } else if (value == 'info') {
+                      SheetAdaptation.showAdaptiveModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        builder: (sheetContext) =>
+                            _ExpertInfoSheet(team: team),
+                      );
+                    }
                   },
+                  itemBuilder: (menuContext) => [
+                    PopupMenuItem<String>(
+                      value: 'share',
+                      child: Row(
+                        children: [
+                          const Icon(Icons.share_outlined, size: 20),
+                          const SizedBox(width: 12),
+                          Text(menuContext.l10n.commonShare),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem<String>(
+                      value: 'info',
+                      child: Row(
+                        children: [
+                          const Icon(Icons.info_outline, size: 20),
+                          const SizedBox(width: 12),
+                          Text(menuContext.l10n.expertInfo),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -206,7 +251,6 @@ class _DetailContent extends StatelessWidget {
               children: [
                 _BioSection(team: team),
                 const SizedBox(height: 12),
-                _TagsSection(team: team),
                 if (state.services.isNotEmpty) ...[
                   _ServicesSection(
                     services: state.services,
@@ -770,15 +814,6 @@ class _BioSectionState extends State<_BioSection> {
                 ),
               ],
             ),
-            if (widget.team.businessHours != null && widget.team.businessHours!.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              _BusinessHoursView(businessHours: widget.team.businessHours!),
-            ],
-            if (widget.team.upcomingClosedDates.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              _UpcomingClosedDatesView(
-                  entries: widget.team.upcomingClosedDates),
-            ],
           ],
         ],
       ),
@@ -1105,97 +1140,300 @@ class _InfoPill extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// 10b. Tags section — expertise + skills + achievements
+// 10b. Expert info sheet — opened from AppBar three-dot menu.
+// Shows: business hours, closed dates, expertise, skills, achievements, gallery.
 // ---------------------------------------------------------------------------
 
-class _TagsSection extends StatelessWidget {
+class _ExpertInfoSheet extends StatelessWidget {
   final ExpertTeam team;
-  const _TagsSection({required this.team});
+  const _ExpertInfoSheet({required this.team});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final langCode = Localizations.localeOf(context).languageCode;
+    final viewInsets = MediaQuery.viewInsetsOf(context);
+
+    final expertise = team.displayExpertiseAreas(langCode);
+    final skills = team.displayFeaturedSkills(langCode);
+    final achievementList = team.displayAchievements(langCode);
+    final hasBusinessHours =
+        team.businessHours != null && team.businessHours!.isNotEmpty;
+    final hasClosedDates = team.upcomingClosedDates.isNotEmpty;
+    final hasLocation = (team.location != null && team.location!.isNotEmpty) ||
+        (team.latitude != null && team.longitude != null);
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.9,
+      minChildSize: 0.4,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (ctx, scrollController) => Padding(
+        padding: EdgeInsets.only(bottom: viewInsets.bottom),
+        child: SingleChildScrollView(
+          controller: scrollController,
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16, top: 4),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Text(
+                      context.l10n.expertInfo,
+                      style: theme.textTheme.titleLarge
+                          ?.copyWith(fontWeight: FontWeight.w700),
+                      textAlign: TextAlign.center,
+                    ),
+                    Positioned(
+                      right: 0,
+                      child: IconButton(
+                        icon: const Icon(Icons.close, size: 22),
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: IconButton.styleFrom(
+                          backgroundColor: isDark
+                              ? Colors.white.withValues(alpha: 0.08)
+                              : Colors.black.withValues(alpha: 0.05),
+                          shape: const CircleBorder(),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              if (hasBusinessHours) ...[
+                _SectionCard(
+                  child: _BusinessHoursView(
+                      businessHours: team.businessHours!),
+                ),
+                const SizedBox(height: 12),
+              ],
+
+              if (hasClosedDates) ...[
+                _SectionCard(
+                  child: _UpcomingClosedDatesView(
+                      entries: team.upcomingClosedDates),
+                ),
+                const SizedBox(height: 12),
+              ],
+
+              if (expertise.isNotEmpty ||
+                  skills.isNotEmpty ||
+                  achievementList.isNotEmpty) ...[
+                _SectionCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (expertise.isNotEmpty) ...[
+                        _buildTagGroup(
+                          context,
+                          title: context.l10n.taskExpertExpertiseAreas,
+                          items: expertise,
+                          bgColor: isDark
+                              ? const Color(0x260055CC)
+                              : const Color(0xFFE8F0FE),
+                          textColor: isDark
+                              ? const Color(0xFF409CFF)
+                              : const Color(0xFF0055CC),
+                        ),
+                        if (skills.isNotEmpty || achievementList.isNotEmpty)
+                          const SizedBox(height: 10),
+                      ],
+                      if (skills.isNotEmpty) ...[
+                        _buildTagGroup(
+                          context,
+                          title: context.l10n.taskExpertFeaturedSkills,
+                          items: skills,
+                          bgColor: isDark
+                              ? const Color(0x266D28D9)
+                              : const Color(0xFFF0E6FF),
+                          textColor: isDark
+                              ? const Color(0xFFBF9FFF)
+                              : const Color(0xFF6D28D9),
+                        ),
+                        if (achievementList.isNotEmpty)
+                          const SizedBox(height: 10),
+                      ],
+                      if (achievementList.isNotEmpty)
+                        _buildTagGroup(
+                          context,
+                          title: context.l10n.taskExpertAchievements,
+                          items: achievementList
+                              .map((t) => '\u{1F3C6} $t')
+                              .toList(),
+                          bgColor: isDark
+                              ? const Color(0x1FB45309)
+                              : const Color(0xFFFFF4E5),
+                          textColor: isDark
+                              ? const Color(0xFFFFB84D)
+                              : const Color(0xFFB45309),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+
+              if (hasLocation) ...[
+                _SectionCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _SectionHeader(
+                        icon: Icons.collections_outlined,
+                        iconGradient: const [
+                          Color(0xFF34C759),
+                          Color(0xFF30B0C7),
+                        ],
+                        title: context.l10n.expertInfoGallery,
+                      ),
+                      const SizedBox(height: 12),
+                      _LocationGallery(team: team),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  static Widget _buildTagGroup(
+    BuildContext context, {
+    required String title,
+    required List<String> items,
+    required Color bgColor,
+    required Color textColor,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: isDark
+                ? AppColors.textSecondaryDark
+                : AppColors.textSecondaryLight,
+            letterSpacing: 0.3,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: items
+              .map((t) => _Tag(
+                    text: t,
+                    bgColor: bgColor,
+                    textColor: textColor,
+                  ))
+              .toList(),
+        ),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 10c. Location gallery — static map preview + address row
+// ---------------------------------------------------------------------------
+
+class _LocationGallery extends StatelessWidget {
+  final ExpertTeam team;
+  const _LocationGallery({required this.team});
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final langCode = Localizations.localeOf(context).languageCode;
-    final expertise = team.displayExpertiseAreas(langCode);
-    final skills = team.displayFeaturedSkills(langCode);
-    final achievementList = team.displayAchievements(langCode);
+    final hasCoords = team.latitude != null && team.longitude != null;
+    final hasKey = AppConfig.googleMapsKey.isNotEmpty;
+    final hasAddress = team.location != null && team.location!.isNotEmpty;
 
-    if (expertise.isEmpty && skills.isEmpty && achievementList.isEmpty) {
-      return const SizedBox.shrink();
-    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (hasCoords && hasKey) _buildStaticMap(context),
+        if (hasCoords && hasKey && hasAddress)
+          const SizedBox(height: AppSpacing.sm),
+        if (hasAddress)
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.location_on_outlined,
+                size: 16,
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  team.serviceRadiusKm != null
+                      ? '${team.location} · ${team.serviceRadiusKm}km'
+                      : team.location!,
+                  style: TextStyle(
+                    fontSize: 13,
+                    height: 1.4,
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
+                  ),
+                ),
+              ),
+            ],
+          ),
+      ],
+    );
+  }
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: _SectionCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (expertise.isNotEmpty) ...[
-              Text(
-                context.l10n.taskExpertExpertiseAreas,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                  letterSpacing: 0.3,
-                ),
+  Widget _buildStaticMap(BuildContext context) {
+    final lat = team.latitude!;
+    final lng = team.longitude!;
+    final key = AppConfig.googleMapsKey;
+    final url = 'https://maps.googleapis.com/maps/api/staticmap'
+        '?center=$lat,$lng&zoom=15&size=600x200'
+        '&markers=color:red%7C$lat,$lng'
+        '&key=$key';
+
+    return GestureDetector(
+      onTap: () {
+        final mapUri = !kIsWeb && Platform.isIOS
+            ? Uri.parse('https://maps.apple.com/?ll=$lat,$lng&z=15')
+            : Uri.parse(
+                'https://www.google.com/maps/search/?api=1&query=$lat,$lng');
+        launchUrl(mapUri, mode: LaunchMode.externalApplication);
+      },
+      child: ClipRRect(
+        borderRadius: AppRadius.allMedium,
+        child: Image.network(
+          url,
+          height: 150,
+          width: double.infinity,
+          fit: BoxFit.cover,
+          cacheWidth: 600,
+          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return Container(
+              height: 150,
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              child: const Center(
+                child: CircularProgressIndicator.adaptive(),
               ),
-              const SizedBox(height: 6),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: expertise.map((t) => _Tag(
-                  text: t,
-                  bgColor: isDark ? const Color(0x260055CC) : const Color(0xFFE8F0FE),
-                  textColor: isDark ? const Color(0xFF409CFF) : const Color(0xFF0055CC),
-                )).toList(),
-              ),
-              const SizedBox(height: 10),
-            ],
-            if (skills.isNotEmpty) ...[
-              Text(
-                context.l10n.taskExpertFeaturedSkills,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                  letterSpacing: 0.3,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: skills.map((t) => _Tag(
-                  text: t,
-                  bgColor: isDark ? const Color(0x266D28D9) : const Color(0xFFF0E6FF),
-                  textColor: isDark ? const Color(0xFFBF9FFF) : const Color(0xFF6D28D9),
-                )).toList(),
-              ),
-              const SizedBox(height: 10),
-            ],
-            if (achievementList.isNotEmpty) ...[
-              Text(
-                context.l10n.taskExpertAchievements,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                  letterSpacing: 0.3,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: achievementList.map((t) => _Tag(
-                  text: '\u{1F3C6} $t',
-                  bgColor: isDark ? const Color(0x1FB45309) : const Color(0xFFFFF4E5),
-                  textColor: isDark ? const Color(0xFFFFB84D) : const Color(0xFFB45309),
-                )).toList(),
-              ),
-            ],
-          ],
+            );
+          },
         ),
       ),
     );
@@ -1923,39 +2161,94 @@ class _ReviewCard extends StatelessWidget {
 // 19. Forum entry
 // ---------------------------------------------------------------------------
 
-class _ForumEntry extends StatelessWidget {
+class _ForumEntry extends StatefulWidget {
   final int forumCategoryId;
   const _ForumEntry({required this.forumCategoryId});
+
+  @override
+  State<_ForumEntry> createState() => _ForumEntryState();
+}
+
+class _ForumEntryState extends State<_ForumEntry> {
+  ForumPost? _previewPost;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPreview();
+  }
+
+  Future<void> _loadPreview() async {
+    try {
+      final res = await context.read<ForumRepository>().getPosts(
+            categoryId: widget.forumCategoryId,
+            pageSize: 5,
+          );
+      if (!mounted) return;
+      final posts = res.posts;
+      ForumPost? pick;
+      // Prefer pinned + featured, then pinned, then featured, then most recent.
+      for (final p in posts) {
+        if (p.isPinned && p.isFeatured) {
+          pick = p;
+          break;
+        }
+      }
+      pick ??= posts.firstWhere(
+        (p) => p.isPinned,
+        orElse: () => posts.firstWhere(
+          (p) => p.isFeatured,
+          orElse: () => posts.isNotEmpty
+              ? posts.first
+              : const ForumPost(
+                  id: -1,
+                  title: '',
+                  categoryId: 0,
+                  authorId: '',
+                ),
+        ),
+      );
+      setState(() {
+        _previewPost = pick!.id > 0 ? pick : null;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return _SectionCard(
-      child: GestureDetector(
-        onTap: () {
-          AppHaptics.selection();
-          context.push('/forum/category/$forumCategoryId');
-        },
-        behavior: HitTestBehavior.opaque,
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF007AFF), Color(0xFF5AC8FA)],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          GestureDetector(
+            onTap: () {
+              AppHaptics.selection();
+              context.push('/forum/category/${widget.forumCategoryId}');
+            },
+            behavior: HitTestBehavior.opaque,
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF007AFF), Color(0xFF5AC8FA)],
+                    ),
+                  ),
+                  child: const Icon(Icons.forum,
+                      size: 18, color: Colors.white),
                 ),
-              ),
-              child: const Icon(Icons.forum, size: 18, color: Colors.white),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
                     context.l10n.expertTeamForumSection,
                     style: TextStyle(
                       fontSize: 14,
@@ -1965,17 +2258,224 @@ class _ForumEntry extends StatelessWidget {
                           : AppColors.textPrimaryLight,
                     ),
                   ),
+                ),
+                Icon(
+                  Icons.chevron_right,
+                  size: 18,
+                  color: isDark
+                      ? AppColors.textTertiaryDark
+                      : AppColors.textTertiaryLight,
+                ),
+              ],
+            ),
+          ),
+          if (_loading)
+            const Padding(
+              padding: EdgeInsets.only(top: 12),
+              child: SizedBox(
+                height: 20,
+                child: Center(
+                  child: SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              ),
+            )
+          else if (_previewPost != null) ...[
+            const SizedBox(height: 12),
+            _ForumPostPreview(post: _previewPost!),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ForumPostPreview extends StatelessWidget {
+  final ForumPost post;
+  const _ForumPostPreview({required this.post});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final locale = Localizations.localeOf(context);
+    final l10n = context.l10n;
+    final title = post.displayTitle(locale);
+    final preview = post.displayContent(locale);
+    final created = post.createdAt;
+
+    return GestureDetector(
+      onTap: () {
+        AppHaptics.selection();
+        context.goToForumPostDetail(post.id);
+      },
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.04)
+              : Colors.black.withValues(alpha: 0.025),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (post.isPinned || post.isFeatured) ...[
+              Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: [
+                  if (post.isPinned)
+                    _PostBadge(
+                      label: l10n.forumPinned,
+                      bgColor: isDark
+                          ? const Color(0x33FF3B30)
+                          : const Color(0xFFFFE8E6),
+                      textColor: isDark
+                          ? const Color(0xFFFF6B5F)
+                          : const Color(0xFFD93025),
+                    ),
+                  if (post.isFeatured)
+                    _PostBadge(
+                      label: l10n.forumFeatured,
+                      bgColor: isDark
+                          ? const Color(0x33FFB300)
+                          : const Color(0xFFFFF4D6),
+                      textColor: isDark
+                          ? const Color(0xFFFFCC66)
+                          : const Color(0xFFB45309),
+                    ),
                 ],
               ),
+              const SizedBox(height: 6),
+            ],
+            Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : AppColors.textPrimaryLight,
+              ),
             ),
-            Icon(
-              Icons.chevron_right,
-              size: 18,
-              color: isDark
-                  ? AppColors.textTertiaryDark
-                  : AppColors.textTertiaryLight,
+            if (preview != null && preview.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                preview,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12,
+                  height: 1.4,
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondaryLight,
+                ),
+              ),
+            ],
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                if (post.author != null &&
+                    post.author!.name.isNotEmpty) ...[
+                  Flexible(
+                    child: Text(
+                      post.author!.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                if (created != null) ...[
+                  Text(
+                    DateFormatter.formatRelative(created, l10n: l10n),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isDark
+                          ? AppColors.textTertiaryDark
+                          : AppColors.textTertiaryLight,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                Icon(Icons.chat_bubble_outline,
+                    size: 12,
+                    color: isDark
+                        ? AppColors.textTertiaryDark
+                        : AppColors.textTertiaryLight),
+                const SizedBox(width: 2),
+                Text(
+                  '${post.replyCount}',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isDark
+                        ? AppColors.textTertiaryDark
+                        : AppColors.textTertiaryLight,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(Icons.favorite_outline,
+                    size: 12,
+                    color: isDark
+                        ? AppColors.textTertiaryDark
+                        : AppColors.textTertiaryLight),
+                const SizedBox(width: 2),
+                Text(
+                  '${post.likeCount}',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isDark
+                        ? AppColors.textTertiaryDark
+                        : AppColors.textTertiaryLight,
+                  ),
+                ),
+              ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PostBadge extends StatelessWidget {
+  final String label;
+  final Color bgColor;
+  final Color textColor;
+  const _PostBadge({
+    required this.label,
+    required this.bgColor,
+    required this.textColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: textColor,
         ),
       ),
     );

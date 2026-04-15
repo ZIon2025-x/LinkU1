@@ -23580,6 +23580,24 @@ abstract class AppLocalizations {
   /// **'Team Bio'**
   String get expertTeamBio;
 
+  /// No description provided for @expertInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Expert Info'**
+  String get expertInfo;
+
+  /// No description provided for @expertInfoGallery.
+  ///
+  /// In en, this message translates to:
+  /// **'Gallery'**
+  String get expertInfoGallery;
+
+  /// No description provided for @expertInfoLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get expertInfoLocation;
+
   /// No description provided for @expertTeamApplicationMessage.
   ///
   /// In en, this message translates to:
@@ -24285,7 +24303,7 @@ abstract class AppLocalizations {
   /// No description provided for @expertTeamForumSection.
   ///
   /// In en, this message translates to:
-  /// **'Team Forum'**
+  /// **'Expert Updates'**
   String get expertTeamForumSection;
 
   /// No description provided for @expertTeamStatMembers.

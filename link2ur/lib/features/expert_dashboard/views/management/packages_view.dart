@@ -163,7 +163,6 @@ class _PackagesViewState extends State<PackagesView> {
     SheetAdaptation.showAdaptiveModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      showDragHandle: true,
       builder: (sheetContext) => _PackageFormSheet(
         existing: existing,
         singleServices: singleServices,
@@ -828,31 +827,56 @@ class _PackageFormSheetState extends State<_PackageFormSheet> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final viewInsets = MediaQuery.viewInsetsOf(context);
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: viewInsets.bottom),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                child: Text(
-                  _isEditing
-                      ? l10n.expertPackageEdit
-                      : l10n.expertPackageCreate,
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleLarge
-                      ?.copyWith(fontWeight: FontWeight.w700),
-                  textAlign: TextAlign.center,
+    return DraggableScrollableSheet(
+      initialChildSize: 0.9,
+      minChildSize: 0.4,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (context, scrollController) => Padding(
+        padding: EdgeInsets.only(bottom: viewInsets.bottom),
+        child: SingleChildScrollView(
+          controller: scrollController,
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Sheet header with close button
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 20, top: 4),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Text(
+                        _isEditing
+                            ? l10n.expertPackageEdit
+                            : l10n.expertPackageCreate,
+                        style: theme.textTheme.titleLarge
+                            ?.copyWith(fontWeight: FontWeight.w700),
+                        textAlign: TextAlign.center,
+                      ),
+                      Positioned(
+                        right: 0,
+                        child: IconButton(
+                          icon: const Icon(Icons.close, size: 22),
+                          onPressed: () => Navigator.of(context).pop(),
+                          style: IconButton.styleFrom(
+                            backgroundColor: isDark
+                                ? Colors.white.withValues(alpha: 0.08)
+                                : Colors.black.withValues(alpha: 0.05),
+                            shape: const CircleBorder(),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
 
               // Package type
               Text(
@@ -1075,6 +1099,7 @@ class _PackageFormSheetState extends State<_PackageFormSheet> {
             ],
           ),
         ),
+      ),
       ),
     );
   }

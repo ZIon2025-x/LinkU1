@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>达人详情页 预览</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+    background: #ECECEC;
+    color: #1c1c1e;
+    padding: 24px;
+    min-height: 100vh;
+  }
+  h1.page-title {
+    text-align: center; font-size: 18px; font-weight: 600;
+    margin-bottom: 8px; color: #333;
+  }
+  .sub-title {
+    text-align: center; font-size: 13px; color: #888; margin-bottom: 24px;
+  }
+  .frames {
+    display: flex; gap: 32px; justify-content: center;
+    flex-wrap: wrap; align-items: flex-start;
+  }
+  .frame-wrap { display: flex; flex-direction: column; align-items: center; }
+  .frame-label {
+    font-size: 13px; font-weight: 600; color: #555;
+    margin-bottom: 10px; letter-spacing: 0.5px;
+  }
+  .phone {
+    width: 375px; height: 812px;
+    background: #F2F2F7;
+    border-radius: 38px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.18),
+                inset 0 0 0 8px #1a1a1a,
+                inset 0 0 0 11px #2a2a2a;
+    overflow: hidden;
+    position: relative;
+    padding: 8px;
+  }
+  .phone-inner {
+    background: #F2F2F7;
+    border-radius: 30px;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    position: relative;
+  }
+  .phone-inner::-webkit-scrollbar { width: 0; }
+
+  /* notch */
+  .notch {
+    position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+    width: 120px; height: 28px;
+    background: #1a1a1a; border-radius: 0 0 18px 18px; z-index: 20;
+  }
+
+  /* status bar */
+  .status-bar {
+    height: 44px; padding: 0 28px;
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 15px; font-weight: 600; color: #fff;
+    position: absolute; top: 8px; left: 8px; right: 8px; z-index: 10;
+  }
+  .status-bar.dark-text { color: #000; }
+  .status-icons { display: flex; gap: 5px; font-size: 13px; }
+
+  /* AppBar (transparent, over hero banner) */
+  .appbar {
+    position: absolute; top: 52px; left: 16px; right: 16px;
+    height: 44px;
+    display: flex; align-items: center; justify-content: space-between;
+    z-index: 15;
+  }
+  .appbar .back, .appbar .menu {
+    width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 22px;
+    background: rgba(0,0,0,0.25); border-radius: 50%;
+    cursor: pointer;
+  }
+
+  /* Hero banner */
+  .hero {
+    position: relative; height: 260px;
+    background: linear-gradient(135deg, #007AFF 0%, #5856D6 100%);
+    color: #fff;
+    padding: 108px 16px 20px; overflow: hidden;
+  }
+  .hero::before {
+    content: ""; position: absolute; inset: 0;
+    background: radial-gradient(circle at 30% 20%, rgba(255,255,255,0.15), transparent 60%);
+  }
+  .hero-content { position: relative; z-index: 2; }
+  .hero .avatar-row { display: flex; align-items: center; gap: 12px; }
+  .avatar {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: #fff; display: flex; align-items: center; justify-content: center;
+    color: #007AFF; font-size: 26px; font-weight: 700;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+  }
+  .hero h2 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  .hero .status-line {
+    display: flex; align-items: center; gap: 6px; font-size: 13px;
+    margin-top: 6px;
+  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: #30D158; }
+  .hero .followers { font-size: 12px; opacity: 0.9; margin-top: 4px; }
+  .official-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px; margin-top: 6px;
+    background: rgba(255,255,255,0.2); border-radius: 10px;
+    font-size: 11px; font-weight: 600;
+  }
+  .hero-location {
+    display: flex; align-items: center; gap: 5px;
+    margin-top: 10px; font-size: 12px; opacity: 0.9;
+  }
+
+  /* Stats card */
+  .stats {
+    margin: -30px 12px 0; background: #fff; border-radius: 14px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    padding: 14px 0; position: relative; z-index: 5;
+  }
+  .stat { text-align: center; border-right: 1px solid #EFEFF4; }
+  .stat:last-child { border-right: none; }
+  .stat .val { font-size: 17px; font-weight: 700; color: #1c1c1e; }
+  .stat .val .star { color: #FF9500; font-size: 13px; }
+  .stat .lbl { font-size: 11px; color: #8E8E93; margin-top: 3px; }
+
+  /* Content sections */
+  .content-pad { padding: 16px 16px 90px; }
+  .card {
+    background: #fff; border-radius: 14px; padding: 18px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+  }
+  .section-header {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 15px; font-weight: 600; color: #1c1c1e;
+    margin-bottom: 12px;
+  }
+  .section-header .ico {
+    width: 20px; height: 20px; border-radius: 5px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 11px;
+  }
+  .bg-blue { background: linear-gradient(135deg, #007AFF, #5856D6); }
+  .bg-green { background: linear-gradient(135deg, #34C759, #30B0C7); }
+  .bg-orange { background: linear-gradient(135deg, #FF9500, #FF2D55); }
+  .bg-purple { background: linear-gradient(135deg, #AF52DE, #5856D6); }
+  .bg-pink { background: linear-gradient(135deg, #FF2D55, #FF9500); }
+  .bg-cyan { background: linear-gradient(135deg, #5AC8FA, #007AFF); }
+
+  .see-all { margin-left: auto; font-size: 13px; color: #007AFF; cursor: pointer; }
+
+  .bio-text {
+    font-size: 14px; line-height: 1.65; color: #3C3C43;
+    margin-bottom: 10px;
+  }
+  .pills { display: flex; flex-wrap: wrap; gap: 8px; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 5px 10px; background: #F2F2F7; border-radius: 100px;
+    font-size: 11px; color: #3C3C43;
+  }
+  .pill b { font-weight: 600; color: #1c1c1e; }
+
+  /* Services */
+  .service-card {
+    border-radius: 10px; overflow: hidden;
+    border: 1px solid #EFEFF4; margin-bottom: 10px; display: flex;
+  }
+  .service-card .thumb {
+    width: 90px; height: 90px; flex-shrink: 0;
+    background: linear-gradient(135deg, #FF9500, #FF2D55);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 26px;
+  }
+  .service-info { padding: 10px 12px; flex: 1; min-width: 0; }
+  .service-info .name {
+    font-size: 14px; font-weight: 600; margin-bottom: 4px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .service-info .desc {
+    font-size: 12px; color: #8E8E93; line-height: 1.4;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .service-info .price {
+    font-size: 15px; font-weight: 700; color: #FF3B30; margin-top: 6px;
+  }
+
+  /* Activity */
+  .activity-card {
+    border: 1px solid #EFEFF4; border-radius: 10px; padding: 10px;
+    margin-bottom: 10px; display: flex; gap: 10px;
+  }
+  .act-thumb {
+    width: 70px; height: 70px; border-radius: 8px;
+    background: linear-gradient(135deg, #AF52DE, #5856D6); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; color: #fff; font-size: 22px;
+  }
+  .act-info { flex: 1; min-width: 0; }
+  .act-info .act-name { font-size: 13px; font-weight: 600; }
+  .act-info .act-meta { font-size: 11px; color: #8E8E93; margin-top: 3px; }
+
+  /* Reviews */
+  .review-summary {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 12px;
+  }
+  .review-summary .big { font-size: 28px; font-weight: 700; }
+  .review-summary .stars { color: #FF9500; font-size: 14px; }
+  .review-summary .count { font-size: 12px; color: #8E8E93; }
+  .review {
+    padding: 10px 0; border-top: 1px solid #F2F2F7;
+  }
+  .review .r-head {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 4px;
+  }
+  .review .r-avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: #D1D1D6; color: #fff; font-size: 12px;
+    display: flex; align-items: center; justify-content: center; font-weight: 600;
+  }
+  .review .r-name { font-size: 13px; font-weight: 600; }
+  .review .r-time { font-size: 11px; color: #8E8E93; margin-left: auto; }
+  .review .r-stars { color: #FF9500; font-size: 12px; margin-bottom: 4px; }
+  .review .r-text {
+    font-size: 13px; color: #3C3C43; line-height: 1.45;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+
+  /* Forum entry — 达人动态 */
+  .forum-header-row {
+    display: flex; align-items: center; gap: 12px; cursor: pointer;
+  }
+  .forum-icon {
+    width: 40px; height: 40px; border-radius: 10px;
+    background: linear-gradient(135deg, #007AFF, #5AC8FA);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 18px;
+  }
+  .forum-title { font-size: 14px; font-weight: 600; flex: 1; }
+  .chev { color: #C7C7CC; font-size: 18px; }
+
+  .post-preview {
+    margin-top: 12px; padding: 12px;
+    background: rgba(0,0,0,0.025); border-radius: 10px; cursor: pointer;
+  }
+  .post-badges { display: flex; gap: 6px; margin-bottom: 6px; }
+  .post-badge {
+    padding: 2px 6px; border-radius: 4px;
+    font-size: 10px; font-weight: 600;
+  }
+  .badge-pinned { background: #FFE8E6; color: #D93025; }
+  .badge-featured { background: #FFF4D6; color: #B45309; }
+  .post-title {
+    font-size: 14px; font-weight: 600; color: #1c1c1e;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .post-content {
+    font-size: 12px; line-height: 1.4; color: #8E8E93;
+    margin-top: 4px;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .post-meta {
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 8px; font-size: 11px; color: #AEAEB2;
+  }
+
+  /* Bottom action bar */
+  .bottom-bar {
+    position: absolute; bottom: 8px; left: 8px; right: 8px;
+    background: #fff; border-radius: 0 0 30px 30px;
+    padding: 12px 16px 28px;
+    display: flex; gap: 10px;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+  }
+  .btn {
+    flex: 1; height: 44px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+  .btn-outline { border: 1.5px solid #007AFF; color: #007AFF; background: #fff; }
+  .btn-primary { background: #007AFF; color: #fff; }
+
+  /* ===== 信息 Sheet ===== */
+  .sheet-dim {
+    background: rgba(0,0,0,0.35);
+    height: 100%; position: relative;
+  }
+  .sheet {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    height: 90%;
+    background: #F2F2F7;
+    border-radius: 16px 16px 0 0;
+    padding: 12px 16px 24px;
+    overflow-y: auto;
+  }
+  .sheet::-webkit-scrollbar { width: 0; }
+  .sheet-header {
+    display: flex; align-items: center; justify-content: center;
+    position: relative; padding: 4px 0 16px;
+  }
+  .sheet-header .title { font-size: 17px; font-weight: 700; }
+  .sheet-header .close {
+    position: absolute; right: 0; width: 34px; height: 34px;
+    border-radius: 50%; background: rgba(0,0,0,0.05);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; color: #3C3C43; cursor: pointer;
+  }
+
+  /* business hours */
+  .bh-title, .cd-title {
+    display: flex; align-items: center; gap: 4px;
+    font-size: 12px; font-weight: 600; color: #8E8E93;
+    margin-bottom: 6px;
+  }
+  .bh-row {
+    display: flex; font-size: 12px; padding: 2px 0;
+  }
+  .bh-row.today { color: #007AFF; font-weight: 600; }
+  .bh-row .day { width: 42px; }
+  .bh-row .closed { color: #8E8E93; }
+  .cd-row {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; padding: 2px 0;
+  }
+  .cd-dot { width: 6px; height: 6px; border-radius: 50%; background: #FF3B30; }
+  .cd-reason { color: #8E8E93; margin-left: 8px; }
+
+  /* tag groups */
+  .tag-group-label {
+    font-size: 11px; font-weight: 600; color: #8E8E93;
+    letter-spacing: 0.3px; margin-bottom: 6px;
+  }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .tag {
+    padding: 4px 10px; border-radius: 100px;
+    font-size: 12px; font-weight: 500;
+  }
+  .tag-exp { background: #E8F0FE; color: #0055CC; }
+  .tag-skill { background: #F0E6FF; color: #6D28D9; }
+  .tag-ach { background: #FFF4E5; color: #B45309; }
+
+  .map-thumb {
+    width: 100%; height: 150px;
+    background: linear-gradient(135deg, #cfe8d3, #aed6b6);
+    border-radius: 10px;
+    position: relative; overflow: hidden;
+  }
+  .map-thumb::before {
+    content: ""; position: absolute; inset: 0;
+    background:
+      linear-gradient(90deg, transparent 24%, rgba(255,255,255,0.5) 25%, rgba(255,255,255,0.5) 26%, transparent 27%, transparent 74%, rgba(255,255,255,0.5) 75%, rgba(255,255,255,0.5) 76%, transparent 77%),
+      linear-gradient(0deg, transparent 24%, rgba(255,255,255,0.5) 25%, rgba(255,255,255,0.5) 26%, transparent 27%, transparent 74%, rgba(255,255,255,0.5) 75%, rgba(255,255,255,0.5) 76%, transparent 77%);
+  }
+  .map-pin {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -100%);
+    color: #FF3B30; font-size: 36px; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.3));
+  }
+  .loc-row {
+    display: flex; align-items: start; gap: 6px;
+    margin-top: 10px; font-size: 13px; color: #1c1c1e;
+  }
+  .loc-row .ico { color: #8E8E93; font-size: 14px; margin-top: 2px; }
+
+  /* Popup menu overlay on main phone */
+  .popup-menu {
+    position: absolute; top: 90px; right: 24px; z-index: 50;
+    background: #fff; border-radius: 12px; min-width: 180px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+    overflow: hidden;
+  }
+  .popup-item {
+    padding: 12px 16px; font-size: 14px;
+    display: flex; align-items: center; gap: 12px;
+    cursor: pointer;
+  }
+  .popup-item:hover { background: #F2F2F7; }
+  .popup-item .ic { font-size: 18px; color: #3C3C43; }
+  .popup-divider { height: 1px; background: #EFEFF4; }
+  .popup-arrow {
+    position: absolute; top: -6px; right: 14px;
+    width: 12px; height: 12px; background: #fff;
+    transform: rotate(45deg);
+  }
+
+  .note {
+    margin-top: 24px; text-align: center; font-size: 12px; color: #888;
+    max-width: 900px; margin-left: auto; margin-right: auto; line-height: 1.6;
+  }
+  .legend {
+    background: #fff; border-radius: 8px; padding: 12px 16px;
+    margin: 16px auto 0; max-width: 900px; font-size: 12px; color: #555;
+  }
+  .legend h3 { font-size: 13px; margin-bottom: 6px; color: #000; }
+  .legend li { margin: 3px 0; }
+</style>
+</head>
+<body>
+
+<h1 class="page-title">达人详情页 — 目前状态预览</h1>
+<p class="sub-title">瘦身后主页面 + 三点菜单 + 达人信息 Sheet</p>
+
+<div class="frames">
+
+  <!-- ============ 主详情页 ============ -->
+  <div class="frame-wrap">
+    <div class="frame-label">主详情页(瘦身后)</div>
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="phone-inner">
+        <!-- 状态栏 (hero 背景下,白字) -->
+        <div class="status-bar">
+          <span>9:41</span>
+          <span class="status-icons">●●●●●  📶  🔋</span>
+        </div>
+
+        <!-- AppBar -->
+        <div class="appbar">
+          <div class="back">‹</div>
+          <div class="menu">⋮</div>
+        </div>
+
+        <!-- Hero -->
+        <div class="hero">
+          <div class="hero-content">
+            <div class="avatar-row">
+              <div class="avatar">陈</div>
+              <div>
+                <h2>陈师傅修理工作室</h2>
+                <div class="status-line">
+                  <div class="dot"></div>
+                  <span>营业中</span>
+                  <span>·</span>
+                  <span>✓ 已认证</span>
+                </div>
+                <div class="followers">1,248 位粉丝</div>
+                <div class="official-badge">🏅 官方认证</div>
+              </div>
+            </div>
+            <div class="hero-location">📍 上海市徐汇区·10km</div>
+          </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats">
+          <div class="stat"><div class="val">3</div><div class="lbl">成员</div></div>
+          <div class="stat"><div class="val">24</div><div class="lbl">服务</div></div>
+          <div class="stat"><div class="val">156</div><div class="lbl">完成</div></div>
+          <div class="stat"><div class="val"><span class="star">★</span> 4.9</div><div class="lbl">评分</div></div>
+        </div>
+
+        <div class="content-pad">
+          <!-- Bio 卡(保留 bio + responseTime/serviceRadius/completionRate 三个 pill;
+               ⚠️ 已移除: 营业时间 + 休息日) -->
+          <div class="card">
+            <div class="section-header">
+              <div class="ico bg-blue">ⓘ</div>
+              <span>团队简介</span>
+            </div>
+            <p class="bio-text">
+              10 年专业家电维修经验,擅长冰箱、洗衣机、空调故障诊断与修复。持证上岗,
+              提供一年保修。服务范围覆盖徐汇区全境,支持当天上门。
+            </p>
+            <div class="pills">
+              <div class="pill">⚡ 响应时间 <b>1 小时内</b></div>
+              <div class="pill">📍 服务半径 <b>10km</b></div>
+              <div class="pill">✓ 完成率 <b>98%</b></div>
+            </div>
+          </div>
+
+          <!-- Services -->
+          <div class="card">
+            <div class="section-header">
+              <div class="ico bg-orange">🛠</div>
+              <span>服务</span>
+              <span class="see-all">查看全部 ›</span>
+            </div>
+            <div class="service-card">
+              <div class="thumb">🧊</div>
+              <div class="service-info">
+                <div class="name">冰箱故障诊断与维修</div>
+                <div class="desc">上门检测,提供维修方案,含保修。适用于各品牌家用冰箱。</div>
+                <div class="price">¥199 起</div>
+              </div>
+            </div>
+            <div class="service-card">
+              <div class="thumb">🌀</div>
+              <div class="service-info">
+                <div class="name">洗衣机深度清洁</div>
+                <div class="desc">拆卸内筒、去除污垢,恢复洗净效果。</div>
+                <div class="price">¥99</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Activities -->
+          <div class="card">
+            <div class="section-header">
+              <div class="ico bg-purple">🎉</div>
+              <span>活动</span>
+              <span class="see-all">查看全部 ›</span>
+            </div>
+            <div class="activity-card">
+              <div class="act-thumb">🎟</div>
+              <div class="act-info">
+                <div class="act-name">春季家电免费检测日</div>
+                <div class="act-meta">📅 4月20日 · 📍 徐汇区</div>
+                <div class="act-meta" style="color:#FF3B30;font-weight:600;margin-top:4px;">限额 20 名</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Reviews -->
+          <div class="card">
+            <div class="section-header">
+              <div class="ico bg-pink">★</div>
+              <span>评价 (42)</span>
+              <span class="see-all">查看全部 ›</span>
+            </div>
+            <div class="review-summary">
+              <div class="big">4.9</div>
+              <div>
+                <div class="stars">★★★★★</div>
+                <div class="count">基于 42 条评价</div>
+              </div>
+            </div>
+            <div class="review">
+              <div class="r-head">
+                <div class="r-avatar">李</div>
+                <div class="r-name">李女士</div>
+                <div class="r-time">2 天前</div>
+              </div>
+              <div class="r-stars">★★★★★</div>
+              <div class="r-text">师傅很专业,冰箱问题很快就解决了,价格也合理,推荐!</div>
+            </div>
+            <div class="review">
+              <div class="r-head">
+                <div class="r-avatar">王</div>
+                <div class="r-name">王先生</div>
+                <div class="r-time">5 天前</div>
+              </div>
+              <div class="r-stars">★★★★★</div>
+              <div class="r-text">上门准时,维修后还详细讲解了日常保养注意事项,服务很周到。</div>
+            </div>
+          </div>
+
+          <!-- ⭐ 达人动态 (原"达人板块") -->
+          <div class="card">
+            <div class="forum-header-row">
+              <div class="forum-icon">💬</div>
+              <div class="forum-title">达人动态</div>
+              <div class="chev">›</div>
+            </div>
+
+            <div class="post-preview">
+              <div class="post-badges">
+                <span class="post-badge badge-pinned">置顶</span>
+                <span class="post-badge badge-featured">精华</span>
+              </div>
+              <div class="post-title">【必读】5 种冰箱常见故障的自检方法</div>
+              <div class="post-content">
+                冰箱不制冷、结冰过多、噪音大……这些问题 80% 可以自己先判断。本文列出 5 种常见故障的快速自检步骤,让你在找师傅前先搞清楚状况...
+              </div>
+              <div class="post-meta">
+                <span>陈师傅</span>
+                <span>·</span>
+                <span>3 天前</span>
+                <span>💬 12</span>
+                <span>❤️ 48</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom bar -->
+      <div class="bottom-bar">
+        <div class="btn btn-outline">💬 咨询达人</div>
+        <div class="btn btn-primary">+ 关注</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 三点菜单展开态 ============ -->
+  <div class="frame-wrap">
+    <div class="frame-label">三点菜单展开</div>
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="phone-inner">
+        <div class="status-bar">
+          <span>9:41</span>
+          <span class="status-icons">●●●●●  📶  🔋</span>
+        </div>
+        <div class="appbar">
+          <div class="back">‹</div>
+          <div class="menu" style="background:rgba(0,0,0,0.45);">⋮</div>
+        </div>
+        <div class="hero">
+          <div class="hero-content">
+            <div class="avatar-row">
+              <div class="avatar">陈</div>
+              <div>
+                <h2>陈师傅修理工作室</h2>
+                <div class="status-line">
+                  <div class="dot"></div>
+                  <span>营业中</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="stats" style="opacity:0.5;">
+          <div class="stat"><div class="val">3</div><div class="lbl">成员</div></div>
+          <div class="stat"><div class="val">24</div><div class="lbl">服务</div></div>
+          <div class="stat"><div class="val">156</div><div class="lbl">完成</div></div>
+          <div class="stat"><div class="val">★ 4.9</div><div class="lbl">评分</div></div>
+        </div>
+
+        <!-- popup menu -->
+        <div class="popup-menu">
+          <div class="popup-arrow"></div>
+          <div class="popup-item">
+            <span class="ic">↗</span>
+            <span>分享</span>
+          </div>
+          <div class="popup-divider"></div>
+          <div class="popup-item">
+            <span class="ic">ⓘ</span>
+            <span>达人信息</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 达人信息 Sheet ============ -->
+  <div class="frame-wrap">
+    <div class="frame-label">达人信息 Sheet(点"达人信息"后)</div>
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="phone-inner">
+        <div class="sheet-dim">
+          <div class="sheet">
+            <!-- header -->
+            <div class="sheet-header">
+              <div class="title">达人信息</div>
+              <div class="close">✕</div>
+            </div>
+
+            <!-- 营业时间 -->
+            <div class="card">
+              <div class="bh-title">🕐 营业时间</div>
+              <div class="bh-row today"><span class="day">周一</span><span>09:00 - 18:00</span></div>
+              <div class="bh-row"><span class="day">周二</span><span>09:00 - 18:00</span></div>
+              <div class="bh-row"><span class="day">周三</span><span>09:00 - 18:00</span></div>
+              <div class="bh-row"><span class="day">周四</span><span>09:00 - 18:00</span></div>
+              <div class="bh-row"><span class="day">周五</span><span>09:00 - 18:00</span></div>
+              <div class="bh-row"><span class="day">周六</span><span>10:00 - 16:00</span></div>
+              <div class="bh-row"><span class="day">周日</span><span class="closed">休息</span></div>
+            </div>
+
+            <!-- 休息日 -->
+            <div class="card">
+              <div class="cd-title">📅 近期休息</div>
+              <div class="cd-row">
+                <div class="cd-dot"></div><span>2026-04-20</span>
+                <span class="cd-reason">家庭事务</span>
+              </div>
+              <div class="cd-row">
+                <div class="cd-dot"></div><span>2026-04-21</span>
+                <span class="cd-reason">家庭事务</span>
+              </div>
+            </div>
+
+            <!-- 专业领域 / 特色技能 / 成就勋章 -->
+            <div class="card">
+              <div class="tag-group-label">专业领域</div>
+              <div class="tags">
+                <span class="tag tag-exp">家电维修</span>
+                <span class="tag tag-exp">制冷设备</span>
+                <span class="tag tag-exp">电路故障</span>
+              </div>
+
+              <div class="tag-group-label">特色技能</div>
+              <div class="tags">
+                <span class="tag tag-skill">快速响应</span>
+                <span class="tag tag-skill">上门服务</span>
+                <span class="tag tag-skill">保修一年</span>
+              </div>
+
+              <div class="tag-group-label">成就勋章</div>
+              <div class="tags">
+                <span class="tag tag-ach">🏆 年度五星达人</span>
+                <span class="tag tag-ach">🏆 连续 3 年零投诉</span>
+                <span class="tag tag-ach">🏆 100+ 好评</span>
+              </div>
+            </div>
+
+            <!-- 达人画廊(只放地点) -->
+            <div class="card">
+              <div class="section-header">
+                <div class="ico bg-green">🖼</div>
+                <span>达人画廊</span>
+              </div>
+              <div class="map-thumb">
+                <div class="map-pin">📍</div>
+              </div>
+              <div class="loc-row">
+                <span class="ico">📍</span>
+                <span>上海市徐汇区·10km</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="legend">
+  <h3>说明</h3>
+  <ul>
+    <li>主详情页 <b>_BioSection</b> 里的营业时间 / 休息日块已移除,只保留 bio + 响应时间 / 服务半径 / 完成率 pill。</li>
+    <li>原 <b>_TagsSection</b>(专业领域 / 特色技能 / 成就)整块从主页移除,全部收到"达人信息"Sheet 内。</li>
+    <li>原分享按钮改为 <b>三点图标</b>,PopupMenu 展开后含"分享"+"达人信息"两项。</li>
+    <li>原"达人板块"Section 改名 <b>达人动态</b>,头行下新增预览帖卡(优先 置顶+精华 → 置顶 → 精华 → 最近)。</li>
+    <li>达人画廊只放地点(Google 静态地图 + 地址行);点击地图外跳原生地图。本预览用 CSS 网格模拟地图缩略图。</li>
+    <li>所有 section 都做非空判断,空数据不渲染。</li>
+  </ul>
+</div>
+
+<p class="note">
+  这是一个粗略结构示意,不追求像素级还原 Flutter 渲染。真机上的圆角 / 阴影 / 字号 / 字体会略有差异。
+</p>
+
+</body>
+</html>

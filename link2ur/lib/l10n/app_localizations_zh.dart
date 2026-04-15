@@ -12270,6 +12270,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get expertTeamBio => '团队简介';
 
   @override
+  String get expertInfo => '达人信息';
+
+  @override
+  String get expertInfoGallery => '达人画廊';
+
+  @override
+  String get expertInfoLocation => '地点';
+
+  @override
   String get expertTeamApplicationMessage => '申请理由';
 
   @override
@@ -12640,7 +12649,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get expertTeamOfficialBadge => '官方';
 
   @override
-  String get expertTeamForumSection => '达人板块';
+  String get expertTeamForumSection => '达人动态';
 
   @override
   String get expertTeamStatMembers => '成员';
@@ -24970,6 +24979,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get expertTeamBio => '團隊簡介';
 
   @override
+  String get expertInfo => '達人資訊';
+
+  @override
+  String get expertInfoGallery => '達人畫廊';
+
+  @override
+  String get expertInfoLocation => '地點';
+
+  @override
   String get expertTeamApplicationMessage => '申請理由';
 
   @override
@@ -25340,7 +25358,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get expertTeamOfficialBadge => '官方';
 
   @override
-  String get expertTeamForumSection => '達人板塊';
+  String get expertTeamForumSection => '達人動態';
 
   @override
   String get expertTeamStatMembers => '成員';
