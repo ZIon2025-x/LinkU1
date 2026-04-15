@@ -9,6 +9,7 @@ import '../../../core/design/app_radius.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_typography.dart';
 import '../../../core/utils/error_localizer.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/decorative_background.dart';
 import '../../../core/widgets/error_state_view.dart';
@@ -689,7 +690,7 @@ class _ExpertRow extends StatelessWidget {
               radius: 24,
               backgroundColor: AppColors.backgroundLight,
               backgroundImage: expert.avatar != null && expert.avatar!.isNotEmpty
-                  ? CachedNetworkImageProvider(expert.avatar!)
+                  ? CachedNetworkImageProvider(Helpers.getImageUrl(expert.avatar!))
                   : null,
               child: expert.avatar == null || expert.avatar!.isEmpty
                   ? const Icon(Icons.person, size: 24, color: AppColors.textSecondaryLight)

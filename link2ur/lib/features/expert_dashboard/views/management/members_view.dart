@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:link2ur/core/utils/error_localizer.dart';
 import 'package:link2ur/core/utils/l10n_extension.dart';
 import 'package:link2ur/data/models/expert_team.dart';
+import 'package:link2ur/core/utils/helpers.dart';
 import 'package:link2ur/data/repositories/expert_team_repository.dart';
 import 'package:link2ur/data/services/storage_service.dart';
 import 'package:link2ur/features/expert_team/bloc/expert_team_bloc.dart';
@@ -181,7 +182,7 @@ class _MemberListItem extends StatelessWidget {
     return ListTile(
       leading: CircleAvatar(
         backgroundImage:
-            member.userAvatar != null ? NetworkImage(member.userAvatar!) : null,
+            member.userAvatar != null ? NetworkImage(Helpers.getImageUrl(member.userAvatar!)) : null,
         child: member.userAvatar == null
             ? Text(
                 (member.userName ?? '?').isNotEmpty

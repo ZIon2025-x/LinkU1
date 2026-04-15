@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:link2ur/core/utils/error_localizer.dart';
 import 'package:link2ur/core/utils/l10n_extension.dart';
 import 'package:link2ur/data/models/expert_team.dart';
+import 'package:link2ur/core/utils/helpers.dart';
 import 'package:link2ur/data/repositories/expert_team_repository.dart';
 import 'package:link2ur/features/expert_team/bloc/expert_team_bloc.dart';
 
@@ -102,7 +103,7 @@ class _JoinRequestCard extends StatelessWidget {
                 CircleAvatar(
                   radius: 22,
                   backgroundImage: request.userAvatar != null
-                      ? NetworkImage(request.userAvatar!)
+                      ? NetworkImage(Helpers.getImageUrl(request.userAvatar!))
                       : null,
                   child: request.userAvatar == null
                       ? Text(

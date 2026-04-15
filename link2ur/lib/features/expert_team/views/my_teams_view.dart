@@ -5,6 +5,7 @@ import 'package:link2ur/core/utils/l10n_extension.dart';
 import 'package:link2ur/data/models/expert_team.dart';
 import 'package:link2ur/data/repositories/expert_team_repository.dart';
 import 'package:link2ur/features/expert_team/bloc/expert_team_bloc.dart';
+import 'package:link2ur/core/utils/helpers.dart';
 import 'package:link2ur/core/widgets/expert_status_badge.dart';
 import 'package:link2ur/features/expert_team/widgets/role_badge.dart';
 
@@ -148,7 +149,7 @@ class _TeamCard extends StatelessWidget {
               CircleAvatar(
                 radius: 24,
                 backgroundImage:
-                    team.avatar != null ? NetworkImage(team.avatar!) : null,
+                    team.avatar != null ? NetworkImage(Helpers.getImageUrl(team.avatar!)) : null,
                 backgroundColor: colorScheme.surfaceContainerHighest,
                 child: team.avatar == null
                     ? const Icon(Icons.group, size: 24)

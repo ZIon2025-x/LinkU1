@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_routes.dart';
 import '../../../core/utils/error_localizer.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../data/models/expert_team.dart';
 import '../../../data/repositories/expert_team_repository.dart';
@@ -254,7 +255,7 @@ class _TeamTitle extends StatelessWidget {
             CircleAvatar(
               radius: 14,
               backgroundImage:
-                  team.avatar != null ? NetworkImage(team.avatar!) : null,
+                  team.avatar != null ? NetworkImage(Helpers.getImageUrl(team.avatar!)) : null,
               child: team.avatar == null
                   ? Text(
                       team.name.isNotEmpty ? team.name.characters.first : '?',

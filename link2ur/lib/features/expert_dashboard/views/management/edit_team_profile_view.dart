@@ -5,6 +5,7 @@ import 'package:link2ur/core/utils/error_localizer.dart';
 import 'package:link2ur/core/utils/l10n_extension.dart';
 import 'package:link2ur/core/widgets/location_picker.dart';
 import 'package:link2ur/data/models/expert_team.dart';
+import 'package:link2ur/core/utils/helpers.dart';
 import 'package:link2ur/data/repositories/expert_team_repository.dart';
 import 'package:link2ur/features/expert_team/bloc/expert_team_bloc.dart';
 
@@ -98,7 +99,7 @@ class _EditBodyState extends State<_EditBody> {
                               CircleAvatar(
                                 radius: 48,
                                 backgroundImage: team.avatar != null
-                                    ? NetworkImage(team.avatar!)
+                                    ? NetworkImage(Helpers.getImageUrl(team.avatar!))
                                     : null,
                                 child: team.avatar == null
                                     ? const Icon(Icons.group, size: 40)

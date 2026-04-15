@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/utils/helpers.dart';
 import '../../../../core/utils/l10n_extension.dart';
 import '../../../../data/repositories/package_purchase_repository.dart';
 
@@ -159,7 +160,7 @@ class _CustomerPackagesViewState extends State<CustomerPackagesView> {
                       CircleAvatar(
                         backgroundImage: p['user_avatar'] != null &&
                                 (p['user_avatar'] as String).isNotEmpty
-                            ? NetworkImage(p['user_avatar'] as String)
+                            ? NetworkImage(Helpers.getImageUrl(p['user_avatar'] as String))
                             : null,
                         child: p['user_avatar'] == null ||
                                 (p['user_avatar'] as String).isEmpty
