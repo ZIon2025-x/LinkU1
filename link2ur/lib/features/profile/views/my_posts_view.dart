@@ -17,22 +17,25 @@ import '../../../core/utils/helpers.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../data/models/flea_market.dart';
 import '../../../data/repositories/flea_market_repository.dart';
+import 'widgets/rented_in_tab.dart';
 
-/// 我的闲置商品视图（对齐iOS MyPostsView.swift）
-/// 4个分类Tab：出售中 / 收的闲置 / 收藏的 / 已售出
+/// 我的闲置商品视图
+/// 6个分类Tab：出售中 / 已售出 / 收的闲置 / 租出 / 租入 / 收藏的
 class MyPostsView extends StatefulWidget {
-  const MyPostsView({super.key});
+  final int initialTab;
+  const MyPostsView({super.key, this.initialTab = 0});
 
   @override
   State<MyPostsView> createState() => _MyPostsViewState();
 }
 
-/// 闲置商品分类
+/// 闲置商品分类（rentedIn 不在此枚举，由 RentedInTab widget 直接处理）
 enum _MyItemsCategory {
   selling,
-  purchased,
-  favorites,
   sold,
+  purchased,
+  rentedOut,
+  favorites,
 }
 
 class _MyPostsViewState extends State<MyPostsView>
@@ -53,7 +56,11 @@ class _MyPostsViewState extends State<MyPostsView>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(
+      length: 6,
+      vsync: this,
+      initialIndex: widget.initialTab.clamp(0, 5),
+    );
     _tabController.addListener(_onTabChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadAllRelated();
@@ -75,33 +82,41 @@ class _MyPostsViewState extends State<MyPostsView>
     }
   }
 
-  /// 根据 tab 从「与我相关」列表中筛选：出售中 / 收的闲置 / 已售出
+  /// 根据 tab 从「与我相关」列表中筛选
   List<FleaMarketItem> _getFilteredItems(_MyItemsCategory category) {
     switch (category) {
       case _MyItemsCategory.selling:
         return _allRelatedItems
             .where((e) =>
                 e.myRole == 'seller' &&
+                e.listingType == 'sale' &&
                 e.status == AppConstants.fleaMarketStatusActive)
             .toList();
-      case _MyItemsCategory.purchased:
-        return _allRelatedItems.where((e) => e.myRole == 'buyer').toList();
-      case _MyItemsCategory.favorites:
-        return _favoriteItems;
       case _MyItemsCategory.sold:
         return _allRelatedItems
             .where((e) =>
                 e.myRole == 'seller' &&
+                e.listingType == 'sale' &&
                 e.status == AppConstants.fleaMarketStatusSold)
             .toList();
+      case _MyItemsCategory.purchased:
+        return _allRelatedItems.where((e) => e.myRole == 'buyer').toList();
+      case _MyItemsCategory.rentedOut:
+        return _allRelatedItems
+            .where((e) =>
+                e.myRole == 'seller' && e.listingType == 'rental')
+            .toList();
+      case _MyItemsCategory.favorites:
+        return _favoriteItems;
     }
   }
 
   bool _isLoading(_MyItemsCategory category) {
     switch (category) {
       case _MyItemsCategory.selling:
-      case _MyItemsCategory.purchased:
       case _MyItemsCategory.sold:
+      case _MyItemsCategory.purchased:
+      case _MyItemsCategory.rentedOut:
         return _allRelatedLoading;
       case _MyItemsCategory.favorites:
         return _favoriteLoading;
@@ -119,8 +134,9 @@ class _MyPostsViewState extends State<MyPostsView>
           _allRelatedItems = items;
           _allRelatedLoading = false;
           _categoryErrors[_MyItemsCategory.selling] = null;
-          _categoryErrors[_MyItemsCategory.purchased] = null;
           _categoryErrors[_MyItemsCategory.sold] = null;
+          _categoryErrors[_MyItemsCategory.purchased] = null;
+          _categoryErrors[_MyItemsCategory.rentedOut] = null;
         });
       }
     } catch (e) {
@@ -128,8 +144,9 @@ class _MyPostsViewState extends State<MyPostsView>
         setState(() {
           _allRelatedLoading = false;
           _categoryErrors[_MyItemsCategory.selling] = e.toString();
-          _categoryErrors[_MyItemsCategory.purchased] = e.toString();
           _categoryErrors[_MyItemsCategory.sold] = e.toString();
+          _categoryErrors[_MyItemsCategory.purchased] = e.toString();
+          _categoryErrors[_MyItemsCategory.rentedOut] = e.toString();
         });
       }
     }
@@ -178,6 +195,7 @@ class _MyPostsViewState extends State<MyPostsView>
           ),
         ],
         bottom: TabBar(
+          isScrollable: true,
           controller: _tabController,
           labelColor: AppColors.primary,
           unselectedLabelColor: isDark
@@ -191,16 +209,24 @@ class _MyPostsViewState extends State<MyPostsView>
               text: l10n.myItemsSelling,
             ),
             Tab(
+              icon: const Icon(Icons.check_circle, size: 18),
+              text: l10n.myItemsSold,
+            ),
+            Tab(
               icon: const Icon(Icons.shopping_bag, size: 18),
               text: l10n.myItemsPurchased,
             ),
             Tab(
-              icon: const Icon(Icons.favorite, size: 18),
-              text: l10n.myItemsFavorites,
+              icon: const Icon(Icons.outbox, size: 18),
+              text: l10n.myPostsTabRentedOut,
             ),
             Tab(
-              icon: const Icon(Icons.check_circle, size: 18),
-              text: l10n.myItemsSold,
+              icon: const Icon(Icons.inbox, size: 18),
+              text: l10n.myPostsTabRentedIn,
+            ),
+            Tab(
+              icon: const Icon(Icons.favorite, size: 18),
+              text: l10n.myItemsFavorites,
             ),
           ],
         ),
@@ -209,9 +235,11 @@ class _MyPostsViewState extends State<MyPostsView>
         controller: _tabController,
         children: [
           _buildCategoryContent(_MyItemsCategory.selling),
-          _buildCategoryContent(_MyItemsCategory.purchased),
-          _buildCategoryContent(_MyItemsCategory.favorites),
           _buildCategoryContent(_MyItemsCategory.sold),
+          _buildCategoryContent(_MyItemsCategory.purchased),
+          _buildCategoryContent(_MyItemsCategory.rentedOut),
+          const RentedInTab(),
+          _buildCategoryContent(_MyItemsCategory.favorites),
         ],
       ),
     );
@@ -241,15 +269,18 @@ class _MyPostsViewState extends State<MyPostsView>
         case _MyItemsCategory.selling:
           emptyTitle = l10n.myItemsEmptySelling;
           emptyMessage = l10n.myItemsEmptySellingMessage;
-        case _MyItemsCategory.purchased:
-          emptyTitle = l10n.myItemsEmptyPurchased;
-          emptyMessage = l10n.myItemsEmptyPurchasedMessage;
-        case _MyItemsCategory.favorites:
-          emptyTitle = l10n.myItemsEmptyFavorites;
-          emptyMessage = l10n.myItemsEmptyFavoritesMessage;
         case _MyItemsCategory.sold:
           emptyTitle = l10n.myItemsEmptySold;
           emptyMessage = l10n.myItemsEmptySoldMessage;
+        case _MyItemsCategory.purchased:
+          emptyTitle = l10n.myItemsEmptyPurchased;
+          emptyMessage = l10n.myItemsEmptyPurchasedMessage;
+        case _MyItemsCategory.rentedOut:
+          emptyTitle = l10n.myPostsTabRentedOut;
+          emptyMessage = l10n.myItemsEmptySellingMessage;
+        case _MyItemsCategory.favorites:
+          emptyTitle = l10n.myItemsEmptyFavorites;
+          emptyMessage = l10n.myItemsEmptyFavoritesMessage;
       }
       return EmptyStateView(
         icon: _categoryIcon(category),
@@ -299,12 +330,14 @@ class _MyPostsViewState extends State<MyPostsView>
     switch (category) {
       case _MyItemsCategory.selling:
         return Icons.sell;
-      case _MyItemsCategory.purchased:
-        return Icons.shopping_bag;
-      case _MyItemsCategory.favorites:
-        return Icons.favorite;
       case _MyItemsCategory.sold:
         return Icons.check_circle;
+      case _MyItemsCategory.purchased:
+        return Icons.shopping_bag;
+      case _MyItemsCategory.rentedOut:
+        return Icons.outbox;
+      case _MyItemsCategory.favorites:
+        return Icons.favorite;
     }
   }
 }
@@ -477,17 +510,32 @@ class _FleaMarketItemCard extends StatelessWidget {
       case _MyItemsCategory.selling:
         text = l10n.myItemsStatusSelling;
         color = AppColors.success;
+      case _MyItemsCategory.sold:
+        text = l10n.myItemsStatusSold;
+        color = AppColors.textTertiaryLight;
       case _MyItemsCategory.purchased:
         // 待支付商品显示「待支付」，方便用户识别并完成支付
         text = item.hasPendingPayment
             ? l10n.taskStatusPendingPayment
             : l10n.myItemsStatusPurchased;
         color = item.hasPendingPayment ? AppColors.warning : AppColors.primary;
+      case _MyItemsCategory.rentedOut:
+        final rentalStatus = item.currentRentalStatus;
+        switch (rentalStatus) {
+          case 'available':
+            text = l10n.rentalListingStatusAvailable;
+            color = AppColors.success;
+          case 'renting':
+            text = l10n.rentalListingStatusRenting;
+            color = AppColors.info;
+          case 'overdue':
+            text = l10n.rentalListingStatusOverdue;
+            color = AppColors.error;
+          default:
+            return const SizedBox.shrink();
+        }
       case _MyItemsCategory.favorites:
         return const SizedBox.shrink();
-      case _MyItemsCategory.sold:
-        text = l10n.myItemsStatusSold;
-        color = AppColors.textTertiaryLight;
     }
 
     return Container(
