@@ -304,6 +304,7 @@ class _MyApplicationCard extends StatelessWidget {
       ServiceApplicationStatus.rejected => l10n.expertApplicationStatusRejected,
       ServiceApplicationStatus.cancelled =>
         l10n.expertApplicationStatusCancelled,
+      ServiceApplicationStatus.unknown => application.status.name,
     };
   }
 
@@ -315,6 +316,7 @@ class _MyApplicationCard extends StatelessWidget {
       ServiceApplicationStatus.approved => AppColors.success,
       ServiceApplicationStatus.rejected => AppColors.error,
       ServiceApplicationStatus.cancelled => AppColors.textTertiaryLight,
+      ServiceApplicationStatus.unknown => AppColors.textSecondaryLight,
     };
   }
 

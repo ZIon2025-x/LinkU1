@@ -10,7 +10,8 @@ enum ServiceApplicationStatus {
   priceAgreed,
   approved,
   rejected,
-  cancelled;
+  cancelled,
+  unknown;
 
   static ServiceApplicationStatus fromApi(String? raw) {
     switch (raw) {
@@ -27,12 +28,13 @@ enum ServiceApplicationStatus {
       case 'cancelled':
         return ServiceApplicationStatus.cancelled;
       default:
-        return ServiceApplicationStatus.pending;
+        return ServiceApplicationStatus.unknown;
     }
   }
 
   String get apiValue => switch (this) {
         ServiceApplicationStatus.priceAgreed => 'price_agreed',
+        ServiceApplicationStatus.unknown => 'unknown',
         _ => name,
       };
 
@@ -116,7 +118,15 @@ class ServiceApplication extends Equatable {
       finalPrice: _parseDoubleOrNull(json['final_price']),
       currency: (json['currency'] as String?) ?? 'GBP',
       taskId: _parseIntOrNull(json['task_id']),
-      createdAt: DateTime.parse(json['created_at'] as String),
+      createdAt: () {
+        final raw = json['created_at'] as String?;
+        if (raw == null) {
+          throw const FormatException(
+            'ServiceApplication missing required created_at',
+          );
+        }
+        return DateTime.parse(raw);
+      }(),
       approvedAt: _parseDateOrNull(json['approved_at']),
       priceAgreedAt: _parseDateOrNull(json['price_agreed_at']),
     );
