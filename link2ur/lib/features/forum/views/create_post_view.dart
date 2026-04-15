@@ -33,11 +33,16 @@ class CreatePostView extends StatefulWidget {
     this.officialTaskId,
     this.officialTaskTitle,
     this.initialCategoryId,
+    this.lockCategory = false,
   });
 
   final int? officialTaskId;
   final String? officialTaskTitle;
   final int? initialCategoryId;
+
+  /// 锁死分类选择:隐藏切换 UI,禁用权限过滤的"不在可发帖列表则重置"逻辑。
+  /// 用于"达人发自己板块的动态"等场景,分类由上游强制决定。
+  final bool lockCategory;
 
   @override
   State<CreatePostView> createState() => _CreatePostViewState();
@@ -481,6 +486,60 @@ class _CreatePostViewState extends State<CreatePostView> {
                 // 分类选择（过滤掉仅管理员可发帖的板块）
                 if (state.categories.isNotEmpty) ...[
                   Builder(builder: (context) {
+                    // 锁死模式：分类由上游强制，渲染只读展示，跳过权限过滤/重置逻辑
+                    if (widget.lockCategory && _selectedCategoryId != null) {
+                      final locked = state.categories.firstWhere(
+                        (c) => c.id == _selectedCategoryId,
+                        orElse: () => ForumCategory(
+                          id: _selectedCategoryId!,
+                          name: '',
+                        ),
+                      );
+                      final label = locked.displayName(
+                          Localizations.localeOf(context));
+                      final isDark =
+                          Theme.of(context).brightness == Brightness.dark;
+                      return Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 14),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.04)
+                              : Colors.black.withValues(alpha: 0.03),
+                          borderRadius: AppRadius.allSmall,
+                          border: Border.all(
+                            color: Colors.black.withValues(alpha: 0.08),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.forum_outlined, size: 18),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                label.isNotEmpty
+                                    ? label
+                                    : context.l10n.forumSelectCategory,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                            Icon(
+                              Icons.lock_outline,
+                              size: 16,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.5),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
                     final currentUser =
                         context.read<AuthBloc>().state.user;
                     final postableCategories =

@@ -48,12 +48,15 @@ List<RouteBase> get forumRoutes => [
           final initialCategoryId = int.tryParse(
             state.uri.queryParameters['categoryId'] ?? '',
           );
+          final lockCategory =
+              state.uri.queryParameters['lock'] == '1';
           return SlideUpTransitionPage(
             key: state.pageKey,
             child: CreatePostView(
               officialTaskId: officialTaskId,
               officialTaskTitle: officialTaskTitle,
               initialCategoryId: initialCategoryId,
+              lockCategory: lockCategory,
             ),
           );
         },

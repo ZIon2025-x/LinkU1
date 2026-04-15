@@ -145,7 +145,7 @@ class _ManagementCenterScaffold extends StatelessWidget {
                 icon: Icons.edit_note_outlined,
                 label: context.l10n.expertManagementCreatePost,
                 onTap: () => context.push(
-                    '/forum/posts/create?categoryId=${team.forumCategoryId}'),
+                    '/forum/posts/create?categoryId=${team.forumCategoryId}&lock=1'),
               ),
           ]),
 
