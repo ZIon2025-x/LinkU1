@@ -290,7 +290,8 @@ class _MyApplicationCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final serviceName = application['service_name'] as String? ?? '';
-    final ownerName = application['service_owner_name'] as String? ??
+    final ownerName = application['owner_name'] as String? ??
+        application['service_owner_name'] as String? ??
         application['expert_name'] as String? ??
         '';
     final message = application['application_message'] as String?;
