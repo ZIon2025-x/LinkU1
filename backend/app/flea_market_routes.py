@@ -1546,8 +1546,13 @@ async def get_my_related_flea_items(
             )
             rental_result = await db.execute(rental_stmt)
             for r in rental_result.scalars().all():
-                # Only keep the latest (most recent) rental per item
-                current_rental_by_item.setdefault(r.item_id, r)
+                existing = current_rental_by_item.get(r.item_id)
+                # Overdue wins over non-overdue; among same-priority, keep most recent (first seen due to DESC order)
+                if existing is None:
+                    current_rental_by_item[r.item_id] = r
+                elif r.status == "overdue" and existing.status != "overdue":
+                    current_rental_by_item[r.item_id] = r
+                # else: existing stays (either already overdue, or both non-overdue and existing is newer)
 
         def _derive_rental_status(it):
             if getattr(it, "listing_type", None) != "rental":
