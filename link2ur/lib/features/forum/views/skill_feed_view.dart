@@ -394,6 +394,7 @@ class _ServiceFeedCard extends StatelessWidget {
               children: [
                 _TypeBadge(label: _serviceLabel(context), color: serviceColor),
                 const Spacer(),
+                _ServiceDiscountBadge(service: service),
                 Text(
                   service.priceDisplay,
                   style: const TextStyle(
@@ -444,6 +445,45 @@ class _ServiceFeedCard extends StatelessWidget {
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ==================== 折扣徽章 (multi 套餐) ====================
+
+class _ServiceDiscountBadge extends StatelessWidget {
+  const _ServiceDiscountBadge({required this.service});
+  final TaskExpertService service;
+
+  @override
+  Widget build(BuildContext context) {
+    if (service.packageType != 'multi') return const SizedBox.shrink();
+    final pkg = service.packagePrice;
+    final sessions = service.totalSessions ?? 0;
+    if (pkg == null || sessions <= 0) return const SizedBox.shrink();
+    final perSessionAvg = pkg / sessions;
+    final base = service.basePrice;
+    if (base <= 0 || base <= perSessionAvg + 0.005) {
+      return const SizedBox.shrink();
+    }
+    final percent = ((1 - perSessionAvg / base) * 100).round();
+    return Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+        decoration: BoxDecoration(
+          color: AppColors.priceRed,
+          borderRadius: BorderRadius.circular(3),
+        ),
+        child: Text(
+          '$percent% OFF',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
     );

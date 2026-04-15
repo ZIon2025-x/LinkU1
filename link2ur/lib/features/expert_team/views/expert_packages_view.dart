@@ -73,6 +73,27 @@ class _PackagesBody extends StatelessWidget {
                                 _StatusChip(status: status),
                               ],
                             ),
+                            // 多次套餐关联服务提示（买家核销时知道去哪里用）
+                            if (_buildLinkedServiceLabel(context, p) != null) ...[
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  const Icon(Icons.link, size: 13,
+                                      color: Colors.blueGrey),
+                                  const SizedBox(width: 4),
+                                  Flexible(
+                                    child: Text(
+                                      _buildLinkedServiceLabel(context, p)!,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(color: Colors.blueGrey),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                             const SizedBox(height: 8),
                             LinearProgressIndicator(
                               value: total > 0 ? (total - remaining) / total : 0,
@@ -173,6 +194,23 @@ class _PackagesBody extends StatelessWidget {
       },
     );
   }
+}
+
+/// multi 套餐关联服务的展示文案，如"用于 1小时英语课"（locale-aware）；
+/// 非关联套餐或缺失名字时返回 null
+String? _buildLinkedServiceLabel(
+    BuildContext context, UserServicePackage p) {
+  if (p.linkedServiceId == null) return null;
+  final locale = Localizations.localeOf(context);
+  String? name;
+  final lang = locale.languageCode;
+  if (lang == 'zh') {
+    name = p.linkedServiceNameZh ?? p.linkedServiceName;
+  } else {
+    name = p.linkedServiceNameEn ?? p.linkedServiceName;
+  }
+  if (name == null || name.isEmpty) return null;
+  return context.l10n.userPackageLinkedServiceLabel(name);
 }
 
 bool _isExpiringSoon(DateTime? expiresAt, int remaining) {

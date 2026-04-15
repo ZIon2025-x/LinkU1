@@ -1617,7 +1617,7 @@ class TaskExpertService(Base):
     # 套餐字段（Phase 7 + A1 purchase flow）
     # package_type:
     #   NULL     → 普通单次服务（走 apply + Task 流程）
-    #   'multi'  → 多课时套餐
+    #   'multi'  → 多次套餐
     #   'bundle' → 服务包
     # 旧值 'single' 已在 migration 197 刷成 NULL 并下线。
     package_type = Column(String(20), nullable=True)
@@ -1630,6 +1630,11 @@ class TaskExpertService(Base):
     package_price = Column(DECIMAL(12, 2), nullable=True)
     # 套餐有效天数 (NULL = 永不过期);购买后 expires_at = purchased_at + validity_days
     validity_days = Column(Integer, nullable=True)
+    # multi 套餐可关联一个现有的单次服务（自引用）:
+    #   NULL     → 套餐自包含（老行为）
+    #   INTEGER  → "本套餐可用于 N 次 {关联服务}"，前端展示被关联服务的名字/图片/原单价
+    # 应用层校验: 仅在 package_type='multi' 时允许非 NULL；被引用 service 必须同 owner 且 package_type IS NULL
+    linked_service_id = Column(Integer, ForeignKey("task_expert_services.id", ondelete="SET NULL"), nullable=True)
 
     # 关系
     expert = relationship("TaskExpert", back_populates="services")

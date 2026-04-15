@@ -488,10 +488,19 @@ class _PackageFormSheetState extends State<_PackageFormSheet> {
   String _packageType = 'multi';
   String _currency = 'GBP';
 
+  /// multi 套餐可选关联服务 id (null = 不关联，即自包含套餐)
+  int? _linkedServiceId;
+
   /// bundle 子服务选择: serviceId -> count
   final Map<int, int> _bundleSelections = {};
 
   bool get _isEditing => widget.existing != null;
+
+  /// 关联型 multi 套餐：多次套餐 + 选择了具体关联服务
+  /// 此时 description/base_price/images/location/time_slots 等字段由后端从关联服务继承，
+  /// 前端表单不再显示这些字段，减少卖家填写负担。
+  bool get _isLinkedMulti =>
+      _packageType == 'multi' && _linkedServiceId != null;
 
   @override
   void initState() {
@@ -517,6 +526,12 @@ class _PackageFormSheetState extends State<_PackageFormSheet> {
         TextEditingController(text: validity?.toString() ?? '');
     _packageType = (s?['package_type'] as String?) ?? 'multi';
     _currency = (s?['currency'] as String?) ?? 'GBP';
+    final initLinked = s?['linked_service_id'] as int?;
+    // 只有当初始值在候选列表里时才保留，否则置 null（避免 DropdownButton value 不在 items 中导致抛错）
+    _linkedServiceId = initLinked != null &&
+            widget.singleServices.any((svc) => svc['id'] == initLinked)
+        ? initLinked
+        : null;
 
     // 回填 bundle 选择
     final existingBundle = s?['bundle_service_ids'];
@@ -546,6 +561,213 @@ class _PackageFormSheetState extends State<_PackageFormSheet> {
     super.dispose();
   }
 
+  /// 多次套餐关联服务下拉
+  /// - 候选 = singleServices（package_type=NULL 的服务）
+  /// - 选中后提示可用此服务的 base_price 作为"单次原价"，点一下自动填充到 base 输入框
+  Widget _buildLinkedServicePicker(BuildContext context) {
+    if (_packageType != 'multi') return const SizedBox.shrink();
+    final l10n = context.l10n;
+    final services = widget.singleServices;
+    if (services.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: AppColors.warning.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.info_outline,
+                size: 16, color: AppColors.warning),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                l10n.expertPackageLinkedServiceEmpty,
+                style: const TextStyle(fontSize: 12),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // 被选中服务的 base_price（展示用）
+    final selected = _linkedServiceId == null
+        ? null
+        : services.firstWhere(
+            (s) => s['id'] == _linkedServiceId,
+            orElse: () => const {},
+          );
+    final selectedBase = (selected?['base_price'] as num?)?.toDouble();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        DropdownButtonFormField<int?>(
+          initialValue: _linkedServiceId,
+          decoration: InputDecoration(
+            labelText: l10n.expertPackageLinkedService,
+            helperText: l10n.expertPackageLinkedServiceHint,
+            helperMaxLines: 3,
+            border: const OutlineInputBorder(),
+          ),
+          isExpanded: true,
+          items: [
+            DropdownMenuItem<int?>(
+              child: Text(l10n.expertPackageLinkedServiceNone),
+            ),
+            ...services.map((s) {
+              final id = s['id'] as int;
+              final name = (s['service_name'] as String?) ??
+                  (s['name'] as String?) ??
+                  '#$id';
+              final base = (s['base_price'] as num?)?.toDouble();
+              final priceStr = base != null
+                  ? ' · ${Helpers.currencySymbolFor(_currency)}${base.toStringAsFixed(2)}'
+                  : '';
+              return DropdownMenuItem<int?>(
+                value: id,
+                child: Text(
+                  '$name$priceStr',
+                  overflow: TextOverflow.ellipsis,
+                ),
+              );
+            }),
+          ],
+          onChanged: (val) {
+            setState(() => _linkedServiceId = val);
+            // 选中关联服务时，自动把套餐名预填为关联服务名（可改）
+            if (val != null) {
+              final svc = widget.singleServices.firstWhere(
+                (s) => s['id'] == val,
+                orElse: () => const {},
+              );
+              final linkedName = (svc['service_name'] as String?) ??
+                  (svc['name'] as String?) ??
+                  '';
+              if (_nameController.text.trim().isEmpty && linkedName.isNotEmpty) {
+                _nameController.text = linkedName;
+              }
+            }
+          },
+        ),
+        // 快速动作：用选中服务的 base_price 填充"单次原价"
+        if (selectedBase != null && selectedBase > 0)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () {
+                  _basePriceController.text = selectedBase.toStringAsFixed(2);
+                  setState(() {});
+                },
+                icon: const Icon(Icons.auto_fix_high, size: 16),
+                label: Text(l10n.expertPackageLinkedServiceUseBase),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  minimumSize: const Size(0, 30),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  /// multi 套餐实时折扣预览块
+  /// - 总价、次数、原价（base）均可解析时显示
+  /// - 若 base > 每次均价 超过 0.5 分，显示红色立省徽章
+  Widget _buildDiscountPreview(BuildContext context) {
+    if (_packageType != 'multi') return const SizedBox.shrink();
+    final pkgPrice = double.tryParse(_packagePriceController.text.trim());
+    final sessions = int.tryParse(_sessionsController.text.trim());
+    if (pkgPrice == null || pkgPrice <= 0 || sessions == null || sessions < 2) {
+      return const SizedBox.shrink();
+    }
+    final perSessionAvg = pkgPrice / sessions;
+    final basePrice = double.tryParse(_basePriceController.text.trim());
+    final hasUserBase = basePrice != null && basePrice > 0;
+    final showDiscount =
+        hasUserBase && basePrice > perSessionAvg + 0.005;
+    final savedTotal = showDiscount
+        ? (basePrice - perSessionAvg) * sessions
+        : 0.0;
+    final percent = showDiscount
+        ? ((1 - perSessionAvg / basePrice) * 100).round()
+        : 0;
+
+    final l10n = context.l10n;
+    final symbol = Helpers.currencySymbolFor(_currency);
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: AppColors.primary.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+              color: AppColors.primary.withValues(alpha: 0.2)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.insights,
+                    size: 16, color: AppColors.primary),
+                const SizedBox(width: 6),
+                Text(
+                  l10n.packagePurchasePerSessionValue(
+                      symbol, perSessionAvg.toStringAsFixed(2)),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ],
+            ),
+            if (showDiscount) ...[
+              const SizedBox(height: 6),
+              Text(
+                l10n.packagePurchaseOriginalPerSession(
+                    symbol, basePrice.toStringAsFixed(2)),
+                style: const TextStyle(
+                  fontSize: 11,
+                  decoration: TextDecoration.lineThrough,
+                  color: Colors.grey,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AppColors.error.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  l10n.packagePurchaseSaveAmount(
+                    symbol,
+                    savedTotal.toStringAsFixed(2),
+                    percent.toString(),
+                  ),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.error,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
 
@@ -560,26 +782,33 @@ class _PackageFormSheetState extends State<_PackageFormSheet> {
     final packagePrice = double.parse(_packagePriceController.text.trim());
     final data = <String, dynamic>{
       'service_name': _nameController.text.trim(),
-      'description': _descController.text.trim(),
       'currency': _currency,
       'package_type': _packageType,
       'package_price': packagePrice,
     };
+    // 关联型 multi 套餐：description / base_price 等字段由后端从关联服务继承，前端不传
+    if (!_isLinkedMulti) {
+      data['description'] = _descController.text.trim();
+    }
 
     if (_packageType == 'multi') {
       final sessions = int.parse(_sessionsController.text.trim());
       data['total_sessions'] = sessions;
-      // base_price: 用户可覆盖,否则按总价 / 课时数 推导（保留 2 位小数,最少 0.01）
-      final baseText = _basePriceController.text.trim();
-      double basePrice;
-      if (baseText.isNotEmpty) {
-        basePrice = double.parse(baseText);
-      } else {
-        basePrice = packagePrice / sessions;
+      // base_price: 未关联时按用户输入 / 自动推导；关联时后端继承，前端不传
+      if (!_isLinkedMulti) {
+        final baseText = _basePriceController.text.trim();
+        double basePrice;
+        if (baseText.isNotEmpty) {
+          basePrice = double.parse(baseText);
+        } else {
+          basePrice = packagePrice / sessions;
+        }
+        basePrice = (basePrice * 100).round() / 100.0;
+        if (basePrice <= 0) basePrice = 0.01;
+        data['base_price'] = basePrice;
       }
-      basePrice = (basePrice * 100).round() / 100.0;
-      if (basePrice <= 0) basePrice = 0.01;
-      data['base_price'] = basePrice;
+      // 关联服务（选填）
+      data['linked_service_id'] = _linkedServiceId;
     } else if (_packageType == 'bundle') {
       data['bundle_service_ids'] = _bundleSelections.entries
           .map((e) => {'service_id': e.key, 'count': e.value})
@@ -646,11 +875,20 @@ class _PackageFormSheetState extends State<_PackageFormSheet> {
                 ],
                 selected: {_packageType},
                 onSelectionChanged: (selected) {
-                  setState(() => _packageType = selected.first);
+                  setState(() {
+                    _packageType = selected.first;
+                    // 切到 bundle 时清空 multi 专属的关联服务字段
+                    if (_packageType != 'multi') _linkedServiceId = null;
+                  });
                 },
                 showSelectedIcon: false,
               ),
               const SizedBox(height: AppSpacing.lg),
+
+              // 关联服务（multi 套餐专属）：选择后自动继承描述/图片/定价等
+              _buildLinkedServicePicker(context),
+              if (_packageType == 'multi')
+                const SizedBox(height: AppSpacing.lg),
 
               // Name
               TextFormField(
@@ -670,25 +908,27 @@ class _PackageFormSheetState extends State<_PackageFormSheet> {
               ),
               const SizedBox(height: AppSpacing.md),
 
-              // Description
-              TextFormField(
-                controller: _descController,
-                decoration: InputDecoration(
-                  labelText: l10n.expertPackageDescription,
-                  border: const OutlineInputBorder(),
-                  alignLabelWithHint: true,
+              // Description (hidden when linked — inherited from linked service)
+              if (!_isLinkedMulti) ...[
+                TextFormField(
+                  controller: _descController,
+                  decoration: InputDecoration(
+                    labelText: l10n.expertPackageDescription,
+                    border: const OutlineInputBorder(),
+                    alignLabelWithHint: true,
+                  ),
+                  maxLines: 4,
+                  maxLength: 2000,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return l10n.validatorFieldRequired(
+                          l10n.expertPackageDescription);
+                    }
+                    return null;
+                  },
                 ),
-                maxLines: 4,
-                maxLength: 2000,
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return l10n.validatorFieldRequired(
-                        l10n.expertPackageDescription);
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: AppSpacing.md),
+                const SizedBox(height: AppSpacing.md),
+              ],
 
               // Sessions count (multi only)
               if (_packageType == 'multi') ...[
@@ -702,6 +942,7 @@ class _PackageFormSheetState extends State<_PackageFormSheet> {
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   textInputAction: TextInputAction.next,
+                  onChanged: (_) => setState(() {}),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
                       return l10n.validatorFieldRequired(
@@ -716,32 +957,37 @@ class _PackageFormSheetState extends State<_PackageFormSheet> {
                 ),
                 const SizedBox(height: AppSpacing.md),
 
-                // Per-session reference price (optional; auto-derived if blank)
-                TextFormField(
-                  controller: _basePriceController,
-                  decoration: InputDecoration(
-                    labelText: l10n.expertPackageBasePrice,
-                    helperText: l10n.expertPackageBasePriceHint,
-                    prefixText: '${Helpers.currencySymbolFor(_currency)} ',
-                    border: const OutlineInputBorder(),
+                // Per-session reference price (hidden when linked — inherited from linked service)
+                if (!_isLinkedMulti) ...[
+                  TextFormField(
+                    controller: _basePriceController,
+                    decoration: InputDecoration(
+                      labelText: l10n.expertPackageBasePrice,
+                      helperText: l10n.expertPackageBasePriceHint,
+                      prefixText: '${Helpers.currencySymbolFor(_currency)} ',
+                      border: const OutlineInputBorder(),
+                    ),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(
+                          RegExp(r'^\d+\.?\d{0,2}')),
+                    ],
+                    textInputAction: TextInputAction.next,
+                    onChanged: (_) => setState(() {}),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) return null;
+                      final p = double.tryParse(value.trim());
+                      if (p == null || p <= 0) {
+                        return l10n.validatorFieldRequired(
+                            l10n.expertPackageBasePrice);
+                      }
+                      return null;
+                    },
                   ),
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(
-                        RegExp(r'^\d+\.?\d{0,2}')),
-                  ],
-                  textInputAction: TextInputAction.next,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) return null;
-                    final p = double.tryParse(value.trim());
-                    if (p == null || p <= 0) {
-                      return l10n.validatorFieldRequired(
-                          l10n.expertPackageBasePrice);
-                    }
-                    return null;
-                  },
-                ),
+                ],
+                // 实时折扣预览 (multi 套餐)
+                _buildDiscountPreview(context),
                 const SizedBox(height: AppSpacing.md),
               ],
 
@@ -785,6 +1031,7 @@ class _PackageFormSheetState extends State<_PackageFormSheet> {
                   FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
                 ],
                 textInputAction: TextInputAction.next,
+                onChanged: (_) => setState(() {}),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
                     return l10n.validatorFieldRequired(l10n.expertPackagePrice);

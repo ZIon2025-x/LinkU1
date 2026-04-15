@@ -15,6 +15,7 @@ import '../../../core/utils/sheet_adaptation.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
+import '../../../core/widgets/expert_status_badge.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../data/repositories/question_repository.dart';
@@ -585,6 +586,10 @@ class _ExpertCard extends StatelessWidget {
                             ),
                           ),
                         ),
+                      ],
+                      if (expert.isOpen != null) ...[
+                        const SizedBox(width: 4),
+                        ExpertStatusBadge(isOpen: expert.isOpen),
                       ],
                     ],
                   ),

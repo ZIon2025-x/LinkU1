@@ -8,7 +8,8 @@ class ExpertDashboardState extends Equatable {
     this.stats = const {},
     this.services = const [],
     this.timeSlots = const [],
-    this.closedDates = const [],
+    this.closedDates = const <ExpertClosedDate>[],
+    this.businessHours = const {},
     this.selectedServiceId,
     this.errorMessage,
     this.actionMessage,
@@ -18,7 +19,8 @@ class ExpertDashboardState extends Equatable {
   final Map<String, dynamic> stats;
   final List<Map<String, dynamic>> services;
   final List<Map<String, dynamic>> timeSlots;
-  final List<Map<String, dynamic>> closedDates;
+  final List<ExpertClosedDate> closedDates;
+  final Map<String, dynamic> businessHours;
   final String? selectedServiceId;
   final String? errorMessage;
   final String? actionMessage;
@@ -28,7 +30,8 @@ class ExpertDashboardState extends Equatable {
     Map<String, dynamic>? stats,
     List<Map<String, dynamic>>? services,
     List<Map<String, dynamic>>? timeSlots,
-    List<Map<String, dynamic>>? closedDates,
+    List<ExpertClosedDate>? closedDates,
+    Map<String, dynamic>? businessHours,
     String? selectedServiceId,
     String? errorMessage,
     String? actionMessage,
@@ -39,6 +42,7 @@ class ExpertDashboardState extends Equatable {
       services: services ?? this.services,
       timeSlots: timeSlots ?? this.timeSlots,
       closedDates: closedDates ?? this.closedDates,
+      businessHours: businessHours ?? this.businessHours,
       selectedServiceId: selectedServiceId ?? this.selectedServiceId,
       errorMessage: errorMessage,
       actionMessage: actionMessage,
@@ -52,6 +56,7 @@ class ExpertDashboardState extends Equatable {
         services,
         timeSlots,
         closedDates,
+        businessHours,
         selectedServiceId,
         errorMessage,
         actionMessage,

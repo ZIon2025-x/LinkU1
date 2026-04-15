@@ -17,8 +17,64 @@ import '../../bloc/expert_dashboard_bloc.dart';
 
 /// Time Slots tab for the Expert Dashboard — lets experts manage time slots
 /// per service (select service → view/add/delete slots).
-class TimeSlotsTab extends StatelessWidget {
+class TimeSlotsTab extends StatefulWidget {
   const TimeSlotsTab({super.key});
+
+  @override
+  State<TimeSlotsTab> createState() => _TimeSlotsTabState();
+}
+
+class _TimeSlotsTabState extends State<TimeSlotsTab> {
+  /// 记住最近一次用户提交的 slot 数据 + 对应 serviceId，
+  /// 供 "不在营业时间" 确认框通过 force=true 重试。
+  Map<String, dynamic>? _pendingSlotData;
+  String? _pendingServiceId;
+
+  Future<void> _handleOutsideBusinessHours() async {
+    final data = _pendingSlotData;
+    final serviceId = _pendingServiceId;
+    if (data == null || serviceId == null) return;
+    final confirmed = await AdaptiveDialogs.showConfirmDialog<bool>(
+      context: context,
+      title: context.l10n.expertTimeSlotOutsideHoursTitle,
+      content: context.l10n.expertTimeSlotOutsideHoursMessage,
+      confirmText: context.l10n.expertTimeSlotCreateAnyway,
+      onConfirm: () => true,
+    );
+    if (confirmed == true && mounted) {
+      context.read<ExpertDashboardBloc>().add(
+            ExpertDashboardCreateTimeSlot(serviceId, data, force: true),
+          );
+      // 下一轮若再失败（不太可能），不会再弹框；成功则按常规流程走
+      _pendingSlotData = null;
+      _pendingServiceId = null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocListener<ExpertDashboardBloc, ExpertDashboardState>(
+      listenWhen: (prev, curr) =>
+          curr.errorMessage == 'outside_business_hours' &&
+          prev.errorMessage != curr.errorMessage,
+      listener: (context, state) {
+        _handleOutsideBusinessHours();
+      },
+      child: _TimeSlotsContent(
+        onRememberPendingSubmit: (serviceId, data) {
+          _pendingServiceId = serviceId;
+          _pendingSlotData = data;
+        },
+      ),
+    );
+  }
+}
+
+class _TimeSlotsContent extends StatelessWidget {
+  const _TimeSlotsContent({required this.onRememberPendingSubmit});
+
+  final void Function(String serviceId, Map<String, dynamic> data)
+      onRememberPendingSubmit;
 
   @override
   Widget build(BuildContext context) {
@@ -147,6 +203,7 @@ class TimeSlotsTab extends StatelessWidget {
       showDragHandle: true,
       builder: (sheetContext) => _TimeSlotFormSheet(
         onSubmit: (data) {
+          onRememberPendingSubmit(serviceId, data);
           context.read<ExpertDashboardBloc>().add(
                 ExpertDashboardCreateTimeSlot(serviceId, data),
               );

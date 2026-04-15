@@ -5,6 +5,7 @@ import 'package:link2ur/core/utils/l10n_extension.dart';
 import 'package:link2ur/data/models/expert_team.dart';
 import 'package:link2ur/data/repositories/expert_team_repository.dart';
 import 'package:link2ur/features/expert_team/bloc/expert_team_bloc.dart';
+import 'package:link2ur/core/widgets/expert_status_badge.dart';
 import 'package:link2ur/features/expert_team/widgets/role_badge.dart';
 
 /// 我的团队页
@@ -175,6 +176,10 @@ class _TeamCard extends StatelessWidget {
                         if (role != null) ...[
                           const SizedBox(width: 8),
                           ExpertRoleBadge(role: role),
+                        ],
+                        if (team.isOpen != null) ...[
+                          const SizedBox(width: 6),
+                          ExpertStatusBadge(isOpen: team.isOpen),
                         ],
                       ],
                     ),

@@ -10837,6 +10837,70 @@ class AppLocalizationsEn extends AppLocalizations {
   String get expertScheduleToday => 'Today';
 
   @override
+  String get expertBusinessHoursTitle => 'Business Hours';
+
+  @override
+  String get expertBusinessHoursSubtitle =>
+      'Weekly open hours (affects the Open/Closed badge on your team page)';
+
+  @override
+  String get expertBusinessHoursEmptyHint =>
+      'Not set — your team page always shows \'Operating\'. Set it to reflect real status.';
+
+  @override
+  String get expertBusinessHoursOpen => 'Open';
+
+  @override
+  String get expertBusinessHoursClose => 'Close';
+
+  @override
+  String get expertBusinessHoursClosedDay => 'Closed';
+
+  @override
+  String get expertBusinessHoursSave => 'Save';
+
+  @override
+  String get expertBusinessHoursSaved => 'Business hours updated';
+
+  @override
+  String get expertBusinessHoursInvalidRange =>
+      'Open time must be earlier than close time';
+
+  @override
+  String get expertBusinessHoursDayMon => 'Monday';
+
+  @override
+  String get expertBusinessHoursDayTue => 'Tuesday';
+
+  @override
+  String get expertBusinessHoursDayWed => 'Wednesday';
+
+  @override
+  String get expertBusinessHoursDayThu => 'Thursday';
+
+  @override
+  String get expertBusinessHoursDayFri => 'Friday';
+
+  @override
+  String get expertBusinessHoursDaySat => 'Saturday';
+
+  @override
+  String get expertBusinessHoursDaySun => 'Sunday';
+
+  @override
+  String get expertClosedDatesUpcoming => 'Upcoming Closed Dates';
+
+  @override
+  String get expertTimeSlotOutsideHoursTitle => 'Outside Business Hours';
+
+  @override
+  String get expertTimeSlotOutsideHoursMessage =>
+      'This time slot falls outside your business hours or on a closed date. Create anyway?';
+
+  @override
+  String get expertTimeSlotCreateAnyway => 'Create anyway';
+
+  @override
   String get expertProfileEditTitle => 'Edit Profile';
 
   @override
@@ -12414,6 +12478,36 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get packagePurchasePerSessionLabel => 'Per-session avg';
+
+  @override
+  String packagePurchasePerSessionValue(String currency, String amount) {
+    return '$currency $amount/session';
+  }
+
+  @override
+  String packagePurchaseOriginalPerSession(String currency, String amount) {
+    return 'Was $currency $amount/session';
+  }
+
+  @override
+  String packagePurchaseSaveAmount(
+      String currency, String amount, String percent) {
+    return 'Save $currency $amount ($percent% off)';
+  }
+
+  @override
+  String get packagePurchaseLinkedServiceLabel => 'Applies to';
+
+  @override
+  String get serviceInactiveSuffix => 'inactive';
+
+  @override
+  String userPackageLinkedServiceLabel(String name) {
+    return 'For $name';
+  }
+
+  @override
   String get packagePurchaseValidityLabel => 'Valid for';
 
   @override
@@ -12851,10 +12945,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String get expertPackagePrice => 'Total Price';
 
   @override
-  String get expertPackageBasePrice => 'Per-session Price';
+  String get expertPackageLinkedService => 'Linked service (optional)';
 
   @override
-  String get expertPackageBasePriceHint => 'Reference price per session';
+  String get expertPackageLinkedServiceHint =>
+      'Bind this multi-session package to an existing single service; each redemption consumes one use of that service';
+
+  @override
+  String get expertPackageLinkedServiceNone => 'None (standalone package)';
+
+  @override
+  String get expertPackageLinkedServiceUseBase =>
+      'Use this service\'s price as the original per-session price';
+
+  @override
+  String get expertPackageLinkedServiceEmpty =>
+      'No eligible single service. Create one first.';
+
+  @override
+  String get expertPackageBasePrice => 'Original Per-session Price (optional)';
+
+  @override
+  String get expertPackageBasePriceHint =>
+      'Undiscounted reference price per session, used to show savings; leave blank to auto-derive from total ÷ sessions';
 
   @override
   String get expertPackageValidityDays => 'Validity (days)';

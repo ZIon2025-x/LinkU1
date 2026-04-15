@@ -10401,6 +10401,66 @@ class AppLocalizationsZh extends AppLocalizations {
   String get expertScheduleToday => '今天';
 
   @override
+  String get expertBusinessHoursTitle => '营业时间';
+
+  @override
+  String get expertBusinessHoursSubtitle => '每周营业时间（决定团队页显示运营中/休息中）';
+
+  @override
+  String get expertBusinessHoursEmptyHint => '尚未设置 — 团队页将一直显示运营中。请设置真实营业时间。';
+
+  @override
+  String get expertBusinessHoursOpen => '开门';
+
+  @override
+  String get expertBusinessHoursClose => '关门';
+
+  @override
+  String get expertBusinessHoursClosedDay => '休息';
+
+  @override
+  String get expertBusinessHoursSave => '保存';
+
+  @override
+  String get expertBusinessHoursSaved => '营业时间已更新';
+
+  @override
+  String get expertBusinessHoursInvalidRange => '开门时间必须早于关门时间';
+
+  @override
+  String get expertBusinessHoursDayMon => '周一';
+
+  @override
+  String get expertBusinessHoursDayTue => '周二';
+
+  @override
+  String get expertBusinessHoursDayWed => '周三';
+
+  @override
+  String get expertBusinessHoursDayThu => '周四';
+
+  @override
+  String get expertBusinessHoursDayFri => '周五';
+
+  @override
+  String get expertBusinessHoursDaySat => '周六';
+
+  @override
+  String get expertBusinessHoursDaySun => '周日';
+
+  @override
+  String get expertClosedDatesUpcoming => '即将到来的休息日';
+
+  @override
+  String get expertTimeSlotOutsideHoursTitle => '不在营业时间内';
+
+  @override
+  String get expertTimeSlotOutsideHoursMessage => '该时间段不在营业时间内或落在休息日。是否仍要创建？';
+
+  @override
+  String get expertTimeSlotCreateAnyway => '仍然创建';
+
+  @override
   String get expertProfileEditTitle => '编辑资料';
 
   @override
@@ -11886,13 +11946,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get packagePurchaseTypeLabel => '类型';
 
   @override
-  String get packagePurchaseTypeMulti => '多课时';
+  String get packagePurchaseTypeMulti => '多次';
 
   @override
   String get packagePurchaseTypeBundle => '服务包';
 
   @override
-  String get packagePurchaseTotalSessionsLabel => '总课时';
+  String get packagePurchaseTotalSessionsLabel => '总次数';
 
   @override
   String packagePurchaseTotalSessionsValue(Object count) {
@@ -11913,6 +11973,36 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String packagePurchasePriceValue(String currency, String amount) {
     return '$currency $amount';
+  }
+
+  @override
+  String get packagePurchasePerSessionLabel => '每次均价';
+
+  @override
+  String packagePurchasePerSessionValue(String currency, String amount) {
+    return '$currency $amount/次';
+  }
+
+  @override
+  String packagePurchaseOriginalPerSession(String currency, String amount) {
+    return '原价 $currency $amount/次';
+  }
+
+  @override
+  String packagePurchaseSaveAmount(
+      String currency, String amount, String percent) {
+    return '立省 $currency $amount（$percent% off）';
+  }
+
+  @override
+  String get packagePurchaseLinkedServiceLabel => '适用服务';
+
+  @override
+  String get serviceInactiveSuffix => '已下架';
+
+  @override
+  String userPackageLinkedServiceLabel(String name) {
+    return '用于 $name';
   }
 
   @override
@@ -11996,7 +12086,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get errorSubServiceExhausted => '该子服务已核销完';
 
   @override
-  String get errorMultiTotalSessionsInvalid => '多课时套餐配置错误';
+  String get errorMultiTotalSessionsInvalid => '多次套餐配置错误';
 
   @override
   String get errorStripeCreateFailed => 'Stripe 订单创建失败';
@@ -12295,7 +12385,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get expertPackageType => '套餐类型';
 
   @override
-  String get expertPackageTypeMulti => '多课时套餐';
+  String get expertPackageTypeMulti => '多次套餐';
 
   @override
   String get expertPackageTypeBundle => '服务包';
@@ -12307,10 +12397,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get expertPackageDescription => '套餐描述';
 
   @override
-  String get expertPackageSessionCount => '总课时数';
+  String get expertPackageSessionCount => '总次数';
 
   @override
-  String get expertPackageSessionCountHint => '此套餐包含多少次课程/服务';
+  String get expertPackageSessionCountHint => '此套餐包含多少次服务';
 
   @override
   String get expertPackageSessions => '次';
@@ -12319,10 +12409,26 @@ class AppLocalizationsZh extends AppLocalizations {
   String get expertPackagePrice => '套餐总价';
 
   @override
-  String get expertPackageBasePrice => '单课时价格';
+  String get expertPackageLinkedService => '关联服务（选填）';
 
   @override
-  String get expertPackageBasePriceHint => '单次课程/服务的参考价';
+  String get expertPackageLinkedServiceHint =>
+      '将此多次套餐绑定到某个现有单次服务；买家核销时消耗该服务的 1 次';
+
+  @override
+  String get expertPackageLinkedServiceNone => '不关联（独立套餐）';
+
+  @override
+  String get expertPackageLinkedServiceUseBase => '使用该服务的单次价格作为原价';
+
+  @override
+  String get expertPackageLinkedServiceEmpty => '暂无可关联的单次服务，请先创建单次服务';
+
+  @override
+  String get expertPackageBasePrice => '单次原价（选填）';
+
+  @override
+  String get expertPackageBasePriceHint => '未折扣的单次参考价，用于展示折扣对比；留空则按总价÷次数自动推算';
 
   @override
   String get expertPackageValidityDays => '有效期（天）';
@@ -12343,7 +12449,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get expertPackageBundleCount => '次数';
 
   @override
-  String get expertPackageSessionCountMin => '至少 2 节课';
+  String get expertPackageSessionCountMin => '至少 2 次';
 
   @override
   String get expertPackageBundleMin => '至少选择 2 个服务';
@@ -12352,7 +12458,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get expertPackageEmpty => '暂无套餐';
 
   @override
-  String get expertPackageEmptyMessage => '创建多课时或服务包套餐，给客户更优惠的价格。';
+  String get expertPackageEmptyMessage => '创建多次或服务包套餐，给客户更优惠的价格。';
 
   @override
   String get expertPackageCreated => '套餐已创建';
@@ -22995,6 +23101,66 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get expertScheduleToday => '今天';
 
   @override
+  String get expertBusinessHoursTitle => '營業時間';
+
+  @override
+  String get expertBusinessHoursSubtitle => '每週營業時間（決定團隊頁顯示營業中/休息中）';
+
+  @override
+  String get expertBusinessHoursEmptyHint => '尚未設定 — 團隊頁會一直顯示營業中。請設定真實營業時間。';
+
+  @override
+  String get expertBusinessHoursOpen => '開門';
+
+  @override
+  String get expertBusinessHoursClose => '關門';
+
+  @override
+  String get expertBusinessHoursClosedDay => '休息';
+
+  @override
+  String get expertBusinessHoursSave => '儲存';
+
+  @override
+  String get expertBusinessHoursSaved => '營業時間已更新';
+
+  @override
+  String get expertBusinessHoursInvalidRange => '開門時間必須早於關門時間';
+
+  @override
+  String get expertBusinessHoursDayMon => '週一';
+
+  @override
+  String get expertBusinessHoursDayTue => '週二';
+
+  @override
+  String get expertBusinessHoursDayWed => '週三';
+
+  @override
+  String get expertBusinessHoursDayThu => '週四';
+
+  @override
+  String get expertBusinessHoursDayFri => '週五';
+
+  @override
+  String get expertBusinessHoursDaySat => '週六';
+
+  @override
+  String get expertBusinessHoursDaySun => '週日';
+
+  @override
+  String get expertClosedDatesUpcoming => '即將到來的休息日';
+
+  @override
+  String get expertTimeSlotOutsideHoursTitle => '不在營業時間內';
+
+  @override
+  String get expertTimeSlotOutsideHoursMessage => '該時段不在營業時間內或落在休息日。仍要建立嗎？';
+
+  @override
+  String get expertTimeSlotCreateAnyway => '仍然建立';
+
+  @override
   String get expertProfileEditTitle => '編輯資料';
 
   @override
@@ -24480,13 +24646,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get packagePurchaseTypeLabel => '類型';
 
   @override
-  String get packagePurchaseTypeMulti => '多堂課';
+  String get packagePurchaseTypeMulti => '多次';
 
   @override
   String get packagePurchaseTypeBundle => '服務包';
 
   @override
-  String get packagePurchaseTotalSessionsLabel => '總堂數';
+  String get packagePurchaseTotalSessionsLabel => '總次數';
 
   @override
   String packagePurchaseTotalSessionsValue(Object count) {
@@ -24507,6 +24673,36 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String packagePurchasePriceValue(String currency, String amount) {
     return '$currency $amount';
+  }
+
+  @override
+  String get packagePurchasePerSessionLabel => '每次均價';
+
+  @override
+  String packagePurchasePerSessionValue(String currency, String amount) {
+    return '$currency $amount/次';
+  }
+
+  @override
+  String packagePurchaseOriginalPerSession(String currency, String amount) {
+    return '原價 $currency $amount/次';
+  }
+
+  @override
+  String packagePurchaseSaveAmount(
+      String currency, String amount, String percent) {
+    return '立省 $currency $amount（$percent% off）';
+  }
+
+  @override
+  String get packagePurchaseLinkedServiceLabel => '適用服務';
+
+  @override
+  String get serviceInactiveSuffix => '已下架';
+
+  @override
+  String userPackageLinkedServiceLabel(String name) {
+    return '用於 $name';
   }
 
   @override
@@ -24590,7 +24786,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get errorSubServiceExhausted => '該子服務已核銷完';
 
   @override
-  String get errorMultiTotalSessionsInvalid => '多堂套餐設定錯誤';
+  String get errorMultiTotalSessionsInvalid => '多次套餐設定錯誤';
 
   @override
   String get errorStripeCreateFailed => 'Stripe 訂單建立失敗';
@@ -24889,7 +25085,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get expertPackageType => '套餐類型';
 
   @override
-  String get expertPackageTypeMulti => '多課時套餐';
+  String get expertPackageTypeMulti => '多次套餐';
 
   @override
   String get expertPackageTypeBundle => '服務包';
@@ -24901,10 +25097,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get expertPackageDescription => '套餐描述';
 
   @override
-  String get expertPackageSessionCount => '總課時數';
+  String get expertPackageSessionCount => '總次數';
 
   @override
-  String get expertPackageSessionCountHint => '此套餐包含多少次課程/服務';
+  String get expertPackageSessionCountHint => '此套餐包含多少次服務';
 
   @override
   String get expertPackageSessions => '次';
@@ -24913,10 +25109,26 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get expertPackagePrice => '套餐總價';
 
   @override
-  String get expertPackageBasePrice => '單課時價格';
+  String get expertPackageLinkedService => '關聯服務（選填）';
 
   @override
-  String get expertPackageBasePriceHint => '單次課程/服務的參考價';
+  String get expertPackageLinkedServiceHint =>
+      '將此多次套餐綁定到某個現有單次服務；買家核銷時消耗該服務的 1 次';
+
+  @override
+  String get expertPackageLinkedServiceNone => '不關聯（獨立套餐）';
+
+  @override
+  String get expertPackageLinkedServiceUseBase => '使用該服務的單次價格作為原價';
+
+  @override
+  String get expertPackageLinkedServiceEmpty => '暫無可關聯的單次服務，請先創建單次服務';
+
+  @override
+  String get expertPackageBasePrice => '單次原價（選填）';
+
+  @override
+  String get expertPackageBasePriceHint => '未折扣的單次參考價，用於展示折扣對比；留空則按總價÷次數自動推算';
 
   @override
   String get expertPackageValidityDays => '有效期（天）';
@@ -24937,7 +25149,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get expertPackageBundleCount => '次數';
 
   @override
-  String get expertPackageSessionCountMin => '至少 2 節課';
+  String get expertPackageSessionCountMin => '至少 2 次';
 
   @override
   String get expertPackageBundleMin => '至少選擇 2 個服務';
@@ -24946,7 +25158,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get expertPackageEmpty => '暫無套餐';
 
   @override
-  String get expertPackageEmptyMessage => '創建多課時或服務包套餐，給客戶更優惠的價格。';
+  String get expertPackageEmptyMessage => '創建多次或服務包套餐，給客戶更優惠的價格。';
 
   @override
   String get expertPackageCreated => '套餐已創建';

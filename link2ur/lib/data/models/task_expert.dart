@@ -46,6 +46,7 @@ class TaskExpert extends Equatable {
     this.isOfficial = false,
     this.officialBadge,
     this.isFollowing = false,
+    this.isOpen,
   });
 
   final String id;
@@ -88,6 +89,9 @@ class TaskExpert extends Equatable {
   final bool isOfficial;
   final String? officialBadge;
   final bool isFollowing;
+  /// 当前是否营业 (后端按 business_hours + closed_dates 计算)
+  /// null = 未设置营业时间; true = 运营中; false = 休息中
+  final bool? isOpen;
 
   // ==================== 双语 display 访问器 ====================
   // 模式：zh → en → 默认字段（与 ForumCategory.displayName 一致）
@@ -181,6 +185,7 @@ class TaskExpert extends Equatable {
       isOfficial: parseBool(json['is_official']),
       officialBadge: json['official_badge'] as String?,
       isFollowing: parseBool(json['is_following']),
+      isOpen: json['is_open'] as bool?,
     );
   }
 
@@ -353,6 +358,8 @@ class TaskExpertService extends Equatable {
     this.bundleServiceIds,
     this.packagePrice,
     this.validityDays,
+    this.linkedServiceId,
+    this.linkedServiceSummary,
   });
 
   final int id;
@@ -403,10 +410,10 @@ class TaskExpertService extends Equatable {
   final double? ownerRating;
 
   // 套餐字段 (Phase 7)
-  /// NULL (普通单次服务) | 'multi' (多课时套餐) | 'bundle' (服务包套餐)。
+  /// NULL (普通单次服务) | 'multi' (多次套餐) | 'bundle' (服务包套餐)。
   /// 旧值 'single' 已在后端 migration 197 下线,此处保留读取兼容。
   final String? packageType;
-  /// multi 套餐总课时数
+  /// multi 套餐总次数
   final int? totalSessions;
   /// bundle 套餐包含的服务 ID 列表
   final List<int>? bundleServiceIds;
@@ -414,8 +421,25 @@ class TaskExpertService extends Equatable {
   final double? packagePrice;
   /// 套餐有效期天数 (null = 永不过期)
   final int? validityDays;
+  /// multi 套餐关联的单次服务 ID (null = 套餐自包含，不关联任何服务)
+  final int? linkedServiceId;
+  /// 被关联服务的简要信息（后端路由层填充，方便前端直接渲染不用再拉一次）
+  /// 键: id / service_name / service_name_en / service_name_zh / image / base_price / currency / status
+  final Map<String, dynamic>? linkedServiceSummary;
 
-  /// 是否多课时套餐
+  /// locale-aware 展示关联服务名
+  String? linkedServiceDisplayName(Locale locale) {
+    final s = linkedServiceSummary;
+    if (s == null) return null;
+    return localizedString(
+      s['service_name_zh'] as String?,
+      s['service_name_en'] as String?,
+      s['service_name'] as String? ?? '',
+      locale,
+    );
+  }
+
+  /// 是否多次套餐
   bool get isMultiPackage => packageType == 'multi';
 
   /// 是否服务包套餐
@@ -517,6 +541,8 @@ class TaskExpertService extends Equatable {
           .toList(),
       packagePrice: (json['package_price'] as num?)?.toDouble(),
       validityDays: json['validity_days'] as int?,
+      linkedServiceId: json['linked_service_id'] as int?,
+      linkedServiceSummary: (json['linked_service_summary'] as Map?)?.cast<String, dynamic>(),
     );
   }
 
@@ -561,11 +587,13 @@ class TaskExpertService extends Equatable {
       'bundle_service_ids': bundleServiceIds,
       'package_price': packagePrice,
       'validity_days': validityDays,
+      'linked_service_id': linkedServiceId,
+      'linked_service_summary': linkedServiceSummary,
     };
   }
 
   @override
-  List<Object?> get props => [id, expertId, serviceType, userId, serviceName, serviceNameEn, serviceNameZh, descriptionEn, descriptionZh, basePrice, pricingType, locationType, location, latitude, longitude, serviceRadiusKm, status, isExpertVerified, ownerName, ownerAvatar, ownerRating, skills, packageType, totalSessions, bundleServiceIds, packagePrice, validityDays];
+  List<Object?> get props => [id, expertId, serviceType, userId, serviceName, serviceNameEn, serviceNameZh, descriptionEn, descriptionZh, basePrice, pricingType, locationType, location, latitude, longitude, serviceRadiusKm, status, isExpertVerified, ownerName, ownerAvatar, ownerRating, skills, packageType, totalSessions, bundleServiceIds, packagePrice, validityDays, linkedServiceId, linkedServiceSummary];
 }
 
 /// 任务达人列表响应

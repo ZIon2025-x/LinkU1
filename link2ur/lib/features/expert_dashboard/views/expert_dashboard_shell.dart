@@ -165,13 +165,17 @@ class _DashboardTabs extends StatelessWidget {
       )
         ..add(const ExpertDashboardLoadStats())
         ..add(const ExpertDashboardLoadMyServices())
-        ..add(const ExpertDashboardLoadClosedDates()),
+        ..add(const ExpertDashboardLoadClosedDates())
+        ..add(const ExpertDashboardLoadBusinessHours()),
       child: BlocListener<ExpertDashboardBloc, ExpertDashboardState>(
         listenWhen: (prev, curr) =>
             (curr.errorMessage != null && prev.errorMessage != curr.errorMessage) ||
             (curr.actionMessage != null && prev.actionMessage != curr.actionMessage),
         listener: (context, state) {
           if (state.errorMessage != null) {
+            // outside_business_hours 由 time_slots_tab 自行拦截处理(弹确认框),
+            // shell 不重复弹 SnackBar 以免干扰
+            if (state.errorMessage == 'outside_business_hours') return;
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(context.localizeError(state.errorMessage!))),
             );

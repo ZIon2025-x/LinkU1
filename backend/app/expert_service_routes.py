@@ -95,6 +95,87 @@ async def _validate_bundle_service_ids(
         })
 
 
+async def _validate_linked_service_id(
+    db: AsyncSession,
+    expert_id: str,
+    linked_service_id: Optional[int],
+    exclude_service_id: Optional[int] = None,
+) -> None:
+    """multi 套餐的 linked_service_id 必须:
+    - 存在且同属当前团队 (owner_type='expert' + owner_id=expert_id)
+    - 状态非 deleted
+    - package_type IS NULL (不能关联其他套餐)
+    - 不能是自身
+    """
+    if linked_service_id is None:
+        return
+    if exclude_service_id is not None and linked_service_id == exclude_service_id:
+        raise HTTPException(status_code=422, detail={
+            "error_code": "linked_service_self",
+            "message": "multi 套餐不能关联自身",
+        })
+    row = (await db.execute(
+        select(models.TaskExpertService.id, models.TaskExpertService.status, models.TaskExpertService.package_type)
+        .where(
+            and_(
+                models.TaskExpertService.id == linked_service_id,
+                models.TaskExpertService.owner_type == "expert",
+                models.TaskExpertService.owner_id == expert_id,
+            )
+        )
+    )).first()
+    if row is None:
+        raise HTTPException(status_code=422, detail={
+            "error_code": "linked_service_not_found",
+            "message": f"关联的服务不存在或不属于本团队: {linked_service_id}",
+        })
+    if row.status == "deleted":
+        raise HTTPException(status_code=422, detail={
+            "error_code": "linked_service_deleted",
+            "message": "关联的服务已删除",
+        })
+    if row.package_type is not None:
+        raise HTTPException(status_code=422, detail={
+            "error_code": "linked_service_is_package",
+            "message": "只能关联非套餐的单次服务",
+        })
+
+
+async def _fetch_linked_service_summary(
+    db: AsyncSession,
+    linked_service_id: Optional[int],
+) -> Optional[dict]:
+    """拉取被关联服务的简要信息供响应附带（name/image/base_price）"""
+    if linked_service_id is None:
+        return None
+    row = (await db.execute(
+        select(
+            models.TaskExpertService.id,
+            models.TaskExpertService.service_name,
+            models.TaskExpertService.service_name_en,
+            models.TaskExpertService.service_name_zh,
+            models.TaskExpertService.images,
+            models.TaskExpertService.base_price,
+            models.TaskExpertService.currency,
+            models.TaskExpertService.status,
+        )
+        .where(models.TaskExpertService.id == linked_service_id)
+    )).first()
+    if row is None:
+        return None
+    first_image = row.images[0] if isinstance(row.images, list) and row.images else None
+    return {
+        "id": row.id,
+        "service_name": row.service_name,
+        "service_name_en": row.service_name_en,
+        "service_name_zh": row.service_name_zh,
+        "image": first_image,
+        "base_price": float(row.base_price) if row.base_price is not None else None,
+        "currency": row.currency,
+        "status": row.status,
+    }
+
+
 @expert_service_router.get("", response_model=List[dict])
 async def list_expert_services(
     expert_id: str,
@@ -174,6 +255,7 @@ async def list_expert_services(
             "package_type": s.package_type,
             "total_sessions": s.total_sessions,
             "bundle_service_ids": s.bundle_service_ids,
+            "linked_service_id": s.linked_service_id,
             "validity_days": s.validity_days,
             "service_radius_km": s.service_radius_km,
             "view_count": s.view_count or 0,
@@ -214,7 +296,39 @@ async def create_expert_service(
     if body.package_type == "bundle":
         await _validate_bundle_service_ids(db, expert_id, body.bundle_service_ids)
 
+    # multi 套餐: 校验 linked_service_id（若有）同属 + 是单次服务
+    linked_service_row = None
+    if body.package_type == "multi" and body.linked_service_id is not None:
+        await _validate_linked_service_id(db, expert_id, body.linked_service_id)
+        # 拉取完整行，用于继承冗余字段
+        linked_service_row = (await db.execute(
+            select(models.TaskExpertService).where(
+                models.TaskExpertService.id == body.linked_service_id
+            )
+        )).scalar_one_or_none()
+
     data = body.model_dump(exclude_unset=True)
+
+    # multi + linked_service_id: 从关联服务继承所有冗余字段（snapshot，不是动态引用）
+    # 仅填充 data 中缺失的字段，不覆盖卖家显式提供的值（如套餐名可自定义）
+    if linked_service_row is not None:
+        inheritable_fields = [
+            "description", "description_en", "description_zh",
+            "category", "images", "skills",
+            "location_type", "location", "latitude", "longitude",
+            "service_radius_km",
+            "currency", "pricing_type",
+            "has_time_slots", "time_slot_duration_minutes",
+            "time_slot_start_time", "time_slot_end_time",
+            "participants_per_slot", "weekly_time_slot_config",
+            "base_price",
+        ]
+        for field in inheritable_fields:
+            if field not in data or data.get(field) is None:
+                inherited_value = getattr(linked_service_row, field, None)
+                if inherited_value is not None:
+                    data[field] = inherited_value
+
     service = models.TaskExpertService(
         owner_type="expert",
         owner_id=expert_id,
@@ -260,6 +374,8 @@ async def get_expert_service_detail(
     service.view_count = (service.view_count or 0) + 1
     await db.commit()
 
+    linked_summary = await _fetch_linked_service_summary(db, service.linked_service_id)
+
     return {
         "id": service.id,
         "service_name": service.service_name,
@@ -289,6 +405,8 @@ async def get_expert_service_detail(
         "bundle_service_ids": service.bundle_service_ids,
         "package_price": float(service.package_price) if service.package_price else None,
         "validity_days": service.validity_days,
+        "linked_service_id": service.linked_service_id,
+        "linked_service_summary": linked_summary,
         "service_radius_km": service.service_radius_km,
         "view_count": service.view_count or 0,
         "application_count": service.application_count or 0,
@@ -334,6 +452,22 @@ async def update_expert_service(
         await _validate_bundle_service_ids(
             db, expert_id, new_bundle_ids, exclude_service_id=service_id
         )
+
+    # multi 套餐: linked_service_id 仅 multi 允许；非 multi 时强制 NULL
+    if "linked_service_id" in update_data:
+        new_linked = update_data["linked_service_id"]
+        if new_linked is not None and new_package_type != "multi":
+            raise HTTPException(status_code=422, detail={
+                "error_code": "linked_service_requires_multi",
+                "message": "只有 multi 套餐才能设置 linked_service_id",
+            })
+        if new_linked is not None:
+            await _validate_linked_service_id(
+                db, expert_id, new_linked, exclude_service_id=service_id
+            )
+    # package_type 从 multi 切换为其它类型时，清空历史 linked_service_id 避免脏数据
+    if "package_type" in update_data and new_package_type != "multi" and service.linked_service_id is not None:
+        service.linked_service_id = None
 
     for field, value in update_data.items():
         if hasattr(service, field):

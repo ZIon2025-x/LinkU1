@@ -7,6 +7,12 @@ class UserServicePackage extends Equatable {
   final String? expertId;
   final String? serviceName;
   final String? packageType;
+  /// multi 套餐关联的单次服务 ID（buyer 侧只读展示用）
+  final int? linkedServiceId;
+  /// 关联服务名（后端 join 填充）
+  final String? linkedServiceName;
+  final String? linkedServiceNameEn;
+  final String? linkedServiceNameZh;
   final int totalSessions;
   final int usedSessions;
   final int remainingSessions;
@@ -37,6 +43,10 @@ class UserServicePackage extends Equatable {
     this.expertId,
     this.serviceName,
     this.packageType,
+    this.linkedServiceId,
+    this.linkedServiceName,
+    this.linkedServiceNameEn,
+    this.linkedServiceNameZh,
     required this.totalSessions,
     required this.usedSessions,
     required this.remainingSessions,
@@ -69,6 +79,10 @@ class UserServicePackage extends Equatable {
       expertId: json['expert_id'] as String?,
       serviceName: json['service_name'] as String?,
       packageType: json['package_type'] as String?,
+      linkedServiceId: json['linked_service_id'] as int?,
+      linkedServiceName: json['linked_service_name'] as String?,
+      linkedServiceNameEn: json['linked_service_name_en'] as String?,
+      linkedServiceNameZh: json['linked_service_name_zh'] as String?,
       totalSessions: json['total_sessions'] as int,
       usedSessions: json['used_sessions'] as int,
       remainingSessions: json['remaining_sessions'] as int,

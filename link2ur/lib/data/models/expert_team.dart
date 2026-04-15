@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
 
+import 'expert_closed_date.dart';
+
 /// 达人团队
 class ExpertTeam extends Equatable {
   final String id;
@@ -47,6 +49,8 @@ class ExpertTeam extends Equatable {
   final Map<String, dynamic>? businessHours;
   /// 当前是否营业（后端根据 business_hours + closed_dates 计算，null=未设置营业时间）
   final bool? isOpen;
+  /// 未来 14 天内的临时休息日（详情接口提供，仅用于展示给访客）
+  final List<ExpertClosedDate> upcomingClosedDates;
 
   const ExpertTeam({
     required this.id,
@@ -91,6 +95,7 @@ class ExpertTeam extends Equatable {
     this.userLevel = 'normal',
     this.businessHours,
     this.isOpen,
+    this.upcomingClosedDates = const [],
   });
 
   factory ExpertTeam.fromJson(Map<String, dynamic> json) {
@@ -139,6 +144,11 @@ class ExpertTeam extends Equatable {
       userLevel: json['user_level'] as String? ?? 'normal',
       businessHours: json['business_hours'] as Map<String, dynamic>?,
       isOpen: json['is_open'] as bool?,
+      upcomingClosedDates: (json['upcoming_closed_dates'] as List?)
+              ?.map((e) =>
+                  ExpertClosedDate.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
     );
   }
 
@@ -183,6 +193,7 @@ class ExpertTeam extends Equatable {
         category, isVerified, expertiseAreas, expertiseAreasEn,
         featuredSkills, featuredSkillsEn, achievements, achievementsEn,
         responseTime, responseTimeEn, userLevel, businessHours, isOpen,
+        upcomingClosedDates,
       ];
 }
 

@@ -30,7 +30,7 @@ from app.schemas_expert import (
     ExpertInvitationCreate, ExpertInvitationOut, ExpertInvitationResponse,
     ExpertRoleChange, ExpertTransfer,
     ExpertProfileUpdateCreate, ExpertProfileUpdateOut,
-    ExpertLocationUpdate,
+    ExpertLocationUpdate, UpcomingClosedDate,
 )
 from app.utils.time_utils import get_utc_time
 
@@ -46,23 +46,25 @@ _DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 
 async def _compute_is_open(db: AsyncSession, expert: Expert) -> Optional[bool]:
     """根据 business_hours + closed_dates 计算当前是否营业。
+    business_hours 存储的是伦敦本地时间（"09:00" 指 London local），
     business_hours 未设置时返回 None（不显示状态）。"""
     bh = expert.business_hours
     if not bh:
         return None
 
-    now = datetime.datetime.now(datetime.timezone.utc)
-    day_key = _DAY_KEYS[now.weekday()]  # 0=mon
-    now_time_str = now.strftime("%H:%M")
+    from app.utils.time_utils import LONDON
+    now_local = datetime.datetime.now(LONDON)
+    day_key = _DAY_KEYS[now_local.weekday()]  # 0=mon
+    now_time_str = now_local.strftime("%H:%M")
+    today_local_date = now_local.date()
 
-    # 检查今天是否临时关门
-    today_str = now.strftime("%Y-%m-%d")
+    # 检查今天是否临时关门（closed_date 按本地日期比对）
     from app.models import ExpertClosedDate
     cd_result = await db.execute(
         select(ExpertClosedDate.id).where(
             and_(
                 ExpertClosedDate.expert_id == expert.id,
-                ExpertClosedDate.closed_date == today_str,
+                ExpertClosedDate.closed_date == today_local_date,
             )
         ).limit(1)
     )
@@ -80,6 +82,57 @@ async def _compute_is_open(db: AsyncSession, expert: Expert) -> Optional[bool]:
         return False
 
     return open_time <= now_time_str < close_time
+
+
+async def _compute_is_open_batch(
+    db: AsyncSession, experts: List[Expert]
+) -> dict:
+    """一次性计算多个 expert 的 is_open。避免列表端点的 N+1 closed_dates 查询。
+    返回: {expert_id: Optional[bool]}. business_hours 未设置时为 None。"""
+    result: dict = {}
+    if not experts:
+        return result
+
+    from app.utils.time_utils import LONDON
+    now_local = datetime.datetime.now(LONDON)
+    day_key = _DAY_KEYS[now_local.weekday()]
+    now_time_str = now_local.strftime("%H:%M")
+    today_local_date = now_local.date()
+
+    # 仅对 business_hours 非空的 expert 去查 closed_dates
+    bh_experts = [e for e in experts if e.business_hours]
+    closed_today_ids: set = set()
+    if bh_experts:
+        from app.models import ExpertClosedDate
+        cd_result = await db.execute(
+            select(ExpertClosedDate.expert_id).where(
+                and_(
+                    ExpertClosedDate.expert_id.in_([e.id for e in bh_experts]),
+                    ExpertClosedDate.closed_date == today_local_date,
+                )
+            )
+        )
+        closed_today_ids = set(cd_result.scalars().all())
+
+    for e in experts:
+        bh = e.business_hours
+        if not bh:
+            result[e.id] = None
+            continue
+        if e.id in closed_today_ids:
+            result[e.id] = False
+            continue
+        today_hours = bh.get(day_key)
+        if not today_hours or not isinstance(today_hours, dict):
+            result[e.id] = False
+            continue
+        open_t = today_hours.get("open")
+        close_t = today_hours.get("close")
+        if not open_t or not close_t:
+            result[e.id] = False
+            continue
+        result[e.id] = open_t <= now_time_str < close_t
+    return result
 
 
 async def _get_expert_or_404(db: AsyncSession, expert_id: str) -> Expert:
@@ -211,11 +264,13 @@ async def list_my_teams(
         )
         followed_ids = set(follow_result.scalars().all())
 
+    is_open_map = await _compute_is_open_batch(db, [e for e, _ in rows])
     out = []
     for expert, role in rows:
         d = ExpertOut.model_validate(expert)
         d.is_following = expert.id in followed_ids
         d.my_role = role
+        d.is_open = is_open_map.get(expert.id)
         out.append(d)
     return out
 
@@ -287,10 +342,12 @@ async def list_featured_experts(
         )
         followed_ids = set(fr.scalars().all())
 
+    is_open_map = await _compute_is_open_batch(db, [e for e, _ in rows])
     out = []
     for expert, featured in rows:
         d = ExpertOut.model_validate(expert)
         d.is_following = expert.id in followed_ids
+        d.is_open = is_open_map.get(expert.id)
         out.append(d)
     return out
 
@@ -319,10 +376,12 @@ async def list_my_following_experts(
         .offset(offset).limit(limit)
     )
     experts = result.scalars().all()
+    is_open_map = await _compute_is_open_batch(db, list(experts))
     out = []
     for e in experts:
         d = ExpertOut.model_validate(e)
         d.is_following = True
+        d.is_open = is_open_map.get(e.id)
         out.append(d)
     return out
 
@@ -398,6 +457,7 @@ async def get_expert_by_user(
         )
 
     out = ExpertOut.model_validate(expert)
+    out.is_open = await _compute_is_open(db, expert)
     # 填充 is_following
     if current_user:
         fr = await db.execute(
@@ -507,10 +567,12 @@ async def list_experts(
         )
         followed_ids = set(fr.scalars().all())
 
+    is_open_map = await _compute_is_open_batch(db, list(experts))
     out = []
     for e in experts:
         d = ExpertOut.model_validate(e)
         d.is_following = e.id in followed_ids
+        d.is_open = is_open_map.get(e.id)
         out.append(d)
     return out
 
@@ -601,6 +663,30 @@ async def get_expert_detail(
 
     # 计算实时营业状态: business_hours + closed_dates
     detail.is_open = await _compute_is_open(db, expert)
+
+    # 未来 14 天内的临时休息日（含今天，按伦敦本地日期对齐）
+    from app.models import ExpertClosedDate
+    from app.utils.time_utils import LONDON
+    today_dt = datetime.datetime.now(LONDON).date()
+    end_dt = today_dt + datetime.timedelta(days=14)
+    upcoming_result = await db.execute(
+        select(ExpertClosedDate.closed_date, ExpertClosedDate.reason)
+        .where(
+            and_(
+                ExpertClosedDate.expert_id == expert_id,
+                ExpertClosedDate.closed_date >= today_dt,
+                ExpertClosedDate.closed_date <= end_dt,
+            )
+        )
+        .order_by(ExpertClosedDate.closed_date.asc())
+    )
+    detail.upcoming_closed_dates = [
+        UpcomingClosedDate(
+            closed_date=row[0].isoformat() if hasattr(row[0], 'isoformat') else str(row[0]),
+            reason=row[1],
+        )
+        for row in upcoming_result.all()
+    ]
 
     return detail
 

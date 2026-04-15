@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:link2ur/data/models/expert_closed_date.dart';
 import 'package:link2ur/data/repositories/task_expert_repository.dart';
 
 part 'expert_dashboard_event.dart';
@@ -23,6 +24,8 @@ class ExpertDashboardBloc
     on<ExpertDashboardLoadClosedDates>(_onLoadClosedDates);
     on<ExpertDashboardCreateClosedDate>(_onCreateClosedDate);
     on<ExpertDashboardDeleteClosedDate>(_onDeleteClosedDate);
+    on<ExpertDashboardLoadBusinessHours>(_onLoadBusinessHours);
+    on<ExpertDashboardUpdateBusinessHours>(_onUpdateBusinessHours);
     on<ExpertDashboardSubmitProfileUpdate>(_onSubmitProfileUpdate);
   }
 
@@ -178,7 +181,12 @@ class ExpertDashboardBloc
     emit(state.copyWith(status: ExpertDashboardStatus.submitting));
     try {
       final serviceId = int.tryParse(event.serviceId) ?? 0;
-      await _repository.createServiceTimeSlot(expertId, serviceId, event.data);
+      await _repository.createServiceTimeSlot(
+        expertId,
+        serviceId,
+        event.data,
+        force: event.force,
+      );
       final timeSlots =
           await _repository.getExpertServiceTimeSlots(expertId, serviceId);
       emit(state.copyWith(
@@ -188,6 +196,14 @@ class ExpertDashboardBloc
         actionMessage: 'expertTimeSlotCreated',
       ));
     } catch (e) {
+      // 营业时间软警告: UI 捕获后通过确认框再次派发 event.force=true
+      if (e is TaskExpertException && e.code == 'outside_business_hours') {
+        emit(state.copyWith(
+          status: ExpertDashboardStatus.error,
+          errorMessage: 'outside_business_hours',
+        ));
+        return;
+      }
       emit(state.copyWith(
         status: ExpertDashboardStatus.error,
         errorMessage: 'expert_dashboard_create_time_slot_failed',
@@ -226,7 +242,8 @@ class ExpertDashboardBloc
   ) async {
     emit(state.copyWith(status: ExpertDashboardStatus.loading));
     try {
-      final closedDates = await _repository.getClosedDates(expertId);
+      final raw = await _repository.getClosedDates(expertId);
+      final closedDates = raw.map(ExpertClosedDate.fromJson).toList();
       emit(state.copyWith(
         status: ExpertDashboardStatus.loaded,
         closedDates: closedDates,
@@ -247,7 +264,8 @@ class ExpertDashboardBloc
     try {
       await _repository.createClosedDate(expertId, event.date,
           reason: event.reason);
-      final closedDates = await _repository.getClosedDates(expertId);
+      final raw = await _repository.getClosedDates(expertId);
+      final closedDates = raw.map(ExpertClosedDate.fromJson).toList();
       emit(state.copyWith(
         status: ExpertDashboardStatus.loaded,
         closedDates: closedDates,
@@ -269,7 +287,8 @@ class ExpertDashboardBloc
     try {
       await _repository.deleteClosedDate(
           expertId, int.tryParse(event.id) ?? 0);
-      final closedDates = await _repository.getClosedDates(expertId);
+      final raw = await _repository.getClosedDates(expertId);
+      final closedDates = raw.map(ExpertClosedDate.fromJson).toList();
       emit(state.copyWith(
         status: ExpertDashboardStatus.loaded,
         closedDates: closedDates,
@@ -279,6 +298,40 @@ class ExpertDashboardBloc
       emit(state.copyWith(
         status: ExpertDashboardStatus.error,
         errorMessage: 'expert_dashboard_delete_closed_date_failed',
+      ));
+    }
+  }
+
+  Future<void> _onLoadBusinessHours(
+    ExpertDashboardLoadBusinessHours event,
+    Emitter<ExpertDashboardState> emit,
+  ) async {
+    try {
+      final hours = await _repository.getBusinessHours(expertId);
+      emit(state.copyWith(businessHours: hours));
+    } catch (e) {
+      emit(state.copyWith(
+        errorMessage: 'expert_dashboard_load_business_hours_failed',
+      ));
+    }
+  }
+
+  Future<void> _onUpdateBusinessHours(
+    ExpertDashboardUpdateBusinessHours event,
+    Emitter<ExpertDashboardState> emit,
+  ) async {
+    emit(state.copyWith(status: ExpertDashboardStatus.submitting));
+    try {
+      await _repository.updateBusinessHours(expertId, event.hours);
+      emit(state.copyWith(
+        status: ExpertDashboardStatus.loaded,
+        businessHours: event.hours,
+        actionMessage: 'expertBusinessHoursUpdated',
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        status: ExpertDashboardStatus.error,
+        errorMessage: 'expert_dashboard_update_business_hours_failed',
       ));
     }
   }

@@ -4,6 +4,7 @@ from typing import List, Optional
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi.responses import JSONResponse
 from sqlalchemy import select, and_, delete as sql_delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,6 +27,66 @@ expert_timeslot_router = APIRouter(
 
 # Public time slot router (no expert auth needed)
 public_service_router = APIRouter(tags=["public-services"])
+
+
+_DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+
+
+async def _check_slot_within_hours(
+    db: AsyncSession, expert: Expert, start_dt: datetime, end_dt: datetime
+) -> Optional[str]:
+    """检查时间段是否落在营业时间内 + 不在休息日。
+    返回 None 表示通过；返回 'closed_date' / 'outside_hours' 表示违规。
+    business_hours 为空时跳过（视为通过，避免强制要求 owner 必须先设营业时间）。
+    """
+    from app.models import ExpertClosedDate
+    from app.utils.time_utils import LONDON
+    import datetime as _dt
+
+    # 将 naive datetime 视为 UTC
+    if start_dt.tzinfo is None:
+        start_dt = start_dt.replace(tzinfo=_dt.timezone.utc)
+    if end_dt.tzinfo is None:
+        end_dt = end_dt.replace(tzinfo=_dt.timezone.utc)
+
+    local_start = start_dt.astimezone(LONDON)
+    local_end = end_dt.astimezone(LONDON)
+    local_date = local_start.date()
+
+    # 1) 休息日（今天/这一天）
+    cd = await db.execute(
+        select(ExpertClosedDate.id).where(
+            and_(
+                ExpertClosedDate.expert_id == expert.id,
+                ExpertClosedDate.closed_date == local_date,
+            )
+        ).limit(1)
+    )
+    if cd.scalar_one_or_none() is not None:
+        return "closed_date"
+
+    # 2) business_hours 未设置 → 放行
+    bh = expert.business_hours
+    if not bh:
+        return None
+
+    day_key = _DAY_KEYS[local_start.weekday()]
+    today_hours = bh.get(day_key)
+    if not isinstance(today_hours, dict):
+        return "outside_hours"
+    open_str = today_hours.get("open")
+    close_str = today_hours.get("close")
+    if not open_str or not close_str:
+        return "outside_hours"
+
+    start_hhmm = local_start.strftime("%H:%M")
+    end_hhmm = local_end.strftime("%H:%M")
+    # 要求 slot 完整落在营业窗口内；跨日 slot 一律视为 outside
+    if local_end.date() != local_date:
+        return "outside_hours"
+    if start_hhmm < open_str or end_hhmm > close_str:
+        return "outside_hours"
+    return None
 
 
 def _serialize_slot(s) -> dict:
@@ -104,11 +165,16 @@ async def create_time_slot(
     service_id: int,
     body: dict,
     request: Request,
+    force: bool = Query(False, description="true 时跳过营业时间校验，强制创建"),
     db: AsyncSession = Depends(get_async_db_dependency),
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
 ):
-    """创建时间段（Owner/Admin）"""
-    await _get_expert_or_404(db, expert_id)
+    """创建时间段（Owner/Admin）
+
+    如果时间段落在休息日或营业时间外，默认会返回 409 `outside_business_hours`
+    警告（不创建）；前端弹确认框后带 `?force=true` 再请求即可强制创建。
+    """
+    expert = await _get_expert_or_404(db, expert_id)
     await _get_member_or_403(db, expert_id, current_user.id, required_roles=["owner", "admin"])
     service = await _get_expert_service(db, expert_id, service_id)
 
@@ -120,6 +186,18 @@ async def create_time_slot(
         raise HTTPException(status_code=400, detail="slot_start_datetime/slot_end_datetime 格式无效")
     if end_dt <= start_dt:
         raise HTTPException(status_code=400, detail="结束时间必须晚于开始时间")
+
+    if not force:
+        violation = await _check_slot_within_hours(db, expert, start_dt, end_dt)
+        if violation is not None:
+            return JSONResponse(
+                status_code=409,
+                content={
+                    "error_code": "outside_business_hours",
+                    "reason": violation,  # 'closed_date' or 'outside_hours'
+                    "detail": "时间段不在营业时间内或落在休息日，请确认后重试",
+                },
+            )
 
     price = body.get('price_per_participant', service.base_price)
     try:
@@ -291,11 +369,16 @@ async def batch_create_time_slots(
     service_id: int,
     body: dict,
     request: Request,
+    force: bool = Query(False, description="true 时跳过营业时间校验，强制创建所有时间段"),
     db: AsyncSession = Depends(get_async_db_dependency),
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
 ):
-    """批量创建时间段（Owner/Admin）"""
-    await _get_expert_or_404(db, expert_id)
+    """批量创建时间段（Owner/Admin）
+
+    如果任何时间段落在休息日或营业时间外，默认会返回 409 `outside_business_hours`
+    警告（不创建）；前端确认后带 `?force=true` 再请求即可强制创建。
+    """
+    expert = await _get_expert_or_404(db, expert_id)
     await _get_member_or_403(db, expert_id, current_user.id, required_roles=["owner", "admin"])
     service = await _get_expert_service(db, expert_id, service_id)
 
@@ -303,15 +386,37 @@ async def batch_create_time_slots(
     if not slots_data:
         raise HTTPException(status_code=400, detail="缺少 slots 数据")
 
-    created_ids = []
-    skipped = 0
-    for slot_data in slots_data:
+    # 预先解析并收集违规时间段
+    parsed: list = []
+    violations: list = []
+    for idx, slot_data in enumerate(slots_data):
         try:
-            start_dt = datetime.fromisoformat(slot_data['slot_start_datetime'])
-            end_dt = datetime.fromisoformat(slot_data['slot_end_datetime'])
+            s = datetime.fromisoformat(slot_data['slot_start_datetime'])
+            e = datetime.fromisoformat(slot_data['slot_end_datetime'])
         except (KeyError, ValueError):
             raise HTTPException(status_code=400, detail="时间段数据格式无效")
+        parsed.append((s, e, slot_data))
+        if not force:
+            v = await _check_slot_within_hours(db, expert, s, e)
+            if v is not None:
+                violations.append({
+                    "index": idx,
+                    "slot_start_datetime": slot_data['slot_start_datetime'],
+                    "reason": v,
+                })
+    if violations and not force:
+        return JSONResponse(
+            status_code=409,
+            content={
+                "error_code": "outside_business_hours",
+                "violations": violations,
+                "detail": f"{len(violations)} 个时间段不在营业时间内或落在休息日，请确认后重试",
+            },
+        )
 
+    created_ids = []
+    skipped = 0
+    for start_dt, end_dt, slot_data in parsed:
         # Check for duplicate (unique constraint: service_id + start + end)
         existing = await db.execute(
             select(models.ServiceTimeSlot).where(

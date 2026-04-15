@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/design/app_colors.dart';
+import '../../../core/utils/service_category_helper.dart';
 import '../../../core/utils/share_util.dart';
 import '../../../core/utils/error_localizer.dart';
 import '../../../core/utils/haptic_feedback.dart';
@@ -14,6 +15,7 @@ import '../../../core/widgets/error_state_view.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../data/models/activity.dart';
 import '../../../data/models/expert_team.dart';
+import '../../../data/models/expert_closed_date.dart';
 import '../../../data/repositories/activity_repository.dart';
 import '../../../data/repositories/expert_team_repository.dart';
 import '../../../data/repositories/task_expert_repository.dart';
@@ -491,7 +493,7 @@ class _HeroBanner extends StatelessWidget {
                           children: [
                             if (team.category != null && team.category!.isNotEmpty) ...[
                               Text(
-                                team.category!,
+                                ServiceCategoryHelper.getLocalizedLabel(team.category!, context.l10n),
                                 style: TextStyle(
                                   fontSize: 13,
                                   color: Colors.white.withAlpha(217),
@@ -772,9 +774,98 @@ class _BioSectionState extends State<_BioSection> {
               const SizedBox(height: 12),
               _BusinessHoursView(businessHours: widget.team.businessHours!),
             ],
+            if (widget.team.upcomingClosedDates.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              _UpcomingClosedDatesView(
+                  entries: widget.team.upcomingClosedDates),
+            ],
           ],
         ],
       ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 7c. Upcoming closed dates (temporary rest days within next 14 days)
+// ---------------------------------------------------------------------------
+
+class _UpcomingClosedDatesView extends StatelessWidget {
+  final List<ExpertClosedDate> entries;
+  const _UpcomingClosedDatesView({required this.entries});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.event_busy,
+                size: 14,
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight),
+            const SizedBox(width: 4),
+            Text(
+              context.l10n.expertClosedDatesUpcoming,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        ...entries.map((e) {
+          final hasReason = (e.reason ?? '').isNotEmpty;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 2),
+            child: Row(
+              children: [
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: const BoxDecoration(
+                    color: AppColors.error,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  e.closedDate,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
+                  ),
+                ),
+                if (hasReason) ...[
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      e.reason!,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          );
+        }),
+      ],
     );
   }
 }
@@ -1213,6 +1304,22 @@ class _ServiceCard extends StatelessWidget {
     final totalSessions = service['total_sessions'] as int?;
     final serviceId = service['id'];
 
+    // 折扣判定（multi 套餐，base_price > package_price/total_sessions）
+    final pkgPriceNum = service['package_price'] as num?;
+    final basePriceNum = service['base_price'] as num?;
+    final isMulti = packageType == 'multi';
+    final sessionsCount = totalSessions ?? 0;
+    final perSessionAvg = (isMulti && pkgPriceNum != null && sessionsCount > 0)
+        ? pkgPriceNum / sessionsCount
+        : null;
+    final showDiscount = isMulti &&
+        perSessionAvg != null &&
+        basePriceNum != null &&
+        basePriceNum.toDouble() > perSessionAvg + 0.005;
+    final discountPercent = showDiscount
+        ? ((1 - perSessionAvg / basePriceNum.toDouble()) * 100).round()
+        : 0;
+
     return GestureDetector(
       onTap: () {
         AppHaptics.selection();
@@ -1229,30 +1336,62 @@ class _ServiceCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image
-            ClipRRect(
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(12)),
-              child: SizedBox(
-                width: 220,
-                height: 120,
-                child: firstImage != null
-                    ? AsyncImageView(
-                        imageUrl: Helpers.getThumbnailUrl(firstImage),
-                        fallbackUrl: Helpers.getImageUrl(firstImage),
-                        width: 220,
-                        height: 120,
-                      )
-                    : Container(
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [Color(0xFFE8F0FE), Color(0xFFF0E6FF)],
+            // Image + 折扣角标
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(12)),
+                  child: SizedBox(
+                    width: 220,
+                    height: 120,
+                    child: firstImage != null
+                        ? AsyncImageView(
+                            imageUrl: Helpers.getThumbnailUrl(firstImage),
+                            fallbackUrl: Helpers.getImageUrl(firstImage),
+                            width: 220,
+                            height: 120,
+                          )
+                        : Container(
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [Color(0xFFE8F0FE), Color(0xFFF0E6FF)],
+                              ),
+                            ),
+                            child: Icon(Icons.design_services,
+                                size: 28, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
                           ),
-                        ),
-                        child: Icon(Icons.design_services,
-                            size: 28, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+                  ),
+                ),
+                if (showDiscount)
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.priceRed,
+                        borderRadius: BorderRadius.circular(4),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.15),
+                            blurRadius: 3,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
                       ),
-              ),
+                      child: Text(
+                        '$discountPercent% OFF',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
             // Body
             Padding(

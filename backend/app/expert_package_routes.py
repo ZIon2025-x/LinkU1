@@ -43,15 +43,29 @@ async def get_my_packages(
                     sub_service_ids.add(int(key))
                 except (TypeError, ValueError):
                     continue
-    all_service_ids = list({*service_ids, *sub_service_ids})
+    # 先加载套餐本身的 service 行（含 linked_service_id），再基于此扩展加载 linked services
+    initial_ids = list({*service_ids, *sub_service_ids})
     service_map: dict = {}
-    if all_service_ids:
+    if initial_ids:
         svc_result = await db.execute(
             select(models.TaskExpertService).where(
-                models.TaskExpertService.id.in_(all_service_ids)
+                models.TaskExpertService.id.in_(initial_ids)
             )
         )
         for svc in svc_result.scalars().all():
+            service_map[svc.id] = svc
+    # 第二批：加载所有 multi 套餐关联的单次服务（供列表显示 "用于 XX"）
+    linked_ids = {
+        svc.linked_service_id for svc in service_map.values()
+        if svc.linked_service_id is not None and svc.linked_service_id not in service_map
+    }
+    if linked_ids:
+        linked_result = await db.execute(
+            select(models.TaskExpertService).where(
+                models.TaskExpertService.id.in_(list(linked_ids))
+            )
+        )
+        for svc in linked_result.scalars().all():
             service_map[svc.id] = svc
 
     def _build_sub_names(bd) -> dict:
@@ -76,12 +90,18 @@ async def get_my_packages(
     for p in packages:
         flags = compute_package_action_flags(p, now)
         svc = service_map.get(p.service_id)
+        # multi 套餐关联服务的名字（供"我的套餐"列表展示"用于 XX"）
+        linked_svc = service_map.get(svc.linked_service_id) if (svc and svc.linked_service_id) else None
         out.append({
             "id": p.id,
             "service_id": p.service_id,
             "expert_id": p.expert_id,
             "service_name": svc.service_name if svc else None,
             "package_type": svc.package_type if svc else None,
+            "linked_service_id": svc.linked_service_id if svc else None,
+            "linked_service_name": linked_svc.service_name if linked_svc else None,
+            "linked_service_name_en": linked_svc.service_name_en if linked_svc else None,
+            "linked_service_name_zh": linked_svc.service_name_zh if linked_svc else None,
             "total_sessions": p.total_sessions,
             "used_sessions": p.used_sessions,
             "remaining_sessions": p.total_sessions - p.used_sessions,

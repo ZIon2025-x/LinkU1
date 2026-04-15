@@ -161,8 +161,8 @@ class ServiceConsultationActions extends ConsultationActions {
               ),
               const SizedBox(width: 8),
             ],
-            // 申请方：正式申请（仅 consulting，negotiating 时不允许）
-            if (isApplicant && isConsulting) ...[
+            // 申请方：正式申请（仅 consulting，negotiating 时不允许；团队咨询无正式申请）
+            if (isApplicant && isConsulting && expertId == null) ...[
               ActionPill(
                 icon: Icons.assignment,
                 label: context.l10n.formalApply,
@@ -182,7 +182,8 @@ class ServiceConsultationActions extends ConsultationActions {
               ),
               const SizedBox(width: 8),
             ],
-            if (isPriceAgreed && isApplicant) ...[
+            // 价格已确认时：正式申请（团队咨询无正式申请）
+            if (isPriceAgreed && isApplicant && expertId == null) ...[
               ActionPill(
                 icon: Icons.assignment,
                 label: context.l10n.formalApply,

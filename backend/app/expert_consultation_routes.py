@@ -224,8 +224,11 @@ async def create_consultation(
 
     # 创建 consulting 占位 task（供聊天页面使用）
     service_name = service.service_name or "服务咨询"
+    service_name_en = service.service_name_en or service.service_name or "Service Consultation"
     consulting_task = models.Task(
         title=service_name,
+        title_zh=service_name,
+        title_en=service_name_en,
         description=f"咨询: {service_name}",
         reward=service.base_price or 0,
         base_reward=service.base_price or 0,
@@ -233,6 +236,7 @@ async def create_consultation(
         currency=service.currency or "GBP",
         location=service.location or "",
         task_type="expert_service",
+        task_source="consultation",
         poster_id=current_user.id,
         status="consulting",
         task_level="expert",
@@ -326,8 +330,11 @@ async def create_team_consultation(
 
     # 创建占位 task
     team_name = expert.name or "达人团队"
+    team_name_en = expert.name_en or expert.name or "Expert Team"
     consulting_task = models.Task(
         title=f"团队咨询: {team_name}",
+        title_zh=f"团队咨询: {team_name}",
+        title_en=f"Team Consultation: {team_name_en}",
         description=f"团队咨询: {team_name}",
         reward=0,
         base_reward=0,
@@ -335,6 +342,7 @@ async def create_team_consultation(
         currency="GBP",
         location="",
         task_type="expert_service",
+        task_source="consultation",
         poster_id=current_user.id,
         status="consulting",
         task_level="expert",

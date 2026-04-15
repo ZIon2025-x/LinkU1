@@ -491,30 +491,7 @@ class _PriceAndTitleCard extends StatelessWidget {
                 ],
               ),
             ),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Text(
-                Helpers.currencySymbolFor(service.currency),
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFFE84D3D),
-                ),
-              ),
-              const SizedBox(width: 2),
-              Text(
-                Helpers.formatAmountNumber(service.basePrice),
-                style: const TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFFE84D3D),
-                ),
-              ),
-              const Spacer(),
-            ],
-          ),
+          _PriceHeaderBlock(service: service),
           const SizedBox(height: 16),
           Text(
             service.displayServiceName(Localizations.localeOf(context)),
@@ -527,8 +504,197 @@ class _PriceAndTitleCard extends StatelessWidget {
                   : AppColors.textPrimaryLight,
             ),
           ),
+          // 关联服务提示（multi 套餐）
+          if (service.isMultiPackage && service.linkedServiceId != null) ...[
+            const SizedBox(height: 8),
+            _LinkedServiceHint(service: service, isDark: isDark),
+          ],
         ],
       ),
+    );
+  }
+}
+
+/// multi 套餐详情页展示"适用于 {关联服务名}"（可点击跳该服务详情）
+/// 若被关联服务非 active（inactive/deleted/其它），显示灰色禁用态不跳转
+class _LinkedServiceHint extends StatelessWidget {
+  const _LinkedServiceHint({required this.service, required this.isDark});
+
+  final TaskExpertService service;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    final linkedName =
+        service.linkedServiceDisplayName(Localizations.localeOf(context)) ??
+            '#${service.linkedServiceId}';
+    final summary = service.linkedServiceSummary;
+    final linkedStatus = summary?['status'] as String?;
+    // active 才允许点击跳转；summary 为 null (后端未填) 时保守当作 active
+    final isActive = summary == null || linkedStatus == 'active';
+    final color = isActive ? AppColors.primary : AppColors.textTertiaryLight;
+
+    final inner = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(isActive ? Icons.link : Icons.link_off,
+              size: 14, color: color),
+          const SizedBox(width: 4),
+          Text(
+            '${context.l10n.packagePurchaseLinkedServiceLabel}：$linkedName'
+            '${isActive ? '' : ' (${context.l10n.serviceInactiveSuffix})'}',
+            style: TextStyle(
+              fontSize: 13,
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          if (isActive) ...[
+            const SizedBox(width: 2),
+            Icon(Icons.chevron_right, size: 14, color: color),
+          ],
+        ],
+      ),
+    );
+
+    if (!isActive) return inner;
+    return GestureDetector(
+      onTap: () {
+        AppHaptics.selection();
+        context.push('/service/${service.linkedServiceId}');
+      },
+      child: inner,
+    );
+  }
+}
+
+// =============================================================
+// 服务价格区块（顶部大号显示）
+// - 单次服务：basePrice
+// - multi 套餐：若 basePrice > 每次均价 → 显示折扣（主价=每次均价、划线原价、省 X%）
+//                否则显示 basePrice（其实等于每次均价）
+// - bundle 套餐：显示 packagePrice 作为总价
+// =============================================================
+
+class _PriceHeaderBlock extends StatelessWidget {
+  const _PriceHeaderBlock({required this.service});
+
+  final TaskExpertService service;
+
+  static const _redColor = Color(0xFFE84D3D);
+
+  @override
+  Widget build(BuildContext context) {
+    final symbol = Helpers.currencySymbolFor(service.currency);
+    final isMulti = service.packageType == 'multi';
+    final isBundle = service.packageType == 'bundle';
+    final pkgPrice = service.packagePrice;
+    final sessions = service.totalSessions ?? 0;
+
+    // 折扣判定（仅 multi 套餐）
+    final perSessionAvg =
+        (isMulti && pkgPrice != null && sessions > 0) ? pkgPrice / sessions : null;
+    final originalPerSession = service.basePrice;
+    final showDiscount = isMulti &&
+        perSessionAvg != null &&
+        originalPerSession > 0 &&
+        originalPerSession > perSessionAvg + 0.005;
+    final percent = showDiscount
+        ? ((1 - perSessionAvg / originalPerSession) * 100).round()
+        : 0;
+
+    // Primary price：bundle 显示总价，multi 有折扣显示每次均价，其它显示 basePrice
+    final double primaryPrice;
+    if (isBundle && pkgPrice != null) {
+      primaryPrice = pkgPrice;
+    } else if (showDiscount) {
+      primaryPrice = perSessionAvg;
+    } else {
+      primaryPrice = originalPerSession;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: [
+            Text(
+              symbol,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: _redColor,
+              ),
+            ),
+            const SizedBox(width: 2),
+            Text(
+              Helpers.formatAmountNumber(primaryPrice),
+              style: const TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                color: _redColor,
+              ),
+            ),
+            if (isMulti) ...[
+              const SizedBox(width: 4),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Text(
+                  '/${context.l10n.expertPackageSessions}',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: _redColor,
+                  ),
+                ),
+              ),
+            ],
+            if (showDiscount) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: _redColor,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  '$percent% OFF',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+            const Spacer(),
+          ],
+        ),
+        if (showDiscount) ...[
+          const SizedBox(height: 2),
+          Text(
+            context.l10n.packagePurchaseOriginalPerSession(
+              symbol,
+              originalPerSession.toStringAsFixed(2),
+            ),
+            style: const TextStyle(
+              fontSize: 12,
+              decoration: TextDecoration.lineThrough,
+              color: Colors.grey,
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
@@ -1503,7 +1669,7 @@ class _BottomApplyBar extends StatelessWidget {
         children: [
           _buildPrimaryButton(
             context,
-            '购买套餐',
+            context.l10n.packagePurchaseDialogTitle,
             () => _PurchasePackageDialog.show(context, service, serviceId),
           ),
           const SizedBox(height: 8),
@@ -2152,7 +2318,7 @@ class _ApplyServiceSheetState extends State<_ApplyServiceSheet> {
 // A1: 套餐购买对话框
 // =============================================================
 //
-// 显示套餐基本信息(总价/课时/有效期),用户确认后调用
+// 显示套餐基本信息(总价/次数/有效期),用户确认后调用
 // PackagePurchaseRepository.purchasePackage 拿 client_secret,
 // 然后跳转 Stripe payment sheet (复用项目现有支付集成)。
 class _PurchasePackageDialog extends StatelessWidget {
@@ -2192,6 +2358,29 @@ class _PurchasePackageDialog extends StatelessWidget {
     // 所以只在 packagePrice 存在时才显示, 避免误导用户.
     final priceStr = service.packagePrice?.toStringAsFixed(2);
     final currency = service.currency;
+    final currencySymbol = Helpers.currencySymbolFor(currency);
+
+    // 折扣对比（方案 C）: 仅当 multi 套餐 + base_price > 每次均价时展示
+    //   原价 = base_price * totalSessions
+    //   现价 = packagePrice
+    //   省 = 原价 - 现价
+    final pkgPriceForCalc = service.packagePrice;
+    final sessionsForCalc = service.totalSessions ?? 0;
+    final perSessionAvg =
+        (isMulti && pkgPriceForCalc != null && sessionsForCalc > 0)
+            ? pkgPriceForCalc / sessionsForCalc
+            : null;
+    final originalPerSession = service.basePrice;
+    final showDiscount = isMulti &&
+        perSessionAvg != null &&
+        originalPerSession > 0 &&
+        originalPerSession > perSessionAvg + 0.005; // 0.5 分钱容差,避免浮点误差
+    final savedTotal = showDiscount
+        ? (originalPerSession - perSessionAvg) * sessionsForCalc
+        : 0.0;
+    final discountPercent = showDiscount
+        ? ((1 - perSessionAvg / originalPerSession) * 100).round()
+        : 0;
 
     return AlertDialog(
       title: Text(l10n.packagePurchaseDialogTitle),
@@ -2227,8 +2416,66 @@ class _PurchasePackageDialog extends StatelessWidget {
           if (priceStr != null)
             _row(
               l10n.packagePurchasePriceLabel,
-              '${Helpers.currencySymbolFor(currency)}$priceStr',
+              '$currencySymbol$priceStr',
             ),
+          // 关联服务（multi 套餐）
+          if (isMulti && service.linkedServiceId != null)
+            _row(
+              l10n.packagePurchaseLinkedServiceLabel,
+              service.linkedServiceDisplayName(Localizations.localeOf(context)) ??
+                  '#${service.linkedServiceId}',
+            ),
+          // 每次均价 + 折扣对比（multi 套餐）
+          if (perSessionAvg != null)
+            _row(
+              l10n.packagePurchasePerSessionLabel,
+              l10n.packagePurchasePerSessionValue(
+                currencySymbol,
+                perSessionAvg.toStringAsFixed(2),
+              ),
+            ),
+          if (showDiscount) ...[
+            Padding(
+              padding: const EdgeInsets.only(top: 6, bottom: 2),
+              child: Row(
+                children: [
+                  // 划线原价/次
+                  Text(
+                    l10n.packagePurchaseOriginalPerSession(
+                      currencySymbol,
+                      originalPerSession.toStringAsFixed(2),
+                    ),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      decoration: TextDecoration.lineThrough,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AppColors.error.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  l10n.packagePurchaseSaveAmount(
+                    currencySymbol,
+                    savedTotal.toStringAsFixed(2),
+                    discountPercent.toString(),
+                  ),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: AppColors.error,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ],
           _row(
             l10n.packagePurchaseValidityLabel,
             service.validityDays != null

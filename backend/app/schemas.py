@@ -2282,7 +2282,8 @@ class TaskExpertServiceCreate(BaseModel):
     service_name: str
     service_name_en: Optional[str] = None
     service_name_zh: Optional[str] = None
-    description: str
+    # description: 非继承场景必填；multi+linked_service_id 时可空（从关联服务继承）
+    description: Optional[str] = None
     description_en: Optional[str] = None
     description_zh: Optional[str] = None
     category: Optional[str] = None
@@ -2304,6 +2305,8 @@ class TaskExpertServiceCreate(BaseModel):
     bundle_service_ids: Optional[List[Any]] = None
     package_price: Optional[condecimal(gt=0, max_digits=12, decimal_places=2)] = None  # owner-set total
     validity_days: Optional[int] = None  # null = 永不过期
+    # multi 套餐关联服务 (方案 B): NULL = 自包含, INTEGER = 指向同 owner 的单次服务 (package_type IS NULL)
+    linked_service_id: Optional[int] = None
     # 时间段相关字段
     has_time_slots: bool = False
     time_slot_duration_minutes: Optional[int] = None  # 每个时间段的时长（分钟）
@@ -2322,11 +2325,28 @@ class TaskExpertServiceCreate(BaseModel):
         # 套餐类型必须有 package_price (multi/bundle 都要)
         if self.package_type in ("multi", "bundle") and self.package_price is None:
             raise ValueError("multi/bundle 套餐必须指定 package_price")
-        # base_price:bundle 可空(没有"单价"概念);multi/普通单次服务必须 > 0
-        if self.package_type != "bundle" and self.base_price is None:
-            raise ValueError("非 bundle 服务必须指定 base_price")
+        # base_price 可空条件:
+        #   - bundle 套餐永远可空（没有"单价"概念）
+        #   - multi 套餐且带 linked_service_id：可空（后端从关联服务继承）
+        #   - 普通单次服务 / 未关联 multi 套餐：必须 > 0
+        if self.base_price is None:
+            if self.package_type == "bundle":
+                pass
+            elif self.package_type == "multi" and self.linked_service_id is not None:
+                pass
+            else:
+                raise ValueError("非 bundle / 未关联的 multi 服务必须指定 base_price")
         if self.validity_days is not None and self.validity_days <= 0:
             raise ValueError("validity_days 必须大于 0")
+        # linked_service_id 仅 multi 套餐允许；同 owner 与 package_type IS NULL 校验在路由层
+        if self.linked_service_id is not None and self.package_type != "multi":
+            raise ValueError("linked_service_id 仅在 package_type='multi' 时允许设置")
+        # description 必填条件：非 multi+linked 场景
+        has_linked_inheritance = (
+            self.package_type == "multi" and self.linked_service_id is not None
+        )
+        if not has_linked_inheritance and (self.description is None or not self.description.strip()):
+            raise ValueError("非继承场景下 description 必填")
         return self
 
 
@@ -2356,6 +2376,8 @@ class TaskExpertServiceUpdate(BaseModel):
     bundle_service_ids: Optional[List[Any]] = None
     package_price: Optional[condecimal(gt=0, max_digits=12, decimal_places=2)] = None
     validity_days: Optional[int] = None
+    # multi 套餐关联服务；Update 语义: None = 不修改，路由层根据"字段是否在请求中出现"判断是否要写入/清空
+    linked_service_id: Optional[int] = None
     # 时间段相关字段
     has_time_slots: Optional[bool] = None
     time_slot_duration_minutes: Optional[int] = None
@@ -2373,6 +2395,7 @@ class TaskExpertServiceUpdate(BaseModel):
             raise ValueError(err)
         if self.validity_days is not None and self.validity_days <= 0:
             raise ValueError("validity_days 必须大于 0")
+        # linked_service_id 与 package_type 的合法性在路由层 cross-check（因为 Update 时 package_type 可能没传）
         return self
     # 注: base_price 不能为 NULL 的业务规则在 route 层 cross-check
     # (update_expert_service), 因为需要 DB 中现有 package_type 作为上下文
@@ -2518,6 +2541,10 @@ class TaskExpertServiceOut(BaseModel):
     bundle_service_ids: Optional[List[Any]] = None
     package_price: Optional[float] = None
     validity_days: Optional[int] = None
+    # multi 套餐关联服务 (方案 B)
+    linked_service_id: Optional[int] = None
+    # 关联服务的简要信息（路由层填充，响应里让前端直接展示）
+    linked_service_summary: Optional[Dict[str, Any]] = None
     # 用户申请的服务申请信息（如果已申请）
     user_application_id: Optional[int] = None  # 用户申请的服务申请ID
     user_application_status: Optional[str] = None  # 申请状态
@@ -2562,6 +2589,9 @@ class TaskExpertServiceOut(BaseModel):
             "bundle_service_ids": getattr(obj, "bundle_service_ids", None),
             "package_price": float(obj.package_price) if getattr(obj, "package_price", None) is not None else None,
             "validity_days": getattr(obj, "validity_days", None),
+            "linked_service_id": getattr(obj, "linked_service_id", None),
+            # linked_service_summary 由路由层按需填充（这里保持 None，避免 ORM 懒加载 MissingGreenlet）
+            "linked_service_summary": None,
             "has_time_slots": obj.has_time_slots,
             "time_slot_duration_minutes": obj.time_slot_duration_minutes,
             "time_slot_start_time": obj.time_slot_start_time.isoformat() if isinstance(obj.time_slot_start_time, time) else (str(obj.time_slot_start_time) if obj.time_slot_start_time else None),

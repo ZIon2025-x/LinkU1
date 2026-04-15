@@ -1177,6 +1177,7 @@ class _ServiceCard extends StatelessWidget {
                     // 价格 + chevron（对标iOS: size 18, bold, primary）
                     Row(
                       children: [
+                        _buildDiscountBadge(service),
                         Text(
                           service.priceDisplay,
                           style: const TextStyle(
@@ -1222,6 +1223,38 @@ class _ServiceCard extends StatelessWidget {
             ? AppColors.textTertiaryDark
             : AppColors.textTertiaryLight,
         size: 24,
+      ),
+    );
+  }
+
+  /// multi 套餐折扣徽章（base > 每次均价时显示 X% OFF）
+  Widget _buildDiscountBadge(TaskExpertService service) {
+    if (service.packageType != 'multi') return const SizedBox.shrink();
+    final pkg = service.packagePrice;
+    final sessions = service.totalSessions ?? 0;
+    if (pkg == null || sessions <= 0) return const SizedBox.shrink();
+    final perSessionAvg = pkg / sessions;
+    final base = service.basePrice;
+    if (base <= 0 || base <= perSessionAvg + 0.005) {
+      return const SizedBox.shrink();
+    }
+    final percent = ((1 - perSessionAvg / base) * 100).round();
+    return Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+        decoration: BoxDecoration(
+          color: AppColors.priceRed,
+          borderRadius: BorderRadius.circular(3),
+        ),
+        child: Text(
+          '$percent% OFF',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
       ),
     );
   }

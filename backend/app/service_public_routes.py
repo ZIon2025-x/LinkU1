@@ -175,6 +175,37 @@ async def get_service_detail(
     service_out.user_task_is_paid = user_task_is_paid
     service_out.user_application_has_negotiation = user_application_has_negotiation
 
+    # 关联服务摘要（multi 套餐展示 "适用于 XX" 用）
+    if service.linked_service_id is not None:
+        linked_row = (await db.execute(
+            select(
+                models.TaskExpertService.id,
+                models.TaskExpertService.service_name,
+                models.TaskExpertService.service_name_en,
+                models.TaskExpertService.service_name_zh,
+                models.TaskExpertService.images,
+                models.TaskExpertService.base_price,
+                models.TaskExpertService.currency,
+                models.TaskExpertService.status,
+            ).where(models.TaskExpertService.id == service.linked_service_id)
+        )).first()
+        if linked_row is not None:
+            first_image = (
+                linked_row.images[0]
+                if isinstance(linked_row.images, list) and linked_row.images
+                else None
+            )
+            service_out.linked_service_summary = {
+                "id": linked_row.id,
+                "service_name": linked_row.service_name,
+                "service_name_en": linked_row.service_name_en,
+                "service_name_zh": linked_row.service_name_zh,
+                "image": first_image,
+                "base_price": float(linked_row.base_price) if linked_row.base_price is not None else None,
+                "currency": linked_row.currency,
+                "status": linked_row.status,
+            }
+
     # owner 信息: 个人服务显示用户; 团队服务显示团队
     if service.owner_type == "user" and service.owner_id:
         from app import async_crud

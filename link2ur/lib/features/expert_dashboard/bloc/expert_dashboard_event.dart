@@ -44,11 +44,17 @@ class ExpertDashboardLoadTimeSlots extends ExpertDashboardEvent {
 }
 
 class ExpertDashboardCreateTimeSlot extends ExpertDashboardEvent {
-  const ExpertDashboardCreateTimeSlot(this.serviceId, this.data);
+  const ExpertDashboardCreateTimeSlot(
+    this.serviceId,
+    this.data, {
+    this.force = false,
+  });
   final String serviceId;
   final Map<String, dynamic> data;
+  /// 用户在"不在营业时间"确认框中点击"仍然创建"后重试时为 true
+  final bool force;
   @override
-  List<Object?> get props => [serviceId, data];
+  List<Object?> get props => [serviceId, data, force];
 }
 
 class ExpertDashboardDeleteTimeSlot extends ExpertDashboardEvent {
@@ -76,6 +82,17 @@ class ExpertDashboardDeleteClosedDate extends ExpertDashboardEvent {
   final String id;
   @override
   List<Object?> get props => [id];
+}
+
+class ExpertDashboardLoadBusinessHours extends ExpertDashboardEvent {
+  const ExpertDashboardLoadBusinessHours();
+}
+
+class ExpertDashboardUpdateBusinessHours extends ExpertDashboardEvent {
+  const ExpertDashboardUpdateBusinessHours(this.hours);
+  final Map<String, dynamic> hours;
+  @override
+  List<Object?> get props => [hours];
 }
 
 class ExpertDashboardSubmitProfileUpdate extends ExpertDashboardEvent {

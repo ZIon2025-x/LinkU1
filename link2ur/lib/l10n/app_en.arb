@@ -4961,6 +4961,26 @@
   "expertScheduleClosedAdded": "Marked as unavailable",
   "expertScheduleClosedRemoved": "Availability restored",
   "expertScheduleToday": "Today",
+  "expertBusinessHoursTitle": "Business Hours",
+  "expertBusinessHoursSubtitle": "Weekly open hours (affects the Open/Closed badge on your team page)",
+  "expertBusinessHoursEmptyHint": "Not set — your team page always shows 'Operating'. Set it to reflect real status.",
+  "expertBusinessHoursOpen": "Open",
+  "expertBusinessHoursClose": "Close",
+  "expertBusinessHoursClosedDay": "Closed",
+  "expertBusinessHoursSave": "Save",
+  "expertBusinessHoursSaved": "Business hours updated",
+  "expertBusinessHoursInvalidRange": "Open time must be earlier than close time",
+  "expertBusinessHoursDayMon": "Monday",
+  "expertBusinessHoursDayTue": "Tuesday",
+  "expertBusinessHoursDayWed": "Wednesday",
+  "expertBusinessHoursDayThu": "Thursday",
+  "expertBusinessHoursDayFri": "Friday",
+  "expertBusinessHoursDaySat": "Saturday",
+  "expertBusinessHoursDaySun": "Sunday",
+  "expertClosedDatesUpcoming": "Upcoming Closed Dates",
+  "expertTimeSlotOutsideHoursTitle": "Outside Business Hours",
+  "expertTimeSlotOutsideHoursMessage": "This time slot falls outside your business hours or on a closed date. Create anyway?",
+  "expertTimeSlotCreateAnyway": "Create anyway",
   "expertProfileEditTitle": "Edit Profile",
   "expertProfileEditName": "Display Name",
   "expertProfileEditNameHint": "Your expert display name",
@@ -5522,6 +5542,35 @@
       "amount": { "type": "String" }
     }
   },
+  "packagePurchasePerSessionLabel": "Per-session avg",
+  "packagePurchasePerSessionValue": "{currency} {amount}/session",
+  "@packagePurchasePerSessionValue": {
+    "placeholders": {
+      "currency": { "type": "String" },
+      "amount": { "type": "String" }
+    }
+  },
+  "packagePurchaseOriginalPerSession": "Was {currency} {amount}/session",
+  "@packagePurchaseOriginalPerSession": {
+    "placeholders": {
+      "currency": { "type": "String" },
+      "amount": { "type": "String" }
+    }
+  },
+  "packagePurchaseSaveAmount": "Save {currency} {amount} ({percent}% off)",
+  "@packagePurchaseSaveAmount": {
+    "placeholders": {
+      "currency": { "type": "String" },
+      "amount": { "type": "String" },
+      "percent": { "type": "String" }
+    }
+  },
+  "packagePurchaseLinkedServiceLabel": "Applies to",
+  "serviceInactiveSuffix": "inactive",
+  "userPackageLinkedServiceLabel": "For {name}",
+  "@userPackageLinkedServiceLabel": {
+    "placeholders": { "name": { "type": "String" } }
+  },
   "packagePurchaseValidityLabel": "Valid for",
   "packagePurchaseValidityDays": "{days} days after purchase",
   "@packagePurchaseValidityDays": {
@@ -5667,8 +5716,13 @@
   "expertPackageSessionCountHint": "How many sessions are included in this package",
   "expertPackageSessions": "sessions",
   "expertPackagePrice": "Total Price",
-  "expertPackageBasePrice": "Per-session Price",
-  "expertPackageBasePriceHint": "Reference price per session",
+  "expertPackageLinkedService": "Linked service (optional)",
+  "expertPackageLinkedServiceHint": "Bind this multi-session package to an existing single service; each redemption consumes one use of that service",
+  "expertPackageLinkedServiceNone": "None (standalone package)",
+  "expertPackageLinkedServiceUseBase": "Use this service's price as the original per-session price",
+  "expertPackageLinkedServiceEmpty": "No eligible single service. Create one first.",
+  "expertPackageBasePrice": "Original Per-session Price (optional)",
+  "expertPackageBasePriceHint": "Undiscounted reference price per session, used to show savings; leave blank to auto-derive from total ÷ sessions",
   "expertPackageValidityDays": "Validity (days)",
   "expertPackageValidityDaysHint": "Leave empty for no expiry",
   "expertPackageBundleServices": "Included Services",

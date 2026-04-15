@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/design/app_colors.dart';
 import '../../../core/design/app_spacing.dart';
@@ -151,8 +152,13 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
     final title = task.displayTitle(locale);
     final typeLabel = _consultationTypeLabel();
 
-    // 后端标题格式为 "咨询: xxx"，替换为 "类型咨询: xxx"
-    for (final prefix in ['咨询: ', '咨询：', '咨询:', 'Consultation: ', 'Consultation:']) {
+    // 后端标题格式为 "咨询: xxx" 或 "团队咨询: xxx"，剥离前缀后加上本地化类型标签
+    for (final prefix in [
+      '团队咨询: ', '团队咨询：', '团队咨询:',
+      'Team Consultation: ', 'Team Consultation:',
+      '咨询: ', '咨询：', '咨询:',
+      'Consultation: ', 'Consultation:',
+    ]) {
       if (title.startsWith(prefix)) {
         return '$typeLabel${context.l10n.consultExpert}: ${title.substring(prefix.length).trim()}';
       }
@@ -166,7 +172,8 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
       case ConsultationType.fleaMarket:
         return context.l10n.taskSourceFleaMarket;
       case ConsultationType.service:
-        final hasExpert = _consultationApp?['expert_id'] != null;
+        final hasExpert = _consultationApp?['expert_id'] != null
+            || _consultationApp?['new_expert_id'] != null;
         return hasExpert
             ? context.l10n.taskSourceExpertService
             : context.l10n.discoveryFeedTypePersonalSkill;
@@ -1108,59 +1115,79 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
     final currencySymbol =
         Helpers.currencySymbolFor(state.task?.currency ?? 'GBP');
 
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        color: isDark
-            ? AppColors.cardBackgroundDark
-            : AppColors.cardBackgroundLight,
-        border: Border(
-          bottom: BorderSide(
-            color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
-          ),
+    return GestureDetector(
+      onTap: () => _navigateToDetailPage(),
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
         ),
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(AppRadius.small),
-          bottomRight: Radius.circular(AppRadius.small),
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            widget.consultationType == ConsultationType.fleaMarket
-                ? Icons.shopping_bag
-                : Icons.design_services,
-            size: 20,
-            color: AppColors.primary,
-          ),
-          AppSpacing.hSm,
-          Expanded(
-            child: Text(
-              state.task != null
-                  ? _consultationTitle(state)
-                  : context.l10n.serviceInfoCard,
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+        decoration: BoxDecoration(
+          color: isDark
+              ? AppColors.cardBackgroundDark
+              : AppColors.cardBackgroundLight,
+          border: Border(
+            bottom: BorderSide(
+              color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
             ),
           ),
-          Text(
-            '$currencySymbol$priceDisplay',
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
+          borderRadius: const BorderRadius.only(
+            bottomLeft: Radius.circular(AppRadius.small),
+            bottomRight: Radius.circular(AppRadius.small),
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              widget.consultationType == ConsultationType.fleaMarket
+                  ? Icons.shopping_bag
+                  : Icons.design_services,
+              size: 20,
               color: AppColors.primary,
             ),
-          ),
-        ],
+            AppSpacing.hSm,
+            Expanded(
+              child: Text(
+                state.task != null
+                    ? _consultationTitle(state)
+                    : context.l10n.serviceInfoCard,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Text(
+              '$currencySymbol$priceDisplay',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: AppColors.primary,
+              ),
+            ),
+            AppSpacing.hSm,
+            Icon(Icons.chevron_right, size: 18,
+              color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight),
+          ],
+        ),
       ),
     );
+  }
+
+  /// 咨询 info card 点击：跳转到达人团队或服务详情页
+  void _navigateToDetailPage() {
+    final serviceId = _consultationApp?['service_id'];
+    final expertId = _consultationApp?['new_expert_id'] as String?;
+
+    if (serviceId != null) {
+      // 服务咨询 → 跳转到服务详情
+      context.push('/service/$serviceId');
+    } else if (expertId != null) {
+      // 团队咨询 → 跳转到达人团队详情
+      context.push('/expert-teams/$expertId');
+    }
   }
 
   /// Check if a message is the last negotiation-type message in the list

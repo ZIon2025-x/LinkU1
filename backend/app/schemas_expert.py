@@ -45,6 +45,7 @@ class ExpertOut(BaseModel):
     longitude: Optional[float] = None
     service_radius_km: Optional[int] = None
     business_hours: Optional[dict] = None  # {"mon": {"open": "09:00", "close": "18:00"}, ...}
+    is_open: Optional[bool] = None  # 当前是否营业（接口层按 business_hours + closed_dates 计算；null=未设置营业时间）
     follower_count: int = 0  # 粉丝数（接口层填充）
     is_following: bool = False  # 当前用户是否关注（接口层填充）
     my_role: Optional[str] = None  # 当前用户在此团队中的角色（接口层填充）
@@ -53,10 +54,17 @@ class ExpertOut(BaseModel):
         from_attributes = True
 
 
+class UpcomingClosedDate(BaseModel):
+    """未来休息日（详情页展示用）"""
+    closed_date: str  # YYYY-MM-DD
+    reason: Optional[str] = None
+
+
 class ExpertDetailOut(ExpertOut):
     members: List["ExpertMemberOut"] = []
     is_featured: bool = False
-    is_open: Optional[bool] = None  # 当前是否在营业时间内（结合 business_hours + closed_dates）
+    # 未来 14 天内的临时休息日（公开，用于详情页展示给访客）
+    upcoming_closed_dates: List[UpcomingClosedDate] = []
 
 
 # ==================== ExpertMember ====================

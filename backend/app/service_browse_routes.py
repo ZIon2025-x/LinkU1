@@ -191,6 +191,7 @@ async def browse_services(
             "service_radius_km": eff_radius,
             "package_type": s.package_type,
             "total_sessions": s.total_sessions,
+            "linked_service_id": s.linked_service_id,
         }
         if lat is not None and lng is not None and eff_lat is not None and eff_lng is not None:
             lat_d = eff_lat - lat

@@ -12,6 +12,7 @@ import '../../../core/utils/l10n_extension.dart';
 import '../../../core/widgets/app_select_sheet.dart';
 import '../../../core/widgets/skeleton_view.dart';
 import '../../../core/widgets/empty_state_view.dart';
+import '../../../core/widgets/expert_status_badge.dart';
 import '../../../core/widgets/async_image_view.dart';
 import '../../../core/router/app_router.dart';
 import '../../../data/models/task_expert.dart';
@@ -455,6 +456,10 @@ class _ExpertCard extends StatelessWidget {
                         size: 14,
                         color: AppColors.primary,
                       ),
+                      if (expert.isOpen != null) ...[
+                        const SizedBox(width: 4),
+                        ExpertStatusBadge(isOpen: expert.isOpen),
+                      ],
                     ],
                   ),
                   const SizedBox(height: 4),

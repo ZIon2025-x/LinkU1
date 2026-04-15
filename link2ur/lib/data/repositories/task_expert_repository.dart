@@ -592,13 +592,28 @@ class TaskExpertRepository {
   }
 
   /// 创建服务时间段
-  Future<Map<String, dynamic>> createServiceTimeSlot(String expertId, int serviceId, Map<String, dynamic> data) async {
+  ///
+  /// [force] 为 true 时跳过后端营业时间校验，直接创建（用户已在确认框中选择"仍然创建"）。
+  Future<Map<String, dynamic>> createServiceTimeSlot(
+    String expertId,
+    int serviceId,
+    Map<String, dynamic> data, {
+    bool force = false,
+  }) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.expertServiceTimeSlots(expertId, serviceId),
       data: _timeSlotToBackendFormat(data),
+      queryParameters: force ? {'force': 'true'} : null,
     );
 
     if (!response.isSuccess || response.data == null) {
+      // 把营业时间软警告原样抛给上层，让 BLoC/UI 决定是否二次确认
+      if (response.errorCode == 'outside_business_hours') {
+        throw const TaskExpertException(
+          'outside_business_hours',
+          code: 'outside_business_hours',
+        );
+      }
       throw TaskExpertException(response.errorCode ?? response.message ?? '创建时间段失败', code: response.errorCode);
     }
 
@@ -613,6 +628,38 @@ class TaskExpertRepository {
 
     if (!response.isSuccess) {
       throw TaskExpertException(response.errorCode ?? response.message ?? '删除时间段失败', code: response.errorCode);
+    }
+  }
+
+  /// 获取达人每周营业时间
+  /// 从达人详情接口 (GET /api/experts/{id}) 读取 business_hours 字段
+  /// 返回: {"mon": {"open": "09:00", "close": "18:00"}, "sun": null, ...} 或 {}(未设置)
+  Future<Map<String, dynamic>> getBusinessHours(String expertId) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.taskExpertById(expertId),
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw TaskExpertException(response.errorCode ?? response.message ?? '获取营业时间失败', code: response.errorCode);
+    }
+
+    final bh = response.data!['business_hours'];
+    if (bh is Map<String, dynamic>) return bh;
+    if (bh is Map) return Map<String, dynamic>.from(bh);
+    return <String, dynamic>{};
+  }
+
+  /// 更新达人每周营业时间 (Owner/Admin)
+  /// hours: {"mon": {"open": "09:00", "close": "18:00"}, "sun": null, ...}
+  /// 传空 Map 表示清空
+  Future<void> updateBusinessHours(String expertId, Map<String, dynamic> hours) async {
+    final response = await _apiService.put(
+      ApiEndpoints.expertTeamBusinessHours(expertId),
+      data: hours,
+    );
+
+    if (!response.isSuccess) {
+      throw TaskExpertException(response.errorCode ?? response.message ?? '更新营业时间失败', code: response.errorCode);
     }
   }
 

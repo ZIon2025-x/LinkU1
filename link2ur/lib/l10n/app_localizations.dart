@@ -19937,6 +19937,126 @@ abstract class AppLocalizations {
   /// **'Today'**
   String get expertScheduleToday;
 
+  /// No description provided for @expertBusinessHoursTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Business Hours'**
+  String get expertBusinessHoursTitle;
+
+  /// No description provided for @expertBusinessHoursSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly open hours (affects the Open/Closed badge on your team page)'**
+  String get expertBusinessHoursSubtitle;
+
+  /// No description provided for @expertBusinessHoursEmptyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Not set — your team page always shows \'Operating\'. Set it to reflect real status.'**
+  String get expertBusinessHoursEmptyHint;
+
+  /// No description provided for @expertBusinessHoursOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get expertBusinessHoursOpen;
+
+  /// No description provided for @expertBusinessHoursClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get expertBusinessHoursClose;
+
+  /// No description provided for @expertBusinessHoursClosedDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Closed'**
+  String get expertBusinessHoursClosedDay;
+
+  /// No description provided for @expertBusinessHoursSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get expertBusinessHoursSave;
+
+  /// No description provided for @expertBusinessHoursSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Business hours updated'**
+  String get expertBusinessHoursSaved;
+
+  /// No description provided for @expertBusinessHoursInvalidRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Open time must be earlier than close time'**
+  String get expertBusinessHoursInvalidRange;
+
+  /// No description provided for @expertBusinessHoursDayMon.
+  ///
+  /// In en, this message translates to:
+  /// **'Monday'**
+  String get expertBusinessHoursDayMon;
+
+  /// No description provided for @expertBusinessHoursDayTue.
+  ///
+  /// In en, this message translates to:
+  /// **'Tuesday'**
+  String get expertBusinessHoursDayTue;
+
+  /// No description provided for @expertBusinessHoursDayWed.
+  ///
+  /// In en, this message translates to:
+  /// **'Wednesday'**
+  String get expertBusinessHoursDayWed;
+
+  /// No description provided for @expertBusinessHoursDayThu.
+  ///
+  /// In en, this message translates to:
+  /// **'Thursday'**
+  String get expertBusinessHoursDayThu;
+
+  /// No description provided for @expertBusinessHoursDayFri.
+  ///
+  /// In en, this message translates to:
+  /// **'Friday'**
+  String get expertBusinessHoursDayFri;
+
+  /// No description provided for @expertBusinessHoursDaySat.
+  ///
+  /// In en, this message translates to:
+  /// **'Saturday'**
+  String get expertBusinessHoursDaySat;
+
+  /// No description provided for @expertBusinessHoursDaySun.
+  ///
+  /// In en, this message translates to:
+  /// **'Sunday'**
+  String get expertBusinessHoursDaySun;
+
+  /// No description provided for @expertClosedDatesUpcoming.
+  ///
+  /// In en, this message translates to:
+  /// **'Upcoming Closed Dates'**
+  String get expertClosedDatesUpcoming;
+
+  /// No description provided for @expertTimeSlotOutsideHoursTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Outside Business Hours'**
+  String get expertTimeSlotOutsideHoursTitle;
+
+  /// No description provided for @expertTimeSlotOutsideHoursMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This time slot falls outside your business hours or on a closed date. Create anyway?'**
+  String get expertTimeSlotOutsideHoursMessage;
+
+  /// No description provided for @expertTimeSlotCreateAnyway.
+  ///
+  /// In en, this message translates to:
+  /// **'Create anyway'**
+  String get expertTimeSlotCreateAnyway;
+
   /// No description provided for @expertProfileEditTitle.
   ///
   /// In en, this message translates to:
@@ -22895,6 +23015,49 @@ abstract class AppLocalizations {
   /// **'{currency} {amount}'**
   String packagePurchasePriceValue(String currency, String amount);
 
+  /// No description provided for @packagePurchasePerSessionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Per-session avg'**
+  String get packagePurchasePerSessionLabel;
+
+  /// No description provided for @packagePurchasePerSessionValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{currency} {amount}/session'**
+  String packagePurchasePerSessionValue(String currency, String amount);
+
+  /// No description provided for @packagePurchaseOriginalPerSession.
+  ///
+  /// In en, this message translates to:
+  /// **'Was {currency} {amount}/session'**
+  String packagePurchaseOriginalPerSession(String currency, String amount);
+
+  /// No description provided for @packagePurchaseSaveAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Save {currency} {amount} ({percent}% off)'**
+  String packagePurchaseSaveAmount(
+      String currency, String amount, String percent);
+
+  /// No description provided for @packagePurchaseLinkedServiceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Applies to'**
+  String get packagePurchaseLinkedServiceLabel;
+
+  /// No description provided for @serviceInactiveSuffix.
+  ///
+  /// In en, this message translates to:
+  /// **'inactive'**
+  String get serviceInactiveSuffix;
+
+  /// No description provided for @userPackageLinkedServiceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'For {name}'**
+  String userPackageLinkedServiceLabel(String name);
+
   /// No description provided for @packagePurchaseValidityLabel.
   ///
   /// In en, this message translates to:
@@ -23687,16 +23850,46 @@ abstract class AppLocalizations {
   /// **'Total Price'**
   String get expertPackagePrice;
 
+  /// No description provided for @expertPackageLinkedService.
+  ///
+  /// In en, this message translates to:
+  /// **'Linked service (optional)'**
+  String get expertPackageLinkedService;
+
+  /// No description provided for @expertPackageLinkedServiceHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Bind this multi-session package to an existing single service; each redemption consumes one use of that service'**
+  String get expertPackageLinkedServiceHint;
+
+  /// No description provided for @expertPackageLinkedServiceNone.
+  ///
+  /// In en, this message translates to:
+  /// **'None (standalone package)'**
+  String get expertPackageLinkedServiceNone;
+
+  /// No description provided for @expertPackageLinkedServiceUseBase.
+  ///
+  /// In en, this message translates to:
+  /// **'Use this service\'s price as the original per-session price'**
+  String get expertPackageLinkedServiceUseBase;
+
+  /// No description provided for @expertPackageLinkedServiceEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No eligible single service. Create one first.'**
+  String get expertPackageLinkedServiceEmpty;
+
   /// No description provided for @expertPackageBasePrice.
   ///
   /// In en, this message translates to:
-  /// **'Per-session Price'**
+  /// **'Original Per-session Price (optional)'**
   String get expertPackageBasePrice;
 
   /// No description provided for @expertPackageBasePriceHint.
   ///
   /// In en, this message translates to:
-  /// **'Reference price per session'**
+  /// **'Undiscounted reference price per session, used to show savings; leave blank to auto-derive from total ÷ sessions'**
   String get expertPackageBasePriceHint;
 
   /// No description provided for @expertPackageValidityDays.
