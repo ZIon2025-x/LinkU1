@@ -265,20 +265,20 @@ class AuthRepository {
     }
 
     // 从服务器获取
-    return await _fetchUserProfile();
+    return await fetchUserProfile();
   }
 
   /// 刷新用户信息
   Future<void> _refreshUserInfo() async {
     try {
-      await _fetchUserProfile();
+      await fetchUserProfile();
     } catch (e) {
       AppLogger.warning('Failed to refresh user info', e);
     }
   }
 
-  /// 获取用户资料
-  Future<User?> _fetchUserProfile() async {
+  /// 获取用户资料（从服务端拉取最新数据）
+  Future<User?> fetchUserProfile() async {
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.userProfile,
     );

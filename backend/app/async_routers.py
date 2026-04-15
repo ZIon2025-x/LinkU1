@@ -467,7 +467,37 @@ async def get_task_by_id(
                 application_result = await db.execute(application_query)
                 is_applicant = application_result.scalar_one_or_none() is not None
 
+            # 咨询类任务：服务所有者通过 expert_service_id 反查
+            is_service_owner = False
             if not is_poster and not is_taker and not is_participant and not is_applicant:
+                if task.expert_service_id:
+                    svc_query = select(models.TaskExpertService.user_id).where(
+                        models.TaskExpertService.id == task.expert_service_id
+                    )
+                    svc_result = await db.execute(svc_query)
+                    svc_owner_id = svc_result.scalar_one_or_none()
+                    if svc_owner_id and str(svc_owner_id) == user_id_str:
+                        is_service_owner = True
+                    if not is_service_owner:
+                        svc_expert_query = select(models.TaskExpertService.expert_id).where(
+                            models.TaskExpertService.id == task.expert_service_id
+                        )
+                        svc_expert_result = await db.execute(svc_expert_query)
+                        svc_expert_id = svc_expert_result.scalar_one_or_none()
+                        if svc_expert_id:
+                            from app.models_expert import ExpertMember
+                            member_query = select(ExpertMember).where(
+                                and_(
+                                    ExpertMember.expert_id == svc_expert_id,
+                                    ExpertMember.user_id == user_id_str,
+                                    ExpertMember.status == "active",
+                                )
+                            )
+                            member_result = await db.execute(member_query)
+                            if member_result.scalar_one_or_none() is not None:
+                                is_service_owner = True
+
+            if not is_poster and not is_taker and not is_participant and not is_applicant and not is_service_owner:
                 raise HTTPException(status_code=403, detail="无权限查看此任务")
     elif task.status == "completed" and current_user:
         # completed 任务公开可见，但非相关用户只能看脱敏摘要

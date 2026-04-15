@@ -224,9 +224,9 @@ class DiscoverBloc extends Bloc<DiscoverEvent, DiscoverState> {
 
     try {
       if (wasFollowing) {
-        await _followRepo.unfollowUser(id);
+        await _followRepo.unfollowExpert(id);
       } else {
-        await _followRepo.followUser(id);
+        await _followRepo.followExpert(id);
       }
     } catch (e) {
       // Revert on failure

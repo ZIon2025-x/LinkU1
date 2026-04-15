@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>达人列表 - 设计稿</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --primary: #007AFF;
+    --primary-light: #409CFF;
+    --bg: #F5F5F5;
+    --card-bg: #FFFFFF;
+    --text-primary: #1a1a1a;
+    --text-secondary: #8E8E93;
+    --text-tertiary: #C7C7CC;
+    --warning: #FFA600;
+    --success: #26BF73;
+    --separator: rgba(198,198,200,0.3);
+    --purple: #7359F2;
+    --pink: #FF4D80;
+    --gold: #FFD700;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text-primary);
+    max-width: 430px;
+    margin: 0 auto;
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* ===== Status Bar ===== */
+  .status-bar {
+    height: 54px;
+    background: var(--card-bg);
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding: 0 24px 8px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .status-bar .time { font-size: 15px; font-weight: 700; }
+  .status-bar .icons { display: flex; gap: 6px; align-items: center; }
+
+  /* ===== Header ===== */
+  .header {
+    background: var(--card-bg);
+    padding: 0 20px 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0 14px;
+  }
+  .header-title {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    background: linear-gradient(135deg, var(--primary), var(--purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .header-actions {
+    display: flex;
+    gap: 8px;
+  }
+  .header-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    border: none;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s;
+  }
+  .header-btn:active { transform: scale(0.92); }
+  .header-btn svg { width: 20px; height: 20px; color: var(--text-primary); }
+  .filter-dot {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--primary);
+  }
+
+  /* ===== Search Bar ===== */
+  .search-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--bg);
+    border-radius: 14px;
+    padding: 10px 14px;
+    margin-bottom: 2px;
+  }
+  .search-bar svg { width: 18px; height: 18px; color: var(--text-tertiary); flex-shrink: 0; }
+  .search-bar input {
+    flex: 1;
+    border: none;
+    background: none;
+    font-size: 15px;
+    color: var(--text-primary);
+    outline: none;
+  }
+  .search-bar input::placeholder { color: var(--text-tertiary); }
+
+  /* ===== Category Tabs (横向滚动) ===== */
+  .category-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding: 14px 20px 6px;
+  }
+  .category-scroll::-webkit-scrollbar { display: none; }
+  .category-tabs {
+    display: flex;
+    gap: 8px;
+    width: max-content;
+  }
+  .cat-chip {
+    padding: 7px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    border: 1px solid var(--separator);
+    background: var(--card-bg);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.25s;
+  }
+  .cat-chip.active {
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    color: #fff;
+    border-color: transparent;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(0,122,255,0.25);
+  }
+
+  /* ===== Sort Bar ===== */
+  .sort-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px 4px;
+  }
+  .sort-bar .count { font-size: 13px; color: var(--text-secondary); }
+  .sort-bar .count b { color: var(--text-primary); font-weight: 700; }
+  .sort-select {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    color: var(--primary);
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  /* ===== Expert Cards ===== */
+  .expert-list {
+    padding: 8px 16px 100px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .expert-card {
+    background: var(--card-bg);
+    border-radius: 20px;
+    padding: 18px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+  }
+  .expert-card:active { transform: scale(0.98); }
+
+  /* 顶部装饰条 */
+  .expert-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary), var(--purple));
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .expert-card.featured::before { opacity: 1; }
+
+  /* Card Header: avatar + name row */
+  .card-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+  }
+
+  .avatar-wrapper {
+    position: relative;
+    flex-shrink: 0;
+  }
+  .avatar {
+    width: 62px;
+    height: 62px;
+    border-radius: 18px;
+    object-fit: cover;
+    background: linear-gradient(135deg, #e0e7ff, #f0e6ff);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--primary);
+  }
+  .avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 18px;
+    object-fit: cover;
+  }
+  .status-dot {
+    position: absolute;
+    bottom: 1px;
+    right: 1px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2.5px solid var(--card-bg);
+  }
+  .status-dot.open { background: var(--success); }
+  .status-dot.closed { background: var(--text-tertiary); }
+
+  .card-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .name-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+  .expert-name {
+    font-size: 16px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 140px;
+  }
+  .badge-verified {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .badge-verified svg { width: 11px; height: 11px; color: #fff; }
+  .badge-official {
+    padding: 2px 7px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #FFD700, #FFA600);
+    color: #5a3e00;
+    flex-shrink: 0;
+    letter-spacing: 0.3px;
+  }
+  .badge-status {
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  .badge-status.open {
+    background: rgba(38,191,115,0.1);
+    color: var(--success);
+  }
+  .badge-status.closed {
+    background: rgba(142,142,147,0.1);
+    color: var(--text-secondary);
+  }
+
+  .expert-bio {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-top: 2px;
+  }
+
+  /* Rating + stats */
+  .card-rating {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 2px;
+  }
+  .rating-value {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--warning);
+    line-height: 1;
+  }
+  .rating-stars {
+    display: flex;
+    gap: 1px;
+    margin-left: 2px;
+  }
+  .rating-stars svg { width: 13px; height: 13px; }
+
+  /* Tags Section */
+  .card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 12px;
+  }
+  .skill-tag {
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 500;
+    background: rgba(0,122,255,0.06);
+    color: var(--primary);
+    border: 1px solid rgba(0,122,255,0.1);
+  }
+  .skill-tag.purple {
+    background: rgba(115,89,242,0.06);
+    color: var(--purple);
+    border-color: rgba(115,89,242,0.1);
+  }
+  .skill-tag.pink {
+    background: rgba(255,77,128,0.06);
+    color: var(--pink);
+    border-color: rgba(255,77,128,0.1);
+  }
+
+  /* Stats Row */
+  .card-stats {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(0,0,0,0.04);
+  }
+  .stat-item {
+    flex: 1;
+    text-align: center;
+    position: relative;
+  }
+  .stat-item + .stat-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 2px;
+    bottom: 2px;
+    width: 1px;
+    background: rgba(0,0,0,0.06);
+  }
+  .stat-value {
+    font-size: 17px;
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1.2;
+  }
+  .stat-label {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+  }
+
+  /* Featured card highlight */
+  .expert-card.featured {
+    box-shadow: 0 2px 20px rgba(0,122,255,0.08);
+  }
+
+  /* ===== Bottom Tab Bar (装饰) ===== */
+  .tab-bar {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 430px;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 0.5px solid var(--separator);
+    display: flex;
+    padding: 6px 0 28px;
+    z-index: 200;
+  }
+  .tab-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    font-size: 10px;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    padding-top: 6px;
+  }
+  .tab-item.active { color: var(--primary); }
+  .tab-item svg { width: 24px; height: 24px; }
+
+  /* ===== Responsive: allow desktop preview ===== */
+  @media (min-width: 431px) {
+    body {
+      border-left: 1px solid #e0e0e0;
+      border-right: 1px solid #e0e0e0;
+      box-shadow: 0 0 40px rgba(0,0,0,0.06);
+    }
+  }
+
+  /* ===== Animations ===== */
+  .expert-card {
+    animation: fadeUp 0.4s ease both;
+  }
+  .expert-card:nth-child(1) { animation-delay: 0s; }
+  .expert-card:nth-child(2) { animation-delay: 0.06s; }
+  .expert-card:nth-child(3) { animation-delay: 0.12s; }
+  .expert-card:nth-child(4) { animation-delay: 0.18s; }
+  .expert-card:nth-child(5) { animation-delay: 0.24s; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+
+<!-- Status Bar -->
+<div class="status-bar">
+  <span class="time">9:41</span>
+  <div class="icons">
+    <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M2 15h2V9H2v6zm4 0h2V5H6v10zm4 0h2V1h-2v14zm4 0h2V7h-2v8z"/></svg>
+    <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M17.5 11.5c0 3.59-2.91 6.5-6.5 6.5s-6.5-2.91-6.5-6.5S7.41 5 11 5c.89 0 1.73.18 2.5.5"/><path d="M17.5 2v4h-4" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+    <svg viewBox="0 0 24 14" width="26" height="14"><rect x="0" y="1" width="20" height="12" rx="3" stroke="currentColor" stroke-width="1" fill="none"/><rect x="2" y="3" width="14" height="8" rx="1.5" fill="currentColor"/><path d="M22 5.5v3a1.5 1.5 0 000-3z" fill="currentColor"/></svg>
+  </div>
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-top">
+    <div class="header-title">达人广场</div>
+    <div class="header-actions">
+      <button class="header-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 21v-7m0 0V3h16v11H4zm4-7h3m-3-4h8"/></svg>
+      </button>
+      <button class="header-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="4" cy="12" r="1" fill="currentColor"/></svg>
+        <span class="filter-dot"></span>
+      </button>
+    </div>
+  </div>
+  <div class="search-bar">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="text" placeholder="搜索技能、达人名称...">
+  </div>
+</div>
+
+<!-- Category Chips -->
+<div class="category-scroll">
+  <div class="category-tabs">
+    <div class="cat-chip active">全部</div>
+    <div class="cat-chip">编程开发</div>
+    <div class="cat-chip">翻译</div>
+    <div class="cat-chip">辅导教学</div>
+    <div class="cat-chip">美食料理</div>
+    <div class="cat-chip">饮品调制</div>
+    <div class="cat-chip">烘焙蛋糕</div>
+    <div class="cat-chip">跑腿代办</div>
+    <div class="cat-chip">社交娱乐</div>
+    <div class="cat-chip">美容护肤</div>
+    <div class="cat-chip">手工制作</div>
+    <div class="cat-chip">游戏陪玩</div>
+    <div class="cat-chip">摄影摄像</div>
+    <div class="cat-chip">家政保洁</div>
+  </div>
+</div>
+
+<!-- Sort Bar -->
+<div class="sort-bar">
+  <span class="count">共 <b>42</b> 位达人</span>
+  <div class="sort-select">
+    综合排序
+    <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+  </div>
+</div>
+
+<!-- Expert Cards -->
+<div class="expert-list">
+
+  <!-- Card 1: Featured / Official -->
+  <div class="expert-card featured">
+    <div class="card-header">
+      <div class="avatar-wrapper">
+        <div class="avatar" style="background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; font-size: 24px;">L</div>
+        <div class="status-dot open"></div>
+      </div>
+      <div class="card-info">
+        <div class="name-row">
+          <span class="expert-name">LinkU 官方团队</span>
+          <span class="badge-verified"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6l2 2 4-4"/></svg></span>
+          <span class="badge-official">官方</span>
+          <span class="badge-status open">营业中</span>
+        </div>
+        <div class="expert-bio">平台官方技术支持团队，提供 App 使用指导、账号问题解决、功能咨询等一站式服务</div>
+      </div>
+    </div>
+
+    <div class="card-tags">
+      <span class="skill-tag">技术支持</span>
+      <span class="skill-tag purple">账号服务</span>
+      <span class="skill-tag">使用指南</span>
+      <span class="skill-tag pink">问题反馈</span>
+    </div>
+
+    <div class="card-stats">
+      <div class="stat-item">
+        <div class="stat-value" style="color: var(--warning);">4.9</div>
+        <div class="stat-label">评分</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">328</div>
+        <div class="stat-label">已完成</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">12</div>
+        <div class="stat-label">服务项</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" style="color: var(--success);">98%</div>
+        <div class="stat-label">好评率</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Card 2 -->
+  <div class="expert-card">
+    <div class="card-header">
+      <div class="avatar-wrapper">
+        <div class="avatar" style="background: linear-gradient(135deg, #f093fb, #f5576c); color: #fff;">小</div>
+        <div class="status-dot open"></div>
+      </div>
+      <div class="card-info">
+        <div class="name-row">
+          <span class="expert-name">小林同学</span>
+          <span class="badge-verified"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6l2 2 4-4"/></svg></span>
+          <span class="badge-status open">营业中</span>
+        </div>
+        <div class="expert-bio">伦敦大学数学系在读，擅长高等数学、线性代数辅导，耐心细致~</div>
+      </div>
+    </div>
+
+    <div class="card-tags">
+      <span class="skill-tag">高等数学</span>
+      <span class="skill-tag purple">线性代数</span>
+      <span class="skill-tag">考试辅导</span>
+    </div>
+
+    <div class="card-stats">
+      <div class="stat-item">
+        <div class="stat-value" style="color: var(--warning);">4.8</div>
+        <div class="stat-label">评分</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">156</div>
+        <div class="stat-label">已完成</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">5</div>
+        <div class="stat-label">服务项</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" style="color: var(--success);">96%</div>
+        <div class="stat-label">好评率</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Card 3 -->
+  <div class="expert-card">
+    <div class="card-header">
+      <div class="avatar-wrapper">
+        <div class="avatar" style="background: linear-gradient(135deg, #4facfe, #00f2fe); color: #fff;">Chef</div>
+        <div class="status-dot closed"></div>
+      </div>
+      <div class="card-info">
+        <div class="name-row">
+          <span class="expert-name">Chef Wang 王大厨</span>
+          <span class="badge-verified"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6l2 2 4-4"/></svg></span>
+          <span class="badge-status closed">休息中</span>
+        </div>
+        <div class="expert-bio">川菜 · 粤菜 · 西餐，10年烹饪经验，可上门做饭、教学或承接聚会餐饮</div>
+      </div>
+    </div>
+
+    <div class="card-tags">
+      <span class="skill-tag pink">川菜</span>
+      <span class="skill-tag">粤菜</span>
+      <span class="skill-tag purple">西餐</span>
+      <span class="skill-tag">上门做饭</span>
+    </div>
+
+    <div class="card-stats">
+      <div class="stat-item">
+        <div class="stat-value" style="color: var(--warning);">4.9</div>
+        <div class="stat-label">评分</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">89</div>
+        <div class="stat-label">已完成</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">8</div>
+        <div class="stat-label">服务项</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" style="color: var(--success);">100%</div>
+        <div class="stat-label">好评率</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Card 4 -->
+  <div class="expert-card">
+    <div class="card-header">
+      <div class="avatar-wrapper">
+        <div class="avatar" style="background: linear-gradient(135deg, #a18cd1, #fbc2eb); color: #fff;">M</div>
+        <div class="status-dot open"></div>
+      </div>
+      <div class="card-info">
+        <div class="name-row">
+          <span class="expert-name">Mia 摄影工作室</span>
+          <span class="badge-verified"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6l2 2 4-4"/></svg></span>
+          <span class="badge-status open">营业中</span>
+        </div>
+        <div class="expert-bio">毕业写真 · 情侣照 · 证件照，提供化妆 + 后期修图一条龙服务</div>
+      </div>
+    </div>
+
+    <div class="card-tags">
+      <span class="skill-tag">毕业写真</span>
+      <span class="skill-tag pink">情侣照</span>
+      <span class="skill-tag purple">证件照</span>
+    </div>
+
+    <div class="card-stats">
+      <div class="stat-item">
+        <div class="stat-value" style="color: var(--warning);">5.0</div>
+        <div class="stat-label">评分</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">64</div>
+        <div class="stat-label">已完成</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">3</div>
+        <div class="stat-label">服务项</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" style="color: var(--success);">100%</div>
+        <div class="stat-label">好评率</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Card 5 -->
+  <div class="expert-card">
+    <div class="card-header">
+      <div class="avatar-wrapper">
+        <div class="avatar" style="background: linear-gradient(135deg, #43e97b, #38f9d7); color: #fff;">D</div>
+        <div class="status-dot open"></div>
+      </div>
+      <div class="card-info">
+        <div class="name-row">
+          <span class="expert-name">David 全栈开发</span>
+          <span class="badge-verified"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6l2 2 4-4"/></svg></span>
+        </div>
+        <div class="expert-bio">Flutter / React / Python 全栈，帮你搞定课程作业、小程序、网站开发</div>
+      </div>
+    </div>
+
+    <div class="card-tags">
+      <span class="skill-tag">Flutter</span>
+      <span class="skill-tag purple">React</span>
+      <span class="skill-tag pink">Python</span>
+      <span class="skill-tag">网站开发</span>
+    </div>
+
+    <div class="card-stats">
+      <div class="stat-item">
+        <div class="stat-value" style="color: var(--warning);">4.7</div>
+        <div class="stat-label">评分</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">213</div>
+        <div class="stat-label">已完成</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">6</div>
+        <div class="stat-label">服务项</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" style="color: var(--success);">95%</div>
+        <div class="stat-label">好评率</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Bottom Tab Bar -->
+<div class="tab-bar">
+  <div class="tab-item">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z"/></svg>
+    <span>首页</span>
+  </div>
+  <div class="tab-item">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V9a2 2 0 012-2h2a2 2 0 012 2v9a2 2 0 01-2 2h-2z"/></svg>
+    <span>社区</span>
+  </div>
+  <div class="tab-item active">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+    <span>达人</span>
+  </div>
+  <div class="tab-item">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+    <span>消息</span>
+  </div>
+  <div class="tab-item">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+    <span>我的</span>
+  </div>
+</div>
+
+</body>
+</html>

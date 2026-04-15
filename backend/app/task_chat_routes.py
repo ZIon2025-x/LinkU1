@@ -673,7 +673,38 @@ async def get_task_messages(
                 participant_result = await db.execute(participant_query)
                 is_participant = participant_result.scalar_one_or_none() is not None
         
+        # 咨询类任务：服务所有者不是 poster/taker，通过 expert_service_id 反查
+        is_service_owner = False
         if not is_poster and not is_taker and not is_participant:
+            if task.expert_service_id:
+                svc_query = select(models.TaskExpertService.user_id).where(
+                    models.TaskExpertService.id == task.expert_service_id
+                )
+                svc_result = await db.execute(svc_query)
+                svc_owner_id = svc_result.scalar_one_or_none()
+                if svc_owner_id and str(svc_owner_id) == str(current_user.id):
+                    is_service_owner = True
+                # 也检查团队成员
+                if not is_service_owner:
+                    svc_expert_query = select(models.TaskExpertService.expert_id).where(
+                        models.TaskExpertService.id == task.expert_service_id
+                    )
+                    svc_expert_result = await db.execute(svc_expert_query)
+                    svc_expert_id = svc_expert_result.scalar_one_or_none()
+                    if svc_expert_id:
+                        from app.models_expert import ExpertMember
+                        member_query = select(ExpertMember).where(
+                            and_(
+                                ExpertMember.expert_id == svc_expert_id,
+                                ExpertMember.user_id == current_user.id,
+                                ExpertMember.status == "active",
+                            )
+                        )
+                        member_result = await db.execute(member_query)
+                        if member_result.scalar_one_or_none() is not None:
+                            is_service_owner = True
+
+        if not is_poster and not is_taker and not is_participant and not is_service_owner:
             # 如果提供了 application_id，允许该申请的申请者访问
             if not application_id:
                 raise HTTPException(

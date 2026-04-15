@@ -53,6 +53,23 @@ from fastapi import BackgroundTasks
 logger = logging.getLogger(__name__)
 
 
+def _check_is_expert(db: Session, user_id: str) -> bool:
+    """Check if user is an expert (legacy TaskExpert or new ExpertMember)."""
+    from app.models import TaskExpert
+    from app.models_expert import ExpertMember
+    task_expert = db.query(TaskExpert).filter(
+        TaskExpert.id == user_id,
+        TaskExpert.status == "active"
+    ).first()
+    if task_expert:
+        return True
+    expert_member = db.query(ExpertMember).filter(
+        ExpertMember.user_id == user_id,
+        ExpertMember.status == "active"
+    ).first()
+    return expert_member is not None
+
+
 # 从 validators 导入手机号标准化函数
 from app.validators import StringValidator
 normalize_phone_number = StringValidator.normalize_phone
@@ -235,6 +252,7 @@ def secure_login(
                 "user_level": user.user_level,
                 "is_verified": user.is_verified,
                 "onboarding_completed": getattr(user, 'onboarding_completed', False),
+                "is_expert": _check_is_expert(db, user.id),
             },
             "session_id": session.session_id,  # 会话ID用于认证
             "expires_in": 300,  # 5分钟
@@ -839,6 +857,7 @@ def get_auth_status(
                 "user_level": user.user_level,
                 "is_verified": user.is_verified,
                 "onboarding_completed": getattr(user, 'onboarding_completed', False),
+                "is_expert": _check_is_expert(db, user.id),
             },
             "session": {
                 "session_id": session.session_id[:8] + "...",
@@ -1738,6 +1757,7 @@ def login_with_phone_verification_code(
                 "user_level": user.user_level,
                 "is_verified": user.is_verified,
                 "onboarding_completed": getattr(user, 'onboarding_completed', False),
+                "is_expert": _check_is_expert(db, user.id),
             },
             "session_id": session.session_id,
             "expires_in": 300,
@@ -1749,11 +1769,11 @@ def login_with_phone_verification_code(
             } if is_mobile else None,
             "is_new_user": is_new_user
         }
-        
+
         # 移动端需要 refresh_token 在响应体中（无法读取 HTTP-only cookies）
         if is_mobile:
             response_data["refresh_token"] = refresh_token
-        
+
         return response_data
 
     except HTTPException:
@@ -2025,6 +2045,7 @@ def login_with_verification_code(
                 "user_level": user.user_level,
                 "is_verified": user.is_verified,
                 "onboarding_completed": getattr(user, 'onboarding_completed', False),
+                "is_expert": _check_is_expert(db, user.id),
             },
             "session_id": session.session_id,
             "expires_in": 300,

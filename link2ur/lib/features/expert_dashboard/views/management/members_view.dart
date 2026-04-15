@@ -118,46 +118,75 @@ class _MembersBody extends StatelessWidget {
   }
 
   Future<void> _showInviteDialog(BuildContext context) async {
-    final l10n = context.l10n;
-    final controller = TextEditingController();
     final bloc = context.read<ExpertTeamBloc>();
-
     await showDialog<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.expertTeamInviteMember),
-        content: TextField(
-          controller: controller,
-          decoration: InputDecoration(
-            labelText: l10n.expertTeamInviteUserIdLabel,
-            hintText: l10n.expertTeamInviteUserIdHint,
-          ),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(l10n.commonCancel),
-          ),
-          TextButton(
-            onPressed: () {
-              final inviteeId = controller.text.trim();
-              // 客户端校验: 非空且长度合理 (后端 user_id 通常 8-32 字符)
-              if (inviteeId.isEmpty || inviteeId.length < 4 || inviteeId.length > 64) {
-                return;
-              }
-              bloc.add(ExpertTeamInviteMember(
-                expertId: expertId,
-                inviteeId: inviteeId,
-              ));
-              Navigator.of(ctx).pop();
-            },
-            child: Text(l10n.expertTeamSendInvite),
-          ),
-        ],
+      builder: (ctx) => _InviteMemberDialog(
+        onSubmit: (inviteeId) {
+          bloc.add(ExpertTeamInviteMember(
+            expertId: expertId,
+            inviteeId: inviteeId,
+          ));
+        },
       ),
     );
-    controller.dispose();
+  }
+}
+
+/// 邀请成员对话框：controller 由 StatefulWidget 自管生命周期，
+/// 避免外部 controller 在热重启/重建时出现 "used after dispose" 异常。
+class _InviteMemberDialog extends StatefulWidget {
+  const _InviteMemberDialog({required this.onSubmit});
+
+  final void Function(String inviteeId) onSubmit;
+
+  @override
+  State<_InviteMemberDialog> createState() => _InviteMemberDialogState();
+}
+
+class _InviteMemberDialogState extends State<_InviteMemberDialog> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return AlertDialog(
+      title: Text(l10n.expertTeamInviteMember),
+      content: TextField(
+        controller: _controller,
+        decoration: InputDecoration(
+          labelText: l10n.expertTeamInviteUserIdLabel,
+          hintText: l10n.expertTeamInviteUserIdHint,
+        ),
+        autofocus: true,
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.commonCancel),
+        ),
+        TextButton(
+          onPressed: () {
+            final inviteeId = _controller.text.trim();
+            // 客户端校验: 非空且长度合理 (后端 user_id 通常 8-32 字符)
+            if (inviteeId.isEmpty ||
+                inviteeId.length < 4 ||
+                inviteeId.length > 64) {
+              return;
+            }
+            widget.onSubmit(inviteeId);
+            Navigator.of(context).pop();
+          },
+          child: Text(l10n.expertTeamSendInvite),
+        ),
+      ],
+    );
   }
 }
 

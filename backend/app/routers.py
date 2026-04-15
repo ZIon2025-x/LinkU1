@@ -1298,7 +1298,29 @@ def _get_task_detail_legacy(
                 ).first()
                 is_applicant = application is not None
             
+            # 咨询类任务：服务所有者通过 expert_service_id 反查
+            is_service_owner = False
             if not is_poster and not is_taker and not is_participant and not is_applicant:
+                if task.expert_service_id:
+                    svc = db.query(models.TaskExpertService).filter(
+                        models.TaskExpertService.id == task.expert_service_id
+                    ).first()
+                    if svc:
+                        if svc.user_id and str(svc.user_id) == user_id_str:
+                            is_service_owner = True
+                        elif svc.expert_id:
+                            from app.models_expert import ExpertMember
+                            member = db.query(ExpertMember).filter(
+                                and_(
+                                    ExpertMember.expert_id == svc.expert_id,
+                                    ExpertMember.user_id == user_id_str,
+                                    ExpertMember.status == "active",
+                                )
+                            ).first()
+                            if member:
+                                is_service_owner = True
+
+            if not is_poster and not is_taker and not is_participant and not is_applicant and not is_service_owner:
                 # 已完成/已取消的任务对外展示摘要（有利于 SEO），其他敏感状态仍返回 403
                 if task.status in ("completed", "cancelled"):
                     _is_summary_only = True

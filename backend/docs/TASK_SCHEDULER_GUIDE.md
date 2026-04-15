@@ -69,7 +69,7 @@ TaskScheduler 是 Link2Ur 后端的进程内定时任务调度器，替代原先
 | 9 | `sync_leaderboard_view_counts` | 5m | (内联) | 将榜单浏览数从 Redis 增量同步到 PostgreSQL |
 | 10 | `check_expired_coupons` | 15m | `scheduled_tasks.check_expired_coupons` | 标记已过期的优惠券及用户持有记录 |
 | 11 | `check_expired_invitation_codes` | 15m | `scheduled_tasks.check_expired_invitation_codes` | 处理过期的邀请码 |
-| 12 | `check_and_end_activities` | 15m | `scheduled_tasks.check_and_end_activities_sync` → `task_expert_routes.check_and_end_activities` | 检查多人活动是否应结束（最后时间段过期 / 截止日期到达），标记为 completed，取消 open/taken 状态的子任务 |
+| 12 | `check_and_end_activities` | 15m | `scheduled_tasks.check_and_end_activities_sync` → `scheduled_tasks.check_and_end_activities` | 检查多人活动是否应结束（最后时间段过期 / 截止日期到达），标记为 completed，取消 open/taken 状态的子任务 |
 | 12a | `send_auto_transfer_reminders` | 1h | `scheduled_tasks.send_auto_transfer_reminders` | **[Phase 2]** 对已完成未确认的达人任务，按 confirmation_deadline 倒计时发送提醒（第1天/第2天各一次） |
 | 12b | `auto_transfer_expired_tasks` | 15m | `scheduled_tasks.auto_transfer_expired_tasks` | **[Phase 3]** 达人任务过期 3 天后自动确认 + Stripe Transfer 转账给达人（含防重复、行级锁、金额校验） |
 | 12c | `auto_confirm_expired_tasks` | 15m | `scheduled_tasks.auto_confirm_expired_tasks` | 自动确认超过 5 天未确认的 pending_confirmation 任务（通用） |

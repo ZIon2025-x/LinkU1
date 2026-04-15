@@ -123,7 +123,10 @@ class _CouponsBody extends StatelessWidget {
           ),
         ],
       ),
-    );
-    // Controllers will be GC'd with the dialog
+    ).whenComplete(() {
+      nameCtrl.dispose();
+      codeCtrl.dispose();
+      valueCtrl.dispose();
+    });
   }
 }

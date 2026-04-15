@@ -1322,9 +1322,9 @@ class _FollowButtonState extends State<_FollowButton> {
     try {
       final repo = context.read<FollowRepository>();
       if (newState) {
-        await repo.followUser(widget.expertId);
+        await repo.followExpert(widget.expertId);
       } else {
-        await repo.unfollowUser(widget.expertId);
+        await repo.unfollowExpert(widget.expertId);
       }
       // 清除详情缓存，确保下次进入时获取最新关注状态
       CacheManager.shared.remove('${CacheManager.prefixExpertDetail}${widget.expertId}');

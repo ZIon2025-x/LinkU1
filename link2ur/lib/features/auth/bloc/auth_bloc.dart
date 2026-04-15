@@ -71,6 +71,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           user: user,
         ));
         AppLogger.info('User authenticated: ${user.id}');
+
+        // 后台刷新服务端最新用户数据（含 is_expert 等字段），
+        // 避免缓存的旧数据缺少字段导致达人身份识别失败
+        _authRepository.fetchUserProfile().then((freshUser) {
+          if (freshUser != null && freshUser != user) {
+            add(AuthUserUpdated(user: freshUser));
+          }
+        }).catchError((_) {});
       } else {
         emit(state.copyWith(status: AuthStatus.unauthenticated));
         AppLogger.info('User not authenticated');

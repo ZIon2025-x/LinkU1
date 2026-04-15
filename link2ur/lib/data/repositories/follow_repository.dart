@@ -1,5 +1,6 @@
 import '../services/api_service.dart';
 import '../models/discovery_feed.dart';
+import '../../core/constants/api_endpoints.dart';
 import '../../core/utils/app_exception.dart';
 
 class FollowException extends AppException {
@@ -26,6 +27,28 @@ class FollowRepository {
     );
     if (!response.isSuccess || response.data == null) {
       throw FollowException(response.errorCode ?? response.message ?? 'unfollow_failed', code: response.errorCode);
+    }
+    return response.data!;
+  }
+
+  /// 关注达人团队
+  Future<Map<String, dynamic>> followExpert(String expertId) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.expertTeamFollow(expertId),
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw FollowException(response.errorCode ?? response.message ?? 'follow_expert_failed', code: response.errorCode);
+    }
+    return response.data!;
+  }
+
+  /// 取消关注达人团队（后端是 toggle POST，关注/取关同一个端点）
+  Future<Map<String, dynamic>> unfollowExpert(String expertId) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.expertTeamFollow(expertId),
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw FollowException(response.errorCode ?? response.message ?? 'unfollow_expert_failed', code: response.errorCode);
     }
     return response.data!;
   }

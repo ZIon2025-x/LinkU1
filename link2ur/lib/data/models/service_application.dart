@@ -100,9 +100,9 @@ class ServiceApplication extends Equatable {
 
   factory ServiceApplication.fromJson(Map<String, dynamic> json) {
     return ServiceApplication(
-      id: (json['id'] as num).toInt(),
+      id: (json['id'] as num?)?.toInt() ?? 0,
       status: ServiceApplicationStatus.fromApi(json['status'] as String?),
-      serviceId: (json['service_id'] as num).toInt(),
+      serviceId: (json['service_id'] as num?)?.toInt() ?? 0,
       serviceName: json['service_name'] as String?,
       ownerId: _parseStringOrNull(json['service_owner_id']),
       ownerName: json['owner_name'] as String? ??
