@@ -256,8 +256,11 @@ class FleaMarketRepository {
 
   /// 与我相关的跳蚤市场商品（一次拉取，前端按 出售中/收的闲置/已售出 筛选）
   /// 基于任务来源=跳蚤市场+用户关联，通过任务 id 关联到商品
-  Future<List<FleaMarketItem>> getMyRelatedFleaItems({bool forceRefresh = false}) async {
-    const cacheKey = '${CacheManager.prefixMyFleaMarket}related';
+  Future<List<FleaMarketItem>> getMyRelatedFleaItems({
+    bool forceRefresh = false,
+    String? type, // 'sale' | 'rental' | null (all)
+  }) async {
+    final cacheKey = '${CacheManager.prefixMyFleaMarket}related_${type ?? "all"}';
     if (forceRefresh) await _cache.invalidateMyFleaMarketCache();
     final cached = forceRefresh ? null : _cache.get<List<dynamic>>(cacheKey);
     if (cached != null) {
@@ -265,8 +268,11 @@ class FleaMarketRepository {
           .map((e) => FleaMarketItem.fromJson(e as Map<String, dynamic>))
           .toList();
     }
+    final queryParams = <String, dynamic>{};
+    if (type != null) queryParams['type'] = type;
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.fleaMarketMyRelatedItems,
+      queryParameters: queryParams.isEmpty ? null : queryParams,
     );
     if (!response.isSuccess || response.data == null) {
       throw FleaMarketException(response.errorCode ?? response.message ?? 'flea_market_error_get_my_related_failed', code: response.errorCode);
