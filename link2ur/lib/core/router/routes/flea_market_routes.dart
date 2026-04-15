@@ -9,7 +9,6 @@ import '../../../features/flea_market/views/flea_market_detail_view.dart';
 import '../../../features/flea_market/views/create_flea_market_item_view.dart';
 import '../../../features/flea_market/views/edit_flea_market_item_view.dart';
 import '../../../features/flea_market/views/rental_detail_view.dart';
-import '../../../features/flea_market/views/my_rentals_view.dart';
 
 /// 跳蚤市场相关路由
 List<RouteBase> get fleaMarketRoutes => [
@@ -54,7 +53,7 @@ List<RouteBase> get fleaMarketRoutes => [
       GoRoute(
         path: AppRoutes.fleaMarketMyRentals,
         name: 'fleaMarketMyRentals',
-        builder: (context, state) => const MyRentalsView(),
+        redirect: (context, state) => '/profile/my-posts?tab=rented-in',
       ),
       GoRoute(
         path: AppRoutes.fleaMarketRentalDetail,
