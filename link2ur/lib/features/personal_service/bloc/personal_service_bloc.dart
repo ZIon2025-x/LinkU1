@@ -134,8 +134,8 @@ class PersonalServiceState extends Equatable {
   const PersonalServiceState({
     this.status = PersonalServiceStatus.initial,
     this.services = const [],
-    this.receivedApplicationsTyped = const [],
-    this.myApplicationsTyped = const [],
+    this.receivedApplications = const [],
+    this.myApplications = const [],
     this.browseResults = const [],
     this.reviews = const [],
     this.browseTotalPages = 1,
@@ -148,8 +148,8 @@ class PersonalServiceState extends Equatable {
 
   final PersonalServiceStatus status;
   final List<Map<String, dynamic>> services;
-  final List<ServiceApplication> receivedApplicationsTyped;
-  final List<ServiceApplication> myApplicationsTyped;
+  final List<ServiceApplication> receivedApplications;
+  final List<ServiceApplication> myApplications;
   final List<Map<String, dynamic>> browseResults;
   final List<Map<String, dynamic>> reviews;
   final int browseTotalPages;
@@ -160,19 +160,11 @@ class PersonalServiceState extends Equatable {
   final int? submittingApplicationId;
   final String? actionMessage;
 
-  /// Backward-compat view layer: views read the two application lists as raw
-  /// maps. M3/M4 flip the views to the typed list; this getter goes away in M5.
-  List<Map<String, dynamic>> get myApplications =>
-      myApplicationsTyped.map((a) => a.toJson()).toList();
-
-  List<Map<String, dynamic>> get receivedApplications =>
-      receivedApplicationsTyped.map((a) => a.toJson()).toList();
-
   PersonalServiceState copyWith({
     PersonalServiceStatus? status,
     List<Map<String, dynamic>>? services,
-    List<ServiceApplication>? receivedApplicationsTyped,
-    List<ServiceApplication>? myApplicationsTyped,
+    List<ServiceApplication>? receivedApplications,
+    List<ServiceApplication>? myApplications,
     List<Map<String, dynamic>>? browseResults,
     List<Map<String, dynamic>>? reviews,
     int? browseTotalPages,
@@ -185,9 +177,9 @@ class PersonalServiceState extends Equatable {
     return PersonalServiceState(
       status: status ?? this.status,
       services: services ?? this.services,
-      receivedApplicationsTyped:
-          receivedApplicationsTyped ?? this.receivedApplicationsTyped,
-      myApplicationsTyped: myApplicationsTyped ?? this.myApplicationsTyped,
+      receivedApplications:
+          receivedApplications ?? this.receivedApplications,
+      myApplications: myApplications ?? this.myApplications,
       browseResults: browseResults ?? this.browseResults,
       reviews: reviews ?? this.reviews,
       browseTotalPages: browseTotalPages ?? this.browseTotalPages,
@@ -201,7 +193,7 @@ class PersonalServiceState extends Equatable {
 
   @override
   List<Object?> get props => [
-        status, services, receivedApplicationsTyped, myApplicationsTyped,
+        status, services, receivedApplications, myApplications,
         browseResults, reviews, browseTotalPages, reviewSummary,
         errorMessage, isSubmitting, submittingApplicationId, actionMessage,
       ];
@@ -299,7 +291,7 @@ class PersonalServiceBloc extends Bloc<PersonalServiceEvent, PersonalServiceStat
       final items = await _repository.getReceivedApplications(limit: 100);
       emit(state.copyWith(
         status: PersonalServiceStatus.loaded,
-        receivedApplicationsTyped: items,
+        receivedApplications: items,
       ));
     } catch (e) {
       AppLogger.error('Failed to load received applications', e);
@@ -408,7 +400,7 @@ class PersonalServiceBloc extends Bloc<PersonalServiceEvent, PersonalServiceStat
       );
       emit(state.copyWith(
         status: PersonalServiceStatus.loaded,
-        myApplicationsTyped: items,
+        myApplications: items,
       ));
     } catch (e) {
       AppLogger.error('Failed to load my applications', e);

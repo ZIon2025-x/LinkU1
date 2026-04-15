@@ -72,7 +72,7 @@ class _ReceivedApplicationsContent extends StatelessWidget {
         },
         builder: (context, state) {
           final l10n = context.l10n;
-          final items = state.receivedApplicationsTyped;
+          final items = state.receivedApplications;
 
           if (state.status == PersonalServiceStatus.loading &&
               items.isEmpty) {

@@ -140,7 +140,7 @@ class _ContentState extends State<_Content> {
                 }
               },
               builder: (context, state) {
-                final items = state.myApplicationsTyped;
+                final items = state.myApplications;
                 if (state.status == PersonalServiceStatus.loading &&
                     items.isEmpty) {
                   return const SkeletonList();
