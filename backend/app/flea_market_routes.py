@@ -10,7 +10,7 @@ import uuid
 import shutil
 from decimal import Decimal
 from typing import List, Literal, Optional
-from datetime import timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -728,6 +728,19 @@ async def get_flea_market_item(
         from app.utils.badge_helpers import enrich_displayed_badges_async
         _badge_cache = await enrich_displayed_badges_async(db, [item.seller_id] if item.seller_id else [])
 
+        # 判断卖家是否活跃（近30天上架≥5件商品）
+        seller_is_active = False
+        if item.seller_id:
+            thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+            active_count_result = await db.execute(
+                select(func.count(models.FleaMarketItem.id)).where(
+                    models.FleaMarketItem.seller_id == item.seller_id,
+                    models.FleaMarketItem.created_at >= thirty_days_ago,
+                    models.FleaMarketItem.status != "deleted",
+                )
+            )
+            seller_is_active = (active_count_result.scalar() or 0) >= 5
+
         # ==================== 租赁相关信息 ====================
         active_rentals = []
         user_rental_request_id = None
@@ -800,6 +813,7 @@ async def get_flea_market_item(
             seller_avatar=seller_avatar,
             seller_user_level=seller_user_level,
             seller_displayed_badge=_badge_cache.get(item.seller_id),
+            seller_is_active=seller_is_active,
             view_count=item.view_count or 0,
             favorite_count=favorite_count,
             refreshed_at=format_iso_utc(item.refreshed_at),

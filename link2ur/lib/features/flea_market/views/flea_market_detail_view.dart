@@ -385,7 +385,7 @@ class _FleaMarketDetailContent extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Semantics(
         button: true,
-        label: 'Action button',
+        label: context.l10n.a11yActionButton,
         child: GestureDetector(
           onTap: onTap,
           child: Container(
@@ -634,7 +634,7 @@ class _FleaMarketDetailContent extends StatelessWidget {
         // 删除按钮
         Semantics(
           button: true,
-          label: 'Delete item',
+          label: context.l10n.a11yDeleteItem,
           child: GestureDetector(
             onTap: state.isSubmitting
                 ? null
@@ -675,7 +675,7 @@ class _FleaMarketDetailContent extends StatelessWidget {
         // 刷新按钮 - 对标iOS orange gradient
         Semantics(
           button: true,
-          label: 'Refresh item',
+          label: context.l10n.a11yRefreshItem,
           child: GestureDetector(
             onTap: state.isSubmitting
                 ? null
@@ -733,7 +733,7 @@ class _FleaMarketDetailContent extends StatelessWidget {
         Expanded(
           child: Semantics(
             button: true,
-            label: 'Edit item',
+            label: context.l10n.a11yEditItem,
             child: GestureDetector(
               onTap: () async {
                 AppHaptics.selection();
@@ -926,7 +926,7 @@ class _FleaMarketDetailContent extends StatelessWidget {
             Expanded(
               child: Semantics(
                 button: true,
-                label: 'Reject offer',
+                label: context.l10n.a11yRejectOffer,
                 child: GestureDetector(
                   onTap: state.isSubmitting
                       ? null
@@ -956,7 +956,7 @@ class _FleaMarketDetailContent extends StatelessWidget {
               flex: 2,
               child: Semantics(
                 button: true,
-                label: 'Accept offer',
+                label: context.l10n.a11yAcceptOffer,
                 child: GestureDetector(
                   onTap: state.isSubmitting
                       ? null
@@ -1102,7 +1102,7 @@ class _FleaMarketDetailContent extends StatelessWidget {
 
     return Semantics(
       button: true,
-      label: 'Buy now',
+      label: context.l10n.a11yBuyNow,
       child: GestureDetector(
         onTap: state.isSubmitting
             ? null
@@ -1291,7 +1291,7 @@ class _FleaMarketDetailContent extends StatelessWidget {
     // 默认：申请租用按钮
     return Semantics(
       button: true,
-      label: 'Apply to rent',
+      label: context.l10n.a11yApplyToRent,
       child: GestureDetector(
         onTap: state.isSubmitting
             ? null
@@ -1523,7 +1523,7 @@ class _FleaMarketPurchaseSheetState extends State<_FleaMarketPurchaseSheet> {
                       onPressed: _isSubmitting
                           ? null
                           : () => Navigator.of(context).pop(),
-                      tooltip: 'Close',
+                      tooltip: l10n.commonClose,
                       icon: const Icon(Icons.close),
                     ),
                   ],
@@ -1911,7 +1911,7 @@ class _ImageGalleryState extends State<_ImageGallery> {
             itemBuilder: (context, index) {
               return Semantics(
                 button: true,
-                label: 'View image',
+                label: context.l10n.a11yViewImage,
                 excludeSemantics: true,
                 child: GestureDetector(
                   onTap: () {
@@ -2343,7 +2343,7 @@ class _SellerCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
       child: Semantics(
         button: true,
-        label: 'View seller',
+        label: context.l10n.a11yViewSeller,
         excludeSemantics: true,
         child: GestureDetector(
           onTap: () => context.push('/user/${item.sellerId}'),
@@ -2406,20 +2406,22 @@ class _SellerCard extends StatelessWidget {
                           const SizedBox(width: 4),
                           InlineBadgeTag(badge: item.sellerDisplayedBadge!),
                         ],
-                        const SizedBox(width: 6),
-                        const Icon(
-                          Icons.verified,
-                          size: 14,
-                          color: AppColors.success,
-                        ),
-                        const SizedBox(width: 3),
-                        Text(
-                          context.l10n.fleaMarketActiveSeller,
-                          style: const TextStyle(
-                            fontSize: 12,
+                        if (item.sellerIsActive) ...[
+                          const SizedBox(width: 6),
+                          const Icon(
+                            Icons.verified,
+                            size: 14,
                             color: AppColors.success,
                           ),
-                        ),
+                          const SizedBox(width: 3),
+                          Text(
+                            context.l10n.fleaMarketActiveSeller,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.success,
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ],

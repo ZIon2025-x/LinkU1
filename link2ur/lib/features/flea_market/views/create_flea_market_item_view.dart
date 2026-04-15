@@ -595,7 +595,7 @@ class _CreateFleaMarketItemContentState
         if (_selectedImages.length < 5)
           Semantics(
             button: true,
-            label: 'Upload image',
+            label: context.l10n.a11yUploadImage,
             child: GestureDetector(
               onTap: _pickImages,
               child: Container(

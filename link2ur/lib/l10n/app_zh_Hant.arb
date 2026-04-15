@@ -5402,6 +5402,12 @@
       "percent": { "type": "String" }
     }
   },
+  "discountBadge": "省{percent}%",
+  "@discountBadge": {
+    "placeholders": {
+      "percent": { "type": "int" }
+    }
+  },
   "packagePurchaseLinkedServiceLabel": "適用服務",
   "serviceInactiveSuffix": "已下架",
   "userPackageLinkedServiceLabel": "用於 {name}",
@@ -5699,5 +5705,33 @@
   "rentalListingStatusOverdue": "逾期",
   "@rentalListingStatusOverdue": {
     "description": "Rental item status badge: rental overdue"
-  }
+  },
+
+  "a11yActionButton": "操作按鈕",
+  "a11yDeleteItem": "刪除商品",
+  "a11yRefreshItem": "重新整理商品",
+  "a11yEditItem": "編輯商品",
+  "a11yRejectOffer": "拒絕報價",
+  "a11yAcceptOffer": "接受報價",
+  "a11yBuyNow": "立即購買",
+  "a11yApplyToRent": "申請租用",
+  "a11yViewImage": "查看圖片",
+  "a11yViewSeller": "查看賣家",
+  "a11ySelectCategory": "選擇分類",
+  "a11yFilterItems": "篩選商品",
+  "a11yViewItem": "查看商品",
+  "a11yUploadImage": "上傳圖片",
+
+  "expertEditForumBoard": "編輯論壇板塊",
+  "expertForumBoardName": "板塊名稱",
+  "expertForumBoardNameEn": "板塊名稱（英文）",
+  "expertForumBoardNameZh": "板塊名稱（中文）",
+  "expertForumBoardDesc": "板塊描述",
+  "expertForumBoardDescEn": "板塊描述（英文）",
+  "expertForumBoardDescZh": "板塊描述（中文）",
+  "expertForumBoardUpdated": "論壇板塊已更新",
+  "expertForumBoardValidateName": "板塊名稱不能為空",
+
+  "profileMyPackages": "我的套餐",
+  "profileMyPackagesSubtitle": "已購買的服務套餐"
 }

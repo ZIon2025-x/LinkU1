@@ -491,6 +491,7 @@ class TaskOut(TaskBase):
     # 当前用户是否已申请（与活动详情一致，在详情接口中根据 current_user 填充，便于客户端直接显示「已申请」状态）
     has_applied: Optional[bool] = None
     user_application_status: Optional[str] = None  # pending / approved / rejected
+    user_application_id: Optional[int] = None  # 当前用户的申请ID，用于跳转咨询聊天
     # 任务完成证据（接单者标记完成时上传的图片/文件与文字说明，仅当任务已标记完成时由详情接口填充）
     completion_evidence: Optional[List[Dict[str, Any]]] = None
     # 是否待报价（发布时未填金额，由接单者报价/议价）
@@ -748,6 +749,7 @@ class TaskOut(TaskBase):
             "payment_expires_at": getattr(obj, 'payment_expires_at', None),  # FastAPI会自动将datetime序列化为ISO格式字符串
             "has_applied": getattr(obj, 'has_applied', None),
             "user_application_status": getattr(obj, 'user_application_status', None),
+            "user_application_id": getattr(obj, 'user_application_id', None),
             "completion_evidence": getattr(obj, 'completion_evidence', None),  # 任务完成证据（由详情接口在 setattr 后填充）
             "reward_to_be_quoted": getattr(obj, 'reward_to_be_quoted', False),
             "counter_offer_price": float(obj.counter_offer_price) if obj.counter_offer_price is not None else None,
@@ -2980,6 +2982,7 @@ class FleaMarketItemResponse(BaseModel):
     seller_avatar: Optional[str] = None  # 卖家头像URL
     seller_user_level: Optional[str] = None  # 卖家会员等级：normal, vip, super（用于「会员卖家」角标）
     seller_displayed_badge: Optional[dict] = None  # 卖家展示勋章
+    seller_is_active: bool = False  # 卖家是否活跃（近30天上架≥5件商品）
     view_count: int
     favorite_count: int = 0  # 收藏数量
     is_favorited: bool = False  # 当前用户是否已收藏

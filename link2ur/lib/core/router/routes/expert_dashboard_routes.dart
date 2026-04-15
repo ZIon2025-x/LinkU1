@@ -5,6 +5,7 @@ import '../../../data/repositories/package_purchase_repository.dart';
 import '../../../features/expert_dashboard/views/expert_dashboard_shell.dart';
 import '../../../features/expert_dashboard/views/management/coupons_view.dart';
 import '../../../features/expert_dashboard/views/management/customer_packages_view.dart';
+import '../../../features/expert_dashboard/views/management/edit_forum_board_view.dart';
 import '../../../features/expert_dashboard/views/management/edit_team_profile_view.dart';
 import '../../../features/expert_dashboard/views/management/join_requests_view.dart';
 import '../../../features/expert_dashboard/views/management/management_center_view.dart';
@@ -60,6 +61,14 @@ List<RouteBase> get expertDashboardRoutes => [
         builder: (context, state) {
           final id = state.pathParameters['expertId']!;
           return EditTeamProfileView(expertId: id);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.expertDashboardManagementEditForumBoard,
+        name: 'expertDashboardManagementEditForumBoard',
+        builder: (context, state) {
+          final id = state.pathParameters['expertId']!;
+          return EditForumBoardView(expertId: id);
         },
       ),
       GoRoute(

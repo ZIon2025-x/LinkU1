@@ -163,7 +163,7 @@ class _RentalRequestSheetState extends State<RentalRequestSheet> {
                             onPressed: _isSubmitting
                                 ? null
                                 : () => Navigator.of(context).pop(),
-                            tooltip: 'Close',
+                            tooltip: context.l10n.commonClose,
                             icon: const Icon(Icons.close),
                           ),
                         ],

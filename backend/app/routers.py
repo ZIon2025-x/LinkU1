@@ -1309,6 +1309,7 @@ def _get_task_detail_legacy(
     if _is_summary_only:
         setattr(task, "has_applied", None)
         setattr(task, "user_application_status", None)
+        setattr(task, "user_application_id", None)
         setattr(task, "completion_evidence", None)
         task.taker_id = None
         task.poster_id = None
@@ -1410,13 +1411,16 @@ def _get_task_detail_legacy(
         if application:
             setattr(task, "has_applied", True)
             setattr(task, "user_application_status", application.status)
+            setattr(task, "user_application_id", application.id)
         else:
             setattr(task, "has_applied", False)
             setattr(task, "user_application_status", None)
+            setattr(task, "user_application_id", None)
     else:
         setattr(task, "has_applied", None)
         setattr(task, "user_application_status", None)
-    
+        setattr(task, "user_application_id", None)
+
     # 任务完成证据：当任务已标记完成时，从系统消息中取出证据（图片/文件 + 文字说明）供详情页展示
     completion_evidence = []
     if task.status in ("pending_confirmation", "completed") and task.completed_at:

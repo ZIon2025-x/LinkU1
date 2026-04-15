@@ -442,7 +442,7 @@ class _EditFleaMarketItemViewContentState
                   _buildTextField(
                     controller: _locationController,
                     label: l10n.fleaMarketLocation,
-                    hint: 'Online',
+                    hint: l10n.locationOnline,
                   ),
                 ],
               ),
@@ -488,7 +488,7 @@ class _EditFleaMarketItemViewContentState
                         if (totalImages < 5)
                           Semantics(
                             button: true,
-                            label: 'Upload image',
+                            label: context.l10n.a11yUploadImage,
                             child: GestureDetector(
                             onTap: _pickImages,
                             child: Container(

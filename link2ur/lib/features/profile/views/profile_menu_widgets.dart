@@ -62,6 +62,14 @@ Widget _buildMyContentSection(BuildContext context, bool isDark) {
               ),
               _profileDivider(isDark),
               _ProfileRow(
+                icon: Icons.card_membership,
+                title: context.l10n.profileMyPackages,
+                subtitle: context.l10n.profileMyPackagesSubtitle,
+                color: AppColors.gold,
+                onTap: () => context.push('/my-packages'),
+              ),
+              _profileDivider(isDark),
+              _ProfileRow(
                 icon: Icons.inventory_2,           // shippingbox.fill
                 title: context.l10n.profileMyPosts,
                 subtitle: context.l10n.profileMyPostsSubtitle,

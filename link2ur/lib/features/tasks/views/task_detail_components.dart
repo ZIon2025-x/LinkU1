@@ -1765,7 +1765,7 @@ class _ApplyTaskSheetState extends State<ApplyTaskSheet> {
                     IconButton(
                       onPressed: () => Navigator.of(context).pop(),
                       icon: const Icon(Icons.close),
-                      tooltip: 'Close',
+                      tooltip: l10n.commonClose,
                     ),
                   ],
                 ),

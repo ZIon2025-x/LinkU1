@@ -1590,7 +1590,41 @@ async def update_expert_profile(
 # any historical pending rows that may still exist in expert_profile_update_requests.
 
 
-# ==================== 18. PUT /{expert_id}/board ====================
+# ==================== 18a. GET /{expert_id}/board ====================
+
+@expert_router.get("/{expert_id}/board")
+async def get_expert_board(
+    expert_id: str,
+    request: Request,
+    db: AsyncSession = Depends(get_async_db_dependency),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+):
+    """获取达人板块信息（Owner/Admin）"""
+    expert = await _get_expert_or_404(db, expert_id)
+    await _get_member_or_403(db, expert_id, current_user.id, required_roles=["owner", "admin"])
+
+    if not expert.forum_category_id:
+        raise HTTPException(status_code=404, detail="达人板块不存在")
+
+    from app.models import ForumCategory
+    result = await db.execute(
+        select(ForumCategory).where(ForumCategory.id == expert.forum_category_id)
+    )
+    board = result.scalar_one_or_none()
+    if not board:
+        raise HTTPException(status_code=404, detail="达人板块不存在")
+
+    return {
+        "name": board.name,
+        "name_en": board.name_en,
+        "name_zh": board.name_zh,
+        "description": board.description,
+        "description_en": board.description_en,
+        "description_zh": board.description_zh,
+    }
+
+
+# ==================== 18b. PUT /{expert_id}/board ====================
 
 @expert_router.put("/{expert_id}/board")
 async def update_expert_board(

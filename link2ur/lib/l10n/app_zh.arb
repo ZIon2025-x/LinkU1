@@ -5465,6 +5465,12 @@
       "percent": { "type": "String" }
     }
   },
+  "discountBadge": "省{percent}%",
+  "@discountBadge": {
+    "placeholders": {
+      "percent": { "type": "int" }
+    }
+  },
   "packagePurchaseLinkedServiceLabel": "适用服务",
   "serviceInactiveSuffix": "已下架",
   "userPackageLinkedServiceLabel": "用于 {name}",
@@ -5762,5 +5768,33 @@
   "rentalListingStatusOverdue": "逾期",
   "@rentalListingStatusOverdue": {
     "description": "Rental item status badge: rental overdue"
-  }
+  },
+
+  "a11yActionButton": "操作按钮",
+  "a11yDeleteItem": "删除商品",
+  "a11yRefreshItem": "刷新商品",
+  "a11yEditItem": "编辑商品",
+  "a11yRejectOffer": "拒绝报价",
+  "a11yAcceptOffer": "接受报价",
+  "a11yBuyNow": "立即购买",
+  "a11yApplyToRent": "申请租用",
+  "a11yViewImage": "查看图片",
+  "a11yViewSeller": "查看卖家",
+  "a11ySelectCategory": "选择分类",
+  "a11yFilterItems": "筛选商品",
+  "a11yViewItem": "查看商品",
+  "a11yUploadImage": "上传图片",
+
+  "expertEditForumBoard": "编辑论坛板块",
+  "expertForumBoardName": "板块名称",
+  "expertForumBoardNameEn": "板块名称（英文）",
+  "expertForumBoardNameZh": "板块名称（中文）",
+  "expertForumBoardDesc": "板块描述",
+  "expertForumBoardDescEn": "板块描述（英文）",
+  "expertForumBoardDescZh": "板块描述（中文）",
+  "expertForumBoardUpdated": "论坛板块已更新",
+  "expertForumBoardValidateName": "板块名称不能为空",
+
+  "profileMyPackages": "我的套餐",
+  "profileMyPackagesSubtitle": "已购买的服务套餐"
 }

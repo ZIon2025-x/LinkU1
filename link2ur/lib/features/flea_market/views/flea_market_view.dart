@@ -122,7 +122,7 @@ class _FleaMarketViewContentState extends State<_FleaMarketViewContent> {
                           final isSelected = state.selectedCategory == value;
                           return Semantics(
                             button: true,
-                            label: 'Select category',
+                            label: context.l10n.a11ySelectCategory,
                             child: GestureDetector(
                               onTap: () {
                                 AppHaptics.selection();
@@ -217,7 +217,7 @@ class _FleaMarketViewContentState extends State<_FleaMarketViewContent> {
                 // 筛选按钮
                 Semantics(
                   button: true,
-                  label: 'Filter items',
+                  label: context.l10n.a11yFilterItems,
                   child: GestureDetector(
                     onTap: () => _showCategoryFilter(context),
                     child: Container(
@@ -429,7 +429,7 @@ class _FleaMarketItemCard extends StatelessWidget {
 
     return Semantics(
       button: true,
-      label: 'View item',
+      label: context.l10n.a11yViewItem,
       excludeSemantics: true,
       child: GestureDetector(
         onTap: () async {

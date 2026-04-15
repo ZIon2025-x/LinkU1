@@ -5573,6 +5573,12 @@
       "percent": { "type": "String" }
     }
   },
+  "discountBadge": "{percent}% OFF",
+  "@discountBadge": {
+    "placeholders": {
+      "percent": { "type": "int" }
+    }
+  },
   "packagePurchaseLinkedServiceLabel": "Applies to",
   "serviceInactiveSuffix": "inactive",
   "userPackageLinkedServiceLabel": "For {name}",
@@ -5870,5 +5876,33 @@
   "rentalListingStatusOverdue": "Overdue",
   "@rentalListingStatusOverdue": {
     "description": "Rental item status badge: rental overdue"
-  }
+  },
+
+  "a11yActionButton": "Action button",
+  "a11yDeleteItem": "Delete item",
+  "a11yRefreshItem": "Refresh item",
+  "a11yEditItem": "Edit item",
+  "a11yRejectOffer": "Reject offer",
+  "a11yAcceptOffer": "Accept offer",
+  "a11yBuyNow": "Buy now",
+  "a11yApplyToRent": "Apply to rent",
+  "a11yViewImage": "View image",
+  "a11yViewSeller": "View seller",
+  "a11ySelectCategory": "Select category",
+  "a11yFilterItems": "Filter items",
+  "a11yViewItem": "View item",
+  "a11yUploadImage": "Upload image",
+
+  "expertEditForumBoard": "Edit Forum Board",
+  "expertForumBoardName": "Board Name",
+  "expertForumBoardNameEn": "Board Name (English)",
+  "expertForumBoardNameZh": "Board Name (Chinese)",
+  "expertForumBoardDesc": "Board Description",
+  "expertForumBoardDescEn": "Board Description (English)",
+  "expertForumBoardDescZh": "Board Description (Chinese)",
+  "expertForumBoardUpdated": "Forum board updated",
+  "expertForumBoardValidateName": "Board name is required",
+
+  "profileMyPackages": "My Packages",
+  "profileMyPackagesSubtitle": "Purchased service packages"
 }

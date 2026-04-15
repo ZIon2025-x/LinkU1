@@ -668,7 +668,7 @@ class _PriceHeaderBlock extends StatelessWidget {
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
-                  '$percent% OFF',
+                  context.l10n.discountBadge(percent),
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 11,
@@ -1531,7 +1531,7 @@ class _BottomApplyBar extends StatelessWidget {
               content: Text(
                 state.errorMessage != null
                     ? context.localizeError(state.errorMessage)
-                    : context.l10n.consultExpert,
+                    : context.l10n.consultationFailed,
               ),
               backgroundColor: AppColors.error,
             ),
@@ -1880,7 +1880,7 @@ class _ApplyServiceSheetState extends State<_ApplyServiceSheet> {
                       const Spacer(),
                       IconButton(
                         icon: const Icon(Icons.close),
-                        tooltip: 'Close',
+                        tooltip: context.l10n.commonClose,
                         onPressed: () => Navigator.of(context).pop(),
                       ),
                     ],

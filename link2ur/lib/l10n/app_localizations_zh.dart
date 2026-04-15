@@ -12019,6 +12019,11 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String discountBadge(int percent) {
+    return '省$percent%';
+  }
+
+  @override
   String get packagePurchaseLinkedServiceLabel => '适用服务';
 
   @override
@@ -12753,6 +12758,81 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get rentalListingStatusOverdue => '逾期';
+
+  @override
+  String get a11yActionButton => '操作按钮';
+
+  @override
+  String get a11yDeleteItem => '删除商品';
+
+  @override
+  String get a11yRefreshItem => '刷新商品';
+
+  @override
+  String get a11yEditItem => '编辑商品';
+
+  @override
+  String get a11yRejectOffer => '拒绝报价';
+
+  @override
+  String get a11yAcceptOffer => '接受报价';
+
+  @override
+  String get a11yBuyNow => '立即购买';
+
+  @override
+  String get a11yApplyToRent => '申请租用';
+
+  @override
+  String get a11yViewImage => '查看图片';
+
+  @override
+  String get a11yViewSeller => '查看卖家';
+
+  @override
+  String get a11ySelectCategory => '选择分类';
+
+  @override
+  String get a11yFilterItems => '筛选商品';
+
+  @override
+  String get a11yViewItem => '查看商品';
+
+  @override
+  String get a11yUploadImage => '上传图片';
+
+  @override
+  String get expertEditForumBoard => '编辑论坛板块';
+
+  @override
+  String get expertForumBoardName => '板块名称';
+
+  @override
+  String get expertForumBoardNameEn => '板块名称（英文）';
+
+  @override
+  String get expertForumBoardNameZh => '板块名称（中文）';
+
+  @override
+  String get expertForumBoardDesc => '板块描述';
+
+  @override
+  String get expertForumBoardDescEn => '板块描述（英文）';
+
+  @override
+  String get expertForumBoardDescZh => '板块描述（中文）';
+
+  @override
+  String get expertForumBoardUpdated => '论坛板块已更新';
+
+  @override
+  String get expertForumBoardValidateName => '板块名称不能为空';
+
+  @override
+  String get profileMyPackages => '我的套餐';
+
+  @override
+  String get profileMyPackagesSubtitle => '已购买的服务套餐';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -24770,6 +24850,11 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
+  String discountBadge(int percent) {
+    return '省$percent%';
+  }
+
+  @override
   String get packagePurchaseLinkedServiceLabel => '適用服務';
 
   @override
@@ -25504,4 +25589,79 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get rentalListingStatusOverdue => '逾期';
+
+  @override
+  String get a11yActionButton => '操作按鈕';
+
+  @override
+  String get a11yDeleteItem => '刪除商品';
+
+  @override
+  String get a11yRefreshItem => '重新整理商品';
+
+  @override
+  String get a11yEditItem => '編輯商品';
+
+  @override
+  String get a11yRejectOffer => '拒絕報價';
+
+  @override
+  String get a11yAcceptOffer => '接受報價';
+
+  @override
+  String get a11yBuyNow => '立即購買';
+
+  @override
+  String get a11yApplyToRent => '申請租用';
+
+  @override
+  String get a11yViewImage => '查看圖片';
+
+  @override
+  String get a11yViewSeller => '查看賣家';
+
+  @override
+  String get a11ySelectCategory => '選擇分類';
+
+  @override
+  String get a11yFilterItems => '篩選商品';
+
+  @override
+  String get a11yViewItem => '查看商品';
+
+  @override
+  String get a11yUploadImage => '上傳圖片';
+
+  @override
+  String get expertEditForumBoard => '編輯論壇板塊';
+
+  @override
+  String get expertForumBoardName => '板塊名稱';
+
+  @override
+  String get expertForumBoardNameEn => '板塊名稱（英文）';
+
+  @override
+  String get expertForumBoardNameZh => '板塊名稱（中文）';
+
+  @override
+  String get expertForumBoardDesc => '板塊描述';
+
+  @override
+  String get expertForumBoardDescEn => '板塊描述（英文）';
+
+  @override
+  String get expertForumBoardDescZh => '板塊描述（中文）';
+
+  @override
+  String get expertForumBoardUpdated => '論壇板塊已更新';
+
+  @override
+  String get expertForumBoardValidateName => '板塊名稱不能為空';
+
+  @override
+  String get profileMyPackages => '我的套餐';
+
+  @override
+  String get profileMyPackagesSubtitle => '已購買的服務套餐';
 }

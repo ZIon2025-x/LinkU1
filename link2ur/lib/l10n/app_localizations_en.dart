@@ -12525,6 +12525,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String discountBadge(int percent) {
+    return '$percent% OFF';
+  }
+
+  @override
   String get packagePurchaseLinkedServiceLabel => 'Applies to';
 
   @override
@@ -13312,4 +13317,79 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get rentalListingStatusOverdue => 'Overdue';
+
+  @override
+  String get a11yActionButton => 'Action button';
+
+  @override
+  String get a11yDeleteItem => 'Delete item';
+
+  @override
+  String get a11yRefreshItem => 'Refresh item';
+
+  @override
+  String get a11yEditItem => 'Edit item';
+
+  @override
+  String get a11yRejectOffer => 'Reject offer';
+
+  @override
+  String get a11yAcceptOffer => 'Accept offer';
+
+  @override
+  String get a11yBuyNow => 'Buy now';
+
+  @override
+  String get a11yApplyToRent => 'Apply to rent';
+
+  @override
+  String get a11yViewImage => 'View image';
+
+  @override
+  String get a11yViewSeller => 'View seller';
+
+  @override
+  String get a11ySelectCategory => 'Select category';
+
+  @override
+  String get a11yFilterItems => 'Filter items';
+
+  @override
+  String get a11yViewItem => 'View item';
+
+  @override
+  String get a11yUploadImage => 'Upload image';
+
+  @override
+  String get expertEditForumBoard => 'Edit Forum Board';
+
+  @override
+  String get expertForumBoardName => 'Board Name';
+
+  @override
+  String get expertForumBoardNameEn => 'Board Name (English)';
+
+  @override
+  String get expertForumBoardNameZh => 'Board Name (Chinese)';
+
+  @override
+  String get expertForumBoardDesc => 'Board Description';
+
+  @override
+  String get expertForumBoardDescEn => 'Board Description (English)';
+
+  @override
+  String get expertForumBoardDescZh => 'Board Description (Chinese)';
+
+  @override
+  String get expertForumBoardUpdated => 'Forum board updated';
+
+  @override
+  String get expertForumBoardValidateName => 'Board name is required';
+
+  @override
+  String get profileMyPackages => 'My Packages';
+
+  @override
+  String get profileMyPackagesSubtitle => 'Purchased service packages';
 }

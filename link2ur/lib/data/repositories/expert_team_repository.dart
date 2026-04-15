@@ -364,6 +364,11 @@ class ExpertTeamRepository {
 
   // ==================== 板块编辑 ====================
 
+  Future<Map<String, dynamic>> getExpertBoard(String expertId) async {
+    final resp = await _apiService.get('/api/experts/$expertId/board');
+    return resp.data as Map<String, dynamic>;
+  }
+
   Future<void> updateExpertBoard(String expertId, Map<String, dynamic> data) async {
     await _apiService.put('/api/experts/$expertId/board', data: data);
   }

@@ -23088,6 +23088,12 @@ abstract class AppLocalizations {
   String packagePurchaseSaveAmount(
       String currency, String amount, String percent);
 
+  /// No description provided for @discountBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'{percent}% OFF'**
+  String discountBadge(int percent);
+
   /// No description provided for @packagePurchaseLinkedServiceLabel.
   ///
   /// In en, this message translates to:
@@ -24503,6 +24509,156 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Overdue'**
   String get rentalListingStatusOverdue;
+
+  /// No description provided for @a11yActionButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Action button'**
+  String get a11yActionButton;
+
+  /// No description provided for @a11yDeleteItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete item'**
+  String get a11yDeleteItem;
+
+  /// No description provided for @a11yRefreshItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh item'**
+  String get a11yRefreshItem;
+
+  /// No description provided for @a11yEditItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit item'**
+  String get a11yEditItem;
+
+  /// No description provided for @a11yRejectOffer.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject offer'**
+  String get a11yRejectOffer;
+
+  /// No description provided for @a11yAcceptOffer.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept offer'**
+  String get a11yAcceptOffer;
+
+  /// No description provided for @a11yBuyNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Buy now'**
+  String get a11yBuyNow;
+
+  /// No description provided for @a11yApplyToRent.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply to rent'**
+  String get a11yApplyToRent;
+
+  /// No description provided for @a11yViewImage.
+  ///
+  /// In en, this message translates to:
+  /// **'View image'**
+  String get a11yViewImage;
+
+  /// No description provided for @a11yViewSeller.
+  ///
+  /// In en, this message translates to:
+  /// **'View seller'**
+  String get a11yViewSeller;
+
+  /// No description provided for @a11ySelectCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Select category'**
+  String get a11ySelectCategory;
+
+  /// No description provided for @a11yFilterItems.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter items'**
+  String get a11yFilterItems;
+
+  /// No description provided for @a11yViewItem.
+  ///
+  /// In en, this message translates to:
+  /// **'View item'**
+  String get a11yViewItem;
+
+  /// No description provided for @a11yUploadImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload image'**
+  String get a11yUploadImage;
+
+  /// No description provided for @expertEditForumBoard.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Forum Board'**
+  String get expertEditForumBoard;
+
+  /// No description provided for @expertForumBoardName.
+  ///
+  /// In en, this message translates to:
+  /// **'Board Name'**
+  String get expertForumBoardName;
+
+  /// No description provided for @expertForumBoardNameEn.
+  ///
+  /// In en, this message translates to:
+  /// **'Board Name (English)'**
+  String get expertForumBoardNameEn;
+
+  /// No description provided for @expertForumBoardNameZh.
+  ///
+  /// In en, this message translates to:
+  /// **'Board Name (Chinese)'**
+  String get expertForumBoardNameZh;
+
+  /// No description provided for @expertForumBoardDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Board Description'**
+  String get expertForumBoardDesc;
+
+  /// No description provided for @expertForumBoardDescEn.
+  ///
+  /// In en, this message translates to:
+  /// **'Board Description (English)'**
+  String get expertForumBoardDescEn;
+
+  /// No description provided for @expertForumBoardDescZh.
+  ///
+  /// In en, this message translates to:
+  /// **'Board Description (Chinese)'**
+  String get expertForumBoardDescZh;
+
+  /// No description provided for @expertForumBoardUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Forum board updated'**
+  String get expertForumBoardUpdated;
+
+  /// No description provided for @expertForumBoardValidateName.
+  ///
+  /// In en, this message translates to:
+  /// **'Board name is required'**
+  String get expertForumBoardValidateName;
+
+  /// No description provided for @profileMyPackages.
+  ///
+  /// In en, this message translates to:
+  /// **'My Packages'**
+  String get profileMyPackages;
+
+  /// No description provided for @profileMyPackagesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchased service packages'**
+  String get profileMyPackagesSubtitle;
 }
 
 class _AppLocalizationsDelegate

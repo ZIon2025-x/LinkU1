@@ -23,6 +23,7 @@ class FleaMarketItem extends Equatable {
     this.sellerAvatar,
     this.sellerUserLevel,
     this.sellerDisplayedBadge,
+    this.sellerIsActive = false,
     this.viewCount = 0,
     this.favoriteCount = 0,
     this.isFavorited,
@@ -78,6 +79,7 @@ class FleaMarketItem extends Equatable {
   final String? sellerAvatar;
   final String? sellerUserLevel; // normal, vip, super
   final UserBadge? sellerDisplayedBadge;
+  final bool sellerIsActive;
   final int viewCount;
   final int favoriteCount;
   final bool? isFavorited;
@@ -175,6 +177,7 @@ class FleaMarketItem extends Equatable {
       sellerDisplayedBadge: json['seller_displayed_badge'] != null
           ? UserBadge.fromJson(json['seller_displayed_badge'] as Map<String, dynamic>)
           : null,
+      sellerIsActive: json['seller_is_active'] == true,
       viewCount: _toInt(json['view_count']),
       favoriteCount: _toInt(json['favorite_count']),
       isFavorited: _toBoolNullable(json['is_favorited']),

@@ -650,7 +650,7 @@ class _TaskDetailContent extends StatelessWidget {
                     totalCount: state.questionsTotalCount,
                     isLoggedIn: currentUserId != null,
                     allowAsk: task.status == AppConstants.taskStatusOpen ||
-                              task.status == AppConstants.applicationStatusChatting,
+                              task.status == AppConstants.taskStatusConsulting,
                     onAsk: (content) => context.read<TaskDetailBloc>().add(
                       TaskDetailAskQuestion(content),
                     ),
@@ -670,7 +670,7 @@ class _TaskDetailContent extends StatelessWidget {
                 // 申请列表 (isPoster && open/chatting/pending_acceptance) — 含管理操作按钮
                 if (isPoster &&
                     (task.status == AppConstants.taskStatusOpen ||
-                     task.status == AppConstants.applicationStatusChatting ||
+                     task.status == AppConstants.taskStatusConsulting ||
                      task.status == AppConstants.taskStatusPendingAcceptance)) ...[
                   AnimatedListItem(
                     index: 4,
@@ -1179,6 +1179,24 @@ class _TaskDetailContent extends StatelessWidget {
         gradient: LinearGradient(
           colors: [AppColors.warning, AppColors.warning.withValues(alpha: 0.8)],
         ),
+      );
+    }
+
+    // 咨询中 / 议价中 / 价格已达成：点击跳转咨询聊天
+    if (task.status == AppConstants.taskStatusConsulting ||
+        task.status == AppConstants.taskStatusNegotiating ||
+        task.status == AppConstants.taskStatusPriceAgreed) {
+      return PrimaryButton(
+        text: TaskStatusHelper.getLocalizedLabel(task.status, context.l10n),
+        onPressed: () {
+          if (task.userApplicationId != null) {
+            context.push(
+              '/tasks/${task.id}/applications/${task.userApplicationId}/chat?consultation=true&type=task',
+            );
+          } else {
+            context.goToTaskChat(task.id);
+          }
+        },
       );
     }
 
@@ -1755,7 +1773,7 @@ class _TaskHeaderCard extends StatelessWidget {
                 isPrimary: true,
               ),
               _buildLocationTag(
-                text: task.location ?? 'Online',
+                text: task.location ?? context.l10n.locationOnline,
                 icon: task.isOnline
                     ? Icons.language
                     : Icons.location_on,
@@ -2750,7 +2768,7 @@ class _DisputeTimelineSheetState extends State<_DisputeTimelineSheet> {
                   ),
                   IconButton(
                     icon: const Icon(Icons.close),
-                    tooltip: 'Close',
+                    tooltip: l10n.commonClose,
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],

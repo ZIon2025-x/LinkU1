@@ -47,6 +47,8 @@ class AppRoutes {
       '/expert-dashboard/:expertId/management/join-requests';
   static const String expertDashboardManagementEditProfile =
       '/expert-dashboard/:expertId/management/edit-profile';
+  static const String expertDashboardManagementEditForumBoard =
+      '/expert-dashboard/:expertId/management/edit-forum-board';
   static const String expertDashboardManagementCoupons =
       '/expert-dashboard/:expertId/management/coupons';
   static const String expertDashboardManagementReviewReplies =
@@ -183,6 +185,7 @@ const authRequiredRoutes = <String>{
   AppRoutes.expertDashboardManagementMembers,
   AppRoutes.expertDashboardManagementJoinRequests,
   AppRoutes.expertDashboardManagementEditProfile,
+  AppRoutes.expertDashboardManagementEditForumBoard,
   AppRoutes.expertDashboardManagementCoupons,
   AppRoutes.expertDashboardManagementReviewReplies,
   AppRoutes.expertDashboardManagementPackages,

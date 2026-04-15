@@ -39,6 +39,7 @@ class Task extends Equatable {
     this.taskLevel,
     this.hasApplied = false,
     this.userApplicationStatus,
+    this.userApplicationId,
     this.completionEvidence,
     this.paymentExpiresAt,
     this.confirmationDeadline,
@@ -110,6 +111,7 @@ class Task extends Equatable {
   final String? taskLevel; // normal, vip, super
   final bool hasApplied;
   final String? userApplicationStatus;
+  final int? userApplicationId;
   final List<Map<String, dynamic>>? completionEvidence;
   final String? paymentExpiresAt;
   final String? confirmationDeadline;
@@ -230,7 +232,7 @@ class Task extends Equatable {
 
   /// 是否可以申请
   bool get canApply =>
-      (status == AppConstants.taskStatusOpen || status == AppConstants.applicationStatusChatting) &&
+      (status == AppConstants.taskStatusOpen || status == AppConstants.taskStatusConsulting) &&
       !hasApplied &&
       !isExpired &&
       currentParticipants < maxParticipants;
@@ -414,6 +416,7 @@ class Task extends Equatable {
       taskLevel: json['task_level'] as String?,
       hasApplied: parseBool(json['has_applied']),
       userApplicationStatus: json['user_application_status'] as String?,
+      userApplicationId: json['user_application_id'] as int?,
       completionEvidence: _parseCompletionEvidence(json['completion_evidence']),
       paymentExpiresAt: json['payment_expires_at'] as String?,
       confirmationDeadline: json['confirmation_deadline'] as String?,
@@ -482,6 +485,7 @@ class Task extends Equatable {
       'task_level': taskLevel,
       'has_applied': hasApplied,
       'user_application_status': userApplicationStatus,
+      'user_application_id': userApplicationId,
       'completion_evidence': completionEvidence,
       'payment_expires_at': paymentExpiresAt,
       'confirmation_deadline': confirmationDeadline,
@@ -543,6 +547,7 @@ class Task extends Equatable {
     String? taskLevel,
     bool? hasApplied,
     String? userApplicationStatus,
+    int? userApplicationId,
     List<Map<String, dynamic>>? completionEvidence,
     String? paymentExpiresAt,
     String? confirmationDeadline,
@@ -603,6 +608,7 @@ class Task extends Equatable {
       taskLevel: taskLevel ?? this.taskLevel,
       hasApplied: hasApplied ?? this.hasApplied,
       userApplicationStatus: userApplicationStatus ?? this.userApplicationStatus,
+      userApplicationId: userApplicationId ?? this.userApplicationId,
       completionEvidence: completionEvidence ?? this.completionEvidence,
       paymentExpiresAt: paymentExpiresAt ?? this.paymentExpiresAt,
       confirmationDeadline: confirmationDeadline ?? this.confirmationDeadline,
@@ -639,7 +645,7 @@ class Task extends Equatable {
   @override
   List<Object?> get props => [
         id, title, status, reward, currency, hasApplied,
-        userApplicationStatus, takerId, takerDisplay, hasReviewed, updatedAt,
+        userApplicationStatus, userApplicationId, takerId, takerDisplay, hasReviewed, updatedAt,
         counterOfferPrice, counterOfferStatus, counterOfferUserId,
         isPublic, takerPublic,
         pricingType, taskMode, requiredSkills,
