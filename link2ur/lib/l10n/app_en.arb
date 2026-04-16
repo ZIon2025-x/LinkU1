@@ -1128,6 +1128,12 @@
   "taskDetailApprove": "Accept",
   "taskDetailReject": "Reject",
   "taskDetailConsult": "Consult",
+  "taskDetailDesignatedWaitingBanner": "Waiting for the designated user to respond",
+  "taskDetailDesignatedWithdraw": "Withdraw request",
+  "taskDetailDesignatedWithdrawConfirmTitle": "Withdraw task request?",
+  "taskDetailDesignatedWithdrawConfirmMessage": "After withdrawal the task becomes public and anyone can apply.",
+  "taskDetailDesignatedAccept": "Accept",
+  "taskDetailDesignatedConsult": "Consult",
   "taskChatDealClosedTitle": "Deal closed with {name}",
   "@taskChatDealClosedTitle": {
     "placeholders": {"name": {"type": "String"}}

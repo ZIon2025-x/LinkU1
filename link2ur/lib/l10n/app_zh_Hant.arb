@@ -923,6 +923,12 @@
   "taskDetailApprove": "同意",
   "taskDetailReject": "拒絕",
   "taskDetailConsult": "諮詢",
+  "taskDetailDesignatedWaitingBanner": "等待對方接受任務請求",
+  "taskDetailDesignatedWithdraw": "撤回請求",
+  "taskDetailDesignatedWithdrawConfirmTitle": "撤回任務請求？",
+  "taskDetailDesignatedWithdrawConfirmMessage": "撤回後任務將公開發佈，其他用戶也可以申請。",
+  "taskDetailDesignatedAccept": "接受",
+  "taskDetailDesignatedConsult": "諮詢",
   "taskChatDealClosedTitle": "已選擇 {name} 達成合作",
   "@taskChatDealClosedTitle": {
     "placeholders": {"name": {"type": "String"}}

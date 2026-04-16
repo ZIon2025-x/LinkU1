@@ -1090,6 +1090,41 @@ class TaskRepository {
 
     return response.data!;
   }
+
+  // --- 指定任务 ---
+
+  /// 被指定用户接受任务
+  Future<Map<String, dynamic>> acceptDesignatedTask(int taskId) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.designatedTaskAccept(taskId),
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw TaskException(response.errorCode ?? response.message ?? 'designated_accept_failed', code: response.errorCode);
+    }
+    return response.data!;
+  }
+
+  /// 被指定用户拒绝任务
+  Future<Map<String, dynamic>> rejectDesignatedTask(int taskId) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.designatedTaskReject(taskId),
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw TaskException(response.errorCode ?? response.message ?? 'designated_reject_failed', code: response.errorCode);
+    }
+    return response.data!;
+  }
+
+  /// 发布者撤回指定请求
+  Future<Map<String, dynamic>> withdrawDesignatedRequest(int taskId) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.designatedTaskWithdraw(taskId),
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw TaskException(response.errorCode ?? response.message ?? 'designated_withdraw_failed', code: response.errorCode);
+    }
+    return response.data!;
+  }
 }
 
 /// 任务异常
