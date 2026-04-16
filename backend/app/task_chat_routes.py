@@ -4677,9 +4677,9 @@ async def create_task_consultation(
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    """创建任务咨询 — 用户对某个任务发起咨询（非正式申请）"""
+    """创建任务咨询 — 创建独立占位任务 + application，使咨询出现在消息列表中"""
     try:
-        # 1. 验证任务存在且状态为 open 或 chatting
+        # 1. 验证原始任务存在且允许咨询
         task_result = await db.execute(
             select(models.Task).where(models.Task.id == task_id)
         )
@@ -4693,30 +4693,55 @@ async def create_task_consultation(
         if str(task.poster_id) == str(current_user.id):
             raise HTTPException(status_code=400, detail="不能咨询自己发布的任务")
 
-        # 3. 检查是否已有该任务的申请
-        existing_result = await db.execute(
-            select(models.TaskApplication).where(
-                models.TaskApplication.task_id == task_id,
-                models.TaskApplication.applicant_id == current_user.id,
+        # 3. 查找是否已有此用户对该原始任务的咨询占位任务
+        existing_placeholder_result = await db.execute(
+            select(models.Task.id).where(
+                models.Task.task_source == "task_consultation",
+                models.Task.poster_id == current_user.id,
+                models.Task.taker_id == task.poster_id,
+                models.Task.description == f"original_task_id:{task_id}",
             )
         )
-        existing_app = existing_result.scalar_one_or_none()
+        placeholder_ids = [row[0] for row in existing_placeholder_result.fetchall()]
+
+        existing_app = None
+        existing_placeholder_id = None
+        if placeholder_ids:
+            app_result = await db.execute(
+                select(models.TaskApplication).where(
+                    models.TaskApplication.task_id.in_(placeholder_ids),
+                    models.TaskApplication.applicant_id == current_user.id,
+                )
+            )
+            existing_app = app_result.scalar_one_or_none()
+            if existing_app:
+                existing_placeholder_id = existing_app.task_id
+
         if existing_app:
             if existing_app.status in ("consulting", "negotiating", "price_agreed"):
                 return {
                     "application_id": existing_app.id,
-                    "task_id": task_id,
+                    "task_id": existing_placeholder_id,
+                    "original_task_id": task_id,
                     "status": existing_app.status,
                     "created_at": format_iso_utc(existing_app.created_at) if existing_app.created_at else None,
                     "is_existing": True,
                 }
             elif existing_app.status == "cancelled":
-                # Re-open cancelled consultation
+                # 4. 重新打开已取消的咨询
                 existing_app.status = "consulting"
                 existing_app.negotiated_price = None
                 existing_app.message = None
 
-                # Send system message
+                # 重新打开占位任务（如果已关闭）
+                placeholder_result = await db.execute(
+                    select(models.Task).where(models.Task.id == existing_placeholder_id)
+                )
+                placeholder_task = placeholder_result.scalar_one_or_none()
+                if placeholder_task and placeholder_task.status in ("closed", "cancelled"):
+                    placeholder_task.status = "consulting"
+
+                # 发送系统消息
                 task_title = task.title or ""
                 user_name = current_user.name if hasattr(current_user, "name") else "用户"
                 content_zh = f"{user_name} 想咨询您的任务「{task_title}」"
@@ -4726,7 +4751,7 @@ async def create_task_consultation(
                     sender_id=None,
                     receiver_id=None,
                     content=content_zh,
-                    task_id=task_id,
+                    task_id=existing_placeholder_id,
                     application_id=existing_app.id,
                     message_type="system",
                     conversation_type="task",
@@ -4738,7 +4763,8 @@ async def create_task_consultation(
 
                 return {
                     "application_id": existing_app.id,
-                    "task_id": task_id,
+                    "task_id": existing_placeholder_id,
+                    "original_task_id": task_id,
                     "status": "consulting",
                     "created_at": format_iso_utc(existing_app.created_at) if existing_app.created_at else None,
                     "is_existing": False,
@@ -4746,20 +4772,44 @@ async def create_task_consultation(
             else:
                 raise HTTPException(status_code=400, detail="您已有该任务的申请")
 
-        # 4. 创建 TaskApplication (status=consulting)
+        # 5. 创建占位任务
         current_time = get_utc_time()
+        task_title = task.title or ""
+        task_title_zh = getattr(task, "title_zh", None) or task_title
+        task_title_en = getattr(task, "title_en", None) or task_title
+
+        consulting_task = models.Task(
+            title=f"咨询: {task_title}",
+            title_zh=f"咨询: {task_title_zh}",
+            title_en=f"Consultation: {task_title_en}",
+            description=f"original_task_id:{task_id}",
+            reward=task.base_reward or 0,
+            base_reward=task.base_reward or 0,
+            reward_to_be_quoted=getattr(task, "reward_to_be_quoted", False),
+            currency=task.currency or "GBP",
+            location=task.location or "",
+            task_type=task.task_type or "other",
+            task_source="task_consultation",
+            poster_id=current_user.id,
+            taker_id=task.poster_id,
+            status="consulting",
+            task_level=getattr(task, "task_level", "normal"),
+        )
+        db.add(consulting_task)
+        await db.flush()  # 获取 consulting_task.id
+
+        # 6. 创建 TaskApplication 指向占位任务
         new_application = models.TaskApplication(
-            task_id=task_id,
+            task_id=consulting_task.id,
             applicant_id=current_user.id,
             status="consulting",
             currency=task.currency or "GBP",
             created_at=current_time,
         )
         db.add(new_application)
-        await db.flush()  # 获取 id
+        await db.flush()  # 获取 new_application.id
 
-        # 5. 发送系统消息
-        task_title = task.title or ""
+        # 7. 发送系统消息
         user_name = current_user.name if hasattr(current_user, "name") else "用户"
         content_zh = f"{user_name} 想咨询您的任务「{task_title}」"
         content_en = f"{user_name} wants to consult about your task \"{task_title}\""
@@ -4767,19 +4817,21 @@ async def create_task_consultation(
             sender_id=None,
             receiver_id=None,
             content=content_zh,
-            task_id=task_id,
+            task_id=consulting_task.id,
+            application_id=new_application.id,
             message_type="system",
             conversation_type="task",
-            application_id=new_application.id,
             meta=json.dumps({"system_action": "consultation_started", "content_en": content_en}),
             created_at=current_time,
         )
         db.add(system_message)
         await db.commit()
 
+        # 8. 返回结果
         return {
             "application_id": new_application.id,
-            "task_id": task_id,
+            "task_id": consulting_task.id,
+            "original_task_id": task_id,
             "status": new_application.status,
             "created_at": format_iso_utc(new_application.created_at) if new_application.created_at else None,
             "is_existing": False,

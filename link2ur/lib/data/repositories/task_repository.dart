@@ -1125,6 +1125,18 @@ class TaskRepository {
     }
     return response.data!;
   }
+  // ==================== Task consultation methods ====================
+
+  /// 创建任务咨询（创建占位任务 + application）
+  Future<Map<String, dynamic>> createTaskConsultation(int taskId) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.consultTask(taskId),
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw TaskException(response.errorCode ?? response.message ?? '创建咨询失败', code: response.errorCode);
+    }
+    return response.data!;
+  }
 }
 
 /// 任务异常

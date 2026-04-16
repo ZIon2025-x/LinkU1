@@ -1347,14 +1347,11 @@ class _TaskDetailContent extends StatelessWidget {
     final messenger = ScaffoldMessenger.of(context);
     final l10n = context.l10n;
     try {
-      final repo = context.read<TaskExpertRepository>();
+      final repo = context.read<TaskRepository>();
       final result = await repo.createTaskConsultation(task.id);
-      final appId = result['application_id'];
-      if (appId == null) {
-        messenger.showSnackBar(SnackBar(content: Text(l10n.consultationFailed)));
-        return;
-      }
-      router.push('/tasks/${task.id}/applications/$appId/chat?consultation=true&type=task');
+      final consultTaskId = result['task_id'] as int;
+      final appId = result['application_id'] as int;
+      router.push('/tasks/$consultTaskId/applications/$appId/chat?consultation=true&type=task');
     } catch (e) {
       if (context.mounted) {
         messenger.showSnackBar(SnackBar(content: Text(l10n.consultationFailed)));
