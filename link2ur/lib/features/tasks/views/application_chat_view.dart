@@ -608,15 +608,15 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
                   },
                 ),
 
-              // Input bar (when chat is active)
-              if (!widget.readOnly && isChatActive) _buildInputBar(),
-
               // Confirm & Pay button (poster only, chatting mode — not consulting)
               if (!widget.readOnly &&
                   !widget.isConsultation &&
                   application?.isChatting == true &&
                   isPoster)
                 _buildConfirmAndPayButton(state),
+
+              // Input bar (when chat is active)
+              if (!widget.readOnly && isChatActive) _buildInputBar(),
             ],
           ),
         );
