@@ -233,6 +233,21 @@ async def create_consultation(
     # 创建 consulting 占位 task（供聊天页面使用）
     service_name = service.service_name or "服务咨询"
     service_name_en = service.service_name_en or service.service_name or "Service Consultation"
+
+    # 解析服务 owner 的 user_id，设为 taker_id 以便对方在消息列表中看到此咨询
+    if service.owner_type == "user":
+        taker_user_id = service.owner_id
+    else:
+        owner_result = await db.execute(
+            select(ExpertMember.user_id).where(
+                ExpertMember.expert_id == service.owner_id,
+                ExpertMember.role == "owner",
+                ExpertMember.status == "active",
+            )
+        )
+        owner_row = owner_result.first()
+        taker_user_id = owner_row[0] if owner_row else None
+
     consulting_task = models.Task(
         title=service_name,
         title_zh=service_name,
@@ -246,6 +261,7 @@ async def create_consultation(
         task_type="expert_service",
         task_source="consultation",
         poster_id=current_user.id,
+        taker_id=taker_user_id,
         status="consulting",
         task_level="expert",
         expert_service_id=service.id,
@@ -340,6 +356,18 @@ async def create_team_consultation(
     # 创建占位 task
     team_name = expert.name or "达人团队"
     team_name_en = expert.name_en or expert.name or "Expert Team"
+
+    # 解析团队 owner 的 user_id，设为 taker_id 以便对方在消息列表中看到此咨询
+    owner_result = await db.execute(
+        select(ExpertMember.user_id).where(
+            ExpertMember.expert_id == expert_id,
+            ExpertMember.role == "owner",
+            ExpertMember.status == "active",
+        )
+    )
+    owner_row = owner_result.first()
+    taker_user_id = owner_row[0] if owner_row else None
+
     consulting_task = models.Task(
         title=f"团队咨询: {team_name}",
         title_zh=f"团队咨询: {team_name}",
@@ -353,6 +381,7 @@ async def create_team_consultation(
         task_type="expert_service",
         task_source="consultation",
         poster_id=current_user.id,
+        taker_id=taker_user_id,
         status="consulting",
         task_level="expert",
     )
