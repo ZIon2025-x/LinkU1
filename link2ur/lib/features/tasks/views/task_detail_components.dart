@@ -1144,8 +1144,9 @@ class _ApplicationItem extends StatelessWidget {
                 ),
               ),
             ],
-            // 操作按钮 (pending 或 chatting 时显示)
-            if (application.isPending) ...[
+            // 操作按钮 (pending 时显示，但 pending_acceptance 指定任务由底部按钮处理)
+            if (application.isPending &&
+                task.status != AppConstants.taskStatusPendingAcceptance) ...[
               const SizedBox(height: AppSpacing.md),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,

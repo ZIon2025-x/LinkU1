@@ -971,8 +971,11 @@ class _TaskDetailContent extends StatelessWidget {
     // 发布者 + pending_acceptance
     if (isPoster && task.status == AppConstants.taskStatusPendingAcceptance) {
       // 对方已接受或议价达成 → 批准并支付（主按钮）+ 撤回（文字链）
+      // 排除旧版伪造的 application（message 含"来自用户资料页"）
       final designatedApp = state.applications.cast<TaskApplication?>().firstWhere(
-        (a) => a!.applicantId == task.takerId && (a.isPending || a.status == 'price_agreed'),
+        (a) => a!.applicantId == task.takerId &&
+               (a.isPending || a.status == 'price_agreed') &&
+               !(a.message?.contains('来自用户资料页') ?? false),
         orElse: () => null,
       );
       if (designatedApp != null) {
