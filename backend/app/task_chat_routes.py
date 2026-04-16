@@ -1356,9 +1356,11 @@ async def send_task_message(
             participant_ids = set()
 
             if request.application_id and application:
-                # Application-scoped chat: only poster and the specific applicant
+                # Application-scoped chat: poster, taker, and the specific applicant
                 if task.poster_id:
                     participant_ids.add(task.poster_id)
+                if task.taker_id:
+                    participant_ids.add(task.taker_id)
                 if application.applicant_id:
                     participant_ids.add(application.applicant_id)
             else:
