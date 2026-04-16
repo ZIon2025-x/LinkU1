@@ -970,20 +970,33 @@ class _TaskDetailContent extends StatelessWidget {
 
     // 发布者 + pending_acceptance
     if (isPoster && task.status == AppConstants.taskStatusPendingAcceptance) {
-      // 对方已接受或议价达成 → 批准并支付（保留原有行为）
+      // 对方已接受或议价达成 → 批准并支付 + 撤回
       final designatedApp = state.applications.cast<TaskApplication?>().firstWhere(
         (a) => a!.applicantId == task.takerId && (a.isPending || a.status == 'price_agreed'),
         orElse: () => null,
       );
       if (designatedApp != null) {
-        return PrimaryButton(
-          text: context.l10n.taskDetailApproveAndPay,
-          icon: Icons.credit_card,
-          onPressed: () {
-            context.read<TaskDetailBloc>().add(
-              TaskDetailAcceptApplicant(designatedApp.id),
-            );
-          },
+        return Column(
+          children: [
+            PrimaryButton(
+              text: context.l10n.taskDetailApproveAndPay,
+              icon: Icons.credit_card,
+              onPressed: () {
+                context.read<TaskDetailBloc>().add(
+                  TaskDetailAcceptApplicant(designatedApp.id),
+                );
+              },
+            ),
+            AppSpacing.vSm,
+            OutlinedButton(
+              onPressed: () => _showWithdrawDesignatedConfirm(context),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.error,
+                minimumSize: const Size.fromHeight(44),
+              ),
+              child: Text(context.l10n.taskDetailDesignatedWithdraw),
+            ),
+          ],
         );
       }
       // 未接受 → 等待状态条 + 撤回按钮

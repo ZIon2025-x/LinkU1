@@ -1795,7 +1795,7 @@ async def accept_application(
             )
 
         # 申请必须是可接受的状态
-        if application.status not in ("pending", "chatting", "approved"):
+        if application.status not in ("pending", "chatting", "approved", "price_agreed"):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"申请当前状态为 {application.status}，无法接受"
