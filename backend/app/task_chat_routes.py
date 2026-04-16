@@ -36,7 +36,7 @@ async def _is_team_member_of_application(
     db: AsyncSession, application: models.ServiceApplication, user_id: str
 ) -> bool:
     """检查用户是否为该申请关联团队的 active owner/admin/member"""
-    expert_id = application.new_expert_id
+    expert_id = getattr(application, 'new_expert_id', None)
     if not expert_id:
         return False
     from app.models_expert import ExpertMember
@@ -790,8 +790,9 @@ async def get_task_messages(
                     detail="申请不存在"
                 )
 
-            # 任务发布者、申请者、或关联团队成员可以查看该申请的消息
-            if not (task.poster_id == current_user.id or application.applicant_id == current_user.id
+            # 任务发布者、接受者、申请者、或关联团队成员可以查看该申请的消息
+            if not (task.poster_id == current_user.id or task.taker_id == current_user.id
+                    or application.applicant_id == current_user.id
                     or await _is_team_member_of_application(db, application, current_user.id)):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
@@ -1174,8 +1175,9 @@ async def send_task_message(
                     detail="该申请当前不在聊天状态"
                 )
 
-            # 发布者、申请者、或关联团队成员可以在该频道发送消息
-            if not (task.poster_id == current_user.id or application.applicant_id == current_user.id
+            # 发布者、接受者、申请者、或关联团队成员可以在该频道发送消息
+            if not (task.poster_id == current_user.id or task.taker_id == current_user.id
+                    or application.applicant_id == current_user.id
                     or await _is_team_member_of_application(db, application, current_user.id)):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
@@ -1184,7 +1186,9 @@ async def send_task_message(
 
             # 确定接收者为对方
             if current_user.id == task.poster_id:
-                application_receiver_id = application.applicant_id
+                application_receiver_id = task.taker_id or application.applicant_id
+            elif current_user.id == task.taker_id:
+                application_receiver_id = task.poster_id
             else:
                 application_receiver_id = task.poster_id
         else:
@@ -4960,9 +4964,10 @@ async def consult_negotiate(
             "currency": currency,
             "action": "negotiate",
         }
+        negotiate_receiver_id = str(task.taker_id) if task.taker_id and current_user.id == task.poster_id else str(task.poster_id)
         negotiate_message = models.Message(
             sender_id=current_user.id,
-            receiver_id=str(task.poster_id),
+            receiver_id=negotiate_receiver_id,
             content=f"提出报价: {currency} {float(proposed_price):.2f}",
             task_id=task_id,
             message_type="negotiation",
@@ -4974,12 +4979,12 @@ async def consult_negotiate(
         db.add(negotiate_message)
         await db.commit()
 
-        # 通知发布者
+        # 通知对方
         try:
             from app import async_crud
             user_name = current_user.name if hasattr(current_user, "name") else "用户"
             await async_crud.async_notification_crud.create_notification(
-                db, str(task.poster_id), "consultation_update",
+                db, negotiate_receiver_id, "consultation_update",
                 "收到新报价", f'{user_name} 对任务「{task.title}」提出了报价 {currency} {float(proposed_price):.2f}',
                 related_id=str(task_id), title_en="New Price Proposal",
                 content_en=f'{user_name} proposed {currency} {float(proposed_price):.2f} for task "{task.title}"',
@@ -5134,8 +5139,9 @@ async def consult_respond(
 
         # 验证身份：双方均可回应
         is_poster = str(task.poster_id) == str(current_user.id)
+        is_taker = str(task.taker_id) == str(current_user.id) if task.taker_id else False
         is_applicant = str(application.applicant_id) == str(current_user.id)
-        if not is_poster and not is_applicant:
+        if not is_poster and not is_taker and not is_applicant:
             raise HTTPException(status_code=403, detail="无权操作此申请")
 
         # 状态必须为 negotiating
@@ -5145,7 +5151,10 @@ async def consult_respond(
         action = body.action
         currency = application.currency or task.currency or "GBP"
         current_time = get_utc_time()
-        other_party_id = str(task.poster_id) if is_applicant else str(application.applicant_id)
+        if is_applicant:
+            other_party_id = str(task.taker_id) if task.taker_id else str(task.poster_id)
+        else:
+            other_party_id = str(application.applicant_id)
         user_name = current_user.name if hasattr(current_user, "name") else "用户"
 
         if action == "accept":
@@ -5354,8 +5363,9 @@ async def consult_close(
 
         # 双方均可关闭
         is_poster = str(task.poster_id) == str(current_user.id)
+        is_taker = str(task.taker_id) == str(current_user.id) if task.taker_id else False
         is_applicant = str(application.applicant_id) == str(current_user.id)
-        if not is_poster and not is_applicant:
+        if not is_poster and not is_taker and not is_applicant:
             raise HTTPException(status_code=403, detail="无权操作此申请")
 
         # 验证状态
@@ -5426,8 +5436,9 @@ async def consult_status(
 
         # 验证双方均可查看
         is_poster = str(task.poster_id) == str(current_user.id)
+        is_taker = str(task.taker_id) == str(current_user.id) if task.taker_id else False
         is_applicant = str(application.applicant_id) == str(current_user.id)
-        if not is_poster and not is_applicant:
+        if not is_poster and not is_taker and not is_applicant:
             raise HTTPException(status_code=403, detail="无权查看此申请")
 
         return {
