@@ -4686,7 +4686,7 @@ async def create_task_consultation(
         task = task_result.scalar_one_or_none()
         if not task:
             raise HTTPException(status_code=404, detail="任务不存在")
-        if task.status not in ("open", "chatting"):
+        if task.status not in ("open", "chatting", "pending_acceptance"):
             raise HTTPException(status_code=400, detail="任务当前状态不允许咨询")
 
         # 2. 不能咨询自己发布的任务
