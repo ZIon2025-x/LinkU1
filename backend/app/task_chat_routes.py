@@ -4891,6 +4891,22 @@ async def create_task_consultation(
             created_at=current_time,
         )
         db.add(system_message)
+
+        # 通知原任务发布者
+        try:
+            from app import async_crud
+            await async_crud.async_notification_crud.create_notification(
+                db, str(task.poster_id), "task_consultation_received",
+                "新任务咨询",
+                f'{user_name} 想咨询您的任务「{task_title}」',
+                related_id=str(consulting_task.id),
+                title_en="New Task Consultation",
+                content_en=f'{user_name} wants to consult about your task "{task_title}"',
+                related_type="task_id",
+            )
+        except Exception as e:
+            logger.warning(f"Failed to notify task poster about consultation: {e}")
+
         await db.commit()
 
         # 8. 返回结果
@@ -5465,6 +5481,27 @@ async def consult_close(
         )
         db.add(system_message)
         await db.commit()
+
+        # 通知对方咨询已关闭
+        try:
+            from app import async_crud
+            if is_applicant:
+                other_id = str(task.taker_id) if task.taker_id else str(task.poster_id)
+            elif is_taker:
+                other_id = str(application.applicant_id)
+            else:
+                other_id = str(application.applicant_id)
+            await async_crud.async_notification_crud.create_notification(
+                db, other_id, "consultation_closed",
+                "咨询已关闭",
+                f'{user_name} 关闭了咨询',
+                related_id=str(task_id),
+                title_en="Consultation Closed",
+                content_en=f'{user_name} closed the consultation',
+                related_type="task_id",
+            )
+        except Exception as e:
+            logger.warning(f"Failed to notify other party about consultation closure: {e}")
 
         return {
             "message": "咨询已关闭",

@@ -4062,6 +4062,24 @@ async def create_flea_market_consultation(
         )
         db.add(system_message)
 
+        # 通知卖家
+        try:
+            from app import async_crud
+            buyer_name = current_user.name or "买家"
+            await async_crud.async_notification_crud.create_notification(
+                db=db,
+                user_id=str(item.seller_id),
+                notification_type="flea_market_consultation",
+                title="新商品咨询",
+                content=f'{buyer_name} 想咨询您的商品「{item.title}」',
+                related_id=str(new_task.id),
+                title_en="New Item Inquiry",
+                content_en=f'{buyer_name} wants to consult about your item "{item.title}"',
+                related_type="task_id",
+            )
+        except Exception as e:
+            logger.warning(f"Failed to notify seller about consultation: {e}")
+
         await db.commit()
 
         return {
