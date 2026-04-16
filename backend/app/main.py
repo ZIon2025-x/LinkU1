@@ -584,7 +584,7 @@ from app.expert_earnings_routes import router as expert_earnings_router
 app.include_router(expert_earnings_router)
 
 from app.routes.designated_task_routes import designated_task_router
-app.include_router(designated_task_router)
+app.include_router(designated_task_router, prefix="/api", tags=["指定任务"])
 
 # 创建上传目录
 import os

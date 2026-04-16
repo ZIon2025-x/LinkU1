@@ -73,9 +73,9 @@ class ApiEndpoints {
   static const String aiOptimizeTask = '/api/tasks/ai-optimize';
 
   // --- 指定任务 ---
-  static String designatedTaskAccept(int taskId) => '/tasks/$taskId/designated/accept';
-  static String designatedTaskReject(int taskId) => '/tasks/$taskId/designated/reject';
-  static String designatedTaskWithdraw(int taskId) => '/tasks/$taskId/designated/withdraw';
+  static String designatedTaskAccept(int taskId) => '/api/tasks/$taskId/designated/accept';
+  static String designatedTaskReject(int taskId) => '/api/tasks/$taskId/designated/reject';
+  static String designatedTaskWithdraw(int taskId) => '/api/tasks/$taskId/designated/withdraw';
 
   // --- 退款/争议 ---
   static String refundRequest(int taskId) =>
