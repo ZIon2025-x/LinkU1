@@ -187,18 +187,6 @@ def create_task(db: Session, user_id: str, task: schemas.TaskCreate):
 
     if designated_taker_id:
         try:
-            from app.models import TaskApplication
-
-            auto_application = TaskApplication(
-                task_id=db_task.id,
-                applicant_id=designated_taker_id,
-                status="pending",
-                message="来自用户资料页的任务请求",
-                negotiated_price=Decimal(str(task.reward)) if task.reward is not None else None,
-                currency=getattr(task, "currency", "GBP") or "GBP",
-            )
-            db.add(auto_application)
-            db.commit()
             create_notification(
                 db,
                 user_id=designated_taker_id,
@@ -231,7 +219,7 @@ def create_task(db: Session, user_id: str, task: schemas.TaskCreate):
             except Exception as push_err:
                 logger.warning(f"指定任务请求推送失败: {push_err}")
         except Exception as e:
-            logger.warning(f"创建指定任务申请/通知失败: {e}")
+            logger.warning(f"创建指定任务通知失败: {e}")
 
     update_user_statistics(db, user_id)
 

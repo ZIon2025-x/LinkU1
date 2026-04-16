@@ -954,29 +954,6 @@ async def apply_for_task(
         if not applicant_id:
             raise HTTPException(status_code=400, detail="Invalid user ID")
 
-        # 特殊处理：指定接单者对 pending_acceptance 任务提交报价
-        if task.status == "pending_acceptance":
-            if str(task.taker_id) != applicant_id:
-                raise HTTPException(status_code=403, detail="此任务已指定给其他用户")
-            if negotiated_price is None:
-                raise HTTPException(status_code=400, detail="指定任务需要提供报价金额")
-            # 查找现有申请记录并更新报价
-            existing_app_query = select(models.TaskApplication).where(
-                and_(models.TaskApplication.task_id == task_id, models.TaskApplication.applicant_id == applicant_id)
-            )
-            existing_app_result = await db.execute(existing_app_query)
-            existing_app = existing_app_result.scalar_one_or_none()
-            if not existing_app:
-                raise HTTPException(status_code=404, detail="申请记录不存在")
-            from decimal import Decimal
-            existing_app.negotiated_price = Decimal(str(negotiated_price))
-            if currency:
-                existing_app.currency = currency
-            await db.commit()
-            await db.refresh(existing_app)
-            logger.info(f"指定任务 {task_id} 接单者 {applicant_id} 提交报价: {negotiated_price}")
-            return {"message": "报价已提交", "application_id": existing_app.id, "negotiated_price": float(negotiated_price)}
-
         # 检查任务状态：必须是 open
         if task.status != "open":
             error_msg = f"任务状态为 {task.status}，不允许申请"
