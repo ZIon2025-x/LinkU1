@@ -200,6 +200,27 @@ def get_unread_messages(db: Session, user_id: str):
     )
     task_ids_set.update([t.id for t in expert_creator_tasks])
 
+    # 4. 作为团队成员的 consultation 任务 (ServiceApplication → ExpertMember)
+    from app.models_expert import ExpertMember
+    sa_team_query = (
+        db.query(models.ServiceApplication.task_id)
+        .join(
+            ExpertMember,
+            and_(
+                ExpertMember.expert_id == models.ServiceApplication.new_expert_id,
+                ExpertMember.user_id == user_id,
+                ExpertMember.status == "active",
+            ),
+        )
+        .filter(
+            models.ServiceApplication.new_expert_id.isnot(None),
+            models.ServiceApplication.task_id.isnot(None),
+        )
+    )
+    consultation_task_ids = [row[0] for row in sa_team_query.all()]
+    if consultation_task_ids:
+        task_ids_set.update(consultation_task_ids)
+
     task_ids = list(task_ids_set)
     if not task_ids:
         return []
