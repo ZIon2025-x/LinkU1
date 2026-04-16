@@ -1400,6 +1400,25 @@ async def send_task_message(
                 except Exception:
                     pass
 
+            # For consultation tasks: also broadcast to team members
+            task_source = getattr(task, 'task_source', None)
+            if task_source in ('consultation', 'task_consultation') and not request.application_id:
+                sa_query = select(models.ServiceApplication).where(
+                    models.ServiceApplication.task_id == task_id
+                )
+                sa_result = await db.execute(sa_query)
+                sa = sa_result.scalar_one_or_none()
+                if sa and sa.new_expert_id:
+                    from app.models_expert import ExpertMember
+                    members_result = await db.execute(
+                        select(ExpertMember.user_id).where(
+                            ExpertMember.expert_id == sa.new_expert_id,
+                            ExpertMember.status == "active",
+                        )
+                    )
+                    for row in members_result.all():
+                        participant_ids.add(row[0])
+
             # 构建消息响应
             message_response = {
                 "type": "task_message",
