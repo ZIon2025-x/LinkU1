@@ -1191,11 +1191,32 @@ async def send_task_message(
                 application_receiver_id = application.applicant_id
             else:
                 application_receiver_id = task.poster_id
-        elif not is_poster and not is_taker and not is_participant and not is_expert_creator:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="无权限发送消息"
-            )
+        else:
+            # Consultation tasks: allow team members even without application_id
+            is_consultation_team_member = False
+            if not request.application_id and not (is_poster or is_taker or is_participant or is_expert_creator):
+                task_source = getattr(task, 'task_source', None)
+                if task_source in ('consultation', 'task_consultation'):
+                    sa_query = select(models.ServiceApplication).where(
+                        models.ServiceApplication.task_id == task_id
+                    )
+                    sa_result = await db.execute(sa_query)
+                    sa = sa_result.scalar_one_or_none()
+                    if sa:
+                        is_consultation_team_member = await _is_team_member_of_application(db, sa, current_user.id)
+
+            if not request.application_id and not (is_poster or is_taker or is_participant or is_expert_creator or is_consultation_team_member):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="无权限发送消息"
+                )
+
+        # For consultation tasks without application_id, determine receiver
+        if not request.application_id and getattr(task, 'task_source', None) in ('consultation', 'task_consultation'):
+            if current_user.id == task.poster_id:
+                application_receiver_id = task.taker_id
+            else:
+                application_receiver_id = task.poster_id
 
         # 任务状态检查：仅拒绝「已结束」状态（已完成、已取消、已关闭、已过期），其余状态（含待确认、待支付、进行中等）均可发
         _ended_statuses = ("completed", "cancelled", "closed", "expired")
