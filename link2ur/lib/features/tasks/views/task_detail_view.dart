@@ -968,12 +968,11 @@ class _TaskDetailContent extends StatelessWidget {
       );
     }
 
-    // 发布者 + pending_acceptance + 无反报价 + 有申请 → 批准并支付按钮
-    if (isPoster &&
-        task.status == AppConstants.taskStatusPendingAcceptance &&
-        !task.hasCounterOfferPending) {
+    // 发布者 + pending_acceptance
+    if (isPoster && task.status == AppConstants.taskStatusPendingAcceptance) {
+      // 对方已接受或议价达成 → 批准并支付（保留原有行为）
       final designatedApp = state.applications.cast<TaskApplication?>().firstWhere(
-        (a) => a!.applicantId == task.takerId && a.isPending,
+        (a) => a!.applicantId == task.takerId && (a.isPending || a.status == 'price_agreed'),
         orElse: () => null,
       );
       if (designatedApp != null) {
@@ -987,6 +986,39 @@ class _TaskDetailContent extends StatelessWidget {
           },
         );
       }
+      // 未接受 → 等待状态条 + 撤回按钮
+      return Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(AppRadius.medium),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.hourglass_top, color: AppColors.primary, size: 18),
+                AppSpacing.hSm,
+                Expanded(
+                  child: Text(
+                    context.l10n.taskDetailDesignatedWaitingBanner,
+                    style: const TextStyle(color: AppColors.primary, fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          AppSpacing.vSm,
+          OutlinedButton(
+            onPressed: () => _showWithdrawDesignatedConfirm(context),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.error,
+              minimumSize: const Size.fromHeight(44),
+            ),
+            child: Text(context.l10n.taskDetailDesignatedWithdraw),
+          ),
+        ],
+      );
     }
 
     // 发布者 + 待支付 → 支付按钮
@@ -1023,69 +1055,38 @@ class _TaskDetailContent extends StatelessWidget {
       );
     }
 
-    // 指定任务接单方 + 待接受
+    // 指定任务接单方 + 待接受 — 定价=接受/拒绝/咨询；待报价=咨询/拒绝
     if (isTaker && task.status == AppConstants.taskStatusPendingAcceptance) {
-      if (task.rewardToBeQuoted) {
-        return PrimaryButton(
-          text: context.l10n.taskDetailSubmitQuote,
-          onPressed: () => _showQuoteDesignatedPriceSheet(context, task),
-        );
-      } else {
-        // 若有 pending 反报价，显示等待状态
-        if (task.hasCounterOfferPending) {
-          return Container(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(AppRadius.medium),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.hourglass_top, color: AppColors.primary, size: 18),
-                AppSpacing.hSm,
-                Expanded(
-                  child: Text(
-                    context.l10n.taskDetailCounterOfferSent,
-                    style: const TextStyle(color: AppColors.primary, fontSize: 13),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
-        // 正常三按钮布局
-        return Row(
-          children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () => _showDeclineDesignatedTaskConfirm(context),
-                style: OutlinedButton.styleFrom(foregroundColor: AppColors.error),
-                child: Text(context.l10n.taskDetailDeclineDesignated),
-              ),
-            ),
-            AppSpacing.hSm,
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () => _showCounterOfferSheet(context, task),
-                child: Text(context.l10n.taskDetailCounterOffer),
-              ),
-            ),
-            AppSpacing.hSm,
-            Expanded(
-              child: PrimaryButton(
-                text: context.l10n.taskDetailAcceptDesignated,
-                onPressed: () {
-                  context.read<TaskDetailBloc>().add(
-                    TaskDetailQuoteDesignatedPriceRequested(
-                      price: task.baseReward ?? task.reward,
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        );
+      final isQuoteTBD = task.rewardToBeQuoted;
+      final consultBtn = Expanded(
+        child: OutlinedButton(
+          onPressed: () => _openDesignatedConsultChat(context, task),
+          child: Text(context.l10n.taskDetailDesignatedConsult),
+        ),
+      );
+      final rejectBtn = Expanded(
+        child: OutlinedButton(
+          onPressed: () => _showDeclineDesignatedTaskConfirm(context),
+          style: OutlinedButton.styleFrom(foregroundColor: AppColors.error),
+          child: Text(context.l10n.taskDetailDeclineDesignated),
+        ),
+      );
+      if (isQuoteTBD) {
+        // 待报价：只有 拒绝 + 咨询
+        return Row(children: [rejectBtn, AppSpacing.hSm, consultBtn]);
       }
+      // 定价：拒绝 + 咨询 + 接受
+      final acceptBtn = Expanded(
+        child: PrimaryButton(
+          text: context.l10n.taskDetailDesignatedAccept,
+          onPressed: () {
+            context.read<TaskDetailBloc>().add(
+              const TaskDetailAcceptDesignatedRequested(),
+            );
+          },
+        ),
+      );
+      return Row(children: [rejectBtn, AppSpacing.hSm, consultBtn, AppSpacing.hSm, acceptBtn]);
     }
 
     // 议价回应 (接单方 + 来自议价通知 + 任务仍处于可响应状态)
@@ -1326,37 +1327,6 @@ class _TaskDetailContent extends StatelessWidget {
     );
   }
 
-  void _showQuoteDesignatedPriceSheet(BuildContext context, Task task) {
-    final bloc = context.read<TaskDetailBloc>();
-    SheetAdaptation.showAdaptiveModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => BlocListener<TaskDetailBloc, TaskDetailState>(
-        bloc: bloc,
-        listenWhen: (prev, cur) =>
-            cur.actionMessage == 'quote_submitted',
-        listener: (c, _) => Navigator.of(c).pop(),
-        child: QuoteDesignatedPriceSheet(currency: task.currency, bloc: bloc),
-      ),
-    );
-  }
-
-  void _showCounterOfferSheet(BuildContext context, Task task) {
-    final bloc = context.read<TaskDetailBloc>();
-    showDialog<void>(
-      context: context,
-      builder: (dialogContext) => _CounterOfferDialog(
-        currency: task.currency,
-        onSubmit: (price) {
-          bloc.add(
-                TaskDetailSubmitCounterOfferRequested(price: price),
-              );
-        },
-      ),
-    );
-  }
-
   void _showDeclineDesignatedTaskConfirm(BuildContext context) {
     final l10n = context.l10n;
     AdaptiveDialogs.showConfirmDialog<bool>(
@@ -1368,71 +1338,44 @@ class _TaskDetailContent extends StatelessWidget {
       isDestructive: true,
     ).then((confirmed) {
       if (!context.mounted || confirmed != true) return;
-      context.read<TaskDetailBloc>().add(const TaskDetailCancelApplicationRequested());
+      context.read<TaskDetailBloc>().add(const TaskDetailRejectDesignatedRequested());
     });
   }
-}
 
-class _CounterOfferDialog extends StatefulWidget {
-  const _CounterOfferDialog({
-    required this.onSubmit,
-    this.currency = 'GBP',
-  });
-
-  final ValueChanged<double> onSubmit;
-  final String currency;
-
-  @override
-  State<_CounterOfferDialog> createState() => _CounterOfferDialogState();
-}
-
-class _CounterOfferDialogState extends State<_CounterOfferDialog> {
-  late final TextEditingController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController();
+  Future<void> _openDesignatedConsultChat(BuildContext context, Task task) async {
+    final router = GoRouter.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = context.l10n;
+    try {
+      final repo = context.read<TaskExpertRepository>();
+      final result = await repo.createTaskConsultation(task.id);
+      final appId = result['application_id'];
+      if (appId == null) {
+        messenger.showSnackBar(SnackBar(content: Text(l10n.consultationFailed)));
+        return;
+      }
+      router.push('/tasks/${task.id}/applications/$appId/chat?consultation=true&type=task');
+    } catch (e) {
+      if (context.mounted) {
+        messenger.showSnackBar(SnackBar(content: Text(l10n.consultationFailed)));
+      }
+    }
   }
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _submit() {
-    final price = double.tryParse(_controller.text.trim());
-    if (price == null || price <= 0) return;
-    widget.onSubmit(price);
-    Navigator.of(context).pop();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(context.l10n.taskDetailCounterOffer),
-      content: TextField(
-        controller: _controller,
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        decoration: InputDecoration(
-          hintText: context.l10n.taskDetailCounterOfferHint,
-          prefixText: '${Helpers.currencySymbolFor(widget.currency)} ',
-        ),
-        autofocus: true,
-        onSubmitted: (_) => _submit(),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(context.l10n.actionsCancel),
-        ),
-        TextButton(
-          onPressed: _submit,
-          child: Text(context.l10n.actionsConfirm),
-        ),
-      ],
-    );
+  void _showWithdrawDesignatedConfirm(BuildContext context) {
+    final bloc = context.read<TaskDetailBloc>();
+    final l10n = context.l10n;
+    AdaptiveDialogs.showConfirmDialog<bool>(
+      context: context,
+      title: l10n.taskDetailDesignatedWithdrawConfirmTitle,
+      content: l10n.taskDetailDesignatedWithdrawConfirmMessage,
+      cancelText: l10n.actionsCancel,
+      confirmText: l10n.taskDetailDesignatedWithdraw,
+      isDestructive: true,
+    ).then((confirmed) {
+      if (!context.mounted || confirmed != true) return;
+      bloc.add(const TaskDetailWithdrawDesignatedRequested());
+    });
   }
 }
 

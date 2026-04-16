@@ -314,6 +314,27 @@ class TaskDetailRespondNegotiationRequested extends TaskDetailEvent {
   List<Object?> get props => [action, notificationId];
 }
 
+/// 被指定用户接受指定任务
+class TaskDetailAcceptDesignatedRequested extends TaskDetailEvent {
+  const TaskDetailAcceptDesignatedRequested();
+  @override
+  List<Object?> get props => [];
+}
+
+/// 被指定用户拒绝指定任务
+class TaskDetailRejectDesignatedRequested extends TaskDetailEvent {
+  const TaskDetailRejectDesignatedRequested();
+  @override
+  List<Object?> get props => [];
+}
+
+/// 发布者撤回指定任务请求
+class TaskDetailWithdrawDesignatedRequested extends TaskDetailEvent {
+  const TaskDetailWithdrawDesignatedRequested();
+  @override
+  List<Object?> get props => [];
+}
+
 /// 切换任务资料可见性（公开/隐藏）
 class TaskDetailToggleProfileVisibility extends TaskDetailEvent {
   const TaskDetailToggleProfileVisibility({required this.isPublic});
@@ -557,6 +578,9 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
     on<TaskDetailSubmitCounterOfferRequested>(_onSubmitCounterOffer, transformer: droppable());
     on<TaskDetailRespondCounterOfferRequested>(_onRespondCounterOffer, transformer: droppable());
     on<TaskDetailRespondNegotiationRequested>(_onRespondNegotiation, transformer: droppable());
+    on<TaskDetailAcceptDesignatedRequested>(_onAcceptDesignated, transformer: droppable());
+    on<TaskDetailRejectDesignatedRequested>(_onRejectDesignated, transformer: droppable());
+    on<TaskDetailWithdrawDesignatedRequested>(_onWithdrawDesignated, transformer: droppable());
     on<TaskDetailToggleProfileVisibility>(_onToggleProfileVisibility, transformer: droppable());
     on<TaskDetailPublicReply>(_onPublicReply, transformer: droppable());
     on<TaskDetailLoadQuestions>(_onLoadQuestions);
@@ -1573,6 +1597,57 @@ class TaskDetailBloc extends Bloc<TaskDetailEvent, TaskDetailState> {
       ));
     } catch (e) {
       emit(state.copyWith(actionMessage: _mapQaError(e, 'qa_delete_failed')));
+    }
+  }
+
+  Future<void> _onAcceptDesignated(
+    TaskDetailAcceptDesignatedRequested event,
+    Emitter<TaskDetailState> emit,
+  ) async {
+    if (_taskId == null) return;
+    emit(state.copyWith(isSubmitting: true));
+    try {
+      await _taskRepository.acceptDesignatedTask(_taskId!);
+      emit(state.copyWith(isSubmitting: false, actionMessage: 'designated_accepted'));
+      add(TaskDetailLoadRequested(_taskId!));
+    } on TaskException catch (e) {
+      emit(state.copyWith(isSubmitting: false, actionMessage: e.message));
+    } catch (e) {
+      emit(state.copyWith(isSubmitting: false, actionMessage: 'designated_accept_failed'));
+    }
+  }
+
+  Future<void> _onRejectDesignated(
+    TaskDetailRejectDesignatedRequested event,
+    Emitter<TaskDetailState> emit,
+  ) async {
+    if (_taskId == null) return;
+    emit(state.copyWith(isSubmitting: true));
+    try {
+      await _taskRepository.rejectDesignatedTask(_taskId!);
+      emit(state.copyWith(isSubmitting: false, actionMessage: 'designated_rejected'));
+      add(TaskDetailLoadRequested(_taskId!));
+    } on TaskException catch (e) {
+      emit(state.copyWith(isSubmitting: false, actionMessage: e.message));
+    } catch (e) {
+      emit(state.copyWith(isSubmitting: false, actionMessage: 'designated_reject_failed'));
+    }
+  }
+
+  Future<void> _onWithdrawDesignated(
+    TaskDetailWithdrawDesignatedRequested event,
+    Emitter<TaskDetailState> emit,
+  ) async {
+    if (_taskId == null) return;
+    emit(state.copyWith(isSubmitting: true));
+    try {
+      await _taskRepository.withdrawDesignatedRequest(_taskId!);
+      emit(state.copyWith(isSubmitting: false, actionMessage: 'designated_withdrawn'));
+      add(TaskDetailLoadRequested(_taskId!));
+    } on TaskException catch (e) {
+      emit(state.copyWith(isSubmitting: false, actionMessage: e.message));
+    } catch (e) {
+      emit(state.copyWith(isSubmitting: false, actionMessage: 'designated_withdraw_failed'));
     }
   }
 

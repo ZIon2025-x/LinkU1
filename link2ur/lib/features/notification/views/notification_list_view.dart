@@ -242,7 +242,7 @@ class _NotificationListViewContentState
     }
 
     // ==================== 任务 ====================
-    if (type.startsWith('task_')) {
+    if (type.startsWith('task_') || type.startsWith('designated_task_')) {
       if (type == 'task_chat' || type == 'task_message') {
         if (taskId != null) context.push('/task-chat/$taskId');
       } else {
