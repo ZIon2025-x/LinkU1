@@ -5275,6 +5275,74 @@ async def consult_formal_apply(
         if not task:
             raise HTTPException(status_code=404, detail="任务不存在")
 
+        current_time = get_utc_time()
+        user_name = current_user.name if hasattr(current_user, "name") else "用户"
+
+        # For task_consultation: create formal application on the ORIGINAL task
+        original_task_id = None
+        orig_task = None
+        if getattr(task, 'task_source', None) == 'task_consultation' and task.description:
+            # Parse original_task_id from description
+            if task.description.startswith("original_task_id:"):
+                try:
+                    original_task_id = int(task.description.split(":")[1])
+                except (ValueError, IndexError):
+                    pass
+
+        if original_task_id:
+            # Verify original task is still open
+            orig_task_result = await db.execute(
+                select(models.Task).where(models.Task.id == original_task_id)
+            )
+            orig_task = orig_task_result.scalar_one_or_none()
+            if not orig_task:
+                raise HTTPException(status_code=404, detail="原任务不存在")
+            if orig_task.status not in ("open", "chatting", "pending_acceptance"):
+                raise HTTPException(status_code=400, detail="原任务当前状态不允许申请")
+
+            # Check if user already has an application on original task
+            existing_orig_app = await db.execute(
+                select(models.TaskApplication).where(
+                    models.TaskApplication.task_id == original_task_id,
+                    models.TaskApplication.applicant_id == current_user.id,
+                    models.TaskApplication.status.notin_(["cancelled", "rejected"]),
+                )
+            )
+            if existing_orig_app.scalar_one_or_none():
+                raise HTTPException(status_code=400, detail="您已有该任务的申请")
+
+            # Create application on original task
+            orig_application = models.TaskApplication(
+                task_id=original_task_id,
+                applicant_id=current_user.id,
+                status="pending",
+                currency=application.currency or orig_task.currency or "GBP",
+                negotiated_price=application.negotiated_price,
+                message=body.message or application.message,
+                created_at=current_time,
+            )
+            db.add(orig_application)
+            await db.flush()
+
+            # Send system message on original task too
+            price_info = ""
+            if application.negotiated_price:
+                currency = application.currency or orig_task.currency or "GBP"
+                price_info = f"，报价 {currency} {float(application.negotiated_price):.2f}"
+            orig_content_zh = f"{user_name} 通过咨询提交了正式申请{price_info}"
+            orig_content_en = f"{user_name} submitted formal application via consultation{price_info}"
+            orig_sys_msg = models.Message(
+                sender_id=None,
+                receiver_id=None,
+                content=orig_content_zh,
+                task_id=original_task_id,
+                message_type="system",
+                conversation_type="task",
+                meta=json.dumps({"system_action": "consultation_formal_apply", "content_en": orig_content_en, "from_consultation_task_id": task_id}),
+                created_at=current_time,
+            )
+            db.add(orig_sys_msg)
+
         # 更新申请
         application.status = "pending"
         if body.message:
@@ -5282,9 +5350,10 @@ async def consult_formal_apply(
         if body.proposed_price is not None:
             application.negotiated_price = Decimal(str(body.proposed_price))
 
+        # Close placeholder task — formal application moves to original task
+        task.status = "closed"
+
         # 创建系统消息
-        current_time = get_utc_time()
-        user_name = current_user.name if hasattr(current_user, "name") else "用户"
         price_info = ""
         if application.negotiated_price:
             currency = application.currency or task.currency or "GBP"
@@ -5305,14 +5374,16 @@ async def consult_formal_apply(
         db.add(system_message)
         await db.commit()
 
-        # 通知发布者
+        # Notify the original task poster (for task_consultation) or placeholder poster (for service consultation)
+        notify_user_id = str(orig_task.poster_id) if original_task_id and orig_task else str(task.poster_id)
+        notify_task_title = orig_task.title if orig_task else task.title
         try:
             from app import async_crud
             await async_crud.async_notification_crud.create_notification(
-                db, str(task.poster_id), "task_application",
-                "收到正式申请", f'{user_name} 对任务「{task.title}」提交了正式申请',
-                related_id=str(task_id), title_en="New Formal Application",
-                content_en=f'{user_name} submitted a formal application for task "{task.title}"',
+                db, notify_user_id, "task_application",
+                "收到正式申请", f'{user_name} 对任务「{notify_task_title}」提交了正式申请',
+                related_id=str(original_task_id or task_id), title_en="New Formal Application",
+                content_en=f'{user_name} submitted a formal application for task "{notify_task_title}"',
                 related_type="task_id",
             )
         except Exception as e:
@@ -5369,10 +5440,12 @@ async def consult_close(
             raise HTTPException(status_code=403, detail="无权操作此申请")
 
         # 验证状态
-        if application.status not in ("consulting", "negotiating"):
+        if application.status not in ("consulting", "negotiating", "price_agreed"):
             raise HTTPException(status_code=400, detail=f"当前状态 {application.status} 不允许关闭咨询")
 
         application.status = "cancelled"
+        # Also close the placeholder task
+        task.status = "closed"
 
         # 系统消息
         current_time = get_utc_time()
