@@ -53,7 +53,7 @@ class Review extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, taskId, rating, isAnonymous, replyContent];
+  List<Object?> get props => [id, taskId, rating, isAnonymous, replyContent, replyAt];
 }
 
 /// 创建评价请求

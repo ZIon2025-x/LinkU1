@@ -1953,7 +1953,13 @@ class _ApplyServiceSheetState extends State<_ApplyServiceSheet> {
   bool _showCounterPrice = false;
   bool _isFlexibleTime = false;
   DateTime? _selectedDeadline;
-  late int? _selectedTimeSlotId = widget.preselectedSlotId;
+  int? _selectedTimeSlotId;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedTimeSlotId = widget.preselectedSlotId;
+  }
 
   @override
   void dispose() {
@@ -2131,7 +2137,8 @@ class _ApplyServiceSheetState extends State<_ApplyServiceSheet> {
                               return GestureDetector(
                                 onTap: canSelect
                                     ? () => setState(() =>
-                                        _selectedTimeSlotId = slot.id)
+                                        _selectedTimeSlotId =
+                                            isSelected ? null : slot.id)
                                     : null,
                                 child: AnimatedOpacity(
                                   opacity: canSelect ? 1.0 : 0.4,
@@ -2231,7 +2238,7 @@ class _ApplyServiceSheetState extends State<_ApplyServiceSheet> {
                       ),
                     ],
 
-                    if (!widget.service.hasTimeSlots) ...[
+                    if (!widget.service.hasTimeSlots || _selectedTimeSlotId == null) ...[
                       const SizedBox(height: 24),
                       _buildSectionHeader(
                           context.l10n.serviceSelectDeadline),

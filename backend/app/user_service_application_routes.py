@@ -463,7 +463,7 @@ async def owner_approve_application(
         price = float(application.negotiated_price)
     elif application.time_slot_id:
         slot = await db.get(models.ServiceTimeSlot, application.time_slot_id)
-        price = float(slot.price_per_participant) if slot and slot.price_per_participant else float(service.base_price)
+        price = float(slot.price_per_participant) if slot and slot.price_per_participant is not None else float(service.base_price)
     else:
         price = float(service.base_price)
 
