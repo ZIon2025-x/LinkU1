@@ -7,8 +7,7 @@ from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models
-from app.database import get_async_db_dependency
-from app.security_auth import get_current_user_secure_async_csrf
+from app.deps import get_async_db_dependency, get_current_user_secure_async_csrf
 from app.utils.time_utils import get_utc_time
 
 logger = logging.getLogger(__name__)
