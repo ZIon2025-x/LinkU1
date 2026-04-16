@@ -283,7 +283,7 @@ async def create_consultation(
     await db.commit()
     await db.refresh(application)
 
-    # 通知团队 owner+admin 有新咨询
+    # 通知服务提供者有新咨询
     if service.owner_type == "expert":
         await _notify_team_admins_new_application(
             db,
@@ -295,6 +295,23 @@ async def create_consultation(
             title_zh="新服务咨询",
             title_en="New Consultation Request",
         )
+    elif service.owner_type == "user" and taker_user_id:
+        # 个人服务：通知服务提供者
+        try:
+            from app import async_crud
+            applicant_name = current_user.name or "用户"
+            svc_name = service.service_name or "服务"
+            await async_crud.async_notification_crud.create_notification(
+                db, taker_user_id, "service_consultation_received",
+                "新服务咨询",
+                f'{applicant_name} 想咨询您的服务「{svc_name}」',
+                related_id=str(application.id),
+                title_en="New Consultation Request",
+                content_en=f'{applicant_name} wants to consult about your service "{svc_name}"',
+                related_type="application_id",
+            )
+        except Exception as e:
+            logger.warning(f"Failed to notify personal service owner: {e}")
 
     return {
         "id": application.id,
