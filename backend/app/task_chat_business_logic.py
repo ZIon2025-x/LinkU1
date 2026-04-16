@@ -220,14 +220,26 @@ class AcceptApplicationLogic:
             and_(
                 models.TaskApplication.task_id == task_id,
                 models.TaskApplication.id != accepted_application_id,
-                models.TaskApplication.status == "pending"
+                models.TaskApplication.status.in_(["pending", "consulting", "negotiating", "price_agreed"])
             )
         )
         other_apps_result = await db.execute(other_applications_query)
         other_applications = other_apps_result.scalars().all()
-        
+
         for other_app in other_applications:
             other_app.status = "rejected"
+
+        # Close task_consultation placeholder tasks that reference this task
+        consult_tasks_query = select(models.Task).where(
+            and_(
+                models.Task.task_source == "task_consultation",
+                models.Task.description == f"original_task_id:{task_id}",
+                models.Task.status.in_(["consulting", "negotiating"]),
+            )
+        )
+        consult_tasks_result = await db.execute(consult_tasks_query)
+        for consult_task in consult_tasks_result.scalars().all():
+            consult_task.status = "closed"
 
 
 class NegotiationPriceLogic:
