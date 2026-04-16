@@ -326,13 +326,15 @@ class TaskChat extends Equatable {
   bool get isConsultation =>
       taskSource == 'consultation' ||
       taskSource == 'flea_market_consultation' ||
-      (serviceApplicationId != null && taskSource != 'consultation' && taskSource != 'flea_market_consultation');
+      taskSource == 'task_consultation' ||
+      serviceApplicationId != null;
 
   /// 咨询类型查询参数
   String get consultationTypeParam {
     if (taskSource == 'consultation') return 'service';
     if (taskSource == 'flea_market_consultation') return 'flea_market';
-    return 'task'; // task consultation
+    if (taskSource == 'task_consultation') return 'task';
+    return 'task';
   }
 
   /// 多语言显示标题（根据 locale 选择 zh/en）
