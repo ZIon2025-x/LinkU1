@@ -296,7 +296,29 @@ async def get_task_chat_list(
             )
             result_2 = await db.execute(multi_participant_query)
             task_ids_set.update([row[0] for row in result_2.all()])
-        
+
+        # 3. 作为团队成员的 consultation 任务
+        from app.models_expert import ExpertMember
+        sa_team_query = (
+            select(models.ServiceApplication.task_id)
+            .join(
+                ExpertMember,
+                and_(
+                    ExpertMember.expert_id == models.ServiceApplication.new_expert_id,
+                    ExpertMember.user_id == current_user.id,
+                    ExpertMember.status == "active",
+                ),
+            )
+            .where(
+                and_(
+                    models.ServiceApplication.new_expert_id.isnot(None),
+                    models.ServiceApplication.task_id.isnot(None),
+                )
+            )
+        )
+        sa_team_result = await db.execute(sa_team_query)
+        task_ids_set.update([row[0] for row in sa_team_result.all()])
+
         if not task_ids_set:
             return {
                 "tasks": [],
