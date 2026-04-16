@@ -336,7 +336,6 @@ async def get_task_chat_list(
                 and_(
                     models.Message.task_id.in_(list(task_ids_set)),
                     models.Message.conversation_type == 'task',
-                    models.Message.application_id.is_(None),
                 )
             )
             .group_by(models.Message.task_id)
@@ -396,7 +395,6 @@ async def get_task_chat_list(
                 and_(
                     models.Message.task_id.in_(task_ids_list),
                     models.Message.conversation_type == 'task',
-                    models.Message.application_id.is_(None),
                 )
             )
             .subquery()
@@ -519,7 +517,6 @@ async def get_task_chat_list(
                         models.Message.sender_id.notin_(['system', 'SYSTEM']),  # 排除系统消息
                         models.Message.message_type != 'system',  # 排除系统类型消息
                         models.Message.conversation_type == 'task',
-                        models.Message.application_id.is_(None),
                     )
                 )
             else:
@@ -532,7 +529,6 @@ async def get_task_chat_list(
                         models.Message.sender_id.notin_(['system', 'SYSTEM']),  # 排除系统消息
                         models.Message.message_type != 'system',  # 排除系统类型消息
                         models.Message.conversation_type == 'task',
-                        models.Message.application_id.is_(None),
                         ~exists(
                             select(1).where(
                                 and_(
