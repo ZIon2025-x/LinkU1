@@ -242,11 +242,12 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final (color, label) = switch (status) {
-      'pending_payment' => (Colors.orange, 'Pending'),
-      'in_progress' => (AppColors.primary, 'Active'),
-      'completed' => (Colors.green, 'Done'),
-      'pending' => (Colors.orange, 'Pending'),
+      'pending_payment' => (Colors.orange, l10n.taskStatusPendingPayment),
+      'in_progress' => (AppColors.primary, l10n.taskStatusInProgress),
+      'completed' => (Colors.green, l10n.taskStatusCompleted),
+      'pending' => (Colors.orange, l10n.taskStatusPendingPayment),
       _ => (Colors.grey, status),
     };
     return Container(

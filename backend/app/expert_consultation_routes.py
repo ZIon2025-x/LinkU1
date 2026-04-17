@@ -23,6 +23,36 @@ consultation_router = APIRouter(tags=["expert-consultations"])
 
 # ==================== Helpers ====================
 
+
+async def _close_consultation_task(
+    db: AsyncSession,
+    application: "models.ServiceApplication",
+    *,
+    reason: str = "咨询已关闭",
+    new_status: str = "closed",
+):
+    """关闭 ServiceApplication 关联的咨询占位 Task，并发送系统消息。
+
+    仅当 Task 状态仍为 'consulting' 时才操作，保证幂等。
+    """
+    if not application.task_id:
+        return
+    task = await db.get(models.Task, application.task_id)
+    if not task or task.status != "consulting":
+        return
+    task.status = new_status
+    # 系统消息 — 与 flea_market_routes.py:4537 保持一致
+    system_msg = models.Message(
+        sender_id=None,
+        receiver_id=task.taker_id if task.taker_id != application.applicant_id else task.poster_id,
+        content=reason,
+        task_id=task.id,
+        message_type="system",
+        conversation_type="task",
+    )
+    db.add(system_msg)
+
+
 async def _notify_team_admins_new_application(
     db: AsyncSession,
     expert_id: str,
@@ -601,6 +631,8 @@ async def respond_to_negotiation(
     elif action == "reject":
         application.status = "rejected"
         application.rejected_at = get_utc_time()
+        # 同步关闭咨询占位 Task
+        await _close_consultation_task(db, application, reason="协商已被拒绝")
     elif action == "counter":
         # 校验价格
         try:
@@ -727,6 +759,8 @@ async def close_consultation(
 
     application.status = "cancelled"
     application.updated_at = get_utc_time()
+    # 同步关闭咨询占位 Task
+    await _close_consultation_task(db, application, reason="咨询已关闭", new_status="closed")
     await db.commit()
     return {"status": "cancelled"}
 
@@ -964,6 +998,22 @@ async def _approve_team_service_application(
             detail="创建支付失败，请稍后重试",
         )
 
+    # 关闭旧的咨询占位 Task（task_id 即将被新 Task 覆盖）
+    old_consultation_task_id = application.task_id
+    if old_consultation_task_id:
+        old_task = await db.get(models.Task, old_consultation_task_id)
+        if old_task and old_task.status == "consulting":
+            old_task.status = "closed"
+            system_msg = models.Message(
+                sender_id=None,
+                receiver_id=old_task.taker_id if old_task.taker_id != application.applicant_id else old_task.poster_id,
+                content="咨询已转为正式订单",
+                task_id=old_task.id,
+                message_type="system",
+                conversation_type="task",
+            )
+            db.add(system_msg)
+
     # 12. 更新 application
     application.status = "approved"
     application.final_price = price
@@ -973,34 +1023,35 @@ async def _approve_team_service_application(
 
     await db.commit()
 
-    # 14. Admin 审批时自动加入任务聊天 (best-effort)
+    # 14. Admin 审批时自动加入任务聊天 (best-effort, savepoint 保证原子性)
     try:
         from app.models_expert import ChatParticipant
-        # 始终创建 poster + owner 的 ChatParticipant，保持与 invite 端点的"首次升级"一致
-        for uid, role in [
-            (application.applicant_id, "client"),
-            (taker_id_value, "expert_owner"),
-        ]:
-            existing = await db.execute(
-                select(ChatParticipant).where(
-                    and_(ChatParticipant.task_id == new_task.id, ChatParticipant.user_id == uid)
+        async with db.begin_nested():
+            # 始终创建 poster + owner 的 ChatParticipant，保持与 invite 端点的"首次升级"一致
+            for uid, role in [
+                (application.applicant_id, "client"),
+                (taker_id_value, "expert_owner"),
+            ]:
+                existing = await db.execute(
+                    select(ChatParticipant).where(
+                        and_(ChatParticipant.task_id == new_task.id, ChatParticipant.user_id == uid)
+                    )
                 )
-            )
-            if not existing.scalar_one_or_none():
-                db.add(ChatParticipant(task_id=new_task.id, user_id=uid, role=role))
-        # 如果审批人不是 owner，也加入聊天
-        if current_user.id != taker_id_value and current_user.id != application.applicant_id:
-            existing_admin = await db.execute(
-                select(ChatParticipant).where(
-                    and_(ChatParticipant.task_id == new_task.id, ChatParticipant.user_id == current_user.id)
+                if not existing.scalar_one_or_none():
+                    db.add(ChatParticipant(task_id=new_task.id, user_id=uid, role=role))
+            # 如果审批人不是 owner，也加入聊天
+            if current_user.id != taker_id_value and current_user.id != application.applicant_id:
+                existing_admin = await db.execute(
+                    select(ChatParticipant).where(
+                        and_(ChatParticipant.task_id == new_task.id, ChatParticipant.user_id == current_user.id)
+                    )
                 )
-            )
-            if not existing_admin.scalar_one_or_none():
-                db.add(ChatParticipant(
-                    task_id=new_task.id,
-                    user_id=current_user.id,
-                    role="expert_admin",
-                ))
+                if not existing_admin.scalar_one_or_none():
+                    db.add(ChatParticipant(
+                        task_id=new_task.id,
+                        user_id=current_user.id,
+                        role="expert_admin",
+                    ))
         await db.commit()
     except Exception as e:
         logger.warning(f"审批后自动加入聊天失败: {e}")
@@ -1057,6 +1108,8 @@ async def reject_application(
     application.status = "rejected"
     application.rejected_at = get_utc_time()
     application.updated_at = get_utc_time()
+    # 同步关闭咨询占位 Task
+    await _close_consultation_task(db, application, reason="申请已被拒绝")
     await db.commit()
     return {"status": "rejected"}
 

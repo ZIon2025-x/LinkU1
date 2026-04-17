@@ -704,7 +704,7 @@ async def get_expert_my_tasks(
                     models.Task.status.notin_(excluded_statuses),
                 )
             )
-            .order_by(models.Task.created_at.desc())
+            .order_by(func.coalesce(models.Task.accepted_at, models.Task.created_at).desc())
             .offset((page - 1) * page_size)
             .limit(page_size)
         )

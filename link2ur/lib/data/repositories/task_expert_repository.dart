@@ -502,6 +502,12 @@ class TaskExpertRepository {
     final response = await _apiService.get(
       ApiEndpoints.expertMyTasks(expertId),
     );
+    if (!response.isSuccess) {
+      throw TaskExpertException(
+        response.errorCode ?? response.message ?? '加载任务失败',
+        code: response.errorCode,
+      );
+    }
     final data = response.data;
     if (data is Map<String, dynamic>) {
       final items = data['items'];

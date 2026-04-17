@@ -389,7 +389,7 @@ class ErrorLocalizer {
       case 'expertServiceDeactivated':
         return context.l10n.expertServiceDeactivated;
       case 'expert_dashboard_load_my_tasks_failed':
-        return context.l10n.expertMyTasksEmpty;
+        return context.l10n.errorLoadFailedMessage;
       case 'expertTimeSlotCreated':
         return context.l10n.expertTimeSlotCreated;
       case 'expertTimeSlotDeleted':
