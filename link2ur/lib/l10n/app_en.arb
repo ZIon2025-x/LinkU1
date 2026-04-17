@@ -2089,6 +2089,8 @@
   "taskStatusNegotiating": "Negotiating",
   "taskStatusPriceAgreed": "Price Agreed",
   "taskStatusClosed": "Closed",
+  "taskStatusExpired": "Expired",
+  "taskStatusTaken": "Taken",
   "applicationStatusConsulting": "Consulting",
   "applicationStatusConsultingDesc": "You are in a consultation with the other party",
   "applicationStatusNegotiating": "Negotiating Price",

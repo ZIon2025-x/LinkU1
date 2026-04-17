@@ -4650,6 +4650,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskStatusClosed => 'Closed';
 
   @override
+  String get taskStatusExpired => 'Expired';
+
+  @override
+  String get taskStatusTaken => 'Taken';
+
+  @override
   String get applicationStatusConsulting => 'Consulting';
 
   @override

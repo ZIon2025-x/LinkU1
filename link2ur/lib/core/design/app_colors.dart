@@ -275,6 +275,12 @@ class AppColors {
         return warning;
       case AppConstants.taskStatusPriceAgreed:
         return success;
+      case AppConstants.taskStatusClosed:
+        return offline;
+      case AppConstants.taskStatusExpired:
+        return error;
+      case AppConstants.taskStatusTaken:
+        return primary;
       default:
         return textSecondaryLight;
     }

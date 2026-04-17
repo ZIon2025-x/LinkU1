@@ -510,6 +510,10 @@ class _TaskChatItem extends StatelessWidget {
         return l10n.taskStatusPriceAgreed;
       case AppConstants.taskStatusClosed:
         return l10n.taskStatusClosed;
+      case AppConstants.taskStatusExpired:
+        return l10n.taskStatusExpired;
+      case AppConstants.taskStatusTaken:
+        return l10n.taskStatusTaken;
       default:
         return taskChat.taskStatus ?? '';
     }

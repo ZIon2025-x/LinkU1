@@ -4465,6 +4465,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskStatusClosed => '已关闭';
 
   @override
+  String get taskStatusExpired => '已过期';
+
+  @override
+  String get taskStatusTaken => '已接单';
+
+  @override
   String get applicationStatusConsulting => '咨询中';
 
   @override
@@ -17319,6 +17325,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get taskStatusClosed => '已關閉';
+
+  @override
+  String get taskStatusExpired => '已過期';
+
+  @override
+  String get taskStatusTaken => '已接單';
 
   @override
   String get applicationStatusConsulting => '諮詢中';

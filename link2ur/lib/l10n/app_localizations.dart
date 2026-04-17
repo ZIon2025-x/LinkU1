@@ -8601,6 +8601,18 @@ abstract class AppLocalizations {
   /// **'Closed'**
   String get taskStatusClosed;
 
+  /// No description provided for @taskStatusExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Expired'**
+  String get taskStatusExpired;
+
+  /// No description provided for @taskStatusTaken.
+  ///
+  /// In en, this message translates to:
+  /// **'Taken'**
+  String get taskStatusTaken;
+
   /// No description provided for @applicationStatusConsulting.
   ///
   /// In en, this message translates to:
