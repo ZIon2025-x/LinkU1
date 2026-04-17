@@ -218,8 +218,8 @@ class FleaMarketRepository {
     return response.data!;
   }
 
-  /// 收藏/取消收藏商品，返回新的收藏状态
-  Future<bool> toggleFavorite(String id) async {
+  /// 收藏/取消收藏商品，返回 (isFavorited, favoriteCount)
+  Future<({bool isFavorited, int favoriteCount})> toggleFavorite(String id) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.fleaMarketItemFavorite(id),
     );
@@ -228,7 +228,12 @@ class FleaMarketRepository {
       throw FleaMarketException(response.errorCode ?? response.message ?? 'flea_market_error_operation_failed', code: response.errorCode);
     }
 
-    return response.data?['is_favorited'] as bool? ?? false;
+    final raw = response.data;
+    final data = raw?['data'] as Map<String, dynamic>? ?? raw;
+    return (
+      isFavorited: data?['is_favorited'] as bool? ?? false,
+      favoriteCount: data?['favorite_count'] as int? ?? 0,
+    );
   }
 
   /// 刷新商品（重新上架）

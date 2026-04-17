@@ -923,9 +923,8 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
       emit(state.copyWith(
         detailStatus: FleaMarketStatus.loaded,
         selectedItem: item,
+        isFavorited: item.isFavorited ?? false,
       ));
-      // 对标iOS checkFavoriteStatus：从收藏列表判断是否已收藏
-      await _checkFavoriteStatus(item.id, emit);
     } catch (e) {
       AppLogger.error('Failed to load flea market item detail', e);
       if (emit.isDone) return;
@@ -948,24 +947,6 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
         isAvailable: false,
       ),
     ));
-  }
-
-  /// 检查商品是否已收藏 - 对标iOS checkFavoriteStatus
-  Future<void> _checkFavoriteStatus(
-    String itemId,
-    Emitter<FleaMarketState> emit,
-  ) async {
-    try {
-      final favResponse = await _fleaMarketRepository.getFavoriteItems(
-        pageSize: 100,
-      );
-      final favoriteIds = favResponse.items.map((e) => e.id).toSet();
-      if (emit.isDone) return;
-      emit(state.copyWith(isFavorited: favoriteIds.contains(itemId)));
-    } catch (e) {
-      // Don't update isFavorited on failure — keep existing state
-      AppLogger.error('Failed to check favorite status', e);
-    }
   }
 
   /// 刷新商品（重新上架）- 对标iOS refreshItem
@@ -1055,22 +1036,31 @@ class FleaMarketBloc extends Bloc<FleaMarketEvent, FleaMarketState> {
     if (state.isTogglingFavorite) return;
 
     final previousFavorited = state.isFavorited;
+    final previousItem = state.selectedItem;
+    final previousCount = previousItem?.favoriteCount ?? 0;
+    final optimisticCount = previousFavorited
+        ? (previousCount > 0 ? previousCount - 1 : 0)
+        : previousCount + 1;
+
     emit(state.copyWith(
       isTogglingFavorite: true,
       isFavorited: !previousFavorited,
+      selectedItem: previousItem?.copyWith(favoriteCount: optimisticCount),
     ));
 
     try {
-      final isFavorited = await _fleaMarketRepository.toggleFavorite(event.itemId);
+      final result = await _fleaMarketRepository.toggleFavorite(event.itemId);
       emit(state.copyWith(
         isTogglingFavorite: false,
-        isFavorited: isFavorited,
+        isFavorited: result.isFavorited,
+        selectedItem: state.selectedItem?.copyWith(favoriteCount: result.favoriteCount),
       ));
     } catch (e) {
       AppLogger.error('Failed to toggle favorite', e);
       emit(state.copyWith(
         isTogglingFavorite: false,
         isFavorited: previousFavorited,
+        selectedItem: previousItem,
       ));
     }
   }

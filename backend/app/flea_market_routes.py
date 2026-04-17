@@ -633,7 +633,18 @@ async def get_flea_market_item(
             .where(models.FleaMarketFavorite.item_id == item.id)
         )
         favorite_count = favorite_count_result.scalar() or 0
-        
+
+        # 检查当前用户是否已收藏
+        is_favorited = False
+        if current_user:
+            fav_check = await db.execute(
+                select(models.FleaMarketFavorite.id).where(
+                    models.FleaMarketFavorite.user_id == current_user.id,
+                    models.FleaMarketFavorite.item_id == item.id,
+                )
+            )
+            is_favorited = fav_check.scalar_one_or_none() is not None
+
         # 检查当前用户是否有未付款的购买
         pending_payment_task_id = None
         pending_payment_client_secret = None
@@ -816,6 +827,7 @@ async def get_flea_market_item(
             seller_is_active=seller_is_active,
             view_count=item.view_count or 0,
             favorite_count=favorite_count,
+            is_favorited=is_favorited,
             refreshed_at=format_iso_utc(item.refreshed_at),
             created_at=format_iso_utc(item.created_at),
             updated_at=format_iso_utc(item.updated_at),
@@ -3342,11 +3354,8 @@ async def toggle_favorite_item(
             # 取消收藏
             await db.delete(favorite)
             await db.commit()
-            return {
-                "success": True,
-                "data": {"is_favorited": False},
-                "message": "已取消收藏"
-            }
+            is_favorited = False
+            message = "已取消收藏"
         else:
             # 添加收藏
             new_favorite = models.FleaMarketFavorite(
@@ -3355,11 +3364,21 @@ async def toggle_favorite_item(
             )
             db.add(new_favorite)
             await db.commit()
-            return {
-                "success": True,
-                "data": {"is_favorited": True},
-                "message": "收藏成功"
-            }
+            is_favorited = True
+            message = "收藏成功"
+
+        # 查询最新收藏数
+        count_result = await db.execute(
+            select(func.count(models.FleaMarketFavorite.id))
+            .where(models.FleaMarketFavorite.item_id == db_id)
+        )
+        favorite_count = count_result.scalar() or 0
+
+        return {
+            "success": True,
+            "data": {"is_favorited": is_favorited, "favorite_count": favorite_count},
+            "message": message
+        }
     except HTTPException:
         raise
     except Exception as e:
