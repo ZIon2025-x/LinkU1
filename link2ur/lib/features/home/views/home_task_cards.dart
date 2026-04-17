@@ -12,6 +12,7 @@ class _NearbyTab extends StatefulWidget {
 class _NearbyTabState extends State<_NearbyTab> {
   bool _locationLoading = false;
   String? _city; // 反向地理编码得到的城市名
+  bool _locationFailed = false;
 
   // 缓存当前坐标，供切换半径时复用
   double _currentLat = _defaultLat;
@@ -146,7 +147,11 @@ class _NearbyTabState extends State<_NearbyTab> {
     if (!mounted) return;
     _currentLat = lat;
     _currentLng = lng;
-    setState(() => _locationLoading = false);
+    final isDefault = lat == _defaultLat && lng == _defaultLng;
+    setState(() {
+      _locationLoading = false;
+      _locationFailed = isDefault;
+    });
     final bloc = context.read<HomeBloc>();
     bloc.add(HomeLoadNearby(
           latitude: lat,
@@ -340,6 +345,7 @@ class _NearbyTabState extends State<_NearbyTab> {
                     child: _NearbyLocationBar(
                       city: _city,
                       onRefreshTap: _loadLocation,
+                      locationFailed: _locationFailed,
                     ),
                   ),
                   // Radius selector
@@ -484,10 +490,12 @@ class _NearbyLocationBar extends StatelessWidget {
   const _NearbyLocationBar({
     required this.city,
     required this.onRefreshTap,
+    this.locationFailed = false,
   });
 
   final String? city;
   final VoidCallback onRefreshTap;
+  final bool locationFailed;
 
   @override
   Widget build(BuildContext context) {
@@ -501,13 +509,25 @@ class _NearbyLocationBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.location_on, size: 14, color: AppColors.primary),
+          Icon(
+            locationFailed ? Icons.location_off : Icons.location_on,
+            size: 14,
+            color: locationFailed ? Colors.orange : AppColors.primary,
+          ),
           const SizedBox(width: 4),
-          Text(
-            l10n.nearbyCurrentLocation(displayCity),
-            style: TextStyle(
-              fontSize: 13,
-              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+          Flexible(
+            child: Text(
+              locationFailed
+                  ? l10n.nearbyLocationFailed
+                  : l10n.nearbyCurrentLocation(displayCity),
+              style: TextStyle(
+                fontSize: 13,
+                color: locationFailed
+                    ? Colors.orange
+                    : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
           const SizedBox(width: 6),

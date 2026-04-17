@@ -5002,6 +5002,7 @@
   "drawerLogin": "登入",
   "nearbyCurrentLocation": "當前定位：{city}",
   "@nearbyCurrentLocation": { "placeholders": { "city": { "type": "String" } } },
+  "nearbyLocationFailed": "定位不可用 · 顯示倫敦附近",
   "nearbySwitch": "切換",
   "nearbyApplicants": "{count}人申請",
   "@nearbyApplicants": { "placeholders": { "count": { "type": "int" } } },

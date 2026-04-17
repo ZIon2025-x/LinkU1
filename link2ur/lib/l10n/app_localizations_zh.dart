@@ -11085,6 +11085,9 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get nearbyLocationFailed => '定位不可用 · 显示伦敦附近';
+
+  @override
   String get nearbySwitch => '切换';
 
   @override
@@ -23997,6 +24000,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String nearbyCurrentLocation(String city) {
     return '當前定位：$city';
   }
+
+  @override
+  String get nearbyLocationFailed => '定位不可用 · 顯示倫敦附近';
 
   @override
   String get nearbySwitch => '切換';

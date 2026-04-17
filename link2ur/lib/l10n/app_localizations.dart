@@ -21287,6 +21287,12 @@ abstract class AppLocalizations {
   /// **'Current location: {city}'**
   String nearbyCurrentLocation(String city);
 
+  /// No description provided for @nearbyLocationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Location unavailable · showing London'**
+  String get nearbyLocationFailed;
+
   /// No description provided for @nearbySwitch.
   ///
   /// In en, this message translates to:
