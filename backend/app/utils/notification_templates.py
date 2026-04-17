@@ -444,6 +444,18 @@ NOTIFICATION_TEMPLATES: Dict[str, Dict[str, Dict[str, str]]] = {
             "content_template": "The dispute for「{service_name}」has been resolved."
         }
     },
+
+    # 活动抽奖中奖
+    "official_activity_won": {
+        "zh": {
+            "title": "🎉 恭喜中奖！",
+            "content_template": "您参与的活动「{activity_title}」已开奖，您获得了{prize_desc}！{voucher_info}"
+        },
+        "en": {
+            "title": "🎉 Congratulations! You Won!",
+            "content_template": "The activity「{activity_title}」has been drawn. You won: {prize_desc}!{voucher_info}"
+        }
+    },
 }
 
 

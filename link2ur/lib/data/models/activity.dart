@@ -584,7 +584,7 @@ class ActivityWinner extends Equatable {
 
   factory ActivityWinner.fromJson(Map<String, dynamic> json) => ActivityWinner(
         userId: json['user_id'] as String,
-        name: json['name'] as String,
+        name: (json['name'] as String?) ?? '',
         avatarUrl: json['avatar_url'] as String?,
         prizeIndex: json['prize_index'] as int?,
       );

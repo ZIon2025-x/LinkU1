@@ -380,9 +380,12 @@ class _ActivityFormSheetState extends State<_ActivityFormSheet> {
       }
     } catch (e) {
       if (mounted) {
+        final msg = e is Exception
+            ? e.toString().replaceFirst(RegExp(r'^Exception:\s*'), '')
+            : e.toString();
         setState(() {
           _isSubmitting = false;
-          _errorMessage = e.toString();
+          _errorMessage = msg;
         });
       }
     }
@@ -1222,6 +1225,21 @@ class _ActivityListTileState extends State<_ActivityListTile> {
     final isLottery = activityType == 'lottery';
     final isFirstCome = activityType == 'first_come';
 
+    // Localized status
+    String localizedStatus;
+    switch (status) {
+      case 'open':
+        localizedStatus = l10n.activityStatusOpen;
+      case 'closed':
+        localizedStatus = l10n.activityStatusClosed;
+      case 'cancelled':
+        localizedStatus = l10n.activityStatusCancelled;
+      case 'completed':
+        localizedStatus = l10n.activityStatusCompleted;
+      default:
+        localizedStatus = status;
+    }
+
     // Badge text
     String badgeText;
     Color badgeColor;
@@ -1277,7 +1295,7 @@ class _ActivityListTileState extends State<_ActivityListTile> {
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
-                  status,
+                  localizedStatus,
                   style: TextStyle(
                     fontSize: 11,
                     color: status == 'open' ? Colors.green : Colors.grey,

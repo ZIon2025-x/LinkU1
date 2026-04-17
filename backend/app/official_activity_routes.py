@@ -2,13 +2,14 @@
 用户端 - 官方/达人活动报名 / 取消 / 结果
 """
 import logging
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import stripe
 from app import models, schemas
 from app.deps import get_async_db_dependency
+from app.async_routers import get_current_user_secure_async_csrf
 from app.utils import get_utc_time
 from app.stripe_config import stripe as _stripe_configured  # noqa: F401 — sets stripe.api_key
 
@@ -18,33 +19,6 @@ official_activity_router = APIRouter(
     prefix="/api/official-activities",
     tags=["official-activities"],
 )
-
-
-async def get_current_user_secure_async_csrf(
-    request: Request,
-    db: AsyncSession = Depends(get_async_db_dependency),
-) -> models.User:
-    """CSRF保护的安全用户认证（异步版本）"""
-    from app.secure_auth import validate_session
-
-    session = validate_session(request)
-    if session:
-        from app import async_crud
-        user = await async_crud.async_user_crud.get_user_by_id(db, session.user_id)
-        if user:
-            if hasattr(user, "is_suspended") and user.is_suspended:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN, detail="账户已被暂停"
-                )
-            if hasattr(user, "is_banned") and user.is_banned:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN, detail="账户已被封禁"
-                )
-            return user
-
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED, detail="未提供有效的认证信息"
-    )
 
 
 @official_activity_router.post("/{activity_id}/apply", response_model=dict)

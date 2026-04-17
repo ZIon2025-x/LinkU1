@@ -21,6 +21,24 @@ from app.utils import get_utc_time
 logger = logging.getLogger(__name__)
 
 
+def _build_notification_texts(activity: models.Activity, voucher_codes: list, prize_index: int | None, idx: int):
+    """Build i18n notification title/content for a draw winner."""
+    from app.utils.notification_templates import get_notification_texts
+
+    prize_desc = activity.prize_description or "奖品"
+    voucher_info = ""
+    if prize_index is not None and idx < len(voucher_codes):
+        voucher_info = f"\nVoucher: {voucher_codes[idx]}"
+
+    title_zh, content_zh, title_en, content_en = get_notification_texts(
+        "official_activity_won",
+        activity_title=activity.title,
+        prize_desc=prize_desc,
+        voucher_info=voucher_info,
+    )
+    return title_zh, content_zh, title_en, content_en
+
+
 async def perform_draw_async(db: AsyncSession, activity: models.Activity) -> List[dict]:
     """Async draw: pick winners, update statuses, send notifications, commit.
 
@@ -57,18 +75,15 @@ async def perform_draw_async(db: AsyncSession, activity: models.Activity) -> Lis
             "prize_index": app.prize_index,
         })
 
-        prize_desc = activity.prize_description or "奖品"
-        voucher_info = (
-            f"\n您的优惠码：{voucher_codes[i]}"
-            if app.prize_index is not None and i < len(voucher_codes)
-            else ""
+        title_zh, content_zh, title_en, content_en = _build_notification_texts(
+            activity, voucher_codes, app.prize_index, i,
         )
         await AsyncNotificationCRUD.create_notification(
             db=db,
             user_id=app.user_id,
             notification_type="official_activity_won",
-            title="🎉 恭喜中奖！",
-            content=f"您参与的活动「{activity.title}」已开奖，您获得了{prize_desc}！{voucher_info}",
+            title=title_zh,
+            content=content_zh,
             related_id=str(activity.id),
         )
 
@@ -116,18 +131,15 @@ def perform_draw_sync(db: Session, activity: models.Activity) -> List[dict]:
         })
 
         try:
-            prize_desc = activity.prize_description or "奖品"
-            voucher_info = (
-                f"\n您的优惠码：{voucher_codes[i]}"
-                if app.prize_index is not None and i < len(voucher_codes)
-                else ""
+            title_zh, content_zh, title_en, content_en = _build_notification_texts(
+                activity, voucher_codes, app.prize_index, i,
             )
             create_notification(
                 db=db,
                 user_id=app.user_id,
                 type="official_activity_won",
-                title="🎉 恭喜中奖！",
-                content=f"您参与的活动「{activity.title}」已开奖，您获得了{prize_desc}！{voucher_info}",
+                title=title_zh,
+                content=content_zh,
                 related_id=str(activity.id),
                 related_type="activity_id",
                 auto_commit=False,
