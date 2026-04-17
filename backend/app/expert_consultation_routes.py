@@ -7,6 +7,10 @@ from sqlalchemy import select, and_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models, schemas
+from app.consultation.helpers import (
+    check_consultation_idempotency,
+    close_consultation_task,
+)
 from app.deps import get_async_db_dependency
 from app.async_routers import (
     get_current_user_secure_async_csrf,
@@ -22,35 +26,6 @@ consultation_router = APIRouter(tags=["expert-consultations"])
 
 
 # ==================== Helpers ====================
-
-
-async def _close_consultation_task(
-    db: AsyncSession,
-    application: "models.ServiceApplication",
-    *,
-    reason: str = "咨询已关闭",
-    new_status: str = "closed",
-):
-    """关闭 ServiceApplication 关联的咨询占位 Task，并发送系统消息。
-
-    仅当 Task 状态仍为 'consulting' 时才操作，保证幂等。
-    """
-    if not application.task_id:
-        return
-    task = await db.get(models.Task, application.task_id)
-    if not task or task.status != "consulting":
-        return
-    task.status = new_status
-    # 系统消息 — 与 flea_market_routes.py:4537 保持一致
-    system_msg = models.Message(
-        sender_id=None,
-        receiver_id=task.taker_id if task.taker_id != application.applicant_id else task.poster_id,
-        content=reason,
-        task_id=task.id,
-        message_type="system",
-        conversation_type="task",
-    )
-    db.add(system_msg)
 
 
 async def _notify_team_admins_new_application(
@@ -240,19 +215,14 @@ async def create_consultation(
     if not service:
         raise HTTPException(status_code=404, detail="服务不存在")
 
-    # 检查是否已有进行中的咨询/申请
-    existing = await db.execute(
-        select(models.ServiceApplication).where(
-            and_(
-                models.ServiceApplication.service_id == service_id,
-                models.ServiceApplication.applicant_id == current_user.id,
-                models.ServiceApplication.status.in_(["consulting", "negotiating", "price_agreed", "pending"]),
-            )
-        )
+    # 检查是否已有进行中的咨询/申请（幂等）
+    existing_app = await check_consultation_idempotency(
+        db,
+        applicant_id=current_user.id,
+        subject_id=service_id,
+        subject_type="service",
     )
-    existing_app = existing.scalar_one_or_none()
     if existing_app:
-        # 已有进行中的咨询/申请，直接返回（幂等）
         return {
             "id": existing_app.id,
             "status": existing_app.status,
@@ -632,7 +602,7 @@ async def respond_to_negotiation(
         application.status = "rejected"
         application.rejected_at = get_utc_time()
         # 同步关闭咨询占位 Task
-        await _close_consultation_task(db, application, reason="协商已被拒绝")
+        await close_consultation_task(db, application, reason="协商已被拒绝")
     elif action == "counter":
         # 校验价格
         try:
@@ -760,7 +730,7 @@ async def close_consultation(
     application.status = "cancelled"
     application.updated_at = get_utc_time()
     # 同步关闭咨询占位 Task
-    await _close_consultation_task(db, application, reason="咨询已关闭", new_status="closed")
+    await close_consultation_task(db, application, reason="咨询已关闭", new_status="closed")
     await db.commit()
     return {"status": "cancelled"}
 
@@ -999,7 +969,7 @@ async def _approve_team_service_application(
         )
 
     # 关闭旧的咨询占位 Task（task_id 即将被新 Task 覆盖）
-    await _close_consultation_task(db, application, reason="咨询已转为正式订单")
+    await close_consultation_task(db, application, reason="咨询已转为正式订单")
 
     # 12. 更新 application
     application.status = "approved"
@@ -1096,7 +1066,7 @@ async def reject_application(
     application.rejected_at = get_utc_time()
     application.updated_at = get_utc_time()
     # 同步关闭咨询占位 Task
-    await _close_consultation_task(db, application, reason="申请已被拒绝")
+    await close_consultation_task(db, application, reason="申请已被拒绝")
     await db.commit()
     return {"status": "rejected"}
 
