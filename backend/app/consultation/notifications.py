@@ -2,7 +2,9 @@
 咨询通知双语模板。
 
 所有咨询相关的系统消息文案在此集中,供路由/scheduled tasks 调用。
-返回 dict,字段与 messages 表 content_zh / content_en 对齐。
+返回 dict,content_zh 写入目标表的主 content 字段;
+content_en 按表不同处理: `notifications` 表有 content_en 列直接写入,
+`messages` 表无此列,需包装进 meta JSON (例如 meta["content_en"] = ...)。
 
 当前涵盖: consultation_submitted / consultation_closed / consultation_stale_auto_closed。
 
