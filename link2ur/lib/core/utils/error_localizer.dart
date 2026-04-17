@@ -384,6 +384,12 @@ class ErrorLocalizer {
         return context.l10n.expertServiceUpdated;
       case 'expertServiceDeleted':
         return context.l10n.expertServiceDeleted;
+      case 'expertServiceActivated':
+        return context.l10n.expertServiceActivated;
+      case 'expertServiceDeactivated':
+        return context.l10n.expertServiceDeactivated;
+      case 'expert_dashboard_load_my_tasks_failed':
+        return context.l10n.expertMyTasksEmpty;
       case 'expertTimeSlotCreated':
         return context.l10n.expertTimeSlotCreated;
       case 'expertTimeSlotDeleted':
@@ -555,6 +561,10 @@ class ErrorLocalizer {
         return context.l10n.errorPackageAlreadyReleased;
       case 'package_cancelled':
         return context.l10n.errorPackageCancelled;
+      case 'package_refunded':
+        return context.l10n.errorPackageRefunded;
+      case 'sub_service_deleted':
+        return context.l10n.errorSubServiceDeleted;
       case 'package_not_active':
         return context.l10n.errorPackageNotActive;
       case 'package_not_reviewable':
