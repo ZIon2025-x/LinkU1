@@ -33,6 +33,8 @@ async def get_discovery_feed(
     page: int = Query(1, ge=1, description="页码"),
     limit: int = Query(20, ge=1, le=50, description="每页数量"),
     seed: Optional[int] = Query(None, description="随机种子，保证分页结果一致；首次请求不传则自动生成"),
+    latitude: Optional[float] = Query(None, ge=-90, le=90, description="用户当前纬度（GPS）"),
+    longitude: Optional[float] = Query(None, ge=-180, le=180, description="用户当前经度（GPS）"),
     request: Request = None,
     current_user: Optional[models.User] = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_async_db_dependency),
@@ -69,11 +71,21 @@ async def get_discovery_feed(
     # Optionally get recommendation scores + user preferences for logged-in users
     recommendation_scores = None
     user_preferred_categories = []
+    user_lat = latitude
+    user_lng = longitude
     if current_user:
+        # 用户没传 GPS 坐标时，尝试用 residence_city 做文本级 location 匹配
+        user_location = None
+        if user_lat is None and current_user.residence_city:
+            user_location = current_user.residence_city
         try:
             import asyncio
             recommendation_scores = await asyncio.wait_for(
-                db.run_sync(lambda session: _get_recommendation_scores_sync(session, current_user)),
+                db.run_sync(lambda session: _get_recommendation_scores_sync(
+                    session, current_user.id,
+                    latitude=user_lat, longitude=user_lng,
+                    location=user_location,
+                )),
                 timeout=0.5,  # 500ms timeout
             )
         except Exception as e:
@@ -794,13 +806,24 @@ async def _fetch_expert_services(db: AsyncSession, limit: int) -> list:
     return items
 
 
-def _get_recommendation_scores_sync(session, user) -> dict:
+def _get_recommendation_scores_sync(
+    session, user_id: str,
+    latitude: float = None, longitude: float = None,
+    location: str = None,
+) -> dict:
     """Get recommendation scores (SYNC — called via db.run_sync).
     Returns {task_id: (score, reason)} or empty dict.
     """
     try:
         from app.task_recommendation import get_task_recommendations
-        recs = get_task_recommendations(user, db=session, limit=50)
+        recs = get_task_recommendations(
+            db=session,
+            user_id=user_id,
+            limit=50,
+            latitude=latitude,
+            longitude=longitude,
+            location=location,
+        )
         return {
             r["task_id"]: (r.get("score", 0), "；".join(r.get("reasons", [])))
             for r in recs

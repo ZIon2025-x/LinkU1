@@ -16,10 +16,13 @@ class DiscoveryRepository {
 
   /// 获取发现 Feed
   /// [seed] 随机种子，翻页时回传保证排序一致；首次加载不传
+  /// [latitude]/[longitude] GPS 坐标，用于地理位置个性化推荐
   Future<DiscoveryFeedResponse> getFeed({
     int page = 1,
     int limit = 20,
     int? seed,
+    double? latitude,
+    double? longitude,
   }) async {
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.discoveryFeed,
@@ -27,6 +30,8 @@ class DiscoveryRepository {
         'page': page,
         'limit': limit,
         if (seed != null) 'seed': seed,
+        if (latitude != null) 'latitude': latitude,
+        if (longitude != null) 'longitude': longitude,
       },
     );
     if (!response.isSuccess || response.data == null) {
