@@ -152,6 +152,12 @@ def _derive_max_participants(body: TeamActivityCreate) -> int:
             return body.draw_participant_count
         return body.max_participants or (body.prize_count * 10)
 
+    # standard — max_participants is required
+    if not body.max_participants:
+        raise HTTPException(status_code=422, detail={
+            "error_code": "max_participants_required",
+            "message": "max_participants is required for standard activities",
+        })
     return body.max_participants
 
 
@@ -321,6 +327,11 @@ def _validate_draw_request(activity: models.Activity):
         raise HTTPException(status_code=400, detail={
             "error_code": "already_drawn",
             "message": "This activity has already been drawn",
+        })
+    if activity.status != "open":
+        raise HTTPException(status_code=400, detail={
+            "error_code": "activity_not_open",
+            "message": "Activity must be open to draw",
         })
 
 

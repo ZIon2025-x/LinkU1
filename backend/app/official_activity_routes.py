@@ -117,14 +117,22 @@ async def apply_official_activity(
         )
         pending_count = count_result.scalar() or 0
         if pending_count >= activity.draw_participant_count:
-            from app.draw_logic import perform_draw_async
-            try:
-                await perform_draw_async(db, activity)
-            except Exception:
-                import logging
-                logging.getLogger(__name__).error(
-                    f"by_count auto-draw failed for activity {activity_id}", exc_info=True
-                )
+            # Re-fetch with row lock to prevent concurrent draws
+            locked_result = await db.execute(
+                select(models.Activity)
+                .where(models.Activity.id == activity_id)
+                .with_for_update()
+            )
+            locked_activity = locked_result.scalar_one_or_none()
+            if locked_activity and not locked_activity.is_drawn:
+                from app.draw_logic import perform_draw_async
+                try:
+                    await perform_draw_async(db, locked_activity)
+                except Exception:
+                    import logging
+                    logging.getLogger(__name__).error(
+                        f"by_count auto-draw failed for activity {activity_id}", exc_info=True
+                    )
 
     return {
         "success": True,

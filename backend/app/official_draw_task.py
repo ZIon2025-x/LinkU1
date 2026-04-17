@@ -2,7 +2,6 @@
 官方活动自动开奖 - task scheduler 同步任务
 （保留 Celery 接口注释，便于切换）
 """
-import random
 import logging
 from sqlalchemy import select
 from sqlalchemy.orm import Session
