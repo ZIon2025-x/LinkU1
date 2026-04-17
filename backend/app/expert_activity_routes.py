@@ -308,3 +308,51 @@ async def create_team_activity(
         "owner_type": "expert",
         "owner_id": expert.id,
     }
+
+
+def _validate_draw_request(activity: models.Activity):
+    """Validate that an activity can be drawn."""
+    if activity.activity_type != "lottery":
+        raise HTTPException(status_code=400, detail={
+            "error_code": "not_lottery",
+            "message": "Only lottery activities can be drawn",
+        })
+    if activity.is_drawn:
+        raise HTTPException(status_code=400, detail={
+            "error_code": "already_drawn",
+            "message": "This activity has already been drawn",
+        })
+
+
+@router.post("/{expert_id}/activities/{activity_id}/draw")
+async def expert_manual_draw(
+    expert_id: str,
+    activity_id: int,
+    db: AsyncSession = Depends(get_async_db_dependency),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+):
+    """Manually trigger lottery draw for an expert team activity."""
+    await _get_member_or_403(
+        db, expert_id, current_user.id, required_roles=['owner', 'admin']
+    )
+
+    result = await db.execute(
+        select(models.Activity).where(
+            models.Activity.id == activity_id,
+            models.Activity.owner_type == 'expert',
+            models.Activity.owner_id == expert_id,
+        )
+    )
+    activity = result.scalar_one_or_none()
+    if not activity:
+        raise HTTPException(status_code=404, detail="Activity not found")
+
+    _validate_draw_request(activity)
+
+    from app.draw_logic import perform_draw_async
+    winners = await perform_draw_async(db, activity)
+    return {
+        "success": True,
+        "winner_count": len(winners),
+        "winners": winners,
+    }
