@@ -4647,6 +4647,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskStatusPriceAgreed => 'Price Agreed';
 
   @override
+  String get taskStatusClosed => 'Closed';
+
+  @override
   String get applicationStatusConsulting => 'Consulting';
 
   @override

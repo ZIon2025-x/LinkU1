@@ -8595,6 +8595,12 @@ abstract class AppLocalizations {
   /// **'Price Agreed'**
   String get taskStatusPriceAgreed;
 
+  /// No description provided for @taskStatusClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'Closed'**
+  String get taskStatusClosed;
+
   /// No description provided for @applicationStatusConsulting.
   ///
   /// In en, this message translates to:

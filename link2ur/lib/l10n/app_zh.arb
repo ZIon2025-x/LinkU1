@@ -2422,6 +2422,7 @@
   "taskStatusConsulting": "咨询中",
   "taskStatusNegotiating": "议价中",
   "taskStatusPriceAgreed": "已达成价格",
+  "taskStatusClosed": "已关闭",
   "applicationStatusConsulting": "咨询中",
   "applicationStatusConsultingDesc": "您正在与对方咨询沟通中",
   "applicationStatusNegotiating": "议价中",

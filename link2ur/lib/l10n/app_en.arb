@@ -2088,6 +2088,7 @@
   "taskStatusConsulting": "Consulting",
   "taskStatusNegotiating": "Negotiating",
   "taskStatusPriceAgreed": "Price Agreed",
+  "taskStatusClosed": "Closed",
   "applicationStatusConsulting": "Consulting",
   "applicationStatusConsultingDesc": "You are in a consultation with the other party",
   "applicationStatusNegotiating": "Negotiating Price",
