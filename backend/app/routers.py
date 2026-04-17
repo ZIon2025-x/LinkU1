@@ -7001,7 +7001,129 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         task_id = _safe_int_metadata(payment_intent, "task_id")
         
         logger.info(f"Payment intent succeeded: {payment_intent_id}, task_id: {task_id}, amount: {payment_intent.get('amount')}")
-        
+
+        # ── Activity apply payment (no task_id, has activity_apply metadata) ──
+        metadata = payment_intent.get("metadata", {})
+        if metadata.get("activity_apply") == "true" and not task_id:
+            _act_id = _safe_int_metadata(payment_intent, "activity_id")
+            _act_user_id = metadata.get("user_id")
+            _act_expert_id = metadata.get("expert_id")
+            _act_expert_user_id = metadata.get("expert_user_id")
+
+            if _act_id and _act_user_id:
+                try:
+                    # Find payment_pending application
+                    _app_row = db.execute(
+                        select(models.OfficialActivityApplication).where(
+                            models.OfficialActivityApplication.activity_id == _act_id,
+                            models.OfficialActivityApplication.user_id == _act_user_id,
+                            models.OfficialActivityApplication.payment_intent_id == payment_intent_id,
+                            models.OfficialActivityApplication.status == "payment_pending",
+                        ).with_for_update()
+                    ).scalar_one_or_none()
+
+                    if _app_row:
+                        _act = db.execute(
+                            select(models.Activity).where(models.Activity.id == _act_id).with_for_update()
+                        ).scalar_one_or_none()
+
+                        if _act and _act.activity_type == "first_come":
+                            from sqlalchemy import func as _sa_func
+                            _attending = db.execute(
+                                select(_sa_func.count()).select_from(models.OfficialActivityApplication).where(
+                                    models.OfficialActivityApplication.activity_id == _act_id,
+                                    models.OfficialActivityApplication.status == "attending",
+                                )
+                            ).scalar() or 0
+                            if _attending >= (_act.prize_count or 0):
+                                # Full — refund
+                                try:
+                                    stripe.Refund.create(payment_intent=payment_intent_id)
+                                    logger.info(f"Activity {_act_id} full, refunded PI {payment_intent_id}")
+                                except Exception as _ref_err:
+                                    logger.error(f"Activity refund failed for PI {payment_intent_id}: {_ref_err}")
+                                _app_row.status = "refunded"
+                            else:
+                                _app_row.status = "attending"
+                        elif _act and _act.activity_type == "lottery":
+                            _app_row.status = "pending"
+                        else:
+                            _app_row.status = "pending"
+
+                        _app_row.amount_paid = payment_intent.get("amount")
+
+                        # PaymentHistory
+                        from app.utils.fee_calculator import calculate_application_fee_pence as _calc_fee
+                        _amt = payment_intent.get("amount", 0)
+                        _fee = _calc_fee(_amt, task_source="expert_activity", task_type=getattr(_act, "task_type", None) if _act else None)
+                        _taker_amt = max(0, _amt - _fee)
+
+                        import uuid as _uuid
+                        _ph = models.PaymentHistory(
+                            order_no=f"ACT{_act_id}-{_uuid.uuid4().hex[:12]}",
+                            user_id=_act_user_id,
+                            payment_intent_id=payment_intent_id,
+                            payment_method="stripe",
+                            total_amount=_amt,
+                            stripe_amount=_amt,
+                            final_amount=_amt,
+                            currency=(_act.currency if _act else "GBP") or "GBP",
+                            status="succeeded",
+                            application_fee=_fee,
+                            escrow_amount=_taker_amt / 100.0,
+                            extra_metadata={"activity_id": _act_id, "activity_apply": True},
+                        )
+                        db.add(_ph)
+
+                        # PaymentTransfer for async payout
+                        if _app_row.status != "refunded" and _act_expert_id and _taker_amt > 0:
+                            _pt = models.PaymentTransfer(
+                                taker_id=_act_expert_user_id or _act_user_id,
+                                taker_expert_id=_act_expert_id,
+                                poster_id=_act_user_id,
+                                amount=_taker_amt / 100.0,
+                                currency=(_act.currency if _act else "GBP") or "GBP",
+                                status="pending",
+                                idempotency_key=f"act-{_act_id}-{payment_intent_id}",
+                                extra_metadata={"activity_id": _act_id, "payment_intent_id": payment_intent_id},
+                            )
+                            db.add(_pt)
+
+                        db.commit()
+                        logger.info(f"✅ Activity payment confirmed: activity={_act_id}, user={_act_user_id}, status={_app_row.status}")
+
+                        # by_count trigger (sync)
+                        if (
+                            _act and _act.activity_type == "lottery"
+                            and _act.draw_mode == "auto"
+                            and _act.draw_trigger in ("by_count", "both")
+                            and not _act.is_drawn
+                            and _act.draw_participant_count
+                        ):
+                            from sqlalchemy import func as _sa_func2
+                            _pend = db.execute(
+                                select(_sa_func2.count()).select_from(models.OfficialActivityApplication).where(
+                                    models.OfficialActivityApplication.activity_id == _act_id,
+                                    models.OfficialActivityApplication.status == "pending",
+                                )
+                            ).scalar() or 0
+                            if _pend >= _act.draw_participant_count:
+                                from app.draw_logic import perform_draw_sync
+                                try:
+                                    perform_draw_sync(db, _act)
+                                    logger.info(f"✅ by_count auto-draw triggered for activity {_act_id}")
+                                except Exception as _draw_err:
+                                    logger.error(f"by_count auto-draw failed: {_draw_err}")
+                    else:
+                        logger.warning(f"⚠️ Activity payment: no payment_pending app found for activity={_act_id}, user={_act_user_id}, pi={payment_intent_id}")
+
+                except Exception as _act_err:
+                    logger.error(f"❌ Activity payment webhook error: activity={_act_id}, error={_act_err}", exc_info=True)
+                    try:
+                        db.rollback()
+                    except Exception:
+                        pass
+
         if task_id:
             # 🔒 并发安全：使用 SELECT FOR UPDATE 锁定任务，防止并发webhook更新
             locked_task_query = select(models.Task).where(
