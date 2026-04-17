@@ -1356,6 +1356,8 @@ class _ActivityListTileState extends State<_ActivityListTile> {
     final l10n = context.l10n;
     final messenger = ScaffoldMessenger.of(context);
     final bloc = context.read<ExpertDashboardBloc>();
+    // Capture context-dependent references before async gap
+    String localizeErr(String? msg) => ErrorLocalizer.localize(context, msg);
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -1393,8 +1395,11 @@ class _ActivityListTileState extends State<_ActivityListTile> {
       }
     } catch (e) {
       if (mounted) {
+        final msg = e is Exception
+            ? e.toString().replaceFirst(RegExp(r'^Exception:\s*'), '')
+            : e.toString();
         messenger.showSnackBar(
-          SnackBar(content: Text(e.toString())),
+          SnackBar(content: Text(localizeErr(msg))),
         );
       }
     } finally {

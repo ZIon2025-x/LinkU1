@@ -207,6 +207,10 @@ async def list_team_activities(
 
         items.append({
             'id': a.id,
+            'expert_id': a.expert_id,
+            'expert_service_id': a.expert_service_id,
+            'owner_type': a.owner_type,
+            'owner_id': a.owner_id,
             'title': a.title,
             'title_en': a.title_en,
             'title_zh': a.title_zh,

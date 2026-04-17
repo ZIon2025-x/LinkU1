@@ -226,7 +226,13 @@ async def cancel_official_activity_application(
     db: AsyncSession = Depends(get_async_db_dependency),
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
 ):
-    """取消报名（截止前可取消）"""
+    """取消报名（截止前可取消）。
+
+    - payment_pending: cancel Stripe PaymentIntent, delete application
+    - attending (paid): block cancellation (参与费不退)
+    - pending (free lottery): delete application
+    - won/lost: block cancellation (已开奖)
+    """
     result = await db.execute(
         select(models.OfficialActivityApplication).where(
             models.OfficialActivityApplication.activity_id == activity_id,
@@ -238,6 +244,21 @@ async def cancel_official_activity_application(
         raise HTTPException(status_code=404, detail="未找到报名记录")
     if application.status in ("won", "lost"):
         raise HTTPException(status_code=400, detail="已开奖，无法取消")
+    if application.status == "refunded":
+        raise HTTPException(status_code=400, detail="已退款，无需取消")
+
+    # Paid & confirmed (attending with payment) — block cancellation per spec (参与费不退)
+    if application.status == "attending" and application.amount_paid and application.amount_paid > 0:
+        raise HTTPException(status_code=400, detail="付费活动报名后不可取消")
+
+    # payment_pending — cancel the Stripe PaymentIntent before deleting
+    if application.status == "payment_pending" and application.payment_intent_id:
+        try:
+            stripe.PaymentIntent.cancel(application.payment_intent_id)
+            logger.info(f"Cancelled PI {application.payment_intent_id} for activity {activity_id}")
+        except Exception as e:
+            logger.warning(f"Failed to cancel PI {application.payment_intent_id}: {e}")
+            # Still delete the application — PI will expire naturally
 
     await db.delete(application)
     await db.commit()
