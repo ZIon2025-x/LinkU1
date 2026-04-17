@@ -11546,6 +11546,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get nearbyLocationFailed => 'Location unavailable · showing London';
 
   @override
+  String get nearbyOpenSettings => 'Open Settings';
+
+  @override
   String get nearbySwitch => 'Switch';
 
   @override

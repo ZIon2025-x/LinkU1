@@ -5201,6 +5201,7 @@
   "nearbyCurrentLocation": "Current location: {city}",
   "@nearbyCurrentLocation": { "placeholders": { "city": { "type": "String" } } },
   "nearbyLocationFailed": "Location unavailable · showing London",
+  "nearbyOpenSettings": "Open Settings",
   "nearbySwitch": "Switch",
   "nearbyApplicants": "{count} applicants",
   "@nearbyApplicants": { "placeholders": { "count": { "type": "int" } } },

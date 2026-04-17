@@ -13,6 +13,7 @@ class _NearbyTabState extends State<_NearbyTab> {
   bool _locationLoading = false;
   String? _city; // 反向地理编码得到的城市名
   bool _locationFailed = false;
+  bool _permissionDeniedForever = false;
 
   // 缓存当前坐标，供切换半径时复用
   double _currentLat = _defaultLat;
@@ -48,13 +49,18 @@ class _NearbyTabState extends State<_NearbyTab> {
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
+        if (permission == LocationPermission.denied ||
+            permission == LocationPermission.deniedForever) {
+          if (mounted && permission == LocationPermission.deniedForever) {
+            setState(() => _permissionDeniedForever = true);
+          }
           _loadWithCoordinates(_defaultLat, _defaultLng);
           return;
         }
       }
 
       if (permission == LocationPermission.deniedForever) {
+        if (mounted) setState(() => _permissionDeniedForever = true);
         _loadWithCoordinates(_defaultLat, _defaultLng);
         return;
       }
@@ -151,6 +157,7 @@ class _NearbyTabState extends State<_NearbyTab> {
     setState(() {
       _locationLoading = false;
       _locationFailed = isDefault;
+      if (!isDefault) _permissionDeniedForever = false;
     });
     final bloc = context.read<HomeBloc>();
     bloc.add(HomeLoadNearby(
@@ -312,6 +319,7 @@ class _NearbyTabState extends State<_NearbyTab> {
                 city: _city,
                 onRefreshTap: _loadLocation,
                 locationFailed: _locationFailed,
+                permissionDeniedForever: _permissionDeniedForever,
               ),
               _NearbyRadiusSelector(
                 selectedRadius: state.nearbyRadius,
@@ -355,6 +363,7 @@ class _NearbyTabState extends State<_NearbyTab> {
                       city: _city,
                       onRefreshTap: _loadLocation,
                       locationFailed: _locationFailed,
+                      permissionDeniedForever: _permissionDeniedForever,
                     ),
                   ),
                   // Radius selector
@@ -501,11 +510,13 @@ class _NearbyLocationBar extends StatelessWidget {
     required this.city,
     required this.onRefreshTap,
     this.locationFailed = false,
+    this.permissionDeniedForever = false,
   });
 
   final String? city;
   final VoidCallback onRefreshTap;
   final bool locationFailed;
+  final bool permissionDeniedForever;
 
   @override
   Widget build(BuildContext context) {
@@ -541,14 +552,34 @@ class _NearbyLocationBar extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 6),
-          GestureDetector(
-            onTap: onRefreshTap,
-            child: const Icon(
-              Icons.my_location,
-              size: 14,
-              color: AppColors.primary,
+          if (permissionDeniedForever)
+            GestureDetector(
+              onTap: () => Geolocator.openAppSettings(),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  l10n.nearbyOpenSettings,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            )
+          else
+            GestureDetector(
+              onTap: onRefreshTap,
+              child: const Icon(
+                Icons.my_location,
+                size: 14,
+                color: AppColors.primary,
+              ),
             ),
-          ),
         ],
       ),
     );

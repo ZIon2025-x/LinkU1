@@ -21293,6 +21293,12 @@ abstract class AppLocalizations {
   /// **'Location unavailable · showing London'**
   String get nearbyLocationFailed;
 
+  /// No description provided for @nearbyOpenSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Settings'**
+  String get nearbyOpenSettings;
+
   /// No description provided for @nearbySwitch.
   ///
   /// In en, this message translates to:

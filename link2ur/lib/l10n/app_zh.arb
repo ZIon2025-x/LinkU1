@@ -5093,6 +5093,7 @@
   "nearbyCurrentLocation": "当前定位：{city}",
   "@nearbyCurrentLocation": { "placeholders": { "city": { "type": "String" } } },
   "nearbyLocationFailed": "定位不可用 · 显示伦敦附近",
+  "nearbyOpenSettings": "去设置",
   "nearbySwitch": "切换",
   "nearbyApplicants": "{count}人申请",
   "@nearbyApplicants": { "placeholders": { "count": { "type": "int" } } },
