@@ -4553,13 +4553,19 @@ async def flea_market_consult_close(
                 task.status = "cancelled"
 
             # 发送系统消息
+            from app.consultation.notifications import consultation_closed
+            _closed_msg = consultation_closed()
             system_msg = models.Message(
                 sender_id=None,
                 receiver_id=item.seller_id if is_buyer else purchase_req.buyer_id,
-                content="咨询已关闭",
+                content=_closed_msg["content_zh"],
                 task_id=purchase_req.task_id,
                 message_type="system",
                 conversation_type="task",
+                meta=json.dumps({
+                    "system_action": "consultation_closed",
+                    "content_en": _closed_msg["content_en"],
+                }),
             )
             db.add(system_msg)
 

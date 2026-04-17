@@ -13,6 +13,7 @@ from app.consultation.helpers import (
     create_placeholder_task,
     resolve_taker_from_service,
 )
+from app.consultation.notifications import consultation_submitted
 from app.deps import get_async_db_dependency
 from app.async_routers import (
     get_current_user_secure_async_csrf,
@@ -55,8 +56,11 @@ async def _notify_team_admins_new_application(
         manager_ids = [r[0] for r in managers_result.all()]
         if not manager_ids:
             return
-        content_zh = f"用户「{applicant_name}」对服务「{service_name}」发起了新申请,请前往达人后台处理"
-        content_en = f"「{applicant_name}」submitted a new request for service「{service_name}」"
+        _msg = consultation_submitted(
+            applicant_name=applicant_name, service_name=service_name
+        )
+        content_zh = _msg["content_zh"] + ",请前往达人后台处理"
+        content_en = _msg["content_en"]
         for mid in manager_ids:
             await AsyncNotificationCRUD.create_notification(
                 db=db,

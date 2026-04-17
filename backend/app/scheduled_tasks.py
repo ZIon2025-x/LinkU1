@@ -915,7 +915,9 @@ def close_stale_consultations(db: Session, inactive_days: int = 14):
     不活跃 = 该 Task 下最后一条消息时间距今超过阈值。
     无消息则以 Task.created_at 为准。
     """
+    import json
     from sqlalchemy import select, func
+    from app.consultation.notifications import consultation_stale_auto_closed
     try:
         cutoff = get_utc_time() - timedelta(days=inactive_days)
 
@@ -946,18 +948,23 @@ def close_stale_consultations(db: Session, inactive_days: int = 14):
             return
 
         closed_count = 0
+        _stale_msg = consultation_stale_auto_closed(days=inactive_days)
         for task in stale_tasks:
             task.status = "closed"
 
-            # 系统消息
+            # 系统消息（中文进 content,英文通过 meta.content_en 承载,与其他咨询系统消息对齐）
             receiver_id = task.taker_id or task.poster_id
             system_msg = models.Message(
                 sender_id=None,
                 receiver_id=receiver_id,
-                content=f"咨询已自动关闭（{inactive_days}天未活跃）",
+                content=_stale_msg["content_zh"],
                 task_id=task.id,
                 message_type="system",
                 conversation_type="task",
+                meta=json.dumps({
+                    "system_action": "consultation_stale_auto_closed",
+                    "content_en": _stale_msg["content_en"],
+                }),
             )
             db.add(system_msg)
 
