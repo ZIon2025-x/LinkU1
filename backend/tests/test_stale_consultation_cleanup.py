@@ -75,7 +75,9 @@ def _make_mock_db(stale_tasks=None, service_app=None, purchase_request=None):
             res.scalar_one_or_none = MagicMock(return_value=None)
         results_queue.append(res)
 
-    db.execute = MagicMock(side_effect=results_queue if results_queue else [MagicMock()])
+    # 不再给 execute 兜底返回 MagicMock:空 stale_tasks 时 execute 本就不该被调用,
+    # 任何意外调用都应明确触发 StopIteration 让测试失败。
+    db.execute = MagicMock(side_effect=results_queue)
     db.add = MagicMock()
     db.commit = MagicMock()
     db.rollback = MagicMock()
@@ -113,29 +115,67 @@ def test_none_inactive_days_reads_from_config():
 
 
 # -----------------------------------------------------------------------------
-# 3) 显式传 inactive_days 时使用该值(不查 Config)
+# 3) 显式传 inactive_days 时使用该值(不查 Config) — 通过写入的 system message
+#    内容断言,确保 days 真的流入了模板;若函数忽略参数走 Config=999,测试会失败。
 # -----------------------------------------------------------------------------
 def test_custom_inactive_days_overrides_config():
-    """显式传入 inactive_days 时应使用该值,哪怕 Config 另有设置。"""
+    """传入 inactive_days 参数时,Config 值被忽略,参数值流入 system message 内容。"""
+    import json
     from app import scheduled_tasks
 
-    db = _make_mock_db(stale_tasks=[])
+    task = _make_mock_task(id=42, task_source="consultation")
+    sa = MagicMock()
+    sa.status = "consulting"
+    db = _make_mock_db(stale_tasks=[task], service_app=sa)
 
     with patch.object(scheduled_tasks, "get_utc_time",
                       return_value=datetime(2026, 1, 20, tzinfo=timezone.utc)), \
          patch("app.config.Config.CONSULTATION_STALE_DAYS", 999):
-        # 显式传 7 天 — Config 的 999 不应生效
+        # 显式传 7 — Config 的 999 不应生效
         scheduled_tasks.close_stale_consultations(db, inactive_days=7)
 
-    # 不崩溃 + 没有 stale 任务时不 commit
-    db.commit.assert_not_called()
+    # 收集所有 db.add 的入参,筛出 Message-like 对象(带 content 属性)
+    added = [c.args[0] for c in db.add.call_args_list]
+    messages = [a for a in added if hasattr(a, "content") and isinstance(a.content, str)]
+    assert messages, f"Expected at least one Message to be inserted, got adds={added!r}"
+
+    # 断言 days=7 确实出现在中文 content 或英文 meta.content_en 里
+    def _found_seven(m):
+        if "7 天" in m.content or "7 days" in m.content:
+            return True
+        meta_raw = getattr(m, "meta", None)
+        if meta_raw:
+            meta_obj = json.loads(meta_raw) if isinstance(meta_raw, str) else meta_raw
+            en = meta_obj.get("content_en", "")
+            if "7 days" in en or "7 天" in en:
+                return True
+        return False
+
+    assert any(_found_seven(m) for m in messages), (
+        f"Expected days=7 to appear in message content/meta, got: "
+        f"{[(m.content, getattr(m, 'meta', None)) for m in messages]}"
+    )
+
+    # 断言 Config 的 999 没有泄漏到任何 message 内容或 meta 里
+    def _leaks_config(m):
+        if "999" in m.content:
+            return True
+        meta_raw = getattr(m, "meta", None)
+        if meta_raw and "999" in (meta_raw if isinstance(meta_raw, str) else json.dumps(meta_raw)):
+            return True
+        return False
+
+    assert not any(_leaks_config(m) for m in messages), (
+        "Config value (999) leaked into message content/meta; "
+        "function likely read Config instead of the explicit inactive_days arg"
+    )
 
 
 # -----------------------------------------------------------------------------
 # 4) 无 stale tasks 时函数直接 return,不 commit / 不 add
 # -----------------------------------------------------------------------------
 def test_no_stale_tasks_skips_commit():
-    """stale_tasks 为空时函数应 early-return。"""
+    """stale_tasks 为空时函数应 early-return,不做任何副作用。"""
     from app import scheduled_tasks
 
     db = _make_mock_db(stale_tasks=[])
@@ -144,13 +184,21 @@ def test_no_stale_tasks_skips_commit():
 
     db.commit.assert_not_called()
     db.add.assert_not_called()
+    # 锁定"无 stale 任务时不再发起 SA/PR 查询"的优化:
+    # 若未来有人在 early-return 前加了无条件 execute,此断言会立即失败。
+    db.execute.assert_not_called()
 
 
 # -----------------------------------------------------------------------------
 # 5) 存在 stale task 时:flip status + db.add(system message) + commit
 # -----------------------------------------------------------------------------
 def test_stale_tasks_are_closed_with_system_message():
-    """有 stale task 时:task.status 翻为 closed、插入 system message、commit 被调用。"""
+    """有 stale task 时:task.status 翻为 closed、插入结构正确的 system message、commit 被调用。
+
+    除了 status/add/commit 的粗粒度断言,还要断言 Message 各字段确实按约定设置,
+    以防未来有人把 Message 构造逻辑拆坏却让测试蒙混过关。
+    """
+    import json
     from app import scheduled_tasks
 
     task = _make_mock_task(id=42, task_source="consultation")
@@ -165,6 +213,39 @@ def test_stale_tasks_are_closed_with_system_message():
     assert sa.status == "cancelled", "Linked ServiceApplication should be cancelled"
     assert db.add.called, "Expected system Message insertion via db.add"
     db.commit.assert_called_once()
+
+    # 断言 Message shape
+    added = [c.args[0] for c in db.add.call_args_list]
+    messages = [a for a in added if hasattr(a, "message_type")]
+    assert len(messages) >= 1, f"Expected at least one Message inserted, got: {added!r}"
+    msg = messages[0]
+    assert msg.task_id == 42, f"msg.task_id should be 42, got {msg.task_id!r}"
+    assert msg.message_type == "system", f"msg.message_type should be 'system', got {msg.message_type!r}"
+    assert msg.conversation_type == "task", (
+        f"msg.conversation_type should be 'task', got {msg.conversation_type!r}"
+    )
+    # receiver 是 taker (fallback 到 poster),_make_mock_task 默认 taker='u0000002'
+    assert msg.receiver_id in ("u0000001", "u0000002"), (
+        f"msg.receiver_id should be taker or poster, got {msg.receiver_id!r}"
+    )
+    # 系统消息发送方为 NULL(系统)
+    assert msg.sender_id is None, f"system msg.sender_id should be None, got {msg.sender_id!r}"
+
+    # content 应提及 14 天 / 自动关闭,证明用的是 consultation_stale_auto_closed 模板
+    assert "14" in msg.content and "自动关闭" in msg.content, (
+        f"content should mention days=14 and '自动关闭', got: {msg.content!r}"
+    )
+
+    # meta 存 JSON 字符串,应包含 content_en(英文承载在 meta,与其他咨询系统消息对齐)
+    assert msg.meta, "Expected msg.meta to carry content_en + system_action"
+    meta_obj = json.loads(msg.meta) if isinstance(msg.meta, str) else msg.meta
+    assert "content_en" in meta_obj, f"Expected meta.content_en, got: {meta_obj!r}"
+    assert "14 days" in meta_obj["content_en"], (
+        f"meta.content_en should mention 14 days, got: {meta_obj['content_en']!r}"
+    )
+    assert meta_obj.get("system_action") == "consultation_stale_auto_closed", (
+        f"Expected system_action='consultation_stale_auto_closed', got: {meta_obj!r}"
+    )
 
 
 # -----------------------------------------------------------------------------
