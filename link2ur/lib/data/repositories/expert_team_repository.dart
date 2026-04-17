@@ -423,6 +423,18 @@ class ExpertTeamRepository {
     );
     return response.data as Map<String, dynamic>;
   }
+
+  /// 达人手动开奖。
+  Future<Map<String, dynamic>> drawTeamActivity(
+    String expertId,
+    int activityId,
+  ) async {
+    final response = await _apiService.post(
+      ApiEndpoints.expertTeamActivityDraw(expertId, activityId),
+      data: {},
+    );
+    return response.data as Map<String, dynamic>;
+  }
 }
 
 class ExpertTeamException extends AppException {
