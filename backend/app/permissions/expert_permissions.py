@@ -6,6 +6,7 @@ Usage:
     # 或
     role = await require_team_role(db, expert_id, user.id, minimum="admin")
 """
+import logging
 from contextvars import ContextVar
 from typing import Literal, Optional
 
@@ -14,12 +15,15 @@ from sqlalchemy import select
 
 from app import models
 
+logger = logging.getLogger(__name__)
+
 TeamRole = Literal["owner", "admin", "member"]
 
 _ROLE_HIERARCHY: dict[TeamRole, int] = {"member": 1, "admin": 2, "owner": 3}
 
 # per-request cache: key = (expert_id, user_id), value = role or None
-_role_cache: ContextVar[Optional[dict[tuple[str, int], Optional[TeamRole]]]] = (
+# 注意: user_id 在整个平台是 8 位字符串 (见 ExpertMember.user_id = String(8))
+_role_cache: ContextVar[Optional[dict[tuple[str, str], Optional[TeamRole]]]] = (
     ContextVar("_expert_role_cache", default=None)
 )
 
@@ -29,7 +33,7 @@ def reset_role_cache() -> None:
     _role_cache.set({})
 
 
-def _cache() -> dict[tuple[str, int], Optional[TeamRole]]:
+def _cache() -> dict[tuple[str, str], Optional[TeamRole]]:
     c = _role_cache.get()
     if c is None:
         c = {}
@@ -37,7 +41,7 @@ def _cache() -> dict[tuple[str, int], Optional[TeamRole]]:
     return c
 
 
-async def _query_team_role(db, expert_id: str, user_id: int) -> Optional[TeamRole]:
+async def _query_team_role(db, expert_id: str, user_id: str) -> Optional[TeamRole]:
     """
     实际 DB 查询(不走缓存)。
     查 ExpertMember 表,对于 owner 也通过 ExpertMember.role='owner' 行识别。
@@ -51,13 +55,18 @@ async def _query_team_role(db, expert_id: str, user_id: int) -> Optional[TeamRol
     member = result.scalar_one_or_none()
     if member is None:
         return None
-    role = (member.role or "").lower()
+    role = (member.role or "").strip().lower()
     if role not in ("owner", "admin", "member"):
-        return "member"
+        logger.warning(
+            "ExpertMember %s has unknown role %r; treating as non-member",
+            getattr(member, "id", (expert_id, user_id)),
+            member.role,
+        )
+        return None
     return role  # type: ignore[return-value]
 
 
-async def get_team_role(db, expert_id: str, user_id: int) -> Optional[TeamRole]:
+async def get_team_role(db, expert_id: str, user_id: str) -> Optional[TeamRole]:
     """返回当前用户在团队内的角色;非成员返回 None。结果在请求上下文内缓存。"""
     cache = _cache()
     key = (expert_id, user_id)
@@ -71,7 +80,7 @@ async def get_team_role(db, expert_id: str, user_id: int) -> Optional[TeamRole]:
 async def require_team_role(
     db,
     expert_id: str,
-    user_id: int,
+    user_id: str,
     *,
     minimum: TeamRole,
 ) -> TeamRole:
@@ -95,7 +104,8 @@ async def require_team_role(
             status_code=403,
             detail={
                 "error_code": "INSUFFICIENT_TEAM_ROLE",
-                "message": f"该操作需要 {minimum} 及以上角色",
+                "message": "角色权限不足",
+                "required_role": minimum,
             },
         )
     return role
