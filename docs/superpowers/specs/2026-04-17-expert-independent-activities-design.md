@@ -73,6 +73,15 @@ if activity_type in ('lottery', 'first_come'):
             draw_trigger 必填（'by_time' | 'by_count' | 'both'）
             if draw_trigger in ('by_time', 'both'): draw_at 必填
             if draw_trigger in ('by_count', 'both'): draw_participant_count 必填，> prize_count
+    # max_participants 自动推导：
+    if activity_type == 'first_come':
+        max_participants = prize_count
+    elif activity_type == 'lottery':
+        if draw_trigger in ('by_count', 'both'):
+            max_participants = draw_participant_count
+        else:  # by_time 或 manual
+            max_participants = 用户传值 or prize_count * 10
+
     if expert_service_id 有值:
         校验服务归属和 active 状态，价格可从服务继承
     else:
@@ -177,7 +186,7 @@ POST /api/experts/{expert_id}/activities/{activity_id}/draw
 | draw_at | by_time/both | 自动开奖时间 |
 | draw_participant_count | by_count/both | 满多少人开奖 |
 | deadline | Y | 报名截止时间 |
-| max_participants | Y | 最大报名人数（默认 prize_count * 10） |
+| max_participants | N | 自动推导（见下），lottery by_time/manual 可手动覆盖 |
 | images | N | 活动图片 |
 | original_price_per_participant | N | 参与费（不填则免费） |
 | expert_service_id | N | 可选关联服务 |
