@@ -7092,12 +7092,11 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                         db.commit()
                         logger.info(f"✅ Activity payment confirmed: activity={_act_id}, user={_act_user_id}, status={_app_row.status}")
 
-                        # by_count trigger (sync)
+                        # by_count trigger (sync) — re-lock activity to prevent race
                         if (
                             _act and _act.activity_type == "lottery"
                             and _act.draw_mode == "auto"
                             and _act.draw_trigger in ("by_count", "both")
-                            and not _act.is_drawn
                             and _act.draw_participant_count
                         ):
                             from sqlalchemy import func as _sa_func2
@@ -7108,12 +7107,17 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                                 )
                             ).scalar() or 0
                             if _pend >= _act.draw_participant_count:
-                                from app.draw_logic import perform_draw_sync
-                                try:
-                                    perform_draw_sync(db, _act)
-                                    logger.info(f"✅ by_count auto-draw triggered for activity {_act_id}")
-                                except Exception as _draw_err:
-                                    logger.error(f"by_count auto-draw failed: {_draw_err}")
+                                # Re-lock activity after commit to prevent concurrent draws
+                                _act_locked = db.execute(
+                                    select(models.Activity).where(models.Activity.id == _act_id).with_for_update()
+                                ).scalar_one_or_none()
+                                if _act_locked and not _act_locked.is_drawn:
+                                    from app.draw_logic import perform_draw_sync
+                                    try:
+                                        perform_draw_sync(db, _act_locked)
+                                        logger.info(f"✅ by_count auto-draw triggered for activity {_act_id}")
+                                    except Exception as _draw_err:
+                                        logger.error(f"by_count auto-draw failed: {_draw_err}")
                     else:
                         logger.warning(f"⚠️ Activity payment: no payment_pending app found for activity={_act_id}, user={_act_user_id}, pi={payment_intent_id}")
 

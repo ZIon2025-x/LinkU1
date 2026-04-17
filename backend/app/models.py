@@ -3127,7 +3127,7 @@ class PaymentHistory(Base):
     
     id = Column(BigInteger, primary_key=True, index=True)
     order_no = Column(String(32), unique=True, nullable=False, index=True)  # 业务订单号（如 PAY20260209143052A3B7K）
-    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=True)  # nullable for activity payments (no task)
     user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)  # 支付者ID
     payment_intent_id = Column(String(255), nullable=True)  # Stripe Payment Intent ID
     payment_method = Column(String(20), nullable=False)  # stripe（积分不能作为支付手段）

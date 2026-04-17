@@ -3,7 +3,7 @@
 （保留 Celery 接口注释，便于切换）
 """
 import logging
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from sqlalchemy.orm import Session
 
 from app import models
@@ -29,6 +29,11 @@ def run_auto_draws(db: Session):
             models.Activity.is_drawn == False,
             models.Activity.status == "open",
             models.Activity.draw_at <= now,
+            # Only by_time/both/NULL(legacy) — by_count triggers in apply endpoint
+            or_(
+                models.Activity.draw_trigger.in_(["by_time", "both"]),
+                models.Activity.draw_trigger.is_(None),
+            ),
         )
     ).scalars().all()
 
