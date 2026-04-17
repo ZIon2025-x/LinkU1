@@ -558,9 +558,16 @@ export const reviewTaskExpertApplication = async (applicationId: number, data: {
   return res.data;
 };
 
-export const createExpertFromApplication = async (applicationId: number) => {
+export const createExpertFromApplication = async (
+  applicationId: number,
+  expertId?: string,
+) => {
   // This still uses old endpoint — expert feature toggle uses expert_id, not application_id
-  const res = await api.post(`/api/admin/task-expert-applications/${applicationId}/create-featured-expert`);
+  const res = await api.post(
+    `/api/admin/task-expert-applications/${applicationId}/create-featured-expert`,
+    null,
+    expertId ? { params: { expert_id: expertId } } : undefined,
+  );
   return res.data;
 };
 

@@ -590,13 +590,49 @@ const ExpertManagement: React.FC = () => {
     });
   };
 
-  const handleCreateFeatured = async (applicationId: number) => {
+  const handleCreateFeatured = async (applicationId: number, expertId?: string) => {
     try {
-      await createExpertFromApplication(applicationId);
+      await createExpertFromApplication(applicationId, expertId);
       message.success('已创建特色任务达人');
       applicationsTable.refresh();
       expertsTable.refresh();
     } catch (error: any) {
+      const detail = error?.response?.data?.detail;
+      const isAmbiguous =
+        error?.response?.status === 422 &&
+        detail &&
+        typeof detail === 'object' &&
+        detail.error_code === 'ambiguous_expert_team' &&
+        Array.isArray(detail.candidates);
+
+      if (isAmbiguous && !expertId) {
+        let selected: string | undefined = detail.candidates[0];
+        Modal.confirm({
+          title: '申请人拥有多个团队',
+          content: (
+            <div>
+              <p style={{ marginTop: 0 }}>请选择要设为精选的团队 ID：</p>
+              <Select
+                defaultValue={selected}
+                style={{ width: '100%' }}
+                onChange={(val: string) => {
+                  selected = val;
+                }}
+                options={detail.candidates.map((id: string) => ({ label: id, value: id }))}
+              />
+            </div>
+          ),
+          okText: '确认',
+          cancelText: '取消',
+          onOk: () => {
+            if (selected) {
+              return handleCreateFeatured(applicationId, selected);
+            }
+          },
+        });
+        return;
+      }
+
       message.error(getErrorMessage(error));
     }
   };

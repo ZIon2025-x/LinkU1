@@ -268,6 +268,8 @@ class TaskExpert extends Equatable {
     DateTime? createdAt,
     bool? isOfficial,
     String? officialBadge,
+    bool? isFollowing,
+    bool? isOpen,
   }) {
     return TaskExpert(
       id: id ?? this.id,
@@ -302,6 +304,8 @@ class TaskExpert extends Equatable {
       createdAt: createdAt ?? this.createdAt,
       isOfficial: isOfficial ?? this.isOfficial,
       officialBadge: officialBadge ?? this.officialBadge,
+      isFollowing: isFollowing ?? this.isFollowing,
+      isOpen: isOpen ?? this.isOpen,
     );
   }
 
