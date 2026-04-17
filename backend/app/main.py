@@ -181,6 +181,17 @@ app.middleware("http")(security_headers_middleware)
 from app.admin_security_middleware import admin_security_middleware
 app.middleware("http")(admin_security_middleware)
 
+# 权限缓存重置中间件 — 在每个请求开始时清空 request-scoped 团队角色缓存
+# 放在其他 @app.middleware("http") 之前，确保 cache 在所有路由处理前被重置
+from app.permissions import reset_role_cache
+
+
+@app.middleware("http")
+async def _reset_permission_cache_middleware(request: Request, call_next):
+    reset_role_cache()
+    return await call_next(request)
+
+
 # 安全监控中间件（纯异步实现，仅使用内存数据结构，无 DB 依赖）
 @app.middleware("http")
 async def security_monitoring_middleware(request: Request, call_next):
