@@ -945,7 +945,7 @@ class _NearbyTagChip extends StatelessWidget {
 
 /// Triggers load-more when scrolled into view
 class _NearbyLoadMoreTrigger extends StatefulWidget {
-  const _NearbyLoadMoreTrigger({required this.onVisible});
+  const _NearbyLoadMoreTrigger({super.key, required this.onVisible});
 
   final VoidCallback onVisible;
 
