@@ -16,6 +16,7 @@ import '../../../data/repositories/personal_service_repository.dart';
 import '../../../data/repositories/trending_search_repository.dart';
 import '../../../core/utils/cache_manager.dart';
 import '../../../core/utils/logger.dart';
+import '../../../data/services/location_city_service.dart';
 import 'home_event.dart';
 import 'home_state.dart';
 
@@ -391,8 +392,12 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     emit(state.copyWith(isLoadingDiscovery: true));
 
     try {
-      // 首次加载不传 seed，后端自动生成
-      final response = await _discoveryRepository.getFeed();
+      // 首次加载不传 seed，后端自动生成；传 GPS 坐标做地理个性化
+      final loc = LocationCityService.instance;
+      final response = await _discoveryRepository.getFeed(
+        latitude: loc.latitude,
+        longitude: loc.longitude,
+      );
       emit(state.copyWith(
         discoveryItems: response.items,
         hasMoreDiscovery: response.hasMore,
@@ -417,9 +422,12 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
     try {
       final nextPage = state.discoveryPage + 1;
+      final loc = LocationCityService.instance;
       final response = await _discoveryRepository.getFeed(
         page: nextPage,
         seed: state.discoverySeed,
+        latitude: loc.latitude,
+        longitude: loc.longitude,
       );
       // 按 ID 去重，防止后端混排偶尔跨页重复
       final existingIds = state.discoveryItems.map((e) => e.id).toSet();
@@ -566,8 +574,9 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         nearbyServicesPage: page,
         hasMoreNearbyServices: page * pageSize < total,
       ));
-    } catch (_) {
-      // Silent fail — nearby services are supplementary data
+    } catch (e) {
+      // Nearby services are supplementary — don't block UI, just log
+      AppLogger.warning('Nearby services load failed', e);
     }
   }
 
