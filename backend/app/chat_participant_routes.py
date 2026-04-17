@@ -82,7 +82,7 @@ async def invite_to_task_chat(
 
     # 检查被邀请人是否为达人团队的活跃成员
     # 查找任务关联的达人团队（通过 owner_type/owner_id 或 expert_creator_id）
-    expert_id_for_check = getattr(task, 'expert_creator_id', None)
+    expert_id_for_check = getattr(task, 'taker_expert_id', None) or getattr(task, 'expert_creator_id', None)
     if not expert_id_for_check:
         raise HTTPException(status_code=400, detail="该任务未关联达人团队，无法邀请成员")
     if expert_id_for_check:
@@ -127,7 +127,7 @@ async def invite_to_task_chat(
                 ))
 
     # 确保达人 Owner 始终在聊天中
-    expert_creator_id = getattr(task, 'expert_creator_id', None)
+    expert_creator_id = getattr(task, 'taker_expert_id', None) or getattr(task, 'expert_creator_id', None)
     if expert_creator_id:
         # 查找达人团队的 Owner
         owner_result = await db.execute(
