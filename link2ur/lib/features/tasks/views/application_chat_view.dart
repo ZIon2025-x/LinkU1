@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -19,6 +21,7 @@ import '../../../data/repositories/activity_repository.dart';
 import '../../../data/repositories/task_expert_repository.dart';
 import '../../../data/services/storage_service.dart';
 import '../../../data/services/api_service.dart';
+import '../../../data/services/websocket_service.dart';
 import '../../../core/constants/api_endpoints.dart';
 import '../../../core/router/page_transitions.dart';
 import '../../../core/widgets/loading_view.dart';
@@ -116,6 +119,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
   bool _isLoadingMessages = true;
   String? _messagesError;
   bool _isSendingMessage = false;
+  StreamSubscription? _wsSubscription;
 
   // Consultation mode state
   Map<String, dynamic>? _consultationApp;
@@ -137,6 +141,28 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
     if (widget.isConsultation) {
       _loadConsultationStatus();
     }
+    _wsSubscription = WebSocketService.instance.messageStream.listen(_onWsMessage);
+  }
+
+  void _onWsMessage(WebSocketMessage wsMessage) {
+    if (wsMessage.data == null || !wsMessage.isChatMessage) return;
+    final data = wsMessage.data!;
+    final Map<String, dynamic> messageMap =
+        (wsMessage.type == 'task_message' && data['message'] is Map<String, dynamic>)
+            ? (data['message'] as Map<String, dynamic>)
+            : data;
+    try {
+      final message = Message.fromJson(messageMap);
+      // Filter: only messages for this task
+      if (message.taskId != widget.taskId) return;
+      // Skip own messages (already added on send)
+      if (message.senderId == _currentUserId) return;
+      // Dedup
+      if (_messages.any((m) => m.id == message.id)) return;
+      if (!mounted) return;
+      setState(() => _messages = [..._messages, message]);
+      _scrollToBottom();
+    } catch (_) {}
   }
 
   String _getCurrencySymbol() {
@@ -184,6 +210,7 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
 
   @override
   void dispose() {
+    _wsSubscription?.cancel();
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
