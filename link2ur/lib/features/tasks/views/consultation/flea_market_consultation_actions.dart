@@ -33,55 +33,105 @@ class FleaMarketConsultationActions extends ConsultationActions {
   }
 
   @override
-  Future<void> showCounterOfferDialog(
+  void onNegotiate(
     BuildContext context, {
-    required String Function() getCurrencySymbol,
-    String? expertId,
-  }) async {
-    final priceController = TextEditingController();
-    final bloc = context.read<TaskExpertBloc>();
-    String? errorText;
-    showDialog(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (dialogContext, setDialogState) => AlertDialog(
-          title: Text(context.l10n.counterOffer),
-          content: TextField(
-            controller: priceController,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: InputDecoration(
-              hintText: context.l10n.counterOfferHint,
-              prefixText: getCurrencySymbol(),
-              errorText: errorText,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
-            ),
-            TextButton(
-              onPressed: () {
-                final price = double.tryParse(priceController.text.trim());
-                if (price == null || price <= 0) {
-                  setDialogState(() => errorText = context.l10n.counterOfferHint);
-                  return;
-                }
-                Navigator.pop(dialogContext);
-                bloc.add(
-                  TaskExpertFleaMarketNegotiateResponse(
-                    applicationId,
-                    action: 'counter',
-                    counterPrice: price,
-                  ),
-                );
-              },
-              child: Text(MaterialLocalizations.of(context).okButtonLabel),
-            ),
-          ],
-        ),
+    required double price,
+    int? serviceId,
+  }) {
+    context.read<TaskExpertBloc>().add(
+      TaskExpertFleaMarketNegotiate(applicationId, price: price),
+    );
+  }
+
+  @override
+  void onQuote(
+    BuildContext context, {
+    required double price,
+    String? message,
+    int? serviceId,
+  }) {
+    context.read<TaskExpertBloc>().add(
+      TaskExpertFleaMarketQuote(
+        applicationId,
+        price: price,
+        message: message,
       ),
-    ).whenComplete(() => priceController.dispose());
+    );
+  }
+
+  @override
+  void onCounterOffer(
+    BuildContext context, {
+    required double price,
+    int? serviceId,
+  }) {
+    context.read<TaskExpertBloc>().add(
+      TaskExpertFleaMarketNegotiateResponse(
+        applicationId,
+        action: 'counter',
+        counterPrice: price,
+      ),
+    );
+  }
+
+  @override
+  void onFormalApply(
+    BuildContext context, {
+    double? price,
+    String? message,
+  }) {
+    // 闲置物品只需确认购买，不需要价格/消息（此方法仅供基类 dialog 调用，
+    // 但因 FleaMarket override 了 showFormalApplyDialog 为纯确认弹窗，
+    // 所以价格参数被忽略）
+    context.read<TaskExpertBloc>().add(
+      TaskExpertFleaMarketFormalBuy(applicationId),
+    );
+  }
+
+  @override
+  void onApprove(
+    BuildContext context, {
+    Map<String, dynamic>? consultationApp,
+  }) {
+    context.read<TaskExpertBloc>().add(
+      TaskExpertApproveFleaMarketPurchase(applicationId),
+    );
+  }
+
+  @override
+  void onClose(BuildContext context) {
+    context.read<TaskExpertBloc>().add(
+      TaskExpertCloseFleaMarketConsultation(applicationId),
+    );
+  }
+
+  /// FleaMarket 的"正式申请"是纯确认购买弹窗（无价格/消息表单），
+  /// 与 Service/Task 的带表单弹窗不同，因此 override 父类默认实现。
+  @override
+  Future<void> showFormalApplyDialog(
+    BuildContext context,
+    String Function() getCurrencySymbol,
+  ) async {
+    await showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.l10n.fleaMarketConfirmPurchase),
+        content: Text(context.l10n.fleaMarketConfirmPurchaseMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              onFormalApply(context);
+            },
+            child: Text(MaterialLocalizations.of(context).okButtonLabel),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -111,7 +161,7 @@ class FleaMarketConsultationActions extends ConsultationActions {
                 label: context.l10n.negotiatePrice,
                 onTap: isSubmitting
                     ? null
-                    : () => _showNegotiateDialog(context, getCurrencySymbol),
+                    : () => showNegotiateDialog(context, getCurrencySymbol),
               ),
               const SizedBox(width: 8),
             ],
@@ -122,7 +172,7 @@ class FleaMarketConsultationActions extends ConsultationActions {
                 label: context.l10n.fleaMarketBuyNow,
                 onTap: isSubmitting
                     ? null
-                    : () => _showFormalApplyDialog(context),
+                    : () => showFormalApplyDialog(context, getCurrencySymbol),
               ),
               const SizedBox(width: 8),
             ],
@@ -132,7 +182,7 @@ class FleaMarketConsultationActions extends ConsultationActions {
                 label: context.l10n.quotePrice,
                 onTap: isSubmitting
                     ? null
-                    : () => _showQuoteDialog(context, getCurrencySymbol),
+                    : () => showQuoteDialog(context, getCurrencySymbol),
               ),
               const SizedBox(width: 8),
             ],
@@ -142,7 +192,7 @@ class FleaMarketConsultationActions extends ConsultationActions {
                 label: context.l10n.fleaMarketConfirmPurchase,
                 onTap: isSubmitting
                     ? null
-                    : () => _showFormalApplyDialog(context),
+                    : () => showFormalApplyDialog(context, getCurrencySymbol),
               ),
               const SizedBox(width: 8),
             ],
@@ -153,7 +203,7 @@ class FleaMarketConsultationActions extends ConsultationActions {
                 color: AppColors.success,
                 onTap: isSubmitting
                     ? null
-                    : () => _showApproveConfirmation(context),
+                    : () => showApproveConfirmation(context),
               ),
               const SizedBox(width: 8),
             ],
@@ -164,194 +214,11 @@ class FleaMarketConsultationActions extends ConsultationActions {
                 color: AppColors.error.withValues(alpha: 0.8),
                 onTap: isSubmitting
                     ? null
-                    : () => _showCloseConfirmation(context),
+                    : () => showCloseConfirmation(context),
               ),
             ],
           ],
         ),
-      ),
-    );
-  }
-
-  void _showNegotiateDialog(BuildContext context, String Function() getCurrencySymbol) {
-    final priceController = TextEditingController();
-    final bloc = context.read<TaskExpertBloc>();
-    String? errorText;
-    showDialog(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (dialogContext, setDialogState) => AlertDialog(
-          title: Text(context.l10n.negotiatePrice),
-          content: TextField(
-            controller: priceController,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: InputDecoration(
-              hintText: context.l10n.negotiatePriceHint,
-              prefixText: getCurrencySymbol(),
-              errorText: errorText,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
-            ),
-            TextButton(
-              onPressed: () {
-                final price = double.tryParse(priceController.text.trim());
-                if (price == null || price <= 0) {
-                  setDialogState(() => errorText = context.l10n.negotiatePriceHint);
-                  return;
-                }
-                Navigator.pop(dialogContext);
-                bloc.add(
-                  TaskExpertFleaMarketNegotiate(applicationId, price: price),
-                );
-              },
-              child: Text(MaterialLocalizations.of(context).okButtonLabel),
-            ),
-          ],
-        ),
-      ),
-    ).whenComplete(() => priceController.dispose());
-  }
-
-  void _showQuoteDialog(BuildContext context, String Function() getCurrencySymbol) {
-    final priceController = TextEditingController();
-    final messageController = TextEditingController();
-    final bloc = context.read<TaskExpertBloc>();
-    String? errorText;
-    showDialog(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (dialogContext, setDialogState) => AlertDialog(
-          title: Text(context.l10n.quotePrice),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: priceController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: InputDecoration(
-                  hintText: context.l10n.quotePriceHint,
-                  prefixText: getCurrencySymbol(),
-                  errorText: errorText,
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: messageController,
-                maxLines: 3,
-                decoration: InputDecoration(
-                  hintText: context.l10n.quoteMessageHint,
-                  border: const OutlineInputBorder(),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
-            ),
-            TextButton(
-              onPressed: () {
-                final price = double.tryParse(priceController.text.trim());
-                if (price == null || price <= 0) {
-                  setDialogState(() => errorText = context.l10n.quotePriceHint);
-                  return;
-                }
-                final msg = messageController.text.trim();
-                Navigator.pop(dialogContext);
-                bloc.add(
-                  TaskExpertFleaMarketQuote(
-                    applicationId,
-                    price: price,
-                    message: msg.isNotEmpty ? msg : null,
-                  ),
-                );
-              },
-              child: Text(MaterialLocalizations.of(context).okButtonLabel),
-            ),
-          ],
-        ),
-      ),
-    ).whenComplete(() {
-      priceController.dispose();
-      messageController.dispose();
-    });
-  }
-
-  void _showFormalApplyDialog(BuildContext context) {
-    final bloc = context.read<TaskExpertBloc>();
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(context.l10n.fleaMarketConfirmPurchase),
-        content: Text(context.l10n.fleaMarketConfirmPurchaseMessage),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-              bloc.add(TaskExpertFleaMarketFormalBuy(applicationId));
-            },
-            child: Text(MaterialLocalizations.of(context).okButtonLabel),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showApproveConfirmation(BuildContext context) {
-    final bloc = context.read<TaskExpertBloc>();
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(context.l10n.expertApplicationConfirmApprove),
-        content: Text(context.l10n.expertApplicationConfirmApproveMessage),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-              bloc.add(TaskExpertApproveFleaMarketPurchase(applicationId));
-            },
-            style: TextButton.styleFrom(foregroundColor: AppColors.success),
-            child: Text(context.l10n.expertApplicationConfirmApprove),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showCloseConfirmation(BuildContext context) {
-    final bloc = context.read<TaskExpertBloc>();
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(context.l10n.closeConsultation),
-        content: Text(context.l10n.closeConsultationConfirm),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-              bloc.add(TaskExpertCloseFleaMarketConsultation(applicationId));
-            },
-            style: TextButton.styleFrom(foregroundColor: AppColors.error),
-            child: Text(MaterialLocalizations.of(context).okButtonLabel),
-          ),
-        ],
       ),
     );
   }
