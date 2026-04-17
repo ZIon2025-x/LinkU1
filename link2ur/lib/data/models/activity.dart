@@ -64,6 +64,8 @@ class Activity extends Equatable {
     this.prizeCount,
     this.drawMode,
     this.drawAt,
+    this.drawTrigger,
+    this.drawParticipantCount,
     this.drawnAt,
     this.winners,
     this.isDrawn = false,
@@ -133,6 +135,8 @@ class Activity extends Equatable {
   final int? prizeCount;
   final String? drawMode;
   final DateTime? drawAt;
+  final String? drawTrigger;
+  final int? drawParticipantCount;
   final DateTime? drawnAt;
   final List<ActivityWinner>? winners;
   final bool isDrawn;
@@ -284,6 +288,8 @@ class Activity extends Equatable {
       drawAt: json['draw_at'] != null
           ? DateTime.tryParse(json['draw_at'] as String)
           : null,
+      drawTrigger: json['draw_trigger'] as String?,
+      drawParticipantCount: json['draw_participant_count'] as int?,
       drawnAt: json['drawn_at'] != null
           ? DateTime.tryParse(json['drawn_at'] as String)
           : null,
@@ -354,6 +360,8 @@ class Activity extends Equatable {
       'prize_count': prizeCount,
       'draw_mode': drawMode,
       'draw_at': drawAt?.toIso8601String(),
+      'draw_trigger': drawTrigger,
+      'draw_participant_count': drawParticipantCount,
       'drawn_at': drawnAt?.toIso8601String(),
       'winners': winners?.map((w) => w.toJson()).toList(),
       'is_drawn': isDrawn,
@@ -417,6 +425,8 @@ class Activity extends Equatable {
     int? prizeCount,
     String? drawMode,
     DateTime? drawAt,
+    String? drawTrigger,
+    int? drawParticipantCount,
     DateTime? drawnAt,
     List<ActivityWinner>? winners,
     bool? isDrawn,
@@ -478,6 +488,8 @@ class Activity extends Equatable {
       prizeCount: prizeCount ?? this.prizeCount,
       drawMode: drawMode ?? this.drawMode,
       drawAt: drawAt ?? this.drawAt,
+      drawTrigger: drawTrigger ?? this.drawTrigger,
+      drawParticipantCount: drawParticipantCount ?? this.drawParticipantCount,
       drawnAt: drawnAt ?? this.drawnAt,
       winners: winners ?? this.winners,
       isDrawn: isDrawn ?? this.isDrawn,
@@ -499,7 +511,7 @@ class Activity extends Equatable {
         hasApplied, userTaskId, userTaskStatus, userTaskIsPaid, userTaskHasNegotiation,
         type, participantStatus, createdAt, updatedAt,
         activityType, prizeType, prizeDescription, prizeDescriptionEn,
-        prizeCount, drawMode, drawAt, drawnAt, winners, isDrawn, isOfficial, currentApplicants,
+        prizeCount, drawMode, drawAt, drawTrigger, drawParticipantCount, drawnAt, winners, isDrawn, isOfficial, currentApplicants,
       ];
 }
 
