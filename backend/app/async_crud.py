@@ -671,32 +671,37 @@ class AsyncTaskCRUD:
                 if sort_by in ("distance", "nearby"):
                     cache_key = f"{cache_key}:distance"
             
-            # 尝试从缓存获取总数
-            try:
-                # 使用异步Redis客户端（使用上下文管理器确保正确关闭）
-                import redis.asyncio as aioredis  # type: ignore[import-untyped]
-                redis_url = Config.REDIS_URL or f"redis://{Config.REDIS_HOST}:{Config.REDIS_PORT}/{Config.REDIS_DB}"
-                
-                async with aioredis.from_url(redis_url, decode_responses=True) as async_redis:
-                    cached_total = await async_redis.get(cache_key)
-                    if cached_total is not None:
-                        try:
-                            total = int(cached_total)
-                        except ValueError:
-                            total = 0
-                    else:
-                        # 缓存未命中，执行精确 count
-                        count_query = select(func.count()).select_from(count_query_for_total.subquery())
-                        total_result = await db.execute(count_query)
-                        total = total_result.scalar() or 0
-                        # 缓存总数（TTL 可以按需调整）
-                        await async_redis.setex(cache_key, 300, str(total))
-            except Exception as e:
-                # Redis 不可用时，直接执行 count
-                logger.warning(f"Redis缓存失败，直接执行count: {e}")
-                count_query = select(func.count()).select_from(count_query_for_total.subquery())
-                total_result = await db.execute(count_query)
-                total = total_result.scalar() or 0
+            # For distance sort, skip count cache — total is computed after
+            # Python-side distance filtering (overwritten later).
+            if sort_by in ("distance", "nearby"):
+                total = 0  # placeholder; will be overwritten after filtering
+            else:
+                # 尝试从缓存获取总数
+                try:
+                    # 使用异步Redis客户端（使用上下文管理器确保正确关闭）
+                    import redis.asyncio as aioredis  # type: ignore[import-untyped]
+                    redis_url = Config.REDIS_URL or f"redis://{Config.REDIS_HOST}:{Config.REDIS_PORT}/{Config.REDIS_DB}"
+
+                    async with aioredis.from_url(redis_url, decode_responses=True) as async_redis:
+                        cached_total = await async_redis.get(cache_key)
+                        if cached_total is not None:
+                            try:
+                                total = int(cached_total)
+                            except ValueError:
+                                total = 0
+                        else:
+                            # 缓存未命中，执行精确 count
+                            count_query = select(func.count()).select_from(count_query_for_total.subquery())
+                            total_result = await db.execute(count_query)
+                            total = total_result.scalar() or 0
+                            # 缓存总数（TTL 可以按需调整）
+                            await async_redis.setex(cache_key, 300, str(total))
+                except Exception as e:
+                    # Redis 不可用时，直接执行 count
+                    logger.warning(f"Redis缓存失败，直接执行count: {e}")
+                    count_query = select(func.count()).select_from(count_query_for_total.subquery())
+                    total_result = await db.execute(count_query)
+                    total = total_result.scalar() or 0
             
             # 3. 列表查询（基于同一个 base_query）
             list_query = base_query.options(
