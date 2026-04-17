@@ -10,6 +10,8 @@ from app import models, schemas
 from app.consultation.helpers import (
     check_consultation_idempotency,
     close_consultation_task,
+    create_placeholder_task,
+    resolve_taker_from_service,
 )
 from app.deps import get_async_db_dependency
 from app.async_routers import (
@@ -235,39 +237,26 @@ async def create_consultation(
     service_name_en = service.service_name_en or service.service_name or "Service Consultation"
 
     # 解析服务 owner 的 user_id，设为 taker_id 以便对方在消息列表中看到此咨询
-    if service.owner_type == "user":
-        taker_user_id = service.owner_id
-    else:
-        owner_result = await db.execute(
-            select(ExpertMember.user_id).where(
-                ExpertMember.expert_id == service.owner_id,
-                ExpertMember.role == "owner",
-                ExpertMember.status == "active",
-            )
-        )
-        owner_row = owner_result.first()
-        taker_user_id = owner_row[0] if owner_row else None
+    taker_user_id, _ = await resolve_taker_from_service(db, service)
 
-    consulting_task = models.Task(
+    consulting_task = await create_placeholder_task(
+        db,
+        consultation_type="consultation",
         title=service_name,
+        applicant_id=current_user.id,
+        taker_id=taker_user_id,
+        description=f"咨询: {service_name}",
         title_zh=service_name,
         title_en=service_name_en,
-        description=f"咨询: {service_name}",
         reward=service.base_price or 0,
         base_reward=service.base_price or 0,
         reward_to_be_quoted=True if not service.base_price else False,
         currency=service.currency or "GBP",
         location=service.location or "",
         task_type="expert_service",
-        task_source="consultation",
-        poster_id=current_user.id,
-        taker_id=taker_user_id,
-        status="consulting",
         task_level="expert",
         expert_service_id=service.id,
     )
-    db.add(consulting_task)
-    await db.flush()  # 获取 task.id
 
     application = models.ServiceApplication(
         service_id=service_id,

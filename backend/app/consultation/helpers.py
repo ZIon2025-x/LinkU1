@@ -65,11 +65,14 @@ async def close_consultation_task(
     new_status: str = "closed",
 ) -> None:
     """
-    关闭 ServiceApplication 关联的咨询占位 Task,并发送系统消息。
+    关闭咨询占位 task,并发送系统消息告知对方。
 
-    幂等保证:仅当 Task 状态仍为 'consulting' 时才操作。
-    这一行为与 expert_consultation_routes._close_consultation_task 一致,
-    是该 helper 的直接迁移。
+    Side effects:
+    - 设置 task.status = 'closed'
+    - 在 messages 表插入一条 `message_type='system'`, `conversation_type='task'` 系统消息
+    - 只有当 task.status == 'consulting' 时才会执行(幂等 guard)
+
+    调用方:approve / reject / close_consultation 时触发。
     """
     if not getattr(application, "task_id", None):
         return
