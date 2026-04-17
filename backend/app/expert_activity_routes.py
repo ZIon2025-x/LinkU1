@@ -161,6 +161,77 @@ def _derive_max_participants(body: TeamActivityCreate) -> int:
     return body.max_participants
 
 
+@router.get("/{expert_id}/activities")
+async def list_team_activities(
+    expert_id: str,
+    status: Optional[str] = None,
+    db: AsyncSession = Depends(get_async_db_dependency),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+):
+    """List activities owned by this expert team.
+
+    Returns all activities where owner_type='expert' and owner_id=expert_id.
+    Only team members (any role) can see the list.
+    """
+    await _get_member_or_403(
+        db, expert_id, current_user.id, required_roles=['owner', 'admin', 'member']
+    )
+
+    from sqlalchemy import func as sa_func
+
+    query = (
+        select(models.Activity)
+        .where(
+            models.Activity.owner_type == 'expert',
+            models.Activity.owner_id == expert_id,
+        )
+        .order_by(models.Activity.created_at.desc())
+    )
+    if status:
+        query = query.where(models.Activity.status == status)
+
+    result = await db.execute(query)
+    activities = result.scalars().all()
+
+    items = []
+    for a in activities:
+        # Count applicants for lottery/first_come
+        current_applicants = None
+        if a.activity_type in ('lottery', 'first_come'):
+            count_result = await db.execute(
+                select(sa_func.count(models.OfficialActivityApplication.id)).where(
+                    models.OfficialActivityApplication.activity_id == a.id,
+                )
+            )
+            current_applicants = count_result.scalar() or 0
+
+        items.append({
+            'id': a.id,
+            'title': a.title,
+            'description': a.description,
+            'location': a.location,
+            'activity_type': a.activity_type,
+            'status': a.status,
+            'deadline': a.deadline.isoformat() if a.deadline else None,
+            'max_participants': a.max_participants,
+            'prize_type': a.prize_type,
+            'prize_description': a.prize_description,
+            'prize_count': a.prize_count,
+            'draw_mode': a.draw_mode,
+            'draw_trigger': a.draw_trigger,
+            'draw_at': a.draw_at.isoformat() if a.draw_at else None,
+            'draw_participant_count': a.draw_participant_count,
+            'is_drawn': a.is_drawn,
+            'drawn_at': a.drawn_at.isoformat() if a.drawn_at else None,
+            'winners': a.winners,
+            'current_applicants': current_applicants,
+            'created_at': a.created_at.isoformat() if a.created_at else None,
+            'images': a.images,
+        })
+
+    return items
+
+
 @router.post("/{expert_id}/activities")
 async def create_team_activity(
     expert_id: str,

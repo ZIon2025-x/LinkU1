@@ -567,6 +567,35 @@ class ErrorLocalizer {
         return context.l10n.errorReasonRequired;
       case 'package_never_used_use_refund':
         return context.l10n.errorPackageNeverUsedUseRefund;
+      // ── Expert activity creation / draw errors ──
+      case 'service_required_for_standard':
+        return context.l10n.errorServiceRequiredForStandard;
+      case 'activity_type_invalid':
+        return context.l10n.errorActivityTypeInvalid;
+      case 'prize_type_required':
+        return context.l10n.errorPrizeTypeRequired;
+      case 'prize_type_invalid':
+        return context.l10n.errorPrizeTypeInvalid;
+      case 'prize_count_required':
+        return context.l10n.errorPrizeCountRequired;
+      case 'draw_mode_required':
+        return context.l10n.errorDrawModeRequired;
+      case 'draw_trigger_required':
+        return context.l10n.errorDrawTriggerRequired;
+      case 'draw_at_required':
+        return context.l10n.errorDrawAtRequired;
+      case 'draw_participant_count_required':
+        return context.l10n.errorDrawParticipantCountRequired;
+      case 'max_participants_required':
+        return context.l10n.errorMaxParticipantsRequired;
+      case 'not_lottery':
+        return context.l10n.errorNotLottery;
+      case 'already_drawn':
+        return context.l10n.errorAlreadyDrawn;
+      case 'activity_not_open':
+        return context.l10n.errorActivityNotOpen;
+      case 'expert_dashboard_load_activities_failed':
+        return context.l10n.errorLoadActivitiesFailed;
       default:
         // 服务端返回的已翻译消息，直接使用
         return errorMessage;
