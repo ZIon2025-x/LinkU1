@@ -305,25 +305,34 @@ class _NearbyTabState extends State<_NearbyTab> {
 
         if (!state.isLoadingNearby && state.nearbyTasks.isEmpty && state.nearbyServices.isEmpty) {
           final isDarkEmpty = Theme.of(context).brightness == Brightness.dark;
-          final center = Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.location_off_outlined,
-                    size: 64, color: isDarkEmpty ? AppColors.textTertiaryDark : AppColors.textTertiaryLight),
-                AppSpacing.vMd,
-                Text(context.l10n.homeNoNearbyTasks,
-                    style: TextStyle(color: isDarkEmpty ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
-                AppSpacing.vMd,
-                TextButton.icon(
-                  onPressed: _loadLocation,
-                  icon: const Icon(Icons.refresh),
-                  label: Text(context.l10n.homeLoadNearbyTasks),
-                ),
-              ],
-            ),
+          final emptyContent = Column(
+            children: [
+              // Keep location bar + radius selector visible so user can switch radius
+              _NearbyLocationBar(
+                city: _city,
+                onRefreshTap: _loadLocation,
+                locationFailed: _locationFailed,
+              ),
+              _NearbyRadiusSelector(
+                selectedRadius: state.nearbyRadius,
+                onChanged: _onRadiusChanged,
+              ),
+              const Spacer(),
+              Icon(Icons.location_off_outlined,
+                  size: 64, color: isDarkEmpty ? AppColors.textTertiaryDark : AppColors.textTertiaryLight),
+              AppSpacing.vMd,
+              Text(context.l10n.homeNoNearbyTasks,
+                  style: TextStyle(color: isDarkEmpty ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
+              AppSpacing.vMd,
+              TextButton.icon(
+                onPressed: _loadLocation,
+                icon: const Icon(Icons.refresh),
+                label: Text(context.l10n.homeLoadNearbyTasks),
+              ),
+              const Spacer(),
+            ],
           );
-          return isDesktop ? ContentConstraint(child: center) : center;
+          return isDesktop ? ContentConstraint(child: emptyContent) : emptyContent;
         }
 
         // Build mixed list of tasks + services for waterfall
