@@ -375,6 +375,9 @@ class Config:
     # 搜索配置
     SEARCH_LANGUAGE = os.getenv("SEARCH_LANGUAGE", "english")  # 全文搜索语言
 
+    # 咨询不活跃自动关闭阈值（天）。staging/prod 可通过环境变量覆盖。
+    CONSULTATION_STALE_DAYS: int = int(os.getenv("CONSULTATION_STALE_DAYS", "14"))
+
     # ==================== App 版本检查 ====================
     APP_LATEST_VERSION = os.getenv("APP_LATEST_VERSION", "1.1.1")
     APP_MIN_VERSION = os.getenv("APP_MIN_VERSION", "1.0.0")
