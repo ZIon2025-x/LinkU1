@@ -57,5 +57,26 @@ void main() {
         isA<TaskExpertState>().having((s) => s.errorCode, 'errorCode', null),
       ],
     );
+
+    blocTest<TaskExpertBloc, TaskExpertState>(
+      'approveApplication threads errorCode on TaskExpertException',
+      build: () {
+        when(() => taskExpertRepo.approveServiceApplication(any())).thenThrow(
+          const TaskExpertException('无权操作', errorCode: 'NOT_SERVICE_OWNER'),
+        );
+        return TaskExpertBloc(
+          taskExpertRepository: taskExpertRepo,
+          questionRepository: questionRepo,
+        );
+      },
+      act: (bloc) => bloc.add(const TaskExpertApproveApplication(42)),
+      expect: () => [
+        isA<TaskExpertState>()
+            .having((s) => s.isSubmitting, 'isSubmitting', true),
+        isA<TaskExpertState>()
+            .having((s) => s.errorCode, 'errorCode', 'NOT_SERVICE_OWNER')
+            .having((s) => s.errorMessage, 'errorMessage', contains('无权操作')),
+      ],
+    );
   });
 }

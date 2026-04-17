@@ -1206,15 +1206,25 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'application_approved',
+        clearErrorCode: true,
       ));
 
       add(const TaskExpertLoadExpertApplications());
+    } on TaskExpertException catch (e) {
+      AppLogger.error('Failed to approve application', e);
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'application_action_failed',
+        errorMessage: e.message,
+        errorCode: e.errorCode,
+      ));
     } catch (e) {
       AppLogger.error('Failed to approve application', e);
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'application_action_failed',
         errorMessage: e.toString(),
+        clearErrorCode: true,
       ));
     }
   }
@@ -1269,15 +1279,25 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'application_rejected',
+        clearErrorCode: true,
       ));
 
       add(const TaskExpertLoadExpertApplications());
+    } on TaskExpertException catch (e) {
+      AppLogger.error('Failed to reject application', e);
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'application_action_failed',
+        errorMessage: e.message,
+        errorCode: e.errorCode,
+      ));
     } catch (e) {
       AppLogger.error('Failed to reject application', e);
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'application_action_failed',
         errorMessage: e.toString(),
+        clearErrorCode: true,
       ));
     }
   }
@@ -1299,15 +1319,25 @@ class TaskExpertBloc extends Bloc<TaskExpertEvent, TaskExpertState> {
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'counter_offer_sent',
+        clearErrorCode: true,
       ));
 
       add(const TaskExpertLoadExpertApplications());
+    } on TaskExpertException catch (e) {
+      AppLogger.error('Failed to send counter offer', e);
+      emit(state.copyWith(
+        isSubmitting: false,
+        actionMessage: 'application_action_failed',
+        errorMessage: e.message,
+        errorCode: e.errorCode,
+      ));
     } catch (e) {
       AppLogger.error('Failed to send counter offer', e);
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'application_action_failed',
         errorMessage: e.toString(),
+        clearErrorCode: true,
       ));
     }
   }
