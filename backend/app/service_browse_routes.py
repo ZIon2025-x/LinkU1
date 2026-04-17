@@ -1,4 +1,4 @@
-from math import radians, cos, sqrt
+from math import radians, cos, sqrt, sin, atan2
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import and_, or_, select, case, func
@@ -194,9 +194,11 @@ async def browse_services(
             "linked_service_id": s.linked_service_id,
         }
         if lat is not None and lng is not None and eff_lat is not None and eff_lng is not None:
-            lat_d = eff_lat - lat
-            lng_d = (eff_lng - lng) * cos(radians(lat))
-            dist_km = sqrt(lat_d * lat_d + lng_d * lng_d) * 111.0
+            # Haversine formula — consistent with task distance calculation
+            dlat = radians(eff_lat - lat)
+            dlng = radians(eff_lng - lng)
+            a = sin(dlat / 2) ** 2 + cos(radians(lat)) * cos(radians(eff_lat)) * sin(dlng / 2) ** 2
+            dist_km = 6371.0 * 2 * atan2(sqrt(a), sqrt(1 - a))
             item["distance_km"] = round(dist_km, 1)
             if eff_radius is None or eff_radius == 0 or s.location_type == "online":
                 item["within_service_area"] = True
