@@ -10225,6 +10225,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get expertDashboardTabActivities => '活动';
 
   @override
+  String get expertDashboardTabMyTasks => '我的任务';
+
+  @override
+  String get expertMyTasksEmpty => '暂无任务';
+
+  @override
+  String get expertMyTasksEmptyMessage => '你参与的任务会显示在这里';
+
+  @override
   String get expertActivitiesEmpty => '暂无活动';
 
   @override
@@ -10353,6 +10362,18 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get activityStatusOpen => '进行中';
+
+  @override
+  String get activityStatusClosed => '已关闭';
+
+  @override
+  String get activityStatusCancelled => '已取消';
+
+  @override
+  String get activityStatusCompleted => '已完成';
+
+  @override
   String get expertDashboardEditProfile => '编辑资料';
 
   @override
@@ -10426,6 +10447,18 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get expertServiceDeleted => '服务已删除';
+
+  @override
+  String get expertServiceActivated => '服务已上架';
+
+  @override
+  String get expertServiceDeactivated => '服务已下架';
+
+  @override
+  String get expertServiceDelist => '下架';
+
+  @override
+  String get expertServiceActivate => '上架';
 
   @override
   String get expertServiceUpdated => '服务已更新';
@@ -12312,6 +12345,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get errorPackageCancelled => '套餐已取消';
+
+  @override
+  String get errorPackageRefunded => '套餐已退款，无法核销';
+
+  @override
+  String get errorSubServiceDeleted => '该子服务已被删除，无法核销';
 
   @override
   String get errorPackageNotActive => '套餐已不处于有效状态';
@@ -23273,6 +23312,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get expertDashboardTabActivities => '活動';
 
   @override
+  String get expertDashboardTabMyTasks => '我的任務';
+
+  @override
+  String get expertMyTasksEmpty => '暫無任務';
+
+  @override
+  String get expertMyTasksEmptyMessage => '你參與的任務會顯示在這裡';
+
+  @override
   String get expertActivitiesEmpty => '暫無活動';
 
   @override
@@ -23401,6 +23449,18 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
+  String get activityStatusOpen => '進行中';
+
+  @override
+  String get activityStatusClosed => '已關閉';
+
+  @override
+  String get activityStatusCancelled => '已取消';
+
+  @override
+  String get activityStatusCompleted => '已完成';
+
+  @override
   String get expertDashboardEditProfile => '編輯資料';
 
   @override
@@ -23474,6 +23534,18 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get expertServiceDeleted => '服務已刪除';
+
+  @override
+  String get expertServiceActivated => '服務已上架';
+
+  @override
+  String get expertServiceDeactivated => '服務已下架';
+
+  @override
+  String get expertServiceDelist => '下架';
+
+  @override
+  String get expertServiceActivate => '上架';
 
   @override
   String get expertServiceUpdated => '服務已更新';
@@ -25360,6 +25432,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get errorPackageCancelled => '套餐已取消';
+
+  @override
+  String get errorPackageRefunded => '套餐已退款，無法核銷';
+
+  @override
+  String get errorSubServiceDeleted => '該子服務已被刪除，無法核銷';
 
   @override
   String get errorPackageNotActive => '套餐已不處於有效狀態';

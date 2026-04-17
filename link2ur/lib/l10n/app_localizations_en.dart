@@ -10656,6 +10656,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get expertDashboardTabActivities => 'Activities';
 
   @override
+  String get expertDashboardTabMyTasks => 'My Tasks';
+
+  @override
+  String get expertMyTasksEmpty => 'No tasks yet';
+
+  @override
+  String get expertMyTasksEmptyMessage =>
+      'Tasks you participate in will appear here.';
+
+  @override
   String get expertActivitiesEmpty => 'No activities yet';
 
   @override
@@ -10791,6 +10801,18 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get activityStatusOpen => 'Open';
+
+  @override
+  String get activityStatusClosed => 'Closed';
+
+  @override
+  String get activityStatusCancelled => 'Cancelled';
+
+  @override
+  String get activityStatusCompleted => 'Completed';
+
+  @override
   String get expertDashboardEditProfile => 'Edit Profile';
 
   @override
@@ -10865,6 +10887,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get expertServiceDeleted => 'Service deleted';
+
+  @override
+  String get expertServiceActivated => 'Service is now listed';
+
+  @override
+  String get expertServiceDeactivated => 'Service has been delisted';
+
+  @override
+  String get expertServiceDelist => 'Delist';
+
+  @override
+  String get expertServiceActivate => 'List';
 
   @override
   String get expertServiceUpdated => 'Service updated';
@@ -12846,6 +12880,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get errorPackageCancelled => 'This package has been cancelled.';
+
+  @override
+  String get errorPackageRefunded => 'This package has been refunded.';
+
+  @override
+  String get errorSubServiceDeleted =>
+      'This sub-service has been deleted and cannot be redeemed.';
 
   @override
   String get errorPackageNotActive => 'This package is no longer active.';

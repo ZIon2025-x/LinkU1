@@ -19583,6 +19583,24 @@ abstract class AppLocalizations {
   /// **'Activities'**
   String get expertDashboardTabActivities;
 
+  /// No description provided for @expertDashboardTabMyTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'My Tasks'**
+  String get expertDashboardTabMyTasks;
+
+  /// No description provided for @expertMyTasksEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No tasks yet'**
+  String get expertMyTasksEmpty;
+
+  /// No description provided for @expertMyTasksEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Tasks you participate in will appear here.'**
+  String get expertMyTasksEmptyMessage;
+
   /// No description provided for @expertActivitiesEmpty.
   ///
   /// In en, this message translates to:
@@ -19835,6 +19853,30 @@ abstract class AppLocalizations {
   /// **'Draw completed! {count} winners selected.'**
   String expertActivityDrawSuccess(Object count);
 
+  /// No description provided for @activityStatusOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get activityStatusOpen;
+
+  /// No description provided for @activityStatusClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'Closed'**
+  String get activityStatusClosed;
+
+  /// No description provided for @activityStatusCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get activityStatusCancelled;
+
+  /// No description provided for @activityStatusCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get activityStatusCompleted;
+
   /// No description provided for @expertDashboardEditProfile.
   ///
   /// In en, this message translates to:
@@ -19984,6 +20026,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Service deleted'**
   String get expertServiceDeleted;
+
+  /// No description provided for @expertServiceActivated.
+  ///
+  /// In en, this message translates to:
+  /// **'Service is now listed'**
+  String get expertServiceActivated;
+
+  /// No description provided for @expertServiceDeactivated.
+  ///
+  /// In en, this message translates to:
+  /// **'Service has been delisted'**
+  String get expertServiceDeactivated;
+
+  /// No description provided for @expertServiceDelist.
+  ///
+  /// In en, this message translates to:
+  /// **'Delist'**
+  String get expertServiceDelist;
+
+  /// No description provided for @expertServiceActivate.
+  ///
+  /// In en, this message translates to:
+  /// **'List'**
+  String get expertServiceActivate;
 
   /// No description provided for @expertServiceUpdated.
   ///
@@ -23651,6 +23717,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This package has been cancelled.'**
   String get errorPackageCancelled;
+
+  /// No description provided for @errorPackageRefunded.
+  ///
+  /// In en, this message translates to:
+  /// **'This package has been refunded.'**
+  String get errorPackageRefunded;
+
+  /// No description provided for @errorSubServiceDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'This sub-service has been deleted and cannot be redeemed.'**
+  String get errorSubServiceDeleted;
 
   /// No description provided for @errorPackageNotActive.
   ///
