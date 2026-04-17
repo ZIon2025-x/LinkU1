@@ -18,6 +18,7 @@ import '../../../core/widgets/error_state_view.dart';
 import '../../../data/models/task.dart';
 import '../../../data/repositories/message_repository.dart';
 import '../../../data/repositories/task_repository.dart';
+import '../../../data/models/expert_team.dart';
 import '../../../data/repositories/expert_team_repository.dart';
 import '../../../data/services/storage_service.dart';
 import '../bloc/chat_bloc.dart';
@@ -107,54 +108,91 @@ class _TaskChatContentState extends State<_TaskChatContent> {
     }
   }
 
-  Future<void> _showInviteMemberDialog(BuildContext context) async {
-    final controller = TextEditingController();
+  Future<void> _showInviteMemberSheet(BuildContext context) async {
     final repo = context.read<ExpertTeamRepository>();
     final messenger = ScaffoldMessenger.of(context);
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(context.l10n.expertTeamInviteMember),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            labelText: '用户 ID',
-            hintText: '输入要邀请的团队成员 ID',
-          ),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(MaterialLocalizations.of(ctx).cancelButtonLabel),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(context.l10n.expertTeamInviteMember),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true && controller.text.trim().isNotEmpty && mounted) {
-      try {
-        await repo.inviteToTaskChat(
-              widget.taskId,
-              controller.text.trim(),
-            );
-        if (mounted) {
-          messenger.showSnackBar(
-            const SnackBar(content: Text('已邀请成员加入聊天')),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          messenger.showSnackBar(
-            SnackBar(content: Text('邀请失败: $e')),
-          );
-        }
+    final navigator = Navigator.of(context);
+
+    // 从已加载的 task 拿团队 ID
+    final task = await _taskFuture;
+    if (task == null || task.takerDisplay == null || !task.takerDisplay!.isTeam) {
+      if (mounted) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('该任务未关联达人团队')),
+        );
+      }
+      return;
+    }
+    final expertId = task.takerDisplay!.entityId;
+
+    if (!mounted) return;
+
+    // 并行加载团队成员 + 已在聊天中的参与者
+    late final List<ExpertMember> members;
+    late final Map<String, dynamic> participantsData;
+    try {
+      final results = await Future.wait([
+        repo.getMembers(expertId),
+        repo.getTaskChatParticipants(widget.taskId),
+      ]);
+      members = results[0] as List<ExpertMember>;
+      participantsData = results[1] as Map<String, dynamic>;
+    } catch (e) {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text('加载成员列表失败: $e')),
+        );
+      }
+      return;
+    }
+
+    // 提取已在聊天中的 user_id 集合
+    final participantsList = participantsData['participants'] as List<dynamic>? ?? [];
+    final existingUserIds = <String>{};
+    for (final p in participantsList) {
+      if (p is Map<String, dynamic>) {
+        final uid = p['user_id']?.toString();
+        if (uid != null) existingUserIds.add(uid);
       }
     }
-    controller.dispose();
+
+    // 过滤掉已在聊天中的成员
+    final invitable = members.where((m) =>
+        m.status == 'active' && !existingUserIds.contains(m.userId)).toList();
+
+    if (!mounted) return;
+
+    if (invitable.isEmpty) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('所有团队成员都已在聊天中')),
+      );
+      return;
+    }
+
+    // 弹出成员列表 bottom sheet
+    showModalBottomSheet<void>(
+      context: navigator.context,
+      builder: (sheetContext) => _InviteMemberList(
+        members: invitable,
+        onInvite: (member) async {
+          Navigator.pop(sheetContext);
+          try {
+            await repo.inviteToTaskChat(widget.taskId, member.userId);
+            if (mounted) {
+              messenger.showSnackBar(
+                SnackBar(content: Text('已邀请 ${member.userName ?? member.userId} 加入聊天')),
+              );
+            }
+          } catch (e) {
+            if (mounted) {
+              messenger.showSnackBar(
+                SnackBar(content: Text('邀请失败: $e')),
+              );
+            }
+          }
+        },
+      ),
+    );
   }
 
   void _sendMessage() {
@@ -268,7 +306,7 @@ class _TaskChatContentState extends State<_TaskChatContent> {
                   if (value == 'task_detail') {
                     context.safePush('/tasks/${widget.taskId}');
                   } else if (value == 'invite_member') {
-                    _showInviteMemberDialog(context);
+                    _showInviteMemberSheet(context);
                   }
                 },
                 itemBuilder: (context) => [
@@ -831,6 +869,78 @@ class _TypingDotsAnimationState extends State<_TypingDotsAnimation>
           }),
         );
       },
+    );
+  }
+}
+
+/// 可邀请的团队成员列表 bottom sheet
+class _InviteMemberList extends StatelessWidget {
+  const _InviteMemberList({
+    required this.members,
+    required this.onInvite,
+  });
+
+  final List<ExpertMember> members;
+  final void Function(ExpertMember) onInvite;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Row(
+              children: [
+                Text(
+                  context.l10n.expertTeamInviteMember,
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w600),
+                ),
+                const Spacer(),
+                Text(
+                  '${members.length}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          Flexible(
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: members.length,
+              itemBuilder: (context, index) {
+                final m = members[index];
+                return ListTile(
+                  leading: CircleAvatar(
+                    backgroundImage: m.userAvatar != null
+                        ? NetworkImage(m.userAvatar!)
+                        : null,
+                    child: m.userAvatar == null
+                        ? Text(
+                            (m.userName ?? '?')[0].toUpperCase(),
+                            style:
+                                const TextStyle(fontWeight: FontWeight.w600),
+                          )
+                        : null,
+                  ),
+                  title: Text(m.userName ?? m.userId),
+                  subtitle: Text(m.role.toUpperCase(),
+                      style: Theme.of(context).textTheme.bodySmall),
+                  trailing: FilledButton.tonal(
+                    onPressed: () => onInvite(m),
+                    child: Text(context.l10n.expertTeamInviteMember),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
