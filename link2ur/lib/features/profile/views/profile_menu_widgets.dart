@@ -38,7 +38,7 @@ Widget _buildMyContentSection(BuildContext context, bool isDark) {
           child: Column(
             children: [
               _ProfileRow(
-                icon: Icons.format_list_bulleted,  // list.bullet.rectangle.fill
+                icon: Icons.format_list_bulleted, // list.bullet.rectangle.fill
                 title: context.l10n.profileMyTasks,
                 subtitle: context.l10n.profileMyTasksSubtitle,
                 color: AppColors.primary,
@@ -62,6 +62,14 @@ Widget _buildMyContentSection(BuildContext context, bool isDark) {
               ),
               _profileDivider(isDark),
               _ProfileRow(
+                icon: Icons.inbox_outlined,
+                title: context.l10n.profileReceivedApplications,
+                subtitle: context.l10n.profileReceivedApplicationsSubtitle,
+                color: AppColors.purple,
+                onTap: () => context.push('/services/my/applications'),
+              ),
+              _profileDivider(isDark),
+              _ProfileRow(
                 icon: Icons.card_membership,
                 title: context.l10n.profileMyPackages,
                 subtitle: context.l10n.profileMyPackagesSubtitle,
@@ -70,7 +78,7 @@ Widget _buildMyContentSection(BuildContext context, bool isDark) {
               ),
               _profileDivider(isDark),
               _ProfileRow(
-                icon: Icons.inventory_2,           // shippingbox.fill
+                icon: Icons.inventory_2, // shippingbox.fill
                 title: context.l10n.profileMyPosts,
                 subtitle: context.l10n.profileMyPostsSubtitle,
                 color: AppColors.warning,
@@ -78,7 +86,7 @@ Widget _buildMyContentSection(BuildContext context, bool isDark) {
               ),
               _profileDivider(isDark),
               _ProfileRow(
-                icon: Icons.description,           // doc.text.fill
+                icon: Icons.description, // doc.text.fill
                 title: context.l10n.profileMyForumPosts,
                 subtitle: context.l10n.profileMyForumPostsSubtitle,
                 color: AppColors.primary,
@@ -86,7 +94,7 @@ Widget _buildMyContentSection(BuildContext context, bool isDark) {
               ),
               _profileDivider(isDark),
               _ProfileRow(
-                icon: Icons.credit_card,           // creditcard.fill
+                icon: Icons.credit_card, // creditcard.fill
                 title: context.l10n.profileMyWallet,
                 subtitle: context.l10n.profileMyWalletSubtitle,
                 color: AppColors.success,
@@ -94,10 +102,10 @@ Widget _buildMyContentSection(BuildContext context, bool isDark) {
               ),
               _profileDivider(isDark),
               _ProfileRow(
-                icon: Icons.admin_panel_settings,  // bolt.shield.fill
-                title: context.l10n.profileMyApplications,
-                subtitle: context.l10n.profileMyApplicationsSubtitle,
-                color: AppColors.purple,
+                icon: Icons.event_note_outlined,
+                title: context.l10n.profileMyActivities,
+                subtitle: context.l10n.profileMyActivitiesSubtitle,
+                color: AppColors.accent,
                 onTap: () => context.push('/my-service-applications'),
               ),
               _ExpertEntryRow(isDark: isDark),
@@ -147,11 +155,9 @@ Widget _buildSystemSection(BuildContext context, bool isDark) {
           child: Column(
             children: [
               Builder(builder: (context) {
-                final isStudentVerified = context
-                    .read<AuthBloc>()
-                    .state
-                    .user
-                    ?.isStudentVerified ?? false;
+                final isStudentVerified =
+                    context.read<AuthBloc>().state.user?.isStudentVerified ??
+                        false;
                 return _ProfileRow(
                   icon: Icons.school,
                   title: context.l10n.profileStudentVerification,
@@ -174,14 +180,14 @@ Widget _buildSystemSection(BuildContext context, bool isDark) {
               }),
               _profileDivider(isDark),
               _ProfileRow(
-                icon: Icons.credit_card,           // creditcard.fill
+                icon: Icons.credit_card, // creditcard.fill
                 title: context.l10n.profilePaymentAccount,
                 color: AppColors.primary,
                 onTap: () => context.push('/payment/stripe-connect/onboarding'),
               ),
               _profileDivider(isDark),
               _ProfileRow(
-                icon: Icons.schedule,              // calendar.badge.clock
+                icon: Icons.schedule, // calendar.badge.clock
                 title: context.l10n.profileActivity,
                 color: AppColors.warning,
                 onTap: () => context.push('/activities'),
@@ -195,14 +201,14 @@ Widget _buildSystemSection(BuildContext context, bool isDark) {
               ),
               _profileDivider(isDark),
               _ProfileRow(
-                icon: Icons.local_activity,        // ticket.fill
+                icon: Icons.local_activity, // ticket.fill
                 title: context.l10n.profilePointsCoupons,
                 color: AppColors.accentPink,
                 onTap: () => context.push('/coupon-points'),
               ),
               _profileDivider(isDark),
               _ProfileRow(
-                icon: Icons.settings,              // gearshape.fill
+                icon: Icons.settings, // gearshape.fill
                 title: context.l10n.profileSettings,
                 color: AppColors.textSecondaryLight,
                 onTap: () => context.push('/settings'),
@@ -228,32 +234,33 @@ Widget _buildLogoutButton(BuildContext context, bool isDark) {
           _showLogoutDialog(context);
         },
         child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          color: AppColors.error.withValues(alpha: 0.08),
-          borderRadius: AppRadius.allLarge,
-          border: Border.all(
-            color: AppColors.error.withValues(alpha: 0.2),
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          decoration: BoxDecoration(
+            color: AppColors.error.withValues(alpha: 0.08),
+            borderRadius: AppRadius.allLarge,
+            border: Border.all(
+              color: AppColors.error.withValues(alpha: 0.2),
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.power_settings_new, // power
+                  color: AppColors.error,
+                  size: 18),
+              const SizedBox(width: 8),
+              Text(
+                context.l10n.profileLogout,
+                style: const TextStyle(
+                  color: AppColors.error,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ],
           ),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.power_settings_new,       // power
-                color: AppColors.error, size: 18),
-            const SizedBox(width: 8),
-            Text(
-              context.l10n.profileLogout,
-              style: const TextStyle(
-                color: AppColors.error,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-            ),
-          ],
-        ),
-      ),
       ),
     ),
   );
@@ -294,8 +301,7 @@ class _ExpertEntryRowState extends State<_ExpertEntryRow> {
   @override
   void initState() {
     super.initState();
-    final isExpertFlag =
-        context.read<AuthBloc>().state.user?.isExpert ?? false;
+    final isExpertFlag = context.read<AuthBloc>().state.user?.isExpert ?? false;
     if (!isExpertFlag && _hasTeams == null) {
       _probeTeams();
     }
@@ -303,8 +309,7 @@ class _ExpertEntryRowState extends State<_ExpertEntryRow> {
 
   Future<void> _probeTeams() async {
     try {
-      final teams =
-          await context.read<ExpertTeamRepository>().getMyTeams();
+      final teams = await context.read<ExpertTeamRepository>().getMyTeams();
       if (!mounted) return;
       setState(() => _hasTeams = teams.isNotEmpty);
       _ExpertEntryRow._cachedHasTeams = teams.isNotEmpty;
@@ -376,78 +381,78 @@ class _ProfileRow extends StatelessWidget {
         },
         behavior: HitTestBehavior.opaque,
         child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(
-          children: [
-            // 图标背景 (对齐iOS: 38x38 rounded rect with gradient)
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    color.withValues(alpha: 0.18),
-                    color.withValues(alpha: 0.12),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                icon,
-                size: 18,
-                color: color,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: isDark
-                          ? AppColors.textPrimaryDark
-                          : AppColors.textPrimaryLight,
-                    ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              // 图标背景 (对齐iOS: 38x38 rounded rect with gradient)
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      color.withValues(alpha: 0.18),
+                      color.withValues(alpha: 0.12),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                  // 副标题 (对齐iOS ProfileRow subtitle)
-                  if (subtitle != null) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle!,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: isDark
-                            ? AppColors.textTertiaryDark
-                            : AppColors.textTertiaryLight,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ],
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  icon,
+                  size: 18,
+                  color: color,
+                ),
               ),
-            ),
-            if (trailing != null) ...[
-              trailing!,
-              const SizedBox(width: 4),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimaryLight,
+                      ),
+                    ),
+                    // 副标题 (对齐iOS ProfileRow subtitle)
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle!,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: isDark
+                              ? AppColors.textTertiaryDark
+                              : AppColors.textTertiaryLight,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              if (trailing != null) ...[
+                trailing!,
+                const SizedBox(width: 4),
+              ],
+              Icon(
+                Icons.chevron_right,
+                size: 16,
+                color: isDark
+                    ? AppColors.textTertiaryDark
+                    : AppColors.textTertiaryLight,
+              ),
             ],
-            Icon(
-              Icons.chevron_right,
-              size: 16,
-              color: isDark
-                  ? AppColors.textTertiaryDark
-                  : AppColors.textTertiaryLight,
-            ),
-          ],
+          ),
         ),
-      ),
       ),
     );
   }

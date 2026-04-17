@@ -40,7 +40,10 @@ class PersonalServiceDeleteRequested extends PersonalServiceEvent {
 
 // --- 收到的申请管理 ---
 class PersonalServiceLoadReceivedApplications extends PersonalServiceEvent {
-  const PersonalServiceLoadReceivedApplications();
+  const PersonalServiceLoadReceivedApplications({this.statusFilter});
+  final String? statusFilter;
+  @override
+  List<Object?> get props => [statusFilter];
 }
 
 class PersonalServiceApproveApplication extends PersonalServiceEvent {
@@ -80,7 +83,8 @@ class PersonalServiceLoadMyApplications extends PersonalServiceEvent {
 }
 
 class PersonalServiceRespondCounterOffer extends PersonalServiceEvent {
-  const PersonalServiceRespondCounterOffer(this.applicationId, {required this.accept});
+  const PersonalServiceRespondCounterOffer(this.applicationId,
+      {required this.accept});
   final int applicationId;
   final bool accept;
   @override
@@ -135,6 +139,7 @@ class PersonalServiceState extends Equatable {
     this.status = PersonalServiceStatus.initial,
     this.services = const [],
     this.receivedApplications = const [],
+    this.receivedApplicationsFilter,
     this.myApplications = const [],
     this.browseResults = const [],
     this.reviews = const [],
@@ -149,6 +154,7 @@ class PersonalServiceState extends Equatable {
   final PersonalServiceStatus status;
   final List<Map<String, dynamic>> services;
   final List<ServiceApplication> receivedApplications;
+  final String? receivedApplicationsFilter;
   final List<ServiceApplication> myApplications;
   final List<Map<String, dynamic>> browseResults;
   final List<Map<String, dynamic>> reviews;
@@ -156,6 +162,7 @@ class PersonalServiceState extends Equatable {
   final Map<String, dynamic>? reviewSummary;
   final String? errorMessage;
   final bool isSubmitting;
+
   /// 当前正在处理的申请 ID（per-item 提交状态）。null 表示没有申请级操作在进行。
   final int? submittingApplicationId;
   final String? actionMessage;
@@ -164,6 +171,7 @@ class PersonalServiceState extends Equatable {
     PersonalServiceStatus? status,
     List<Map<String, dynamic>>? services,
     List<ServiceApplication>? receivedApplications,
+    String? receivedApplicationsFilter,
     List<ServiceApplication>? myApplications,
     List<Map<String, dynamic>>? browseResults,
     List<Map<String, dynamic>>? reviews,
@@ -177,8 +185,9 @@ class PersonalServiceState extends Equatable {
     return PersonalServiceState(
       status: status ?? this.status,
       services: services ?? this.services,
-      receivedApplications:
-          receivedApplications ?? this.receivedApplications,
+      receivedApplications: receivedApplications ?? this.receivedApplications,
+      receivedApplicationsFilter:
+          receivedApplicationsFilter ?? this.receivedApplicationsFilter,
       myApplications: myApplications ?? this.myApplications,
       browseResults: browseResults ?? this.browseResults,
       reviews: reviews ?? this.reviews,
@@ -193,14 +202,25 @@ class PersonalServiceState extends Equatable {
 
   @override
   List<Object?> get props => [
-        status, services, receivedApplications, myApplications,
-        browseResults, reviews, browseTotalPages, reviewSummary,
-        errorMessage, isSubmitting, submittingApplicationId, actionMessage,
+        status,
+        services,
+        receivedApplications,
+        receivedApplicationsFilter,
+        myApplications,
+        browseResults,
+        reviews,
+        browseTotalPages,
+        reviewSummary,
+        errorMessage,
+        isSubmitting,
+        submittingApplicationId,
+        actionMessage,
       ];
 }
 
 // ==================== BLoC ====================
-class PersonalServiceBloc extends Bloc<PersonalServiceEvent, PersonalServiceState> {
+class PersonalServiceBloc
+    extends Bloc<PersonalServiceEvent, PersonalServiceState> {
   PersonalServiceBloc({required PersonalServiceRepository repository})
       : _repository = repository,
         super(const PersonalServiceState()) {
@@ -229,7 +249,8 @@ class PersonalServiceBloc extends Bloc<PersonalServiceEvent, PersonalServiceStat
     emit(state.copyWith(status: PersonalServiceStatus.loading));
     try {
       final services = await _repository.getMyServices();
-      emit(state.copyWith(status: PersonalServiceStatus.loaded, services: services));
+      emit(state.copyWith(
+          status: PersonalServiceStatus.loaded, services: services));
     } catch (e) {
       emit(state.copyWith(
         status: PersonalServiceStatus.error,
@@ -245,7 +266,8 @@ class PersonalServiceBloc extends Bloc<PersonalServiceEvent, PersonalServiceStat
     emit(state.copyWith(isSubmitting: true));
     try {
       await _repository.createService(event.data);
-      emit(state.copyWith(isSubmitting: false, actionMessage: 'service_created'));
+      emit(state.copyWith(
+          isSubmitting: false, actionMessage: 'service_created'));
       add(const PersonalServiceLoadRequested());
     } catch (e) {
       emit(state.copyWith(isSubmitting: false, errorMessage: e.toString()));
@@ -259,7 +281,8 @@ class PersonalServiceBloc extends Bloc<PersonalServiceEvent, PersonalServiceStat
     emit(state.copyWith(isSubmitting: true));
     try {
       await _repository.updateService(event.id, event.data);
-      emit(state.copyWith(isSubmitting: false, actionMessage: 'service_updated'));
+      emit(state.copyWith(
+          isSubmitting: false, actionMessage: 'service_updated'));
       add(const PersonalServiceLoadRequested());
     } catch (e) {
       emit(state.copyWith(isSubmitting: false, errorMessage: e.toString()));
@@ -273,7 +296,8 @@ class PersonalServiceBloc extends Bloc<PersonalServiceEvent, PersonalServiceStat
     emit(state.copyWith(isSubmitting: true));
     try {
       await _repository.deleteService(event.id);
-      emit(state.copyWith(isSubmitting: false, actionMessage: 'service_deleted'));
+      emit(state.copyWith(
+          isSubmitting: false, actionMessage: 'service_deleted'));
       add(const PersonalServiceLoadRequested());
     } catch (e) {
       emit(state.copyWith(isSubmitting: false, errorMessage: e.toString()));
@@ -286,9 +310,18 @@ class PersonalServiceBloc extends Bloc<PersonalServiceEvent, PersonalServiceStat
     PersonalServiceLoadReceivedApplications event,
     Emitter<PersonalServiceState> emit,
   ) async {
-    emit(state.copyWith(status: PersonalServiceStatus.loading));
+    // Store filter as non-null '' for "all" so copyWith ?? preserves it
+    final filterValue = event.statusFilter ?? '';
+    emit(state.copyWith(
+      status: PersonalServiceStatus.loading,
+      receivedApplicationsFilter: filterValue,
+    ));
     try {
-      final items = await _repository.getReceivedApplications(limit: 100);
+      final apiFilter = filterValue.isEmpty ? null : filterValue;
+      final items = await _repository.getReceivedApplications(
+        status: apiFilter,
+        limit: 100,
+      );
       emit(state.copyWith(
         status: PersonalServiceStatus.loaded,
         receivedApplications: items,
@@ -320,7 +353,9 @@ class PersonalServiceBloc extends Bloc<PersonalServiceEvent, PersonalServiceStat
       // AUDIT-11: Delay list reload slightly so success toast is clearly visible
       // before the list rebuild kicks in.
       await Future<void>.delayed(const Duration(milliseconds: 400));
-      add(const PersonalServiceLoadReceivedApplications());
+      add(PersonalServiceLoadReceivedApplications(
+        statusFilter: state.receivedApplicationsFilter,
+      ));
     } catch (e) {
       AppLogger.error('Failed to approve application', e);
       emit(state.copyWith(
@@ -341,12 +376,15 @@ class PersonalServiceBloc extends Bloc<PersonalServiceEvent, PersonalServiceStat
       submittingApplicationId: event.applicationId,
     ));
     try {
-      await _repository.rejectApplication(event.applicationId, reason: event.reason);
+      await _repository.rejectApplication(event.applicationId,
+          reason: event.reason);
       emit(state.copyWith(
         isSubmitting: false,
         actionMessage: 'application_rejected',
       ));
-      add(const PersonalServiceLoadReceivedApplications());
+      add(PersonalServiceLoadReceivedApplications(
+        statusFilter: state.receivedApplicationsFilter,
+      ));
     } catch (e) {
       AppLogger.error('Failed to reject application', e);
       emit(state.copyWith(
@@ -376,7 +414,9 @@ class PersonalServiceBloc extends Bloc<PersonalServiceEvent, PersonalServiceStat
         isSubmitting: false,
         actionMessage: 'counter_offer_sent',
       ));
-      add(const PersonalServiceLoadReceivedApplications());
+      add(PersonalServiceLoadReceivedApplications(
+        statusFilter: state.receivedApplicationsFilter,
+      ));
     } catch (e) {
       AppLogger.error('Failed to send counter offer', e);
       emit(state.copyWith(
@@ -427,9 +467,8 @@ class PersonalServiceBloc extends Bloc<PersonalServiceEvent, PersonalServiceStat
       );
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: event.accept
-            ? 'counter_offer_accepted'
-            : 'counter_offer_rejected',
+        actionMessage:
+            event.accept ? 'counter_offer_accepted' : 'counter_offer_rejected',
       ));
       add(const PersonalServiceLoadMyApplications());
     } catch (e) {
@@ -481,9 +520,8 @@ class PersonalServiceBloc extends Bloc<PersonalServiceEvent, PersonalServiceStat
       final newStatus = result['status'] as String?;
       emit(state.copyWith(
         isSubmitting: false,
-        actionMessage: newStatus == 'active'
-            ? 'service_activated'
-            : 'service_deactivated',
+        actionMessage:
+            newStatus == 'active' ? 'service_activated' : 'service_deactivated',
       ));
       add(const PersonalServiceLoadRequested());
     } catch (e) {
@@ -522,9 +560,8 @@ class PersonalServiceBloc extends Bloc<PersonalServiceEvent, PersonalServiceStat
 
       emit(state.copyWith(
         status: PersonalServiceStatus.loaded,
-        browseResults: event.page == 1
-            ? items
-            : [...state.browseResults, ...items],
+        browseResults:
+            event.page == 1 ? items : [...state.browseResults, ...items],
         browseTotalPages: totalPages,
       ));
     } catch (e) {
@@ -544,13 +581,15 @@ class PersonalServiceBloc extends Bloc<PersonalServiceEvent, PersonalServiceStat
   ) async {
     emit(state.copyWith(status: PersonalServiceStatus.loading));
     try {
-      final result = await _repository.getServiceReviews(event.serviceId, page: event.page);
+      final result = await _repository.getServiceReviews(event.serviceId,
+          page: event.page);
       final items = (result['items'] as List<dynamic>?)
               ?.map((e) => Map<String, dynamic>.from(e as Map))
               .toList() ??
           [];
 
-      final summary = await _repository.getServiceReviewSummary(event.serviceId);
+      final summary =
+          await _repository.getServiceReviewSummary(event.serviceId);
       emit(state.copyWith(
         status: PersonalServiceStatus.loaded,
         reviews: items,

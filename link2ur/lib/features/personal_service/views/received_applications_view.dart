@@ -7,6 +7,7 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/adaptive_dialogs.dart';
 import '../../../core/utils/error_localizer.dart';
+import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/router/go_router_extensions.dart';
@@ -34,8 +35,34 @@ class ReceivedApplicationsView extends StatelessWidget {
   }
 }
 
-class _ReceivedApplicationsContent extends StatelessWidget {
+class _ReceivedApplicationsContent extends StatefulWidget {
   const _ReceivedApplicationsContent();
+
+  @override
+  State<_ReceivedApplicationsContent> createState() =>
+      _ReceivedApplicationsContentState();
+}
+
+class _ReceivedApplicationsContentState
+    extends State<_ReceivedApplicationsContent> {
+  String _selectedFilter = '';
+
+  void _applyFilter(String filter) {
+    setState(() => _selectedFilter = filter);
+    context.read<PersonalServiceBloc>().add(
+          PersonalServiceLoadReceivedApplications(
+            statusFilter: filter.isEmpty ? null : filter,
+          ),
+        );
+  }
+
+  void _reload() {
+    context.read<PersonalServiceBloc>().add(
+          PersonalServiceLoadReceivedApplications(
+            statusFilter: _selectedFilter.isEmpty ? null : _selectedFilter,
+          ),
+        );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,105 +72,166 @@ class _ReceivedApplicationsContent extends StatelessWidget {
       appBar: AppBar(
         title: Text(l10n.expertApplicationsTitle),
       ),
-      body: BlocConsumer<PersonalServiceBloc, PersonalServiceState>(
-        listenWhen: (prev, curr) => prev.actionMessage != curr.actionMessage,
-        listener: (context, state) {
-          if (state.actionMessage == null) return;
-          final l10n = context.l10n;
-          final msg = switch (state.actionMessage) {
-            'application_approved' => l10n.expertApplicationApproved,
-            'application_rejected' => l10n.expertApplicationRejected,
-            'counter_offer_sent' => l10n.expertApplicationCounterOfferSent,
-            'application_action_failed' => state.errorMessage != null
-                ? context.localizeError(state.errorMessage)
-                : l10n.expertApplicationActionFailed,
-            _ => null,
-          };
-          if (msg != null) {
-            final isError = state.actionMessage == 'application_action_failed';
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(msg),
-                backgroundColor: isError ? AppColors.error : AppColors.success,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
-        },
-        builder: (context, state) {
-          final l10n = context.l10n;
-          final items = state.receivedApplications;
-
-          if (state.status == PersonalServiceStatus.loading &&
-              items.isEmpty) {
-            return const SkeletonList();
-          }
-
-          if (state.status == PersonalServiceStatus.error &&
-              items.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.error_outline,
-                      size: 48,
-                      color: AppColors.error.withValues(alpha: 0.5)),
-                  AppSpacing.vMd,
-                  Text(state.errorMessage != null
+      body: Column(
+        children: [
+          // Filter chips
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.sm,
+            ),
+            child: Row(
+              children: [
+                _FilterChip(
+                  label: l10n.receivedApplicationsFilterAll,
+                  selected: _selectedFilter.isEmpty,
+                  onTap: () => _applyFilter(''),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                _FilterChip(
+                  label: l10n.receivedApplicationsFilterPending,
+                  selected: _selectedFilter == 'pending',
+                  onTap: () => _applyFilter('pending'),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                _FilterChip(
+                  label: l10n.receivedApplicationsFilterNegotiating,
+                  selected: _selectedFilter == 'negotiating',
+                  onTap: () => _applyFilter('negotiating'),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                _FilterChip(
+                  label: l10n.receivedApplicationsFilterPriceAgreed,
+                  selected: _selectedFilter == 'price_agreed',
+                  onTap: () => _applyFilter('price_agreed'),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                _FilterChip(
+                  label: l10n.receivedApplicationsFilterApproved,
+                  selected: _selectedFilter == 'approved',
+                  onTap: () => _applyFilter('approved'),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                _FilterChip(
+                  label: l10n.receivedApplicationsFilterRejected,
+                  selected: _selectedFilter == 'rejected',
+                  onTap: () => _applyFilter('rejected'),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                _FilterChip(
+                  label: l10n.receivedApplicationsFilterCancelled,
+                  selected: _selectedFilter == 'cancelled',
+                  onTap: () => _applyFilter('cancelled'),
+                ),
+              ],
+            ),
+          ),
+          // List
+          Expanded(
+            child: BlocConsumer<PersonalServiceBloc, PersonalServiceState>(
+              listenWhen: (prev, curr) =>
+                  prev.actionMessage != curr.actionMessage,
+              listener: (context, state) {
+                if (state.actionMessage == null) return;
+                final l10n = context.l10n;
+                final msg = switch (state.actionMessage) {
+                  'application_approved' => l10n.expertApplicationApproved,
+                  'application_rejected' => l10n.expertApplicationRejected,
+                  'counter_offer_sent' =>
+                    l10n.expertApplicationCounterOfferSent,
+                  'application_action_failed' => state.errorMessage != null
                       ? context.localizeError(state.errorMessage)
-                      : l10n.expertApplicationActionFailed),
-                  AppSpacing.vMd,
-                  TextButton(
-                    onPressed: () => context
-                        .read<PersonalServiceBloc>()
-                        .add(const PersonalServiceLoadReceivedApplications()),
-                    child: Text(l10n.commonRetry),
-                  ),
-                ],
-              ),
-            );
-          }
+                      : l10n.expertApplicationActionFailed,
+                  _ => null,
+                };
+                if (msg != null) {
+                  final isError =
+                      state.actionMessage == 'application_action_failed';
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(msg),
+                      backgroundColor:
+                          isError ? AppColors.error : AppColors.success,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              },
+              builder: (context, state) {
+                final l10n = context.l10n;
+                final items = state.receivedApplications;
 
-          if (items.isEmpty) {
-            return EmptyStateView(
-              icon: Icons.inbox_outlined,
-              title: l10n.expertApplicationsEmpty,
-              message: l10n.expertApplicationsEmptyMessage,
-            );
-          }
+                if (state.status == PersonalServiceStatus.loading &&
+                    items.isEmpty) {
+                  return const SkeletonList();
+                }
 
-          return RefreshIndicator(
-            onRefresh: () async {
-              final bloc = context.read<PersonalServiceBloc>();
-              bloc.add(const PersonalServiceLoadReceivedApplications());
-              await bloc.stream.firstWhere(
-                (s) => s.status != PersonalServiceStatus.loading,
-              );
-            },
-            child: ListView.separated(
-              clipBehavior: Clip.none,
-              padding: const EdgeInsets.all(AppSpacing.md),
-              itemCount: items.length,
-              separatorBuilder: (_, __) =>
-                  const SizedBox(height: AppSpacing.md),
-              itemBuilder: (context, index) {
-                final application = items[index];
-                final isThisSubmitting = state.isSubmitting &&
-                    state.submittingApplicationId != null &&
-                    state.submittingApplicationId == application.id;
-                return AnimatedListItem(
-                  key: ValueKey(application.id),
-                  index: index,
-                  maxAnimatedIndex: 11,
-                  child: _ApplicationCard(
-                    application: application,
-                    isSubmitting: isThisSubmitting,
+                if (state.status == PersonalServiceStatus.error &&
+                    items.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.error_outline,
+                            size: 48,
+                            color: AppColors.error.withValues(alpha: 0.5)),
+                        AppSpacing.vMd,
+                        Text(state.errorMessage != null
+                            ? context.localizeError(state.errorMessage)
+                            : l10n.expertApplicationActionFailed),
+                        AppSpacing.vMd,
+                        TextButton(
+                          onPressed: _reload,
+                          child: Text(l10n.commonRetry),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                if (items.isEmpty) {
+                  return EmptyStateView(
+                    icon: Icons.inbox_outlined,
+                    title: l10n.expertApplicationsEmpty,
+                    message: l10n.expertApplicationsEmptyMessage,
+                  );
+                }
+
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    _reload();
+                    await context.read<PersonalServiceBloc>().stream.firstWhere(
+                          (s) => s.status != PersonalServiceStatus.loading,
+                        );
+                  },
+                  child: ListView.separated(
+                    clipBehavior: Clip.none,
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    itemCount: items.length,
+                    separatorBuilder: (_, __) =>
+                        const SizedBox(height: AppSpacing.md),
+                    itemBuilder: (context, index) {
+                      final application = items[index];
+                      final isThisSubmitting = state.isSubmitting &&
+                          state.submittingApplicationId != null &&
+                          state.submittingApplicationId == application.id;
+                      return AnimatedListItem(
+                        key: ValueKey(application.id),
+                        index: index,
+                        maxAnimatedIndex: 11,
+                        child: _ApplicationCard(
+                          application: application,
+                          isSubmitting: isThisSubmitting,
+                        ),
+                      );
+                    },
                   ),
                 );
               },
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }
@@ -192,6 +280,7 @@ class _ApplicationCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final applicantName = application.applicantName ?? 'Unknown';
+    final applicantAvatar = application.applicantAvatar;
     final serviceName = application.serviceName ?? '';
     final message = application.applicationMessage;
     final negotiatedPrice = application.negotiatedPrice;
@@ -199,237 +288,291 @@ class _ApplicationCard extends StatelessWidget {
     final currency = application.currency;
     final statusColor = _statusColor();
 
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight,
-        borderRadius: BorderRadius.circular(AppRadius.medium),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header with status badge
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-                AppSpacing.md, AppSpacing.md, AppSpacing.md, AppSpacing.sm),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (serviceName.isNotEmpty)
-                        Text(
-                          serviceName,
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleSmall
-                              ?.copyWith(fontWeight: FontWeight.w600),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      const SizedBox(height: AppSpacing.xs),
-                      Row(
-                        children: [
-                          Icon(Icons.person_outline,
-                              size: 14,
-                              color: isDark
-                                  ? AppColors.textSecondaryDark
-                                  : AppColors.textSecondaryLight),
-                          const SizedBox(width: AppSpacing.xs),
-                          Text(
-                            applicantName,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(
-                                  color: isDark
-                                      ? AppColors.textSecondaryDark
-                                      : AppColors.textSecondaryLight,
-                                ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(AppRadius.tiny),
-                  ),
-                  child: Text(
-                    _statusLabel(context),
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: statusColor,
-                          fontWeight: FontWeight.w600,
-                        ),
-                  ),
-                ),
-              ],
+    return GestureDetector(
+      onTap: () => context.goToServiceDetail(application.serviceId),
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDark
+              ? AppColors.cardBackgroundDark
+              : AppColors.cardBackgroundLight,
+          borderRadius: BorderRadius.circular(AppRadius.medium),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
-          ),
-
-          // Price info
-          if (negotiatedPrice != null || expertCounterPrice != null)
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header with status badge
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md, AppSpacing.md, AppSpacing.md, AppSpacing.sm),
               child: Row(
                 children: [
-                  if (negotiatedPrice != null) ...[
-                    Text(
-                      '${l10n.expertApplicationPrice}: ',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: isDark
-                                ? AppColors.textSecondaryDark
-                                : AppColors.textSecondaryLight,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (serviceName.isNotEmpty)
+                          Text(
+                            serviceName,
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleSmall
+                                ?.copyWith(fontWeight: FontWeight.w600),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
+                        const SizedBox(height: AppSpacing.xs),
+                        Row(
+                          children: [
+                            if (applicantAvatar != null &&
+                                applicantAvatar.isNotEmpty) ...[
+                              CircleAvatar(
+                                radius: 10,
+                                backgroundImage: NetworkImage(applicantAvatar),
+                                backgroundColor: isDark
+                                    ? Colors.white.withValues(alpha: 0.1)
+                                    : Colors.black.withValues(alpha: 0.05),
+                              ),
+                            ] else
+                              Icon(Icons.person_outline,
+                                  size: 14,
+                                  color: isDark
+                                      ? AppColors.textSecondaryDark
+                                      : AppColors.textSecondaryLight),
+                            const SizedBox(width: AppSpacing.xs),
+                            Text(
+                              applicantName,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: isDark
+                                        ? AppColors.textSecondaryDark
+                                        : AppColors.textSecondaryLight,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                    Text(
-                      '${Helpers.currencySymbolFor(currency)}${Helpers.formatAmountNumber(negotiatedPrice)}',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+                    decoration: BoxDecoration(
+                      color: statusColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(AppRadius.tiny),
+                    ),
+                    child: Text(
+                      _statusLabel(context),
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: statusColor,
                             fontWeight: FontWeight.w600,
-                            color: AppColors.primary,
                           ),
                     ),
-                  ],
-                  if (negotiatedPrice != null && expertCounterPrice != null)
-                    const SizedBox(width: AppSpacing.md),
-                  if (expertCounterPrice != null) ...[
-                    Text(
-                      '${l10n.expertApplicationCounterPrice}: ',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: isDark
-                                ? AppColors.textSecondaryDark
-                                : AppColors.textSecondaryLight,
-                          ),
-                    ),
-                    Text(
-                      '${Helpers.currencySymbolFor(currency)}${Helpers.formatAmountNumber(expertCounterPrice)}',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.accent,
-                          ),
-                    ),
-                  ],
+                  ),
                 ],
               ),
             ),
 
-          // Message
-          if (message != null && message.isNotEmpty)
+            // Price info
+            if (negotiatedPrice != null || expertCounterPrice != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                child: Row(
+                  children: [
+                    if (negotiatedPrice != null) ...[
+                      Text(
+                        '${l10n.expertApplicationPrice}: ',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: isDark
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondaryLight,
+                            ),
+                      ),
+                      Text(
+                        '${Helpers.currencySymbolFor(currency)}${Helpers.formatAmountNumber(negotiatedPrice)}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primary,
+                            ),
+                      ),
+                    ],
+                    if (negotiatedPrice != null && expertCounterPrice != null)
+                      const SizedBox(width: AppSpacing.md),
+                    if (expertCounterPrice != null) ...[
+                      Text(
+                        '${l10n.expertApplicationCounterPrice}: ',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: isDark
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondaryLight,
+                            ),
+                      ),
+                      Text(
+                        '${Helpers.currencySymbolFor(currency)}${Helpers.formatAmountNumber(expertCounterPrice)}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.accent,
+                            ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+
+            // Message
+            if (message != null && message.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.message_outlined,
+                        size: 14,
+                        color: isDark
+                            ? AppColors.textTertiaryDark
+                            : AppColors.textTertiaryLight),
+                    const SizedBox(width: AppSpacing.xs),
+                    Expanded(
+                      child: Text(
+                        message,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: isDark
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondaryLight,
+                            ),
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+            // Timestamp
             Padding(
               padding: const EdgeInsets.fromLTRB(
                   AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0),
               child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.message_outlined,
-                      size: 14,
+                  Icon(Icons.access_time,
+                      size: 12,
                       color: isDark
                           ? AppColors.textTertiaryDark
                           : AppColors.textTertiaryLight),
                   const SizedBox(width: AppSpacing.xs),
-                  Expanded(
-                    child: Text(
-                      message,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: isDark
-                                ? AppColors.textSecondaryDark
-                                : AppColors.textSecondaryLight,
-                          ),
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
+                  Text(
+                    l10n.serviceApplicationCreatedAt(
+                      DateFormatter.formatSmart(application.createdAt,
+                          l10n: l10n),
                     ),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontSize: 11,
+                          color: isDark
+                              ? AppColors.textTertiaryDark
+                              : AppColors.textTertiaryLight,
+                        ),
                   ),
-                ],
-              ),
-            ),
-
-          // Action buttons
-          if (application.canReject ||
-              application.canApprove ||
-              application.canCounterOffer) ...[
-            const SizedBox(height: AppSpacing.sm),
-            const Divider(height: 1),
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.sm),
-              child: Row(
-                children: [
-                  if (application.canCounterOffer)
-                    Expanded(
-                      child: _ActionButton(
-                        label: l10n.expertApplicationCounterOffer,
-                        icon: Icons.price_change_outlined,
-                        color: AppColors.accent,
-                        isSubmitting: isSubmitting,
-                        onPressed: () =>
-                            _showCounterOfferDialog(context),
+                  if (application.status == ServiceApplicationStatus.approved &&
+                      application.approvedAt != null) ...[
+                    const SizedBox(width: AppSpacing.md),
+                    Text(
+                      l10n.serviceApplicationApprovedAt(
+                        DateFormatter.formatSmart(application.approvedAt!,
+                            l10n: l10n),
                       ),
-                    ),
-                  if (application.canCounterOffer && application.canReject)
-                    const SizedBox(width: AppSpacing.sm),
-                  if (application.canReject)
-                    Expanded(
-                      child: _ActionButton(
-                        label: l10n.expertApplicationReject,
-                        icon: Icons.close,
-                        color: AppColors.error,
-                        isSubmitting: isSubmitting,
-                        onPressed: () =>
-                            _showRejectDialog(context),
-                      ),
-                    ),
-                  if (application.canApprove) ...[
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: _ActionButton(
-                        label: l10n.expertApplicationApprove,
-                        icon: Icons.check,
-                        color: AppColors.success,
-                        isSubmitting: isSubmitting,
-                        onPressed: () =>
-                            _showApproveConfirmation(context),
-                      ),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            fontSize: 11,
+                            color: AppColors.success,
+                          ),
                     ),
                   ],
                 ],
               ),
             ),
-          ] else ...[
-            if (application.canViewTask) ...[
-              const SizedBox(height: AppSpacing.xs),
+
+            // Action buttons
+            if (application.canReject ||
+                application.canApprove ||
+                application.canCounterOffer) ...[
+              const SizedBox(height: AppSpacing.sm),
               const Divider(height: 1),
               Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton.icon(
-                    onPressed: () {
-                      final taskId = application.taskId;
-                      if (taskId != null) context.goToTaskDetail(taskId);
-                    },
-                    icon: const Icon(Icons.open_in_new, size: 16),
-                    label: Text(l10n.expertApplicationViewTask),
-                    style: TextButton.styleFrom(
-                      visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                child: Row(
+                  children: [
+                    if (application.canCounterOffer)
+                      Expanded(
+                        child: _ActionButton(
+                          label: l10n.expertApplicationCounterOffer,
+                          icon: Icons.price_change_outlined,
+                          color: AppColors.accent,
+                          isSubmitting: isSubmitting,
+                          onPressed: () => _showCounterOfferDialog(context),
+                        ),
+                      ),
+                    if (application.canCounterOffer && application.canReject)
+                      const SizedBox(width: AppSpacing.sm),
+                    if (application.canReject)
+                      Expanded(
+                        child: _ActionButton(
+                          label: l10n.expertApplicationReject,
+                          icon: Icons.close,
+                          color: AppColors.error,
+                          isSubmitting: isSubmitting,
+                          onPressed: () => _showRejectDialog(context),
+                        ),
+                      ),
+                    if (application.canApprove) ...[
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: _ActionButton(
+                          label: l10n.expertApplicationApprove,
+                          icon: Icons.check,
+                          color: AppColors.success,
+                          isSubmitting: isSubmitting,
+                          onPressed: () => _showApproveConfirmation(context),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ] else ...[
+              if (application.canViewTask) ...[
+                const SizedBox(height: AppSpacing.xs),
+                const Divider(height: 1),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
+                      onPressed: () {
+                        final taskId = application.taskId;
+                        if (taskId != null) context.goToTaskDetail(taskId);
+                      },
+                      icon: const Icon(Icons.open_in_new, size: 16),
+                      label: Text(l10n.expertApplicationViewTask),
+                      style: TextButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ] else
-              const SizedBox(height: AppSpacing.md),
+              ] else
+                const SizedBox(height: AppSpacing.md),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -549,8 +692,7 @@ class _ApplicationCard extends StatelessWidget {
                   if (price == null || price <= 0) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                          content:
-                              Text(l10n.fleaMarketNegotiatePriceTooLow)),
+                          content: Text(l10n.fleaMarketNegotiatePriceTooLow)),
                     );
                     return;
                   }
@@ -655,6 +797,32 @@ class _ActionButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
         visualDensity: VisualDensity.compact,
+      ),
+    );
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return FilterChip(
+      label: Text(label),
+      selected: selected,
+      onSelected: (_) => onTap(),
+      selectedColor: AppColors.primary.withValues(alpha: 0.15),
+      checkmarkColor: AppColors.primary,
+      side: BorderSide(
+        color: selected ? AppColors.primary : Theme.of(context).dividerColor,
       ),
     );
   }

@@ -6,6 +6,7 @@ import '../../../core/design/app_spacing.dart';
 import '../../../core/design/app_radius.dart';
 import '../../../core/utils/adaptive_dialogs.dart';
 import '../../../core/utils/error_localizer.dart';
+import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/utils/l10n_extension.dart';
 import '../../../core/router/go_router_extensions.dart';
@@ -180,10 +181,7 @@ class _ContentState extends State<_Content> {
                 return RefreshIndicator(
                   onRefresh: () async {
                     _reload(context);
-                    await context
-                        .read<PersonalServiceBloc>()
-                        .stream
-                        .firstWhere(
+                    await context.read<PersonalServiceBloc>().stream.firstWhere(
                           (s) => s.status != PersonalServiceStatus.loading,
                         );
                   },
@@ -333,272 +331,310 @@ class _MyApplicationCard extends StatelessWidget {
     final currency = application.currency;
     final statusColor = _statusColor();
 
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark
-            ? AppColors.cardBackgroundDark
-            : AppColors.cardBackgroundLight,
-        borderRadius: BorderRadius.circular(AppRadius.medium),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-                AppSpacing.md, AppSpacing.md, AppSpacing.md, AppSpacing.sm),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (serviceName.isNotEmpty)
-                        Text(
-                          serviceName,
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleSmall
-                              ?.copyWith(fontWeight: FontWeight.w600),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      if (ownerName.isNotEmpty) ...[
-                        const SizedBox(height: AppSpacing.xs),
-                        Row(
-                          children: [
-                            Icon(Icons.person_outline,
-                                size: 14,
-                                color: isDark
-                                    ? AppColors.textSecondaryDark
-                                    : AppColors.textSecondaryLight),
-                            const SizedBox(width: AppSpacing.xs),
-                            Text(
-                              ownerName,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
-                                  ?.copyWith(
-                                    color: isDark
-                                        ? AppColors.textSecondaryDark
-                                        : AppColors.textSecondaryLight,
-                                  ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(AppRadius.tiny),
-                  ),
-                  child: Text(
-                    _statusLabel(context),
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: statusColor,
-                          fontWeight: FontWeight.w600,
-                        ),
-                  ),
-                ),
-              ],
+    return GestureDetector(
+      onTap: () => context.goToServiceDetail(application.serviceId),
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDark
+              ? AppColors.cardBackgroundDark
+              : AppColors.cardBackgroundLight,
+          borderRadius: BorderRadius.circular(AppRadius.medium),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
-          ),
-
-          // Price info
-          if (negotiatedPrice != null || counterPrice != null)
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
             Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md, AppSpacing.md, AppSpacing.md, AppSpacing.sm),
               child: Row(
                 children: [
-                  if (negotiatedPrice != null) ...[
-                    Text(
-                      '${l10n.expertApplicationPrice}: ',
-                      style:
-                          Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: isDark
-                                    ? AppColors.textSecondaryDark
-                                    : AppColors.textSecondaryLight,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (serviceName.isNotEmpty)
+                          Text(
+                            serviceName,
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleSmall
+                                ?.copyWith(fontWeight: FontWeight.w600),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        if (ownerName.isNotEmpty) ...[
+                          const SizedBox(height: AppSpacing.xs),
+                          Row(
+                            children: [
+                              Icon(Icons.person_outline,
+                                  size: 14,
+                                  color: isDark
+                                      ? AppColors.textSecondaryDark
+                                      : AppColors.textSecondaryLight),
+                              const SizedBox(width: AppSpacing.xs),
+                              Text(
+                                ownerName,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: isDark
+                                          ? AppColors.textSecondaryDark
+                                          : AppColors.textSecondaryLight,
+                                    ),
                               ),
+                            ],
+                          ),
+                        ],
+                      ],
                     ),
-                    Text(
-                      '${Helpers.currencySymbolFor(currency)}${Helpers.formatAmountNumber(negotiatedPrice)}',
-                      style:
-                          Theme.of(context).textTheme.bodySmall?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.primary,
-                              ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+                    decoration: BoxDecoration(
+                      color: statusColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(AppRadius.tiny),
                     ),
-                  ],
-                  if (negotiatedPrice != null && counterPrice != null)
-                    const SizedBox(width: AppSpacing.md),
-                  if (counterPrice != null) ...[
-                    Text(
-                      '${l10n.expertApplicationCounterPrice}: ',
-                      style:
-                          Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: isDark
-                                    ? AppColors.textSecondaryDark
-                                    : AppColors.textSecondaryLight,
-                              ),
+                    child: Text(
+                      _statusLabel(context),
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: statusColor,
+                            fontWeight: FontWeight.w600,
+                          ),
                     ),
-                    Text(
-                      '${Helpers.currencySymbolFor(currency)}${Helpers.formatAmountNumber(counterPrice)}',
-                      style:
-                          Theme.of(context).textTheme.bodySmall?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.accent,
-                              ),
-                    ),
-                  ],
+                  ),
                 ],
               ),
             ),
 
-          // Message
-          if (message != null && message.isNotEmpty)
+            // Price info
+            if (negotiatedPrice != null || counterPrice != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                child: Row(
+                  children: [
+                    if (negotiatedPrice != null) ...[
+                      Text(
+                        '${l10n.expertApplicationPrice}: ',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: isDark
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondaryLight,
+                            ),
+                      ),
+                      Text(
+                        '${Helpers.currencySymbolFor(currency)}${Helpers.formatAmountNumber(negotiatedPrice)}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primary,
+                            ),
+                      ),
+                    ],
+                    if (negotiatedPrice != null && counterPrice != null)
+                      const SizedBox(width: AppSpacing.md),
+                    if (counterPrice != null) ...[
+                      Text(
+                        '${l10n.expertApplicationCounterPrice}: ',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: isDark
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondaryLight,
+                            ),
+                      ),
+                      Text(
+                        '${Helpers.currencySymbolFor(currency)}${Helpers.formatAmountNumber(counterPrice)}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.accent,
+                            ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+
+            // Message
+            if (message != null && message.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.message_outlined,
+                        size: 14,
+                        color: isDark
+                            ? AppColors.textTertiaryDark
+                            : AppColors.textTertiaryLight),
+                    const SizedBox(width: AppSpacing.xs),
+                    Expanded(
+                      child: Text(
+                        message,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: isDark
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondaryLight,
+                            ),
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+            // Timestamp
             Padding(
               padding: const EdgeInsets.fromLTRB(
                   AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0),
               child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.message_outlined,
-                      size: 14,
+                  Icon(Icons.access_time,
+                      size: 12,
                       color: isDark
                           ? AppColors.textTertiaryDark
                           : AppColors.textTertiaryLight),
                   const SizedBox(width: AppSpacing.xs),
-                  Expanded(
-                    child: Text(
-                      message,
-                      style:
-                          Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: isDark
-                                    ? AppColors.textSecondaryDark
-                                    : AppColors.textSecondaryLight,
-                              ),
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
+                  Text(
+                    l10n.serviceApplicationCreatedAt(
+                      DateFormatter.formatSmart(application.createdAt,
+                          l10n: l10n),
                     ),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontSize: 11,
+                          color: isDark
+                              ? AppColors.textTertiaryDark
+                              : AppColors.textTertiaryLight,
+                        ),
                   ),
+                  if (application.status == ServiceApplicationStatus.approved &&
+                      application.approvedAt != null) ...[
+                    const SizedBox(width: AppSpacing.md),
+                    Text(
+                      l10n.serviceApplicationApprovedAt(
+                        DateFormatter.formatSmart(application.approvedAt!,
+                            l10n: l10n),
+                      ),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            fontSize: 11,
+                            color: AppColors.success,
+                          ),
+                    ),
+                  ],
                 ],
               ),
             ),
 
-          // Counter-offer response buttons
-          if (application.canRespondCounterOffer) ...[
-            const SizedBox(height: AppSpacing.sm),
-            const Divider(height: 1),
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.sm),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: isSubmitting
-                          ? null
-                          : () => _confirmRejectCounterOffer(context),
-                      icon: const Icon(Icons.close, size: 16),
-                      label: Text(l10n.serviceCounterOfferRejectConfirm,
-                          style: const TextStyle(fontSize: 12),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.error,
-                        side: BorderSide(
-                            color: AppColors.error.withValues(alpha: 0.4)),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.sm,
-                            vertical: AppSpacing.xs),
-                        visualDensity: VisualDensity.compact,
+            // Counter-offer response buttons
+            if (application.canRespondCounterOffer) ...[
+              const SizedBox(height: AppSpacing.sm),
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: isSubmitting
+                            ? null
+                            : () => _confirmRejectCounterOffer(context),
+                        icon: const Icon(Icons.close, size: 16),
+                        label: Text(l10n.serviceCounterOfferRejectConfirm,
+                            style: const TextStyle(fontSize: 12),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.error,
+                          side: BorderSide(
+                              color: AppColors.error.withValues(alpha: 0.4)),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.sm,
+                              vertical: AppSpacing.xs),
+                          visualDensity: VisualDensity.compact,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: FilledButton.icon(
-                      onPressed: isSubmitting
-                          ? null
-                          : () => _confirmAcceptCounterOffer(context),
-                      icon: const Icon(Icons.check, size: 16),
-                      label: Text(l10n.serviceCounterOfferAcceptConfirm,
-                          style: const TextStyle(fontSize: 12),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.success,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.sm,
-                            vertical: AppSpacing.xs),
-                        visualDensity: VisualDensity.compact,
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: isSubmitting
+                            ? null
+                            : () => _confirmAcceptCounterOffer(context),
+                        icon: const Icon(Icons.check, size: 16),
+                        label: Text(l10n.serviceCounterOfferAcceptConfirm,
+                            style: const TextStyle(fontSize: 12),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.success,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.sm,
+                              vertical: AppSpacing.xs),
+                          visualDensity: VisualDensity.compact,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ]
-          // Cancel button
-          else if (application.canCancel) ...[
-            const SizedBox(height: AppSpacing.sm),
-            const Divider(height: 1),
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  onPressed: isSubmitting
-                      ? null
-                      : () => _confirmCancel(context),
-                  icon: const Icon(Icons.cancel_outlined, size: 16),
-                  label: Text(l10n.serviceApplicationConfirmCancel),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.error,
-                    visualDensity: VisualDensity.compact,
+            ]
+            // Cancel button
+            else if (application.canCancel) ...[
+              const SizedBox(height: AppSpacing.sm),
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed:
+                        isSubmitting ? null : () => _confirmCancel(context),
+                    icon: const Icon(Icons.cancel_outlined, size: 16),
+                    label: Text(l10n.serviceApplicationConfirmCancel),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.error,
+                      visualDensity: VisualDensity.compact,
+                    ),
                   ),
                 ),
               ),
-            ),
-          ]
-          // View task link
-          else if (application.canViewTask) ...[
-            const SizedBox(height: AppSpacing.xs),
-            const Divider(height: 1),
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  onPressed: () {
-                    final taskId = application.taskId;
-                    if (taskId != null) context.goToTaskDetail(taskId);
-                  },
-                  icon: const Icon(Icons.open_in_new, size: 16),
-                  label: Text(l10n.expertApplicationViewTask),
-                  style: TextButton.styleFrom(
-                    visualDensity: VisualDensity.compact,
+            ]
+            // View task link
+            else if (application.canViewTask) ...[
+              const SizedBox(height: AppSpacing.xs),
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () {
+                      final taskId = application.taskId;
+                      if (taskId != null) context.goToTaskDetail(taskId);
+                    },
+                    icon: const Icon(Icons.open_in_new, size: 16),
+                    label: Text(l10n.expertApplicationViewTask),
+                    style: TextButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                    ),
                   ),
                 ),
               ),
-            ),
-          ] else
-            const SizedBox(height: AppSpacing.md),
-        ],
+            ] else
+              const SizedBox(height: AppSpacing.md),
+          ],
+        ),
       ),
     );
   }
