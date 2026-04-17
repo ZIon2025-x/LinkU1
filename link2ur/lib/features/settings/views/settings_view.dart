@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 
+import '../../../core/utils/app_version.dart';
 import '../../../core/widgets/external_web_view.dart';
 import '../bloc/settings_bloc.dart';
 import '../../../core/utils/haptic_feedback.dart';
@@ -23,29 +23,9 @@ class SettingsView extends StatefulWidget {
 }
 
 class _SettingsViewState extends State<SettingsView> {
-  String? _appVersion;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadAppVersion();
-  }
-
-  Future<void> _loadAppVersion() async {
-    try {
-      final packageInfo = await PackageInfo.fromPlatform();
-      if (mounted) {
-        setState(() {
-          _appVersion = '${packageInfo.version} (${packageInfo.buildNumber})';
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _appVersion = null; // Will use l10n fallback in build method
-        });
-      }
-    }
+  String? get _appVersion {
+    final v = AppVersion.instance;
+    return v.version != '0.0.0' ? v.fullVersion : null;
   }
 
   /// 在应用内 WebView 打开链接（条款/隐私等）

@@ -11,6 +11,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 
 import 'app.dart';
 import 'core/config/app_config.dart';
+import 'core/utils/app_version.dart';
 import 'core/utils/crash_reporter.dart';
 import 'core/utils/logger.dart';
 import 'core/utils/network_monitor.dart';
@@ -75,6 +76,9 @@ void main() {
 
       // Stripe 支付（信用卡/Apple Pay/支付宝）需在首次支付前完成初始化，避免点击「确认支付」时抛出 StripeConfigException
       await _initStripeIfConfigured();
+
+      // 版本信息：非阻塞初始化
+      AppVersion.instance.initialize();
 
       // 网络监测：非阻塞初始化，不影响启动速度
       NetworkMonitor.instance.initialize();

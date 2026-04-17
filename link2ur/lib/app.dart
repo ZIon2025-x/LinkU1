@@ -6,13 +6,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'app_providers.dart';
 import 'core/design/app_theme.dart';
 import 'core/design/scroll_behavior.dart';
 import 'core/router/app_router.dart';
+import 'core/utils/app_version.dart';
 import 'core/utils/deep_link_handler.dart';
 import 'core/utils/logger.dart';
 import 'core/utils/network_monitor.dart';
@@ -128,6 +128,7 @@ class _Link2UrAppState extends State<Link2UrApp> {
       discoveryRepository: _discoveryRepository,
       authBloc: _authBloc,
       child: _DeferredBlocLoader(
+        onResumed: _checkAppVersion,
         child: _WebSplashTimeout(
           child: MultiBlocListener(
             listeners: [
@@ -141,7 +142,7 @@ class _Link2UrAppState extends State<Link2UrApp> {
                 },
                 listener: (context, state) async {
                   // Auth check 完成 → 版本检查 → 移除 splash
-                  await _checkAppVersion(context);
+                  await _checkAppVersion();
                   FlutterNativeSplash.remove();
                 },
               ),
@@ -213,35 +214,33 @@ class _Link2UrAppState extends State<Link2UrApp> {
     );
   }
 
-  /// 比较语义化版本号，返回 current < other
-  bool _isVersionLessThan(String current, String other) {
-    final currentParts = current.split('.').map(int.tryParse).toList();
-    final otherParts = other.split('.').map(int.tryParse).toList();
-    for (var i = 0; i < 3; i++) {
-      final c = (i < currentParts.length ? currentParts[i] : 0) ?? 0;
-      final o = (i < otherParts.length ? otherParts[i] : 0) ?? 0;
-      if (c < o) return true;
-      if (c > o) return false;
-    }
-    return false;
-  }
+  /// 是否已弹出版本更新弹窗（防止前台恢复时重复弹出）
+  bool _updateDialogShowing = false;
 
-  Future<void> _checkAppVersion(BuildContext context) async {
+  Future<void> _checkAppVersion([BuildContext? ctx]) async {
     // Web 端不检查版本
     if (kIsWeb) return;
 
+    final context = ctx ?? _rootNavigatorKey.currentContext;
+    if (context == null) return;
+
     try {
-      final packageInfo = await PackageInfo.fromPlatform();
+      final appVersion = AppVersion.instance;
       final platform = Platform.isIOS ? 'ios' : 'android';
       final result = await _versionCheckRepository.checkVersion(
         platform: platform,
-        currentVersion: packageInfo.version,
+        currentVersion: appVersion.version,
       );
       if (result == null || !context.mounted) return;
 
-      if (result.forceUpdate) {
+      // 前端做防御性校验：即使后端返回 forceUpdate=false，
+      // 如果 current < minVersion 也视为强制更新
+      final force = result.forceUpdate ||
+          appVersion.compareVersion(result.minVersion) < 0;
+
+      if (force) {
         _showUpdateDialog(context, result, force: true);
-      } else if (_isVersionLessThan(packageInfo.version, result.latestVersion)) {
+      } else if (appVersion.needsUpdate(result.latestVersion)) {
         _showUpdateDialog(context, result, force: false);
       }
     } catch (e) {
@@ -250,7 +249,38 @@ class _Link2UrAppState extends State<Link2UrApp> {
   }
 
   void _showUpdateDialog(BuildContext context, VersionCheckResponse response, {required bool force}) {
+    // 防止重复弹出
+    if (_updateDialogShowing) return;
+    _updateDialogShowing = true;
     final l10n = AppLocalizations.of(context);
+    final hasValidUrl = response.updateUrl.isNotEmpty &&
+        Uri.tryParse(response.updateUrl)?.hasScheme == true;
+
+    // 构建 content：主提示 + 更新日志（如有）
+    final message = force
+        ? (l10n?.versionUpdateRequiredMessage ?? '当前版本过旧，请更新到最新版本以继续使用。')
+        : (l10n?.versionUpdateAvailableMessage(response.latestVersion) ?? '新版本 ${response.latestVersion} 已发布。');
+
+    Widget content;
+    if (response.releaseNotes.isNotEmpty) {
+      content = Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(message),
+          const SizedBox(height: 12),
+          Text(
+            response.releaseNotes,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      );
+    } else {
+      content = Text(message);
+    }
+
     showDialog<void>(
       context: context,
       barrierDismissible: !force,
@@ -262,11 +292,7 @@ class _Link2UrAppState extends State<Link2UrApp> {
                 ? (l10n?.versionUpdateRequired ?? '需要更新')
                 : (l10n?.versionUpdateAvailable ?? '发现新版本'),
           ),
-          content: Text(
-            force
-                ? (l10n?.versionUpdateRequiredMessage ?? '当前版本过旧，请更新到最新版本以继续使用。')
-                : (l10n?.versionUpdateAvailableMessage(response.latestVersion) ?? '新版本 ${response.latestVersion} 已发布。'),
-          ),
+          content: content,
           actions: [
             if (!force)
               TextButton(
@@ -274,18 +300,25 @@ class _Link2UrAppState extends State<Link2UrApp> {
                 child: Text(l10n?.versionUpdateLater ?? '稍后'),
               ),
             TextButton(
-              onPressed: () async {
-                final uri = Uri.tryParse(response.updateUrl);
-                if (uri != null) {
-                  await launchUrl(uri, mode: LaunchMode.externalApplication);
-                }
-              },
+              onPressed: hasValidUrl
+                  ? () async {
+                      final uri = Uri.parse(response.updateUrl);
+                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      // 非强制更新：跳转商店后关闭弹窗
+                      if (!force && dialogContext.mounted) {
+                        Navigator.of(dialogContext).pop();
+                      }
+                    }
+                  : null, // URL 无效时按钮置灰
               child: Text(l10n?.versionUpdateNow ?? '立即更新'),
             ),
           ],
         ),
       ),
-    );
+    ).then((_) {
+      // 弹窗关闭后重置标志（非强制更新用户点"稍后"，下次前台恢复可再提示）
+      _updateDialogShowing = false;
+    });
   }
 }
 
@@ -316,8 +349,9 @@ class _WebSplashTimeoutState extends State<_WebSplashTimeout> {
 /// 延迟加载非关键 BLoC 数据，避免阻塞首帧渲染
 /// 对齐 iOS：60 秒轮询未读数 + 应用恢复前台时刷新（不依赖后端 WebSocket 推送）
 class _DeferredBlocLoader extends StatefulWidget {
-  const _DeferredBlocLoader({required this.child});
+  const _DeferredBlocLoader({required this.child, this.onResumed});
   final Widget child;
+  final VoidCallback? onResumed;
 
   @override
   State<_DeferredBlocLoader> createState() => _DeferredBlocLoaderState();
@@ -361,6 +395,8 @@ class _DeferredBlocLoaderState extends State<_DeferredBlocLoader>
           const NotificationRefreshListIfLoaded(),
         );
       }
+      // 前台恢复时重新检查版本
+      widget.onResumed?.call();
     }
   }
 

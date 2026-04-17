@@ -12869,6 +12869,56 @@ class AppLocalizationsEn extends AppLocalizations {
       'This package has not been used yet. Please use the refund option instead.';
 
   @override
+  String get errorServiceRequiredForStandard =>
+      'Standard activities require a linked service';
+
+  @override
+  String get errorActivityTypeInvalid => 'Invalid activity type';
+
+  @override
+  String get errorPrizeTypeRequired =>
+      'Prize type is required for this activity';
+
+  @override
+  String get errorPrizeTypeInvalid =>
+      'Only physical prizes and in-person events are supported';
+
+  @override
+  String get errorPrizeCountRequired => 'Number of prizes/slots is required';
+
+  @override
+  String get errorDrawModeRequired =>
+      'Draw method is required for lottery activities';
+
+  @override
+  String get errorDrawTriggerRequired =>
+      'Draw trigger condition is required for auto draw';
+
+  @override
+  String get errorDrawAtRequired => 'Auto draw time is required';
+
+  @override
+  String get errorDrawParticipantCountRequired =>
+      'Draw participant count must be greater than prize count';
+
+  @override
+  String get errorMaxParticipantsRequired =>
+      'Max participants is required for standard activities';
+
+  @override
+  String get errorNotLottery => 'Only lottery activities can be drawn';
+
+  @override
+  String get errorAlreadyDrawn => 'This activity has already been drawn';
+
+  @override
+  String get errorActivityNotOpen =>
+      'Activity must be open to perform this action';
+
+  @override
+  String get errorLoadActivitiesFailed => 'Failed to load activities';
+
+  @override
   String get expertTeamEditProfileTitle => 'Edit Team Profile';
 
   @override

@@ -12332,6 +12332,48 @@ class AppLocalizationsZh extends AppLocalizations {
   String get errorPackageNeverUsedUseRefund => '套餐尚未使用，请使用退款功能';
 
   @override
+  String get errorServiceRequiredForStandard => '普通活动必须关联服务';
+
+  @override
+  String get errorActivityTypeInvalid => '无效的活动类型';
+
+  @override
+  String get errorPrizeTypeRequired => '请选择奖品类型';
+
+  @override
+  String get errorPrizeTypeInvalid => '仅支持实物奖品和线下到场';
+
+  @override
+  String get errorPrizeCountRequired => '请填写名额数量';
+
+  @override
+  String get errorDrawModeRequired => '抽奖活动必须选择开奖方式';
+
+  @override
+  String get errorDrawTriggerRequired => '自动开奖必须选择触发条件';
+
+  @override
+  String get errorDrawAtRequired => '请设置自动开奖时间';
+
+  @override
+  String get errorDrawParticipantCountRequired => '满员开奖人数必须大于名额数';
+
+  @override
+  String get errorMaxParticipantsRequired => '普通活动必须填写最大参与人数';
+
+  @override
+  String get errorNotLottery => '仅抽奖活动可以开奖';
+
+  @override
+  String get errorAlreadyDrawn => '该活动已经开过奖了';
+
+  @override
+  String get errorActivityNotOpen => '活动必须为开放状态才能执行此操作';
+
+  @override
+  String get errorLoadActivitiesFailed => '加载活动列表失败';
+
+  @override
   String get expertTeamEditProfileTitle => '编辑团队信息';
 
   @override
@@ -25336,6 +25378,48 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get errorPackageNeverUsedUseRefund => '套餐尚未使用，請使用退款功能';
+
+  @override
+  String get errorServiceRequiredForStandard => '普通活動必須關聯服務';
+
+  @override
+  String get errorActivityTypeInvalid => '無效的活動類型';
+
+  @override
+  String get errorPrizeTypeRequired => '請選擇獎品類型';
+
+  @override
+  String get errorPrizeTypeInvalid => '僅支持實物獎品和線下到場';
+
+  @override
+  String get errorPrizeCountRequired => '請填寫名額數量';
+
+  @override
+  String get errorDrawModeRequired => '抽獎活動必須選擇開獎方式';
+
+  @override
+  String get errorDrawTriggerRequired => '自動開獎必須選擇觸發條件';
+
+  @override
+  String get errorDrawAtRequired => '請設置自動開獎時間';
+
+  @override
+  String get errorDrawParticipantCountRequired => '滿員開獎人數必須大於名額數';
+
+  @override
+  String get errorMaxParticipantsRequired => '普通活動必須填寫最大參與人數';
+
+  @override
+  String get errorNotLottery => '僅抽獎活動可以開獎';
+
+  @override
+  String get errorAlreadyDrawn => '該活動已經開過獎了';
+
+  @override
+  String get errorActivityNotOpen => '活動必須為開放狀態才能執行此操作';
+
+  @override
+  String get errorLoadActivitiesFailed => '載入活動列表失敗';
 
   @override
   String get expertTeamEditProfileTitle => '編輯團隊資料';

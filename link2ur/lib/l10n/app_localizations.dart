@@ -23688,6 +23688,90 @@ abstract class AppLocalizations {
   /// **'This package has not been used yet. Please use the refund option instead.'**
   String get errorPackageNeverUsedUseRefund;
 
+  /// No description provided for @errorServiceRequiredForStandard.
+  ///
+  /// In en, this message translates to:
+  /// **'Standard activities require a linked service'**
+  String get errorServiceRequiredForStandard;
+
+  /// No description provided for @errorActivityTypeInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid activity type'**
+  String get errorActivityTypeInvalid;
+
+  /// No description provided for @errorPrizeTypeRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Prize type is required for this activity'**
+  String get errorPrizeTypeRequired;
+
+  /// No description provided for @errorPrizeTypeInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Only physical prizes and in-person events are supported'**
+  String get errorPrizeTypeInvalid;
+
+  /// No description provided for @errorPrizeCountRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Number of prizes/slots is required'**
+  String get errorPrizeCountRequired;
+
+  /// No description provided for @errorDrawModeRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Draw method is required for lottery activities'**
+  String get errorDrawModeRequired;
+
+  /// No description provided for @errorDrawTriggerRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Draw trigger condition is required for auto draw'**
+  String get errorDrawTriggerRequired;
+
+  /// No description provided for @errorDrawAtRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto draw time is required'**
+  String get errorDrawAtRequired;
+
+  /// No description provided for @errorDrawParticipantCountRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Draw participant count must be greater than prize count'**
+  String get errorDrawParticipantCountRequired;
+
+  /// No description provided for @errorMaxParticipantsRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Max participants is required for standard activities'**
+  String get errorMaxParticipantsRequired;
+
+  /// No description provided for @errorNotLottery.
+  ///
+  /// In en, this message translates to:
+  /// **'Only lottery activities can be drawn'**
+  String get errorNotLottery;
+
+  /// No description provided for @errorAlreadyDrawn.
+  ///
+  /// In en, this message translates to:
+  /// **'This activity has already been drawn'**
+  String get errorAlreadyDrawn;
+
+  /// No description provided for @errorActivityNotOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity must be open to perform this action'**
+  String get errorActivityNotOpen;
+
+  /// No description provided for @errorLoadActivitiesFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load activities'**
+  String get errorLoadActivitiesFailed;
+
   /// No description provided for @expertTeamEditProfileTitle.
   ///
   /// In en, this message translates to:
