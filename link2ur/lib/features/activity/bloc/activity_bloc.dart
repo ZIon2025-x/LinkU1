@@ -5,6 +5,7 @@ import '../../../data/models/activity.dart';
 import '../../../data/models/task_expert.dart';
 import '../../../data/repositories/activity_repository.dart';
 import '../../../data/repositories/task_expert_repository.dart';
+import '../../../data/services/payment_service.dart';
 import '../../../core/utils/cache_manager.dart';
 import '../../../core/utils/logger.dart';
 
@@ -240,8 +241,10 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
   ActivityBloc({
     required ActivityRepository activityRepository,
     TaskExpertRepository? taskExpertRepository,
+    PaymentService? paymentService,
   })  : _activityRepository = activityRepository,
         _taskExpertRepository = taskExpertRepository,
+        _paymentService = paymentService,
         super(const ActivityState()) {
     on<ActivityLoadRequested>(_onLoadRequested);
     on<ActivityLoadMore>(_onLoadMore);
@@ -259,6 +262,7 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
 
   final ActivityRepository _activityRepository;
   final TaskExpertRepository? _taskExpertRepository;
+  final PaymentService? _paymentService;
 
   Future<void> _onLoadRequested(
     ActivityLoadRequested event,
@@ -460,9 +464,35 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
   ) async {
     emit(state.copyWith(officialApplyStatus: OfficialApplyStatus.applying));
     try {
-      await _activityRepository.applyOfficialActivity(event.activityId);
+      final result = await _activityRepository.applyOfficialActivity(event.activityId);
+
+      // Check if payment is required
+      if (result['requires_payment'] == true) {
+        final clientSecret = result['client_secret'] as String?;
+        final paymentService = _paymentService;
+        if (clientSecret == null || paymentService == null) {
+          emit(state.copyWith(officialApplyStatus: OfficialApplyStatus.error));
+          return;
+        }
+
+        final paid = await paymentService.presentPaymentSheet(
+          clientSecret: clientSecret,
+          customerId: result['customer_id'] as String?,
+          ephemeralKeySecret: result['ephemeral_key_secret'] as String?,
+        );
+
+        if (paid) {
+          emit(state.copyWith(officialApplyStatus: OfficialApplyStatus.applied));
+          add(ActivityLoadDetail(event.activityId));
+        } else {
+          // User cancelled payment
+          emit(state.copyWith(officialApplyStatus: OfficialApplyStatus.idle));
+        }
+        return;
+      }
+
+      // Free activity — already applied on backend
       emit(state.copyWith(officialApplyStatus: OfficialApplyStatus.applied));
-      // 刷新详情以更新名额计数，并加载结果
       add(ActivityLoadDetail(event.activityId));
     } on ActivityFullException {
       emit(state.copyWith(officialApplyStatus: OfficialApplyStatus.full));

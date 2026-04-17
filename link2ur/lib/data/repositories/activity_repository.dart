@@ -228,8 +228,9 @@ class ActivityRepository {
     }
   }
 
-  /// 申请官方活动（抽奖/先到先得）
-  Future<void> applyOfficialActivity(int activityId) async {
+  /// 申请活动（抽奖/先到先得）
+  /// 返回 response data，可能包含 requires_payment + client_secret
+  Future<Map<String, dynamic>> applyOfficialActivity(int activityId) async {
     final response = await _apiService.post(
       ApiEndpoints.officialActivityApply(activityId),
     );
@@ -238,8 +239,12 @@ class ActivityRepository {
       if (msg.contains('已满') || msg.contains('full') || msg.contains('no more')) {
         throw const ActivityFullException();
       }
-      throw ActivityException(response.errorCode ?? response.message ?? 'activity_official_apply_failed', code: response.errorCode);
+      throw ActivityException(
+        response.errorCode ?? response.message ?? 'activity_official_apply_failed',
+        code: response.errorCode,
+      );
     }
+    return response.data as Map<String, dynamic>? ?? {'success': true};
   }
 
   /// 取消申请官方活动

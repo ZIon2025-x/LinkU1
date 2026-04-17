@@ -30,6 +30,7 @@ import '../../../data/models/task_expert.dart';
 import '../../../data/repositories/activity_repository.dart';
 import '../../../data/repositories/payment_repository.dart';
 import '../../../data/repositories/task_expert_repository.dart';
+import '../../../data/services/payment_service.dart';
 import '../../tasks/bloc/task_detail_bloc.dart';
 import '../../tasks/views/approval_payment_page.dart';
 import '../bloc/activity_bloc.dart';
@@ -50,6 +51,7 @@ class ActivityDetailView extends StatelessWidget {
         activityRepository: context.read<ActivityRepository>(),
         taskExpertRepository:
             context.read<TaskExpertRepository>(),
+        paymentService: PaymentService.instance,
       )..add(ActivityLoadDetail(activityId)),
       child: _ActivityDetailViewContent(activityId: activityId),
     );
