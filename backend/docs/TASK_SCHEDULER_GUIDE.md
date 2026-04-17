@@ -94,6 +94,7 @@ TaskScheduler 是 Link2Ur 后端的进程内定时任务调度器，替代原先
 | 18 | `revert_unpaid_application_approvals` | 1h | `crud.revert_unpaid_application_approvals` | 撤销 `pending_payment` 超过 24 小时未付款的申请批准，状态回退为 `open` |
 | 19 | `update_popular_tasks` | 30m | (内联) | 基于 24 小时内的 UserTaskInteraction 数据，计算热门任务 Top 50，缓存到 Redis |
 | 20 | `precompute_recommendations` | 1h | (内联) | 为最近 7 天有交互行为的活跃用户（最多 100 个）预计算推荐结果 |
+| 20a | `close_stale_consultations` | 1h | `scheduled_tasks.close_stale_consultations` | 自动关闭超过 14 天不活跃的咨询占位任务（`status=consulting` + `task_source=consultation/flea_market_consultation`），同步关闭关联的 ServiceApplication / FleaMarketPurchaseRequest，发送系统消息 |
 
 > **⚠️ #13 性能隐患**：
 > 当前全量扫描更新所有用户统计，用户量增长后将成为数据库瓶颈。
