@@ -250,6 +250,8 @@ class _ApplicationCard extends StatelessWidget {
     final l10n = context.l10n;
     return switch (application.status) {
       ServiceApplicationStatus.pending => l10n.expertApplicationStatusPending,
+      ServiceApplicationStatus.consulting =>
+        l10n.expertApplicationStatusConsulting,
       ServiceApplicationStatus.negotiating =>
         l10n.expertApplicationStatusNegotiating,
       ServiceApplicationStatus.priceAgreed =>
@@ -265,6 +267,7 @@ class _ApplicationCard extends StatelessWidget {
   Color _statusColor() {
     return switch (application.status) {
       ServiceApplicationStatus.pending => AppColors.warning,
+      ServiceApplicationStatus.consulting => AppColors.info,
       ServiceApplicationStatus.negotiating => AppColors.accent,
       ServiceApplicationStatus.priceAgreed => AppColors.primary,
       ServiceApplicationStatus.approved => AppColors.success,
@@ -334,7 +337,8 @@ class _ApplicationCard extends StatelessWidget {
                                 applicantAvatar.isNotEmpty) ...[
                               CircleAvatar(
                                 radius: 10,
-                                backgroundImage: NetworkImage(applicantAvatar),
+                                backgroundImage: NetworkImage(
+                                    Helpers.getImageUrl(applicantAvatar)),
                                 backgroundColor: isDark
                                     ? Colors.white.withValues(alpha: 0.1)
                                     : Colors.black.withValues(alpha: 0.05),

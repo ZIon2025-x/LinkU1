@@ -6,6 +6,7 @@ import 'package:equatable/equatable.dart';
 /// `user_service_application_routes.py` and `schemas.ServiceApplicationOut`.
 enum ServiceApplicationStatus {
   pending,
+  consulting,
   negotiating,
   priceAgreed,
   approved,
@@ -17,6 +18,8 @@ enum ServiceApplicationStatus {
     switch (raw) {
       case 'pending':
         return ServiceApplicationStatus.pending;
+      case 'consulting':
+        return ServiceApplicationStatus.consulting;
       case 'negotiating':
         return ServiceApplicationStatus.negotiating;
       case 'price_agreed':
@@ -278,8 +281,11 @@ extension ServiceApplicationRules on ServiceApplication {
       expertCounterPrice != null;
 
   /// Applicant can navigate to the created task.
+  /// Consulting also creates a task for the chat flow.
   bool get canViewTask =>
-      status == ServiceApplicationStatus.approved && taskId != null;
+      (status == ServiceApplicationStatus.approved ||
+          status == ServiceApplicationStatus.consulting) &&
+      taskId != null;
 
   // ---- Owner-side rules (what the service owner can do) ----
 
