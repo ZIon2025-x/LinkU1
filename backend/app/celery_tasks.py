@@ -1720,6 +1720,29 @@ if CELERY_AVAILABLE:
             db.close()
             release_redis_distributed_lock(lock_key)
 
+    # ── 不活跃咨询自动关闭 (每小时) ──
+    @celery_app.task(name='app.celery_tasks.close_stale_consultations_task', bind=True, max_retries=2, default_retry_delay=60)
+    def close_stale_consultations_task(self):
+        """自动关闭超过14天不活跃的咨询占位任务 - 每小时"""
+        task_name = 'close_stale_consultations_task'
+        lock_key = f"celery_lock:{task_name}"
+        if not get_redis_distributed_lock(lock_key, lock_ttl=3600):
+            return {"status": "skipped"}
+        db = SessionLocal()
+        try:
+            from app.scheduled_tasks import close_stale_consultations
+            close_stale_consultations(db)
+            return {"status": "success"}
+        except Exception as e:
+            db.rollback()
+            logger.error(f"不活跃咨询自动关闭失败: {e}", exc_info=True)
+            if self.request.retries < self.max_retries:
+                raise self.retry(exc=e)
+            raise
+        finally:
+            db.close()
+            release_redis_distributed_lock(lock_key)
+
     # ── 套餐过期提醒 (每小时) ──
     @celery_app.task(name='app.celery_tasks.send_package_expiry_reminders_task', bind=True, max_retries=2, default_retry_delay=60)
     def send_package_expiry_reminders_task(self):

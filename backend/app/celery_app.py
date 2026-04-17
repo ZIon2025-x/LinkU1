@@ -196,6 +196,12 @@ celery_app.conf.beat_schedule = {
         'task': 'app.celery_tasks.process_expired_verifications_task',
         'schedule': 3600.0,  # 1小时
     },
+
+    # 自动关闭不活跃咨询 - 每1小时执行一次
+    'close-stale-consultations': {
+        'task': 'app.celery_tasks.close_stale_consultations_task',
+        'schedule': 3600.0,  # 1小时
+    },
     
     # ========== 学生认证过期提醒任务 ==========
     
