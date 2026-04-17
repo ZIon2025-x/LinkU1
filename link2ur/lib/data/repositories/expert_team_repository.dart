@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:link2ur/core/constants/api_endpoints.dart';
 import 'package:link2ur/core/utils/app_exception.dart';
 import 'package:link2ur/data/models/expert_team.dart';
@@ -139,6 +141,20 @@ class ExpertTeamRepository {
   }
 
   // ==================== 资料修改 ====================
+
+  /// 上传团队头像图片，返回图片 URL
+  Future<String> uploadAvatar(Uint8List bytes, String filename) async {
+    final response = await _apiService.uploadFileBytes<Map<String, dynamic>>(
+      '${ApiEndpoints.uploadPublicImage}?category=expert_avatar',
+      bytes: bytes,
+      filename: filename,
+      fieldName: 'image',
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw AppException(response.errorCode ?? response.message ?? 'upload_avatar_failed');
+    }
+    return response.data!['url'] as String? ?? '';
+  }
 
   /// 直接更新团队资料（Owner only，即时生效，无需审核）
   Future<void> updateProfile(String expertId, {

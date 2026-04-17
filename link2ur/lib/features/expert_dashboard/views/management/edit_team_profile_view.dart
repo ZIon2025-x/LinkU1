@@ -1,6 +1,11 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_cropper/image_cropper.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:link2ur/core/design/app_colors.dart';
 import 'package:link2ur/core/utils/error_localizer.dart';
 import 'package:link2ur/core/utils/l10n_extension.dart';
 import 'package:link2ur/core/widgets/location_picker.dart';
@@ -36,11 +41,17 @@ class _EditBodyState extends State<_EditBody> {
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
   final _bioCtrl = TextEditingController();
+  final _imagePicker = ImagePicker();
   bool _initialized = false;
   String? _location;
   double? _latitude;
   double? _longitude;
   int? _serviceRadiusKm;
+
+  // Avatar state
+  Uint8List? _avatarBytes;
+  String? _newAvatarUrl;
+  bool _uploadingAvatar = false;
 
   @override
   void dispose() {
@@ -59,6 +70,112 @@ class _EditBodyState extends State<_EditBody> {
       _serviceRadiusKm = team.serviceRadiusKm;
       _initialized = true;
     }
+  }
+
+  Future<void> _pickFromGallery() async {
+    final file = await _imagePicker.pickImage(source: ImageSource.gallery);
+    if (file == null || !mounted) return;
+    await _cropAndUpload(file);
+  }
+
+  Future<void> _pickFromCamera() async {
+    final file = await _imagePicker.pickImage(source: ImageSource.camera);
+    if (file == null || !mounted) return;
+    await _cropAndUpload(file);
+  }
+
+  Future<void> _cropAndUpload(XFile file) async {
+    final l10n = context.l10n;
+    final repo = context.read<ExpertTeamRepository>();
+    final messenger = ScaffoldMessenger.of(context);
+
+    final croppedFile = await ImageCropper().cropImage(
+      sourcePath: file.path,
+      aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
+      maxWidth: 512,
+      maxHeight: 512,
+      compressQuality: 85,
+      uiSettings: [
+        AndroidUiSettings(
+          toolbarTitle: l10n.profileSelectAvatar,
+          toolbarColor: AppColors.primary,
+          toolbarWidgetColor: Colors.white,
+          activeControlsWidgetColor: AppColors.primary,
+          cropStyle: CropStyle.circle,
+          lockAspectRatio: true,
+          hideBottomControls: true,
+        ),
+        IOSUiSettings(
+          title: l10n.profileSelectAvatar,
+          cropStyle: CropStyle.circle,
+          aspectRatioLockEnabled: true,
+          resetAspectRatioEnabled: false,
+        ),
+      ],
+    );
+    if (croppedFile == null || !mounted) return;
+
+    final bytes = await croppedFile.readAsBytes();
+    final filename = croppedFile.path.split('/').last;
+
+    setState(() {
+      _avatarBytes = bytes;
+      _uploadingAvatar = true;
+    });
+
+    try {
+      final url = await repo.uploadAvatar(bytes, filename);
+      if (!mounted) return;
+      setState(() {
+        _newAvatarUrl = url;
+        _uploadingAvatar = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _avatarBytes = null;
+        _uploadingAvatar = false;
+      });
+      final errorMsg = context.localizeError(e.toString());
+      messenger.showSnackBar(
+        SnackBar(content: Text(errorMsg)),
+      );
+    }
+  }
+
+  void _showImageSourceSheet() {
+    final l10n = context.l10n;
+    showModalBottomSheet(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: Text(l10n.profileAvatarFromGallery),
+              onTap: () {
+                Navigator.pop(context);
+                _pickFromGallery();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt_outlined),
+              title: Text(l10n.profileAvatarFromCamera),
+              onTap: () {
+                Navigator.pop(context);
+                _pickFromCamera();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.close),
+              title: Text(l10n.commonCancel),
+              onTap: () => Navigator.pop(context),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -92,29 +209,53 @@ class _EditBodyState extends State<_EditBody> {
                     key: _formKey,
                     child: ListView(
                       children: [
-                        // Avatar placeholder
+                        // Avatar
                         Center(
-                          child: Stack(
-                            children: [
-                              CircleAvatar(
-                                radius: 48,
-                                backgroundImage: team.avatar != null
-                                    ? NetworkImage(Helpers.getImageUrl(team.avatar!))
-                                    : null,
-                                child: team.avatar == null
-                                    ? const Icon(Icons.group, size: 40)
-                                    : null,
-                              ),
-                              Positioned(
-                                bottom: 0,
-                                right: 0,
-                                child: CircleAvatar(
-                                  radius: 16,
-                                  backgroundColor: Theme.of(context).colorScheme.primary,
-                                  child: const Icon(Icons.camera_alt, size: 16, color: Colors.white),
+                          child: GestureDetector(
+                            onTap: _uploadingAvatar ? null : _showImageSourceSheet,
+                            child: Stack(
+                              children: [
+                                if (_avatarBytes != null)
+                                  CircleAvatar(
+                                    radius: 48,
+                                    backgroundImage: MemoryImage(_avatarBytes!),
+                                  )
+                                else
+                                  CircleAvatar(
+                                    radius: 48,
+                                    backgroundImage: team.avatar != null
+                                        ? NetworkImage(Helpers.getImageUrl(team.avatar!))
+                                        : null,
+                                    child: team.avatar == null
+                                        ? const Icon(Icons.group, size: 40)
+                                        : null,
+                                  ),
+                                if (_uploadingAvatar)
+                                  const Positioned.fill(
+                                    child: CircleAvatar(
+                                      radius: 48,
+                                      backgroundColor: Colors.black38,
+                                      child: SizedBox(
+                                        width: 24,
+                                        height: 24,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                Positioned(
+                                  bottom: 0,
+                                  right: 0,
+                                  child: CircleAvatar(
+                                    radius: 16,
+                                    backgroundColor: Theme.of(context).colorScheme.primary,
+                                    child: const Icon(Icons.camera_alt, size: 16, color: Colors.white),
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                         const SizedBox(height: 24),
@@ -189,7 +330,7 @@ class _EditBodyState extends State<_EditBody> {
                           width: double.infinity,
                           height: 48,
                           child: ElevatedButton(
-                            onPressed: state.status == ExpertTeamStatus.loading
+                            onPressed: state.status == ExpertTeamStatus.loading || _uploadingAvatar
                                 ? null
                                 : () async {
                                     if (!_formKey.currentState!.validate()) return;
@@ -204,7 +345,7 @@ class _EditBodyState extends State<_EditBody> {
                                         _longitude != team.longitude ||
                                         _serviceRadiusKm != team.serviceRadiusKm;
 
-                                    if (newName == null && newBio == null && !locationChanged) {
+                                    if (newName == null && newBio == null && _newAvatarUrl == null && !locationChanged) {
                                       ScaffoldMessenger.of(context).showSnackBar(
                                         SnackBar(
                                           content: Text(
@@ -222,13 +363,14 @@ class _EditBodyState extends State<_EditBody> {
                                     final savedMsg = context.l10n.commonSaved;
                                     final failedPrefix = context.l10n.expertTeamEditProfileSubmitFailed;
 
-                                    // Profile update (name/bio) — direct save, no review
-                                    if (newName != null || newBio != null) {
+                                    // Profile update (name/bio/avatar) — direct save, no review
+                                    if (newName != null || newBio != null || _newAvatarUrl != null) {
                                       try {
                                         await repo.updateProfile(
                                           widget.expertId,
                                           newName: newName,
                                           newBio: newBio,
+                                          newAvatar: _newAvatarUrl,
                                         );
                                       } catch (e) {
                                         final detail = context.mounted

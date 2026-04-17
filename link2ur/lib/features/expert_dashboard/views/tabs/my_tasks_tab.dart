@@ -191,7 +191,7 @@ class _TaskCard extends StatelessWidget {
                         if (reward != null) ...[
                           const SizedBox(width: AppSpacing.sm),
                           Text(
-                            '$currency ${(reward as num).toStringAsFixed(2)}',
+                            '$currency ${(num.tryParse(reward.toString()) ?? 0).toStringAsFixed(2)}',
                             style: Theme.of(context)
                                 .textTheme
                                 .bodySmall
@@ -206,7 +206,7 @@ class _TaskCard extends StatelessWidget {
                     if (joinedAt != null) ...[
                       const SizedBox(height: 2),
                       Text(
-                        joinedAt.substring(0, 10),
+                        joinedAt.length >= 10 ? joinedAt.substring(0, 10) : joinedAt,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: isDark
                                   ? AppColors.textSecondaryDark

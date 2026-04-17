@@ -18,6 +18,7 @@ import '../../../../core/utils/l10n_extension.dart';
 import '../../../../core/utils/sheet_adaptation.dart';
 import '../../../../core/widgets/error_state_view.dart';
 import '../../bloc/expert_dashboard_bloc.dart';
+import '../../bloc/selected_expert_cubit.dart';
 
 /// Services tab for the Expert Dashboard — lists services with create/edit/delete.
 class ServicesTab extends StatelessWidget {
@@ -46,10 +47,15 @@ class ServicesTab extends StatelessWidget {
           );
         }
 
+        final canManage =
+            context.read<SelectedExpertCubit>().state.canManage;
+
         return Scaffold(
           body: state.services.isEmpty
               ? _EmptyServicesView(
-                  onCreateTap: () => _showServiceFormSheet(context),
+                  onCreateTap: canManage
+                      ? () => _showServiceFormSheet(context)
+                      : null,
                 )
               : ListView.builder(
                   padding: const EdgeInsets.fromLTRB(
@@ -63,27 +69,39 @@ class ServicesTab extends StatelessWidget {
                           const EdgeInsets.only(bottom: AppSpacing.sm),
                       child: _ServiceCard(
                         service: service,
+                        canManage: canManage,
                         onEdit: () =>
                             _showServiceFormSheet(context, service: service),
+                        onToggleStatus: () =>
+                            context.read<ExpertDashboardBloc>().add(
+                                  ExpertDashboardToggleServiceStatus(
+                                      service['id']?.toString() ?? ''),
+                                ),
                         onDelete: () =>
                             _confirmDelete(context, service),
                       ),
                     );
                   },
                 ),
-          // Fix 2: Disable FAB during submitting status
-          floatingActionButton: context.select<ExpertDashboardBloc, bool>(
-            (bloc) =>
-                bloc.state.status == ExpertDashboardStatus.submitting,
-          )
-              ? const FloatingActionButton(
-                  onPressed: null,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : FloatingActionButton(
-                  onPressed: () => _showServiceFormSheet(context),
-                  tooltip: context.l10n.expertServiceCreate,
-                  child: const Icon(Icons.add),
+          floatingActionButton: !canManage
+              ? null
+              : Builder(
+                  builder: (ctx) {
+                    final submitting = ctx.select<ExpertDashboardBloc, bool>(
+                      (bloc) => bloc.state.status == ExpertDashboardStatus.submitting,
+                    );
+                    return FloatingActionButton(
+                      onPressed: submitting ? null : () => _showServiceFormSheet(context),
+                      tooltip: context.l10n.expertServiceCreate,
+                      child: submitting
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            )
+                          : const Icon(Icons.add),
+                    );
+                  },
                 ),
         );
       },
@@ -135,9 +153,9 @@ class ServicesTab extends StatelessWidget {
 // =============================================================================
 
 class _EmptyServicesView extends StatelessWidget {
-  const _EmptyServicesView({required this.onCreateTap});
+  const _EmptyServicesView({this.onCreateTap});
 
-  final VoidCallback onCreateTap;
+  final VoidCallback? onCreateTap;
 
   @override
   Widget build(BuildContext context) {
@@ -170,12 +188,14 @@ class _EmptyServicesView extends StatelessWidget {
                   ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: AppSpacing.lg),
-            FilledButton.icon(
-              onPressed: onCreateTap,
-              icon: const Icon(Icons.add),
-              label: Text(context.l10n.expertServiceCreate),
-            ),
+            if (onCreateTap != null) ...[
+              const SizedBox(height: AppSpacing.lg),
+              FilledButton.icon(
+                onPressed: onCreateTap,
+                icon: const Icon(Icons.add),
+                label: Text(context.l10n.expertServiceCreate),
+              ),
+            ],
           ],
         ),
       ),
@@ -192,11 +212,15 @@ class _ServiceCard extends StatelessWidget {
     required this.service,
     required this.onEdit,
     required this.onDelete,
+    required this.onToggleStatus,
+    required this.canManage,
   });
 
   final Map<String, dynamic> service;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+  final VoidCallback onToggleStatus;
+  final bool canManage;
 
   @override
   Widget build(BuildContext context) {
@@ -260,37 +284,56 @@ class _ServiceCard extends StatelessWidget {
               ),
             ),
             // Actions menu
-            PopupMenuButton<String>(
-              onSelected: (value) {
-                if (value == 'edit') onEdit();
-                if (value == 'delete') onDelete();
-              },
-              itemBuilder: (context) => [
-                PopupMenuItem(
-                  value: 'edit',
-                  child: ListTile(
-                    leading: const Icon(Icons.edit_outlined),
-                    title: Text(context.l10n.expertServiceEdit),
-                    contentPadding: EdgeInsets.zero,
-                    visualDensity: VisualDensity.compact,
-                  ),
-                ),
-                PopupMenuItem(
-                  value: 'delete',
-                  child: ListTile(
-                    leading: Icon(Icons.delete_outline,
-                        color: Theme.of(context).colorScheme.error),
-                    title: Text(
-                      context.l10n.expertServiceDelete,
-                      style: TextStyle(
-                          color: Theme.of(context).colorScheme.error),
+            if (canManage)
+              PopupMenuButton<String>(
+                onSelected: (value) {
+                  if (value == 'edit') onEdit();
+                  if (value == 'toggle') onToggleStatus();
+                  if (value == 'delete') onDelete();
+                },
+                itemBuilder: (context) => [
+                  PopupMenuItem(
+                    value: 'edit',
+                    child: ListTile(
+                      leading: const Icon(Icons.edit_outlined),
+                      title: Text(context.l10n.expertServiceEdit),
+                      contentPadding: EdgeInsets.zero,
+                      visualDensity: VisualDensity.compact,
                     ),
-                    contentPadding: EdgeInsets.zero,
-                    visualDensity: VisualDensity.compact,
                   ),
-                ),
-              ],
-            ),
+                  PopupMenuItem(
+                    value: 'toggle',
+                    child: ListTile(
+                      leading: Icon(
+                        status == 'active'
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
+                      ),
+                      title: Text(
+                        status == 'active'
+                            ? context.l10n.expertServiceDelist
+                            : context.l10n.expertServiceActivate,
+                      ),
+                      contentPadding: EdgeInsets.zero,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'delete',
+                    child: ListTile(
+                      leading: Icon(Icons.delete_outline,
+                          color: Theme.of(context).colorScheme.error),
+                      title: Text(
+                        context.l10n.expertServiceDelete,
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.error),
+                      ),
+                      contentPadding: EdgeInsets.zero,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
+                ],
+              ),
           ],
         ),
       ),

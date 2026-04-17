@@ -194,16 +194,17 @@ class _PackagesViewState extends State<PackagesView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(context.l10n.expertManagementPackages)),
-      floatingActionButton: _submitting
-          ? const FloatingActionButton(
-              onPressed: null,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          : FloatingActionButton(
-              onPressed: () => _showFormSheet(),
-              tooltip: context.l10n.expertPackageCreate,
-              child: const Icon(Icons.add),
-            ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _submitting ? null : () => _showFormSheet(),
+        tooltip: context.l10n.expertPackageCreate,
+        child: _submitting
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              )
+            : const Icon(Icons.add),
+      ),
       body: _buildBody(context),
     );
   }

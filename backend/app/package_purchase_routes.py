@@ -675,7 +675,8 @@ async def redeem_package(
                 status_code=400,
                 detail={"error_code": "package_id_invalid", "message": "package_id 必须是整数"},
             )
-        target_user_id = None  # manual 模式不限制 user_id
+        # manual 模式不限制 user_id — expert_id 过滤已保证只能核销本团队售出的套餐
+        target_user_id = None
         redeem_method = "manual"
 
     # 加载 + 锁定 package
@@ -693,6 +694,37 @@ async def redeem_package(
     )
     pkg = pkg_result.scalar_one_or_none()
     if not pkg:
+        # 二次查询: 不过滤 status, 返回更具体的错误码
+        check_filters = [
+            UserServicePackage.id == target_package_id,
+            UserServicePackage.expert_id == expert_id,
+        ]
+        if target_user_id is not None:
+            check_filters.append(UserServicePackage.user_id == target_user_id)
+        check_result = await db.execute(
+            select(UserServicePackage.status).where(and_(*check_filters))
+        )
+        existing_status = check_result.scalar_one_or_none()
+        if existing_status == "expired":
+            raise HTTPException(
+                status_code=400,
+                detail={"error_code": "package_expired", "message": "套餐已过期"},
+            )
+        if existing_status == "exhausted":
+            raise HTTPException(
+                status_code=400,
+                detail={"error_code": "package_exhausted", "message": "套餐次数已用完"},
+            )
+        if existing_status == "refunded":
+            raise HTTPException(
+                status_code=400,
+                detail={"error_code": "package_refunded", "message": "套餐已退款"},
+            )
+        if existing_status is not None:
+            raise HTTPException(
+                status_code=400,
+                detail={"error_code": "package_not_active", "message": f"套餐状态为 {existing_status}，无法核销"},
+            )
         raise HTTPException(
             status_code=404,
             detail={"error_code": "package_not_found_or_not_team", "message": "套餐不存在或不属于该团队"},
@@ -773,6 +805,17 @@ async def redeem_package(
             raise HTTPException(
                 status_code=400,
                 detail={"error_code": "sub_service_not_in_bundle", "message": "该子服务不在此套餐中"},
+            )
+        # 验证子服务在 TaskExpertService 中仍然存在
+        svc_exists = await db.execute(
+            select(models.TaskExpertService.id).where(
+                models.TaskExpertService.id == sub_service_id
+            )
+        )
+        if not svc_exists.scalar_one_or_none():
+            raise HTTPException(
+                status_code=400,
+                detail={"error_code": "sub_service_deleted", "message": "该子服务已被删除，无法核销"},
             )
         sub_entry = dict(bd[sub_key])
         if int(sub_entry.get("used", 0)) >= int(sub_entry.get("total", 0)):

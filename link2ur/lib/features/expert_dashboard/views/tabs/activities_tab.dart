@@ -82,11 +82,21 @@ class ActivitiesTab extends StatelessWidget {
                     );
                   },
                 ),
-          floatingActionButton: FloatingActionButton(
-            onPressed: () => _showActivityFormSheet(context, state.services),
-            tooltip: context.l10n.expertActivityCreate,
-            child: const Icon(Icons.add),
-          ),
+          floatingActionButton: !context.read<SelectedExpertCubit>().state.canManage
+              ? null
+              : FloatingActionButton(
+                  onPressed: state.status == ExpertDashboardStatus.submitting
+                      ? null
+                      : () => _showActivityFormSheet(context, state.services),
+                  tooltip: context.l10n.expertActivityCreate,
+                  child: state.status == ExpertDashboardStatus.submitting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Icon(Icons.add),
+                ),
         );
       },
     );
