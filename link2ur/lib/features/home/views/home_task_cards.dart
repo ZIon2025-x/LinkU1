@@ -366,10 +366,16 @@ class _NearbyTabState extends State<_NearbyTab> {
               ),
             ),
             if (state.isLoadingNearby)
-              Positioned.fill(
-                child: ColoredBox(
-                  color: Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.5),
-                  child: const Center(child: CircularProgressIndicator()),
+              const Positioned(
+                top: 100,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2.5),
+                  ),
                 ),
               ),
           ],
