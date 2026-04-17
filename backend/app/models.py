@@ -2209,7 +2209,9 @@ class Activity(Base):
     drawn_at = Column(DateTime(timezone=True), nullable=True)  # 实际开奖时间
     winners = Column(JSONB, nullable=True)            # [{user_id, name, prize_index}]
     is_drawn = Column(Boolean, default=False, nullable=False)
-    
+    draw_trigger = Column(String(10), nullable=True)        # by_time / by_count / both
+    draw_participant_count = Column(Integer, nullable=True)  # threshold for by_count/both
+
     # 关系
     expert = relationship("User", foreign_keys=[expert_id])
     service = relationship("TaskExpertService", back_populates="activities")
