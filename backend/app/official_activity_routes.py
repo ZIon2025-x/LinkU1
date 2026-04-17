@@ -70,12 +70,24 @@ async def apply_official_activity(
     if not activity:
         raise HTTPException(status_code=404, detail="活动不存在或已结束")
 
-    # ── Check for existing application (exclude refunded) ──
+    # ── Clean up refunded records so UniqueConstraint doesn't block re-apply ──
+    refunded_result = await db.execute(
+        select(models.OfficialActivityApplication).where(
+            models.OfficialActivityApplication.activity_id == activity_id,
+            models.OfficialActivityApplication.user_id == current_user.id,
+            models.OfficialActivityApplication.status == 'refunded',
+        )
+    )
+    for refunded_app in refunded_result.scalars().all():
+        await db.delete(refunded_app)
+    # Flush deletes before checking for active applications
+    await db.flush()
+
+    # ── Check for existing active application ──
     existing = await db.execute(
         select(models.OfficialActivityApplication).where(
             models.OfficialActivityApplication.activity_id == activity_id,
             models.OfficialActivityApplication.user_id == current_user.id,
-            models.OfficialActivityApplication.status != 'refunded',
         )
     )
     existing_app = existing.scalar_one_or_none()
