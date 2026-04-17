@@ -115,7 +115,7 @@ async def get_tasks(
     location: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     keyword: Optional[str] = Query(None),
-    sort_by: Optional[str] = Query("latest"),
+    sort_by: Optional[str] = Query("latest", pattern="^(latest|distance|nearby|highest_pay|near_deadline|recommended)$"),
     expert_creator_id: Optional[str] = Query(None),
     is_multi_participant: Optional[bool] = Query(None),
     parent_activity_id: Optional[int] = Query(None),
