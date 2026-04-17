@@ -256,9 +256,10 @@ async def get_tasks(
 
     # 其他排序或初次加载：用 offset/limit + total
     # 支持page/page_size参数，向后兼容skip/limit
-    if page > 1 or page_size != 20:
-        skip = (page - 1) * page_size
-        limit = page_size
+    # Always use page/page_size when provided (they have defaults)
+    # skip/limit are legacy params kept for backward compat
+    skip = (page - 1) * page_size
+    limit = page_size
     
     # 不再自动设置距离排序，只有明确传递 sort_by="distance" 或 "nearby" 时才使用距离排序
     # 推荐任务和任务大厅不使用距离排序，也不隐藏 online 任务
