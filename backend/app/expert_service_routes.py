@@ -489,6 +489,88 @@ async def update_expert_service(
     return {"id": service.id, "status": service.status}
 
 
+@expert_service_router.patch("/{service_id}/status")
+async def toggle_expert_service_status(
+    expert_id: str,
+    service_id: int,
+    request: Request,
+    db: AsyncSession = Depends(get_async_db_dependency),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+):
+    """上架/下架团队服务（Owner/Admin）— active ↔ inactive 切换"""
+    expert = await _get_expert_or_404(db, expert_id)
+    await _get_member_or_403(db, expert_id, current_user.id, required_roles=["owner", "admin"])
+
+    result = await db.execute(
+        select(models.TaskExpertService).where(
+            and_(
+                models.TaskExpertService.id == service_id,
+                models.TaskExpertService.owner_type == "expert",
+                models.TaskExpertService.owner_id == expert_id,
+                models.TaskExpertService.status.in_(["active", "inactive"]),
+            )
+        )
+    )
+    service = result.scalar_one_or_none()
+    if not service:
+        raise HTTPException(status_code=404, detail="服务不存在或已删除")
+
+    if service.status == "active":
+        # 下架前检查: 有进行中的活动或申请则拒绝
+        from sqlalchemy import func as _func
+        active_act_count = (await db.execute(
+            select(_func.count(models.Activity.id)).where(
+                and_(
+                    models.Activity.expert_service_id == service_id,
+                    models.Activity.status.in_(["open", "in_progress"]),
+                )
+            )
+        )).scalar() or 0
+        if active_act_count > 0:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "error_code": "service_has_active_activities",
+                    "message": f"该服务还有 {active_act_count} 个进行中的活动,请先处理后再下架",
+                    "active_activities": active_act_count,
+                },
+            )
+        active_app_count = (await db.execute(
+            select(_func.count(models.ServiceApplication.id)).where(
+                and_(
+                    models.ServiceApplication.service_id == service_id,
+                    models.ServiceApplication.status.in_(
+                        ["pending", "consulting", "negotiating", "price_agreed", "approved"]
+                    ),
+                )
+            )
+        )).scalar() or 0
+        if active_app_count > 0:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "error_code": "service_has_active_applications",
+                    "message": f"该服务还有 {active_app_count} 个进行中的申请,请先处理后再下架",
+                    "active_applications": active_app_count,
+                },
+            )
+        new_status = "inactive"
+        expert.total_services = max((expert.total_services or 1) - 1, 0)
+    else:
+        new_status = "active"
+        expert.total_services = (expert.total_services or 0) + 1
+
+    service.status = new_status
+    service.updated_at = get_utc_time()
+    expert.updated_at = get_utc_time()
+    await db.commit()
+    return {
+        "id": service.id,
+        "status": new_status,
+        "message": f"服务已{'上架' if new_status == 'active' else '下架'}",
+    }
+
+
 @expert_service_router.delete("/{service_id}")
 async def delete_expert_service(
     expert_id: str,
@@ -567,3 +649,121 @@ async def delete_expert_service(
     expert.updated_at = get_utc_time()
     await db.commit()
     return {"detail": "服务已删除"}
+
+
+# ==================== 团队任务列表 ====================
+
+@expert_service_router.get("/my-tasks")
+async def get_expert_my_tasks(
+    expert_id: str,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=50),
+    db: AsyncSession = Depends(get_async_db_dependency),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+):
+    """团队成员查看自己参与的任务列表。
+
+    - Owner: 看到该团队所有任务 (taker_expert_id = expert_id)
+    - Admin/Member: 只看到自己在 chat_participants 里的任务
+    """
+    from sqlalchemy import func
+    from app.models_expert import ExpertMember, ChatParticipant
+
+    # 权限: 活跃成员
+    member_result = await db.execute(
+        select(ExpertMember).where(
+            and_(
+                ExpertMember.expert_id == expert_id,
+                ExpertMember.user_id == current_user.id,
+                ExpertMember.status == "active",
+            )
+        )
+    )
+    member = member_result.scalar_one_or_none()
+    if not member:
+        raise HTTPException(status_code=403, detail="不是该团队的活跃成员")
+
+    excluded_statuses = ("deleted", "cancelled")
+
+    if member.role == "owner":
+        # Owner 看所有团队任务
+        count_q = select(func.count(models.Task.id)).where(
+            and_(
+                models.Task.taker_expert_id == expert_id,
+                models.Task.status.notin_(excluded_statuses),
+            )
+        )
+        total = (await db.execute(count_q)).scalar() or 0
+
+        tasks_q = (
+            select(models.Task, models.User)
+            .outerjoin(models.User, models.Task.poster_id == models.User.id)
+            .where(
+                and_(
+                    models.Task.taker_expert_id == expert_id,
+                    models.Task.status.notin_(excluded_statuses),
+                )
+            )
+            .order_by(models.Task.created_at.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
+        rows = (await db.execute(tasks_q)).all()
+
+        items = []
+        for task, poster in rows:
+            items.append(_task_to_dict(task, poster, joined_at=task.accepted_at or task.created_at))
+    else:
+        # Admin/Member 只看 chat_participants 里有自己的
+        count_q = (
+            select(func.count(models.Task.id))
+            .join(ChatParticipant, ChatParticipant.task_id == models.Task.id)
+            .where(
+                and_(
+                    ChatParticipant.user_id == current_user.id,
+                    models.Task.taker_expert_id == expert_id,
+                    models.Task.status.notin_(excluded_statuses),
+                )
+            )
+        )
+        total = (await db.execute(count_q)).scalar() or 0
+
+        tasks_q = (
+            select(models.Task, models.User, ChatParticipant.joined_at)
+            .join(ChatParticipant, ChatParticipant.task_id == models.Task.id)
+            .outerjoin(models.User, models.Task.poster_id == models.User.id)
+            .where(
+                and_(
+                    ChatParticipant.user_id == current_user.id,
+                    models.Task.taker_expert_id == expert_id,
+                    models.Task.status.notin_(excluded_statuses),
+                )
+            )
+            .order_by(ChatParticipant.joined_at.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
+        rows = (await db.execute(tasks_q)).all()
+
+        items = []
+        for task, poster, joined_at in rows:
+            items.append(_task_to_dict(task, poster, joined_at=joined_at))
+
+    return {"items": items, "total": total, "page": page, "page_size": page_size}
+
+
+def _task_to_dict(task, poster, *, joined_at) -> dict:
+    return {
+        "id": task.id,
+        "title": task.title,
+        "status": task.status,
+        "task_source": task.task_source,
+        "poster_id": task.poster_id,
+        "poster_name": getattr(poster, "name", None) if poster else None,
+        "poster_avatar": getattr(poster, "avatar", None) if poster else None,
+        "reward": float(task.reward) if task.reward else None,
+        "currency": task.currency,
+        "created_at": task.created_at.isoformat() if task.created_at else None,
+        "accepted_at": task.accepted_at.isoformat() if task.accepted_at else None,
+        "joined_at": joined_at.isoformat() if joined_at else None,
+    }
