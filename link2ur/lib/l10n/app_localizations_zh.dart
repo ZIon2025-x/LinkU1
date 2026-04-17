@@ -4952,20 +4952,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get notificationTitleUnknown => '通知';
 
   @override
-  String notificationContentTaskApplication(
-    String applicant_name,
-    String task_title,
-    String application_message,
-    String price_info,
-  ) {
+  String notificationContentTaskApplication(String applicant_name,
+      String task_title, String application_message, String price_info) {
     return '$applicant_name 申请了任务「$task_title」\\n申请留言：$application_message\\n议价金额：$price_info';
   }
 
   @override
   String notificationContentApplicationAccepted(
-    String task_title,
-    String payment_expires_info,
-  ) {
+      String task_title, String payment_expires_info) {
     return '申请者已接受您对任务「$task_title」的议价，请完成支付。$payment_expires_info';
   }
 
@@ -4981,9 +4975,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String notificationContentTaskCompleted(
-    String taker_name,
-    String task_title,
-  ) {
+      String taker_name, String task_title) {
     return '$taker_name 已将任务「$task_title」标记为完成';
   }
 
@@ -5004,19 +4996,13 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String notificationContentApplicationMessage(
-    String task_title,
-    String message,
-  ) {
+      String task_title, String message) {
     return '任务「$task_title」的发布者给您留言：$message';
   }
 
   @override
-  String notificationContentNegotiationOffer(
-    String task_title,
-    String message,
-    String negotiated_price,
-    String currencySymbol,
-  ) {
+  String notificationContentNegotiationOffer(String task_title, String message,
+      String negotiated_price, String currencySymbol) {
     return '任务「$task_title」的发布者提出议价\n留言：$message\n议价金额：$currencySymbol$negotiated_price';
   }
 
@@ -5037,9 +5023,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String notificationContentTaskApprovedWithPayment(
-    String task_title,
-    String payment_expires_info,
-  ) {
+      String task_title, String payment_expires_info) {
     return '您的任务申请已被同意！任务：$task_title$payment_expires_info';
   }
 
@@ -5519,9 +5503,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String fleaMarketAcceptCounterOfferConfirmMessage(
-    String price,
-    String currencySymbol,
-  ) {
+      String price, String currencySymbol) {
     return '确定接受卖家的还价 $currencySymbol$price 吗？';
   }
 
@@ -6192,10 +6174,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String refundDescApprovedAmount(
-    String param1,
-    double param2,
-    String currencySymbol,
-  ) {
+      String param1, double param2, String currencySymbol) {
     return '退款金额：$currencySymbol$param2$param1，退款将在5-10个工作日内退回';
   }
 
@@ -6212,10 +6191,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String refundDescCompletedAmount(
-    String param1,
-    double param2,
-    String currencySymbol,
-  ) {
+      String param1, double param2, String currencySymbol) {
     return '退款金额：$currencySymbol$param2$param1，已退回您的原支付方式';
   }
 
@@ -12060,10 +12036,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String packagePurchaseSaveAmount(
-    String currency,
-    String amount,
-    String percent,
-  ) {
+      String currency, String amount, String percent) {
     return '立省 $currency $amount（$percent% off）';
   }
 
@@ -17832,20 +17805,14 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get notificationTitleUnknown => '通知';
 
   @override
-  String notificationContentTaskApplication(
-    String applicant_name,
-    String task_title,
-    String application_message,
-    String price_info,
-  ) {
+  String notificationContentTaskApplication(String applicant_name,
+      String task_title, String application_message, String price_info) {
     return '$applicant_name 申請了任務「$task_title」\\n申請留言：$application_message\\n議價金額：$price_info';
   }
 
   @override
   String notificationContentApplicationAccepted(
-    String task_title,
-    String payment_expires_info,
-  ) {
+      String task_title, String payment_expires_info) {
     return '申請者已接受您對任務「$task_title」的議價，請完成支付。$payment_expires_info';
   }
 
@@ -17861,9 +17828,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String notificationContentTaskCompleted(
-    String taker_name,
-    String task_title,
-  ) {
+      String taker_name, String task_title) {
     return '$taker_name 已將任務「$task_title」標記爲完成';
   }
 
@@ -17884,19 +17849,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String notificationContentApplicationMessage(
-    String task_title,
-    String message,
-  ) {
+      String task_title, String message) {
     return '任務「$task_title」的發布者給您留言：$message';
   }
 
   @override
-  String notificationContentNegotiationOffer(
-    String task_title,
-    String message,
-    String negotiated_price,
-    String currencySymbol,
-  ) {
+  String notificationContentNegotiationOffer(String task_title, String message,
+      String negotiated_price, String currencySymbol) {
     return '任務「$task_title」的發布者提出議價\n留言：$message\n議價金額：$currencySymbol$negotiated_price';
   }
 
@@ -17917,9 +17876,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String notificationContentTaskApprovedWithPayment(
-    String task_title,
-    String payment_expires_info,
-  ) {
+      String task_title, String payment_expires_info) {
     return '您的任務申請已被同意！任務：$task_title$payment_expires_info';
   }
 
@@ -18399,9 +18356,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String fleaMarketAcceptCounterOfferConfirmMessage(
-    String price,
-    String currencySymbol,
-  ) {
+      String price, String currencySymbol) {
     return '確定接受賣家的還價 $currencySymbol$price 嗎？';
   }
 
@@ -19072,10 +19027,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String refundDescApprovedAmount(
-    String param1,
-    double param2,
-    String currencySymbol,
-  ) {
+      String param1, double param2, String currencySymbol) {
     return '退款金額：$currencySymbol$param2$param1，退款將在5-10個工作日內退回';
   }
 
@@ -19092,10 +19044,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String refundDescCompletedAmount(
-    String param1,
-    double param2,
-    String currencySymbol,
-  ) {
+      String param1, double param2, String currencySymbol) {
     return '退款金額：$currencySymbol$param2$param1，已退回您的原支付方式';
   }
 
@@ -24940,10 +24889,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String packagePurchaseSaveAmount(
-    String currency,
-    String amount,
-    String percent,
-  ) {
+      String currency, String amount, String percent) {
     return '立省 $currency $amount（$percent% off）';
   }
 

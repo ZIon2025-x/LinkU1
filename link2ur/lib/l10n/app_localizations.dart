@@ -63,7 +63,7 @@ import 'app_localizations_zh.dart';
 /// property.
 abstract class AppLocalizations {
   AppLocalizations(String locale)
-    : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+      : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -86,17 +86,17 @@ abstract class AppLocalizations {
   /// of delegates is preferred or required.
   static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
       <LocalizationsDelegate<dynamic>>[
-        delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-      ];
+    delegate,
+    GlobalMaterialLocalizations.delegate,
+    GlobalCupertinoLocalizations.delegate,
+    GlobalWidgetsLocalizations.delegate,
+  ];
 
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
     Locale('en'),
     Locale('zh'),
-    Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
+    Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant')
   ];
 
   /// No description provided for @commonOk.
@@ -9559,21 +9559,15 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{applicant_name} applied for task「{task_title}」\\nApplication message: {application_message}\\nNegotiated price: {price_info}'**
-  String notificationContentTaskApplication(
-    String applicant_name,
-    String task_title,
-    String application_message,
-    String price_info,
-  );
+  String notificationContentTaskApplication(String applicant_name,
+      String task_title, String application_message, String price_info);
 
   /// No description provided for @notificationContentApplicationAccepted.
   ///
   /// In en, this message translates to:
   /// **'The applicant has accepted your negotiation offer for task「{task_title}」. Please complete the payment.{payment_expires_info}'**
   String notificationContentApplicationAccepted(
-    String task_title,
-    String payment_expires_info,
-  );
+      String task_title, String payment_expires_info);
 
   /// No description provided for @notificationContentApplicationRejected.
   ///
@@ -9616,20 +9610,14 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The publisher of task「{task_title}」sent you a message: {message}'**
   String notificationContentApplicationMessage(
-    String task_title,
-    String message,
-  );
+      String task_title, String message);
 
   /// No description provided for @notificationContentNegotiationOffer.
   ///
   /// In en, this message translates to:
   /// **'The publisher of task「{task_title}」proposed a negotiation\nMessage: {message}\nNegotiated price: {currencySymbol}{negotiated_price}'**
-  String notificationContentNegotiationOffer(
-    String task_title,
-    String message,
-    String negotiated_price,
-    String currencySymbol,
-  );
+  String notificationContentNegotiationOffer(String task_title, String message,
+      String negotiated_price, String currencySymbol);
 
   /// No description provided for @notificationContentNegotiationRejected.
   ///
@@ -9654,9 +9642,7 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your task application has been approved! Task: {task_title}{payment_expires_info}'**
   String notificationContentTaskApprovedWithPayment(
-    String task_title,
-    String payment_expires_info,
-  );
+      String task_title, String payment_expires_info);
 
   /// No description provided for @notificationContentAnnouncement.
   ///
@@ -10581,9 +10567,7 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Are you sure you want to accept the seller\'s counter offer of {currencySymbol}{price}?'**
   String fleaMarketAcceptCounterOfferConfirmMessage(
-    String price,
-    String currencySymbol,
-  );
+      String price, String currencySymbol);
 
   /// No description provided for @fleaMarketRejectCounterOfferConfirmTitle.
   ///
@@ -11820,10 +11804,7 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Refund amount: {currencySymbol}{param2}{param1}. Will be returned in 5-10 business days.'**
   String refundDescApprovedAmount(
-    String param1,
-    double param2,
-    String currencySymbol,
-  );
+      String param1, double param2, String currencySymbol);
 
   /// No description provided for @refundDescApprovedGeneric.
   ///
@@ -11848,10 +11829,7 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Refund amount: {currencySymbol}{param2}{param1}. Returned to your original payment method.'**
   String refundDescCompletedAmount(
-    String param1,
-    double param2,
-    String currencySymbol,
-  );
+      String param1, double param2, String currencySymbol);
 
   /// No description provided for @refundDescCompletedGeneric.
   ///
@@ -23150,10 +23128,7 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Save {currency} {amount} ({percent}% off)'**
   String packagePurchaseSaveAmount(
-    String currency,
-    String amount,
-    String percent,
-  );
+      String currency, String amount, String percent);
 
   /// No description provided for @discountBadge.
   ///
@@ -24767,9 +24742,8 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
   }
 
   throw FlutterError(
-    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-    'an issue with the localizations generation tool. Please file an issue '
-    'on GitHub with a reproducible sample app and the gen-l10n configuration '
-    'that was used.',
-  );
+      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+      'an issue with the localizations generation tool. Please file an issue '
+      'on GitHub with a reproducible sample app and the gen-l10n configuration '
+      'that was used.');
 }

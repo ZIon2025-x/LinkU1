@@ -5170,20 +5170,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationTitleUnknown => 'Notification';
 
   @override
-  String notificationContentTaskApplication(
-    String applicant_name,
-    String task_title,
-    String application_message,
-    String price_info,
-  ) {
+  String notificationContentTaskApplication(String applicant_name,
+      String task_title, String application_message, String price_info) {
     return '$applicant_name applied for task「$task_title」\\nApplication message: $application_message\\nNegotiated price: $price_info';
   }
 
   @override
   String notificationContentApplicationAccepted(
-    String task_title,
-    String payment_expires_info,
-  ) {
+      String task_title, String payment_expires_info) {
     return 'The applicant has accepted your negotiation offer for task「$task_title」. Please complete the payment.$payment_expires_info';
   }
 
@@ -5199,9 +5193,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String notificationContentTaskCompleted(
-    String taker_name,
-    String task_title,
-  ) {
+      String taker_name, String task_title) {
     return '$taker_name has marked task「$task_title」as completed';
   }
 
@@ -5222,19 +5214,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String notificationContentApplicationMessage(
-    String task_title,
-    String message,
-  ) {
+      String task_title, String message) {
     return 'The publisher of task「$task_title」sent you a message: $message';
   }
 
   @override
-  String notificationContentNegotiationOffer(
-    String task_title,
-    String message,
-    String negotiated_price,
-    String currencySymbol,
-  ) {
+  String notificationContentNegotiationOffer(String task_title, String message,
+      String negotiated_price, String currencySymbol) {
     return 'The publisher of task「$task_title」proposed a negotiation\nMessage: $message\nNegotiated price: $currencySymbol$negotiated_price';
   }
 
@@ -5255,9 +5241,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String notificationContentTaskApprovedWithPayment(
-    String task_title,
-    String payment_expires_info,
-  ) {
+      String task_title, String payment_expires_info) {
     return 'Your task application has been approved! Task: $task_title$payment_expires_info';
   }
 
@@ -5768,9 +5752,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String fleaMarketAcceptCounterOfferConfirmMessage(
-    String price,
-    String currencySymbol,
-  ) {
+      String price, String currencySymbol) {
     return 'Are you sure you want to accept the seller\'s counter offer of $currencySymbol$price?';
   }
 
@@ -6464,10 +6446,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String refundDescApprovedAmount(
-    String param1,
-    double param2,
-    String currencySymbol,
-  ) {
+      String param1, double param2, String currencySymbol) {
     return 'Refund amount: $currencySymbol$param2$param1. Will be returned in 5-10 business days.';
   }
 
@@ -6485,10 +6464,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String refundDescCompletedAmount(
-    String param1,
-    double param2,
-    String currencySymbol,
-  ) {
+      String param1, double param2, String currencySymbol) {
     return 'Refund amount: $currencySymbol$param2$param1. Returned to your original payment method.';
   }
 
@@ -12568,10 +12544,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String packagePurchaseSaveAmount(
-    String currency,
-    String amount,
-    String percent,
-  ) {
+      String currency, String amount, String percent) {
     return 'Save $currency $amount ($percent% off)';
   }
 
