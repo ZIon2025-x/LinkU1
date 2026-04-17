@@ -817,7 +817,6 @@ class _ActivityFormSheetState extends State<_ActivityFormSheet> {
                         hintText: context.l10n.expertActivitySelectServiceHint),
                     items: [
                       DropdownMenuItem<Map<String, dynamic>>(
-                        value: null,
                         child: Text(context.l10n.expertActivityFree),
                       ),
                       ...activeServices
