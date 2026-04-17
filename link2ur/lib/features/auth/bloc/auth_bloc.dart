@@ -7,6 +7,7 @@ import 'package:stream_transform/stream_transform.dart';
 import '../../../data/models/user.dart';
 import '../../../data/repositories/auth_repository.dart';
 import '../../../data/services/storage_service.dart';
+import '../../../data/services/location_city_service.dart';
 import '../../../data/services/push_notification_service.dart';
 import '../../../core/utils/logger.dart';
 import '../../../core/utils/cache_manager.dart';
@@ -246,6 +247,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       // 即使登出API失败，仍然清除本地状态
       AppLogger.error('Logout API failed, clearing local state', e);
     }
+    LocationCityService.instance.clear();
     await CacheManager.shared.invalidateForumCache();
     emit(const AuthState(status: AuthStatus.unauthenticated));
   }
@@ -325,6 +327,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     } catch (e) {
       AppLogger.error('Force logout cleanup failed', e);
     }
+    LocationCityService.instance.clear();
     await CacheManager.shared.invalidateForumCache();
     emit(const AuthState(
       status: AuthStatus.unauthenticated,

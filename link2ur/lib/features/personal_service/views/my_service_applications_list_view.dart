@@ -75,6 +75,12 @@ class _ContentState extends State<_Content> {
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 _FilterChip(
+                  label: l10n.expertApplicationStatusConsulting,
+                  selected: _selectedFilter == 'consulting',
+                  onTap: () => _applyFilter('consulting'),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                _FilterChip(
                   label: l10n.myServiceApplicationsFilterNegotiating,
                   selected: _selectedFilter == 'negotiating',
                   onTap: () => _applyFilter('negotiating'),
@@ -239,6 +245,8 @@ class _ContentState extends State<_Content> {
     switch (filter) {
       case 'pending':
         return l10n.myServiceApplicationsEmptyPending as String;
+      case 'consulting':
+        return l10n.myServiceApplicationsEmptyConsulting as String;
       case 'negotiating':
         return l10n.myServiceApplicationsEmptyNegotiating as String;
       case 'price_agreed':

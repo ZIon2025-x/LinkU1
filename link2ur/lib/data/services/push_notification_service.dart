@@ -12,6 +12,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import '../../core/constants/api_endpoints.dart';
 import '../../core/config/api_config.dart';
 import '../../core/utils/logger.dart';
+import 'location_city_service.dart';
 import 'storage_service.dart';
 import 'api_service.dart';
 
@@ -246,22 +247,28 @@ class PushNotificationService with WidgetsBindingObserver {
         }
       }
 
-      // Check location permission (don't request, just check)
-      final permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        return;
-      }
+      // 优先复用 LocationCityService 已缓存的坐标，避免重复 GPS 调用
+      double? lat = LocationCityService.instance.latitude;
+      double? lng = LocationCityService.instance.longitude;
 
-      // Get position
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.low,
-      );
+      if (lat == null || lng == null) {
+        // LocationCityService 没有坐标，自己获取
+        final permission = await Geolocator.checkPermission();
+        if (permission == LocationPermission.denied ||
+            permission == LocationPermission.deniedForever) {
+          return;
+        }
+        final position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.low,
+        );
+        lat = position.latitude;
+        lng = position.longitude;
+      }
 
       // Upload to backend
       await _apiService?.post('/api/profile/location', data: {
-        'latitude': position.latitude,
-        'longitude': position.longitude,
+        'latitude': lat,
+        'longitude': lng,
       });
 
       // Save timestamp

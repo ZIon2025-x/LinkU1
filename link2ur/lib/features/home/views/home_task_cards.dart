@@ -96,6 +96,7 @@ class _NearbyTabState extends State<_NearbyTab> {
         if (city != null && city.isNotEmpty && mounted) {
           setState(() => _city = city);
           context.read<HomeBloc>().add(HomeLocationCityUpdated(city));
+          LocationCityService.instance.update(city: city, lat: lat, lng: lng);
         }
       }
     } catch (_) {

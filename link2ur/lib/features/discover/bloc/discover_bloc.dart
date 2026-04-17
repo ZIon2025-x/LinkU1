@@ -12,7 +12,7 @@ import 'package:link2ur/data/repositories/forum_repository.dart';
 import 'package:link2ur/data/repositories/leaderboard_repository.dart';
 import 'package:link2ur/data/repositories/task_expert_repository.dart';
 import 'package:link2ur/data/repositories/trending_search_repository.dart';
-import 'package:link2ur/data/services/storage_service.dart';
+import 'package:link2ur/data/services/location_city_service.dart';
 
 part 'discover_event.dart';
 part 'discover_state.dart';
@@ -48,17 +48,19 @@ class DiscoverBloc extends Bloc<DiscoverEvent, DiscoverState> {
     if (state.status == DiscoverStatus.loading) return;
     emit(state.copyWith(status: DiscoverStatus.loading));
 
-    final userInfo = StorageService.instance.getUserInfo();
-    final city = userInfo?['residence_city'] as String?;
-
+    final city = await _resolveCity();
     await _loadAll(emit, city);
   }
 
   Future<void> _onRefresh(DiscoverRefreshRequested event, Emitter<DiscoverState> emit) async {
     if (state.status == DiscoverStatus.loading) return;
-    final userInfo = StorageService.instance.getUserInfo();
-    final city = userInfo?['residence_city'] as String?;
+    final city = await _resolveCity();
     await _loadAll(emit, city);
+  }
+
+  /// 从全局 LocationCityService 获取城市名（GPS 优先，fallback residence_city）
+  Future<String?> _resolveCity() async {
+    return LocationCityService.instance.resolve();
   }
 
   Future<void> _loadAll(Emitter<DiscoverState> emit, String? city) async {

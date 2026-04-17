@@ -21965,6 +21965,12 @@ abstract class AppLocalizations {
   /// **'You haven\'t applied to any services yet. Browse available services to get started.'**
   String get myServiceApplicationsEmptyMessage;
 
+  /// No description provided for @myServiceApplicationsEmptyConsulting.
+  ///
+  /// In en, this message translates to:
+  /// **'No consulting applications.'**
+  String get myServiceApplicationsEmptyConsulting;
+
   /// No description provided for @myServiceApplicationsEmptyPending.
   ///
   /// In en, this message translates to:

@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:geocoding/geocoding.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/design/app_colors.dart';
@@ -12,6 +10,7 @@ import '../../core/utils/responsive.dart';
 import '../../core/widgets/badge_view.dart';
 import '../../core/widgets/buttons.dart';
 import '../../core/widgets/desktop_sidebar.dart';
+import '../../data/services/location_city_service.dart';
 import '../../data/repositories/activity_repository.dart';
 import '../../data/repositories/common_repository.dart';
 import '../../data/repositories/discovery_repository.dart';
@@ -169,23 +168,9 @@ class _MainTabViewState extends State<MainTabView>
 
   /// 异步获取 GPS 城市名，更新 HomeBloc.locationCity 供左上角显示
   Future<void> _resolveLocationCity() async {
-    try {
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) return;
-      final permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        return;
-      }
-      final position = await Geolocator.getLastKnownPosition();
-      if (position == null) return;
-      final placemarks = await placemarkFromCoordinates(
-          position.latitude, position.longitude);
-      if (placemarks.isNotEmpty && placemarks.first.locality != null) {
-        _homeBloc.add(HomeLocationCityUpdated(placemarks.first.locality!));
-      }
-    } catch (_) {
-      // GPS 城市解析失败不影响其他功能
+    final city = await LocationCityService.instance.resolve();
+    if (city != null && city.isNotEmpty) {
+      _homeBloc.add(HomeLocationCityUpdated(city));
     }
   }
 

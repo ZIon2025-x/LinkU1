@@ -96,6 +96,12 @@ class _ReceivedApplicationsContentState
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 _FilterChip(
+                  label: l10n.expertApplicationStatusConsulting,
+                  selected: _selectedFilter == 'consulting',
+                  onTap: () => _applyFilter('consulting'),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                _FilterChip(
                   label: l10n.receivedApplicationsFilterNegotiating,
                   selected: _selectedFilter == 'negotiating',
                   onTap: () => _applyFilter('negotiating'),

@@ -11431,6 +11431,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get myServiceApplicationsEmptyMessage => '您还没有申请过任何服务。浏览可用服务开始吧。';
 
   @override
+  String get myServiceApplicationsEmptyConsulting => '暂无咨询中的申请。';
+
+  @override
   String get myServiceApplicationsEmptyPending => '暂无待处理的申请。';
 
   @override
@@ -24340,6 +24343,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get myServiceApplicationsEmptyMessage => '您還沒有申請過任何服務。瀏覽可用服務開始吧。';
+
+  @override
+  String get myServiceApplicationsEmptyConsulting => '暫無諮詢中的申請。';
 
   @override
   String get myServiceApplicationsEmptyPending => '暫無待處理的申請。';

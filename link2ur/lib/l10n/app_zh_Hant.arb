@@ -5148,6 +5148,7 @@
   "myServiceApplicationsTitle": "我的服務申請",
   "myServiceApplicationsEmpty": "暫無申請",
   "myServiceApplicationsEmptyMessage": "您還沒有申請過任何服務。瀏覽可用服務開始吧。",
+  "myServiceApplicationsEmptyConsulting": "暫無諮詢中的申請。",
   "myServiceApplicationsEmptyPending": "暫無待處理的申請。",
   "myServiceApplicationsEmptyNegotiating": "暫無協商中的申請。",
   "myServiceApplicationsEmptyPriceAgreed": "暫無已達成價格的申請。",

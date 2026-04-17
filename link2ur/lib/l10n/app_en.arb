@@ -5319,6 +5319,7 @@
   "myServiceApplicationsTitle": "My Service Applications",
   "myServiceApplicationsEmpty": "No Applications Yet",
   "myServiceApplicationsEmptyMessage": "You haven't applied to any services yet. Browse available services to get started.",
+  "myServiceApplicationsEmptyConsulting": "No consulting applications.",
   "myServiceApplicationsEmptyPending": "No pending applications.",
   "myServiceApplicationsEmptyNegotiating": "No applications currently in negotiation.",
   "myServiceApplicationsEmptyPriceAgreed": "No applications with agreed price.",

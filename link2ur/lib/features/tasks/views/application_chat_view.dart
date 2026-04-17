@@ -1100,71 +1100,30 @@ class _ApplicationChatContentState extends State<_ApplicationChatContent> {
   }
 
   Widget _buildConfirmAndPayButton(TaskDetailState state) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        border: Border(
-          top: BorderSide(
-            color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
-          ),
-        ),
-      ),
-      child: SafeArea(
-        top: false,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
         child: Row(
           children: [
-            // 拒绝按钮（轮廓样式）
-            OutlinedButton.icon(
-              onPressed: state.isSubmitting ? null : _confirmRejectFromChat,
-              icon: const Icon(Icons.cancel_outlined, size: 18),
-              label: Text(context.l10n.taskDetailReject),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.error,
-                side: const BorderSide(color: AppColors.error),
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.medium),
-                ),
-              ),
+            ActionPill(
+              icon: Icons.payment,
+              label: context.l10n.confirmAndPay,
+              color: AppColors.success,
+              onTap: state.isSubmitting
+                  ? null
+                  : () {
+                      context.read<TaskDetailBloc>().add(
+                            TaskDetailConfirmAndPay(widget.applicationId),
+                          );
+                    },
             ),
-            const SizedBox(width: AppSpacing.sm),
-            // 同意并支付按钮（主按钮）
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: state.isSubmitting
-                    ? null
-                    : () {
-                        context.read<TaskDetailBloc>().add(
-                              TaskDetailConfirmAndPay(widget.applicationId),
-                            );
-                      },
-                icon: state.isSubmitting
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Icon(Icons.payment),
-                label: Text(context.l10n.confirmAndPay),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.medium),
-                  ),
-                ),
-              ),
+            const SizedBox(width: 8),
+            ActionPill(
+              icon: Icons.close,
+              label: context.l10n.taskDetailReject,
+              color: AppColors.error.withValues(alpha: 0.8),
+              onTap: state.isSubmitting ? null : _confirmRejectFromChat,
             ),
           ],
         ),

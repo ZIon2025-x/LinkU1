@@ -5211,6 +5211,7 @@
   "myServiceApplicationsTitle": "我的服务申请",
   "myServiceApplicationsEmpty": "暂无申请",
   "myServiceApplicationsEmptyMessage": "您还没有申请过任何服务。浏览可用服务开始吧。",
+  "myServiceApplicationsEmptyConsulting": "暂无咨询中的申请。",
   "myServiceApplicationsEmptyPending": "暂无待处理的申请。",
   "myServiceApplicationsEmptyNegotiating": "暂无协商中的申请。",
   "myServiceApplicationsEmptyPriceAgreed": "暂无已达成价格的申请。",

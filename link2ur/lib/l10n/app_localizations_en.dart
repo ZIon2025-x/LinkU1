@@ -11909,6 +11909,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'You haven\'t applied to any services yet. Browse available services to get started.';
 
   @override
+  String get myServiceApplicationsEmptyConsulting =>
+      'No consulting applications.';
+
+  @override
   String get myServiceApplicationsEmptyPending => 'No pending applications.';
 
   @override
