@@ -973,6 +973,38 @@ async def _approve_team_service_application(
 
     await db.commit()
 
+    # 14. Admin 审批时自动加入任务聊天 (best-effort)
+    try:
+        from app.models_expert import ChatParticipant
+        # 始终创建 poster + owner 的 ChatParticipant，保持与 invite 端点的"首次升级"一致
+        for uid, role in [
+            (application.applicant_id, "client"),
+            (taker_id_value, "expert_owner"),
+        ]:
+            existing = await db.execute(
+                select(ChatParticipant).where(
+                    and_(ChatParticipant.task_id == new_task.id, ChatParticipant.user_id == uid)
+                )
+            )
+            if not existing.scalar_one_or_none():
+                db.add(ChatParticipant(task_id=new_task.id, user_id=uid, role=role))
+        # 如果审批人不是 owner，也加入聊天
+        if current_user.id != taker_id_value and current_user.id != application.applicant_id:
+            existing_admin = await db.execute(
+                select(ChatParticipant).where(
+                    and_(ChatParticipant.task_id == new_task.id, ChatParticipant.user_id == current_user.id)
+                )
+            )
+            if not existing_admin.scalar_one_or_none():
+                db.add(ChatParticipant(
+                    task_id=new_task.id,
+                    user_id=current_user.id,
+                    role="expert_admin",
+                ))
+        await db.commit()
+    except Exception as e:
+        logger.warning(f"审批后自动加入聊天失败: {e}")
+
     # 13. 通知申请人（best-effort，失败不阻塞主流程）
     try:
         from app.task_notifications import send_service_application_approved_notification
