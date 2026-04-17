@@ -193,7 +193,8 @@ class _NearbyTabState extends State<_NearbyTab> {
         widget: _NearbyWaterfallCard(
           title: title,
           imageUrl: task.firstImage,
-          distance: task.distance,
+          distanceText: task.blurredDistanceText,
+          distanceMeters: task.distance,
           tags: [task.taskType],
           price: '\u00A3${task.reward == task.reward.truncateToDouble() ? task.reward.toInt().toString() : task.reward.toStringAsFixed(2)}',
           applicantCount: task.currentParticipants,
@@ -230,7 +231,8 @@ class _NearbyTabState extends State<_NearbyTab> {
         widget: _NearbyWaterfallCard(
           title: name,
           imageUrl: imageUrl,
-          distance: distMeters,
+          distanceText: distMeters != null ? _blurDistance(distMeters) : null,
+          distanceMeters: distMeters,
           price: priceStr,
           itemType: 'service',
           isExpertVerified: isExpert,
@@ -259,6 +261,17 @@ class _NearbyTabState extends State<_NearbyTab> {
           : price.toStringAsFixed(2);
     }
     return price.toString();
+  }
+
+  /// Blur distance to 500m buckets (same as Task model's blurredDistanceText)
+  static String _blurDistance(double meters) {
+    final bucket = (meters / 500).ceil() * 500;
+    if (bucket <= 500) return '<500m';
+    if (bucket < 1000) return '<${bucket}m';
+    final km = bucket / 1000;
+    return km == km.roundToDouble()
+        ? '<${km.toInt()}km'
+        : '<${km.toStringAsFixed(1)}km';
   }
 
   @override
@@ -505,7 +518,8 @@ class _NearbyWaterfallCard extends StatelessWidget {
   const _NearbyWaterfallCard({
     required this.title,
     this.imageUrl,
-    this.distance,
+    this.distanceText,
+    this.distanceMeters,
     this.tags = const [],
     this.price,
     this.applicantCount = 0,
@@ -518,7 +532,10 @@ class _NearbyWaterfallCard extends StatelessWidget {
 
   final String title;
   final String? imageUrl;
-  final double? distance;
+  /// Pre-formatted blurred distance text, e.g. "<1.5km"
+  final String? distanceText;
+  /// Raw distance in meters — used only for sorting in _buildWaterfallItems
+  final double? distanceMeters;
   final List<String> tags;
   final String? price;
   final int applicantCount;
@@ -743,7 +760,7 @@ class _NearbyWaterfallCard extends StatelessWidget {
               ),
             ),
           ),
-        if (distance != null)
+        if (distanceText != null)
           Positioned(
             bottom: 8,
             left: 8,
@@ -757,7 +774,7 @@ class _NearbyWaterfallCard extends StatelessWidget {
                     const Icon(Icons.location_on, size: 11, color: Colors.white),
                     const SizedBox(width: 2),
                     Text(
-                      _formatDistance(distance!),
+                      distanceText!,
                       style: const TextStyle(
                         fontSize: 11,
                         color: Colors.white,
@@ -810,10 +827,6 @@ class _NearbyWaterfallCard extends StatelessWidget {
     );
   }
 
-  static String _formatDistance(double meters) {
-    if (meters < 1000) return '${meters.round()}m';
-    return '${(meters / 1000).toStringAsFixed(1)}km';
-  }
 }
 
 /// Tag chip for waterfall card
