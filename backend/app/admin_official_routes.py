@@ -70,69 +70,9 @@ async def _get_official_expert(db: AsyncSession) -> models.TaskExpert:
 
 
 async def _perform_draw(db: AsyncSession, activity: models.Activity) -> List[dict]:
-    """
-    核心开奖逻辑（异步版，供 admin 手动开奖使用）：
-    1. 随机抽取 prize_count 个 pending 报名者
-    2. 更新 status: won/lost
-    3. 分配券码（如适用）
-    4. 发站内通知
-    5. 更新 activity.is_drawn, drawn_at, winners
-    """
-    from app.async_crud import AsyncNotificationCRUD
-
-    apps_result = await db.execute(
-        select(models.OfficialActivityApplication, models.User)
-        .join(models.User, models.User.id == models.OfficialActivityApplication.user_id)
-        .where(
-            models.OfficialActivityApplication.activity_id == activity.id,
-            models.OfficialActivityApplication.status == "pending",
-        )
-    )
-    all_apps = apps_result.all()
-
-    prize_count = activity.prize_count or 1
-    selected = random.sample(all_apps, min(prize_count, len(all_apps)))
-    selected_ids = {app.user_id for app, _ in selected}
-    voucher_codes = activity.voucher_codes or []
-    winners_data = []
-
-    for i, (app, user) in enumerate(selected):
-        app.status = "won"
-        app.notified_at = get_utc_time()
-        if activity.prize_type == "voucher_code" and i < len(voucher_codes):
-            app.prize_index = i
-        winners_data.append({
-            "user_id": app.user_id,
-            "name": user.name,
-            "prize_index": app.prize_index,
-        })
-
-        prize_desc = activity.prize_description or "奖品"
-        voucher_info = (
-            f"\n您的优惠码：{voucher_codes[i]}"
-            if app.prize_index is not None and i < len(voucher_codes)
-            else ""
-        )
-        await AsyncNotificationCRUD.create_notification(
-            db=db,
-            user_id=app.user_id,
-            notification_type="official_activity_won",
-            title="🎉 恭喜中奖！",
-            content=f"您参与的活动「{activity.title}」已开奖，您获得了{prize_desc}！{voucher_info}",
-            related_id=str(activity.id),
-        )
-
-    for app, _ in all_apps:
-        if app.user_id not in selected_ids:
-            app.status = "lost"
-
-    activity.is_drawn = True
-    activity.drawn_at = get_utc_time()
-    activity.winners = winners_data
-    activity.status = "completed"
-
-    await db.commit()
-    return winners_data
+    """Delegate to shared draw logic."""
+    from app.draw_logic import perform_draw_async
+    return await perform_draw_async(db, activity)
 
 
 # ── 官方账号管理 ─────────────────────────────────────
