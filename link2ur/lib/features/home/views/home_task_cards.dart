@@ -28,10 +28,20 @@ class _NearbyTabState extends State<_NearbyTab> {
   @override
   void initState() {
     super.initState();
-    // 如果已有附近任务数据，跳过重新定位
     final homeState = context.read<HomeBloc>().state;
     if (homeState.nearbyTasks.isNotEmpty) return;
-    _loadLocation();
+
+    // 优先使用全局单例的缓存坐标（main_tab_view 启动时已 resolve），
+    // 避免 NearbyTab 重复做 GPS 权限检查 + 定位请求。
+    final locService = LocationCityService.instance;
+    if (locService.isResolved && locService.latitude != null && locService.longitude != null) {
+      _city = locService.city;
+      _loadWithCoordinates(locService.latitude!, locService.longitude!);
+      // 后台获取精确位置（和原逻辑一致，差异 >500m 才刷新）
+      _refreshWithCurrentPosition(locService.latitude!, locService.longitude!);
+    } else {
+      _loadLocation();
+    }
   }
 
   Future<void> _loadLocation() async {
