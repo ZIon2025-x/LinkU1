@@ -999,20 +999,7 @@ async def _approve_team_service_application(
         )
 
     # 关闭旧的咨询占位 Task（task_id 即将被新 Task 覆盖）
-    old_consultation_task_id = application.task_id
-    if old_consultation_task_id:
-        old_task = await db.get(models.Task, old_consultation_task_id)
-        if old_task and old_task.status == "consulting":
-            old_task.status = "closed"
-            system_msg = models.Message(
-                sender_id=None,
-                receiver_id=old_task.taker_id if old_task.taker_id != application.applicant_id else old_task.poster_id,
-                content="咨询已转为正式订单",
-                task_id=old_task.id,
-                message_type="system",
-                conversation_type="task",
-            )
-            db.add(system_msg)
+    await _close_consultation_task(db, application, reason="咨询已转为正式订单")
 
     # 12. 更新 application
     application.status = "approved"
