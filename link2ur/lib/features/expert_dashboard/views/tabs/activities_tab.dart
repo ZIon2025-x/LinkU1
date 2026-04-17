@@ -143,6 +143,15 @@ class _ActivityFormSheetState extends State<_ActivityFormSheet> {
   bool _isSubmitting = false;
   String? _errorMessage;
 
+  String _activityType = 'standard'; // 'standard' | 'lottery' | 'first_come'
+  String _prizeType = 'physical';    // 'physical' | 'in_person'
+  String _drawMode = 'auto';         // 'auto' | 'manual'
+  String _drawTrigger = 'by_time';   // 'by_time' | 'by_count' | 'both'
+  DateTime? _drawAt;
+  late final TextEditingController _prizeDescriptionController;
+  late final TextEditingController _prizeCountController;
+  late final TextEditingController _drawParticipantCountController;
+
   static const _titleMaxLength = 100;
   static const _descMaxLength = 2000;
 
@@ -154,6 +163,9 @@ class _ActivityFormSheetState extends State<_ActivityFormSheet> {
     _priceController = TextEditingController();
     _maxParticipantsController = TextEditingController(text: '10');
     _minParticipantsController = TextEditingController(text: '1');
+    _prizeDescriptionController = TextEditingController();
+    _prizeCountController = TextEditingController(text: '3');
+    _drawParticipantCountController = TextEditingController(text: '30');
     _titleController.addListener(_onTextChanged);
     _descriptionController.addListener(_onTextChanged);
   }
@@ -169,6 +181,9 @@ class _ActivityFormSheetState extends State<_ActivityFormSheet> {
     _priceController.dispose();
     _maxParticipantsController.dispose();
     _minParticipantsController.dispose();
+    _prizeDescriptionController.dispose();
+    _prizeCountController.dispose();
+    _drawParticipantCountController.dispose();
     super.dispose();
   }
 
@@ -243,24 +258,52 @@ class _ActivityFormSheetState extends State<_ActivityFormSheet> {
     }
   }
 
+  Future<void> _pickDrawAt() async {
+    final now = DateTime.now();
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: _drawAt ?? now.add(const Duration(days: 7)),
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 365)),
+    );
+    if (pickedDate == null || !mounted) return;
+
+    final pickedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(_drawAt ?? now),
+    );
+    if (pickedTime == null || !mounted) return;
+
+    setState(() {
+      _drawAt = DateTime(
+        pickedDate.year, pickedDate.month, pickedDate.day,
+        pickedTime.hour, pickedTime.minute,
+      );
+    });
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_deadline == null) {
-      setState(() =>
-          _errorMessage = context.l10n.validatorFieldRequired(
-              context.l10n.expertActivityDeadline));
+      setState(() => _errorMessage = context.l10n.validatorFieldRequired(
+          context.l10n.expertActivityDeadline));
       return;
     }
-    if (_selectedService == null) {
-      setState(() =>
-          _errorMessage = context.l10n.validatorFieldRequired(
-              context.l10n.expertActivitySelectService));
+    if (_activityType == 'standard' && _selectedService == null) {
+      setState(() => _errorMessage = context.l10n.validatorFieldRequired(
+          context.l10n.expertActivitySelectService));
       return;
     }
     if (_location == null || _location!.isEmpty) {
-      setState(() =>
-          _errorMessage = context.l10n.validatorFieldRequired(
-              context.l10n.activityLocation));
+      setState(() => _errorMessage = context.l10n.validatorFieldRequired(
+          context.l10n.activityLocation));
+      return;
+    }
+    if (_activityType == 'lottery' && _drawMode == 'auto' &&
+        (_drawTrigger == 'by_time' || _drawTrigger == 'both') &&
+        _drawAt == null) {
+      setState(() => _errorMessage = context.l10n.validatorFieldRequired(
+          context.l10n.expertActivityDrawAt));
       return;
     }
 
@@ -269,13 +312,8 @@ class _ActivityFormSheetState extends State<_ActivityFormSheet> {
       _errorMessage = null;
     });
 
-    final maxParticipants =
-        int.tryParse(_maxParticipantsController.text.trim()) ?? 10;
-    final minParticipants =
-        int.tryParse(_minParticipantsController.text.trim()) ?? 1;
     final priceText = _priceController.text.trim();
-    final price =
-        priceText.isEmpty ? null : double.tryParse(priceText);
+    final price = priceText.isEmpty ? null : double.tryParse(priceText);
 
     final data = <String, dynamic>{
       'title': _titleController.text.trim(),
@@ -283,14 +321,40 @@ class _ActivityFormSheetState extends State<_ActivityFormSheet> {
       'location': _location!,
       'task_type': _taskType,
       'deadline': _deadline!.toIso8601String(),
-      'max_participants': maxParticipants,
-      'min_participants': minParticipants,
-      'expert_service_id': _selectedService!['id'],
+      'activity_type': _activityType,
+      if (_selectedService != null) 'expert_service_id': _selectedService!['id'],
       if (price != null) 'original_price_per_participant': price,
       if (_latitude != null) 'latitude': _latitude,
       if (_longitude != null) 'longitude': _longitude,
       if (_serviceRadiusKm != null) 'service_radius_km': _serviceRadiusKm,
     };
+
+    if (_activityType == 'standard') {
+      data['max_participants'] =
+          int.tryParse(_maxParticipantsController.text.trim()) ?? 10;
+      data['min_participants'] =
+          int.tryParse(_minParticipantsController.text.trim()) ?? 1;
+    }
+
+    if (_activityType != 'standard') {
+      data['prize_type'] = _prizeType;
+      data['prize_description'] = _prizeDescriptionController.text.trim();
+      data['prize_count'] = int.tryParse(_prizeCountController.text.trim()) ?? 1;
+    }
+
+    if (_activityType == 'lottery') {
+      data['draw_mode'] = _drawMode;
+      if (_drawMode == 'auto') {
+        data['draw_trigger'] = _drawTrigger;
+        if (_drawTrigger == 'by_time' || _drawTrigger == 'both') {
+          data['draw_at'] = _drawAt!.toUtc().toIso8601String();
+        }
+        if (_drawTrigger == 'by_count' || _drawTrigger == 'both') {
+          data['draw_participant_count'] =
+              int.tryParse(_drawParticipantCountController.text.trim()) ?? 30;
+        }
+      }
+    }
 
     try {
       await widget.repository.createTeamActivity(widget.expertId, data);
@@ -306,6 +370,273 @@ class _ActivityFormSheetState extends State<_ActivityFormSheet> {
         });
       }
     }
+  }
+
+  Widget _buildActivityTypeSelector() {
+    final l10n = context.l10n;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final types = [
+      ('standard', l10n.expertActivityTypeStandard, l10n.expertActivityTypeStandardDesc, Icons.event_outlined),
+      ('lottery', l10n.expertActivityTypeLottery, l10n.expertActivityTypeLotteryDesc, Icons.casino_outlined),
+      ('first_come', l10n.expertActivityTypeFirstCome, l10n.expertActivityTypeFirstComeDesc, Icons.bolt_outlined),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionLabel(label: l10n.expertActivityType, isRequired: true),
+        const SizedBox(height: 8),
+        ...types.map((t) {
+          final (value, label, desc, icon) = t;
+          final selected = _activityType == value;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: InkWell(
+              onTap: () => setState(() => _activityType = value),
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: selected
+                        ? AppColors.primary
+                        : isDark
+                            ? Colors.white.withValues(alpha: 0.12)
+                            : const Color(0xFFE0E0E0),
+                    width: selected ? 2 : 1.5,
+                  ),
+                  color: selected
+                      ? AppColors.primary.withValues(alpha: 0.08)
+                      : isDark
+                          ? const Color(0xFF1C1C1E)
+                          : Colors.white,
+                ),
+                child: Row(
+                  children: [
+                    Icon(icon, color: selected ? AppColors.primary : null),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(label, style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: selected ? AppColors.primary : null,
+                          )),
+                          Text(desc, style: TextStyle(
+                            fontSize: 12,
+                            color: isDark
+                                ? AppColors.textSecondaryDark
+                                : AppColors.textSecondaryLight,
+                          )),
+                        ],
+                      ),
+                    ),
+                    if (selected)
+                      const Icon(Icons.check_circle, color: AppColors.primary, size: 20),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  Widget _buildPrizeFields() {
+    final l10n = context.l10n;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionLabel(label: l10n.expertActivityPrizeType, isRequired: true),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: ChoiceChip(
+                label: Text(l10n.expertActivityPrizePhysical),
+                selected: _prizeType == 'physical',
+                onSelected: (_) => setState(() => _prizeType = 'physical'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: ChoiceChip(
+                label: Text(l10n.expertActivityPrizeInPerson),
+                selected: _prizeType == 'in_person',
+                onSelected: (_) => setState(() => _prizeType = 'in_person'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        _SectionLabel(label: l10n.expertActivityPrizeDescription, isRequired: true),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: _prizeDescriptionController,
+          decoration: _inputDecoration(
+            hintText: l10n.expertActivityPrizeDescriptionHint,
+            alignLabelWithHint: true,
+          ),
+          maxLines: 2,
+          style: const TextStyle(fontSize: 15),
+          validator: (value) {
+            if (_activityType != 'standard' &&
+                (value == null || value.trim().isEmpty)) {
+              return l10n.validatorFieldRequired(l10n.expertActivityPrizeDescription);
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 20),
+        _SectionLabel(label: l10n.expertActivityPrizeCount, isRequired: true),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: _prizeCountController,
+          decoration: _inputDecoration(hintText: '3'),
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          validator: (value) {
+            if (_activityType != 'standard') {
+              final n = int.tryParse(value ?? '');
+              if (n == null || n < 1) {
+                return l10n.validatorFieldRequired(l10n.expertActivityPrizeCount);
+              }
+            }
+            return null;
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDrawConfig() {
+    final l10n = context.l10n;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionLabel(label: l10n.expertActivityDrawMode, isRequired: true),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: ChoiceChip(
+                label: Text(l10n.expertActivityDrawModeAuto),
+                selected: _drawMode == 'auto',
+                onSelected: (_) => setState(() => _drawMode = 'auto'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: ChoiceChip(
+                label: Text(l10n.expertActivityDrawModeManual),
+                selected: _drawMode == 'manual',
+                onSelected: (_) => setState(() => _drawMode = 'manual'),
+              ),
+            ),
+          ],
+        ),
+        if (_drawMode == 'auto') ...[
+          const SizedBox(height: 20),
+          _SectionLabel(label: l10n.expertActivityDrawTrigger, isRequired: true),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            children: [
+              ChoiceChip(
+                label: Text(l10n.expertActivityDrawTriggerByTime),
+                selected: _drawTrigger == 'by_time',
+                onSelected: (_) => setState(() => _drawTrigger = 'by_time'),
+              ),
+              ChoiceChip(
+                label: Text(l10n.expertActivityDrawTriggerByCount),
+                selected: _drawTrigger == 'by_count',
+                onSelected: (_) => setState(() => _drawTrigger = 'by_count'),
+              ),
+              ChoiceChip(
+                label: Text(l10n.expertActivityDrawTriggerBoth),
+                selected: _drawTrigger == 'both',
+                onSelected: (_) => setState(() => _drawTrigger = 'both'),
+              ),
+            ],
+          ),
+          if (_drawTrigger == 'by_time' || _drawTrigger == 'both') ...[
+            const SizedBox(height: 20),
+            _SectionLabel(label: l10n.expertActivityDrawAt, isRequired: true),
+            const SizedBox(height: 8),
+            InkWell(
+              onTap: _pickDrawAt,
+              borderRadius: AppRadius.allSmall,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.12)
+                        : const Color(0xFFE0E0E0),
+                    width: 1.5,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.schedule_outlined, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _drawAt == null
+                            ? l10n.expertActivityDrawAt
+                            : '${_drawAt!.year}-${_drawAt!.month.toString().padLeft(2, '0')}-${_drawAt!.day.toString().padLeft(2, '0')} ${_drawAt!.hour.toString().padLeft(2, '0')}:${_drawAt!.minute.toString().padLeft(2, '0')}',
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: _drawAt == null
+                              ? (isDark ? Colors.white38 : Colors.black38)
+                              : null,
+                        ),
+                      ),
+                    ),
+                    Icon(Icons.arrow_drop_down,
+                        color: isDark ? Colors.white54 : Colors.black45),
+                  ],
+                ),
+              ),
+            ),
+          ],
+          if (_drawTrigger == 'by_count' || _drawTrigger == 'both') ...[
+            const SizedBox(height: 20),
+            _SectionLabel(
+              label: l10n.expertActivityDrawParticipantCount,
+              isRequired: true,
+            ),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _drawParticipantCountController,
+              decoration: _inputDecoration(hintText: '30'),
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              validator: (value) {
+                if (_activityType == 'lottery' &&
+                    _drawMode == 'auto' &&
+                    (_drawTrigger == 'by_count' || _drawTrigger == 'both')) {
+                  final n = int.tryParse(value ?? '');
+                  final prizeCount = int.tryParse(_prizeCountController.text) ?? 0;
+                  if (n == null || n <= prizeCount) {
+                    return '${l10n.expertActivityDrawParticipantCount} > ${l10n.expertActivityPrizeCount}';
+                  }
+                }
+                return null;
+              },
+            ),
+          ],
+        ],
+      ],
+    );
   }
 
   String _serviceLabel(Map<String, dynamic> service) {
@@ -391,31 +722,72 @@ class _ActivityFormSheetState extends State<_ActivityFormSheet> {
                   const SizedBox(height: 16),
                 ],
 
+                // ── Activity type selector ──
+                _buildActivityTypeSelector(),
+                const SizedBox(height: 20),
+
                 // ── Linked service ──
-                _SectionLabel(
-                  label: context.l10n.expertActivitySelectService,
-                  isRequired: true,
-                ),
-                const SizedBox(height: 8),
-                if (activeServices.isEmpty)
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? Colors.white.withValues(alpha: 0.05)
-                          : Colors.black.withValues(alpha: 0.04),
-                      borderRadius: AppRadius.allSmall,
-                    ),
-                    child: Text(
-                      context.l10n.expertServicesEmpty,
-                      style: TextStyle(
+                if (_activityType == 'standard') ...[
+                  _SectionLabel(
+                    label: context.l10n.expertActivitySelectService,
+                    isRequired: true,
+                  ),
+                  const SizedBox(height: 8),
+                  if (activeServices.isEmpty)
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
                         color: isDark
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondaryLight,
+                            ? Colors.white.withValues(alpha: 0.05)
+                            : Colors.black.withValues(alpha: 0.04),
+                        borderRadius: AppRadius.allSmall,
                       ),
+                      child: Text(
+                        context.l10n.expertServicesEmpty,
+                        style: TextStyle(
+                          color: isDark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondaryLight,
+                        ),
+                      ),
+                    )
+                  else
+                    DropdownButtonFormField<Map<String, dynamic>>(
+                      initialValue: _selectedService,
+                      hint: Text(
+                        context.l10n.expertActivitySelectServiceHint,
+                        style: TextStyle(
+                          color: isDark ? Colors.white38 : Colors.black38,
+                          fontSize: 15,
+                        ),
+                      ),
+                      decoration: _inputDecoration(
+                          hintText: context.l10n.expertActivitySelectServiceHint),
+                      items: activeServices
+                          .map((s) => DropdownMenuItem(
+                                value: s,
+                                child: Text(
+                                  _serviceLabel(s),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ))
+                          .toList(),
+                      onChanged: (value) =>
+                          setState(() => _selectedService = value),
+                      validator: (value) {
+                        if (value == null) {
+                          return context.l10n.validatorFieldRequired(
+                              context.l10n.expertActivitySelectService);
+                        }
+                        return null;
+                      },
                     ),
-                  )
-                else
+                  const SizedBox(height: 20),
+                ] else if (activeServices.isNotEmpty) ...[
+                  _SectionLabel(
+                    label: context.l10n.expertActivityServiceOptional,
+                  ),
+                  const SizedBox(height: 8),
                   DropdownButtonFormField<Map<String, dynamic>>(
                     initialValue: _selectedService,
                     hint: Text(
@@ -426,28 +798,26 @@ class _ActivityFormSheetState extends State<_ActivityFormSheet> {
                       ),
                     ),
                     decoration: _inputDecoration(
-                        hintText:
-                            context.l10n.expertActivitySelectServiceHint),
-                    items: activeServices
-                        .map((s) => DropdownMenuItem(
-                              value: s,
-                              child: Text(
-                                _serviceLabel(s),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ))
-                        .toList(),
+                        hintText: context.l10n.expertActivitySelectServiceHint),
+                    items: [
+                      DropdownMenuItem<Map<String, dynamic>>(
+                        value: null,
+                        child: Text(context.l10n.expertActivityFree),
+                      ),
+                      ...activeServices
+                          .map((s) => DropdownMenuItem(
+                                value: s,
+                                child: Text(
+                                  _serviceLabel(s),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              )),
+                    ],
                     onChanged: (value) =>
                         setState(() => _selectedService = value),
-                    validator: (value) {
-                      if (value == null) {
-                        return context.l10n.validatorFieldRequired(
-                            context.l10n.expertActivitySelectService);
-                      }
-                      return null;
-                    },
                   ),
-                const SizedBox(height: 20),
+                  const SizedBox(height: 20),
+                ],
 
                 // ── Title ──
                 _SectionLabel(
@@ -500,6 +870,18 @@ class _ActivityFormSheetState extends State<_ActivityFormSheet> {
                   },
                 ),
                 const SizedBox(height: 20),
+
+                // ── Prize fields (lottery / first_come only) ──
+                if (_activityType != 'standard') ...[
+                  _buildPrizeFields(),
+                  const SizedBox(height: 20),
+                ],
+
+                // ── Draw config (lottery only) ──
+                if (_activityType == 'lottery') ...[
+                  _buildDrawConfig(),
+                  const SizedBox(height: 20),
+                ],
 
                 // ── Task type ──
                 _SectionLabel(
@@ -577,61 +959,65 @@ class _ActivityFormSheetState extends State<_ActivityFormSheet> {
                 ),
                 const SizedBox(height: 20),
 
-                // ── Participants ──
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _SectionLabel(
-                            label: context.l10n.expertActivityMaxParticipants,
-                            isRequired: true,
-                          ),
-                          const SizedBox(height: 8),
-                          TextFormField(
-                            controller: _maxParticipantsController,
-                            decoration: _inputDecoration(hintText: '10'),
-                            keyboardType: TextInputType.number,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly
-                            ],
-                            validator: (value) {
-                              final n = int.tryParse(value ?? '');
-                              if (n == null || n < 1) {
-                                return context.l10n.validatorFieldRequired(
-                                    context.l10n
-                                        .expertActivityMaxParticipants);
-                              }
-                              return null;
-                            },
-                          ),
-                        ],
+                // ── Participants (only for standard, or lottery by_time/manual) ──
+                if (_activityType == 'standard' ||
+                    (_activityType == 'lottery' &&
+                     (_drawMode == 'manual' || _drawTrigger == 'by_time'))) ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _SectionLabel(
+                              label: context.l10n.expertActivityMaxParticipants,
+                              isRequired: true,
+                            ),
+                            const SizedBox(height: 8),
+                            TextFormField(
+                              controller: _maxParticipantsController,
+                              decoration: _inputDecoration(hintText: '10'),
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly
+                              ],
+                              validator: (value) {
+                                final n = int.tryParse(value ?? '');
+                                if (n == null || n < 1) {
+                                  return context.l10n.validatorFieldRequired(
+                                      context.l10n
+                                          .expertActivityMaxParticipants);
+                                }
+                                return null;
+                              },
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _SectionLabel(
-                            label: context.l10n.expertActivityMinParticipants,
-                          ),
-                          const SizedBox(height: 8),
-                          TextFormField(
-                            controller: _minParticipantsController,
-                            decoration: _inputDecoration(hintText: '1'),
-                            keyboardType: TextInputType.number,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly
-                            ],
-                          ),
-                        ],
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _SectionLabel(
+                              label: context.l10n.expertActivityMinParticipants,
+                            ),
+                            const SizedBox(height: 8),
+                            TextFormField(
+                              controller: _minParticipantsController,
+                              decoration: _inputDecoration(hintText: '1'),
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                ],
 
                 // ── Price per participant ──
                 _SectionLabel(
