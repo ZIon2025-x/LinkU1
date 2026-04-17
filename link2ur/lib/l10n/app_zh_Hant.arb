@@ -3698,6 +3698,8 @@
   "taskTypePetCare": "寵物照料",
   "taskTypeLifeConvenience": "生活便利",
   "taskTypeOther": "其他",
+  "taskTypeExpertService": "達人服務",
+  "taskTypeFleaMarket": "二手市場",
   "taskTypeCampusLifeNeedVerify": "發布「校園生活」任務需要先完成學生郵箱認證",
   "taskDetailNoImages": "暫無圖片",
   "timeDaysAgo": "{days}天前",
@@ -5212,6 +5214,29 @@
 
   "profileMyServiceApplications": "我的服務申請",
   "profileMyServiceApplicationsSubtitle": "追蹤服務申請進度",
+  "profileReceivedApplications": "收到的申請",
+  "profileReceivedApplicationsSubtitle": "審核和管理收到的服務申請",
+  "profileMyActivities": "我的活動",
+  "profileMyActivitiesSubtitle": "查看申請和收藏的活動",
+  "serviceApplicationCreatedAt": "申請於 {time}",
+  "@serviceApplicationCreatedAt": {
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  },
+  "serviceApplicationApprovedAt": "通過於 {time}",
+  "@serviceApplicationApprovedAt": {
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  },
+  "receivedApplicationsFilterAll": "全部",
+  "receivedApplicationsFilterPending": "待處理",
+  "receivedApplicationsFilterNegotiating": "協商中",
+  "receivedApplicationsFilterPriceAgreed": "價格已確認",
+  "receivedApplicationsFilterApproved": "已通過",
+  "receivedApplicationsFilterRejected": "已拒絕",
+  "receivedApplicationsFilterCancelled": "已取消",
   "versionUpdateRequired": "需要更新",
   "versionUpdateAvailable": "發現新版本",
   "versionUpdateRequiredMessage": "目前版本過舊，請更新至最新版本以繼續使用。",

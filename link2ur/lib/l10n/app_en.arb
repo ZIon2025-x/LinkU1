@@ -3785,6 +3785,8 @@
   "taskTypePetCare": "Pet Care",
   "taskTypeLifeConvenience": "Life Convenience",
   "taskTypeOther": "Other",
+  "taskTypeExpertService": "Expert Service",
+  "taskTypeFleaMarket": "Flea Market",
   "taskTypeCampusLifeNeedVerify": "Publishing \"Campus Life\" tasks requires student email verification",
   "taskDetailNoImages": "No images",
   "timeDaysAgo": "{days}d ago",
@@ -5383,6 +5385,29 @@
 
   "profileMyServiceApplications": "My Applications",
   "profileMyServiceApplicationsSubtitle": "Track your service applications",
+  "profileReceivedApplications": "Received Applications",
+  "profileReceivedApplicationsSubtitle": "Review and manage service requests",
+  "profileMyActivities": "My Activities",
+  "profileMyActivitiesSubtitle": "View applied and favorited activities",
+  "serviceApplicationCreatedAt": "Applied {time}",
+  "@serviceApplicationCreatedAt": {
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  },
+  "serviceApplicationApprovedAt": "Approved {time}",
+  "@serviceApplicationApprovedAt": {
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  },
+  "receivedApplicationsFilterAll": "All",
+  "receivedApplicationsFilterPending": "Pending",
+  "receivedApplicationsFilterNegotiating": "Negotiating",
+  "receivedApplicationsFilterPriceAgreed": "Price Agreed",
+  "receivedApplicationsFilterApproved": "Approved",
+  "receivedApplicationsFilterRejected": "Rejected",
+  "receivedApplicationsFilterCancelled": "Cancelled",
   "versionUpdateRequired": "Update Required",
   "versionUpdateAvailable": "New Version Available",
   "versionUpdateRequiredMessage": "Your current version is no longer supported. Please update to continue using the app.",

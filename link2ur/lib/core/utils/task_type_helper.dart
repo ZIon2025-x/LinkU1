@@ -60,6 +60,9 @@ class TaskTypeHelper {
     'repair': (l) => l.createTaskCategoryRepair,
     'errand': (l) => l.taskTypeErrandRunning,
     '其他': (l) => l.taskTypeOther,
+    // 咨询 placeholder task 类型
+    'expert_service': (l) => l.taskTypeExpertService,
+    'flea_market': (l) => l.taskTypeFleaMarket,
   };
 
   /// 根据 taskType 获取对应的 Material Icon
@@ -116,5 +119,9 @@ class TaskTypeHelper {
 
     // ===== 中文变体（达人任务创建时可能使用）=====
     '其他': Icons.apps,
+
+    // ===== 咨询 placeholder task 类型 =====
+    'expert_service': Icons.home_repair_service_rounded,
+    'flea_market': Icons.storefront_rounded,
   };
 }

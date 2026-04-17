@@ -7805,6 +7805,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskTypeOther => '其他';
 
   @override
+  String get taskTypeExpertService => '达人服务';
+
+  @override
+  String get taskTypeFleaMarket => '二手市场';
+
+  @override
   String get taskTypeCampusLifeNeedVerify => '发布「校园生活」任务需要先完成学生邮箱认证';
 
   @override
@@ -11597,6 +11603,49 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get profileMyServiceApplicationsSubtitle => '跟踪服务申请进度';
+
+  @override
+  String get profileReceivedApplications => '收到的申请';
+
+  @override
+  String get profileReceivedApplicationsSubtitle => '审核和管理收到的服务申请';
+
+  @override
+  String get profileMyActivities => '我的活动';
+
+  @override
+  String get profileMyActivitiesSubtitle => '查看申请和收藏的活动';
+
+  @override
+  String serviceApplicationCreatedAt(String time) {
+    return '申请于 $time';
+  }
+
+  @override
+  String serviceApplicationApprovedAt(String time) {
+    return '通过于 $time';
+  }
+
+  @override
+  String get receivedApplicationsFilterAll => '全部';
+
+  @override
+  String get receivedApplicationsFilterPending => '待处理';
+
+  @override
+  String get receivedApplicationsFilterNegotiating => '协商中';
+
+  @override
+  String get receivedApplicationsFilterPriceAgreed => '价格已确认';
+
+  @override
+  String get receivedApplicationsFilterApproved => '已通过';
+
+  @override
+  String get receivedApplicationsFilterRejected => '已拒绝';
+
+  @override
+  String get receivedApplicationsFilterCancelled => '已取消';
 
   @override
   String get versionUpdateRequired => '需要更新';
@@ -20667,6 +20716,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get taskTypeOther => '其他';
 
   @override
+  String get taskTypeExpertService => '達人服務';
+
+  @override
+  String get taskTypeFleaMarket => '二手市場';
+
+  @override
   String get taskTypeCampusLifeNeedVerify => '發布「校園生活」任務需要先完成學生郵箱認證';
 
   @override
@@ -24459,6 +24514,49 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get profileMyServiceApplicationsSubtitle => '追蹤服務申請進度';
+
+  @override
+  String get profileReceivedApplications => '收到的申請';
+
+  @override
+  String get profileReceivedApplicationsSubtitle => '審核和管理收到的服務申請';
+
+  @override
+  String get profileMyActivities => '我的活動';
+
+  @override
+  String get profileMyActivitiesSubtitle => '查看申請和收藏的活動';
+
+  @override
+  String serviceApplicationCreatedAt(String time) {
+    return '申請於 $time';
+  }
+
+  @override
+  String serviceApplicationApprovedAt(String time) {
+    return '通過於 $time';
+  }
+
+  @override
+  String get receivedApplicationsFilterAll => '全部';
+
+  @override
+  String get receivedApplicationsFilterPending => '待處理';
+
+  @override
+  String get receivedApplicationsFilterNegotiating => '協商中';
+
+  @override
+  String get receivedApplicationsFilterPriceAgreed => '價格已確認';
+
+  @override
+  String get receivedApplicationsFilterApproved => '已通過';
+
+  @override
+  String get receivedApplicationsFilterRejected => '已拒絕';
+
+  @override
+  String get receivedApplicationsFilterCancelled => '已取消';
 
   @override
   String get versionUpdateRequired => '需要更新';

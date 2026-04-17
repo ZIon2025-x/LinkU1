@@ -8137,6 +8137,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskTypeOther => 'Other';
 
   @override
+  String get taskTypeExpertService => 'Expert Service';
+
+  @override
+  String get taskTypeFleaMarket => 'Flea Market';
+
+  @override
   String get taskTypeCampusLifeNeedVerify =>
       'Publishing \"Campus Life\" tasks requires student email verification';
 
@@ -12087,6 +12093,51 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get profileMyServiceApplicationsSubtitle =>
       'Track your service applications';
+
+  @override
+  String get profileReceivedApplications => 'Received Applications';
+
+  @override
+  String get profileReceivedApplicationsSubtitle =>
+      'Review and manage service requests';
+
+  @override
+  String get profileMyActivities => 'My Activities';
+
+  @override
+  String get profileMyActivitiesSubtitle =>
+      'View applied and favorited activities';
+
+  @override
+  String serviceApplicationCreatedAt(String time) {
+    return 'Applied $time';
+  }
+
+  @override
+  String serviceApplicationApprovedAt(String time) {
+    return 'Approved $time';
+  }
+
+  @override
+  String get receivedApplicationsFilterAll => 'All';
+
+  @override
+  String get receivedApplicationsFilterPending => 'Pending';
+
+  @override
+  String get receivedApplicationsFilterNegotiating => 'Negotiating';
+
+  @override
+  String get receivedApplicationsFilterPriceAgreed => 'Price Agreed';
+
+  @override
+  String get receivedApplicationsFilterApproved => 'Approved';
+
+  @override
+  String get receivedApplicationsFilterRejected => 'Rejected';
+
+  @override
+  String get receivedApplicationsFilterCancelled => 'Cancelled';
 
   @override
   String get versionUpdateRequired => 'Update Required';

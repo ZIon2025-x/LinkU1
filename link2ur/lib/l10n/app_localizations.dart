@@ -14939,6 +14939,18 @@ abstract class AppLocalizations {
   /// **'Other'**
   String get taskTypeOther;
 
+  /// No description provided for @taskTypeExpertService.
+  ///
+  /// In en, this message translates to:
+  /// **'Expert Service'**
+  String get taskTypeExpertService;
+
+  /// No description provided for @taskTypeFleaMarket.
+  ///
+  /// In en, this message translates to:
+  /// **'Flea Market'**
+  String get taskTypeFleaMarket;
+
   /// No description provided for @taskTypeCampusLifeNeedVerify.
   ///
   /// In en, this message translates to:
@@ -22294,6 +22306,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Track your service applications'**
   String get profileMyServiceApplicationsSubtitle;
+
+  /// No description provided for @profileReceivedApplications.
+  ///
+  /// In en, this message translates to:
+  /// **'Received Applications'**
+  String get profileReceivedApplications;
+
+  /// No description provided for @profileReceivedApplicationsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Review and manage service requests'**
+  String get profileReceivedApplicationsSubtitle;
+
+  /// No description provided for @profileMyActivities.
+  ///
+  /// In en, this message translates to:
+  /// **'My Activities'**
+  String get profileMyActivities;
+
+  /// No description provided for @profileMyActivitiesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'View applied and favorited activities'**
+  String get profileMyActivitiesSubtitle;
+
+  /// No description provided for @serviceApplicationCreatedAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Applied {time}'**
+  String serviceApplicationCreatedAt(String time);
+
+  /// No description provided for @serviceApplicationApprovedAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved {time}'**
+  String serviceApplicationApprovedAt(String time);
+
+  /// No description provided for @receivedApplicationsFilterAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get receivedApplicationsFilterAll;
+
+  /// No description provided for @receivedApplicationsFilterPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get receivedApplicationsFilterPending;
+
+  /// No description provided for @receivedApplicationsFilterNegotiating.
+  ///
+  /// In en, this message translates to:
+  /// **'Negotiating'**
+  String get receivedApplicationsFilterNegotiating;
+
+  /// No description provided for @receivedApplicationsFilterPriceAgreed.
+  ///
+  /// In en, this message translates to:
+  /// **'Price Agreed'**
+  String get receivedApplicationsFilterPriceAgreed;
+
+  /// No description provided for @receivedApplicationsFilterApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get receivedApplicationsFilterApproved;
+
+  /// No description provided for @receivedApplicationsFilterRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get receivedApplicationsFilterRejected;
+
+  /// No description provided for @receivedApplicationsFilterCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get receivedApplicationsFilterCancelled;
 
   /// No description provided for @versionUpdateRequired.
   ///
