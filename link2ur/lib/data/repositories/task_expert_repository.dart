@@ -481,6 +481,37 @@ class TaskExpertRepository {
     return response.data!;
   }
 
+  /// 上架/下架服务
+  Future<Map<String, dynamic>> toggleServiceStatus(
+      String expertId, int serviceId) async {
+    final response = await _apiService.patch(
+      ApiEndpoints.expertServiceToggleStatus(expertId, serviceId),
+    );
+
+    if (!response.isSuccess) {
+      throw TaskExpertException(
+        response.errorCode ?? response.message ?? '操作失败',
+        code: response.errorCode,
+      );
+    }
+    return response.data as Map<String, dynamic>? ?? {};
+  }
+
+  /// 获取团队任务列表（我参与的）
+  Future<List<Map<String, dynamic>>> getMyTasks(String expertId) async {
+    final response = await _apiService.get(
+      ApiEndpoints.expertMyTasks(expertId),
+    );
+    final data = response.data;
+    if (data is Map<String, dynamic>) {
+      final items = data['items'];
+      if (items is List) {
+        return items.cast<Map<String, dynamic>>();
+      }
+    }
+    return [];
+  }
+
   /// 删除服务
   Future<void> deleteService(String expertId, int serviceId) async {
     final response = await _apiService.delete(

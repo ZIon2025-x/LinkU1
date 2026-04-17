@@ -203,6 +203,10 @@ class ApiEndpoints {
   // 服务管理（需要 expertId）
   static String expertServiceById(String expertId, int serviceId) =>
       '/api/experts/$expertId/services/$serviceId';
+  static String expertServiceToggleStatus(String expertId, int serviceId) =>
+      '/api/experts/$expertId/services/$serviceId/status';
+  static String expertMyTasks(String expertId) =>
+      '/api/experts/$expertId/services/my-tasks';
 
   // 服务时间段（需要 expertId）
   static String expertServiceTimeSlots(String expertId, int serviceId) =>
