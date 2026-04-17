@@ -126,12 +126,14 @@ class HomeLoadNearbyServices extends HomeEvent {
     required this.latitude,
     required this.longitude,
     this.radius = 5,
+    this.loadMore = false,
   });
   final double latitude;
   final double longitude;
   final int radius;
+  final bool loadMore;
   @override
-  List<Object?> get props => [latitude, longitude, radius];
+  List<Object?> get props => [latitude, longitude, radius, loadMore];
 }
 
 /// 切换附近服务搜索半径

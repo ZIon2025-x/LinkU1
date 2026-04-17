@@ -320,9 +320,16 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         return task;
       }).toList();
 
-      final allTasks = event.loadMore
-          ? [...state.nearbyTasks, ...tasksWithDistance]
-          : tasksWithDistance;
+      List<Task> allTasks;
+      if (event.loadMore) {
+        final existingIds = state.nearbyTasks.map((t) => t.id).toSet();
+        final newTasks = tasksWithDistance
+            .where((t) => !existingIds.contains(t.id))
+            .toList();
+        allTasks = [...state.nearbyTasks, ...newTasks];
+      } else {
+        allTasks = tasksWithDistance;
+      }
 
       // 按模糊距离区间排序（500m 为一个区间）
       // 同一区间内保持原始顺序（后端已按精确距离排序）
@@ -532,14 +539,33 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   ) async {
     if (_personalServiceRepository == null) return;
     try {
+      final page = event.loadMore ? state.nearbyServicesPage + 1 : 1;
       final result = await _personalServiceRepository.browseServices(
         sort: 'nearby',
         lat: event.latitude,
         lng: event.longitude,
         radius: event.radius,
+        page: page,
       );
-      final items = List<Map<String, dynamic>>.from(result['items'] ?? []);
-      emit(state.copyWith(nearbyServices: items, nearbyRadius: event.radius));
+      final newItems = List<Map<String, dynamic>>.from(result['items'] ?? []);
+      final total = result['total'] as int? ?? 0;
+      final pageSize = result['page_size'] as int? ?? 20;
+
+      List<Map<String, dynamic>> allItems;
+      if (event.loadMore) {
+        final existingIds = state.nearbyServices.map((s) => s['id']).toSet();
+        final deduped = newItems.where((s) => !existingIds.contains(s['id'])).toList();
+        allItems = [...state.nearbyServices, ...deduped];
+      } else {
+        allItems = newItems;
+      }
+
+      emit(state.copyWith(
+        nearbyServices: allItems,
+        nearbyRadius: event.radius,
+        nearbyServicesPage: page,
+        hasMoreNearbyServices: page * pageSize < total,
+      ));
     } catch (_) {
       // Silent fail — nearby services are supplementary data
     }

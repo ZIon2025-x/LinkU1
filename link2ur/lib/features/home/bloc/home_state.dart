@@ -46,6 +46,8 @@ class HomeState extends Equatable {
     this.nearbyServices = const [],
     this.nearbyRadius = 5,
     this.isLoadingNearby = false,
+    this.nearbyServicesPage = 1,
+    this.hasMoreNearbyServices = true,
     this.trendingSearches = const [],
   });
 
@@ -106,6 +108,8 @@ class HomeState extends Equatable {
   final int nearbyRadius;
   /// 附近数据加载中（切换半径时不清空已有数据）
   final bool isLoadingNearby;
+  final int nearbyServicesPage;
+  final bool hasMoreNearbyServices;
 
   /// 热搜榜数据
   final List<TrendingSearchItem> trendingSearches;
@@ -151,6 +155,8 @@ class HomeState extends Equatable {
     List<Map<String, dynamic>>? nearbyServices,
     int? nearbyRadius,
     bool? isLoadingNearby,
+    int? nearbyServicesPage,
+    bool? hasMoreNearbyServices,
     List<TrendingSearchItem>? trendingSearches,
   }) {
     return HomeState(
@@ -190,6 +196,8 @@ class HomeState extends Equatable {
       nearbyServices: nearbyServices ?? this.nearbyServices,
       nearbyRadius: nearbyRadius ?? this.nearbyRadius,
       isLoadingNearby: isLoadingNearby ?? this.isLoadingNearby,
+      nearbyServicesPage: nearbyServicesPage ?? this.nearbyServicesPage,
+      hasMoreNearbyServices: hasMoreNearbyServices ?? this.hasMoreNearbyServices,
       trendingSearches: trendingSearches ?? this.trendingSearches,
     );
   }
@@ -230,6 +238,8 @@ class HomeState extends Equatable {
         nearbyServices,
         nearbyRadius,
         isLoadingNearby,
+        nearbyServicesPage,
+        hasMoreNearbyServices,
         trendingSearches,
       ];
 }
