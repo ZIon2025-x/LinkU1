@@ -6030,13 +6030,73 @@ async def get_unread_notification_count_api(
     )
     lb_unread = lb_unread_result.scalar() or 0
 
-    forum_unread_result = await db.execute(
-        select(func.count()).select_from(models.ForumNotification).where(
+    # --- 论坛未读：必须与 /notifications/interaction 列表端点一致，
+    #     只统计用户可见板块（general + 本校）内的通知 ---
+    from app.forum_routes import visible_forums
+
+    visible_category_ids = []
+    gen_res = await db.execute(
+        select(models.ForumCategory.id).where(
+            models.ForumCategory.type == 'general',
+            models.ForumCategory.is_visible == True
+        )
+    )
+    visible_category_ids.extend([r[0] for r in gen_res.all()])
+    school_ids = await visible_forums(current_user, db)
+    visible_category_ids.extend(school_ids)
+
+    # 取所有未读论坛通知
+    forum_unread_rows = await db.execute(
+        select(
+            models.ForumNotification.id,
+            models.ForumNotification.target_type,
+            models.ForumNotification.target_id,
+        ).where(
             models.ForumNotification.to_user_id == current_user.id,
             models.ForumNotification.is_read == False,
         )
     )
-    forum_unread = forum_unread_result.scalar() or 0
+    unread_forum_list = forum_unread_rows.all()
+
+    # 按 target_type 分组，批量查 category_id
+    post_ids = [r.target_id for r in unread_forum_list if r.target_type == "post"]
+    reply_ids = [r.target_id for r in unread_forum_list if r.target_type == "reply"]
+
+    post_cat_map = {}
+    if post_ids:
+        res = await db.execute(
+            select(models.ForumPost.id, models.ForumPost.category_id)
+            .where(models.ForumPost.id.in_(post_ids))
+        )
+        post_cat_map = {r[0]: r[1] for r in res.all()}
+
+    reply_cat_map = {}
+    if reply_ids:
+        res = await db.execute(
+            select(models.ForumReply.id, models.ForumReply.post_id)
+            .where(models.ForumReply.id.in_(reply_ids))
+        )
+        reply_post_map = {r[0]: r[1] for r in res.all()}
+        if reply_post_map:
+            res2 = await db.execute(
+                select(models.ForumPost.id, models.ForumPost.category_id)
+                .where(models.ForumPost.id.in_(list(reply_post_map.values())))
+            )
+            pid_cat = {r[0]: r[1] for r in res2.all()}
+            reply_cat_map = {
+                rid: pid_cat.get(pid)
+                for rid, pid in reply_post_map.items()
+                if pid in pid_cat
+            }
+
+    forum_unread = 0
+    for r in unread_forum_list:
+        if r.target_type == "post":
+            cat_id = post_cat_map.get(r.target_id)
+        else:
+            cat_id = reply_cat_map.get(r.target_id)
+        if cat_id and cat_id in visible_category_ids:
+            forum_unread += 1
 
     return {
         "unread_count": system_count - lb_unread,
