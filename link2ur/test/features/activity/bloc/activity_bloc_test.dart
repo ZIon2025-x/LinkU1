@@ -455,7 +455,7 @@ void main() {
         'applies to official activity on success',
         build: () {
           when(() => mockActivityRepo.applyOfficialActivity(any()))
-              .thenAnswer((_) async {});
+              .thenAnswer((_) async => <String, dynamic>{'success': true, 'requires_payment': false});
           // Mock for chained ActivityLoadDetail(activityId)
           when(() => mockActivityRepo.getActivityById(any()))
               .thenAnswer((_) async => testActivity);
