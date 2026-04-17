@@ -2260,11 +2260,13 @@ class OfficialActivityApplication(Base):
     # status: pending / won / lost / attending
     prize_index = Column(Integer, nullable=True)   # voucher_codes[prize_index]
     notified_at = Column(DateTime(timezone=True), nullable=True)
+    payment_intent_id = Column(String(255), nullable=True)
+    amount_paid = Column(Integer, nullable=True)  # pence
 
     __table_args__ = (
         UniqueConstraint("activity_id", "user_id", name="uq_official_app_activity_user"),
         CheckConstraint(
-            "status IN ('pending','won','lost','attending')",
+            "status IN ('payment_pending','pending','won','lost','attending','refunded')",
             name="ck_official_app_status"
         ),
     )
