@@ -19,8 +19,10 @@ class ExpertDashboardBloc
     on<ExpertDashboardLoadStats>(_onLoadStats);
     on<ExpertDashboardLoadMyServices>(_onLoadMyServices);
     on<ExpertDashboardLoadActivities>(_onLoadActivities);
+    on<ExpertDashboardLoadMyTasks>(_onLoadMyTasks);
     on<ExpertDashboardCreateService>(_onCreateService);
     on<ExpertDashboardUpdateService>(_onUpdateService);
+    on<ExpertDashboardToggleServiceStatus>(_onToggleServiceStatus);
     on<ExpertDashboardDeleteService>(_onDeleteService);
     on<ExpertDashboardLoadTimeSlots>(_onLoadTimeSlots);
     on<ExpertDashboardCreateTimeSlot>(_onCreateTimeSlot);
@@ -94,6 +96,25 @@ class ExpertDashboardBloc
     }
   }
 
+  Future<void> _onLoadMyTasks(
+    ExpertDashboardLoadMyTasks event,
+    Emitter<ExpertDashboardState> emit,
+  ) async {
+    emit(state.copyWith(status: ExpertDashboardStatus.loading));
+    try {
+      final tasks = await _repository.getMyTasks(expertId);
+      emit(state.copyWith(
+        status: ExpertDashboardStatus.loaded,
+        myTasks: tasks,
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        status: ExpertDashboardStatus.error,
+        errorMessage: 'expert_dashboard_load_my_tasks_failed',
+      ));
+    }
+  }
+
   /// 帮助函数: 服务列表 + stats 同步刷新,避免 stats_tab 显示陈旧的"上架服务数"
   Future<({List<Map<String, dynamic>> services, Map<String, dynamic>? stats})>
       _reloadServicesAndStats() async {
@@ -149,6 +170,32 @@ class ExpertDashboardBloc
       emit(state.copyWith(
         status: ExpertDashboardStatus.error,
         errorMessage: 'expert_dashboard_update_service_failed',
+      ));
+    }
+  }
+
+  Future<void> _onToggleServiceStatus(
+    ExpertDashboardToggleServiceStatus event,
+    Emitter<ExpertDashboardState> emit,
+  ) async {
+    emit(state.copyWith(status: ExpertDashboardStatus.submitting));
+    try {
+      final result = await _repository.toggleServiceStatus(
+          expertId, int.tryParse(event.id) ?? 0);
+      final newStatus = result['status'] as String? ?? '';
+      final reloaded = await _reloadServicesAndStats();
+      emit(state.copyWith(
+        status: ExpertDashboardStatus.loaded,
+        services: reloaded.services,
+        stats: reloaded.stats ?? state.stats,
+        actionMessage: newStatus == 'active'
+            ? 'expertServiceActivated'
+            : 'expertServiceDeactivated',
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        status: ExpertDashboardStatus.error,
+        errorMessage: e.toString(),
       ));
     }
   }

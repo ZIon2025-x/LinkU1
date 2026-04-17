@@ -8,6 +8,7 @@ class ExpertDashboardState extends Equatable {
     this.stats = const {},
     this.services = const [],
     this.activities = const [],
+    this.myTasks = const [],
     this.timeSlots = const [],
     this.closedDates = const <ExpertClosedDate>[],
     this.businessHours = const {},
@@ -20,6 +21,7 @@ class ExpertDashboardState extends Equatable {
   final Map<String, dynamic> stats;
   final List<Map<String, dynamic>> services;
   final List<Map<String, dynamic>> activities;
+  final List<Map<String, dynamic>> myTasks;
   final List<Map<String, dynamic>> timeSlots;
   final List<ExpertClosedDate> closedDates;
   final Map<String, dynamic> businessHours;
@@ -32,6 +34,7 @@ class ExpertDashboardState extends Equatable {
     Map<String, dynamic>? stats,
     List<Map<String, dynamic>>? services,
     List<Map<String, dynamic>>? activities,
+    List<Map<String, dynamic>>? myTasks,
     List<Map<String, dynamic>>? timeSlots,
     List<ExpertClosedDate>? closedDates,
     Map<String, dynamic>? businessHours,
@@ -44,6 +47,7 @@ class ExpertDashboardState extends Equatable {
       stats: stats ?? this.stats,
       services: services ?? this.services,
       activities: activities ?? this.activities,
+      myTasks: myTasks ?? this.myTasks,
       timeSlots: timeSlots ?? this.timeSlots,
       closedDates: closedDates ?? this.closedDates,
       businessHours: businessHours ?? this.businessHours,
@@ -59,6 +63,7 @@ class ExpertDashboardState extends Equatable {
         stats,
         services,
         activities,
+        myTasks,
         timeSlots,
         closedDates,
         businessHours,

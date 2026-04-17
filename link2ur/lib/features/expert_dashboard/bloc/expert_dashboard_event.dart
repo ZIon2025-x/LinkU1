@@ -18,6 +18,10 @@ class ExpertDashboardLoadActivities extends ExpertDashboardEvent {
   const ExpertDashboardLoadActivities();
 }
 
+class ExpertDashboardLoadMyTasks extends ExpertDashboardEvent {
+  const ExpertDashboardLoadMyTasks();
+}
+
 class ExpertDashboardCreateService extends ExpertDashboardEvent {
   const ExpertDashboardCreateService(this.data);
   final Map<String, dynamic> data;
@@ -31,6 +35,13 @@ class ExpertDashboardUpdateService extends ExpertDashboardEvent {
   final Map<String, dynamic> data;
   @override
   List<Object?> get props => [id, data];
+}
+
+class ExpertDashboardToggleServiceStatus extends ExpertDashboardEvent {
+  const ExpertDashboardToggleServiceStatus(this.id);
+  final String id;
+  @override
+  List<Object?> get props => [id];
 }
 
 class ExpertDashboardDeleteService extends ExpertDashboardEvent {
