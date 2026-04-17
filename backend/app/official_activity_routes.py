@@ -60,6 +60,16 @@ async def apply_official_activity(
     if not activity:
         raise HTTPException(status_code=404, detail="活动不存在或已结束")
 
+    # ── Payment check for paid activities ──
+    if (activity.original_price_per_participant or 0) > 0:
+        return {
+            "success": False,
+            "requires_payment": True,
+            "amount": float(activity.original_price_per_participant),
+            "currency": activity.currency or "GBP",
+            "message": "此活动需要支付参与费",
+        }
+
     existing = await db.execute(
         select(models.OfficialActivityApplication).where(
             models.OfficialActivityApplication.activity_id == activity_id,
@@ -90,6 +100,32 @@ async def apply_official_activity(
     )
     db.add(application)
     await db.commit()
+
+    # ── by_count / both trigger: check if threshold reached ──
+    if (
+        activity.activity_type == "lottery"
+        and activity.draw_mode == "auto"
+        and activity.draw_trigger in ("by_count", "both")
+        and not activity.is_drawn
+        and activity.draw_participant_count
+    ):
+        count_result = await db.execute(
+            select(func.count()).select_from(models.OfficialActivityApplication).where(
+                models.OfficialActivityApplication.activity_id == activity_id,
+                models.OfficialActivityApplication.status == "pending",
+            )
+        )
+        pending_count = count_result.scalar() or 0
+        if pending_count >= activity.draw_participant_count:
+            from app.draw_logic import perform_draw_async
+            try:
+                await perform_draw_async(db, activity)
+            except Exception:
+                import logging
+                logging.getLogger(__name__).error(
+                    f"by_count auto-draw failed for activity {activity_id}", exc_info=True
+                )
+
     return {
         "success": True,
         "status": app_status,

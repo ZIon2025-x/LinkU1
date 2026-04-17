@@ -16,32 +16,30 @@ logger = logging.getLogger(__name__)
 def run_auto_draws(db: Session):
     """
     定时检查需要自动开奖的活动（每 60 秒执行一次）。
-    找 draw_mode=auto, is_drawn=False, draw_at <= now 的活动执行开奖。
+    Scans ALL lottery activities (official + expert) with auto draw mode.
+    Only triggers for by_time/both where draw_at has passed.
+    NULL draw_trigger = legacy official activities (treat as by_time).
     """
+    from app.draw_logic import perform_draw_sync
+
     now = get_utc_time()
     activities = db.execute(
         select(models.Activity).where(
             models.Activity.activity_type == "lottery",
             models.Activity.draw_mode == "auto",
             models.Activity.is_drawn == False,
-            models.Activity.draw_at <= now,
             models.Activity.status == "open",
+            models.Activity.draw_at <= now,
         )
     ).scalars().all()
 
     for activity in activities:
         try:
-            _perform_draw_sync(db, activity)
+            perform_draw_sync(db, activity)
             logger.info(f"Auto draw completed for activity {activity.id}")
         except Exception as e:
             logger.error(f"Auto draw failed for activity {activity.id}: {e}")
             db.rollback()
-
-
-def _perform_draw_sync(db: Session, activity: models.Activity):
-    """Delegate to shared draw logic."""
-    from app.draw_logic import perform_draw_sync
-    perform_draw_sync(db, activity)
 
 
 # ── Celery 接口（保留，便于切换）─────────────────────────
